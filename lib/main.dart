@@ -1,6 +1,7 @@
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:convert';
 import 'dart:html';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:uspsa_results_viewer/data/model.dart';
@@ -61,6 +62,8 @@ extension _DisplayString on _SortMode {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  static const _MIN_WIDTH = 1024.0;
+
   BuildContext _innerContext;
   PracticalMatch _canonicalMatch;
 
@@ -128,6 +131,23 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    var size = MediaQuery.of(context).size;
+
+    Widget sortWidget;
+    Widget keyWidget;
+
+    if(_scores.length == 0 && _canonicalMatch == null) {
+      sortWidget = Container();
+      keyWidget = Container();
+    }
+    else {
+      sortWidget = Column(
+        children: [
+          _buildFilterControls(),
+        ],
+      );
+      keyWidget = _stage == null ? _buildMatchScoreKey(size) : _buildStageScoreKey(size);
+    }
 
     Widget listWidget;
     if(_scores.length == 0 && _canonicalMatch == null) {
@@ -135,8 +155,8 @@ class _MyHomePageState extends State<MyHomePage> {
         behavior: HitTestBehavior.opaque,
         onTap: _getFile,
         child: SizedBox(
-          height: 800,
-          width: 1280,
+          height: size.height,
+          width: size.width,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -153,28 +173,30 @@ class _MyHomePageState extends State<MyHomePage> {
       );
     }
     else {
-      listWidget = ListView.builder(
-        itemCount: (_scores?.length ?? 0),
-        itemBuilder: (ctx, i) {
-          if(_stage == null) return _buildMatchScoreRow(i);
-          else return _buildStageScoreRow(i, _stage);
-        }
+      listWidget = SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minWidth: _MIN_WIDTH,
+            maxWidth: max(size.width, _MIN_WIDTH),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              keyWidget,
+              Expanded(child: ListView.builder(
+                  itemCount: (_scores?.length ?? 0),
+                  itemBuilder: (ctx, i) {
+                    if(_stage == null) return _buildMatchScoreRow(i);
+                    else return _buildStageScoreRow(i, _stage);
+                  }
+              )),
+            ],
+          ),
+        ),
       );
     }
 
-    Widget sortWidget;
-
-    if(_scores.length == 0 && _canonicalMatch == null) {
-      sortWidget = Container();
-    }
-    else {
-      sortWidget = Column(
-        children: [
-          _buildFilterControls(),
-          _stage == null ? _buildMatchScoreKey() : _buildStageScoreKey(),
-        ],
-      );
-    }
     return Scaffold(
       appBar: AppBar(
         title: Text(_canonicalMatch?.name ?? "Match Results Viewer"),
@@ -364,35 +386,42 @@ class _MyHomePageState extends State<MyHomePage> {
     return stageMenuItems;
   }
 
-  Widget _buildMatchScoreKey() {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border(
-            bottom: BorderSide()
-        ),
-        color: Colors.white,
+  Widget _buildMatchScoreKey(Size screenSize) {
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        minWidth: _MIN_WIDTH,
+        maxWidth: max(screenSize.width, _MIN_WIDTH)
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(2.0),
-        child: Row(
-          children: [
-            Expanded(flex: 1, child: Text("Row")),
-            Expanded(flex: 1, child: Text("Place")),
-            Expanded(flex: 3, child: Text("Name")),
-            Expanded(flex: 1, child: Text("Class")),
-            Expanded(flex: 3, child: Text("Division")),
-            Expanded(flex: 1, child: Text("PF")),
-            Expanded(flex: 2, child: Text("Match %")),
-            Expanded(flex: 2, child: Text("Match Pts.")),
-            Expanded(flex: 2, child: Text("Time")),
-            Expanded(flex: 3, child: Tooltip(
-                message: "The number of points out of the maximum possible for this stage.",
-                child: Text("Points/${_canonicalMatch.maxPoints}"))
-            ),
-            Expanded(flex: 5, child: Text("Hits")),
-          ],
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border(
+              bottom: BorderSide()
+          ),
+          color: Colors.white,
         ),
-      )
+        child: Padding(
+          padding: const EdgeInsets.all(2.0),
+          child: Row(
+            mainAxisSize: MainAxisSize.max,
+            children: [
+              Expanded(flex: 1, child: Text("Row")),
+              Expanded(flex: 1, child: Text("Place")),
+              Expanded(flex: 3, child: Text("Name")),
+              Expanded(flex: 1, child: Text("Class")),
+              Expanded(flex: 3, child: Text("Division")),
+              Expanded(flex: 1, child: Text("PF")),
+              Expanded(flex: 2, child: Text("Match %")),
+              Expanded(flex: 2, child: Text("Match Pts.")),
+              Expanded(flex: 2, child: Text("Time")),
+              Expanded(flex: 3, child: Tooltip(
+                  message: "The number of points out of the maximum possible for this stage.",
+                  child: Text("Points/${_canonicalMatch.maxPoints}"))
+              ),
+              Expanded(flex: 5, child: Text("Hits")),
+            ],
+          ),
+        )
+      ),
     );
   }
 
@@ -421,36 +450,42 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  Widget _buildStageScoreKey() {
-    return Container(
-        decoration: BoxDecoration(
-          border: Border(
-              bottom: BorderSide()
+  Widget _buildStageScoreKey(Size screenSize) {
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+          minWidth: _MIN_WIDTH,
+          maxWidth: max(screenSize.width, _MIN_WIDTH)
+      ),
+      child: Container(
+          decoration: BoxDecoration(
+            border: Border(
+                bottom: BorderSide()
+            ),
+            color: Colors.white,
           ),
-          color: Colors.white,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(2.0),
-          child: Row(
-            children: [
-              Expanded(flex: 1, child: Text("Row")),
-              Expanded(flex: 1, child: Text("Place")),
-              Expanded(flex: 3, child: Text("Name")),
-              Expanded(flex: 1, child: Text("Class")),
-              Expanded(flex: 3, child: Text("Division")),
-              Expanded(flex: 1, child: Text("PF")),
-              Expanded(flex: 3, child: Tooltip(
-                  message: "The number of points out of the maximum possible for this stage.",
-                  child: Text("Points/${_stage.maxPoints}"))
-              ),
-              Expanded(flex: 2, child: Text("Time")),
-              Expanded(flex: 2, child: Text("Hit Factor")),
-              Expanded(flex: 2, child: Text("Stage %")),
-              Expanded(flex: 2, child: Text("Match Pts.")),
-              Expanded(flex: 4, child: Text("Hits")),
-            ],
-          ),
-        )
+          child: Padding(
+            padding: const EdgeInsets.all(2.0),
+            child: Row(
+              children: [
+                Expanded(flex: 1, child: Text("Row")),
+                Expanded(flex: 1, child: Text("Place")),
+                Expanded(flex: 3, child: Text("Name")),
+                Expanded(flex: 1, child: Text("Class")),
+                Expanded(flex: 3, child: Text("Division")),
+                Expanded(flex: 1, child: Text("PF")),
+                Expanded(flex: 3, child: Tooltip(
+                    message: "The number of points out of the maximum possible for this stage.",
+                    child: Text("Points/${_stage.maxPoints}"))
+                ),
+                Expanded(flex: 2, child: Text("Time")),
+                Expanded(flex: 2, child: Text("Hit Factor")),
+                Expanded(flex: 2, child: Text("Stage %")),
+                Expanded(flex: 2, child: Text("Match Pts.")),
+                Expanded(flex: 4, child: Text("Hits")),
+              ],
+            ),
+          )
+      ),
     );
   }
   Widget _buildStageScoreRow(int i, Stage stage) {
