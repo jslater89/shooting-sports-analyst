@@ -43739,7 +43739,7 @@ i.b=E.a5V(new T.cP(new S.a2(1024,r,0,1/0),T.eP(H.b([s,new T.a6(1,C.k,new B.pv(ne
 q=r==null
 r=q?m:r.a
 r=L.I(r==null?"Match Results Viewer":r,m)
-q=q&&n.d==null
+q=q||n.d!=null
 p=t.t
 q=q?H.b([],p):H.b([S.rB(B.xH(m,L.JZ(C.oE,m,m),new F.Tv(n),m),"Upload a new match file, replacing the current data.")],p)
 q.push(B.xH(m,L.JZ(C.wa,m,m),n.gLG(),m))
