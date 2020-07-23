@@ -246,7 +246,7 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         title: Text(_canonicalMatch?.name ?? "Match Results Viewer"),
         centerTitle: true,
-        actions: (_canonicalMatch == null && _shouldShowUploadControls() ? [] : [
+        actions: (_canonicalMatch == null || !_shouldShowUploadControls() ? [] : [
           Tooltip(
             message: "Upload a new match file, replacing the current data.",
             child: IconButton(
