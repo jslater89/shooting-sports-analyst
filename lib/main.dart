@@ -202,6 +202,17 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         title: Text(_canonicalMatch?.name ?? "Match Results Viewer"),
         centerTitle: true,
+        actions: _canonicalMatch == null ? [] : [
+          Tooltip(
+            message: "Upload a new match file, replacing the current data.",
+            child: IconButton(
+              icon: Icon(Icons.cloud_upload),
+              onPressed: () {
+                _getFile();
+              },
+            ),
+          )
+        ],
       ),
       body: Builder(
         builder: (context) {
