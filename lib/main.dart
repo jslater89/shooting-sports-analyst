@@ -290,6 +290,8 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {
       _scores = _canonicalMatch.getScores(shooters: filteredShooters);
     });
+
+    _applySortMode(_sortMode);
   }
 
   void _applySortMode(_SortMode s) {
