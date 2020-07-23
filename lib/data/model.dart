@@ -327,7 +327,7 @@ extension ClassificationFrom on Classification {
       case "u": return Classification.U;
       default:
         debugPrint("Unknown classification: $s");
-        return Classification.unknown;
+        return Classification.U;
     }
   }
 }
