@@ -259,7 +259,9 @@ class _MyHomePageState extends State<MyHomePage> {
         ])..add(
           IconButton(
             icon: Icon(Icons.help),
-            onPressed: _showAbout,
+            onPressed: () {
+              _showAbout(size);
+            },
           )
         ),
       ),
@@ -281,35 +283,39 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  void _showAbout() {
+  void _showAbout(Size screenSize) {
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           title: Text("About"),
-          content: RichText(
-            text: TextSpan(
-              children: [
-                TextSpan(
-                  style: Theme.of(context).textTheme.bodyText1,
-                  text: "A Flutter web app for displaying USPSA scores. You can also embed this widget into "
-                      "your match website to show your match results.\n\n"
-                      "Visit the repository at "
-                ),
-                TextSpan(
-                  text: "https://github.com/jslater89/uspsa-result-viewer",
-                  style: Theme.of(context).textTheme.bodyText1.apply(color: Theme.of(context).colorScheme.primary),
-                  recognizer: TapGestureRecognizer()..onTap = () async {
-                    String url = "https://github.com/jslater89/uspsa-result-viewer";
-                    window.open(url, '_blank');
-                  }
-                ),
-                TextSpan(
-                  style: Theme.of(context).textTheme.bodyText1,
-                  text: " for more information."
-                )
-              ]
-            )
+          content: SizedBox(
+            width: screenSize.width * 0.5,
+            child: RichText(
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    style: Theme.of(context).textTheme.bodyText1,
+                    text: "A Flutter web app for displaying USPSA scores. You can also embed this widget into "
+                        "your match website, automatically loading your results file from a provided Internet "
+                        "address.\n\n"
+                        "Visit the repository at "
+                  ),
+                  TextSpan(
+                    text: "https://github.com/jslater89/uspsa-result-viewer",
+                    style: Theme.of(context).textTheme.bodyText1.apply(color: Theme.of(context).colorScheme.primary),
+                    recognizer: TapGestureRecognizer()..onTap = () async {
+                      String url = "https://github.com/jslater89/uspsa-result-viewer";
+                      window.open(url, '_blank');
+                    }
+                  ),
+                  TextSpan(
+                    style: Theme.of(context).textTheme.bodyText1,
+                    text: " for more information."
+                  )
+                ]
+              )
+            ),
           )
         );
       }
