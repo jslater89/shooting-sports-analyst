@@ -4,6 +4,7 @@ import 'dart:math';
 import 'dart:convert';
 
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:uspsa_results_viewer/data/model.dart';
 import 'package:uspsa_results_viewer/data/results_file_parser.dart';
@@ -65,6 +66,24 @@ extension _DisplayString on _SortMode {
 class _MyHomePageState extends State<MyHomePage> {
   static const _MIN_WIDTH = 1024.0;
 
+  @override
+  void initState() {
+    super.initState();
+
+    final Map<String, String> params = Uri.parse(window.location.href).queryParameters;
+    debugPrint("iframe params? $params");
+    final String resultsFileUrl = params['resultsFile'];
+
+    if(resultsFileUrl != null) {
+      debugPrint("getting preset results file $resultsFileUrl");
+      _iframeResultsUrl = resultsFileUrl;
+      _getFile();
+    }
+  }
+
+  String _iframeResultsUrl;
+  String _iframeResultsErr;
+
   BuildContext _innerContext;
   PracticalMatch _canonicalMatch;
 
@@ -73,62 +92,84 @@ class _MyHomePageState extends State<MyHomePage> {
   Stage _stage;
   _SortMode _sortMode = _SortMode.score;
 
-  void _getFile() async {
-    InputElement uploadInput = FileUploadInputElement();
-    uploadInput.click();
-
-    uploadInput.onChange.listen((e) {
-      // read file content as dataURL
-      final files = uploadInput.files;
-      if (files.length == 1) {
-        final file = files[0];
-        FileReader reader =  FileReader();
-
-        reader.onLoadEnd.listen((event) {
-          //String reportFile = AsciiCodec().decode(reader.result);
-          //String reportFile = String.fromCharCodes(reader.result);
-          String reportFile = Utf8Codec().decode(reader.result);
-
-          reportFile = reportFile.replaceAll("\r\n", "\n");
-          List<String> lines = reportFile.split("\n");
-
-          List<String> infoLines = [];
-          List<String> competitorLines = [];
-          List<String> stageLines = [];
-          List<String> stageScoreLines = [];
-
-          for(String l in lines) {
-            l = l.trim();
-            if(l.startsWith(r"$INFO")) infoLines.add(l);
-            else if(l.startsWith("E ")) competitorLines.add(l);
-            else if(l.startsWith("G ")) stageLines.add(l);
-            else if(l.startsWith("I ")) stageScoreLines.add(l);
-          }
-
-          _canonicalMatch = processResultLines(
-              infoLines: infoLines,
-              competitorLines: competitorLines,
-              stageLines: stageLines,
-              stageScoreLines: stageScoreLines,
-          );
-
-          var scores = _canonicalMatch.getScores();
-
-          setState(() {
-            _canonicalMatch = _canonicalMatch;
-            _scores = scores;
-          });
-        });
-
-        reader.onError.listen((fileEvent) {
-          Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("File read error")));
-        });
-
-        reader.readAsArrayBuffer(file);
-      }
-    });
+  bool _shouldShowUploadControls() {
+    return _iframeResultsUrl == null;
   }
 
+  void _getFile() async {
+    if(_iframeResultsUrl != null) {
+      try {
+        var resultsString = await HttpRequest.getString(_iframeResultsUrl);
+        _processScoreFile(resultsString);
+      } catch(err) {
+        setState(() {
+          _iframeResultsErr = err.toString();
+        });
+      }
+    }
+    else {
+      InputElement uploadInput = FileUploadInputElement();
+      uploadInput.click();
+
+      uploadInput.onChange.listen((e) {
+        // read file content as dataURL
+        final files = uploadInput.files;
+        if (files.length == 1) {
+          final file = files[0];
+          FileReader reader = FileReader();
+
+          reader.onLoadEnd.listen((event) {
+            //String reportFile = AsciiCodec().decode(reader.result);
+            //String reportFile = String.fromCharCodes(reader.result);
+            String reportFile = Utf8Codec().decode(reader.result);
+            _processScoreFile(reportFile);
+          });
+
+          reader.onError.listen((fileEvent) {
+            Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("File read error")));
+          });
+
+          reader.readAsArrayBuffer(file);
+        }
+      });
+    }
+  }
+
+  void _processScoreFile(String fileContents) {
+    String reportFile = fileContents.replaceAll("\r\n", "\n");
+    List<String> lines = reportFile.split("\n");
+
+    List<String> infoLines = [];
+    List<String> competitorLines = [];
+    List<String> stageLines = [];
+    List<String> stageScoreLines = [];
+
+    for (String l in lines) {
+      l = l.trim();
+      if (l.startsWith(r"$INFO"))
+        infoLines.add(l);
+      else if (l.startsWith("E "))
+        competitorLines.add(l);
+      else if (l.startsWith("G "))
+        stageLines.add(l);
+      else if (l.startsWith("I ")) stageScoreLines.add(l);
+    }
+
+    _canonicalMatch = processResultLines(
+      infoLines: infoLines,
+      competitorLines: competitorLines,
+      stageLines: stageLines,
+      stageScoreLines: stageScoreLines,
+    );
+
+    var scores = _canonicalMatch.getScores();
+
+    setState(() {
+      _canonicalMatch = _canonicalMatch;
+      _scores = scores;
+    });
+
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -137,7 +178,7 @@ class _MyHomePageState extends State<MyHomePage> {
     Widget sortWidget;
     Widget keyWidget;
 
-    if(_scores.length == 0 && _canonicalMatch == null) {
+    if(_canonicalMatch == null) {
       sortWidget = Container();
       keyWidget = Container();
     }
@@ -151,7 +192,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     Widget listWidget;
-    if(_scores.length == 0 && _canonicalMatch == null) {
+    if(_canonicalMatch == null && _shouldShowUploadControls()) {
       listWidget = GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: _getFile,
@@ -172,6 +213,9 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ),
       );
+    }
+    else if(_iframeResultsErr != null) {
+      listWidget = Text("Error embedding widget: $_iframeResultsErr");
     }
     else {
       listWidget = SingleChildScrollView(
@@ -202,7 +246,7 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         title: Text(_canonicalMatch?.name ?? "Match Results Viewer"),
         centerTitle: true,
-        actions: _canonicalMatch == null ? [] : [
+        actions: (_canonicalMatch == null && _shouldShowUploadControls() ? [] : [
           Tooltip(
             message: "Upload a new match file, replacing the current data.",
             child: IconButton(
@@ -212,7 +256,12 @@ class _MyHomePageState extends State<MyHomePage> {
               },
             ),
           )
-        ],
+        ])..add(
+          IconButton(
+            icon: Icon(Icons.help),
+            onPressed: _showAbout,
+          )
+        ),
       ),
       body: Builder(
         builder: (context) {
@@ -229,6 +278,41 @@ class _MyHomePageState extends State<MyHomePage> {
           );
         }
       ),
+    );
+  }
+
+  void _showAbout() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text("About"),
+          content: RichText(
+            text: TextSpan(
+              children: [
+                TextSpan(
+                  style: Theme.of(context).textTheme.bodyText1,
+                  text: "A Flutter web app for displaying USPSA scores. You can also embed this widget into "
+                      "your match website to show your match results.\n\n"
+                      "Visit the repository at "
+                ),
+                TextSpan(
+                  text: "https://github.com/jslater89/uspsa-result-viewer",
+                  style: Theme.of(context).textTheme.bodyText1.apply(color: Theme.of(context).colorScheme.primary),
+                  recognizer: TapGestureRecognizer()..onTap = () async {
+                    String url = "https://github.com/jslater89/uspsa-result-viewer";
+                    window.open(url, '_blank');
+                  }
+                ),
+                TextSpan(
+                  style: Theme.of(context).textTheme.bodyText1,
+                  text: " for more information."
+                )
+              ]
+            )
+          )
+        );
+      }
     );
   }
 
