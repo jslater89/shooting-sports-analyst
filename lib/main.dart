@@ -6,10 +6,11 @@ import 'dart:convert';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:uspsa_results_viewer/data/model.dart';
-import 'package:uspsa_results_viewer/data/results_file_parser.dart';
-import 'package:uspsa_results_viewer/ui/filter_dialog.dart';
-import 'package:uspsa_results_viewer/ui/score_row.dart';
+import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/results_file_parser.dart';
+import 'package:uspsa_result_viewer/ui/filter_dialog.dart';
+import 'package:uspsa_result_viewer/ui/score_row.dart';
+import 'package:uspsa_result_viewer/version.dart';
 
 void main() {
   runApp(MyApp());
@@ -325,7 +326,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                   TextSpan(
                     style: Theme.of(context).textTheme.bodyText1,
-                    text: " for more information.\n\n© Jay Slater 2020\nGPL 3.0"
+                    text: " for more information.\n\nuspsa_result_viewer v${VersionInfo.version}\n© Jay Slater 2020\nGPL 3.0"
                   )
                 ]
               )

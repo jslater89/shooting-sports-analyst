@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:uspsa_results_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/model.dart';
 
 PracticalMatch processResultLines({List<String> infoLines, List<String> competitorLines, List<String> stageLines, List<String> stageScoreLines}) {
   PracticalMatch match = PracticalMatch();

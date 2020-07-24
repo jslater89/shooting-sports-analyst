@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:uspsa_results_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/model.dart';
 
 class FilterSet {
   FilterMode mode = FilterMode.and;
