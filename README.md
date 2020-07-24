@@ -1,16 +1,23 @@
-# uspsa_results_viewer
+# USPSA Match Results Viewer
 
-A new Flutter project.
+A web application for viewing USPSA match results, usable standalone at
+[github.io](https://jslater.github.io/uspsa-result-viewer), or embedded
+into an iframe.
 
-## Getting Started
+## Embedding
 
-This project is a starting point for a Flutter application.
+See [this example file](https://github.com/jslater89/uspsa-result-viewer/blob/master/embedded-index.html).
 
-A few resources to get you started if this is your first Flutter project:
+## Known Issues
 
-- [Lab: Write your first Flutter app](https://flutter.dev/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.dev/docs/cookbook)
+* May not match PractiScore precisely on DQed shooters.
 
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Contributions
+
+Open a pull request.
+
+## Future Features
+
+* Clickable score rows to show a popup scorecard.
+* 'What-If' editing.
+* Simple query language for search box ("open AND d OR limited AND c").
