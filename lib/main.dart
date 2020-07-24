@@ -8,8 +8,10 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
+import 'package:uspsa_result_viewer/data/sort_mode.dart';
+import 'package:uspsa_result_viewer/ui/filter_controls.dart';
 import 'package:uspsa_result_viewer/ui/filter_dialog.dart';
-import 'package:uspsa_result_viewer/ui/score_row.dart';
+import 'package:uspsa_result_viewer/ui/score_list.dart';
 import 'package:uspsa_result_viewer/version.dart';
 
 void main() {
@@ -38,33 +40,6 @@ class MyHomePage extends StatefulWidget {
   _MyHomePageState createState() => _MyHomePageState();
 }
 
-enum _SortMode {
-  score,
-  time,
-  alphas,
-  availablePoints,
-  lastName,
-}
-
-extension _DisplayString on _SortMode {
-  String displayString() {
-    switch(this) {
-
-      case _SortMode.score:
-        return "Score";
-      case _SortMode.time:
-        return "Time";
-      case _SortMode.alphas:
-        return "Alphas";
-      case _SortMode.availablePoints:
-        return "Available Points";
-      case _SortMode.lastName:
-        return "Last Name";
-    }
-    return "INVALID SORT MODE";
-  }
-}
-
 class _MyHomePageState extends State<MyHomePage> {
   static const _MIN_WIDTH = 1024.0;
 
@@ -81,14 +56,6 @@ class _MyHomePageState extends State<MyHomePage> {
       _iframeResultsUrl = resultsFileUrl;
       _getFile();
     }
-
-    _searchController.addListener(() {
-      _searchTerm = _searchController.text.toLowerCase();
-      setState(() {
-        _searchedScores = []..addAll(_baseScores);
-        _searchedScores = _searchedScores..retainWhere(_applySearch);
-      });
-    });
   }
 
   String _iframeResultsUrl;
@@ -97,14 +64,12 @@ class _MyHomePageState extends State<MyHomePage> {
   BuildContext _innerContext;
   PracticalMatch _canonicalMatch;
 
-  TextEditingController _searchController = TextEditingController();
-  String _searchTerm = "";
-
   FilterSet _filters = FilterSet();
   List<RelativeMatchScore> _baseScores = [];
+  String _searchTerm = "";
   List<RelativeMatchScore> _searchedScores = [];
   Stage _stage;
-  _SortMode _sortMode = _SortMode.score;
+  SortMode _sortMode = SortMode.score;
 
   bool _shouldShowUploadControls() {
     return _iframeResultsUrl == null;
@@ -191,15 +156,21 @@ class _MyHomePageState extends State<MyHomePage> {
     var size = MediaQuery.of(context).size;
 
     Widget sortWidget;
-    Widget keyWidget;
 
     if(_canonicalMatch == null) {
       sortWidget = Container();
-      keyWidget = Container();
     }
     else {
-      sortWidget = _buildFilterControls();
-      keyWidget = _stage == null ? _buildMatchScoreKey(size) : _buildStageScoreKey(size);
+      sortWidget = FilterControls(
+        filters: _filters,
+        stages: _canonicalMatch.stages,
+        currentStage: _stage,
+        sortMode: _sortMode,
+        onFiltersChanged: _applyFilters,
+        onSortModeChanged: _applySortMode,
+        onStageChanged: _applyStage,
+        onSearchChanged: _applySearchTerm,
+      );
     }
 
     Widget listWidget;
@@ -229,27 +200,12 @@ class _MyHomePageState extends State<MyHomePage> {
       listWidget = Text("Error embedding widget: $_iframeResultsErr");
     }
     else {
-      listWidget = SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            minWidth: _MIN_WIDTH,
-            maxWidth: max(size.width, _MIN_WIDTH),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              keyWidget,
-              Expanded(child: ListView.builder(
-                  itemCount: (_searchedScores?.length ?? 0),
-                  itemBuilder: (ctx, i) {
-                    if(_stage == null) return _buildMatchScoreRow(i);
-                    else return _buildStageScoreRow(i, _stage);
-                  }
-              )),
-            ],
-          ),
-        ),
+      listWidget = ScoreList(
+        baseScores: _baseScores,
+        filteredScores: _searchedScores,
+        match: _canonicalMatch,
+        stage: _stage,
+        minWidth: _MIN_WIDTH,
       );
     }
 
@@ -333,96 +289,9 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  Widget _buildFilterControls() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Material(
-        elevation: 3,
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Flexible(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: 200,
-                    minWidth: 50,
-                  ),
-                  child: TextField(
-                    controller: _searchController,
-                    autofocus: false,
-                    decoration: InputDecoration(
-                        hintText: "Quick search"
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("Sort by...", style: Theme.of(context).textTheme.caption),
-                  DropdownButton<_SortMode>(
-                    underline: Container(
-                      height: 1,
-                      color: Colors.black,
-                    ),
-                    items: _buildSortItems(),
-                    onChanged: (_SortMode s) {
-                      _applySortMode(s);
-                    },
-                    value: _sortMode,
-                  ),
-                ],
-              ),
-              SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("Results for...", style: Theme.of(context).textTheme.caption),
-                  DropdownButton<Stage>(
-                    underline: Container(
-                      height: 1,
-                      color: Colors.black,
-                    ),
-                    items: _buildStageMenuItems(),
-                    onChanged: (Stage s) {
-                      setState(() {
-                        _stage = s;
-                        _baseScores = _baseScores;
-                        _searchedScores = []..addAll(_baseScores);
-                      });
+  void _applyFilters(FilterSet filters) {
+    _filters = filters;
 
-                      _applySortMode(_sortMode);
-                    },
-                    value: _stage,
-                  ),
-                ],
-              ),
-              SizedBox(width: 10),
-              FlatButton(
-                child: Text("FILTERS"),
-                onPressed: () async {
-                  var filters = await showDialog<FilterSet>(context: context, builder: (context) {
-                    return FilterDialog(currentFilters: _filters,);
-                  }
-                  );
-
-                  if(filters != null) {
-                    _filters = filters;
-                    _applyFilters();
-                  }
-                },
-              ),
-            ],
-          )
-        ),
-      ),
-    );
-  }
-
-  void _applyFilters() {
     List<Shooter> filteredShooters = _canonicalMatch.filterShooters(
       filterMode: _filters.mode,
       allowReentries: _filters.reentries,
@@ -448,21 +317,31 @@ class _MyHomePageState extends State<MyHomePage> {
     _applySortMode(_sortMode);
   }
 
-  void _applySortMode(_SortMode s) {
+  void _applyStage(Stage s) {
+    setState(() {
+      _stage = s;
+      _baseScores = _baseScores;
+      _searchedScores = []..addAll(_baseScores);
+    });
+
+    _applySortMode(_sortMode);
+  }
+
+  void _applySortMode(SortMode s) {
     switch(s) {
-      case _SortMode.score:
+      case SortMode.score:
         _baseScores.sortByScore(stage: _stage);
         break;
-      case _SortMode.time:
+      case SortMode.time:
         _baseScores.sortByTime(stage: _stage);
         break;
-      case _SortMode.alphas:
+      case SortMode.alphas:
         _baseScores.sortByAlphas(stage: _stage);
         break;
-      case _SortMode.availablePoints:
+      case SortMode.availablePoints:
         _baseScores.sortByAvailablePoints(stage: _stage);
         break;
-      case _SortMode.lastName:
+      case SortMode.lastName:
         _baseScores.sortBySurname();
         break;
     }
@@ -474,180 +353,12 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  List<DropdownMenuItem<_SortMode>> _buildSortItems() {
-    return [
-      DropdownMenuItem<_SortMode>(
-        child: Text(_SortMode.score.displayString()),
-        value: _SortMode.score,
-      ),
-      DropdownMenuItem<_SortMode>(
-        child: Text(_SortMode.time.displayString()),
-        value: _SortMode.time,
-      ),
-      DropdownMenuItem<_SortMode>(
-        child: Text(_SortMode.alphas.displayString()),
-        value: _SortMode.alphas,
-      ),
-      DropdownMenuItem<_SortMode>(
-        child: Text(_SortMode.availablePoints.displayString()),
-        value: _SortMode.availablePoints,
-      ),
-      DropdownMenuItem<_SortMode>(
-        child: Text(_SortMode.lastName.displayString()),
-        value: _SortMode.lastName,
-      ),
-    ];
-  }
-
-  List<DropdownMenuItem<Stage>> _buildStageMenuItems() {
-    var stageMenuItems = [
-      DropdownMenuItem<Stage>(
-        child: Text("Match"),
-        value: null,
-      )
-    ];
-
-    for(Stage s in _canonicalMatch.stages) {
-      stageMenuItems.add(
-        DropdownMenuItem<Stage>(
-          child: Text(s.name),
-          value: s
-        )
-      );
-    }
-
-    return stageMenuItems;
-  }
-
-  Widget _buildMatchScoreKey(Size screenSize) {
-    return ConstrainedBox(
-      constraints: BoxConstraints(
-        minWidth: _MIN_WIDTH,
-        maxWidth: max(screenSize.width, _MIN_WIDTH)
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border(
-              bottom: BorderSide()
-          ),
-          color: Colors.white,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(2.0),
-          child: Row(
-            mainAxisSize: MainAxisSize.max,
-            children: [
-              Expanded(flex: 1, child: Text("Row")),
-              Expanded(flex: 1, child: Text("Place")),
-              Expanded(flex: 3, child: Text("Name")),
-              Expanded(flex: 1, child: Text("Class")),
-              Expanded(flex: 3, child: Text("Division")),
-              Expanded(flex: 1, child: Text("PF")),
-              Expanded(flex: 2, child: Text("Match %")),
-              Expanded(flex: 2, child: Text("Match Pts.")),
-              Expanded(flex: 2, child: Text("Time")),
-              Expanded(flex: 3, child: Tooltip(
-                  message: "The number of points out of the maximum possible for this stage.",
-                  child: Text("Points/${_canonicalMatch.maxPoints}"))
-              ),
-              Expanded(flex: 5, child: Text("Hits")),
-            ],
-          ),
-        )
-      ),
-    );
-  }
-
-  Widget _buildMatchScoreRow(int i) {
-    var score = _searchedScores[i];
-    return ScoreRow(
-      color: i % 2 == 1 ? Colors.grey[200] : Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(2.0),
-        child: Row(
-          children: [
-            Expanded(flex: 1, child: Text("${_baseScores.indexOf(score) + 1}")),
-            Expanded(flex: 1, child: Text("${score.total.place}")),
-            Expanded(flex: 3, child: Text(score.shooter.getName())),
-            Expanded(flex: 1, child: Text(score.shooter.classification.displayString())),
-            Expanded(flex: 3, child: Text(score.shooter.division.displayString())),
-            Expanded(flex: 1, child: Text(score.shooter.powerFactor.shortString())),
-            Expanded(flex: 2, child: Text((score.total.percent * 100).toStringAsFixed(2))),
-            Expanded(flex: 2, child: Text(score.total.relativePoints.toStringAsFixed(2))),
-            Expanded(flex: 2, child: Text(score.total.score.time.toStringAsFixed(2))),
-            Expanded(flex: 3, child: Text("${score.total.score.totalPoints} (${(score.percentTotalPoints * 100).toStringAsFixed(2)}%)")),
-            Expanded(flex: 5, child: Text("${score.total.score.a}A ${score.total.score.c}C ${score.total.score.d}D ${score.total.score.m}M ${score.total.score.ns}NS ${score.total.score.penaltyCount}P")),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStageScoreKey(Size screenSize) {
-    return ConstrainedBox(
-      constraints: BoxConstraints(
-          minWidth: _MIN_WIDTH,
-          maxWidth: max(screenSize.width, _MIN_WIDTH)
-      ),
-      child: Container(
-          decoration: BoxDecoration(
-            border: Border(
-                bottom: BorderSide()
-            ),
-            color: Colors.white,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(2.0),
-            child: Row(
-              children: [
-                Expanded(flex: 1, child: Text("Row")),
-                Expanded(flex: 1, child: Text("Place")),
-                Expanded(flex: 3, child: Text("Name")),
-                Expanded(flex: 1, child: Text("Class")),
-                Expanded(flex: 3, child: Text("Division")),
-                Expanded(flex: 1, child: Text("PF")),
-                Expanded(flex: 3, child: Tooltip(
-                    message: "The number of points out of the maximum possible for this stage.",
-                    child: Text("Points/${_stage.maxPoints}"))
-                ),
-                Expanded(flex: 2, child: Text("Time")),
-                Expanded(flex: 2, child: Text("Hit Factor")),
-                Expanded(flex: 2, child: Text("Stage %")),
-                Expanded(flex: 2, child: Text("Match Pts.")),
-                Expanded(flex: 4, child: Text("Hits")),
-              ],
-            ),
-          )
-      ),
-    );
-  }
-  Widget _buildStageScoreRow(int i, Stage stage) {
-
-    var matchScore = _searchedScores[i];
-    var stageScore = _searchedScores[i].stageScores[stage];
-
-    return ScoreRow(
-      color: i % 2 == 1 ? Colors.grey[200] : Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(2.0),
-        child: Row(
-          children: [
-            Expanded(flex: 1, child: Text("${_baseScores.indexOf(matchScore) + 1}")),
-            Expanded(flex: 1, child: Text("${stageScore.place}")),
-            Expanded(flex: 3, child: Text(matchScore.shooter.getName())),
-            Expanded(flex: 1, child: Text(matchScore.shooter.classification.displayString())),
-            Expanded(flex: 3, child: Text(matchScore.shooter.division.displayString())),
-            Expanded(flex: 1, child: Text(matchScore.shooter.powerFactor.shortString())),
-            Expanded(flex: 3, child: Text("${stageScore.score.totalPoints} (${(stageScore.score.percentTotalPoints * 100).toStringAsFixed(1)}%)")),
-            Expanded(flex: 2, child: Text(stageScore.score.time.toStringAsFixed(2))),
-            Expanded(flex: 2, child: Text(stageScore.score.hitFactor.toStringAsFixed(4))),
-            Expanded(flex: 2, child: Text((stageScore.percent * 100).toStringAsFixed(2))),
-            Expanded(flex: 2, child: Text(stageScore.relativePoints.toStringAsFixed(2))),
-            Expanded(flex: 4, child: Text("${stageScore.score.a}A ${stageScore.score.c}C ${stageScore.score.d}D ${stageScore.score.m}M ${stageScore.score.ns}NS ${stageScore.score.penaltyCount}P")),
-          ],
-        ),
-      ),
-    );
+  void _applySearchTerm(String query) {
+    _searchTerm = query;
+    setState(() {
+      _searchedScores = []..addAll(_baseScores);
+      _searchedScores = _searchedScores..retainWhere(_applySearch);
+    });
   }
 
   bool _applySearch(RelativeMatchScore element) {
