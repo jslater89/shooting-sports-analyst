@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:uspsa_results_viewer/data/model.dart';
 import 'package:uspsa_results_viewer/data/results_file_parser.dart';
 import 'package:uspsa_results_viewer/ui/filter_dialog.dart';
+import 'package:uspsa_results_viewer/ui/score_row.dart';
 
 void main() {
   runApp(MyApp());
@@ -311,7 +312,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                   TextSpan(
                     style: Theme.of(context).textTheme.bodyText1,
-                    text: " for more information."
+                    text: " for more information.\n\n© Jay Slater 2020\nGPL 3.0"
                   )
                 ]
               )
@@ -529,7 +530,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Widget _buildMatchScoreRow(int i) {
     var score = _scores[i];
-    return Container(
+    return ScoreRow(
       color: i % 2 == 1 ? Colors.grey[200] : Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(2.0),
@@ -595,7 +596,7 @@ class _MyHomePageState extends State<MyHomePage> {
     var matchScore = _scores[i];
     var stageScore = _scores[i].stageScores[stage];
 
-    return Container(
+    return ScoreRow(
       color: i % 2 == 1 ? Colors.grey[200] : Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(2.0),
