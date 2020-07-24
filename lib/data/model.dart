@@ -1,4 +1,6 @@
 
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 
 enum FilterMode {
@@ -57,6 +59,7 @@ class PracticalMatch {
 
       matchScores[shooter] = RelativeMatchScore();
       matchScores[shooter].shooter = shooter;
+      matchScores[shooter].total.score.shooter = shooter;
       for(Stage stage in stages) {
         if(shooter.stageScores[stage] == null) continue;
         shooterTotalPoints += shooter.stageScores[stage].totalPoints;
@@ -64,9 +67,6 @@ class PracticalMatch {
             ..stage = stage
             ..score = shooter.stageScores[stage];
       }
-      matchScores[shooter].total.score.totalPoints = shooterTotalPoints;
-      matchScores[shooter].percentTotalPoints = shooterTotalPoints.toDouble() / matchMaxPoints.toDouble();
-      //debugPrint("${shooter.firstName} ${shooter.lastName} shot ${totalScores[shooter].percentTotalPoints} total points");
 
       for(Stage stage in stages) {
         if(shooter.stageScores[stage] == null) continue;
@@ -84,6 +84,9 @@ class PracticalMatch {
         matchScores[shooter].total.score.procedural += shooter.stageScores[stage].procedural;
         matchScores[shooter].total.score.otherPenalty += shooter.stageScores[stage].otherPenalty;
       }
+
+      matchScores[shooter].percentTotalPoints = shooterTotalPoints.toDouble() / matchMaxPoints.toDouble();
+      //debugPrint("${shooter.firstName} ${shooter.lastName} shot ${totalScores[shooter].percentTotalPoints} total points");
     }
 
     // First, for each stage, sort by HF. Then, calculate stage percentages.
@@ -208,6 +211,7 @@ class Stage {
 }
 
 class Score {
+  Shooter shooter;
   Stage stage;
   double t1 = 0, t2 = 0, t3 = 0, t4 = 0, t5 = 0;
   double time = 0;
@@ -221,6 +225,7 @@ class Score {
       return totalPoints.toDouble();
     }
     double score = double.parse((totalPoints / time).toStringAsFixed(4));
+    if(score.isInfinite) return 0;
     if(score.isNaN) return 0;
     return score;
   }
@@ -232,10 +237,31 @@ class Score {
     return procedural + lateShot + extraShot + extraHit + otherPenalty;
   }
 
-  int penaltyPoints = 0;
+  int get penaltyPoints {
+    int total = 0;
+    total += 10 * m;
+    total += 10 * ns;
+    total += 10 * procedural;
+    total += 10 * extraShot;
+    total += 10 * extraHit;
+    total += 10 * otherPenalty;
+    total += 5 * lateShot;
 
-  int rawPoints = 0;
-  int totalPoints = 0;
+    return total;
+  }
+
+  int get rawPoints {
+    int aValue = 5;
+    int bValue = shooter.powerFactor == PowerFactor.major ? 4 : 3;
+    int cValue = bValue;
+    int dValue = shooter.powerFactor == PowerFactor.major ? 2 : 1;
+
+    return a * aValue + b * bValue + c * cValue + d * dValue;
+  }
+
+  int get totalPoints {
+    return max(0, rawPoints - penaltyPoints);
+  }
 }
 
 enum Scoring {

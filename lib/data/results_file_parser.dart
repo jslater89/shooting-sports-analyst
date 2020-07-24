@@ -152,6 +152,7 @@ void _readScoreLines(List<String> stageScoreLines, Map<int, Shooter> shootersByF
 
       Score s = Score()
         ..stage = stage
+        ..shooter = shooter
         ..a = int.parse(splitLine[_A])
         ..b = int.parse(splitLine[_B])
         ..c = int.parse(splitLine[_C])
@@ -164,17 +165,28 @@ void _readScoreLines(List<String> stageScoreLines, Map<int, Shooter> shootersByF
         ..extraHit = int.parse(splitLine[_EXTRA_HIT])
         ..npm = int.parse(splitLine[_NPM])
         ..otherPenalty = int.parse(splitLine[_OTHER_PENALTY])
-        ..penaltyPoints = int.parse(splitLine[_PENALTY_POINTS])
+        //..penaltyPoints = int.parse(splitLine[_PENALTY_POINTS])
         ..t1 = double.parse(splitLine[_T1])
         ..t2 = double.parse(splitLine[_T2])
         ..t3 = double.parse(splitLine[_T3])
         ..t4 = double.parse(splitLine[_T4])
         ..t5 = double.parse(splitLine[_T5])
-        ..time = double.parse(splitLine[_TIME])
-        ..rawPoints = int.parse(splitLine[_RAW_POINTS])
-        ..totalPoints = int.parse(splitLine[_TOTAL_POINTS]);
+        ..time = double.parse(splitLine[_TIME]);
+        //..rawPoints = int.parse(splitLine[_RAW_POINTS])
+        //..totalPoints = int.parse(splitLine[_TOTAL_POINTS]);
 
       shooter.stageScores[stage] = s;
+
+
+      if(s.penaltyPoints != int.parse(splitLine[_PENALTY_POINTS])) {
+        debugPrint("Penalty points mismatch for ${shooter.getName()} on ${stage.name}: ${s.penaltyPoints} vs ${splitLine[_PENALTY_POINTS]}");
+      }
+      if(s.rawPoints != int.parse(splitLine[_RAW_POINTS])) {
+        debugPrint("Raw points mismatch for ${shooter.getName()} on ${stage.name}: ${s.rawPoints} vs ${splitLine[_RAW_POINTS]}");
+      }
+      if(s.totalPoints != int.parse(splitLine[_TOTAL_POINTS])) {
+        debugPrint("Total points mismatch for ${shooter.getName()} on ${stage.name}: ${s.totalPoints} vs ${splitLine[_TOTAL_POINTS]}");
+      }
 
       i++;
     } catch(err) {
