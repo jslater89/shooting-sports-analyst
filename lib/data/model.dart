@@ -111,7 +111,15 @@ class PracticalMatch {
         double hitFactor = shooter.stageScores[stage].hitFactor;
         double percent = hitFactor / highHitFactor;
         if(percent.isNaN) percent = 0;
-        double relativePoints = stage.maxPoints * percent;
+
+        double relativePoints;
+        if(stage.type == Scoring.fixedTime) {
+          relativePoints = shooter.stageScores[stage].totalPoints.toDouble();
+        }
+        else {
+          relativePoints = stage.maxPoints * percent;
+        }
+
         matchScores[shooter].stageScores[stage]
           ..percent = percent
           ..relativePoints = relativePoints
@@ -168,7 +176,6 @@ class RelativeScore {
   /// For match scores, total from stage scores
   /// and use to set percent.
   double relativePoints = 0;
-  // TODO: fill in relative points etc.
 }
 
 class Shooter {
@@ -210,6 +217,9 @@ class Score {
   }
 
   double get hitFactor {
+    if(stage.type == Scoring.fixedTime) {
+      return totalPoints.toDouble();
+    }
     double score = double.parse((totalPoints / time).toStringAsFixed(4));
     if(score.isNaN) return 0;
     return score;
@@ -241,7 +251,7 @@ extension ScoringFrom on Scoring {
     switch(s) {
       case "comstock": return Scoring.comstock;
       case "virginia": return Scoring.virginia;
-      case "fixed time": return Scoring.fixedTime;
+      case "fixed": return Scoring.fixedTime;
       default: {
         debugPrint("Unknown scoring: $s");
         return Scoring.unknown;
