@@ -1,7 +1,7 @@
 # USPSA Match Results Viewer
 
 A web application for viewing USPSA match results, usable standalone at
-[github.io](https://jslater.github.io/uspsa-result-viewer), or embedded
+[github.io](https://jslater89.github.io/uspsa-result-viewer), or embedded
 into an iframe.
 
 ## Embedding
