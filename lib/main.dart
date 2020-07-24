@@ -198,11 +198,7 @@ class _MyHomePageState extends State<MyHomePage> {
       keyWidget = Container();
     }
     else {
-      sortWidget = Column(
-        children: [
-          _buildFilterControls(),
-        ],
-      );
+      sortWidget = _buildFilterControls();
       keyWidget = _stage == null ? _buildMatchScoreKey(size) : _buildStageScoreKey(size);
     }
 
@@ -655,7 +651,8 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   bool _applySearch(RelativeMatchScore element) {
-    if(element.shooter.firstName.toLowerCase().startsWith(_searchTerm)) return true;
+    // getName() instead of first name so 'john sm' matches 'first:john last:smith'
+    if(element.shooter.getName().toLowerCase().startsWith(_searchTerm)) return true;
     if(element.shooter.lastName.toLowerCase().startsWith(_searchTerm)) return true;
     return false;
   }
