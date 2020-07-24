@@ -80,6 +80,14 @@ class _MyHomePageState extends State<MyHomePage> {
       _iframeResultsUrl = resultsFileUrl;
       _getFile();
     }
+
+    _searchController.addListener(() {
+      _searchTerm = _searchController.text.toLowerCase();
+      setState(() {
+        _searchedScores = []..addAll(_baseScores);
+        _searchedScores = _searchedScores..retainWhere(_applySearch);
+      });
+    });
   }
 
   String _iframeResultsUrl;
@@ -88,8 +96,12 @@ class _MyHomePageState extends State<MyHomePage> {
   BuildContext _innerContext;
   PracticalMatch _canonicalMatch;
 
+  TextEditingController _searchController = TextEditingController();
+  String _searchTerm = "";
+
   FilterSet _filters = FilterSet();
-  List<RelativeMatchScore> _scores = [];
+  List<RelativeMatchScore> _baseScores = [];
+  List<RelativeMatchScore> _searchedScores = [];
   Stage _stage;
   _SortMode _sortMode = _SortMode.score;
 
@@ -167,7 +179,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
     setState(() {
       _canonicalMatch = _canonicalMatch;
-      _scores = scores;
+      _baseScores = scores;
+      _searchedScores = []..addAll(_baseScores);
     });
 
   }
@@ -231,7 +244,7 @@ class _MyHomePageState extends State<MyHomePage> {
             children: [
               keyWidget,
               Expanded(child: ListView.builder(
-                  itemCount: (_scores?.length ?? 0),
+                  itemCount: (_searchedScores?.length ?? 0),
                   itemBuilder: (ctx, i) {
                     if(_stage == null) return _buildMatchScoreRow(i);
                     else return _buildStageScoreRow(i, _stage);
@@ -333,6 +346,22 @@ class _MyHomePageState extends State<MyHomePage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              Flexible(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: 200,
+                    minWidth: 50,
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    autofocus: false,
+                    decoration: InputDecoration(
+                        hintText: "Quick search"
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(width: 10),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -364,7 +393,8 @@ class _MyHomePageState extends State<MyHomePage> {
                     onChanged: (Stage s) {
                       setState(() {
                         _stage = s;
-                        _scores = _scores;
+                        _baseScores = _baseScores;
+                        _searchedScores = []..addAll(_baseScores);
                       });
 
                       _applySortMode(_sortMode);
@@ -375,11 +405,11 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
               SizedBox(width: 10),
               FlatButton(
-                child: Text("SET FILTERS"),
+                child: Text("FILTERS"),
                 onPressed: () async {
                   var filters = await showDialog<FilterSet>(context: context, builder: (context) {
-                      return FilterDialog(currentFilters: _filters,);
-                    }
+                    return FilterDialog(currentFilters: _filters,);
+                  }
                   );
 
                   if(filters != null) {
@@ -387,7 +417,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     _applyFilters();
                   }
                 },
-              )
+              ),
             ],
           )
         ),
@@ -407,13 +437,15 @@ class _MyHomePageState extends State<MyHomePage> {
     if(filteredShooters.length == 0) {
       Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("Filters match 0 shooters!")));
       setState(() {
-        _scores = [];
+        _baseScores = [];
+        _searchedScores = [];
       });
       return;
     }
 
     setState(() {
-      _scores = _canonicalMatch.getScores(shooters: filteredShooters);
+      _baseScores = _canonicalMatch.getScores(shooters: filteredShooters);
+      _searchedScores = []..addAll(_baseScores);
     });
 
     _applySortMode(_sortMode);
@@ -422,25 +454,26 @@ class _MyHomePageState extends State<MyHomePage> {
   void _applySortMode(_SortMode s) {
     switch(s) {
       case _SortMode.score:
-        _scores.sortByScore(stage: _stage);
+        _baseScores.sortByScore(stage: _stage);
         break;
       case _SortMode.time:
-        _scores.sortByTime(stage: _stage);
+        _baseScores.sortByTime(stage: _stage);
         break;
       case _SortMode.alphas:
-        _scores.sortByAlphas(stage: _stage);
+        _baseScores.sortByAlphas(stage: _stage);
         break;
       case _SortMode.availablePoints:
-        _scores.sortByAvailablePoints(stage: _stage);
+        _baseScores.sortByAvailablePoints(stage: _stage);
         break;
       case _SortMode.lastName:
-        _scores.sortBySurname();
+        _baseScores.sortBySurname();
         break;
     }
 
     setState(() {
       _sortMode = s;
-      _scores = _scores;
+      _baseScores = _baseScores;
+      _searchedScores = []..addAll(_baseScores)..retainWhere(_applySearch);
     });
   }
 
@@ -529,14 +562,14 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Widget _buildMatchScoreRow(int i) {
-    var score = _scores[i];
+    var score = _searchedScores[i];
     return ScoreRow(
       color: i % 2 == 1 ? Colors.grey[200] : Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(2.0),
         child: Row(
           children: [
-            Expanded(flex: 1, child: Text("${i + 1}")),
+            Expanded(flex: 1, child: Text("${_baseScores.indexOf(score) + 1}")),
             Expanded(flex: 1, child: Text("${score.total.place}")),
             Expanded(flex: 3, child: Text(score.shooter.getName())),
             Expanded(flex: 1, child: Text(score.shooter.classification.displayString())),
@@ -593,8 +626,8 @@ class _MyHomePageState extends State<MyHomePage> {
   }
   Widget _buildStageScoreRow(int i, Stage stage) {
 
-    var matchScore = _scores[i];
-    var stageScore = _scores[i].stageScores[stage];
+    var matchScore = _searchedScores[i];
+    var stageScore = _searchedScores[i].stageScores[stage];
 
     return ScoreRow(
       color: i % 2 == 1 ? Colors.grey[200] : Colors.white,
@@ -602,7 +635,7 @@ class _MyHomePageState extends State<MyHomePage> {
         padding: const EdgeInsets.all(2.0),
         child: Row(
           children: [
-            Expanded(flex: 1, child: Text("${i + 1}")),
+            Expanded(flex: 1, child: Text("${_baseScores.indexOf(matchScore) + 1}")),
             Expanded(flex: 1, child: Text("${stageScore.place}")),
             Expanded(flex: 3, child: Text(matchScore.shooter.getName())),
             Expanded(flex: 1, child: Text(matchScore.shooter.classification.displayString())),
@@ -618,5 +651,11 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
       ),
     );
+  }
+
+  bool _applySearch(RelativeMatchScore element) {
+    if(element.shooter.firstName.toLowerCase().startsWith(_searchTerm)) return true;
+    if(element.shooter.lastName.toLowerCase().startsWith(_searchTerm)) return true;
+    return false;
   }
 }
