@@ -35,6 +35,14 @@ class FilterControls extends StatefulWidget {
 class _FilterControlsState extends State<FilterControls> {
   TextEditingController _searchController = TextEditingController();
 
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() {
+      widget.onSearchChanged(_searchController.text);
+    });
+  }
+
   List<DropdownMenuItem<SortMode>> _buildSortItems() {
     return [
       DropdownMenuItem<SortMode>(
@@ -82,9 +90,7 @@ class _FilterControlsState extends State<FilterControls> {
 
   @override
   Widget build(BuildContext context) {
-    _searchController.addListener(() {
-      widget.onSearchChanged(_searchController.text);
-    });
+    var size = MediaQuery.of(context).size;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
@@ -92,11 +98,15 @@ class _FilterControlsState extends State<FilterControls> {
         elevation: 3,
         child: Padding(
             padding: const EdgeInsets.all(8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Flexible(
-                  child: ConstrainedBox(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minWidth: size.width, maxWidth: size.width),
+              child: Wrap(
+                direction: Axis.horizontal,
+                alignment: WrapAlignment.center,
+                runAlignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  ConstrainedBox(
                     constraints: BoxConstraints(
                       maxWidth: 200,
                       minWidth: 50,
@@ -105,61 +115,64 @@ class _FilterControlsState extends State<FilterControls> {
                       controller: _searchController,
                       autofocus: false,
                       decoration: InputDecoration(
-                          hintText: "Quick search"
+                        hintText: "Quick search",
+                        suffixIcon: GestureDetector(
+                          child: Icon(Icons.help),
+                        )
                       ),
                     ),
                   ),
-                ),
-                SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("Sort by...", style: Theme.of(context).textTheme.caption),
-                    DropdownButton<SortMode>(
-                      underline: Container(
-                        height: 1,
-                        color: Colors.black,
+                  SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text("Sort by...", style: Theme.of(context).textTheme.caption),
+                      DropdownButton<SortMode>(
+                        underline: Container(
+                          height: 1,
+                          color: Colors.black,
+                        ),
+                        items: _buildSortItems(),
+                        onChanged: (SortMode s) {
+                          widget.onSortModeChanged(s);
+                        },
+                        value: widget.sortMode,
                       ),
-                      items: _buildSortItems(),
-                      onChanged: (SortMode s) {
-                        widget.onSortModeChanged(s);
-                      },
-                      value: widget.sortMode,
-                    ),
-                  ],
-                ),
-                SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("Results for...", style: Theme.of(context).textTheme.caption),
-                    DropdownButton<Stage>(
-                      underline: Container(
-                        height: 1,
-                        color: Colors.black,
+                    ],
+                  ),
+                  SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text("Results for...", style: Theme.of(context).textTheme.caption),
+                      DropdownButton<Stage>(
+                        underline: Container(
+                          height: 1,
+                          color: Colors.black,
+                        ),
+                        items: _buildStageMenuItems(),
+                        onChanged: (Stage s) {
+                          widget.onStageChanged(s);
+                        },
+                        value: widget.currentStage,
                       ),
-                      items: _buildStageMenuItems(),
-                      onChanged: (Stage s) {
-                        widget.onStageChanged(s);
-                      },
-                      value: widget.currentStage,
-                    ),
-                  ],
-                ),
-                SizedBox(width: 10),
-                FlatButton(
-                  child: Text("FILTERS"),
-                  onPressed: () async {
-                    var filters = await showDialog<FilterSet>(context: context, builder: (context) {
-                      return FilterDialog(currentFilters: this.widget.filters,);
-                    });
+                    ],
+                  ),
+                  SizedBox(width: 10),
+                  FlatButton(
+                    child: Text("FILTERS"),
+                    onPressed: () async {
+                      var filters = await showDialog<FilterSet>(context: context, builder: (context) {
+                        return FilterDialog(currentFilters: this.widget.filters,);
+                      });
 
-                    if(filters != null) {
-                      widget.onFiltersChanged(filters);
-                    }
-                  },
-                ),
-              ],
+                      if(filters != null) {
+                        widget.onFiltersChanged(filters);
+                      }
+                    },
+                  ),
+                ],
+              ),
             )
         ),
       ),
