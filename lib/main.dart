@@ -408,13 +408,14 @@ class _MyHomePageState extends State<MyHomePage> {
               },
             ),
           ),
+        ]..add(
           IconButton(
             icon: Icon(Icons.help),
             onPressed: () {
               _showAbout(size);
             },
-          )
-        ]),
+          ))
+        ),
         bottom: _operationInProgress ? PreferredSize(
           preferredSize: Size(double.infinity, 5),
           child: LinearProgressIndicator(value: null, backgroundColor: primaryColor, valueColor: animation),
