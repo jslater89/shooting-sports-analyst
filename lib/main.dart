@@ -1,5 +1,6 @@
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html';
+import 'dart:isolate';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -250,12 +251,12 @@ class _MyHomePageState extends State<MyHomePage> {
     else {
       InputElement uploadInput = FileUploadInputElement();
       uploadInput.click();
-
-      setState(() {
-        _operationInProgress = true;
-      });
-
       uploadInput.onChange.listen((e) {
+
+        setState(() {
+          _operationInProgress = true;
+        });
+
         // read file content as dataURL
         final files = uploadInput.files;
         if (files.length == 1) {
@@ -312,17 +313,17 @@ class _MyHomePageState extends State<MyHomePage> {
       else if (l.startsWith("I ")) stageScoreLines.add(l);
     }
 
-    _canonicalMatch = processResultLines(
+    PracticalMatch canonicalMatch = processResultLines(
       infoLines: infoLines,
       competitorLines: competitorLines,
       stageLines: stageLines,
       stageScoreLines: stageScoreLines,
     );
 
-    var scores = _canonicalMatch.getScores();
+    var scores = canonicalMatch.getScores();
 
     setState(() {
-      _canonicalMatch = _canonicalMatch;
+      _canonicalMatch = canonicalMatch;
       _baseScores = scores;
       _searchedScores = []..addAll(_baseScores);
     });
