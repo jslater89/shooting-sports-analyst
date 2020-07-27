@@ -50601,7 +50601,8 @@ s=r?j:s.a
 s=L.H(s==null?"Match Results Viewer":s,j,j,j,j,j,j)
 r=r||k.d!=null
 q=t.t
-r=r?H.b([],q):H.b([S.nM(B.qB(j,L.qA(C.pW,j,j),new F.YH(k),j),"Upload a new match file from your device, replacing the current data."),S.nM(B.qB(j,L.qA(C.pV,j,j),new F.YI(k),j),"Download a new match file from PractiScore, replacing the current data."),B.qB(j,L.qA(C.xT,j,j),new F.YJ(k,h),j)],q)
+r=r?H.b([],q):H.b([S.nM(B.qB(j,L.qA(C.pW,j,j),new F.YH(k),j),"Upload a new match file from your device, replacing the current data."),S.nM(B.qB(j,L.qA(C.pV,j,j),new F.YI(k),j),"Download a new match file from PractiScore, replacing the current data.")],q)
+r.push(B.qB(j,L.qA(C.xT,j,j),new F.YJ(k,h),j))
 q=k.x?new Q.BQ(new U.qZ(j,n,l,j,j,j),new P.X(1/0,5),j):j
 p=q==null?j:q.d
 p=p==null?j:p.b
