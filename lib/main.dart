@@ -283,6 +283,11 @@ class _MyHomePageState extends State<MyHomePage> {
 
           reader.readAsArrayBuffer(file);
         }
+        else {
+          setState(() {
+            _operationInProgress = false;
+          });
+        }
       });
     }
   }
