@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/ui/score_row.dart';
+import 'package:uspsa_result_viewer/ui/shooter_card.dart';
 
 class ScoreList extends StatelessWidget {
   final PracticalMatch match;
@@ -41,8 +42,8 @@ class ScoreList extends StatelessWidget {
             Expanded(child: ListView.builder(
                 itemCount: (filteredScores?.length ?? 0),
                 itemBuilder: (ctx, i) {
-                  if(stage == null) return _buildMatchScoreRow(i);
-                  else return _buildStageScoreRow(i, stage);
+                  if(stage == null) return _buildMatchScoreRow(index: i, context: context);
+                  else return _buildStageScoreRow(context, i, stage);
                 }
             )),
           ],
@@ -91,26 +92,33 @@ class ScoreList extends StatelessWidget {
     );
   }
 
-  Widget _buildMatchScoreRow(int i) {
-    var score = filteredScores[i];
-    return ScoreRow(
-      color: i % 2 == 1 ? Colors.grey[200] : Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(2.0),
-        child: Row(
-          children: [
-            Expanded(flex: 1, child: Text("${baseScores.indexOf(score) + 1}")),
-            Expanded(flex: 1, child: Text("${score.total.place}")),
-            Expanded(flex: 3, child: Text(score.shooter.getName())),
-            Expanded(flex: 1, child: Text(score.shooter.classification.displayString())),
-            Expanded(flex: 3, child: Text(score.shooter.division.displayString())),
-            Expanded(flex: 1, child: Text(score.shooter.powerFactor.shortString())),
-            Expanded(flex: 2, child: Text((score.total.percent * 100).toStringAsFixed(2))),
-            Expanded(flex: 2, child: Text(score.total.relativePoints.toStringAsFixed(2))),
-            Expanded(flex: 2, child: Text(score.total.score.time.toStringAsFixed(2))),
-            Expanded(flex: 3, child: Text("${score.total.score.totalPoints} (${(score.percentTotalPoints * 100).toStringAsFixed(2)}%)")),
-            Expanded(flex: 5, child: Text("${score.total.score.a}A ${score.total.score.c}C ${score.total.score.d}D ${score.total.score.m}M ${score.total.score.ns}NS ${score.total.score.penaltyCount}P")),
-          ],
+  Widget _buildMatchScoreRow({BuildContext context, int index}) {
+    var score = filteredScores[index];
+    return GestureDetector(
+      onTap: () {
+        showDialog(context: context, builder: (context) {
+          return ShooterResultCard(matchScore: score,);
+        });
+      },
+      child: ScoreRow(
+        color: index % 2 == 1 ? Colors.grey[200] : Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(2.0),
+          child: Row(
+            children: [
+              Expanded(flex: 1, child: Text("${baseScores.indexOf(score) + 1}")),
+              Expanded(flex: 1, child: Text("${score.total.place}")),
+              Expanded(flex: 3, child: Text(score.shooter.getName())),
+              Expanded(flex: 1, child: Text(score.shooter.classification.displayString())),
+              Expanded(flex: 3, child: Text(score.shooter.division.displayString())),
+              Expanded(flex: 1, child: Text(score.shooter.powerFactor.shortString())),
+              Expanded(flex: 2, child: Text((score.total.percent * 100).toStringAsFixed(2))),
+              Expanded(flex: 2, child: Text(score.total.relativePoints.toStringAsFixed(2))),
+              Expanded(flex: 2, child: Text(score.total.score.time.toStringAsFixed(2))),
+              Expanded(flex: 3, child: Text("${score.total.score.totalPoints} (${(score.percentTotalPoints * 100).toStringAsFixed(2)}%)")),
+              Expanded(flex: 5, child: Text("${score.total.score.a}A ${score.total.score.c}C ${score.total.score.d}D ${score.total.score.m}M ${score.total.score.ns}NS ${score.total.score.penaltyCount}P")),
+            ],
+          ),
         ),
       ),
     );
@@ -154,30 +162,37 @@ class ScoreList extends StatelessWidget {
       ),
     );
   }
-  Widget _buildStageScoreRow(int i, Stage stage) {
+  Widget _buildStageScoreRow(BuildContext context, int i, Stage stage) {
 
     var matchScore = filteredScores[i];
     var stageScore = filteredScores[i].stageScores[stage];
 
-    return ScoreRow(
-      color: i % 2 == 1 ? Colors.grey[200] : Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(2.0),
-        child: Row(
-          children: [
-            Expanded(flex: 1, child: Text("${baseScores.indexOf(matchScore) + 1}")),
-            Expanded(flex: 1, child: Text("${stageScore.place}")),
-            Expanded(flex: 3, child: Text(matchScore.shooter.getName())),
-            Expanded(flex: 1, child: Text(matchScore.shooter.classification.displayString())),
-            Expanded(flex: 3, child: Text(matchScore.shooter.division.displayString())),
-            Expanded(flex: 1, child: Text(matchScore.shooter.powerFactor.shortString())),
-            Expanded(flex: 3, child: Text("${stageScore.score.totalPoints} (${(stageScore.score.percentTotalPoints * 100).toStringAsFixed(1)}%)")),
-            Expanded(flex: 2, child: Text(stageScore.score.time.toStringAsFixed(2))),
-            Expanded(flex: 2, child: Text(stageScore.score.hitFactor.toStringAsFixed(4))),
-            Expanded(flex: 2, child: Text((stageScore.percent * 100).toStringAsFixed(2))),
-            Expanded(flex: 2, child: Text(stageScore.relativePoints.toStringAsFixed(2))),
-            Expanded(flex: 4, child: Text("${stageScore.score.a}A ${stageScore.score.c}C ${stageScore.score.d}D ${stageScore.score.m}M ${stageScore.score.ns}NS ${stageScore.score.penaltyCount}P")),
-          ],
+    return GestureDetector(
+      onTap: () {
+        showDialog(context: context, builder: (context) {
+          return ShooterResultCard(stageScore: stageScore,);
+        });
+      },
+      child: ScoreRow(
+        color: i % 2 == 1 ? Colors.grey[200] : Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(2.0),
+          child: Row(
+            children: [
+              Expanded(flex: 1, child: Text("${baseScores.indexOf(matchScore) + 1}")),
+              Expanded(flex: 1, child: Text("${stageScore.place}")),
+              Expanded(flex: 3, child: Text(matchScore.shooter.getName())),
+              Expanded(flex: 1, child: Text(matchScore.shooter.classification.displayString())),
+              Expanded(flex: 3, child: Text(matchScore.shooter.division.displayString())),
+              Expanded(flex: 1, child: Text(matchScore.shooter.powerFactor.shortString())),
+              Expanded(flex: 3, child: Text("${stageScore.score.totalPoints} (${(stageScore.score.percentTotalPoints * 100).toStringAsFixed(1)}%)")),
+              Expanded(flex: 2, child: Text(stageScore.score.time.toStringAsFixed(2))),
+              Expanded(flex: 2, child: Text(stageScore.score.hitFactor.toStringAsFixed(4))),
+              Expanded(flex: 2, child: Text((stageScore.percent * 100).toStringAsFixed(2))),
+              Expanded(flex: 2, child: Text(stageScore.relativePoints.toStringAsFixed(2))),
+              Expanded(flex: 4, child: Text("${stageScore.score.a}A ${stageScore.score.c}C ${stageScore.score.d}D ${stageScore.score.m}M ${stageScore.score.ns}NS ${stageScore.score.penaltyCount}P")),
+            ],
+          ),
         ),
       ),
     );

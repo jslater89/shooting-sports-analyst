@@ -1,6 +1,7 @@
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html';
-import 'dart:math';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 
@@ -54,7 +55,7 @@ class _MyHomePageState extends State<MyHomePage> {
     if(resultsFileUrl != null) {
       debugPrint("getting preset results file $resultsFileUrl");
       _iframeResultsUrl = resultsFileUrl;
-      _getFile();
+      _loadFile();
     }
   }
 
@@ -63,6 +64,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   BuildContext _innerContext;
   PracticalMatch _canonicalMatch;
+
+  bool _operationInProgress = false;
 
   FilterSet _filters = FilterSet();
   List<RelativeMatchScore> _baseScores = [];
@@ -75,11 +78,127 @@ class _MyHomePageState extends State<MyHomePage> {
     return _iframeResultsUrl == null;
   }
 
-  void _getFile() async {
+  Future<void> _downloadFile() async {
+    var matchUrl = await showDialog<String>(context: context, builder: (context) {
+      var controller = TextEditingController();
+      return AlertDialog(
+        title: Text("Enter PractiScore match URL"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text("Copy the URL to the match's PractiScore results page and paste it in the field below.\n\nProcessing may take several seconds.", softWrap: true,),
+            TextField(
+              controller: controller,
+              decoration: InputDecoration(
+                hintText: "https://practiscore.com/results/new/...",
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          FlatButton(
+            child: Text("CANCEL"),
+            onPressed: () {
+              Navigator.of(context).pop();
+            }
+          ),
+          FlatButton(
+            child: Text("OK"),
+            onPressed: () {
+              Navigator.of(context).pop(controller.text);
+            }
+          ),
+        ],
+      );
+    });
+
+    var matchUrlParts = matchUrl.split("/");
+    var matchId = matchUrlParts.last;
+
+    var reportUrl = "";
+    if(kDebugMode) {
+      reportUrl = "https://cors-anywhere.herokuapp.com/https://practiscore.com/reports/web/$matchId";
+    }
+    else {
+      reportUrl = "https://still-harbor-88681.herokuapp.com/https://practiscore.com/reports/web/$matchId";
+    }
+
+    debugPrint("Report download URL: $reportUrl");
+
+    var responseString = "";
+    try {
+      var response = await http.get(reportUrl);
+      if(response.statusCode < 400) {
+        responseString = response.body;
+        if (responseString.startsWith("\$")) {
+          await _processScoreFile(responseString);
+          return;
+        }
+      }
+      if(response.statusCode == 404) {
+        Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("No match record exists at given URL.")));
+        return;
+      }
+
+      debugPrint("response: ${response.body}");
+    }
+    catch(err) {
+      debugPrint("download error: $err ${err.runtimeType}");
+      if(err is ProgressEvent) {
+        ProgressEvent pe = err;
+        debugPrint(pe.type);
+      }
+      if(err is http.ClientException) {
+        http.ClientException ce = err;
+        debugPrint("${ce.uri} ${ce.message}");
+      }
+      Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("Failed to download match report.")));
+      return;
+    }
+
+    // If we've gotten this far, we probably have a match without a club name set.
+    // Try a POST.
+
+    try {
+      var tokenLine = responseString.split("\n").firstWhere((element) => element.startsWith('<meta name="csrf-token"'));
+      var token = tokenLine.split('"')[3];
+      debugPrint("Token: $token");
+      var body = {
+        '_token': token,
+        'ClubName': 'None',
+        'matchId': matchId,
+      };
+      var response = await http.post(reportUrl, body: body);
+      if(response.statusCode < 400) {
+        var responseString = response.body;
+        if (responseString.startsWith("\$")) {
+          await _processScoreFile(responseString);
+          return;
+        }
+      }
+
+      debugPrint("Didn't work: ${response.statusCode} ${response.body}");
+    }
+    catch(err) {
+      debugPrint("download error pt. 2: $err ${err.runtimeType}");
+    }
+
+    Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("Error downloading match file.")));
+  }
+
+  Future<void> _loadFile() async {
     if(_iframeResultsUrl != null) {
       try {
-        var resultsString = await HttpRequest.getString(_iframeResultsUrl);
-        _processScoreFile(resultsString);
+        var response = await http.get(_iframeResultsUrl);
+        if(response.statusCode < 400) {
+          var responseString = response.body;
+          if (responseString.startsWith("\$")) {
+            await _processScoreFile(responseString);
+            return;
+          }
+        }
+
+        debugPrint("response: $response");
       } catch(err) {
         setState(() {
           _iframeResultsErr = err.toString();
@@ -90,6 +209,10 @@ class _MyHomePageState extends State<MyHomePage> {
       InputElement uploadInput = FileUploadInputElement();
       uploadInput.click();
 
+      setState(() {
+        _operationInProgress = true;
+      });
+
       uploadInput.onChange.listen((e) {
         // read file content as dataURL
         final files = uploadInput.files;
@@ -97,15 +220,23 @@ class _MyHomePageState extends State<MyHomePage> {
           final file = files[0];
           FileReader reader = FileReader();
 
-          reader.onLoadEnd.listen((event) {
+          reader.onLoadEnd.listen((event) async {
             //String reportFile = AsciiCodec().decode(reader.result);
             //String reportFile = String.fromCharCodes(reader.result);
             String reportFile = Utf8Codec().decode(reader.result);
-            _processScoreFile(reportFile);
+            await _processScoreFile(reportFile);
+
+            setState(() {
+              _operationInProgress = false;
+            });
           });
 
           reader.onError.listen((fileEvent) {
             Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("File read error")));
+
+            setState(() {
+              _operationInProgress = false;
+            });
           });
 
           reader.readAsArrayBuffer(file);
@@ -114,7 +245,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  void _processScoreFile(String fileContents) {
+  Future<void> _processScoreFile(String fileContents) async {
     String reportFile = fileContents.replaceAll("\r\n", "\n");
     List<String> lines = reportFile.split("\n");
 
@@ -175,24 +306,54 @@ class _MyHomePageState extends State<MyHomePage> {
 
     Widget listWidget;
     if(_canonicalMatch == null && _shouldShowUploadControls()) {
-      listWidget = GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: _getFile,
-        child: SizedBox(
-          height: size.height,
-          width: size.width,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(height: 150),
-              Icon(Icons.cloud_upload, size: 230, color: Colors.grey,),
-              Text("Click to upload a report.txt file from PractiScore", style: Theme
-                  .of(context)
-                  .textTheme
-                  .subtitle1
-                  .apply(color: Colors.grey)),
-            ],
-          ),
+      listWidget = SizedBox(
+        height: size.height,
+        width: size.width,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            GestureDetector(
+              onTap: () async {
+                await _loadFile();
+              },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(height: 150),
+                  Icon(Icons.cloud_upload, size: 230, color: Colors.grey,),
+                  Text("Click to upload a report.txt file from your device", style: Theme
+                      .of(context)
+                      .textTheme
+                      .subtitle1
+                      .apply(color: Colors.grey)),
+                ],
+              ),
+            ),
+            GestureDetector(
+              onTap: () async {
+                setState(() {
+                  _operationInProgress = true;
+                });
+                await _downloadFile();
+                setState(() {
+                  _operationInProgress = false;
+                });
+              },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(height: 150),
+                  Icon(Icons.cloud_download, size: 230, color: Colors.grey,),
+                  Text("Click to download a report.txt file from PractiScore", style: Theme
+                      .of(context)
+                      .textTheme
+                      .subtitle1
+                      .apply(color: Colors.grey)),
+                ],
+              ),
+            ),
+          ],
         ),
       );
     }
@@ -209,28 +370,55 @@ class _MyHomePageState extends State<MyHomePage> {
       );
     }
 
+    final primaryColor = Theme.of(context).primaryColor;
+    final backgroundColor = Theme.of(context).backgroundColor;
+
+    if(_operationInProgress) debugPrint("Operation in progress");
+
+    var animation = (_operationInProgress) ?
+    AlwaysStoppedAnimation<Color>(backgroundColor) : AlwaysStoppedAnimation<Color>(primaryColor);
+
+
     return Scaffold(
       appBar: AppBar(
         title: Text(_canonicalMatch?.name ?? "Match Results Viewer"),
         centerTitle: true,
         actions: (_canonicalMatch == null || !_shouldShowUploadControls() ? [] : [
           Tooltip(
-            message: "Upload a new match file, replacing the current data.",
+            message: "Upload a new match file from your device, replacing the current data.",
             child: IconButton(
               icon: Icon(Icons.cloud_upload),
-              onPressed: () {
-                _getFile();
+              onPressed: () async {
+                await _loadFile();
               },
             ),
-          )
-        ])..add(
+          ),
+          Tooltip(
+            message: "Download a new match file from PractiScore, replacing the current data.",
+            child: IconButton(
+              icon: Icon(Icons.cloud_download),
+              onPressed: () async {
+                setState(() {
+                  _operationInProgress = true;
+                });
+                await _downloadFile();
+                setState(() {
+                  _operationInProgress = false;
+                });
+              },
+            ),
+          ),
           IconButton(
             icon: Icon(Icons.help),
             onPressed: () {
               _showAbout(size);
             },
           )
-        ),
+        ]),
+        bottom: _operationInProgress ? PreferredSize(
+          preferredSize: Size(double.infinity, 5),
+          child: LinearProgressIndicator(value: null, backgroundColor: primaryColor, valueColor: animation),
+        ) : null,
       ),
       body: Builder(
         builder: (context) {
@@ -368,3 +556,4 @@ class _MyHomePageState extends State<MyHomePage> {
     return false;
   }
 }
+

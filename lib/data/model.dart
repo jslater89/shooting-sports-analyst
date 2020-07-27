@@ -251,6 +251,8 @@ class Score {
   }
 
   int get rawPoints {
+    if(stage?.type == Scoring.chrono) return 0;
+
     int aValue = 5;
     int bValue = shooter.powerFactor == PowerFactor.major ? 4 : 3;
     int cValue = bValue;
@@ -268,6 +270,7 @@ enum Scoring {
   comstock,
   virginia,
   fixedTime,
+  chrono,
   unknown,
 }
 
@@ -278,6 +281,7 @@ extension ScoringFrom on Scoring {
       case "comstock": return Scoring.comstock;
       case "virginia": return Scoring.virginia;
       case "fixed": return Scoring.fixedTime;
+      case "chrono": return Scoring.chrono;
       default: {
         debugPrint("Unknown scoring: $s");
         return Scoring.unknown;
@@ -524,5 +528,11 @@ extension Sorting on List<RelativeMatchScore> {
     this.sort((a, b) {
       return a.shooter.lastName.compareTo(b.shooter.lastName);
     });
+  }
+}
+
+extension AsPercentage on double {
+  String asPercentage({int decimals = 2}) {
+    return (this * 100).toStringAsFixed(2);
   }
 }
