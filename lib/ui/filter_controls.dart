@@ -116,9 +116,9 @@ class _FilterControlsState extends State<FilterControls> {
                       autofocus: false,
                       decoration: InputDecoration(
                         hintText: "Quick search",
-                        suffixIcon: GestureDetector(
-                          child: Icon(Icons.help),
-                        )
+//                        suffixIcon: GestureDetector(
+//                          child: Icon(Icons.help),
+//                        )
                       ),
                     ),
                   ),
