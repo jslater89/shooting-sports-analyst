@@ -10166,12 +10166,12 @@ return C.AW}},
 ab3:function(a){a=J.p4(a).toLowerCase()
 switch(a){case"pcc":return C.hF
 case"open":return C.hG
-case"limited":return C.hH
-case"carry optics":return C.hI
-case"limited 10":return C.hJ
-case"production":return C.hK
-case"single stack":return C.hL
-case"revolver":return C.hM
+case"ltd":case"limited":return C.hH
+case"co":case"carry optics":return C.hI
+case"l10":case"ltd10":case"limited 10":return C.hJ
+case"prod":case"production":return C.hK
+case"ss":case"single stack":return C.hL
+case"revo":case"revolver":return C.hM
 default:D.b6().$1("Unknown division: "+a)
 return C.pJ}},
 L7:function(a){switch(a){case C.hF:return"PCC"
@@ -50821,7 +50821,7 @@ F.YA.prototype={
 $1:function(a){var s=null,r=L.H("About",s,s,s,s,s,s),q=Q.fi(s,s,K.U(a,!1).y2.y,"A Flutter web app for displaying USPSA scores. You can also embed this widget into your match website, automatically loading your results file from a provided Internet address.\n\nVisit the repository at "),p=K.U(a,!1).y2.y.ue(K.U(a,!1).I.a),o=t.e
 o=new N.dy(C.an,18,C.b2,P.r(o,t.v),P.aV(o),s,s,P.r(o,t.B))
 o.b0=new F.Yz()
-return E.a1A(s,new T.aS(this.a.a*0.5,s,T.a2C(!1,s,s,C.b5,!0,s,Q.fi(H.b([q,Q.fi(s,o,p,u.n),Q.fi(s,s,K.U(a,!1).y2.y," for more information.\n\nuspsa_result_viewer v1.1.2\n\xa9 Jay Slater 2020\nGPL 3.0")],t.B2),s,s,s),C.b_,s,s,1,C.ak),s),r)}}
+return E.a1A(s,new T.aS(this.a.a*0.5,s,T.a2C(!1,s,s,C.b5,!0,s,Q.fi(H.b([q,Q.fi(s,o,p,u.n),Q.fi(s,s,K.U(a,!1).y2.y," for more information.\n\nuspsa_result_viewer v1.1.3\n\xa9 Jay Slater 2020\nGPL 3.0")],t.B2),s,s,s),C.b_,s,s,1,C.ak),s),r)}}
 F.Yz.prototype={
 $0:function(){var s=0,r=P.ac(t.P)
 var $async$$0=P.a6(function(a,b){if(a===1)return P.a9(b,r)
