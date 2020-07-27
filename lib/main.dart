@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 import 'package:uspsa_result_viewer/data/sort_mode.dart';
 import 'package:uspsa_result_viewer/ui/filter_controls.dart';
@@ -79,6 +80,14 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> _downloadFile() async {
+    var proxyUrl;
+    if(kDebugMode) {
+      proxyUrl = "https://cors-anywhere.herokuapp.com/";
+    }
+    else {
+      proxyUrl = "https://still-harbor-88681.herokuapp.com/";
+    }
+
     var matchUrl = await showDialog<String>(context: context, builder: (context) {
       var controller = TextEditingController();
       return AlertDialog(
@@ -86,10 +95,7 @@ class _MyHomePageState extends State<MyHomePage> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text("Copy the URL to the match's PractiScore results page and paste it in the field below."
-                "The URL must have the long ID (32 alphanumeric characters, separated by dashes), not the"
-                "short 6-digit ID. Match URLs with the long ID can be found on your PractiScore profile page.\n\n"
-                "Processing may take several seconds.",
+            Text("Copy the URL to the match's PractiScore results page and paste it in the field below.",
               softWrap: true,),
             TextField(
               controller: controller,
@@ -116,15 +122,47 @@ class _MyHomePageState extends State<MyHomePage> {
       );
     });
 
+    if(matchUrl == null) {
+      return;
+    }
+
     var matchUrlParts = matchUrl.split("/");
     var matchId = matchUrlParts.last;
+    
+    // It's probably a short ID
+    if(!matchId.contains(r"-")) {
+      try {
+        debugPrint("Trying to get match from URL: $matchUrl");
+        var response = await http.get("$proxyUrl$matchUrl");
+        if(response.statusCode == 404) {
+          Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("Match not found.")));
+        }
+        else if(response.statusCode == 200) {
+          var foundUrl = getPractiscoreWebReportUrl(response.body);
+          if(foundUrl != null) {
+            matchId = foundUrl.split("/").last;
+          }
+          else {
+            Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("Unable to determine web report URL.")));
+          }
+        }
+        else {
+          debugPrint("${response.statusCode} ${response.body}");
+          Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("Unable to download match file.")));
+        }
+      }
+      catch(err) {
+        debugPrint("$err");
+        Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("Unable to download match file.")));
+      }
+    }
 
     var reportUrl = "";
     if(kDebugMode) {
-      reportUrl = "https://cors-anywhere.herokuapp.com/https://practiscore.com/reports/web/$matchId";
+      reportUrl = "${proxyUrl}https://practiscore.com/reports/web/$matchId";
     }
     else {
-      reportUrl = "https://still-harbor-88681.herokuapp.com/https://practiscore.com/reports/web/$matchId";
+      reportUrl = "${proxyUrl}https://practiscore.com/reports/web/$matchId";
     }
 
     debugPrint("Report download URL: $reportUrl");
@@ -144,7 +182,7 @@ class _MyHomePageState extends State<MyHomePage> {
         return;
       }
 
-      debugPrint("response: ${response.body}");
+      debugPrint("response: ${response.body.split("\n").first}");
     }
     catch(err) {
       debugPrint("download error: $err ${err.runtimeType}");
@@ -164,12 +202,12 @@ class _MyHomePageState extends State<MyHomePage> {
     // Try a POST.
 
     try {
-      var tokenLine = responseString.split("\n").firstWhere((element) => element.startsWith('<meta name="csrf-token"'));
-      var token = tokenLine.split('"')[3];
+      var token = getClubNameToken(responseString);
       debugPrint("Token: $token");
       var body = {
         '_token': token,
         'ClubName': 'None',
+        'ClubCode': 'None',
         'matchId': matchId,
       };
       var response = await http.post(reportUrl, body: body);
