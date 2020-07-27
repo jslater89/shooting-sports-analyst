@@ -50651,7 +50651,7 @@ if(C.c.bz(s.toLowerCase(),r))return!0
 if(C.c.bz(a.a.b.toLowerCase(),r))return!0
 return!1}}
 F.Yp.prototype={
-$1:function(a){var s=null,r=D.a67(),q=L.H("Enter PractiScore match URL",s,s,s,s,s,s),p=t.t,o=T.d3(H.b([L.H("Copy the URL to the match's PractiScore results page and paste it in the field below.\n\nProcessing may take several seconds.",s,s,s,!0,s,s),Z.a69(!1,r,L.a2_(s,s,s,s,s,s,s,!0,s,s,s,s,s,s,s,C.jy,s,s,s,!0,s,s,s,s,s,"https://practiscore.com/results/new/...",s,s,!1,s,s,s,s,s,s,s,s,s,s,s,s,s,s))],p),C.F,C.N,C.a7)
+$1:function(a){var s=null,r=D.a67(),q=L.H("Enter PractiScore match URL",s,s,s,s,s,s),p=t.t,o=T.d3(H.b([L.H("Copy the URL to the match's PractiScore results page and paste it in the field below.The URL must have the long ID (32 alphanumeric characters, separated by dashes), not theshort 6-digit ID. Match URLs with the long ID can be found on your PractiScore profile page.\n\nProcessing may take several seconds.",s,s,s,!0,s,s),Z.a69(!1,r,L.a2_(s,s,s,s,s,s,s,!0,s,s,s,s,s,s,s,C.jy,s,s,s,!0,s,s,s,s,s,"https://practiscore.com/results/new/...",s,s,!1,s,s,s,s,s,s,s,s,s,s,s,s,s,s))],p),C.F,C.N,C.a7)
 return E.a1v(H.b([N.mc(L.H("CANCEL",s,s,s,s,s,s),new F.Yn(a),s,s),N.mc(L.H("OK",s,s,s,s,s,s),new F.Yo(a,r),s,s)],p),o,q)}}
 F.Yn.prototype={
 $0:function(){K.hA(this.a,!1).dU()},

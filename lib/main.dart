@@ -86,7 +86,11 @@ class _MyHomePageState extends State<MyHomePage> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text("Copy the URL to the match's PractiScore results page and paste it in the field below.\n\nProcessing may take several seconds.", softWrap: true,),
+            Text("Copy the URL to the match's PractiScore results page and paste it in the field below."
+                "The URL must have the long ID (32 alphanumeric characters, separated by dashes), not the"
+                "short 6-digit ID. Match URLs with the long ID can be found on your PractiScore profile page.\n\n"
+                "Processing may take several seconds.",
+              softWrap: true,),
             TextField(
               controller: controller,
               decoration: InputDecoration(
