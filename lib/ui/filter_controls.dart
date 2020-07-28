@@ -8,6 +8,8 @@ class FilterControls extends StatefulWidget {
   final List<Stage> stages;
   final Stage currentStage;
   final FilterSet filters;
+
+  final FocusNode returnFocus;
   
   final Function(SortMode) onSortModeChanged;
   final Function(Stage) onStageChanged;
@@ -22,10 +24,11 @@ class FilterControls extends StatefulWidget {
       @required this.currentStage,
       @required this.stages,
       @required this.filters,
+      @required this.returnFocus,
       @required this.onSortModeChanged,
       @required this.onStageChanged,
       @required this.onFiltersChanged,
-      @required this.onSearchChanged
+      @required this.onSearchChanged,
     }) : super(key: key);
 
   @override
@@ -41,6 +44,11 @@ class _FilterControlsState extends State<FilterControls> {
     _searchController.addListener(() {
       widget.onSearchChanged(_searchController.text);
     });
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   List<DropdownMenuItem<SortMode>> _buildSortItems() {
@@ -120,6 +128,9 @@ class _FilterControlsState extends State<FilterControls> {
 //                          child: Icon(Icons.help),
 //                        )
                       ),
+                      onSubmitted: (_t) {
+                        widget.returnFocus.requestFocus();
+                      },
                     ),
                   ),
                   SizedBox(width: 10),

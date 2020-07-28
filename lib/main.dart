@@ -1,6 +1,8 @@
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -53,6 +55,8 @@ class _MyHomePageState extends State<MyHomePage> {
     debugPrint("iframe params? $params");
     final String resultsFileUrl = params['resultsFile'];
 
+    _appFocus = FocusNode();
+
     if(resultsFileUrl != null) {
       debugPrint("getting preset results file $resultsFileUrl");
       _iframeResultsUrl = resultsFileUrl;
@@ -60,8 +64,19 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  @override
+  void dispose() {
+    super.dispose();
+
+    _appFocus.dispose();
+  }
+
   String _iframeResultsUrl;
   String _iframeResultsErr;
+
+  FocusNode _appFocus;
+  ScrollController _verticalScrollController = ScrollController();
+  ScrollController _horizontalScrollController = ScrollController();
 
   BuildContext _innerContext;
   PracticalMatch _canonicalMatch;
@@ -344,6 +359,7 @@ class _MyHomePageState extends State<MyHomePage> {
         stages: _canonicalMatch.stages,
         currentStage: _stage,
         sortMode: _sortMode,
+        returnFocus: _appFocus,
         onFiltersChanged: _applyFilters,
         onSortModeChanged: _applySortMode,
         onStageChanged: _applyStage,
@@ -413,6 +429,8 @@ class _MyHomePageState extends State<MyHomePage> {
         filteredScores: _searchedScores,
         match: _canonicalMatch,
         stage: _stage,
+        verticalScrollController: _verticalScrollController,
+        horizontalScrollController: _horizontalScrollController,
         minWidth: _MIN_WIDTH,
       );
     }
@@ -425,65 +443,120 @@ class _MyHomePageState extends State<MyHomePage> {
     var animation = (_operationInProgress) ?
     AlwaysStoppedAnimation<Color>(backgroundColor) : AlwaysStoppedAnimation<Color>(primaryColor);
 
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_canonicalMatch?.name ?? "Match Results Viewer"),
-        centerTitle: true,
-        actions: (_canonicalMatch == null || !_shouldShowUploadControls() ? [] : [
-          Tooltip(
-            message: "Upload a new match file from your device, replacing the current data.",
-            child: IconButton(
-              icon: Icon(Icons.cloud_upload),
-              onPressed: () async {
-                await _loadFile();
-              },
-            ),
-          ),
-          Tooltip(
-            message: "Download a new match file from PractiScore, replacing the current data.",
-            child: IconButton(
-              icon: Icon(Icons.cloud_download),
-              onPressed: () async {
-                setState(() {
-                  _operationInProgress = true;
-                });
-                await _downloadFile();
-                setState(() {
-                  _operationInProgress = false;
-                });
-              },
-            ),
-          ),
-        ]..add(
-          IconButton(
-            icon: Icon(Icons.help),
-            onPressed: () {
-              _showAbout(size);
-            },
-          ))
-        ),
-        bottom: _operationInProgress ? PreferredSize(
-          preferredSize: Size(double.infinity, 5),
-          child: LinearProgressIndicator(value: null, backgroundColor: primaryColor, valueColor: animation),
-        ) : null,
-      ),
-      body: Builder(
-        builder: (context) {
-          _innerContext = context;
-          return Column(
-            children: [
-              sortWidget,
-              Expanded(
-                child: Center(
-                  child: listWidget,
+    return RawKeyboardListener(
+      onKey: (RawKeyEvent e) {
+        if(e is RawKeyDownEvent) {
+          if (_appFocus.hasPrimaryFocus) {
+            // n.b.: 40 logical pixels is two rows
+            if(e.logicalKey == LogicalKeyboardKey.arrowLeft) {
+              _adjustScroll(_horizontalScrollController, amount: -40);
+            }
+            else if(e.logicalKey == LogicalKeyboardKey.arrowRight) {
+              _adjustScroll(_horizontalScrollController, amount: 40);
+            }
+            else if(e.logicalKey == LogicalKeyboardKey.arrowUp) {
+              _adjustScroll(_verticalScrollController, amount: -20);
+            }
+            else if(e.logicalKey == LogicalKeyboardKey.arrowDown) {
+              _adjustScroll(_verticalScrollController, amount: 20);
+            }
+            else if(e.logicalKey == LogicalKeyboardKey.pageUp) {
+              _adjustScroll(_verticalScrollController, amount: -400);
+            }
+            else if(e.logicalKey == LogicalKeyboardKey.pageDown) {
+              _adjustScroll(_verticalScrollController, amount: 400);
+            }
+            else if(e.logicalKey == LogicalKeyboardKey.space) {
+              _adjustScroll(_verticalScrollController, amount: 400);
+            }
+            // Suuuuuuper slow for presumably list-view reasons
+//            else if(e.logicalKey == LogicalKeyboardKey.home) {
+//              _adjustScroll(_verticalScrollController, amount: double.negativeInfinity);
+//            }
+//            else if(e.logicalKey == LogicalKeyboardKey.end) {
+//              _adjustScroll(_verticalScrollController, amount: double.infinity);
+//            }
+          }
+          else {
+            debugPrint("Not primary focus");
+          }
+        }
+      },
+      autofocus: true,
+      focusNode: _appFocus,
+      child: GestureDetector(
+        onTap: () {
+          _appFocus.requestFocus();
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            title: Text(_canonicalMatch?.name ?? "Match Results Viewer"),
+            centerTitle: true,
+            actions: (_canonicalMatch == null || !_shouldShowUploadControls() ? [] : [
+              Tooltip(
+                message: "Upload a new match file from your device, replacing the current data.",
+                child: IconButton(
+                  icon: Icon(Icons.cloud_upload),
+                  onPressed: () async {
+                    await _loadFile();
+                  },
                 ),
               ),
-            ],
-          );
-        }
+              Tooltip(
+                message: "Download a new match file from PractiScore, replacing the current data.",
+                child: IconButton(
+                  icon: Icon(Icons.cloud_download),
+                  onPressed: () async {
+                    setState(() {
+                      _operationInProgress = true;
+                    });
+                    await _downloadFile();
+                    setState(() {
+                      _operationInProgress = false;
+                    });
+                  },
+                ),
+              ),
+            ]..add(
+              IconButton(
+                icon: Icon(Icons.help),
+                onPressed: () {
+                  _showAbout(size);
+                },
+              ))
+            ),
+            bottom: _operationInProgress ? PreferredSize(
+              preferredSize: Size(double.infinity, 5),
+              child: LinearProgressIndicator(value: null, backgroundColor: primaryColor, valueColor: animation),
+            ) : null,
+          ),
+          body: Builder(
+            builder: (context) {
+              _innerContext = context;
+              return Column(
+                children: [
+                  sortWidget,
+                  Expanded(
+                    child: Center(
+                      child: listWidget,
+                    ),
+                  ),
+                ],
+              );
+            }
+          ),
+        ),
       ),
     );
+  }
+
+  void _adjustScroll(ScrollController c, {@required double amount}) {
+    // Clamp to in-range values to prevent jumping on arrow key presses
+    double newPosition = c.offset + amount;
+    newPosition = max(newPosition, 0);
+    newPosition = min(newPosition, c.position.maxScrollExtent);
+
+    c.jumpTo(newPosition);
   }
 
   void _showAbout(Size screenSize) {

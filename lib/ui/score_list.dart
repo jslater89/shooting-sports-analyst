@@ -11,8 +11,19 @@ class ScoreList extends StatelessWidget {
   final List<RelativeMatchScore> baseScores;
   final List<RelativeMatchScore> filteredScores;
   final double minWidth;
+  final ScrollController horizontalScrollController;
+  final ScrollController verticalScrollController;
 
-  const ScoreList({Key key, @required this.match, @required this.stage, @required this.baseScores, @required this.filteredScores, this.minWidth = 1024}) : super(key: key);
+  const ScoreList({
+    Key key,
+    @required this.match,
+    @required this.stage,
+    @required this.baseScores,
+    @required this.filteredScores,
+    this.minWidth = 1024,
+    this.verticalScrollController,
+    this.horizontalScrollController
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +40,7 @@ class ScoreList extends StatelessWidget {
     }
 
     return SingleChildScrollView(
+      controller: horizontalScrollController,
       scrollDirection: Axis.horizontal,
       child: ConstrainedBox(
         constraints: BoxConstraints(
@@ -40,11 +52,12 @@ class ScoreList extends StatelessWidget {
           children: [
             keyWidget,
             Expanded(child: ListView.builder(
-                itemCount: (filteredScores?.length ?? 0),
-                itemBuilder: (ctx, i) {
-                  if(stage == null) return _buildMatchScoreRow(index: i, context: context);
-                  else return _buildStageScoreRow(context, i, stage);
-                }
+              controller: verticalScrollController,
+              itemCount: (filteredScores?.length ?? 0),
+              itemBuilder: (ctx, i) {
+                if(stage == null) return _buildMatchScoreRow(index: i, context: context);
+                else return _buildStageScoreRow(context, i, stage);
+              }
             )),
           ],
         ),
