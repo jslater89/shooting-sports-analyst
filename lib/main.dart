@@ -15,6 +15,7 @@ import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 import 'package:uspsa_result_viewer/data/sort_mode.dart';
 import 'package:uspsa_result_viewer/ui/filter_controls.dart';
 import 'package:uspsa_result_viewer/ui/filter_dialog.dart';
+import 'package:uspsa_result_viewer/ui/match_breakdown.dart';
 import 'package:uspsa_result_viewer/ui/score_list.dart';
 import 'package:uspsa_result_viewer/version.dart';
 
@@ -443,6 +444,59 @@ class _MyHomePageState extends State<MyHomePage> {
     var animation = (_operationInProgress) ?
     AlwaysStoppedAnimation<Color>(backgroundColor) : AlwaysStoppedAnimation<Color>(primaryColor);
 
+    List<Widget> actions = [];
+    if(_canonicalMatch != null && _shouldShowUploadControls()) {
+      actions.addAll([
+        Tooltip(
+          message: "Upload a new match file from your device, replacing the current data.",
+          child: IconButton(
+            icon: Icon(Icons.cloud_upload),
+            onPressed: () async {
+              await _loadFile();
+            },
+          ),
+        ),
+        Tooltip(
+          message: "Download a new match file from PractiScore, replacing the current data.",
+          child: IconButton(
+            icon: Icon(Icons.cloud_download),
+            onPressed: () async {
+              setState(() {
+                _operationInProgress = true;
+              });
+              await _downloadFile();
+              setState(() {
+                _operationInProgress = false;
+              });
+            },
+          ),
+        ),
+      ]);
+    }
+    if(_canonicalMatch != null) {
+      actions.add(
+        Tooltip(
+          message: "Display a match breakdown.",
+          child: IconButton(
+            icon: Icon(Icons.table_chart),
+            onPressed: () {
+              showDialog(context: context, builder: (context) {
+                return MatchBreakdown(shooters: _canonicalMatch.shooters);
+              });
+            },
+          )
+        )
+      );
+    }
+    actions.add(
+      IconButton(
+        icon: Icon(Icons.help),
+        onPressed: () {
+          _showAbout(size);
+        },
+      )
+    );
+
     return RawKeyboardListener(
       onKey: (RawKeyEvent e) {
         if(e is RawKeyDownEvent) {
@@ -492,39 +546,7 @@ class _MyHomePageState extends State<MyHomePage> {
           appBar: AppBar(
             title: Text(_canonicalMatch?.name ?? "Match Results Viewer"),
             centerTitle: true,
-            actions: (_canonicalMatch == null || !_shouldShowUploadControls() ? [] : [
-              Tooltip(
-                message: "Upload a new match file from your device, replacing the current data.",
-                child: IconButton(
-                  icon: Icon(Icons.cloud_upload),
-                  onPressed: () async {
-                    await _loadFile();
-                  },
-                ),
-              ),
-              Tooltip(
-                message: "Download a new match file from PractiScore, replacing the current data.",
-                child: IconButton(
-                  icon: Icon(Icons.cloud_download),
-                  onPressed: () async {
-                    setState(() {
-                      _operationInProgress = true;
-                    });
-                    await _downloadFile();
-                    setState(() {
-                      _operationInProgress = false;
-                    });
-                  },
-                ),
-              ),
-            ]..add(
-              IconButton(
-                icon: Icon(Icons.help),
-                onPressed: () {
-                  _showAbout(size);
-                },
-              ))
-            ),
+            actions: actions,
             bottom: _operationInProgress ? PreferredSize(
               preferredSize: Size(double.infinity, 5),
               child: LinearProgressIndicator(value: null, backgroundColor: primaryColor, valueColor: animation),

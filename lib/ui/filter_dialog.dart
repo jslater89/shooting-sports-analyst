@@ -266,7 +266,7 @@ class _FilterDialogState extends State<FilterDialog> {
       ),
       actions: [
         FlatButton(
-          child: Text("RESET"),
+          child: Text("ALL"),
           onPressed: () {
             setState(() {
               _filters = FilterSet();
@@ -274,7 +274,7 @@ class _FilterDialogState extends State<FilterDialog> {
           },
         ),
         FlatButton(
-          child: Text("CLEAR"),
+          child: Text("NONE"),
           onPressed: () {
             setState(() {
               _filters = FilterSet(empty: true);
