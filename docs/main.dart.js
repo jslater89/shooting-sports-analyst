@@ -6809,9 +6809,13 @@ X_:function X_(a){this.a=a},
 WO:function WO(a,b){this.a=a
 this.b=b},
 X0:function X0(a){this.a=a},
-WN:function WN(a){this.a=a},
+WN:function WN(a,b,c){this.a=a
+this.b=b
+this.c=c},
 X1:function X1(a){this.a=a},
-WM:function WM(a){this.a=a},
+WM:function WM(a,b,c){this.a=a
+this.b=b
+this.c=c},
 X3:function X3(a){this.a=a},
 X4:function X4(a,b){this.a=a
 this.b=b},
@@ -51283,7 +51287,7 @@ F.YU.prototype={
 $1:function(a){var s=null,r=L.B("About",s,s,s,s,s,s),q=Q.fm(s,s,K.T(a,!1).y2.y,"A Flutter web app for displaying USPSA scores. You can also embed this widget into your match website, automatically loading your results file from a provided Internet address.\n\nVisit the repository at "),p=K.T(a,!1).y2.y.ui(K.T(a,!1).F.a),o=t.e
 o=new N.dC(C.an,18,C.b2,P.r(o,t.v),P.aK(o),s,s,P.r(o,t.B))
 o.b1=new F.YT()
-return E.JV(s,new T.aS(this.a.a*0.5,s,T.a35(!1,s,s,C.b6,!0,s,Q.fm(H.b([q,Q.fm(s,o,p,u.n),Q.fm(s,s,K.T(a,!1).y2.y," for more information.\n\nuspsa_result_viewer v1.2.0\n\xa9 Jay Slater 2020\nGPL 3.0")],t.B2),s,s,s),C.b0,s,s,1,C.al),s),r)}}
+return E.JV(s,new T.aS(this.a.a*0.5,s,T.a35(!1,s,s,C.b6,!0,s,Q.fm(H.b([q,Q.fm(s,o,p,u.n),Q.fm(s,s,K.T(a,!1).y2.y," for more information.\n\nuspsa_result_viewer v1.2.1\n\xa9 Jay Slater 2020\nGPL 3.0")],t.B2),s,s,s),C.b0,s,s,1,C.al),s),r)}}
 F.YT.prototype={
 $0:function(){var s=0,r=P.ae(t.P)
 var $async$$0=P.a6(function(a,b){if(a===1)return P.ab(b,r)
@@ -51466,18 +51470,22 @@ if(this.b)s.a=C.mk
 else s.a=C.pR},
 $S:0}
 T.X0.prototype={
-$0:function(){var s=this.a
-s.a9(new T.WN(s))},
+$0:function(){var s=this.a,r=s.d
+s.a9(new T.WN(s,r.b,r.a))},
 $S:0}
 T.WN.prototype={
-$0:function(){this.a.d=T.a2r(!1)},
+$0:function(){var s=this.a.d=T.a2r(!1)
+s.b=this.b
+s.a=this.c},
 $S:0}
 T.X1.prototype={
-$0:function(){var s=this.a
-s.a9(new T.WM(s))},
+$0:function(){var s=this.a,r=s.d
+s.a9(new T.WM(s,r.b,r.a))},
 $S:0}
 T.WM.prototype={
-$0:function(){this.a.d=T.a2r(!0)},
+$0:function(){var s=this.a.d=T.a2r(!0)
+s.b=this.b
+s.a=this.c},
 $S:0}
 T.X3.prototype={
 $0:function(){K.hE(this.a,!1).jk(null)},
