@@ -52,16 +52,22 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     super.initState();
 
+    _appFocus = FocusNode();
+
     final Map<String, String> params = Uri.parse(window.location.href).queryParameters;
     debugPrint("iframe params? $params");
     final String resultsFileUrl = params['resultsFile'];
-
-    _appFocus = FocusNode();
+    final String practiscoreUrl = params['practiscoreUrl'];
 
     if(resultsFileUrl != null) {
       debugPrint("getting preset results file $resultsFileUrl");
       _iframeResultsUrl = resultsFileUrl;
       _loadFile();
+    }
+    else if(practiscoreUrl != null) {
+      debugPrint("getting preset practiscore results from $practiscoreUrl");
+      _iframePractiscoreUrl = practiscoreUrl;
+      _downloadFile();
     }
   }
 
@@ -73,6 +79,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   String _iframeResultsUrl;
+  String _iframePractiscoreUrl;
   String _iframeResultsErr;
 
   FocusNode _appFocus;
@@ -92,7 +99,7 @@ class _MyHomePageState extends State<MyHomePage> {
   SortMode _sortMode = SortMode.score;
 
   bool _shouldShowUploadControls() {
-    return _iframeResultsUrl == null;
+    return _iframeResultsUrl == null && _iframePractiscoreUrl == null;
   }
 
   Future<void> _downloadFile() async {
@@ -104,7 +111,7 @@ class _MyHomePageState extends State<MyHomePage> {
       proxyUrl = "https://still-harbor-88681.herokuapp.com/";
     }
 
-    var matchUrl = await showDialog<String>(context: context, builder: (context) {
+    var matchUrl = _iframePractiscoreUrl != null ? _iframePractiscoreUrl : await showDialog<String>(context: context, builder: (context) {
       var controller = TextEditingController();
       return AlertDialog(
         title: Text("Enter PractiScore match URL"),
