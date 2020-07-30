@@ -268,16 +268,24 @@ class _FilterDialogState extends State<FilterDialog> {
         FlatButton(
           child: Text("ALL"),
           onPressed: () {
+            bool secondGun = _filters.reentries;
+            FilterMode mode = _filters.mode;
             setState(() {
               _filters = FilterSet();
+              _filters.reentries = secondGun;
+              _filters.mode = mode;
             });
           },
         ),
         FlatButton(
           child: Text("NONE"),
           onPressed: () {
+            bool secondGun = _filters.reentries;
+            FilterMode mode = _filters.mode;
             setState(() {
               _filters = FilterSet(empty: true);
+              _filters.reentries = secondGun;
+              _filters.mode = mode;
             });
           },
         ),
