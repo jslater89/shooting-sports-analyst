@@ -254,9 +254,9 @@ class Score {
     if(stage?.type == Scoring.chrono) return 0;
 
     int aValue = 5;
-    int bValue = shooter.powerFactor == PowerFactor.major ? 4 : 3;
+    int bValue = shooter?.powerFactor == PowerFactor.major ? 4 : 3;
     int cValue = bValue;
-    int dValue = shooter.powerFactor == PowerFactor.major ? 2 : 1;
+    int dValue = shooter?.powerFactor == PowerFactor.major ? 2 : 1;
 
     return a * aValue + b * bValue + c * cValue + d * dValue;
   }

@@ -207,8 +207,11 @@ class _MyHomePageState extends State<MyHomePage> {
 
       debugPrint("response: ${response.body.split("\n").first}");
     }
-    catch(err) {
+    catch(err, stackTrace) {
       debugPrint("download error: $err ${err.runtimeType}");
+      if(stackTrace != null) {
+        debugPrint("$stackTrace");
+      }
       if(err is ProgressEvent) {
         ProgressEvent pe = err;
         debugPrint(pe.type);
