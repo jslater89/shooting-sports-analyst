@@ -59,6 +59,26 @@ class ShooterResultCard extends StatelessWidget {
 
   Widget _buildStageCard(BuildContext context) {
     Shooter shooter = stageScore.score.shooter;
+    List<Widget> timeHolder = [];
+    var stringTimes = stageScore.score.stringTimes;
+
+    if(stringTimes.length > 0) {
+      List<CaptionedText> children = [];
+      int stringNum = 1;
+      for(double time in stringTimes) {
+        children.add(CaptionedText(
+          captionText: "String ${stringNum++}",
+          text: time.toStringAsFixed(2),
+        ));
+      }
+      timeHolder = [
+        Row(
+          children: children,
+        ),
+        SizedBox(height: 12),
+      ];
+    }
+
     return Dialog(
       child: Padding(
         padding: const EdgeInsets.all(8.0),
@@ -81,12 +101,16 @@ class ShooterResultCard extends StatelessWidget {
                   captionText: "Time",
                   text: "${stageScore.score.time.toStringAsFixed(2)}s",
                 ),
-                SizedBox(width: 12),
-                CaptionedText(
-                    captionText: "Stage Score",
-                    text: "${stageScore.relativePoints.toStringAsFixed(2)} (${stageScore.percent.asPercentage()}%)"
-                ),
-              ],
+                SizedBox(width: 12)
+              ]
+              ..addAll(
+                timeHolder
+              )
+              ..add(CaptionedText(
+                  captionText: "Stage Score",
+                  text: "${stageScore.relativePoints.toStringAsFixed(2)} (${stageScore.percent.asPercentage()}%)"
+                )
+              ),
             ),
             SizedBox(height: 10),
             _ScoreBody(result: stageScore)

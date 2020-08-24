@@ -48,6 +48,8 @@ class PracticalMatch {
     if(shooters == null) shooters = this.shooters;
     if(stages == null) stages = this.stages;
 
+    if(shooters.length == 0 || stages.length == 0) return [];
+
     int matchMaxPoints = stages.map<int>((e) => e.maxPoints).reduce((a, b) => a + b);
     debugPrint("Max points for match: $matchMaxPoints");
 
@@ -215,6 +217,16 @@ class Score {
   Stage stage;
   double t1 = 0, t2 = 0, t3 = 0, t4 = 0, t5 = 0;
   double time = 0;
+
+  List<double> get stringTimes {
+    List<double> times = [];
+    if(t1 > 0) times.add(t1);
+    if(t2 > 0) times.add(t2);
+    if(t3 > 0) times.add(t3);
+    if(t4 > 0) times.add(t4);
+    if(t5 > 0) times.add(t5);
+    return times;
+}
 
   double get percentTotalPoints {
     return totalPoints.toDouble() / stage.maxPoints.toDouble();
