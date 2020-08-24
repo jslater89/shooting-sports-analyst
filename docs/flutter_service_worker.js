@@ -7,13 +7,14 @@ const RESOURCES = {
 "/": "a3cd39d34ff975048240f8c7f72af17a",
 "favicon.png": "5dcef449791fa27946b3d35ad8803796",
 "assets/AssetManifest.json": "99914b932bd37a50b983c5e7c90ae93b",
-"assets/FontManifest.json": "580ff1a5d08679ded8fcf5c6848cece7",
+"assets/FontManifest.json": "7b2a36307916a9721811788013e65289",
 "assets/fonts/MaterialIcons-Regular.ttf": "56d3ffdef7a25659eab6a68a3fbfaf16",
-"assets/NOTICES": "ff65f4eecf56f813b7be0b4084e44f5c",
+"assets/fonts/MaterialIcons-Regular.otf": "a68d2a28c526b3b070aefca4bac93d25",
+"assets/NOTICES": "4794e66c225f2363de831b5053c0d2eb",
 "manifest.json": "8f3938b6b6203a32f1eb64fa965181cf",
 "icons/Icon-192.png": "ac9a721a12bbc803b44f645561ecb1e1",
 "icons/Icon-512.png": "96e752610906ba2a93c65f8abe1645f1",
-"main.dart.js": "39917e6dcb2b699df0e75669c408c94b"
+"main.dart.js": "fb2bc15faeb1ef55ca37dec489d10f88"
 };
 
 // The application shell files that are downloaded before a service worker can
@@ -30,8 +31,8 @@ const CORE = [
 self.addEventListener("install", (event) => {
   return event.waitUntil(
     caches.open(TEMP).then((cache) => {
-      // Provide a no-cache param to ensure the latest version is downloaded.
-      return cache.addAll(CORE.map((value) => new Request(value, {'cache': 'no-cache'})));
+      // Provide a 'reload' param to ensure the latest version is downloaded.
+      return cache.addAll(CORE.map((value) => new Request(value, {'cache': 'reload'})));
     })
   );
 });
@@ -114,7 +115,7 @@ self.addEventListener("fetch", (event) => {
         // Either respond with the cached resource, or perform a fetch and
         // lazily populate the cache. Ensure the resources are not cached
         // by the browser for longer than the service worker expects.
-        var modifiedRequest = new Request(event.request, {'cache': 'no-cache'});
+        var modifiedRequest = new Request(event.request, {'cache': 'reload'});
         return response || fetch(modifiedRequest).then((response) => {
           cache.put(event.request, response.clone());
           return response;
