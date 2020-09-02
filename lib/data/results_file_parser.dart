@@ -184,8 +184,8 @@ void _readScoreLines(List<String> stageScoreLines, Map<int, Shooter> shootersByF
       if(s.rawPoints != int.parse(splitLine[_RAW_POINTS])) {
         debugPrint("Raw points mismatch for ${shooter.getName()} on ${stage.name}: ${s.rawPoints} vs ${splitLine[_RAW_POINTS]}");
       }
-      if(s.totalPoints != int.parse(splitLine[_TOTAL_POINTS])) {
-        debugPrint("Total points mismatch for ${shooter.getName()} on ${stage.name}: ${s.totalPoints} vs ${splitLine[_TOTAL_POINTS]}");
+      if(s.getTotalPoints(scoreDQ: false) != int.parse(splitLine[_TOTAL_POINTS])) {
+        debugPrint("Total points mismatch for ${shooter.getName()} on ${stage.name}: ${s.getTotalPoints(scoreDQ: false)} vs ${splitLine[_TOTAL_POINTS]}");
       }
 
       i++;

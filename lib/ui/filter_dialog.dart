@@ -4,6 +4,7 @@ import 'package:uspsa_result_viewer/data/model.dart';
 class FilterSet {
   FilterMode mode = FilterMode.and;
   bool reentries = true;
+  bool scoreDQs = true;
 
   Map<Division, bool> divisions;
   Map<Classification, bool> classifications;
@@ -231,7 +232,7 @@ class _FilterDialogState extends State<FilterDialog> {
             children: [
               Expanded(
                 child: Tooltip(
-                  message: "If unchecked, results for shooters' second guns will be hidden.",
+                  message: "If unchecked, results for shooters' second guns/reentries will be hidden.",
                   child: CheckboxListTile(
                     title: Text("Include 2nd Gun?"),
                     controlAffinity: ListTileControlAffinity.leading,
@@ -246,8 +247,8 @@ class _FilterDialogState extends State<FilterDialog> {
               ),
               Expanded(
                 child: Tooltip(
-                  message: "If checked, only shooters who match ALL checked values will be shown. "
-                    "Otherwise, shooters who match ANY checked value will be shown.",
+                  message: "If checked, only shooters who match a checked item in every column will be shown. "
+                    "Otherwise, shooters who match any checked value will be shown.",
                   child: CheckboxListTile(
                     title: Text("Exclusive Filters?"),
                     controlAffinity: ListTileControlAffinity.leading,
@@ -259,7 +260,23 @@ class _FilterDialogState extends State<FilterDialog> {
                     }
                   ),
                 ),
-              )
+              ),
+              Expanded(
+                child: Tooltip(
+                  message: "If checked, disqualified shooters will be scored on stages they completed pre-DQ. "
+                      "Otherwise, disqualified shooters will be scored 0 on all stages.",
+                  child: CheckboxListTile(
+                      title: Text("Score DQs?"),
+                      controlAffinity: ListTileControlAffinity.leading,
+                      value: _filters.scoreDQs,
+                      onChanged: (bool value) {
+                        setState(() {
+                          _filters.scoreDQs = value;
+                        });
+                      }
+                  ),
+                ),
+              ),
             ],
           )
         ],
@@ -270,10 +287,12 @@ class _FilterDialogState extends State<FilterDialog> {
           onPressed: () {
             bool secondGun = _filters.reentries;
             FilterMode mode = _filters.mode;
+            bool scoreDQs = _filters.scoreDQs;
             setState(() {
               _filters = FilterSet();
               _filters.reentries = secondGun;
               _filters.mode = mode;
+              _filters.scoreDQs = scoreDQs;
             });
           },
         ),
@@ -282,10 +301,12 @@ class _FilterDialogState extends State<FilterDialog> {
           onPressed: () {
             bool secondGun = _filters.reentries;
             FilterMode mode = _filters.mode;
+            bool scoreDQs = _filters.scoreDQs;
             setState(() {
               _filters = FilterSet(empty: true);
               _filters.reentries = secondGun;
               _filters.mode = mode;
+              _filters.scoreDQs = scoreDQs;
             });
           },
         ),

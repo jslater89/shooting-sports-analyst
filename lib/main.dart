@@ -345,7 +345,7 @@ class _MyHomePageState extends State<MyHomePage> {
       stageScoreLines: stageScoreLines,
     );
 
-    var scores = canonicalMatch.getScores();
+    var scores = canonicalMatch.getScores(scoreDQ: _filters.scoreDQs);
 
     setState(() {
       _canonicalMatch = canonicalMatch;
@@ -440,6 +440,7 @@ class _MyHomePageState extends State<MyHomePage> {
         filteredScores: _searchedScores,
         match: _canonicalMatch,
         stage: _stage,
+        scoreDQ: _filters.scoreDQs,
         verticalScrollController: _verticalScrollController,
         horizontalScrollController: _horizontalScrollController,
         minWidth: _MIN_WIDTH,
@@ -651,7 +652,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     setState(() {
-      _baseScores = _canonicalMatch.getScores(shooters: filteredShooters);
+      _baseScores = _canonicalMatch.getScores(shooters: filteredShooters, scoreDQ: _filters.scoreDQs);
       _searchedScores = []..addAll(_baseScores);
     });
 

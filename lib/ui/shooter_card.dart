@@ -8,8 +8,9 @@ import 'package:uspsa_result_viewer/ui/captioned_text.dart';
 class ShooterResultCard extends StatelessWidget {
   final RelativeMatchScore matchScore;
   final RelativeScore stageScore;
+  final bool scoreDQ;
 
-  const ShooterResultCard({Key key, this.matchScore, this.stageScore}) : super(key: key);
+  const ShooterResultCard({Key key, this.matchScore, this.stageScore, this.scoreDQ = true}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -99,7 +100,7 @@ class ShooterResultCard extends StatelessWidget {
               children: [
                 CaptionedText(
                     captionText: "Hit Factor",
-                    text: "${stageScore.score.hitFactor.toStringAsFixed(4)}",
+                    text: "${stageScore.score.getHitFactor(scoreDQ: scoreDQ).toStringAsFixed(4)}",
                 ),
                 SizedBox(width: 12),
                 CaptionedText(

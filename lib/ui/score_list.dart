@@ -10,6 +10,7 @@ class ScoreList extends StatelessWidget {
   final Stage stage;
   final List<RelativeMatchScore> baseScores;
   final List<RelativeMatchScore> filteredScores;
+  final bool scoreDQ;
   final double minWidth;
   final ScrollController horizontalScrollController;
   final ScrollController verticalScrollController;
@@ -22,7 +23,8 @@ class ScoreList extends StatelessWidget {
     @required this.filteredScores,
     this.minWidth = 1024,
     this.verticalScrollController,
-    this.horizontalScrollController
+    this.horizontalScrollController,
+    this.scoreDQ = true,
   }) : super(key: key);
 
   @override
@@ -128,7 +130,7 @@ class ScoreList extends StatelessWidget {
               Expanded(flex: 2, child: Text((score.total.percent * 100).toStringAsFixed(2))),
               Expanded(flex: 2, child: Text(score.total.relativePoints.toStringAsFixed(2))),
               Expanded(flex: 2, child: Text(score.total.score.time.toStringAsFixed(2))),
-              Expanded(flex: 3, child: Text("${score.total.score.totalPoints} (${(score.percentTotalPoints * 100).toStringAsFixed(2)}%)")),
+              Expanded(flex: 3, child: Text("${score.total.score.getTotalPoints(scoreDQ: scoreDQ)} (${(score.percentTotalPoints * 100).toStringAsFixed(2)}%)")),
               Expanded(flex: 5, child: Text("${score.total.score.a}A ${score.total.score.c}C ${score.total.score.d}D ${score.total.score.m}M ${score.total.score.ns}NS ${score.total.score.penaltyCount}P")),
             ],
           ),
@@ -183,7 +185,7 @@ class ScoreList extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         showDialog(context: context, builder: (context) {
-          return ShooterResultCard(stageScore: stageScore,);
+          return ShooterResultCard(stageScore: stageScore, scoreDQ: scoreDQ,);
         });
       },
       child: ScoreRow(
@@ -198,9 +200,9 @@ class ScoreList extends StatelessWidget {
               Expanded(flex: 1, child: Text(matchScore.shooter.classification.displayString())),
               Expanded(flex: 3, child: Text(matchScore.shooter.division.displayString())),
               Expanded(flex: 1, child: Text(matchScore.shooter.powerFactor.shortString())),
-              Expanded(flex: 3, child: Text("${stageScore.score.totalPoints} (${(stageScore.score.percentTotalPoints * 100).toStringAsFixed(1)}%)")),
+              Expanded(flex: 3, child: Text("${stageScore.score.getTotalPoints(scoreDQ: scoreDQ)} (${(stageScore.score.getPercentTotalPoints(scoreDQ: scoreDQ) * 100).toStringAsFixed(1)}%)")),
               Expanded(flex: 2, child: Text(stageScore.score.time.toStringAsFixed(2))),
-              Expanded(flex: 2, child: Text(stageScore.score.hitFactor.toStringAsFixed(4))),
+              Expanded(flex: 2, child: Text(stageScore.score.getHitFactor(scoreDQ: scoreDQ).toStringAsFixed(4))),
               Expanded(flex: 2, child: Text((stageScore.percent * 100).toStringAsFixed(2))),
               Expanded(flex: 2, child: Text(stageScore.relativePoints.toStringAsFixed(2))),
               Expanded(flex: 4, child: Text("${stageScore.score.a}A ${stageScore.score.c}C ${stageScore.score.d}D ${stageScore.score.m}M ${stageScore.score.ns}NS ${stageScore.score.penaltyCount}P")),
