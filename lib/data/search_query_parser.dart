@@ -21,7 +21,7 @@ class SearchQueryElement {
     if(classification != null && s.classification != classification) return false;
     if(division != null && s.division != division) return false;
     if(powerFactor != null && s.powerFactor != powerFactor) return false;
-    if(name != null && !s.firstName.toLowerCase().startsWith(name) && !s.lastName.toLowerCase().startsWith(name)) return false;
+    if(name != null && !s.getName().toLowerCase().startsWith(name) && !s.lastName.toLowerCase().startsWith(name)) return false;
 
     return true;
   }
