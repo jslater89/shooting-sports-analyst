@@ -175,7 +175,7 @@ void _readScoreLines(List<String> stageScoreLines, Map<int, Shooter> shootersByF
         //..rawPoints = int.parse(splitLine[_RAW_POINTS])
         //..totalPoints = int.parse(splitLine[_TOTAL_POINTS]);
 
-      var stageFinished = int.parse(splitLine[_RAW_POINTS]) != 0 && s.time > 0;
+      var stageFinished = int.parse(splitLine[_RAW_POINTS]) != 0 && (s.time > 0 || stage.type == Scoring.fixedTime);
 
       // Work around a PractiScore web results bug: if a shooter has neither points
       // nor time, we can assume it's someone who didn't complete the stage at all.
