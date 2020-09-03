@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
+import 'package:uspsa_result_viewer/data/search_query_parser.dart';
 import 'package:uspsa_result_viewer/data/sort_mode.dart';
 import 'package:uspsa_result_viewer/ui/filter_controls.dart';
 import 'package:uspsa_result_viewer/ui/filter_dialog.dart';
@@ -696,11 +697,35 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _applySearchTerm(String query) {
-    _searchTerm = query;
-    setState(() {
-      _searchedScores = []..addAll(_baseScores);
-      _searchedScores = _searchedScores..retainWhere(_applySearch);
-    });
+    if(query.startsWith("?")) {
+      var queryElements = parseQuery(query);
+      if(queryElements != null) {
+        setState(() {
+          _searchedScores = []..addAll(_baseScores);
+          _searchedScores = _searchedScores..retainWhere((element) {
+            bool retain = false;
+            for(var query in queryElements) {
+              if(query.matchesShooter(element.shooter)) return true;
+            }
+
+            return retain;
+          });
+        });
+      }
+      else {
+        // make search box red
+        setState(() {
+          _searchedScores = []..addAll(_baseScores);
+        });
+      }
+    }
+    else {
+      _searchTerm = query;
+      setState(() {
+        _searchedScores = []..addAll(_baseScores);
+        _searchedScores = _searchedScores..retainWhere(_applySearch);
+      });
+    }
   }
 
   bool _applySearch(RelativeMatchScore element) {
