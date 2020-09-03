@@ -51,7 +51,7 @@ List<SearchQueryElement> parseQuery(String query) {
     }
   }
 
-  debugPrint("Elements: $elements");
+  //debugPrint("Elements: $elements");
   return elements;
 }
 
@@ -77,16 +77,14 @@ SearchQueryElement _parseGroup(String group) {
 
       element.name = item.replaceAll('"', '');
     }
-    else if(item.length == 1) {
-      if(!RegExp("gm|[mabcdu]").hasMatch(item)) return null;
-
-      element.classification = ClassificationFrom.string(item);
-    }
     else if(pf != null) {
       element.powerFactor = pf;
     }
     else if(div != null){
       element.division = div;
+    }
+    else if(RegExp(r"^gm$|^[mabcdu]$").hasMatch(item)) {
+      element.classification = ClassificationFrom.string(item);
     }
     else {
       debugPrint("Bad item: $item");
@@ -108,7 +106,7 @@ Division _matchDivision(String query) {
 
   if(query.startsWith("pc")) return Division.pcc;
   else if(query.startsWith("op")) return Division.open;
-  else if(query.startsWith(RegExp("li.*1"))) return Division.limited10;
+  else if(query.startsWith(RegExp("l.*1"))) return Division.limited10;
   else if(query.startsWith("li")) return Division.limited;
   else if(query.startsWith("ca")) return Division.carryOptics;
   else if(query.startsWith("co")) return Division.carryOptics;
