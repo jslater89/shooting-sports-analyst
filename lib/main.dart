@@ -49,6 +49,8 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   static const _MIN_WIDTH = 1024.0;
 
+  bool _invalidSearch = false;
+
   @override
   void initState() {
     super.initState();
@@ -372,6 +374,7 @@ class _MyHomePageState extends State<MyHomePage> {
         currentStage: _stage,
         sortMode: _sortMode,
         returnFocus: _appFocus,
+        searchError: _invalidSearch,
         onFiltersChanged: _applyFilters,
         onSortModeChanged: _applySortMode,
         onStageChanged: _applyStage,
@@ -701,6 +704,7 @@ class _MyHomePageState extends State<MyHomePage> {
       var queryElements = parseQuery(query);
       if(queryElements != null) {
         setState(() {
+          _invalidSearch = false;
           _searchedScores = []..addAll(_baseScores);
           _searchedScores = _searchedScores..retainWhere((element) {
             bool retain = false;
@@ -713,8 +717,8 @@ class _MyHomePageState extends State<MyHomePage> {
         });
       }
       else {
-        // make search box red
         setState(() {
+          _invalidSearch = true;
           _searchedScores = []..addAll(_baseScores);
         });
       }
@@ -722,6 +726,7 @@ class _MyHomePageState extends State<MyHomePage> {
     else {
       _searchTerm = query;
       setState(() {
+        _invalidSearch = false;
         _searchedScores = []..addAll(_baseScores);
         _searchedScores = _searchedScores..retainWhere(_applySearch);
       });

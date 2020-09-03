@@ -15,6 +15,8 @@ class FilterControls extends StatefulWidget {
   final Function(Stage) onStageChanged;
   final Function(FilterSet) onFiltersChanged;
   final Function(String) onSearchChanged;
+
+  final bool searchError;
   //final Function onAdvancedQueryChanged;
 
   const FilterControls(
@@ -25,6 +27,7 @@ class FilterControls extends StatefulWidget {
       @required this.stages,
       @required this.filters,
       @required this.returnFocus,
+      @required this.searchError,
       @required this.onSortModeChanged,
       @required this.onStageChanged,
       @required this.onFiltersChanged,
@@ -112,25 +115,33 @@ class _FilterControlsState extends State<FilterControls> {
                 direction: Axis.horizontal,
                 alignment: WrapAlignment.center,
                 runAlignment: WrapAlignment.center,
-                crossAxisAlignment: WrapCrossAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.start,
                 children: [
                   ConstrainedBox(
                     constraints: BoxConstraints(
-                      maxWidth: 200,
-                      minWidth: 50,
+                      maxWidth: 300,
+                      minWidth: 100,
                     ),
-                    child: TextField(
-                      controller: _searchController,
-                      autofocus: false,
-                      decoration: InputDecoration(
-                        hintText: "Quick search",
-//                        suffixIcon: GestureDetector(
-//                          child: Icon(Icons.help),
-//                        )
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 14),
+                      child: TextField(
+                        controller: _searchController,
+                        autofocus: false,
+                        decoration: InputDecoration(
+                          helperText: ' ',
+                          errorText: widget.searchError ? "Invalid query" : null,
+                          hintText: "Quick search",
+                          suffixIcon: GestureDetector(
+                            child: Icon(Icons.help),
+                            onTap: () {
+                              _showQueryHelp(size);
+                            },
+                          )
+                        ),
+                        onSubmitted: (_t) {
+                          widget.returnFocus.requestFocus();
+                        },
                       ),
-                      onSubmitted: (_t) {
-                        widget.returnFocus.requestFocus();
-                      },
                     ),
                   ),
                   SizedBox(width: 10),
@@ -170,17 +181,20 @@ class _FilterControlsState extends State<FilterControls> {
                     ],
                   ),
                   SizedBox(width: 10),
-                  FlatButton(
-                    child: Text("FILTERS"),
-                    onPressed: () async {
-                      var filters = await showDialog<FilterSet>(context: context, builder: (context) {
-                        return FilterDialog(currentFilters: this.widget.filters,);
-                      });
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    child: FlatButton(
+                      child: Text("FILTERS"),
+                      onPressed: () async {
+                        var filters = await showDialog<FilterSet>(context: context, builder: (context) {
+                          return FilterDialog(currentFilters: this.widget.filters,);
+                        });
 
-                      if(filters != null) {
-                        widget.onFiltersChanged(filters);
-                      }
-                    },
+                        if(filters != null) {
+                          widget.onFiltersChanged(filters);
+                        }
+                      },
+                    ),
                   ),
                 ],
               ),
@@ -188,5 +202,27 @@ class _FilterControlsState extends State<FilterControls> {
         ),
       ),
     );
+  }
+
+  void _showQueryHelp(Size screenSize) {
+    showDialog(context: context, builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text("Search Help"),
+        content: SizedBox(
+          width: screenSize.width * 0.5,
+          child: Text("Enter text to search by name.\n"
+              "\n"
+              "The search box also supports a simple query language. Start your query with a question mark to enter "
+              "query mode. Query mode uses groups of search terms linked by the keyword AND. Valid search terms are "
+              "division names, classifications, power factors, and shooter names. Shooter names must be enclosed in "
+              "double quotes. For instance, '?\"jay\" AND revo' searches for all Jays in Revolver division.\n"
+              "\n"
+              "Groups of search terms may be separated by the keyword OR. '?lim10 AND b OR prod AND c OR ss AND d' "
+              "searches for Limited 10 B-class shooters, Production Cs, and Single Stack Ds.\n"
+              "\n"
+              "Queries are not case sensitive."),
+        ),
+      );
+    });
   }
 }

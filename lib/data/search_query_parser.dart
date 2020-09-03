@@ -105,6 +105,7 @@ Division _matchDivision(String query) {
   query.replaceAll(RegExp(r"\s"), '');
 
   if(query.startsWith("pc")) return Division.pcc;
+  else if(query.startsWith("pi")) return Division.pcc;
   else if(query.startsWith("op")) return Division.open;
   else if(query.startsWith(RegExp("l.*1"))) return Division.limited10;
   else if(query.startsWith("li")) return Division.limited;
