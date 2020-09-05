@@ -91,7 +91,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   BuildContext _innerContext;
   PracticalMatch _canonicalMatch;
-  PracticalMatch _whatIfMatch;
+  PracticalMatch _currentMatch;
 
   bool _operationInProgress = false;
 
@@ -101,6 +101,18 @@ class _MyHomePageState extends State<MyHomePage> {
   List<RelativeMatchScore> _searchedScores = [];
   Stage _stage;
   SortMode _sortMode = SortMode.score;
+
+  /// If true, in what-if mode. If false, not in what-if mode.
+  bool _whatIfMode = false;
+  Map<Stage, List<Shooter>> _editedShooters = {};
+  List<Shooter> get _allEditedShooters {
+    Set<Shooter> shooterSet = {};
+    for(var list in _editedShooters.values) {
+      shooterSet.addAll(list);
+    }
+
+    return shooterSet.toList();
+  }
 
   bool _shouldShowUploadControls() {
     return _iframeResultsUrl == null && _iframePractiscoreUrl == null;
@@ -350,11 +362,11 @@ class _MyHomePageState extends State<MyHomePage> {
     );
 
     _canonicalMatch = canonicalMatch;
-    _whatIfMatch = _canonicalMatch.copy();
-    var scores = _whatIfMatch.getScores(scoreDQ: _filters.scoreDQs);
+    _currentMatch = _canonicalMatch.copy();
+    var scores = _currentMatch.getScores(scoreDQ: _filters.scoreDQs);
 
     setState(() {
-      _whatIfMatch = _whatIfMatch;
+      _currentMatch = _currentMatch;
       _baseScores = scores;
       _searchedScores = []..addAll(_baseScores);
     });
@@ -367,13 +379,13 @@ class _MyHomePageState extends State<MyHomePage> {
 
     Widget sortWidget;
 
-    if(_whatIfMatch == null) {
+    if(_currentMatch == null) {
       sortWidget = Container();
     }
     else {
       sortWidget = FilterControls(
         filters: _filters,
-        stages: _whatIfMatch.stages,
+        stages: _currentMatch.stages,
         currentStage: _stage,
         sortMode: _sortMode,
         returnFocus: _appFocus,
@@ -386,7 +398,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     Widget listWidget;
-    if(_whatIfMatch == null && _shouldShowUploadControls()) {
+    if(_currentMatch == null && _shouldShowUploadControls()) {
       listWidget = SizedBox(
         height: size.height,
         width: size.width,
@@ -445,12 +457,34 @@ class _MyHomePageState extends State<MyHomePage> {
       listWidget = ScoreList(
         baseScores: _baseScores,
         filteredScores: _searchedScores,
-        match: _whatIfMatch,
+        match: _currentMatch,
         stage: _stage,
         scoreDQ: _filters.scoreDQs,
         verticalScrollController: _verticalScrollController,
         horizontalScrollController: _horizontalScrollController,
         minWidth: _MIN_WIDTH,
+        onScoreEdited: (shooter, stage) {
+          if(_editedShooters[stage] == null) {
+             _editedShooters[stage] = [];
+          }
+          setState(() {
+            _whatIfMode = true;
+            if(!_editedShooters[stage].contains(shooter)) {
+              _editedShooters[stage].add(shooter);
+            }
+          });
+
+          var scores = _currentMatch.getScores();
+
+          setState(() {
+            _baseScores = scores;
+            _searchedScores = []..addAll(scores);
+          });
+
+          _applySortMode(_sortMode);
+        },
+        whatIfMode: _whatIfMode,
+        editedShooters: _stage == null ? _allEditedShooters : _editedShooters[_stage] ?? [],
       );
     }
 
@@ -463,7 +497,48 @@ class _MyHomePageState extends State<MyHomePage> {
     AlwaysStoppedAnimation<Color>(backgroundColor) : AlwaysStoppedAnimation<Color>(primaryColor);
 
     List<Widget> actions = [];
-    if(_whatIfMatch != null && _shouldShowUploadControls()) {
+    if(_currentMatch != null && _whatIfMode) {
+      actions.add(
+        Tooltip(
+          message: "Exit what-if mode, restoring the original match scores.",
+          child: IconButton(
+            icon: Icon(Icons.undo),
+            onPressed: () async {
+
+              _currentMatch = _canonicalMatch.copy();
+              var scores = _currentMatch.getScores();
+
+              setState(() {
+                _editedShooters = {};
+                _currentMatch = _currentMatch;
+                _stage = _stage == null ? null : _currentMatch.lookupStage(_stage);
+                _baseScores = scores;
+                _searchedScores = []..addAll(scores);
+                _whatIfMode = false;
+              });
+
+              _applyStage(_stage);
+            }
+          )
+        )
+      );
+    }
+    else if(_currentMatch != null && !_whatIfMode) {
+      actions.add(
+        Tooltip(
+          message: "Enter what-if mode, allowing you to edit stage scores.",
+          child: IconButton(
+            icon: Icon(Icons.edit),
+            onPressed: () async {
+              setState(() {
+                _whatIfMode = true;
+              });
+            }
+          )
+        )
+      );
+    }
+    if(_currentMatch != null && _shouldShowUploadControls()) {
       actions.addAll([
         Tooltip(
           message: "Upload a new match file from your device, replacing the current data.",
@@ -491,7 +566,7 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
       ]);
     }
-    if(_whatIfMatch != null) {
+    if(_currentMatch != null) {
       actions.add(
         Tooltip(
           message: "Display a match breakdown.",
@@ -499,7 +574,7 @@ class _MyHomePageState extends State<MyHomePage> {
             icon: Icon(Icons.table_chart),
             onPressed: () {
               showDialog(context: context, builder: (context) {
-                return MatchBreakdown(shooters: _whatIfMatch.shooters);
+                return MatchBreakdown(shooters: _currentMatch.shooters);
               });
             },
           )
@@ -562,7 +637,7 @@ class _MyHomePageState extends State<MyHomePage> {
         },
         child: Scaffold(
           appBar: AppBar(
-            title: Text(_whatIfMatch?.name ?? "Match Results Viewer"),
+            title: Text(_currentMatch?.name ?? "Match Results Viewer"),
             centerTitle: true,
             actions: actions,
             bottom: _operationInProgress ? PreferredSize(
@@ -641,7 +716,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void _applyFilters(FilterSet filters) {
     _filters = filters;
 
-    List<Shooter> filteredShooters = _whatIfMatch.filterShooters(
+    List<Shooter> filteredShooters = _currentMatch.filterShooters(
       filterMode: _filters.mode,
       allowReentries: _filters.reentries,
       divisions: _filters.divisions.keys.where((element) => _filters.divisions[element]).toList(),
@@ -659,7 +734,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     setState(() {
-      _baseScores = _whatIfMatch.getScores(shooters: filteredShooters, scoreDQ: _filters.scoreDQs);
+      _baseScores = _currentMatch.getScores(shooters: filteredShooters, scoreDQ: _filters.scoreDQs);
       _searchedScores = []..addAll(_baseScores);
     });
 

@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 
 class ScoreRow extends StatefulWidget {
   final Widget child;
+  final bool edited;
   final Color color;
   final Color textColor;
   final Color hoverColor;
   final Color hoverTextColor;
 
-  const ScoreRow({Key key, this.child, this.color, this.textColor, this.hoverColor, this.hoverTextColor}) : super(key: key);
+  const ScoreRow({Key key, this.child, this.color, this.textColor, this.hoverColor, this.hoverTextColor, this.edited}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() {
@@ -25,6 +26,9 @@ class _ScoreRowState extends State<ScoreRow> {
     Color textColor = widget.textColor ?? Theme.of(context).textTheme.bodyText1.color;
     Color hoverTextColor = widget.hoverTextColor ?? Theme.of(context).colorScheme.onPrimary;
 
+    if(widget.edited) {
+      textColor = Colors.red;
+    }
 
     ThemeData baseTheme = Theme.of(context);
     return MouseRegion(

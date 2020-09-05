@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/ui/editable_shooter_card.dart';
 import 'package:uspsa_result_viewer/ui/score_row.dart';
 import 'package:uspsa_result_viewer/ui/shooter_card.dart';
 
@@ -14,6 +15,9 @@ class ScoreList extends StatelessWidget {
   final double minWidth;
   final ScrollController horizontalScrollController;
   final ScrollController verticalScrollController;
+  final Function(Shooter, Stage) onScoreEdited;
+  final List<Shooter> editedShooters;
+  final bool whatIfMode;
 
   const ScoreList({
     Key key,
@@ -25,6 +29,9 @@ class ScoreList extends StatelessWidget {
     this.verticalScrollController,
     this.horizontalScrollController,
     this.scoreDQ = true,
+    @required this.onScoreEdited,
+    this.whatIfMode = false,
+    this.editedShooters = const [],
   }) : super(key: key);
 
   @override
@@ -117,6 +124,7 @@ class ScoreList extends StatelessWidget {
       },
       child: ScoreRow(
         color: index % 2 == 1 ? Colors.grey[200] : Colors.white,
+        edited: editedShooters.contains(score.shooter),
         child: Padding(
           padding: const EdgeInsets.all(2.0),
           child: Row(
@@ -183,13 +191,25 @@ class ScoreList extends StatelessWidget {
     var stageScore = filteredScores[i].stageScores[stage];
 
     return GestureDetector(
-      onTap: () {
-        showDialog(context: context, builder: (context) {
-          return ShooterResultCard(stageScore: stageScore, scoreDQ: scoreDQ,);
-        });
+      onTap: () async {
+        if(whatIfMode) {
+          var rescore = await showDialog<bool>(context: context, barrierDismissible: false, builder: (context) {
+            return EditableShooterCard(stageScore: stageScore, scoreDQ: scoreDQ,);
+          });
+
+          if(rescore) {
+            onScoreEdited(matchScore.shooter, stage);
+          }
+        }
+        else {
+          showDialog(context: context, builder: (context) {
+            return ShooterResultCard(stageScore: stageScore, scoreDQ: scoreDQ,);
+          });
+        }
       },
       child: ScoreRow(
         color: i % 2 == 1 ? Colors.grey[200] : Colors.white,
+        edited: editedShooters.contains(matchScore.shooter),
         child: Padding(
           padding: const EdgeInsets.all(2.0),
           child: Row(
