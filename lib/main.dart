@@ -91,6 +91,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   BuildContext _innerContext;
   PracticalMatch _canonicalMatch;
+  PracticalMatch _whatIfMatch;
 
   bool _operationInProgress = false;
 
@@ -348,10 +349,12 @@ class _MyHomePageState extends State<MyHomePage> {
       stageScoreLines: stageScoreLines,
     );
 
-    var scores = canonicalMatch.getScores(scoreDQ: _filters.scoreDQs);
+    _canonicalMatch = canonicalMatch;
+    _whatIfMatch = _canonicalMatch.copy();
+    var scores = _whatIfMatch.getScores(scoreDQ: _filters.scoreDQs);
 
     setState(() {
-      _canonicalMatch = canonicalMatch;
+      _whatIfMatch = _whatIfMatch;
       _baseScores = scores;
       _searchedScores = []..addAll(_baseScores);
     });
@@ -364,13 +367,13 @@ class _MyHomePageState extends State<MyHomePage> {
 
     Widget sortWidget;
 
-    if(_canonicalMatch == null) {
+    if(_whatIfMatch == null) {
       sortWidget = Container();
     }
     else {
       sortWidget = FilterControls(
         filters: _filters,
-        stages: _canonicalMatch.stages,
+        stages: _whatIfMatch.stages,
         currentStage: _stage,
         sortMode: _sortMode,
         returnFocus: _appFocus,
@@ -383,7 +386,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     Widget listWidget;
-    if(_canonicalMatch == null && _shouldShowUploadControls()) {
+    if(_whatIfMatch == null && _shouldShowUploadControls()) {
       listWidget = SizedBox(
         height: size.height,
         width: size.width,
@@ -442,7 +445,7 @@ class _MyHomePageState extends State<MyHomePage> {
       listWidget = ScoreList(
         baseScores: _baseScores,
         filteredScores: _searchedScores,
-        match: _canonicalMatch,
+        match: _whatIfMatch,
         stage: _stage,
         scoreDQ: _filters.scoreDQs,
         verticalScrollController: _verticalScrollController,
@@ -460,7 +463,7 @@ class _MyHomePageState extends State<MyHomePage> {
     AlwaysStoppedAnimation<Color>(backgroundColor) : AlwaysStoppedAnimation<Color>(primaryColor);
 
     List<Widget> actions = [];
-    if(_canonicalMatch != null && _shouldShowUploadControls()) {
+    if(_whatIfMatch != null && _shouldShowUploadControls()) {
       actions.addAll([
         Tooltip(
           message: "Upload a new match file from your device, replacing the current data.",
@@ -488,7 +491,7 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
       ]);
     }
-    if(_canonicalMatch != null) {
+    if(_whatIfMatch != null) {
       actions.add(
         Tooltip(
           message: "Display a match breakdown.",
@@ -496,7 +499,7 @@ class _MyHomePageState extends State<MyHomePage> {
             icon: Icon(Icons.table_chart),
             onPressed: () {
               showDialog(context: context, builder: (context) {
-                return MatchBreakdown(shooters: _canonicalMatch.shooters);
+                return MatchBreakdown(shooters: _whatIfMatch.shooters);
               });
             },
           )
@@ -559,7 +562,7 @@ class _MyHomePageState extends State<MyHomePage> {
         },
         child: Scaffold(
           appBar: AppBar(
-            title: Text(_canonicalMatch?.name ?? "Match Results Viewer"),
+            title: Text(_whatIfMatch?.name ?? "Match Results Viewer"),
             centerTitle: true,
             actions: actions,
             bottom: _operationInProgress ? PreferredSize(
@@ -638,7 +641,7 @@ class _MyHomePageState extends State<MyHomePage> {
   void _applyFilters(FilterSet filters) {
     _filters = filters;
 
-    List<Shooter> filteredShooters = _canonicalMatch.filterShooters(
+    List<Shooter> filteredShooters = _whatIfMatch.filterShooters(
       filterMode: _filters.mode,
       allowReentries: _filters.reentries,
       divisions: _filters.divisions.keys.where((element) => _filters.divisions[element]).toList(),
@@ -656,7 +659,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     setState(() {
-      _baseScores = _canonicalMatch.getScores(shooters: filteredShooters, scoreDQ: _filters.scoreDQs);
+      _baseScores = _whatIfMatch.getScores(shooters: filteredShooters, scoreDQ: _filters.scoreDQs);
       _searchedScores = []..addAll(_baseScores);
     });
 

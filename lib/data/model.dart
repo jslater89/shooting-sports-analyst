@@ -2,6 +2,7 @@
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 enum FilterMode {
   or, and,
@@ -14,6 +15,29 @@ class PracticalMatch {
   List<Stage> stages = [];
 
   int maxPoints;
+
+  PracticalMatch copy() {
+    var newMatch = PracticalMatch()
+        ..name = name
+        ..date = date
+        ..shooters = []
+        ..stages = []
+        ..maxPoints = maxPoints;
+
+    newMatch.stages.addAll(stages.map((s) => s.copy()));
+    newMatch.shooters.addAll(shooters.map((s) => s.copy(newMatch)));
+
+    return newMatch;
+  }
+
+  /// Looks up a stage  by name.
+  Stage lookupStage(Stage stage) {
+    for(Stage s in stages) {
+      if(stage.name == s.name) return s;
+    }
+
+    return null;
+  }
 
   /// Filters shooters by division, power factor, and classification.
   List<Shooter> filterShooters({
@@ -200,6 +224,25 @@ class Shooter {
     if(dq) dqSuffix = " (DQ)";
     return "$firstName $lastName$dqSuffix";
   }
+
+  Shooter copy(PracticalMatch parent) {
+    var newShooter = Shooter()
+        ..firstName = firstName
+        ..lastName = lastName
+        ..memberNumber = memberNumber
+        ..reentry = reentry
+        ..dq = dq
+        ..division = division
+        ..classification = classification
+        ..powerFactor = powerFactor
+        ..stageScores = {};
+
+    stageScores.forEach((stage, score) {
+      newShooter.stageScores[parent.lookupStage(stage)] = score.copy(newShooter, stage);
+    });
+
+    return newShooter;
+  }
 }
 
 class Stage {
@@ -209,6 +252,16 @@ class Stage {
   bool classifier;
   String classifierNumber;
   Scoring type;
+
+  Stage copy() {
+    return Stage()
+        ..name = name
+        ..minRounds = minRounds
+        ..maxPoints = maxPoints
+        ..classifier = classifier
+        ..classifierNumber = classifierNumber
+        ..type = type;
+  }
 }
 
 class Score {
@@ -216,6 +269,35 @@ class Score {
   Stage stage;
   double t1 = 0, t2 = 0, t3 = 0, t4 = 0, t5 = 0;
   double time = 0;
+
+  int a = 0, b = 0, c = 0, d = 0, m = 0, ns = 0, npm = 0;
+  int procedural = 0, lateShot = 0, extraShot = 0, extraHit = 0, otherPenalty = 0;
+
+  Score copy(Shooter shooter, Stage stage) {
+    var newScore = Score()
+        ..shooter = shooter
+        ..stage = stage
+        ..t1 = t1
+        ..t2 = t2
+        ..t3 = t3
+        ..t4 = t4
+        ..t5 = t5
+        ..time = time
+        ..a = a
+        ..b = b
+        ..c = c
+        ..d = d
+        ..m = m
+        ..ns = ns
+        ..npm = npm
+        ..procedural = procedural
+        ..lateShot = lateShot
+        ..extraShot = extraShot
+        ..extraHit = extraHit
+        ..otherPenalty = otherPenalty;
+
+    return newScore;
+  }
 
   List<double> get stringTimes {
     List<double> times = [];
@@ -240,9 +322,6 @@ class Score {
     if(score.isNaN) return 0;
     return score;
   }
-
-  int a = 0, b = 0, c = 0, d = 0, m = 0, ns = 0, npm = 0;
-  int procedural = 0, lateShot = 0, extraShot = 0, extraHit = 0, otherPenalty = 0;
 
   int get penaltyCount {
     return procedural + lateShot + extraShot + extraHit + otherPenalty;
