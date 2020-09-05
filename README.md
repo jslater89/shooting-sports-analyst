@@ -20,8 +20,3 @@ several seconds to start up if it hasn't been used in the last half hour.
 ## Contributions
 
 Open a pull request.
-
-## Future Features
-
-* 'What-If' editing.
-* Simple query language for search box ("open AND d OR limited AND c").
