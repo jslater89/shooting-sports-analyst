@@ -121,6 +121,8 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  Text("Round count: ${_score.stage.minRounds}"),
+                  SizedBox(height: 5),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
