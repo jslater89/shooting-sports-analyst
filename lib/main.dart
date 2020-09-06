@@ -102,6 +102,8 @@ class _MyHomePageState extends State<MyHomePage> {
   Stage _stage;
   SortMode _sortMode = SortMode.score;
 
+  List<Shooter> get _filteredShooters => _baseScores.map((score) => score.shooter).toList();
+
   /// If true, in what-if mode. If false, not in what-if mode.
   bool _whatIfMode = false;
   Map<Stage, List<Shooter>> _editedShooters = {};
@@ -474,7 +476,7 @@ class _MyHomePageState extends State<MyHomePage> {
             }
           });
 
-          var scores = _currentMatch.getScores();
+          var scores = _currentMatch.getScores(shooters: _filteredShooters);
 
           setState(() {
             _baseScores = scores;
@@ -506,7 +508,8 @@ class _MyHomePageState extends State<MyHomePage> {
             onPressed: () async {
 
               _currentMatch = _canonicalMatch.copy();
-              var scores = _currentMatch.getScores();
+              List<Shooter> filteredShooters = _filterShooters();
+              var scores = _currentMatch.getScores(shooters: filteredShooters);
 
               setState(() {
                 _editedShooters = {};
@@ -713,9 +716,7 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  void _applyFilters(FilterSet filters) {
-    _filters = filters;
-
+  List<Shooter> _filterShooters() {
     List<Shooter> filteredShooters = _currentMatch.filterShooters(
       filterMode: _filters.mode,
       allowReentries: _filters.reentries,
@@ -723,6 +724,13 @@ class _MyHomePageState extends State<MyHomePage> {
       classes: _filters.classifications.keys.where((element) => _filters.classifications[element]).toList(),
       powerFactors: _filters.powerFactors.keys.where((element) => _filters.powerFactors[element]).toList(),
     );
+    return filteredShooters;
+  }
+
+  void _applyFilters(FilterSet filters) {
+    _filters = filters;
+
+    List<Shooter> filteredShooters = _filterShooters();
 
     if(filteredShooters.length == 0) {
       Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("Filters match 0 shooters!")));
