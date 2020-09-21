@@ -53794,7 +53794,7 @@ $S:361}
 F.a_H.prototype={
 $1:function(a){var s=null,r=L.z("About",s,s,s,s,s,s),q=K.T(a,!1).K,p=K.T(a,!1).K.y.uH(K.T(a,!1).J.a),o=N.VJ(s)
 o.b9=new F.a_G()
-return E.yn(s,T.ap(T.a4X(s,s,C.b2,!0,s,new Q.da(s,H.b([new Q.da("A Flutter web app for displaying USPSA scores. You can also embed this widget into your match website, automatically loading your results file from a provided Internet address.\n\nVisit the repository at ",s,s,q.y),new Q.da(u.n,s,o,p),new Q.da(" for more information.\n\nuspsa_result_viewer v2.1.0\n\xa9 Jay Slater 2020\nGPL 3.0",s,s,K.T(a,!1).K.y)],t.B2),s,s),C.aX,s,s,1,C.ag),s,this.a.a*0.5),r)},
+return E.yn(s,T.ap(T.a4X(s,s,C.b2,!0,s,new Q.da(s,H.b([new Q.da("A Flutter web app for displaying USPSA scores. You can also embed this widget into your match website, automatically loading your results file from a provided Internet address.\n\nVisit the repository at ",s,s,q.y),new Q.da(u.n,s,o,p),new Q.da(" for more information.\n\nuspsa_result_viewer v2.1.1\n\xa9 Jay Slater 2020\nGPL 3.0",s,s,K.T(a,!1).K.y)],t.B2),s,s),C.aX,s,s,1,C.ag),s,this.a.a*0.5),r)},
 $S:86}
 F.a_G.prototype={
 $0:function(){var s=0,r=P.ab(t.P)
