@@ -4,6 +4,11 @@ A web application for viewing USPSA match results, usable standalone at
 [github.io](https://jslater89.github.io/uspsa-result-viewer), or embedded
 into an iframe.
 
+## Building
+
+Copy web/index-template.html to web/index.html, then use `flutter build web`.
+
+
 ## Embedding
 
 See [this example file](https://github.com/jslater89/uspsa-result-viewer/blob/master/embedded-index.html).

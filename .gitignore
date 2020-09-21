@@ -30,6 +30,8 @@
 .pub/
 /build/
 
+web/index.html
+
 # Web related
 lib/generated_plugin_registrant.dart
 
