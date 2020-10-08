@@ -8,6 +8,14 @@ into an iframe.
 
 Copy web/index-template.html to web/index.html, then use `flutter build web`.
 
+## Linking
+
+You can link directly to the a results page for a given match with a link of
+the form:
+
+https://jslater89.github.io/uspsa-result-viewer?practiscoreId=117062
+
+`practiscoreId` is the last part of the match URL.
 
 ## Embedding
 
