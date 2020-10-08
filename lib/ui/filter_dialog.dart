@@ -278,10 +278,57 @@ class _FilterDialogState extends State<FilterDialog> {
                 ),
               ),
             ],
-          )
+          ),
         ],
       ),
       actions: [
+        FlatButton(
+          child: Text("HANDGUNS"),
+          onPressed: () {
+            var filters = FilterSet();
+            filters.reentries =_filters.reentries;
+            filters.scoreDQs = _filters.scoreDQs;
+            filters.divisions[Division.pcc] = false;
+
+            setState(() {
+              _filters = filters;
+            });
+          },
+        ),
+        FlatButton(
+          child: Text("HICAP"),
+          onPressed: () {
+            var filters = FilterSet();
+            filters.reentries =_filters.reentries;
+            filters.scoreDQs = _filters.scoreDQs;
+            filters.divisions[Division.pcc] = false;
+            filters.divisions[Division.limited10] = false;
+            filters.divisions[Division.production] = false;
+            filters.divisions[Division.singleStack] = false;
+            filters.divisions[Division.revolver] = false;
+
+            setState(() {
+              _filters = filters;
+            });
+          },
+        ),
+        FlatButton(
+            child: Text("LOCAP"),
+            onPressed: () {
+              var filters = FilterSet();
+              filters.reentries =_filters.reentries;
+              filters.scoreDQs = _filters.scoreDQs;
+              filters.divisions[Division.pcc] = false;
+              filters.divisions[Division.open] = false;
+              filters.divisions[Division.limited] = false;
+              filters.divisions[Division.carryOptics] = false;
+
+              setState(() {
+                _filters = filters;
+              });
+            }
+        ),
+        SizedBox(width: 60),
         FlatButton(
           child: Text("ALL"),
           onPressed: () {
