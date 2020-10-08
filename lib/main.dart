@@ -61,6 +61,7 @@ class _MyHomePageState extends State<MyHomePage> {
     debugPrint("iframe params? $params");
     final String resultsFileUrl = params['resultsFile'];
     final String practiscoreUrl = params['practiscoreUrl'];
+    final String practiscoreId = params['practiscoreId'];
 
     if(resultsFileUrl != null) {
       debugPrint("getting preset results file $resultsFileUrl");
@@ -70,6 +71,11 @@ class _MyHomePageState extends State<MyHomePage> {
     else if(practiscoreUrl != null) {
       debugPrint("getting preset practiscore results from $practiscoreUrl");
       _iframePractiscoreUrl = practiscoreUrl;
+      _downloadFile();
+    }
+    else if(practiscoreId != null) {
+      _iframePractiscoreUrl = "https://practiscore.com/results/new/$practiscoreId";
+      debugPrint("getting practiscore results for $practiscoreId from $_iframePractiscoreUrl");
       _downloadFile();
     }
   }
