@@ -1,7 +1,36 @@
 import 'package:flutter/foundation.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 
-PracticalMatch processResultLines({List<String> infoLines, List<String> competitorLines, List<String> stageLines, List<String> stageScoreLines}) {
+Future<PracticalMatch> processScoreFile(String fileContents) async {
+  String reportFile = fileContents.replaceAll("\r\n", "\n");
+  List<String> lines = reportFile.split("\n");
+
+  List<String> infoLines = [];
+  List<String> competitorLines = [];
+  List<String> stageLines = [];
+  List<String> stageScoreLines = [];
+
+  for (String l in lines) {
+    l = l.trim();
+    if (l.startsWith(r"$INFO"))
+      infoLines.add(l);
+    else if (l.startsWith("E "))
+      competitorLines.add(l);
+    else if (l.startsWith("G "))
+      stageLines.add(l);
+    else if (l.startsWith("I ")) stageScoreLines.add(l);
+  }
+
+  PracticalMatch canonicalMatch = _processResultLines(
+    infoLines: infoLines,
+    competitorLines: competitorLines,
+    stageLines: stageLines,
+    stageScoreLines: stageScoreLines,
+  );
+  return canonicalMatch;
+}
+
+PracticalMatch _processResultLines({List<String> infoLines, List<String> competitorLines, List<String> stageLines, List<String> stageScoreLines}) {
   PracticalMatch match = PracticalMatch();
   _readInfoLines(match, infoLines);
 

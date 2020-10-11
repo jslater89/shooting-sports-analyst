@@ -14,16 +14,64 @@ import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 import 'package:uspsa_result_viewer/data/search_query_parser.dart';
 import 'package:uspsa_result_viewer/data/sort_mode.dart';
+import 'package:uspsa_result_viewer/route/local_upload.dart';
+import 'package:uspsa_result_viewer/route/match_select.dart';
+import 'package:uspsa_result_viewer/route/practiscore_url.dart';
 import 'package:uspsa_result_viewer/ui/filter_controls.dart';
 import 'package:uspsa_result_viewer/ui/filter_dialog.dart';
 import 'package:uspsa_result_viewer/ui/match_breakdown.dart';
 import 'package:uspsa_result_viewer/ui/score_list.dart';
 import 'package:uspsa_result_viewer/version.dart';
-import 'package:flutter/material.dart';
 import 'configure_nonweb.dart' if (dart.library.html) 'configure_web.dart';
+import 'package:fluro/fluro.dart' as fluro;
+
+class GlobalData {
+  String _resultsFileUrl;
+  String get resultsFileUrl => _resultsFileUrl;
+  String _practiscoreUrl;
+  String get practiscoreUrl => _practiscoreUrl;
+  String _practiscoreId;
+  String get practiscoreId => _practiscoreId;
+  final router = fluro.Router();
+
+  GlobalData() {
+    final Map<String, String> params = Uri.parse(window.location.href).queryParameters;
+    debugPrint("iframe params? $params");
+    _resultsFileUrl = params['resultsFile'];
+    _practiscoreUrl = params['practiscoreUrl'];
+    _practiscoreId = params['practiscoreId'];
+  }
+}
+
+GlobalData globals = GlobalData();
 
 void main() {
+  globals.router.define('/', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
+    handlerFunc: (context, params) {
+      debugPrint("$params");
+      return MatchSelectPage();
+    }
+  ));
+  globals.router.define('/local', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
+    handlerFunc: (context, params) {
+      return UploadedResultPage();
+    }
+  ));
+  globals.router.define('/web/:matchId', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
+    handlerFunc: (context, params) {
+      return PractiscoreResultPage(matchId: params['matchId'][0],);
+    }
+  ));
+
+  // resultUrl is base64-encoded
+  globals.router.define('/webfile/:resultUrl', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
+      handlerFunc: (context, params) {
+        var urlString = String.fromCharCodes(Base64Codec.urlSafe().decode(params['resultUrl'][0]));
+        return PractiscoreResultPage(resultUrl: urlString,);
+      }
+  ));
   configureApp();
+
   runApp(MyApp());
 }
 
@@ -37,19 +85,13 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.indigo,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: MyHomePage(),
+      initialRoute: '/',
+      onGenerateRoute: globals.router.generator,
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key}) : super(key: key);
-
-  @override
-  _MyHomePageState createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
+class _MyHomePageState extends State<StatefulWidget> {
   static const _MIN_WIDTH = 1024.0;
 
   bool _invalidSearch = false;
@@ -179,7 +221,8 @@ class _MyHomePageState extends State<MyHomePage> {
     var matchUrlParts = matchUrl.split("/");
     var matchId = matchUrlParts.last;
     
-    // It's probably a short ID
+    // It's probably a short ID—the long IDs are UUID-style, with dashes separating
+    // blocks of alphanumeric characters
     if(!matchId.contains(r"-")) {
       try {
         debugPrint("Trying to get match from URL: $matchUrl");
@@ -365,22 +408,22 @@ class _MyHomePageState extends State<MyHomePage> {
       else if (l.startsWith("I ")) stageScoreLines.add(l);
     }
 
-    PracticalMatch canonicalMatch = processResultLines(
-      infoLines: infoLines,
-      competitorLines: competitorLines,
-      stageLines: stageLines,
-      stageScoreLines: stageScoreLines,
-    );
+    // PracticalMatch canonicalMatch = processResultLines(
+    //   infoLines: infoLines,
+    //   competitorLines: competitorLines,
+    //   stageLines: stageLines,
+    //   stageScoreLines: stageScoreLines,
+    // );
 
-    _canonicalMatch = canonicalMatch;
-    _currentMatch = _canonicalMatch.copy();
-    var scores = _currentMatch.getScores(scoreDQ: _filters.scoreDQs);
-
-    setState(() {
-      _currentMatch = _currentMatch;
-      _baseScores = scores;
-      _searchedScores = []..addAll(_baseScores);
-    });
+    // _canonicalMatch = canonicalMatch;
+    // _currentMatch = _canonicalMatch.copy();
+    // var scores = _currentMatch.getScores(scoreDQ: _filters.scoreDQs);
+    //
+    // setState(() {
+    //   _currentMatch = _currentMatch;
+    //   _baseScores = scores;
+    //   _searchedScores = []..addAll(_baseScores);
+    // });
 
   }
 

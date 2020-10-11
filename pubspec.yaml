@@ -27,7 +27,8 @@ dependencies:
   flutter_web_plugins:
     sdk: flutter
 
-  http: ^0.12.1
+  fluro: ^1.6.3 # routing
+  http: ^0.12.1 # web requests
 
 dev_dependencies:
   flutter_test:

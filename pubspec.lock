@@ -50,6 +50,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "1.2.0-nullsafety.1"
+  fluro:
+    dependency: "direct main"
+    description:
+      name: fluro
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "1.6.3"
   flutter:
     dependency: "direct main"
     description: flutter
@@ -79,6 +86,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "3.1.4"
+  js:
+    dependency: transitive
+    description:
+      name: js
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "0.6.3-nullsafety.1"
   matcher:
     dependency: transitive
     description:
@@ -125,7 +139,7 @@ packages:
       name: stack_trace
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "1.10.0-nullsafety.1"
+    version: "1.10.0-nullsafety.2"
   stream_channel:
     dependency: transitive
     description:
@@ -169,4 +183,5 @@ packages:
     source: hosted
     version: "2.1.0-nullsafety.3"
 sdks:
-  dart: ">=2.10.0-110 <=2.11.0-161.0.dev"
+  dart: ">=2.10.0-110 <=2.11.0-207.0.dev"
+  flutter: ">=1.12.0"
