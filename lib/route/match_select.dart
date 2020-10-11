@@ -35,10 +35,7 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
 
   void _launchPresetPractiscore({String url}) async {
     var matchId = await _getMatchId(presetUrl: url);
-    if(matchId == null) {
-      Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("Unable to fetch match from $url.")));
-    }
-    else {
+    if(matchId != null) {
       Navigator.of(context).pushNamed('/web/$matchId');
     }
   }
@@ -124,7 +121,6 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
   Future<void> _uploadResultsFile(Function(String) onFileContents) async {
     InputElement uploadInput = FileUploadInputElement();
     uploadInput.click();
-    debugPrint("Launching upload dialog");
     uploadInput.onChange.listen((e) {
       setState(() {
         _operationInProgress = true;
@@ -161,6 +157,7 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
       }
       else {
         debugPrint("Got weird files: $files");
+        onFileContents(null);
       }
     });
   }

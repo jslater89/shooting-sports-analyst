@@ -30,7 +30,6 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
 
     if(widget.matchId != null)        _getPractiscoreMatch();
@@ -86,7 +85,7 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
         }
       }
       else if(response.statusCode == 404) {
-        //Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("No match record exists at given URL.")));
+        Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("No match record exists at given URL.")));
         debugPrint("No match record at $reportUrl");
         return;
       }
@@ -106,7 +105,7 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
         http.ClientException ce = err;
         debugPrint("${ce.uri} ${ce.message}");
       }
-      //Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("Failed to download match report.")));
+      Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("Failed to download match report.")));
       return;
     }
 
@@ -136,6 +135,7 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
     catch(err) {
       debugPrint("download error pt. 2: $err ${err.runtimeType}");
     }
+    Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("Failed to download match report.")));
   }
 
   @override

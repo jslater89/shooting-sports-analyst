@@ -12,7 +12,6 @@ import 'package:uspsa_result_viewer/ui/filter_controls.dart';
 import 'package:uspsa_result_viewer/ui/filter_dialog.dart';
 import 'package:uspsa_result_viewer/ui/match_breakdown.dart';
 import 'package:uspsa_result_viewer/ui/score_list.dart';
-import 'package:uspsa_result_viewer/version.dart';
 
 class ResultPage extends StatefulWidget {
   final PracticalMatch canonicalMatch;
@@ -67,6 +66,7 @@ class _ResultPageState extends State<ResultPage> {
     SystemChrome.setApplicationSwitcherDescription(
       ApplicationSwitcherDescription(
         label: "Results: ${widget.canonicalMatch.name}",
+        primaryColor: 0x3f51b5, // Colors.indigo
       )
     );
 
