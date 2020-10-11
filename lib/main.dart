@@ -19,8 +19,11 @@ import 'package:uspsa_result_viewer/ui/filter_dialog.dart';
 import 'package:uspsa_result_viewer/ui/match_breakdown.dart';
 import 'package:uspsa_result_viewer/ui/score_list.dart';
 import 'package:uspsa_result_viewer/version.dart';
+import 'package:flutter/material.dart';
+import 'configure_nonweb.dart' if (dart.library.html) 'configure_web.dart';
 
 void main() {
+  configureApp();
   runApp(MyApp());
 }
 
