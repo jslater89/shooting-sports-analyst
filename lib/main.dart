@@ -1,27 +1,13 @@
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html';
-import 'dart:math';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
-import 'package:uspsa_result_viewer/data/results_file_parser.dart';
-import 'package:uspsa_result_viewer/data/search_query_parser.dart';
-import 'package:uspsa_result_viewer/data/sort_mode.dart';
 import 'package:uspsa_result_viewer/route/local_upload.dart';
 import 'package:uspsa_result_viewer/route/match_select.dart';
 import 'package:uspsa_result_viewer/route/practiscore_url.dart';
-import 'package:uspsa_result_viewer/ui/filter_controls.dart';
-import 'package:uspsa_result_viewer/ui/filter_dialog.dart';
-import 'package:uspsa_result_viewer/ui/match_breakdown.dart';
-import 'package:uspsa_result_viewer/ui/score_list.dart';
-import 'package:uspsa_result_viewer/version.dart';
 import 'configure_nonweb.dart' if (dart.library.html) 'configure_web.dart';
 import 'package:fluro/fluro.dart' as fluro;
 

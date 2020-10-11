@@ -17,18 +17,22 @@ class MatchSelectPage extends StatefulWidget {
 class _MatchSelectPageState extends State<MatchSelectPage> {
   BuildContext _innerContext;
   bool _operationInProgress = false;
+  bool _launchingFromParam = false;
 
   @override
   void initState() {
     super.initState();
 
     if(globals.practiscoreId != null) {
+      _launchingFromParam = true;
       _launchPresetPractiscore(url: "https://practiscore.com/results/new/${globals.practiscoreId}");
     }
     else if(globals.practiscoreUrl != null) {
+      _launchingFromParam = true;
       _launchPresetPractiscore(url: globals.practiscoreUrl);
     }
     else if(globals.resultsFileUrl != null) {
+      _launchingFromParam = true;
       _launchNonPractiscoreFile(url: globals.resultsFileUrl);
     }
   }
@@ -36,13 +40,15 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
   void _launchPresetPractiscore({String url}) async {
     var matchId = await _getMatchId(presetUrl: url);
     if(matchId != null) {
-      Navigator.of(context).pushNamed('/web/$matchId');
+      //Navigator.of(context).pushNamed('/web/$matchId');
+      window.location.href = "/#/web/$matchId";
     }
   }
 
   void _launchNonPractiscoreFile({@required String url}) async {
     var urlBytes = Base64Codec.urlSafe().encode(url.codeUnits);
-    Navigator.of(context).pushNamed('/webfile/$urlBytes');
+    //Navigator.of(context).pushNamed('/webfile/$urlBytes');
+    window.location.href = "/#/webfile/$urlBytes";
   }
 
   @override
@@ -54,7 +60,7 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
       onInnerContextAssigned: (context) {
         _innerContext = context;
       },
-      child: SizedBox(
+      child: _launchingFromParam ? Center(child: Text("Launching...")) : SizedBox(
         height: size.height,
         width: size.width,
         child: Row(
