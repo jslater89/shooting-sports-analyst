@@ -4,6 +4,19 @@ A web application for viewing USPSA match results, usable standalone at
 [github.io](https://jslater89.github.io/uspsa-result-viewer), or embedded
 into an iframe.
 
+## Building
+
+Copy web/index-template.html to web/index.html, then use `flutter build web`.
+
+## Linking
+
+You can link directly to the a results page for a given match with a link of
+the form:
+
+https://jslater89.github.io/uspsa-result-viewer?practiscoreId=117062
+
+`practiscoreId` is the last part of the match URL.
+
 ## Embedding
 
 See [this example file](https://github.com/jslater89/uspsa-result-viewer/blob/master/embedded-index.html).

@@ -19,8 +19,11 @@ import 'package:uspsa_result_viewer/ui/filter_dialog.dart';
 import 'package:uspsa_result_viewer/ui/match_breakdown.dart';
 import 'package:uspsa_result_viewer/ui/score_list.dart';
 import 'package:uspsa_result_viewer/version.dart';
+import 'package:flutter/material.dart';
+import 'configure_nonweb.dart' if (dart.library.html) 'configure_web.dart';
 
 void main() {
+  configureApp();
   runApp(MyApp());
 }
 
@@ -61,6 +64,7 @@ class _MyHomePageState extends State<MyHomePage> {
     debugPrint("iframe params? $params");
     final String resultsFileUrl = params['resultsFile'];
     final String practiscoreUrl = params['practiscoreUrl'];
+    final String practiscoreId = params['practiscoreId'];
 
     if(resultsFileUrl != null) {
       debugPrint("getting preset results file $resultsFileUrl");
@@ -70,6 +74,11 @@ class _MyHomePageState extends State<MyHomePage> {
     else if(practiscoreUrl != null) {
       debugPrint("getting preset practiscore results from $practiscoreUrl");
       _iframePractiscoreUrl = practiscoreUrl;
+      _downloadFile();
+    }
+    else if(practiscoreId != null) {
+      _iframePractiscoreUrl = "https://practiscore.com/results/new/$practiscoreId";
+      debugPrint("getting practiscore results for $practiscoreId from $_iframePractiscoreUrl");
       _downloadFile();
     }
   }
@@ -101,6 +110,8 @@ class _MyHomePageState extends State<MyHomePage> {
   List<RelativeMatchScore> _searchedScores = [];
   Stage _stage;
   SortMode _sortMode = SortMode.score;
+
+  List<Shooter> get _filteredShooters => _baseScores.map((score) => score.shooter).toList();
 
   /// If true, in what-if mode. If false, not in what-if mode.
   bool _whatIfMode = false;
@@ -474,7 +485,7 @@ class _MyHomePageState extends State<MyHomePage> {
             }
           });
 
-          var scores = _currentMatch.getScores();
+          var scores = _currentMatch.getScores(shooters: _filteredShooters);
 
           setState(() {
             _baseScores = scores;
@@ -506,7 +517,8 @@ class _MyHomePageState extends State<MyHomePage> {
             onPressed: () async {
 
               _currentMatch = _canonicalMatch.copy();
-              var scores = _currentMatch.getScores();
+              List<Shooter> filteredShooters = _filterShooters();
+              var scores = _currentMatch.getScores(shooters: filteredShooters);
 
               setState(() {
                 _editedShooters = {};
@@ -713,9 +725,7 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  void _applyFilters(FilterSet filters) {
-    _filters = filters;
-
+  List<Shooter> _filterShooters() {
     List<Shooter> filteredShooters = _currentMatch.filterShooters(
       filterMode: _filters.mode,
       allowReentries: _filters.reentries,
@@ -723,6 +733,13 @@ class _MyHomePageState extends State<MyHomePage> {
       classes: _filters.classifications.keys.where((element) => _filters.classifications[element]).toList(),
       powerFactors: _filters.powerFactors.keys.where((element) => _filters.powerFactors[element]).toList(),
     );
+    return filteredShooters;
+  }
+
+  void _applyFilters(FilterSet filters) {
+    _filters = filters;
+
+    List<Shooter> filteredShooters = _filterShooters();
 
     if(filteredShooters.length == 0) {
       Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("Filters match 0 shooters!")));
