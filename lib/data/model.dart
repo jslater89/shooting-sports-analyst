@@ -262,6 +262,11 @@ class Stage {
         ..classifierNumber = classifierNumber
         ..type = type;
   }
+
+  @override
+  String toString() {
+    return name;
+  }
 }
 
 class Score {

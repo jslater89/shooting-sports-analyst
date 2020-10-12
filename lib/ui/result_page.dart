@@ -1,7 +1,7 @@
+// ignore: avoid_web_libraries_in_flutter
 import 'dart:html';
 import 'dart:math';
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
@@ -42,8 +42,12 @@ class _ResultPageState extends State<ResultPage> {
   String _searchTerm = "";
   bool _invalidSearch = false;
   List<RelativeMatchScore> _searchedScores = [];
+  StageMenuItem _currentStageMenuItem = StageMenuItem.match();
+  List<Stage> _filteredStages;
   Stage _stage;
   SortMode _sortMode = SortMode.score;
+
+  int get _matchMaxPoints => _filteredStages.map((stage) => stage.maxPoints).reduce((a, b) => a + b);
 
   List<Shooter> get _filteredShooters => _baseScores.map((score) => score.shooter).toList();
 
@@ -72,7 +76,8 @@ class _ResultPageState extends State<ResultPage> {
 
     _appFocus = FocusNode();
     _currentMatch = widget.canonicalMatch.copy();
-    var scores = _currentMatch.getScores(scoreDQ: _filters.scoreDQs);
+    _filteredStages = []..addAll(_currentMatch.stages);
+    var scores = _currentMatch.getScores(scoreDQ: _filters.scoreDQs, stages: _filteredStages);
 
     _baseScores = scores;
     _searchedScores = []..addAll(_baseScores);
@@ -120,21 +125,31 @@ class _ResultPageState extends State<ResultPage> {
     }
 
     setState(() {
-      _baseScores = _currentMatch.getScores(shooters: filteredShooters, scoreDQ: _filters.scoreDQs);
+      _baseScores = _currentMatch.getScores(shooters: filteredShooters, scoreDQ: _filters.scoreDQs, stages: _filteredStages);
       _searchedScores = []..addAll(_baseScores);
     });
 
     _applySortMode(_sortMode);
   }
 
-  void _applyStage(Stage s) {
+  void _applyStage(StageMenuItem s) {
     setState(() {
-      _stage = s;
+      if(s.type != StageMenuItemType.filter) _stage = s.stage;
+      _currentStageMenuItem = s;
       _baseScores = _baseScores;
       _searchedScores = []..addAll(_baseScores);
     });
 
     _applySortMode(_sortMode);
+  }
+
+  void _selectStages(List<Stage> stages) {
+    setState(() {
+      _currentStageMenuItem = StageMenuItem.match();
+      _filteredStages = stages;
+    });
+
+    _applyFilters(_filters);
   }
 
   void _applySortMode(SortMode s) {
@@ -210,14 +225,16 @@ class _ResultPageState extends State<ResultPage> {
 
     Widget sortWidget = FilterControls(
       filters: _filters,
-      stages: _currentMatch.stages,
-      currentStage: _stage,
+      allStages: _currentMatch.stages,
+      filteredStages: _filteredStages,
+      currentStage: _currentStageMenuItem,
       sortMode: _sortMode,
       returnFocus: _appFocus,
       searchError: _invalidSearch,
       onFiltersChanged: _applyFilters,
       onSortModeChanged: _applySortMode,
       onStageChanged: _applyStage,
+      onStageSetChanged: _selectStages,
       onSearchChanged: _applySearchTerm,
     );
 
@@ -225,6 +242,7 @@ class _ResultPageState extends State<ResultPage> {
       baseScores: _baseScores,
       filteredScores: _searchedScores,
       match: _currentMatch,
+      maxPoints: _matchMaxPoints,
       stage: _stage,
       scoreDQ: _filters.scoreDQs,
       verticalScrollController: _verticalScrollController,
@@ -285,7 +303,7 @@ class _ResultPageState extends State<ResultPage> {
                       _whatIfMode = false;
                     });
 
-                    _applyStage(_stage);
+                    _applyStage(StageMenuItem(_stage));
                   }
               )
           )
@@ -415,7 +433,4 @@ class _ResultPageState extends State<ResultPage> {
       ),
     );
   }
-
-  bool _shouldShowUploadControls() => true; // TODO: hide if embedded
-
 }

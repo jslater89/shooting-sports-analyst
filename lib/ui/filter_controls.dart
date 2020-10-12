@@ -2,19 +2,29 @@ import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/sort_mode.dart';
 import 'package:uspsa_result_viewer/ui/filter_dialog.dart';
+import 'package:uspsa_result_viewer/ui/stage_select_dialog.dart';
 
 class FilterControls extends StatefulWidget {
   final SortMode sortMode;
-  final List<Stage> stages;
-  final Stage currentStage;
+
+  /// All stages in the current match. Used to populate the stage
+  /// filter dialog in what-if mode.
+  final List<Stage> allStages;
+
+  /// The stages currently scored. Used to populate the stage
+  /// select dropdown.
+  final List<Stage> filteredStages;
+
+  final StageMenuItem currentStage;
   final FilterSet filters;
 
   final FocusNode returnFocus;
   
   final Function(SortMode) onSortModeChanged;
-  final Function(Stage) onStageChanged;
+  final Function(StageMenuItem) onStageChanged;
   final Function(FilterSet) onFiltersChanged;
   final Function(String) onSearchChanged;
+  final Function(List<Stage>) onStageSetChanged;
 
   final bool searchError;
   //final Function onAdvancedQueryChanged;
@@ -24,12 +34,14 @@ class FilterControls extends StatefulWidget {
       Key key,
       @required this.sortMode,
       @required this.currentStage,
-      @required this.stages,
+      @required this.allStages,
+      @required this.filteredStages,
       @required this.filters,
       @required this.returnFocus,
       @required this.searchError,
       @required this.onSortModeChanged,
       @required this.onStageChanged,
+      @required this.onStageSetChanged,
       @required this.onFiltersChanged,
       @required this.onSearchChanged,
     }) : super(key: key);
@@ -79,22 +91,29 @@ class _FilterControlsState extends State<FilterControls> {
     ];
   }
 
-  List<DropdownMenuItem<Stage>> _buildStageMenuItems() {
+  List<DropdownMenuItem<StageMenuItem>> _buildStageMenuItems() {
     var stageMenuItems = [
-      DropdownMenuItem<Stage>(
+      DropdownMenuItem<StageMenuItem>(
         child: Text("Match"),
-        value: null,
+        value: StageMenuItem.match(),
       )
     ];
 
-    for(Stage s in widget.stages) {
+    for(Stage s in widget.filteredStages) {
       stageMenuItems.add(
-          DropdownMenuItem<Stage>(
+          DropdownMenuItem<StageMenuItem>(
               child: Text(s.name),
-              value: s
+              value: StageMenuItem(s),
           )
       );
     }
+
+    stageMenuItems.add(
+      DropdownMenuItem<StageMenuItem>(
+        child: Text("Select stages..."),
+        value: StageMenuItem.filter(),
+      )
+    );
 
     return stageMenuItems;
   }
@@ -167,14 +186,33 @@ class _FilterControlsState extends State<FilterControls> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text("Results for...", style: Theme.of(context).textTheme.caption),
-                      DropdownButton<Stage>(
+                      DropdownButton<StageMenuItem>(
                         underline: Container(
                           height: 1,
                           color: Colors.black,
                         ),
                         items: _buildStageMenuItems(),
-                        onChanged: (Stage s) {
-                          widget.onStageChanged(s);
+                        onChanged: (StageMenuItem item) async {
+                          if(item == StageMenuItem.filter()) {
+                            var stages = await showDialog<List<Stage>>(
+                              context: context,
+                              builder: (context) {
+                                var initialState = <Stage, bool>{};
+                                for(Stage s in widget.allStages) {
+                                  initialState[s] = widget.filteredStages.contains(s);
+                                }
+                                return StageSelectDialog(initialState: initialState);
+                              }
+                            );
+
+                            if(stages != null) {
+                              debugPrint("Filtered stages: $stages");
+                              widget.onStageSetChanged(stages);
+                            }
+                          }
+                          else {
+                            widget.onStageChanged(item);
+                          }
                         },
                         value: widget.currentStage,
                       ),
@@ -225,4 +263,34 @@ class _FilterControlsState extends State<FilterControls> {
       );
     });
   }
+}
+
+enum StageMenuItemType {
+  stage,
+  filter,
+  match,
+}
+class StageMenuItem {
+  StageMenuItem(this.stage) : this.type = StageMenuItemType.stage;
+  StageMenuItem.filter() : this.type = StageMenuItemType.filter;
+  StageMenuItem.match() : this.type = StageMenuItemType.match;
+
+  StageMenuItemType type;
+  Stage stage;
+
+  @override
+  bool operator ==(Object other) {
+    if(!(other is StageMenuItem)) return false;
+    StageMenuItem o2 = other;
+
+    if(this.type == StageMenuItemType.stage) {
+      return this.type == o2.type && this.stage == o2.stage;
+    }
+    else {
+      return this.type == o2.type;
+    }
+  }
+
+  @override
+  int get hashCode => type.hashCode ^ (stage?.hashCode ?? 0);
 }

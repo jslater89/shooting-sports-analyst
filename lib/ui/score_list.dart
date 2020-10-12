@@ -8,6 +8,7 @@ import 'package:uspsa_result_viewer/ui/shooter_card.dart';
 
 class ScoreList extends StatelessWidget {
   final PracticalMatch match;
+  final int maxPoints;
   final Stage stage;
   final List<RelativeMatchScore> baseScores;
   final List<RelativeMatchScore> filteredScores;
@@ -25,6 +26,7 @@ class ScoreList extends StatelessWidget {
     @required this.stage,
     @required this.baseScores,
     @required this.filteredScores,
+    this.maxPoints,
     this.minWidth = 1024,
     this.verticalScrollController,
     this.horizontalScrollController,
@@ -38,6 +40,9 @@ class ScoreList extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget keyWidget;
 
+    int displayMaxPoints = maxPoints;
+    if(maxPoints == null) displayMaxPoints = match.maxPoints;
+
     var screenSize = MediaQuery.of(context).size;
     var maxWidth = screenSize.width;
 
@@ -45,7 +50,7 @@ class ScoreList extends StatelessWidget {
       keyWidget = Container();
     }
     else {
-      keyWidget = stage == null ? _buildMatchScoreKey(screenSize) : _buildStageScoreKey(screenSize);
+      keyWidget = stage == null ? _buildMatchScoreKey(screenSize, displayMaxPoints) : _buildStageScoreKey(screenSize);
     }
 
     return SingleChildScrollView(
@@ -75,7 +80,7 @@ class ScoreList extends StatelessWidget {
   }
 
 
-  Widget _buildMatchScoreKey(Size screenSize) {
+  Widget _buildMatchScoreKey(Size screenSize, int maxPoints) {
     return ConstrainedBox(
       constraints: BoxConstraints(
           minWidth: minWidth,
@@ -104,7 +109,7 @@ class ScoreList extends StatelessWidget {
                 Expanded(flex: 2, child: Text("Time")),
                 Expanded(flex: 3, child: Tooltip(
                     message: "The number of points out of the maximum possible for this stage.",
-                    child: Text("Points/${match.maxPoints}"))
+                    child: Text("Points/$maxPoints"))
                 ),
                 Expanded(flex: 5, child: Text("Hits")),
               ],
