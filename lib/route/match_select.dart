@@ -15,6 +15,8 @@ class MatchSelectPage extends StatefulWidget {
 }
 
 class _MatchSelectPageState extends State<MatchSelectPage> {
+  static const redirectRoot = kDebugMode ? "/" : "/uspsa-result-viewer/";
+
   BuildContext _innerContext;
   bool _operationInProgress = false;
   bool _launchingFromParam = false;
@@ -41,14 +43,14 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
     var matchId = await _getMatchId(presetUrl: url);
     if(matchId != null) {
       //Navigator.of(context).pushNamed('/web/$matchId');
-      window.location.href = "/#/web/$matchId";
+      window.location.href = "$redirectRoot#/web/$matchId";
     }
   }
 
   void _launchNonPractiscoreFile({@required String url}) async {
     var urlBytes = Base64Codec.urlSafe().encode(url.codeUnits);
     //Navigator.of(context).pushNamed('/webfile/$urlBytes');
-    window.location.href = "/#/webfile/$urlBytes";
+    window.location.href = "$redirectRoot#/webfile/$urlBytes";
   }
 
   @override
