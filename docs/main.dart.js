@@ -54571,7 +54571,7 @@ var $async$m5=P.a8(function(b,c){if(b===1)return P.aa(c,r)
 while(true)switch(s){case 0:s=2
 return P.au(q.k_(a),$async$m5)
 case 2:p=c
-if(p!=null)window.location.href="/#/web/"+p
+if(p!=null)window.location.href="/uspsa-result-viewer/#/web/"+p
 return P.ab(null,r)}})
 return P.ac($async$m5,r)},
 uf:function(a){return this.RY(a)},
@@ -54579,7 +54579,7 @@ RY:function(a){var s=0,r=P.ad(t.z),q
 var $async$uf=P.a8(function(b,c){if(b===1)return P.aa(c,r)
 while(true)switch(s){case 0:a.toString
 q=new P.z0(C.vd).gip().c3(new H.fo(a))
-window.location.href="/#/webfile/"+q
+window.location.href="/uspsa-result-viewer/#/webfile/"+q
 return P.ab(null,r)}})
 return P.ac($async$uf,r)},
 H:function(a,b){var s,r=this,q=null,p=F.b8(b,!1).a,o=r.e
