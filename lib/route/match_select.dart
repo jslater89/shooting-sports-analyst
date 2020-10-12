@@ -2,6 +2,7 @@ import 'dart:convert';
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html';
 
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -71,9 +72,15 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
           children: [
             GestureDetector(
               onTap: () async {
-                _uploadResultsFile((contents) {
+                _uploadResultsFile((contents) async {
                   if(contents != null) {
-                    Navigator.of(context).pushNamed('/local', arguments: contents);
+                    await Navigator.of(context).pushNamed('/local', arguments: contents);
+                    SystemChrome.setApplicationSwitcherDescription(
+                        ApplicationSwitcherDescription(
+                          label: "Match Results Viewer",
+                          primaryColor: 0x3f51b5, // Colors.indigo
+                        )
+                    );
                   }
                   else {
                     debugPrint("Null file contents");
@@ -104,7 +111,13 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
                 });
 
                 if(matchId != null) {
-                  Navigator.of(context).pushNamed('/web/$matchId');
+                  await Navigator.of(context).pushNamed('/web/$matchId');
+                  SystemChrome.setApplicationSwitcherDescription(
+                      ApplicationSwitcherDescription(
+                        label: "Match Results Viewer",
+                        primaryColor: 0x3f51b5, // Colors.indigo
+                      )
+                  );
                 }
               },
               child: Column(
