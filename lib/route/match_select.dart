@@ -75,12 +75,6 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
                 _uploadResultsFile((contents) async {
                   if(contents != null) {
                     await Navigator.of(context).pushNamed('/local', arguments: contents);
-                    SystemChrome.setApplicationSwitcherDescription(
-                        ApplicationSwitcherDescription(
-                          label: "Match Results Viewer",
-                          primaryColor: 0x3f51b5, // Colors.indigo
-                        )
-                    );
                   }
                   else {
                     debugPrint("Null file contents");
@@ -112,12 +106,6 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
 
                 if(matchId != null) {
                   await Navigator.of(context).pushNamed('/web/$matchId');
-                  SystemChrome.setApplicationSwitcherDescription(
-                      ApplicationSwitcherDescription(
-                        label: "Match Results Viewer",
-                        primaryColor: 0x3f51b5, // Colors.indigo
-                      )
-                  );
                 }
               },
               child: Column(

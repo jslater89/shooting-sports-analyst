@@ -371,34 +371,45 @@ class _ResultPageState extends State<ResultPage> {
       },
       autofocus: true,
       focusNode: _appFocus,
-      child: GestureDetector(
-        onTap: () {
-          _appFocus.requestFocus();
+      child: WillPopScope(
+        onWillPop: () async {
+          SystemChrome.setApplicationSwitcherDescription(
+              ApplicationSwitcherDescription(
+                label: "Match Results Viewer",
+                primaryColor: 0x3f51b5, // Colors.indigo
+              )
+          );
+          return true;
         },
-        child: Scaffold(
-          appBar: AppBar(
-            title: Text(_currentMatch?.name ?? "Match Results Viewer"),
-            centerTitle: true,
-            actions: actions,
-            bottom: _operationInProgress ? PreferredSize(
-              preferredSize: Size(double.infinity, 5),
-              child: LinearProgressIndicator(value: null, backgroundColor: primaryColor, valueColor: animation),
-            ) : null,
-          ),
-          body: Builder(
-              builder: (context) {
-                _innerContext = context;
-                return Column(
-                  children: [
-                    sortWidget,
-                    Expanded(
-                      child: Center(
-                        child: listWidget,
+        child: GestureDetector(
+          onTap: () {
+            _appFocus.requestFocus();
+          },
+          child: Scaffold(
+            appBar: AppBar(
+              title: Text(_currentMatch?.name ?? "Match Results Viewer"),
+              centerTitle: true,
+              actions: actions,
+              bottom: _operationInProgress ? PreferredSize(
+                preferredSize: Size(double.infinity, 5),
+                child: LinearProgressIndicator(value: null, backgroundColor: primaryColor, valueColor: animation),
+              ) : null,
+            ),
+            body: Builder(
+                builder: (context) {
+                  _innerContext = context;
+                  return Column(
+                    children: [
+                      sortWidget,
+                      Expanded(
+                        child: Center(
+                          child: listWidget,
+                        ),
                       ),
-                    ),
-                  ],
-                );
-              }
+                    ],
+                  );
+                }
+            ),
           ),
         ),
       ),
