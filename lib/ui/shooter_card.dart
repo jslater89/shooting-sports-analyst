@@ -1,8 +1,6 @@
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html';
-
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/ui/captioned_text.dart';
 
 class ShooterResultCard extends StatelessWidget {
@@ -130,7 +128,7 @@ class ShooterResultCard extends StatelessWidget {
     if(shooter.memberNumber != null && shooter.memberNumber != "") {
       return GestureDetector(
         onTap: () {
-          window.open("https://uspsa.org/classification/${shooter.memberNumber}", '_blank');
+          HtmlOr.openLink("https://uspsa.org/classification/${shooter.memberNumber}");
         },
         child: Text(
           "${shooter.getName()} - ${shooter.division.displayString()} ${shooter.classification.displayString()}",

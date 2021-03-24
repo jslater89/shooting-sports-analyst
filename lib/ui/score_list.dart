@@ -68,7 +68,7 @@ class ScoreList extends StatelessWidget {
             keyWidget,
             Expanded(child: ListView.builder(
               controller: verticalScrollController,
-              itemCount: (filteredScores.length ?? 0),
+              itemCount: (filteredScores.length),
               itemBuilder: (ctx, i) {
                 if(stage == null) return _buildMatchScoreRow(index: i, context: context);
                 else return _buildStageScoreRow(context, i, stage);

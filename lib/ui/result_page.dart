@@ -1,5 +1,3 @@
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -375,12 +373,12 @@ class _ResultPageState extends State<ResultPage> {
               _adjustScroll(_verticalScrollController, amount: 400);
             }
             // Suuuuuuper slow for presumably list-view reasons
-//            else if(e.logicalKey == LogicalKeyboardKey.home) {
-//              _adjustScroll(_verticalScrollController, amount: double.negativeInfinity);
-//            }
-//            else if(e.logicalKey == LogicalKeyboardKey.end) {
-//              _adjustScroll(_verticalScrollController, amount: double.infinity);
-//            }
+            else if(e.logicalKey == LogicalKeyboardKey.home) {
+             _adjustScroll(_verticalScrollController, amount: double.negativeInfinity);
+            }
+            else if(e.logicalKey == LogicalKeyboardKey.end) {
+             _adjustScroll(_verticalScrollController, amount: double.infinity);
+            }
           }
           else {
             debugPrint("Not primary focus");

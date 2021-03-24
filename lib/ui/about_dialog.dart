@@ -1,9 +1,7 @@
 
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html';
-
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/version.dart';
 
 void showAbout(BuildContext context, Size screenSize) {
@@ -29,7 +27,7 @@ void showAbout(BuildContext context, Size screenSize) {
                             style: Theme.of(context).textTheme.bodyText1!.apply(color: Theme.of(context).colorScheme.primary),
                             recognizer: TapGestureRecognizer()..onTap = () async {
                               String url = "https://github.com/jslater89/uspsa-result-viewer";
-                              window.open(url, '_blank');
+                              HtmlOr.openLink(url);
                             }
                         ),
                         TextSpan(

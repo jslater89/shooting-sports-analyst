@@ -1,12 +1,13 @@
 import 'dart:convert';
 // ignore: avoid_web_libraries_in_flutter
-import 'dart:html';
+import 'package:uspsa_result_viewer/html_or/html_or.dart';
 
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
 import 'package:uspsa_result_viewer/main.dart';
+import 'package:uspsa_result_viewer/route/practiscore_url.dart';
 import 'package:uspsa_result_viewer/ui/empty_scaffold.dart';
 
 class MatchSelectPage extends StatefulWidget {
@@ -15,8 +16,6 @@ class MatchSelectPage extends StatefulWidget {
 }
 
 class _MatchSelectPageState extends State<MatchSelectPage> {
-  static const redirectRoot = kDebugMode ? "/" : "/uspsa-result-viewer/";
-
   late BuildContext _innerContext;
   bool _operationInProgress = false;
   bool _launchingFromParam = false;
@@ -42,15 +41,13 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
   void _launchPresetPractiscore({String? url}) async {
     var matchId = await _getMatchId(presetUrl: url);
     if(matchId != null) {
-      //Navigator.of(context).pushNamed('/web/$matchId');
-      window.location.href = "$redirectRoot#/web/$matchId";
+      HtmlOr.navigateTo(context, "/web/$matchId");
     }
   }
 
   void _launchNonPractiscoreFile({required String url}) async {
     var urlBytes = Base64Codec.urlSafe().encode(url.codeUnits);
-    //Navigator.of(context).pushNamed('/webfile/$urlBytes');
-    window.location.href = "$redirectRoot#/webfile/$urlBytes";
+    HtmlOr.navigateTo(context, "/webfile/$urlBytes");
   }
 
   @override
@@ -127,57 +124,11 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
   }
 
   Future<void> _uploadResultsFile(Function(String?) onFileContents) async {
-    InputElement uploadInput = FileUploadInputElement() as InputElement;
-    uploadInput.click();
-    uploadInput.onChange.listen((e) {
-      setState(() {
-        _operationInProgress = true;
-      });
-
-      // read file content as dataURL
-      final files = uploadInput.files!;
-      debugPrint("Files: $files");
-      if(files.length == 1) {
-        FileReader reader = FileReader();
-
-        reader.onLoadEnd.listen((event) async {
-          //String reportFile = AsciiCodec().decode(reader.result);
-          //String reportFile = String.fromCharCodes(reader.result);
-          String reportFile = Utf8Codec().decode(reader.result as List<int>);
-
-          setState(() {
-            _operationInProgress = false;
-          });
-
-          onFileContents(reportFile);
-        });
-
-        reader.onError.listen((fileEvent) {
-          Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("File read error")));
-
-          setState(() {
-            _operationInProgress = false;
-          });
-          onFileContents(null);
-        });
-
-        reader.readAsArrayBuffer(files[0]);
-      }
-      else {
-        debugPrint("Got weird files: $files");
-        onFileContents(null);
-      }
-    });
+    HtmlOr.pickAndReadFile(context, onFileContents);
   }
 
   Future<String?> _getMatchId({String? presetUrl}) async {
-    var proxyUrl;
-    if(kDebugMode) {
-      proxyUrl = "https://cors-anywhere.herokuapp.com/";
-    }
-    else {
-      proxyUrl = "https://still-harbor-88681.herokuapp.com/";
-    }
+    var proxyUrl = getProxyUrl();
 
     var matchUrl = presetUrl ?? await showDialog<String>(context: context, builder: (context) {
       var controller = TextEditingController();

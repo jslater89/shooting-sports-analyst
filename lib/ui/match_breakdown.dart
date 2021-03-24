@@ -48,7 +48,7 @@ class MatchBreakdown extends StatelessWidget {
   Widget _buildTable(Map<_DivisionClass, int> shooterCounts) {
     var rows = <TableRow>[];
 
-    var divisions = []..addAll(Division.values)..remove(Division.unknown);
+    var divisions = <Division>[]..addAll(Division.values)..remove(Division.unknown);
 
     var columns = <Widget>[
       Align(alignment: Alignment.centerRight, child: Text("")),
@@ -70,7 +70,7 @@ class MatchBreakdown extends StatelessWidget {
     );
 
     int i = 0;
-    for(Division d in divisions as Iterable<Division>) {
+    for(Division d in divisions) {
       var columns = <Widget>[];
 
       columns.add(Text(d.displayString()));

@@ -1,10 +1,11 @@
 // ignore: avoid_web_libraries_in_flutter
-import 'dart:html';
+
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
 
 
 import 'package:flutter/material.dart';
+import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/route/local_upload.dart';
 import 'package:uspsa_result_viewer/route/match_select.dart';
 import 'package:uspsa_result_viewer/route/practiscore_url.dart';
@@ -21,7 +22,7 @@ class GlobalData {
   final router = fluro.FluroRouter();
 
   GlobalData() {
-    final Map<String, String> params = Uri.parse(window.location.href).queryParameters;
+    var params = HtmlOr.getQueryParams();
     debugPrint("iframe params? $params");
     _resultsFileUrl = params['resultsFile'];
     _practiscoreUrl = params['practiscoreUrl'];

@@ -1,11 +1,13 @@
 // ignore: avoid_web_libraries_in_flutter
-import 'dart:html';
+//import 'dart:html';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
+import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/ui/empty_scaffold.dart';
 import 'package:uspsa_result_viewer/ui/result_page.dart';
 import 'package:http/http.dart' as http;
@@ -61,13 +63,7 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
   }
 
   Future<void> _getPractiscoreMatch() async {
-    var proxyUrl = "";
-    if(kDebugMode) {
-      proxyUrl = "https://cors-anywhere.herokuapp.com/";
-    }
-    else {
-      proxyUrl = "https://still-harbor-88681.herokuapp.com/";
-    }
+    var proxyUrl = getProxyUrl();
     var reportUrl = "${proxyUrl}https://practiscore.com/reports/web/${widget.matchId}";
     debugPrint("Report download URL: $reportUrl");
 
@@ -96,10 +92,6 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
       debugPrint("download error: $err ${err.runtimeType}");
       if (stackTrace != null) {
         debugPrint("$stackTrace");
-      }
-      if (err is ProgressEvent) {
-        ProgressEvent pe = err;
-        debugPrint(pe.type);
       }
       if (err is http.ClientException) {
         http.ClientException ce = err;
@@ -156,4 +148,16 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
     );
   }
 
+}
+
+String getProxyUrl() {
+  if(HtmlOr.needsProxy) {
+    if (kDebugMode) {
+      return "https://cors-anywhere.herokuapp.com/";
+    }
+    else {
+      return "https://still-harbor-88681.herokuapp.com/";
+    }
+  }
+  return "";
 }
