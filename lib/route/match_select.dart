@@ -17,7 +17,7 @@ class MatchSelectPage extends StatefulWidget {
 class _MatchSelectPageState extends State<MatchSelectPage> {
   static const redirectRoot = kDebugMode ? "/" : "/uspsa-result-viewer/";
 
-  BuildContext _innerContext;
+  late BuildContext _innerContext;
   bool _operationInProgress = false;
   bool _launchingFromParam = false;
 
@@ -35,11 +35,11 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
     }
     else if(globals.resultsFileUrl != null) {
       _launchingFromParam = true;
-      _launchNonPractiscoreFile(url: globals.resultsFileUrl);
+      _launchNonPractiscoreFile(url: globals.resultsFileUrl!);
     }
   }
 
-  void _launchPresetPractiscore({String url}) async {
+  void _launchPresetPractiscore({String? url}) async {
     var matchId = await _getMatchId(presetUrl: url);
     if(matchId != null) {
       //Navigator.of(context).pushNamed('/web/$matchId');
@@ -47,7 +47,7 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
     }
   }
 
-  void _launchNonPractiscoreFile({@required String url}) async {
+  void _launchNonPractiscoreFile({required String url}) async {
     var urlBytes = Base64Codec.urlSafe().encode(url.codeUnits);
     //Navigator.of(context).pushNamed('/webfile/$urlBytes');
     window.location.href = "$redirectRoot#/webfile/$urlBytes";
@@ -88,7 +88,7 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
                   Text("Click to upload a report.txt file from your device", style: Theme
                       .of(context)
                       .textTheme
-                      .subtitle1
+                      .subtitle1!
                       .apply(color: Colors.grey)),
                 ],
               ),
@@ -115,7 +115,7 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
                   Text("Click to download a report.txt file from PractiScore", style: Theme
                       .of(context)
                       .textTheme
-                      .subtitle1
+                      .subtitle1!
                       .apply(color: Colors.grey)),
                 ],
               ),
@@ -126,8 +126,8 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
     );
   }
 
-  Future<void> _uploadResultsFile(Function(String) onFileContents) async {
-    InputElement uploadInput = FileUploadInputElement();
+  Future<void> _uploadResultsFile(Function(String?) onFileContents) async {
+    InputElement uploadInput = FileUploadInputElement() as InputElement;
     uploadInput.click();
     uploadInput.onChange.listen((e) {
       setState(() {
@@ -135,7 +135,7 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
       });
 
       // read file content as dataURL
-      final files = uploadInput.files;
+      final files = uploadInput.files!;
       debugPrint("Files: $files");
       if(files.length == 1) {
         FileReader reader = FileReader();
@@ -143,7 +143,7 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
         reader.onLoadEnd.listen((event) async {
           //String reportFile = AsciiCodec().decode(reader.result);
           //String reportFile = String.fromCharCodes(reader.result);
-          String reportFile = Utf8Codec().decode(reader.result);
+          String reportFile = Utf8Codec().decode(reader.result as List<int>);
 
           setState(() {
             _operationInProgress = false;
@@ -170,7 +170,7 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
     });
   }
 
-  Future<String> _getMatchId({String presetUrl}) async {
+  Future<String?> _getMatchId({String? presetUrl}) async {
     var proxyUrl;
     if(kDebugMode) {
       proxyUrl = "https://cors-anywhere.herokuapp.com/";
@@ -225,7 +225,7 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
     if(!matchId.contains(r"-")) {
       try {
         debugPrint("Trying to get match from URL: $matchUrl");
-        var response = await http.get("$proxyUrl$matchUrl");
+        var response = await http.get(Uri.parse("$proxyUrl$matchUrl"));
         if(response.statusCode == 404) {
           Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("Match not found.")));
           return null;

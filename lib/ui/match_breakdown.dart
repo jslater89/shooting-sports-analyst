@@ -4,7 +4,7 @@ import 'package:uspsa_result_viewer/data/model.dart';
 class MatchBreakdown extends StatelessWidget {
   final List<Shooter> shooters;
 
-  const MatchBreakdown({Key key, @required this.shooters}) : super(key: key);
+  const MatchBreakdown({Key? key, required this.shooters}) : super(key: key);
 
   /// To the left: a table of division/class numbers.
   @override
@@ -26,10 +26,10 @@ class MatchBreakdown extends StatelessWidget {
     shooterCounts[_DivisionClass(null, null)] = 0;
     
     for(Shooter s in shooters) {
-      shooterCounts[_DivisionClass(s.division, s.classification)] += 1;
-      shooterCounts[_DivisionClass(s.division, null)] += 1;
-      shooterCounts[_DivisionClass(null, s.classification)] += 1;
-      shooterCounts[_DivisionClass(null, null)] += 1;
+      shooterCounts[_DivisionClass(s.division, s.classification)] = shooterCounts[_DivisionClass(s.division, s.classification)]! + 1;
+      shooterCounts[_DivisionClass(s.division, null)] = shooterCounts[_DivisionClass(s.division, null)]! + 1;
+      shooterCounts[_DivisionClass(null, s.classification)] = shooterCounts[_DivisionClass(null, s.classification)]! + 1;
+      shooterCounts[_DivisionClass(null, null)] = shooterCounts[_DivisionClass(null, null)]! + 1;
     }
     
     return AlertDialog(
@@ -70,7 +70,7 @@ class MatchBreakdown extends StatelessWidget {
     );
 
     int i = 0;
-    for(Division d in divisions) {
+    for(Division d in divisions as Iterable<Division>) {
       var columns = <Widget>[];
 
       columns.add(Text(d.displayString()));
@@ -151,8 +151,8 @@ class MatchBreakdown extends StatelessWidget {
 }
 
 class _DivisionClass {
-  final Division division;
-  final Classification classification;
+  final Division? division;
+  final Classification? classification;
 
   _DivisionClass(this.division, this.classification);
   

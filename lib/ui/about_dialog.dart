@@ -26,7 +26,7 @@ void showAbout(BuildContext context, Size screenSize) {
                         ),
                         TextSpan(
                             text: "https://github.com/jslater89/uspsa-result-viewer",
-                            style: Theme.of(context).textTheme.bodyText1.apply(color: Theme.of(context).colorScheme.primary),
+                            style: Theme.of(context).textTheme.bodyText1!.apply(color: Theme.of(context).colorScheme.primary),
                             recognizer: TapGestureRecognizer()..onTap = () async {
                               String url = "https://github.com/jslater89/uspsa-result-viewer";
                               window.open(url, '_blank');

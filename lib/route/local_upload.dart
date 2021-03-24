@@ -5,16 +5,16 @@ import 'package:uspsa_result_viewer/ui/empty_scaffold.dart';
 import 'package:uspsa_result_viewer/ui/result_page.dart';
 
 class UploadedResultPage extends StatefulWidget {
-  const UploadedResultPage({Key key}) : super(key: key);
+  const UploadedResultPage({Key? key}) : super(key: key);
 
   @override
   _UploadedResultPageState createState() => _UploadedResultPageState();
 }
 
 class _UploadedResultPageState extends State<UploadedResultPage> {
-  PracticalMatch _match;
-  BuildContext _innerContext;
-  String _resultString;
+  PracticalMatch? _match;
+  BuildContext? _innerContext;
+  String? _resultString;
   bool _operationInProgress = false;
 
   @override
@@ -25,27 +25,27 @@ class _UploadedResultPageState extends State<UploadedResultPage> {
   Future<void> _getMatch() async {
     try {
       _resultString = ModalRoute
-          .of(context)
+          .of(context)!
           .settings
-          .arguments;
+          .arguments as String?;
 
       if (_resultString == null) {
         if(_innerContext != null) {
-          Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("No file given. Go back and try again.")));
+          Scaffold.of(_innerContext!).showSnackBar(SnackBar(content: Text("No file given. Go back and try again.")));
           setState(() {
             _operationInProgress = false;
           });
         }
       }
 
-      PracticalMatch m = await processScoreFile(_resultString);
+      PracticalMatch m = await processScoreFile(_resultString!);
       setState(() {
         _match = m;
       });
     }
     catch(err) {
       if(_innerContext != null) {
-        Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("No file given. Go back and try again.")));
+        Scaffold.of(_innerContext!).showSnackBar(SnackBar(content: Text("No file given. Go back and try again.")));
         setState(() {
           _operationInProgress = false;
         });

@@ -13,12 +13,12 @@ class FilterControls extends StatefulWidget {
 
   /// The stages currently scored. Used to populate the stage
   /// select dropdown.
-  final List<Stage> filteredStages;
+  final List<Stage>? filteredStages;
 
   final StageMenuItem currentStage;
   final FilterSet filters;
 
-  final FocusNode returnFocus;
+  final FocusNode? returnFocus;
   
   final Function(SortMode) onSortModeChanged;
   final Function(StageMenuItem) onStageChanged;
@@ -31,19 +31,19 @@ class FilterControls extends StatefulWidget {
 
   const FilterControls(
     {
-      Key key,
-      @required this.sortMode,
-      @required this.currentStage,
-      @required this.allStages,
-      @required this.filteredStages,
-      @required this.filters,
-      @required this.returnFocus,
-      @required this.searchError,
-      @required this.onSortModeChanged,
-      @required this.onStageChanged,
-      @required this.onStageSetChanged,
-      @required this.onFiltersChanged,
-      @required this.onSearchChanged,
+      Key? key,
+      required this.sortMode,
+      required this.currentStage,
+      required this.allStages,
+      required this.filteredStages,
+      required this.filters,
+      required this.returnFocus,
+      required this.searchError,
+      required this.onSortModeChanged,
+      required this.onStageChanged,
+      required this.onStageSetChanged,
+      required this.onFiltersChanged,
+      required this.onSearchChanged,
     }) : super(key: key);
 
   @override
@@ -99,10 +99,10 @@ class _FilterControlsState extends State<FilterControls> {
       )
     ];
 
-    for(Stage s in widget.filteredStages) {
+    for(Stage s in widget.filteredStages!) {
       stageMenuItems.add(
           DropdownMenuItem<StageMenuItem>(
-              child: Text(s.name),
+              child: Text(s.name!),
               value: StageMenuItem(s),
           )
       );
@@ -158,7 +158,7 @@ class _FilterControlsState extends State<FilterControls> {
                           )
                         ),
                         onSubmitted: (_t) {
-                          widget.returnFocus.requestFocus();
+                          widget.returnFocus!.requestFocus();
                         },
                       ),
                     ),
@@ -174,8 +174,8 @@ class _FilterControlsState extends State<FilterControls> {
                           color: Colors.black,
                         ),
                         items: _buildSortItems(),
-                        onChanged: (SortMode s) {
-                          widget.onSortModeChanged(s);
+                        onChanged: (SortMode? s) {
+                          if(s != null) widget.onSortModeChanged(s);
                         },
                         value: widget.sortMode,
                       ),
@@ -192,14 +192,14 @@ class _FilterControlsState extends State<FilterControls> {
                           color: Colors.black,
                         ),
                         items: _buildStageMenuItems(),
-                        onChanged: (StageMenuItem item) async {
+                        onChanged: (StageMenuItem? item) async {
                           if(item == StageMenuItem.filter()) {
                             var stages = await showDialog<List<Stage>>(
                               context: context,
                               builder: (context) {
                                 var initialState = <Stage, bool>{};
                                 for(Stage s in widget.allStages) {
-                                  initialState[s] = widget.filteredStages.contains(s);
+                                  initialState[s] = widget.filteredStages!.contains(s);
                                 }
                                 return StageSelectDialog(initialState: initialState);
                               }
@@ -211,7 +211,7 @@ class _FilterControlsState extends State<FilterControls> {
                             }
                           }
                           else {
-                            widget.onStageChanged(item);
+                            if(item != null) widget.onStageChanged(item);
                           }
                         },
                         value: widget.currentStage,
@@ -276,7 +276,7 @@ class StageMenuItem {
   StageMenuItem.match() : this.type = StageMenuItemType.match;
 
   StageMenuItemType type;
-  Stage stage;
+  Stage? stage;
 
   @override
   bool operator ==(Object other) {

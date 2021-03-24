@@ -12,13 +12,13 @@ import 'configure_nonweb.dart' if (dart.library.html) 'configure_web.dart';
 import 'package:fluro/fluro.dart' as fluro;
 
 class GlobalData {
-  String _resultsFileUrl;
-  String get resultsFileUrl => _resultsFileUrl;
-  String _practiscoreUrl;
-  String get practiscoreUrl => _practiscoreUrl;
-  String _practiscoreId;
-  String get practiscoreId => _practiscoreId;
-  final router = fluro.Router();
+  String? _resultsFileUrl;
+  String? get resultsFileUrl => _resultsFileUrl;
+  String? _practiscoreUrl;
+  String? get practiscoreUrl => _practiscoreUrl;
+  String? _practiscoreId;
+  String? get practiscoreId => _practiscoreId;
+  final router = fluro.FluroRouter();
 
   GlobalData() {
     final Map<String, String> params = Uri.parse(window.location.href).queryParameters;
@@ -45,14 +45,14 @@ void main() {
   ));
   globals.router.define('/web/:matchId', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
     handlerFunc: (context, params) {
-      return PractiscoreResultPage(matchId: params['matchId'][0],);
+      return PractiscoreResultPage(matchId: params['matchId']![0],);
     }
   ));
 
   // resultUrl is base64-encoded
   globals.router.define('/webfile/:resultUrl', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
       handlerFunc: (context, params) {
-        var urlString = String.fromCharCodes(Base64Codec.urlSafe().decode(params['resultUrl'][0]));
+        var urlString = String.fromCharCodes(Base64Codec.urlSafe().decode(params['resultUrl']![0]));
         return PractiscoreResultPage(resultUrl: urlString,);
       }
   ));

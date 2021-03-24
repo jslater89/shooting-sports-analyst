@@ -30,7 +30,7 @@ Future<PracticalMatch> processScoreFile(String fileContents) async {
   return canonicalMatch;
 }
 
-PracticalMatch _processResultLines({List<String> infoLines, List<String> competitorLines, List<String> stageLines, List<String> stageScoreLines}) {
+PracticalMatch _processResultLines({required List<String> infoLines, required List<String> competitorLines, required List<String> stageLines, required List<String> stageScoreLines}) {
   PracticalMatch match = PracticalMatch();
   _readInfoLines(match, infoLines);
 
@@ -169,8 +169,8 @@ void _readScoreLines(List<String> stageScoreLines, Map<int, Shooter> shootersByF
     try {
       List<String> splitLine = line.split(",");
 
-      Stage stage = stagesByFileId[int.parse(splitLine[_STAGE_ID])];
-      Shooter shooter = shootersByFileId[int.parse(splitLine[_SHOOTER_ID])];
+      Stage? stage = stagesByFileId[int.parse(splitLine[_STAGE_ID])];
+      Shooter? shooter = shootersByFileId[int.parse(splitLine[_SHOOTER_ID])];
 
       if(stage == null) {
         throw("Null stage for ${int.parse(splitLine[_STAGE_ID])}!");

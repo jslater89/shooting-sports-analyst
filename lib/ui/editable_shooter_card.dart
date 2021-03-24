@@ -8,11 +8,11 @@ import 'package:uspsa_result_viewer/ui/captioned_text.dart';
 
 /// EditableShooterCard should _not_ be barrier-dismissable.
 class EditableShooterCard extends StatefulWidget {
-  final RelativeMatchScore matchScore;
-  final RelativeScore stageScore;
-  final bool scoreDQ;
+  final RelativeMatchScore? matchScore;
+  final RelativeScore? stageScore;
+  final bool? scoreDQ;
 
-  const EditableShooterCard({Key key, this.matchScore, this.stageScore, this.scoreDQ = true}) : super(key: key);
+  const EditableShooterCard({Key? key, this.matchScore, this.stageScore, this.scoreDQ = true}) : super(key: key);
 
   @override
   _EditableShooterCardState createState() => _EditableShooterCardState();
@@ -37,22 +37,22 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
     if(widget.matchScore != null) throw ArgumentError("Cannot edit match score; edit stage scores.");
     if(widget.stageScore == null) throw ArgumentError("Missing stage score.");
 
-    _timeController.text = _score.time.toStringAsFixed(2);
-    _aController.text = "${_score.a}";
-    _cController.text = "${_score.c}";
-    _dController.text = "${_score.d}";
-    _mController.text = "${_score.m}";
-    _nsController.text = "${_score.ns}";
-    _procController.text = "${_score.procedural}";
+    _timeController.text = _score!.time.toStringAsFixed(2);
+    _aController.text = "${_score!.a}";
+    _cController.text = "${_score!.c}";
+    _dController.text = "${_score!.d}";
+    _mController.text = "${_score!.m}";
+    _nsController.text = "${_score!.ns}";
+    _procController.text = "${_score!.procedural}";
   }
 
-  Score get _score => widget.stageScore.score;
+  Score? get _score => widget.stageScore!.score;
 
   @override
   Widget build(BuildContext context) {
-    Shooter shooter = widget.stageScore.score.shooter;
+    Shooter shooter = widget.stageScore!.score!.shooter!;
     List<Widget> timeHolder = [];
-    var stringTimes = widget.stageScore.score.stringTimes;
+    var stringTimes = widget.stageScore!.score!.stringTimes;
 
     if(stringTimes.length > 1) {
       List<Widget> children = [];
@@ -90,7 +90,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
               children: [
                 CaptionedText(
                   captionText: "Hit Factor",
-                  text: "${_score.getHitFactor(scoreDQ: widget.scoreDQ).toStringAsFixed(4)}",
+                  text: "${_score!.getHitFactor(scoreDQ: widget.scoreDQ).toStringAsFixed(4)}",
                 ),
                 SizedBox(width: 12),
                 SizedBox(
@@ -121,7 +121,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text("Round count: ${_score.stage.minRounds}"),
+                  Text("Round count: ${_score!.stage!.minRounds}"),
                   SizedBox(height: 5),
                   Row(
                     mainAxisSize: MainAxisSize.min,
@@ -219,22 +219,22 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
                       SizedBox(width: 12),
                       CaptionedText(
                         captionText: "Late Shot",
-                        text: "${_score.lateShot}",
+                        text: "${_score!.lateShot}",
                       ),
                       SizedBox(width: 12),
                       CaptionedText(
                         captionText: "Extra Shot",
-                        text: "${_score.extraShot}",
+                        text: "${_score!.extraShot}",
                       ),
                       SizedBox(width: 12),
                       CaptionedText(
                         captionText: "Extra Hit",
-                        text: "${_score.extraHit}",
+                        text: "${_score!.extraHit}",
                       ),
                       SizedBox(width: 12),
                       CaptionedText(
                         captionText: "Other",
-                        text: "${_score.otherPenalty}",
+                        text: "${_score!.otherPenalty}",
                       )
                     ],
                   ),
@@ -255,7 +255,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
 
   String _getPercentScoreText() {
     if(_edited) return "n/a (rescore)";
-    else return "${widget.stageScore.relativePoints.toStringAsFixed(2)} (${widget.stageScore.percent.asPercentage()}%)";
+    else return "${widget.stageScore!.relativePoints.toStringAsFixed(2)} (${widget.stageScore!.percent.asPercentage()}%)";
   }
 
   List<Widget> _buildButtons() {
@@ -319,19 +319,19 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
   }
   
   bool _validateScore() {
-    Score s = _score.copy(_score.shooter, _score.stage);
+    Score s = _score!.copy(_score!.shooter, _score!.stage);
     _updateFromUI(s);
 
     var sum = s.a + s.c + s.d + s.m;
-    if(sum > _score.stage.minRounds) {
+    if(sum > _score!.stage!.minRounds) {
       setState(() {
-        _scoreError = "Too many scoring hits! $sum vs. ${s.stage.minRounds}.";
+        _scoreError = "Too many scoring hits! $sum vs. ${s.stage!.minRounds}.";
       });
       return false;
     }
-    else if(sum < _score.stage.minRounds) {
+    else if(sum < _score!.stage!.minRounds) {
       setState(() {
-        _scoreError = "Too few hits, assuming ${s.stage.minRounds - sum} NPM";
+        _scoreError = "Too few hits, assuming ${s.stage!.minRounds - sum} NPM";
       });
     }
     else {
@@ -344,10 +344,10 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
   }
 
   void _updateScore() {
-    _updateFromUI(_score);
+    _updateFromUI(_score!);
 
     setState(() {
-      widget.stageScore.score = widget.stageScore.score;
+      widget.stageScore!.score = widget.stageScore!.score;
       _edited = true;
     });
   }
@@ -360,7 +360,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
         },
         child: Text(
           "${shooter.getName()} - ${shooter.division.displayString()} ${shooter.classification.displayString()}",
-          style: Theme.of(context).textTheme.headline6.copyWith(
+          style: Theme.of(context).textTheme.headline6!.copyWith(
             color: Theme.of(context).primaryColor,
             decoration: TextDecoration.underline,
           ),

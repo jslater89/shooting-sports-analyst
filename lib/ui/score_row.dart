@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 
 class ScoreRow extends StatefulWidget {
-  final Widget child;
-  final bool edited;
-  final Color color;
-  final Color textColor;
-  final Color hoverColor;
-  final Color hoverTextColor;
+  final Widget? child;
+  final bool? edited;
+  final Color? color;
+  final Color? textColor;
+  final Color? hoverColor;
+  final Color? hoverTextColor;
 
-  const ScoreRow({Key key, this.child, this.color, this.textColor, this.hoverColor, this.hoverTextColor, this.edited}) : super(key: key);
+  const ScoreRow({Key? key, this.child, this.color, this.textColor, this.hoverColor, this.hoverTextColor, this.edited}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() {
@@ -23,10 +23,10 @@ class _ScoreRowState extends State<ScoreRow> {
   Widget build(BuildContext context) {
     Color background = widget.color ?? Theme.of(context).colorScheme.background;
     Color hoverColor = widget.hoverColor ?? Theme.of(context).colorScheme.primary;
-    Color textColor = widget.textColor ?? Theme.of(context).textTheme.bodyText1.color;
+    Color? textColor = widget.textColor ?? Theme.of(context).textTheme.bodyText1!.color;
     Color hoverTextColor = widget.hoverTextColor ?? Theme.of(context).colorScheme.onPrimary;
 
-    if(widget.edited) {
+    if(widget.edited!) {
       textColor = Colors.red;
     }
 
@@ -44,14 +44,14 @@ class _ScoreRowState extends State<ScoreRow> {
             child: Builder(
               builder: (context) {
                 return DefaultTextStyle(
-                  style: Theme.of(context).textTheme.bodyText1,
-                  child: widget.child,
+                  style: Theme.of(context).textTheme.bodyText1!,
+                  child: widget.child!,
                 );
               }
             ),
             data: baseTheme.copyWith(
               textTheme: baseTheme.textTheme.copyWith(
-                bodyText1: baseTheme.textTheme.bodyText1.copyWith(
+                bodyText1: baseTheme.textTheme.bodyText1!.copyWith(
                   color: _hover ? hoverTextColor : textColor,
                 )
               )

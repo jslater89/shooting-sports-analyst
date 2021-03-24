@@ -11,10 +11,10 @@ import 'package:uspsa_result_viewer/ui/result_page.dart';
 import 'package:http/http.dart' as http;
 
 class PractiscoreResultPage extends StatefulWidget {
-  final String matchId;
-  final String resultUrl;
+  final String? matchId;
+  final String? resultUrl;
 
-  const PractiscoreResultPage({Key key, this.matchId, this.resultUrl}) : super(key: key);
+  const PractiscoreResultPage({Key? key, this.matchId, this.resultUrl}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() {
@@ -24,8 +24,8 @@ class PractiscoreResultPage extends StatefulWidget {
 }
 
 class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
-  PracticalMatch _match;
-  BuildContext _innerContext;
+  PracticalMatch? _match;
+  late BuildContext _innerContext;
   bool _operationInProgress = false;
 
   @override
@@ -39,10 +39,10 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
 
   Future<void> _getResultFileMatch() async {
     try {
-      var response = await http.get(widget.resultUrl);
+      var response = await http.get(Uri.parse(widget.resultUrl!));
       if(response.statusCode < 400) {
         var responseString = response.body;
-        if (responseString?.startsWith("\$") ?? false) {
+        if (responseString.startsWith("\$")) {
           var match = await processScoreFile(responseString);
           setState(() {
             _match = match;
@@ -73,7 +73,7 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
 
     var responseString = "";
     try {
-      var response = await http.get(reportUrl);
+      var response = await http.get(Uri.parse(reportUrl));
       if(response.statusCode < 400) {
         responseString = response.body;
         if (responseString.startsWith(r"$")) {
@@ -118,7 +118,7 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
         'ClubCode': 'None',
         'matchId': widget.matchId,
       };
-      var response = await http.post(reportUrl, body: body);
+      var response = await http.post(Uri.parse(reportUrl), body: body);
       if(response.statusCode < 400) {
         var responseString = response.body;
         if (responseString.startsWith(r"$")) {

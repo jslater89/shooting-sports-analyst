@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 
 class StageSelectDialog extends StatefulWidget {
-  final Map<Stage, bool> initialState;
+  final Map<Stage, bool?> initialState;
 
-  const StageSelectDialog({Key key, @required this.initialState}) : super(key: key);
+  const StageSelectDialog({Key? key, required this.initialState}) : super(key: key);
 
   @override
   _StageSelectDialogState createState() => _StageSelectDialogState();
 }
 
 class _StageSelectDialogState extends State<StageSelectDialog> {
-  Map<Stage, bool> state;
+  late Map<Stage, bool?> state;
 
   @override
   void initState() {
@@ -19,7 +19,7 @@ class _StageSelectDialogState extends State<StageSelectDialog> {
     super.initState();
   }
 
-  void _toggle(Stage s, bool value) {
+  void _toggle(Stage s, bool? value) {
     setState(() {
       state[s] = value;
     });
@@ -33,7 +33,7 @@ class _StageSelectDialogState extends State<StageSelectDialog> {
       SizedBox(height: 10),
     ]..addAll(
       state.keys.map(
-        (Stage s) => CheckboxListTile(value: state[s], onChanged: (v) => _toggle(s, v), title: Text(s.name),)
+        (Stage s) => CheckboxListTile(value: state[s], onChanged: (v) => _toggle(s, v), title: Text(s.name!),)
       )
     );
 
@@ -73,7 +73,7 @@ class _StageSelectDialogState extends State<StageSelectDialog> {
         FlatButton(
           child: Text("APPLY"),
           onPressed: () {
-            Navigator.of(context).pop(state.keys.toList()..retainWhere((stage) => state[stage]));
+            Navigator.of(context).pop(state.keys.toList()..retainWhere((stage) => state[stage]!));
           },
         )
       ],

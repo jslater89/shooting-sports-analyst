@@ -14,10 +14,10 @@ import 'package:uspsa_result_viewer/ui/match_breakdown.dart';
 import 'package:uspsa_result_viewer/ui/score_list.dart';
 
 class ResultPage extends StatefulWidget {
-  final PracticalMatch canonicalMatch;
+  final PracticalMatch? canonicalMatch;
   final Function(BuildContext) onInnerContextAssigned;
 
-  const ResultPage({Key key, @required this.canonicalMatch, @required this.onInnerContextAssigned}) : super(key: key);
+  const ResultPage({Key? key, required this.canonicalMatch, required this.onInnerContextAssigned}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() {
@@ -28,12 +28,12 @@ class ResultPage extends StatefulWidget {
 class _ResultPageState extends State<ResultPage> {
   static const _MIN_WIDTH = 1024.0;
 
-  FocusNode _appFocus;
+  FocusNode? _appFocus;
   ScrollController _verticalScrollController = ScrollController();
   ScrollController _horizontalScrollController = ScrollController();
 
-  BuildContext _innerContext;
-  PracticalMatch _currentMatch;
+  late BuildContext _innerContext;
+  PracticalMatch? _currentMatch;
 
   bool _operationInProgress = false;
 
@@ -43,13 +43,13 @@ class _ResultPageState extends State<ResultPage> {
   bool _invalidSearch = false;
   List<RelativeMatchScore> _searchedScores = [];
   StageMenuItem _currentStageMenuItem = StageMenuItem.match();
-  List<Stage> _filteredStages;
-  Stage _stage;
+  List<Stage>? _filteredStages;
+  Stage? _stage;
   SortMode _sortMode = SortMode.score;
 
-  int get _matchMaxPoints => _filteredStages.map((stage) => stage.maxPoints).reduce((a, b) => a + b);
+  int get _matchMaxPoints => _filteredStages!.map((stage) => stage.maxPoints).reduce((a, b) => a + b);
 
-  List<Shooter> get _filteredShooters => _baseScores.map((score) => score.shooter).toList();
+  List<Shooter?> get _filteredShooters => _baseScores.map((score) => score.shooter).toList();
 
   /// If true, in what-if mode. If false, not in what-if mode.
   bool _whatIfMode = false;
@@ -69,15 +69,15 @@ class _ResultPageState extends State<ResultPage> {
 
     SystemChrome.setApplicationSwitcherDescription(
       ApplicationSwitcherDescription(
-        label: "Results: ${widget.canonicalMatch.name}",
+        label: "Results: ${widget.canonicalMatch!.name}",
         primaryColor: 0x3f51b5, // Colors.indigo
       )
     );
 
     _appFocus = FocusNode();
-    _currentMatch = widget.canonicalMatch.copy();
-    _filteredStages = []..addAll(_currentMatch.stages);
-    var scores = _currentMatch.getScores(scoreDQ: _filters.scoreDQs, stages: _filteredStages);
+    _currentMatch = widget.canonicalMatch!.copy();
+    _filteredStages = []..addAll(_currentMatch!.stages);
+    var scores = _currentMatch!.getScores(scoreDQ: _filters.scoreDQs, stages: _filteredStages);
 
     _baseScores = scores;
     _searchedScores = []..addAll(_baseScores);
@@ -87,10 +87,10 @@ class _ResultPageState extends State<ResultPage> {
   void dispose() {
     super.dispose();
 
-    _appFocus.dispose();
+    _appFocus!.dispose();
   }
 
-  void _adjustScroll(ScrollController c, {@required double amount}) {
+  void _adjustScroll(ScrollController c, {required double amount}) {
     // Clamp to in-range values to prevent jumping on arrow key presses
     double newPosition = c.offset + amount;
     newPosition = max(newPosition, 0);
@@ -100,12 +100,12 @@ class _ResultPageState extends State<ResultPage> {
   }
 
   List<Shooter> _filterShooters() {
-    List<Shooter> filteredShooters = _currentMatch.filterShooters(
+    List<Shooter> filteredShooters = _currentMatch!.filterShooters(
       filterMode: _filters.mode,
       allowReentries: _filters.reentries,
-      divisions: _filters.divisions.keys.where((element) => _filters.divisions[element]).toList(),
-      classes: _filters.classifications.keys.where((element) => _filters.classifications[element]).toList(),
-      powerFactors: _filters.powerFactors.keys.where((element) => _filters.powerFactors[element]).toList(),
+      divisions: _filters.divisions!.keys.where((element) => _filters.divisions![element]!).toList(),
+      classes: _filters.classifications!.keys.where((element) => _filters.classifications![element]!).toList(),
+      powerFactors: _filters.powerFactors!.keys.where((element) => _filters.powerFactors![element]!).toList(),
     );
     return filteredShooters;
   }
@@ -125,7 +125,7 @@ class _ResultPageState extends State<ResultPage> {
     }
 
     setState(() {
-      _baseScores = _currentMatch.getScores(shooters: filteredShooters, scoreDQ: _filters.scoreDQs, stages: _filteredStages);
+      _baseScores = _currentMatch!.getScores(shooters: filteredShooters, scoreDQ: _filters.scoreDQs, stages: _filteredStages);
       _searchedScores = []..addAll(_baseScores);
     });
 
@@ -214,8 +214,8 @@ class _ResultPageState extends State<ResultPage> {
 
   bool _applySearch(RelativeMatchScore element) {
     // getName() instead of first name so 'john sm' matches 'first:john last:smith'
-    if(element.shooter.getName().toLowerCase().startsWith(_searchTerm)) return true;
-    if(element.shooter.lastName.toLowerCase().startsWith(_searchTerm)) return true;
+    if(element.shooter!.getName().toLowerCase().startsWith(_searchTerm)) return true;
+    if(element.shooter!.lastName!.toLowerCase().startsWith(_searchTerm)) return true;
     return false;
   }
 
@@ -225,7 +225,7 @@ class _ResultPageState extends State<ResultPage> {
 
     Widget sortWidget = FilterControls(
       filters: _filters,
-      allStages: _currentMatch.stages,
+      allStages: _currentMatch!.stages,
       filteredStages: _filteredStages,
       currentStage: _currentStageMenuItem,
       sortMode: _sortMode,
@@ -250,16 +250,16 @@ class _ResultPageState extends State<ResultPage> {
       minWidth: _MIN_WIDTH,
       onScoreEdited: (shooter, stage) {
         if(_editedShooters[stage] == null) {
-          _editedShooters[stage] = [];
+          _editedShooters[stage!] = [];
         }
         setState(() {
           _whatIfMode = true;
-          if(!_editedShooters[stage].contains(shooter)) {
-            _editedShooters[stage].add(shooter);
+          if(!_editedShooters[stage]!.contains(shooter)) {
+            _editedShooters[stage]!.add(shooter!);
           }
         });
 
-        var scores = _currentMatch.getScores(shooters: _filteredShooters);
+        var scores = _currentMatch!.getScores(shooters: _filteredShooters);
 
         setState(() {
           _baseScores = scores;
@@ -269,7 +269,7 @@ class _ResultPageState extends State<ResultPage> {
         _applySortMode(_sortMode);
       },
       whatIfMode: _whatIfMode,
-      editedShooters: _stage == null ? _allEditedShooters : _editedShooters[_stage] ?? [],
+      editedShooters: _stage == null ? _allEditedShooters : _editedShooters[_stage!] ?? [],
     );
 
     final primaryColor = Theme.of(context).primaryColor;
@@ -290,14 +290,14 @@ class _ResultPageState extends State<ResultPage> {
                   icon: Icon(Icons.undo),
                   onPressed: () async {
 
-                    _currentMatch = widget.canonicalMatch.copy();
+                    _currentMatch = widget.canonicalMatch!.copy();
                     List<Shooter> filteredShooters = _filterShooters();
-                    var scores = _currentMatch.getScores(shooters: filteredShooters);
+                    var scores = _currentMatch!.getScores(shooters: filteredShooters);
 
                     setState(() {
                       _editedShooters = {};
                       _currentMatch = _currentMatch;
-                      _stage = _stage == null ? null : _currentMatch.lookupStage(_stage);
+                      _stage = _stage == null ? null : _currentMatch!.lookupStage(_stage);
                       _baseScores = scores;
                       _searchedScores = []..addAll(scores);
                       _whatIfMode = false;
@@ -332,7 +332,7 @@ class _ResultPageState extends State<ResultPage> {
                 icon: Icon(Icons.table_chart),
                 onPressed: () {
                   showDialog(context: context, builder: (context) {
-                    return MatchBreakdown(shooters: _currentMatch.shooters);
+                    return MatchBreakdown(shooters: _currentMatch!.shooters);
                   });
                 },
               )
@@ -351,7 +351,7 @@ class _ResultPageState extends State<ResultPage> {
     return RawKeyboardListener(
       onKey: (RawKeyEvent e) {
         if(e is RawKeyDownEvent) {
-          if (_appFocus.hasPrimaryFocus) {
+          if (_appFocus!.hasPrimaryFocus) {
             // n.b.: 40 logical pixels is two rows
             if(e.logicalKey == LogicalKeyboardKey.arrowLeft) {
               _adjustScroll(_horizontalScrollController, amount: -40);
@@ -388,7 +388,7 @@ class _ResultPageState extends State<ResultPage> {
         }
       },
       autofocus: true,
-      focusNode: _appFocus,
+      focusNode: _appFocus!,
       child: WillPopScope(
         onWillPop: () async {
           SystemChrome.setApplicationSwitcherDescription(
@@ -401,7 +401,7 @@ class _ResultPageState extends State<ResultPage> {
         },
         child: GestureDetector(
           onTap: () {
-            _appFocus.requestFocus();
+            _appFocus!.requestFocus();
           },
           child: Scaffold(
             appBar: AppBar(

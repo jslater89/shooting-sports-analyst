@@ -12,16 +12,16 @@ import 'package:uspsa_result_viewer/data/model.dart';
 // one power factor, and one name.
 
 class SearchQueryElement {
-  Classification classification;
-  Division division;
-  PowerFactor powerFactor;
-  String name;
+  Classification? classification;
+  Division? division;
+  PowerFactor? powerFactor;
+  String? name;
 
-  bool matchesShooter(Shooter s) {
-    if(classification != null && s.classification != classification) return false;
-    if(division != null && s.division != division) return false;
-    if(powerFactor != null && s.powerFactor != powerFactor) return false;
-    if(name != null && !s.getName().toLowerCase().startsWith(name) && !s.lastName.toLowerCase().startsWith(name)) return false;
+  bool matchesShooter(Shooter? s) {
+    if(classification != null && s!.classification != classification) return false;
+    if(division != null && s!.division != division) return false;
+    if(powerFactor != null && s!.powerFactor != powerFactor) return false;
+    if(name != null && !s!.getName().toLowerCase().startsWith(name!) && !s.lastName!.toLowerCase().startsWith(name!)) return false;
 
     return true;
   }
@@ -32,7 +32,7 @@ class SearchQueryElement {
   }
 }
 
-List<SearchQueryElement> parseQuery(String query) {
+List<SearchQueryElement>? parseQuery(String query) {
   query = query.toLowerCase();
   query = query.replaceAll('?', '');
   List<String> groups = query.split("or");
@@ -41,7 +41,7 @@ List<SearchQueryElement> parseQuery(String query) {
 
   for(String group in groups) {
     group = group.trim();
-    SearchQueryElement element = _parseGroup(group);
+    SearchQueryElement? element = _parseGroup(group);
     if(element == null) {
       debugPrint("Bad element: $group");
       return null;
@@ -55,7 +55,7 @@ List<SearchQueryElement> parseQuery(String query) {
   return elements;
 }
 
-SearchQueryElement _parseGroup(String group) {
+SearchQueryElement? _parseGroup(String group) {
   List<String> items = group.split("and");
 
   if(items.length > 4) {
@@ -95,13 +95,13 @@ SearchQueryElement _parseGroup(String group) {
   return element;
 }
 
-PowerFactor _matchPowerFactor(String query) {
+PowerFactor? _matchPowerFactor(String query) {
   if(query.startsWith("maj")) return PowerFactor.major;
   else if(query.startsWith("min")) return PowerFactor.minor;
   else return null;
 }
 
-Division _matchDivision(String query) {
+Division? _matchDivision(String query) {
   query.replaceAll(RegExp(r"\s"), '');
 
   if(query.startsWith("pc")) return Division.pcc;
