@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:html';
 
 import 'package:file_picker/file_picker.dart';
@@ -23,8 +24,7 @@ class Controller extends ControlInterface {
     var result = await FilePicker.platform.pickFiles();
     if(result != null) {
       var f = result.files[0];
-      debugPrint("Bytes: ${f.size} ${f.bytes}");
-      onFileContents(f.bytes.toString());
+      onFileContents(Utf8Decoder().convert(f.bytes?.toList() ?? []));
     }
     else {
     onFileContents(null);
