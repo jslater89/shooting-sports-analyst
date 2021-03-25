@@ -3,12 +3,12 @@ import 'package:uspsa_result_viewer/data/model.dart';
 
 class FilterSet {
   FilterMode mode = FilterMode.and;
-  bool? reentries = true;
-  bool? scoreDQs = true;
+  bool reentries = true;
+  bool scoreDQs = true;
 
-  Map<Division, bool?>? divisions;
-  Map<Classification, bool?>? classifications;
-  Map<PowerFactor, bool?>? powerFactors;
+  late Map<Division, bool> divisions;
+  late Map<Classification, bool> classifications;
+  late Map<PowerFactor, bool> powerFactors;
 
   FilterSet({bool empty = false}) {
     divisions = {};
@@ -16,15 +16,15 @@ class FilterSet {
     powerFactors = {};
 
     for (Division d in Division.values) {
-      divisions![d] = !empty;
+      divisions[d] = !empty;
     }
 
     for (Classification c in Classification.values) {
-      classifications![c] = !empty;
+      classifications[c] = !empty;
     }
 
     for (PowerFactor f in PowerFactor.values) {
-      powerFactors![f] = !empty;
+      powerFactors[f] = !empty;
     }
 
   }
@@ -69,7 +69,7 @@ class _FilterDialogState extends State<FilterDialog> {
                     CheckboxListTile(
                       title: Text("Major"),
                       controlAffinity: ListTileControlAffinity.leading,
-                      value: _filters!.powerFactors![PowerFactor.major],
+                      value: _filters!.powerFactors[PowerFactor.major],
                       onChanged: (bool? value) {
                         _updateFilter(_filters!.powerFactors, PowerFactor.major, value);
                       },
@@ -77,7 +77,7 @@ class _FilterDialogState extends State<FilterDialog> {
                     CheckboxListTile(
                       title: Text("Minor"),
                       controlAffinity: ListTileControlAffinity.leading,
-                      value: _filters!.powerFactors![PowerFactor.minor],
+                      value: _filters!.powerFactors[PowerFactor.minor],
                       onChanged: (bool? value) {
                         _updateFilter(_filters!.powerFactors, PowerFactor.minor, value);
                       },
@@ -95,7 +95,7 @@ class _FilterDialogState extends State<FilterDialog> {
                     CheckboxListTile(
                       title: Text("PCC"),
                       controlAffinity: ListTileControlAffinity.leading,
-                      value: _filters!.divisions![Division.pcc],
+                      value: _filters!.divisions[Division.pcc],
                       onChanged: (bool? value) {
                         _updateFilter(_filters!.divisions, Division.pcc, value);
                       },
@@ -103,7 +103,7 @@ class _FilterDialogState extends State<FilterDialog> {
                     CheckboxListTile(
                       title: Text("Open"),
                       controlAffinity: ListTileControlAffinity.leading,
-                      value: _filters!.divisions![Division.open],
+                      value: _filters!.divisions[Division.open],
                       onChanged: (bool? value) {
                         _updateFilter(_filters!.divisions, Division.open, value);
                       },
@@ -111,7 +111,7 @@ class _FilterDialogState extends State<FilterDialog> {
                     CheckboxListTile(
                       title: Text("Limited"),
                       controlAffinity: ListTileControlAffinity.leading,
-                      value: _filters!.divisions![Division.limited],
+                      value: _filters!.divisions[Division.limited],
                       onChanged: (bool? value) {
                         _updateFilter(_filters!.divisions, Division.limited, value);
                       },
@@ -119,7 +119,7 @@ class _FilterDialogState extends State<FilterDialog> {
                     CheckboxListTile(
                       title: Text("Limited 10"),
                       controlAffinity: ListTileControlAffinity.leading,
-                      value: _filters!.divisions![Division.limited10],
+                      value: _filters!.divisions[Division.limited10],
                       onChanged: (bool? value) {
                         _updateFilter(_filters!.divisions, Division.limited10, value);
                       },
@@ -127,7 +127,7 @@ class _FilterDialogState extends State<FilterDialog> {
                     CheckboxListTile(
                       title: Text("Carry Optics"),
                       controlAffinity: ListTileControlAffinity.leading,
-                      value: _filters!.divisions![Division.carryOptics],
+                      value: _filters!.divisions[Division.carryOptics],
                       onChanged: (bool? value) {
                         _updateFilter(_filters!.divisions, Division.carryOptics, value);
                       },
@@ -135,7 +135,7 @@ class _FilterDialogState extends State<FilterDialog> {
                     CheckboxListTile(
                       title: Text("Production"),
                       controlAffinity: ListTileControlAffinity.leading,
-                      value: _filters!.divisions![Division.production],
+                      value: _filters!.divisions[Division.production],
                       onChanged: (bool? value) {
                         _updateFilter(_filters!.divisions, Division.production, value);
                       },
@@ -143,7 +143,7 @@ class _FilterDialogState extends State<FilterDialog> {
                     CheckboxListTile(
                       title: Text("Single Stack"),
                       controlAffinity: ListTileControlAffinity.leading,
-                      value: _filters!.divisions![Division.singleStack],
+                      value: _filters!.divisions[Division.singleStack],
                       onChanged: (bool? value) {
                         _updateFilter(_filters!.divisions, Division.singleStack, value);
                       },
@@ -151,7 +151,7 @@ class _FilterDialogState extends State<FilterDialog> {
                     CheckboxListTile(
                       title: Text("Revolver"),
                       controlAffinity: ListTileControlAffinity.leading,
-                      value: _filters!.divisions![Division.revolver],
+                      value: _filters!.divisions[Division.revolver],
                       onChanged: (bool? value) {
                         _updateFilter(_filters!.divisions, Division.revolver, value);
                       },
@@ -169,7 +169,7 @@ class _FilterDialogState extends State<FilterDialog> {
                     CheckboxListTile(
                       title: Text("GM"),
                       controlAffinity: ListTileControlAffinity.leading,
-                      value: _filters!.classifications![Classification.GM],
+                      value: _filters!.classifications[Classification.GM],
                       onChanged: (bool? value) {
                         _updateFilter(_filters!.classifications, Classification.GM, value);
                       },
@@ -177,7 +177,7 @@ class _FilterDialogState extends State<FilterDialog> {
                     CheckboxListTile(
                       title: Text("M"),
                       controlAffinity: ListTileControlAffinity.leading,
-                      value: _filters!.classifications![Classification.M],
+                      value: _filters!.classifications[Classification.M],
                       onChanged: (bool? value) {
                         _updateFilter(_filters!.classifications, Classification.M, value);
                       },
@@ -185,7 +185,7 @@ class _FilterDialogState extends State<FilterDialog> {
                     CheckboxListTile(
                       title: Text("A"),
                       controlAffinity: ListTileControlAffinity.leading,
-                      value: _filters!.classifications![Classification.A],
+                      value: _filters!.classifications[Classification.A],
                       onChanged: (bool? value) {
                         _updateFilter(_filters!.classifications, Classification.A, value);
                       },
@@ -193,7 +193,7 @@ class _FilterDialogState extends State<FilterDialog> {
                     CheckboxListTile(
                       title: Text("B"),
                       controlAffinity: ListTileControlAffinity.leading,
-                      value: _filters!.classifications![Classification.B],
+                      value: _filters!.classifications[Classification.B],
                       onChanged: (bool? value) {
                         _updateFilter(_filters!.classifications, Classification.B, value);
                       },
@@ -201,7 +201,7 @@ class _FilterDialogState extends State<FilterDialog> {
                     CheckboxListTile(
                       title: Text("C"),
                       controlAffinity: ListTileControlAffinity.leading,
-                      value: _filters!.classifications![Classification.C],
+                      value: _filters!.classifications[Classification.C],
                       onChanged: (bool? value) {
                         _updateFilter(_filters!.classifications, Classification.C, value);
                       },
@@ -209,7 +209,7 @@ class _FilterDialogState extends State<FilterDialog> {
                     CheckboxListTile(
                       title: Text("D"),
                       controlAffinity: ListTileControlAffinity.leading,
-                      value: _filters!.classifications![Classification.D],
+                      value: _filters!.classifications[Classification.D],
                       onChanged: (bool? value) {
                         _updateFilter(_filters!.classifications, Classification.D, value);
                       },
@@ -217,7 +217,7 @@ class _FilterDialogState extends State<FilterDialog> {
                     CheckboxListTile(
                       title: Text("U"),
                       controlAffinity: ListTileControlAffinity.leading,
-                      value: _filters!.classifications![Classification.U],
+                      value: _filters!.classifications[Classification.U],
                       onChanged: (bool? value) {
                         _updateFilter(_filters!.classifications, Classification.U, value);
                       },
@@ -239,7 +239,7 @@ class _FilterDialogState extends State<FilterDialog> {
                     value: _filters!.reentries,
                     onChanged: (bool? value) {
                       setState(() {
-                        _filters!.reentries = value;
+                        _filters!.reentries = value ?? false;
                       });
                     },
                   ),
@@ -271,7 +271,7 @@ class _FilterDialogState extends State<FilterDialog> {
                       value: _filters!.scoreDQs,
                       onChanged: (bool? value) {
                         setState(() {
-                          _filters!.scoreDQs = value;
+                          _filters!.scoreDQs = value ?? false;
                         });
                       }
                   ),
@@ -288,7 +288,7 @@ class _FilterDialogState extends State<FilterDialog> {
             var filters = FilterSet();
             filters.reentries =_filters!.reentries;
             filters.scoreDQs = _filters!.scoreDQs;
-            filters.divisions![Division.pcc] = false;
+            filters.divisions[Division.pcc] = false;
 
             setState(() {
               _filters = filters;
@@ -301,11 +301,11 @@ class _FilterDialogState extends State<FilterDialog> {
             var filters = FilterSet();
             filters.reentries =_filters!.reentries;
             filters.scoreDQs = _filters!.scoreDQs;
-            filters.divisions![Division.pcc] = false;
-            filters.divisions![Division.limited10] = false;
-            filters.divisions![Division.production] = false;
-            filters.divisions![Division.singleStack] = false;
-            filters.divisions![Division.revolver] = false;
+            filters.divisions[Division.pcc] = false;
+            filters.divisions[Division.limited10] = false;
+            filters.divisions[Division.production] = false;
+            filters.divisions[Division.singleStack] = false;
+            filters.divisions[Division.revolver] = false;
 
             setState(() {
               _filters = filters;
@@ -318,10 +318,10 @@ class _FilterDialogState extends State<FilterDialog> {
               var filters = FilterSet();
               filters.reentries =_filters!.reentries;
               filters.scoreDQs = _filters!.scoreDQs;
-              filters.divisions![Division.pcc] = false;
-              filters.divisions![Division.open] = false;
-              filters.divisions![Division.limited] = false;
-              filters.divisions![Division.carryOptics] = false;
+              filters.divisions[Division.pcc] = false;
+              filters.divisions[Division.open] = false;
+              filters.divisions[Division.limited] = false;
+              filters.divisions[Division.carryOptics] = false;
 
               setState(() {
                 _filters = filters;

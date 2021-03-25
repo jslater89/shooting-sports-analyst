@@ -33,7 +33,7 @@ class _StageSelectDialogState extends State<StageSelectDialog> {
       SizedBox(height: 10),
     ]..addAll(
       state.keys.map(
-        (Stage s) => CheckboxListTile(value: state[s], onChanged: (v) => _toggle(s, v), title: Text(s.name!),)
+        (Stage s) => CheckboxListTile(value: state[s], onChanged: (v) => _toggle(s, v), title: Text(s.name),)
       )
     );
 

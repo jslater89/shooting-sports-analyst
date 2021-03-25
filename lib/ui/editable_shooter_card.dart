@@ -9,7 +9,7 @@ import 'package:uspsa_result_viewer/ui/captioned_text.dart';
 class EditableShooterCard extends StatefulWidget {
   final RelativeMatchScore? matchScore;
   final RelativeScore? stageScore;
-  final bool? scoreDQ;
+  final bool scoreDQ;
 
   const EditableShooterCard({Key? key, this.matchScore, this.stageScore, this.scoreDQ = true}) : super(key: key);
 
@@ -49,9 +49,9 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
 
   @override
   Widget build(BuildContext context) {
-    Shooter shooter = widget.stageScore!.score!.shooter!;
+    Shooter shooter = widget.stageScore!.score.shooter;
     List<Widget> timeHolder = [];
-    var stringTimes = widget.stageScore!.score!.stringTimes;
+    var stringTimes = widget.stageScore!.score.stringTimes;
 
     if(stringTimes.length > 1) {
       List<Widget> children = [];

@@ -31,9 +31,9 @@ class PracticalMatch {
   }
 
   /// Looks up a stage  by name.
-  Stage? lookupStage(Stage? stage) {
+  Stage? lookupStage(Stage stage) {
     for(Stage s in stages) {
-      if(stage!.name == s.name) return s;
+      if(stage.name == s.name) return s;
     }
 
     return null;
@@ -52,12 +52,12 @@ class PracticalMatch {
     for(Shooter s in shooters) {
       if(filterMode == FilterMode.or) {
         if (divisions.contains(s.division) || powerFactors.contains(s.powerFactor) || classes.contains(s.classification)) {
-          if(allowReentries! || !s.reentry!) filteredShooters.add(s);
+          if(allowReentries! || !s.reentry) filteredShooters.add(s);
         }
       }
       else {
         if (divisions.contains(s.division) && powerFactors.contains(s.powerFactor) && classes.contains(s.classification)) {
-          if(allowReentries! || !s.reentry!) filteredShooters.add(s);
+          if(allowReentries! || !s.reentry) filteredShooters.add(s);
         }
       }
     }
@@ -67,47 +67,48 @@ class PracticalMatch {
 
   /// Returns one relative score for each shooter provided, representing performance
   /// in a hypothetical match made up of the given shooters and stages.
-  List<RelativeMatchScore> getScores({List<Shooter?>? shooters, List<Stage>? stages, bool? scoreDQ = true}) {
-    if(shooters == null) shooters = this.shooters;
-    if(stages == null) stages = this.stages;
+  List<RelativeMatchScore> getScores({List<Shooter>? shooters, List<Stage>? stages, bool scoreDQ = true}) {
+    List<Shooter> innerShooters = shooters != null ? shooters : this.shooters;
+    List<Stage> innerStages = stages != null ? stages : this.stages;
 
-    if(shooters.length == 0 || stages.length == 0) return [];
+    if(innerShooters.length == 0 || innerStages.length == 0) return [];
 
-    int matchMaxPoints = stages.map<int>((e) => e.maxPoints).reduce((a, b) => a + b);
+    int matchMaxPoints = innerStages.map<int>((e) => e.maxPoints).reduce((a, b) => a + b);
     debugPrint("Max points for match: $matchMaxPoints");
 
     // Create a total score for each shooter, precalculating what we can and
     // prepopulating what we can't.
     Map<Shooter, RelativeMatchScore> matchScores = {};
-    for(Shooter shooter in shooters as Iterable<Shooter>) {
+    for(Shooter shooter in innerShooters) {
       int shooterTotalPoints = 0;
 
-      matchScores[shooter] = RelativeMatchScore();
+      matchScores[shooter] = RelativeMatchScore(shooter: shooter);
       matchScores[shooter]!.shooter = shooter;
-      matchScores[shooter]!.total.score!.shooter = shooter;
-      for(Stage stage in stages) {
+      matchScores[shooter]!.total = RelativeScore();
+      matchScores[shooter]!.total.score = Score(shooter: shooter);
+      for(Stage stage in innerStages) {
         if(shooter.stageScores[stage] == null) continue;
-        shooterTotalPoints += shooter.stageScores[stage]!.getTotalPoints(scoreDQ: scoreDQ!);
+        shooterTotalPoints += shooter.stageScores[stage]!.getTotalPoints(scoreDQ: scoreDQ);
         matchScores[shooter]!.stageScores[stage] = RelativeScore()
-            ..stage = stage
-            ..score = shooter.stageScores[stage];
+            ..score = shooter.stageScores[stage]!
+            ..stage = stage;
       }
 
-      for(Stage stage in stages) {
+      for(Stage stage in innerStages) {
         if(shooter.stageScores[stage] == null) continue;
-        matchScores[shooter]!.total.score!.time += shooter.stageScores[stage]!.time;
-        matchScores[shooter]!.total.score!.a += shooter.stageScores[stage]!.a;
-        matchScores[shooter]!.total.score!.b += shooter.stageScores[stage]!.b;
-        matchScores[shooter]!.total.score!.c += shooter.stageScores[stage]!.c;
-        matchScores[shooter]!.total.score!.d += shooter.stageScores[stage]!.d;
-        matchScores[shooter]!.total.score!.m += shooter.stageScores[stage]!.m;
-        matchScores[shooter]!.total.score!.ns += shooter.stageScores[stage]!.ns;
-        matchScores[shooter]!.total.score!.npm += shooter.stageScores[stage]!.npm;
-        matchScores[shooter]!.total.score!.extraHit += shooter.stageScores[stage]!.extraHit;
-        matchScores[shooter]!.total.score!.extraShot += shooter.stageScores[stage]!.extraShot;
-        matchScores[shooter]!.total.score!.lateShot += shooter.stageScores[stage]!.lateShot;
-        matchScores[shooter]!.total.score!.procedural += shooter.stageScores[stage]!.procedural;
-        matchScores[shooter]!.total.score!.otherPenalty += shooter.stageScores[stage]!.otherPenalty;
+        matchScores[shooter]!.total.score.time += shooter.stageScores[stage]!.time;
+        matchScores[shooter]!.total.score.a += shooter.stageScores[stage]!.a;
+        matchScores[shooter]!.total.score.b += shooter.stageScores[stage]!.b;
+        matchScores[shooter]!.total.score.c += shooter.stageScores[stage]!.c;
+        matchScores[shooter]!.total.score.d += shooter.stageScores[stage]!.d;
+        matchScores[shooter]!.total.score.m += shooter.stageScores[stage]!.m;
+        matchScores[shooter]!.total.score.ns += shooter.stageScores[stage]!.ns;
+        matchScores[shooter]!.total.score.npm += shooter.stageScores[stage]!.npm;
+        matchScores[shooter]!.total.score.extraHit += shooter.stageScores[stage]!.extraHit;
+        matchScores[shooter]!.total.score.extraShot += shooter.stageScores[stage]!.extraShot;
+        matchScores[shooter]!.total.score.lateShot += shooter.stageScores[stage]!.lateShot;
+        matchScores[shooter]!.total.score.procedural += shooter.stageScores[stage]!.procedural;
+        matchScores[shooter]!.total.score.otherPenalty += shooter.stageScores[stage]!.otherPenalty;
       }
 
       matchScores[shooter]!.percentTotalPoints = shooterTotalPoints.toDouble() / matchMaxPoints.toDouble();
@@ -115,34 +116,36 @@ class PracticalMatch {
     }
 
     // First, for each stage, sort by HF. Then, calculate stage percentages.
-    for(Stage stage in stages) {
+    for(Stage stage in innerStages) {
       // Sort high to low
-      shooters.sort((Shooter? a, Shooter? b) {
-        if(a?.stageScores[stage] == null && b?.stageScores[stage] == null) return 0;
-        if(a?.stageScores[stage] == null && b?.stageScores[stage] != null) return -1;
-        if(b?.stageScores[stage] == null && a?.stageScores[stage] != null) return 1;
+      innerShooters.sort((Shooter a, Shooter b) {
+        if(a.stageScores[stage] == null && b.stageScores[stage] == null) return 0;
+        if(a.stageScores[stage] == null && b.stageScores[stage] != null) return -1;
+        if(b.stageScores[stage] == null && a.stageScores[stage] != null) {
+          return 1;
+        }
 
-        return b!.stageScores[stage]!.getHitFactor(scoreDQ: scoreDQ).compareTo(a!.stageScores[stage]!.getHitFactor(scoreDQ: scoreDQ));
+        return b.stageScores[stage]!.getHitFactor(scoreDQ: scoreDQ).compareTo(a.stageScores[stage]!.getHitFactor(scoreDQ: scoreDQ));
       });
 
-      if(shooters[0]!.stageScores[stage] == null) {
+      if(innerShooters[0].stageScores[stage] == null) {
         // we've clearly hit some awful condition here, so let's
         // just bail out
-        debugPrint("Winner of ${stage.name}: ${shooters[0]!.firstName} ${shooters[0]!.lastName} with ${shooters[0]!.stageScores[stage]!.getHitFactor(scoreDQ: scoreDQ)}");
+        debugPrint("Winner of ${stage.name}: ${innerShooters[0].firstName} ${innerShooters[0].lastName} with ${innerShooters[0].stageScores[stage]!.getHitFactor(scoreDQ: scoreDQ)}");
         continue;
       }
-      double highHitFactor = shooters[0]!.stageScores[stage]!.getHitFactor(scoreDQ: scoreDQ);
+      double highHitFactor = innerShooters[0].stageScores[stage]!.getHitFactor(scoreDQ: scoreDQ);
       //debugPrint("Winner of ${stage.name}: ${shooters[0].firstName} ${shooters[0].lastName} with ${shooters[0].stageScores[stage].hitFactor}");
 
       int place = 1;
-      for(Shooter shooter in shooters as Iterable<Shooter>) {
+      for(Shooter shooter in innerShooters) {
         double hitFactor = shooter.stageScores[stage]!.getHitFactor(scoreDQ: scoreDQ);
         double percent = hitFactor / highHitFactor;
         if(percent.isNaN) percent = 0;
 
         double relativePoints;
         if(stage.type == Scoring.fixedTime) {
-          relativePoints = shooter.stageScores[stage]!.getTotalPoints(scoreDQ: scoreDQ!).toDouble();
+          relativePoints = shooter.stageScores[stage]!.getTotalPoints(scoreDQ: scoreDQ).toDouble();
         }
         else {
           relativePoints = stage.maxPoints * percent;
@@ -157,8 +160,8 @@ class PracticalMatch {
 
     // Next, for each shooter, add relative points for all stages and sort by relative points. Then,
     // calculate percentages for each shooter.
-    for(Shooter shooter in shooters as Iterable<Shooter>) {
-      for(Stage stage in stages) {
+    for(Shooter shooter in innerShooters) {
+      for(Stage stage in innerStages) {
         matchScores[shooter]!.total.relativePoints += matchScores[shooter]!.stageScores[stage]?.relativePoints ?? 0;
       }
     }
@@ -179,9 +182,10 @@ class PracticalMatch {
 }
 
 class RelativeMatchScore {
-  Shooter? shooter;
+  RelativeMatchScore({required this.shooter});
 
-  RelativeScore total = RelativeScore();
+  Shooter shooter;
+  late RelativeScore total;
 
   /// Percent of match max points shot
   late double percentTotalPoints;
@@ -190,7 +194,8 @@ class RelativeMatchScore {
 }
 
 class RelativeScore {
-  Score? score = Score();
+  RelativeScore();
+  late Score score;
 
   int place = -1;
 
@@ -207,21 +212,21 @@ class RelativeScore {
 }
 
 class Shooter {
-  String? firstName;
-  String? lastName;
-  String? memberNumber;
-  bool? reentry;
-  bool? dq;
+  String firstName = "";
+  String lastName = "";
+  String memberNumber = "";
+  bool reentry = false;
+  bool dq = false;
 
   Division? division;
   Classification? classification;
   PowerFactor? powerFactor;
 
-  Map<Stage?, Score> stageScores = {};
+  Map<Stage, Score> stageScores = {};
 
   String getName() {
     String dqSuffix = "";
-    if(dq!) dqSuffix = " (DQ)";
+    if(dq) dqSuffix = " (DQ)";
     return "$firstName $lastName$dqSuffix";
   }
 
@@ -238,7 +243,7 @@ class Shooter {
         ..stageScores = {};
 
     stageScores.forEach((stage, score) {
-      newShooter.stageScores[parent.lookupStage(stage)] = score.copy(newShooter, stage);
+      newShooter.stageScores[parent.lookupStage(stage)!] = score.copy(newShooter, stage);
     });
 
     return newShooter;
@@ -246,31 +251,51 @@ class Shooter {
 }
 
 class Stage {
-  String? name;
+  String name;
   int minRounds = 0;
   int maxPoints = 0;
-  bool? classifier;
-  String? classifierNumber;
-  Scoring? type;
+  bool classifier;
+  String classifierNumber;
+  Scoring type;
+
+  Stage({
+    required this.name,
+    required this.minRounds,
+    required this.maxPoints,
+    required this.classifier,
+    required this.classifierNumber,
+    required this.type,
+  });
 
   Stage copy() {
-    return Stage()
-        ..name = name
-        ..minRounds = minRounds
-        ..maxPoints = maxPoints
-        ..classifier = classifier
-        ..classifierNumber = classifierNumber
-        ..type = type;
+    return Stage(
+      name: name,
+      minRounds: minRounds,
+      maxPoints: maxPoints,
+      classifier: classifier,
+      classifierNumber: classifierNumber,
+      type: type,
+    );
   }
 
   @override
   String toString() {
-    return name!;
+    return name;
   }
+
+  @override
+  bool operator ==(Object other) {
+    if(!(other is Stage)) return false;
+    return this.name == other.name;
+  }
+
+  @override
+  // TODO: implement hashCode
+  int get hashCode => this.name.hashCode;
 }
 
 class Score {
-  Shooter? shooter;
+  Shooter shooter;
   Stage? stage;
   double t1 = 0, t2 = 0, t3 = 0, t4 = 0, t5 = 0;
   double time = 0;
@@ -278,10 +303,13 @@ class Score {
   int a = 0, b = 0, c = 0, d = 0, m = 0, ns = 0, npm = 0;
   int procedural = 0, lateShot = 0, extraShot = 0, extraHit = 0, otherPenalty = 0;
 
-  Score copy(Shooter? shooter, Stage? stage) {
-    var newScore = Score()
-        ..shooter = shooter
-        ..stage = stage
+  Score({
+    required this.shooter,
+    this.stage
+  });
+
+  Score copy(Shooter shooter, Stage? stage) {
+    var newScore = Score(shooter: shooter, stage: stage)
         ..t1 = t1
         ..t2 = t2
         ..t3 = t3
@@ -318,11 +346,11 @@ class Score {
     return getTotalPoints(scoreDQ: scoreDQ).toDouble() / stage!.maxPoints.toDouble();
   }
 
-  double getHitFactor({bool? scoreDQ = true}) {
+  double getHitFactor({bool scoreDQ = true}) {
     if(stage!.type == Scoring.fixedTime) {
-      return getTotalPoints(scoreDQ: scoreDQ!).toDouble();
+      return getTotalPoints(scoreDQ: scoreDQ).toDouble();
     }
-    double score = double.parse((getTotalPoints(scoreDQ: scoreDQ!) / time).toStringAsFixed(4));
+    double score = double.parse((getTotalPoints(scoreDQ: scoreDQ) / time).toStringAsFixed(4));
     if(score.isInfinite) return 0;
     if(score.isNaN) return 0;
     return score;
@@ -349,16 +377,21 @@ class Score {
     if(stage?.type == Scoring.chrono) return 0;
 
     int aValue = 5;
-    int bValue = shooter?.powerFactor == PowerFactor.major ? 4 : 3;
+    int bValue = shooter.powerFactor == PowerFactor.major ? 4 : 3;
     int cValue = bValue;
-    int dValue = shooter?.powerFactor == PowerFactor.major ? 2 : 1;
+    int dValue = shooter.powerFactor == PowerFactor.major ? 2 : 1;
 
     return a * aValue + b * bValue + c * cValue + d * dValue;
   }
 
   int getTotalPoints({bool scoreDQ = true}) {
-    if(!scoreDQ && (shooter?.dq ?? false)) return 0;
+    if(!scoreDQ && (shooter.dq)) return 0;
     else return max(0, rawPoints - penaltyPoints);
+  }
+
+  @override
+  String toString() {
+    return "${shooter.memberNumber} ${stage?.name ?? "Match"} ${getHitFactor(scoreDQ: false)}";
   }
 }
 
@@ -568,15 +601,15 @@ extension Sorting on List<RelativeMatchScore> {
   void sortByTime({Stage? stage}) {
     if (stage != null) {
       this.sort((a, b) {
-        if(a.shooter!.dq! && !b.shooter!.dq!) {
+        if(a.shooter.dq && !b.shooter.dq) {
           return 1;
         }
-        if(b.shooter!.dq! && !a.shooter!.dq!) {
+        if(b.shooter.dq && !a.shooter.dq) {
           return -1;
         }
 
         if (a.stageScores.containsKey(stage) && b.stageScores.containsKey(stage)) {
-          return a.stageScores[stage]!.score!.time.compareTo(b.stageScores[stage]!.score!.time);
+          return a.stageScores[stage]!.score.time.compareTo(b.stageScores[stage]!.score.time);
         }
         else {
           return 0;
@@ -585,14 +618,14 @@ extension Sorting on List<RelativeMatchScore> {
     }
     else {
       this.sort((a, b) {
-        if(a.shooter!.dq! && !b.shooter!.dq!) {
+        if(a.shooter.dq && !b.shooter.dq) {
           return 1;
         }
-        if(b.shooter!.dq! && !a.shooter!.dq!) {
+        if(b.shooter.dq && !a.shooter.dq) {
           return -1;
         }
 
-        return a.total.score!.time.compareTo(b.total.score!.time);
+        return a.total.score.time.compareTo(b.total.score.time);
       });
     }
   }
@@ -601,7 +634,7 @@ extension Sorting on List<RelativeMatchScore> {
     if (stage != null) {
       this.sort((a, b) {
         if (a.stageScores.containsKey(stage) && b.stageScores.containsKey(stage)) {
-          return b.stageScores[stage]!.score!.a.compareTo(a.stageScores[stage]!.score!.a);
+          return b.stageScores[stage]!.score.a.compareTo(a.stageScores[stage]!.score.a);
         }
         else {
           return 0;
@@ -610,7 +643,7 @@ extension Sorting on List<RelativeMatchScore> {
     }
     else {
       this.sort((a, b) {
-        return b.total.score!.a.compareTo(a.total.score!.a);
+        return b.total.score.a.compareTo(a.total.score.a);
       });
     }
   }
@@ -619,7 +652,7 @@ extension Sorting on List<RelativeMatchScore> {
     if (stage != null) {
       this.sort((a, b) {
         if (a.stageScores.containsKey(stage) && b.stageScores.containsKey(stage)) {
-          return b.stageScores[stage]!.score!.getPercentTotalPoints(scoreDQ: scoreDQ).compareTo(a.stageScores[stage]!.score!.getPercentTotalPoints(scoreDQ: scoreDQ));
+          return b.stageScores[stage]!.score.getPercentTotalPoints(scoreDQ: scoreDQ).compareTo(a.stageScores[stage]!.score.getPercentTotalPoints(scoreDQ: scoreDQ));
         }
         else {
           return 0;
@@ -635,7 +668,7 @@ extension Sorting on List<RelativeMatchScore> {
 
   void sortBySurname() {
     this.sort((a, b) {
-      return a.shooter!.lastName!.compareTo(b.shooter!.lastName!);
+      return a.shooter.lastName.compareTo(b.shooter.lastName);
     });
   }
 }

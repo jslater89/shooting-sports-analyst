@@ -6,7 +6,7 @@ import 'package:uspsa_result_viewer/ui/captioned_text.dart';
 class ShooterResultCard extends StatelessWidget {
   final RelativeMatchScore? matchScore;
   final RelativeScore? stageScore;
-  final bool? scoreDQ;
+  final bool scoreDQ;
 
   const ShooterResultCard({Key? key, this.matchScore, this.stageScore, this.scoreDQ = true}) : super(key: key);
 
@@ -31,7 +31,7 @@ class ShooterResultCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            _buildShooterLink(context, matchScore!.shooter!),
+            _buildShooterLink(context, matchScore!.shooter),
             SizedBox(height: 10),
             Row(
               mainAxisSize: MainAxisSize.min,
@@ -44,7 +44,7 @@ class ShooterResultCard extends StatelessWidget {
                 SizedBox(width: 12),
                 CaptionedText(
                   captionText: "Time",
-                  text: "${matchScore!.total.score!.time.toStringAsFixed(2)}s",
+                  text: "${matchScore!.total.score.time.toStringAsFixed(2)}s",
                 )
               ],
             ),
@@ -57,9 +57,9 @@ class ShooterResultCard extends StatelessWidget {
   }
 
   Widget _buildStageCard(BuildContext context) {
-    Shooter shooter = stageScore!.score!.shooter!;
+    Shooter shooter = stageScore!.score.shooter;
     List<Widget> timeHolder = [];
-    var stringTimes = stageScore!.score!.stringTimes;
+    var stringTimes = stageScore!.score.stringTimes;
 
     if(stringTimes.length > 1) {
       List<Widget> children = [];
@@ -98,12 +98,12 @@ class ShooterResultCard extends StatelessWidget {
               children: [
                 CaptionedText(
                     captionText: "Hit Factor",
-                    text: "${stageScore!.score!.getHitFactor(scoreDQ: scoreDQ).toStringAsFixed(4)}",
+                    text: "${stageScore!.score.getHitFactor(scoreDQ: scoreDQ).toStringAsFixed(4)}",
                 ),
                 SizedBox(width: 12),
                 CaptionedText(
                   captionText: "Time",
-                  text: "${stageScore!.score!.time.toStringAsFixed(2)}s",
+                  text: "${stageScore!.score.time.toStringAsFixed(2)}s",
                 ),
                 SizedBox(width: 12),
                 CaptionedText(
@@ -162,27 +162,27 @@ class _ScoreBody extends StatelessWidget {
           children: [
             CaptionedText(
               captionText: "A",
-              text: "${result!.score!.a}",
+              text: "${result!.score.a}",
             ),
             SizedBox(width: 12),
             CaptionedText(
               captionText: "C",
-              text: "${result!.score!.c + result!.score!.b}",
+              text: "${result!.score.c + result!.score.b}",
             ),
             SizedBox(width: 12),
             CaptionedText(
               captionText: "D",
-              text: "${result!.score!.d}",
+              text: "${result!.score.d}",
             ),
             SizedBox(width: 12),
             CaptionedText(
               captionText: "M",
-              text: "${result!.score!.m}",
+              text: "${result!.score.m}",
             ),
             SizedBox(width: 12),
             CaptionedText(
               captionText: "NS",
-              text: "${result!.score!.ns}",
+              text: "${result!.score.ns}",
             )
           ],
         ),
@@ -193,27 +193,27 @@ class _ScoreBody extends StatelessWidget {
           children: [
             CaptionedText(
               captionText: "Procedural",
-              text: "${result!.score!.procedural}",
+              text: "${result!.score.procedural}",
             ),
             SizedBox(width: 12),
             CaptionedText(
               captionText: "Late Shot",
-              text: "${result!.score!.lateShot}",
+              text: "${result!.score.lateShot}",
             ),
             SizedBox(width: 12),
             CaptionedText(
               captionText: "Extra Shot",
-              text: "${result!.score!.extraShot}",
+              text: "${result!.score.extraShot}",
             ),
             SizedBox(width: 12),
             CaptionedText(
               captionText: "Extra Hit",
-              text: "${result!.score!.extraHit}",
+              text: "${result!.score.extraHit}",
             ),
             SizedBox(width: 12),
             CaptionedText(
               captionText: "Other",
-              text: "${result!.score!.otherPenalty}",
+              text: "${result!.score.otherPenalty}",
             )
           ],
         ),

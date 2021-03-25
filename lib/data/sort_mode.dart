@@ -11,7 +11,6 @@ enum SortMode {
 extension SortModeDisplayString on SortMode {
   String displayString() {
     switch(this) {
-
       case SortMode.score:
         return "Score";
       case SortMode.time:
@@ -23,6 +22,5 @@ extension SortModeDisplayString on SortMode {
       case SortMode.lastName:
         return "Last Name";
     }
-    return "INVALID SORT MODE";
   }
 }

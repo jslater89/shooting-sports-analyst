@@ -13,7 +13,7 @@ class FilterControls extends StatefulWidget {
 
   /// The stages currently scored. Used to populate the stage
   /// select dropdown.
-  final List<Stage>? filteredStages;
+  final List<Stage> filteredStages;
 
   final StageMenuItem currentStage;
   final FilterSet filters;
@@ -99,10 +99,10 @@ class _FilterControlsState extends State<FilterControls> {
       )
     ];
 
-    for(Stage s in widget.filteredStages!) {
+    for(Stage s in widget.filteredStages) {
       stageMenuItems.add(
           DropdownMenuItem<StageMenuItem>(
-              child: Text(s.name!),
+              child: Text(s.name),
               value: StageMenuItem(s),
           )
       );
@@ -199,7 +199,7 @@ class _FilterControlsState extends State<FilterControls> {
                               builder: (context) {
                                 var initialState = <Stage, bool>{};
                                 for(Stage s in widget.allStages) {
-                                  initialState[s] = widget.filteredStages!.contains(s);
+                                  initialState[s] = widget.filteredStages.contains(s);
                                 }
                                 return StageSelectDialog(initialState: initialState);
                               }
@@ -271,7 +271,7 @@ enum StageMenuItemType {
   match,
 }
 class StageMenuItem {
-  StageMenuItem(this.stage) : this.type = StageMenuItemType.stage;
+  StageMenuItem(Stage stage) : this.stage = stage, this.type = StageMenuItemType.stage;
   StageMenuItem.filter() : this.type = StageMenuItemType.filter;
   StageMenuItem.match() : this.type = StageMenuItemType.match;
 
@@ -293,4 +293,9 @@ class StageMenuItem {
 
   @override
   int get hashCode => type.hashCode ^ (stage?.hashCode ?? 0);
+
+  @override
+  String toString() {
+    return "type: $type name: ${this.stage?.name}";
+  }
 }

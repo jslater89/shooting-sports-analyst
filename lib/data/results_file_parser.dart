@@ -42,7 +42,7 @@ PracticalMatch _processResultLines({required List<String> infoLines, required Li
   for(Shooter s in match.shooters) {
     for(Stage stage in match.stages) {
       if(!s.stageScores.containsKey(stage)) {
-        s.stageScores[stage] = Score()..stage = stage;
+        s.stageScores[stage] = Score(shooter: s)..stage = stage;
       }
     }
   }
@@ -118,13 +118,14 @@ Map<int, Stage> _readStageLines(PracticalMatch match, List<String> stageLines) {
   for(String line in stageLines) {
     try {
       List<String> splitLine = line.split(",");
-      Stage s = Stage()
-        ..minRounds = int.parse(splitLine[_MIN_ROUNDS])
-        ..maxPoints = int.parse(splitLine[_MAX_POINTS])
-        ..classifier = splitLine[_CLASSIFIER].toLowerCase() == "yes"
-        ..classifierNumber = splitLine[_CLASSIFIER_NUM]
-        ..name = splitLine[_STAGE_NAME]
-        ..type = ScoringFrom.string(splitLine[_SCORING]);
+      Stage s = Stage(
+        minRounds: int.parse(splitLine[_MIN_ROUNDS]),
+        maxPoints: int.parse(splitLine[_MAX_POINTS]),
+        classifier: splitLine[_CLASSIFIER].toLowerCase() == "yes",
+        classifierNumber: splitLine[_CLASSIFIER_NUM],
+        name: splitLine[_STAGE_NAME],
+        type: ScoringFrom.string(splitLine[_SCORING])
+      );
 
       stagesById[i++] = s;
       maxPoints += s.maxPoints;
@@ -179,9 +180,7 @@ void _readScoreLines(List<String> stageScoreLines, Map<int, Shooter> shootersByF
         throw("Null shooter ${int.parse(splitLine[_SHOOTER_ID])}!");
       }
 
-      Score s = Score()
-        ..stage = stage
-        ..shooter = shooter
+      Score s = Score(shooter: shooter, stage: stage)
         ..a = int.parse(splitLine[_A])
         ..b = int.parse(splitLine[_B])
         ..c = int.parse(splitLine[_C])
@@ -209,13 +208,12 @@ void _readScoreLines(List<String> stageScoreLines, Map<int, Shooter> shootersByF
       // Work around a PractiScore web results bug: if a shooter has neither points
       // nor time, we can assume it's someone who didn't complete the stage at all.
       if(!stageFinished) {
-        shooter.stageScores[stage] = Score()..stage = stage;
+        shooter.stageScores[stage] = Score(shooter: shooter, stage: stage);
         debugPrint("Shooter ${shooter.getName()} did not finish ${stage.name}");
         continue;
       }
 
       shooter.stageScores[stage] = s;
-
 
       if(s.penaltyPoints != int.parse(splitLine[_PENALTY_POINTS])) {
         debugPrint("Penalty points mismatch for ${shooter.getName()} on ${stage.name}: ${s.penaltyPoints} vs ${splitLine[_PENALTY_POINTS]}");

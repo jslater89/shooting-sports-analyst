@@ -41,13 +41,13 @@ class _ResultPageState extends State<ResultPage> {
   bool _invalidSearch = false;
   List<RelativeMatchScore> _searchedScores = [];
   StageMenuItem _currentStageMenuItem = StageMenuItem.match();
-  List<Stage>? _filteredStages;
+  List<Stage> _filteredStages = [];
   Stage? _stage;
   SortMode _sortMode = SortMode.score;
 
-  int get _matchMaxPoints => _filteredStages!.map((stage) => stage.maxPoints).reduce((a, b) => a + b);
+  int get _matchMaxPoints => _filteredStages.map((stage) => stage.maxPoints).reduce((a, b) => a + b);
 
-  List<Shooter?> get _filteredShooters => _baseScores.map((score) => score.shooter).toList();
+  List<Shooter> get _filteredShooters => _baseScores.map((score) => score.shooter).toList();
 
   /// If true, in what-if mode. If false, not in what-if mode.
   bool _whatIfMode = false;
@@ -101,9 +101,9 @@ class _ResultPageState extends State<ResultPage> {
     List<Shooter> filteredShooters = _currentMatch!.filterShooters(
       filterMode: _filters.mode,
       allowReentries: _filters.reentries,
-      divisions: _filters.divisions!.keys.where((element) => _filters.divisions![element]!).toList(),
-      classes: _filters.classifications!.keys.where((element) => _filters.classifications![element]!).toList(),
-      powerFactors: _filters.powerFactors!.keys.where((element) => _filters.powerFactors![element]!).toList(),
+      divisions: _filters.divisions.keys.where((element) => _filters.divisions[element]!).toList(),
+      classes: _filters.classifications.keys.where((element) => _filters.classifications[element]!).toList(),
+      powerFactors: _filters.powerFactors.keys.where((element) => _filters.powerFactors[element]!).toList(),
     );
     return filteredShooters;
   }
@@ -212,8 +212,8 @@ class _ResultPageState extends State<ResultPage> {
 
   bool _applySearch(RelativeMatchScore element) {
     // getName() instead of first name so 'john sm' matches 'first:john last:smith'
-    if(element.shooter!.getName().toLowerCase().startsWith(_searchTerm)) return true;
-    if(element.shooter!.lastName!.toLowerCase().startsWith(_searchTerm)) return true;
+    if(element.shooter.getName().toLowerCase().startsWith(_searchTerm)) return true;
+    if(element.shooter.lastName.toLowerCase().startsWith(_searchTerm)) return true;
     return false;
   }
 
@@ -292,16 +292,19 @@ class _ResultPageState extends State<ResultPage> {
                     List<Shooter> filteredShooters = _filterShooters();
                     var scores = _currentMatch!.getScores(shooters: filteredShooters);
 
+                    //debugPrint("Match: $_currentMatch Stage: $_stage Shooters: $_filteredShooters Scores: $scores");
+                    debugPrint("${_filteredShooters[0].stageScores}");
+
                     setState(() {
                       _editedShooters = {};
                       _currentMatch = _currentMatch;
-                      _stage = _stage == null ? null : _currentMatch!.lookupStage(_stage);
+                      _stage = _stage == null ? null : _currentMatch!.lookupStage(_stage!);
                       _baseScores = scores;
                       _searchedScores = []..addAll(scores);
                       _whatIfMode = false;
                     });
 
-                    _applyStage(StageMenuItem(_stage));
+                    _applyStage(_stage != null ? StageMenuItem(_stage!) : StageMenuItem.match());
                   }
               )
           )
