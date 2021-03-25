@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Product Id="*" UpgradeCode="{{.upgradeCode}}" Version="{{.version}}" Language="1033" Name="{{.applicationName}}" Manufacturer="{{.author}}">
+        <Package InstallerVersion="300" Compressed="yes"/>
+        <Media Id="1" Cabinet="{{.packageName}}.cab" EmbedCab="yes" />
+        <Directory Id="TARGETDIR" Name="SourceDir">
+            <Directory Id="ProgramFilesFolder">
+                <Directory Id="APPLICATIONROOTDIRECTORY" Name="{{.applicationName}}">
+                    <?include directories.wxi ?>
+                </Directory>
+            </Directory>
+            <Directory Id="ProgramMenuFolder">
+                <Directory Id="ApplicationProgramsFolder" Name="{{.applicationName}}"/>
+            </Directory>
+        </Directory>
+        <Icon Id="ShortcutIcon" SourceFile="build{{.pathSeparator}}assets{{.pathSeparator}}icon.ico"/>
+        <Property Id="ARPPRODUCTICON" Value="ShortcutIcon"/>
+        <?include directory_refs.wxi ?>
+        <DirectoryRef Id="ApplicationProgramsFolder">
+            <Component Id="ApplicationShortcut" Guid="*">
+                <Shortcut Id="ApplicationStartMenuShortcut"
+                          Name="{{.applicationName}}"
+                          Description="{{.description}}"
+                          Target="[#{{.executableName}}.exe]"
+                          WorkingDirectory="APPLICATIONROOTDIRECTORY"
+                          Icon="ShortcutIcon"/>
+                <RemoveFolder Id="CleanUpShortCut" On="uninstall"/>
+                <RegistryValue Root="HKCU" Key="Software\{{.author}}\{{.packageName}}" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
+            </Component>
+        </DirectoryRef>
+        <Feature Id="MainApplication" Title="{{.applicationName}}" Level="1">
+            <ComponentRef Id="ApplicationShortcut"/>
+            <?include component_refs.wxi ?>
+        </Feature>
+    </Product>
+</Wix>
