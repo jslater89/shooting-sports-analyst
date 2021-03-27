@@ -29,6 +29,8 @@
 .pub-cache/
 .pub/
 /build/
+*.msi
+*.AppImage
 
 web/index.html
 

@@ -63560,7 +63560,7 @@ c=l.y.h(0,o).i6(a7)/e
 if(isNaN(c))c=0
 b=i?l.y.h(0,o).i7(a7):k*c
 h=q.h(0,l).d.h(0,o)
-h.d=c
+h.d=c*100
 h.e=b
 a=d+1
 h.b=d}}for(p=a5.length,m=0;m<a5.length;a5.length===p||(0,H.B)(a5),++m){l=a5[m]
@@ -64181,7 +64181,7 @@ o.toString
 o=o.zA(K.a5(a).L.a)
 s=N.a2C(r)
 s.ay=new E.ada()
-return E.tc(r,T.ar(T.aeD(r,r,C.bb,!0,r,new Q.dD(r,H.a([new Q.dD("A Flutter web app for displaying USPSA scores. You can also embed this widget into your match website, automatically loading your results file from a provided Internet address.\n\nVisit the repository at ",r,r,p.Y.y),new Q.dD(u.H,r,s,o),new Q.dD(" for more information.\n\nuspsa_result_viewer v3.0.0\n\xa9 Jay Slater 2020\nGPL 3.0",r,r,K.a5(a).Y.y)],t.VO),r,r),C.aq,r,r,1,C.aj),r,this.a.a*0.5),q)},
+return E.tc(r,T.ar(T.aeD(r,r,C.bb,!0,r,new Q.dD(r,H.a([new Q.dD("A Flutter web app for displaying USPSA scores. You can also embed this widget into your match website, automatically loading your results file from a provided Internet address.\n\nVisit the repository at ",r,r,p.Y.y),new Q.dD(u.H,r,s,o),new Q.dD(" for more information.\n\nuspsa_result_viewer v3.0.1\n\xa9 Jay Slater 2021\nGPL 3.0+",r,r,K.a5(a).Y.y)],t.VO),r,r),C.aq,r,r,1,C.aj),r,this.a.a*0.5),q)},
 $S:84}
 E.ada.prototype={
 $0:function(){var s=0,r=P.Y(t.H)
@@ -65019,7 +65019,7 @@ We:function(a0,a1,a2){var s,r,q,p,o,n,m=this,l=null,k=m.r[a1],j=k.d.h(0,a2),i=C.
 c=T.aE(L.z(Z.aj2(c.x),l,l,l,l,l,l,l),1)
 s=H.c(f?l:j.gas().i7(m.x))+" ("
 r=f?l:j.gas().vR(m.x)
-s=T.aE(L.z(s+C.d.O(r==null?0:r,1)+"%)",l,l,l,l,l,l,l),3)
+s=T.aE(L.z(s+C.d.O((r==null?0:r)*100,1)+"%)",l,l,l,l,l,l,l),3)
 r=f?l:C.d.O(j.gas().x,2)
 r=T.aE(L.z(r==null?"0.00":r,l,l,l,l,l,l,l),2)
 q=f?l:C.d.O(j.gas().i6(m.x),4)

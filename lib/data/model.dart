@@ -152,7 +152,7 @@ class PracticalMatch {
         }
 
         matchScores[shooter]!.stageScores[stage]!
-          ..percent = percent
+          ..percent = (percent * 100)
           ..relativePoints = relativePoints
           ..place = place++;
       }
