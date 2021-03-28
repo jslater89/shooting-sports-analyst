@@ -14471,8 +14471,8 @@ return P.X($async$Bg,r)},
 ay_:function(a,b,c,d){var s,r,q,p,o,n,m,l,k,j,i=new Z.w3(H.a([],t.zm),H.a([],t.Ro))
 S.ay1(i,b)
 S.ay2(d,S.ay0(i,a),S.ay3(i,c))
-for(s=i.c,r=s.length,q=0;q<s.length;s.length===r||(0,H.B)(s),++q){p=s[q]
-for(o=i.d,n=o.length,m=0;m<o.length;o.length===n||(0,H.B)(o),++m){l=o[m]
+for(s=i.d,r=s.length,q=0;q<s.length;s.length===r||(0,H.B)(s),++q){p=s[q]
+for(o=i.e,n=o.length,m=0;m<o.length;o.length===n||(0,H.B)(o),++m){l=o[m]
 if(!p.y.ae(0,l)){k=p.y
 j=new Z.i_(p,null)
 j.b=l
@@ -14498,7 +14498,7 @@ q=k
 j=g
 g=j+1
 J.eh(h,j,q)
-a.c.push(q)}catch(i){p=H.a3(i)
+a.d.push(q)}catch(i){p=H.a3(i)
 D.aX().$1("Error parsing shooter: "+H.c(s)+" "+H.c(p))}}D.aX().$1("Read "+J.bx(h)+" shooters")
 return h},
 ay3:function(a,b){var s,r,q,p,o,n,m,l,k,j,i,h=P.u(t.S,t.cL),g=1,f=0
@@ -14513,8 +14513,8 @@ j=g
 g=j+1
 J.eh(h,j,q)
 f+=q.c
-a.d.push(q)}catch(i){p=H.a3(i)
-D.aX().$1("Error parsing stage: "+H.c(s)+" "+H.c(p))}}a.e=f
+a.e.push(q)}catch(i){p=H.a3(i)
+D.aX().$1("Error parsing stage: "+H.c(s)+" "+H.c(p))}}a.f=f
 D.aX().$1("Read "+J.bx(h)+" stages")
 return h},
 ay2:function(a,b,a0){var s,r,q,p,o,n,m,l,k,j,i,h,g,f,e=null,d=" (DQ)",c=0
@@ -14805,9 +14805,9 @@ auV:function(a){C.c.c3(a,new Z.a1T())},
 DS:function DS(a){this.b=a},
 w3:function w3(a,b){var _=this
 _.b=_.a=null
-_.c=a
-_.d=b
-_.e=null},
+_.d=a
+_.e=b
+_.f=null},
 Y8:function Y8(){},
 Y9:function Y9(a){this.a=a},
 Ya:function Ya(){},
@@ -63456,22 +63456,22 @@ mz:function(a){var s,r=this,q=t.zm,p=t.Ro,o=new Z.w3(H.a([],q),H.a([],p))
 o.a=r.a
 o.b=r.b
 q=H.a([],q)
-o.c=q
+o.d=q
 p=H.a([],p)
-o.d=p
-o.e=r.e
-s=r.d
+o.e=p
+o.f=r.f
+s=r.e
 C.c.G(p,new H.an(s,new Z.Y8(),H.ag(s).j("an<1,c_>")))
-s=r.c
+s=r.d
 C.c.G(q,new H.an(s,new Z.Y9(o),H.ag(s).j("an<1,cv>")))
 return o},
 Md:function(a){var s,r,q,p,o
-for(s=this.d,r=s.length,q=a.a,p=0;p<r;++p){o=s[p]
+for(s=this.e,r=s.length,q=a.a,p=0;p<r;++p){o=s[p]
 if(q===o.a)return o}return null},
 a6L:function(a,b,c,d,e){var s,r,q,p,o,n,m=H.a([],t.zm)
-for(s=this.c,r=s.length,q=d===C.rq,p=!a,o=0;o<s.length;s.length===r||(0,H.B)(s),++o){n=s[o]
+for(s=this.d,r=s.length,q=d===C.rq,p=!a,o=0;o<s.length;s.length===r||(0,H.B)(s),++o){n=s[o]
 if(q){if(C.c.A(c,n.f)||C.c.A(e,n.x)||C.c.A(b,n.r))if(!p||!n.d)m.push(n)}else if(C.c.A(c,n.f)&&C.c.A(e,n.x)&&C.c.A(b,n.r))if(!p||!n.d)m.push(n)}return m},
-vT:function(a7,a8,a9){var s,r,q,p,o,n,m,l,k,j,i,h,g,f,e,d,c,b,a,a0,a1,a2,a3="total",a4="score",a5=a8!=null?a8:this.c,a6=a9!=null?a9:this.d
+vT:function(a7,a8,a9){var s,r,q,p,o,n,m,l,k,j,i,h,g,f,e,d,c,b,a,a0,a1,a2,a3="total",a4="score",a5=a8!=null?a8:this.d,a6=a9!=null?a9:this.e
 if(a5.length===0||J.bx(a6)===0)return H.a([],t.M)
 s=J.bJ(a6)
 r=s.hc(a6,new Z.Ya(),t.S).k9(0,new Z.Yb())
@@ -63560,7 +63560,7 @@ c=l.y.h(0,o).i6(a7)/e
 if(isNaN(c))c=0
 b=i?l.y.h(0,o).i7(a7):k*c
 h=q.h(0,l).d.h(0,o)
-h.d=c*100
+h.d=c
 h.e=b
 a=d+1
 h.b=d}}for(p=a5.length,m=0;m<a5.length;a5.length===p||(0,H.B)(a5),++m){l=a5[m]
@@ -64181,7 +64181,7 @@ o.toString
 o=o.zA(K.a5(a).L.a)
 s=N.a2C(r)
 s.ay=new E.ada()
-return E.tc(r,T.ar(T.aeD(r,r,C.bb,!0,r,new Q.dD(r,H.a([new Q.dD("A Flutter web app for displaying USPSA scores. You can also embed this widget into your match website, automatically loading your results file from a provided Internet address.\n\nVisit the repository at ",r,r,p.Y.y),new Q.dD(u.H,r,s,o),new Q.dD(" for more information.\n\nuspsa_result_viewer v3.0.1\n\xa9 Jay Slater 2021\nGPL 3.0+",r,r,K.a5(a).Y.y)],t.VO),r,r),C.aq,r,r,1,C.aj),r,this.a.a*0.5),q)},
+return E.tc(r,T.ar(T.aeD(r,r,C.bb,!0,r,new Q.dD(r,H.a([new Q.dD("A Flutter web app for displaying USPSA scores. You can also embed this widget into your match website, automatically loading your results file from a provided Internet address.\n\nVisit the repository at ",r,r,p.Y.y),new Q.dD(u.H,r,s,o),new Q.dD(" for more information.\n\nuspsa_result_viewer v3.0.2\n\xa9 Jay Slater 2021\nGPL 3.0+",r,r,K.a5(a).Y.y)],t.VO),r,r),C.aq,r,r,1,C.aj),r,this.a.a*0.5),q)},
 $S:84}
 E.ada.prototype={
 $0:function(){var s=0,r=P.Y(t.H)
@@ -64717,7 +64717,7 @@ X.xr(new X.tt("Results: "+H.c(r.a.c.a),4149685))
 r.d=O.E2(!0,null,!0,null,!1)
 r.x=r.a.c.mz(0)
 s=H.a([],t.Ro)
-C.c.G(s,r.x.d)
+C.c.G(s,r.x.e)
 r.dx=s
 r.Q=r.x.Om(r.z.c,s)
 s=H.a([],t.M)
@@ -64781,7 +64781,7 @@ VN:function(a){var s=a.a.j7(),r=this.ch
 if(C.b.aA(s.toLowerCase(),r))return!0
 if(C.b.aA(a.a.b.toLowerCase(),r))return!0
 return!1},
-J:function(a1,a2){var s,r,q,p=this,o=null,n=a2.V(t.w).f,m=p.z,l=p.x,k=l.d,j=p.dx,i=p.db,h=p.fr,g=p.d,f=p.cx,e=p.Q,d=p.cy,c=p.ga0s(),b=p.dy,a=p.z.c,a0=p.fx
+J:function(a1,a2){var s,r,q,p=this,o=null,n=a2.V(t.w).f,m=p.z,l=p.x,k=l.e,j=p.dx,i=p.db,h=p.fr,g=p.d,f=p.cx,e=p.Q,d=p.cy,c=p.ga0s(),b=p.dy,a=p.z.c,a0=p.fx
 if(b==null)s=p.gVG()
 else{s=p.fy.h(0,b)
 if(s==null)s=H.a([],t.zm)}K.a5(a2)
@@ -64962,7 +64962,7 @@ $C:"$0",
 $R:0,
 $S:0}
 M.a9b.prototype={
-$1:function(a){return new V.pj(this.a.x.c,null)},
+$1:function(a){return new V.pj(this.a.x.d,null)},
 $S:428}
 M.a9h.prototype={
 $0:function(){E.amP(this.a.gGG(),this.b)},
@@ -65015,25 +65015,25 @@ o=n.r.length
 return E.ajP(new T.d5(new S.ai(r,q,0,1/0),T.cH(H.a([s,T.aE(E.ajM(new B.vc(new G.a1D(new X.a_F(n,b),o,!0,!0,!0),m,C.l,!1,p,!1,m,!1,m,o,C.a2,C.uC,m,C.ao,m),p,!0),1)],t.p),C.t,C.H,C.I),m),n.z,C.k)},
 W3:function(a,b){var s=this,r=null,q=s.r[b],p=C.f.eh(b,2)===1?C.a6.h(0,200):C.j,o=C.c.A(s.cx,q.a),n=T.aE(L.z(""+(C.c.dE(s.f,q)+1),r,r,r,r,r,r,r),1),m=T.aE(L.z(""+q.gcV(q).b,r,r,r,r,r,r,r),1),l=T.aE(L.z(q.a.j7(),r,r,r,r,r,r,r),3),k=q.a
 return D.eK(r,S.ajI(new T.bH(C.kg,T.da(H.a([n,m,l,T.aE(L.z(Z.tG(k.r),r,r,r,r,r,r,r),1),T.aE(L.z(Z.oE(k.f),r,r,r,r,r,r,r),3),T.aE(L.z(Z.aj2(k.x),r,r,r,r,r,r,r),1),T.aE(L.z(C.d.O(q.gcV(q).d*100,2),r,r,r,r,r,r,r),2),T.aE(L.z(C.d.O(q.gcV(q).e,2),r,r,r,r,r,r,r),2),T.aE(L.z(C.d.O(q.gcV(q).gas().x,2),r,r,r,r,r,r,r),2),T.aE(L.z(""+q.gcV(q).gas().i7(s.x)+" ("+C.d.O(q.gBP()*100,2)+"%)",r,r,r,r,r,r,r),3),T.aE(L.z(""+q.gcV(q).gas().y+"A "+q.gcV(q).gas().Q+"C "+q.gcV(q).gas().ch+"D "+q.gcV(q).gas().cx+"M "+q.gcV(q).gas().cy+"NS "+q.gcV(q).gas().gMH()+"P",r,r,r,r,r,r,r),5)],t.p),C.t,C.H,C.aS),r),p,o),C.a2,!1,r,r,r,r,r,r,r,r,r,r,r,r,new X.a_B(a,q),r,r,r,r,r,r)},
-We:function(a0,a1,a2){var s,r,q,p,o,n,m=this,l=null,k=m.r[a1],j=k.d.h(0,a2),i=C.f.eh(a1,2)===1?C.a6.h(0,200):C.j,h=C.c.A(m.cx,k.a),g=T.aE(L.z(""+(C.c.dE(m.f,k)+1),l,l,l,l,l,l,l),1),f=j==null,e=T.aE(L.z(H.c(f?l:j.b),l,l,l,l,l,l,l),1),d=T.aE(L.z(k.a.j7(),l,l,l,l,l,l,l),3),c=k.a,b=T.aE(L.z(Z.tG(c.r),l,l,l,l,l,l,l),1),a=T.aE(L.z(Z.oE(c.f),l,l,l,l,l,l,l),3)
-c=T.aE(L.z(Z.aj2(c.x),l,l,l,l,l,l,l),1)
-s=H.c(f?l:j.gas().i7(m.x))+" ("
-r=f?l:j.gas().vR(m.x)
-s=T.aE(L.z(s+C.d.O((r==null?0:r)*100,1)+"%)",l,l,l,l,l,l,l),3)
-r=f?l:C.d.O(j.gas().x,2)
-r=T.aE(L.z(r==null?"0.00":r,l,l,l,l,l,l,l),2)
-q=f?l:C.d.O(j.gas().i6(m.x),4)
+We:function(a1,a2,a3){var s,r,q,p,o,n,m=this,l=null,k="0.00",j=m.r[a2],i=j.d.h(0,a3),h=C.f.eh(a2,2)===1?C.a6.h(0,200):C.j,g=C.c.A(m.cx,j.a),f=T.aE(L.z(""+(C.c.dE(m.f,j)+1),l,l,l,l,l,l,l),1),e=i==null,d=T.aE(L.z(H.c(e?l:i.b),l,l,l,l,l,l,l),1),c=T.aE(L.z(j.a.j7(),l,l,l,l,l,l,l),3),b=j.a,a=T.aE(L.z(Z.tG(b.r),l,l,l,l,l,l,l),1),a0=T.aE(L.z(Z.oE(b.f),l,l,l,l,l,l,l),3)
+b=T.aE(L.z(Z.aj2(b.x),l,l,l,l,l,l,l),1)
+s=H.c(e?l:i.gas().i7(m.x))+" ("
+r=e?l:i.gas().vR(m.x)
+s=T.aE(L.z(s+C.d.O((r==null?0:r)*100,2)+"%)",l,l,l,l,l,l,l),3)
+r=e?l:C.d.O(i.gas().x,2)
+r=T.aE(L.z(r==null?k:r,l,l,l,l,l,l,l),2)
+q=e?l:C.d.O(i.gas().i6(m.x),4)
 q=T.aE(L.z(q==null?"0.0000":q,l,l,l,l,l,l,l),2)
-p=f?l:j.d
-p=T.aE(L.z(C.d.O(p==null?0:p,2),l,l,l,l,l,l,l),2)
-o=f?l:C.d.O(j.e,2)
-o=T.aE(L.z(o==null?"0.00":o,l,l,l,l,l,l,l),2)
-n=H.c(f?l:j.gas().y)+"A "
-n=n+H.c(f?l:j.gas().Q)+"C "
-n=n+H.c(f?l:j.gas().ch)+"D "
-n=n+H.c(f?l:j.gas().cx)+"M "
-n=n+H.c(f?l:j.gas().cy)+"NS "
-return D.eK(l,S.ajI(new T.bH(C.kg,T.da(H.a([g,e,d,b,a,c,s,r,q,p,o,T.aE(L.z(n+H.c(f?l:j.gas().gMH())+"P",l,l,l,l,l,l,l),4)],t.p),C.t,C.H,C.aS),l),i,h),C.a2,!1,l,l,l,l,l,l,l,l,l,l,l,l,new X.a_E(m,a0,j,k,a2),l,l,l,l,l,l)}}
+p=e?l:C.d.O(i.d*100,2)
+p=T.aE(L.z((p==null?k:p)+"%",l,l,l,l,l,l,l),2)
+o=e?l:C.d.O(i.e,2)
+o=T.aE(L.z(o==null?k:o,l,l,l,l,l,l,l),2)
+n=H.c(e?l:i.gas().y)+"A "
+n=n+H.c(e?l:i.gas().Q)+"C "
+n=n+H.c(e?l:i.gas().ch)+"D "
+n=n+H.c(e?l:i.gas().cx)+"M "
+n=n+H.c(e?l:i.gas().cy)+"NS "
+return D.eK(l,S.ajI(new T.bH(C.kg,T.da(H.a([f,d,c,a,a0,b,s,r,q,p,o,T.aE(L.z(n+H.c(e?l:i.gas().gMH())+"P",l,l,l,l,l,l,l),4)],t.p),C.t,C.H,C.aS),l),h,g),C.a2,!1,l,l,l,l,l,l,l,l,l,l,l,l,new X.a_E(m,a1,i,j,a3),l,l,l,l,l,l)}}
 X.a_F.prototype={
 $2:function(a,b){var s=this.a,r=s.e
 if(r==null)return s.W3(this.b,b)
