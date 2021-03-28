@@ -11,6 +11,8 @@ class PracticalMatch {
   String? name;
   String? date;
 
+  late String reportContents;
+
   List<Shooter> shooters = [];
   List<Stage> stages = [];
 
@@ -152,7 +154,7 @@ class PracticalMatch {
         }
 
         matchScores[shooter]!.stageScores[stage]!
-          ..percent = (percent * 100)
+          ..percent = percent
           ..relativePoints = relativePoints
           ..place = place++;
       }

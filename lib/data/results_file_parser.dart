@@ -26,7 +26,7 @@ Future<PracticalMatch> processScoreFile(String fileContents) async {
     competitorLines: competitorLines,
     stageLines: stageLines,
     stageScoreLines: stageScoreLines,
-  );
+  )..reportContents = reportFile;
   return canonicalMatch;
 }
 

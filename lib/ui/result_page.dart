@@ -327,17 +327,17 @@ class _ResultPageState extends State<ResultPage> {
     }
     if(_currentMatch != null) {
       actions.add(
-          Tooltip(
-              message: "Display a match breakdown.",
-              child: IconButton(
-                icon: Icon(Icons.table_chart),
-                onPressed: () {
-                  showDialog(context: context, builder: (context) {
-                    return MatchBreakdown(shooters: _currentMatch!.shooters);
-                  });
-                },
-              )
-          )
+        Tooltip(
+            message: "Display a match breakdown.",
+            child: IconButton(
+              icon: Icon(Icons.table_chart),
+              onPressed: () {
+                showDialog(context: context, builder: (context) {
+                  return MatchBreakdown(shooters: _currentMatch!.shooters);
+                });
+              },
+            )
+        )
       );
     }
     actions.add(

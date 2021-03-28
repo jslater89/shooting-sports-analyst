@@ -35,4 +35,7 @@ class HtmlOr {
   }
 
   static bool get needsProxy => controller.needsProxy;
+
+  static bool get isWeb => needsProxy;
+  static bool get isDesktop => !needsProxy;
 }
