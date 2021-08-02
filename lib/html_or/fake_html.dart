@@ -28,7 +28,7 @@ class Controller extends ControlInterface {
       onFileContents(await nativeFile.readAsString());
     }
     else {
-    onFileContents(null);
+      onFileContents(null);
     }
   }
 

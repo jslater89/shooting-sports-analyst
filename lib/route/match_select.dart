@@ -62,65 +62,72 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
       child: _launchingFromParam ? Center(child: Text("Launching...")) : SizedBox(
         height: size.height,
         width: size.width,
-        child: Row(
+        child: size.width > 750 ? Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            GestureDetector(
-              onTap: () async {
-                _uploadResultsFile((contents) async {
-                  if(contents != null) {
-                    await Navigator.of(context).pushNamed('/local', arguments: contents);
-                  }
-                  else {
-                    debugPrint("Null file contents");
-                  }
-                });
-              },
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(height: 150),
-                  Icon(Icons.cloud_upload, size: 230, color: Colors.grey,),
-                  Text("Click to upload a report.txt file from your device", style: Theme
-                      .of(context)
-                      .textTheme
-                      .subtitle1!
-                      .apply(color: Colors.grey)),
-                ],
-              ),
-            ),
-            GestureDetector(
-              onTap: () async {
-                setState(() {
-                  _operationInProgress = true;
-                });
-                var matchId = await _getMatchId();
-                setState(() {
-                  _operationInProgress = false;
-                });
-
-                if(matchId != null) {
-                  await Navigator.of(context).pushNamed('/web/$matchId');
-                }
-              },
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(height: 150),
-                  Icon(Icons.cloud_download, size: 230, color: Colors.grey,),
-                  Text("Click to download a report.txt file from PractiScore", style: Theme
-                      .of(context)
-                      .textTheme
-                      .subtitle1!
-                      .apply(color: Colors.grey)),
-                ],
-              ),
-            ),
-          ],
+          children: _selectButtons(),
+        ) : Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: _selectButtons(),
         ),
       )
     );
+  }
+
+  List<Widget> _selectButtons() {
+    return [
+      GestureDetector(
+        onTap: () async {
+          _uploadResultsFile((contents) async {
+            if(contents != null) {
+              await Navigator.of(context).pushNamed('/local', arguments: contents);
+            }
+            else {
+              debugPrint("Null file contents");
+            }
+          });
+        },
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(height: 150),
+            Icon(Icons.cloud_upload, size: 230, color: Colors.grey,),
+            Text("Click to upload a report.txt file from your device", style: Theme
+                .of(context)
+                .textTheme
+                .subtitle1!
+                .apply(color: Colors.grey)),
+          ],
+        ),
+      ),
+      GestureDetector(
+        onTap: () async {
+          setState(() {
+            _operationInProgress = true;
+          });
+          var matchId = await _getMatchId();
+          setState(() {
+            _operationInProgress = false;
+          });
+
+          if(matchId != null) {
+            await Navigator.of(context).pushNamed('/web/$matchId');
+          }
+        },
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(height: 150),
+            Icon(Icons.cloud_download, size: 230, color: Colors.grey,),
+            Text("Click to download a report.txt file from PractiScore", style: Theme
+                .of(context)
+                .textTheme
+                .subtitle1!
+                .apply(color: Colors.grey)),
+          ],
+        ),
+      ),
+    ];
   }
 
   Future<void> _uploadResultsFile(Function(String?) onFileContents) async {
