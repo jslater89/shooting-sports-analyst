@@ -150,12 +150,19 @@ class _FilterControlsState extends State<FilterControls> {
                           helperText: ' ',
                           errorText: widget.searchError ? "Invalid query" : null,
                           hintText: "Quick search",
-                          suffixIcon: GestureDetector(
-                            child: Icon(Icons.help),
-                            onTap: () {
-                              _showQueryHelp(size);
-                            },
-                          )
+                          suffixIcon: _searchController.text.length > 0 ?
+                            GestureDetector(
+                              child: Icon(Icons.cancel),
+                              onTap: () {
+                                _searchController.text = '';
+                              },
+                            ) :
+                            GestureDetector(
+                              child: Icon(Icons.help),
+                              onTap: () {
+                                _showQueryHelp(size);
+                              },
+                            )
                         ),
                         onSubmitted: (_t) {
                           widget.returnFocus!.requestFocus();

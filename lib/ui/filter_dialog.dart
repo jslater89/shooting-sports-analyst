@@ -333,7 +333,7 @@ class _FilterDialogState extends State<FilterDialog> {
           child: Text("ALL"),
           onPressed: () {
             bool? secondGun = _filters!.reentries;
-            FilterMode mode = _filters!.mode;
+            FilterMode mode = FilterMode.and;
             bool? scoreDQs = _filters!.scoreDQs;
             setState(() {
               _filters = FilterSet();
@@ -347,7 +347,7 @@ class _FilterDialogState extends State<FilterDialog> {
           child: Text("NONE"),
           onPressed: () {
             bool? secondGun = _filters!.reentries;
-            FilterMode mode = _filters!.mode;
+            FilterMode mode = FilterMode.or;
             bool? scoreDQs = _filters!.scoreDQs;
             setState(() {
               _filters = FilterSet(empty: true);

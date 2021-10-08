@@ -44,6 +44,7 @@ class _ResultPageState extends State<ResultPage> {
   List<Stage> _filteredStages = [];
   Stage? _stage;
   SortMode _sortMode = SortMode.score;
+  String _lastQuery = "";
 
   int get _matchMaxPoints => _filteredStages.map((stage) => stage.maxPoints).reduce((a, b) => a + b);
 
@@ -139,6 +140,9 @@ class _ResultPageState extends State<ResultPage> {
     });
 
     _applySortMode(_sortMode);
+    if(_lastQuery.isNotEmpty) {
+      _applySearchTerm(_lastQuery);
+    }
   }
 
   void _selectStages(List<Stage> stages) {
@@ -177,6 +181,7 @@ class _ResultPageState extends State<ResultPage> {
   }
 
   void _applySearchTerm(String query) {
+    _lastQuery = query;
     if(query.startsWith("?")) {
       var queryElements = parseQuery(query);
       if(queryElements != null) {
@@ -212,8 +217,8 @@ class _ResultPageState extends State<ResultPage> {
 
   bool _applySearch(RelativeMatchScore element) {
     // getName() instead of first name so 'john sm' matches 'first:john last:smith'
-    if(element.shooter.getName().toLowerCase().startsWith(_searchTerm)) return true;
-    if(element.shooter.lastName.toLowerCase().startsWith(_searchTerm)) return true;
+    if(element.shooter.getName().toLowerCase().startsWith(_searchTerm.toLowerCase())) return true;
+    if(element.shooter.lastName.toLowerCase().startsWith(_searchTerm.toLowerCase())) return true;
     return false;
   }
 
@@ -384,7 +389,7 @@ class _ResultPageState extends State<ResultPage> {
             }
           }
           else {
-            debugPrint("Not primary focus");
+            //debugPrint("Not primary focus");
           }
         }
       },
