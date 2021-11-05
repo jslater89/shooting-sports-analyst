@@ -65,16 +65,18 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
         child: size.width > 750 ? Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: _selectButtons(),
-        ) : Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: _selectButtons(),
+          children: _selectButtons(column: false),
+        ) : SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: _selectButtons(column: true),
+          ),
         ),
       )
     );
   }
 
-  List<Widget> _selectButtons() {
+  List<Widget> _selectButtons({bool column = false}) {
     return [
       GestureDetector(
         onTap: () async {
@@ -90,7 +92,7 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(height: 150),
+            SizedBox(height: column ? 0 : 150),
             Icon(Icons.cloud_upload, size: 230, color: Colors.grey,),
             Text("Click to upload a report.txt file from your device", style: Theme
                 .of(context)
@@ -117,7 +119,7 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(height: 150),
+            SizedBox(height: column ? 0 : 150),
             Icon(Icons.cloud_download, size: 230, color: Colors.grey,),
             Text("Click to download a report.txt file from PractiScore", style: Theme
                 .of(context)

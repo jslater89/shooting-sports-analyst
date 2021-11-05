@@ -62,24 +62,34 @@ class ScoreList extends StatelessWidget {
           minWidth: minWidth,
           maxWidth: max(maxWidth, minWidth),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            keyWidget,
-            Expanded(child: Scrollbar(
-              isAlwaysShown: true,
-              controller: verticalScrollController,
-              child: ListView.builder(
+        child: GestureDetector(
+          onPanUpdate: (details) {
+            if(horizontalScrollController != null) {
+              _adjustScroll(horizontalScrollController!, amount: -details.delta.dx);
+            }
+            if(verticalScrollController != null) {
+              _adjustScroll(verticalScrollController!, amount: -details.delta.dy);
+            }
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              keyWidget,
+              Expanded(child: Scrollbar(
+                isAlwaysShown: true,
                 controller: verticalScrollController,
-                itemCount: (filteredScores.length),
-                itemBuilder: (ctx, i) {
-                  if(stage == null) return _buildMatchScoreRow(index: i, context: context);
-                  else if(stage != null) return _buildStageScoreRow(context, i, stage!);
-                  else return Container();
-                }
-              ),
-            )),
-          ],
+                child: ListView.builder(
+                  controller: verticalScrollController,
+                  itemCount: (filteredScores.length),
+                  itemBuilder: (ctx, i) {
+                    if(stage == null) return _buildMatchScoreRow(index: i, context: context);
+                    else if(stage != null) return _buildStageScoreRow(context, i, stage!);
+                    else return Container();
+                  }
+                ),
+              )),
+            ],
+          ),
         ),
       ),
     );
@@ -244,6 +254,13 @@ class ScoreList extends StatelessWidget {
     );
   }
 
+  void _adjustScroll(ScrollController c, {required double amount}) {
+    // Clamp to in-range values to prevent jumping on arrow key presses
+    double newPosition = c.offset + amount;
+    newPosition = max(newPosition, 0);
+    newPosition = min(newPosition, c.position.maxScrollExtent);
 
+    c.jumpTo(newPosition);
+  }
 }
 
