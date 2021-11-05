@@ -37,7 +37,10 @@ class MatchBreakdown extends StatelessWidget {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _buildTable(shooterCounts),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: _buildTable(shooterCounts)
+          ),
           SizedBox(height: 12),
           _buildPowerFactor(shooters),
         ],
