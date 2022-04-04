@@ -49,7 +49,7 @@ class ShooterResultCard extends StatelessWidget {
               ],
             ),
             SizedBox(height: 10),
-            _ScoreBody(result: matchScore!.total)
+            MatchScoreBody(result: matchScore!.total)
           ],
         ),
       ),
@@ -116,7 +116,7 @@ class ShooterResultCard extends StatelessWidget {
             ]..addAll(
               timeHolder
             )..add(
-              _ScoreBody(result: stageScore)
+              MatchScoreBody(result: stageScore)
             ),
         ),
       ),
@@ -146,10 +146,10 @@ class ShooterResultCard extends StatelessWidget {
   }
 }
 
-class _ScoreBody extends StatelessWidget {
+class MatchScoreBody extends StatelessWidget {
   final RelativeScore? result;
 
-  const _ScoreBody({Key? key, this.result}) : super(key: key);
+  const MatchScoreBody({Key? key, this.result}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

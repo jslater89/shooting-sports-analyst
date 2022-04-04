@@ -17,7 +17,7 @@ class ScoreList extends StatelessWidget {
   final double minWidth;
   final ScrollController? horizontalScrollController;
   final ScrollController? verticalScrollController;
-  final Function(Shooter?, Stage?) onScoreEdited;
+  final Function(Shooter, Stage?, bool wholeMatch) onScoreEdited;
   final List<Shooter> editedShooters;
   final bool whatIfMode;
 
@@ -135,13 +135,25 @@ class ScoreList extends StatelessWidget {
     );
   }
 
-  Widget _buildMatchScoreRow({BuildContext? context, required int index}) {
+  Widget _buildMatchScoreRow({required BuildContext context, required int index}) {
     var score = filteredScores[index];
     return GestureDetector(
-      onTap: () {
-        showDialog(context: context!, builder: (context) {
-          return ShooterResultCard(matchScore: score,);
-        });
+      onTap: () async {
+        if(whatIfMode) {
+          var scoreEdit = await (showDialog<ScoreEdit>(context: context, barrierDismissible: false, builder: (context) {
+            return EditableShooterCard(matchScore: score, scoreDQ: scoreDQ,);
+          })) ?? null;
+
+          if(scoreEdit != null && scoreEdit.rescore) {
+            // Any edits from here are always going to be whole-match changes
+            onScoreEdited(score.shooter, null, true);
+          }
+        }
+        else {
+          showDialog(context: context, builder: (context) {
+            return ShooterResultCard(matchScore: score, scoreDQ: scoreDQ,);
+          });
+        }
       },
       child: ScoreRow(
         color: index % 2 == 1 ? Colors.grey[200] : Colors.white,
@@ -214,12 +226,12 @@ class ScoreList extends StatelessWidget {
     return GestureDetector(
       onTap: () async {
         if(whatIfMode) {
-          var rescore = await (showDialog<bool>(context: context, barrierDismissible: false, builder: (context) {
+          var scoreEdit = await (showDialog<ScoreEdit>(context: context, barrierDismissible: false, builder: (context) {
             return EditableShooterCard(stageScore: stageScore, scoreDQ: scoreDQ,);
-          })) ?? false;
+          })) ?? null;
 
-          if(rescore) {
-            onScoreEdited(matchScore.shooter, stage);
+          if(scoreEdit != null && scoreEdit.rescore) {
+            onScoreEdited(matchScore.shooter, stage, scoreEdit.wholeMatch);
           }
         }
         else {

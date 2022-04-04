@@ -251,20 +251,26 @@ class _ResultPageState extends State<ResultPage> {
       verticalScrollController: _verticalScrollController,
       horizontalScrollController: _horizontalScrollController,
       minWidth: _MIN_WIDTH,
-      onScoreEdited: (shooter, stage) {
-        if(_editedShooters[stage] == null) {
-          _editedShooters[stage!] = [];
-        }
-        setState(() {
-          _whatIfMode = true;
-          if(!_editedShooters[stage]!.contains(shooter)) {
-            _editedShooters[stage]!.add(shooter!);
+      onScoreEdited: (shooter, stage, wholeMatch) {
+        if(wholeMatch) {
+          for(var stage in _currentMatch!.stages) {
+            if(_editedShooters[stage] == null) _editedShooters[stage] = [];
+
+            _editedShooters[stage]!.add(shooter);
           }
-        });
+        }
+
+        if(stage != null && _editedShooters[stage] == null) {
+          _editedShooters[stage] = [];
+          if(!_editedShooters[stage]!.contains(shooter)) {
+            _editedShooters[stage]!.add(shooter);
+          }
+        }
 
         var scores = _currentMatch!.getScores(shooters: _filteredShooters);
 
         setState(() {
+          _whatIfMode = true;
           _baseScores = scores;
           _searchedScores = []..addAll(scores);
         });
