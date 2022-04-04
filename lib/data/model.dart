@@ -228,8 +228,10 @@ class Shooter {
 
   String getName() {
     String dqSuffix = "";
-    if(dq) dqSuffix = " (DQ)";
-    return "$firstName $lastName$dqSuffix";
+    String reentrySuffix = "";
+    if(dq) dqSuffix = "(DQ)";
+    if(reentry) reentrySuffix = "(R)";
+    return [firstName, lastName, reentrySuffix, dqSuffix].join(" ");
   }
 
   Shooter copy(PracticalMatch parent) {
