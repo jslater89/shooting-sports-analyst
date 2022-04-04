@@ -508,7 +508,10 @@ extension ClassificationFrom on Classification {
     s = s.trim().toLowerCase();
     switch(s) {
       case "gm": return Classification.GM;
+      case "grandmaster": return Classification.GM;
+      case "g": return Classification.GM;
       case "m": return Classification.M;
+      case "master": return Classification.M;
       case "a": return Classification.A;
       case "b": return Classification.B;
       case "c": return Classification.C;
