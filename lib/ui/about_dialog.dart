@@ -32,7 +32,7 @@ void showAbout(BuildContext context, Size screenSize) {
                         ),
                         TextSpan(
                             style: Theme.of(context).textTheme.bodyText1,
-                            text: " for more information.\n\nuspsa_result_viewer v${VersionInfo.version}\n© Jay Slater 2021\nGPL 3.0+"
+                            text: " for more information.\n\nuspsa_result_viewer v${VersionInfo.version}\n© Jay Slater ${DateTime.now().year}\nGPL 3.0+"
                         )
                       ]
                   )
