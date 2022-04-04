@@ -168,7 +168,7 @@ class ScoreList extends StatelessWidget {
               Expanded(flex: 1, child: Text(score.shooter.classification.displayString())),
               Expanded(flex: 3, child: Text(score.shooter.division.displayString())),
               Expanded(flex: 1, child: Text(score.shooter.powerFactor.shortString())),
-              Expanded(flex: 2, child: Text(score.total.percent.asPercentage())),
+              Expanded(flex: 2, child: Text("${score.total.percent.asPercentage()}%")),
               Expanded(flex: 2, child: Text(score.total.relativePoints.toStringAsFixed(2))),
               Expanded(flex: 2, child: Text(score.total.score.time.toStringAsFixed(2))),
               Expanded(flex: 3, child: Text("${score.total.score.getTotalPoints(scoreDQ: scoreDQ)} (${score.percentTotalPoints.asPercentage()}%)")),
