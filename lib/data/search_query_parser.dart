@@ -34,8 +34,38 @@ class SearchQueryElement {
 
 List<SearchQueryElement>? parseQuery(String query) {
   query = query.toLowerCase();
-  query = query.replaceAll('?', '');
-  List<String> groups = query.split("or");
+  query = query.replaceFirst('?', '');
+  Map<String, String> literals = {};
+
+  // Replace quoted strings with 'literal0', 'literal1', etc.
+  // so that names including the string 'or' don't screw up the
+  // splitter/query parser
+  RegExp literalRegex = RegExp(r'"[^"]*"');
+  int literalCount = 0;
+  literalRegex.allMatches(query).forEach((element) {
+    var token = "literal$literalCount";
+    literals[token] = element.input.substring(element.start, element.end);
+    literalCount += 1;
+  });
+
+  for(int i = 0; i < literalCount; i++) {
+    var token = "literal$i";
+    var literal = literals[token]!;
+    query = query.replaceFirst(literal, token);
+  }
+
+  // Split the string including replaced literals
+  List<String> groups = query.split(RegExp(r'("[^"]*")|or'));
+
+  // After splitting by 'or', replace the literal0,1,... placeholders
+  // with their original values.
+  for(int i = 0; i < groups.length; i++) {
+    for(int i = 0; i < literalCount; i++) {
+      var token = "literal$i";
+      var literal = literals[token]!;
+      groups[i] = groups[i].replaceFirst(token, literal);
+    }
+  }
 
   List<SearchQueryElement> elements = [];
 
