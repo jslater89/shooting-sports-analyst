@@ -11,6 +11,13 @@ import 'package:uspsa_result_viewer/data/model.dart';
 // Each group can contain, at most, one classification, one division,
 // one power factor, and one name.
 
+class _LiteralReplacement {
+  final String modifiedString;
+  final Map<String, String> replacements;
+
+  _LiteralReplacement({required this.modifiedString, required this.replacements});
+}
+
 class SearchQueryElement {
   Classification? classification;
   Division? division;
@@ -35,36 +42,15 @@ class SearchQueryElement {
 List<SearchQueryElement>? parseQuery(String query) {
   query = query.toLowerCase();
   query = query.replaceFirst('?', '');
-  Map<String, String> literals = {};
 
-  // Replace quoted strings with 'literal0', 'literal1', etc.
-  // so that names including the string 'or' don't screw up the
-  // splitter/query parser
-  RegExp literalRegex = RegExp(r'"[^"]*"');
-  int literalCount = 0;
-  literalRegex.allMatches(query).forEach((element) {
-    var token = "literal$literalCount";
-    literals[token] = element.input.substring(element.start, element.end);
-    literalCount += 1;
-  });
-
-  for(int i = 0; i < literalCount; i++) {
-    var token = "literal$i";
-    var literal = literals[token]!;
-    query = query.replaceFirst(literal, token);
-  }
-
+  var replacements = _replaceQuotedStrings(query);
   // Split the string including replaced literals
-  List<String> groups = query.split(RegExp(r'("[^"]*")|or'));
+  List<String> groups = replacements.modifiedString.split("or");
 
   // After splitting by 'or', replace the literal0,1,... placeholders
   // with their original values.
   for(int i = 0; i < groups.length; i++) {
-    for(int i = 0; i < literalCount; i++) {
-      var token = "literal$i";
-      var literal = literals[token]!;
-      groups[i] = groups[i].replaceFirst(token, literal);
-    }
+    groups[i] = _replaceLiterals(groups[i], replacements: replacements);
   }
 
   List<SearchQueryElement> elements = [];
@@ -86,7 +72,15 @@ List<SearchQueryElement>? parseQuery(String query) {
 }
 
 SearchQueryElement? _parseGroup(String group) {
-  List<String> items = group.split("and");
+  var replacements = _replaceQuotedStrings(group);
+  // Split the string including replaced literals
+  List<String> items = replacements.modifiedString.split("and");
+
+  // After splitting by 'or', replace the literal0,1,... placeholders
+  // with their original values.
+  for(int i = 0; i < items.length; i++) {
+    items[i] = _replaceLiterals(items[i], replacements: replacements);
+  }
 
   if(items.length > 4) {
     return null;
@@ -123,6 +117,37 @@ SearchQueryElement? _parseGroup(String group) {
   }
 
   return element;
+}
+
+_LiteralReplacement _replaceQuotedStrings(String query) {
+  // Replace quoted strings with 'literal0', 'literal1', etc.
+  // so that names including the string 'or' don't screw up the
+  // splitter/query parser
+  RegExp literalRegex = RegExp(r'"[^"]*"');
+  Map<String, String> literals = {};
+  int literalCount = 0;
+  literalRegex.allMatches(query).forEach((element) {
+    var token = "literal$literalCount";
+    literals[token] = element.input.substring(element.start, element.end);
+    literalCount += 1;
+  });
+
+  for(int i = 0; i < literalCount; i++) {
+    var token = "literal$i";
+    var literal = literals[token]!;
+    query = query.replaceFirst(literal, token);
+  }
+
+  return _LiteralReplacement(modifiedString: query, replacements: literals);
+}
+
+String _replaceLiterals(String s, {required _LiteralReplacement replacements}) {
+  for(var token in replacements.replacements.keys) {
+    var literal = replacements.replacements[token]!;
+    s = s.replaceFirst(token, literal);
+  }
+
+  return s;
 }
 
 PowerFactor? _matchPowerFactor(String query) {
