@@ -68,43 +68,45 @@ class _FilterDialogState extends State<FilterDialog> {
   Widget _buildWide(BuildContext context) {
     return AlertDialog(
       title: Text("Filters"),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: _powerFactorTiles(context),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: _powerFactorTiles(context),
+                  ),
                 ),
-              ),
-              SizedBox(width: 20),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: _divisionTiles(context),
+                SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: _divisionTiles(context),
+                  ),
                 ),
-              ),
-              SizedBox(width: 20),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: _classTiles(context),
+                SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: _classTiles(context),
+                  ),
                 ),
-              ),
-            ],
-          ),
-          Divider(),
-          Row(
-            children: _settingsTiles(context).map((e) => Expanded(child: e)).toList()
-          ),
-        ],
+              ],
+            ),
+            Divider(),
+            Row(
+              children: _settingsTiles(context).map((e) => Expanded(child: e)).toList()
+            ),
+          ],
+        ),
       ),
       actions: _actions(context),
     );
