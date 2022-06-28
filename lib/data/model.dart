@@ -605,14 +605,16 @@ extension Sorting on List<RelativeMatchScore> {
     }
   }
   
-  void sortByTime({Stage? stage}) {
+  void sortByTime({Stage? stage, required bool scoreDQs}) {
     if (stage != null) {
       this.sort((a, b) {
-        if(a.shooter.dq && !b.shooter.dq) {
-          return 1;
-        }
-        if(b.shooter.dq && !a.shooter.dq) {
-          return -1;
+        if(!scoreDQs) {
+          if (a.shooter.dq && !b.shooter.dq) {
+            return 1;
+          }
+          if (b.shooter.dq && !a.shooter.dq) {
+            return -1;
+          }
         }
 
         if (a.stageScores.containsKey(stage) && b.stageScores.containsKey(stage)) {
@@ -625,11 +627,13 @@ extension Sorting on List<RelativeMatchScore> {
     }
     else {
       this.sort((a, b) {
-        if(a.shooter.dq && !b.shooter.dq) {
-          return 1;
-        }
-        if(b.shooter.dq && !a.shooter.dq) {
-          return -1;
+        if (!scoreDQs) {
+          if (a.shooter.dq && !b.shooter.dq) {
+            return 1;
+          }
+          if (b.shooter.dq && !a.shooter.dq) {
+            return -1;
+          }
         }
 
         return a.total.score.time.compareTo(b.total.score.time);

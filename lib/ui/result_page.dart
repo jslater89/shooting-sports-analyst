@@ -147,7 +147,7 @@ class _ResultPageState extends State<ResultPage> {
 
   void _selectStages(List<Stage> stages) {
     setState(() {
-      _currentStageMenuItem = StageMenuItem.match();
+      _applyStage(_stage != null && stages.contains(_stage) ? StageMenuItem(_stage!) : StageMenuItem.match());
       _filteredStages = stages;
     });
 
@@ -160,7 +160,7 @@ class _ResultPageState extends State<ResultPage> {
         _baseScores.sortByScore(stage: _stage);
         break;
       case SortMode.time:
-        _baseScores.sortByTime(stage: _stage);
+        _baseScores.sortByTime(stage: _stage, scoreDQs: _filters.scoreDQs);
         break;
       case SortMode.alphas:
         _baseScores.sortByAlphas(stage: _stage);
@@ -306,6 +306,8 @@ class _ResultPageState extends State<ResultPage> {
                     //debugPrint("Match: $_currentMatch Stage: $_stage Shooters: $_filteredShooters Scores: $scores");
                     debugPrint("${_filteredShooters[0].stageScores}");
 
+                    var filteredStages = []..addAll(_filteredStages);
+
                     setState(() {
                       _editedShooters = {};
                       _currentMatch = _currentMatch;
@@ -315,6 +317,7 @@ class _ResultPageState extends State<ResultPage> {
                       _whatIfMode = false;
                     });
 
+                    _selectStages(_filteredStages);
                     _applyStage(_stage != null ? StageMenuItem(_stage!) : StageMenuItem.match());
                   }
               )
