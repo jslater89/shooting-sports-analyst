@@ -5,6 +5,7 @@ import 'dart:convert';
 
 
 import 'package:flutter/material.dart';
+import 'package:uspsa_result_viewer/dump_ratings.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/route/local_upload.dart';
 import 'package:uspsa_result_viewer/route/match_select.dart';
@@ -33,6 +34,8 @@ class GlobalData {
 GlobalData globals = GlobalData();
 
 void main() {
+  dumpRatings();
+
   globals.router.define('/', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
     handlerFunc: (context, params) {
       debugPrint("$params");

@@ -307,6 +307,9 @@ class Score {
   int a = 0, b = 0, c = 0, d = 0, m = 0, ns = 0, npm = 0;
   int procedural = 0, lateShot = 0, extraShot = 0, extraHit = 0, otherPenalty = 0;
 
+  /// Number of times a target was hit
+  int get hits => a + b + c + d + ns;
+
   Score({
     required this.shooter,
     this.stage

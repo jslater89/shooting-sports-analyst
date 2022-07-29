@@ -26,8 +26,9 @@ class FilterSet {
     for (PowerFactor f in PowerFactor.values) {
       powerFactors[f] = !empty;
     }
-
   }
+
+  Iterable<Division> get activeDivisions => divisions.keys.where((div) => divisions[div] ?? false);
 }
 
 class FilterDialog extends StatefulWidget {

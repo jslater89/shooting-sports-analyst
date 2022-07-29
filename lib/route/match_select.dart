@@ -2,7 +2,6 @@ import 'dart:convert';
 // ignore: avoid_web_libraries_in_flutter
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 
-import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
@@ -137,8 +136,6 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
   }
 
   Future<String?> _getMatchId({String? presetUrl}) async {
-    var proxyUrl = getProxyUrl();
-
     var matchUrl = presetUrl ?? await showDialog<String>(context: context, builder: (context) {
       var controller = TextEditingController();
       return AlertDialog(
@@ -177,41 +174,7 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
       return null;
     }
 
-    var matchUrlParts = matchUrl.split("/");
-    var matchId = matchUrlParts.last;
-
-    // It's probably a short ID—the long IDs are UUID-style, with dashes separating
-    // blocks of alphanumeric characters
-    if(!matchId.contains(r"-")) {
-      try {
-        debugPrint("Trying to get match from URL: $matchUrl");
-        var response = await http.get(Uri.parse("$proxyUrl$matchUrl"));
-        if(response.statusCode == 404) {
-          Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("Match not found.")));
-          return null;
-        }
-        else if(response.statusCode == 200) {
-          var foundUrl = getPractiscoreWebReportUrl(response.body);
-          if(foundUrl != null) {
-            matchId = foundUrl.split("/").last;
-          }
-          else {
-            Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("Unable to determine web report URL.")));
-            return null;
-          }
-        }
-        else {
-          debugPrint("${response.statusCode} ${response.body}");
-          Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("Unable to download match file.")));
-          return null;
-        }
-      }
-      catch(err) {
-        debugPrint("$err");
-        Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("Unable to download match file.")));
-        return null;
-      }
-    }
+    var matchId = processMatchUrl(matchUrl, context: _innerContext);
 
     return matchId;
   }
