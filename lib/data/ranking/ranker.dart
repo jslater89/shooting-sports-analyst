@@ -7,10 +7,10 @@ class Ranker {
   Map<String, ShooterRating> knownShooters = {};
   Set<String> _memberNumbersEncountered = Set<String>();
   RatingSystem ratingSystem;
-  FilterSet? filters;
+  FilterSet? _filters;
   bool byStage;
 
-  Ranker({required List<PracticalMatch> matches, required this.ratingSystem, this.filters, this.byStage = false}) : this._matches = matches {
+  Ranker({required List<PracticalMatch> matches, required this.ratingSystem, FilterSet? filters, this.byStage = false}) : this._matches = matches, this._filters = filters {
     for(PracticalMatch m in _matches) {
       for(Shooter s in m.shooters) {
         if(s.memberNumber.isNotEmpty && !s.reentry && s.memberNumber.length > 3) {
@@ -41,10 +41,10 @@ class Ranker {
   void _rankMatch(PracticalMatch match) {
     var scores = match.getScores(scoreDQ: false);
     var shooters = <Shooter>[];
-    if(filters != null) {
+    if(_filters != null) {
       shooters = match.filterShooters(
-        filterMode: filters!.mode,
-        divisions: filters!.activeDivisions.toList(),
+        filterMode: _filters!.mode,
+        divisions: _filters!.activeDivisions.toList(),
         powerFactors: [],
         classes: [],
         allowReentries: false,
@@ -53,6 +53,9 @@ class Ranker {
     else {
       shooters = match.filterShooters(allowReentries: false);
     }
+
+    Map<ShooterRating, double> totalChange = {};
+
     for(int i = 0; i < shooters.length; i++) {
       for(int j = i + 1; j < shooters.length; j++) {
         Shooter a = shooters[i];
@@ -93,22 +96,33 @@ class Ranker {
         ShooterRating aRating = knownShooters[memNumA]!;
         ShooterRating bRating = knownShooters[memNumB]!;
 
+        totalChange[aRating] ??= 0;
+        totalChange[bRating] ??= 0;
+
         RelativeMatchScore aScore = scores.firstWhere((score) => score.shooter == a);
         RelativeMatchScore bScore = scores.firstWhere((score) => score.shooter == b);
 
         if(byStage) {
-          for(Stage s in match.stages) {
-            RelativeScore aStageScore = aScore.stageScores[s]!;
-            RelativeScore bStageScore = bScore.stageScores[s]!;
+          for(Stage stage in match.stages) {
+            RelativeScore aStageScore = aScore.stageScores[stage]!;
+            RelativeScore bStageScore = bScore.stageScores[stage]!;
 
             // Filter out badly marked classifier reshoots
             if(aStageScore.score.hits == 0 && aStageScore.score.time == 0) continue;
             if(bStageScore.score.hits == 0 && bStageScore.score.time == 0) continue;
 
-            ratingSystem.updateShooterRatings({
+            var update = ratingSystem.updateShooterRatings({
               aRating: aStageScore,
               bRating: bStageScore,
             });
+
+            var aChange = totalChange[aRating]!;
+            aChange += update[aRating]!;
+            totalChange[aRating] = aChange;
+
+            var bChange = totalChange[bRating]!;
+            bChange += update[bRating]!;
+            totalChange[bRating] = bChange;
           }
         }
         else {
