@@ -13,7 +13,7 @@ class Ranker {
   Ranker({required List<PracticalMatch> matches, required this.ratingSystem, FilterSet? filters, this.byStage = false}) : this._matches = matches, this._filters = filters {
     for(PracticalMatch m in _matches) {
       for(Shooter s in m.shooters) {
-        if(s.memberNumber.isNotEmpty && !s.reentry && s.memberNumber.length > 3) {
+        if(_processMemberNumber(s.memberNumber).isNotEmpty && !s.reentry && s.memberNumber.length > 3) {
           knownShooters[_processMemberNumber(s.memberNumber)] = ShooterRating(s, ratingSystem.defaultRating);
         }
       }
@@ -54,7 +54,7 @@ class Ranker {
       shooters = match.filterShooters(allowReentries: false);
     }
 
-    Map<ShooterRating, double> totalChange = {};
+    Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes = {};
 
     for(int i = 0; i < shooters.length; i++) {
       for(int j = i + 1; j < shooters.length; j++) {
@@ -96,8 +96,8 @@ class Ranker {
         ShooterRating aRating = knownShooters[memNumA]!;
         ShooterRating bRating = knownShooters[memNumB]!;
 
-        totalChange[aRating] ??= 0;
-        totalChange[bRating] ??= 0;
+        changes[aRating] ??= {};
+        changes[bRating] ??= {};
 
         RelativeMatchScore aScore = scores.firstWhere((score) => score.shooter == a);
         RelativeMatchScore bScore = scores.firstWhere((score) => score.shooter == b);
@@ -116,30 +116,33 @@ class Ranker {
               bRating: bStageScore,
             });
 
-            var aChange = totalChange[aRating]!;
-            aChange += update[aRating]!;
-            totalChange[aRating] = aChange;
+            changes[aRating]![aStageScore] ??= RatingEvent(eventName: "${match.name} - ${stage.name}", score: aStageScore);
+            changes[bRating]![bStageScore] ??= RatingEvent(eventName: "${match.name} - ${stage.name}", score: bStageScore);
 
-            var bChange = totalChange[bRating]!;
-            bChange += update[bRating]!;
-            totalChange[bRating] = bChange;
+            changes[aRating]![aStageScore]!.ratingChange += update[aRating]!;
+            changes[bRating]![bStageScore]!.ratingChange += update[bRating]!;
           }
         }
         else {
-          ratingSystem.updateShooterRatings({
+          var update = ratingSystem.updateShooterRatings({
             aRating: aScore.total,
             bRating: bScore.total,
           });
+          changes[aRating]![aScore.total] ??= RatingEvent(eventName: "${match.name}", score: aScore.total, ratingChange: update[aRating]!);
+          changes[bRating]![bScore.total] ??= RatingEvent(eventName: "${match.name}", score: bScore.total, ratingChange: update[bRating]!);
         }
+      }
+    }
+
+    for(var r in changes.keys) {
+      for(var event in changes[r]!.values) {
+        r.ratingEvents.add(event);
       }
     }
   }
 
   String _processMemberNumber(String no) {
-    no = no.toLowerCase().replaceFirst("ty", "");
-    no = no.toLowerCase().replaceFirst("a", "");
-    no = no.toLowerCase().replaceFirst("fy", "");
-    no = no.toUpperCase();
+    no = no.replaceAll(RegExp(r"[^0-9]"), "");
     return no;
   }
 }
@@ -148,7 +151,17 @@ class ShooterRating {
   final Shooter shooter;
   double rating;
 
+  List<RatingEvent> ratingEvents = [];
+
   ShooterRating(this.shooter, this.rating);
+}
+
+class RatingEvent {
+  String eventName;
+  RelativeScore score;
+  double ratingChange;
+
+  RatingEvent({required this.eventName, required this.score, this.ratingChange = 0});
 }
 
 abstract class RatingSystem {

@@ -39,13 +39,22 @@ class EloRanker implements RatingSystem {
       closeFactor -= (percentDiff / 10) * 0.5;
     }
 
+    var eloDiffFactor = 1.0;
+    var eloDiff = (aRating.rating - bRating.rating).abs();
+    if(eloDiff > (5 * K)) {
+      eloDiff -= 5 * K;
+      eloDiffFactor -= min(1.0, eloDiff / (10 * K)) * 0.9;
+    }
+
+    var mod = eloDiffFactor * closeFactor;
+
     if(aScore.percent > bScore.percent) {
-      aDiff = K * (1 - pA) * closeFactor;
-      bDiff = K * (0 - pB) * closeFactor;
+      aDiff = K * (1 - pA) * mod;
+      bDiff = K * (0 - pB) * mod;
     }
     else {
-      bDiff = K * (1 - pB) * closeFactor;
-      aDiff = K * (0 - pA) * closeFactor;
+      bDiff = K * (1 - pB) * mod;
+      aDiff = K * (0 - pA) * mod;
     }
 
     aRating.rating += aDiff;

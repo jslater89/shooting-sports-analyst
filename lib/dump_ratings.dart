@@ -39,11 +39,19 @@ void dumpRatings() async {
     "https://practiscore.com/results/new/173327", // Gem City July
     "https://practiscore.com/results/new/175522", // Pardoe July
     "https://practiscore.com/results/new/173313", // PMSC July
-    "https://practiscore.com/results/new/173577", // Western PA section
+    // "https://practiscore.com/results/new/173577", // Western PA section
     "https://practiscore.com/results/new/174574", // GPGC July
     "https://practiscore.com/results/new/175336", // Castlewood July
     "https://practiscore.com/results/new/175662", // EHPSA July
   ];
+
+  // var matchUrls = [
+  //   "https://practiscore.com/results/new/165379", // 4/21 Delmarva
+  //   "https://practiscore.com/results/new/168242", // 5/19 Mid-Atlantic
+  //   "https://practiscore.com/results/new/170506", // 6/10 Buckeye Blast
+  //   "https://practiscore.com/results/new/172099", // 6/24 MD State
+  //   "https://practiscore.com/results/new/173577", // 7/08 WPA
+  // ];
 
   var matches = <PracticalMatch>[];
   for(String url in matchUrls) {
@@ -67,7 +75,7 @@ void dumpRatings() async {
   for(String memberNum in extraFastRankings.knownShooters.keys) {
     var rating = extraFastRankings.knownShooters[memberNum]!;
 
-    debugPrint("$memberNum,${rating.shooter.getName()},${rating.rating.round()}");
+    debugPrint("$memberNum,${rating.shooter.getName(suffixes: false)},${rating.rating.round()}");
   }
 
   var fastRankings = Ranker(matches: matches, ratingSystem: EloRanker(), byStage: true, filters: FilterSet(empty: true)
@@ -81,7 +89,7 @@ void dumpRatings() async {
   for(String memberNum in fastRankings.knownShooters.keys) {
     var rating = fastRankings.knownShooters[memberNum]!;
 
-    debugPrint("$memberNum,${rating.shooter.getName()},${rating.rating.round()}");
+    debugPrint("$memberNum,${rating.shooter.getName(suffixes: false)},${rating.rating.round()}");
   }
 
   var locapRankings = Ranker(matches: matches, ratingSystem: EloRanker(), byStage: true, filters: FilterSet(empty: true)
@@ -97,6 +105,11 @@ void dumpRatings() async {
   for(String memberNum in locapRankings.knownShooters.keys) {
     var rating = locapRankings.knownShooters[memberNum]!;
 
-    debugPrint("$memberNum,${rating.shooter.getName()},${rating.rating.round()}");
+    debugPrint("$memberNum,${rating.shooter.getName(suffixes: false)},${rating.rating.round()}");
   }
+
+  // var me = locapRankings.knownShooters["102675"]!;
+  // for(var event in me.ratingEvents) {
+  //   debugPrint("${me.shooter.getName(suffixes: false)} changed by ${event.ratingChange.round()} at ${event.eventName}");
+  // }
 }

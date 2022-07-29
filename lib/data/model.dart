@@ -226,7 +226,9 @@ class Shooter {
 
   Map<Stage, Score> stageScores = {};
 
-  String getName() {
+  String getName({bool suffixes = true}) {
+    if(!suffixes) return [firstName, lastName].join(" ");
+
     String dqSuffix = "";
     String reentrySuffix = "";
     if(dq) dqSuffix = "(DQ)";
