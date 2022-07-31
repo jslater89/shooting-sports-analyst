@@ -76,7 +76,7 @@ class PracticalMatch {
     if(innerShooters.length == 0 || innerStages.length == 0) return [];
 
     int matchMaxPoints = innerStages.map<int>((e) => e.maxPoints).reduce((a, b) => a + b);
-    debugPrint("Max points for match: $matchMaxPoints");
+    // debugPrint("Max points for match: $matchMaxPoints");
 
     // Create a total score for each shooter, precalculating what we can and
     // prepopulating what we can't.

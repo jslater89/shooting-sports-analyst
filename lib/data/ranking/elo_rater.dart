@@ -2,20 +2,21 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/ranking/ranker.dart';
+import 'package:uspsa_result_viewer/data/ranking/rater.dart';
+import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 
-class EloRanker implements RatingSystem {
+class EloRater implements RatingSystem {
   @override
   double get defaultRating => 1000;
 
   static const double K = 30;
 
   @override
-  Map<ShooterRating, double> updateShooterRatings(Map<ShooterRating, RelativeScore> scores) {
+  Map<ShooterRating, double> updateShooterRatings(Map<ShooterRating, RelativeScore> scores, {required PracticalMatch match, Stage? stage}) {
     var ratings = scores.keys.toList();
 
     if(scores.length != 2) {
-      debugPrint("???");
+      debugPrint("Incorrect number of shooters");
       for(var rating in scores.keys) {
         debugPrint("${rating.shooter.getName()}");
       }
@@ -70,4 +71,7 @@ class EloRanker implements RatingSystem {
   double _probability(double lose, double win) {
     return 1.0 * 1.0 / (1 + 1.0 * (pow(10, 1.0 * (lose - win) / 400)));
   }
+
+  @override
+  RatingMode get mode => RatingMode.roundRobin;
 }

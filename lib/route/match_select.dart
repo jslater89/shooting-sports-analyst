@@ -61,14 +61,48 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
       child: _launchingFromParam ? Center(child: Text("Launching...")) : SizedBox(
         height: size.height,
         width: size.width,
-        child: size.width > 750 ? Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: _selectButtons(column: false),
+        child: size.width > 750 ? Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: _selectButtons(column: false),
+            ),
+            SizedBox(height: 50),
+            GestureDetector(
+              child: Column(
+                children: [
+                  Icon(Icons.list, size: 230, color: Colors.grey,),
+                  Text("Click to generate ratings for shooters in a list of matches", style: Theme
+                      .of(context)
+                      .textTheme
+                      .subtitle1!
+                      .apply(color: Colors.grey)),
+                ],
+              ),
+            )
+          ],
         ) : SingleChildScrollView(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.start,
-            children: _selectButtons(column: true),
+            children: [
+              ..._selectButtons(column: true),
+              GestureDetector(
+                onTap: () {
+
+                },
+                child: Column(
+                  children: [
+                    Icon(Icons.list, size: 230, color: Colors.grey,),
+                    Text("Click to generate ratings for shooters in a list of matches", style: Theme
+                        .of(context)
+                        .textTheme
+                        .subtitle1!
+                        .apply(color: Colors.grey)),
+                  ],
+                ),
+              )
+            ]
           ),
         ),
       )
