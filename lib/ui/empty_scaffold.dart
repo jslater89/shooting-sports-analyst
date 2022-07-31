@@ -6,7 +6,7 @@ class EmptyScaffold extends StatelessWidget {
   final bool? operationInProgress;
   final Function(BuildContext) onInnerContextAssigned;
 
-  const EmptyScaffold({Key? key, this.child, this.operationInProgress, required this.onInnerContextAssigned}) : super(key: key);
+  const EmptyScaffold({Key? key, this.child, this.operationInProgress = false, required this.onInnerContextAssigned}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

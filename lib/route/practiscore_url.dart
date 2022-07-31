@@ -56,7 +56,8 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
       }
 
       debugPrint("response: $response");
-    } catch(err) {
+    }
+    catch(err) {
 
     }
     Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("Failed to download result file from ${widget.resultUrl}.")));

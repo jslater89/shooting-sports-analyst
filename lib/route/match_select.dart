@@ -70,7 +70,11 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
             ),
             SizedBox(height: 50),
             GestureDetector(
+              onTap: () {
+                Navigator.of(context).pushNamed('/rater');
+              },
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.list, size: 230, color: Colors.grey,),
                   Text("Click to generate ratings for shooters in a list of matches", style: Theme
@@ -89,9 +93,10 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
               ..._selectButtons(column: true),
               GestureDetector(
                 onTap: () {
-
+                  Navigator.of(context).pushNamed('/rater');
                 },
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.list, size: 230, color: Colors.grey,),
                     Text("Click to generate ratings for shooters in a list of matches", style: Theme
