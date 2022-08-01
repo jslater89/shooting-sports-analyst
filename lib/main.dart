@@ -35,6 +35,8 @@ class GlobalData {
 GlobalData globals = GlobalData();
 
 void main() {
+  dumpRatings();
+
   globals.router.define('/', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
     handlerFunc: (context, params) {
       debugPrint("$params");

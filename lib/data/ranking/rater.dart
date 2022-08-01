@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
@@ -14,8 +16,36 @@ class Rater {
   Rater({required List<PracticalMatch> matches, required this.ratingSystem, FilterSet? filters, this.byStage = false}) : this._matches = matches, this._filters = filters {
     for(PracticalMatch m in _matches) {
       for(Shooter s in m.shooters) {
-        if(_processMemberNumber(s.memberNumber).isNotEmpty && !s.reentry && s.memberNumber.length > 3) {
-          knownShooters[_processMemberNumber(s.memberNumber)] = ShooterRating(s, ratingSystem.defaultRating);
+        if(processMemberNumber(s.memberNumber).isNotEmpty && !s.reentry && s.memberNumber.length > 3) {
+          knownShooters[processMemberNumber(s.memberNumber)] = ShooterRating(s, ratingSystem.defaultRating);
+        }
+      }
+    }
+
+    Map<String, List<String>> namesToNumbers = {};
+
+    for(var num in knownShooters.keys) {
+      var shooter = knownShooters[num]!.shooter;
+      var name = "${shooter.firstName.toLowerCase()}${shooter.lastName.toLowerCase()}";
+
+      namesToNumbers[name] ??= [];
+      namesToNumbers[name]!.add(num);
+    }
+
+    // shooter numbers to remove from known shooters, because they're duplicates
+    var numsToRemove = <String>[];
+
+    for(var name in namesToNumbers.keys) {
+      var list = namesToNumbers[name]!;
+      if(list.length == 2) {
+        debugPrint("Shooter $name has two member numbers: $list");
+        if(list[0].length <= 4 && list[1].length > 4) {
+          knownShooters[list[1]] = knownShooters[list[0]]!;
+          numsToRemove.add(list[1]);
+        }
+        else if(list[1].length <= 4 && list[0].length > 4) {
+          knownShooters[list[0]] = knownShooters[list[1]]!;
+          numsToRemove.add(list[0]);
         }
       }
     }
@@ -31,7 +61,7 @@ class Rater {
       }
     }
 
-    debugPrint("Rated ${knownShooters.length} shooters in ${_matches.length} matches in ${filters != null ? filters!.activeDivisions.toList() : "all divisions"}");
+    debugPrint("Rated ${knownShooters.length} shooters in ${_matches.length} matches in ${filters != null ? filters.activeDivisions.toList() : "all divisions"}");
   }
   
   void addMatch(PracticalMatch match) {
@@ -40,7 +70,6 @@ class Rater {
   }
 
   void _rankMatch(PracticalMatch match) {
-    var scores = match.getScores(scoreDQ: false);
     var shooters = <Shooter>[];
     if(_filters != null) {
       shooters = match.filterShooters(
@@ -54,15 +83,24 @@ class Rater {
     else {
       shooters = match.filterShooters(allowReentries: false);
     }
+    var scores = match.getScores(shooters: shooters, scoreDQ: false);
+
+    // Based on strength of competition, vary rating gain between 50% and 130%.
+    var matchStrength = 0.0;
+    for(var shooter in shooters) {
+      matchStrength += _strengthForClass(shooter.classification);
+    }
+    matchStrength = matchStrength / shooters.length;
+    double strengthMod = 1.0 + max(-0.5, min(1.3, ((matchStrength) - 4) * 0.2));
 
     Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes = {};
 
     for(int i = 0; i < shooters.length; i++) {
       if(ratingSystem.mode == RatingMode.roundRobin) {
-        _processRoundRobin(match, shooters, scores, i, changes);
+        _processRoundRobin(match, shooters, scores, i, changes, strengthMod);
       }
       else {
-        _processOneshot(match, shooters[i], scores, changes);
+        _processOneshot(match, shooters[i], scores, changes, strengthMod);
       }
     }
 
@@ -79,7 +117,7 @@ class Rater {
     if(s.dq) return false;
     if(s.reentry) return false;
 
-    String memNum = _processMemberNumber(s.memberNumber);
+    String memNum = processMemberNumber(s.memberNumber);
     if(s.firstName.endsWith("2") || s.lastName.endsWith("2") || s.firstName.endsWith("3") || s.firstName.endsWith("3")) return false;
 
     if(knownShooters[memNum] == null) return false;
@@ -87,7 +125,7 @@ class Rater {
     return true;
   }
 
-  void _processRoundRobin(PracticalMatch match, List<Shooter> shooters, List<RelativeMatchScore> scores, int startIndex, Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes) {
+  void _processRoundRobin(PracticalMatch match, List<Shooter> shooters, List<RelativeMatchScore> scores, int startIndex, Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes, double matchStrength) {
     for(int j = startIndex + 1; j < shooters.length; j++) {
       Shooter a = shooters[startIndex];
       Shooter b = shooters[j];
@@ -96,8 +134,8 @@ class Rater {
         continue;
       }
 
-      String memNumA = _processMemberNumber(a.memberNumber);
-      String memNumB = _processMemberNumber(b.memberNumber);
+      String memNumA = processMemberNumber(a.memberNumber);
+      String memNumB = processMemberNumber(b.memberNumber);
 
       // unmarked reentries
       if(memNumA == memNumB) continue;
@@ -124,12 +162,12 @@ class Rater {
           if(bStageScore.score.hits == 0 && bStageScore.score.time == 0) continue;
 
           var update = ratingSystem.updateShooterRatings(
-            {
+            shooters: [aRating, bRating],
+            scores: {
               aRating: aStageScore,
               bRating: bStageScore,
             },
-            match: match,
-            stage: stage,
+            matchStrength: matchStrength,
           );
 
           changes[aRating]![aStageScore] ??= RatingEvent(eventName: "${match.name} - ${stage.name}", score: aStageScore);
@@ -141,11 +179,12 @@ class Rater {
       }
       else {
         var update = ratingSystem.updateShooterRatings(
-          {
+          shooters: [aRating, bRating],
+          scores: {
             aRating: aScore.total,
             bRating: bScore.total,
           },
-          match: match,
+          matchStrength: matchStrength,
         );
 
         changes[aRating]![aScore.total] ??= RatingEvent(eventName: "${match.name}", score: aScore.total, ratingChange: update[aRating]!);
@@ -154,19 +193,16 @@ class Rater {
     }
   }
 
-  void _processOneshot(PracticalMatch match, Shooter shooter, List<RelativeMatchScore> scores, Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes) {
+  void _processOneshot(PracticalMatch match, Shooter shooter, List<RelativeMatchScore> scores, Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes, double matchStrength) {
     if(!_verifyShooter(shooter)) {
       return;
     }
 
-    String memNum = _processMemberNumber(shooter.memberNumber);
-
+    String memNum = processMemberNumber(shooter.memberNumber);
     _memberNumbersEncountered.add(memNum);
 
     ShooterRating rating = knownShooters[memNum]!;
-
     changes[rating] ??= {};
-
     RelativeMatchScore score = scores.firstWhere((score) => score.shooter == shooter);
 
     if(byStage) {
@@ -176,25 +212,38 @@ class Rater {
         // Filter out badly marked classifier reshoots
         if(stageScore.score.hits == 0 && stageScore.score.time == 0) continue;
 
+        var scoreMap = <ShooterRating, RelativeScore>{};
+        for(var s in scores) {
+          if(!_verifyShooter(s.shooter)) continue;
+
+          String num = processMemberNumber(s.shooter.memberNumber);
+          var otherScore = s.stageScores[stage]!;
+          if(otherScore.score.hits == 0 && otherScore.score.time == 0) continue;
+          scoreMap[knownShooters[num]!] = otherScore;
+        }
+
         var update = ratingSystem.updateShooterRatings(
-          {
-            rating: stageScore,
-          },
-          match: match,
-          stage: stage,
+          shooters: [rating],
+          scores: scoreMap,
+          matchStrength: matchStrength,
         );
 
         changes[rating]![stageScore] ??= RatingEvent(eventName: "${match.name} - ${stage.name}", score: stageScore);
-
         changes[rating]![stageScore]!.ratingChange += update[rating]!;
       }
     }
     else {
+      var scoreMap = <ShooterRating, RelativeScore>{};
+      for(var s in scores) {
+        if(!_verifyShooter(s.shooter)) continue;
+        String num = processMemberNumber(s.shooter.memberNumber);
+
+        scoreMap[knownShooters[num]!] = s.total;
+      }
       var update = ratingSystem.updateShooterRatings(
-        {
-          rating: score.total,
-        },
-        match: match,
+        shooters: [rating],
+        scores: scoreMap,
+        matchStrength: matchStrength,
       );
 
       changes[rating]![score.total] ??= RatingEvent(eventName: "${match.name}",
@@ -203,7 +252,28 @@ class Rater {
     }
   }
 
-  String _processMemberNumber(String no) {
+  double _strengthForClass(Classification? c) {
+    switch(c) {
+      case Classification.GM:
+        return 8;
+      case Classification.M:
+        return 6;
+      case Classification.A:
+        return 4;
+      case Classification.B:
+        return 3;
+      case Classification.C:
+        return 2;
+      case Classification.D:
+        return 1;
+      case Classification.U:
+        return 0;
+      default:
+        return 2.5;
+    }
+  }
+
+  static String processMemberNumber(String no) {
     no = no.replaceAll(RegExp(r"[^0-9]"), "");
     return no;
   }

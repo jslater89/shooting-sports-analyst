@@ -25,7 +25,7 @@ enum RatingMode {
 
   /// This rating system considers each shooter once per rating event, and does any
   /// additional iteration internally. [RatingSystem.updateShooterRatings]' scores
-  /// parameter will contain one shooter.
+  /// parameter will contain scores for all shooters.
   oneShot,
 }
 
@@ -36,7 +36,11 @@ abstract class RatingSystem {
   /// Given some number of shooters (see [RatingMode]), update their ratings
   /// and return a map of the changes.
   ///
+  /// [shooter] is the shooter or shooters whose ratings should change. If
+  /// [mode] is [RatingMode.roundRobin], [shooters] is identical to the list
+  /// of keys in [scores].
+  ///
   /// [match] is the match and [stage] the stage in question. If [stage] is
   /// not null, the ratings are being done by stage.
-  Map<ShooterRating, double> updateShooterRatings(Map<ShooterRating, RelativeScore> scores, {required PracticalMatch match, Stage? stage});
+  Map<ShooterRating, double> updateShooterRatings({required List<ShooterRating> shooters, required Map<ShooterRating, RelativeScore> scores, double matchStrength = 1.0});
 }

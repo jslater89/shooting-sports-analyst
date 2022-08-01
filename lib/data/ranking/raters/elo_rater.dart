@@ -2,7 +2,6 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 
 class EloRater implements RatingSystem {
@@ -12,7 +11,7 @@ class EloRater implements RatingSystem {
   static const double K = 30;
 
   @override
-  Map<ShooterRating, double> updateShooterRatings(Map<ShooterRating, RelativeScore> scores, {required PracticalMatch match, Stage? stage}) {
+  Map<ShooterRating, double> updateShooterRatings({required List<ShooterRating> shooters, required Map<ShooterRating, RelativeScore> scores, double matchStrength = 1.0}) {
     var ratings = scores.keys.toList();
 
     if(scores.length != 2) {
