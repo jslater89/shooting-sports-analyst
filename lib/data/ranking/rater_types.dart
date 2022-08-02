@@ -7,6 +7,11 @@ class ShooterRating {
   List<RatingEvent> ratingEvents = [];
 
   ShooterRating(this.shooter, this.rating);
+
+  ShooterRating.copy(ShooterRating other) :
+      this.shooter = other.shooter,
+      this.rating = other.rating,
+      this.ratingEvents = other.ratingEvents.map((e) => RatingEvent.copy(e)).toList();
 }
 
 class RatingEvent {
@@ -15,6 +20,11 @@ class RatingEvent {
   double ratingChange;
 
   RatingEvent({required this.eventName, required this.score, this.ratingChange = 0});
+
+  RatingEvent.copy(RatingEvent other) :
+      this.eventName = other.eventName,
+      this.score = other.score,
+      this.ratingChange = other.ratingChange;
 }
 
 enum RatingMode {

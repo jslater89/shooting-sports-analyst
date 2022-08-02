@@ -15,13 +15,51 @@ class Rater {
 
   Rater({required List<PracticalMatch> matches, required this.ratingSystem, FilterSet? filters, this.byStage = false}) : this._matches = matches, this._filters = filters {
     for(PracticalMatch m in _matches) {
-      for(Shooter s in m.shooters) {
-        if(processMemberNumber(s.memberNumber).isNotEmpty && !s.reentry && s.memberNumber.length > 3) {
-          knownShooters[processMemberNumber(s.memberNumber)] = ShooterRating(s, ratingSystem.defaultRating);
-        }
-      }
+      _addShootersFromMatch(m);
     }
 
+    _deduplicateShooters();
+
+    for(PracticalMatch m in _matches) {
+      _rankMatch(m);
+    }
+
+    _removeUnseenShooters();
+
+    debugPrint("Initial ratings complete for ${knownShooters.length} shooters in ${_matches.length} matches in ${filters != null ? filters.activeDivisions.toList() : "all divisions"}");
+  }
+
+  Rater.copy(Rater other) :
+      this.knownShooters = other.knownShooters.map((key, value) => MapEntry(key, ShooterRating.copy(value))),
+      this._matches = other._matches.map((m) => m.copy()).toList(),
+      this.byStage = other.byStage,
+      this._memberNumbersEncountered = Set()..addAll(other._memberNumbersEncountered),
+      this._filters = other._filters,
+      this.ratingSystem = other.ratingSystem;
+
+  
+  void addMatch(PracticalMatch match) {
+    _matches.add(match);
+
+    _addShootersFromMatch(match);
+    _deduplicateShooters();
+
+    _rankMatch(match);
+
+    _removeUnseenShooters();
+
+    debugPrint("Ratings update complete for ${knownShooters.length} shooters in ${_matches.length} matches in ${_filters != null ? _filters!.activeDivisions.toList() : "all divisions"}");
+  }
+
+  void _addShootersFromMatch(PracticalMatch match) {
+    for(Shooter s in match.shooters) {
+      if(processMemberNumber(s.memberNumber).isNotEmpty && !s.reentry && s.memberNumber.length > 3) {
+        knownShooters[processMemberNumber(s.memberNumber)] ??= ShooterRating(s, ratingSystem.defaultRating);
+      }
+    }
+  }
+
+  void _deduplicateShooters() {
     Map<String, List<String>> namesToNumbers = {};
 
     for(var num in knownShooters.keys) {
@@ -49,24 +87,15 @@ class Rater {
         }
       }
     }
+  }
 
-    for(PracticalMatch m in _matches) {
-      _rankMatch(m);
-    }
-
+  void _removeUnseenShooters() {
     List<String> shooterNumbers = knownShooters.keys.toList();
     for(String num in shooterNumbers) {
       if(!_memberNumbersEncountered.contains(num)) {
         knownShooters.remove(num);
       }
     }
-
-    debugPrint("Rated ${knownShooters.length} shooters in ${_matches.length} matches in ${filters != null ? filters.activeDivisions.toList() : "all divisions"}");
-  }
-  
-  void addMatch(PracticalMatch match) {
-    _matches.add(match);
-    _rankMatch(match);
   }
 
   void _rankMatch(PracticalMatch match) {
@@ -95,6 +124,12 @@ class Rater {
 
     Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes = {};
 
+    // TODO: pull match stage iteration out to here, if present.
+    // TODO: don't update ratings in the rating system—do that here
+    // TODO: gather rating events for each match/stage, and apply them after all changes have been calculated
+    //        (this means you aren't handicapping/handicapped based on your ratings happening first)
+
+    // Process ratings for each shooter.
     for(int i = 0; i < shooters.length; i++) {
       if(ratingSystem.mode == RatingMode.roundRobin) {
         _processRoundRobin(match, shooters, scores, i, changes, strengthMod);

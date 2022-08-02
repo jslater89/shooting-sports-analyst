@@ -32,6 +32,9 @@ enum TabContents {
 class _RaterPageState extends State<RaterPage> {
   bool _operationInProgress = false;
 
+  // TODO: bring this and ratersByDivision out into a data class
+  //      (RatingHistory or something)
+
   /// Maps URLs to matches in canonical order.
   LinkedHashMap<String, PracticalMatch?> _matches = LinkedHashMap();
 
@@ -187,14 +190,13 @@ class _RaterPageState extends State<RaterPage> {
     debugPrint("Loading matches");
 
     var currentMatches = <PracticalMatch>[];
+    PracticalMatch? lastMatch;
+
     for(String url in _matches.keys) {
       var match = _matches[url];
       if(match == null) {
         debugPrint("WARN: null match for $url");
       }
-
-      // TODO: copy Rater, add match
-      // instead of calculating it every time
 
       var m = match!;
       currentMatches.add(m);
@@ -203,17 +205,27 @@ class _RaterPageState extends State<RaterPage> {
       for(var tabContents in TabContents.values) {
         var divisionMap = <Division, bool>{};
         tabContents.divisions.forEach((element) => divisionMap[element] = true);
-        _ratersByDivision[m]![tabContents] = Rater(
-          matches: innerMatches,
-          ratingSystem: MultiplayerPercentEloRater(),
-          byStage: true,
-          filters: FilterSet(
-            empty: true,
-          )
-            ..mode = FilterMode.or
-            ..divisions = divisionMap
-        );
+
+        if(lastMatch == null) {
+          _ratersByDivision[m]![tabContents] = Rater(
+              matches: innerMatches,
+              ratingSystem: MultiplayerPercentEloRater(),
+              byStage: true,
+              filters: FilterSet(
+                empty: true,
+              )
+                ..mode = FilterMode.or
+                ..divisions = divisionMap
+          );
+        }
+        else {
+          Rater newRater = Rater.copy(_ratersByDivision[lastMatch]![tabContents]!);
+          newRater.addMatch(m);
+          _ratersByDivision[m]![tabContents] = newRater;
+        }
       }
+
+      lastMatch = m;
     }
 
     setState(() {
