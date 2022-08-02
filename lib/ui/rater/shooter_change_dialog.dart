@@ -18,7 +18,10 @@ class ShooterRatingChangeDialog extends StatelessWidget {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: events.map((e) =>
-          Text("${e.eventName}: ${e.ratingChange.toStringAsFixed(2)}")
+          Tooltip(
+            message: e.info.join("\n"),
+            child: Text("${e.eventName}: ${e.ratingChange.toStringAsFixed(2)}")
+          )
         ).toList(),
       ),
     );

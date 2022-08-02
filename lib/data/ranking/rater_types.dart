@@ -14,6 +14,13 @@ class ShooterRating {
       this.ratingEvents = other.ratingEvents.map((e) => RatingEvent.copy(e)).toList();
 }
 
+class RatingChange {
+  final double change;
+  final List<String> info;
+
+  RatingChange({required this.change, this.info = const []});
+}
+
 class RatingEvent {
   String eventName;
   RelativeScore score;
@@ -54,7 +61,7 @@ abstract class RatingSystem {
   ///
   /// [match] is the match and [stage] the stage in question. If [stage] is
   /// not null, the ratings are being done by stage.
-  Map<ShooterRating, double> updateShooterRatings({required List<ShooterRating> shooters, required Map<ShooterRating, RelativeScore> scores, double matchStrength = 1.0});
+  Map<ShooterRating, RatingChange> updateShooterRatings({required List<ShooterRating> shooters, required Map<ShooterRating, RelativeScore> scores, double matchStrength = 1.0});
 
   static const initialPlacementMultipliers = [
     2.5,

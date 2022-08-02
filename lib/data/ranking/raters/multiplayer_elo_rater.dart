@@ -15,14 +15,14 @@ class MultiplayerEloRater implements RatingSystem {
   RatingMode get mode => RatingMode.oneShot;
 
   @override
-  Map<ShooterRating, double> updateShooterRatings({required List<ShooterRating> shooters, required Map<ShooterRating, RelativeScore> scores, double matchStrength = 1.0}) {
+  Map<ShooterRating, RatingChange> updateShooterRatings({required List<ShooterRating> shooters, required Map<ShooterRating, RelativeScore> scores, double matchStrength = 1.0}) {
     if(shooters.length != 1) {
       throw StateError("Incorrect number of shooters passed to MultiplayerElo");
     }
 
     if(scores.length <= 1) {
       return {
-        shooters[0]: 0,
+        shooters[0]: RatingChange(change: 0),
       };
     }
 
@@ -49,7 +49,7 @@ class MultiplayerEloRater implements RatingSystem {
     }
 
     return {
-      aRating: change,
+      aRating: RatingChange(change: change),
     };
   }
 

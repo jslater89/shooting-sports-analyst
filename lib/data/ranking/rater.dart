@@ -244,8 +244,8 @@ class Rater {
         changes[aRating]![aStageScore] ??= RatingEvent(eventName: "${match.name} - ${stage.name}", score: aStageScore);
         changes[bRating]![bStageScore] ??= RatingEvent(eventName: "${match.name} - ${stage.name}", score: bStageScore);
 
-        changes[aRating]![aStageScore]!.ratingChange += update[aRating]!;
-        changes[bRating]![bStageScore]!.ratingChange += update[bRating]!;
+        changes[aRating]![aStageScore]!.ratingChange += update[aRating]!.change;
+        changes[bRating]![bStageScore]!.ratingChange += update[bRating]!.change;
       }
       else {
         var update = ratingSystem.updateShooterRatings(
@@ -257,8 +257,8 @@ class Rater {
           matchStrength: matchStrength,
         );
 
-        changes[aRating]![aScore.total] ??= RatingEvent(eventName: "${match.name}", score: aScore.total, ratingChange: update[aRating]!);
-        changes[bRating]![bScore.total] ??= RatingEvent(eventName: "${match.name}", score: bScore.total, ratingChange: update[bRating]!);
+        changes[aRating]![aScore.total] ??= RatingEvent(eventName: "${match.name}", score: aScore.total, ratingChange: update[aRating]!.change);
+        changes[bRating]![bScore.total] ??= RatingEvent(eventName: "${match.name}", score: bScore.total, ratingChange: update[bRating]!.change);
       }
     }
   }
@@ -298,7 +298,8 @@ class Rater {
       );
 
       changes[rating]![stageScore] ??= RatingEvent(eventName: "${match.name} - ${stage.name}", score: stageScore);
-      changes[rating]![stageScore]!.ratingChange += update[rating]!;
+      changes[rating]![stageScore]!.ratingChange += update[rating]!.change;
+      changes[rating]![stageScore]!.info = update[rating]!.info;
     }
     else {
       var scoreMap = <ShooterRating, RelativeScore>{};
@@ -315,8 +316,10 @@ class Rater {
       );
 
       changes[rating]![score.total] ??= RatingEvent(eventName: "${match.name}",
-          score: score.total,
-          ratingChange: update[rating]!);
+        score: score.total,
+        ratingChange: update[rating]!.change,
+        info: update[rating]!.info,
+      );
     }
   }
 
