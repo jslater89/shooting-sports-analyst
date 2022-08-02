@@ -68,25 +68,25 @@ class MultiplayerPercentEloRater implements RatingSystem {
     var actualScore = percentComponent * percentWeight + placeComponent * placeWeight;
     var change = K * placementMultiplier * matchStrength * (scores.length - 1) * (actualScore - expectedScore);
 
-    var changeFromPercent = K * placementMultiplier * matchStrength * (scores.length - 1) * (percentComponent * percentWeight - (expectedScore * percentWeight));
-    var changeFromPlace = K * placementMultiplier * matchStrength * (scores.length - 1) * (placeComponent * placeWeight - (expectedScore * placeWeight));
-    if(Rater.processMemberNumber(aRating.shooter.memberNumber) == "94315") {
-      debugPrint("### Amanda stats: $actualPercent of ${scores.length} shooters for ${aScore.stage?.name}, SoS ${matchStrength.toStringAsFixed(3)}, placement $placementMultiplier");
-      debugPrint("AS/ES: ${actualScore.toStringAsFixed(6)}/${expectedScore.toStringAsFixed(6)}");
-      debugPrint("Actual/expected percent: ${(percentComponent * totalPercent * 100).toStringAsFixed(2)}/${(expectedScore * totalPercent * 100).toStringAsFixed(2)}");
-      debugPrint("Actual/expected place: ${aScore.place}/${(scores.length - (expectedScore * divisor)).toStringAsFixed(4)}");
-      debugPrint("Rating±Change: ${aRating.rating.round()} + ${change.toStringAsFixed(2)} (${changeFromPercent.toStringAsFixed(2)} from pct, ${changeFromPlace.toStringAsFixed(2)} from place)");
-      debugPrint("###");
-    }
-    if(Rater.processMemberNumber(aRating.shooter.memberNumber) == "89315") {
-      debugPrint("### Lee stats: $actualPercent of ${scores.length} shooters for ${aScore.stage?.name}, SoS ${matchStrength.toStringAsFixed(3)}");
-      debugPrint("AS/ES: ${actualScore.toStringAsFixed(6)}/${expectedScore.toStringAsFixed(6)}");
-      debugPrint("Actual/expected percent: ${(percentComponent * totalPercent * 100).toStringAsFixed(2)}/${(expectedScore * totalPercent * 100).toStringAsFixed(2)}");
-      debugPrint("Actual/expected place: ${aScore.place}/${(scores.length - (expectedScore * divisor)).toStringAsFixed(4)}");
-      debugPrint("Rating±Change: ${aRating.rating.round()} + ${change.toStringAsFixed(2)} (${changeFromPercent.toStringAsFixed(2)} from pct, ${changeFromPlace.toStringAsFixed(2)} from place)");
-      debugPrint("###");
-    }
-    aRating.rating += change;
+    // var changeFromPercent = K * placementMultiplier * matchStrength * (scores.length - 1) * (percentComponent * percentWeight - (expectedScore * percentWeight));
+    // var changeFromPlace = K * placementMultiplier * matchStrength * (scores.length - 1) * (placeComponent * placeWeight - (expectedScore * placeWeight));
+    // if(Rater.processMemberNumber(aRating.shooter.memberNumber) == "94315") {
+    //   debugPrint("### Amanda stats: $actualPercent of ${scores.length} shooters for ${aScore.stage?.name}, SoS ${matchStrength.toStringAsFixed(3)}, placement $placementMultiplier");
+    //   debugPrint("AS/ES: ${actualScore.toStringAsFixed(6)}/${expectedScore.toStringAsFixed(6)}");
+    //   debugPrint("Actual/expected percent: ${(percentComponent * totalPercent * 100).toStringAsFixed(2)}/${(expectedScore * totalPercent * 100).toStringAsFixed(2)}");
+    //   debugPrint("Actual/expected place: ${aScore.place}/${(scores.length - (expectedScore * divisor)).toStringAsFixed(4)}");
+    //   debugPrint("Rating±Change: ${aRating.rating.round()} + ${change.toStringAsFixed(2)} (${changeFromPercent.toStringAsFixed(2)} from pct, ${changeFromPlace.toStringAsFixed(2)} from place)");
+    //   debugPrint("###");
+    // }
+    // if(Rater.processMemberNumber(aRating.shooter.memberNumber) == "89315") {
+    //   debugPrint("### Lee stats: $actualPercent of ${scores.length} shooters for ${aScore.stage?.name}, SoS ${matchStrength.toStringAsFixed(3)}");
+    //   debugPrint("AS/ES: ${actualScore.toStringAsFixed(6)}/${expectedScore.toStringAsFixed(6)}");
+    //   debugPrint("Actual/expected percent: ${(percentComponent * totalPercent * 100).toStringAsFixed(2)}/${(expectedScore * totalPercent * 100).toStringAsFixed(2)}");
+    //   debugPrint("Actual/expected place: ${aScore.place}/${(scores.length - (expectedScore * divisor)).toStringAsFixed(4)}");
+    //   debugPrint("Rating±Change: ${aRating.rating.round()} + ${change.toStringAsFixed(2)} (${changeFromPercent.toStringAsFixed(2)} from pct, ${changeFromPlace.toStringAsFixed(2)} from place)");
+    //   debugPrint("###");
+    // }
+    // aRating.rating += change;
 
     if(change.isNaN || change.isInfinite) {
       throw StateError("NaN/Infinite");

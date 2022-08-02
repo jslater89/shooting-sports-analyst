@@ -57,9 +57,6 @@ class EloRater implements RatingSystem {
       aDiff = K * (0 - pA) * mod;
     }
 
-    aRating.rating += aDiff;
-    bRating.rating += bDiff;
-
     return {
       aRating: aDiff,
       bRating: bDiff,

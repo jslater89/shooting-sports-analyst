@@ -48,8 +48,6 @@ class MultiplayerEloRater implements RatingSystem {
       throw StateError("NaN");
     }
 
-    aRating.rating += change;
-
     return {
       aRating: change,
     };

@@ -130,19 +130,43 @@ class Rater {
     //        (this means you aren't handicapping/handicapped based on your ratings happening first)
 
     // Process ratings for each shooter.
-    for(int i = 0; i < shooters.length; i++) {
-      if(ratingSystem.mode == RatingMode.roundRobin) {
-        _processRoundRobin(match, shooters, scores, i, changes, strengthMod);
-      }
-      else {
-        _processOneshot(match, shooters[i], scores, changes, strengthMod);
+    if(byStage) {
+      for(Stage s in match.stages) {
+        for(int i = 0; i < shooters.length; i++) {
+          if(ratingSystem.mode == RatingMode.roundRobin) {
+            _processRoundRobin(match, s, shooters, scores, i, changes, strengthMod);
+          }
+          else {
+            _processOneshot(match, s, shooters[i], scores, changes, strengthMod);
+          }
+        }
+
+        for(var r in changes.keys) {
+          for(var event in changes[r]!.values) {
+            r.rating += event.ratingChange;
+            r.ratingEvents.add(event);
+          }
+        }
+        changes.clear();
       }
     }
-
-    for(var r in changes.keys) {
-      for(var event in changes[r]!.values) {
-        r.ratingEvents.add(event);
+    else {
+      for(int i = 0; i < shooters.length; i++) {
+        if(ratingSystem.mode == RatingMode.roundRobin) {
+          _processRoundRobin(match, null, shooters, scores, i, changes, strengthMod);
+        }
+        else {
+          _processOneshot(match, null, shooters[i], scores, changes, strengthMod);
+        }
       }
+
+      for(var r in changes.keys) {
+        for(var event in changes[r]!.values) {
+          r.rating += event.ratingChange;
+          r.ratingEvents.add(event);
+        }
+      }
+      changes.clear();
     }
   }
 
@@ -160,7 +184,7 @@ class Rater {
     return true;
   }
 
-  void _processRoundRobin(PracticalMatch match, List<Shooter> shooters, List<RelativeMatchScore> scores, int startIndex, Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes, double matchStrength) {
+  void _processRoundRobin(PracticalMatch match, Stage? stage, List<Shooter> shooters, List<RelativeMatchScore> scores, int startIndex, Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes, double matchStrength) {
     for(int j = startIndex + 1; j < shooters.length; j++) {
       Shooter a = shooters[startIndex];
       Shooter b = shooters[j];
@@ -187,30 +211,28 @@ class Rater {
       RelativeMatchScore aScore = scores.firstWhere((score) => score.shooter == a);
       RelativeMatchScore bScore = scores.firstWhere((score) => score.shooter == b);
 
-      if(byStage) {
-        for(Stage stage in match.stages) {
-          RelativeScore aStageScore = aScore.stageScores[stage]!;
-          RelativeScore bStageScore = bScore.stageScores[stage]!;
+      if(stage != null) {
+        RelativeScore aStageScore = aScore.stageScores[stage]!;
+        RelativeScore bStageScore = bScore.stageScores[stage]!;
 
-          // Filter out badly marked classifier reshoots
-          if(aStageScore.score.hits == 0 && aStageScore.score.time == 0) continue;
-          if(bStageScore.score.hits == 0 && bStageScore.score.time == 0) continue;
+        // Filter out badly marked classifier reshoots
+        if(aStageScore.score.hits == 0 && aStageScore.score.time == 0) continue;
+        if(bStageScore.score.hits == 0 && bStageScore.score.time == 0) continue;
 
-          var update = ratingSystem.updateShooterRatings(
-            shooters: [aRating, bRating],
-            scores: {
-              aRating: aStageScore,
-              bRating: bStageScore,
-            },
-            matchStrength: matchStrength,
-          );
+        var update = ratingSystem.updateShooterRatings(
+          shooters: [aRating, bRating],
+          scores: {
+            aRating: aStageScore,
+            bRating: bStageScore,
+          },
+          matchStrength: matchStrength,
+        );
 
-          changes[aRating]![aStageScore] ??= RatingEvent(eventName: "${match.name} - ${stage.name}", score: aStageScore);
-          changes[bRating]![bStageScore] ??= RatingEvent(eventName: "${match.name} - ${stage.name}", score: bStageScore);
+        changes[aRating]![aStageScore] ??= RatingEvent(eventName: "${match.name} - ${stage.name}", score: aStageScore);
+        changes[bRating]![bStageScore] ??= RatingEvent(eventName: "${match.name} - ${stage.name}", score: bStageScore);
 
-          changes[aRating]![aStageScore]!.ratingChange += update[aRating]!;
-          changes[bRating]![bStageScore]!.ratingChange += update[bRating]!;
-        }
+        changes[aRating]![aStageScore]!.ratingChange += update[aRating]!;
+        changes[bRating]![bStageScore]!.ratingChange += update[bRating]!;
       }
       else {
         var update = ratingSystem.updateShooterRatings(
@@ -228,7 +250,7 @@ class Rater {
     }
   }
 
-  void _processOneshot(PracticalMatch match, Shooter shooter, List<RelativeMatchScore> scores, Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes, double matchStrength) {
+  void _processOneshot(PracticalMatch match, Stage? stage, Shooter shooter, List<RelativeMatchScore> scores, Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes, double matchStrength) {
     if(!_verifyShooter(shooter)) {
       return;
     }
@@ -240,32 +262,30 @@ class Rater {
     changes[rating] ??= {};
     RelativeMatchScore score = scores.firstWhere((score) => score.shooter == shooter);
 
-    if(byStage) {
-      for(Stage stage in match.stages) {
-        RelativeScore stageScore = score.stageScores[stage]!;
+    if(stage != null) {
+      RelativeScore stageScore = score.stageScores[stage]!;
 
-        // Filter out badly marked classifier reshoots
-        if(stageScore.score.hits == 0 && stageScore.score.time == 0) continue;
+      // Filter out badly marked classifier reshoots
+      if(stageScore.score.hits == 0 && stageScore.score.time == 0) return;
 
-        var scoreMap = <ShooterRating, RelativeScore>{};
-        for(var s in scores) {
-          if(!_verifyShooter(s.shooter)) continue;
+      var scoreMap = <ShooterRating, RelativeScore>{};
+      for(var s in scores) {
+        if(!_verifyShooter(s.shooter)) continue;
 
-          String num = processMemberNumber(s.shooter.memberNumber);
-          var otherScore = s.stageScores[stage]!;
-          if(otherScore.score.hits == 0 && otherScore.score.time == 0) continue;
-          scoreMap[knownShooters[num]!] = otherScore;
-        }
-
-        var update = ratingSystem.updateShooterRatings(
-          shooters: [rating],
-          scores: scoreMap,
-          matchStrength: matchStrength,
-        );
-
-        changes[rating]![stageScore] ??= RatingEvent(eventName: "${match.name} - ${stage.name}", score: stageScore);
-        changes[rating]![stageScore]!.ratingChange += update[rating]!;
+        String num = processMemberNumber(s.shooter.memberNumber);
+        var otherScore = s.stageScores[stage]!;
+        if(otherScore.score.hits == 0 && otherScore.score.time == 0) continue;
+        scoreMap[knownShooters[num]!] = otherScore;
       }
+
+      var update = ratingSystem.updateShooterRatings(
+        shooters: [rating],
+        scores: scoreMap,
+        matchStrength: matchStrength,
+      );
+
+      changes[rating]![stageScore] ??= RatingEvent(eventName: "${match.name} - ${stage.name}", score: stageScore);
+      changes[rating]![stageScore]!.ratingChange += update[rating]!;
     }
     else {
       var scoreMap = <ShooterRating, RelativeScore>{};
