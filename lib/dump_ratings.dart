@@ -7,6 +7,12 @@ import 'package:uspsa_result_viewer/data/ranking/raters/multiplayer_elo_rater.da
 import 'package:uspsa_result_viewer/data/ranking/raters/multiplayer_percent_elo_rater.dart';
 import 'package:uspsa_result_viewer/ui/filter_dialog.dart';
 
+var classicNationalsUrls = [
+  "https://practiscore.com/results/new/117062",
+  "https://practiscore.com/results/new/134571",
+  "https://practiscore.com/results/new/168263",
+];
+
 var castlewoodMatchUrls = [
   "https://practiscore.com/results/new/bea1d67c-3176-48f2-9905-77c8d2673a70",
   "https://practiscore.com/results/new/08f3d157-aeaf-422f-b9a7-d342051644c5",

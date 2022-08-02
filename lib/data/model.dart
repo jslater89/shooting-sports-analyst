@@ -183,6 +183,11 @@ class PracticalMatch {
     
     return finalScores;
   }
+
+  @override
+  String toString() {
+    return name ?? "unnamed match";
+  }
 }
 
 class RelativeMatchScore {

@@ -44,13 +44,14 @@ class _RaterPageState extends State<RaterPage> {
   /// after that match has been processed.
   Map<PracticalMatch, Map<TabContents, Rater>> _ratersByDivision = {};
 
+  PracticalMatch? _selectedMatch;
   bool get _matchesLoading => _matchUrls.containsValue(null);
 
   @override
   void initState() {
     super.initState();
 
-    for(var url in wpaMatchUrls) {
+    for(var url in classicNationalsUrls) {
       _matchUrls[url] = null;
       _getMatchResultFile(url);
     }
@@ -101,9 +102,10 @@ class _RaterPageState extends State<RaterPage> {
   Widget _ratingView() {
     final backgroundColor = Theme.of(context).backgroundColor;
 
-    final lastMatch = _matches.last;
+    var match = _selectedMatch;
+    if(match == null) return Container();
 
-    debugPrint("Last match: ${lastMatch.name}");
+    debugPrint("Last match: ${match.name}");
 
     if(_ratersByDivision.length < _matches.length) return Container();
 
@@ -123,17 +125,43 @@ class _RaterPageState extends State<RaterPage> {
               }).toList(),
             ),
           ),
-          Text(lastMatch.name ?? "(unknown match name)"),
+          ..._buildRatingViewHeader(),
           Expanded(
             child: TabBarView(
               children: TabContents.values.map((t) {
-                return RaterView(rater: _ratersByDivision[lastMatch]![t]!, currentMatch: lastMatch);
+                return RaterView(rater: _ratersByDivision[match]![t]!, currentMatch: match);
               }).toList(),
             ),
           )
         ]
       ),
     );
+  }
+
+  List<Widget> _buildRatingViewHeader() {
+    return [
+      Container(
+        color: Colors.white,
+        child: DropdownButton<PracticalMatch>(
+          underline: Container(
+            height: 1,
+            color: Colors.black,
+          ),
+          items: _matches.reversed.map((m) {
+            return DropdownMenuItem<PracticalMatch>(
+              child: Text(m.name ?? "<unnamed match>"),
+              value: m,
+            );
+          }).toList(),
+          value: _selectedMatch,
+          onChanged: (m) {
+            setState(() {
+              _selectedMatch = m;
+            });
+          },
+        ),
+      ),
+    ];
   }
 
   List<Widget> _generateActions() {
@@ -244,7 +272,7 @@ class _RaterPageState extends State<RaterPage> {
     }
 
     setState(() {
-      // _ratersByDivision;
+      _selectedMatch = lastMatch;
     });
   }
 }
@@ -278,7 +306,7 @@ extension _Utilities on TabContents {
       case TabContents.carryOptics:
         return [Division.carryOptics];
       case TabContents.locap:
-        return [Division.singleStack, Division.limited10, Division.production, Division.revolver];
+        return [/*Division.singleStack, Division.limited10, Division.production,*/ Division.revolver];
       default:
         throw StateError("Missing case clause");
     }

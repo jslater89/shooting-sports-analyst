@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_charts/flutter_charts.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 
@@ -11,19 +12,64 @@ class ShooterRatingChangeDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    List<RatingEvent> events = rating.ratingEvents.where((r) => match.stages.contains(r.score.stage)).toList();
+    List<RatingEvent> events = rating.ratingEvents;
+    // if(rating.ratingEvents.length < 30) {
+    //   events = rating.ratingEvents;
+    // }
+    // else {
+    //   events = rating.ratingEvents.sublist(rating.ratingEvents.length - 30);
+    // }
 
     return AlertDialog(
       title: Text("Ratings for ${rating.shooter.getName(suffixes: false)}"),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: events.map((e) =>
-          Tooltip(
-            message: e.info.join("\n"),
-            child: Text("${e.eventName}: ${e.ratingChange.toStringAsFixed(2)}")
-          )
-        ).toList(),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              height: 300,
+              width: 600,
+              child: _buildChart(events)
+            ),
+            ...events.reversed.map((e) =>
+                Tooltip(
+                    message: e.info.join("\n"),
+                    child: Text("${e.eventName}: ${e.ratingChange.toStringAsFixed(2)}")
+                )
+            ).toList()
+          ],
+        ),
       ),
     );
+  }
+
+  Widget _buildChart(List<RatingEvent> events) {
+    LabelLayoutStrategy? xContainerLabelLayoutStrategy;
+    ChartOptions chartOptions = const ChartOptions(
+      lineChartOptions: LineChartOptions(
+        hotspotInnerRadius: 0,
+        hotspotOuterRadius: 0,
+      )
+    );
+    double accumulator = 0;
+    ChartData chartData = ChartData(
+      dataRows: [events.map((e) => accumulator += e.ratingChange).toList()],
+      xUserLabels: events.map((_) => "").toList(),
+      dataRowsLegends: ["Change in Rating"],
+      chartOptions: chartOptions,
+      dataRowsColors: [Colors.blueGrey],
+    );
+
+    var lineChartContainer = LineChartTopContainer(
+      chartData: chartData,
+      xContainerLabelLayoutStrategy: xContainerLabelLayoutStrategy,
+    );
+
+    var lineChart = LineChart(
+      painter: LineChartPainter(
+        lineChartContainer: lineChartContainer,
+      ),
+    );
+    return lineChart;
   }
 }
