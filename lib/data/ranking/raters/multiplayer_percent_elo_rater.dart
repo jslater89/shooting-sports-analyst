@@ -62,13 +62,16 @@ class MultiplayerPercentEloRater implements RatingSystem {
     var percentComponent = totalPercent == 0 ? 0 : (actualPercent / totalPercent);
     var placeComponent = (scores.length - aScore.place) /  divisor;
 
-    var actualScore = percentComponent * percentWeight + placeComponent * placeWeight;
-    var change = K * matchStrength * (scores.length - 1) * (actualScore - expectedScore);
+    var placementMultiplier = aRating.ratingEvents.length < RatingSystem.initialPlacementMultipliers.length ?
+      RatingSystem.initialPlacementMultipliers[aRating.ratingEvents.length] : 1.0;
 
-    var changeFromPercent = K * matchStrength * (scores.length - 1) * (percentComponent * percentWeight - (expectedScore * percentWeight));
-    var changeFromPlace = K * matchStrength * (scores.length - 1) * (placeComponent * placeWeight - (expectedScore * placeWeight));
+    var actualScore = percentComponent * percentWeight + placeComponent * placeWeight;
+    var change = K * placementMultiplier * matchStrength * (scores.length - 1) * (actualScore - expectedScore);
+
+    var changeFromPercent = K * placementMultiplier * matchStrength * (scores.length - 1) * (percentComponent * percentWeight - (expectedScore * percentWeight));
+    var changeFromPlace = K * placementMultiplier * matchStrength * (scores.length - 1) * (placeComponent * placeWeight - (expectedScore * placeWeight));
     if(Rater.processMemberNumber(aRating.shooter.memberNumber) == "94315") {
-      debugPrint("### Amanda stats: $actualPercent of ${scores.length} shooters for ${aScore.stage?.name}, SoS ${matchStrength.toStringAsFixed(3)}");
+      debugPrint("### Amanda stats: $actualPercent of ${scores.length} shooters for ${aScore.stage?.name}, SoS ${matchStrength.toStringAsFixed(3)}, placement $placementMultiplier");
       debugPrint("AS/ES: ${actualScore.toStringAsFixed(6)}/${expectedScore.toStringAsFixed(6)}");
       debugPrint("Actual/expected percent: ${(percentComponent * totalPercent * 100).toStringAsFixed(2)}/${(expectedScore * totalPercent * 100).toStringAsFixed(2)}");
       debugPrint("Actual/expected place: ${aScore.place}/${(scores.length - (expectedScore * divisor)).toStringAsFixed(4)}");

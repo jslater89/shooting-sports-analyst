@@ -24,7 +24,8 @@ class PracticalMatch {
         ..date = date
         ..shooters = []
         ..stages = []
-        ..maxPoints = maxPoints;
+        ..maxPoints = maxPoints
+        ..reportContents = reportContents;
 
     newMatch.stages.addAll(stages.map((s) => s.copy()));
     newMatch.shooters.addAll(shooters.map((s) => s.copy(newMatch)));
@@ -289,15 +290,18 @@ class Stage {
     return name;
   }
 
-  @override
-  bool operator ==(Object other) {
-    if(!(other is Stage)) return false;
-    return this.name == other.name;
-  }
-
-  @override
-  // TODO: implement hashCode
-  int get hashCode => this.name.hashCode;
+  // @override
+  // bool operator ==(Object other) {
+  //   if(!(other is Stage)) return false;
+  //   return this.name == other.name;
+  // }
+  //
+  // bool exactEquals(Object other) {
+  //   return other == this;
+  // }
+  //
+  // @override
+  // int get hashCode => this.name.hashCode;
 }
 
 class Score {

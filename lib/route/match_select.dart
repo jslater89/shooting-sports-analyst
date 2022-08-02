@@ -130,7 +130,7 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(height: column ? 0 : 150),
+            SizedBox(height: column ? 0 : 50),
             Icon(Icons.cloud_upload, size: 230, color: Colors.grey,),
             Text("Click to upload a report.txt file from your device", style: Theme
                 .of(context)
@@ -157,7 +157,7 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(height: column ? 0 : 150),
+            SizedBox(height: column ? 0 : 50),
             Icon(Icons.cloud_download, size: 230, color: Colors.grey,),
             Text("Click to download a report.txt file from PractiScore", style: Theme
                 .of(context)

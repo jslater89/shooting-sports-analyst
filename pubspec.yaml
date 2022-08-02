@@ -32,7 +32,7 @@ dependencies:
   fluro: ^2.0.3 # routing
   http: ^0.13.1 # web requests
   collection: ^1.15.0-nullsafety.4
-  file_picker: ^3.0.0
+  file_picker: ^4.0.0
   url_launcher: ^6.0.2
 
 dev_dependencies:

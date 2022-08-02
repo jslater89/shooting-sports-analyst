@@ -7,45 +7,99 @@ import 'package:uspsa_result_viewer/data/ranking/raters/multiplayer_elo_rater.da
 import 'package:uspsa_result_viewer/data/ranking/raters/multiplayer_percent_elo_rater.dart';
 import 'package:uspsa_result_viewer/ui/filter_dialog.dart';
 
+var castlewoodMatchUrls = [
+  "https://practiscore.com/results/new/bea1d67c-3176-48f2-9905-77c8d2673a70",
+  "https://practiscore.com/results/new/08f3d157-aeaf-422f-b9a7-d342051644c5",
+  "https://practiscore.com/results/new/ddacc20c-61e5-4e5c-be7a-2b54fcb3892d",
+  "https://practiscore.com/results/new/a0c94340-ecc6-4016-a3ab-cee1b7387357",
+  "https://practiscore.com/results/new/8628231c-4235-4713-90f3-311388dfbaef",
+  "https://practiscore.com/results/new/94fd96ad-1c7f-49bf-8b75-71b14fc12d1b",
+  "https://practiscore.com/results/new/8d3bdcef-4523-4d5a-b310-73b1acc148f9",
+  "https://practiscore.com/results/new/4906a64e-8c57-4587-9b0a-ccee719a431a",
+  "https://practiscore.com/results/new/35e478ec-e9b3-4a13-97f6-1c6913e1c5c4",
+  "https://practiscore.com/results/new/2579c6db-1e4c-4448-af55-be0b1bf0edde",
+  "https://practiscore.com/results/new/e65b8840-e81d-4d40-bc46-26ad988d3ddd",
+  "https://practiscore.com/results/new/c1f4854e-7684-4c11-a883-e9742aa1124d",
+  "https://practiscore.com/results/new/f08f37a2-db1b-4f29-b1b9-90e065a4b0a4",
+  "https://practiscore.com/results/new/752141a7-e339-49ee-bd8e-09f3a6b1cf8b",
+  "https://practiscore.com/results/new/d8cb8ed0-d4ab-4190-b9df-49908e481a17",
+  "https://practiscore.com/results/new/32689df8-309f-47b9-b51b-21b993ed2311",
+].reversed.toList();
+
+var outEastMatchUrls = [ // Cantrell's stomping grounds
+  "https://www.practiscore.com/results/new/174787",
+  "https://www.practiscore.com/results/new/171773",
+  "https://www.practiscore.com/results/new/167848",
+  "https://www.practiscore.com/results/new/165072",
+  "https://www.practiscore.com/results/new/162442",
+  "https://www.practiscore.com/results/new/174467",
+  "https://www.practiscore.com/results/new/171551",
+  "https://www.practiscore.com/results/new/164866",
+  "https://www.practiscore.com/results/new/162099",
+  "https://www.practiscore.com/results/new/175382",
+  "https://www.practiscore.com/results/new/169252",
+  "https://www.practiscore.com/results/new/165572",
+  "https://www.practiscore.com/results/new/162879",
+  "https://www.practiscore.com/results/new/173148",
+  "https://www.practiscore.com/results/new/169883",
+  "https://www.practiscore.com/results/new/163497",
+  "https://www.practiscore.com/results/new/172204",
+  "https://www.practiscore.com/results/new/169150",
+  "https://www.practiscore.com/results/new/165475",
+  "https://www.practiscore.com/results/new/162753",
+  "https://www.practiscore.com/results/new/160329",
+  "https://www.practiscore.com/results/new/170692",
+  "https://www.practiscore.com/results/new/164208",
+  "https://www.practiscore.com/results/new/175412",
+  "https://www.practiscore.com/results/new/172327",
+  "https://www.practiscore.com/results/new/165587",
+  "https://www.practiscore.com/results/new/162899",
+  "https://www.practiscore.com/results/new/176161",
+  "https://www.practiscore.com/results/new/173711",
+  "https://www.practiscore.com/results/new/170632",
+  "https://www.practiscore.com/results/new/167548",
+  "https://www.practiscore.com/results/new/164174",
+];
+
 void dumpRatings() async {
-  var matchUrls = [ // Western PA
-    "https://practiscore.com/results/new/161142", // Gem City March
-    "https://practiscore.com/results/new/162898", // EHPSA March
-
-    "https://practiscore.com/results/new/163678", // Gem City April
-    "https://practiscore.com/results/new/163757", // Pardoe April
-    "https://practiscore.com/results/new/163576", // GPGC April 1
-    "https://practiscore.com/results/new/164215", // LCSA April
-    "https://practiscore.com/results/new/165480", // Castlewood April
-    "https://practiscore.com/results/new/165554", // EHPSA April
-    "https://practiscore.com/results/new/166298", // GPGC April 2
-
-    "https://practiscore.com/results/new/166447", // Gem City May
-    "https://practiscore.com/results/new/168622", // Pardoe May
-    "https://practiscore.com/results/new/167621", // LCSA May
-    "https://practiscore.com/results/new/167183", // PMSC May
-    "https://practiscore.com/results/new/167825", // Clairton May
-    "https://practiscore.com/results/new/168462", // GPGC May
-    "https://practiscore.com/results/new/169171", // Castlewood May
-    "https://practiscore.com/results/new/168420", // EHPSA May
-
-    "https://practiscore.com/results/new/172505", // Pardoe June
-    "https://practiscore.com/results/new/170223", // Gem City June
-    "https://practiscore.com/results/new/170220", // PMSC June
-    "https://practiscore.com/results/new/171664", // GPGC June
-    "https://practiscore.com/results/new/171753", // Clairton June
-    "https://practiscore.com/results/new/171470", // Castlewood June
-    "https://practiscore.com/results/new/172303", // EHPSA June
-
-    "https://practiscore.com/results/new/174748", // Clairton July
-    "https://practiscore.com/results/new/173327", // Gem City July
-    "https://practiscore.com/results/new/175522", // Pardoe July
-    "https://practiscore.com/results/new/173313", // PMSC July
-    // "https://practiscore.com/results/new/173577", // Western PA section
-    "https://practiscore.com/results/new/174574", // GPGC July
-    "https://practiscore.com/results/new/175336", // Castlewood July
-    "https://practiscore.com/results/new/175662", // EHPSA July
-  ];
+  // var matchUrls = [ // Western PA
+  //   "https://practiscore.com/results/new/161142", // Gem City March
+  //   "https://practiscore.com/results/new/162898", // EHPSA March
+  //
+  //   "https://practiscore.com/results/new/163678", // Gem City April
+  //   "https://practiscore.com/results/new/163757", // Pardoe April
+  //   "https://practiscore.com/results/new/163576", // GPGC April 1
+  //   "https://practiscore.com/results/new/164215", // LCSA April
+  //   "https://practiscore.com/results/new/165480", // Castlewood April
+  //   "https://practiscore.com/results/new/165554", // EHPSA April
+  //   "https://practiscore.com/results/new/166298", // GPGC April 2
+  //
+  //   "https://practiscore.com/results/new/166447", // Gem City May
+  //   "https://practiscore.com/results/new/168622", // Pardoe May
+  //   "https://practiscore.com/results/new/167621", // LCSA May
+  //   "https://practiscore.com/results/new/167183", // PMSC May
+  //   "https://practiscore.com/results/new/167825", // Clairton May
+  //   "https://practiscore.com/results/new/168462", // GPGC May
+  //   "https://practiscore.com/results/new/169171", // Castlewood May
+  //   "https://practiscore.com/results/new/168420", // EHPSA May
+  //
+  //   "https://practiscore.com/results/new/172505", // Pardoe June
+  //   "https://practiscore.com/results/new/170223", // Gem City June
+  //   "https://practiscore.com/results/new/170220", // PMSC June
+  //   "https://practiscore.com/results/new/171664", // GPGC June
+  //   "https://practiscore.com/results/new/171753", // Clairton June
+  //   "https://practiscore.com/results/new/171470", // Castlewood June
+  //   "https://practiscore.com/results/new/172303", // EHPSA June
+  //
+  //   "https://practiscore.com/results/new/174748", // Clairton July
+  //   "https://practiscore.com/results/new/173327", // Gem City July
+  //   "https://practiscore.com/results/new/175522", // Pardoe July
+  //   "https://practiscore.com/results/new/173313", // PMSC July
+  //   // "https://practiscore.com/results/new/173577", // Western PA section
+  //   "https://practiscore.com/results/new/174574", // GPGC July
+  //   "https://practiscore.com/results/new/175336", // Castlewood July
+  //   "https://practiscore.com/results/new/175662", // EHPSA July
+  // ];
 
   // var matchUrls = [ // Some locals
   //   "https://practiscore.com/results/new/165379", // 4/21 Delmarva
@@ -126,6 +180,8 @@ void dumpRatings() async {
   //   "https://www.practiscore.com/results/new/90343",
   //   "https://www.practiscore.com/results/new/64849",
   // ];
+
+  var matchUrls = castlewoodMatchUrls;
 
   var matches = <PracticalMatch>[];
   for(String url in matchUrls) {
