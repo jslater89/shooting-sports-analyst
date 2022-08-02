@@ -48,7 +48,7 @@ class _RaterPageState extends State<RaterPage> {
   void initState() {
     super.initState();
 
-    for(var url in castlewoodMatchUrls) {
+    for(var url in singleMatchUrl) {
       _matches[url] = null;
       _getMatchResultFile(url);
     }

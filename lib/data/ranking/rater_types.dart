@@ -18,13 +18,15 @@ class RatingEvent {
   String eventName;
   RelativeScore score;
   double ratingChange;
+  List<String> info;
 
-  RatingEvent({required this.eventName, required this.score, this.ratingChange = 0});
+  RatingEvent({required this.eventName, required this.score, this.ratingChange = 0, this.info = const []});
 
   RatingEvent.copy(RatingEvent other) :
       this.eventName = other.eventName,
       this.score = other.score,
-      this.ratingChange = other.ratingChange;
+      this.ratingChange = other.ratingChange,
+      this.info = [...other.info];
 }
 
 enum RatingMode {
@@ -65,4 +67,13 @@ abstract class RatingSystem {
     1.2,
     1.1,
   ];
+
+  static const initialClassRatings = {
+    Classification.GM: 1300,
+    Classification.M: 1200,
+    Classification.A: 1100,
+    Classification.B: 1000,
+    Classification.C: 900,
+    Classification.D: 800,
+  };
 }

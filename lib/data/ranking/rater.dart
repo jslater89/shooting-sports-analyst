@@ -168,6 +168,19 @@ class Rater {
       }
       changes.clear();
     }
+
+    var membersToRemove = <String>{};
+    for(String num in _memberNumbersEncountered) {
+      var maybeShooter = knownShooters[num];
+      if(maybeShooter != null) {
+        if(maybeShooter.ratingEvents.length == 0) {
+          membersToRemove.add(num);
+          knownShooters.remove(num);
+        }
+      }
+    }
+
+    _memberNumbersEncountered.removeAll(membersToRemove);
   }
 
   bool _verifyShooter(Shooter s) {

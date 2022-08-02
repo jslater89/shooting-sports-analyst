@@ -61,6 +61,47 @@ var outEastMatchUrls = [ // Cantrell's stomping grounds
   "https://www.practiscore.com/results/new/164174",
 ];
 
+var areaMatchUrls = [ // area matches
+  "https://www.practiscore.com/results/new/169680",
+  "https://www.practiscore.com/results/new/143211",
+  "https://www.practiscore.com/results/new/119324",
+  "https://www.practiscore.com/results/new/84701",
+  "https://www.practiscore.com/results/new/57037",
+  "https://www.practiscore.com/results/new/150803",
+  "https://www.practiscore.com/results/new/122157",
+  "https://www.practiscore.com/results/new/96911",
+  "https://www.practiscore.com/results/new/69654",
+  "https://www.practiscore.com/results/new/142725",
+  "https://www.practiscore.com/results/new/113573",
+  "https://www.practiscore.com/results/new/88452",
+  "https://www.practiscore.com/results/new/63305",
+  "https://www.practiscore.com/results/new/148135",
+  "https://www.practiscore.com/results/new/117974",
+  "https://www.practiscore.com/results/new/87404",
+  "https://www.practiscore.com/results/new/65924",
+  "https://www.practiscore.com/results/new/175816",
+  "https://www.practiscore.com/results/new/91448",
+  "https://www.practiscore.com/results/new/146707",
+  "https://www.practiscore.com/results/new/117346",
+  "https://www.practiscore.com/results/new/62672",
+  "https://www.practiscore.com/results/new/163972",
+  "https://www.practiscore.com/results/new/131991",
+  "https://www.practiscore.com/results/new/78750",
+  "https://www.practiscore.com/results/new/54465",
+  "https://www.practiscore.com/results/new/139302",
+  "https://www.practiscore.com/results/new/118650",
+  "https://www.practiscore.com/results/new/84766",
+  "https://www.practiscore.com/results/new/59688",
+  "https://www.practiscore.com/results/new/145355",
+  "https://www.practiscore.com/results/new/115551",
+  "https://www.practiscore.com/results/new/90343",
+  "https://www.practiscore.com/results/new/64849",
+];
+
+var singleMatchUrl = [
+  "https://practiscore.com/results/new/163576", // GPGC April 1
+];
+
 void dumpRatings() async {
   // var matchUrls = [ // Western PA
   //   "https://practiscore.com/results/new/161142", // Gem City March
@@ -107,78 +148,6 @@ void dumpRatings() async {
   //   "https://practiscore.com/results/new/170506", // 6/10 Buckeye Blast
   //   "https://practiscore.com/results/new/172099", // 6/24 MD State
   //   "https://practiscore.com/results/new/173577", // 7/08 WPA
-  // ];
-
-  // var matchUrls = [ // Cantrell's stomping grounds
-  //   "https://www.practiscore.com/results/new/174787",
-  //   "https://www.practiscore.com/results/new/171773",
-  //   "https://www.practiscore.com/results/new/167848",
-  //   "https://www.practiscore.com/results/new/165072",
-  //   "https://www.practiscore.com/results/new/162442",
-  //   "https://www.practiscore.com/results/new/174467",
-  //   "https://www.practiscore.com/results/new/171551",
-  //   "https://www.practiscore.com/results/new/164866",
-  //   "https://www.practiscore.com/results/new/162099",
-  //   "https://www.practiscore.com/results/new/175382",
-  //   "https://www.practiscore.com/results/new/169252",
-  //   "https://www.practiscore.com/results/new/165572",
-  //   "https://www.practiscore.com/results/new/162879",
-  //   "https://www.practiscore.com/results/new/173148",
-  //   "https://www.practiscore.com/results/new/169883",
-  //   "https://www.practiscore.com/results/new/163497",
-  //   "https://www.practiscore.com/results/new/172204",
-  //   "https://www.practiscore.com/results/new/169150",
-  //   "https://www.practiscore.com/results/new/165475",
-  //   "https://www.practiscore.com/results/new/162753",
-  //   "https://www.practiscore.com/results/new/160329",
-  //   "https://www.practiscore.com/results/new/170692",
-  //   "https://www.practiscore.com/results/new/164208",
-  //   "https://www.practiscore.com/results/new/175412",
-  //   "https://www.practiscore.com/results/new/172327",
-  //   "https://www.practiscore.com/results/new/165587",
-  //   "https://www.practiscore.com/results/new/162899",
-  //   "https://www.practiscore.com/results/new/176161",
-  //   "https://www.practiscore.com/results/new/173711",
-  //   "https://www.practiscore.com/results/new/170632",
-  //   "https://www.practiscore.com/results/new/167548",
-  //   "https://www.practiscore.com/results/new/164174",
-  // ];
-  
-  // var matchUrls = [ // area matches
-  //   "https://www.practiscore.com/results/new/169680",
-  //   "https://www.practiscore.com/results/new/143211",
-  //   "https://www.practiscore.com/results/new/119324",
-  //   "https://www.practiscore.com/results/new/84701",
-  //   "https://www.practiscore.com/results/new/57037",
-  //   "https://www.practiscore.com/results/new/150803",
-  //   "https://www.practiscore.com/results/new/122157",
-  //   "https://www.practiscore.com/results/new/96911",
-  //   "https://www.practiscore.com/results/new/69654",
-  //   "https://www.practiscore.com/results/new/142725",
-  //   "https://www.practiscore.com/results/new/113573",
-  //   "https://www.practiscore.com/results/new/88452",
-  //   "https://www.practiscore.com/results/new/63305",
-  //   "https://www.practiscore.com/results/new/148135",
-  //   "https://www.practiscore.com/results/new/117974",
-  //   "https://www.practiscore.com/results/new/87404",
-  //   "https://www.practiscore.com/results/new/65924",
-  //   "https://www.practiscore.com/results/new/175816",
-  //   "https://www.practiscore.com/results/new/91448",
-  //   "https://www.practiscore.com/results/new/146707",
-  //   "https://www.practiscore.com/results/new/117346",
-  //   "https://www.practiscore.com/results/new/62672",
-  //   "https://www.practiscore.com/results/new/163972",
-  //   "https://www.practiscore.com/results/new/131991",
-  //   "https://www.practiscore.com/results/new/78750",
-  //   "https://www.practiscore.com/results/new/54465",
-  //   "https://www.practiscore.com/results/new/139302",
-  //   "https://www.practiscore.com/results/new/118650",
-  //   "https://www.practiscore.com/results/new/84766",
-  //   "https://www.practiscore.com/results/new/59688",
-  //   "https://www.practiscore.com/results/new/145355",
-  //   "https://www.practiscore.com/results/new/115551",
-  //   "https://www.practiscore.com/results/new/90343",
-  //   "https://www.practiscore.com/results/new/64849",
   // ];
 
   var matchUrls = castlewoodMatchUrls;

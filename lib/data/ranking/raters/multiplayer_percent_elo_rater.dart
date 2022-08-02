@@ -30,26 +30,34 @@ class MultiplayerPercentEloRater implements RatingSystem {
 
     var aRating = shooters[0];
     var aScore = scores[aRating]!;
-    var divisor = (scores.length * (scores.length - 1)) / 2;
 
     double expectedScore = 0;
     var highOpponentScore = 0.0;
+    int usedScores = 1; // our own score
     for(var bRating in scores.keys) {
       if (Rater.processMemberNumber(aRating.shooter.memberNumber) ==
           Rater.processMemberNumber(bRating.shooter.memberNumber)) continue;
+
+      var opponentScore = scores[bRating]!;
+
+      // Ignore opponents who didn't record a score for the stage
+      if(opponentScore.score.hits == 0 && opponentScore.score.time == 0) {
+        continue;
+      }
+
+      if (opponentScore.relativePoints > highOpponentScore) {
+        highOpponentScore = opponentScore.relativePoints;
+      }
 
       var probability = _probability(bRating.rating, aRating.rating);
       if (probability.isNaN) {
         throw StateError("NaN");
       }
+
       expectedScore += probability;
-
-      var opponentScore = scores[bRating]!;
-      if (opponentScore.relativePoints > highOpponentScore) {
-        highOpponentScore = opponentScore.relativePoints;
-      }
-
+      usedScores++;
     }
+    var divisor = (usedScores * (usedScores - 1)) / 2;
     expectedScore = (expectedScore) / divisor;
 
     var totalPercent = scores.map((rating, score) => MapEntry(rating, score.percent)).values.reduce((value, element) => value + element);
