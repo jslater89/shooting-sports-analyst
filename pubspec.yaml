@@ -34,6 +34,7 @@ dependencies:
   collection: ^1.15.0-nullsafety.4
   file_picker: ^4.0.0
   url_launcher: ^6.0.2
+  intl:
 
 dev_dependencies:
   flutter_test:

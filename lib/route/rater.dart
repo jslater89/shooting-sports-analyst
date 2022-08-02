@@ -35,21 +35,23 @@ class _RaterPageState extends State<RaterPage> {
   // TODO: bring this and ratersByDivision out into a data class
   //      (RatingHistory or something)
 
-  /// Maps URLs to matches in canonical order.
-  LinkedHashMap<String, PracticalMatch?> _matches = LinkedHashMap();
+  /// Maps URLs to matches
+  Map<String, PracticalMatch?> _matchUrls = {};
+  
+  List<PracticalMatch> _matches = [];
 
   /// Maps matches to a map of Raters, which hold the incremental ratings
   /// after that match has been processed.
   Map<PracticalMatch, Map<TabContents, Rater>> _ratersByDivision = {};
 
-  bool get _matchesLoading => _matches.containsValue(null);
+  bool get _matchesLoading => _matchUrls.containsValue(null);
 
   @override
   void initState() {
     super.initState();
 
-    for(var url in singleMatchUrl) {
-      _matches[url] = null;
+    for(var url in wpaMatchUrls) {
+      _matchUrls[url] = null;
       _getMatchResultFile(url);
     }
   }
@@ -88,8 +90,8 @@ class _RaterPageState extends State<RaterPage> {
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: _matches.keys.map((url) {
-            return Text("${url.split("/").last}: ${_matches[url]?.name ?? "Loading..."}");
+          children: _matchUrls.keys.map((url) {
+            return Text("${url.split("/").last}: ${_matchUrls[url]?.name ?? "Loading..."}");
           }).toList(),
         ),
       ),
@@ -99,11 +101,11 @@ class _RaterPageState extends State<RaterPage> {
   Widget _ratingView() {
     final backgroundColor = Theme.of(context).backgroundColor;
 
-    final lastMatch = _matches.values.last!;
+    final lastMatch = _matches.last;
 
     debugPrint("Last match: ${lastMatch.name}");
 
-    if(_ratersByDivision.length < _matches.values.length) return Container();
+    if(_ratersByDivision.length < _matches.length) return Container();
 
     return DefaultTabController(
       length: TabContents.values.length,
@@ -111,7 +113,6 @@ class _RaterPageState extends State<RaterPage> {
       initialIndex: 0,
       child: Column(
         children: [
-          // TODO: header goes here
           Container(
             color: backgroundColor,
             child: TabBar(
@@ -122,6 +123,7 @@ class _RaterPageState extends State<RaterPage> {
               }).toList(),
             ),
           ),
+          Text(lastMatch.name ?? "(unknown match name)"),
           Expanded(
             child: TabBarView(
               children: TabContents.values.map((t) {
@@ -146,9 +148,9 @@ class _RaterPageState extends State<RaterPage> {
             }) ?? [];
 
             for(var url in newUrls) {
-              if(!_matches.containsKey(url)) {
+              if(!_matchUrls.containsKey(url)) {
                 setState(() {
-                  _matches[url] = null;
+                  _matchUrls[url] = null;
                 });
                 _getMatchResultFile(url);
               }
@@ -174,7 +176,7 @@ class _RaterPageState extends State<RaterPage> {
       var match = await getPractiscoreMatchHeadless(id);
       if(match != null) {
         setState(() {
-          _matches[url] = match;
+          _matchUrls[url] = match;
         });
 
         if(!_matchesLoading) {
@@ -189,13 +191,26 @@ class _RaterPageState extends State<RaterPage> {
   void _processInitialMatches() {
     debugPrint("Loading matches");
 
+    _matches = [
+      for (var m in _matchUrls.values)
+        if(m != null) m
+    ];
+    _matches.sort((a, b) {
+      if(a.date == null && b.date == null) {
+        return 0;
+      }
+      if(a.date == null) return -1;
+      if(b.date == null) return 1;
+
+      return a.date!.compareTo(b.date!);
+    });
+
     var currentMatches = <PracticalMatch>[];
     PracticalMatch? lastMatch;
 
-    for(String url in _matches.keys) {
-      var match = _matches[url];
+    for(PracticalMatch? match in _matches) {
       if(match == null) {
-        debugPrint("WARN: null match for $url");
+        debugPrint("WARN: null match");
       }
 
       var m = match!;

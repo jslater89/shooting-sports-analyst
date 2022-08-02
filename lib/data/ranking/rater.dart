@@ -14,6 +14,16 @@ class Rater {
   bool byStage;
 
   Rater({required List<PracticalMatch> matches, required this.ratingSystem, FilterSet? filters, this.byStage = false}) : this._matches = matches, this._filters = filters {
+    _matches.sort((a, b) {
+      if(a.date == null && b.date == null) {
+        return 0;
+      }
+      if(a.date == null) return -1;
+      if(b.date == null) return 1;
+
+      return a.date!.compareTo(b.date!);
+    });
+
     for(PracticalMatch m in _matches) {
       _addShootersFromMatch(m);
     }

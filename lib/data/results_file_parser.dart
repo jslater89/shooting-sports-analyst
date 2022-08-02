@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:intl/intl.dart';
 
 Future<PracticalMatch> processScoreFile(String fileContents) async {
   String reportFile = fileContents.replaceAll("\r\n", "\n");
@@ -18,7 +19,8 @@ Future<PracticalMatch> processScoreFile(String fileContents) async {
       competitorLines.add(l);
     else if (l.startsWith("G "))
       stageLines.add(l);
-    else if (l.startsWith("I ")) stageScoreLines.add(l);
+    else if (l.startsWith("I "))
+      stageScoreLines.add(l);
   }
 
   PracticalMatch canonicalMatch = _processResultLines(
@@ -52,6 +54,8 @@ PracticalMatch _processResultLines({required List<String> infoLines, required Li
 
 const String _MATCH_NAME = r"$INFO Match name:";
 const String _MATCH_DATE = r"$INFO Match date:";
+final DateFormat _df = DateFormat("MM/dd/yyyy");
+
 void _readInfoLines(PracticalMatch match, List<String> infoLines) {
   for(String line in infoLines) {
     if(line.startsWith(_MATCH_NAME)) {
@@ -60,7 +64,13 @@ void _readInfoLines(PracticalMatch match, List<String> infoLines) {
     }
     else if(line.startsWith(_MATCH_DATE)) {
       debugPrint("Found match date");
-      match.date = line.replaceFirst(_MATCH_DATE, "");
+      match.rawDate = line.replaceFirst(_MATCH_DATE, "");
+      try {
+        match.date = _df.parse(match.rawDate!);
+      }
+      catch(e) {
+        debugPrint("Unable to parse date ${match.rawDate} $e");
+      }
     }
   }
 }

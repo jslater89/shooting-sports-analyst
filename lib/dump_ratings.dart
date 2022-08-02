@@ -98,49 +98,50 @@ var areaMatchUrls = [ // area matches
   "https://www.practiscore.com/results/new/64849",
 ];
 
+var wpaMatchUrls = [ // Western PA
+  "https://practiscore.com/results/new/161142", // Gem City March
+  "https://practiscore.com/results/new/162898", // EHPSA March
+
+  "https://practiscore.com/results/new/163678", // Gem City April
+  "https://practiscore.com/results/new/163757", // Pardoe April
+  "https://practiscore.com/results/new/163576", // GPGC April 1
+  "https://practiscore.com/results/new/164215", // LCSA April
+  "https://practiscore.com/results/new/165480", // Castlewood April
+  "https://practiscore.com/results/new/165554", // EHPSA April
+  "https://practiscore.com/results/new/166298", // GPGC April 2
+
+  "https://practiscore.com/results/new/166447", // Gem City May
+  "https://practiscore.com/results/new/168622", // Pardoe May
+  "https://practiscore.com/results/new/167621", // LCSA May
+  "https://practiscore.com/results/new/167183", // PMSC May
+  "https://practiscore.com/results/new/167825", // Clairton May
+  "https://practiscore.com/results/new/168462", // GPGC May
+  "https://practiscore.com/results/new/169171", // Castlewood May
+  "https://practiscore.com/results/new/168420", // EHPSA May
+
+  "https://practiscore.com/results/new/172505", // Pardoe June
+  "https://practiscore.com/results/new/170223", // Gem City June
+  "https://practiscore.com/results/new/170220", // PMSC June
+  "https://practiscore.com/results/new/171664", // GPGC June
+  "https://practiscore.com/results/new/171753", // Clairton June
+  "https://practiscore.com/results/new/171470", // Castlewood June
+  "https://practiscore.com/results/new/172303", // EHPSA June
+
+  "https://practiscore.com/results/new/174748", // Clairton July
+  "https://practiscore.com/results/new/173327", // Gem City July
+  "https://practiscore.com/results/new/175522", // Pardoe July
+  "https://practiscore.com/results/new/173313", // PMSC July
+  // "https://practiscore.com/results/new/173577", // Western PA section
+  "https://practiscore.com/results/new/174574", // GPGC July
+  "https://practiscore.com/results/new/175336", // Castlewood July
+  "https://practiscore.com/results/new/175662", // EHPSA July
+];
+
 var singleMatchUrl = [
   "https://practiscore.com/results/new/163576", // GPGC April 1
 ];
 
 void dumpRatings() async {
-  // var matchUrls = [ // Western PA
-  //   "https://practiscore.com/results/new/161142", // Gem City March
-  //   "https://practiscore.com/results/new/162898", // EHPSA March
-  //
-  //   "https://practiscore.com/results/new/163678", // Gem City April
-  //   "https://practiscore.com/results/new/163757", // Pardoe April
-  //   "https://practiscore.com/results/new/163576", // GPGC April 1
-  //   "https://practiscore.com/results/new/164215", // LCSA April
-  //   "https://practiscore.com/results/new/165480", // Castlewood April
-  //   "https://practiscore.com/results/new/165554", // EHPSA April
-  //   "https://practiscore.com/results/new/166298", // GPGC April 2
-  //
-  //   "https://practiscore.com/results/new/166447", // Gem City May
-  //   "https://practiscore.com/results/new/168622", // Pardoe May
-  //   "https://practiscore.com/results/new/167621", // LCSA May
-  //   "https://practiscore.com/results/new/167183", // PMSC May
-  //   "https://practiscore.com/results/new/167825", // Clairton May
-  //   "https://practiscore.com/results/new/168462", // GPGC May
-  //   "https://practiscore.com/results/new/169171", // Castlewood May
-  //   "https://practiscore.com/results/new/168420", // EHPSA May
-  //
-  //   "https://practiscore.com/results/new/172505", // Pardoe June
-  //   "https://practiscore.com/results/new/170223", // Gem City June
-  //   "https://practiscore.com/results/new/170220", // PMSC June
-  //   "https://practiscore.com/results/new/171664", // GPGC June
-  //   "https://practiscore.com/results/new/171753", // Clairton June
-  //   "https://practiscore.com/results/new/171470", // Castlewood June
-  //   "https://practiscore.com/results/new/172303", // EHPSA June
-  //
-  //   "https://practiscore.com/results/new/174748", // Clairton July
-  //   "https://practiscore.com/results/new/173327", // Gem City July
-  //   "https://practiscore.com/results/new/175522", // Pardoe July
-  //   "https://practiscore.com/results/new/173313", // PMSC July
-  //   // "https://practiscore.com/results/new/173577", // Western PA section
-  //   "https://practiscore.com/results/new/174574", // GPGC July
-  //   "https://practiscore.com/results/new/175336", // Castlewood July
-  //   "https://practiscore.com/results/new/175662", // EHPSA July
-  // ];
 
   // var matchUrls = [ // Some locals
   //   "https://practiscore.com/results/new/165379", // 4/21 Delmarva

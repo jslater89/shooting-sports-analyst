@@ -9,7 +9,8 @@ enum FilterMode {
 }
 class PracticalMatch {
   String? name;
-  String? date;
+  String? rawDate;
+  DateTime? date;
 
   late String reportContents;
 
