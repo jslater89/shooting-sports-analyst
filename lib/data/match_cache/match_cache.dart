@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
+import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 
 class MatchCache {
   static MatchCache? _instance;
@@ -21,8 +22,10 @@ class MatchCache {
   var _ready = Completer<bool>();
   late Future<bool> ready;
 
-  Map<String, PracticalMatch> _cache = {};
+  Map<String, _MatchCacheEntry> _cache = {};
   late SharedPreferences _prefs;
+  static const _cachePrefix = "cache/";
+  static const _cacheSeparator = "XxX";
 
   void _init() async {
     _instance!.ready = _instance!._ready.future;
@@ -33,23 +36,58 @@ class MatchCache {
   }
 
   Future<void> load() async {
+    _cache.clear();
 
+    var paths = _prefs.getKeys();
+    for(var path in paths) {
+      if(path.startsWith(_cachePrefix)) {
+        var reportContents = _prefs.getString(path);
+
+        var ids = path.replaceFirst(_cachePrefix, "").split(_cacheSeparator);
+
+        if(reportContents != null) {
+          var match = await processScoreFile(reportContents);
+          var entry = _MatchCacheEntry(match: match, ids: ids);
+          for(var id in ids) {
+            _cache[id] = entry;
+          }
+
+          debugPrint("Loaded ${entry.match.name} from $path");
+        }
+      }
+    }
   }
 
   void clear() {
     _cache.clear();
-    // TODO: clear prefs?
+    _clearPrefs();
+  }
+
+  void _clearPrefs() {
+    var keys = _prefs.getKeys();
+    for(var key in keys) {
+      if(key.startsWith(_cachePrefix)) _prefs.remove(key);
+    }
+  }
+
+  String _generatePath(_MatchCacheEntry entry) {
+    var idString = entry.ids.join(_cacheSeparator);
+    return "$_cachePrefix/$idString";
   }
 
   void save() async {
-
+    for(var entry in _cache.values) {
+      var path = _generatePath(entry);
+      await _prefs.setString(path, entry.match.reportContents);
+      debugPrint("Saved ${entry.match.name} to $path");
+    }
   }
 
   Future<PracticalMatch?> getMatch(String matchUrl, {bool forceUpdate = false}) async {
     var id = matchUrl.split("/").last;
     if(!forceUpdate && _cache.containsKey(id)) {
       debugPrint("Using cache for $id");
-      return _cache[id];
+      return _cache[id]!.match;
     }
 
     var canonId = await processMatchUrl(matchUrl);
@@ -57,8 +95,12 @@ class MatchCache {
     if(canonId != null) {
       var match = await getPractiscoreMatchHeadless(canonId);
       if(match != null) {
-        _cache[id] = match;
-        _cache[canonId] = match;
+        var cacheEntry = _MatchCacheEntry(
+          ids: [id, canonId],
+          match: match,
+        );
+        _cache[id] = cacheEntry;
+        _cache[canonId] = cacheEntry;
         return match;
       }
       debugPrint("Match is null");
@@ -69,4 +111,11 @@ class MatchCache {
 
     return null;
   }
+}
+
+class _MatchCacheEntry {
+  final PracticalMatch match;
+  final List<String> ids;
+
+  _MatchCacheEntry({required this.match, required this.ids});
 }

@@ -213,6 +213,7 @@ class _RaterPageState extends State<RaterPage> {
             if(m != null) m
         ];
 
+        _matchCache.save();
         _history = RatingHistory(groups: activeTabs, matches: actualMatches);
 
         debugPrint("History ready with ${_history.matches.length} matches");
