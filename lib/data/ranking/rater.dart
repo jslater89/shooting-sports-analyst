@@ -134,11 +134,6 @@ class Rater {
 
     Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes = {};
 
-    // TODO: pull match stage iteration out to here, if present.
-    // TODO: don't update ratings in the rating system—do that here
-    // TODO: gather rating events for each match/stage, and apply them after all changes have been calculated
-    //        (this means you aren't handicapping/handicapped based on your ratings happening first)
-
     // Process ratings for each shooter.
     if(byStage) {
       for(Stage s in match.stages) {
@@ -152,10 +147,15 @@ class Rater {
         }
 
         for(var r in changes.keys) {
+          var totalChange = 0.0;
+
           for(var event in changes[r]!.values) {
+            totalChange += event.ratingChange;
             r.rating += event.ratingChange;
             r.ratingEvents.add(event);
           }
+
+          r.updateTrends(totalChange);
         }
         changes.clear();
       }
@@ -171,10 +171,15 @@ class Rater {
       }
 
       for(var r in changes.keys) {
+        var totalChange = 0.0;
+
         for(var event in changes[r]!.values) {
+          totalChange += event.ratingChange;
           r.rating += event.ratingChange;
           r.ratingEvents.add(event);
         }
+
+        r.updateTrends(totalChange);
       }
       changes.clear();
     }
@@ -256,6 +261,8 @@ class Rater {
 
         changes[aRating]![aStageScore]!.ratingChange += update[aRating]!.change;
         changes[bRating]![bStageScore]!.ratingChange += update[bRating]!.change;
+
+        // TODO: variance, trend
       }
       else {
         var update = ratingSystem.updateShooterRatings(

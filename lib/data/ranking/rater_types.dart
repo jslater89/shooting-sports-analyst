@@ -1,16 +1,33 @@
+import 'dart:math';
+
 import 'package:uspsa_result_viewer/data/model.dart';
 
 class ShooterRating {
+  static const baseTrendWindow = 4;
+
   final Shooter shooter;
   double rating;
+  double variance = 0;
+  double trend = 0;
 
   List<RatingEvent> ratingEvents = [];
 
   ShooterRating(this.shooter, this.rating);
 
+  void updateTrends(double totalChange) {
+    var trendWindow = min(ratingEvents.length, baseTrendWindow * 5);
+    var totalVariance = variance * trendWindow + totalChange.abs();
+    variance = totalVariance / (trendWindow + 1);
+
+    var totalTrend = trend * trendWindow + (totalChange >= 0 ? 1 : -1);
+    trend = totalTrend / (trendWindow + 1);
+  }
+
   ShooterRating.copy(ShooterRating other) :
       this.shooter = other.shooter,
       this.rating = other.rating,
+      this.variance = other.variance,
+      this.trend = other.trend,
       this.ratingEvents = other.ratingEvents.map((e) => RatingEvent.copy(e)).toList();
 }
 

@@ -144,7 +144,8 @@ var wpaMatchUrls = [ // Western PA
 ];
 
 var singleMatchUrl = [
-  "https://practiscore.com/results/new/163576", // GPGC April 1
+  // "https://practiscore.com/results/new/163576", // GPGC April 1
+  "https://practiscore.com/results/new/176161", // Shadow Hawk Masters Whatever
 ];
 
 void dumpRatings() async {

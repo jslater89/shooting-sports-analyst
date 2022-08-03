@@ -33,6 +33,7 @@ class MultiplayerPercentEloRater implements RatingSystem {
 
     double expectedScore = 0;
     var highOpponentScore = 0.0;
+    int zeroes = 0;
     int usedScores = 1; // our own score
     for(var bRating in scores.keys) {
       if (Rater.processMemberNumber(aRating.shooter.memberNumber) ==
@@ -47,6 +48,10 @@ class MultiplayerPercentEloRater implements RatingSystem {
 
       if (opponentScore.relativePoints > highOpponentScore) {
         highOpponentScore = opponentScore.relativePoints;
+      }
+
+      if(opponentScore.relativePoints < 0.1) {
+        zeroes += 1;
       }
 
       var probability = _probability(bRating.rating, aRating.rating);
@@ -73,13 +78,19 @@ class MultiplayerPercentEloRater implements RatingSystem {
     var placementMultiplier = aRating.ratingEvents.length < RatingSystem.initialPlacementMultipliers.length ?
       RatingSystem.initialPlacementMultipliers[aRating.ratingEvents.length] : 1.0;
 
-    var actualScore = percentComponent * percentWeight + placeComponent * placeWeight;
-    var change = K * placementMultiplier * matchStrength * (scores.length - 1) * (actualScore - expectedScore);
+    // If lots of people zero a stage, we can't reason effectively about the relative
+    // differences in performance of those people, compared to each other or compared
+    // to the field that didn't zero it. If more than 10% of people zero a stage, start
+    // scaling K down (to 0.34, when 30%+ of people zero a stage).
+    var zeroMultiplier = (zeroes / usedScores) < 0.1 ? 1 : 1 - 0.66 * ((min(0.3, (zeroes / usedScores) - 0.1)) / 0.3);
 
-    var changeFromPercent = K * placementMultiplier * matchStrength * (scores.length - 1) * (percentComponent * percentWeight - (expectedScore * percentWeight));
-    var changeFromPlace = K * placementMultiplier * matchStrength * (scores.length - 1) * (placeComponent * placeWeight - (expectedScore * placeWeight));
-    // if(Rater.processMemberNumber(aRating.shooter.memberNumber) == "94315") {
-    //   debugPrint("### Amanda stats: $actualPercent of ${scores.length} shooters for ${aScore.stage?.name}, SoS ${matchStrength.toStringAsFixed(3)}, placement $placementMultiplier");
+    var actualScore = percentComponent * percentWeight + placeComponent * placeWeight;
+    var change = K * placementMultiplier * matchStrength * zeroMultiplier * (scores.length - 1) * (actualScore - expectedScore);
+
+    var changeFromPercent = K * placementMultiplier * matchStrength * zeroMultiplier * (scores.length - 1) * (percentComponent * percentWeight - (expectedScore * percentWeight));
+    var changeFromPlace = K * placementMultiplier * matchStrength * zeroMultiplier * (scores.length - 1) * (placeComponent * placeWeight - (expectedScore * placeWeight));
+    // if(Rater.processMemberNumber(aRating.shooter.memberNumber) == "127719") {
+    //   debugPrint("### ${aRating.shooter.lastName} stats: $actualPercent of $usedScores shooters for ${aScore.stage?.name}, SoS ${matchStrength.toStringAsFixed(3)}, placement $placementMultiplier, zero $zeroMultiplier ($zeroes)");
     //   debugPrint("AS/ES: ${actualScore.toStringAsFixed(6)}/${expectedScore.toStringAsFixed(6)}");
     //   debugPrint("Actual/expected percent: ${(percentComponent * totalPercent * 100).toStringAsFixed(2)}/${(expectedScore * totalPercent * 100).toStringAsFixed(2)}");
     //   debugPrint("Actual/expected place: ${aScore.place}/${(scores.length - (expectedScore * divisor)).toStringAsFixed(4)}");

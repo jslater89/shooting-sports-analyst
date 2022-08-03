@@ -51,7 +51,7 @@ class _RaterPageState extends State<RaterPage> {
   void initState() {
     super.initState();
 
-    for(var url in classicNationalsUrls) {
+    for(var url in outEastMatchUrls) {
       _matchUrls[url] = null;
       _getMatchResultFile(url);
     }
@@ -306,7 +306,7 @@ extension _Utilities on TabContents {
       case TabContents.carryOptics:
         return [Division.carryOptics];
       case TabContents.locap:
-        return [/*Division.singleStack, Division.limited10, Division.production,*/ Division.revolver];
+        return [Division.singleStack, Division.limited10, Division.production, Division.revolver];
       default:
         throw StateError("Missing case clause");
     }

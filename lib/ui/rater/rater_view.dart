@@ -49,12 +49,14 @@ class _RaterViewState extends State<RaterView> {
             child: Row(
               mainAxisSize: MainAxisSize.max,
               children: [
-                Expanded(flex: 4, child: Text("")),
+                Expanded(flex: 3, child: Text("")),
                 Expanded(flex: 2, child: Text("Member #")),
                 Expanded(flex: 3, child: Text("Name")),
                 Expanded(flex: 1, child: Text("Rating")),
+                Expanded(flex: 1, child: Text("Variance")),
+                Expanded(flex: 1, child: Text("Trend")),
                 Expanded(flex: 1, child: Text("Stages")),
-                Expanded(flex: 4, child: Text("")),
+                Expanded(flex: 3, child: Text("")),
               ],
             ),
           )
@@ -79,12 +81,14 @@ class _RaterViewState extends State<RaterView> {
             padding: const EdgeInsets.all(2.0),
             child: Row(
               children: [
-                Expanded(flex: 4, child: Text("")),
+                Expanded(flex: 3, child: Text("")),
                 Expanded(flex: 2, child: Text(Rater.processMemberNumber(sortedRatings[i].shooter.memberNumber))),
                 Expanded(flex: 3, child: Text(sortedRatings[i].shooter.getName(suffixes: false))),
                 Expanded(flex: 1, child: Text("${sortedRatings[i].rating.round()}")),
+                Expanded(flex: 1, child: Text("${sortedRatings[i].variance.toStringAsFixed(2)}")),
+                Expanded(flex: 1, child: Text("${sortedRatings[i].trend.toStringAsFixed(2)}")),
                 Expanded(flex: 1, child: Text("${sortedRatings[i].ratingEvents.length}")),
-                Expanded(flex: 4, child: Text("")),
+                Expanded(flex: 3, child: Text("")),
               ],
             )
           ),
