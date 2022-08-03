@@ -5,6 +5,7 @@ import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/multiplayer_percent_elo_rater.dart';
+import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 import 'package:uspsa_result_viewer/dump_ratings.dart';
 import 'package:uspsa_result_viewer/ui/empty_scaffold.dart';
@@ -19,38 +20,26 @@ class RaterPage extends StatefulWidget {
   State<RaterPage> createState() => _RaterPageState();
 }
 
-enum TabContents {
-  open,
-  limited,
-  pcc,
-  carryOptics,
-  locap,
-}
-
 // Tabs for rating categories
 // A slider to allow
 class _RaterPageState extends State<RaterPage> {
   bool _operationInProgress = false;
 
-  // TODO: bring this and ratersByDivision out into a data class
-  //      (RatingHistory or something)
-
   /// Maps URLs to matches
   Map<String, PracticalMatch?> _matchUrls = {};
   
-  List<PracticalMatch> _matches = [];
+  late RatingHistory _history;
+  bool _historyReady = false;
 
   static const activeTabs = const [
-    TabContents.open,
-    TabContents.pcc,
-    TabContents.limited,
-    TabContents.carryOptics,
-    TabContents.locap,
+    RaterGroup.open,
+    RaterGroup.pcc,
+    RaterGroup.limited,
+    RaterGroup.carryOptics,
+    RaterGroup.locap,
   ];
 
-  /// Maps matches to a map of Raters, which hold the incremental ratings
-  /// after that match has been processed.
-  Map<PracticalMatch, Map<TabContents, Rater>> _ratersByDivision = {};
+  
 
   PracticalMatch? _selectedMatch;
   bool get _matchesLoading => _matchUrls.containsValue(null);
@@ -59,7 +48,7 @@ class _RaterPageState extends State<RaterPage> {
   void initState() {
     super.initState();
 
-    for(var url in areaMatchUrls) {
+    for(var url in castlewoodMatchUrls) {
       _matchUrls[url] = null;
       _getMatchResultFile(url);
     }
@@ -111,11 +100,14 @@ class _RaterPageState extends State<RaterPage> {
     final backgroundColor = Theme.of(context).backgroundColor;
 
     var match = _selectedMatch;
-    if(match == null) return Container();
+    if(match == null) {
+      debugPrint("No match selected!");
+      return Container();
+    }
 
     debugPrint("Last match: ${match.name}");
 
-    if(_ratersByDivision.length < _matches.length) return Container();
+    if(!_historyReady) return Container();
 
     return DefaultTabController(
       length: activeTabs.length,
@@ -137,7 +129,7 @@ class _RaterPageState extends State<RaterPage> {
           Expanded(
             child: TabBarView(
               children: activeTabs.map((t) {
-                return RaterView(rater: _ratersByDivision[match]![t]!, currentMatch: match);
+                return RaterView(rater: _history.raterFor(match, t), currentMatch: match);
               }).toList(),
             ),
           )
@@ -155,7 +147,7 @@ class _RaterPageState extends State<RaterPage> {
             height: 1,
             color: Colors.black,
           ),
-          items: _matches.reversed.map((m) {
+          items: _history.matches.reversed.map((m) {
             return DropdownMenuItem<PracticalMatch>(
               child: Text(m.name ?? "<unnamed match>"),
               value: m,
@@ -216,108 +208,39 @@ class _RaterPageState extends State<RaterPage> {
         });
 
         if(!_matchesLoading) {
-          _processInitialMatches();
+          var actualMatches = <PracticalMatch>[
+            for(var m in _matchUrls.values)
+              if(m != null) m
+          ];
+
+          _history = RatingHistory(groups: activeTabs, matches: actualMatches);
+
+          debugPrint("History ready with ${_history.matches.length} matches");
+          setState(() {
+            _selectedMatch = _history.matches.last;
+            _historyReady = true;
+          });
         }
         return true;
       }
     }
     return false;
   }
-
-  void _processInitialMatches() {
-    debugPrint("Loading matches");
-
-    _matches = [
-      for (var m in _matchUrls.values)
-        if(m != null) m
-    ];
-    _matches.sort((a, b) {
-      if(a.date == null && b.date == null) {
-        return 0;
-      }
-      if(a.date == null) return -1;
-      if(b.date == null) return 1;
-
-      return a.date!.compareTo(b.date!);
-    });
-
-    var currentMatches = <PracticalMatch>[];
-    PracticalMatch? lastMatch;
-
-    for(PracticalMatch? match in _matches) {
-      if(match == null) {
-        debugPrint("WARN: null match");
-      }
-
-      var m = match!;
-      currentMatches.add(m);
-      debugPrint("Considering match ${m.name}");
-      var innerMatches = <PracticalMatch>[]..addAll(currentMatches);
-      _ratersByDivision[m] ??= {};
-      for(var tabContents in activeTabs) {
-        var divisionMap = <Division, bool>{};
-        tabContents.divisions.forEach((element) => divisionMap[element] = true);
-
-        if(lastMatch == null) {
-          _ratersByDivision[m]![tabContents] = Rater(
-              matches: innerMatches,
-              ratingSystem: MultiplayerPercentEloRater(),
-              byStage: true,
-              filters: FilterSet(
-                empty: true,
-              )
-                ..mode = FilterMode.or
-                ..divisions = divisionMap
-                ..reentries = false
-                ..scoreDQs = false
-          );
-        }
-        else {
-          Rater newRater = Rater.copy(_ratersByDivision[lastMatch]![tabContents]!);
-          newRater.addMatch(m);
-          _ratersByDivision[m]![tabContents] = newRater;
-        }
-      }
-
-      lastMatch = m;
-    }
-
-    setState(() {
-      _selectedMatch = lastMatch;
-    });
-  }
 }
 
-extension _Utilities on TabContents {
+extension _Utilities on RaterGroup {
   String get label {
     switch(this) {
-      case TabContents.open:
+      case RaterGroup.open:
         return "OPEN";
-      case TabContents.limited:
+      case RaterGroup.limited:
         return "LIM";
-      case TabContents.pcc:
+      case RaterGroup.pcc:
         return "PCC";
-      case TabContents.carryOptics:
+      case RaterGroup.carryOptics:
         return "CO";
-      case TabContents.locap:
+      case RaterGroup.locap:
         return "LOCAP";
-      default:
-        throw StateError("Missing case clause");
-    }
-  }
-
-  List<Division> get divisions {
-    switch(this) {
-      case TabContents.open:
-        return [Division.open];
-      case TabContents.limited:
-        return [Division.limited];
-      case TabContents.pcc:
-        return [Division.pcc];
-      case TabContents.carryOptics:
-        return [Division.carryOptics];
-      case TabContents.locap:
-        return [Division.singleStack, Division.limited10, Division.production, Division.revolver];
       default:
         throw StateError("Missing case clause");
     }
