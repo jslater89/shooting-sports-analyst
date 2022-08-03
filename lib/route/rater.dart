@@ -1,6 +1,7 @@
 import 'dart:collection';
 
 import 'package:flutter/material.dart';
+import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
@@ -39,9 +40,8 @@ class _RaterPageState extends State<RaterPage> {
     RaterGroup.locap,
   ];
 
-  
-
   PracticalMatch? _selectedMatch;
+  MatchCache _matchCache = MatchCache();
   bool get _matchesLoading => _matchUrls.containsValue(null);
 
   @override
@@ -199,31 +199,31 @@ class _RaterPageState extends State<RaterPage> {
   }
 
   Future<bool> _getMatchResultFile(String url) async {
-    var id = await processMatchUrl(url);
-    if(id != null) {
-      var match = await getPractiscoreMatchHeadless(id);
-      if(match != null) {
+    await _matchCache.ready;
+
+    var match = await _matchCache.getMatch(url);
+    if(match != null) {
+      setState(() {
+        _matchUrls[url] = match;
+      });
+
+      if(!_matchesLoading) {
+        var actualMatches = <PracticalMatch>[
+          for(var m in _matchUrls.values)
+            if(m != null) m
+        ];
+
+        _history = RatingHistory(groups: activeTabs, matches: actualMatches);
+
+        debugPrint("History ready with ${_history.matches.length} matches");
         setState(() {
-          _matchUrls[url] = match;
+          _selectedMatch = _history.matches.last;
+          _historyReady = true;
         });
-
-        if(!_matchesLoading) {
-          var actualMatches = <PracticalMatch>[
-            for(var m in _matchUrls.values)
-              if(m != null) m
-          ];
-
-          _history = RatingHistory(groups: activeTabs, matches: actualMatches);
-
-          debugPrint("History ready with ${_history.matches.length} matches");
-          setState(() {
-            _selectedMatch = _history.matches.last;
-            _historyReady = true;
-          });
-        }
-        return true;
       }
+      return true;
     }
+
     return false;
   }
 }

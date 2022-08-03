@@ -36,6 +36,7 @@ dependencies:
   url_launcher: ^6.0.2
   intl:
   flutter_charts:
+  shared_preferences:
 
 dev_dependencies:
   flutter_test:
