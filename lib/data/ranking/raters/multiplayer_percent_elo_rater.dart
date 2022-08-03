@@ -89,7 +89,7 @@ class MultiplayerPercentEloRater implements RatingSystem {
 
     var changeFromPercent = K * placementMultiplier * matchStrength * zeroMultiplier * (scores.length - 1) * (percentComponent * percentWeight - (expectedScore * percentWeight));
     var changeFromPlace = K * placementMultiplier * matchStrength * zeroMultiplier * (scores.length - 1) * (placeComponent * placeWeight - (expectedScore * placeWeight));
-    // if(Rater.processMemberNumber(aRating.shooter.memberNumber) == "127719") {
+    // if(Rater.processMemberNumber(aRating.shooter.memberNumber) == "98581") {
     //   debugPrint("### ${aRating.shooter.lastName} stats: $actualPercent of $usedScores shooters for ${aScore.stage?.name}, SoS ${matchStrength.toStringAsFixed(3)}, placement $placementMultiplier, zero $zeroMultiplier ($zeroes)");
     //   debugPrint("AS/ES: ${actualScore.toStringAsFixed(6)}/${expectedScore.toStringAsFixed(6)}");
     //   debugPrint("Actual/expected percent: ${(percentComponent * totalPercent * 100).toStringAsFixed(2)}/${(expectedScore * totalPercent * 100).toStringAsFixed(2)}");
@@ -114,6 +114,6 @@ class MultiplayerPercentEloRater implements RatingSystem {
   }
 
   double _probability(double lose, double win) {
-    return 1.0 / (1.0 + (pow(10, (lose - win) / 400)));
+    return 1.0 / (1.0 + (pow(10, (lose - win) / 800)));
   }
 }

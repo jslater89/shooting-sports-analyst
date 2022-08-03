@@ -1,9 +1,11 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 
 class ShooterRating {
-  static const baseTrendWindow = 4;
+  static const baseTrendWindow = 6;
 
   final Shooter shooter;
   double rating;
@@ -16,11 +18,24 @@ class ShooterRating {
 
   void updateTrends(double totalChange) {
     var trendWindow = min(ratingEvents.length, baseTrendWindow * 5);
-    var totalVariance = variance * trendWindow + totalChange.abs();
-    variance = totalVariance / (trendWindow + 1);
+    var totalVariance = variance * (trendWindow - 1) + totalChange.abs();
+    variance = totalVariance / (trendWindow.toDouble());
 
-    var totalTrend = trend * trendWindow + (totalChange >= 0 ? 1 : -1);
-    trend = totalTrend / (trendWindow + 1);
+    var totalTrend = trend * (trendWindow - 1) + (totalChange >= 0 ? 1 : -1);
+    trend = totalTrend / (trendWindow);
+
+    // if(Rater.processMemberNumber(shooter.memberNumber) == "128393") {
+    //   debugPrint("Trends for ${shooter.lastName}");
+    //   debugPrint("$totalVariance / $trendWindow = $variance");
+    //   debugPrint("$totalTrend / $trendWindow = $trend");
+    // }
+  }
+  
+  void copyRatingFrom(ShooterRating other) {
+    this.rating = other.rating;
+    this.variance = other.variance;
+    this.trend = other.trend;
+    this.ratingEvents = other.ratingEvents.map((e) => RatingEvent.copy(e)).toList();
   }
 
   ShooterRating.copy(ShooterRating other) :
@@ -29,6 +44,11 @@ class ShooterRating {
       this.variance = other.variance,
       this.trend = other.trend,
       this.ratingEvents = other.ratingEvents.map((e) => RatingEvent.copy(e)).toList();
+
+  @override
+  String toString() {
+    return "${shooter.getName(suffixes: false)} ${rating.round()} ($hashCode)";
+  }
 }
 
 class RatingChange {

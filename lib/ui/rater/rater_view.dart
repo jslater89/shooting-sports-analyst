@@ -65,7 +65,7 @@ class _RaterViewState extends State<RaterView> {
   }
 
   List<Widget> _buildRatingRows() {
-    var sortedRatings = widget.rater.knownShooters.values.sorted((a, b) => b.rating.compareTo(a.rating));
+    var sortedRatings = widget.rater.uniqueShooters.sorted((a, b) => b.rating.compareTo(a.rating));
 
     List<Widget> widgets = [];
     for(int i = 0; i < sortedRatings.length; i++) {

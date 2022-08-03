@@ -219,7 +219,7 @@ void _readScoreLines(List<String> stageScoreLines, Map<int, Shooter> shootersByF
       // nor time, we can assume it's someone who didn't complete the stage at all.
       if(!stageFinished) {
         shooter.stageScores[stage] = Score(shooter: shooter, stage: stage);
-        debugPrint("Shooter ${shooter.getName()} did not finish ${stage.name}");
+        // debugPrint("Shooter ${shooter.getName()} did not finish ${stage.name}");
         continue;
       }
 

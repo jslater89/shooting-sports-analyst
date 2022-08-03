@@ -40,6 +40,14 @@ class _RaterPageState extends State<RaterPage> {
   
   List<PracticalMatch> _matches = [];
 
+  static const activeTabs = const [
+    TabContents.open,
+    TabContents.pcc,
+    TabContents.limited,
+    TabContents.carryOptics,
+    TabContents.locap,
+  ];
+
   /// Maps matches to a map of Raters, which hold the incremental ratings
   /// after that match has been processed.
   Map<PracticalMatch, Map<TabContents, Rater>> _ratersByDivision = {};
@@ -51,7 +59,7 @@ class _RaterPageState extends State<RaterPage> {
   void initState() {
     super.initState();
 
-    for(var url in outEastMatchUrls) {
+    for(var url in areaMatchUrls) {
       _matchUrls[url] = null;
       _getMatchResultFile(url);
     }
@@ -110,7 +118,7 @@ class _RaterPageState extends State<RaterPage> {
     if(_ratersByDivision.length < _matches.length) return Container();
 
     return DefaultTabController(
-      length: TabContents.values.length,
+      length: activeTabs.length,
       animationDuration: Duration(seconds: 0),
       initialIndex: 0,
       child: Column(
@@ -118,7 +126,7 @@ class _RaterPageState extends State<RaterPage> {
           Container(
             color: backgroundColor,
             child: TabBar(
-              tabs: TabContents.values.map((t) {
+              tabs: activeTabs.map((t) {
                 return Tab(
                   text: t.label,
                 );
@@ -128,7 +136,7 @@ class _RaterPageState extends State<RaterPage> {
           ..._buildRatingViewHeader(),
           Expanded(
             child: TabBarView(
-              children: TabContents.values.map((t) {
+              children: activeTabs.map((t) {
                 return RaterView(rater: _ratersByDivision[match]![t]!, currentMatch: match);
               }).toList(),
             ),
@@ -243,9 +251,10 @@ class _RaterPageState extends State<RaterPage> {
 
       var m = match!;
       currentMatches.add(m);
+      debugPrint("Considering match ${m.name}");
       var innerMatches = <PracticalMatch>[]..addAll(currentMatches);
       _ratersByDivision[m] ??= {};
-      for(var tabContents in TabContents.values) {
+      for(var tabContents in activeTabs) {
         var divisionMap = <Division, bool>{};
         tabContents.divisions.forEach((element) => divisionMap[element] = true);
 
@@ -259,6 +268,8 @@ class _RaterPageState extends State<RaterPage> {
               )
                 ..mode = FilterMode.or
                 ..divisions = divisionMap
+                ..reentries = false
+                ..scoreDQs = false
           );
         }
         else {

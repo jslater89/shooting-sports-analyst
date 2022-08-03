@@ -22,6 +22,7 @@ class PracticalMatch {
   PracticalMatch copy() {
     var newMatch = PracticalMatch()
         ..name = name
+        ..rawDate = rawDate
         ..date = date
         ..shooters = []
         ..stages = []
@@ -236,11 +237,10 @@ class Shooter {
   String getName({bool suffixes = true}) {
     if(!suffixes) return [firstName, lastName].join(" ");
 
-    String dqSuffix = "";
-    String reentrySuffix = "";
-    if(dq) dqSuffix = "(DQ)";
-    if(reentry) reentrySuffix = "(R)";
-    return [firstName, lastName, reentrySuffix, dqSuffix].join(" ");
+    var components = [firstName, lastName];
+    if(dq) components.add("(DQ)");
+    if(reentry) components.add("(R)");
+    return components.join(" ");
   }
 
   Shooter copy(PracticalMatch parent) {

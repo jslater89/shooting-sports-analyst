@@ -65,9 +65,12 @@ var outEastMatchUrls = [ // Cantrell's stomping grounds
   "https://www.practiscore.com/results/new/170632",
   "https://www.practiscore.com/results/new/167548",
   "https://www.practiscore.com/results/new/164174",
+  "https://www.practiscore.com/results/new/172099",
+  "https://www.practiscore.com/results/new/165379"
 ];
 
-var areaMatchUrls = [ // area matches
+var areaMatchUrls = [
+  // area matches
   "https://www.practiscore.com/results/new/169680",
   "https://www.practiscore.com/results/new/143211",
   "https://www.practiscore.com/results/new/119324",
@@ -102,6 +105,12 @@ var areaMatchUrls = [ // area matches
   "https://www.practiscore.com/results/new/115551",
   "https://www.practiscore.com/results/new/90343",
   "https://www.practiscore.com/results/new/64849",
+
+  // CO nationals
+  "https://www.practiscore.com/results/new/68331",
+  "https://www.practiscore.com/results/new/93422",
+  "https://www.practiscore.com/results/new/120572",
+  "https://www.practiscore.com/results/new/150048",
 ];
 
 var wpaMatchUrls = [ // Western PA
@@ -141,6 +150,19 @@ var wpaMatchUrls = [ // Western PA
   "https://practiscore.com/results/new/174574", // GPGC July
   "https://practiscore.com/results/new/175336", // Castlewood July
   "https://practiscore.com/results/new/175662", // EHPSA July
+  "https://practiscore.com/results/new/176076", // LCSA July
+
+  // // DSS
+  // "https://practiscore.com/results/new/175295",
+  // "https://practiscore.com/results/new/172193",
+  // "https://practiscore.com/results/new/167125",
+  // "https://practiscore.com/results/new/164458",
+  //
+  // // Crooked Creek
+  // "https://practiscore.com/results/new/165060",
+  // "https://practiscore.com/results/new/174540",
+  // "https://practiscore.com/results/new/167893",
+  // "https://practiscore.com/results/new/171745",
 ];
 
 var singleMatchUrl = [
