@@ -23,15 +23,18 @@ class _RatingsContainerPageState extends State<RatingsContainerPage> {
     if(!configured) {
       return ConfigureRatingsPage(
         onSettingsReady: (RatingHistorySettings settings, List<String> matchUrls) {
+          debugPrint("Sending ${matchUrls.length} URLs to rater view");
           setState(() {
             this.settings = settings;
+            this.matchUrls = matchUrls;
           });
         }
       );
     }
     else {
       return RatingsViewPage(
-        settings: settings!
+        settings: settings!,
+        matchUrls: matchUrls!,
       );
     }
   }

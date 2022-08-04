@@ -23,7 +23,7 @@ class MultiplayerPercentEloRater implements RatingSystem {
   final double placeWeight;
   final double scale;
 
-  MultiplayerPercentEloRater({this.K = defaultK, this.scale = defaultScale, this.percentWeight = defaultPercentWeight, this.placeWeight = defaultPlaceWeight});
+  MultiplayerPercentEloRater({this.K = defaultK, this.scale = defaultScale, this.percentWeight = defaultPercentWeight}) : this.placeWeight = 1.0 - percentWeight;
 
   @override
   Map<ShooterRating, RatingChange> updateShooterRatings({required List<ShooterRating> shooters, required Map<ShooterRating, RelativeScore> scores, double matchStrength = 1.0}) {
@@ -74,7 +74,10 @@ class MultiplayerPercentEloRater implements RatingSystem {
     var divisor = (usedScores * (usedScores - 1)) / 2;
     expectedScore = (expectedScore) / divisor;
 
-    var totalPercent = scores.map((rating, score) => MapEntry(rating, score.percent)).values.reduce((value, element) => value + element);
+    var totalPercent = 0.0;
+    for(var relativeScore in scores.values) {
+      totalPercent += relativeScore.percent;
+    }
 
     var actualPercent = aScore.percent;
     if(aScore.percent == 1.0 && highOpponentScore > 0.1) {

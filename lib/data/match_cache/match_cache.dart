@@ -25,7 +25,7 @@ class MatchCache {
 
   Map<String, _MatchCacheEntry> _cache = {};
   late SharedPreferences _prefs;
-  static const _cachePrefix = "cache";
+  static const _cachePrefix = "cache/";
   static const _cacheSeparator = "XxX";
 
   void _init() async {
@@ -74,7 +74,7 @@ class MatchCache {
 
   String _generatePath(_MatchCacheEntry entry) {
     var idString = entry.ids.sorted((a,b) => a.compareTo(b)).join(_cacheSeparator);
-    return "$_cachePrefix/$idString";
+    return "$_cachePrefix$idString";
   }
 
   void save() async {

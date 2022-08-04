@@ -16,9 +16,10 @@ import 'package:uspsa_result_viewer/ui/rater/enter_urls_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/rater_view.dart';
 
 class RatingsViewPage extends StatefulWidget {
-  const RatingsViewPage({Key? key, required this.settings}) : super(key: key);
+  const RatingsViewPage({Key? key, required this.settings, required this.matchUrls}) : super(key: key);
 
   final RatingHistorySettings settings;
+  final List<String> matchUrls;
 
   @override
   State<RatingsViewPage> createState() => _RatingsViewPageState();
@@ -59,7 +60,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       animationDuration: Duration(seconds: 0)
     );
 
-    for(var url in areaMatchUrls) {
+    for(var url in widget.matchUrls) {
       _matchUrls[url] = null;
       _getMatchResultFile(url);
     }
