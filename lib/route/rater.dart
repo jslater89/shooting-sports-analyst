@@ -9,6 +9,7 @@ import 'package:uspsa_result_viewer/data/ranking/raters/multiplayer_percent_elo_
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 import 'package:uspsa_result_viewer/dump_ratings.dart';
+import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/ui/empty_scaffold.dart';
 import 'package:uspsa_result_viewer/ui/filter_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/enter_urls_dialog.dart';
@@ -23,7 +24,7 @@ class RaterPage extends StatefulWidget {
 
 // Tabs for rating categories
 // A slider to allow
-class _RaterPageState extends State<RaterPage> {
+class _RaterPageState extends State<RaterPage> with TickerProviderStateMixin {
   bool _operationInProgress = false;
 
   /// Maps URLs to matches
@@ -42,13 +43,21 @@ class _RaterPageState extends State<RaterPage> {
 
   PracticalMatch? _selectedMatch;
   MatchCache _matchCache = MatchCache();
+  late TabController _tabController;
   bool get _matchesLoading => _matchUrls.containsValue(null);
 
   @override
   void initState() {
     super.initState();
 
-    for(var url in castlewoodMatchUrls) {
+    _tabController = TabController(
+      length: activeTabs.length,
+      vsync: this,
+      initialIndex: 0,
+      animationDuration: Duration(seconds: 0)
+    );
+
+    for(var url in areaMatchUrls) {
       _matchUrls[url] = null;
       _getMatchResultFile(url);
     }
@@ -109,32 +118,29 @@ class _RaterPageState extends State<RaterPage> {
 
     if(!_historyReady) return Container();
 
-    return DefaultTabController(
-      length: activeTabs.length,
-      animationDuration: Duration(seconds: 0),
-      initialIndex: 0,
-      child: Column(
-        children: [
-          Container(
-            color: backgroundColor,
-            child: TabBar(
-              tabs: activeTabs.map((t) {
-                return Tab(
-                  text: t.label,
-                );
-              }).toList(),
-            ),
+    return Column(
+      children: [
+        Container(
+          color: backgroundColor,
+          child: TabBar(
+            controller: _tabController,
+            tabs: activeTabs.map((t) {
+              return Tab(
+                text: t.label,
+              );
+            }).toList(),
           ),
-          ..._buildRatingViewHeader(),
-          Expanded(
-            child: TabBarView(
-              children: activeTabs.map((t) {
-                return RaterView(rater: _history.raterFor(match, t), currentMatch: match);
-              }).toList(),
-            ),
-          )
-        ]
-      ),
+        ),
+        ..._buildRatingViewHeader(),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: activeTabs.map((t) {
+              return RaterView(rater: _history.raterFor(match, t), currentMatch: match);
+            }).toList(),
+          ),
+        )
+      ]
     );
   }
 
@@ -167,24 +173,18 @@ class _RaterPageState extends State<RaterPage> {
   List<Widget> _generateActions() {
     return [
       Tooltip(
-        message: "Add matches",
-        child: IconButton(
-          icon: Icon(Icons.add),
-          onPressed: () async {
-            var newUrls = await showDialog<List<String>>(context: context, builder: (context) {
-              return EnterUrlsDialog();
-            }) ?? [];
-
-            for(var url in newUrls) {
-              if(!_matchUrls.containsKey(url)) {
-                setState(() {
-                  _matchUrls[url] = null;
-                });
-                _getMatchResultFile(url);
+          message: "Download ratings as CSV",
+          child: IconButton(
+            icon: Icon(Icons.save_alt),
+            onPressed: () async {
+              if(_selectedMatch != null) {
+                var tab = activeTabs[_tabController.index];
+                var rater = _history.raterFor(_selectedMatch!, tab);
+                var csv = rater.toCSV();
+                HtmlOr.saveFile("ratings-${tab.label}.csv", csv);
               }
-            }
-          },
-        )
+            },
+          )
       ),
       Tooltip(
         message: "Edit matches",

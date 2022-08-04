@@ -34,4 +34,13 @@ class Controller extends ControlInterface {
 
   @override
   bool get needsProxy => false;
+
+  @override
+  void saveFile(String defaultName, String fileContents) async {
+    var path = await FilePicker.platform.saveFile(fileName: defaultName);
+    if(path != null) {
+      var file = File(path);
+      await file.writeAsString(fileContents);
+    }
+  }
 }

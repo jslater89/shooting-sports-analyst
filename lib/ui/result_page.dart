@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/search_query_parser.dart';
 import 'package:uspsa_result_viewer/data/sort_mode.dart';
+import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/ui/about_dialog.dart';
 import 'package:uspsa_result_viewer/ui/filter_controls.dart';
 import 'package:uspsa_result_viewer/ui/filter_dialog.dart';
@@ -340,6 +341,18 @@ class _ResultPageState extends State<ResultPage> {
       );
     }
     if(_currentMatch != null) {
+      actions.add(
+          Tooltip(
+              message: "Save match results to CSV.",
+              child: IconButton(
+                icon: Icon(Icons.save_alt),
+                onPressed: () {
+                  var csv = _searchedScores.toCSV();
+                  HtmlOr.saveFile("match-results.csv", csv);
+                },
+              )
+          )
+      );
       actions.add(
         Tooltip(
             message: "Display a match breakdown.",

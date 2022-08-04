@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
@@ -410,6 +411,20 @@ class Rater {
         info: update[rating]!.info,
       );
     }
+  }
+
+  String toCSV() {
+    String csv = "Member#,Name,Rating,Variance,Trend,Stages\n";
+
+    var sortedShooters = uniqueShooters.sorted((a, b) => b.rating.compareTo(a.rating));
+
+    for(var s in sortedShooters) {
+      csv += "${Rater.processMemberNumber(s.shooter.memberNumber)},";
+      csv += "${s.shooter.getName()},";
+      csv += "${s.rating.round()},${s.variance.toStringAsFixed(2)},${s.trend.toStringAsFixed(2)},${s.ratingEvents.length}\n";
+    }
+
+    return csv;
   }
 
   void _encounteredMemberNumber(String num) {

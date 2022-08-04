@@ -1,8 +1,10 @@
 
 import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 
 enum FilterMode {
   or, and,
@@ -201,6 +203,22 @@ class RelativeMatchScore {
   late double percentTotalPoints;
 
   Map<Stage, RelativeScore> stageScores = {};
+}
+
+extension MatchScoresToCSV on List<RelativeMatchScore> {
+  String toCSV() {
+    String csv = "Member#,Name,MatchPoints,Percentage\n";
+    var sorted = this.sorted((a, b) => a.total.place.compareTo(b.total.place));
+
+    for(var score in sorted) {
+      csv += "${Rater.processMemberNumber(score.shooter.memberNumber)},";
+      csv += "${score.shooter.getName(suffixes: false)},";
+      csv += "${score.total.relativePoints.toStringAsFixed(2)},";
+      csv += "${(score.total.percent * 100).toStringAsFixed(2)}\n";
+    }
+
+    return csv;
+  }
 }
 
 class RelativeScore {

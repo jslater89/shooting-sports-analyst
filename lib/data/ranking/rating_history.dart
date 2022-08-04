@@ -9,7 +9,16 @@ import 'package:uspsa_result_viewer/ui/filter_dialog.dart';
 class RatingHistory {
   /// The [PracticalMatch]es this rating history contains
   List<PracticalMatch> _matches;
-  List<PracticalMatch> get matches => []..addAll(_matches);
+  List<PracticalMatch> get matches {
+    if(preserveHistory) {
+      return []..addAll(_matches);
+    }
+    else {
+      return [_matches.last];
+    }
+  }
+
+  bool preserveHistory = false;
 
   /// Groups used to calculate ratings for this RatingHistory.
   List<RaterGroup> _groups;
@@ -45,38 +54,61 @@ class RatingHistory {
     var currentMatches = <PracticalMatch>[];
     PracticalMatch? lastMatch;
 
-    for(PracticalMatch match in _matches) {
-      var m = match;
-      currentMatches.add(m);
-      debugPrint("Considering match ${m.name}");
-      var innerMatches = <PracticalMatch>[]..addAll(currentMatches);
+    if(preserveHistory) {
+      for (PracticalMatch match in _matches) {
+        var m = match;
+        currentMatches.add(m);
+        debugPrint("Considering match ${m.name}");
+        var innerMatches = <PracticalMatch>[]..addAll(currentMatches);
+        _ratersByDivision[m] ??= {};
+        for (var group in _groups) {
+          var divisionMap = <Division, bool>{};
+          group.divisions.forEach((element) => divisionMap[element] = true);
+
+          if (lastMatch == null) {
+            _ratersByDivision[m]![group] = Rater(
+                matches: innerMatches,
+                ratingSystem: MultiplayerPercentEloRater(),
+                byStage: true,
+                filters: FilterSet(
+                  empty: true,
+                )
+                  ..mode = FilterMode.or
+                  ..divisions = divisionMap
+                  ..reentries = false
+                  ..scoreDQs = false
+            );
+          }
+          else {
+            Rater newRater = Rater.copy(_ratersByDivision[lastMatch]![group]!);
+            newRater.addMatch(m);
+            _ratersByDivision[m]![group] = newRater;
+          }
+        }
+
+        lastMatch = m;
+      }
+    }
+    else {
+      var m = _matches.last;
       _ratersByDivision[m] ??= {};
-      for(var group in _groups) {
+
+      for (var group in _groups) {
         var divisionMap = <Division, bool>{};
         group.divisions.forEach((element) => divisionMap[element] = true);
-
-        if(lastMatch == null) {
-          _ratersByDivision[m]![group] = Rater(
-              matches: innerMatches,
-              ratingSystem: MultiplayerPercentEloRater(),
-              byStage: true,
-              filters: FilterSet(
-                empty: true,
-              )
-                ..mode = FilterMode.or
-                ..divisions = divisionMap
-                ..reentries = false
-                ..scoreDQs = false
-          );
-        }
-        else {
-          Rater newRater = Rater.copy(_ratersByDivision[lastMatch]![group]!);
-          newRater.addMatch(m);
-          _ratersByDivision[m]![group] = newRater;
-        }
+        _ratersByDivision[m]![group] = Rater(
+            matches: _matches,
+            ratingSystem: MultiplayerPercentEloRater(),
+            byStage: true,
+            filters: FilterSet(
+              empty: true,
+            )
+              ..mode = FilterMode.or
+              ..divisions = divisionMap
+              ..reentries = false
+              ..scoreDQs = false
+        );
       }
-
-      lastMatch = m;
     }
   }
 }

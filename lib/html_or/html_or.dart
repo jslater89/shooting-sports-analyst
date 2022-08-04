@@ -9,6 +9,7 @@ const redirectRoot = kDebugMode ? "/" : "/uspsa-result-viewer/";
 abstract class ControlInterface {
   void navigateTo(String namedRoute);
   Map<String, String> getQueryParams();
+  void saveFile(String defaultName, String fileContents);
   void pickAndReadFile(Function(String?) onFileContents);
   bool get needsProxy;
 }
@@ -24,6 +25,10 @@ class HtmlOr {
   static void pickAndReadFile(BuildContext context, Function(String?) onFileContents) async {
     lastContext = context;
     controller.pickAndReadFile(onFileContents);
+  }
+
+  static void saveFile(String defaultName, String fileContents) async {
+    return controller.saveFile(defaultName, fileContents);
   }
 
   static Map<String, String> getQueryParams() {

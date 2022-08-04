@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
@@ -24,7 +25,7 @@ class MatchCache {
 
   Map<String, _MatchCacheEntry> _cache = {};
   late SharedPreferences _prefs;
-  static const _cachePrefix = "cache/";
+  static const _cachePrefix = "cache";
   static const _cacheSeparator = "XxX";
 
   void _init() async {
@@ -49,10 +50,11 @@ class MatchCache {
           var match = await processScoreFile(reportContents);
           var entry = _MatchCacheEntry(match: match, ids: ids);
           for(var id in ids) {
+            id = id.replaceAll("/","");
             _cache[id] = entry;
           }
 
-          debugPrint("Loaded ${entry.match.name} from $path");
+          debugPrint("Loaded ${entry.match.name} from $path to $ids");
         }
       }
     }
@@ -71,14 +73,20 @@ class MatchCache {
   }
 
   String _generatePath(_MatchCacheEntry entry) {
-    var idString = entry.ids.join(_cacheSeparator);
+    var idString = entry.ids.sorted((a,b) => a.compareTo(b)).join(_cacheSeparator);
     return "$_cachePrefix/$idString";
   }
 
   void save() async {
+    Set<_MatchCacheEntry> alreadySaved = Set();
     for(var entry in _cache.values) {
+      if(alreadySaved.contains(entry)) continue;
+
       var path = _generatePath(entry);
+      if(_prefs.containsKey(path)) continue; // No need to resave
+
       await _prefs.setString(path, entry.match.reportContents);
+      alreadySaved.add(entry);
       debugPrint("Saved ${entry.match.name} to $path");
     }
   }
