@@ -9,12 +9,21 @@ class MultiplayerPercentEloRater implements RatingSystem {
   @override
   double get defaultRating => 1000;
 
-  static const K = 50;
-  static const percentWeight = 0.75;
-  static const placeWeight = 0.25;
+  static const defaultK = 50.0;
+  static const defaultPercentWeight = 0.75;
+  static const defaultPlaceWeight = 0.25;
+  static const defaultScale = 800.0;
 
   @override
   RatingMode get mode => RatingMode.oneShot;
+
+  /// K is the K parameter to the rating Elo algorithm
+  final double K;
+  final double percentWeight;
+  final double placeWeight;
+  final double scale;
+
+  MultiplayerPercentEloRater({this.K = defaultK, this.scale = defaultScale, this.percentWeight = defaultPercentWeight, this.placeWeight = defaultPlaceWeight});
 
   @override
   Map<ShooterRating, RatingChange> updateShooterRatings({required List<ShooterRating> shooters, required Map<ShooterRating, RelativeScore> scores, double matchStrength = 1.0}) {
@@ -114,6 +123,6 @@ class MultiplayerPercentEloRater implements RatingSystem {
   }
 
   double _probability(double lose, double win) {
-    return 1.0 / (1.0 + (pow(10, (lose - win) / 800)));
+    return 1.0 / (1.0 + (pow(10, (lose - win) / scale)));
   }
 }

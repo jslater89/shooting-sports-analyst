@@ -9,6 +9,8 @@ class EnterUrlsDialog extends StatefulWidget {
 
 class _EnterUrlsDialogState extends State<EnterUrlsDialog> {
   TextEditingController urlController = TextEditingController();
+
+  String _errorText = "";
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -18,11 +20,12 @@ class _EnterUrlsDialogState extends State<EnterUrlsDialog> {
         children: [
           SizedBox(width: 600),
           Text("Enter match URLs one per line."),
+          Text(_errorText, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).errorColor)),
           TextField(
             keyboardType: TextInputType.multiline,
             maxLines: null,
             decoration: InputDecoration(
-
+              hintText: "https://practiscore.com/results/new/..."
             ),
             controller: urlController,
           )
@@ -38,10 +41,25 @@ class _EnterUrlsDialogState extends State<EnterUrlsDialog> {
         TextButton(
           child: Text("OK"),
           onPressed: () {
-            Navigator.of(context).pop(<String>[]);
+            List<String> urls = urlController.text.split("\n");
+            if(_validate(urls)) {
+              Navigator.of(context).pop(urls);
+            }
+            else{
+              setState(() {
+                _errorText = "Some URLs failed to validate.";
+              });
+            }
           },
         )
       ],
     );
+  }
+
+  bool _validate(List<String> urls) {
+    for(var url in urls) {
+      if(!url.contains("practiscore.com/results/new")) return false;
+    }
+    return true;
   }
 }

@@ -15,16 +15,18 @@ import 'package:uspsa_result_viewer/ui/filter_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/enter_urls_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/rater_view.dart';
 
-class RaterPage extends StatefulWidget {
-  const RaterPage({Key? key}) : super(key: key);
+class RatingsViewPage extends StatefulWidget {
+  const RatingsViewPage({Key? key, required this.settings}) : super(key: key);
+
+  final RatingHistorySettings settings;
 
   @override
-  State<RaterPage> createState() => _RaterPageState();
+  State<RatingsViewPage> createState() => _RatingsViewPageState();
 }
 
 // Tabs for rating categories
 // A slider to allow
-class _RaterPageState extends State<RaterPage> with TickerProviderStateMixin {
+class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderStateMixin {
   bool _operationInProgress = false;
 
   /// Maps URLs to matches
@@ -67,9 +69,8 @@ class _RaterPageState extends State<RaterPage> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).primaryColor;
     final backgroundColor = Theme.of(context).backgroundColor;
-
     var animation = (_operationInProgress) ?
-    AlwaysStoppedAnimation<Color>(backgroundColor) : AlwaysStoppedAnimation<Color>(primaryColor);
+      AlwaysStoppedAnimation<Color>(backgroundColor) : AlwaysStoppedAnimation<Color>(primaryColor);
 
     List<Widget> actions = _generateActions();
 
@@ -214,7 +215,7 @@ class _RaterPageState extends State<RaterPage> with TickerProviderStateMixin {
         ];
 
         _matchCache.save();
-        _history = RatingHistory(groups: activeTabs, matches: actualMatches);
+        _history = RatingHistory(settings: widget.settings, matches: actualMatches);
 
         debugPrint("History ready with ${_history.matches.length} matches");
         setState(() {

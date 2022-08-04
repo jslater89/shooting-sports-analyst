@@ -10,7 +10,8 @@ import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/route/local_upload.dart';
 import 'package:uspsa_result_viewer/route/match_select.dart';
 import 'package:uspsa_result_viewer/route/practiscore_url.dart';
-import 'package:uspsa_result_viewer/route/rater.dart';
+import 'package:uspsa_result_viewer/route/ratings.dart';
+import 'package:uspsa_result_viewer/route/view_ratings.dart';
 import 'configure_nonweb.dart' if (dart.library.html) 'configure_web.dart';
 import 'package:fluro/fluro.dart' as fluro;
 
@@ -50,7 +51,7 @@ void main() {
   ));
   globals.router.define('/rater', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
     handlerFunc: (context, params) {
-      return RaterPage();
+      return RatingsContainerPage();
     }
   ));
   globals.router.define('/web/:matchId', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
