@@ -362,40 +362,64 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                 child:
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 40),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text("Matches", style: Theme.of(context).textTheme.labelLarge),
-                            IconButton(
-                              icon: Icon(Icons.add),
-                              color: Theme.of(context).primaryColor,
-                              onPressed: () async {
-                                var urls = await showDialog<List<String>>(context: context, builder: (context) {
-                                  return EnterUrlsDialog();
-                                });
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text("Matches", style: Theme.of(context).textTheme.labelLarge),
+                              IconButton(
+                                icon: Icon(Icons.add),
+                                color: Theme.of(context).primaryColor,
+                                onPressed: () async {
+                                  var urls = await showDialog<List<String>>(context: context, builder: (context) {
+                                    return EnterUrlsDialog();
+                                  });
 
-                                if(urls == null) return;
+                                  if(urls == null) return;
 
-                                for(var url in urls) {
-                                  if(!matchUrls.contains(url)) {
-                                    matchUrls.add(url);
+                                  for(var url in urls) {
+                                    if(!matchUrls.contains(url)) {
+                                      matchUrls.add(url);
+                                    }
                                   }
-                                }
 
-                                setState(() {
-                                  // matchUrls
-                                });
-                              },
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 10),
-                        ...matchUrls.map((url) => Text(url)),
-                      ],
+                                  setState(() {
+                                    // matchUrls
+                                  });
+                                },
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.remove),
+                                color: Theme.of(context).primaryColor,
+                                onPressed: () async {
+                                  setState(() {
+                                    matchUrls.clear();
+                                  });
+                                }
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 10),
+                          ...matchUrls.map((url) => Row(
+                            children: [
+                              Text(url),
+                              IconButton(
+                                icon: Icon(Icons.remove),
+                                color: Theme.of(context).primaryColor,
+                                onPressed: () {
+                                  setState(() {
+                                    matchUrls.remove(url);
+                                  });
+                                },
+                              )
+                            ],
+                          )),
+                        ],
+                      ),
                     ),
                   )
               )

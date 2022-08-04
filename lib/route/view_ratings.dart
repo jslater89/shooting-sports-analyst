@@ -147,26 +147,33 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   }
 
   List<Widget> _buildRatingViewHeader() {
+    var size = MediaQuery.of(context).size;
+
     return [
-      Container(
-        color: Colors.white,
-        child: DropdownButton<PracticalMatch>(
-          underline: Container(
-            height: 1,
-            color: Colors.black,
+      ConstrainedBox(
+        constraints: BoxConstraints(minWidth: size.width, maxWidth: size.width),
+        child: Container(
+          color: Colors.white,
+          child: Center(
+            child: DropdownButton<PracticalMatch>(
+              underline: Container(
+                height: 1,
+                color: Colors.black,
+              ),
+              items: _history.matches.reversed.map((m) {
+                return DropdownMenuItem<PracticalMatch>(
+                  child: Text(m.name ?? "<unnamed match>"),
+                  value: m,
+                );
+              }).toList(),
+              value: _selectedMatch,
+              onChanged: _history.matches.length == 1 ? null : (m) {
+                setState(() {
+                  _selectedMatch = m;
+                });
+              },
+            ),
           ),
-          items: _history.matches.reversed.map((m) {
-            return DropdownMenuItem<PracticalMatch>(
-              child: Text(m.name ?? "<unnamed match>"),
-              value: m,
-            );
-          }).toList(),
-          value: _selectedMatch,
-          onChanged: (m) {
-            setState(() {
-              _selectedMatch = m;
-            });
-          },
         ),
       ),
     ];
