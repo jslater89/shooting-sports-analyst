@@ -22,7 +22,6 @@ class PractiscoreResultPage extends StatefulWidget {
   State<StatefulWidget> createState() {
     return _PractiscoreResultPageState();
   }
-
 }
 
 class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
@@ -148,7 +147,6 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
       onInnerContextAssigned: (context) => _innerContext = context,
     );
   }
-
 }
 
 String getProxyUrl() {

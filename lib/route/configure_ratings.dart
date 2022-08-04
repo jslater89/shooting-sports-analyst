@@ -502,7 +502,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
             var names = RatingProjectManager().savedProjects().toList();
 
             var projectName = await showDialog<String>(context: context, builder: (context) {
-              return SelectProjectDialog(projectNames: names);
+              return SelectProjectDialog(
+                projectNames: names,
+              );
             });
 
             var project = RatingProjectManager().loadProject(projectName ?? "");

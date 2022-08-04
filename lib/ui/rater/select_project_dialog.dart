@@ -1,11 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 
-class SelectProjectDialog extends StatelessWidget {
+class SelectProjectDialog extends StatefulWidget {
   const SelectProjectDialog({Key? key, required this.projectNames}) : super(key: key);
 
   final List<String> projectNames;
 
+  @override
+  State<SelectProjectDialog> createState() => _SelectProjectDialogState();
+}
+
+class _SelectProjectDialogState extends State<SelectProjectDialog> {
+  List<String> _localNames = [];
+  @override
+  void initState() {
+    super.initState();
+    _localNames = widget.projectNames;
+  }
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -15,15 +26,42 @@ class SelectProjectDialog extends StatelessWidget {
         child: ListView.builder(
           shrinkWrap: true,
           itemBuilder: (context, i) {
-            var name = projectNames[i];
+            var name = _localNames[i];
             return ListTile(
               title: Text(name),
+              trailing: IconButton(
+                icon: Icon(Icons.delete),
+                onPressed: () async {
+                  var delete = await showDialog<bool>(context: context, builder: (context) {
+                    return AlertDialog(
+                      title: Text("Are you sure?"),
+                      actions: [
+                        TextButton(
+                          child: Text("CANCEL"),
+                          onPressed: () { Navigator.of(context).pop(false); },
+                        ),
+                        TextButton(
+                          child: Text("DELETE"),
+                          onPressed: () { Navigator.of(context).pop(true); },
+                        )
+                      ],
+                    );
+                  });
+
+                  if(delete ?? false) {
+                    RatingProjectManager().deleteProject(name);
+                    setState(() {
+                      _localNames.remove(name);
+                    });
+                  }
+                },
+              ),
               onTap: () {
                 Navigator.of(context).pop(name);
               },
             );
           },
-          itemCount: projectNames.length,
+          itemCount: _localNames.length,
         ),
       ),
     );

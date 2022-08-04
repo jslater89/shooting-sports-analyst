@@ -110,6 +110,11 @@ class RatingProjectManager {
     await _prefs.setString("$projectPrefix${project.name}", encoded);
   }
 
+  Future<void> deleteProject(String name) async {
+    _projects.remove(name);
+    await _prefs.remove("$projectPrefix$name");
+  }
+
   List<String> savedProjects() {
     return _projects.keys.toList();
   }
