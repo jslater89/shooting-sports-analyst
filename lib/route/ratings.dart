@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/route/configure_ratings.dart';
@@ -22,8 +23,13 @@ class _RatingsContainerPageState extends State<RatingsContainerPage> {
   Widget build(BuildContext context) {
     if(!configured) {
       return ConfigureRatingsPage(
-        onSettingsReady: (RatingHistorySettings settings, List<String> matchUrls) {
+        onSettingsReady: (RatingHistorySettings settings, List<String> matchUrls) async {
           debugPrint("Sending ${matchUrls.length} URLs to rater view");
+          var p = RatingProject(name: RatingProjectManager.autosaveName, settings: settings, matchUrls: matchUrls);
+
+          await RatingProjectManager().ready;
+          RatingProjectManager().saveProject(p);
+
           setState(() {
             this.settings = settings;
             this.matchUrls = matchUrls;

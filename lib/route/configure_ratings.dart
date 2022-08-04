@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/multiplayer_percent_elo_rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
+import 'package:uspsa_result_viewer/ui/rater/enter_name_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/enter_urls_dialog.dart';
+import 'package:uspsa_result_viewer/ui/rater/select_project_dialog.dart';
 
 class ConfigureRatingsPage extends StatefulWidget {
   const ConfigureRatingsPage({Key? key, required this.onSettingsReady}) : super(key: key);
@@ -16,30 +19,14 @@ class ConfigureRatingsPage extends StatefulWidget {
 class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   final bool _operationInProgress = false;
 
-  static const combinedLocap = const [
-    RaterGroup.open,
-    RaterGroup.limited,
-    RaterGroup.pcc,
-    RaterGroup.carryOptics,
-    RaterGroup.locap,
-  ];
-
-  static const splitLocap = const [
-    RaterGroup.open,
-    RaterGroup.limited,
-    RaterGroup.pcc,
-    RaterGroup.carryOptics,
-    RaterGroup.production,
-    RaterGroup.singleStack,
-    RaterGroup.revolver,
-    RaterGroup.limited10,
-  ];
-
   List<String> matchUrls = [];
+  String? _title;
 
   @override
   void initState() {
     super.initState();
+
+    _loadAutosave();
 
     _pctWeightController.addListener(() {
       if(_pctWeightController.text.length > 0) {
@@ -68,6 +55,31 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     });
   }
 
+  Future<void> _loadAutosave() async {
+    await RatingProjectManager().ready;
+    var autosave = RatingProjectManager().loadProject(RatingProjectManager.autosaveName);
+    if(autosave != null) {
+      _loadProject(autosave);
+      debugPrint("Loaded autosave");
+    }
+    else {
+      debugPrint("Autosaved project is null");
+    }
+  }
+
+  void _loadProject(RatingProject project) {
+    setState(() {
+      matchUrls = []..addAll(project.matchUrls);
+      _keepHistory = project.settings.preserveHistory;
+      _byStage = project.settings.byStage;
+      _combineLocap = project.settings.groups.contains(RaterGroup.locap);
+    });
+    var algorithm = project.settings.algorithm as MultiplayerPercentEloRater;
+    _kController.text = "${algorithm.K}";
+    _scaleController.text = "${algorithm.scale}";
+    _pctWeightController.text = "${algorithm.percentWeight}";
+  }
+
   @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).primaryColor;
@@ -75,17 +87,24 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     var animation = (_operationInProgress) ?
       AlwaysStoppedAnimation<Color>(backgroundColor) : AlwaysStoppedAnimation<Color>(primaryColor);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("Shooter Rating Calculator"),
-        centerTitle: true,
-        actions: _generateActions(),
-        bottom: _operationInProgress ? PreferredSize(
-          preferredSize: Size(double.infinity, 5),
-          child: LinearProgressIndicator(value: null, backgroundColor: primaryColor, valueColor: animation),
-        ) : null,
+    return WillPopScope(
+      onWillPop: () async {
+        await _saveProject(RatingProjectManager.autosaveName);
+
+        return true;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(_title ?? "Shooter Rating Calculator"),
+          centerTitle: true,
+          actions: _generateActions(),
+          bottom: _operationInProgress ? PreferredSize(
+            preferredSize: Size(double.infinity, 5),
+            child: LinearProgressIndicator(value: null, backgroundColor: primaryColor, valueColor: animation),
+          ) : null,
+        ),
+        body: _body(),
       ),
-      body: _body(),
     );
   }
 
@@ -100,6 +119,49 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
   String _validationError = "";
 
+  RatingHistorySettings? _makeAndValidateSettings() {
+
+    double? K = double.tryParse(_kController.text);
+    double? scale = double.tryParse(_scaleController.text);
+    double? pctWeight = double.tryParse(_pctWeightController.text);
+
+    if(K == null) {
+      setState(() {
+        _validationError = "K factor incorrectly formatted";
+      });
+      return null;
+    }
+
+    if(scale == null) {
+      setState(() {
+        _validationError = "Scale factor incorrectly formatted";
+      });
+      return null;
+    }
+
+    if(pctWeight == null || pctWeight > 1 || pctWeight < 0) {
+      setState(() {
+        _validationError = "Percent weight incorrectly formatted or out of range (0-1)";
+      });
+      return null;
+    }
+
+    var ratingSystem = MultiplayerPercentEloRater(
+      K:  K,
+      scale: scale,
+      percentWeight: pctWeight,
+    );
+
+    var groups = _combineLocap ? RatingProjectManager.combinedLocap : RatingProjectManager.splitLocap;
+
+    return RatingHistorySettings(
+      algorithm: ratingSystem,
+      groups: groups,
+      byStage: _byStage,
+      preserveHistory: _keepHistory,
+    );
+  }
+
   Widget _body() {
     return Column(
       children: [
@@ -112,39 +174,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
               ElevatedButton(
                 child: Text("ADVANCE"),
                 onPressed: () {
+                  var settings = _makeAndValidateSettings();
 
-                  double? K = double.tryParse(_kController.text);
-                  double? scale = double.tryParse(_scaleController.text);
-                  double? pctWeight = double.tryParse(_pctWeightController.text);
-
-                  if(K == null) {
-                    setState(() {
-                      _validationError = "K factor incorrectly formatted";
-                    });
-                    return;
-                  }
-
-                  if(scale == null) {
-                    setState(() {
-                      _validationError = "Scale factor incorrectly formatted";
-                    });
-                    return;
-                  }
-
-                  if(pctWeight == null || pctWeight > 1 || pctWeight < 0) {
-                    setState(() {
-                      _validationError = "Percent weight incorrectly formatted or out of range (0-1)";
-                    });
-                    return;
-                  }
-
-                  var ratingSystem = MultiplayerPercentEloRater(
-                    K:  K,
-                    scale: scale,
-                    percentWeight: pctWeight,
-                  );
-
-                  var groups = _combineLocap ? combinedLocap : splitLocap;
+                  if(settings == null) return;
 
                   if(matchUrls.isEmpty) {
                     setState(() {
@@ -160,7 +192,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                     return;
                   }
 
-                  widget.onSettingsReady(RatingHistorySettings(algorithm: ratingSystem, byStage: _byStage, preserveHistory: _keepHistory, groups: groups), matchUrls);
+                  widget.onSettingsReady(settings, matchUrls);
                 },
               ),
               SizedBox(width: 20),
@@ -430,14 +462,34 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     );
   }
 
+  Future<void> _saveProject(String name) async {
+    var settings = _makeAndValidateSettings();
+    if(settings == null || name.isEmpty) return;
+
+    var project = RatingProject(
+        name: name,
+        settings: settings,
+        matchUrls: []..addAll(matchUrls)
+    );
+
+    await RatingProjectManager().saveProject(project);
+    debugPrint("Saved ${project.name}");
+  }
+
   List<Widget> _generateActions() {
     return [
       Tooltip(
         message: "Save current project to local storage.",
         child: IconButton(
           icon: Icon(Icons.save),
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Sorry, not done yet")));
+          onPressed: () async {
+            var name = await showDialog<String>(context: context, builder: (context) {
+              return EnterNameDialog();
+            });
+
+            if(name == null) return;
+
+            await _saveProject(name);
           },
         ),
       ),
@@ -445,8 +497,22 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         message: "Open a project from local storage.",
         child: IconButton(
           icon: Icon(Icons.folder_open),
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Sorry, also not done yet")));
+          onPressed: () async {
+            await RatingProjectManager().ready;
+            var names = RatingProjectManager().savedProjects().toList();
+
+            var projectName = await showDialog<String>(context: context, builder: (context) {
+              return SelectProjectDialog(projectNames: names);
+            });
+
+            var project = RatingProjectManager().loadProject(projectName ?? "");
+            if(project != null) {
+              _loadProject(project);
+              debugPrint("Loaded ${project.name}");
+              setState(() {
+                _title = "Project: ${project.name}";
+              });
+            }
           },
         ),
       )
