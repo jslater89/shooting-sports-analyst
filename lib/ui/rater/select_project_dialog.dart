@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
+import 'package:uspsa_result_viewer/ui/confirm_dialog.dart';
 
 class SelectProjectDialog extends StatefulWidget {
   const SelectProjectDialog({Key? key, required this.projectNames}) : super(key: key);
@@ -33,19 +34,7 @@ class _SelectProjectDialogState extends State<SelectProjectDialog> {
                 icon: Icon(Icons.delete),
                 onPressed: () async {
                   var delete = await showDialog<bool>(context: context, builder: (context) {
-                    return AlertDialog(
-                      title: Text("Are you sure?"),
-                      actions: [
-                        TextButton(
-                          child: Text("CANCEL"),
-                          onPressed: () { Navigator.of(context).pop(false); },
-                        ),
-                        TextButton(
-                          child: Text("DELETE"),
-                          onPressed: () { Navigator.of(context).pop(true); },
-                        )
-                      ],
-                    );
+                    return ConfirmDialog();
                   });
 
                   if(delete ?? false) {

@@ -4,6 +4,7 @@ import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/multiplayer_percent_elo_rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
+import 'package:uspsa_result_viewer/ui/confirm_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/enter_name_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/enter_urls_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/select_project_dialog.dart';
@@ -429,9 +430,17 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 icon: Icon(Icons.remove),
                                 color: Theme.of(context).primaryColor,
                                 onPressed: () async {
-                                  setState(() {
-                                    matchUrls.clear();
+                                  var delete = await showDialog<bool>(context: context, builder: (context) {
+                                    return ConfirmDialog(
+                                      content: Text("This will clear all currently-selected matches."),
+                                    );
                                   });
+
+                                  if(delete ?? false) {
+                                    setState(() {
+                                      matchUrls.clear();
+                                    });
+                                  }
                                 }
                               ),
                             ],
@@ -484,8 +493,16 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         child: IconButton(
           icon: Icon(Icons.clear_all),
           onPressed: () async {
-            await MatchCache().ready;
-            MatchCache().clear();
+            var delete = await showDialog<bool>(context: context, builder: (context) {
+              return ConfirmDialog(
+                content: Text("Clearing the match cache will redownload all matches from PractiScore.")
+              );
+            });
+
+            if(delete ?? false) {
+              await MatchCache().ready;
+              MatchCache().clear();
+            }
           },
         ),
       ),

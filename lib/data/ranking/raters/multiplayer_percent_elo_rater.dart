@@ -115,8 +115,9 @@ class MultiplayerPercentEloRater implements RatingSystem {
       throw StateError("NaN/Infinite");
     }
 
+    var hf = aScore.score.getHitFactor(scoreDQ: false);
     List<String> info = [
-      "Actual/expected percent: ${(percentComponent * totalPercent * 100).toStringAsFixed(2)}/${(expectedScore * totalPercent * 100).toStringAsFixed(2)}",
+      "Actual/expected percent: ${(percentComponent * totalPercent * 100).toStringAsFixed(2)}/${(expectedScore * totalPercent * 100).toStringAsFixed(2)} on ${hf.toStringAsFixed(2)}HF",
       "Actual/expected place: ${aScore.place}/${(scores.length - (expectedScore * divisor)).toStringAsFixed(4)}",
       "Rating±Change: ${aRating.rating.round()} + ${change.toStringAsFixed(2)} (${changeFromPercent.toStringAsFixed(2)} from pct, ${changeFromPlace.toStringAsFixed(2)} from place)",
       "effective K, multipliers: ${(K * placementMultiplier * matchStrength * zeroMultiplier).toStringAsFixed(2)}, SoS ${matchStrength.toStringAsFixed(3)}, IP ${placementMultiplier.toStringAsFixed(2)}, Zero ${zeroMultiplier.toStringAsFixed(2)}",
