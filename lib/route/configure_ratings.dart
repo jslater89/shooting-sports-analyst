@@ -161,7 +161,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   String _validationError = "";
 
   RatingHistorySettings? _makeAndValidateSettings() {
-
     double? K = double.tryParse(_kController.text);
     double? scale = double.tryParse(_scaleController.text);
     double? pctWeight = double.tryParse(_pctWeightController.text);

@@ -25,7 +25,7 @@ Future<String?> processMatchUrl(String matchUrl, {BuildContext? context}) async 
   // blocks of alphanumeric characters
   if(!matchId.contains(r"-")) {
     try {
-      debugPrint("Trying to get match from URL: $matchUrl");
+      if(verboseParse) debugPrint("Trying to get match from URL: $matchUrl");
       var response = await http.get(Uri.parse("${getProxyUrl()}$matchUrl"));
       if(response.statusCode == 404) {
         if(context != null) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Match not found.")));
@@ -62,7 +62,7 @@ Future<String?> processMatchUrl(String matchUrl, {BuildContext? context}) async 
 Future<PracticalMatch?> getPractiscoreMatchHeadless(String matchId) async {
   var proxyUrl = getProxyUrl();
   var reportUrl = "${proxyUrl}https://practiscore.com/reports/web/$matchId";
-  debugPrint("Report download URL: $reportUrl");
+  if(verboseParse) debugPrint("Report download URL: $reportUrl");
 
   var responseString = "";
   try {
@@ -79,7 +79,7 @@ Future<PracticalMatch?> getPractiscoreMatchHeadless(String matchId) async {
       return null;
     }
 
-    debugPrint("response: ${response.body.split("\n").first}");
+    if(verboseParse) debugPrint("response: ${response.body.split("\n").first}");
   }
   catch(err, stackTrace) {
     debugPrint("download error: $err ${err.runtimeType}");
@@ -94,7 +94,7 @@ Future<PracticalMatch?> getPractiscoreMatchHeadless(String matchId) async {
 
   try {
     var token = getClubNameToken(responseString);
-    debugPrint("Token: $token");
+    if(verboseParse) debugPrint("Token: $token");
     var body = {
       '_token': token,
       'ClubName': 'None',

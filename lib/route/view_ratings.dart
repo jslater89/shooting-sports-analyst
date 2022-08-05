@@ -125,7 +125,6 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   int _totalProgress = 0;
 
   Widget _matchLoadingIndicator() {
-    debugPrint("Progress: $_currentProgress/$_totalProgress");
     return SingleChildScrollView(
       child: Center(
         child: Column(
@@ -388,7 +387,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
           _totalProgress = totalSteps;
         });
 
-        debugPrint("Match cache progress: $_currentProgress/$_totalProgress");
+        //debugPrint("Match cache progress: $_currentProgress/$_totalProgress");
         await Future.delayed(Duration(milliseconds: 50));
       }
     });
@@ -405,7 +404,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         _totalProgress = totalSteps;
       });
 
-      debugPrint("Rating history progress: $_currentProgress/$_totalProgress");
+      // debugPrint("Rating history progress: $_currentProgress/$_totalProgress");
       await Future.delayed(Duration(milliseconds: 50));
     });
 

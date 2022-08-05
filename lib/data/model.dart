@@ -5,6 +5,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
+import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 
 enum FilterMode {
   or, and,
@@ -497,7 +498,7 @@ extension DivisionFrom on Division {
       case "revo":
       case "revolver": return Division.revolver;
       default: {
-        debugPrint("Unknown division: $s");
+        if(verboseParse) debugPrint("Unknown division: $s");
         return Division.unknown;
       }
     }
@@ -544,6 +545,9 @@ enum Classification {
 extension ClassificationFrom on Classification {
   static Classification string(String s) {
     s = s.trim().toLowerCase();
+
+    if(s.isEmpty) return Classification.U;
+
     switch(s) {
       case "gm": return Classification.GM;
       case "grandmaster": return Classification.GM;
@@ -557,7 +561,7 @@ extension ClassificationFrom on Classification {
       case "u": return Classification.U;
       case "x": return Classification.U;
       default:
-        debugPrint("Unknown classification: $s");
+        if(verboseParse) debugPrint("Unknown classification: $s");
         return Classification.U;
     }
   }

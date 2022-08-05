@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:intl/intl.dart';
 
+const verboseParse = false;
+
 Future<PracticalMatch> processScoreFile(String fileContents) async {
   String reportFile = fileContents.replaceAll("\r\n", "\n");
   List<String> lines = reportFile.split("\n");
@@ -39,7 +41,7 @@ PracticalMatch _processResultLines({required List<String> infoLines, required Li
   Map<int, Shooter> shootersByFileId = _readCompetitorLines(match, competitorLines);
   Map<int, Stage> stagesByFileId = _readStageLines(match, stageLines);
 
-  _readScoreLines(stageScoreLines, shootersByFileId, stagesByFileId);
+  int stageScoreCount = _readScoreLines(stageScoreLines, shootersByFileId, stagesByFileId);
 
   for(Shooter s in match.shooters) {
     for(Stage stage in match.stages) {
@@ -48,6 +50,8 @@ PracticalMatch _processResultLines({required List<String> infoLines, required Li
       }
     }
   }
+
+  debugPrint("Processed match with ${match.shooters.length} shooters, ${match.stages.length} stages, and $stageScoreCount stage scores");
 
   return match;
 }
@@ -59,11 +63,11 @@ final DateFormat _df = DateFormat("MM/dd/yyyy");
 void _readInfoLines(PracticalMatch match, List<String> infoLines) {
   for(String line in infoLines) {
     if(line.startsWith(_MATCH_NAME)) {
-      debugPrint("Found match name");
+      // debugPrint("Found match name");
       match.name = line.replaceFirst(_MATCH_NAME, "");
     }
     else if(line.startsWith(_MATCH_DATE)) {
-      debugPrint("Found match date");
+      // debugPrint("Found match date");
       match.rawDate = line.replaceFirst(_MATCH_DATE, "");
       try {
         match.date = _df.parse(match.rawDate!);
@@ -109,7 +113,7 @@ Map<int, Shooter> _readCompetitorLines(PracticalMatch match, List<String> compet
     }
   }
 
-  debugPrint("Read ${shootersById.length} shooters");
+  // debugPrint("Read ${shootersById.length} shooters");
 
   return shootersById;
 }
@@ -146,7 +150,7 @@ Map<int, Stage> _readStageLines(PracticalMatch match, List<String> stageLines) {
   }
 
   match.maxPoints = maxPoints;
-  debugPrint("Read ${stagesById.length} stages");
+  // debugPrint("Read ${stagesById.length} stages");
 
   return stagesById;
 }
@@ -174,7 +178,7 @@ const int _T5 = 24;
 const int _TIME = 25;
 const int _RAW_POINTS = 26;
 const int _TOTAL_POINTS = 27;
-void _readScoreLines(List<String> stageScoreLines, Map<int, Shooter> shootersByFileId, Map<int, Stage> stagesByFileId) {
+int _readScoreLines(List<String> stageScoreLines, Map<int, Shooter> shootersByFileId, Map<int, Stage> stagesByFileId) {
   int i = 0;
   for(String line in stageScoreLines) {
     try {
@@ -226,13 +230,13 @@ void _readScoreLines(List<String> stageScoreLines, Map<int, Shooter> shootersByF
       shooter.stageScores[stage] = s;
 
       if(s.penaltyPoints != int.parse(splitLine[_PENALTY_POINTS])) {
-        debugPrint("Penalty points mismatch for ${shooter.getName()} on ${stage.name}: ${s.penaltyPoints} vs ${splitLine[_PENALTY_POINTS]}");
+        if(verboseParse) debugPrint("Penalty points mismatch for ${shooter.getName()} on ${stage.name}: ${s.penaltyPoints} vs ${splitLine[_PENALTY_POINTS]}");
       }
       if(s.rawPoints != int.parse(splitLine[_RAW_POINTS])) {
-        debugPrint("Raw points mismatch for ${shooter.getName()} on ${stage.name}: ${s.rawPoints} vs ${splitLine[_RAW_POINTS]}");
+        if(verboseParse) debugPrint("Raw points mismatch for ${shooter.getName()} on ${stage.name}: ${s.rawPoints} vs ${splitLine[_RAW_POINTS]}");
       }
       if(s.getTotalPoints(scoreDQ: false) != int.parse(splitLine[_TOTAL_POINTS])) {
-        debugPrint("Total points mismatch for ${shooter.getName()} on ${stage.name}: ${s.getTotalPoints(scoreDQ: false)} vs ${splitLine[_TOTAL_POINTS]}");
+        if(verboseParse) debugPrint("Total points mismatch for ${shooter.getName()} on ${stage.name}: ${s.getTotalPoints(scoreDQ: false)} vs ${splitLine[_TOTAL_POINTS]}");
       }
 
       i++;
@@ -241,5 +245,6 @@ void _readScoreLines(List<String> stageScoreLines, Map<int, Shooter> shootersByF
     }
   }
 
-  debugPrint("Processed $i stage scores");
+  // debugPrint("Processed $i stage scores");
+  return i;
 }

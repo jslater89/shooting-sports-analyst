@@ -153,7 +153,7 @@ class Rater {
         // If the shooter is already mapped, or if both numbers are 5-digit non-lifetime numbers, continue
         if((knownShooters[list[0]] == knownShooters[list[1]]) || (list[0].length > 4 && list[1].length > 4)) continue;
 
-        debugPrint("Shooter $name has two member numbers, not already mapped: $list (${knownShooters[list[0]]}, ${knownShooters[list[1]]})");
+        debugPrint("Shooter $name has two member numbers, mapping: $list (${knownShooters[list[0]]}, ${knownShooters[list[1]]})");
 
         var rating0 = knownShooters[list[0]]!;
         var rating1 = knownShooters[list[1]]!;
@@ -167,14 +167,14 @@ class Rater {
           knownShooters[list[1]] = rating0;
           _memberNumberMappings[list[1]] = list[0];
 
-          debugPrint("Mapped r1-r0 ${list[1]} to ${list[0]} with ${rating0.ratingEvents.length} ratings during deduplication");
+          // debugPrint("Mapped r1-r0 ${list[1]} to ${list[0]} with ${rating0.ratingEvents.length} ratings during deduplication");
         }
         else {
           rating1.copyRatingFrom(rating0);
           knownShooters[list[0]] = rating1;
           _memberNumberMappings[list[0]] = list[1];
 
-          debugPrint("Mapped r0-r1 ${list[0]} to ${list[1]} with ${rating1.ratingEvents.length} ratings during deduplication");
+          // debugPrint("Mapped r0-r1 ${list[0]} to ${list[1]} with ${rating1.ratingEvents.length} ratings during deduplication");
         }
       }
     }

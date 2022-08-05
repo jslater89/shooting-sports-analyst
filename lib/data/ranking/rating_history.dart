@@ -120,7 +120,7 @@ class RatingHistory {
     group.divisions.forEach((element) => divisionMap[element] = true);
     return Rater(
         matches: matches,
-        ratingSystem: MultiplayerPercentEloRater(),
+        ratingSystem: _settings.algorithm,
         byStage: _settings.byStage,
         filters: FilterSet(
           empty: true,
