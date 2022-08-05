@@ -139,7 +139,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                 value: _currentProgress / _totalProgress,
               ),
             SizedBox(height: 20),
-            ..._matchUrls.keys.map((url) {
+            ..._matchUrls.keys.toList().reversed.map((url) {
               return Text("${url.split("/").last}: ${_matchUrls[url]?.name ?? "Loading..."}");
             })
           ],
