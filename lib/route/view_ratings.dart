@@ -65,13 +65,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   late RatingHistory _history;
   _LoadingState _loadingState = _LoadingState.notStarted;
 
-  static const activeTabs = const [
-    RaterGroup.open,
-    RaterGroup.pcc,
-    RaterGroup.limited,
-    RaterGroup.carryOptics,
-    RaterGroup.locap,
-  ];
+  late List<RaterGroup> activeTabs;
 
   PracticalMatch? _selectedMatch;
   MatchCache _matchCache = MatchCache();
@@ -80,6 +74,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   @override
   void initState() {
     super.initState();
+
+    activeTabs = widget.settings.groups;
 
     _searchController = TextEditingController();
     // _searchController.addListener(() {
@@ -448,8 +444,14 @@ extension _Utilities on RaterGroup {
         return "CO";
       case RaterGroup.locap:
         return "LOCAP";
-      default:
-        throw StateError("Missing case clause");
+      case RaterGroup.singleStack:
+        return "SS";
+      case RaterGroup.production:
+        return "PROD";
+      case RaterGroup.limited10:
+        return "L10";
+      case RaterGroup.revolver:
+        return "REVO";
     }
   }
 }

@@ -22,6 +22,7 @@ class MatchCache {
 
   var _ready = Completer<bool>();
   late Future<bool> ready;
+  static bool get readyNow => _instance != null && _instance!._ready.isCompleted;
 
   Map<String, _MatchCacheEntry> _cache = {};
   late SharedPreferences _prefs;
@@ -105,12 +106,14 @@ class MatchCache {
     }
   }
 
-  Future<PracticalMatch?> getMatch(String matchUrl, {bool forceUpdate = false}) async {
+  Future<PracticalMatch?> getMatch(String matchUrl, {bool forceUpdate = false, bool localOnly = false}) async {
     var id = matchUrl.split("/").last;
     if(!forceUpdate && _cache.containsKey(id)) {
       debugPrint("Using cache for $id");
       return _cache[id]!.match;
     }
+
+    if(localOnly) return null;
 
     var canonId = await processMatchUrl(matchUrl);
 

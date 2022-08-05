@@ -21,14 +21,30 @@ class ConfigureRatingsPage extends StatefulWidget {
 class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   final bool _operationInProgress = false;
 
+  bool matchCacheReady = false;
   List<String> matchUrls = [];
+  Map<String, String> urlDisplayNames = {};
+
+  Future<void> getUrlDisplayNames() async {
+    var map = <String, String>{};
+    await MatchCache().ready;
+    var cache = MatchCache();
+
+    for(var url in matchUrls) {
+      var match = await cache.getMatch(url, localOnly: true);
+      map[url] = match?.name ?? url;
+    }
+
+    setState(() {
+      urlDisplayNames = map;
+    });
+  }
+
   String? _title;
 
   @override
   void initState() {
     super.initState();
-
-    _loadAutosave();
 
     _pctWeightController.addListener(() {
       if(_pctWeightController.text.length > 0) {
@@ -55,9 +71,30 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         }
       }
     });
+
+    matchCacheReady = MatchCache.readyNow;
+
+    if(!matchCacheReady) _warmUpMatchCache();
+
+    _loadAutosave();
+  }
+
+  Future<void> _warmUpMatchCache() async {
+    // Allow time for the 'loading' screen to display
+    await Future.delayed(Duration(milliseconds: 500));
+
+    await MatchCache().ready;
+    setState(() {
+      matchCacheReady = true;
+    });
   }
 
   Future<void> _loadAutosave() async {
+    // Allow time for the 'loading' screen to display
+    if(!RatingProjectManager.readyNow) {
+      await Future.delayed(Duration(milliseconds: 500));
+    }
+
     await RatingProjectManager().ready;
     var autosave = RatingProjectManager().loadProject(RatingProjectManager.autosaveName);
     if(autosave != null) {
@@ -80,6 +117,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     _kController.text = "${algorithm.K}";
     _scaleController.text = "${algorithm.scale}";
     _pctWeightController.text = "${algorithm.percentWeight}";
+
+    getUrlDisplayNames();
   }
 
   @override
@@ -165,6 +204,14 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   }
 
   Widget _body() {
+    if(!matchCacheReady) {
+      return Padding(
+        padding: const EdgeInsets.all(128),
+        child: Center(
+          child: Text("Loading match cache...", style: Theme.of(context).textTheme.subtitle1),
+        ),
+      );
+    }
     return Column(
       children: [
         Padding(
@@ -243,7 +290,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                         value: _byStage,
                         onChanged: (value) {
                           if(value != null) {
-                            _byStage = value;
+                            setState(() {
+                              _byStage = value;
+                            });
                           }
                         }
                       ),
@@ -255,7 +304,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                         value: _keepHistory,
                         onChanged: (value) {
                           if(value != null) {
-                            _keepHistory = value;
+                            setState(() {
+                              _keepHistory = value;
+                            });
                           }
                         }
                       ),
@@ -267,7 +318,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                         value: _combineLocap,
                         onChanged: (value) {
                           if(value != null) {
-                            _combineLocap = value;
+                            setState(() {
+                              _combineLocap = value;
+                            });
                           }
                         }
                       ),
@@ -424,6 +477,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                   setState(() {
                                     // matchUrls
                                   });
+
+                                  getUrlDisplayNames();
                                 },
                               ),
                               IconButton(
@@ -439,6 +494,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                   if(delete ?? false) {
                                     setState(() {
                                       matchUrls.clear();
+                                      urlDisplayNames.clear();
                                     });
                                   }
                                 }
@@ -446,20 +502,21 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                             ],
                           ),
                           SizedBox(height: 10),
-                          ...matchUrls.map((url) => Row(
-                            children: [
-                              Text(url),
-                              IconButton(
-                                icon: Icon(Icons.remove),
-                                color: Theme.of(context).primaryColor,
-                                onPressed: () {
-                                  setState(() {
-                                    matchUrls.remove(url);
-                                  });
-                                },
-                              )
-                            ],
-                          )),
+                          for(var url in urlDisplayNames.keys)
+                            Row(
+                              children: [
+                                Text(urlDisplayNames[url]!),
+                                IconButton(
+                                  icon: Icon(Icons.remove),
+                                  color: Theme.of(context).primaryColor,
+                                  onPressed: () {
+                                    setState(() {
+                                      matchUrls.remove(url);
+                                    });
+                                  },
+                                )
+                              ],
+                            ),
                         ],
                       ),
                     ),
@@ -484,6 +541,10 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
     await RatingProjectManager().saveProject(project);
     debugPrint("Saved ${project.name}");
+
+    setState(() {
+      _title = project.name;
+    });
   }
 
   List<Widget> _generateActions() {

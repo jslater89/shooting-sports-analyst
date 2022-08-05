@@ -46,6 +46,8 @@ class RatingProjectManager {
   
   late Future<bool> ready;
   Completer<bool> _readyCompleter;
+  static bool get readyNow => _instance != null && _instance!._readyCompleter.isCompleted;
+
   late SharedPreferences _prefs;
   
   Future<void> _init() async {
