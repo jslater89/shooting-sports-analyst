@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/multiplayer_percent_elo_rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
@@ -478,6 +479,16 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
   List<Widget> _generateActions() {
     return [
+      Tooltip(
+        message: "Clear locally-cached matches.",
+        child: IconButton(
+          icon: Icon(Icons.clear_all),
+          onPressed: () async {
+            await MatchCache().ready;
+            MatchCache().clear();
+          },
+        ),
+      ),
       Tooltip(
         message: "Save current project to local storage.",
         child: IconButton(

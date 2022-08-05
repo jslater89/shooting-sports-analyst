@@ -8,8 +8,9 @@ import 'package:uspsa_result_viewer/ui/rater/shooter_change_dialog.dart';
 import 'package:uspsa_result_viewer/ui/score_row.dart';
 
 class RaterView extends StatefulWidget {
-  const RaterView({Key? key, required this.rater, required this.currentMatch}) : super(key: key);
+  const RaterView({Key? key, required this.rater, required this.currentMatch, this.search}) : super(key: key);
 
+  final String? search;
   final Rater rater;
   final PracticalMatch currentMatch;
 
@@ -66,6 +67,10 @@ class _RaterViewState extends State<RaterView> {
 
   List<Widget> _buildRatingRows() {
     var sortedRatings = widget.rater.uniqueShooters.sorted((a, b) => b.rating.compareTo(a.rating));
+
+    if(widget.search != null && widget.search!.isNotEmpty) {
+      sortedRatings = sortedRatings.where((r) => r.shooter.getName(suffixes: false).toLowerCase().contains(widget.search!.toLowerCase())).toList();
+    }
 
     List<Widget> widgets = [];
     for(int i = 0; i < sortedRatings.length; i++) {

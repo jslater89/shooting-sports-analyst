@@ -32,6 +32,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
   /// Maps URLs to matches
   Map<String, PracticalMatch?> _matchUrls = {};
+  late TextEditingController _searchController;
   
   late RatingHistory _history;
   bool _historyReady = false;
@@ -53,6 +54,10 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   void initState() {
     super.initState();
 
+    _searchController = TextEditingController();
+    // _searchController.addListener(() {
+    // });
+
     _tabController = TabController(
       length: activeTabs.length,
       vsync: this,
@@ -65,6 +70,13 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       _getMatchResultFile(url);
     }
   }
+
+  String _searchTerm = "";
+  // void _updateSearch() {
+  //   setState(() {
+  //     _searchTerm = _searchController.text;
+  //   });
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -138,7 +150,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
           child: TabBarView(
             controller: _tabController,
             children: activeTabs.map((t) {
-              return RaterView(rater: _history.raterFor(match, t), currentMatch: match);
+              return RaterView(rater: _history.raterFor(match, t), currentMatch: match, search: _searchTerm);
             }).toList(),
           ),
         )
@@ -155,23 +167,65 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         child: Container(
           color: Colors.white,
           child: Center(
-            child: DropdownButton<PracticalMatch>(
-              underline: Container(
-                height: 1,
-                color: Colors.black,
-              ),
-              items: _history.matches.reversed.map((m) {
-                return DropdownMenuItem<PracticalMatch>(
-                  child: Text(m.name ?? "<unnamed match>"),
-                  value: m,
-                );
-              }).toList(),
-              value: _selectedMatch,
-              onChanged: _history.matches.length == 1 ? null : (m) {
-                setState(() {
-                  _selectedMatch = m;
-                });
-              },
+            child: Row(
+              mainAxisSize: MainAxisSize.max,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                DropdownButton<PracticalMatch>(
+                  underline: Container(
+                    height: 1,
+                    color: Colors.black,
+                  ),
+                  items: _history.matches.reversed.map((m) {
+                    return DropdownMenuItem<PracticalMatch>(
+                      child: Text(m.name ?? "<unnamed match>"),
+                      value: m,
+                    );
+                  }).toList(),
+                  value: _selectedMatch,
+                  onChanged: _history.matches.length == 1 ? null : (m) {
+                    setState(() {
+                      _selectedMatch = m;
+                    });
+                  },
+                ),
+                SizedBox(width: 20),
+                SizedBox(
+                  width: 200,
+                  child: TextField(
+                    controller: _searchController,
+                    autofocus: false,
+                    onSubmitted: (search) {
+                      setState(() {
+                        _searchTerm = search;
+                      });
+                    },
+                    decoration: InputDecoration(
+                      helperText: ' ',
+                      hintText: "Search",
+                      suffixIcon: _searchTerm.length > 0 ?
+                          GestureDetector(
+                            child: Icon(Icons.cancel),
+                            onTap: () {
+                              _searchController.text = '';
+                              setState(() {
+                                _searchTerm = "";
+                              });
+                            },
+                          )
+                      :
+                          GestureDetector(
+                            child: Icon(Icons.arrow_circle_right_rounded),
+                            onTap: () {
+                              setState(() {
+                                _searchTerm = _searchController.text;
+                              });
+                            },
+                          ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -182,28 +236,28 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   List<Widget> _generateActions() {
     return [
       Tooltip(
-          message: "Download ratings as CSV",
-          child: IconButton(
-            icon: Icon(Icons.save_alt),
-            onPressed: () async {
-              if(_selectedMatch != null) {
-                var tab = activeTabs[_tabController.index];
-                var rater = _history.raterFor(_selectedMatch!, tab);
-                var csv = rater.toCSV();
-                HtmlOr.saveFile("ratings-${tab.label}.csv", csv);
-              }
-            },
-          )
-      ),
-      Tooltip(
-        message: "Edit matches",
+        message: "Download ratings as CSV",
         child: IconButton(
-          icon: Icon(Icons.list),
-          onPressed: () {
-            // TODO: show matches dialog
+          icon: Icon(Icons.save_alt),
+          onPressed: () async {
+            if(_selectedMatch != null) {
+              var tab = activeTabs[_tabController.index];
+              var rater = _history.raterFor(_selectedMatch!, tab);
+              var csv = rater.toCSV();
+              HtmlOr.saveFile("ratings-${tab.label}.csv", csv);
+            }
           },
         )
-      )
+      ),
+      // Tooltip(
+      //   message: "Edit matches",
+      //   child: IconButton(
+      //     icon: Icon(Icons.list),
+      //     onPressed: () {
+      //       // TODO: show matches dialog
+      //     },
+      //   )
+      // )
     ];
   }
 
