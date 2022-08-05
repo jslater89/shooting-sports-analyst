@@ -136,7 +136,9 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
   int _currentProgress = 0;
   int _totalProgress = 0;
+
   Widget _matchLoadingIndicator() {
+    debugPrint("Progress: $_currentProgress/$_totalProgress");
     return SingleChildScrollView(
       child: Center(
         child: Column(
@@ -147,7 +149,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
             SizedBox(height: 10),
             if(_totalProgress > 0)
               LinearProgressIndicator(
-                value: _currentProgress == 0 ? null : (_currentProgress) / _totalProgress,
+                value: _currentProgress / _totalProgress,
               ),
             SizedBox(height: 20),
             ..._matchUrls.keys.map((url) {
@@ -167,8 +169,6 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       debugPrint("No match selected!");
       return Container();
     }
-
-    debugPrint("Last match: ${match.name}");
 
     if(_loadingState != _LoadingState.done) return Container();
 
@@ -386,23 +386,43 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
     setState(() {
       _loadingState = _LoadingState.updatingCache;
+      _totalProgress = 1;
+      _currentProgress = 0;
     });
 
-    await Future.delayed(Duration(milliseconds: 500));
+    await Future.delayed(Duration(milliseconds: 100));
 
-    _matchCache.save();
+    int lastPause = -100;
+    await _matchCache.save((currentSteps, totalSteps) async {
+      if((currentSteps - lastPause) > 10) {
+        lastPause = currentSteps;
+        setState(() {
+          _currentProgress = currentSteps;
+          _totalProgress = totalSteps;
+        });
 
-    await Future.delayed(Duration(milliseconds: 500));
+        debugPrint("Match cache progress: $_currentProgress/$_totalProgress");
+        await Future.delayed(Duration(milliseconds: 50));
+      }
+    });
 
     setState(() {
       _loadingState = _LoadingState.processingScores;
     });
 
-    await Future.delayed(Duration(milliseconds: 500));
+    await Future.delayed(Duration(milliseconds: 100));
 
-    _history = RatingHistory(settings: widget.settings, matches: actualMatches);
+    _history = RatingHistory(settings: widget.settings, matches: actualMatches, progressCallback: (currentSteps, totalSteps) async {
+      setState(() {
+        _currentProgress = currentSteps;
+        _totalProgress = totalSteps;
+      });
 
-    await Future.delayed(Duration(milliseconds: 500));
+      debugPrint("Rating history progress: $_currentProgress/$_totalProgress");
+      await Future.delayed(Duration(milliseconds: 50));
+    });
+
+    await _history.processInitialMatches();
 
     debugPrint("History ready with ${_history.matches.length} matches after ${urls.length} URLs and $failures failures");
     setState(() {

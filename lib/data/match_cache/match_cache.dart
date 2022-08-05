@@ -77,17 +77,31 @@ class MatchCache {
     return "$_cachePrefix$idString";
   }
 
-  void save() async {
+  Future<void> save([Future<void> Function(int, int)? progressCallback]) async {
     Set<_MatchCacheEntry> alreadySaved = Set();
+    int totalProgress = _cache.values.length;
+    int currentProgress = 0;
+
     for(var entry in _cache.values) {
-      if(alreadySaved.contains(entry)) continue;
+      if(alreadySaved.contains(entry)) {
+        currentProgress += 1;
+        await progressCallback?.call(currentProgress, totalProgress);
+        continue;
+      }
 
       var path = _generatePath(entry);
-      if(_prefs.containsKey(path)) continue; // No need to resave
+      if(_prefs.containsKey(path)) {
+        currentProgress += 1;
+        await progressCallback?.call(currentProgress, totalProgress);
+        continue; // No need to resave
+      }
 
       await _prefs.setString(path, entry.match.reportContents);
       alreadySaved.add(entry);
       debugPrint("Saved ${entry.match.name} to $path");
+
+      currentProgress += 1;
+      await progressCallback?.call(currentProgress, totalProgress);
     }
   }
 

@@ -156,13 +156,6 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "0.6.4"
-  localstorage:
-    dependency: "direct main"
-    description:
-      path: "../flutter_localstorage"
-      relative: true
-    source: path
-    version: "4.0.0+1"
   matcher:
     dependency: transitive
     description:

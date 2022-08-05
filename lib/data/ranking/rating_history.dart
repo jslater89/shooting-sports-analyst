@@ -25,11 +25,16 @@ class RatingHistory {
   /// after that match has been processed.
   Map<PracticalMatch, Map<RaterGroup, Rater>> _ratersByDivision = {};
 
-  RatingHistory({required List<PracticalMatch> matches, RatingHistorySettings? settings}) : this._matches = matches {
+  Future<void> Function(int, int)? progressCallback;
+
+  RatingHistory({required List<PracticalMatch> matches, RatingHistorySettings? settings, this.progressCallback}) : this._matches = matches {
     if(settings != null) _settings = settings;
     else _settings = RatingHistorySettings(algorithm: MultiplayerPercentEloRater());
+  }
 
-    _processInitialMatches();
+  Future<void> processInitialMatches() async {
+    if(_ratersByDivision.length > 0) throw StateError("Called processInitialMatches twice");
+    return _processInitialMatches();
   }
 
   Rater raterFor(PracticalMatch match, RaterGroup group) {
@@ -39,8 +44,10 @@ class RatingHistory {
     return _ratersByDivision[match]![group]!;
   }
 
-  void _processInitialMatches() {
+  Future<void> _processInitialMatches() async {
     debugPrint("Loading matches");
+
+    int stepsFinished = 0;
 
     _matches.sort((a, b) {
       if(a.date == null && b.date == null) {
@@ -55,7 +62,13 @@ class RatingHistory {
     var currentMatches = <PracticalMatch>[];
     PracticalMatch? lastMatch;
 
+    await progressCallback?.call(0, 1);
+
     if(_settings.preserveHistory) {
+      int totalSteps = ((matches.length * (matches.length + 1)) / 2).round() * _settings.groups.length;
+
+      debugPrint("Total steps, history preserved: $totalSteps");
+
       for (PracticalMatch match in _matches) {
         var m = match;
         currentMatches.add(m);
@@ -68,11 +81,17 @@ class RatingHistory {
 
           if (lastMatch == null) {
             _ratersByDivision[m]![group] = _raterForGroup(innerMatches, group);
+
+            stepsFinished += 1;
+            await progressCallback?.call(stepsFinished, totalSteps);
           }
           else {
             Rater newRater = Rater.copy(_ratersByDivision[lastMatch]![group]!);
             newRater.addMatch(m);
             _ratersByDivision[m]![group] = newRater;
+
+            stepsFinished += 1;
+            await progressCallback?.call(stepsFinished, totalSteps);
           }
         }
 
@@ -80,11 +99,18 @@ class RatingHistory {
       }
     }
     else {
+      int totalSteps = matches.length + _settings.groups.length;
+
+      debugPrint("Total steps, history discarded: $totalSteps");
+
       var m = _matches.last;
       _ratersByDivision[m] ??= {};
 
       for (var group in _settings.groups) {
         _ratersByDivision[m]![group] = _raterForGroup(_matches, group);
+
+        stepsFinished += 1;
+        await progressCallback?.call(stepsFinished, totalSteps);
       }
     }
   }

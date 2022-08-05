@@ -14,10 +14,11 @@ class Rater {
   RatingSystem ratingSystem;
   FilterSet? _filters;
   bool byStage;
+  void Function(int, int)? progressCallback;
 
   Set<ShooterRating> get uniqueShooters => <ShooterRating>{}..addAll(knownShooters.values);
 
-  Rater({required List<PracticalMatch> matches, required this.ratingSystem, FilterSet? filters, this.byStage = false}) : this._matches = matches, this._filters = filters {
+  Rater({required List<PracticalMatch> matches, required this.ratingSystem, FilterSet? filters, this.byStage = false, this.progressCallback}) : this._matches = matches, this._filters = filters {
     _matches.sort((a, b) {
       if(a.date == null && b.date == null) {
         return 0;
@@ -34,8 +35,13 @@ class Rater {
 
     _deduplicateShooters();
 
+    int totalSteps = _matches.length;
+    int currentSteps = 0;
     for(PracticalMatch m in _matches) {
       _rankMatch(m);
+
+      currentSteps += 1;
+      progressCallback?.call(currentSteps, totalSteps);
     }
 
     _removeUnseenShooters();
