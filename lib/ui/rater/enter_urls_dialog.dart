@@ -45,7 +45,8 @@ class _EnterUrlsDialogState extends State<EnterUrlsDialog> {
         TextButton(
           child: Text("OK"),
           onPressed: () {
-            List<String> urls = urlController.text.split("\n");
+            var text = urlController.text.replaceAll("\r","");
+            List<String> urls = text.split("\n").map((url) => url.trim()).toList();
             if(_validate(urls)) {
               Navigator.of(context).pop(urls);
             }

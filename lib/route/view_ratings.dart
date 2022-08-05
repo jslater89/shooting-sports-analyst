@@ -25,6 +25,34 @@ class RatingsViewPage extends StatefulWidget {
   State<RatingsViewPage> createState() => _RatingsViewPageState();
 }
 
+enum _LoadingState {
+  notStarted,
+  readingCache,
+  downloadingMatches,
+  processingScores,
+  updatingCache,
+  done,
+}
+
+extension _LoadingStateLabel on _LoadingState {
+  String get label {
+    switch(this) {
+      case _LoadingState.notStarted:
+        return "not started";
+      case _LoadingState.readingCache:
+        return "loading match cache";
+      case _LoadingState.downloadingMatches:
+        return "downloading matches";
+      case _LoadingState.processingScores:
+        return "processing scores";
+      case _LoadingState.done:
+        return "finished";
+      case _LoadingState.updatingCache:
+        return "updating cache";
+    }
+  }
+}
+
 // Tabs for rating categories
 // A slider to allow
 class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderStateMixin {
@@ -35,7 +63,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   late TextEditingController _searchController;
   
   late RatingHistory _history;
-  bool _historyReady = false;
+  _LoadingState _loadingState = _LoadingState.notStarted;
 
   static const activeTabs = const [
     RaterGroup.open,
@@ -48,7 +76,6 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   PracticalMatch? _selectedMatch;
   MatchCache _matchCache = MatchCache();
   late TabController _tabController;
-  bool get _matchesLoading => _matchUrls.containsValue(null);
 
   @override
   void initState() {
@@ -65,10 +92,11 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       animationDuration: Duration(seconds: 0)
     );
 
-    for(var url in widget.matchUrls) {
-      _matchUrls[url] = null;
-      _getMatchResultFile(url);
-    }
+    _init();
+  }
+
+  Future<void> _init() async {
+    _getMatchResultFiles(widget.matchUrls);
   }
 
   String _searchTerm = "";
@@ -102,18 +130,30 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   }
 
   Widget _body() {
-    if(_matchesLoading) return _matchLoadingIndicator();
+    if(_loadingState != _LoadingState.done) return _matchLoadingIndicator();
     else return _ratingView();
   }
 
+  int _currentProgress = 0;
+  int _totalProgress = 0;
   Widget _matchLoadingIndicator() {
     return SingleChildScrollView(
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: _matchUrls.keys.map((url) {
-            return Text("${url.split("/").last}: ${_matchUrls[url]?.name ?? "Loading..."}");
-          }).toList(),
+          children: [
+            Text("Loading...", style: Theme.of(context).textTheme.subtitle1),
+            Text("Now: ${_loadingState.label}", style: Theme.of(context).textTheme.subtitle2),
+            SizedBox(height: 10),
+            if(_totalProgress > 0)
+              LinearProgressIndicator(
+                value: _currentProgress == 0 ? null : (_currentProgress) / _totalProgress,
+              ),
+            SizedBox(height: 20),
+            ..._matchUrls.keys.map((url) {
+              return Text("${url.split("/").last}: ${_matchUrls[url]?.name ?? "Loading..."}");
+            })
+          ],
         ),
       ),
     );
@@ -130,7 +170,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
     debugPrint("Last match: ${match.name}");
 
-    if(!_historyReady) return Container();
+    if(_loadingState != _LoadingState.done) return Container();
 
     return Column(
       children: [
@@ -261,34 +301,117 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     ];
   }
 
-  Future<bool> _getMatchResultFile(String url) async {
+  Future<bool> _getMatchResultFiles(List<String> urls) async {
+    setState(() {
+      _loadingState = _LoadingState.readingCache;
+    });
     await _matchCache.ready;
 
-    var match = await _matchCache.getMatch(url);
-    if(match != null) {
-      setState(() {
-        _matchUrls[url] = match;
-      });
+    setState(() {
+      _loadingState = _LoadingState.downloadingMatches;
+      _totalProgress = urls.length;
+    });
 
-      if(!_matchesLoading) {
-        var actualMatches = <PracticalMatch>[
-          for(var m in _matchUrls.values)
-            if(m != null) m
-        ];
+    var localUrls = []..addAll(urls);
 
-        _matchCache.save();
-        _history = RatingHistory(settings: widget.settings, matches: actualMatches);
+    int failures = 0;
+    var urlsByFuture = <Future<PracticalMatch?>, String>{};
+    while(localUrls.isNotEmpty) {
 
-        debugPrint("History ready with ${_history.matches.length} matches");
+      var futures = <Future<PracticalMatch?>>[];
+      var urlsThisStep = [];
+      if(localUrls.length < 10) {
+        urlsThisStep = []..addAll(localUrls);
+        localUrls.clear();
+
+      }
+      else {
+        urlsThisStep = localUrls.sublist(0, 10);
+        localUrls.removeWhere((element) => urlsThisStep.contains(element));
+      }
+
+      for(var url in urlsThisStep) {
         setState(() {
-          _selectedMatch = _history.matches.last;
-          _historyReady = true;
+          _matchUrls[url] = null;
+        });
+        var f = _matchCache.getMatch(url);
+        urlsByFuture[f] = url;
+        futures.add(f);
+      }
+
+      await Future.wait(futures);
+
+      for(var future in futures) {
+        var match = await future;
+        var url = urlsByFuture[future]!;
+        if(match != null) {
+          _matchUrls[url] = match;
+        }
+        else {
+          _matchUrls.remove(url);
+          failures += 1;
+        }
+      }
+
+      if(mounted) {
+        setState(() {
+          _currentProgress = _matchUrls.values.where((v) => v != null).length;
         });
       }
-      return true;
+      else {
+        return false;
+      }
     }
 
-    return false;
+    // // (catch any we missed, if any?)
+    // for(var future in urlsByFuture.keys) {
+    //   var match = await future;
+    //   var url = urlsByFuture[future]!;
+    //   if(_matchUrls[url] == null) continue;
+    //
+    //   debugPrint("Missed match: $url");
+    //   if(match != null) {
+    //     _matchUrls[url] = match;
+    //   }
+    //   else {
+    //     _matchUrls.remove(url);
+    //     failures += 1;
+    //   }
+    // }
+
+    var actualMatches = <PracticalMatch>[
+      for(var m in _matchUrls.values)
+        if(m != null) m
+    ];
+
+    setState(() {
+      _loadingState = _LoadingState.updatingCache;
+    });
+
+    await Future.delayed(Duration(milliseconds: 500));
+
+    _matchCache.save();
+
+    await Future.delayed(Duration(milliseconds: 500));
+
+    setState(() {
+      _loadingState = _LoadingState.processingScores;
+    });
+
+    await Future.delayed(Duration(milliseconds: 500));
+
+    _history = RatingHistory(settings: widget.settings, matches: actualMatches);
+
+    await Future.delayed(Duration(milliseconds: 500));
+
+    debugPrint("History ready with ${_history.matches.length} matches after ${urls.length} URLs and $failures failures");
+    setState(() {
+      _selectedMatch = _history.matches.last;
+      _loadingState = _LoadingState.done;
+    });
+
+    if(failures > 0) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to download $failures matches")));
+    return true;
   }
 }
 

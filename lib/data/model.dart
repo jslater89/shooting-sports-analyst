@@ -473,6 +473,8 @@ extension DivisionFrom on Division {
     s = s.trim().toLowerCase();
     switch(s) {
       case "pcc": return Division.pcc;
+      case "pistol caliber carbine": return Division.pcc;
+
       case "open": return Division.open;
 
       case "ltd":
@@ -491,6 +493,7 @@ extension DivisionFrom on Division {
       case "ss":
       case "single stack": return Division.singleStack;
 
+      case "rev":
       case "revo":
       case "revolver": return Division.revolver;
       default: {
@@ -552,6 +555,7 @@ extension ClassificationFrom on Classification {
       case "c": return Classification.C;
       case "d": return Classification.D;
       case "u": return Classification.U;
+      case "x": return Classification.U;
       default:
         debugPrint("Unknown classification: $s");
         return Classification.U;

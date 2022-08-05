@@ -212,6 +212,8 @@ class Rater {
       matchStrength += _strengthForClass(shooter.classification);
     }
     matchStrength = matchStrength / shooters.length;
+
+    // Your shooter
     double strengthMod = 1.0 + max(-0.5, min(1.3, ((matchStrength) - 4) * 0.2));
 
     Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes = {};

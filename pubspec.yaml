@@ -37,8 +37,6 @@ dependencies:
   intl:
   flutter_charts:
   shared_preferences:
-  localstorage:
-    path: ../flutter_localstorage
   path_provider:
 
 dev_dependencies:

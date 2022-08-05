@@ -410,7 +410,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 onPressed: () async {
                                   var urls = await showDialog<List<String>>(context: context, builder: (context) {
                                     return EnterUrlsDialog();
-                                  });
+                                  }, barrierDismissible: false);
 
                                   if(urls == null) return;
 

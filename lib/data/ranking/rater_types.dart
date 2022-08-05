@@ -18,6 +18,11 @@ class ShooterRating {
 
   void updateTrends(double totalChange) {
     var trendWindow = min(ratingEvents.length, baseTrendWindow * 5);
+
+    if(trendWindow == 0) {
+      return;
+    }
+
     var totalVariance = variance * (trendWindow - 1) + totalChange.abs();
     variance = totalVariance / (trendWindow.toDouble());
 

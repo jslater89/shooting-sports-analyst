@@ -87,6 +87,7 @@ class MultiplayerPercentEloRater implements RatingSystem {
     var percentComponent = totalPercent == 0 ? 0 : (actualPercent / totalPercent);
     var placeComponent = (scores.length - aScore.place) /  divisor;
 
+    // The first N matches you shoot get bonuses for initial placement.
     var placementMultiplier = aRating.ratingEvents.length < RatingSystem.initialPlacementMultipliers.length ?
       RatingSystem.initialPlacementMultipliers[aRating.ratingEvents.length] : 1.0;
 
@@ -118,6 +119,7 @@ class MultiplayerPercentEloRater implements RatingSystem {
       "Actual/expected percent: ${(percentComponent * totalPercent * 100).toStringAsFixed(2)}/${(expectedScore * totalPercent * 100).toStringAsFixed(2)}",
       "Actual/expected place: ${aScore.place}/${(scores.length - (expectedScore * divisor)).toStringAsFixed(4)}",
       "Rating±Change: ${aRating.rating.round()} + ${change.toStringAsFixed(2)} (${changeFromPercent.toStringAsFixed(2)} from pct, ${changeFromPlace.toStringAsFixed(2)} from place)",
+      "effective K, multipliers: ${(K * placementMultiplier * matchStrength * zeroMultiplier).toStringAsFixed(2)}, SoS ${matchStrength.toStringAsFixed(3)}, IP ${placementMultiplier.toStringAsFixed(2)}, Zero ${zeroMultiplier.toStringAsFixed(2)}",
     ];
 
     return {
