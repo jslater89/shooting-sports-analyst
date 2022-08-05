@@ -26,10 +26,14 @@ class ShooterRatingChangeDialog extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(
-              height: 300,
-              width: 600,
-              child: _buildChart(events)
+            Text("Current rating: ${rating.rating.round()}", style: Theme.of(context).textTheme.subtitle1),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: SizedBox(
+                height: 300,
+                width: 600,
+                child: _buildChart(events)
+              ),
             ),
             ...events.reversed.map((e) =>
                 Tooltip(
@@ -45,7 +49,14 @@ class ShooterRatingChangeDialog extends StatelessWidget {
 
   Widget _buildChart(List<RatingEvent> events) {
     LabelLayoutStrategy? xContainerLabelLayoutStrategy;
+    ChartOptions.noLabels();
     ChartOptions chartOptions = const ChartOptions(
+      xContainerOptions: XContainerOptions(
+        isXContainerShown: false,
+      ),
+      yContainerOptions: YContainerOptions(
+        isYGridlinesShown: false,
+      ),
       lineChartOptions: LineChartOptions(
         hotspotInnerRadius: 0,
         hotspotOuterRadius: 0,
