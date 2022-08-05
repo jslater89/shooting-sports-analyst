@@ -125,7 +125,7 @@ class ShooterResultCard extends StatelessWidget {
 
 
   Widget _buildShooterLink(BuildContext context, Shooter shooter) {
-    if(shooter.memberNumber != null && shooter.memberNumber != "") {
+    if(shooter.memberNumber != "") {
       return GestureDetector(
         onTap: () {
           HtmlOr.openLink("https://uspsa.org/classification/${shooter.memberNumber}");

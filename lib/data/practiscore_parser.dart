@@ -1,5 +1,4 @@
 import 'package:collection/collection.dart' show IterableExtension;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:uspsa_result_viewer/data/model.dart';
@@ -29,7 +28,7 @@ Future<String?> processMatchUrl(String matchUrl, {BuildContext? context}) async 
       debugPrint("Trying to get match from URL: $matchUrl");
       var response = await http.get(Uri.parse("${getProxyUrl()}$matchUrl"));
       if(response.statusCode == 404) {
-        if(context != null) Scaffold.of(context).showSnackBar(SnackBar(content: Text("Match not found.")));
+        if(context != null) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Match not found.")));
         debugPrint("404: match not found");
         return null;
       }
@@ -39,20 +38,20 @@ Future<String?> processMatchUrl(String matchUrl, {BuildContext? context}) async 
           matchId = foundUrl.split("/").last;
         }
         else {
-          if(context != null) Scaffold.of(context).showSnackBar(SnackBar(content: Text("Unable to determine web report URL.")));
+          if(context != null) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unable to determine web report URL.")));
           debugPrint("Unable to determine web report URL");
           return null;
         }
       }
       else {
         debugPrint("${response.statusCode} ${response.body}");
-        if(context != null) Scaffold.of(context).showSnackBar(SnackBar(content: Text("Unable to download match file.")));
+        if(context != null) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unable to download match file.")));
         return null;
       }
     }
     catch(err) {
       debugPrint("$err");
-      if(context != null) Scaffold.of(context).showSnackBar(SnackBar(content: Text("Unable to download match file.")));
+      if(context != null) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unable to download match file.")));
       return null;
     }
   }
@@ -84,9 +83,8 @@ Future<PracticalMatch?> getPractiscoreMatchHeadless(String matchId) async {
   }
   catch(err, stackTrace) {
     debugPrint("download error: $err ${err.runtimeType}");
-    if (stackTrace != null) {
-      debugPrint("$stackTrace");
-    }
+    debugPrint("$stackTrace");
+
     if (err is http.ClientException) {
       http.ClientException ce = err;
       debugPrint("${ce.uri} ${ce.message}");

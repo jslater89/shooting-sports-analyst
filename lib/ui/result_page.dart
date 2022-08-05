@@ -116,7 +116,7 @@ class _ResultPageState extends State<ResultPage> {
     List<Shooter> filteredShooters = _filterShooters();
 
     if(filteredShooters.length == 0) {
-      Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("Filters match 0 shooters!")));
+      ScaffoldMessenger.of(_innerContext).showSnackBar(SnackBar(content: Text("Filters match 0 shooters!")));
       setState(() {
         _baseScores = [];
         _searchedScores = [];
@@ -307,7 +307,8 @@ class _ResultPageState extends State<ResultPage> {
                     //debugPrint("Match: $_currentMatch Stage: $_stage Shooters: $_filteredShooters Scores: $scores");
                     debugPrint("${_filteredShooters[0].stageScores}");
 
-                    var filteredStages = []..addAll(_filteredStages);
+                    // Not sure if vestigial or the sign of a bug
+                    // var filteredStages = []..addAll(_filteredStages);
 
                     setState(() {
                       _editedShooters = {};

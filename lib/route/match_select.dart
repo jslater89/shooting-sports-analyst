@@ -2,11 +2,9 @@ import 'dart:convert';
 // ignore: avoid_web_libraries_in_flutter
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
 import 'package:uspsa_result_viewer/main.dart';
-import 'package:uspsa_result_viewer/route/practiscore_url.dart';
 import 'package:uspsa_result_viewer/ui/empty_scaffold.dart';
 
 class MatchSelectPage extends StatefulWidget {
@@ -193,13 +191,13 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
           ],
         ),
         actions: [
-          FlatButton(
+          TextButton(
               child: Text("CANCEL"),
               onPressed: () {
                 Navigator.of(context).pop();
               }
           ),
-          FlatButton(
+          TextButton(
               child: Text("OK"),
               onPressed: () {
                 Navigator.of(context).pop(controller.text);

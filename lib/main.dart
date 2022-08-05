@@ -1,17 +1,14 @@
 // ignore: avoid_web_libraries_in_flutter
 
-import 'package:flutter/foundation.dart';
 import 'dart:convert';
 
 
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/dump_ratings.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/route/local_upload.dart';
 import 'package:uspsa_result_viewer/route/match_select.dart';
 import 'package:uspsa_result_viewer/route/practiscore_url.dart';
 import 'package:uspsa_result_viewer/route/ratings.dart';
-import 'package:uspsa_result_viewer/route/view_ratings.dart';
 import 'configure_nonweb.dart' if (dart.library.html) 'configure_web.dart';
 import 'package:fluro/fluro.dart' as fluro;
 

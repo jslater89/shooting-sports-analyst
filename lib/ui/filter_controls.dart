@@ -228,7 +228,7 @@ class _FilterControlsState extends State<FilterControls> {
                   SizedBox(width: 10),
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    child: FlatButton(
+                    child: TextButton(
                       child: Text("FILTERS"),
                       onPressed: () async {
                         var filters = await showDialog<FilterSet>(context: context, builder: (context) {

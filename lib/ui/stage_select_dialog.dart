@@ -46,7 +46,7 @@ class _StageSelectDialogState extends State<StageSelectDialog> {
         ),
       ),
       actions: [
-        FlatButton(
+        TextButton(
           child: Text("ALL"),
           onPressed: () {
             setState(() {
@@ -55,7 +55,7 @@ class _StageSelectDialogState extends State<StageSelectDialog> {
 
           },
         ),
-        FlatButton(
+        TextButton(
           child: Text("NONE"),
           onPressed: () {
             setState(() {
@@ -64,13 +64,13 @@ class _StageSelectDialogState extends State<StageSelectDialog> {
           },
         ),
         SizedBox(width: 50),
-        FlatButton(
+        TextButton(
           child: Text("CANCEL"),
           onPressed: () {
             Navigator.of(context).pop(null);
           },
         ),
-        FlatButton(
+        TextButton(
           child: Text("APPLY"),
           onPressed: () {
             Navigator.of(context).pop(state.keys.toList()..retainWhere((stage) => state[stage]!));

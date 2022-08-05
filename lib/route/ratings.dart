@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/route/configure_ratings.dart';
 import 'package:uspsa_result_viewer/route/view_ratings.dart';
-import 'package:uspsa_result_viewer/ui/empty_scaffold.dart';
 
 class RatingsContainerPage extends StatefulWidget {
   const RatingsContainerPage({Key? key}) : super(key: key);

@@ -31,7 +31,7 @@ class _UploadedResultPageState extends State<UploadedResultPage> {
 
       if (_resultString == null) {
         if(_innerContext != null) {
-          Scaffold.of(_innerContext!).showSnackBar(SnackBar(content: Text("No file given. Go back and try again.")));
+          ScaffoldMessenger.of(_innerContext!).showSnackBar(SnackBar(content: Text("No file given. Go back and try again.")));
           setState(() {
             _operationInProgress = false;
           });
@@ -45,7 +45,7 @@ class _UploadedResultPageState extends State<UploadedResultPage> {
     }
     catch(err) {
       if(_innerContext != null) {
-        Scaffold.of(_innerContext!).showSnackBar(SnackBar(content: Text("No file given. Go back and try again.")));
+        ScaffoldMessenger.of(_innerContext!).showSnackBar(SnackBar(content: Text("No file given. Go back and try again.")));
         setState(() {
           _operationInProgress = false;
         });

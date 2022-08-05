@@ -1,7 +1,6 @@
 // ignore: avoid_web_libraries_in_flutter
 //import 'dart:html';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
@@ -59,7 +58,7 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
     catch(err) {
 
     }
-    Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("Failed to download result file from ${widget.resultUrl}.")));
+    ScaffoldMessenger.of(_innerContext).showSnackBar(SnackBar(content: Text("Failed to download result file from ${widget.resultUrl}.")));
   }
 
   Future<void> _getPractiscoreMatch() async {
@@ -81,7 +80,7 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
         }
       }
       else if(response.statusCode == 404) {
-        Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("No match record exists at given URL.")));
+        ScaffoldMessenger.of(_innerContext).showSnackBar(SnackBar(content: Text("No match record exists at given URL.")));
         debugPrint("No match record at $reportUrl");
         return;
       }
@@ -90,14 +89,12 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
     }
     catch(err, stackTrace) {
       debugPrint("download error: $err ${err.runtimeType}");
-      if (stackTrace != null) {
-        debugPrint("$stackTrace");
-      }
+      debugPrint("$stackTrace");
       if (err is http.ClientException) {
         http.ClientException ce = err;
         debugPrint("${ce.uri} ${ce.message}");
       }
-      Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("Failed to download match report.")));
+      ScaffoldMessenger.of(_innerContext).showSnackBar(SnackBar(content: Text("Failed to download match report.")));
       return;
     }
 
@@ -127,7 +124,7 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
     catch(err) {
       debugPrint("download error pt. 2: $err ${err.runtimeType}");
     }
-    Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("Failed to download match report.")));
+    ScaffoldMessenger.of(_innerContext).showSnackBar(SnackBar(content: Text("Failed to download match report.")));
   }
 
   @override
