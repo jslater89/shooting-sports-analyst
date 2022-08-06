@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
@@ -50,7 +51,7 @@ class MultiplayerPercentEloRater implements RatingSystem {
       var opponentScore = scores[bRating]!;
 
       // Ignore opponents who didn't record a score for the stage
-      if(opponentScore.score.hits == 0 && opponentScore.score.time == 0) {
+      if(opponentScore.score.hits == 0 && opponentScore.score.time <= 0.5) {
         continue;
       }
 
@@ -70,6 +71,13 @@ class MultiplayerPercentEloRater implements RatingSystem {
       expectedScore += probability;
       usedScores++;
     }
+
+    if(usedScores == 1) {
+      return {
+        shooters[0]: RatingChange(change: 0),
+      };
+    }
+
     var divisor = (usedScores * (usedScores - 1)) / 2;
     expectedScore = (expectedScore) / divisor;
 
@@ -101,20 +109,18 @@ class MultiplayerPercentEloRater implements RatingSystem {
 
     var changeFromPercent = K * placementMultiplier * matchStrength * zeroMultiplier * (scores.length - 1) * (percentComponent * percentWeight - (expectedScore * percentWeight));
     var changeFromPlace = K * placementMultiplier * matchStrength * zeroMultiplier * (scores.length - 1) * (placeComponent * placeWeight - (expectedScore * placeWeight));
-    // if(Rater.processMemberNumber(aRating.shooter.memberNumber) == "98581") {
-    //   debugPrint("### ${aRating.shooter.lastName} stats: $actualPercent of $usedScores shooters for ${aScore.stage?.name}, SoS ${matchStrength.toStringAsFixed(3)}, placement $placementMultiplier, zero $zeroMultiplier ($zeroes)");
-    //   debugPrint("AS/ES: ${actualScore.toStringAsFixed(6)}/${expectedScore.toStringAsFixed(6)}");
-    //   debugPrint("Actual/expected percent: ${(percentComponent * totalPercent * 100).toStringAsFixed(2)}/${(expectedScore * totalPercent * 100).toStringAsFixed(2)}");
-    //   debugPrint("Actual/expected place: ${aScore.place}/${(scores.length - (expectedScore * divisor)).toStringAsFixed(4)}");
-    //   debugPrint("Rating±Change: ${aRating.rating.round()} + ${change.toStringAsFixed(2)} (${changeFromPercent.toStringAsFixed(2)} from pct, ${changeFromPlace.toStringAsFixed(2)} from place)");
-    //   debugPrint("###");
-    // }
 
     if(change.isNaN || change.isInfinite) {
+      debugPrint("### ${aRating.shooter.lastName} stats: $actualPercent of $usedScores shooters for ${aScore.stage?.name}, SoS ${matchStrength.toStringAsFixed(3)}, placement $placementMultiplier, zero $zeroMultiplier ($zeroes)");
+      debugPrint("AS/ES: ${actualScore.toStringAsFixed(6)}/${expectedScore.toStringAsFixed(6)}");
+      debugPrint("Actual/expected percent: ${(percentComponent * totalPercent * 100).toStringAsFixed(2)}/${(expectedScore * totalPercent * 100).toStringAsFixed(2)}");
+      debugPrint("Actual/expected place: ${aScore.place}/${(scores.length - (expectedScore * divisor)).toStringAsFixed(4)}");
+      debugPrint("Rating±Change: ${aRating.rating.round()} + ${change.toStringAsFixed(2)} (${changeFromPercent.toStringAsFixed(2)} from pct, ${changeFromPlace.toStringAsFixed(2)} from place)");
+      debugPrint("###");
       throw StateError("NaN/Infinite");
     }
 
-    var hf = aScore.score.getHitFactor(scoreDQ: false);
+    var hf = aScore.score.getHitFactor(scoreDQ: aScore.score.stage != null);
     List<String> info = [
       "Actual/expected percent: ${(percentComponent * totalPercent * 100).toStringAsFixed(2)}/${(expectedScore * totalPercent * 100).toStringAsFixed(2)} on ${hf.toStringAsFixed(2)}HF",
       "Actual/expected place: ${aScore.place}/${(scores.length - (expectedScore * divisor)).toStringAsFixed(4)}",

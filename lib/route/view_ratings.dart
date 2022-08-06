@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
@@ -52,6 +53,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   /// Maps URLs to matches
   Map<String, PracticalMatch?> _matchUrls = {};
   late TextEditingController _searchController;
+  late TextEditingController _minRatingsController;
+  int _minRatings = 0;
   
   late RatingHistory _history;
   _LoadingState _loadingState = _LoadingState.notStarted;
@@ -69,8 +72,16 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     activeTabs = widget.settings.groups;
 
     _searchController = TextEditingController();
-    // _searchController.addListener(() {
-    // });
+    _minRatingsController = TextEditingController();
+    _minRatingsController.addListener(() {
+      var text = _minRatingsController.text;
+      var maybeInt = int.tryParse(text);
+      if(maybeInt != null) {
+        setState(() {
+          _minRatings = maybeInt;
+        });
+      }
+    });
 
     _tabController = TabController(
       length: activeTabs.length,
@@ -186,7 +197,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
           child: TabBarView(
             controller: _tabController,
             children: activeTabs.map((t) {
-              return RaterView(rater: _history.raterFor(match, t), currentMatch: match, search: _searchTerm);
+              return RaterView(rater: _history.raterFor(match, t), currentMatch: match, search: _searchTerm, minRatings: _minRatings);
             }).toList(),
           ),
         )
@@ -258,6 +269,25 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                               });
                             },
                           ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 20),
+                Tooltip(
+                  message: "Filter shooters with fewer than this many ${widget.settings.byStage ? "stages" : "matches"} from view.",
+                  child: SizedBox(
+                    width: 100,
+                    child: TextField(
+                      controller: _minRatingsController,
+                      autofocus: false,
+                      decoration: InputDecoration(
+                        helperText: ' ',
+                        hintText: "Min. ${widget.settings.byStage ? "Stages" : "Matches"}",
+                      ),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter(RegExp(r"[0-9]*"), allow: true),
+                      ],
                     ),
                   ),
                 ),
@@ -452,6 +482,10 @@ extension _Utilities on RaterGroup {
         return "L10";
       case RaterGroup.revolver:
         return "REVO";
+      case RaterGroup.openPcc:
+        return "OPEN/PCC";
+      case RaterGroup.limitedCO:
+        return "LIM/CO";
     }
   }
 }

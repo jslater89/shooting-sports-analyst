@@ -112,6 +112,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       _keepHistory = project.settings.preserveHistory;
       _byStage = project.settings.byStage;
       _combineLocap = project.settings.groups.contains(RaterGroup.locap);
+      _combineLimitedCO = project.settings.groups.contains(RaterGroup.limitedCO);
+      _combineOpenPCC = project.settings.groups.contains(RaterGroup.openPcc);
     });
     var algorithm = project.settings.algorithm as MultiplayerPercentEloRater;
     _kController.text = "${algorithm.K}";
@@ -152,6 +154,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   bool _byStage = true;
   bool _keepHistory = false;
   bool _combineLocap = true;
+  bool _combineOpenPCC = false;
+  bool _combineLimitedCO = false;
 
   TextEditingController _kController = TextEditingController(text: "${MultiplayerPercentEloRater.defaultK}");
   TextEditingController _scaleController = TextEditingController(text: "${MultiplayerPercentEloRater.defaultScale}");
@@ -192,7 +196,11 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       percentWeight: pctWeight,
     );
 
-    var groups = _combineLocap ? RatingProjectManager.combinedLocap : RatingProjectManager.splitLocap;
+    var groups = RatingHistorySettings.groupsForSettings(
+      combineLocap: _combineLocap,
+      combineLimitedCO: _combineLimitedCO,
+      combineOpenPCC: _combineOpenPCC,
+    );
 
     return RatingHistorySettings(
       algorithm: ratingSystem,
@@ -251,6 +259,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                     _byStage = true;
                     _keepHistory = false;
                     _combineLocap = true;
+                    _combineOpenPCC = false;
+                    _combineLimitedCO = false;
                     _validationError = "";
                   });
                   _kController.text = "${MultiplayerPercentEloRater.defaultK}";
@@ -309,6 +319,34 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                             });
                           }
                         }
+                      ),
+                      CheckboxListTile(
+                          title: Tooltip(
+                            child: Text("Combine Open/PCC?"),
+                            message: "Combine ratings for Single Stack, Revolver, Production, and Limited 10 if checked.",
+                          ),
+                          value: _combineOpenPCC,
+                          onChanged: (value) {
+                            if(value != null) {
+                              setState(() {
+                                _combineOpenPCC = value;
+                              });
+                            }
+                          }
+                      ),
+                      CheckboxListTile(
+                          title: Tooltip(
+                            child: Text("Combine Limited/CO?"),
+                            message: "Combine ratings for Single Stack, Revolver, Production, and Limited 10 if checked.",
+                          ),
+                          value: _combineLimitedCO,
+                          onChanged: (value) {
+                            if(value != null) {
+                              setState(() {
+                                _combineLimitedCO = value;
+                              });
+                            }
+                          }
                       ),
                       CheckboxListTile(
                         title: Tooltip(

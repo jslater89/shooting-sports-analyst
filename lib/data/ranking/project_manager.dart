@@ -10,25 +10,6 @@ class RatingProjectManager {
   static const projectPrefix = "project/";
   static const autosaveName = "autosave";
 
-  static const combinedLocap = const [
-    RaterGroup.open,
-    RaterGroup.limited,
-    RaterGroup.pcc,
-    RaterGroup.carryOptics,
-    RaterGroup.locap,
-  ];
-
-  static const splitLocap = const [
-    RaterGroup.open,
-    RaterGroup.limited,
-    RaterGroup.pcc,
-    RaterGroup.carryOptics,
-    RaterGroup.production,
-    RaterGroup.singleStack,
-    RaterGroup.revolver,
-    RaterGroup.limited10,
-  ];
-  
   static RatingProjectManager? _instance;
   factory RatingProjectManager() {
     if(_instance == null) {
@@ -61,6 +42,11 @@ class RatingProjectManager {
       if(key.startsWith(projectPrefix)) {
         try {
           Map<String, dynamic> encodedProject = jsonDecode(_prefs.getString(key) ?? "");
+
+          var combineOpenPCC = (encodedProject[_combineOpenPCCKey] ?? false) as bool;
+          var combineLimitedCO = (encodedProject[_combineLimitedCOKey] ?? false) as bool;
+          var combineLocap = (encodedProject[_combineLocapKey] ?? true) as bool;
+
           var settings = RatingHistorySettings(
             algorithm: MultiplayerPercentEloRater(
               K: encodedProject[_kKey] as double,
@@ -69,7 +55,11 @@ class RatingProjectManager {
             ),
             preserveHistory: encodedProject[_keepHistoryKey] as bool,
             byStage: encodedProject[_byStageKey] as bool,
-            groups: (encodedProject[_combineLocapKey] as bool) ? combinedLocap : splitLocap,
+            groups: RatingHistorySettings.groupsForSettings(
+              combineOpenPCC: combineOpenPCC,
+              combineLimitedCO: combineLimitedCO,
+              combineLocap: combineLocap,
+            ),
           );
           var matchUrls = (encodedProject[_urlsKey] as List<dynamic>).map((item) => item as String).toList();
           var name = encodedProject[_nameKey] as String;
@@ -102,6 +92,8 @@ class RatingProjectManager {
     map[_pctWeightKey] = algorithm.percentWeight;
     map[_scaleKey] = algorithm.scale;
     map[_combineLocapKey] = project.settings.groups.contains(RaterGroup.locap);
+    map[_combineOpenPCCKey] = project.settings.groups.contains(RaterGroup.openPcc);
+    map[_combineLimitedCOKey] = project.settings.groups.contains(RaterGroup.limitedCO);
     map[_byStageKey] = project.settings.byStage;
     map[_keepHistoryKey] = project.settings.preserveHistory;
     map[_urlsKey] = project.matchUrls;
@@ -129,6 +121,8 @@ class RatingProjectManager {
   static const _pctWeightKey = "pctWt";
   static const _scaleKey = "scale";
   static const _combineLocapKey = "combineLocap";
+  static const _combineLimitedCOKey = "combineLimCO";
+  static const _combineOpenPCCKey = "combineOpPCC";
   static const _byStageKey = "byStage";
   static const _keepHistoryKey = "keepHistory";
   static const _urlsKey = "urls";

@@ -51,7 +51,7 @@ PracticalMatch _processResultLines({required List<String> infoLines, required Li
     }
   }
 
-  debugPrint("Processed match with ${match.shooters.length} shooters, ${match.stages.length} stages, and $stageScoreCount stage scores");
+  debugPrint("Processed match ${match.name} with ${match.shooters.length} shooters, ${match.stages.length} stages, and $stageScoreCount stage scores");
 
   return match;
 }

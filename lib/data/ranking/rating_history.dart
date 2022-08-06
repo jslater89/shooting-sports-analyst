@@ -110,7 +110,6 @@ class RatingHistory {
         _ratersByDivision[m]![group] = await _raterForGroup(_matches, group, (_1, _2) async {
           stepsFinished += 1;
           await progressCallback?.call(stepsFinished, totalSteps);
-          debugPrint("$stepsFinished/$totalSteps");
         });
       }
     }
@@ -148,6 +147,8 @@ enum RaterGroup {
   limited10,
   revolver,
   locap,
+  openPcc,
+  limitedCO,
 }
 
 extension _InternalUtilities on RaterGroup {
@@ -171,8 +172,10 @@ extension _InternalUtilities on RaterGroup {
         return [Division.limited10];
       case RaterGroup.revolver:
         return [Division.revolver];
-      default:
-        throw StateError("Missing case clause");
+      case RaterGroup.openPcc:
+        return [Division.open, Division.pcc];
+      case RaterGroup.limitedCO:
+        return [Division.limited, Division.carryOptics];
     }
   }
 }
@@ -189,4 +192,19 @@ class RatingHistorySettings {
     this.groups = const [RaterGroup.open, RaterGroup.limited, RaterGroup.pcc, RaterGroup.carryOptics, RaterGroup.locap],
     required this.algorithm,
   });
+
+  static List<RaterGroup> groupsForSettings({bool combineOpenPCC = false, bool combineLimitedCO = false, bool combineLocap = true}) {
+    var groups = <RaterGroup>[];
+
+    if(combineOpenPCC) groups.add(RaterGroup.openPcc);
+    else groups.addAll([RaterGroup.open, RaterGroup.pcc]);
+
+    if(combineLimitedCO) groups.add(RaterGroup.limitedCO);
+    else groups.addAll([RaterGroup.limited, RaterGroup.carryOptics]);
+
+    if(combineLocap) groups.add(RaterGroup.locap);
+    else groups.addAll([RaterGroup.production, RaterGroup.singleStack, RaterGroup.revolver, RaterGroup.limited10]);
+
+    return groups;
+  }
 }

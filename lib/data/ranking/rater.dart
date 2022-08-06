@@ -212,7 +212,7 @@ class Rater {
 
   void _rankMatch(PracticalMatch match) {
     var shooters = _getShooters(match);
-    var scores = match.getScores(shooters: shooters, scoreDQ: false);
+    var scores = match.getScores(shooters: shooters, scoreDQ: byStage);
 
     // Based on strength of competition, vary rating gain between 50% and 130%.
     var matchStrength = 0.0;
@@ -280,7 +280,7 @@ class Rater {
   bool _verifyShooter(Shooter s) {
     if(s.memberNumber.isEmpty) return false;
     if(s.memberNumber.length <= 3) return false;
-    if(s.dq) return false;
+    if(!byStage && s.dq) return false;
     if(s.reentry) return false;
 
     String memNum = processMemberNumber(s.memberNumber);
@@ -320,8 +320,12 @@ class Rater {
         RelativeScore bStageScore = bScore.stageScores[stage]!;
 
         // Filter out badly marked classifier reshoots
-        if(aStageScore.score.hits == 0 && aStageScore.score.time == 0) continue;
-        if(bStageScore.score.hits == 0 && bStageScore.score.time == 0) continue;
+        if(aStageScore.score.hits == 0 && aStageScore.score.time <= 0.1) continue;
+        if(bStageScore.score.hits == 0 && bStageScore.score.time <= 0.1) continue;
+
+        // Filter out extremely short times that are probably DNFs or partial scores entered for DQs
+        if(aStageScore.score.time <= 0.5) continue;
+        if(bStageScore.score.time <= 0.5) continue;
 
         _encounteredMemberNumber(memNumA);
         _encounteredMemberNumber(memNumB);
@@ -342,6 +346,9 @@ class Rater {
         changes[bRating]![bStageScore]!.ratingChange += update[bRating]!.change;
       }
       else {
+        // Filter out non-DQ DNFs
+        if(_dnf(aScore) || _dnf(bScore))
+
         _encounteredMemberNumber(memNumA);
         _encounteredMemberNumber(memNumB);
 
@@ -375,7 +382,10 @@ class Rater {
       RelativeScore stageScore = score.stageScores[stage]!;
 
       // Filter out badly marked classifier reshoots
-      if(stageScore.score.hits == 0 && stageScore.score.time == 0) return;
+      if(stageScore.score.hits == 0 && stageScore.score.time == 0.0) return;
+
+      // Filter out extremely short times that are probably DNFs or partial scores entered for DQs
+      if(stageScore.score.time <= 0.5) return;
 
       _encounteredMemberNumber(memNum);
 
@@ -400,6 +410,9 @@ class Rater {
       changes[rating]![stageScore]!.info = update[rating]!.info;
     }
     else {
+      // Filter out non-DQ DNFs
+      if(_dnf(score)) return;
+
       _encounteredMemberNumber(memNum);
 
       var scoreMap = <ShooterRating, RelativeScore>{};
@@ -421,6 +434,14 @@ class Rater {
         info: update[rating]!.info,
       );
     }
+  }
+
+  bool _dnf(RelativeMatchScore score) {
+    for(var stageScore in score.stageScores.values) {
+      if(stageScore.score.time <= 0.01 && stageScore.score.hits == 0) return true;
+    }
+
+    return false;
   }
 
   String toCSV() {

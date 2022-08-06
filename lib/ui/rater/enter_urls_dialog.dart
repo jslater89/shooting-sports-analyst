@@ -47,8 +47,9 @@ class _EnterUrlsDialogState extends State<EnterUrlsDialog> {
           onPressed: () {
             var text = urlController.text.replaceAll("\r","");
             List<String> urls = text.split("\n").map((url) => url.trim()).toList();
-            if(_validate(urls)) {
-              Navigator.of(context).pop(urls);
+            List<String> goodUrls = _validate(urls);
+            if(goodUrls.length > 0) {
+              Navigator.of(context).pop(goodUrls);
             }
             else{
               setState(() {
@@ -61,10 +62,16 @@ class _EnterUrlsDialogState extends State<EnterUrlsDialog> {
     );
   }
 
-  bool _validate(List<String> urls) {
+  List<String> _validate(List<String> urls) {
+    List<String> goodUrls = [];
     for(var url in urls) {
-      if(!url.contains("practiscore.com/results/new")) return false;
+      if(url.trim().isEmpty || !url.startsWith("http")) {
+        debugPrint("Skipping non-URL $url");
+        continue;
+      }
+      else if(url.contains("practiscore.com/results/new")) goodUrls.add(url);
+      else debugPrint("Bad URL: $url");
     }
-    return true;
+    return goodUrls;
   }
 }

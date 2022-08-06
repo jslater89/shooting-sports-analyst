@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 project(runner LANGUAGES CXX)
 
 set(BINARY_NAME "uspsa_result_viewer")
-set(APPLICATION_ID "com.example.uspsa_result_viewer")
+set(APPLICATION_ID "uspsa-result-viewer")
 
 cmake_policy(SET CMP0063 NEW)
 
