@@ -26,7 +26,7 @@ class MultiplayerPercentEloRater implements RatingSystem {
   MultiplayerPercentEloRater({this.K = defaultK, this.scale = defaultScale, this.percentWeight = defaultPercentWeight}) : this.placeWeight = 1.0 - percentWeight;
 
   @override
-  Map<ShooterRating, RatingChange> updateShooterRatings({required List<ShooterRating> shooters, required Map<ShooterRating, RelativeScore> scores, double matchStrength = 1.0}) {
+  Map<ShooterRating, RatingChange> updateShooterRatings({required List<ShooterRating> shooters, required Map<ShooterRating, RelativeScore> scores, double matchStrengthMultiplier = 1.0, double connectednessMultiplier = 1.0}) {
     if(shooters.length != 1) {
       throw StateError("Incorrect number of shooters passed to MultiplayerElo");
     }
@@ -105,13 +105,14 @@ class MultiplayerPercentEloRater implements RatingSystem {
     var zeroMultiplier = (zeroes / usedScores) < 0.1 ? 1 : 1 - 0.66 * ((min(0.3, (zeroes / usedScores) - 0.1)) / 0.3);
 
     var actualScore = percentComponent * percentWeight + placeComponent * placeWeight;
-    var change = K * placementMultiplier * matchStrength * zeroMultiplier * (scores.length - 1) * (actualScore - expectedScore);
+    var effectiveK = K * placementMultiplier * matchStrengthMultiplier * zeroMultiplier * connectednessMultiplier;
+    var change = effectiveK * (scores.length - 1) * (actualScore - expectedScore);
 
-    var changeFromPercent = K * placementMultiplier * matchStrength * zeroMultiplier * (scores.length - 1) * (percentComponent * percentWeight - (expectedScore * percentWeight));
-    var changeFromPlace = K * placementMultiplier * matchStrength * zeroMultiplier * (scores.length - 1) * (placeComponent * placeWeight - (expectedScore * placeWeight));
+    var changeFromPercent = effectiveK * (scores.length - 1) * (percentComponent * percentWeight - (expectedScore * percentWeight));
+    var changeFromPlace = effectiveK * (scores.length - 1) * (placeComponent * placeWeight - (expectedScore * placeWeight));
 
     if(change.isNaN || change.isInfinite) {
-      debugPrint("### ${aRating.shooter.lastName} stats: $actualPercent of $usedScores shooters for ${aScore.stage?.name}, SoS ${matchStrength.toStringAsFixed(3)}, placement $placementMultiplier, zero $zeroMultiplier ($zeroes)");
+      debugPrint("### ${aRating.shooter.lastName} stats: $actualPercent of $usedScores shooters for ${aScore.stage?.name}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}, placement $placementMultiplier, zero $zeroMultiplier ($zeroes)");
       debugPrint("AS/ES: ${actualScore.toStringAsFixed(6)}/${expectedScore.toStringAsFixed(6)}");
       debugPrint("Actual/expected percent: ${(percentComponent * totalPercent * 100).toStringAsFixed(2)}/${(expectedScore * totalPercent * 100).toStringAsFixed(2)}");
       debugPrint("Actual/expected place: ${aScore.place}/${(scores.length - (expectedScore * divisor)).toStringAsFixed(4)}");
@@ -125,7 +126,7 @@ class MultiplayerPercentEloRater implements RatingSystem {
       "Actual/expected percent: ${(percentComponent * totalPercent * 100).toStringAsFixed(2)}/${(expectedScore * totalPercent * 100).toStringAsFixed(2)} on ${hf.toStringAsFixed(2)}HF",
       "Actual/expected place: ${aScore.place}/${(scores.length - (expectedScore * divisor)).toStringAsFixed(4)}",
       "Rating±Change: ${aRating.rating.round()} + ${change.toStringAsFixed(2)} (${changeFromPercent.toStringAsFixed(2)} from pct, ${changeFromPlace.toStringAsFixed(2)} from place)",
-      "effective K, multipliers: ${(K * placementMultiplier * matchStrength * zeroMultiplier).toStringAsFixed(2)}, SoS ${matchStrength.toStringAsFixed(3)}, IP ${placementMultiplier.toStringAsFixed(2)}, Zero ${zeroMultiplier.toStringAsFixed(2)}",
+      "eff. K, multipliers: ${(effectiveK).toStringAsFixed(2)}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}, IP ${placementMultiplier.toStringAsFixed(2)}, Zero ${zeroMultiplier.toStringAsFixed(2)}, Conn ${connectednessMultiplier.toStringAsFixed(2)}",
     ];
 
     return {

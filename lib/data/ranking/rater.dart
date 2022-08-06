@@ -214,27 +214,54 @@ class Rater {
     var shooters = _getShooters(match);
     var scores = match.getScores(shooters: shooters, scoreDQ: byStage);
 
-    // Based on strength of competition, vary rating gain between 50% and 130%.
+    // Based on strength of competition, vary rating gain between 50% and 150%.
     var matchStrength = 0.0;
     for(var shooter in shooters) {
       matchStrength += _strengthForClass(shooter.classification);
     }
     matchStrength = matchStrength / shooters.length;
+    double strengthMod = 1.0 + max(-0.5, min(1.5, ((matchStrength) - 4) * 0.2));
 
-    // Your shooter
-    double strengthMod = 1.0 + max(-0.5, min(1.3, ((matchStrength) - 4) * 0.2));
+    // Based on connectedness, vary rating gain between 80% and 120%
+    var totalConnectedness = 0.0;
+    var totalShooters = 0;
+
+    for(var shooter in knownShooters.values) {
+      if (shooter.ratingEvents.length > ShooterRating.baseTrendWindow / (byStage ? 1 : ShooterRating.trendStagesPerMatch)) {
+        totalConnectedness += shooter.connectedness;
+        totalShooters += 1;
+      }
+    }
+    var globalAverageConnectedness = totalShooters < 5 ? 120 : totalConnectedness / totalShooters;
+
+    totalConnectedness = 0.0;
+    totalShooters = 0;
+    for(var shooter in shooters) {
+      var rating = knownShooters[processMemberNumber(shooter.memberNumber)];
+
+      if(rating != null) {
+        totalConnectedness += rating.connectedness;
+        totalShooters += 1;
+      }
+    }
+    var localAverageConnectedness = totalConnectedness / (totalShooters > 0 ? totalShooters : 1.0);
+    var connectednessMod = 1.0 + max(-0.2, min(0.2, (((localAverageConnectedness / globalAverageConnectedness) - 1.0) * 1))); // * 1: how much to adjust the percentages by
+
+    // It's not an improvement right now
+    connectednessMod = 1.0;
 
     Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes = {};
+    Set<ShooterRating> shootersAtMatch = Set();
 
     // Process ratings for each shooter.
     if(byStage) {
       for(Stage s in match.stages) {
         for(int i = 0; i < shooters.length; i++) {
           if(ratingSystem.mode == RatingMode.roundRobin) {
-            _processRoundRobin(match, s, shooters, scores, i, changes, strengthMod);
+            _processRoundRobin(match, s, shooters, scores, i, changes, strengthMod, connectednessMod);
           }
           else {
-            _processOneshot(match, s, shooters[i], scores, changes, strengthMod);
+            _processOneshot(match, s, shooters[i], scores, changes, strengthMod, connectednessMod);
           }
         }
 
@@ -248,6 +275,7 @@ class Rater {
           }
 
           r.updateTrends(totalChange);
+          shootersAtMatch.add(r);
         }
         changes.clear();
       }
@@ -255,10 +283,10 @@ class Rater {
     else {
       for(int i = 0; i < shooters.length; i++) {
         if(ratingSystem.mode == RatingMode.roundRobin) {
-          _processRoundRobin(match, null, shooters, scores, i, changes, strengthMod);
+          _processRoundRobin(match, null, shooters, scores, i, changes, strengthMod, connectednessMod);
         }
         else {
-          _processOneshot(match, null, shooters[i], scores, changes, strengthMod);
+          _processOneshot(match, null, shooters[i], scores, changes, strengthMod, connectednessMod);
         }
       }
 
@@ -271,9 +299,31 @@ class Rater {
           r.ratingEvents.add(event);
         }
 
+        shootersAtMatch.add(r);
         r.updateTrends(totalChange);
       }
       changes.clear();
+    }
+
+    if(match.date != null && shootersAtMatch.length > 1) {
+      var averageBefore = 0.0;
+      var averageAfter = 0.0;
+
+      // debugPrint("Updating connectedness at ${match.name} for ${shootersAtMatch.length} of ${knownShooters.length} shooters");
+      var encounteredList = shootersAtMatch.toList();
+      for (var rating in encounteredList) {
+        averageBefore += rating.connectedness;
+        rating.updateConnections(match.date!, encounteredList);
+      }
+
+      for (var rating in encounteredList) {
+        rating.updateConnectedness();
+        averageAfter += rating.connectedness;
+      }
+
+      averageBefore /= encounteredList.length;
+      averageAfter /= encounteredList.length;
+      // debugPrint("Averages: ${averageBefore.toStringAsFixed(1)} -> ${averageAfter.toStringAsFixed(1)} vs. ${expectedConnectedness.toStringAsFixed(1)}");
     }
   }
 
@@ -291,7 +341,7 @@ class Rater {
     return true;
   }
 
-  void _processRoundRobin(PracticalMatch match, Stage? stage, List<Shooter> shooters, List<RelativeMatchScore> scores, int startIndex, Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes, double matchStrength) {
+  void _processRoundRobin(PracticalMatch match, Stage? stage, List<Shooter> shooters, List<RelativeMatchScore> scores, int startIndex, Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes, double matchStrength, double connectednessMod) {
     for(int j = startIndex + 1; j < shooters.length; j++) {
       Shooter a = shooters[startIndex];
       Shooter b = shooters[j];
@@ -336,7 +386,8 @@ class Rater {
             aRating: aStageScore,
             bRating: bStageScore,
           },
-          matchStrength: matchStrength,
+          matchStrengthMultiplier: matchStrength,
+          connectednessMultiplier: connectednessMod,
         );
 
         changes[aRating]![aStageScore] ??= RatingEvent(eventName: "${match.name} - ${stage.name}", score: aStageScore);
@@ -358,7 +409,8 @@ class Rater {
             aRating: aScore.total,
             bRating: bScore.total,
           },
-          matchStrength: matchStrength,
+          matchStrengthMultiplier: matchStrength,
+          connectednessMultiplier: connectednessMod,
         );
 
         changes[aRating]![aScore.total] ??= RatingEvent(eventName: "${match.name}", score: aScore.total, ratingChange: update[aRating]!.change);
@@ -367,7 +419,7 @@ class Rater {
     }
   }
 
-  void _processOneshot(PracticalMatch match, Stage? stage, Shooter shooter, List<RelativeMatchScore> scores, Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes, double matchStrength) {
+  void _processOneshot(PracticalMatch match, Stage? stage, Shooter shooter, List<RelativeMatchScore> scores, Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes, double matchStrength, double connectednessMod) {
     if(!_verifyShooter(shooter)) {
       return;
     }
@@ -402,7 +454,8 @@ class Rater {
       var update = ratingSystem.updateShooterRatings(
         shooters: [rating],
         scores: scoreMap,
-        matchStrength: matchStrength,
+        matchStrengthMultiplier: matchStrength,
+        connectednessMultiplier: connectednessMod,
       );
 
       changes[rating]![stageScore] ??= RatingEvent(eventName: "${match.name} - ${stage.name}", score: stageScore);
@@ -425,7 +478,8 @@ class Rater {
       var update = ratingSystem.updateShooterRatings(
         shooters: [rating],
         scores: scoreMap,
-        matchStrength: matchStrength,
+        matchStrengthMultiplier: matchStrength,
+        connectednessMultiplier: connectednessMod,
       );
 
       changes[rating]![score.total] ??= RatingEvent(eventName: "${match.name}",

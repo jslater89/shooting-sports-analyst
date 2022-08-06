@@ -11,7 +11,7 @@ class EloRater implements RatingSystem {
   static const double K = 30;
 
   @override
-  Map<ShooterRating, RatingChange> updateShooterRatings({required List<ShooterRating> shooters, required Map<ShooterRating, RelativeScore> scores, double matchStrength = 1.0}) {
+  Map<ShooterRating, RatingChange> updateShooterRatings({required List<ShooterRating> shooters, required Map<ShooterRating, RelativeScore> scores, double matchStrengthMultiplier = 1.0, double connectednessMultiplier = 1.0}) {
     var ratings = scores.keys.toList();
 
     if(scores.length != 2) {

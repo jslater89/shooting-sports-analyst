@@ -4,6 +4,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
+import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/ui/rater/shooter_change_dialog.dart';
 import 'package:uspsa_result_viewer/ui/score_row.dart';
 
@@ -60,6 +61,7 @@ class _RaterViewState extends State<RaterView> {
                 Expanded(flex: 1, child: Text("Rating")),
                 Expanded(flex: 1, child: Text("Variance")),
                 Expanded(flex: 1, child: Text("Trend")),
+                Expanded(flex: 1, child: Text("Conn.")),
                 Expanded(flex: 1, child: Text(widget.rater.byStage ? "Stages" : "Matches")),
                 Expanded(flex: 3, child: Text("")),
               ],
@@ -69,8 +71,15 @@ class _RaterViewState extends State<RaterView> {
     )];
   }
 
+  int _ratingWindow = 12;
   List<Widget> _buildRatingRows() {
     var sortedRatings = widget.rater.uniqueShooters.where((e) => e.ratingEvents.length > widget.minRatings).sorted((a, b) => b.rating.compareTo(a.rating));
+    // var sortedRatings = widget.rater.uniqueShooters.where((e) => e.ratingEvents.length > widget.minRatings).sorted((a, b) {
+    //   var bRating = b.averageRating(window: _ratingWindow);
+    //   var aRating = a.averageRating(window: _ratingWindow);
+    //
+    //   return bRating.averageOfIntermediates.compareTo(aRating.averageOfIntermediates);
+    // });
 
     if(widget.search != null && widget.search!.isNotEmpty) {
       sortedRatings = sortedRatings.where((r) => r.shooter.getName(suffixes: false).toLowerCase().contains(widget.search!.toLowerCase())).toList();
@@ -96,6 +105,7 @@ class _RaterViewState extends State<RaterView> {
                 Expanded(flex: 1, child: Text("${sortedRatings[i].rating.round()}")),
                 Expanded(flex: 1, child: Text("${sortedRatings[i].variance.toStringAsFixed(2)}")),
                 Expanded(flex: 1, child: Text("${sortedRatings[i].trend.toStringAsFixed(2)}")),
+                Expanded(flex: 1, child: Text("${(sortedRatings[i].connectedness - ShooterRating.baseConnectedness).toStringAsFixed(1)}")),
                 Expanded(flex: 1, child: Text("${sortedRatings[i].ratingEvents.length}")),
                 Expanded(flex: 3, child: Text("")),
               ],
