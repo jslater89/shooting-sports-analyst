@@ -298,7 +298,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                       CheckboxListTile(
                         title: Tooltip(
                           child: Text("Keep full history?"),
-                          message: "Keep intermediate ratings after each match if checked, or keep only final ratings if unchecked.",
+                          message: "Keep intermediate ratings after each match if checked, or keep only final ratings if unchecked.\n\n"
+                              "WARNING: this option uses very large amounts of RAM for large datasets!",
                         ),
                         value: _keepHistory,
                         onChanged: (value) {
@@ -501,29 +502,33 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                         ),
                         SizedBox(height: 10),
                         Expanded(
-                          child: SingleChildScrollView(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                for(var url in urlDisplayNames.keys)
-                                  Row(
-                                    children: [
-                                      Text(urlDisplayNames[url]!),
-                                      IconButton(
-                                        icon: Icon(Icons.remove),
-                                        color: Theme.of(context).primaryColor,
-                                        onPressed: () {
-                                          setState(() {
-                                            matchUrls.remove(url);
-                                            urlDisplayNames.remove(url);
-                                          });
-                                        },
-                                      )
-                                    ],
-                                  ),
-                              ],
+                          child: Scrollbar(
+                            thumbVisibility: true,
+                            child: SingleChildScrollView(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  for(var url in urlDisplayNames.keys)
+                                    Row(
+                                      mainAxisSize: MainAxisSize.max,
+                                      children: [
+                                        Expanded(child: Text(urlDisplayNames[url]!, overflow: TextOverflow.fade)),
+                                        IconButton(
+                                          icon: Icon(Icons.remove),
+                                          color: Theme.of(context).primaryColor,
+                                          onPressed: () {
+                                            setState(() {
+                                              matchUrls.remove(url);
+                                              urlDisplayNames.remove(url);
+                                            });
+                                          },
+                                        )
+                                      ],
+                                    ),
+                                ],
+                              ),
                             ),
                           ),
                         ),

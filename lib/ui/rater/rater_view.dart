@@ -21,12 +21,15 @@ class RaterView extends StatefulWidget {
 class _RaterViewState extends State<RaterView> {
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          ..._buildRatingKey(),
-          ..._buildRatingRows(),
-        ]
+    return Scrollbar(
+      thumbVisibility: true,
+      child: SingleChildScrollView(
+        child: Column(
+          children: [
+            ..._buildRatingKey(),
+            ..._buildRatingRows(),
+          ]
+        ),
       ),
     );
   }
@@ -56,7 +59,7 @@ class _RaterViewState extends State<RaterView> {
                 Expanded(flex: 1, child: Text("Rating")),
                 Expanded(flex: 1, child: Text("Variance")),
                 Expanded(flex: 1, child: Text("Trend")),
-                Expanded(flex: 1, child: Text("Stages")),
+                Expanded(flex: 1, child: Text(widget.rater.byStage ? "Stages" : "Matches")),
                 Expanded(flex: 3, child: Text("")),
               ],
             ),

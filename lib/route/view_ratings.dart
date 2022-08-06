@@ -138,14 +138,17 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
             ),
           SizedBox(height: 20),
           Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ..._matchUrls.keys.toList().reversed.map((url) {
-                    return Text("${url.split("/").last}: ${_matchUrls[url]?.name ?? "Loading..."}");
-                  })
-                ],
+            child: Scrollbar(
+              thumbVisibility: true,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ..._matchUrls.keys.toList().reversed.map((url) {
+                      return Text("${url.split("/").last}: ${_matchUrls[url]?.name ?? "Loading..."}");
+                    })
+                  ],
+                ),
               ),
             )
           )
