@@ -125,24 +125,31 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   int _totalProgress = 0;
 
   Widget _matchLoadingIndicator() {
-    return SingleChildScrollView(
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text("Loading...", style: Theme.of(context).textTheme.subtitle1),
-            Text("Now: ${_loadingState.label}", style: Theme.of(context).textTheme.subtitle2),
-            SizedBox(height: 10),
-            if(_totalProgress > 0)
-              LinearProgressIndicator(
-                value: _currentProgress / _totalProgress,
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text("Loading...", style: Theme.of(context).textTheme.subtitle1),
+          Text("Now: ${_loadingState.label}", style: Theme.of(context).textTheme.subtitle2),
+          SizedBox(height: 10),
+          if(_totalProgress > 0)
+            LinearProgressIndicator(
+              value: _currentProgress / _totalProgress,
+            ),
+          SizedBox(height: 20),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ..._matchUrls.keys.toList().reversed.map((url) {
+                    return Text("${url.split("/").last}: ${_matchUrls[url]?.name ?? "Loading..."}");
+                  })
+                ],
               ),
-            SizedBox(height: 20),
-            ..._matchUrls.keys.toList().reversed.map((url) {
-              return Text("${url.split("/").last}: ${_matchUrls[url]?.name ?? "Loading..."}");
-            })
-          ],
-        ),
+            )
+          )
+        ],
       ),
     );
   }
@@ -388,7 +395,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         });
 
         //debugPrint("Match cache progress: $_currentProgress/$_totalProgress");
-        await Future.delayed(Duration(milliseconds: 50));
+        await Future.delayed(Duration(milliseconds: 1));
       }
     });
 
@@ -405,7 +412,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       });
 
       // debugPrint("Rating history progress: $_currentProgress/$_totalProgress");
-      await Future.delayed(Duration(milliseconds: 50));
+      await Future.delayed(Duration(milliseconds: 1));
     });
 
     await _history.processInitialMatches();

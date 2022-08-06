@@ -14,7 +14,7 @@ class Rater {
   RatingSystem ratingSystem;
   FilterSet? _filters;
   bool byStage;
-  void Function(int, int)? progressCallback;
+  Future<void> Function(int, int)? progressCallback;
 
   Set<ShooterRating> get uniqueShooters => <ShooterRating>{}..addAll(knownShooters.values);
 
@@ -34,19 +34,21 @@ class Rater {
     }
 
     _deduplicateShooters();
+  }
 
+  Future<void> calculateInitialRatings() async {
     int totalSteps = _matches.length;
     int currentSteps = 0;
     for(PracticalMatch m in _matches) {
       _rankMatch(m);
 
       currentSteps += 1;
-      progressCallback?.call(currentSteps, totalSteps);
+      await progressCallback?.call(currentSteps, totalSteps);
     }
 
     _removeUnseenShooters();
 
-    debugPrint("Initial ratings complete for ${knownShooters.length} shooters in ${_matches.length} matches in ${filters != null ? filters.activeDivisions.toList() : "all divisions"}");
+    debugPrint("Initial ratings complete for ${knownShooters.length} shooters in ${_matches.length} matches in ${_filters != null ? _filters!.activeDivisions.toList() : "all divisions"}");
   }
 
   Rater.copy(Rater other) :
@@ -101,7 +103,7 @@ class Rater {
 
     for(var mappedNumber in secondPass) {
       var actualNumber = _memberNumberMappings[mappedNumber]!;
-      debugPrint("Mapped $mappedNumber to $actualNumber with ${knownShooters[actualNumber]?.ratingEvents.length} ratings during copy");
+      // debugPrint("Mapped $mappedNumber to $actualNumber with ${knownShooters[actualNumber]?.ratingEvents.length} ratings during copy");
 
       if(knownShooters[actualNumber] == null) {
         // break

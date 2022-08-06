@@ -385,7 +385,7 @@ class Score {
   }
 
   double getHitFactor({bool scoreDQ = true}) {
-    if(stage!.type == Scoring.fixedTime) {
+    if(stage?.type == Scoring.fixedTime) {
       return getTotalPoints(scoreDQ: scoreDQ).toDouble();
     }
     double score = double.parse((getTotalPoints(scoreDQ: scoreDQ) / time).toStringAsFixed(4));

@@ -448,76 +448,86 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                 child:
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 40),
-                    child: SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Text("Matches", style: Theme.of(context).textTheme.labelLarge),
-                              IconButton(
-                                icon: Icon(Icons.add),
-                                color: Theme.of(context).primaryColor,
-                                onPressed: () async {
-                                  var urls = await showDialog<List<String>>(context: context, builder: (context) {
-                                    return EnterUrlsDialog();
-                                  }, barrierDismissible: false);
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text("Matches", style: Theme.of(context).textTheme.labelLarge),
+                            IconButton(
+                              icon: Icon(Icons.add),
+                              color: Theme.of(context).primaryColor,
+                              onPressed: () async {
+                                var urls = await showDialog<List<String>>(context: context, builder: (context) {
+                                  return EnterUrlsDialog();
+                                }, barrierDismissible: false);
 
-                                  if(urls == null) return;
+                                if(urls == null) return;
 
-                                  for(var url in urls) {
-                                    if(!matchUrls.contains(url)) {
-                                      matchUrls.add(url);
-                                    }
-                                  }
-
-                                  setState(() {
-                                    // matchUrls
-                                  });
-
-                                  getUrlDisplayNames();
-                                },
-                              ),
-                              IconButton(
-                                icon: Icon(Icons.remove),
-                                color: Theme.of(context).primaryColor,
-                                onPressed: () async {
-                                  var delete = await showDialog<bool>(context: context, builder: (context) {
-                                    return ConfirmDialog(
-                                      content: Text("This will clear all currently-selected matches."),
-                                    );
-                                  });
-
-                                  if(delete ?? false) {
-                                    setState(() {
-                                      matchUrls.clear();
-                                      urlDisplayNames.clear();
-                                    });
+                                for(var url in urls) {
+                                  if(!matchUrls.contains(url)) {
+                                    matchUrls.add(url);
                                   }
                                 }
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 10),
-                          for(var url in urlDisplayNames.keys)
-                            Row(
+
+                                setState(() {
+                                  // matchUrls
+                                });
+
+                                getUrlDisplayNames();
+                              },
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.remove),
+                              color: Theme.of(context).primaryColor,
+                              onPressed: () async {
+                                var delete = await showDialog<bool>(context: context, builder: (context) {
+                                  return ConfirmDialog(
+                                    content: Text("This will clear all currently-selected matches."),
+                                  );
+                                });
+
+                                if(delete ?? false) {
+                                  setState(() {
+                                    matchUrls.clear();
+                                    urlDisplayNames.clear();
+                                  });
+                                }
+                              }
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 10),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(urlDisplayNames[url]!),
-                                IconButton(
-                                  icon: Icon(Icons.remove),
-                                  color: Theme.of(context).primaryColor,
-                                  onPressed: () {
-                                    setState(() {
-                                      matchUrls.remove(url);
-                                    });
-                                  },
-                                )
+                                for(var url in urlDisplayNames.keys)
+                                  Row(
+                                    children: [
+                                      Text(urlDisplayNames[url]!),
+                                      IconButton(
+                                        icon: Icon(Icons.remove),
+                                        color: Theme.of(context).primaryColor,
+                                        onPressed: () {
+                                          setState(() {
+                                            matchUrls.remove(url);
+                                            urlDisplayNames.remove(url);
+                                          });
+                                        },
+                                      )
+                                    ],
+                                  ),
                               ],
                             ),
-                        ],
-                      ),
+                          ),
+                        ),
+                      ],
                     ),
                   )
               )

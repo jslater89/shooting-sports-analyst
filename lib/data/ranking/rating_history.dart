@@ -65,9 +65,9 @@ class RatingHistory {
     await progressCallback?.call(0, 1);
 
     if(_settings.preserveHistory) {
-      int totalSteps = ((matches.length * (matches.length + 1)) / 2).round() * _settings.groups.length;
+      int totalSteps = matches.length * _settings.groups.length;
 
-      debugPrint("Total steps, history preserved: $totalSteps");
+      // debugPrint("Total steps, history preserved: $totalSteps");
 
       for (PracticalMatch match in _matches) {
         var m = match;
@@ -80,7 +80,7 @@ class RatingHistory {
           group.divisions.forEach((element) => divisionMap[element] = true);
 
           if (lastMatch == null) {
-            _ratersByDivision[m]![group] = _raterForGroup(innerMatches, group);
+            _ratersByDivision[m]![group] = await _raterForGroup(innerMatches, group);
 
             stepsFinished += 1;
             await progressCallback?.call(stepsFinished, totalSteps);
@@ -99,26 +99,27 @@ class RatingHistory {
       }
     }
     else {
-      int totalSteps = matches.length + _settings.groups.length;
+      int totalSteps = _settings.groups.length * _matches.length;
 
-      debugPrint("Total steps, history discarded: $totalSteps");
+      // debugPrint("Total steps, history discarded: $totalSteps");
 
       var m = _matches.last;
       _ratersByDivision[m] ??= {};
 
       for (var group in _settings.groups) {
-        _ratersByDivision[m]![group] = _raterForGroup(_matches, group);
-
-        stepsFinished += 1;
-        await progressCallback?.call(stepsFinished, totalSteps);
+        _ratersByDivision[m]![group] = await _raterForGroup(_matches, group, (_1, _2) async {
+          stepsFinished += 1;
+          await progressCallback?.call(stepsFinished, totalSteps);
+          debugPrint("$stepsFinished/$totalSteps");
+        });
       }
     }
   }
   
-  Rater _raterForGroup(List<PracticalMatch> matches, RaterGroup group) {
+  Future<Rater> _raterForGroup(List<PracticalMatch> matches, RaterGroup group, [Future<void> Function(int, int)? progressCallback]) async {
     var divisionMap = <Division, bool>{};
     group.divisions.forEach((element) => divisionMap[element] = true);
-    return Rater(
+    var r = Rater(
         matches: matches,
         ratingSystem: _settings.algorithm,
         byStage: _settings.byStage,
@@ -128,8 +129,12 @@ class RatingHistory {
           ..mode = FilterMode.or
           ..divisions = divisionMap
           ..reentries = false
-          ..scoreDQs = false
-    ); 
+          ..scoreDQs = false,
+        progressCallback: progressCallback,
+    );
+
+    await r.calculateInitialRatings();
+    return r;
   }
 }
 
