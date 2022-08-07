@@ -1,10 +1,18 @@
 import 'package:flutter/foundation.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 
+enum MatchLevel {
+  I,
+  II,
+  III,
+  IV,
+}
+
 class PracticalMatch {
   String? name;
   String? rawDate;
   DateTime? date;
+  MatchLevel? level;
 
   late String reportContents;
 
@@ -18,6 +26,7 @@ class PracticalMatch {
       ..name = name
       ..rawDate = rawDate
       ..date = date
+      ..level = level
       ..shooters = []
       ..stages = []
       ..maxPoints = maxPoints

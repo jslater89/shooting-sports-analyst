@@ -58,6 +58,7 @@ PracticalMatch _processResultLines({required List<String> infoLines, required Li
 
 const String _MATCH_NAME = r"$INFO Match name:";
 const String _MATCH_DATE = r"$INFO Match date:";
+const String _MATCH_LEVEL = r"$INFO Match Level:";
 final DateFormat _df = DateFormat("MM/dd/yyyy");
 
 void _readInfoLines(PracticalMatch match, List<String> infoLines) {
@@ -75,6 +76,15 @@ void _readInfoLines(PracticalMatch match, List<String> infoLines) {
       catch(e) {
         debugPrint("Unable to parse date ${match.rawDate} $e");
       }
+    }
+    else if(line.startsWith(_MATCH_LEVEL)) {
+      var level = line.replaceFirst(_MATCH_LEVEL, "").toUpperCase();
+      if(level.contains("IV")) match.level = MatchLevel.IV;
+      else if(level.contains("III")) match.level = MatchLevel.III;
+      else if(level.contains("II")) match.level = MatchLevel.II;
+      else if(level.contains("I")) match.level = MatchLevel.I;
+
+      debugPrint("${match.name} has $level => ${match.level}");
     }
   }
 }

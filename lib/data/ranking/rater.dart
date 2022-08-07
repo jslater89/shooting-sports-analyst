@@ -131,7 +131,7 @@ class Rater {
     var shooters = _getShooters(match);
     for(Shooter s in shooters) {
       if(processMemberNumber(s.memberNumber).isNotEmpty && !s.reentry && s.memberNumber.length > 3) {
-        knownShooters[processMemberNumber(s.memberNumber)] ??= ShooterRating(s, ratingSystem.defaultRating);
+        knownShooters[processMemberNumber(s.memberNumber)] ??= ShooterRating(s, RatingSystem.initialClassRatings[s.classification] ?? 800.0); // ratingSystem.defaultRating
       }
     }
   }
@@ -214,25 +214,59 @@ class Rater {
     var shooters = _getShooters(match);
     var scores = match.getScores(shooters: shooters, scoreDQ: byStage);
 
-    // Based on strength of competition, vary rating gain between 50% and 150%.
+    // Based on strength of competition, vary rating gain between 25% and 150%.
     var matchStrength = 0.0;
     for(var shooter in shooters) {
       matchStrength += _strengthForClass(shooter.classification);
     }
     matchStrength = matchStrength / shooters.length;
-    double strengthMod = 1.0 + max(-0.5, min(1.5, ((matchStrength) - 4) * 0.2));
+    double strengthMod =  (1.0 + max(-0.25, min(1.5, ((matchStrength) - 4) * 0.2))) * (match.level?.strengthBonus ?? 1.0);
+
+    // Update connectedness before a match, so people gaining connectedness
+    // at a match benefit from it.
+    if(match.date != null && shooters.length > 1) {
+      var averageBefore = 0.0;
+      var averageAfter = 0.0;
+
+      var encounteredList = <ShooterRating>[];
+      for(var shooter in shooters) {
+        var rating = knownShooters[processMemberNumber(shooter.memberNumber)];
+        if(rating != null) encounteredList.add(rating);
+      }
+
+      // var encounteredList = shootersAtMatch.toList();
+
+      // debugPrint("Updating connectedness at ${match.name} for ${shootersAtMatch.length} of ${knownShooters.length} shooters");
+      for (var rating in encounteredList) {
+        averageBefore += rating.connectedness;
+        rating.updateConnections(match.date!, encounteredList);
+      }
+
+      for (var rating in encounteredList) {
+        rating.updateConnectedness();
+        averageAfter += rating.connectedness;
+      }
+
+      averageBefore /= encounteredList.length;
+      averageAfter /= encounteredList.length;
+      // debugPrint("Averages: ${averageBefore.toStringAsFixed(1)} -> ${averageAfter.toStringAsFixed(1)} vs. ${expectedConnectedness.toStringAsFixed(1)}");
+    }
 
     // Based on connectedness, vary rating gain between 80% and 120%
     var totalConnectedness = 0.0;
-    var totalShooters = 0;
+    var totalShooters = 0.0;
+    var connectednesses = <double>[];
 
     for(var shooter in knownShooters.values) {
-      if (shooter.ratingEvents.length > ShooterRating.baseTrendWindow / (byStage ? 1 : ShooterRating.trendStagesPerMatch)) {
+      var mod = ShooterRating.baseTrendWindow / (byStage ? 1 : 1 * ShooterRating.trendStagesPerMatch);
+      if (shooter.ratingEvents.length > mod) {
         totalConnectedness += shooter.connectedness;
+        connectednesses.add(shooter.connectedness);
         totalShooters += 1;
       }
     }
-    var globalAverageConnectedness = totalShooters < 5 ? 120 : totalConnectedness / totalShooters;
+    var globalAverageConnectedness = totalShooters < 1 ? 105 : totalConnectedness / totalShooters;
+    var globalMedianConnectedness = totalShooters < 1 ? 105 : connectednesses[connectednesses.length ~/ 2];
 
     totalConnectedness = 0.0;
     totalShooters = 0;
@@ -245,10 +279,9 @@ class Rater {
       }
     }
     var localAverageConnectedness = totalConnectedness / (totalShooters > 0 ? totalShooters : 1.0);
-    var connectednessMod = 1.0 + max(-0.2, min(0.2, (((localAverageConnectedness / globalAverageConnectedness) - 1.0) * 1))); // * 1: how much to adjust the percentages by
+    var connectednessMod = /*1.0;*/ 1.0 + max(-0.2, min(0.2, (((localAverageConnectedness / globalAverageConnectedness) - 1.0) * 3))); // * 1: how much to adjust the percentages by
 
-    // It's not an improvement right now
-    connectednessMod = 1.0;
+     debugPrint("Connectedness for ${match.name}: ${localAverageConnectedness.toStringAsFixed(2)}/${globalAverageConnectedness.toStringAsFixed(2)} => ${connectednessMod.toStringAsFixed(3)}");
 
     Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes = {};
     Set<ShooterRating> shootersAtMatch = Set();
@@ -303,27 +336,6 @@ class Rater {
         r.updateTrends(totalChange);
       }
       changes.clear();
-    }
-
-    if(match.date != null && shootersAtMatch.length > 1) {
-      var averageBefore = 0.0;
-      var averageAfter = 0.0;
-
-      // debugPrint("Updating connectedness at ${match.name} for ${shootersAtMatch.length} of ${knownShooters.length} shooters");
-      var encounteredList = shootersAtMatch.toList();
-      for (var rating in encounteredList) {
-        averageBefore += rating.connectedness;
-        rating.updateConnections(match.date!, encounteredList);
-      }
-
-      for (var rating in encounteredList) {
-        rating.updateConnectedness();
-        averageAfter += rating.connectedness;
-      }
-
-      averageBefore /= encounteredList.length;
-      averageAfter /= encounteredList.length;
-      // debugPrint("Averages: ${averageBefore.toStringAsFixed(1)} -> ${averageAfter.toStringAsFixed(1)} vs. ${expectedConnectedness.toStringAsFixed(1)}");
     }
   }
 
@@ -523,7 +535,7 @@ class Rater {
   double _strengthForClass(Classification? c) {
     switch(c) {
       case Classification.GM:
-        return 8;
+        return 10;
       case Classification.M:
         return 6;
       case Classification.A:
@@ -544,5 +556,20 @@ class Rater {
   static String processMemberNumber(String no) {
     no = no.replaceAll(RegExp(r"[^0-9]"), "");
     return no;
+  }
+}
+
+extension _StrengthBonus on MatchLevel {
+  double get strengthBonus {
+    switch(this) {
+      case MatchLevel.I:
+        return 1.0;
+      case MatchLevel.II:
+        return 1.15;
+      case MatchLevel.III:
+        return 1.3;
+      case MatchLevel.IV:
+        return 1.45;
+    }
   }
 }
