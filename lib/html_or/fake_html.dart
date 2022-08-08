@@ -33,6 +33,20 @@ class Controller extends ControlInterface {
   }
 
   @override
+  Future<String?> pickAndReadFileNow() async {
+    var result = await FilePicker.platform.pickFiles();
+    if(result != null) {
+      var f = result.files[0];
+      var nativeFile = File(f.path ?? "/error!");
+      debugPrint("File: ${nativeFile.path} ${await nativeFile.length()}");
+      return await nativeFile.readAsString();
+    }
+    else {
+      return null;
+    }
+  }
+
+  @override
   bool get needsProxy => false;
 
   @override

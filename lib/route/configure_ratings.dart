@@ -24,6 +24,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   bool matchCacheReady = false;
   List<String> matchUrls = [];
   Map<String, String> urlDisplayNames = {};
+  String? _lastProjectName;
 
   Future<void> getUrlDisplayNames() async {
     var map = <String, String>{};
@@ -39,8 +40,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       urlDisplayNames = map;
     });
   }
-
-  String? _title;
 
   @override
   void initState() {
@@ -121,6 +120,10 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     _pctWeightController.text = "${algorithm.percentWeight}";
 
     getUrlDisplayNames();
+
+    setState(() {
+      _lastProjectName = project.name;
+    });
   }
 
   @override
@@ -138,7 +141,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text(_title ?? "Shooter Rating Calculator"),
+          title: Text(_lastProjectName == null ? "Shooter Rating Calculator" : "Project $_lastProjectName"),
           centerTitle: true,
           actions: _generateActions(),
           bottom: _operationInProgress ? PreferredSize(
@@ -478,7 +481,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                           ),
                         ]
                       )
-                      // entry box for K, one box for percentWeight with calc placeWeight, entry box for scale
                     ],
                   ),
                 ),
@@ -583,19 +585,25 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
   Future<void> _saveProject(String name) async {
     var settings = _makeAndValidateSettings();
-    if(settings == null || name.isEmpty) return;
+    if(settings == null || name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("You must provide valid settings (including match URLs) to save.")));
+      return;
+    }
+
+    bool isAutosave = name == RatingProjectManager.autosaveName;
+    String mapName = isAutosave || _lastProjectName == null ? RatingProjectManager.autosaveName : _lastProjectName!;
 
     var project = RatingProject(
-        name: name,
+        name: _lastProjectName ?? name,
         settings: settings,
         matchUrls: []..addAll(matchUrls)
     );
 
-    await RatingProjectManager().saveProject(project);
-    debugPrint("Saved ${project.name}");
+    await RatingProjectManager().saveProject(project, mapName: mapName);
+    debugPrint("Saved ${project.name}" + (isAutosave ? " (autosave)" : ""));
 
     setState(() {
-      _title = project.name;
+      _lastProjectName = project.name;
     });
   }
 
@@ -620,15 +628,54 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         ),
       ),
       Tooltip(
+        message: "Export settings to a file.",
+        child: IconButton(
+          icon: Icon(Icons.download),
+          onPressed: () async {
+            var settings = _makeAndValidateSettings();
+            if(settings == null) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("You must provide valid settings (including match URLs) to export.")));
+              return;
+            }
+
+            var project = RatingProject(
+                name: "${_lastProjectName ?? "Unnamed Project"}",
+                settings: settings,
+                matchUrls: []..addAll(matchUrls)
+            );
+            await RatingProjectManager().exportToFile(project);
+          }
+        ),
+      ),
+      Tooltip(
+        message: "Import settings from a file.",
+        child: IconButton(
+          icon: Icon(Icons.file_upload),
+          onPressed: () async {
+            var imported = await RatingProjectManager().importFromFile();
+            if(imported != null) {
+              _loadProject(imported);
+            }
+            else {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unable to load file")));
+            }
+          }
+        ),
+      ),
+      Tooltip(
         message: "Save current project to local storage.",
         child: IconButton(
           icon: Icon(Icons.save),
           onPressed: () async {
             var name = await showDialog<String>(context: context, builder: (context) {
-              return EnterNameDialog();
+              return EnterNameDialog(initial: _lastProjectName);
             });
 
             if(name == null) return;
+
+            setState(() {
+              _lastProjectName = name;
+            });
 
             await _saveProject(name);
           },
@@ -653,7 +700,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
               _loadProject(project);
               debugPrint("Loaded ${project.name}");
               setState(() {
-                _title = "Project: ${project.name}";
+                _lastProjectName = project.name;
               });
             }
           },

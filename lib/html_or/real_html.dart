@@ -33,6 +33,18 @@ class Controller extends ControlInterface {
   }
 
   @override
+  Future<String?> pickAndReadFileNow() async {
+    var result = await FilePicker.platform.pickFiles();
+    if(result != null) {
+      var f = result.files[0];
+      return Utf8Decoder().convert(f.bytes?.toList() ?? []);
+    }
+    else {
+      return null;
+    }
+  }
+
+  @override
   bool get needsProxy => true;
 
   @override

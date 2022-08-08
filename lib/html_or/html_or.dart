@@ -11,6 +11,7 @@ abstract class ControlInterface {
   Map<String, String> getQueryParams();
   void saveFile(String defaultName, String fileContents);
   void pickAndReadFile(Function(String?) onFileContents);
+  Future<String?> pickAndReadFileNow();
   bool get needsProxy;
 }
 
@@ -27,7 +28,11 @@ class HtmlOr {
     controller.pickAndReadFile(onFileContents);
   }
 
-  static void saveFile(String defaultName, String fileContents) async {
+  static Future<String?> pickAndReadFileNow() async {
+    return controller.pickAndReadFileNow();
+  }
+
+  static Future<void> saveFile(String defaultName, String fileContents) async {
     return controller.saveFile(defaultName, fileContents);
   }
 

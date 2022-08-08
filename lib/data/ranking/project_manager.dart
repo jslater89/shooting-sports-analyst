@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/multiplayer_percent_elo_rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
+import 'package:uspsa_result_viewer/html_or/html_or.dart';
 
 class RatingProjectManager {
   static const projectPrefix = "project/";
@@ -43,28 +45,8 @@ class RatingProjectManager {
         try {
           Map<String, dynamic> encodedProject = jsonDecode(_prefs.getString(key) ?? "");
 
-          var combineOpenPCC = (encodedProject[_combineOpenPCCKey] ?? false) as bool;
-          var combineLimitedCO = (encodedProject[_combineLimitedCOKey] ?? false) as bool;
-          var combineLocap = (encodedProject[_combineLocapKey] ?? true) as bool;
-
-          var settings = RatingHistorySettings(
-            algorithm: MultiplayerPercentEloRater(
-              K: encodedProject[_kKey] as double,
-              percentWeight: encodedProject[_pctWeightKey] as double,
-              scale: encodedProject[_scaleKey] as double,
-            ),
-            preserveHistory: encodedProject[_keepHistoryKey] as bool,
-            byStage: encodedProject[_byStageKey] as bool,
-            groups: RatingHistorySettings.groupsForSettings(
-              combineOpenPCC: combineOpenPCC,
-              combineLimitedCO: combineLimitedCO,
-              combineLocap: combineLocap,
-            ),
-          );
-          var matchUrls = (encodedProject[_urlsKey] as List<dynamic>).map((item) => item as String).toList();
-          var name = encodedProject[_nameKey] as String;
-
-          _projects[name] = RatingProject(name: name, settings: settings, matchUrls: matchUrls);
+          var project = RatingProject.fromJson(encodedProject);
+          _projects[project.name] = project;
         }
         catch(e) {
           debugPrint("Error decoding project $key: $e");
@@ -72,6 +54,27 @@ class RatingProjectManager {
         }
       }
     }
+  }
+
+  Future<void> exportToFile(RatingProject project) async {
+    await HtmlOr.saveFile("${project.name.replaceAll(RegExp(r"[ ,+]+"), "-")}.json", project.toJson());
+  }
+
+  Future<RatingProject?> importFromFile() async {
+    var fileContents = await HtmlOr.pickAndReadFileNow();
+
+    if(fileContents != null) {
+      try {
+        var encodedProject = jsonDecode(fileContents);
+        var project =  RatingProject.fromJson(encodedProject);
+        project.name = "${project.name} (imported)";
+        return project;
+      } catch(e) {
+        print("Error loading file: $e");
+      }
+    }
+
+    return null;
   }
   
   // Maps project name to a project
@@ -81,24 +84,10 @@ class RatingProjectManager {
     return _projects.containsKey(name);
   }
   
-  Future<void> saveProject(RatingProject project) async {
-    _projects[project.name] = project;
+  Future<void> saveProject(RatingProject project, {String? mapName}) async {
+    _projects[mapName ?? project.name] = project;
 
-    var algorithm = project.settings.algorithm as MultiplayerPercentEloRater;
-
-    Map<String, dynamic> map = {};
-    map[_nameKey] = project.name;
-    map[_kKey] = algorithm.K;
-    map[_pctWeightKey] = algorithm.percentWeight;
-    map[_scaleKey] = algorithm.scale;
-    map[_combineLocapKey] = project.settings.groups.contains(RaterGroup.locap);
-    map[_combineOpenPCCKey] = project.settings.groups.contains(RaterGroup.openPcc);
-    map[_combineLimitedCOKey] = project.settings.groups.contains(RaterGroup.limitedCO);
-    map[_byStageKey] = project.settings.byStage;
-    map[_keepHistoryKey] = project.settings.preserveHistory;
-    map[_urlsKey] = project.matchUrls;
-
-    var encoded = jsonEncode(map);
+    var encoded = project.toJson();
 
     await _prefs.setString("$projectPrefix${project.name}", encoded);
   }
@@ -115,18 +104,18 @@ class RatingProjectManager {
   RatingProject? loadProject(String name) {
     return _projects[name];
   }
-
-  static const _nameKey = "name";
-  static const _kKey = "k";
-  static const _pctWeightKey = "pctWt";
-  static const _scaleKey = "scale";
-  static const _combineLocapKey = "combineLocap";
-  static const _combineLimitedCOKey = "combineLimCO";
-  static const _combineOpenPCCKey = "combineOpPCC";
-  static const _byStageKey = "byStage";
-  static const _keepHistoryKey = "keepHistory";
-  static const _urlsKey = "urls";
 }
+
+const _nameKey = "name";
+const _kKey = "k";
+const _pctWeightKey = "pctWt";
+const _scaleKey = "scale";
+const _combineLocapKey = "combineLocap";
+const _combineLimitedCOKey = "combineLimCO";
+const _combineOpenPCCKey = "combineOpPCC";
+const _byStageKey = "byStage";
+const _keepHistoryKey = "keepHistory";
+const _urlsKey = "urls";
 
 class RatingProject {
   String name;
@@ -138,4 +127,48 @@ class RatingProject {
     required this.settings,
     required this.matchUrls,
   });
+
+  factory RatingProject.fromJson(Map<String, dynamic> encodedProject) {
+    var combineOpenPCC = (encodedProject[_combineOpenPCCKey] ?? false) as bool;
+    var combineLimitedCO = (encodedProject[_combineLimitedCOKey] ?? false) as bool;
+    var combineLocap = (encodedProject[_combineLocapKey] ?? true) as bool;
+
+    var settings = RatingHistorySettings(
+      algorithm: MultiplayerPercentEloRater(
+        K: encodedProject[_kKey] as double,
+        percentWeight: encodedProject[_pctWeightKey] as double,
+        scale: encodedProject[_scaleKey] as double,
+      ),
+      preserveHistory: encodedProject[_keepHistoryKey] as bool,
+      byStage: encodedProject[_byStageKey] as bool,
+      groups: RatingHistorySettings.groupsForSettings(
+        combineOpenPCC: combineOpenPCC,
+        combineLimitedCO: combineLimitedCO,
+        combineLocap: combineLocap,
+      ),
+    );
+    var matchUrls = (encodedProject[_urlsKey] as List<dynamic>).map((item) => item as String).toList();
+    var name = encodedProject[_nameKey] as String;
+
+    return RatingProject(name: name, settings: settings, matchUrls: matchUrls);
+  }
+
+  String toJson() {
+    var algorithm = settings.algorithm as MultiplayerPercentEloRater;
+
+    Map<String, dynamic> map = {};
+    map[_nameKey] = name;
+    map[_kKey] = algorithm.K;
+    map[_pctWeightKey] = algorithm.percentWeight;
+    map[_scaleKey] = algorithm.scale;
+    map[_combineLocapKey] = settings.groups.contains(RaterGroup.locap);
+    map[_combineOpenPCCKey] = settings.groups.contains(RaterGroup.openPcc);
+    map[_combineLimitedCOKey] = settings.groups.contains(RaterGroup.limitedCO);
+    map[_byStageKey] = settings.byStage;
+    map[_keepHistoryKey] = settings.preserveHistory;
+    map[_urlsKey] = matchUrls;
+
+    var encoded = jsonEncode(map);
+    return encoded;
+  }
 }

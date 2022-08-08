@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 
 class EnterNameDialog extends StatefulWidget {
-  const EnterNameDialog({Key? key, this.initial = ""}) : super(key: key);
+  const EnterNameDialog({Key? key, this.initial}) : super(key: key);
 
-  final String initial;
+  final String? initial;
 
   @override
   State<EnterNameDialog> createState() => _EnterNameDialogState();
