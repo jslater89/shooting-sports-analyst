@@ -22,12 +22,6 @@ class _RatingsContainerPageState extends State<RatingsContainerPage> {
     if(!configured) {
       return ConfigureRatingsPage(
         onSettingsReady: (RatingHistorySettings settings, List<String> matchUrls) async {
-          // debugPrint("Sending ${matchUrls.length} URLs to rater view");
-          var p = RatingProject(name: RatingProjectManager.autosaveName, settings: settings, matchUrls: matchUrls);
-
-          await RatingProjectManager().ready;
-          RatingProjectManager().saveProject(p);
-
           setState(() {
             this.settings = settings;
             this.matchUrls = matchUrls;

@@ -46,7 +46,16 @@ class RatingProjectManager {
           Map<String, dynamic> encodedProject = jsonDecode(_prefs.getString(key) ?? "");
 
           var project = RatingProject.fromJson(encodedProject);
-          _projects[project.name] = project;
+
+          var mapName = key.replaceFirst(projectPrefix, "");
+          if(mapName != project.name) {
+            _projects[mapName] = project;
+            debugPrint("Inflating $key (${project.name}) to $mapName");
+          }
+          else {
+            _projects[project.name] = project;
+            debugPrint("Inflating $key to ${project.name}");
+          }
         }
         catch(e) {
           debugPrint("Error decoding project $key: $e");
@@ -85,11 +94,23 @@ class RatingProjectManager {
   }
   
   Future<void> saveProject(RatingProject project, {String? mapName}) async {
-    _projects[mapName ?? project.name] = project;
+    _projects[project.name] = project;
+    if(mapName != null && mapName != project.name) {
+      _projects[mapName] = project;
+    }
 
     var encoded = project.toJson();
 
     await _prefs.setString("$projectPrefix${project.name}", encoded);
+    if(mapName != null && mapName != project.name) {
+      await _prefs.setString("$projectPrefix$mapName", encoded);
+    }
+
+    var projectNames = [project.name];
+    if(mapName != null && mapName != project.name) {
+      projectNames.add(mapName);
+    }
+    debugPrint("Saved project ${project.name} to: $projectNames");
   }
 
   Future<void> deleteProject(String name) async {
@@ -102,7 +123,14 @@ class RatingProjectManager {
   }
   
   RatingProject? loadProject(String name) {
-    return _projects[name];
+    var project = _projects[name];
+    if(project != null) {
+      print("Returning ${project.name} from $name");
+    }
+    else {
+      print("No project for $name");
+    }
+    return project;
   }
 }
 

@@ -98,7 +98,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     var autosave = RatingProjectManager().loadProject(RatingProjectManager.autosaveName);
     if(autosave != null) {
       _loadProject(autosave);
-      debugPrint("Loaded autosave");
     }
     else {
       debugPrint("Autosaved project is null");
@@ -124,6 +123,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     setState(() {
       _lastProjectName = project.name;
     });
+    debugPrint("Loaded ${project.name}");
   }
 
   @override
@@ -250,6 +250,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                     });
                     return;
                   }
+
+                  _saveProject(RatingProjectManager.autosaveName);
 
                   widget.onSettingsReady(settings, matchUrls);
                 },
@@ -600,7 +602,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     );
 
     await RatingProjectManager().saveProject(project, mapName: mapName);
-    debugPrint("Saved ${project.name}" + (isAutosave ? " (autosave)" : ""));
+    debugPrint("Saved ${project.name} to $mapName" + (isAutosave ? " (autosave)" : ""));
 
     setState(() {
       _lastProjectName = project.name;
@@ -698,7 +700,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
             var project = RatingProjectManager().loadProject(projectName ?? "");
             if(project != null) {
               _loadProject(project);
-              debugPrint("Loaded ${project.name}");
               setState(() {
                 _lastProjectName = project.name;
               });
