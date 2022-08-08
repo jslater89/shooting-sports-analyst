@@ -67,48 +67,37 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
               children: _selectButtons(column: false),
             ),
             SizedBox(height: 50),
-            GestureDetector(
-              onTap: () {
-                Navigator.of(context).pushNamed('/rater');
-              },
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.list, size: 230, color: Colors.grey,),
-                  Text("Click to generate ratings for shooters in a list of matches", style: Theme
-                      .of(context)
-                      .textTheme
-                      .subtitle1!
-                      .apply(color: Colors.grey)),
-                ],
-              ),
-            )
+            if(HtmlOr.isDesktop) _raterLink(),
           ],
         ) : SingleChildScrollView(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               ..._selectButtons(column: true),
-              GestureDetector(
-                onTap: () {
-                  Navigator.of(context).pushNamed('/rater');
-                },
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.list, size: 230, color: Colors.grey,),
-                    Text("Click to generate ratings for shooters in a list of matches", style: Theme
-                        .of(context)
-                        .textTheme
-                        .subtitle1!
-                        .apply(color: Colors.grey)),
-                  ],
-                ),
-              )
+              if(HtmlOr.isDesktop) _raterLink(),
             ]
           ),
         ),
       )
+    );
+  }
+
+  Widget _raterLink() {
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).pushNamed('/rater');
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.list, size: 230, color: Colors.grey,),
+          Text("Click to generate ratings for shooters in a list of matches", style: Theme
+              .of(context)
+              .textTheme
+              .subtitle1!
+              .apply(color: Colors.grey)),
+        ],
+      ),
     );
   }
 
