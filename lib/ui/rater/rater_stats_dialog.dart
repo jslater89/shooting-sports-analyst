@@ -15,9 +15,11 @@ class RaterStatsDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text("Statistics"),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: _buildStatsRows(context),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: _buildStatsRows(context),
+        ),
       ),
     );
   }
