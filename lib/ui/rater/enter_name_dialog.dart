@@ -25,7 +25,7 @@ class _EnterNameDialogState extends State<EnterNameDialog> {
       if(RatingProjectManager().projectExists(nameController.text)) {
         setState(() {
           confirm = true;
-          _errorText = "Project name exists. Tap 'OK' twice to confirm overwrite.";
+          _errorText = "A project with that name exists. Tap 'OK' twice to confirm overwrite.";
         });
       }
       else {

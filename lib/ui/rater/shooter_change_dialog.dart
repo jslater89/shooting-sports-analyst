@@ -38,7 +38,34 @@ class ShooterRatingChangeDialog extends StatelessWidget {
             ...events.reversed.map((e) =>
                 Tooltip(
                     message: e.info.join("\n"),
-                    child: Text("${e.eventName}: ${e.ratingChange.toStringAsFixed(2)}")
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Expanded(
+                                flex: 8,
+                                child: Text("${e.eventName}", style: Theme.of(context).textTheme.bodyText2!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).errorColor : null)),
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child: Align(
+                                  alignment: Alignment.centerRight,
+                                  child: Text("${e.ratingChange.toStringAsFixed(2)}", style: Theme.of(context).textTheme.bodyText2!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).errorColor : null))
+                                ),
+                              )
+                            ],
+                          ),
+                          Divider(
+                            height: 2,
+                            thickness: 1,
+                          )
+                        ],
+                      ),
+                    ),
                 )
             ).toList()
           ],
