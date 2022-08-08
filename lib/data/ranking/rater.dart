@@ -286,7 +286,7 @@ class Rater {
     var localAverageConnectedness = totalConnectedness / (totalShooters > 0 ? totalShooters : 1.0);
     var connectednessMod = /*1.0;*/ 1.0 + max(-0.2, min(0.2, (((localAverageConnectedness / globalAverageConnectedness) - 1.0) * 3))); // * 1: how much to adjust the percentages by
 
-     debugPrint("Connectedness for ${match.name}: ${localAverageConnectedness.toStringAsFixed(2)}/${globalAverageConnectedness.toStringAsFixed(2)} => ${connectednessMod.toStringAsFixed(3)}");
+     // debugPrint("Connectedness for ${match.name}: ${localAverageConnectedness.toStringAsFixed(2)}/${globalAverageConnectedness.toStringAsFixed(2)} => ${connectednessMod.toStringAsFixed(3)}");
 
     Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes = {};
     Set<ShooterRating> shootersAtMatch = Set();
@@ -552,7 +552,7 @@ class Rater {
       case Classification.D:
         return 1;
       case Classification.U:
-        return 0;
+        return _strengthForClass(Classification.C);
       default:
         return 2.5;
     }
@@ -572,7 +572,7 @@ class Rater {
     var histogram = <int, int>{};
     for(var rating in allRatings) {
       // Buckets 100 wide
-      var bucket = (1 + (rating / 100).floor());
+      var bucket = (0 + (rating / 100).floor());
 
       var value = histogram[bucket] ?? 0;
       value += 1;
@@ -585,7 +585,7 @@ class Rater {
     var countsByClass = <Classification, int>{};
 
     for(var classification in Classification.values) {
-      if(classification == Classification.U || classification == Classification.unknown) continue;
+      if(classification == Classification.unknown) continue;
 
       var shootersInClass = knownShooters.values.where((r) => r.lastClassification == classification);
       var ratingsInClass = shootersInClass.map((r) => r.rating);

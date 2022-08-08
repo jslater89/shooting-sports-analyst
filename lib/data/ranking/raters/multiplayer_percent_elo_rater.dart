@@ -42,6 +42,7 @@ class MultiplayerPercentEloRater implements RatingSystem {
 
     double expectedScore = 0;
     var highOpponentScore = 0.0;
+    var secondHighScore = 0.0;
     int zeroes = 0;
     int usedScores = 1; // our own score
     for(var bRating in scores.keys) {
@@ -57,6 +58,9 @@ class MultiplayerPercentEloRater implements RatingSystem {
 
       if (opponentScore.relativePoints > highOpponentScore) {
         highOpponentScore = opponentScore.relativePoints;
+      }
+      else if (opponentScore.relativePoints > secondHighScore) {
+        secondHighScore = opponentScore.relativePoints;
       }
 
       if(opponentScore.relativePoints < 0.1) {
@@ -91,6 +95,12 @@ class MultiplayerPercentEloRater implements RatingSystem {
       actualPercent = aScore.relativePoints / highOpponentScore;
       totalPercent += (actualPercent - 1.0);
     }
+    // n.b. I tried this, but it actually made rating spread worse rather than better.
+    // else if(highOpponentScore > 0.1 && secondHighScore > 0.1) {
+    //   var pct = highOpponentScore / secondHighScore;
+    //   totalPercent += (pct - 1.0);
+    // }
+
     var percentComponent = totalPercent == 0 ? 0 : (actualPercent / totalPercent);
     var placeComponent = (scores.length - aScore.place) /  divisor;
 

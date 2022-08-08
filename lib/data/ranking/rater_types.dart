@@ -303,7 +303,7 @@ abstract class RatingSystem {
     Classification.B: 1000.0,
     Classification.C: 900.0,
     Classification.D: 800.0,
-    Classification.U: 800.0,
+    Classification.U: 900.0,
     Classification.unknown: 800.0,
     null: 800.0,
   };

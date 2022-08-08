@@ -93,7 +93,6 @@ class ShooterStatsDialog extends StatelessWidget {
 
   Widget _buildChart(List<RatingEvent> events) {
     LabelLayoutStrategy? xContainerLabelLayoutStrategy;
-    ChartOptions.noLabels();
     ChartOptions chartOptions = const ChartOptions(
       xContainerOptions: XContainerOptions(
         isXContainerShown: false,
