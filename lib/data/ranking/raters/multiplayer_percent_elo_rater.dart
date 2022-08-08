@@ -10,8 +10,8 @@ class MultiplayerPercentEloRater implements RatingSystem {
   double get defaultRating => 1000;
 
   static const defaultK = 50.0;
-  static const defaultPercentWeight = 0.75;
-  static const defaultPlaceWeight = 0.25;
+  static const defaultPercentWeight = 0.5;
+  static const defaultPlaceWeight = 0.5;
   static const defaultScale = 800.0;
 
   @override
