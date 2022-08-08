@@ -5,6 +5,7 @@ import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
+import 'package:uspsa_result_viewer/ui/rater/rater_stats_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/rater_view.dart';
 
 class RatingsViewPage extends StatefulWidget {
@@ -301,6 +302,22 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
   List<Widget> _generateActions() {
     return [
+      Tooltip(
+          message: "View statistics for this division or group.",
+          child: IconButton(
+            icon: Icon(Icons.bar_chart),
+            onPressed: () async {
+              if(_selectedMatch != null) {
+                var tab = activeTabs[_tabController.index];
+                var rater = _history.raterFor(_selectedMatch!, tab);
+                var statistics = rater.getStatistics();
+                showDialog(context: context, builder: (context) {
+                  return RaterStatsDialog(statistics);
+                });
+              }
+            },
+          )
+      ),
       Tooltip(
         message: "Download ratings as CSV",
         child: IconButton(

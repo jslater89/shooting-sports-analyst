@@ -18,6 +18,7 @@ class ShooterRating {
   static const maxConnections = 40;
 
   final Shooter shooter;
+  Classification lastClassification;
   double rating;
   double variance = 0;
   double trend = 0;
@@ -139,7 +140,7 @@ class ShooterRating {
     }
   }
 
-  ShooterRating(this.shooter, this.rating);
+  ShooterRating(this.shooter, this.rating) : this.lastClassification = shooter.classification ?? Classification.U;
 
   void updateTrends(double totalChange) {
     var trendWindow = min(ratingEvents.length, baseTrendWindow);
@@ -175,6 +176,7 @@ class ShooterRating {
       this.rating = other.rating,
       this.variance = other.variance,
       this.trend = other.trend,
+      this.lastClassification = other.lastClassification,
       this._connectedness = other._connectedness,
       this.connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure)..addAll(other.connectedShooters.map((e) => ConnectedShooter.copy(e))),
       this.ratingEvents = other.ratingEvents.map((e) => RatingEvent.copy(e)).toList();

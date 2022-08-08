@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
-import 'package:uspsa_result_viewer/ui/rater/shooter_change_dialog.dart';
+import 'package:uspsa_result_viewer/ui/rater/shooter_stats_dialog.dart';
 import 'package:uspsa_result_viewer/ui/score_row.dart';
 
 class RaterView extends StatefulWidget {
@@ -90,7 +90,7 @@ class _RaterViewState extends State<RaterView> {
       widgets.add(GestureDetector(
         onTap: () {
           showDialog(context: context, builder: (context) {
-            return ShooterRatingChangeDialog(rating: sortedRatings[i], match: widget.currentMatch);
+            return ShooterStatsDialog(rating: sortedRatings[i], match: widget.currentMatch);
           });
         },
         child: ScoreRow(

@@ -4,6 +4,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
+import 'package:uspsa_result_viewer/data/sorted_list.dart';
 import 'package:uspsa_result_viewer/ui/filter_dialog.dart';
 
 class Rater {
@@ -115,6 +116,7 @@ class Rater {
 
   
   void addMatch(PracticalMatch match) {
+    _cachedStats = null;
     _matches.add(match);
 
     _addShootersFromMatch(match);
@@ -231,7 +233,10 @@ class Rater {
       var encounteredList = <ShooterRating>[];
       for(var shooter in shooters) {
         var rating = knownShooters[processMemberNumber(shooter.memberNumber)];
-        if(rating != null) encounteredList.add(rating);
+        if(rating != null) {
+          encounteredList.add(rating);
+          rating.lastClassification = shooter.classification ?? rating.lastClassification;
+        }
       }
 
       // var encounteredList = shootersAtMatch.toList();
@@ -553,6 +558,57 @@ class Rater {
     }
   }
 
+  RaterStatistics? _cachedStats;
+  RaterStatistics getStatistics() {
+    if(_cachedStats == null) _calculateStats();
+
+    return _cachedStats!;
+  }
+
+  void _calculateStats() {
+    var count = knownShooters.length;
+    var allRatings = knownShooters.values.map((r) => r.rating);
+
+    var histogram = <int, int>{};
+    for(var rating in allRatings) {
+      // Buckets 100 wide
+      var bucket = (1 + (rating / 100).floor());
+
+      var value = histogram[bucket] ?? 0;
+      value += 1;
+      histogram[bucket] = value;
+    }
+
+    var averagesByClass = <Classification, double>{};
+    var minsByClass = <Classification, double>{};
+    var maxesByClass = <Classification, double>{};
+    var countsByClass = <Classification, int>{};
+
+    for(var classification in Classification.values) {
+      if(classification == Classification.U || classification == Classification.unknown) continue;
+
+      var shootersInClass = knownShooters.values.where((r) => r.lastClassification == classification);
+      var ratingsInClass = shootersInClass.map((r) => r.rating);
+
+      averagesByClass[classification] = ratingsInClass.length > 0 ? ratingsInClass.average : 0;
+      minsByClass[classification] = ratingsInClass.length > 0 ? ratingsInClass.min : 0;
+      maxesByClass[classification] = ratingsInClass.length > 0 ? ratingsInClass.max : 0;
+      countsByClass[classification] = ratingsInClass.length;
+    }
+
+    _cachedStats = RaterStatistics(
+      shooters: count,
+      averageRating: allRatings.average,
+      minRating: allRatings.min,
+      maxRating: allRatings.max,
+      histogram: histogram,
+      countByClass: countsByClass,
+      averageByClass: averagesByClass,
+      minByClass: minsByClass,
+      maxByClass: maxesByClass,
+    );
+  }
+
   static String processMemberNumber(String no) {
     no = no.replaceAll(RegExp(r"[^0-9]"), "");
     return no;
@@ -572,4 +628,30 @@ extension _StrengthBonus on MatchLevel {
         return 1.45;
     }
   }
+}
+
+class RaterStatistics {
+  int shooters;
+  double averageRating;
+  double minRating;
+  double maxRating;
+
+  Map<int, int> histogram;
+
+  Map<Classification, int> countByClass;
+  Map<Classification, double> averageByClass;
+  Map<Classification, double> minByClass;
+  Map<Classification, double> maxByClass;
+
+  RaterStatistics({
+    required this.shooters,
+    required this.averageRating,
+    required this.minRating,
+    required this.maxRating,
+    required this.countByClass,
+    required this.averageByClass,
+    required this.minByClass,
+    required this.maxByClass,
+    required this.histogram,
+  });
 }
