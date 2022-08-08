@@ -17,7 +17,15 @@ which you likely already have installed.
 
 To enter the Elo rater, click the bottom icon from the application's main screen.
 
-### Configuration Screen
+### Obtaining quality results
+The rating algorithm is not perfect, and there are some things you can do to increase the quality
+of your results.
+
+The first, and most important, is to use the minimum stages/minimum matches filter on the results
+screen. Start with about 10 stages or 2 matches per year: this will filter out people who are on
+the periphery of the dataset, who would otherwise cause noise in the results.
+
+### Configuration screen
 
 #### Main options
 * **By stage?**: whether the rating algorithm runs after every stage, or after every match. After
@@ -51,7 +59,7 @@ URL to remove it individually.
 During match processing, matches are downloaded to a local cache. If a URL is already present in
 the local cache, the match name will be displayed rather than the raw URL.
 
-### Action bar items
+#### Action bar items
 * **Clear match cache**: removes all locally-cached matches. If launching the rating configuration
   screen becomes excessively slow, this will speed it up.
 * **Export to file**: export the current settings to a file which can be shared between users.
@@ -92,6 +100,7 @@ in their rating.
 ## The algorithm in detail
 The rating engine uses a version of the classic Elo rating system generalized to multiplayer games.
 
+### "Classic Elo" refresher
 Classic Elo operates by predicting the probability that one competitor will beat another in a 
 two-player game, based on the difference in their ratings.
 
@@ -103,6 +112,7 @@ matched, the winner gains a moderate number of points.
 The winner always gains points, and the loser always loses points. For a free-for-all game like
 USPSA, where there is one winner but there isn't one loser, this is obviously not appropriate.
 
+### Multiplayer Elo
 [Generalizing Elo to multiplayer games](https://towardsdatascience.com/developing-a-generalized-elo-rating-system-for-multiplayer-games-b9b495e87802?gi=f06e5b58c1e)
 produces a more suitable system. For each player, the algorithm looks at the ratings of every other
 player in the field, and uses them to generate an expected score. Players gain rating points for
@@ -115,16 +125,75 @@ competition, the rating engine will expect good shooters to win by substantial m
 their ratings.
 
 ### Generating shooter rating from start to finish
-* Seeded by class
-* IP multiplier
-* Per match...
-  * Strength of schedule multiplier
-    * Match level multiplier
-  * Connectedness multiplier
-  * In by-match mode, remove people who DQed or DNFed a stage.
-* Per stage...
-  * Zero multiplier
-  * Stages you shoot before DQing count, in by-stage mode!
-    * DNFs removed
-  * Calculate actual score for both percent and place
-    * Apply based on multipliers
+The rating engine operates by division group: if a shooter has recorded performances in multiple
+divisions in a dataset, he receives a rating in each of those divisions.
+
+It can also operate in one of two modes: by stage, or by match. Internally, these are referred to
+as _rating events_. In by-stage mode, a rating event is a stage. In by-match mode, a rating event
+is a match. This section will refer to both stages and matches as rating events, except where
+behavior differs between by-stage and by-match mode.
+
+#### Initial ratings
+When the engine encounters a shooter for the first time, he receives an initial rating: 800 for D
+or U, 900 for C, 1000 for B, 1100 for A, 1200 for M, and 1300 for GM. Classification has no direct
+effect on a shooter's rating after the initial rating. Note that the average Elo in a dataset will
+generally be less than 1000, because C, D, and U shooters outnumber A, M, and GM shooters in most
+sets.
+
+For his first 10 rating events, a shooter's rating changes more rapidly, with a K factor multiplier
+that scales from 2.5 down to 1.0, to increase the speed of initial placement.
+
+#### Strength of schedule
+When evaluating each match, the rating engine calculates a strength of schedule modifier used to
+adjust K, using a weighted average of the classifications of the shooters present: GM counts for 10,
+M for 6, A for 4, B for 3, C for 2, and D/U for 1. The match's strength of schedule ranges between
+50% and 150% based on the difference between the average and 4. The strength of schedule modifier is
+further adjusted by a multiplier for match level: L1 matches count for 100%, L2 matches for 115%,
+and L3 matches for 130%.
+
+### Connectedness
+The engine also calculates a connectedness multiplier for each match. In an ideal world, every
+competitor would shoot against everyone else the same number of times. (An ideal world for
+determining ratings, at least.) In the real world, shooters compete at varying times and in
+varying places; some shooters travel widely in a region, and some stick to a few matches.
+
+A shooter's connectedness is 1% of the sum of the connectednesses of the 40 best-connected shooters
+he has competed against in the last 60 days, updated when he shoots a match. (That is, connections
+will not expire unless a shooter is competing actively.) The purpose of connectedness is to measure
+the degree to which a shooter's current rating derives from the ratings of a broad range of other
+shooters in the dataset, even if he doesn't shoot against them directly. Highly connected shooters
+are rating carriers: their ratings account for performance against many other shooters, so matches
+that include them yield more reliable results.
+
+The rating engine determines the expected connectedness of a match by taking the average
+connectedness of all shooters at a match, and comparing it to the median of the connectednesses of
+all known shooters who have completed more than 30 stages or 5 matches. Matches more connected than
+the median receive a K multiplier of up to 120%. Matches less connected than the median receive a
+multiplier of down to 80%.
+
+#### Match-specific processing
+In match mode, the engine removes anyone with a DQ on record, or anyone who did not finish
+one or more stages. (The engine assumes a stage was a DNF if it has zero time and zero scoring
+events—i.e., hits, scored misses, penalties, or NPMs.)
+
+#### Stage processing
+In stage mode, the engine ignores DNFed stages, but _includes_ stages a disqualified shooter
+completed before disqualifying.
+
+By-stage mode also examines the scores for each stage, and applies a negative modifier to K if
+more than 10% of shooters zeroed it, from 100% K at 10% to 34% K at 30%.
+
+#### Final calculations
+Finally, having determined the above modifiers, the engine moves on to changing ratings. For each
+shooter, the engine calculates an expected score between 0 and 1 for the shooter, based on the
+ratings of other shooters at the match. 0 corresponds to last place, and 1 corresponds to a stage
+win. In percentage terms, the expected score may exceed 100%: the algorithm expects the shooter to
+not only win, but win by a particular margin.
+
+The shooter's actual percentage and place are both normalized to values between 0 and 1.
+Additionally, for the winning shooter, the actual percentage is adjusted to account for his margin
+of victory.
+
+The ratio between actual score and expected score determines the amount of rating adjustment, scaled
+by the percentage weight and placement weight from the engine's settings. Rating changes for all
+competitors are calculated prior to applying any changes to the data used for calculation.
