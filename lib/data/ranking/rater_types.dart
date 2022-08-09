@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/sorted_list.dart';
 
 class ShooterRating {
@@ -244,6 +245,11 @@ class ConnectedShooter {
       this.shooter = other.shooter,
       this.connectedness = other.connectedness,
       this.lastSeen = other.lastSeen;
+
+  @override
+  String toString() {
+    return "${shooter.shooter.getName()} => ${connectedness.round()}";
+  }
 }
 
 enum RatingMode {

@@ -284,7 +284,7 @@ class Rater {
       }
     }
     var localAverageConnectedness = totalConnectedness / (totalShooters > 0 ? totalShooters : 1.0);
-    var connectednessMod = /*1.0;*/ 1.0 + max(-0.2, min(0.2, (((localAverageConnectedness / globalAverageConnectedness) - 1.0) * 3))); // * 1: how much to adjust the percentages by
+    var connectednessMod = /*1.0;*/ 1.0 + max(-0.2, min(0.2, (((localAverageConnectedness / globalMedianConnectedness) - 1.0) * 3))); // * 1: how much to adjust the percentages by
 
      // debugPrint("Connectedness for ${match.name}: ${localAverageConnectedness.toStringAsFixed(2)}/${globalAverageConnectedness.toStringAsFixed(2)} => ${connectednessMod.toStringAsFixed(3)}");
 
