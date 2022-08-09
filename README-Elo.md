@@ -32,8 +32,9 @@ Lastly, try adjusting the settings. The default settings are a compromise betwee
 an established shooter new to the dataset can reach the correct rating, and the amount of noise in
 the ratings of shooters already present in the set.
 
-For ratings that converge more quickly, but vary more rapidly around the average, try K=60,
-percent weight=0.25. For ratings that reach equilibrium more slowly, try K=50, percent weight=0.50.
+For ratings that converge more quickly, but vary more rapidly around the average, try K=60, percent
+weight=0.25. For ratings that reach equilibrium more slowly but vary less, try K=50, percent
+weight=0.50.
 
 ## Usage
 Download and unzip the files. No installation is necessary.
@@ -50,6 +51,11 @@ of your results.
 The first, and most important, is to use the minimum stages/minimum matches filter on the results
 screen. Start with about 10 stages or 2 matches per year: this will filter out people who are on
 the periphery of the dataset, who would otherwise cause noise in the results.
+
+The second is to choose your dataset well. The algorithm works best on highly networked shooters,
+many of whom encounter many others frequently. Examples of datasets that have produced good
+results include all of the matches in the Western PA section, area matches and Nationals, and a
+combined western PA/eastern PA/Maryland/Northern Virginia/Delaware set.
 
 ### Configuration screen
 
