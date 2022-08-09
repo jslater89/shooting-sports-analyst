@@ -4,7 +4,7 @@ A web application for viewing USPSA match results, usable standalone at
 [github.io](https://jslater89.github.io/uspsa-result-viewer), or embedded
 into an iframe.
 
-For information on the Elo rater, see [README-Elo.md](https://github.com/jslater89/uspsa-result-viewer/https://github.com/jslater89/uspsa-result-viewer/blob/develop/README-Elo.md).
+For information on the Elo rater, see [README-Elo.md](https://github.com/jslater89/uspsa-result-viewer/blob/develop/README-Elo.md).
 
 ## Building
 
