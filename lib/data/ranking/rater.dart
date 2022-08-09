@@ -295,7 +295,7 @@ class Rater {
     // Process ratings for each shooter.
     if(byStage) {
       for(Stage s in match.stages) {
-        var weightMod = 1.0 + max(-0.25, min(0.25, (s.maxPoints - 110) /  300));
+        var weightMod = 1.0 + max(-0.20, min(0.10, (s.maxPoints - 120) /  400));
 
         for(int i = 0; i < shooters.length; i++) {
           if(ratingSystem.mode == RatingMode.roundRobin) {
