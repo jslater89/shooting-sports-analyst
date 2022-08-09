@@ -47,7 +47,10 @@ class MultiplayerPercentEloRater implements RatingSystem {
     var highOpponentScore = 0.0;
     var secondHighScore = 0.0;
 
-    var highOpponentRating = aRating.rating;
+    var highOpponentRating = 0.0;
+    var secondOpponentRating = 0.0;
+
+    var highOpponentClass = 0;
     var allRatings = SortedList<double>.comparable();
     allRatings.add(aRating.rating);
 
@@ -80,7 +83,9 @@ class MultiplayerPercentEloRater implements RatingSystem {
         throw StateError("NaN");
       }
 
+      if(bRating.lastClassification.index > highOpponentClass) highOpponentClass = bRating.lastClassification.index;
       if(bRating.rating > highOpponentRating) highOpponentRating = bRating.rating;
+      else if(bRating.rating > secondOpponentRating) secondOpponentRating = bRating.rating;
       allRatings.add(bRating.rating);
 
       expectedScore += probability;
@@ -99,17 +104,22 @@ class MultiplayerPercentEloRater implements RatingSystem {
     var averageRating = allRatings.average;
     var pubstomp = false;
 
-    // TODO: figure out a better heuristic to turn this on per rating event
-    // The below currently doesn't catch much of PR or NR winning over newcomers in Limited, but does
     // It's only a pubstomp if:
-    // 1. The winner wins by more than 15%
-    // 2. The highest-rated shooter's rating is greater than both the median and average opponent rating by $scale
-    // 3. The match strength multiplier is less than 1.0 (i.e., there aren't a lot of GMs/Ms on hand)
-    // if((highOpponentScore / secondHighScore > 1.15) && highOpponentRating - medianRating > scale && highOpponentRating - averageRating > scale && matchStrengthMultiplier < 1.0) {
-    //   matchStrengthMultiplier *= 0.5;
-    //   pubstomp = true;
-    //   print("Pubstomp multiplier for ${highOpponentRating.round()} over ${medianRating.round()}/${averageRating.round()} on ${allRatings.length} ${aScore.stage?.name}");
-    // }
+    // 1. The winner wins by more than 25%.
+    // 2. The winner is M shooting against no better than B or GM shooting against no better than A.
+    // 3. The winner's rating is at least 200 higher than the next shooter's.
+    var aClass = aRating.lastClassification.index;
+    var bClass = highOpponentClass;
+
+    if(Rater.processMemberNumber(aRating.shooter.memberNumber) == "68934") {
+      print("${aScore.relativePoints} / $secondHighScore ${aScore.relativePoints / secondHighScore}");
+      print("$aClass <= ${Classification.M.index}? $bClass - $aClass >= 2?");
+    }
+    if(aScore.percent >= 1.0 && (aScore.relativePoints / secondHighScore > 1.25) && aClass <= Classification.M.index && bClass - aClass >= 2 && aRating.rating - highOpponentRating > 200) {
+      matchStrengthMultiplier *= 0.25;
+      pubstomp = true;
+      // print("Pubstomp multiplier for $aRating ${medianRating.round()}/${averageRating.round()} on ${allRatings.length} ${aScore.stage?.name}");
+    }
 
     var divisor = (usedScores * (usedScores - 1)) / 2;
 
