@@ -183,7 +183,7 @@ M for 6, A for 4, B for 3, C for 2, and D/U for 1. The match's strength of sched
 further adjusted by a multiplier for match level: L1 matches count for 100%, L2 matches for 115%,
 and L3 matches for 130%.
 
-### Connectedness
+#### Connectedness
 The engine also calculates a connectedness multiplier for each match. In an ideal world, every
 competitor would shoot against everyone else the same number of times. (An ideal world for
 determining ratings, at least.) In the real world, shooters compete at varying times and in
@@ -208,12 +208,17 @@ In match mode, the engine removes anyone with a DQ on record, or anyone who did 
 one or more stages. (The engine assumes a stage was a DNF if it has zero time and zero scoring
 events—i.e., hits, scored misses, penalties, or NPMs.)
 
-#### Stage processing
+#### Stage-specific processing
 In stage mode, the engine ignores DNFed stages, but _includes_ stages a disqualified shooter
 completed before disqualifying.
 
 By-stage mode also examines the scores for each stage, and applies a negative modifier to K if
 more than 10% of shooters zeroed it, from 100% K at 10% to 34% K at 30%.
+
+Finally, by-stage mode applies a modifier of between -20% and 10% of K, based on the maximum
+points of the stage. An 8-round stage multiplies K by 80%, a 24-round stage applies no modifier,
+and a 32-round stage multiplies K by 110%. Stages shorter than 8 rounds or longer than 32 are
+treated as 8 or 32, respectively.
 
 #### Final calculations
 Finally, having determined the above modifiers, the engine moves on to changing ratings. For each

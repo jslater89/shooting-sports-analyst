@@ -224,39 +224,6 @@ class Rater {
     matchStrength = matchStrength / shooters.length;
     double strengthMod =  (1.0 + max(-0.75, min(0.5, ((matchStrength) - _strengthForClass(Classification.A)) * 0.2))) * (match.level?.strengthBonus ?? 1.0);
 
-    // Update connectedness before a match, so people gaining connectedness
-    // at a match benefit from it.
-    if(match.date != null && shooters.length > 1) {
-      var averageBefore = 0.0;
-      var averageAfter = 0.0;
-
-      var encounteredList = <ShooterRating>[];
-      for(var shooter in shooters) {
-        var rating = knownShooters[processMemberNumber(shooter.memberNumber)];
-        if(rating != null) {
-          encounteredList.add(rating);
-          rating.lastClassification = shooter.classification ?? rating.lastClassification;
-        }
-      }
-
-      // var encounteredList = shootersAtMatch.toList();
-
-      // debugPrint("Updating connectedness at ${match.name} for ${shootersAtMatch.length} of ${knownShooters.length} shooters");
-      for (var rating in encounteredList) {
-        averageBefore += rating.connectedness;
-        rating.updateConnections(match.date!, encounteredList);
-      }
-
-      for (var rating in encounteredList) {
-        rating.updateConnectedness();
-        averageAfter += rating.connectedness;
-      }
-
-      averageBefore /= encounteredList.length;
-      averageAfter /= encounteredList.length;
-      // debugPrint("Averages: ${averageBefore.toStringAsFixed(1)} -> ${averageAfter.toStringAsFixed(1)} vs. ${expectedConnectedness.toStringAsFixed(1)}");
-    }
-
     // Based on connectedness, vary rating gain between 80% and 120%
     var totalConnectedness = 0.0;
     var totalShooters = 0.0;
@@ -345,6 +312,38 @@ class Rater {
       }
       changes.clear();
     }
+
+    if(match.date != null && shooters.length > 1) {
+      var averageBefore = 0.0;
+      var averageAfter = 0.0;
+
+      var encounteredList = <ShooterRating>[];
+      for(var shooter in shooters) {
+        var rating = knownShooters[processMemberNumber(shooter.memberNumber)];
+        if(rating != null) {
+          encounteredList.add(rating);
+          rating.lastClassification = shooter.classification ?? rating.lastClassification;
+        }
+      }
+
+      // var encounteredList = shootersAtMatch.toList();
+
+      // debugPrint("Updating connectedness at ${match.name} for ${shootersAtMatch.length} of ${knownShooters.length} shooters");
+      for (var rating in encounteredList) {
+        averageBefore += rating.connectedness;
+        rating.updateConnections(match.date!, encounteredList);
+      }
+
+      for (var rating in encounteredList) {
+        rating.updateConnectedness();
+        averageAfter += rating.connectedness;
+      }
+
+      averageBefore /= encounteredList.length;
+      averageAfter /= encounteredList.length;
+      // debugPrint("Averages: ${averageBefore.toStringAsFixed(1)} -> ${averageAfter.toStringAsFixed(1)} vs. ${expectedConnectedness.toStringAsFixed(1)}");
+    }
+
   }
 
   bool _verifyShooter(Shooter s) {

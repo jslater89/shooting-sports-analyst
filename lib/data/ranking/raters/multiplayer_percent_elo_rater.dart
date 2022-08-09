@@ -100,7 +100,12 @@ class MultiplayerPercentEloRater implements RatingSystem {
     var pubstomp = false;
 
     // TODO: figure out a better heuristic to turn this on per rating event
-    // if(highOpponentRating - medianRating > scale && highOpponentRating - averageRating > scale && matchStrengthMultiplier < 1.0) {
+    // The below currently doesn't catch much of PR or NR winning over newcomers in Limited, but does
+    // It's only a pubstomp if:
+    // 1. The winner wins by more than 15%
+    // 2. The highest-rated shooter's rating is greater than both the median and average opponent rating by $scale
+    // 3. The match strength multiplier is less than 1.0 (i.e., there aren't a lot of GMs/Ms on hand)
+    // if((highOpponentScore / secondHighScore > 1.15) && highOpponentRating - medianRating > scale && highOpponentRating - averageRating > scale && matchStrengthMultiplier < 1.0) {
     //   matchStrengthMultiplier *= 0.5;
     //   pubstomp = true;
     //   print("Pubstomp multiplier for ${highOpponentRating.round()} over ${medianRating.round()}/${averageRating.round()} on ${allRatings.length} ${aScore.stage?.name}");
