@@ -222,7 +222,7 @@ class Rater {
       matchStrength += _strengthForClass(shooter.classification);
     }
     matchStrength = matchStrength / shooters.length;
-    double strengthMod =  (1.0 + max(-0.75, min(1.5, ((matchStrength) - 4) * 0.2))) * (match.level?.strengthBonus ?? 1.0);
+    double strengthMod =  (1.0 + max(-0.75, min(0.5, ((matchStrength) - _strengthForClass(Classification.A)) * 0.2))) * (match.level?.strengthBonus ?? 1.0);
 
     // Update connectedness before a match, so people gaining connectedness
     // at a match benefit from it.
