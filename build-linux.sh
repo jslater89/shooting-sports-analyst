@@ -7,6 +7,7 @@ fi
 PROJ_ROOT=`pwd`
 flutter build linux
 cd build/linux/x64/release
+rm uspsa-result-viewer.zip
 rm -rf uspsa-result-viewer
 cp -r bundle uspsa-result-viewer
 zip -r uspsa-result-viewer.zip uspsa-result-viewer
