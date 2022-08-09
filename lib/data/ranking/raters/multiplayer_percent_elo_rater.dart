@@ -9,9 +9,9 @@ class MultiplayerPercentEloRater implements RatingSystem {
   @override
   double get defaultRating => 1000;
 
-  static const defaultK = 50.0;
-  static const defaultPercentWeight = 0.5;
-  static const defaultPlaceWeight = 0.5;
+  static const defaultK = 60.0;
+  static const defaultPercentWeight = 0.4;
+  static const defaultPlaceWeight = 0.6;
   static const defaultScale = 800.0;
 
   @override
@@ -85,8 +85,8 @@ class MultiplayerPercentEloRater implements RatingSystem {
     var divisor = (usedScores * (usedScores - 1)) / 2;
 
     // TODO: solve my expected-percent-above-100 issue
-    // What I want to be able to do is, for the predicted winner, set expected score equal to their
-    // actual relative points (e.g.) and scale everyone else's expected score accordingly.
+    // I might be able to solve this by distributing percent actual score more like it's distributed for placement:
+    // pick a floor for percent points for last place, and adjust the intervals on the way up by relative finish.
     expectedScore = (expectedScore) / divisor;
 
     var totalPercent = 0.0;

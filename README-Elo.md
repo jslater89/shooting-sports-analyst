@@ -3,11 +3,22 @@ Desktop builds of the result viewer contain an Elo rating system, which applies 
 Elo algorithm to USPSA match results to attempt to determine the approximate rating of each
 competitor.
 
-## No web version?
+## FAQ
+**Where's the web version?**
 The rating system code is not currently optimized to the point that it is feasible to include
 in the web app. For large datasets, it processes hundreds of thousands of stage scores with
 math not well-suited to browser JavaScript engines, consumes more than 10gb of RAM, and displays
-thousands of shooter ratings, all of which are obstacles to 
+thousands of shooter ratings, all of which are obstacles to providing a web app version.
+
+**Why do the tooltips in some shooter details say the expected place is 2nd or below, but the
+expected percentage is greater than 100%?**
+The long version is too long for a FAQ, but the short version is that the rating points up for
+grabs for percent finishes are spread more evenly among all competitors than the rating points
+for place finishes. Put another way, to climb past a certain point, you'll need to start reliably
+beating your expected placement against strong competition.
+
+See the "percent vs. placement" header in the algorithm explainer section of this document for a
+somewhat deeper treatment.
 
 ## Usage
 Download and unzip the files. No installation is necessary.
@@ -197,3 +208,33 @@ of victory.
 The ratio between actual score and expected score determines the amount of rating adjustment, scaled
 by the percentage weight and placement weight from the engine's settings. Rating changes for all
 competitors are calculated prior to applying any changes to the data used for calculation.
+
+#### Percent vs. placement
+In its current form, it isn't unusual to see the engine say that a shooter's expected position is,
+for instance, 3rd, but his expected percentage is over 100%. This is an artifact of the different
+score distribution functions used for percentage and placement.
+
+For placement, actual score (in the Elo sense) is distributed in a linearly descending manner: last
+place gets zero points, and the remaining points are divided up so that the intervals between actual
+scores for the remaining places are constant, according to the formula below, where _n_ is the
+number of shooters.
+                            (n)(n-1)
+actualScore = (n - place) * --------
+                               2
+
+For percentage, each competitor receives points proportional to their finish. See below, where
+matchPoints is the score a shooter earned on a stage, and totalMatchPoints is the sum of all scores
+on the stage.
+
+actualScore = matchPoints / totalMatchPoints
+
+Consider a brief example of three shooters, with match points on a given rating event of 100, 95,
+and 60. They receive 0.666..., 0.333..., and 0 actual score from placement, and .392, .372, and
+.235 actual score from percentage. If each component is weighted equally, their combined actual
+scores are 0.529, 0.353, and 0.118. Without percentage mixed in, the shooter in last place will
+always lose rating points, whether he finishes with 60 points, 20 points, or 94 points. With
+percentage, a shooter who competes primarily against higher-rated shooters still has a way to make
+positive adjustments to his rating, without having to beat them heads-up or seek out similarly-
+skilled competition elsewhere.
+
+It also provides a brake on the ratings of
