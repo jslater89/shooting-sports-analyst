@@ -271,7 +271,7 @@ abstract class RatingSystem {
   ///
   /// [match] is the match and [stage] the stage in question. If [stage] is
   /// not null, the ratings are being done by stage.
-  Map<ShooterRating, RatingChange> updateShooterRatings({required List<ShooterRating> shooters, required Map<ShooterRating, RelativeScore> scores, double matchStrengthMultiplier = 1.0, double connectednessMultiplier = 1.0});
+  Map<ShooterRating, RatingChange> updateShooterRatings({required List<ShooterRating> shooters, required Map<ShooterRating, RelativeScore> scores, double matchStrengthMultiplier = 1.0, double connectednessMultiplier = 1.0, double eventWeightMultiplier = 1.0});
 
   static const initialPlacementMultipliers = [
     // 1.5,

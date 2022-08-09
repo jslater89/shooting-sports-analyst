@@ -1,9 +1,11 @@
 import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
+import 'package:uspsa_result_viewer/data/sorted_list.dart';
 
 class MultiplayerPercentEloRater implements RatingSystem {
   @override
@@ -26,7 +28,7 @@ class MultiplayerPercentEloRater implements RatingSystem {
   MultiplayerPercentEloRater({this.K = defaultK, this.scale = defaultScale, this.percentWeight = defaultPercentWeight}) : this.placeWeight = 1.0 - percentWeight;
 
   @override
-  Map<ShooterRating, RatingChange> updateShooterRatings({required List<ShooterRating> shooters, required Map<ShooterRating, RelativeScore> scores, double matchStrengthMultiplier = 1.0, double connectednessMultiplier = 1.0}) {
+  Map<ShooterRating, RatingChange> updateShooterRatings({required List<ShooterRating> shooters, required Map<ShooterRating, RelativeScore> scores, double matchStrengthMultiplier = 1.0, double connectednessMultiplier = 1.0, double eventWeightMultiplier = 1.0}) {
     if(shooters.length != 1) {
       throw StateError("Incorrect number of shooters passed to MultiplayerElo");
     }
@@ -41,8 +43,14 @@ class MultiplayerPercentEloRater implements RatingSystem {
     var aScore = scores[aRating]!;
 
     double expectedScore = 0;
+
     var highOpponentScore = 0.0;
     var secondHighScore = 0.0;
+
+    var highOpponentRating = aRating.rating;
+    var allRatings = SortedList<double>.comparable();
+    allRatings.add(aRating.rating);
+
     int zeroes = 0;
     int usedScores = 1; // our own score
     for(var bRating in scores.keys) {
@@ -72,6 +80,9 @@ class MultiplayerPercentEloRater implements RatingSystem {
         throw StateError("NaN");
       }
 
+      if(bRating.rating > highOpponentRating) highOpponentRating = bRating.rating;
+      allRatings.add(bRating.rating);
+
       expectedScore += probability;
       usedScores++;
     }
@@ -82,11 +93,25 @@ class MultiplayerPercentEloRater implements RatingSystem {
       };
     }
 
+    // Add an extra penalty for crazy pubstomps: if the high rating
+    // is more than scale above the
+    var medianRating = allRatings[allRatings.length ~/ 2];
+    var averageRating = allRatings.average;
+    var pubstomp = false;
+
+    // TODO: figure out a better heuristic to turn this on per rating event
+    // if(highOpponentRating - medianRating > scale && highOpponentRating - averageRating > scale && matchStrengthMultiplier < 1.0) {
+    //   matchStrengthMultiplier *= 0.5;
+    //   pubstomp = true;
+    //   print("Pubstomp multiplier for ${highOpponentRating.round()} over ${medianRating.round()}/${averageRating.round()} on ${allRatings.length} ${aScore.stage?.name}");
+    // }
+
     var divisor = (usedScores * (usedScores - 1)) / 2;
 
     // TODO: solve my expected-percent-above-100 issue
     // I might be able to solve this by distributing percent actual score more like it's distributed for placement:
     // pick a floor for percent points for last place, and adjust the intervals on the way up by relative finish.
+    // This is, however, a good soft cap on pubstompers.
     expectedScore = (expectedScore) / divisor;
 
     var totalPercent = 0.0;
@@ -114,7 +139,7 @@ class MultiplayerPercentEloRater implements RatingSystem {
     var zeroMultiplier = (zeroes / usedScores) < 0.1 ? 1 : 1 - 0.66 * ((min(0.3, (zeroes / usedScores) - 0.1)) / 0.3);
 
     var actualScore = percentComponent * percentWeight + placeComponent * placeWeight;
-    var effectiveK = K * placementMultiplier * matchStrengthMultiplier * zeroMultiplier * connectednessMultiplier;
+    var effectiveK = K * placementMultiplier * matchStrengthMultiplier * zeroMultiplier * connectednessMultiplier * eventWeightMultiplier;
 
     var changeFromPercent = effectiveK * (usedScores - 1) * (percentComponent * percentWeight - (expectedScore * percentWeight));
     var changeFromPlace = effectiveK * (usedScores - 1) * (placeComponent * placeWeight - (expectedScore * placeWeight));
@@ -122,7 +147,7 @@ class MultiplayerPercentEloRater implements RatingSystem {
     var change = changeFromPlace + changeFromPercent;
 
     if(change.isNaN || change.isInfinite) {
-      debugPrint("### ${aRating.shooter.lastName} stats: $actualPercent of $usedScores shooters for ${aScore.stage?.name}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}, placement $placementMultiplier, zero $zeroMultiplier ($zeroes)");
+      debugPrint("### ${aRating.shooter.lastName} stats: $actualPercent of $usedScores shooters for ${aScore.stage?.name}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}${pubstomp ? "p" : ""}, placement $placementMultiplier, zero $zeroMultiplier ($zeroes)");
       debugPrint("AS/ES: ${actualScore.toStringAsFixed(6)}/${expectedScore.toStringAsFixed(6)}");
       debugPrint("Actual/expected percent: ${(percentComponent * totalPercent * 100).toStringAsFixed(2)}/${(expectedScore * totalPercent * 100).toStringAsFixed(2)}");
       debugPrint("Actual/expected place: ${aScore.place}/${(usedScores - (expectedScore * divisor)).toStringAsFixed(4)}");
@@ -136,7 +161,7 @@ class MultiplayerPercentEloRater implements RatingSystem {
       "Actual/expected percent: ${(percentComponent * totalPercent * 100).toStringAsFixed(2)}/${(expectedScore * totalPercent * 100).toStringAsFixed(2)} on ${hf.toStringAsFixed(2)}HF",
       "Actual/expected place: ${aScore.place}/${(usedScores - (expectedScore * divisor)).toStringAsFixed(4)}",
       "Rating±Change: ${aRating.rating.round()} + ${change.toStringAsFixed(2)} (${changeFromPercent.toStringAsFixed(2)} from pct, ${changeFromPlace.toStringAsFixed(2)} from place)",
-      "eff. K, multipliers: ${(effectiveK).toStringAsFixed(2)}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}, IP ${placementMultiplier.toStringAsFixed(2)}, Zero ${zeroMultiplier.toStringAsFixed(2)}, Conn ${connectednessMultiplier.toStringAsFixed(2)}",
+      "eff. K, multipliers: ${(effectiveK).toStringAsFixed(2)}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}${pubstomp ? "p" : ""}, IP ${placementMultiplier.toStringAsFixed(2)}, Zero ${zeroMultiplier.toStringAsFixed(2)}, Conn ${connectednessMultiplier.toStringAsFixed(2)}, EW ${eventWeightMultiplier.toStringAsFixed(2)}",
     ];
 
     return {

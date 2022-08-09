@@ -294,12 +294,14 @@ class Rater {
     // Process ratings for each shooter.
     if(byStage) {
       for(Stage s in match.stages) {
+        var weightMod = 1.0 + max(-0.25, min(0.25, (s.maxPoints - 110) /  300));
+
         for(int i = 0; i < shooters.length; i++) {
           if(ratingSystem.mode == RatingMode.roundRobin) {
-            _processRoundRobin(match, s, shooters, scores, i, changes, strengthMod, connectednessMod);
+            _processRoundRobin(match, s, shooters, scores, i, changes, strengthMod, connectednessMod, weightMod);
           }
           else {
-            _processOneshot(match, s, shooters[i], scores, changes, strengthMod, connectednessMod);
+            _processOneshot(match, s, shooters[i], scores, changes, strengthMod, connectednessMod, weightMod);
           }
         }
 
@@ -321,10 +323,10 @@ class Rater {
     else {
       for(int i = 0; i < shooters.length; i++) {
         if(ratingSystem.mode == RatingMode.roundRobin) {
-          _processRoundRobin(match, null, shooters, scores, i, changes, strengthMod, connectednessMod);
+          _processRoundRobin(match, null, shooters, scores, i, changes, strengthMod, connectednessMod, 1.0);
         }
         else {
-          _processOneshot(match, null, shooters[i], scores, changes, strengthMod, connectednessMod);
+          _processOneshot(match, null, shooters[i], scores, changes, strengthMod, connectednessMod, 1.0);
         }
       }
 
@@ -358,7 +360,7 @@ class Rater {
     return true;
   }
 
-  void _processRoundRobin(PracticalMatch match, Stage? stage, List<Shooter> shooters, List<RelativeMatchScore> scores, int startIndex, Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes, double matchStrength, double connectednessMod) {
+  void _processRoundRobin(PracticalMatch match, Stage? stage, List<Shooter> shooters, List<RelativeMatchScore> scores, int startIndex, Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes, double matchStrength, double connectednessMod, double weightMod) {
     for(int j = startIndex + 1; j < shooters.length; j++) {
       Shooter a = shooters[startIndex];
       Shooter b = shooters[j];
@@ -405,6 +407,7 @@ class Rater {
           },
           matchStrengthMultiplier: matchStrength,
           connectednessMultiplier: connectednessMod,
+          eventWeightMultiplier: weightMod,
         );
 
         changes[aRating]![aStageScore] ??= RatingEvent(eventName: "${match.name} - ${stage.name}", score: aStageScore);
@@ -436,7 +439,7 @@ class Rater {
     }
   }
 
-  void _processOneshot(PracticalMatch match, Stage? stage, Shooter shooter, List<RelativeMatchScore> scores, Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes, double matchStrength, double connectednessMod) {
+  void _processOneshot(PracticalMatch match, Stage? stage, Shooter shooter, List<RelativeMatchScore> scores, Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes, double matchStrength, double connectednessMod, double weightMod) {
     if(!_verifyShooter(shooter)) {
       return;
     }
@@ -473,6 +476,7 @@ class Rater {
         scores: scoreMap,
         matchStrengthMultiplier: matchStrength,
         connectednessMultiplier: connectednessMod,
+        eventWeightMultiplier: weightMod,
       );
 
       changes[rating]![stageScore] ??= RatingEvent(eventName: "${match.name} - ${stage.name}", score: stageScore);
