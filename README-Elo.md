@@ -20,6 +20,21 @@ beating your expected placement against strong competition.
 See the "percent vs. placement" header in the algorithm explainer section of this document for a
 somewhat deeper treatment.
 
+**Why are the ratings wrong?**
+For one, there's still substantial testing and improvement to be done (though this version is
+really quite good compared to its predecessors).
+
+For another, try using a value of about 10 stages (or 2 matches) in the 'minimum stages' box in the
+results view per 75 stages/15 matches in your dataset. The engine does an okay job of placing people
+quickly, but it does a much better job comparing people above a minimum threshold of data.
+
+Lastly, try adjusting the settings. The default settings are a compromise between the speed at which
+an established shooter new to the dataset can reach the correct rating, and the amount of noise in
+the ratings of shooters already present in the set.
+
+For ratings that converge more quickly, but vary more rapidly around the average, try K=60,
+percent weight=0.25. For ratings that reach equilibrium more slowly, try K=50, percent weight=0.50.
+
 ## Usage
 Download and unzip the files. No installation is necessary.
 
@@ -237,4 +252,8 @@ percentage, a shooter who competes primarily against higher-rated shooters still
 positive adjustments to his rating, without having to beat them heads-up or seek out similarly-
 skilled competition elsewhere.
 
-It also provides a brake on the ratings of
+It also provides a brake on the ratings of good shooters who mostly shoot against weak competition.
+Due to the manner in which the engine calculates win probability, a shooter will always gain points
+for placing first in a rating event; probability of win approaches 100% as the rating gap increases
+but never quite gets there. Expected percentage, on the other hand, can (and does) rise above what
+a shooter is able to obtain.
