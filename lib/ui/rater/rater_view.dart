@@ -73,7 +73,7 @@ class _RaterViewState extends State<RaterView> {
 
   int _ratingWindow = 12;
   List<Widget> _buildRatingRows() {
-    var sortedRatings = widget.rater.uniqueShooters.where((e) => e.ratingEvents.length > widget.minRatings).sorted((a, b) => b.rating.compareTo(a.rating));
+    var sortedRatings = widget.rater.uniqueShooters.where((e) => e.ratingEvents.length >= widget.minRatings).sorted((a, b) => b.rating.compareTo(a.rating));
     // var sortedRatings = widget.rater.uniqueShooters.where((e) => e.ratingEvents.length > widget.minRatings).sorted((a, b) {
     //   var bRating = b.averageRating(window: _ratingWindow);
     //   var aRating = a.averageRating(window: _ratingWindow);
