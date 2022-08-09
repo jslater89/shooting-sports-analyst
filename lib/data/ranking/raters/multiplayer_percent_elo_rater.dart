@@ -83,10 +83,6 @@ class MultiplayerPercentEloRater implements RatingSystem {
     }
 
     var divisor = (usedScores * (usedScores - 1)) / 2;
-
-    // TODO: what I want, to solve the expected-percent-greater-than-100 thing...
-    // is to set an expectedScore such that the predicted winner's actualScore is equal
-    // to it, using (say) relative points.
     expectedScore = (expectedScore) / divisor;
 
     var totalPercent = 0.0;
@@ -99,13 +95,14 @@ class MultiplayerPercentEloRater implements RatingSystem {
       actualPercent = aScore.relativePoints / highOpponentScore;
       totalPercent += (actualPercent - 1.0);
     }
-    else if(highOpponentScore > 0.1 && secondHighScore > 0.1) {
-      var pct = highOpponentScore / secondHighScore;
-      totalPercent += (pct - 1.0);
-    }
+    // n.b. I tried this, but it actually made rating spread worse rather than better.
+    // else if(highOpponentScore > 0.1 && secondHighScore > 0.1) {
+    //   var pct = highOpponentScore / secondHighScore;
+    //   totalPercent += (pct - 1.0);
+    // }
 
     var percentComponent = totalPercent == 0 ? 0 : (actualPercent / totalPercent);
-    var placeComponent = (usedScores - aScore.place) /  divisor;
+    var placeComponent = (scores.length - aScore.place) /  divisor;
 
     // The first N matches you shoot get bonuses for initial placement.
     var placementMultiplier = aRating.ratingEvents.length < RatingSystem.initialPlacementMultipliers.length ?
@@ -119,16 +116,16 @@ class MultiplayerPercentEloRater implements RatingSystem {
 
     var actualScore = percentComponent * percentWeight + placeComponent * placeWeight;
     var effectiveK = K * placementMultiplier * matchStrengthMultiplier * zeroMultiplier * connectednessMultiplier;
-    var change = effectiveK * (usedScores - 1) * (actualScore - expectedScore);
+    var change = effectiveK * (scores.length - 1) * (actualScore - expectedScore);
 
-    var changeFromPercent = effectiveK * (usedScores - 1) * (percentComponent * percentWeight - (expectedScore * percentWeight));
-    var changeFromPlace = effectiveK * (usedScores - 1) * (placeComponent * placeWeight - (expectedScore * placeWeight));
+    var changeFromPercent = effectiveK * (scores.length - 1) * (percentComponent * percentWeight - (expectedScore * percentWeight));
+    var changeFromPlace = effectiveK * (scores.length - 1) * (placeComponent * placeWeight - (expectedScore * placeWeight));
 
     if(change.isNaN || change.isInfinite) {
       debugPrint("### ${aRating.shooter.lastName} stats: $actualPercent of $usedScores shooters for ${aScore.stage?.name}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}, placement $placementMultiplier, zero $zeroMultiplier ($zeroes)");
       debugPrint("AS/ES: ${actualScore.toStringAsFixed(6)}/${expectedScore.toStringAsFixed(6)}");
       debugPrint("Actual/expected percent: ${(percentComponent * totalPercent * 100).toStringAsFixed(2)}/${(expectedScore * totalPercent * 100).toStringAsFixed(2)}");
-      debugPrint("Actual/expected place: ${aScore.place}/${(usedScores - (expectedScore * divisor)).toStringAsFixed(4)}");
+      debugPrint("Actual/expected place: ${aScore.place}/${(scores.length - (expectedScore * divisor)).toStringAsFixed(4)}");
       debugPrint("Rating±Change: ${aRating.rating.round()} + ${change.toStringAsFixed(2)} (${changeFromPercent.toStringAsFixed(2)} from pct, ${changeFromPlace.toStringAsFixed(2)} from place)");
       debugPrint("###");
       throw StateError("NaN/Infinite");
@@ -137,7 +134,7 @@ class MultiplayerPercentEloRater implements RatingSystem {
     var hf = aScore.score.getHitFactor(scoreDQ: aScore.score.stage != null);
     List<String> info = [
       "Actual/expected percent: ${(percentComponent * totalPercent * 100).toStringAsFixed(2)}/${(expectedScore * totalPercent * 100).toStringAsFixed(2)} on ${hf.toStringAsFixed(2)}HF",
-      "Actual/expected place: ${aScore.place}/${(usedScores - (expectedScore * divisor)).toStringAsFixed(4)}",
+      "Actual/expected place: ${aScore.place}/${(scores.length - (expectedScore * divisor)).toStringAsFixed(4)}",
       "Rating±Change: ${aRating.rating.round()} + ${change.toStringAsFixed(2)} (${changeFromPercent.toStringAsFixed(2)} from pct, ${changeFromPlace.toStringAsFixed(2)} from place)",
       "eff. K, multipliers: ${(effectiveK).toStringAsFixed(2)}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}, IP ${placementMultiplier.toStringAsFixed(2)}, Zero ${zeroMultiplier.toStringAsFixed(2)}, Conn ${connectednessMultiplier.toStringAsFixed(2)}",
     ];
