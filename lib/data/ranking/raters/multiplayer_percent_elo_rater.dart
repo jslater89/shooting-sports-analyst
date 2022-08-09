@@ -99,11 +99,6 @@ class MultiplayerPercentEloRater implements RatingSystem {
       actualPercent = aScore.relativePoints / highOpponentScore;
       totalPercent += (actualPercent - 1.0);
     }
-    // n.b. I tried this, but it actually made rating spread worse rather than better.
-    // else if(highOpponentScore > 0.1 && secondHighScore > 0.1) {
-    //   var pct = highOpponentScore / secondHighScore;
-    //   totalPercent += (pct - 1.0);
-    // }
 
     var percentComponent = totalPercent == 0 ? 0 : (actualPercent / totalPercent);
     var placeComponent = (usedScores - aScore.place) /  divisor;
@@ -120,10 +115,11 @@ class MultiplayerPercentEloRater implements RatingSystem {
 
     var actualScore = percentComponent * percentWeight + placeComponent * placeWeight;
     var effectiveK = K * placementMultiplier * matchStrengthMultiplier * zeroMultiplier * connectednessMultiplier;
-    var change = effectiveK * (usedScores - 1) * (actualScore - expectedScore);
 
     var changeFromPercent = effectiveK * (usedScores - 1) * (percentComponent * percentWeight - (expectedScore * percentWeight));
     var changeFromPlace = effectiveK * (usedScores - 1) * (placeComponent * placeWeight - (expectedScore * placeWeight));
+
+    var change = changeFromPlace + changeFromPercent;
 
     if(change.isNaN || change.isInfinite) {
       debugPrint("### ${aRating.shooter.lastName} stats: $actualPercent of $usedScores shooters for ${aScore.stage?.name}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}, placement $placementMultiplier, zero $zeroMultiplier ($zeroes)");
