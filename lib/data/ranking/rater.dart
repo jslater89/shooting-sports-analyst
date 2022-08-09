@@ -272,6 +272,7 @@ class Rater {
     }
     var globalAverageConnectedness = totalShooters < 1 ? 105 : totalConnectedness / totalShooters;
     var globalMedianConnectedness = totalShooters < 1 ? 105 : connectednesses[connectednesses.length ~/ 2];
+    var connectednessDenominator = globalMedianConnectedness;
 
     totalConnectedness = 0.0;
     totalShooters = 0;
@@ -284,9 +285,9 @@ class Rater {
       }
     }
     var localAverageConnectedness = totalConnectedness / (totalShooters > 0 ? totalShooters : 1.0);
-    var connectednessMod = /*1.0;*/ 1.0 + max(-0.2, min(0.2, (((localAverageConnectedness / globalMedianConnectedness) - 1.0) * 3))); // * 1: how much to adjust the percentages by
+    var connectednessMod = /*1.0;*/ 1.0 + max(-0.2, min(0.2, (((localAverageConnectedness / connectednessDenominator) - 1.0) * 2))); // * 1: how much to adjust the percentages by
 
-     // debugPrint("Connectedness for ${match.name}: ${localAverageConnectedness.toStringAsFixed(2)}/${globalAverageConnectedness.toStringAsFixed(2)} => ${connectednessMod.toStringAsFixed(3)}");
+    // debugPrint("Connectedness for ${match.name}: ${localAverageConnectedness.toStringAsFixed(2)}/${connectednessDenominator.toStringAsFixed(2)} => ${connectednessMod.toStringAsFixed(3)}");
 
     Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes = {};
     Set<ShooterRating> shootersAtMatch = Set();
