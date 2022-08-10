@@ -102,24 +102,6 @@ class MultiplayerPercentEloRater implements RatingSystem {
     // is more than scale above the
     var medianRating = allRatings[allRatings.length ~/ 2];
     var averageRating = allRatings.average;
-    var pubstomp = false;
-
-    // It's only a pubstomp if:
-    // 1. The winner wins by more than 25%.
-    // 2. The winner is M shooting against no better than B or GM shooting against no better than A.
-    // 3. The winner's rating is at least 200 higher than the next shooter's.
-    var aClass = aRating.lastClassification.index;
-    var bClass = highOpponentClass;
-
-    // if(Rater.processMemberNumber(aRating.shooter.memberNumber) == "68934") {
-    //   print("${aScore.relativePoints} / $secondHighScore ${aScore.relativePoints / secondHighScore}");
-    //   print("$aClass <= ${Classification.M.index}? $bClass - $aClass >= 2?");
-    // }
-    if(aScore.percent >= 1.0 && (aScore.relativePoints / secondHighScore > 1.25) && aClass <= Classification.M.index && bClass - aClass >= 2 && aRating.rating - highOpponentRating > 200) {
-      matchStrengthMultiplier *= 0.4;
-      pubstomp = true;
-      // print("Pubstomp multiplier for $aRating ${medianRating.round()}/${averageRating.round()} on ${allRatings.length} ${aScore.stage?.name}");
-    }
 
     var divisor = (usedScores * (usedScores - 1)) / 2;
 
@@ -162,7 +144,7 @@ class MultiplayerPercentEloRater implements RatingSystem {
     var change = changeFromPlace + changeFromPercent;
 
     if(change.isNaN || change.isInfinite) {
-      debugPrint("### ${aRating.shooter.lastName} stats: $actualPercent of $usedScores shooters for ${aScore.stage?.name}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}${pubstomp ? "p" : ""}, placement $placementMultiplier, zero $zeroMultiplier ($zeroes)");
+      debugPrint("### ${aRating.shooter.lastName} stats: $actualPercent of $usedScores shooters for ${aScore.stage?.name}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}, placement $placementMultiplier, zero $zeroMultiplier ($zeroes)");
       debugPrint("AS/ES: ${actualScore.toStringAsFixed(6)}/${expectedScore.toStringAsFixed(6)}");
       debugPrint("Actual/expected percent: ${(percentComponent * totalPercent * 100).toStringAsFixed(2)}/${(expectedScore * totalPercent * 100).toStringAsFixed(2)}");
       debugPrint("Actual/expected place: ${aScore.place}/${(usedScores - (expectedScore * divisor)).toStringAsFixed(4)}");
@@ -176,7 +158,7 @@ class MultiplayerPercentEloRater implements RatingSystem {
       "Actual/expected percent: ${(percentComponent * totalPercent * 100).toStringAsFixed(2)}/${(expectedScore * totalPercent * 100).toStringAsFixed(2)} on ${hf.toStringAsFixed(2)}HF",
       "Actual/expected place: ${aScore.place}/${(usedScores - (expectedScore * divisor)).toStringAsFixed(4)}",
       "Rating±Change: ${aRating.rating.round()} + ${change.toStringAsFixed(2)} (${changeFromPercent.toStringAsFixed(2)} from pct, ${changeFromPlace.toStringAsFixed(2)} from place)",
-      "eff. K, multipliers: ${(effectiveK).toStringAsFixed(2)}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}${pubstomp ? "p" : ""}, IP ${placementMultiplier.toStringAsFixed(2)}, Zero ${zeroMultiplier.toStringAsFixed(2)}, Conn ${connectednessMultiplier.toStringAsFixed(2)}, EW ${eventWeightMultiplier.toStringAsFixed(2)}",
+      "eff. K, multipliers: ${(effectiveK).toStringAsFixed(2)}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}, IP ${placementMultiplier.toStringAsFixed(2)}, Zero ${zeroMultiplier.toStringAsFixed(2)}, Conn ${connectednessMultiplier.toStringAsFixed(2)}, EW ${eventWeightMultiplier.toStringAsFixed(2)}",
     ];
 
     return {

@@ -220,6 +220,11 @@ class Rater {
     var matchStrength = 0.0;
     for(var shooter in shooters) {
       matchStrength += _strengthForClass(shooter.classification);
+
+      var rating = knownShooters[processMemberNumber(shooter.memberNumber)];
+      if(rating != null) {
+        rating.lastClassification = shooter.classification ?? rating.lastClassification;
+      }
     }
     matchStrength = matchStrength / shooters.length;
     double strengthMod =  (1.0 + max(-0.75, min(0.5, ((matchStrength) - _strengthForClass(Classification.A)) * 0.2))) * (match.level?.strengthBonus ?? 1.0);
@@ -317,16 +322,7 @@ class Rater {
       var averageBefore = 0.0;
       var averageAfter = 0.0;
 
-      var encounteredList = <ShooterRating>[];
-      for(var shooter in shooters) {
-        var rating = knownShooters[processMemberNumber(shooter.memberNumber)];
-        if(rating != null) {
-          encounteredList.add(rating);
-          rating.lastClassification = shooter.classification ?? rating.lastClassification;
-        }
-      }
-
-      // var encounteredList = shootersAtMatch.toList();
+      var encounteredList = shootersAtMatch.toList();
 
       // debugPrint("Updating connectedness at ${match.name} for ${shootersAtMatch.length} of ${knownShooters.length} shooters");
       for (var rating in encounteredList) {
@@ -361,8 +357,19 @@ class Rater {
   }
 
   void _processRoundRobin(PracticalMatch match, Stage? stage, List<Shooter> shooters, List<RelativeMatchScore> scores, int startIndex, Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes, double matchStrength, double connectednessMod, double weightMod) {
+    Shooter a = shooters[startIndex];
+    var score = scores.firstWhere((element) => element.shooter == a);
+
+    // Check for pubstomp
+    var pubstompMod = 1.0;
+    if(score.total.percent >= 1.0) {
+      if(_pubstomp(scores)) {
+        pubstompMod = 0.33;
+      }
+    }
+    matchStrength *= pubstompMod;
+
     for(int j = startIndex + 1; j < shooters.length; j++) {
-      Shooter a = shooters[startIndex];
       Shooter b = shooters[j];
 
       if(!_verifyShooter(a) || !_verifyShooter(b)) {
@@ -454,6 +461,15 @@ class Rater {
     changes[rating] ??= {};
     RelativeMatchScore score = scores.firstWhere((score) => score.shooter == shooter);
 
+    // Check for pubstomp
+    var pubstompMod = 1.0;
+    if(score.total.percent >= 1.0) {
+      if(_pubstomp(scores)) {
+        pubstompMod = 0.33;
+      }
+    }
+    matchStrength *= pubstompMod;
+
     if(stage != null) {
       RelativeScore stageScore = score.stageScores[stage]!;
 
@@ -516,6 +532,50 @@ class Rater {
         info: update[rating]!.info,
       );
     }
+  }
+
+  bool _pubstomp(List<RelativeMatchScore> scores) {
+    if(scores.length < 2) return false;
+
+    var sorted = scores.sorted((a, b) => b.total.percent.compareTo(a.total.percent));
+
+    var first = sorted[0];
+    var second = sorted[1];
+
+    var firstScore = first.total;
+    var secondScore = second.total;
+
+    var firstClass = first.shooter.classification ?? Classification.U;
+    var secondClass = second.shooter.classification ?? Classification.U;
+
+    var firstRating = knownShooters[processMemberNumber(first.shooter.memberNumber)];
+    var secondRating = knownShooters[processMemberNumber(second.shooter.memberNumber)];
+
+    // People entered with empty or invalid member numbers
+    if(firstRating == null || secondRating == null) {
+      // print("Unexpected null in pubstomp detection");
+      return false;
+    }
+
+    // if(processMemberNumber(first.shooter.memberNumber) == "68934" || processMemberNumber(first.shooter.memberNumber) == "5172") {
+    //   debugPrint("${firstScore.percent.toStringAsFixed(2)} ${(firstScore.relativePoints/secondScore.relativePoints).toStringAsFixed(3)}");
+    //   debugPrint("${firstRating.rating.round()} > ${secondRating.rating.round()}");
+    // }
+
+    // It's only a pubstomp if:
+    // 1. The winner wins by more than 25%.
+    // 2. The winner is M shooting against no better than B or GM shooting against no better than A.
+    // 3. The winner's rating is at least 200 higher than the next shooter's.
+    if(firstScore.percent >= 1.0
+        && (firstScore.relativePoints / secondScore.relativePoints > 1.20)
+        && firstClass.index <= Classification.M.index
+        && secondClass.index - firstClass.index >= 2
+        && firstRating.rating - secondRating.rating > 200) {
+      // print("Pubstomp multiplier for $firstRating over $secondRating");
+      return true;
+
+    }
+    return false;
   }
 
   bool _dnf(RelativeMatchScore score) {
