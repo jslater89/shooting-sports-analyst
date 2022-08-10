@@ -14,8 +14,8 @@ thousands of shooter ratings, all of which are obstacles to providing a web app 
 expected percentage is greater than 100%?**
 The long version is too long for a FAQ, but the short version is that the rating points up for
 grabs for percent finishes are spread more evenly among all competitors than the rating points
-for place finishes. Put another way, to climb past a certain point, you'll need to start reliably
-beating your expected placement against strong competition.
+for place finishes. Put another way, to climb past a certain point, finishing well in percentage
+terms can only take you so far: eventually, you'll need to start winning outright to climb further.
 
 See the "percent vs. placement" header in the algorithm explainer section of this document for a
 somewhat deeper treatment.
@@ -182,6 +182,11 @@ M for 6, A for 4, B for 3, C for 2, and D/U for 1. The match's strength of sched
 50% and 150% based on the difference between the average and 4. The strength of schedule modifier is
 further adjusted by a multiplier for match level: L1 matches count for 100%, L2 matches for 115%,
 and L3 matches for 130%.
+
+The engine also applies a 'pubstomp multiplier' to high-level shooters shooting exclusively against
+low-level competition. If a shooter is classified at least M, is shooting against shooters no closer
+than two classifications down, wins a rating event by at least 25%, and has a rating at least 200
+greater than the second-place finisher, K is reduced by 75% for the winner only.
 
 #### Connectedness
 The engine also calculates a connectedness multiplier for each match. In an ideal world, every
