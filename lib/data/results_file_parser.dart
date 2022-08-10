@@ -84,7 +84,7 @@ void _readInfoLines(PracticalMatch match, List<String> infoLines) {
       else if(level.contains("II")) match.level = MatchLevel.II;
       else if(level.contains("I")) match.level = MatchLevel.I;
 
-      debugPrint("${match.name} has $level => ${match.level}");
+      // debugPrint("${match.name} has $level => ${match.level}");
     }
   }
 }
