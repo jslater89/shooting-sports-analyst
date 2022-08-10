@@ -111,12 +111,12 @@ class MultiplayerPercentEloRater implements RatingSystem {
     var aClass = aRating.lastClassification.index;
     var bClass = highOpponentClass;
 
-    if(Rater.processMemberNumber(aRating.shooter.memberNumber) == "68934") {
-      print("${aScore.relativePoints} / $secondHighScore ${aScore.relativePoints / secondHighScore}");
-      print("$aClass <= ${Classification.M.index}? $bClass - $aClass >= 2?");
-    }
+    // if(Rater.processMemberNumber(aRating.shooter.memberNumber) == "68934") {
+    //   print("${aScore.relativePoints} / $secondHighScore ${aScore.relativePoints / secondHighScore}");
+    //   print("$aClass <= ${Classification.M.index}? $bClass - $aClass >= 2?");
+    // }
     if(aScore.percent >= 1.0 && (aScore.relativePoints / secondHighScore > 1.25) && aClass <= Classification.M.index && bClass - aClass >= 2 && aRating.rating - highOpponentRating > 200) {
-      matchStrengthMultiplier *= 0.25;
+      matchStrengthMultiplier *= 0.4;
       pubstomp = true;
       // print("Pubstomp multiplier for $aRating ${medianRating.round()}/${averageRating.round()} on ${allRatings.length} ${aScore.stage?.name}");
     }

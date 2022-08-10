@@ -392,6 +392,10 @@ class Rater {
         if(aStageScore.score.hits == 0 && aStageScore.score.time <= 0.1) continue;
         if(bStageScore.score.hits == 0 && bStageScore.score.time <= 0.1) continue;
 
+        // The George Williams Rule
+        if(aStageScore.stage!.type != Scoring.fixedTime && aStageScore.score.getHitFactor() > 30) continue;
+        if(bStageScore.stage!.type != Scoring.fixedTime && bStageScore.score.getHitFactor() > 30) continue;
+
         // Filter out extremely short times that are probably DNFs or partial scores entered for DQs
         if(aStageScore.score.time <= 0.5) continue;
         if(bStageScore.score.time <= 0.5) continue;
@@ -456,6 +460,9 @@ class Rater {
       // Filter out badly marked classifier reshoots
       if(stageScore.score.hits == 0 && stageScore.score.time == 0.0) return;
 
+      // The George Williams Rule
+      if(stageScore.stage!.type != Scoring.fixedTime && stageScore.score.getHitFactor() > 30) return;
+
       // Filter out extremely short times that are probably DNFs or partial scores entered for DQs
       if(stageScore.score.time <= 0.5) return;
 
@@ -513,7 +520,7 @@ class Rater {
 
   bool _dnf(RelativeMatchScore score) {
     for(var stageScore in score.stageScores.values) {
-      if(stageScore.score.time <= 0.01 && stageScore.score.hits == 0) return true;
+      if(stageScore.stage!.type != Scoring.chrono && stageScore.score.time <= 0.01 && stageScore.score.hits == 0) return true;
     }
 
     return false;

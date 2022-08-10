@@ -42,6 +42,12 @@ class Shooter {
 
     return newShooter;
   }
+
+  @override
+  String toString() {
+    // TODO: implement toString
+    return super.toString();
+  }
 }
 
 enum Division {
