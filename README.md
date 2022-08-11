@@ -32,4 +32,6 @@ your browser's URL bar.
 
 ## Contributions
 
-Open a pull request.
+For result viewer issues, or Elo rater UI issues, open a pull request.
+
+For Elo rater algorithm issues, please open an issue and attach an exported rater project that demonstrates the issue first, and be prepared to discuss and/or justify any proposed changes to the math.
