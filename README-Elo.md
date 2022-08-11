@@ -20,7 +20,7 @@ terms can only take you so far: eventually, you'll need to start winning outrigh
 See the "percent vs. placement" header in the algorithm explainer section of this document for a
 somewhat deeper treatment.
 
-**Why are the ratings wrong?**
+**Why are the ratings wrong, in general?**
 For one, there's still substantial testing and improvement to be done (though this version is
 really quite good compared to its predecessors).
 
@@ -35,6 +35,31 @@ the ratings of shooters already present in the set.
 For ratings that converge more quickly, but vary more rapidly around the average, try K=60, percent
 weight=0.25. For ratings that reach equilibrium more slowly but vary less, try K=50, percent
 weight=0.50.
+
+**Why are the ratings wrong, in that someone worse than me has a higher rating?**
+There are a few reasons why this might be.
+
+The first is that it takes a relatively large difference in rating before the algorithm expects
+one person to consistently beat another. A rating difference of 100 between two players indicates
+that the algorithm thinks the higher-rated player will beat the lower-rated player about 57% of the
+time, which is essentially a toss-up. With a rating difference of 200, the weaker is still expected
+to win 36% of matchups. Only at 800 rating difference (with the default settings) is does the
+algorithm consider a matchup nearly a sure thing: a 91% chance for the higher-rated player to win.
+
+All of that to say, a rating difference of 100 points doesn't matter very much, so if the better
+shooter is within that margin, you can more or less ignore the difference.
+
+The second is that Elo rewards volume, to a point. The algorithm makes an effort to minimize this
+effect, but it is still present. Given equal skill, the person shooting 100 matches will likely be
+rated more closely to their actual skill than the person shooting 10.
+
+The third is that the algorithm strongly rewards consistency: it's easy to lose a lot of points by
+bombing a stage, but hard to climb back up.
+
+The fourth possibility is that you are classified M or GM and shoot mostly against much weaker
+competition. The algorithm contains a modifier that prevents highly-classed shooters from gaining
+large amounts of rating points in such situations, applied when they win a match by 20% or more
+against a second-place opponent two or more classes down.
 
 ## Usage
 Download and unzip the files. No installation is necessary.
@@ -185,7 +210,7 @@ and L3 matches for 130%.
 
 The engine also applies a 'pubstomp multiplier' to high-level shooters shooting exclusively against
 low-level competition. If a shooter is classified at least M, is shooting against shooters no closer
-than two classifications down, wins a rating event by at least 25%, and has a rating at least 200
+than two classifications down, wins a rating event by at least 20%, and has a rating at least 200
 greater than the second-place finisher, K is reduced by 75% for the winner only.
 
 #### Connectedness
@@ -217,8 +242,10 @@ events—i.e., hits, scored misses, penalties, or NPMs.)
 In stage mode, the engine ignores DNFed stages, but _includes_ stages a disqualified shooter
 completed before disqualifying.
 
-By-stage mode also examines the scores for each stage, and applies a negative modifier to K if
-more than 10% of shooters zeroed it, from 100% K at 10% to 34% K at 30%.
+Observation suggests that stages that many shooters zero do not provide much usable information
+about the relative performances between shooters. As such, y-stage mode also examines the scores for
+each stage, and applies a negative modifier to K if more than 10% of shooters zeroed it, from 100% K
+at 10% to 34% K at 30%.
 
 Finally, by-stage mode applies a modifier of between -20% and 10% of K, based on the maximum
 points of the stage. An 8-round stage multiplies K by 80%, a 24-round stage applies no modifier,
