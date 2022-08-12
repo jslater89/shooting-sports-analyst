@@ -654,6 +654,7 @@ class Rater {
     var minsByClass = <Classification, double>{};
     var maxesByClass = <Classification, double>{};
     var countsByClass = <Classification, int>{};
+    Map<Classification, Map<int, int>> histogramsByClass = {};
 
     for(var classification in Classification.values) {
       if(classification == Classification.unknown) continue;
@@ -665,6 +666,16 @@ class Rater {
       minsByClass[classification] = ratingsInClass.length > 0 ? ratingsInClass.min : 0;
       maxesByClass[classification] = ratingsInClass.length > 0 ? ratingsInClass.max : 0;
       countsByClass[classification] = ratingsInClass.length;
+
+      histogramsByClass[classification] = {};
+      for(var rating in ratingsInClass) {
+        // Buckets 100 wide
+        var bucket = (0 + (rating / 100).floor());
+
+        var value = histogramsByClass[classification]![bucket] ?? 0;
+        value += 1;
+        histogramsByClass[classification]![bucket] = value;
+      }
     }
 
     _cachedStats = RaterStatistics(
@@ -677,6 +688,7 @@ class Rater {
       averageByClass: averagesByClass,
       minByClass: minsByClass,
       maxByClass: maxesByClass,
+      histogramsByClass: histogramsByClass,
     );
   }
 
@@ -714,6 +726,8 @@ class RaterStatistics {
   Map<Classification, double> minByClass;
   Map<Classification, double> maxByClass;
 
+  Map<Classification, Map<int, int>> histogramsByClass;
+
   RaterStatistics({
     required this.shooters,
     required this.averageRating,
@@ -724,5 +738,6 @@ class RaterStatistics {
     required this.minByClass,
     required this.maxByClass,
     required this.histogram,
+    required this.histogramsByClass,
   });
 }

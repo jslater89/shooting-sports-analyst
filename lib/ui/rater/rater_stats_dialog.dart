@@ -110,7 +110,7 @@ class RaterStatsDialog extends StatelessWidget {
   Widget buildHistogram(BuildContext context) {
     ChartOptions chartOptions = const ChartOptions(
       legendOptions: LegendOptions(
-        isLegendContainerShown: false,
+        //isLegendContainerShown: false,
       ),
       xContainerOptions: XContainerOptions(
         isXContainerShown: true,
@@ -124,29 +124,48 @@ class RaterStatsDialog extends StatelessWidget {
       options: chartOptions,
     );
 
+    List<List<double>> series = [];
+    var legends = <String>[];
+
     var hist = <int, int>{}..addAll(statistics.histogram);
     var minKey = hist.keys.min;
     var maxKey = hist.keys.max;
 
-    for(int i = minKey; i < maxKey; i += 100) {
-      hist[i] ??= 0;
-    }
     var keys = statistics.histogram.keys.toList();
     keys.sort();
 
-    var data = <double>[];
+    for(var classification in Classification.values) {
+      if(classification == Classification.unknown) continue;
+
+      var classHist = statistics.histogramsByClass[classification]!;
+
+      List<double> data = [];
+      for(int i = minKey; i < maxKey + 1; i += 1) {
+        data.add(classHist[i]?.toDouble() ?? 0.0);
+      }
+
+      legends.add(classification.name);
+      series.add(data);
+    }
+
     var labels = <String>[];
-    for(var key in keys) {
-      data.add(hist[key]!.toDouble());
-      labels.add((key * 100).toString());
+    for(int i = minKey; i < maxKey + 1; i += 1) {
+      labels.add((i * 100).toString());
     }
 
     ChartData chartData = ChartData(
-      dataRows: [data],
+      dataRows: series,
       xUserLabels: labels,
-      dataRowsLegends: [""],
+      dataRowsLegends: legends,
       chartOptions: chartOptions,
-      dataRowsColors: [Colors.blueGrey],
+      dataRowsColors: [
+        Colors.red,
+        Colors.orange,
+        Colors.yellow,
+        Colors.green,
+        Colors.blue,
+        Color.fromARGB(0xff, 0x09, 0x1f, 0x92),
+        Colors.deepPurple],
     );
 
     var barChartContainer = VerticalBarChartTopContainer(
