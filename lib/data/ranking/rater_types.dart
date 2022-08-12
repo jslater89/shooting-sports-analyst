@@ -168,6 +168,8 @@ class ShooterRating {
     this.variance = other.variance;
     this.trend = other.trend;
     this._connectedness = other._connectedness;
+    this.lastClassification = other.lastClassification;
+    this._connectedness = other._connectedness;
     this.connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure)..addAll(other.connectedShooters.map((e) => ConnectedShooter.copy(e)));
     this.ratingEvents = other.ratingEvents.map((e) => RatingEvent.copy(e)).toList();
   }
