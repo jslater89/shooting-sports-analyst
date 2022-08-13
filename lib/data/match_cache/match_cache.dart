@@ -106,6 +106,20 @@ class MatchCache {
     }
   }
 
+  Future<bool> deleteMatch(String matchUrl) async {
+    var id = matchUrl.split("/").last;
+    var entry = _cache[id];
+
+    if(entry != null) {
+      for(var id in entry.ids) {
+        _cache.remove(id);
+      }
+      return _prefs.remove(_generatePath(entry));
+    }
+
+    return false;
+  }
+
   Future<PracticalMatch?> getMatch(String matchUrl, {bool forceUpdate = false, bool localOnly = false}) async {
     var id = matchUrl.split("/").last;
     if(!forceUpdate && _cache.containsKey(id)) {

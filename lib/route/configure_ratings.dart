@@ -557,6 +557,19 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                       mainAxisSize: MainAxisSize.max,
                                       children: [
                                         Expanded(child: Text(urlDisplayNames[url]!, overflow: TextOverflow.fade)),
+                                        Tooltip(
+                                          message: "Remove this match from the cache, redownloading it.",
+                                          child: IconButton(
+                                            icon: Icon(Icons.refresh),
+                                            color: Theme.of(context).primaryColor,
+                                            onPressed: () {
+                                              MatchCache().deleteMatch(url);
+                                              setState(() {
+                                                urlDisplayNames[url] = url;
+                                              });
+                                            },
+                                          ),
+                                        ),
                                         IconButton(
                                           icon: Icon(Icons.remove),
                                           color: Theme.of(context).primaryColor,
