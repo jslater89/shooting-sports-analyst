@@ -364,6 +364,8 @@ class Rater {
     Shooter a = shooters[startIndex];
     var score = scores.firstWhere((element) => element.shooter == a);
 
+    if(scores.length < 2) return;
+
     // Check for pubstomp
     var pubstompMod = 1.0;
     if(score.total.percent >= 1.0) {
@@ -459,6 +461,8 @@ class Rater {
       return;
     }
 
+    if(scores.length < 2) return;
+
     String memNum = processMemberNumber(shooter.memberNumber);
 
     ShooterRating rating = knownShooters[memNum]!;
@@ -478,7 +482,7 @@ class Rater {
       RelativeScore stageScore = score.stageScores[stage]!;
 
       // Filter out badly marked classifier reshoots
-      if(stageScore.score.hits == 0 && stageScore.score.time == 0.0) return;
+      if(stageScore.score.hits == 0 && stageScore.score.time <= 0.1) return;
 
       // The George Williams Rule
       if(stageScore.stage!.type != Scoring.fixedTime && stageScore.score.getHitFactor() > 30) return;
@@ -506,22 +510,34 @@ class Rater {
         eventWeightMultiplier: weightMod,
       );
 
-      changes[rating]![stageScore] ??= RatingEvent(eventName: "${match.name} - ${stage.name}", score: stageScore);
-      changes[rating]![stageScore]!.ratingChange += update[rating]!.change;
-      changes[rating]![stageScore]!.info = update[rating]!.info;
+      bool hasRatingChangeForStage = false;
+      for(var stageScore in changes[rating]!.keys) {
+        if(stage == stageScore.stage) {
+          hasRatingChangeForStage = true;
+          break;
+        }
+      }
+
+      if(!hasRatingChangeForStage) {
+        changes[rating]![stageScore] ??= RatingEvent(eventName: "${match.name} - ${stage.name}", score: stageScore);
+        changes[rating]![stageScore]!.ratingChange += update[rating]!.change;
+        changes[rating]![stageScore]!.info = update[rating]!.info;
+      }
     }
     else {
       // Filter out non-DQ DNFs
-      if(_dnf(score)) return;
+      if(_dnf(score)) {
+        return;
+      }
 
       _encounteredMemberNumber(memNum);
 
       var scoreMap = <ShooterRating, RelativeScore>{};
       for(var s in scores) {
-        if(!_verifyShooter(s.shooter)) continue;
+        if(!_verifyShooter(s.shooter) || _dnf(score)) continue;
         String num = processMemberNumber(s.shooter.memberNumber);
 
-        scoreMap[knownShooters[num]!] = s.total;
+        scoreMap[knownShooters[num]!] ??= s.total;
       }
       var update = ratingSystem.updateShooterRatings(
         shooters: [rating],
@@ -530,11 +546,14 @@ class Rater {
         connectednessMultiplier: connectednessMod,
       );
 
-      changes[rating]![score.total] ??= RatingEvent(eventName: "${match.name}",
-        score: score.total,
-        ratingChange: update[rating]!.change,
-        info: update[rating]!.info,
-      );
+      // You only get one rating change per match.
+      if(changes[rating]!.isEmpty) {
+        changes[rating]![score.total] ??= RatingEvent(eventName: "${match.name}",
+          score: score.total,
+          ratingChange: update[rating]!.change,
+          info: update[rating]!.info,
+        );
+      }
     }
   }
 
@@ -584,7 +603,9 @@ class Rater {
 
   bool _dnf(RelativeMatchScore score) {
     for(var stageScore in score.stageScores.values) {
-      if(stageScore.stage!.type != Scoring.chrono && stageScore.score.time <= 0.01 && stageScore.score.hits == 0) return true;
+      if(stageScore.stage!.type != Scoring.chrono && stageScore.score.time <= 0.01 && stageScore.score.hits == 0) {
+        return true;
+      }
     }
 
     return false;
