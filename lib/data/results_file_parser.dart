@@ -51,7 +51,7 @@ PracticalMatch _processResultLines({required List<String> infoLines, required Li
     }
   }
 
-  debugPrint("Processed match ${match.name} with ${match.shooters.length} shooters, ${match.stages.length} stages, and $stageScoreCount stage scores");
+  print("Processed match ${match.name} with ${match.shooters.length} shooters, ${match.stages.length} stages, and $stageScoreCount stage scores");
 
   return match;
 }
@@ -64,17 +64,17 @@ final DateFormat _df = DateFormat("MM/dd/yyyy");
 void _readInfoLines(PracticalMatch match, List<String> infoLines) {
   for(String line in infoLines) {
     if(line.startsWith(_MATCH_NAME)) {
-      // debugPrint("Found match name");
+      // print("Found match name");
       match.name = line.replaceFirst(_MATCH_NAME, "");
     }
     else if(line.startsWith(_MATCH_DATE)) {
-      // debugPrint("Found match date");
+      // print("Found match date");
       match.rawDate = line.replaceFirst(_MATCH_DATE, "");
       try {
         match.date = _df.parse(match.rawDate!);
       }
       catch(e) {
-        debugPrint("Unable to parse date ${match.rawDate} $e");
+        print("Unable to parse date ${match.rawDate} $e");
       }
     }
     else if(line.startsWith(_MATCH_LEVEL)) {
@@ -84,7 +84,7 @@ void _readInfoLines(PracticalMatch match, List<String> infoLines) {
       else if(level.contains("II")) match.level = MatchLevel.II;
       else if(level.contains("I")) match.level = MatchLevel.I;
 
-      // debugPrint("${match.name} has $level => ${match.level}");
+      // print("${match.name} has $level => ${match.level}");
     }
   }
 }
@@ -119,11 +119,11 @@ Map<int, Shooter> _readCompetitorLines(PracticalMatch match, List<String> compet
       shootersById[i++] = s;
       match.shooters.add(s);
     } catch(err) {
-      debugPrint("Error parsing shooter: $line $err");
+      print("Error parsing shooter: $line $err");
     }
   }
 
-  // debugPrint("Read ${shootersById.length} shooters");
+  // print("Read ${shootersById.length} shooters");
 
   return shootersById;
 }
@@ -155,12 +155,12 @@ Map<int, Stage> _readStageLines(PracticalMatch match, List<String> stageLines) {
       maxPoints += s.maxPoints;
       match.stages.add(s);
     } catch(err) {
-      debugPrint("Error parsing stage: $line $err");
+      print("Error parsing stage: $line $err");
     }
   }
 
   match.maxPoints = maxPoints;
-  // debugPrint("Read ${stagesById.length} stages");
+  // print("Read ${stagesById.length} stages");
 
   return stagesById;
 }
@@ -233,28 +233,28 @@ int _readScoreLines(List<String> stageScoreLines, Map<int, Shooter> shootersByFi
       // nor time, we can assume it's someone who didn't complete the stage at all.
       if(!stageFinished) {
         shooter.stageScores[stage] = Score(shooter: shooter, stage: stage);
-        // debugPrint("Shooter ${shooter.getName()} did not finish ${stage.name}");
+        // print("Shooter ${shooter.getName()} did not finish ${stage.name}");
         continue;
       }
 
       shooter.stageScores[stage] = s;
 
       if(s.penaltyPoints != int.parse(splitLine[_PENALTY_POINTS])) {
-        if(verboseParse) debugPrint("Penalty points mismatch for ${shooter.getName()} on ${stage.name}: ${s.penaltyPoints} vs ${splitLine[_PENALTY_POINTS]}");
+        if(verboseParse) print("Penalty points mismatch for ${shooter.getName()} on ${stage.name}: ${s.penaltyPoints} vs ${splitLine[_PENALTY_POINTS]}");
       }
       if(s.rawPoints != int.parse(splitLine[_RAW_POINTS])) {
-        if(verboseParse) debugPrint("Raw points mismatch for ${shooter.getName()} on ${stage.name}: ${s.rawPoints} vs ${splitLine[_RAW_POINTS]}");
+        if(verboseParse) print("Raw points mismatch for ${shooter.getName()} on ${stage.name}: ${s.rawPoints} vs ${splitLine[_RAW_POINTS]}");
       }
       if(s.getTotalPoints(scoreDQ: false) != int.parse(splitLine[_TOTAL_POINTS])) {
-        if(verboseParse) debugPrint("Total points mismatch for ${shooter.getName()} on ${stage.name}: ${s.getTotalPoints(scoreDQ: false)} vs ${splitLine[_TOTAL_POINTS]}");
+        if(verboseParse) print("Total points mismatch for ${shooter.getName()} on ${stage.name}: ${s.getTotalPoints(scoreDQ: false)} vs ${splitLine[_TOTAL_POINTS]}");
       }
 
       i++;
     } catch(err) {
-      debugPrint("Error parsing score: $line $err");
+      print("Error parsing score: $line $err");
     }
   }
 
-  // debugPrint("Processed $i stage scores");
+  // print("Processed $i stage scores");
   return i;
 }

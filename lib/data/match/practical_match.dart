@@ -82,7 +82,7 @@ class PracticalMatch {
     if(innerShooters.length == 0 || innerStages.length == 0) return [];
 
     int matchMaxPoints = innerStages.map<int>((e) => e.maxPoints).reduce((a, b) => a + b);
-    // debugPrint("Max points for match: $matchMaxPoints");
+    // print("Max points for match: $matchMaxPoints");
 
     // Create a total score for each shooter, precalculating what we can and
     // prepopulating what we can't.
@@ -120,7 +120,7 @@ class PracticalMatch {
       }
 
       matchScores[shooter]!.percentTotalPoints = shooterTotalPoints.toDouble() / matchMaxPoints.toDouble();
-      //debugPrint("${shooter.firstName} ${shooter.lastName} shot ${totalScores[shooter].percentTotalPoints} total points");
+      //print("${shooter.firstName} ${shooter.lastName} shot ${totalScores[shooter].percentTotalPoints} total points");
     }
 
     // First, for each stage, sort by HF. Then, calculate stage percentages.
@@ -139,11 +139,11 @@ class PracticalMatch {
       if(innerShooters[0].stageScores[stage] == null) {
         // we've clearly hit some awful condition here, so let's
         // just bail out
-        debugPrint("Winner of ${stage.name}: ${innerShooters[0].firstName} ${innerShooters[0].lastName} with ${innerShooters[0].stageScores[stage]!.getHitFactor(scoreDQ: scoreDQ)}");
+        print("Winner of ${stage.name}: ${innerShooters[0].firstName} ${innerShooters[0].lastName} with ${innerShooters[0].stageScores[stage]!.getHitFactor(scoreDQ: scoreDQ)}");
         continue;
       }
       double highHitFactor = innerShooters[0].stageScores[stage]!.getHitFactor(scoreDQ: scoreDQ);
-      //debugPrint("Winner of ${stage.name}: ${shooters[0].firstName} ${shooters[0].lastName} with ${shooters[0].stageScores[stage].hitFactor}");
+      //print("Winner of ${stage.name}: ${shooters[0].firstName} ${shooters[0].lastName} with ${shooters[0].stageScores[stage].hitFactor}");
 
       int place = 1;
       for(Shooter shooter in innerShooters) {

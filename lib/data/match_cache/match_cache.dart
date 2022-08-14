@@ -55,7 +55,7 @@ class MatchCache {
             _cache[id] = entry;
           }
 
-          debugPrint("Loaded ${entry.match.name} from $path to $ids");
+          print("Loaded ${entry.match.name} from $path to $ids");
         }
       }
     }
@@ -99,7 +99,7 @@ class MatchCache {
 
       await _prefs.setString(path, entry.match.reportContents);
       alreadySaved.add(entry);
-      debugPrint("Saved ${entry.match.name} to $path");
+      print("Saved ${entry.match.name} to $path");
 
       currentProgress += 1;
       await progressCallback?.call(currentProgress, totalProgress);
@@ -142,10 +142,10 @@ class MatchCache {
         _cache[canonId] = cacheEntry;
         return match;
       }
-      debugPrint("Match is null");
+      print("Match is null");
     }
     else {
-      debugPrint("canon ID is null");
+      print("canon ID is null");
     }
 
     return null;
