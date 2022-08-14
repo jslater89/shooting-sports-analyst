@@ -7,6 +7,7 @@ import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/ui/confirm_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/enter_name_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/enter_urls_dialog.dart';
+import 'package:uspsa_result_viewer/ui/rater/member_number_whitelist_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/select_project_dialog.dart';
 
 class ConfigureRatingsPage extends StatefulWidget {
@@ -160,6 +161,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   bool _combineOpenPCC = false;
   bool _combineLimitedCO = false;
 
+  List<String> _memNumWhitelist = [];
+
   TextEditingController _kController = TextEditingController(text: "${MultiplayerPercentEloRater.defaultK}");
   TextEditingController _scaleController = TextEditingController(text: "${MultiplayerPercentEloRater.defaultScale}");
   TextEditingController _pctWeightController = TextEditingController(text: "${MultiplayerPercentEloRater.defaultPercentWeight}");
@@ -210,6 +213,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       groups: groups,
       byStage: _byStage,
       preserveHistory: _keepHistory,
+      memberNumberWhitelist: _memNumWhitelist,
     );
   }
 
@@ -624,6 +628,19 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
   List<Widget> _generateActions() {
     return [
+      Tooltip(
+        message: "Enter member numbers to whitelist from classifier reshoot detection.",
+        child: IconButton(
+          icon: Icon(Icons.person_add_alt_1_outlined),
+          onPressed: () async {
+            var whitelist = await showDialog<List<String>>(context: context, builder: (context) {
+              return MemberNumberWhitelistDialog(_memNumWhitelist);
+            }) ?? [];
+
+            _memNumWhitelist = whitelist;
+          },
+        ),
+      ),
       Tooltip(
         message: "Clear locally-cached matches.",
         child: IconButton(
