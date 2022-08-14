@@ -15,11 +15,12 @@ class Rater {
   RatingSystem ratingSystem;
   FilterSet? _filters;
   bool byStage;
+  List<String> memberNumberWhitelist;
   Future<void> Function(int, int)? progressCallback;
 
   Set<ShooterRating> get uniqueShooters => <ShooterRating>{}..addAll(knownShooters.values);
 
-  Rater({required List<PracticalMatch> matches, required this.ratingSystem, FilterSet? filters, this.byStage = false, this.progressCallback}) : this._matches = matches, this._filters = filters {
+  Rater({required List<PracticalMatch> matches, required this.ratingSystem, FilterSet? filters, this.byStage = false, this.progressCallback, this.memberNumberWhitelist = const []}) : this._matches = matches, this._filters = filters {
     _matches.sort((a, b) {
       if(a.date == null && b.date == null) {
         return 0;
@@ -59,6 +60,7 @@ class Rater {
       this._memberNumbersEncountered = Set()..addAll(other._memberNumbersEncountered),
       this._memberNumberMappings = {}..addAll(other._memberNumberMappings),
       this._filters = other._filters,
+      this.memberNumberWhitelist = other.memberNumberWhitelist,
       this.ratingSystem = other.ratingSystem {
     List<String> secondPass = [];
     for(var entry in _memberNumberMappings.entries) {
@@ -343,15 +345,17 @@ class Rater {
   }
 
   bool _verifyShooter(Shooter s) {
-    if(s.memberNumber.isEmpty) return false;
-    if(s.memberNumber.length <= 3) return false;
     if(!byStage && s.dq) return false;
     if(s.reentry) return false;
+    if(s.memberNumber.isEmpty) return false;
 
     String memNum = processMemberNumber(s.memberNumber);
-    if(s.firstName.endsWith("2") || s.lastName.endsWith("2") || s.firstName.endsWith("3") || s.firstName.endsWith("3")) return false;
-
     if(knownShooters[memNum] == null) return false;
+    if(memberNumberWhitelist.contains(memNum)) return true;
+
+    if(s.memberNumber.length <= 3) return false;
+
+    if(s.firstName.endsWith("2") || s.lastName.endsWith("2") || s.firstName.endsWith("3") || s.firstName.endsWith("3")) return false;
 
     return true;
   }

@@ -184,6 +184,7 @@ class RatingHistorySettings {
   bool byStage;
   bool preserveHistory;
   List<RaterGroup> groups;
+  List<String> memberNumberWhitelist;
   RatingSystem algorithm;
 
   RatingHistorySettings({
@@ -191,6 +192,7 @@ class RatingHistorySettings {
     this.preserveHistory = false,
     this.groups = const [RaterGroup.open, RaterGroup.limited, RaterGroup.pcc, RaterGroup.carryOptics, RaterGroup.locap],
     required this.algorithm,
+    this.memberNumberWhitelist = const [],
   });
 
   static List<RaterGroup> groupsForSettings({bool combineOpenPCC = false, bool combineLimitedCO = false, bool combineLocap = true}) {

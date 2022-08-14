@@ -144,6 +144,7 @@ const _combineOpenPCCKey = "combineOpPCC";
 const _byStageKey = "byStage";
 const _keepHistoryKey = "keepHistory";
 const _urlsKey = "urls";
+const _whitelistKey = "memNumWhitelist";
 
 class RatingProject {
   String name;
@@ -174,6 +175,8 @@ class RatingProject {
         combineLimitedCO: combineLimitedCO,
         combineLocap: combineLocap,
       ),
+      memberNumberWhitelist: ((encodedProject[_whitelistKey] ?? []) as List<dynamic>).map((item) => item as String).toList(),
+
     );
     var matchUrls = (encodedProject[_urlsKey] as List<dynamic>).map((item) => item as String).toList();
     var name = encodedProject[_nameKey] as String;
@@ -195,6 +198,7 @@ class RatingProject {
     map[_byStageKey] = settings.byStage;
     map[_keepHistoryKey] = settings.preserveHistory;
     map[_urlsKey] = matchUrls;
+    map[_whitelistKey] = settings.memberNumberWhitelist;
 
     var encoded = jsonEncode(map);
     return encoded;
