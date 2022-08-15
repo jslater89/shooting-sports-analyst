@@ -36,6 +36,18 @@ class _EnterNameDialogState extends State<EnterNameDialog> {
         });
       }
     });
+
+    _initialCheck();
+  }
+
+  void _initialCheck() async {
+    await RatingProjectManager().ready;
+    if(widget.initial != null && RatingProjectManager().projectExists(widget.initial!)) {
+      setState(() {
+        confirm = true;
+        _errorText = "A project with that name exists. Tap 'OK' twice to confirm overwrite.";
+      });
+    }
   }
   
   @override
