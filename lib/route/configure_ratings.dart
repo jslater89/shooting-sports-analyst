@@ -636,7 +636,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       Tooltip(
         message: "Enter aliases for shooters whose names and member numbers change.",
         child: IconButton(
-          icon: Icon(Icons.dataset_linked_outlined),
+          icon: Icon(Icons.add_link),
           onPressed: () async {
             var aliases = await showDialog<Map<String, String>>(context: context, builder: (context) {
               return ShooterAliasesDialog(_shooterAliases);
@@ -646,72 +646,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
               _shooterAliases = aliases;
             }
           },
-        ),
-      ),
-      Tooltip(
-        message: "Enter member numbers to whitelist from classifier reshoot detection.",
-        child: IconButton(
-          icon: Icon(Icons.person_add_alt_1_outlined),
-          onPressed: () async {
-            var whitelist = await showDialog<List<String>>(context: context, builder: (context) {
-              return MemberNumberWhitelistDialog(_memNumWhitelist);
-            }) ?? [];
-
-            _memNumWhitelist = whitelist;
-          },
-        ),
-      ),
-      Tooltip(
-        message: "Clear locally-cached matches.",
-        child: IconButton(
-          icon: Icon(Icons.clear_all),
-          onPressed: () async {
-            var delete = await showDialog<bool>(context: context, builder: (context) {
-              return ConfirmDialog(
-                content: Text("Clearing the match cache will redownload all matches from PractiScore.")
-              );
-            });
-
-            if(delete ?? false) {
-              await MatchCache().ready;
-              MatchCache().clear();
-            }
-          },
-        ),
-      ),
-      Tooltip(
-        message: "Export settings to a file.",
-        child: IconButton(
-          icon: Icon(Icons.download),
-          onPressed: () async {
-            var settings = _makeAndValidateSettings();
-            if(settings == null) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("You must provide valid settings (including match URLs) to export.")));
-              return;
-            }
-
-            var project = RatingProject(
-                name: "${_lastProjectName ?? "Unnamed Project"}",
-                settings: settings,
-                matchUrls: []..addAll(matchUrls)
-            );
-            await RatingProjectManager().exportToFile(project);
-          }
-        ),
-      ),
-      Tooltip(
-        message: "Import settings from a file.",
-        child: IconButton(
-          icon: Icon(Icons.file_upload),
-          onPressed: () async {
-            var imported = await RatingProjectManager().importFromFile();
-            if(imported != null) {
-              _loadProject(imported);
-            }
-            else {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unable to load file")));
-            }
-          }
         ),
       ),
       Tooltip(
@@ -756,7 +690,97 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
             }
           },
         ),
+      ),
+      PopupMenuButton<_MenuEntry>(
+        onSelected: (item) => _handleClick(item),
+        tooltip: null,
+        itemBuilder: (context) {
+          List<PopupMenuEntry<_MenuEntry>> items = [];
+          for(var item in _MenuEntry.values) {
+            items.add(PopupMenuItem(
+              child: Text(item.label),
+              value: item,
+            ));
+          }
+
+          return items;
+        },
       )
     ];
+  }
+
+  Future<void> _handleClick(_MenuEntry item) async {
+    switch(item) {
+
+      case _MenuEntry.import:
+        var imported = await RatingProjectManager().importFromFile();
+        if(imported != null) {
+          _loadProject(imported);
+        }
+        else {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unable to load file")));
+        }
+        break;
+
+
+      case _MenuEntry.export:
+        var settings = _makeAndValidateSettings();
+        if(settings == null) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("You must provide valid settings (including match URLs) to export.")));
+          return;
+        }
+
+        var project = RatingProject(
+            name: "${_lastProjectName ?? "Unnamed Project"}",
+            settings: settings,
+            matchUrls: []..addAll(matchUrls)
+        );
+        await RatingProjectManager().exportToFile(project);
+        break;
+
+
+      case _MenuEntry.numberWhitelist:
+        var whitelist = await showDialog<List<String>>(context: context, builder: (context) {
+          return MemberNumberWhitelistDialog(_memNumWhitelist);
+        }) ?? [];
+
+        _memNumWhitelist = whitelist;
+        break;
+
+
+      case _MenuEntry.clearCache:
+        var delete = await showDialog<bool>(context: context, builder: (context) {
+          return ConfirmDialog(
+              content: Text("Clearing the match cache will redownload all matches from PractiScore.")
+          );
+        });
+
+        if(delete ?? false) {
+          await MatchCache().ready;
+          MatchCache().clear();
+        }
+    }
+  }
+}
+
+enum _MenuEntry {
+  import,
+  export,
+  numberWhitelist,
+  clearCache,
+}
+
+extension _MenuEntryUtils on _MenuEntry {
+  String get label {
+    switch(this) {
+      case _MenuEntry.import:
+        return "Import";
+      case _MenuEntry.export:
+        return "Export";
+      case _MenuEntry.numberWhitelist:
+        return "Member whitelist";
+      case _MenuEntry.clearCache:
+        return "Clear cache";
+    }
   }
 }
