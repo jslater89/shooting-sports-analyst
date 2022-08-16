@@ -4,6 +4,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
+import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
 import 'package:uspsa_result_viewer/data/sorted_list.dart';
 import 'package:uspsa_result_viewer/ui/filter_dialog.dart';
 
@@ -145,11 +146,17 @@ class Rater {
 
     for(var num in knownShooters.keys) {
       var shooter = knownShooters[num]!.shooter;
-      var name = "${shooter.firstName.toLowerCase()}${shooter.lastName.toLowerCase()}";
+      var name = "${shooter.firstName.toLowerCase().replaceAll(RegExp(r"\s+"), "")}"
+          + "${shooter.lastName.toLowerCase().replaceAll(RegExp(r"\s+"), "")}";
 
-      namesToNumbers[name] ??= [];
-      namesToNumbers[name]!.add(num);
+      var finalName = shooterAliases[name] ?? name;
 
+      namesToNumbers[finalName] ??= [];
+      namesToNumbers[finalName]!.add(num);
+
+      if(name.startsWith("maxmichel")) {
+        print("Breakpoint");
+      }
       _memberNumberMappings[num] ??= num;
     }
 
