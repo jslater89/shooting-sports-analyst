@@ -4,11 +4,13 @@ import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/multiplayer_percent_elo_rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
+import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
 import 'package:uspsa_result_viewer/ui/confirm_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/enter_name_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/enter_urls_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/member_number_whitelist_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/select_project_dialog.dart';
+import 'package:uspsa_result_viewer/ui/rater/shooter_aliases_dialog.dart';
 
 class ConfigureRatingsPage extends StatefulWidget {
   const ConfigureRatingsPage({Key? key, required this.onSettingsReady}) : super(key: key);
@@ -113,6 +115,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       _combineLocap = project.settings.groups.contains(RaterGroup.locap);
       _combineLimitedCO = project.settings.groups.contains(RaterGroup.limitedCO);
       _combineOpenPCC = project.settings.groups.contains(RaterGroup.openPcc);
+      _shooterAliases = project.settings.shooterAliases;
     });
     var algorithm = project.settings.algorithm as MultiplayerPercentEloRater;
     _kController.text = "${algorithm.K}";
@@ -162,6 +165,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   bool _combineLimitedCO = false;
 
   List<String> _memNumWhitelist = [];
+  Map<String, String> _shooterAliases = defaultShooterAliases;
 
   TextEditingController _kController = TextEditingController(text: "${MultiplayerPercentEloRater.defaultK}");
   TextEditingController _scaleController = TextEditingController(text: "${MultiplayerPercentEloRater.defaultScale}");
@@ -214,6 +218,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       byStage: _byStage,
       preserveHistory: _keepHistory,
       memberNumberWhitelist: _memNumWhitelist,
+      shooterAliases: _shooterAliases,
     );
   }
 
@@ -628,6 +633,21 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
   List<Widget> _generateActions() {
     return [
+      Tooltip(
+        message: "Enter aliases for shooters whose names and member numbers change.",
+        child: IconButton(
+          icon: Icon(Icons.dataset_linked_outlined),
+          onPressed: () async {
+            var aliases = await showDialog<Map<String, String>>(context: context, builder: (context) {
+              return ShooterAliasesDialog(_shooterAliases);
+            }, barrierDismissible: false);
+
+            if(aliases != null) {
+              _shooterAliases = aliases;
+            }
+          },
+        ),
+      ),
       Tooltip(
         message: "Enter member numbers to whitelist from classifier reshoot detection.",
         child: IconButton(

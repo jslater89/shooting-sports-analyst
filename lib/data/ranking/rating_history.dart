@@ -4,6 +4,7 @@ import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/multiplayer_percent_elo_rater.dart';
 import 'package:uspsa_result_viewer/ui/filter_dialog.dart';
+import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart' as defaultAliases;
 
 /// RatingHistory turns a sequence of [PracticalMatch]es into a series of
 /// [Rater]s.
@@ -186,6 +187,7 @@ class RatingHistorySettings {
   List<RaterGroup> groups;
   List<String> memberNumberWhitelist;
   RatingSystem algorithm;
+  Map<String, String> shooterAliases;
 
   RatingHistorySettings({
     this.byStage = false,
@@ -193,6 +195,7 @@ class RatingHistorySettings {
     this.groups = const [RaterGroup.open, RaterGroup.limited, RaterGroup.pcc, RaterGroup.carryOptics, RaterGroup.locap],
     required this.algorithm,
     this.memberNumberWhitelist = const [],
+    this.shooterAliases = defaultAliases.defaultShooterAliases,
   });
 
   static List<RaterGroup> groupsForSettings({bool combineOpenPCC = false, bool combineLimitedCO = false, bool combineLocap = true}) {

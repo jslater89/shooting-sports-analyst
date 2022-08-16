@@ -149,7 +149,7 @@ class Rater {
       var name = "${shooter.firstName.toLowerCase().replaceAll(RegExp(r"\s+"), "")}"
           + "${shooter.lastName.toLowerCase().replaceAll(RegExp(r"\s+"), "")}";
 
-      var finalName = shooterAliases[name] ?? name;
+      var finalName = defaultShooterAliases[name] ?? name;
 
       namesToNumbers[finalName] ??= [];
       namesToNumbers[finalName]!.add(num);

@@ -1,3 +1,3 @@
-const Map<String, String> shooterAliases = {
+const Map<String, String> defaultShooterAliases = {
   "maxmicheljr": "maxmichel",
 };

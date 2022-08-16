@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/multiplayer_percent_elo_rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
+import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 
 class RatingProjectManager {
@@ -145,6 +146,7 @@ const _byStageKey = "byStage";
 const _keepHistoryKey = "keepHistory";
 const _urlsKey = "urls";
 const _whitelistKey = "memNumWhitelist";
+const _aliasesKey = "aliases";
 
 class RatingProject {
   String name;
@@ -176,7 +178,9 @@ class RatingProject {
         combineLocap: combineLocap,
       ),
       memberNumberWhitelist: ((encodedProject[_whitelistKey] ?? []) as List<dynamic>).map((item) => item as String).toList(),
-
+      shooterAliases: ((encodedProject[_aliasesKey] ?? defaultShooterAliases) as Map<String, dynamic>).map<String, String>((k, v) =>
+        MapEntry(k, v as String)
+      )
     );
     var matchUrls = (encodedProject[_urlsKey] as List<dynamic>).map((item) => item as String).toList();
     var name = encodedProject[_nameKey] as String;
@@ -199,6 +203,7 @@ class RatingProject {
     map[_keepHistoryKey] = settings.preserveHistory;
     map[_urlsKey] = matchUrls;
     map[_whitelistKey] = settings.memberNumberWhitelist;
+    map[_aliasesKey] = settings.shooterAliases;
 
     var encoded = jsonEncode(map);
     return encoded;
