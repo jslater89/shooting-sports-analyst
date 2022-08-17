@@ -269,17 +269,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
               ElevatedButton(
                 child: Text("RESTORE DEFAULTS"),
                 onPressed: () {
-                  setState(() {
-                    _byStage = true;
-                    _keepHistory = false;
-                    _combineLocap = true;
-                    _combineOpenPCC = false;
-                    _combineLimitedCO = false;
-                    _validationError = "";
-                  });
-                  _kController.text = "${MultiplayerPercentEloRater.defaultK}";
-                  _scaleController.text = "${MultiplayerPercentEloRater.defaultScale}";
-                  _pctWeightController.text = "${MultiplayerPercentEloRater.defaultPercentWeight}";
+                  _restoreDefaults();
                 },
               ),
             ],
@@ -631,19 +621,44 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     });
   }
 
+  void _restoreDefaults() {
+    setState(() {
+      _byStage = true;
+      _keepHistory = false;
+      _combineLocap = true;
+      _combineOpenPCC = false;
+      _combineLimitedCO = false;
+      _validationError = "";
+      _shooterAliases = defaultShooterAliases;
+      _memNumWhitelist = [];
+    });
+    _kController.text = "${MultiplayerPercentEloRater.defaultK}";
+    _scaleController.text = "${MultiplayerPercentEloRater.defaultScale}";
+    _pctWeightController.text = "${MultiplayerPercentEloRater.defaultPercentWeight}";
+  }
+
   List<Widget> _generateActions() {
     return [
       Tooltip(
-        message: "Enter aliases for shooters whose names and member numbers change.",
+        message: "Create a new project.",
         child: IconButton(
-          icon: Icon(Icons.add_link),
+          icon: Icon(Icons.create_new_folder_outlined),
           onPressed: () async {
-            var aliases = await showDialog<Map<String, String>>(context: context, builder: (context) {
-              return ShooterAliasesDialog(_shooterAliases);
-            }, barrierDismissible: false);
+            var confirm = await showDialog<bool>(context: context, builder: (context) =>
+              ConfirmDialog(
+                content: Text("Creating a new project will reset settings to default and clear all currently-selected matches."),
+                positiveButtonLabel: "CREATE",
+              )
+            );
 
-            if(aliases != null) {
-              _shooterAliases = aliases;
+            if(confirm ?? false) {
+              setState(() {
+                _lastProjectName = "New Project";
+
+                matchUrls.clear();
+                urlDisplayNames.clear();
+              });
+              _restoreDefaults();
             }
           },
         ),
@@ -691,6 +706,21 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
           },
         ),
       ),
+      Tooltip(
+        message: "Enter aliases for shooters whose names and member numbers change.",
+        child: IconButton(
+          icon: Icon(Icons.add_link),
+          onPressed: () async {
+            var aliases = await showDialog<Map<String, String>>(context: context, builder: (context) {
+              return ShooterAliasesDialog(_shooterAliases);
+            }, barrierDismissible: false);
+
+            if(aliases != null) {
+              _shooterAliases = aliases;
+            }
+          },
+        ),
+      ),
       PopupMenuButton<_MenuEntry>(
         onSelected: (item) => _handleClick(item),
         tooltip: null,
@@ -714,15 +744,27 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
       case _MenuEntry.import:
         var imported = await RatingProjectManager().importFromFile();
+
         if(imported != null) {
+          if(RatingProjectManager().projectExists(imported.name)) {
+            var confirm = await showDialog<bool>(context: context, builder: (context) {
+              return ConfirmDialog(
+                content: Text("A project with that name already exists. Overwrite?"),
+                positiveButtonLabel: "OVERWRITE",
+              );
+            }, barrierDismissible: false);
+
+            if(confirm == null || !confirm) {
+              return;
+            }
+          }
+
           _loadProject(imported);
         }
         else {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unable to load file")));
         }
         break;
-
-
       case _MenuEntry.export:
         var settings = _makeAndValidateSettings();
         if(settings == null) {
@@ -751,7 +793,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       case _MenuEntry.clearCache:
         var delete = await showDialog<bool>(context: context, builder: (context) {
           return ConfirmDialog(
-              content: Text("Clearing the match cache will redownload all matches from PractiScore.")
+            content: Text("Clearing the match cache will redownload all matches from PractiScore."),
+            positiveButtonLabel: "CLEAR",
           );
         });
 

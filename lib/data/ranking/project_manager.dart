@@ -77,7 +77,7 @@ class RatingProjectManager {
       try {
         var encodedProject = jsonDecode(fileContents);
         var project =  RatingProject.fromJson(encodedProject);
-        project.name = "${project.name} (imported)";
+        project.name = "${project.name}";
         return project;
       } catch(e) {
         print("Error loading file: $e");
