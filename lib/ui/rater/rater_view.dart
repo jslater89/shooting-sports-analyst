@@ -25,13 +25,11 @@ class _RaterViewState extends State<RaterView> {
   Widget build(BuildContext context) {
     return Scrollbar(
       thumbVisibility: true,
-      child: SingleChildScrollView(
-        child: Column(
-          children: [
-            ..._buildRatingKey(),
-            ..._buildRatingRows(),
-          ]
-        ),
+      child: Column(
+        children: [
+          ..._buildRatingKey(),
+          ..._buildRatingRows(),
+        ]
       ),
     );
   }
@@ -58,11 +56,31 @@ class _RaterViewState extends State<RaterView> {
                 Expanded(flex: 6, child: Text("")),
                 Expanded(flex: 3, child: Text("Member #")),
                 Expanded(flex: 6, child: Text("Name")),
-                Expanded(flex: 2, child: Text("Rating")),
-                Expanded(flex: 2, child: Text("Variance")),
-                Expanded(flex: 2, child: Text("Trend")),
-                Expanded(flex: 2, child: Text("Conn.")),
-                Expanded(flex: 2, child: Text(widget.rater.byStage ? "Stages" : "Matches")),
+                Expanded(flex: 2, child: Text("Rating", textAlign: TextAlign.end)),
+                Expanded(
+                  flex: 2,
+                  child: Tooltip(
+                    message: "The average change in the shooter's rating per event, over the last 30 rating events.",
+                    child: Text("Variance", textAlign: TextAlign.end),
+                  )
+                ),
+                Expanded(
+                  flex: 2,
+                  child:
+                    Tooltip(
+                      message: "The change in the shooter's rating, over the last 30 rating events.",
+                      child: Text("Trend", textAlign: TextAlign.end)
+                    )
+                ),
+                Expanded(
+                    flex: 2,
+                    child:
+                    Tooltip(
+                        message: "The shooter's connectedness, a measure of how much he shoots against other shooters in the set.",
+                        child: Text("Conn.", textAlign: TextAlign.end)
+                    )
+                ),
+                Expanded(flex: 2, child: Text(widget.rater.byStage ? "Stages" : "Matches", textAlign: TextAlign.end)),
                 Expanded(flex: 6, child: Text("")),
               ],
             ),
@@ -85,36 +103,40 @@ class _RaterViewState extends State<RaterView> {
       sortedRatings = sortedRatings.where((r) => r.shooter.getName(suffixes: false).toLowerCase().contains(widget.search!.toLowerCase())).toList();
     }
 
-    List<Widget> widgets = [];
-    for(int i = 0; i < sortedRatings.length; i++) {
-      widgets.add(GestureDetector(
-        onTap: () {
-          showDialog(context: context, builder: (context) {
-            return ShooterStatsDialog(rating: sortedRatings[i], match: widget.currentMatch);
-          });
-        },
-        child: ScoreRow(
-          color: i % 2 == 1 ? Colors.grey[200] : Colors.white,
-          child: Padding(
-            padding: const EdgeInsets.all(2.0),
-            child: Row(
-              children: [
-                Expanded(flex: 4, child: Text("")),
-                Expanded(flex: 2, child: Text("${i+1}")),
-                Expanded(flex: 3, child: Text(Rater.processMemberNumber(sortedRatings[i].shooter.memberNumber))),
-                Expanded(flex: 6, child: Text(sortedRatings[i].shooter.getName(suffixes: false))),
-                Expanded(flex: 2, child: Text("${sortedRatings[i].rating.round()}")),
-                Expanded(flex: 2, child: Text("${sortedRatings[i].variance.toStringAsFixed(2)}")),
-                Expanded(flex: 2, child: Text("${sortedRatings[i].trend.toStringAsFixed(2)}")),
-                Expanded(flex: 2, child: Text("${(sortedRatings[i].connectedness - ShooterRating.baseConnectedness).toStringAsFixed(1)}")),
-                Expanded(flex: 2, child: Text("${sortedRatings[i].ratingEvents.length}")),
-                Expanded(flex: 6, child: Text("")),
-              ],
-            )
-          ),
-        ),
-      ));
-    }
-    return widgets;
+    return [
+      Expanded(
+        child: ListView.builder(itemBuilder: (context, i) {
+          var trend = sortedRatings[i].rating - sortedRatings[i].averageRating().firstRating;
+
+          return GestureDetector(
+            onTap: () {
+              showDialog(context: context, builder: (context) {
+                return ShooterStatsDialog(rating: sortedRatings[i], match: widget.currentMatch);
+              });
+            },
+            child: ScoreRow(
+              color: i % 2 == 1 ? Colors.grey[200] : Colors.white,
+              child: Padding(
+                  padding: const EdgeInsets.all(2.0),
+                  child: Row(
+                    children: [
+                      Expanded(flex: 4, child: Text("")),
+                      Expanded(flex: 2, child: Text("${i+1}")),
+                      Expanded(flex: 3, child: Text(Rater.processMemberNumber(sortedRatings[i].shooter.memberNumber))),
+                      Expanded(flex: 6, child: Text(sortedRatings[i].shooter.getName(suffixes: false))),
+                      Expanded(flex: 2, child: Text("${sortedRatings[i].rating.round()}", textAlign: TextAlign.end)),
+                      Expanded(flex: 2, child: Text("${sortedRatings[i].variance.toStringAsFixed(2)}", textAlign: TextAlign.end)),
+                      Expanded(flex: 2, child: Text("${trend.round()}", textAlign: TextAlign.end)),
+                      Expanded(flex: 2, child: Text("${(sortedRatings[i].connectedness - ShooterRating.baseConnectedness).toStringAsFixed(1)}", textAlign: TextAlign.end)),
+                      Expanded(flex: 2, child: Text("${sortedRatings[i].ratingEvents.length}", textAlign: TextAlign.end,)),
+                      Expanded(flex: 6, child: Text("")),
+                    ],
+                  )
+              ),
+            ),
+          );
+        }, itemCount: sortedRatings.length),
+      )
+    ];
   }
 }

@@ -42,7 +42,7 @@ class ShooterRating {
       runningRating = intermediateRating;
     }
 
-    return AverageRating(minRating: lowestPoint, maxRating: highestPoint, averageOfIntermediates: intermediateRatings.sum / intermediateRatings.length, window: window);
+    return AverageRating(firstRating: runningRating, minRating: lowestPoint, maxRating: highestPoint, averageOfIntermediates: intermediateRatings.sum / intermediateRatings.length, window: window);
   }
 
   List<RatingEvent> ratingEvents = [];
@@ -191,6 +191,7 @@ class ShooterRating {
 }
 
 class AverageRating {
+  final double firstRating;
   final double minRating;
   final double maxRating;
   final double averageOfIntermediates;
@@ -199,6 +200,7 @@ class AverageRating {
   double get averageOfMinMax => (minRating + maxRating) / 2;
 
   AverageRating({
+    required this.firstRating,
     required this.minRating,
     required this.maxRating,
     required this.averageOfIntermediates,

@@ -539,6 +539,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 }
                               }
                             ),
+                            // TODO: button to sort by date, descending, for matches in cache
                           ],
                         ),
                         SizedBox(height: 10),
