@@ -163,6 +163,10 @@ extension Sorting on List<RelativeMatchScore> {
         }
 
         if (a.stageScores.containsKey(stage) && b.stageScores.containsKey(stage)) {
+          if(a.stageScores[stage]!.score.time == 0 && b.stageScores[stage]!.score.time == 0) return 0;
+          else if(a.stageScores[stage]!.score.time > 0 && b.stageScores[stage]!.score.time == 0) return -1;
+          else if(a.stageScores[stage]!.score.time == 0 && b.stageScores[stage]!.score.time > 0) return 1;
+
           return a.stageScores[stage]!.score.time.compareTo(b.stageScores[stage]!.score.time);
         }
         else {
@@ -180,6 +184,10 @@ extension Sorting on List<RelativeMatchScore> {
             return -1;
           }
         }
+
+        if(a.total.score.time == 0 && b.total.score.time == 0) return 0;
+        else if(a.total.score.time > 0 && b.total.score.time == 0) return -1;
+        else if(a.total.score.time == 0 && b.total.score.time > 0) return 1;
 
         return a.total.score.time.compareTo(b.total.score.time);
       });
