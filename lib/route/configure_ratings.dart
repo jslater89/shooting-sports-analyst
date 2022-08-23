@@ -551,7 +551,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 mainAxisAlignment: MainAxisAlignment.start,
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  for(var url in urlDisplayNames.keys)
+                                  // show newest additions at the top
+                                  for(var url in urlDisplayNames.keys.toList().reversed)
                                     Row(
                                       mainAxisSize: MainAxisSize.max,
                                       children: [
