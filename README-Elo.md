@@ -7,8 +7,7 @@ competitor.
 **Where's the web version?**
 The rating system code is not currently optimized to the point that it is feasible to include
 in the web app. For large datasets, it processes hundreds of thousands of stage scores with
-math not well-suited to browser JavaScript engines, consumes more than 10gb of RAM, and displays
-thousands of shooter ratings, all of which are obstacles to providing a web app version.
+math not well-suited to browser JavaScript engines, which makes it too slow for most cases.
 
 **Why do the tooltips in some shooter details say the expected place is 2nd or below, but the
 expected percentage is greater than 100%?**
@@ -35,6 +34,9 @@ the ratings of shooters already present in the set.
 For ratings that converge more quickly, but vary more rapidly around the average, try K=60, percent
 weight=0.25. For ratings that reach equilibrium more slowly but vary less, try K=50, percent
 weight=0.50.
+
+For ratings based on match performance instead of stage performance, try K=150 and scale 400, with
+the default 0.4 percent weight, and disable the 'by stage' option.
 
 **Why are the ratings wrong, in that someone worse than me has a higher rating?**
 There are a few reasons why this might be.
@@ -111,17 +113,28 @@ You can paste multiple match URLs into the dialog, one per line. The application
 duplicate URLs.
 
 Use the minus button at the top of the match list to clear it. Use the minus button next to each
-URL to remove it individually.
+URL to remove it individually. The refresh button next to each match will remove it from the cache,
+forcing a redownload from Practiscore. This is useful in the event that match results change.
 
 During match processing, matches are downloaded to a local cache. If a URL is already present in
 the local cache, the match name will be displayed rather than the raw URL.
 
 #### Action bar items
+* **Create a new project**: clear all matches, restore settings to default, and reset the project
+  name.
 * **Clear match cache**: removes all locally-cached matches. If launching the rating configuration
   screen becomes excessively slow, this will speed it up.
 * **Export to file**: export the current settings to a file which can be shared between users.
 * **Import from file**: import settings from a file.
 * **Save/load**: save or load a project from the application's internal storage.
+* **Enter aliases**: add aliases for shooters whose names and member numbers both change. The engine
+  attempts to detect member number changes (i.e., if people change to a lifetime membership), but
+  can only do so if a shooter's name is the same both when he first appears in the dataset, and when
+  his member number changes. For example, Max Michel entered his name as 'Max Michel Jr.' in 2020,
+  started entering his name as 'Max Michel' in early 2021, and bought a lifetime membership in late
+  2021. Because his name changed before he bought his lifetime membership, an alias is required.
+* **Member whitelist**: whitelist members from reshoot detection. If a member number is present on
+  this list, the associated member will be included in match results if his name ends in '2' or '3'.
 
 ### Ratings Screen
 Ratings are displayed in descending order of Elo. The tabs at the top of the screen select
@@ -132,22 +145,25 @@ The dropdown below the tabs displaying a match name will be enabled if you have 
 enabled in settings, and allows you to select a match after which you wish to view ratings.
 
 The search box searches by member name (case-insensitive). The minimum stages/matches box allows you
-to filter out competitors whose ratings are based on fewer than the given number of events.
+to filter out competitors whose ratings are based on fewer than the given number of events. The
+maximum age box allows you to filter out competitors who have not been seen for more than the given
+number of days.
 
 Clicking a shooter name will display a chart of their rating change over time, along with a list of
 all the events on which their rating is based.
 
-The action button in the top right corner will export the currently-selected division group's ratings
-to CSV, for analysis in other tools.
+The action button in the top right corner will export the currently-selected division group's
+ratings to CSV, for analysis in other tools.
 
 #### Metrics
 Variance is the average of the absolute change in a competitor's rating over the past 30 rating
-events. Trend is the average of the direction of their rating changes over the past 30 events (+1
-for positive changes, -1 for negative changes). A high variance and a trend near +1 or -1 means the
-system is still finding the correct rating for a shooter. A high variance and a trend near 0 means
-a shooter's rating is approximately correct, but that he frequently overperforms or underperforms
-the rating algorithm's predictions. A low variance means the rating system usually predicts a
-shooter's performances correctly.
+events. Trend is the sum of their rating changes over the past 30 rating events.
+
+A high variance and a trend of large absolute value means the rating system is still finding the
+correct rating for the shooter. A high variance and a small trend means the shooter's rating is
+approximately correct, but that he frequently overperforms or underperforms the rating algorithm's
+predictions. A low variance will usually be accompanied by a small to moderate trend, and indicates
+that the algorithm usually predicts the shooter's performances well.
 
 Connectedness is a measure of how much the shooter competes against other people in the dataset.
 Competitors with low connectedness relative to others in their division or division group have not
@@ -191,8 +207,8 @@ is a match. This section will refer to both stages and matches as rating events,
 behavior differs between by-stage and by-match mode.
 
 #### Initial ratings
-When the engine encounters a shooter for the first time, he receives an initial rating: 800 for D
-or U, 900 for C, 1000 for B, 1100 for A, 1200 for M, and 1300 for GM. Classification has no direct
+When the engine encounters a shooter for the first time, he receives an initial rating: 800 for D,
+900 for C or U, 1000 for B, 1100 for A, 1200 for M, and 1300 for GM. Classification has no direct
 effect on a shooter's rating after the initial rating. Note that the average Elo in a dataset will
 generally be less than 1000, because C, D, and U shooters outnumber A, M, and GM shooters in most
 sets.
@@ -238,6 +254,9 @@ In match mode, the engine removes anyone with a DQ on record, or anyone who did 
 one or more stages. (The engine assumes a stage was a DNF if it has zero time and zero scoring
 events—i.e., hits, scored misses, penalties, or NPMs.)
 
+Additionally, a shooter's match score is ignored if his time on any non-fixed-time stage is less
+than tenth of a second, on the theory that this is always a data entry error.
+
 #### Stage-specific processing
 In stage mode, the engine ignores DNFed stages, but _includes_ stages a disqualified shooter
 completed before disqualifying.
@@ -246,6 +265,9 @@ Observation suggests that stages that many shooters zero do not provide much usa
 about the relative performances between shooters. As such, y-stage mode also examines the scores for
 each stage, and applies a negative modifier to K if more than 10% of shooters zeroed it, from 100% K
 at 10% to 34% K at 30%.
+
+A shooter's stage score will not be counted if the time is less than a tenth of a second on a
+non-fixed-time course of fire, as this typically indicates a data entry error.
 
 Finally, by-stage mode applies a modifier of between -20% and 10% of K, based on the maximum
 points of the stage. An 8-round stage multiplies K by 80%, a 24-round stage applies no modifier,
