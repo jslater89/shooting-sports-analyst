@@ -23,6 +23,7 @@ class ShooterRating {
   double rating;
   double variance = 0;
   double trend = 0;
+  DateTime lastSeen;
 
   AverageRating averageRating({int window = ShooterRating.baseTrendWindow}) {
     double runningRating = rating;
@@ -141,7 +142,9 @@ class ShooterRating {
     }
   }
 
-  ShooterRating(this.shooter, this.rating) : this.lastClassification = shooter.classification ?? Classification.U;
+  ShooterRating(this.shooter, this.rating, {DateTime? date}) :
+        this.lastClassification = shooter.classification ?? Classification.U,
+        this.lastSeen = date ?? DateTime.now();
 
   void updateTrends(double totalChange) {
     var trendWindow = min(ratingEvents.length, baseTrendWindow);
@@ -170,6 +173,7 @@ class ShooterRating {
     this._connectedness = other._connectedness;
     this.lastClassification = other.lastClassification;
     this._connectedness = other._connectedness;
+    this.lastSeen = other.lastSeen;
     this.connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure)..addAll(other.connectedShooters.map((e) => ConnectedShooter.copy(e)));
     this.ratingEvents = other.ratingEvents.map((e) => RatingEvent.copy(e)).toList();
   }
@@ -181,6 +185,7 @@ class ShooterRating {
       this.trend = other.trend,
       this.lastClassification = other.lastClassification,
       this._connectedness = other._connectedness,
+      this.lastSeen = other.lastSeen,
       this.connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure)..addAll(other.connectedShooters.map((e) => ConnectedShooter.copy(e))),
       this.ratingEvents = other.ratingEvents.map((e) => RatingEvent.copy(e)).toList();
 

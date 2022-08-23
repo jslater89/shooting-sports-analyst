@@ -55,7 +55,9 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   Map<String, PracticalMatch?> _matchUrls = {};
   late TextEditingController _searchController;
   late TextEditingController _minRatingsController;
+  late TextEditingController _maxDaysController;
   int _minRatings = 0;
+  int _maxDays = 0;
   
   late RatingHistory _history;
   _LoadingState _loadingState = _LoadingState.notStarted;
@@ -80,6 +82,27 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       if(maybeInt != null) {
         setState(() {
           _minRatings = maybeInt;
+        });
+      }
+      else {
+        setState(() {
+          _minRatings = 0;
+        });
+      }
+    });
+
+    _maxDaysController = TextEditingController();
+    _maxDaysController.addListener(() {
+      var text = _maxDaysController.text;
+      var maybeInt = int.tryParse(text);
+      if(maybeInt != null) {
+        setState(() {
+          _maxDays = maybeInt;
+        });
+      }
+      else {
+        setState(() {
+          _maxDays = 0;
         });
       }
     });
@@ -198,7 +221,11 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
           child: TabBarView(
             controller: _tabController,
             children: activeTabs.map((t) {
-              return RaterView(rater: _history.raterFor(match, t), currentMatch: match, search: _searchTerm, minRatings: _minRatings);
+              Duration? maxAge;
+              if(_maxDays > 0) {
+                maxAge = Duration(days: _maxDays);
+              }
+              return RaterView(rater: _history.raterFor(match, t), currentMatch: match, search: _searchTerm, minRatings: _minRatings, maxAge: maxAge);
             }).toList(),
           ),
         )
@@ -214,85 +241,105 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         constraints: BoxConstraints(minWidth: size.width, maxWidth: size.width),
         child: Container(
           color: Colors.white,
-          child: Center(
-            child: Row(
-              mainAxisSize: MainAxisSize.max,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                DropdownButton<PracticalMatch>(
-                  underline: Container(
-                    height: 1,
-                    color: Colors.black,
-                  ),
-                  items: _history.matches.reversed.map((m) {
-                    return DropdownMenuItem<PracticalMatch>(
-                      child: Text(m.name ?? "<unnamed match>"),
-                      value: m,
-                    );
-                  }).toList(),
-                  value: _selectedMatch,
-                  onChanged: _history.matches.length == 1 ? null : (m) {
-                    setState(() {
-                      _selectedMatch = m;
-                    });
-                  },
-                ),
-                SizedBox(width: 20),
-                SizedBox(
-                  width: 200,
-                  child: TextField(
-                    controller: _searchController,
-                    autofocus: false,
-                    onSubmitted: (search) {
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 10.0),
+            child: Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.max,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  DropdownButton<PracticalMatch>(
+                    underline: Container(
+                      height: 1,
+                      color: Colors.black,
+                    ),
+                    items: _history.matches.reversed.map((m) {
+                      return DropdownMenuItem<PracticalMatch>(
+                        child: Text(m.name ?? "<unnamed match>"),
+                        value: m,
+                      );
+                    }).toList(),
+                    value: _selectedMatch,
+                    onChanged: _history.matches.length == 1 ? null : (m) {
                       setState(() {
-                        _searchTerm = search;
+                        _selectedMatch = m;
                       });
                     },
-                    decoration: InputDecoration(
-                      helperText: ' ',
-                      hintText: "Search",
-                      suffixIcon: _searchTerm.length > 0 ?
-                          GestureDetector(
-                            child: Icon(Icons.cancel),
-                            onTap: () {
-                              _searchController.text = '';
-                              setState(() {
-                                _searchTerm = "";
-                              });
-                            },
-                          )
-                      :
-                          GestureDetector(
-                            child: Icon(Icons.arrow_circle_right_rounded),
-                            onTap: () {
-                              setState(() {
-                                _searchTerm = _searchController.text;
-                              });
-                            },
-                          ),
-                    ),
                   ),
-                ),
-                SizedBox(width: 20),
-                Tooltip(
-                  message: "Filter shooters with fewer than this many ${widget.settings.byStage ? "stages" : "matches"} from view.",
-                  child: SizedBox(
-                    width: 100,
+                  SizedBox(width: 20),
+                  SizedBox(
+                    width: 200,
                     child: TextField(
-                      controller: _minRatingsController,
+                      controller: _searchController,
                       autofocus: false,
+                      onSubmitted: (search) {
+                        setState(() {
+                          _searchTerm = search;
+                        });
+                      },
                       decoration: InputDecoration(
                         helperText: ' ',
-                        hintText: "Min. ${widget.settings.byStage ? "Stages" : "Matches"}",
+                        hintText: "Search",
+                        suffixIcon: _searchTerm.length > 0 ?
+                            GestureDetector(
+                              child: Icon(Icons.cancel),
+                              onTap: () {
+                                _searchController.text = '';
+                                setState(() {
+                                  _searchTerm = "";
+                                });
+                              },
+                            )
+                        :
+                            GestureDetector(
+                              child: Icon(Icons.arrow_circle_right_rounded),
+                              onTap: () {
+                                setState(() {
+                                  _searchTerm = _searchController.text;
+                                });
+                              },
+                            ),
                       ),
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        FilteringTextInputFormatter(RegExp(r"[0-9]*"), allow: true),
-                      ],
                     ),
                   ),
-                ),
-              ],
+                  SizedBox(width: 20),
+                  Tooltip(
+                    message: "Filter shooters with fewer than this many ${widget.settings.byStage ? "stages" : "matches"} from view.",
+                    child: SizedBox(
+                      width: 100,
+                      child: TextField(
+                        controller: _minRatingsController,
+                        autofocus: false,
+                        decoration: InputDecoration(
+                          helperText: "Min. ${widget.settings.byStage ? "Stages" : "Matches"}",
+                        ),
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter(RegExp(r"[0-9]*"), allow: true),
+                        ],
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 20),
+                  Tooltip(
+                    message: "Filter shooters last seen more than this many days ago.",
+                    child: SizedBox(
+                      width: 100,
+                      child: TextField(
+                        controller: _maxDaysController,
+                        autofocus: false,
+                        decoration: InputDecoration(
+                          helperText: "Max. Age",
+                        ),
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter(RegExp(r"[0-9]*"), allow: true),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

@@ -9,9 +9,10 @@ import 'package:uspsa_result_viewer/ui/rater/shooter_stats_dialog.dart';
 import 'package:uspsa_result_viewer/ui/score_row.dart';
 
 class RaterView extends StatefulWidget {
-  const RaterView({Key? key, required this.rater, required this.currentMatch, this.search, this.minRatings = 0}) : super(key: key);
+  const RaterView({Key? key, required this.rater, required this.currentMatch, this.search, this.maxAge, this.minRatings = 0}) : super(key: key);
 
   final String? search;
+  final Duration? maxAge;
   final int minRatings;
   final Rater rater;
   final PracticalMatch currentMatch;
@@ -23,14 +24,11 @@ class RaterView extends StatefulWidget {
 class _RaterViewState extends State<RaterView> {
   @override
   Widget build(BuildContext context) {
-    return Scrollbar(
-      thumbVisibility: true,
-      child: Column(
-        children: [
-          ..._buildRatingKey(),
-          ..._buildRatingRows(),
-        ]
-      ),
+    return Column(
+      children: [
+        ..._buildRatingKey(),
+        ..._buildRatingRows(),
+      ]
     );
   }
 
@@ -103,39 +101,50 @@ class _RaterViewState extends State<RaterView> {
       sortedRatings = sortedRatings.where((r) => r.shooter.getName(suffixes: false).toLowerCase().contains(widget.search!.toLowerCase())).toList();
     }
 
+    if(widget.maxAge != null) {
+      var cutoff = widget.currentMatch.date ?? DateTime.now();
+      cutoff = cutoff.subtract(widget.maxAge!);
+      sortedRatings = sortedRatings.where((r) => r.lastSeen.isAfter(cutoff)).toList();
+    }
+
     return [
       Expanded(
-        child: ListView.builder(itemBuilder: (context, i) {
-          var trend = sortedRatings[i].rating - sortedRatings[i].averageRating().firstRating;
+        child: Scrollbar(
+          thumbVisibility: true,
+          child: ListView.builder(itemBuilder: (context, i) {
+            var trend = sortedRatings[i].rating - sortedRatings[i].averageRating().firstRating;
 
-          return GestureDetector(
-            onTap: () {
-              showDialog(context: context, builder: (context) {
-                return ShooterStatsDialog(rating: sortedRatings[i], match: widget.currentMatch);
-              });
-            },
-            child: ScoreRow(
-              color: i % 2 == 1 ? Colors.grey[200] : Colors.white,
-              child: Padding(
-                  padding: const EdgeInsets.all(2.0),
-                  child: Row(
-                    children: [
-                      Expanded(flex: 4, child: Text("")),
-                      Expanded(flex: 2, child: Text("${i+1}")),
-                      Expanded(flex: 3, child: Text(Rater.processMemberNumber(sortedRatings[i].shooter.memberNumber))),
-                      Expanded(flex: 6, child: Text(sortedRatings[i].shooter.getName(suffixes: false))),
-                      Expanded(flex: 2, child: Text("${sortedRatings[i].rating.round()}", textAlign: TextAlign.end)),
-                      Expanded(flex: 2, child: Text("${sortedRatings[i].variance.toStringAsFixed(2)}", textAlign: TextAlign.end)),
-                      Expanded(flex: 2, child: Text("${trend.round()}", textAlign: TextAlign.end)),
-                      Expanded(flex: 2, child: Text("${(sortedRatings[i].connectedness - ShooterRating.baseConnectedness).toStringAsFixed(1)}", textAlign: TextAlign.end)),
-                      Expanded(flex: 2, child: Text("${sortedRatings[i].ratingEvents.length}", textAlign: TextAlign.end,)),
-                      Expanded(flex: 6, child: Text("")),
-                    ],
-                  )
+            return GestureDetector(
+              onTap: () {
+                showDialog(context: context, builder: (context) {
+                  return ShooterStatsDialog(rating: sortedRatings[i], match: widget.currentMatch);
+                });
+              },
+              child: ScoreRow(
+                color: i % 2 == 1 ? Colors.grey[200] : Colors.white,
+                child: Padding(
+                    padding: const EdgeInsets.all(2.0),
+                    child: Row(
+                      children: [
+                        Expanded(flex: 4, child: Text("")),
+                        Expanded(flex: 2, child: Text("${i+1}")),
+                        Expanded(flex: 3, child: Text(Rater.processMemberNumber(sortedRatings[i].shooter.memberNumber))),
+                        Expanded(flex: 6, child: Text(sortedRatings[i].shooter.getName(suffixes: false))),
+                        Expanded(flex: 2, child: Text("${sortedRatings[i].rating.round()}", textAlign: TextAlign.end)),
+                        Expanded(flex: 2, child: Text("${sortedRatings[i].variance.toStringAsFixed(2)}", textAlign: TextAlign.end)),
+                        Expanded(flex: 2, child: Text("${trend.round()}", textAlign: TextAlign.end)),
+                        Expanded(flex: 2, child: Text("${(sortedRatings[i].connectedness - ShooterRating.baseConnectedness).toStringAsFixed(1)}", textAlign: TextAlign.end)),
+                        Expanded(flex: 2, child: Text("${sortedRatings[i].ratingEvents.length}", textAlign: TextAlign.end,)),
+                        Expanded(flex: 6, child: Text("")),
+                      ],
+                    )
+                ),
               ),
-            ),
-          );
-        }, itemCount: sortedRatings.length),
+            );
+          },
+          itemCount: sortedRatings.length,
+          ),
+        ),
       )
     ];
   }

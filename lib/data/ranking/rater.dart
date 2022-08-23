@@ -136,7 +136,7 @@ class Rater {
     var shooters = _getShooters(match);
     for(Shooter s in shooters) {
       if(processMemberNumber(s.memberNumber).isNotEmpty && !s.reentry && s.memberNumber.length > 3) {
-        knownShooters[processMemberNumber(s.memberNumber)] ??= ShooterRating(s, RatingSystem.initialClassRatings[s.classification] ?? 800.0); // ratingSystem.defaultRating
+        knownShooters[processMemberNumber(s.memberNumber)] ??= ShooterRating(s, RatingSystem.initialClassRatings[s.classification] ?? 800.0, date: match.date); // ratingSystem.defaultRating
       }
     }
   }
@@ -337,6 +337,7 @@ class Rater {
       for (var rating in encounteredList) {
         averageBefore += rating.connectedness;
         rating.updateConnections(match.date!, encounteredList);
+        rating.lastSeen = match.date!;
       }
 
       for (var rating in encounteredList) {
