@@ -120,6 +120,15 @@ class MatchCache {
     return false;
   }
 
+  PracticalMatch? getMatchImmediate(String matchUrl) {
+    var id = matchUrl.split("/").last;
+    if(_cache.containsKey(id)) {
+      return _cache[id]!.match;
+    }
+
+    return null;
+  }
+
   Future<PracticalMatch?> getMatch(String matchUrl, {bool forceUpdate = false, bool localOnly = false}) async {
     var id = matchUrl.split("/").last;
     if(!forceUpdate && _cache.containsKey(id)) {

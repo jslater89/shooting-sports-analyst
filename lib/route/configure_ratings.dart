@@ -497,7 +497,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                       children: [
                         Row(
                           children: [
-                            Text("Matches", style: Theme.of(context).textTheme.labelLarge),
+                            Text("Matches (${matchUrls.length})", style: Theme.of(context).textTheme.labelLarge),
                             IconButton(
                               icon: Icon(Icons.add),
                               color: Theme.of(context).primaryColor,
@@ -508,9 +508,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
                                 if(urls == null) return;
 
-                                for(var url in urls) {
+                                for(var url in urls.reversed) {
                                   if(!matchUrls.contains(url)) {
-                                    matchUrls.add(url);
+                                    matchUrls.insert(0, url);
                                   }
                                 }
 
@@ -539,7 +539,32 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 }
                               }
                             ),
-                            // TODO: button to sort by date, descending, for matches in cache
+                            Tooltip(
+                              message: "Sort matches from most recent to least recent. Non-cached matches will be displayed first.",
+                              child: IconButton(
+                                icon: Icon(Icons.sort),
+                                color: Theme.of(context).primaryColor,
+                                onPressed: () async {
+                                  var cache = MatchCache();
+                                  await cache.ready;
+
+                                  matchUrls.sort((a, b) {
+                                    var matchA = cache.getMatchImmediate(a);
+                                    var matchB = cache.getMatchImmediate(b);
+
+                                    // Sort uncached matches to the top
+                                    if(matchA == null && matchB == null) return 0;
+                                    if(matchA == null && matchB != null) return -1;
+                                    if(matchA != null && matchB == null) return 0;
+
+                                    // Sort remaining matches by date descending
+                                    return matchB!.date!.compareTo(matchA!.date!);
+                                  });
+
+                                  getUrlDisplayNames();
+                                }
+                              ),
+                            ),
                           ],
                         ),
                         SizedBox(height: 10),
@@ -553,7 +578,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   // show newest additions at the top
-                                  for(var url in urlDisplayNames.keys.toList().reversed)
+                                  for(var url in urlDisplayNames.keys.toList())
                                     Row(
                                       mainAxisSize: MainAxisSize.max,
                                       children: [
