@@ -21,7 +21,16 @@ class ShooterStatsDialog extends StatelessWidget {
     // }
 
     return AlertDialog(
-      title: Text("Ratings for ${rating.shooter.getName(suffixes: false)} (${rating.lastClassification.name})"),
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text("Ratings for ${rating.shooter.getName(suffixes: false)} (${rating.lastClassification.name})"),
+          IconButton(
+            icon: Icon(Icons.close),
+            onPressed: Navigator.of(context).pop,
+          )
+        ],
+      ),
       content: Row(
         children: [
           Expanded(
