@@ -1,6 +1,5 @@
 // ignore: avoid_web_libraries_in_flutter
 
-import 'package:flutter/foundation.dart';
 import 'dart:convert';
 
 
@@ -9,6 +8,7 @@ import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/route/local_upload.dart';
 import 'package:uspsa_result_viewer/route/match_select.dart';
 import 'package:uspsa_result_viewer/route/practiscore_url.dart';
+import 'package:uspsa_result_viewer/route/ratings.dart';
 import 'configure_nonweb.dart' if (dart.library.html) 'configure_web.dart';
 import 'package:fluro/fluro.dart' as fluro;
 
@@ -33,6 +33,8 @@ class GlobalData {
 GlobalData globals = GlobalData();
 
 void main() {
+  // dumpRatings();
+
   globals.router.define('/', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
     handlerFunc: (context, params) {
       debugPrint("$params");
@@ -42,6 +44,11 @@ void main() {
   globals.router.define('/local', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
     handlerFunc: (context, params) {
       return UploadedResultPage();
+    }
+  ));
+  globals.router.define('/rater', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
+    handlerFunc: (context, params) {
+      return RatingsContainerPage();
     }
   ));
   globals.router.define('/web/:matchId', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(

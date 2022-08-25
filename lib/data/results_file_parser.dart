@@ -1,5 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:intl/intl.dart';
+
+const verboseParse = false;
 
 Future<PracticalMatch> processScoreFile(String fileContents) async {
   String reportFile = fileContents.replaceAll("\r\n", "\n");
@@ -18,7 +21,8 @@ Future<PracticalMatch> processScoreFile(String fileContents) async {
       competitorLines.add(l);
     else if (l.startsWith("G "))
       stageLines.add(l);
-    else if (l.startsWith("I ")) stageScoreLines.add(l);
+    else if (l.startsWith("I "))
+      stageScoreLines.add(l);
   }
 
   PracticalMatch canonicalMatch = _processResultLines(
@@ -37,7 +41,7 @@ PracticalMatch _processResultLines({required List<String> infoLines, required Li
   Map<int, Shooter> shootersByFileId = _readCompetitorLines(match, competitorLines);
   Map<int, Stage> stagesByFileId = _readStageLines(match, stageLines);
 
-  _readScoreLines(stageScoreLines, shootersByFileId, stagesByFileId);
+  int stageScoreCount = _readScoreLines(stageScoreLines, shootersByFileId, stagesByFileId);
 
   for(Shooter s in match.shooters) {
     for(Stage stage in match.stages) {
@@ -47,20 +51,40 @@ PracticalMatch _processResultLines({required List<String> infoLines, required Li
     }
   }
 
+  print("Processed match ${match.name} with ${match.shooters.length} shooters, ${match.stages.length} stages, and $stageScoreCount stage scores");
+
   return match;
 }
 
 const String _MATCH_NAME = r"$INFO Match name:";
 const String _MATCH_DATE = r"$INFO Match date:";
+const String _MATCH_LEVEL = r"$INFO Match Level:";
+final DateFormat _df = DateFormat("MM/dd/yyyy");
+
 void _readInfoLines(PracticalMatch match, List<String> infoLines) {
   for(String line in infoLines) {
     if(line.startsWith(_MATCH_NAME)) {
-      debugPrint("Found match name");
+      // print("Found match name");
       match.name = line.replaceFirst(_MATCH_NAME, "");
     }
     else if(line.startsWith(_MATCH_DATE)) {
-      debugPrint("Found match date");
-      match.date = line.replaceFirst(_MATCH_DATE, "");
+      // print("Found match date");
+      match.rawDate = line.replaceFirst(_MATCH_DATE, "");
+      try {
+        match.date = _df.parse(match.rawDate!);
+      }
+      catch(e) {
+        print("Unable to parse date ${match.rawDate} $e");
+      }
+    }
+    else if(line.startsWith(_MATCH_LEVEL)) {
+      var level = line.replaceFirst(_MATCH_LEVEL, "").toUpperCase();
+      if(level.contains("IV")) match.level = MatchLevel.IV;
+      else if(level.contains("III")) match.level = MatchLevel.III;
+      else if(level.contains("II")) match.level = MatchLevel.II;
+      else if(level.contains("I")) match.level = MatchLevel.I;
+
+      // print("${match.name} has $level => ${match.level}");
     }
   }
 }
@@ -95,11 +119,11 @@ Map<int, Shooter> _readCompetitorLines(PracticalMatch match, List<String> compet
       shootersById[i++] = s;
       match.shooters.add(s);
     } catch(err) {
-      debugPrint("Error parsing shooter: $line $err");
+      print("Error parsing shooter: $line $err");
     }
   }
 
-  debugPrint("Read ${shootersById.length} shooters");
+  // print("Read ${shootersById.length} shooters");
 
   return shootersById;
 }
@@ -131,12 +155,12 @@ Map<int, Stage> _readStageLines(PracticalMatch match, List<String> stageLines) {
       maxPoints += s.maxPoints;
       match.stages.add(s);
     } catch(err) {
-      debugPrint("Error parsing stage: $line $err");
+      print("Error parsing stage: $line $err");
     }
   }
 
   match.maxPoints = maxPoints;
-  debugPrint("Read ${stagesById.length} stages");
+  // print("Read ${stagesById.length} stages");
 
   return stagesById;
 }
@@ -164,7 +188,7 @@ const int _T5 = 24;
 const int _TIME = 25;
 const int _RAW_POINTS = 26;
 const int _TOTAL_POINTS = 27;
-void _readScoreLines(List<String> stageScoreLines, Map<int, Shooter> shootersByFileId, Map<int, Stage> stagesByFileId) {
+int _readScoreLines(List<String> stageScoreLines, Map<int, Shooter> shootersByFileId, Map<int, Stage> stagesByFileId) {
   int i = 0;
   for(String line in stageScoreLines) {
     try {
@@ -209,27 +233,28 @@ void _readScoreLines(List<String> stageScoreLines, Map<int, Shooter> shootersByF
       // nor time, we can assume it's someone who didn't complete the stage at all.
       if(!stageFinished) {
         shooter.stageScores[stage] = Score(shooter: shooter, stage: stage);
-        debugPrint("Shooter ${shooter.getName()} did not finish ${stage.name}");
+        // print("Shooter ${shooter.getName()} did not finish ${stage.name}");
         continue;
       }
 
       shooter.stageScores[stage] = s;
 
       if(s.penaltyPoints != int.parse(splitLine[_PENALTY_POINTS])) {
-        debugPrint("Penalty points mismatch for ${shooter.getName()} on ${stage.name}: ${s.penaltyPoints} vs ${splitLine[_PENALTY_POINTS]}");
+        if(verboseParse) print("Penalty points mismatch for ${shooter.getName()} on ${stage.name}: ${s.penaltyPoints} vs ${splitLine[_PENALTY_POINTS]}");
       }
       if(s.rawPoints != int.parse(splitLine[_RAW_POINTS])) {
-        debugPrint("Raw points mismatch for ${shooter.getName()} on ${stage.name}: ${s.rawPoints} vs ${splitLine[_RAW_POINTS]}");
+        if(verboseParse) print("Raw points mismatch for ${shooter.getName()} on ${stage.name}: ${s.rawPoints} vs ${splitLine[_RAW_POINTS]}");
       }
       if(s.getTotalPoints(scoreDQ: false) != int.parse(splitLine[_TOTAL_POINTS])) {
-        debugPrint("Total points mismatch for ${shooter.getName()} on ${stage.name}: ${s.getTotalPoints(scoreDQ: false)} vs ${splitLine[_TOTAL_POINTS]}");
+        if(verboseParse) print("Total points mismatch for ${shooter.getName()} on ${stage.name}: ${s.getTotalPoints(scoreDQ: false)} vs ${splitLine[_TOTAL_POINTS]}");
       }
 
       i++;
     } catch(err) {
-      debugPrint("Error parsing score: $line $err");
+      print("Error parsing score: $line $err");
     }
   }
 
-  debugPrint("Processed $i stage scores");
+  // print("Processed $i stage scores");
+  return i;
 }

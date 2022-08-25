@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -76,7 +75,7 @@ class ScoreList extends StatelessWidget {
             children: [
               keyWidget,
               Expanded(child: Scrollbar(
-                isAlwaysShown: true,
+                thumbVisibility: true,
                 controller: verticalScrollController,
                 child: ListView.builder(
                   controller: verticalScrollController,

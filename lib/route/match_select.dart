@@ -2,12 +2,9 @@ import 'dart:convert';
 // ignore: avoid_web_libraries_in_flutter
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 
-import 'package:http/http.dart' as http;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
 import 'package:uspsa_result_viewer/main.dart';
-import 'package:uspsa_result_viewer/route/practiscore_url.dart';
 import 'package:uspsa_result_viewer/ui/empty_scaffold.dart';
 
 class MatchSelectPage extends StatefulWidget {
@@ -62,17 +59,45 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
       child: _launchingFromParam ? Center(child: Text("Launching...")) : SizedBox(
         height: size.height,
         width: size.width,
-        child: size.width > 750 ? Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: _selectButtons(column: false),
+        child: size.width > 750 ? Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: _selectButtons(column: false),
+            ),
+            SizedBox(height: 50),
+            if(HtmlOr.isDesktop) _raterLink(),
+          ],
         ) : SingleChildScrollView(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.start,
-            children: _selectButtons(column: true),
+            children: [
+              ..._selectButtons(column: true),
+              if(HtmlOr.isDesktop) _raterLink(),
+            ]
           ),
         ),
       )
+    );
+  }
+
+  Widget _raterLink() {
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).pushNamed('/rater');
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.list, size: 230, color: Colors.grey,),
+          Text("Click to generate ratings for shooters in a list of matches", style: Theme
+              .of(context)
+              .textTheme
+              .subtitle1!
+              .apply(color: Colors.grey)),
+        ],
+      ),
     );
   }
 
@@ -92,7 +117,7 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(height: column ? 0 : 150),
+            SizedBox(height: column ? 0 : 50),
             Icon(Icons.cloud_upload, size: 230, color: Colors.grey,),
             Text("Click to upload a report.txt file from your device", style: Theme
                 .of(context)
@@ -119,7 +144,7 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(height: column ? 0 : 150),
+            SizedBox(height: column ? 0 : 50),
             Icon(Icons.cloud_download, size: 230, color: Colors.grey,),
             Text("Click to download a report.txt file from PractiScore", style: Theme
                 .of(context)
@@ -137,8 +162,6 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
   }
 
   Future<String?> _getMatchId({String? presetUrl}) async {
-    var proxyUrl = getProxyUrl();
-
     var matchUrl = presetUrl ?? await showDialog<String>(context: context, builder: (context) {
       var controller = TextEditingController();
       return AlertDialog(
@@ -157,13 +180,13 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
           ],
         ),
         actions: [
-          FlatButton(
+          TextButton(
               child: Text("CANCEL"),
               onPressed: () {
                 Navigator.of(context).pop();
               }
           ),
-          FlatButton(
+          TextButton(
               child: Text("OK"),
               onPressed: () {
                 Navigator.of(context).pop(controller.text);
@@ -177,41 +200,7 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
       return null;
     }
 
-    var matchUrlParts = matchUrl.split("/");
-    var matchId = matchUrlParts.last;
-
-    // It's probably a short ID—the long IDs are UUID-style, with dashes separating
-    // blocks of alphanumeric characters
-    if(!matchId.contains(r"-")) {
-      try {
-        debugPrint("Trying to get match from URL: $matchUrl");
-        var response = await http.get(Uri.parse("$proxyUrl$matchUrl"));
-        if(response.statusCode == 404) {
-          Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("Match not found.")));
-          return null;
-        }
-        else if(response.statusCode == 200) {
-          var foundUrl = getPractiscoreWebReportUrl(response.body);
-          if(foundUrl != null) {
-            matchId = foundUrl.split("/").last;
-          }
-          else {
-            Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("Unable to determine web report URL.")));
-            return null;
-          }
-        }
-        else {
-          debugPrint("${response.statusCode} ${response.body}");
-          Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("Unable to download match file.")));
-          return null;
-        }
-      }
-      catch(err) {
-        debugPrint("$err");
-        Scaffold.of(_innerContext).showSnackBar(SnackBar(content: Text("Unable to download match file.")));
-        return null;
-      }
-    }
+    var matchId = processMatchUrl(matchUrl, context: _innerContext);
 
     return matchId;
   }

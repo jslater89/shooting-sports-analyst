@@ -1,5 +1,5 @@
 name: uspsa_result_viewer
-description: A USPSA match result viewer.
+description: A USPSA match result viewer and Elo rater.
 
 # The following line prevents the package from being accidentally published to
 # pub.dev using `pub publish`. This is preferred for private packages.
@@ -16,9 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # Read more about iOS versioning at
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 
-version: 4.0.2+1
-authors:
-  - Jay Slater (jay@manywords.press)
+version: 5.0.0-rc1+1
 
 environment:
   sdk: '>=2.12.0 <3.0.0'
@@ -32,8 +30,12 @@ dependencies:
   fluro: ^2.0.3 # routing
   http: ^0.13.1 # web requests
   collection: ^1.15.0-nullsafety.4
-  file_picker: ^3.0.0
+  file_picker: ^4.0.0
   url_launcher: ^6.0.2
+  intl:
+  flutter_charts:
+  shared_preferences:
+  path_provider:
 
 dev_dependencies:
   flutter_test:

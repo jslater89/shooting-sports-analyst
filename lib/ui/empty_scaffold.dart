@@ -3,10 +3,11 @@ import 'package:uspsa_result_viewer/ui/about_dialog.dart';
 
 class EmptyScaffold extends StatelessWidget {
   final Widget? child;
+  final String? title;
   final bool? operationInProgress;
-  final Function(BuildContext) onInnerContextAssigned;
+  final Function(BuildContext)? onInnerContextAssigned;
 
-  const EmptyScaffold({Key? key, this.child, this.operationInProgress, required this.onInnerContextAssigned}) : super(key: key);
+  const EmptyScaffold({Key? key, this.child, this.operationInProgress = false, this.onInnerContextAssigned, this.title}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +19,7 @@ class EmptyScaffold extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-      title: Text("Match Results Viewer"),
+      title: Text(title ?? "Match Results Viewer"),
         centerTitle: true,
         actions: [
           IconButton(
@@ -35,7 +36,7 @@ class EmptyScaffold extends StatelessWidget {
       ),
       body: Builder(
         builder: (context) {
-          onInnerContextAssigned(context);
+          if(onInnerContextAssigned != null) onInnerContextAssigned!(context);
           return child!;
         },
       ),

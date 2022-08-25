@@ -26,7 +26,7 @@ class _ScoreRowState extends State<ScoreRow> {
     Color? textColor = widget.textColor ?? Theme.of(context).textTheme.bodyText1!.color;
     Color hoverTextColor = widget.hoverTextColor ?? Theme.of(context).colorScheme.onPrimary;
 
-    if(widget.edited!) {
+    if(widget.edited ?? false) {
       textColor = Colors.red;
     }
 

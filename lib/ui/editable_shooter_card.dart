@@ -372,7 +372,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
   List<Widget> _buildButtons() {
     if(_edited) {
       return [
-        FlatButton(
+        TextButton(
           child: Text("APPLY"),
           onPressed: () {
             if(widget.stageScore != null) {
@@ -388,7 +388,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
         ),
         Tooltip(
           message: "Close this dialog and rescore the match.",
-          child: FlatButton(
+          child: TextButton(
             child: Text("RESCORE"),
             onPressed: () {
               Navigator.of(context).pop(ScoreEdit(wholeMatch: _wholeMatchChange, rescore: true));
@@ -399,7 +399,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
     }
     else {
       return [
-        FlatButton(
+        TextButton(
           child: Text("APPLY"),
           onPressed: () {
             if(widget.stageScore != null) {
@@ -413,7 +413,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
             }
           },
         ),
-        FlatButton(
+        TextButton(
           child: Text("CLOSE"),
           onPressed: () {
             Navigator.of(context).pop(ScoreEdit(wholeMatch: false, rescore: false));

@@ -1,8 +1,9 @@
 import 'dart:convert';
+// ignore: avoid_web_libraries_in_flutter
 import 'dart:html';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 
 Controller _controller = Controller();
@@ -32,5 +33,22 @@ class Controller extends ControlInterface {
   }
 
   @override
+  Future<String?> pickAndReadFileNow() async {
+    var result = await FilePicker.platform.pickFiles();
+    if(result != null) {
+      var f = result.files[0];
+      return Utf8Decoder().convert(f.bytes?.toList() ?? []);
+    }
+    else {
+      return null;
+    }
+  }
+
+  @override
   bool get needsProxy => true;
+
+  @override
+  void saveFile(String defaultName, String fileContents) {
+    launch("data:application/octet-stream;base64,${base64Encode(utf8.encode(fileContents))}");
+  }
 }
