@@ -278,6 +278,7 @@ class Rater {
       for(Stage s in match.stages) {
         var weightMod = 1.0 + max(-0.20, min(0.10, (s.maxPoints - 120) /  400));
 
+        // TODO: handle [RatingMode.wholeEvent]
         for(int i = 0; i < shooters.length; i++) {
           if(ratingSystem.mode == RatingMode.roundRobin) {
             _processRoundRobin(match, s, shooters, scores, i, changes, strengthMod, connectednessMod, weightMod);
