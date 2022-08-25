@@ -278,8 +278,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                         });
                       },
                       decoration: InputDecoration(
-                        helperText: ' ',
-                        hintText: "Search",
+                        helperText: "Search",
                         suffixIcon: _searchTerm.length > 0 ?
                             GestureDetector(
                               child: Icon(Icons.cancel),

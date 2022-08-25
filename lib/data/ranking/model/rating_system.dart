@@ -12,11 +12,15 @@ abstract class RatingSystem {
   /// and return a map of the changes.
   ///
   /// [shooter] is the shooter or shooters whose ratings should change. If
-  /// [mode] is [RatingMode.roundRobin], [shooters] is identical to the list
-  /// of keys in [scores].
+  /// [mode] is [RatingMode.roundRobin], [shooters] and [scores] both contain
+  /// two elements, for the pair of shooters being compared.
   ///
-  /// [match] is the match and [stage] the stage in question. If [stage] is
-  /// not null, the ratings are being done by stage.
+  /// If [mode] is [RatingMode.oneShot], [shooters] is a one-element list containing
+  /// the shooter currently under consideration, and [scores] contains entries for
+  /// all shooters in the rating event.
+  ///
+  /// If [mode] is [RatingMode.wholeEvent], [shooters] and [scores] both contain
+  /// entries for all shooters in the rating event.
   Map<ShooterRating, RatingChange> updateShooterRatings({required List<ShooterRating> shooters, required Map<ShooterRating, RelativeScore> scores, double matchStrengthMultiplier = 1.0, double connectednessMultiplier = 1.0, double eventWeightMultiplier = 1.0});
 
   static const initialPlacementMultipliers = [
