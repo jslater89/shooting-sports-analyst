@@ -7,7 +7,7 @@ import 'package:uspsa_result_viewer/data/ranking/model/connected_shooter.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_change.dart';
 import 'package:uspsa_result_viewer/data/sorted_list.dart';
 
-class ShooterRating {
+abstract class ShooterRating<T extends ShooterRating<T>> {
   /// The number of events over which trend/variance are calculated.
   static const baseTrendWindow = 30;
 
@@ -22,10 +22,13 @@ class ShooterRating {
 
   final Shooter shooter;
   Classification lastClassification;
-  double rating;
-  double variance = 0;
-  double trend = 0;
   DateTime lastSeen;
+
+  double get rating;
+  set rating(double rating);
+
+  List<RatingEvent> get ratingEvents;
+  set ratingEvents(List<RatingEvent> events);
 
   AverageRating averageRating({int window = ShooterRating.baseTrendWindow}) {
     double runningRating = rating;
@@ -48,23 +51,21 @@ class ShooterRating {
     return AverageRating(firstRating: runningRating, minRating: lowestPoint, maxRating: highestPoint, averageOfIntermediates: intermediateRatings.sum / intermediateRatings.length, window: window);
   }
 
-  List<RatingEvent> ratingEvents = [];
-
   /// The shooters off of whom this shooter's connectedness is based.
   SortedList<ConnectedShooter> connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure);
-  double _connectedness = baseConnectedness;
+  double _connectedness = ShooterRating.baseConnectedness;
   double get connectedness => _connectedness;
 
   // TODO: have this return the change, apply at the end
   void updateConnectedness() {
-    var c = baseConnectedness;
+    var c = ShooterRating.baseConnectedness;
     for(var connection in connectedShooters.asIterable) {
       // Our connectedness increases by the connectedness of the other shooter, minus
       // the connectedness they get from us.
-      var change = (connection.connectedness * connectionPercentGain) - (_connectedness * connectionPercentGain * connectionPercentGain);
+      var change = (connection.connectedness * ShooterRating.connectionPercentGain) - (_connectedness * ShooterRating.connectionPercentGain * connectionPercentGain);
 
       // Fewer points for connecting with someone without a lot of ratings
-      var scale = min(1.0, connection.shooter.ratingEvents.length / baseTrendWindow);
+      var scale = min(1.0, connection.shooter.ratingEvents.length / ShooterRating.baseTrendWindow);
 
       // Fewer points if you don't have a lot of ratings
       // if(ratingEvents.length < baseTrendWindow) {
@@ -144,55 +145,23 @@ class ShooterRating {
     }
   }
 
-  ShooterRating(this.shooter, this.rating, {DateTime? date}) :
-        this.lastClassification = shooter.classification ?? Classification.U,
-        this.lastSeen = date ?? DateTime.now();
+  void updateTrends(double totalChange);
 
-  void updateTrends(double totalChange) {
-    var trendWindow = min(ratingEvents.length, baseTrendWindow);
-
-    if(trendWindow == 0) {
-      return;
-    }
-
-    var totalVariance = variance * (trendWindow - 1) + totalChange.abs();
-    variance = totalVariance / (trendWindow.toDouble());
-
-    var totalTrend = trend * (trendWindow - 1) + (totalChange >= 0 ? 1 : -1);
-    trend = totalTrend / (trendWindow);
-
-    // if(Rater.processMemberNumber(shooter.memberNumber) == "128393") {
-    //   debugPrint("Trends for ${shooter.lastName}");
-    //   debugPrint("$totalVariance / $trendWindow = $variance");
-    //   debugPrint("$totalTrend / $trendWindow = $trend");
-    // }
-  }
-
-  void copyRatingFrom(ShooterRating other) {
-    this.rating = other.rating;
-    this.variance = other.variance;
-    this.trend = other.trend;
+  void copyRatingFrom(T other) {
     this._connectedness = other._connectedness;
     this.lastClassification = other.lastClassification;
-    this._connectedness = other._connectedness;
     this.lastSeen = other.lastSeen;
     this.connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure)..addAll(other.connectedShooters.map((e) => ConnectedShooter.copy(e)));
-    this.ratingEvents = other.ratingEvents.map((e) => RatingEvent.copy(e)).toList();
   }
 
-  ShooterRating.copy(ShooterRating other) :
-        this.shooter = other.shooter,
-        this.rating = other.rating,
-        this.variance = other.variance,
-        this.trend = other.trend,
-        this.lastClassification = other.lastClassification,
-        this._connectedness = other._connectedness,
-        this.lastSeen = other.lastSeen,
-        this.connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure)..addAll(other.connectedShooters.map((e) => ConnectedShooter.copy(e))),
-        this.ratingEvents = other.ratingEvents.map((e) => RatingEvent.copy(e)).toList();
+  ShooterRating(this.shooter, {DateTime? date}) :
+      this.lastClassification = shooter.classification ?? Classification.U,
+      this.lastSeen = date ?? DateTime.now();
 
-  @override
-  String toString() {
-    return "${shooter.getName(suffixes: false)} ${rating.round()} ($hashCode)";
-  }
+  ShooterRating.copy(T other) :
+      this.shooter = other.shooter,
+      this.lastClassification = other.lastClassification,
+      this._connectedness = other._connectedness,
+      this.lastSeen = other.lastSeen,
+      this.connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure)..addAll(other.connectedShooters.map((e) => ConnectedShooter.copy(e)));
 }

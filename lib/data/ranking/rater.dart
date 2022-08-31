@@ -68,7 +68,7 @@ class Rater {
       if(entry.key == entry.value) {
         // If, per the member number mappings, this is the canonical mapping, copy it immediately.
         // (The canonical mapping is the one where mappings[num] = num—i.e., no mapping)
-        knownShooters[entry.value] = ShooterRating.copy(other.knownShooters[entry.value]!);
+        knownShooters[entry.value] = ratingSystem.copyShooterRating(other.knownShooters[entry.value]!);
       }
       else {
         if(other.knownShooters[entry.key] != null && other.knownShooters[entry.key] == other.knownShooters[entry.value]) {
@@ -136,7 +136,7 @@ class Rater {
     var shooters = _getShooters(match);
     for(Shooter s in shooters) {
       if(processMemberNumber(s.memberNumber).isNotEmpty && !s.reentry && s.memberNumber.length > 3) {
-        knownShooters[processMemberNumber(s.memberNumber)] ??= ShooterRating(s, RatingSystem.initialClassRatings[s.classification] ?? 800.0, date: match.date); // ratingSystem.defaultRating
+        knownShooters[processMemberNumber(s.memberNumber)] ??= ratingSystem.newShooterRating(s, RatingSystem.initialClassRatings[s.classification] ?? 800.0, date: match.date); // ratingSystem.defaultRating
       }
     }
   }
@@ -154,9 +154,9 @@ class Rater {
       namesToNumbers[finalName] ??= [];
       namesToNumbers[finalName]!.add(num);
 
-      if(name.startsWith("maxmichel")) {
-        print("Breakpoint");
-      }
+      // if(name.startsWith("maxmichel")) {
+      //   print("Breakpoint");
+      // }
       _memberNumberMappings[num] ??= num;
     }
 
@@ -621,17 +621,8 @@ class Rater {
   }
 
   String toCSV() {
-    String csv = "Member#,Name,Rating,Variance,Trend,Stages\n";
-
     var sortedShooters = uniqueShooters.sorted((a, b) => b.rating.compareTo(a.rating));
-
-    for(var s in sortedShooters) {
-      csv += "${Rater.processMemberNumber(s.shooter.memberNumber)},";
-      csv += "${s.shooter.getName()},";
-      csv += "${s.rating.round()},${s.variance.toStringAsFixed(2)},${s.trend.toStringAsFixed(2)},${s.ratingEvents.length}\n";
-    }
-
-    return csv;
+    return ratingSystem.ratingsToCsv(sortedShooters);
   }
 
   void _encounteredMemberNumber(String num) {

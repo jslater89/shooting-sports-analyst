@@ -4,10 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
+import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/sorted_list.dart';
 import 'package:uspsa_result_viewer/ui/score_row.dart';
 
-class MultiplayerPercentEloRater implements RatingSystem {
+class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
   @override
   double get defaultRating => 1000;
 
@@ -215,6 +216,8 @@ class MultiplayerPercentEloRater implements RatingSystem {
   ScoreRow buildShooterRatingRow({required BuildContext context, required int place, required ShooterRating rating}) {
     var trend = rating.rating - rating.averageRating().firstRating;
 
+    var castRating = rating as EloShooterRating;
+
     return ScoreRow(
       color: (place - 1) % 2 == 1 ? Colors.grey[200] : Colors.white,
       child: Padding(
@@ -226,7 +229,7 @@ class MultiplayerPercentEloRater implements RatingSystem {
               Expanded(flex: 3, child: Text(Rater.processMemberNumber(rating.shooter.memberNumber))),
               Expanded(flex: 6, child: Text(rating.shooter.getName(suffixes: false))),
               Expanded(flex: 2, child: Text("${rating.rating.round()}", textAlign: TextAlign.end)),
-              Expanded(flex: 2, child: Text("${rating.variance.toStringAsFixed(2)}", textAlign: TextAlign.end)),
+              Expanded(flex: 2, child: Text("${castRating.variance.toStringAsFixed(2)}", textAlign: TextAlign.end)),
               Expanded(flex: 2, child: Text("${trend.round()}", textAlign: TextAlign.end)),
               Expanded(flex: 2, child: Text("${(rating.connectedness - ShooterRating.baseConnectedness).toStringAsFixed(1)}", textAlign: TextAlign.end)),
               Expanded(flex: 2, child: Text("${rating.ratingEvents.length}", textAlign: TextAlign.end,)),
@@ -235,5 +238,28 @@ class MultiplayerPercentEloRater implements RatingSystem {
           )
       ),
     );
+  }
+
+  @override
+  ShooterRating<EloShooterRating> copyShooterRating(EloShooterRating rating) {
+    return EloShooterRating.copy(rating);
+  }
+
+  @override
+  ShooterRating<EloShooterRating> newShooterRating(Shooter shooter, double initialRating, {DateTime? date}) {
+    return EloShooterRating(shooter, initialRating, date: date);
+  }
+
+  @override
+  String ratingsToCsv(List<ShooterRating> ratings) {
+    String csv = "Member#,Name,Rating,Variance,Trend,Stages\n";
+
+    for(var s in ratings) {
+      s as EloShooterRating;
+      csv += "${Rater.processMemberNumber(s.shooter.memberNumber)},";
+      csv += "${s.shooter.getName()},";
+      csv += "${s.rating.round()},${s.variance.toStringAsFixed(2)},${s.trend.toStringAsFixed(2)},${s.ratingEvents.length}\n";
+    }
+    return csv;
   }
 }
