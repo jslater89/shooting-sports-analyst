@@ -246,8 +246,8 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
   }
 
   @override
-  ShooterRating<EloShooterRating> newShooterRating(Shooter shooter, double initialRating, {DateTime? date}) {
-    return EloShooterRating(shooter, initialRating, date: date);
+  ShooterRating<EloShooterRating> newShooterRating(Shooter shooter, {DateTime? date}) {
+    return EloShooterRating(shooter, initialClassRatings[shooter.classification] ?? 800.0, date: date);
   }
 
   @override
@@ -262,4 +262,15 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     }
     return csv;
   }
+
+  static const initialClassRatings = {
+    Classification.GM: 1300.0,
+    Classification.M: 1200.0,
+    Classification.A: 1100.0,
+    Classification.B: 1000.0,
+    Classification.C: 900.0,
+    Classification.D: 800.0,
+    Classification.U: 900.0,
+    Classification.unknown: 800.0,
+  };
 }

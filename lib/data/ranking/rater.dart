@@ -136,7 +136,7 @@ class Rater {
     var shooters = _getShooters(match);
     for(Shooter s in shooters) {
       if(processMemberNumber(s.memberNumber).isNotEmpty && !s.reentry && s.memberNumber.length > 3) {
-        knownShooters[processMemberNumber(s.memberNumber)] ??= ratingSystem.newShooterRating(s, RatingSystem.initialClassRatings[s.classification] ?? 800.0, date: match.date); // ratingSystem.defaultRating
+        knownShooters[processMemberNumber(s.memberNumber)] ??= ratingSystem.newShooterRating(s, date: match.date); // ratingSystem.defaultRating
       }
     }
   }

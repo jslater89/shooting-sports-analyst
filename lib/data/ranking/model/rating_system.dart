@@ -39,7 +39,7 @@ abstract class RatingSystem<T extends ShooterRating<T>> {
   ShooterRating copyShooterRating(T rating);
 
   /// Create a new shooter rating for the given information.
-  ShooterRating newShooterRating(Shooter shooter, double initialRating, {DateTime? date});
+  ShooterRating newShooterRating(Shooter shooter, {DateTime? date});
 
   String ratingsToCsv(List<ShooterRating> ratings);
 
@@ -65,16 +65,4 @@ abstract class RatingSystem<T extends ShooterRating<T>> {
     1.2,
     1.1,
   ];
-
-  static const initialClassRatings = {
-    Classification.GM: 1300.0,
-    Classification.M: 1200.0,
-    Classification.A: 1100.0,
-    Classification.B: 1000.0,
-    Classification.C: 900.0,
-    Classification.D: 800.0,
-    Classification.U: 900.0,
-    Classification.unknown: 800.0,
-    null: 800.0,
-  };
 }
