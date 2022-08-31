@@ -163,15 +163,16 @@ class RatingProject {
     var combineOpenPCC = (encodedProject[_combineOpenPCCKey] ?? false) as bool;
     var combineLimitedCO = (encodedProject[_combineLimitedCOKey] ?? false) as bool;
     var combineLocap = (encodedProject[_combineLocapKey] ?? true) as bool;
+    var byStage = encodedProject[_byStageKey] as bool;
 
     var settings = RatingHistorySettings(
       algorithm: MultiplayerPercentEloRater(
         K: encodedProject[_kKey] as double,
         percentWeight: encodedProject[_pctWeightKey] as double,
         scale: encodedProject[_scaleKey] as double,
+        byStage: byStage
       ),
       preserveHistory: encodedProject[_keepHistoryKey] as bool,
-      byStage: encodedProject[_byStageKey] as bool,
       groups: RatingHistorySettings.groupsForSettings(
         combineOpenPCC: combineOpenPCC,
         combineLimitedCO: combineLimitedCO,

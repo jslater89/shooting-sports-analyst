@@ -204,6 +204,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       K:  K,
       scale: scale,
       percentWeight: pctWeight,
+      byStage: _byStage,
     );
 
     var groups = RatingHistorySettings.groupsForSettings(
@@ -215,7 +216,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     return RatingHistorySettings(
       algorithm: ratingSystem,
       groups: groups,
-      byStage: _byStage,
       preserveHistory: _keepHistory,
       memberNumberWhitelist: _memNumWhitelist,
       shooterAliases: _shooterAliases,

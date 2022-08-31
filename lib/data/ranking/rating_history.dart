@@ -30,7 +30,7 @@ class RatingHistory {
 
   RatingHistory({required List<PracticalMatch> matches, RatingHistorySettings? settings, this.progressCallback}) : this._matches = matches {
     if(settings != null) _settings = settings;
-    else _settings = RatingHistorySettings(algorithm: MultiplayerPercentEloRater());
+    else _settings = RatingHistorySettings(algorithm: MultiplayerPercentEloRater(byStage: true));
   }
 
   Future<void> processInitialMatches() async {
@@ -182,7 +182,7 @@ extension _InternalUtilities on RaterGroup {
 }
 
 class RatingHistorySettings {
-  bool byStage;
+  bool get byStage => algorithm.byStage;
   bool preserveHistory;
   List<RaterGroup> groups;
   List<String> memberNumberWhitelist;
@@ -190,7 +190,6 @@ class RatingHistorySettings {
   Map<String, String> shooterAliases;
 
   RatingHistorySettings({
-    this.byStage = false,
     this.preserveHistory = false,
     this.groups = const [RaterGroup.open, RaterGroup.limited, RaterGroup.pcc, RaterGroup.carryOptics, RaterGroup.locap],
     required this.algorithm,

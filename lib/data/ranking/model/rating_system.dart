@@ -1,12 +1,15 @@
+import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/match/relative_scores.dart';
 import 'package:uspsa_result_viewer/data/match/shooter.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_change.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_mode.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
+import 'package:uspsa_result_viewer/ui/score_row.dart';
 
 abstract class RatingSystem {
   double get defaultRating;
   RatingMode get mode;
+  bool get byStage;
 
   /// Given some number of shooters (see [RatingMode]), update their ratings
   /// and return a map of the changes.
@@ -22,6 +25,15 @@ abstract class RatingSystem {
   /// If [mode] is [RatingMode.wholeEvent], [shooters] and [scores] both contain
   /// entries for all shooters in the rating event.
   Map<ShooterRating, RatingChange> updateShooterRatings({required List<ShooterRating> shooters, required Map<ShooterRating, RelativeScore> scores, double matchStrengthMultiplier = 1.0, double connectednessMultiplier = 1.0, double eventWeightMultiplier = 1.0});
+
+  /// Return a Row containing labels for a table of shooter ratings.
+  Row buildRatingKey(BuildContext context);
+
+  /// Return a ScoreRow containing values for a given shooter rating in a table of shooter ratings.
+  ///
+  /// [rating] is guaranteed to be the subclass of ShooterRating corresponding to this
+  /// rating system.
+  ScoreRow buildShooterRatingRow({required BuildContext context, required int place, required ShooterRating rating});
 
   static const initialPlacementMultipliers = [
     // 1.5,

@@ -1,11 +1,11 @@
 import 'dart:math';
 
-import 'package:collection/collection.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/sorted_list.dart';
+import 'package:uspsa_result_viewer/ui/score_row.dart';
 
 class MultiplayerPercentEloRater implements RatingSystem {
   @override
@@ -25,7 +25,10 @@ class MultiplayerPercentEloRater implements RatingSystem {
   final double placeWeight;
   final double scale;
 
-  MultiplayerPercentEloRater({this.K = defaultK, this.scale = defaultScale, this.percentWeight = defaultPercentWeight}) : this.placeWeight = 1.0 - percentWeight;
+  @override
+  final bool byStage;
+
+  MultiplayerPercentEloRater({this.K = defaultK, this.scale = defaultScale, this.percentWeight = defaultPercentWeight, required this.byStage}) : this.placeWeight = 1.0 - percentWeight;
 
   @override
   Map<ShooterRating, RatingChange> updateShooterRatings({required List<ShooterRating> shooters, required Map<ShooterRating, RelativeScore> scores, double matchStrengthMultiplier = 1.0, double connectednessMultiplier = 1.0, double eventWeightMultiplier = 1.0}) {
@@ -168,5 +171,69 @@ class MultiplayerPercentEloRater implements RatingSystem {
 
   double _probability(double lose, double win) {
     return 1.0 / (1.0 + (pow(10, (lose - win) / scale)));
+  }
+
+  @override
+  Row buildRatingKey(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.max,
+      children: [
+        Expanded(flex: 6, child: Text("")),
+        Expanded(flex: 3, child: Text("Member #")),
+        Expanded(flex: 6, child: Text("Name")),
+        Expanded(flex: 2, child: Text("Rating", textAlign: TextAlign.end)),
+        Expanded(
+            flex: 2,
+            child: Tooltip(
+              message: "The average change in the shooter's rating per event, over the last 30 rating events.",
+              child: Text("Variance", textAlign: TextAlign.end),
+            )
+        ),
+        Expanded(
+            flex: 2,
+            child:
+            Tooltip(
+                message: "The change in the shooter's rating, over the last 30 rating events.",
+                child: Text("Trend", textAlign: TextAlign.end)
+            )
+        ),
+        Expanded(
+            flex: 2,
+            child:
+            Tooltip(
+                message: "The shooter's connectedness, a measure of how much he shoots against other shooters in the set.",
+                child: Text("Conn.", textAlign: TextAlign.end)
+            )
+        ),
+        Expanded(flex: 2, child: Text(byStage ? "Stages" : "Matches", textAlign: TextAlign.end)),
+        Expanded(flex: 6, child: Text("")),
+      ],
+    );
+  }
+
+  @override
+  ScoreRow buildShooterRatingRow({required BuildContext context, required int place, required ShooterRating rating}) {
+    var trend = rating.rating - rating.averageRating().firstRating;
+
+    return ScoreRow(
+      color: (place - 1) % 2 == 1 ? Colors.grey[200] : Colors.white,
+      child: Padding(
+          padding: const EdgeInsets.all(2.0),
+          child: Row(
+            children: [
+              Expanded(flex: 4, child: Text("")),
+              Expanded(flex: 2, child: Text("$place")),
+              Expanded(flex: 3, child: Text(Rater.processMemberNumber(rating.shooter.memberNumber))),
+              Expanded(flex: 6, child: Text(rating.shooter.getName(suffixes: false))),
+              Expanded(flex: 2, child: Text("${rating.rating.round()}", textAlign: TextAlign.end)),
+              Expanded(flex: 2, child: Text("${rating.variance.toStringAsFixed(2)}", textAlign: TextAlign.end)),
+              Expanded(flex: 2, child: Text("${trend.round()}", textAlign: TextAlign.end)),
+              Expanded(flex: 2, child: Text("${(rating.connectedness - ShooterRating.baseConnectedness).toStringAsFixed(1)}", textAlign: TextAlign.end)),
+              Expanded(flex: 2, child: Text("${rating.ratingEvents.length}", textAlign: TextAlign.end,)),
+              Expanded(flex: 6, child: Text("")),
+            ],
+          )
+      ),
+    );
   }
 }
