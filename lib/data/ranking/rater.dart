@@ -279,18 +279,25 @@ class Rater {
         var weightMod = 1.0 + max(-0.20, min(0.10, (s.maxPoints - 120) /  400));
 
         // TODO: handle [RatingMode.wholeEvent]
-        for(int i = 0; i < shooters.length; i++) {
-          if(ratingSystem.mode == RatingMode.roundRobin) {
-            _processRoundRobin(match, s, shooters, scores, i, changes, strengthMod, connectednessMod, weightMod);
-          }
-          else {
-            _processOneshot(match, s, shooters[i], scores, changes, strengthMod, connectednessMod, weightMod);
+        if(ratingSystem.mode == RatingMode.wholeEvent) {
+
+        }
+        else {
+          for(int i = 0; i < shooters.length; i++) {
+            if(ratingSystem.mode == RatingMode.roundRobin) {
+              _processRoundRobin(match, s, shooters, scores, i, changes, strengthMod, connectednessMod, weightMod);
+            }
+            else {
+              _processOneshot(match, s, shooters[i], scores, changes, strengthMod, connectednessMod, weightMod);
+            }
           }
         }
 
         for(var r in changes.keys) {
           var totalChange = 0.0;
 
+          // TODO: feed these changes and the rating back into the rating system
+          // that way rating systems can do their own updates
           for(var event in changes[r]!.values) {
             totalChange += event.ratingChange;
             r.rating += event.ratingChange;
@@ -304,12 +311,17 @@ class Rater {
       }
     }
     else {
-      for(int i = 0; i < shooters.length; i++) {
-        if(ratingSystem.mode == RatingMode.roundRobin) {
-          _processRoundRobin(match, null, shooters, scores, i, changes, strengthMod, connectednessMod, 1.0);
-        }
-        else {
-          _processOneshot(match, null, shooters[i], scores, changes, strengthMod, connectednessMod, 1.0);
+      if(ratingSystem.mode == RatingMode.wholeEvent) {
+
+      }
+      else {
+        for(int i = 0; i < shooters.length; i++) {
+          if(ratingSystem.mode == RatingMode.roundRobin) {
+            _processRoundRobin(match, null, shooters, scores, i, changes, strengthMod, connectednessMod, 1.0);
+          }
+          else {
+            _processOneshot(match, null, shooters[i], scores, changes, strengthMod, connectednessMod, 1.0);
+          }
         }
       }
 

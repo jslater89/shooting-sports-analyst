@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
@@ -135,20 +136,24 @@ class RatingProjectManager {
   }
 }
 
+// TODO: distinct names for OpenSkill
 const _nameKey = "name";
-const _kKey = "k";
-const _pctWeightKey = "pctWt";
-const _scaleKey = "scale";
 const _combineLocapKey = "combineLocap";
 const _combineLimitedCOKey = "combineLimCO";
 const _combineOpenPCCKey = "combineOpPCC";
-const _byStageKey = "byStage";
 const _keepHistoryKey = "keepHistory";
 const _urlsKey = "urls";
 const _whitelistKey = "memNumWhitelist";
 const _aliasesKey = "aliases";
 
+// Values for the multiplayer percent elo rater.
+
 class RatingProject {
+  static const byStageKey = "byStage";
+  static const algorithmKey = "algo";
+  static const multiplayerEloValue = "multiElo";
+  static const openskillValue = "openskill";
+
   String name;
   RatingHistorySettings settings;
   List<String> matchUrls;
@@ -163,15 +168,12 @@ class RatingProject {
     var combineOpenPCC = (encodedProject[_combineOpenPCCKey] ?? false) as bool;
     var combineLimitedCO = (encodedProject[_combineLimitedCOKey] ?? false) as bool;
     var combineLocap = (encodedProject[_combineLocapKey] ?? true) as bool;
-    var byStage = encodedProject[_byStageKey] as bool;
+
+    var algorithmName = (encodedProject[algorithmKey] ?? multiplayerEloValue) as String;
+    var algorithm = _algorithmForName(algorithmName, encodedProject);
 
     var settings = RatingHistorySettings(
-      algorithm: MultiplayerPercentEloRater(
-        K: encodedProject[_kKey] as double,
-        percentWeight: encodedProject[_pctWeightKey] as double,
-        scale: encodedProject[_scaleKey] as double,
-        byStage: byStage
-      ),
+      algorithm: algorithm,
       preserveHistory: encodedProject[_keepHistoryKey] as bool,
       groups: RatingHistorySettings.groupsForSettings(
         combineOpenPCC: combineOpenPCC,
@@ -189,22 +191,28 @@ class RatingProject {
     return RatingProject(name: name, settings: settings, matchUrls: matchUrls);
   }
 
-  String toJson() {
-    var algorithm = settings.algorithm as MultiplayerPercentEloRater;
+  static RatingSystem _algorithmForName(String name, Map<String, dynamic> encodedProject) {
+    switch(name) {
+      case multiplayerEloValue:
+        return MultiplayerPercentEloRater.fromJson(encodedProject);
+      default:
+        throw ArgumentError();
+    }
+  }
 
+  String toJson() {
     Map<String, dynamic> map = {};
     map[_nameKey] = name;
-    map[_kKey] = algorithm.K;
-    map[_pctWeightKey] = algorithm.percentWeight;
-    map[_scaleKey] = algorithm.scale;
     map[_combineLocapKey] = settings.groups.contains(RaterGroup.locap);
     map[_combineOpenPCCKey] = settings.groups.contains(RaterGroup.openPcc);
     map[_combineLimitedCOKey] = settings.groups.contains(RaterGroup.limitedCO);
-    map[_byStageKey] = settings.byStage;
     map[_keepHistoryKey] = settings.preserveHistory;
     map[_urlsKey] = matchUrls;
     map[_whitelistKey] = settings.memberNumberWhitelist;
     map[_aliasesKey] = settings.shooterAliases;
+
+    /// Alg-specific settings
+    settings.algorithm.encodeToJson(map);
 
     var encoded = jsonEncode(map);
     return encoded;

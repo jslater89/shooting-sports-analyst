@@ -2,11 +2,16 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/sorted_list.dart';
 import 'package:uspsa_result_viewer/ui/score_row.dart';
+
+const _kKey = "k";
+const _pctWeightKey = "pctWt";
+const _scaleKey = "scale";
 
 class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
   @override
@@ -30,6 +35,15 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
   final bool byStage;
 
   MultiplayerPercentEloRater({this.K = defaultK, this.scale = defaultScale, this.percentWeight = defaultPercentWeight, required this.byStage}) : this.placeWeight = 1.0 - percentWeight;
+
+  factory MultiplayerPercentEloRater.fromJson(Map<String, dynamic> json) {
+    return MultiplayerPercentEloRater(
+        K: json[_kKey] as double,
+        percentWeight: json[_pctWeightKey] as double,
+        scale: json[_scaleKey] as double,
+        byStage: json[RatingProject.byStageKey] as bool,
+    );
+  }
 
   @override
   Map<ShooterRating, RatingChange> updateShooterRatings({required List<ShooterRating> shooters, required Map<ShooterRating, RelativeScore> scores, double matchStrengthMultiplier = 1.0, double connectednessMultiplier = 1.0, double eventWeightMultiplier = 1.0}) {
@@ -273,4 +287,13 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     Classification.U: 900.0,
     Classification.unknown: 800.0,
   };
+
+  @override
+  void encodeToJson(Map<String, dynamic> json) {
+    json[RatingProject.algorithmKey] = RatingProject.multiplayerEloValue;
+    json[RatingProject.byStageKey] = byStage;
+    json[_kKey] = K;
+    json[_pctWeightKey] = percentWeight;
+    json[_scaleKey] = scale;
+  }
 }

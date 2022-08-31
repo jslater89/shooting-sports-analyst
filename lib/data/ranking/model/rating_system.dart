@@ -41,7 +41,10 @@ abstract class RatingSystem<T extends ShooterRating<T>> {
   /// Create a new shooter rating for the given information.
   ShooterRating newShooterRating(Shooter shooter, {DateTime? date});
 
+  ///
   String ratingsToCsv(List<ShooterRating> ratings);
+
+  encodeToJson(Map<String, dynamic> json);
 
   static const initialPlacementMultipliers = [
     // 1.5,
