@@ -149,10 +149,10 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
 String getProxyUrl() {
   if(HtmlOr.needsProxy) {
     if (kDebugMode) {
-      return "https://cors-anywhere.herokuapp.com/";
+      return "https://parabellum.stagerepo.com:10541/";
     }
     else {
-      return "https://still-harbor-88681.herokuapp.com/";
+      return "https://parabellum.stagerepo.com:10541/";
     }
   }
   return "";
