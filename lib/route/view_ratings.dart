@@ -158,6 +158,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
   int _currentProgress = 0;
   int _totalProgress = 0;
+  String? _loadingEventName;
 
   Widget _matchLoadingIndicator() {
     return Center(
@@ -165,7 +166,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         mainAxisSize: MainAxisSize.min,
         children: [
           Text("Loading...", style: Theme.of(context).textTheme.subtitle1),
-          Text("Now: ${_loadingState.label}", style: Theme.of(context).textTheme.subtitle2),
+          Text("Now: ${_loadingState.label}${_loadingEventName != null ? " ($_loadingEventName)" : ""}", style: Theme.of(context).textTheme.subtitle2),
           SizedBox(height: 10),
           if(_totalProgress > 0)
             LinearProgressIndicator(
@@ -501,13 +502,14 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
     await Future.delayed(Duration(milliseconds: 100));
 
-    _history = RatingHistory(settings: widget.settings, matches: actualMatches, progressCallback: (currentSteps, totalSteps) async {
+    _history = RatingHistory(settings: widget.settings, matches: actualMatches, progressCallback: (currentSteps, totalSteps, eventName) async {
       setState(() {
         _currentProgress = currentSteps;
         _totalProgress = totalSteps;
+        _loadingEventName = eventName;
       });
 
-      // debugPrint("Rating history progress: $_currentProgress/$_totalProgress");
+      debugPrint("Rating history progress: $_currentProgress/$_totalProgress $eventName");
       await Future.delayed(Duration(milliseconds: 1));
     });
 

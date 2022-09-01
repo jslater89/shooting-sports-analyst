@@ -5,6 +5,7 @@ import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/multiplayer_percent_elo_rater.dart';
 import 'package:uspsa_result_viewer/ui/filter_dialog.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart' as defaultAliases;
+import 'package:intl/intl.dart';
 
 /// RatingHistory turns a sequence of [PracticalMatch]es into a series of
 /// [Rater]s.
@@ -26,7 +27,7 @@ class RatingHistory {
   /// after that match has been processed.
   Map<PracticalMatch, Map<RaterGroup, Rater>> _ratersByDivision = {};
 
-  Future<void> Function(int, int)? progressCallback;
+  Future<void> Function(int currentSteps, int totalSteps, String? eventName)? progressCallback;
 
   RatingHistory({required List<PracticalMatch> matches, RatingHistorySettings? settings, this.progressCallback}) : this._matches = matches {
     if(settings != null) _settings = settings;
@@ -63,7 +64,7 @@ class RatingHistory {
     var currentMatches = <PracticalMatch>[];
     PracticalMatch? lastMatch;
 
-    await progressCallback?.call(0, 1);
+    await progressCallback?.call(0, 1, null);
 
     if(_settings.preserveHistory) {
       int totalSteps = matches.length * _settings.groups.length;
@@ -84,7 +85,7 @@ class RatingHistory {
             _ratersByDivision[m]![group] = await _raterForGroup(innerMatches, group);
 
             stepsFinished += 1;
-            await progressCallback?.call(stepsFinished, totalSteps);
+            await progressCallback?.call(stepsFinished, totalSteps, "${toBeginningOfSentenceCase(group.name)} - ${m.name}");
           }
           else {
             Rater newRater = Rater.copy(_ratersByDivision[lastMatch]![group]!);
@@ -92,7 +93,7 @@ class RatingHistory {
             _ratersByDivision[m]![group] = newRater;
 
             stepsFinished += 1;
-            await progressCallback?.call(stepsFinished, totalSteps);
+            await progressCallback?.call(stepsFinished, totalSteps, "${toBeginningOfSentenceCase(group.name)} - ${m.name}");
           }
         }
 
@@ -108,15 +109,15 @@ class RatingHistory {
       _ratersByDivision[m] ??= {};
 
       for (var group in _settings.groups) {
-        _ratersByDivision[m]![group] = await _raterForGroup(_matches, group, (_1, _2) async {
+        _ratersByDivision[m]![group] = await _raterForGroup(_matches, group, (_1, _2, eventName) async {
           stepsFinished += 1;
-          await progressCallback?.call(stepsFinished, totalSteps);
+          await progressCallback?.call(stepsFinished, totalSteps, "${toBeginningOfSentenceCase(group.name)} - $eventName");
         });
       }
     }
   }
   
-  Future<Rater> _raterForGroup(List<PracticalMatch> matches, RaterGroup group, [Future<void> Function(int, int)? progressCallback]) async {
+  Future<Rater> _raterForGroup(List<PracticalMatch> matches, RaterGroup group, [Future<void> Function(int, int, String?)? progressCallback]) async {
     var divisionMap = <Division, bool>{};
     group.divisions.forEach((element) => divisionMap[element] = true);
     var r = Rater(

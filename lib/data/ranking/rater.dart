@@ -17,7 +17,7 @@ class Rater {
   FilterSet? _filters;
   bool byStage;
   List<String> memberNumberWhitelist;
-  Future<void> Function(int, int)? progressCallback;
+  Future<void> Function(int, int, String? eventName)? progressCallback;
 
   Set<ShooterRating> get uniqueShooters => <ShooterRating>{}..addAll(knownShooters.values);
 
@@ -46,7 +46,7 @@ class Rater {
       _rankMatch(m);
 
       currentSteps += 1;
-      await progressCallback?.call(currentSteps, totalSteps);
+      await progressCallback?.call(currentSteps, totalSteps, m.name);
     }
 
     _removeUnseenShooters();
