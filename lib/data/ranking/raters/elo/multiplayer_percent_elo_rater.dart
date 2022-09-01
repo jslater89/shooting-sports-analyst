@@ -5,6 +5,7 @@ import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
+import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rating_change.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/sorted_list.dart';
 import 'package:uspsa_result_viewer/ui/score_row.dart';
@@ -16,6 +17,8 @@ const _scaleKey = "scale";
 class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
   @override
   double get defaultRating => 1000;
+
+  static const ratingKey = "rating";
 
   static const defaultK = 60.0;
   static const defaultPercentWeight = 0.4;
@@ -53,7 +56,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
 
     if(scores.length <= 1) {
       return {
-        shooters[0]: RatingChange(change: 0),
+        shooters[0]: RatingChange(change: {ratingKey: 0}),
       };
     }
 
@@ -112,7 +115,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
 
     if(usedScores == 1) {
       return {
-        shooters[0]: RatingChange(change: 0),
+        shooters[0]: RatingChange(change: {ratingKey: 0}),
       };
     }
 
@@ -180,7 +183,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     ];
 
     return {
-      aRating: RatingChange(change: change, info: info),
+      aRating: RatingChange(change: {ratingKey: change}, info: info),
     };
   }
 
@@ -295,5 +298,10 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     json[_kKey] = K;
     json[_pctWeightKey] = percentWeight;
     json[_scaleKey] = scale;
+  }
+
+  @override
+  RatingEvent newEvent({required String eventName, required RelativeScore score, List<String> info = const []}) {
+    return EloRatingEvent(eventName: eventName, score: score, ratingChange: 0, info: info);
   }
 }

@@ -7,7 +7,11 @@ import 'package:uspsa_result_viewer/data/ranking/model/connected_shooter.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_change.dart';
 import 'package:uspsa_result_viewer/data/sorted_list.dart';
 
+
 abstract class ShooterRating<T extends ShooterRating<T>> {
+  // The weird generic is required so that subclasses can implement
+  // [copyRatingFrom].
+
   /// The number of events over which trend/variance are calculated.
   static const baseTrendWindow = 30;
 
@@ -29,6 +33,8 @@ abstract class ShooterRating<T extends ShooterRating<T>> {
 
   List<RatingEvent> get ratingEvents;
   set ratingEvents(List<RatingEvent> events);
+
+  void updateFromEvents(List<RatingEvent> events);
 
   AverageRating averageRating({int window = ShooterRating.baseTrendWindow}) {
     double runningRating = rating;
@@ -145,7 +151,7 @@ abstract class ShooterRating<T extends ShooterRating<T>> {
     }
   }
 
-  void updateTrends(double totalChange);
+  void updateTrends(List<RatingEvent> changes);
 
   void copyRatingFrom(T other) {
     this._connectedness = other._connectedness;
@@ -158,7 +164,7 @@ abstract class ShooterRating<T extends ShooterRating<T>> {
       this.lastClassification = shooter.classification ?? Classification.U,
       this.lastSeen = date ?? DateTime.now();
 
-  ShooterRating.copy(T other) :
+  ShooterRating.copy(ShooterRating other) :
       this.shooter = other.shooter,
       this.lastClassification = other.lastClassification,
       this._connectedness = other._connectedness,

@@ -1,8 +1,10 @@
 import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_change.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
+import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rating_change.dart';
 
 class EloShooterRating extends ShooterRating<EloShooterRating> {
   double rating;
@@ -14,7 +16,18 @@ class EloShooterRating extends ShooterRating<EloShooterRating> {
   EloShooterRating(Shooter shooter, this.rating, {DateTime? date}) :
       super(shooter, date: date);
 
-  void updateTrends(double totalChange) {
+  void updateFromEvents(List<RatingEvent> events) {
+    for(var e in events) {
+      e as EloRatingEvent;
+      ratingEvents.add(e);
+      rating += e.ratingChange;
+    }
+  }
+
+  void updateTrends(List<RatingEvent> changes) {
+    double totalChange = changes.map(
+            (c) => (c as EloRatingEvent).ratingChange).sum;
+
     var trendWindow = min(ratingEvents.length, ShooterRating.baseTrendWindow);
 
     if(trendWindow == 0) {
@@ -39,14 +52,14 @@ class EloShooterRating extends ShooterRating<EloShooterRating> {
     this.rating = other.rating;
     this.variance = other.variance;
     this.trend = other.trend;
-    this.ratingEvents = other.ratingEvents.map((e) => RatingEvent.copy(e)).toList();
+    this.ratingEvents = other.ratingEvents.map((e) => EloRatingEvent.copy(e as EloRatingEvent)).toList();
   }
 
   EloShooterRating.copy(EloShooterRating other) :
         this.rating = other.rating,
         this.variance = other.variance,
         this.trend = other.trend,
-        this.ratingEvents = other.ratingEvents.map((e) => RatingEvent.copy(e)).toList(),
+        this.ratingEvents = other.ratingEvents.map((e) => EloRatingEvent.copy(e as EloRatingEvent)).toList(),
         super.copy(other);
 
   @override
