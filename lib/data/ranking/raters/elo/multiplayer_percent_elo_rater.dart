@@ -15,9 +15,6 @@ const _pctWeightKey = "pctWt";
 const _scaleKey = "scale";
 
 class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
-  @override
-  double get defaultRating => 1000;
-
   static const ratingKey = "rating";
 
   static const defaultK = 60.0;
@@ -37,7 +34,12 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
   @override
   final bool byStage;
 
-  MultiplayerPercentEloRater({this.K = defaultK, this.scale = defaultScale, this.percentWeight = defaultPercentWeight, required this.byStage}) : this.placeWeight = 1.0 - percentWeight;
+  MultiplayerPercentEloRater({
+    this.K = defaultK,
+    this.scale = defaultScale,
+    this.percentWeight = defaultPercentWeight,
+    required this.byStage
+  }) : this.placeWeight = 1.0 - percentWeight;
 
   factory MultiplayerPercentEloRater.fromJson(Map<String, dynamic> json) {
     return MultiplayerPercentEloRater(
@@ -230,7 +232,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
   }
 
   @override
-  ScoreRow buildShooterRatingRow({required BuildContext context, required int place, required ShooterRating rating}) {
+  ScoreRow buildRatingRow({required BuildContext context, required int place, required ShooterRating rating}) {
     var trend = rating.rating - rating.averageRating().firstRating;
 
     var castRating = rating as EloShooterRating;
@@ -269,7 +271,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
 
   @override
   String ratingsToCsv(List<ShooterRating> ratings) {
-    String csv = "Member#,Name,Rating,Variance,Trend,Stages\n";
+    String csv = "Member#,Name,Rating,Variance,Trend,${byStage ? "Stages" : "Matches"}\n";
 
     for(var s in ratings) {
       s as EloShooterRating;

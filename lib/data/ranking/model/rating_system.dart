@@ -7,7 +7,6 @@ import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
 import 'package:uspsa_result_viewer/ui/score_row.dart';
 
 abstract class RatingSystem<T extends ShooterRating<T>> {
-  double get defaultRating;
   RatingMode get mode;
   bool get byStage;
 
@@ -33,7 +32,7 @@ abstract class RatingSystem<T extends ShooterRating<T>> {
   ///
   /// [rating] is guaranteed to be the subclass of ShooterRating corresponding to this
   /// rating system.
-  ScoreRow buildShooterRatingRow({required BuildContext context, required int place, required ShooterRating rating});
+  ScoreRow buildRatingRow({required BuildContext context, required int place, required ShooterRating rating});
 
   /// Return a deep copy of the provided shooter rating.
   ShooterRating copyShooterRating(T rating);

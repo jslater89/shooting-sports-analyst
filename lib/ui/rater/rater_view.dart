@@ -85,7 +85,7 @@ class _RaterViewState extends State<RaterView> {
                   return ShooterStatsDialog(rating: sortedRatings[i], match: widget.currentMatch);
                 });
               },
-              child: widget.rater.ratingSystem.buildShooterRatingRow(
+              child: widget.rater.ratingSystem.buildRatingRow(
                 context: context,
                 place: i + 1,
                 rating: sortedRatings[i],

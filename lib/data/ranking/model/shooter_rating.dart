@@ -29,7 +29,6 @@ abstract class ShooterRating<T extends ShooterRating<T>> {
   DateTime lastSeen;
 
   double get rating;
-  set rating(double rating);
 
   List<RatingEvent> get ratingEvents;
   set ratingEvents(List<RatingEvent> events);
