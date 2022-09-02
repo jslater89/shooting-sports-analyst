@@ -81,7 +81,9 @@ class MyApp extends StatelessWidget {
       ),
       initialRoute: '/',
       onGenerateRoute: globals.router.generator,
+      scrollBehavior: ScrollConfiguration.of(context).copyWith(
+        platform: TargetPlatform.android
+      ),
     );
   }
 }
-

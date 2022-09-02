@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
+import 'package:uspsa_result_viewer/data/ranking/raters/openskill/openskill_rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
 import 'package:uspsa_result_viewer/ui/confirm_dialog.dart';
@@ -117,10 +118,13 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       _combineOpenPCC = project.settings.groups.contains(RaterGroup.openPcc);
       _shooterAliases = project.settings.shooterAliases;
     });
-    var algorithm = project.settings.algorithm as MultiplayerPercentEloRater;
-    _kController.text = "${algorithm.K}";
-    _scaleController.text = "${algorithm.scale}";
-    _pctWeightController.text = "${algorithm.percentWeight}";
+    var algorithm = project.settings.algorithm;
+
+    if(algorithm is MultiplayerPercentEloRater) {
+      _kController.text = "${algorithm.K}";
+      _scaleController.text = "${algorithm.scale}";
+      _pctWeightController.text = "${algorithm.percentWeight}";
+    }
 
     getUrlDisplayNames();
 
@@ -200,12 +204,13 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       return null;
     }
 
-    var ratingSystem = MultiplayerPercentEloRater(
-      K:  K,
-      scale: scale,
-      percentWeight: pctWeight,
-      byStage: _byStage,
-    );
+    // var ratingSystem = MultiplayerPercentEloRater(
+    //   K:  K,
+    //   scale: scale,
+    //   percentWeight: pctWeight,
+    //   byStage: _byStage,
+    // );
+    var ratingSystem = OpenskillRater(byStage: _byStage);
 
     var groups = RatingHistorySettings.groupsForSettings(
       combineLocap: _combineLocap,

@@ -26,7 +26,11 @@ class OpenskillRating extends ShooterRating<OpenskillRating> {
 
   @override
   void updateFromEvents(List<RatingEvent> events) {
-    // TODO: implement updateFromEvents
+    for(var event in events) {
+      event as OpenskillRatingEvent;
+      mu += event.muChange;
+      sigma += event.sigmaChange;
+    }
   }
 
   @override

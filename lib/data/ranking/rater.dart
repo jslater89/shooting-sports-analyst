@@ -278,9 +278,8 @@ class Rater {
       for(Stage s in match.stages) {
         var weightMod = 1.0 + max(-0.20, min(0.10, (s.maxPoints - 120) /  400));
 
-        // TODO: handle [RatingMode.wholeEvent]
         if(ratingSystem.mode == RatingMode.wholeEvent) {
-
+          _processWholeEvent(match, s, scores, changes, matchStrength, connectednessMod, weightMod);
         }
         else {
           for(int i = 0; i < shooters.length; i++) {
@@ -303,7 +302,7 @@ class Rater {
     }
     else {
       if(ratingSystem.mode == RatingMode.wholeEvent) {
-
+        _processWholeEvent(match, null, scores, changes, matchStrength, connectednessMod, 1.0);
       }
       else {
         for(int i = 0; i < shooters.length; i++) {
@@ -563,6 +562,109 @@ class Rater {
         changes[rating]![score.total]!.apply(update[rating]!);
       }
     }
+  }
+
+  void _processWholeEvent(PracticalMatch match, Stage? stage, List<RelativeMatchScore> scores, Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes, double matchStrength, double connectednessMod, double weightMod) {
+    // Check for pubstomp
+    var pubstompMod = 1.0;
+    if(_pubstomp(scores)) {
+      pubstompMod = 0.33;
+    }
+    matchStrength *= pubstompMod;
+
+    if(stage != null) {
+      var scoreMap = <ShooterRating, RelativeScore>{};
+      for(var s in scores) {
+        if(!_verifyShooter(s.shooter)) continue;
+
+        String num = processMemberNumber(s.shooter.memberNumber);
+
+        var otherScore = s.stageScores[stage]!;
+        var validScore = _isValid(otherScore);
+
+        if(validScore) {
+          _encounteredMemberNumber(num);
+          scoreMap[knownShooters[num]!] = otherScore;
+          changes[knownShooters[num]!] ??= {};
+        }
+      }
+
+      var update = ratingSystem.updateShooterRatings(
+        shooters: scoreMap.keys.toList(),
+        scores: scoreMap,
+        matchStrengthMultiplier: matchStrength,
+        connectednessMultiplier: connectednessMod,
+        eventWeightMultiplier: weightMod,
+      );
+
+      for(var rating in scoreMap.keys) {
+        bool hasRatingChangeForStage = false;
+        var stageScore = scores.firstWhereOrNull((e) => e.shooter == rating.shooter)?.stageScores[stage]!;
+
+        if(stageScore == null) {
+          print("Null stage score for ${rating.shooter} on ${stage.name}");
+          continue;
+        }
+
+        for (var stageScore in changes[rating]!.keys) {
+          if (stage == stageScore.stage) {
+            hasRatingChangeForStage = true;
+            break;
+          }
+        }
+
+        if (!hasRatingChangeForStage) {
+          changes[rating]![stageScore] ??= ratingSystem.newEvent(eventName: "${match.name} - ${stage.name}", score: stageScore);
+          changes[rating]![stageScore]!.apply(update[rating]!);
+          changes[rating]![stageScore]!.info = update[rating]!.info;
+        }
+      }
+    }
+    else {
+      // Filter out non-DQ DNFs
+      var scoreMap = <ShooterRating, RelativeScore>{};
+      for(var s in scores) {
+        if(!_verifyShooter(s.shooter) || _dnf(s)) continue;
+        String num = processMemberNumber(s.shooter.memberNumber);
+
+        scoreMap[knownShooters[num]!] ??= s.total;
+        changes[knownShooters[num]!] ??= {};
+        _encounteredMemberNumber(num);
+      }
+
+      var update = ratingSystem.updateShooterRatings(
+        shooters: scoreMap.keys.toList(),
+        scores: scoreMap,
+        matchStrengthMultiplier: matchStrength,
+        connectednessMultiplier: connectednessMod,
+      );
+
+      for(var rating in scoreMap.keys) {
+        var score = scores.firstWhere((e) => e.shooter == rating.shooter);
+        // You only get one rating change per match.
+        if (changes[rating]!.isEmpty) {
+          changes[rating]![score.total] ??= ratingSystem.newEvent(eventName: "${match.name}",
+            score: score.total,
+            info: update[rating]!.info,
+          );
+
+          changes[rating]![score.total]!.apply(update[rating]!);
+        }
+      }
+    }
+  }
+
+  bool _isValid(RelativeScore score) {
+    // Filter out badly marked classifier reshoots
+    if(score.score.hits == 0 && score.score.time <= 0.1) return false;
+
+    // The George Williams Rule
+    if(score.stage != null && score.stage!.type != Scoring.fixedTime && score.score.getHitFactor() > 30) return false;
+
+    // Filter out extremely short times that are probably DNFs or partial scores entered for DQs
+    if(score.score.time <= 0.5) return false;
+
+    return true;
   }
 
   bool _pubstomp(List<RelativeMatchScore> scores) {
