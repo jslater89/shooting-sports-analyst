@@ -44,4 +44,9 @@ class OpenskillRating extends ShooterRating<OpenskillRating> {
     mu = other.mu;
     sigma = other.sigma;
   }
+
+  @override
+  String toString() {
+    return "${shooter.getName(suffixes: false)} ${rating.round()} ($hashCode)";
+  }
 }

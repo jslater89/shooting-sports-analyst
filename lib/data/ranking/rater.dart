@@ -599,7 +599,7 @@ class Rater {
 
       for(var rating in scoreMap.keys) {
         bool hasRatingChangeForStage = false;
-        var stageScore = scores.firstWhereOrNull((e) => e.shooter == rating.shooter)?.stageScores[stage]!;
+        var stageScore = scoreMap[rating];
 
         if(stageScore == null) {
           print("Null stage score for ${rating.shooter} on ${stage.name}");
