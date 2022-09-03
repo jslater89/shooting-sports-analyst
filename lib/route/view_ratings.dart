@@ -509,7 +509,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         _loadingEventName = eventName;
       });
 
-      debugPrint("Rating history progress: $_currentProgress/$_totalProgress $eventName");
+      // print("Rating history progress: $_currentProgress/$_totalProgress $eventName");
       await Future.delayed(Duration(milliseconds: 1));
     });
 

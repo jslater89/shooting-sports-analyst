@@ -726,6 +726,11 @@ class Rater {
     );
   }
 
+  @override
+  String toString() {
+    return "Rater for ${_matches.last.name} with ${_filters?.divisions}";
+  }
+
   static String processMemberNumber(String no) {
     no = no.replaceAll(RegExp(r"[^0-9]"), "");
     return no;

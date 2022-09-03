@@ -166,12 +166,12 @@ class RatingProject {
 
     var settings = RatingHistorySettings(
       algorithm: MultiplayerPercentEloRater(
-        K: encodedProject[_kKey] as double,
-        percentWeight: encodedProject[_pctWeightKey] as double,
-        scale: encodedProject[_scaleKey] as double,
+        K: (encodedProject[_kKey] ?? MultiplayerPercentEloRater.defaultK) as double,
+        percentWeight: (encodedProject[_pctWeightKey] ?? MultiplayerPercentEloRater.defaultPercentWeight) as double,
+        scale: (encodedProject[_scaleKey] ?? MultiplayerPercentEloRater.defaultScale) as double,
       ),
       preserveHistory: encodedProject[_keepHistoryKey] as bool,
-      byStage: encodedProject[_byStageKey] as bool,
+      byStage: (encodedProject[_byStageKey] ?? true) as bool,
       groups: RatingHistorySettings.groupsForSettings(
         combineOpenPCC: combineOpenPCC,
         combineLimitedCO: combineLimitedCO,

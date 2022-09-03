@@ -45,8 +45,7 @@ class Shooter {
 
   @override
   String toString() {
-    // TODO: implement toString
-    return super.toString();
+    return getName(suffixes: false);
   }
 }
 
