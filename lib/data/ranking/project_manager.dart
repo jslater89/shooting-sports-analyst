@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:hive/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/multiplayer_percent_elo_rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
@@ -32,19 +33,26 @@ class RatingProjectManager {
   static bool get readyNow => _instance != null && _instance!._readyCompleter.isCompleted;
 
   late SharedPreferences _prefs;
+  late Box<String> _box;
+  static const String _migrated = "migrated?";
   
   Future<void> _init() async {
-    _prefs = await SharedPreferences.getInstance();
+    _box = await Hive.openBox<String>("rating-projects");
+
+    if(!_box.containsKey(_migrated)) {
+      _prefs = await SharedPreferences.getInstance();
+      await _migrate();
+    }
     await _loadFromPrefs();
 
     _readyCompleter.complete(true);
   }
 
   Future<void> _loadFromPrefs() async {
-    for(var key in _prefs.getKeys()) {
+    for(var key in _box.keys) {
       if(key.startsWith(projectPrefix)) {
         try {
-          Map<String, dynamic> encodedProject = jsonDecode(_prefs.getString(key) ?? "");
+          Map<String, dynamic> encodedProject = jsonDecode(_box.get(key) ?? "");
 
           var project = RatingProject.fromJson(encodedProject);
 
@@ -60,10 +68,28 @@ class RatingProjectManager {
         }
         catch(e) {
           debugPrint("Error decoding project $key: $e");
-          debugPrint(_prefs.getString(key));
+          debugPrint(_box.get(key));
         }
       }
     }
+  }
+
+  Future<void> _migrate() async {
+    print("Migrating ProjectManager to HiveDB");
+    for(var key in _prefs.getKeys()) {
+      if (key.startsWith(projectPrefix)) {
+        var string = _prefs.getString(key);
+        if (string != null) {
+          _box.put(key, string);
+          print("Moved $key to Hive");
+        }
+        _prefs.remove(key);
+        print("Deleted $key from shared prefs");
+      }
+    }
+
+    _box.put(_migrated, "true");
+    print("Migration complete");
   }
 
   Future<void> exportToFile(RatingProject project) async {
@@ -102,9 +128,9 @@ class RatingProjectManager {
 
     var encoded = project.toJson();
 
-    await _prefs.setString("$projectPrefix${project.name}", encoded);
+    await _box.put("$projectPrefix${project.name}", encoded);
     if(mapName != null && mapName != project.name) {
-      await _prefs.setString("$projectPrefix$mapName", encoded);
+      await _box.put("$projectPrefix$mapName", encoded);
     }
 
     var projectNames = [project.name];
@@ -116,7 +142,7 @@ class RatingProjectManager {
 
   Future<void> deleteProject(String name) async {
     _projects.remove(name);
-    await _prefs.remove("$projectPrefix$name");
+    await _box.delete("$projectPrefix$name");
   }
 
   List<String> savedProjects() {
