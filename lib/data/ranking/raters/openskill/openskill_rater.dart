@@ -34,7 +34,7 @@ class OpenskillRater implements RatingSystem<OpenskillRating> {
   static const defaultMu = 25.0;
   static const defaultSigma = 25/3;
   static const defaultBeta = 25/3/2; // half of defaultSigma
-  static const defaultTau = 25/6/10;
+  static const defaultTau = 25/3/10;
   static const defaultEpsilon = 0.0001;
 
   final double beta = defaultBeta;
@@ -139,13 +139,13 @@ class OpenskillRater implements RatingSystem<OpenskillRating> {
   static const _muIndex = 0;
   static const _sigmaIndex = 1;
   static const initialClassRatings = {
-    Classification.GM: [defaultMu, defaultSigma],
-    Classification.M: [defaultMu, defaultSigma],
-    Classification.A: [defaultMu, defaultSigma],
-    Classification.B: [defaultMu, defaultSigma],
-    Classification.C: [defaultMu, defaultSigma],
+    Classification.GM: [defaultMu + 25, defaultSigma],
+    Classification.M: [defaultMu + 20, defaultSigma],
+    Classification.A: [defaultMu + 15, defaultSigma],
+    Classification.B: [defaultMu + 10, defaultSigma],
+    Classification.C: [defaultMu + 5, defaultSigma],
     Classification.D: [defaultMu, defaultSigma],
-    Classification.U: [defaultMu, defaultSigma],
+    Classification.U: [defaultMu + 5, defaultSigma],
     Classification.unknown: [defaultMu, defaultSigma],
   };
 
@@ -177,7 +177,7 @@ class OpenskillScore {
   RelativeScore actualScore;
 
   int rank = -1;
-  double get score => actualScore.relativePoints;
+  double get score => -actualScore.relativePoints;
 
   late double sumQ;
   late int a;

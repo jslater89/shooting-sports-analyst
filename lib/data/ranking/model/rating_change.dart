@@ -5,6 +5,11 @@ class RatingChange {
   final List<String> info;
 
   RatingChange({required this.change, this.info = const []});
+
+  @override
+  String toString() {
+    return "$change";
+  }
 }
 
 abstract class RatingEvent {

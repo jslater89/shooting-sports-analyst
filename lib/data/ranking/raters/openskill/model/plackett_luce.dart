@@ -16,6 +16,7 @@ class PlackettLuce {
     for(int i = 0; i < teams.length; i++) {
       final iTeam = teams[i];
       final iMuOverCe = exp(iTeam.mu / c);
+
       final omegaDeltaSum = teams
         .where((qTeam) => qTeam.rank <= iTeam.rank)
         .map<_OmegaDelta>((qTeam) {
@@ -34,7 +35,7 @@ class PlackettLuce {
       final iOmega = omegaDeltaSum.omega * (iTeam.sigmaSquared / c);
       final iDelta = iGamma * omegaDeltaSum.delta * (iTeam.sigmaSquared / pow(c, 2));
 
-      final newSigma = iTeam.sigma * max(epsilon, 1 - iDelta);
+      final newSigma = iTeam.sigma * sqrt(max(epsilon, 1 - iDelta));
 
       changes[iTeam.rating] = RatingChange(change: {
         OpenskillRater.muKey: iOmega,

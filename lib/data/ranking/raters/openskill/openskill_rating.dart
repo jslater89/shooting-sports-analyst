@@ -10,7 +10,7 @@ class OpenskillRating extends ShooterRating<OpenskillRating> {
   double mu;
   double sigma;
 
-  double get ordinal => mu - 3*sigma;
+  double get ordinal => mu - 2*sigma;
 
   @override
   List<RatingEvent> ratingEvents = [];
