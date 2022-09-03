@@ -204,13 +204,13 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       return null;
     }
 
-    // var ratingSystem = MultiplayerPercentEloRater(
-    //   K:  K,
-    //   scale: scale,
-    //   percentWeight: pctWeight,
-    //   byStage: _byStage,
-    // );
-    var ratingSystem = OpenskillRater(byStage: _byStage);
+    var ratingSystem = MultiplayerPercentEloRater(
+      K:  K,
+      scale: scale,
+      percentWeight: pctWeight,
+      byStage: _byStage,
+    );
+    // var ratingSystem = OpenskillRater(byStage: _byStage);
 
     var groups = RatingHistorySettings.groupsForSettings(
       combineLocap: _combineLocap,
