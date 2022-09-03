@@ -43,10 +43,10 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
 
   factory MultiplayerPercentEloRater.fromJson(Map<String, dynamic> json) {
     return MultiplayerPercentEloRater(
-        K: json[_kKey] as double,
-        percentWeight: json[_pctWeightKey] as double,
-        scale: json[_scaleKey] as double,
-        byStage: json[RatingProject.byStageKey] as bool,
+        K: (json[_kKey] ?? defaultK) as double,
+        percentWeight: (json[_pctWeightKey] ?? defaultPercentWeight) as double,
+        scale: (json[_scaleKey] ?? defaultScale) as double,
+        byStage: (json[RatingProject.byStageKey] ?? true) as bool,
     );
   }
 
