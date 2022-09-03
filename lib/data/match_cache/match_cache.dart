@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
+import 'package:hive/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
@@ -26,12 +27,20 @@ class MatchCache {
 
   Map<String, _MatchCacheEntry> _cache = {};
   late SharedPreferences _prefs;
+  late Box<String> _box;
   static const _cachePrefix = "cache/";
   static const _cacheSeparator = "XxX";
+  static const _migrated = "migrated?";
 
   void _init() async {
     _instance!.ready = _instance!._ready.future;
-    _prefs = await SharedPreferences.getInstance();
+    _box = await Hive.openBox<String>("match-cache");
+
+    if(!_box.containsKey(_migrated)) {
+      _prefs = await SharedPreferences.getInstance();
+      await _migrate();
+    }
+
     await _instance!.load();
 
     _ready.complete(true);
@@ -40,10 +49,10 @@ class MatchCache {
   Future<void> load() async {
     _cache.clear();
 
-    var paths = _prefs.getKeys();
+    var paths = _box.keys;
     for(var path in paths) {
       if(path.startsWith(_cachePrefix)) {
-        var reportContents = _prefs.getString(path);
+        var reportContents = _box.get(path);
 
         var ids = path.replaceFirst(_cachePrefix, "").split(_cacheSeparator);
 
@@ -67,9 +76,9 @@ class MatchCache {
   }
 
   void _clearPrefs() {
-    var keys = _prefs.getKeys();
+    var keys = _box.keys;
     for(var key in keys) {
-      if(key.startsWith(_cachePrefix)) _prefs.remove(key);
+      if(key.startsWith(_cachePrefix)) _box.delete(key);
     }
   }
 
@@ -91,13 +100,14 @@ class MatchCache {
       }
 
       var path = _generatePath(entry);
-      if(_prefs.containsKey(path)) {
+      if(_box.containsKey(path)) {
         currentProgress += 1;
         await progressCallback?.call(currentProgress, totalProgress);
         continue; // No need to resave
       }
 
-      await _prefs.setString(path, entry.match.reportContents);
+      // Box saves in a background isolate
+      _box.put(path, entry.match.reportContents);
       alreadySaved.add(entry);
       print("Saved ${entry.match.name} to $path");
 
@@ -114,7 +124,8 @@ class MatchCache {
       for(var id in entry.ids) {
         _cache.remove(id);
       }
-      return _prefs.remove(_generatePath(entry));
+      await _box.delete(_generatePath(entry));
+      return true;
     }
 
     return false;
@@ -143,11 +154,16 @@ class MatchCache {
     if(canonId != null) {
       var match = await getPractiscoreMatchHeadless(canonId);
       if(match != null) {
+        var ids = [canonId];
+        if(id != canonId) ids.insert(0, id);
+
         var cacheEntry = _MatchCacheEntry(
-          ids: [id, canonId],
+          ids: ids,
           match: match,
         );
-        _cache[id] = cacheEntry;
+
+        if(id != canonId) _cache[id] = cacheEntry;
+
         _cache[canonId] = cacheEntry;
         return match;
       }
@@ -158,6 +174,24 @@ class MatchCache {
     }
 
     return null;
+  }
+
+  Future<void> _migrate() async {
+    print("Migrating MatchCache to HiveDB");
+    for(var key in _prefs.getKeys()) {
+      if (key.startsWith(_cachePrefix)) {
+        var string = _prefs.getString(key);
+        if (string != null) {
+          _box.put(key, string);
+          print("Moved $key to Hive");
+        }
+        _prefs.remove(key);
+        print("Deleted $key from shared prefs");
+      }
+    }
+
+    _box.put(_migrated, "true");
+    print("Migration complete");
   }
 }
 

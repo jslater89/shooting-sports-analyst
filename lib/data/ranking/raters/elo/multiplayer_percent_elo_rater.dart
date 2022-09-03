@@ -66,24 +66,18 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     var aScore = scores[aRating]!;
 
     double expectedScore = 0;
-
     var highOpponentScore = 0.0;
-    var secondHighScore = 0.0;
 
-    var highOpponentRating = 0.0;
-    var secondOpponentRating = 0.0;
+    // our own score
+    int usedScores = 1;
+    var totalPercent = aScore.percent;
+    int zeroes = aScore.percent < 0.1 ? 1 : 0;
 
-    var highOpponentClass = 0;
-    var allRatings = SortedList<double>.comparable();
-    allRatings.add(aRating.rating);
-
-    int zeroes = 0;
-    int usedScores = 1; // our own score
     for(var bRating in scores.keys) {
-      if (Rater.processMemberNumber(aRating.shooter.memberNumber) ==
-          Rater.processMemberNumber(bRating.shooter.memberNumber)) continue;
-
       var opponentScore = scores[bRating]!;
+
+      // No credit against ourselves
+      if(opponentScore == aScore) continue;
 
       // Ignore opponents who didn't record a score for the stage
       if(opponentScore.score.hits == 0 && opponentScore.score.time <= 0.5) {
@@ -92,9 +86,6 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
 
       if (opponentScore.relativePoints > highOpponentScore) {
         highOpponentScore = opponentScore.relativePoints;
-      }
-      else if (opponentScore.relativePoints > secondHighScore) {
-        secondHighScore = opponentScore.relativePoints;
       }
 
       if(opponentScore.relativePoints < 0.1) {
@@ -106,12 +97,8 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
         throw StateError("NaN");
       }
 
-      if(bRating.lastClassification.index > highOpponentClass) highOpponentClass = bRating.lastClassification.index;
-      if(bRating.rating > highOpponentRating) highOpponentRating = bRating.rating;
-      else if(bRating.rating > secondOpponentRating) secondOpponentRating = bRating.rating;
-      allRatings.add(bRating.rating);
-
       expectedScore += probability;
+      totalPercent += opponentScore.percent;
       usedScores++;
     }
 
@@ -121,11 +108,6 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
       };
     }
 
-    // Add an extra penalty for crazy pubstomps: if the high rating
-    // is more than scale above the
-    var medianRating = allRatings[allRatings.length ~/ 2];
-    var averageRating = allRatings.average;
-
     var divisor = (usedScores * (usedScores - 1)) / 2;
 
     // TODO: solve my expected-percent-above-100 issue
@@ -134,10 +116,9 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     // This is, however, a good soft cap on pubstompers.
     expectedScore = (expectedScore) / divisor;
 
-    var totalPercent = 0.0;
-    for(var relativeScore in scores.values) {
-      totalPercent += relativeScore.percent;
-    }
+    // for(var relativeScore in scores.values) {
+    //   totalPercent += relativeScore.percent;
+    // }
 
     var actualPercent = aScore.percent;
     if(aScore.percent == 1.0 && highOpponentScore > 0.1) {

@@ -17,7 +17,7 @@ class Rater {
   FilterSet? _filters;
   bool byStage;
   List<String> memberNumberWhitelist;
-  Future<void> Function(int, int)? progressCallback;
+  Future<void> Function(int, int, String? eventName)? progressCallback;
 
   Set<ShooterRating> get uniqueShooters => <ShooterRating>{}..addAll(knownShooters.values);
 
@@ -46,7 +46,7 @@ class Rater {
       _rankMatch(m);
 
       currentSteps += 1;
-      await progressCallback?.call(currentSteps, totalSteps);
+      await progressCallback?.call(currentSteps, totalSteps, m.name);
     }
 
     _removeUnseenShooters();
@@ -347,19 +347,44 @@ class Rater {
 
   }
 
+  Map<Shooter, bool> _verifyCache = {};
   bool _verifyShooter(Shooter s) {
-    if(!byStage && s.dq) return false;
-    if(s.reentry) return false;
-    if(s.memberNumber.isEmpty) return false;
+    if(_verifyCache.containsKey(s)) return _verifyCache[s]!;
+
+    if(!byStage && s.dq) {
+      _verifyCache[s] = false;
+      return false;
+    }
+    if(s.reentry) {
+      _verifyCache[s] = false;
+      return false;
+    }
+    if(s.memberNumber.isEmpty) {
+      _verifyCache[s] = false;
+      return false;
+    }
 
     String memNum = processMemberNumber(s.memberNumber);
-    if(knownShooters[memNum] == null) return false;
-    if(memberNumberWhitelist.contains(memNum)) return true;
+    if(knownShooters[memNum] == null) {
+      _verifyCache[s] = false;
+      return false;
+    }
+    if(memberNumberWhitelist.contains(memNum)) {
+      _verifyCache[s] = true;
+      return true;
+    }
 
-    if(s.memberNumber.length <= 3) return false;
+    if(s.memberNumber.length <= 3) {
+      _verifyCache[s] = false;
+      return false;
+    }
 
-    if(s.firstName.endsWith("2") || s.lastName.endsWith("2") || s.firstName.endsWith("3") || s.firstName.endsWith("3")) return false;
+    if(s.firstName.endsWith("2") || s.lastName.endsWith("2") || s.firstName.endsWith("3") || s.firstName.endsWith("3")) {
+      _verifyCache[s] = false;
+      return false;
+    }
 
+    _verifyCache[s] = true;
     return true;
   }
 
@@ -818,9 +843,17 @@ class Rater {
     );
   }
 
+  @override
+  String toString() {
+    return "Rater for ${_matches.last.name} with ${_filters?.divisions}";
+  }
+
+  static Map<String, String> _processMemNumCache = {};
   static String processMemberNumber(String no) {
-    no = no.replaceAll(RegExp(r"[^0-9]"), "");
-    return no;
+    if(_processMemNumCache.containsKey(no)) return _processMemNumCache[no]!;
+    var no2 = no.replaceAll(RegExp(r"[^0-9]"), "");
+    _processMemNumCache[no] = no2;
+    return no2;
   }
 }
 

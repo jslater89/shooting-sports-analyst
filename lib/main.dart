@@ -4,6 +4,8 @@ import 'dart:convert';
 
 
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/route/local_upload.dart';
 import 'package:uspsa_result_viewer/route/match_select.dart';
@@ -32,7 +34,7 @@ class GlobalData {
 
 GlobalData globals = GlobalData();
 
-void main() {
+void main() async {
   // dumpRatings();
 
   globals.router.define('/', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
@@ -66,6 +68,11 @@ void main() {
   ));
   configureApp();
 
+  WidgetsFlutterBinding.ensureInitialized();
+
+  var path = await getApplicationSupportDirectory();
+  Hive.init(path.absolute.path);
+
   runApp(MyApp());
 }
 
@@ -81,9 +88,10 @@ class MyApp extends StatelessWidget {
       ),
       initialRoute: '/',
       onGenerateRoute: globals.router.generator,
-      scrollBehavior: ScrollConfiguration.of(context).copyWith(
-        platform: TargetPlatform.android
-      ),
+      // The default desktop behavior is dumb in 3.3.0
+      // scrollBehavior: ScrollConfiguration.of(context).copyWith(
+      //   platform: TargetPlatform.android,
+      // ),
     );
   }
 }
