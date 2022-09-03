@@ -14,6 +14,15 @@ class SortedList<T> {
   }
 
   void add(T item) {
+    if(_backing.length == 0) {
+      _backing.add(item);
+      return;
+    }
+    if(_comparator(item, _backing.last) > 0) {
+      _backing.add(item);
+      return;
+    }
+
     // The first time that the new item is less than
     // the current item, insert it in place of the
     // current item and move everything else right.
