@@ -150,7 +150,14 @@ class OpenskillRater implements RatingSystem<OpenskillRating> {
   };
 
   @override
-  Map<ShooterRating, RatingChange> updateShooterRatings({required List<ShooterRating> shooters, required Map<ShooterRating, RelativeScore> scores, double matchStrengthMultiplier = 1.0, double connectednessMultiplier = 1.0, double eventWeightMultiplier = 1.0}) {
+  Map<ShooterRating, RatingChange> updateShooterRatings({
+    required List<ShooterRating> shooters,
+    required Map<ShooterRating, RelativeScore> scores,
+    required Map<ShooterRating, RelativeScore> matchScores,
+    double matchStrengthMultiplier = 1.0,
+    double connectednessMultiplier = 1.0,
+    double eventWeightMultiplier = 1.0
+  }) {
     Map<OpenskillRating, RatingChange> changes = {};
 
     List<OpenskillRating> provisionalTeams = shooters.map((e) => e as OpenskillRating).toList();

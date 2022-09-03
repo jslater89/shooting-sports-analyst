@@ -450,6 +450,10 @@ class Rater {
             aRating: aStageScore,
             bRating: bStageScore,
           },
+          matchScores: {
+            aRating: aScore.total,
+            bRating: bScore.total,
+          },
           matchStrengthMultiplier: matchStrength,
           connectednessMultiplier: connectednessMod,
           eventWeightMultiplier: weightMod,
@@ -471,6 +475,10 @@ class Rater {
         var update = ratingSystem.updateShooterRatings(
           shooters: [aRating, bRating],
           scores: {
+            aRating: aScore.total,
+            bRating: bScore.total,
+          },
+          matchScores: {
             aRating: aScore.total,
             bRating: bScore.total,
           },
@@ -524,6 +532,7 @@ class Rater {
       _encounteredMemberNumber(memNum);
 
       var scoreMap = <ShooterRating, RelativeScore>{};
+      var matchScoreMap = <ShooterRating, RelativeScore>{};
       for(var s in scores) {
         if(!_verifyShooter(s.shooter)) continue;
 
@@ -531,11 +540,13 @@ class Rater {
         var otherScore = s.stageScores[stage]!;
         if(otherScore.score.hits == 0 && otherScore.score.time == 0) continue;
         scoreMap[knownShooters[num]!] = otherScore;
+        matchScoreMap[knownShooters[num]!] = s.total;
       }
 
       var update = ratingSystem.updateShooterRatings(
         shooters: [rating],
         scores: scoreMap,
+        matchScores: matchScoreMap,
         matchStrengthMultiplier: matchStrength,
         connectednessMultiplier: connectednessMod,
         eventWeightMultiplier: weightMod,
@@ -564,15 +575,18 @@ class Rater {
       _encounteredMemberNumber(memNum);
 
       var scoreMap = <ShooterRating, RelativeScore>{};
+      var matchScoreMap = <ShooterRating, RelativeScore>{};
       for(var s in scores) {
         if(!_verifyShooter(s.shooter) || _dnf(score)) continue;
         String num = processMemberNumber(s.shooter.memberNumber);
 
         scoreMap[knownShooters[num]!] ??= s.total;
+        matchScoreMap[knownShooters[num]!] ??= s.total;
       }
       var update = ratingSystem.updateShooterRatings(
         shooters: [rating],
         scores: scoreMap,
+        matchScores: matchScoreMap,
         matchStrengthMultiplier: matchStrength,
         connectednessMultiplier: connectednessMod,
       );
@@ -599,6 +613,7 @@ class Rater {
 
     if(stage != null) {
       var scoreMap = <ShooterRating, RelativeScore>{};
+      var matchScoreMap = <ShooterRating, RelativeScore>{};
       for(var s in scores) {
         if(!_verifyShooter(s.shooter)) continue;
 
@@ -610,6 +625,7 @@ class Rater {
         if(validScore) {
           _encounteredMemberNumber(num);
           scoreMap[knownShooters[num]!] = otherScore;
+          matchScoreMap[knownShooters[num]!] = s.total;
           changes[knownShooters[num]!] ??= {};
         }
       }
@@ -617,6 +633,7 @@ class Rater {
       var update = ratingSystem.updateShooterRatings(
         shooters: scoreMap.keys.toList(),
         scores: scoreMap,
+        matchScores: matchScoreMap,
         matchStrengthMultiplier: matchStrength,
         connectednessMultiplier: connectednessMod,
         eventWeightMultiplier: weightMod,
@@ -648,11 +665,13 @@ class Rater {
     else {
       // Filter out non-DQ DNFs
       var scoreMap = <ShooterRating, RelativeScore>{};
+      var matchScoreMap = <ShooterRating, RelativeScore>{};
       for(var s in scores) {
         if(!_verifyShooter(s.shooter) || _dnf(s)) continue;
         String num = processMemberNumber(s.shooter.memberNumber);
 
         scoreMap[knownShooters[num]!] ??= s.total;
+        matchScoreMap[knownShooters[num]!] ??= s.total;
         changes[knownShooters[num]!] ??= {};
         _encounteredMemberNumber(num);
       }
@@ -660,6 +679,7 @@ class Rater {
       var update = ratingSystem.updateShooterRatings(
         shooters: scoreMap.keys.toList(),
         scores: scoreMap,
+        matchScores: matchScoreMap,
         matchStrengthMultiplier: matchStrength,
         connectednessMultiplier: connectednessMod,
       );

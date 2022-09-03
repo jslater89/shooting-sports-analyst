@@ -31,7 +31,7 @@ class OpenskillTest {
     };
 
     var rater = OpenskillRater(byStage: false);
-    var changes = rater.updateShooterRatings(shooters: ratings, scores: scores);
+    var changes = rater.updateShooterRatings(shooters: ratings, scores: scores, matchScores: scores);
 
     print(changes);
     print("expected: mu +/-2.635, sigma -0.2284");
