@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
-import 'package:uspsa_result_viewer/data/sorted_list.dart';
 import 'package:uspsa_result_viewer/ui/filter_dialog.dart';
 
 class Rater {
@@ -279,15 +278,42 @@ class Rater {
         var weightMod = 1.0 + max(-0.20, min(0.10, (s.maxPoints - 120) /  400));
 
         if(ratingSystem.mode == RatingMode.wholeEvent) {
-          _processWholeEvent(match, s, scores, changes, matchStrength, connectednessMod, weightMod);
+          _processWholeEvent(
+            match: match,
+            stage: s,
+            scores: scores,
+            changes: changes,
+            matchStrength: strengthMod,
+            connectednessMod: connectednessMod,
+            weightMod: weightMod
+          );
         }
         else {
           for(int i = 0; i < shooters.length; i++) {
             if(ratingSystem.mode == RatingMode.roundRobin) {
-              _processRoundRobin(match, s, shooters, scores, i, changes, strengthMod, connectednessMod, weightMod);
+              _processRoundRobin(
+                match: match,
+                stage: s,
+                shooters: shooters,
+                scores: scores,
+                startIndex: i,
+                changes: changes,
+                matchStrength: strengthMod,
+                connectednessMod: connectednessMod,
+                weightMod: weightMod,
+              );
             }
             else {
-              _processOneshot(match, s, shooters[i], scores, changes, strengthMod, connectednessMod, weightMod);
+              _processOneshot(
+                match: match,
+                stage: s,
+                shooter: shooters[i],
+                scores: scores,
+                changes: changes,
+                matchStrength: strengthMod,
+                connectednessMod: connectednessMod,
+                weightMod: weightMod
+              );
             }
           }
         }
@@ -302,15 +328,42 @@ class Rater {
     }
     else {
       if(ratingSystem.mode == RatingMode.wholeEvent) {
-        _processWholeEvent(match, null, scores, changes, matchStrength, connectednessMod, 1.0);
+        _processWholeEvent(
+            match: match,
+            stage: null,
+            scores: scores,
+            changes: changes,
+            matchStrength: strengthMod,
+            connectednessMod: connectednessMod,
+            weightMod: 1.0
+        );
       }
       else {
         for(int i = 0; i < shooters.length; i++) {
           if(ratingSystem.mode == RatingMode.roundRobin) {
-            _processRoundRobin(match, null, shooters, scores, i, changes, strengthMod, connectednessMod, 1.0);
+            _processRoundRobin(
+              match: match,
+              stage: null,
+              shooters: shooters,
+              scores: scores,
+              startIndex: i,
+              changes: changes,
+              matchStrength: strengthMod,
+              connectednessMod: connectednessMod,
+              weightMod: 1.0,
+            );
           }
           else {
-            _processOneshot(match, null, shooters[i], scores, changes, strengthMod, connectednessMod, 1.0);
+            _processOneshot(
+                match: match,
+                stage: null,
+                shooter: shooters[i],
+                scores: scores,
+                changes: changes,
+                matchStrength: strengthMod,
+                connectednessMod: connectednessMod,
+                weightMod: 1.0
+            );
           }
         }
       }
@@ -388,7 +441,17 @@ class Rater {
     return true;
   }
 
-  void _processRoundRobin(PracticalMatch match, Stage? stage, List<Shooter> shooters, List<RelativeMatchScore> scores, int startIndex, Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes, double matchStrength, double connectednessMod, double weightMod) {
+  void _processRoundRobin({
+    required PracticalMatch match,
+    Stage? stage,
+    required List<Shooter> shooters,
+    required List<RelativeMatchScore> scores,
+    required int startIndex,
+    required Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes,
+    required double matchStrength,
+    required double connectednessMod,
+    required double weightMod,
+  }) {
     Shooter a = shooters[startIndex];
     var score = scores.firstWhere((element) => element.shooter == a);
 
@@ -495,7 +558,16 @@ class Rater {
     }
   }
 
-  void _processOneshot(PracticalMatch match, Stage? stage, Shooter shooter, List<RelativeMatchScore> scores, Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes, double matchStrength, double connectednessMod, double weightMod) {
+  void _processOneshot({
+    required PracticalMatch match,
+    Stage? stage,
+    required Shooter shooter,
+    required List<RelativeMatchScore> scores,
+    required Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes,
+    required double matchStrength,
+    required double connectednessMod,
+    required double weightMod
+  }) {
     if(!_verifyShooter(shooter)) {
       return;
     }
@@ -603,7 +675,15 @@ class Rater {
     }
   }
 
-  void _processWholeEvent(PracticalMatch match, Stage? stage, List<RelativeMatchScore> scores, Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes, double matchStrength, double connectednessMod, double weightMod) {
+  void _processWholeEvent({
+    required PracticalMatch match,
+    Stage? stage,
+    required List<RelativeMatchScore> scores,
+    required Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes,
+    required double matchStrength,
+    required double connectednessMod,
+    required double weightMod
+  }) {
     // Check for pubstomp
     var pubstompMod = 1.0;
     if(_pubstomp(scores)) {

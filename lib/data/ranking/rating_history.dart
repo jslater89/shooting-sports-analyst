@@ -46,6 +46,18 @@ class RatingHistory {
     return _ratersByDivision[match]![group]!;
   }
 
+  int countUniqueShooters() {
+    Set<String> memberNumbers = <String>{};
+    for(var group in _settings.groups) {
+      var rater = _ratersByDivision[_matches.last]![group]!;
+      for(var num in rater.knownShooters.keys) {
+        memberNumbers.add(num);
+      }
+    }
+
+    return memberNumbers.length;
+  }
+
   Future<void> _processInitialMatches() async {
     debugPrint("Loading matches");
 
@@ -115,6 +127,14 @@ class RatingHistory {
         });
       }
     }
+
+    int stageCount = 0;
+    // int scoreCount = 0;
+    for(var m in _matches) {
+      stageCount += m.stages.length;
+      // scoreCount += m.getScores().length;
+    }
+    print("Total of ${countUniqueShooters()} shooters, ${_matches.length} matches, and $stageCount stages");
   }
   
   Future<Rater> _raterForGroup(List<PracticalMatch> matches, RaterGroup group, [Future<void> Function(int, int, String?)? progressCallback]) async {

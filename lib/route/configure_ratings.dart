@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/openskill/openskill_rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
 import 'package:uspsa_result_viewer/ui/confirm_dialog.dart';
@@ -29,6 +28,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   List<String> matchUrls = [];
   Map<String, String> urlDisplayNames = {};
   String? _lastProjectName;
+
+  int? _matchCacheCurrent;
+  int? _matchCacheTotal;
 
   Future<void> getUrlDisplayNames() async {
     var map = <String, String>{};
@@ -75,6 +77,22 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       }
     });
 
+    _matchBlendController.addListener(() {
+      if(_matchBlendController.text.length > 0) {
+        var newBlend = double.tryParse(_matchBlendController.text);
+        if(newBlend != null) {
+          if(newBlend > 1) {
+            // _pctWeightController.text = "1.0";
+            newBlend = 1.0;
+          }
+          else if(newBlend < 0) {
+            // _pctWeightController.text = "0.0";
+            newBlend = 0.0;
+          }
+        }
+      }
+    });
+
     matchCacheReady = MatchCache.readyNow;
 
     if(!matchCacheReady) _warmUpMatchCache();
@@ -84,8 +102,15 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
   Future<void> _warmUpMatchCache() async {
     // Allow time for the 'loading' screen to display
-    await Future.delayed(Duration(milliseconds: 500));
+    await Future.delayed(Duration(milliseconds: 1));
 
+    matchCacheProgressCallback = (current, total) async {
+      setState(() {
+        _matchCacheCurrent = current;
+        _matchCacheTotal = total;
+      });
+      await Future.delayed(Duration(milliseconds: 1));
+    };
     await MatchCache().ready;
     setState(() {
       matchCacheReady = true;
@@ -95,7 +120,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   Future<void> _loadAutosave() async {
     // Allow time for the 'loading' screen to display
     if(!RatingProjectManager.readyNow) {
-      await Future.delayed(Duration(milliseconds: 500));
+      await Future.delayed(Duration(milliseconds: 1));
     }
 
     await RatingProjectManager().ready;
@@ -124,6 +149,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       _kController.text = "${algorithm.K}";
       _scaleController.text = "${algorithm.scale}";
       _pctWeightController.text = "${algorithm.percentWeight}";
+      _matchBlendController.text = "${algorithm.matchBlend}";
     }
 
     getUrlDisplayNames();
@@ -175,6 +201,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   TextEditingController _scaleController = TextEditingController(text: "${MultiplayerPercentEloRater.defaultScale}");
   TextEditingController _pctWeightController = TextEditingController(text: "${MultiplayerPercentEloRater.defaultPercentWeight}");
   TextEditingController _placeWeightController = TextEditingController(text: "${MultiplayerPercentEloRater.defaultPlaceWeight}");
+  TextEditingController _matchBlendController = TextEditingController(text: "${MultiplayerPercentEloRater.defaultMatchBlend}");
 
   String _validationError = "";
 
@@ -182,6 +209,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     double? K = double.tryParse(_kController.text);
     double? scale = double.tryParse(_scaleController.text);
     double? pctWeight = double.tryParse(_pctWeightController.text);
+    double? matchBlend = double.tryParse(_matchBlendController.text);
 
     if(K == null) {
       setState(() {
@@ -204,10 +232,18 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       return null;
     }
 
+    if(matchBlend == null || matchBlend > 1 || matchBlend < 0) {
+      setState(() {
+        _validationError = "Match blend incorrectly formatted or out of range (0-1)";
+      });
+      return null;
+    }
+
     var ratingSystem = MultiplayerPercentEloRater(
       K:  K,
       scale: scale,
       percentWeight: pctWeight,
+      matchBlend: matchBlend,
       byStage: _byStage,
     );
     // var ratingSystem = OpenskillRater(byStage: _byStage);
@@ -228,11 +264,22 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   }
 
   Widget _body() {
+    var width = MediaQuery.of(context).size.width;
     if(!matchCacheReady) {
       return Padding(
-        padding: const EdgeInsets.all(128),
-        child: Center(
-          child: Text("Loading match cache...", style: Theme.of(context).textTheme.subtitle1),
+        padding: const EdgeInsets.all(0),
+        child: Column(
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            SizedBox(height: 128, width: width),
+            Text("Loading match cache...", style: Theme.of(context).textTheme.subtitle1),
+            if(_matchCacheTotal != null && _matchCacheTotal! > 0)
+              SizedBox(height: 16),
+            if(_matchCacheTotal != null && _matchCacheTotal! > 0)
+              LinearProgressIndicator(
+                value: (_matchCacheCurrent ?? 0) / (_matchCacheTotal ?? 1),
+              ),
+          ],
         ),
       );
     }
@@ -317,8 +364,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                       CheckboxListTile(
                         title: Tooltip(
                           child: Text("Keep full history?"),
-                          message: "Keep intermediate ratings after each match if checked, or keep only final ratings if unchecked.\n\n"
-                              "WARNING: this option uses very large amounts of RAM for large datasets!",
+                          message: "Keep intermediate ratings after each match if checked, or keep only final ratings if unchecked.",
                         ),
                         value: _keepHistory,
                         onChanged: (value) {
@@ -432,6 +478,33 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Tooltip(
+                            message: "In by-stage mode, blend match percentage into stage percentage, to reduce the impact of single bad stages.",
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 16),
+                              child: Text("Match Blend", style: Theme.of(context).textTheme.subtitle1!),
+                            ),
+                          ),
+                          SizedBox(
+                            width: 100,
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 20),
+                              child: TextFormField(
+                                controller: _matchBlendController,
+                                textAlign: TextAlign.end,
+                                keyboardType: TextInputType.numberWithOptions(),
+                                inputFormatters: [
+                                  FilteringTextInputFormatter(RegExp(r"[0-9\-\.]*"), allow: true),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ]
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.max,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Tooltip(
                             message: "Percent/placement weight control how much weight the algorithm gives to percent finish "
                                 "vs. placement. Too little placement weight can cause initial ratings to adjust very slowly. "
                                 "Too much placement weight can unfairly penalize shooters who finish near strong competition in percentage terms.",
@@ -486,7 +559,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                             ],
                           ),
                         ]
-                      )
+                      ),
                     ],
                   ),
                 ),

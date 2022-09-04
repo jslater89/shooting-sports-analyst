@@ -8,6 +8,8 @@ import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 
+Future<void> Function(int, int)? matchCacheProgressCallback;
+
 class MatchCache {
   static MatchCache? _instance;
   factory MatchCache() {
@@ -50,6 +52,7 @@ class MatchCache {
     _cache.clear();
 
     var paths = _box.keys;
+    int i = 0;
     for(var path in paths) {
       if(path.startsWith(_cachePrefix)) {
         var reportContents = _box.get(path);
@@ -66,6 +69,9 @@ class MatchCache {
 
           print("Loaded ${entry.match.name} from $path to $ids");
         }
+
+        i += 1;
+        await matchCacheProgressCallback?.call(i, paths.length);
       }
     }
   }

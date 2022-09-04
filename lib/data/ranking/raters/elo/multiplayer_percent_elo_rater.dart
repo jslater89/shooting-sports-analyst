@@ -13,6 +13,7 @@ import 'package:uspsa_result_viewer/ui/score_row.dart';
 const _kKey = "k";
 const _pctWeightKey = "pctWt";
 const _scaleKey = "scale";
+const _matchBlendKey = "matchBlend";
 
 class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
   static const ratingKey = "rating";
@@ -21,6 +22,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
   static const defaultPercentWeight = 0.4;
   static const defaultPlaceWeight = 0.6;
   static const defaultScale = 800.0;
+  static const defaultMatchBlend = 0.0;
 
   @override
   RatingMode get mode => RatingMode.oneShot;
@@ -30,6 +32,9 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
   final double percentWeight;
   final double placeWeight;
   final double scale;
+  final double _matchBlend;
+
+  double get matchBlend => _matchBlend;
 
   @override
   final bool byStage;
@@ -38,14 +43,18 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     this.K = defaultK,
     this.scale = defaultScale,
     this.percentWeight = defaultPercentWeight,
+    double matchBlend = defaultMatchBlend,
     required this.byStage
-  }) : this.placeWeight = 1.0 - percentWeight;
+  })
+      : this.placeWeight = 1.0 - percentWeight,
+        this._matchBlend = byStage ? matchBlend : 0.0;
 
   factory MultiplayerPercentEloRater.fromJson(Map<String, dynamic> json) {
     return MultiplayerPercentEloRater(
         K: (json[_kKey] ?? defaultK) as double,
         percentWeight: (json[_pctWeightKey] ?? defaultPercentWeight) as double,
         scale: (json[_scaleKey] ?? defaultScale) as double,
+        matchBlend: (json[_matchBlendKey] ?? defaultMatchBlend) as double,
         byStage: (json[RatingProject.byStageKey] ?? true) as bool,
     );
   }
@@ -71,17 +80,19 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
 
     var aRating = shooters[0];
     var aScore = scores[aRating]!;
+    var aMatchScore = matchScores[aRating]!;
 
     double expectedScore = 0;
     var highOpponentScore = 0.0;
 
     // our own score
     int usedScores = 1;
-    var totalPercent = aScore.percent;
+    var totalPercent = aScore.percent + (aMatchScore.percent * _matchBlend);
     int zeroes = aScore.percent < 0.1 ? 1 : 0;
 
     for(var bRating in scores.keys) {
       var opponentScore = scores[bRating]!;
+      var opponentMatchScore = matchScores[bRating]!;
 
       // No credit against ourselves
       if(opponentScore == aScore) continue;
@@ -106,6 +117,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
 
       expectedScore += probability;
       totalPercent += opponentScore.percent;
+      totalPercent += opponentMatchScore.percent * _matchBlend;
       usedScores++;
     }
 
@@ -123,17 +135,17 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     // This is, however, a good soft cap on pubstompers.
     expectedScore = (expectedScore) / divisor;
 
-    // for(var relativeScore in scores.values) {
-    //   totalPercent += relativeScore.percent;
-    // }
-
-    var actualPercent = aScore.percent;
+    var actualPercent = aScore.percent + (aMatchScore.percent * _matchBlend);
     if(aScore.percent == 1.0 && highOpponentScore > 0.1) {
       actualPercent = aScore.relativePoints / highOpponentScore;
       totalPercent += (actualPercent - 1.0);
     }
 
     var percentComponent = totalPercent == 0 ? 0 : (actualPercent / totalPercent);
+
+    // TODO: I'm not sure this is a valid way to do it.
+    //var placeBlend = (aScore.place * (1 - _matchBlend)) + (aMatchScore.place * _matchBlend);
+
     var placeComponent = (usedScores - aScore.place) /  divisor;
 
     // The first N matches you shoot get bonuses for initial placement.
@@ -288,6 +300,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     json[_kKey] = K;
     json[_pctWeightKey] = percentWeight;
     json[_scaleKey] = scale;
+    json[_matchBlendKey] = _matchBlend;
   }
 
   @override
