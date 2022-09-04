@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:charts_flutter/flutter.dart' as charts;
@@ -121,6 +122,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   // Doesn't do recreating well
   charts.Series<_AccumulatedRatingEvent, int>? _series;
   charts.LineChart? _chart;
+  late NumberFormat _nf;
 
   Widget _buildChart(List<RatingEvent> events) {
     double accumulator = 0;
@@ -133,6 +135,8 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     }).toList();
 
     if(_series == null) {
+      _nf = NumberFormat("####");
+
       _series = charts.Series<_AccumulatedRatingEvent, int>(
         id: 'Results',
         colorFn: (_, __) => charts.MaterialPalette.blue.shadeDefault,
@@ -182,6 +186,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
             desiredMinTickCount: 8,
             desiredTickCount: 10,
           ),
+          tickFormatterSpec: charts.BasicNumericTickFormatterSpec.fromNumberFormat(_nf),
           showAxisLine: true,
         ),
       );
