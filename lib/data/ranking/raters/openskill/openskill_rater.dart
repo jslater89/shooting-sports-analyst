@@ -106,8 +106,9 @@ class OpenskillRater implements RatingSystem<OpenskillRating> {
   RatingMode get mode => RatingMode.wholeEvent;
 
   @override
-  RatingEvent newEvent({required String eventName, required RelativeScore score, List<String> info = const []}) {
-    return OpenskillRatingEvent(muChange: 0, sigmaChange: 0, eventName: eventName, score: score, info: info);
+  RatingEvent newEvent({required ShooterRating rating, required String eventName, required RelativeScore score, List<String> info = const []}) {
+    rating as OpenskillRating;
+    return OpenskillRatingEvent(initialMu: rating.mu, muChange: 0, sigmaChange: 0, eventName: eventName, score: score, info: info);
   }
 
   @override

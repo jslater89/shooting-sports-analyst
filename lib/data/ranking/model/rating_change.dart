@@ -18,6 +18,8 @@ abstract class RatingEvent {
   List<String> info;
 
   double get ratingChange;
+  double get oldRating;
+  double get newRating => oldRating + ratingChange;
 
   RatingEvent({required this.eventName, required this.score, this.info = const []});
 

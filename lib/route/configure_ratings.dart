@@ -721,9 +721,11 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     await RatingProjectManager().saveProject(project, mapName: mapName);
     debugPrint("Saved ${project.name} to $mapName" + (isAutosave ? " (autosave)" : ""));
 
-    setState(() {
-      _lastProjectName = project.name;
-    });
+    if(mounted) {
+      setState(() {
+        _lastProjectName = project.name;
+      });
+    }
   }
 
   void _restoreDefaults() {

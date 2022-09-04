@@ -522,8 +522,8 @@ class Rater {
           eventWeightMultiplier: weightMod,
         );
 
-        changes[aRating]![aStageScore] ??= ratingSystem.newEvent(eventName: "${match.name} - ${stage.name}", score: aStageScore);
-        changes[bRating]![bStageScore] ??= ratingSystem.newEvent(eventName: "${match.name} - ${stage.name}", score: bStageScore);
+        changes[aRating]![aStageScore] ??= ratingSystem.newEvent(rating: aRating, eventName: "${match.name} - ${stage.name}", score: aStageScore);
+        changes[bRating]![bStageScore] ??= ratingSystem.newEvent(rating: bRating, eventName: "${match.name} - ${stage.name}", score: bStageScore);
 
         changes[aRating]![aStageScore]!.apply(update[aRating]!);
         changes[bRating]![bStageScore]!.apply(update[bRating]!);
@@ -549,8 +549,8 @@ class Rater {
           connectednessMultiplier: connectednessMod,
         );
 
-        changes[aRating]![aScore.total] ??= ratingSystem.newEvent(eventName: "${match.name}", score: aScore.total);
-        changes[bRating]![bScore.total] ??= ratingSystem.newEvent(eventName: "${match.name}", score: bScore.total);
+        changes[aRating]![aScore.total] ??= ratingSystem.newEvent(rating: aRating, eventName: "${match.name}", score: aScore.total);
+        changes[bRating]![bScore.total] ??= ratingSystem.newEvent(rating: bRating, eventName: "${match.name}", score: bScore.total);
 
         changes[aRating]![aScore.total]!.apply(update[aRating]!);
         changes[bRating]![bScore.total]!.apply(update[bRating]!);
@@ -633,7 +633,7 @@ class Rater {
       }
 
       if(!hasRatingChangeForStage) {
-        changes[rating]![stageScore] ??= ratingSystem.newEvent(eventName: "${match.name} - ${stage.name}", score: stageScore);
+        changes[rating]![stageScore] ??= ratingSystem.newEvent(rating: rating, eventName: "${match.name} - ${stage.name}", score: stageScore);
         changes[rating]![stageScore]!.apply(update[rating]!);
         changes[rating]![stageScore]!.info = update[rating]!.info;
       }
@@ -665,7 +665,7 @@ class Rater {
 
       // You only get one rating change per match.
       if(changes[rating]!.isEmpty) {
-        changes[rating]![score.total] ??= ratingSystem.newEvent(eventName: "${match.name}",
+        changes[rating]![score.total] ??= ratingSystem.newEvent(rating: rating, eventName: "${match.name}",
           score: score.total,
           info: update[rating]!.info,
         );
@@ -736,7 +736,7 @@ class Rater {
         }
 
         if (!hasRatingChangeForStage) {
-          changes[rating]![stageScore] ??= ratingSystem.newEvent(eventName: "${match.name} - ${stage.name}", score: stageScore);
+          changes[rating]![stageScore] ??= ratingSystem.newEvent(rating: rating, eventName: "${match.name} - ${stage.name}", score: stageScore);
           changes[rating]![stageScore]!.apply(update[rating]!);
           changes[rating]![stageScore]!.info = update[rating]!.info;
         }
@@ -768,7 +768,9 @@ class Rater {
         var score = scores.firstWhere((e) => e.shooter == rating.shooter);
         // You only get one rating change per match.
         if (changes[rating]!.isEmpty) {
-          changes[rating]![score.total] ??= ratingSystem.newEvent(eventName: "${match.name}",
+          changes[rating]![score.total] ??= ratingSystem.newEvent(
+            rating: rating,
+            eventName: "${match.name}",
             score: score.total,
             info: update[rating]!.info,
           );

@@ -50,7 +50,7 @@ abstract class RatingSystem<T extends ShooterRating<T>> {
   /// Create a new shooter rating for the given information.
   ShooterRating newShooterRating(Shooter shooter, {DateTime? date});
 
-  RatingEvent newEvent({required String eventName, required RelativeScore score, List<String> info = const []});
+  RatingEvent newEvent({required ShooterRating rating, required String eventName, required RelativeScore score, List<String> info = const []});
 
   /// Return a string containing a CSV representation of the
   /// given shooter ratings.

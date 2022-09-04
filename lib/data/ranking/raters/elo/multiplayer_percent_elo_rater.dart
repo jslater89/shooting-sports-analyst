@@ -304,7 +304,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
   }
 
   @override
-  RatingEvent newEvent({required String eventName, required RelativeScore score, List<String> info = const []}) {
-    return EloRatingEvent(eventName: eventName, score: score, ratingChange: 0, info: info);
+  RatingEvent newEvent({required ShooterRating rating, required String eventName, required RelativeScore score, List<String> info = const []}) {
+    return EloRatingEvent(oldRating: rating.rating, eventName: eventName, score: score, ratingChange: 0, info: info);
   }
 }

@@ -6,9 +6,13 @@ class OpenskillRatingEvent extends RatingEvent {
   double muChange;
   double sigmaChange;
 
-  double get ratingChange => sigmaChange;
+  double initialMu;
+
+  double get oldRating => initialMu;
+  double get ratingChange => muChange;
 
   OpenskillRatingEvent({
+    required this.initialMu,
     required this.muChange,
     required this.sigmaChange,
     required String eventName,
@@ -27,6 +31,7 @@ class OpenskillRatingEvent extends RatingEvent {
   }
 
   OpenskillRatingEvent.copy(OpenskillRatingEvent other) :
+      this.initialMu = other.initialMu,
       this.muChange = other.muChange,
       this.sigmaChange = other.sigmaChange,
       super.copy(other);

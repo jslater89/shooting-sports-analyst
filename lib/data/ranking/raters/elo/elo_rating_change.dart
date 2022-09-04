@@ -4,11 +4,13 @@ import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_
 
 class EloRatingEvent extends RatingEvent {
   double ratingChange;
+  final double oldRating;
 
-  EloRatingEvent({required String eventName, required RelativeScore score, List<String> info = const [], required this.ratingChange})
+  EloRatingEvent({required this.oldRating, required String eventName, required RelativeScore score, List<String> info = const [], required this.ratingChange})
       : super(eventName: eventName, score: score, info: info);
 
   EloRatingEvent.copy(EloRatingEvent other) :
+      this.oldRating = other.oldRating,
       this.ratingChange = other.ratingChange,
       super.copy(other);
 
