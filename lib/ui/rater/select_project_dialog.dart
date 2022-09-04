@@ -34,7 +34,7 @@ class _SelectProjectDialogState extends State<SelectProjectDialog> {
                 icon: Icon(Icons.delete),
                 onPressed: () async {
                   var delete = await showDialog<bool>(context: context, builder: (context) {
-                    return ConfirmDialog();
+                    return ConfirmDialog(content: Text("Delete $name?"));
                   });
 
                   if(delete ?? false) {

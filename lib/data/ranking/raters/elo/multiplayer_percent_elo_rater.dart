@@ -35,6 +35,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
   final double _matchBlend;
 
   double get matchBlend => _matchBlend;
+  double get stageBlend => 1 - _matchBlend;
 
   @override
   final bool byStage;
@@ -87,7 +88,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
 
     // our own score
     int usedScores = 1;
-    var totalPercent = aScore.percent + (aMatchScore.percent * _matchBlend);
+    var totalPercent = (aScore.percent * stageBlend) + (aMatchScore.percent * matchBlend);
     int zeroes = aScore.percent < 0.1 ? 1 : 0;
 
     for(var bRating in scores.keys) {
@@ -116,8 +117,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
       }
 
       expectedScore += probability;
-      totalPercent += opponentScore.percent;
-      totalPercent += opponentMatchScore.percent * _matchBlend;
+      totalPercent += (opponentScore.percent * stageBlend) + (opponentMatchScore.percent * matchBlend);
       usedScores++;
     }
 
@@ -135,7 +135,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     // This is, however, a good soft cap on pubstompers.
     expectedScore = (expectedScore) / divisor;
 
-    var actualPercent = aScore.percent + (aMatchScore.percent * _matchBlend);
+    var actualPercent = (aScore.percent * stageBlend) + (aMatchScore.percent * matchBlend);
     if(aScore.percent == 1.0 && highOpponentScore > 0.1) {
       actualPercent = aScore.relativePoints / highOpponentScore;
       totalPercent += (actualPercent - 1.0);
