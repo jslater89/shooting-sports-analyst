@@ -35,6 +35,9 @@ dependencies:
   intl:
   flutter_charts: # old charts
   charts_flutter: # new charts
+    git:
+      url: https://github.com/jslater89/charts_flutter
+      ref: master
   shared_preferences:
   path_provider:
   hive: 2.2.3

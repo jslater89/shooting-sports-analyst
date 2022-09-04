@@ -56,11 +56,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
               children: [
                 Padding(
                   padding: const EdgeInsets.only(top: 8, bottom: 36),
-                  child: SizedBox(
-                    height: 300,
-                    width: 600,
-                    child: _buildChart(events)
-                  ),
+                  child: _buildChart(events)
                 ),
                 ..._buildShooterStats(context),
               ],
@@ -122,6 +118,10 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     );
   }
 
+  // Doesn't do recreating well
+  charts.Series<_AccumulatedRatingEvent, int>? _series;
+  charts.LineChart? _chart;
+
   Widget _buildChart(List<RatingEvent> events) {
     double accumulator = 0;
     double minRating = 10000;
@@ -132,55 +132,65 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       return _AccumulatedRatingEvent(e, accumulator += e.ratingChange);
     }).toList();
 
-    var series = charts.Series<_AccumulatedRatingEvent, int>(
-      id: 'Results',
-      colorFn: (_, __) => charts.MaterialPalette.blue.shadeDefault,
-      measureFn: (_AccumulatedRatingEvent e, _) => e.baseEvent.newRating,
-      domainFn: (_, int? index) => index!,
-      data: ratings,
-    );
+    if(_series == null) {
+      _series = charts.Series<_AccumulatedRatingEvent, int>(
+        id: 'Results',
+        colorFn: (_, __) => charts.MaterialPalette.blue.shadeDefault,
+        measureFn: (_AccumulatedRatingEvent e, _) => e.baseEvent.newRating,
+        domainFn: (_, int? index) => index!,
+        data: ratings,
+      );
+    }
 
-    return charts.LineChart(
-      [series],
-      animate: false,
-      behaviors: [
-        charts.SelectNearest(
-          eventTrigger: charts.SelectionTrigger.tap,
-          selectionModelType: charts.SelectionModelType.info,
-          maximumDomainDistancePx: 400,
-        ),
-        charts.LinePointHighlighter(
-          selectionModelType: charts.SelectionModelType.info
-        )
-      ],
-      selectionModels: [
-        charts.SelectionModelConfig(
-          type: charts.SelectionModelType.info,
-          updatedListener: (model) {
-            if(model.hasDatumSelection) {
-              final rating = ratings[model.selectedDatum[0].index!];
-              _highlight(rating);
-            }
-          },
-        )
-      ],
-      domainAxis: charts.NumericAxisSpec(
-        renderSpec: charts.NoneRenderSpec(
-          axisLineStyle: charts.LineStyleSpec(
-            thickness: 1,
+    if(_chart == null) {
+      _chart = charts.LineChart(
+        [_series!],
+        animate: false,
+        behaviors: [
+          charts.SelectNearest(
+            eventTrigger: charts.SelectionTrigger.hover,
+            selectionModelType: charts.SelectionModelType.info,
+            maximumDomainDistancePx: 400,
+          ),
+          charts.LinePointHighlighter(
+              selectionModelType: charts.SelectionModelType.info
           )
+        ],
+        selectionModels: [
+          charts.SelectionModelConfig(
+            type: charts.SelectionModelType.info,
+            updatedListener: (model) {
+              if(model.hasDatumSelection) {
+                final rating = ratings[model.selectedDatum[0].index!];
+                _highlight(rating);
+              }
+            },
+          )
+        ],
+        domainAxis: charts.NumericAxisSpec(
+          renderSpec: charts.NoneRenderSpec(
+              axisLineStyle: charts.LineStyleSpec(
+                thickness: 1,
+              )
+          ),
+          showAxisLine: true,
         ),
-        showAxisLine: true,
-      ),
-      primaryMeasureAxis: charts.NumericAxisSpec(
-        viewport: charts.NumericExtents(minRating - 100, maxRating + 100),
-        tickProviderSpec: charts.BasicNumericTickProviderSpec(
-          dataIsInWholeNumbers: true,
-          desiredMinTickCount: 8,
-          desiredTickCount: 10,
+        primaryMeasureAxis: charts.NumericAxisSpec(
+          viewport: charts.NumericExtents(minRating - 100, maxRating + 100),
+          tickProviderSpec: charts.BasicNumericTickProviderSpec(
+            dataIsInWholeNumbers: true,
+            desiredMinTickCount: 8,
+            desiredTickCount: 10,
+          ),
+          showAxisLine: true,
         ),
-        showAxisLine: true,
-      ),
+      );
+    }
+
+    return SizedBox(
+      height: 300,
+      width: 600,
+      child: _chart!,
     );
   }
 
