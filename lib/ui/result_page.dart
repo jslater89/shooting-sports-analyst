@@ -319,7 +319,7 @@ class _ResultPageState extends State<ResultPage> {
                       _whatIfMode = false;
                     });
 
-                    _selectStages(_filteredStages);
+                    _selectStages(_currentMatch!.stages);
                     _applyStage(_stage != null ? StageMenuItem(_stage!) : StageMenuItem.match());
                   }
               )
