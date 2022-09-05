@@ -38,6 +38,7 @@ dependencies:
     git:
       url: https://github.com/jslater89/charts_flutter
       ref: master
+      path: charts_flutter
   shared_preferences:
   path_provider:
   hive: 2.2.3
