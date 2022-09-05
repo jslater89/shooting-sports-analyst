@@ -53,6 +53,12 @@ class MatchCache {
 
     var paths = _box.keys;
     int i = 0;
+
+    int matches = 0;
+    int stages = 0;
+    int shooters = 0;
+    int stageScores = 0;
+
     for(var path in paths) {
       if(path.startsWith(_cachePrefix)) {
         var reportContents = _box.get(path);
@@ -67,6 +73,11 @@ class MatchCache {
             _cache[id] = entry;
           }
 
+          matches += 1;
+          stages += match.stages.length;
+          shooters += match.shooters.length;
+          stageScores += match.stageScoreCount;
+
           if(verboseParse) print("Loaded ${entry.match.name} from $path to $ids");
         }
 
@@ -74,6 +85,8 @@ class MatchCache {
         await matchCacheProgressCallback?.call(i, paths.length);
       }
     }
+
+    print("Loaded $matches cached matches, with $stages stages, $shooters shooters, and $stageScores stage scores");
   }
 
   void clear() {

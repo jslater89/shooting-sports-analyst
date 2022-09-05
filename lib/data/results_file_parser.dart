@@ -51,7 +51,8 @@ PracticalMatch _processResultLines({required List<String> infoLines, required Li
     }
   }
 
-  print("Processed match ${match.name} with ${match.shooters.length} shooters, ${match.stages.length} stages, and $stageScoreCount stage scores");
+  match.stageScoreCount = stageScoreCount;
+  if(verboseParse) print("Processed match ${match.name} with ${match.shooters.length} shooters, ${match.stages.length} stages, and $stageScoreCount stage scores");
 
   return match;
 }

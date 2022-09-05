@@ -20,6 +20,7 @@ class PracticalMatch {
   List<Stage> stages = [];
 
   int? maxPoints;
+  int stageScoreCount = 0;
 
   PracticalMatch copy() {
     var newMatch = PracticalMatch()
