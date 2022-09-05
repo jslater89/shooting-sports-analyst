@@ -189,6 +189,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     };
   }
 
+  /// Return the probability that win beats lose.
   double _probability(double lose, double win) {
     return 1.0 / (1.0 + (pow(10, (lose - win) / scale)));
   }

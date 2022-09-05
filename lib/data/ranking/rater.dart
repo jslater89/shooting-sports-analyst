@@ -624,16 +624,8 @@ class Rater {
         eventWeightMultiplier: weightMod,
       );
 
-      bool hasRatingChangeForStage = false;
-      for(var stageScore in changes[rating]!.keys) {
-        if(stage == stageScore.stage) {
-          hasRatingChangeForStage = true;
-          break;
-        }
-      }
-
-      if(!hasRatingChangeForStage) {
-        changes[rating]![stageScore] ??= ratingSystem.newEvent(rating: rating, eventName: "${match.name} - ${stage.name}", score: stageScore);
+      if(!changes[rating]!.containsKey(stageScore)) {
+        changes[rating]![stageScore] = ratingSystem.newEvent(rating: rating, eventName: "${match.name} - ${stage.name}", score: stageScore);
         changes[rating]![stageScore]!.apply(update[rating]!);
         changes[rating]![stageScore]!.info = update[rating]!.info;
       }
@@ -665,7 +657,9 @@ class Rater {
 
       // You only get one rating change per match.
       if(changes[rating]!.isEmpty) {
-        changes[rating]![score.total] ??= ratingSystem.newEvent(rating: rating, eventName: "${match.name}",
+        changes[rating]![score.total] = ratingSystem.newEvent(
+          rating: rating,
+          eventName: "${match.name}",
           score: score.total,
           info: update[rating]!.info,
         );
@@ -720,7 +714,6 @@ class Rater {
       );
 
       for(var rating in scoreMap.keys) {
-        bool hasRatingChangeForStage = false;
         var stageScore = scoreMap[rating];
 
         if(stageScore == null) {
@@ -728,15 +721,8 @@ class Rater {
           continue;
         }
 
-        for (var stageScore in changes[rating]!.keys) {
-          if (stage == stageScore.stage) {
-            hasRatingChangeForStage = true;
-            break;
-          }
-        }
-
-        if (!hasRatingChangeForStage) {
-          changes[rating]![stageScore] ??= ratingSystem.newEvent(rating: rating, eventName: "${match.name} - ${stage.name}", score: stageScore);
+        if (!changes[rating]!.containsKey(stageScore)) {
+          changes[rating]![stageScore] = ratingSystem.newEvent(rating: rating, eventName: "${match.name} - ${stage.name}", score: stageScore);
           changes[rating]![stageScore]!.apply(update[rating]!);
           changes[rating]![stageScore]!.info = update[rating]!.info;
         }
