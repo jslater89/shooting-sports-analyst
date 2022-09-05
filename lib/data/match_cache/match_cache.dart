@@ -67,7 +67,7 @@ class MatchCache {
             _cache[id] = entry;
           }
 
-          print("Loaded ${entry.match.name} from $path to $ids");
+          if(verboseParse) print("Loaded ${entry.match.name} from $path to $ids");
         }
 
         i += 1;
