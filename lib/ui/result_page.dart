@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
@@ -299,7 +300,6 @@ class _ResultPageState extends State<ResultPage> {
               child: IconButton(
                   icon: Icon(Icons.undo),
                   onPressed: () async {
-
                     _currentMatch = widget.canonicalMatch!.copy();
                     List<Shooter> filteredShooters = _filterShooters();
                     var scores = _currentMatch!.getScores(shooters: filteredShooters);
@@ -319,7 +319,8 @@ class _ResultPageState extends State<ResultPage> {
                       _whatIfMode = false;
                     });
 
-                    _selectStages(_currentMatch!.stages);
+                    var newStages = _filteredStages.map((stage) => _currentMatch!.lookupStage(stage)!).toList();
+                    _selectStages(newStages);
                     _applyStage(_stage != null ? StageMenuItem(_stage!) : StageMenuItem.match());
                   }
               )
