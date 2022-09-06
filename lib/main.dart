@@ -70,8 +70,10 @@ void main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
 
-  var path = await getApplicationSupportDirectory();
-  Hive.init(path.absolute.path);
+  if(!HtmlOr.isWeb) {
+    var path = await getApplicationSupportDirectory();
+    Hive.init(path.absolute.path);
+  }
 
   runApp(MyApp());
 }
