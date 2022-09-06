@@ -12,8 +12,8 @@ const RESOURCES = {
 "assets/shaders/ink_sparkle.frag": "c3aac807b424b4eeff75b9515d28e513",
 "icons/Icon-192.png": "ac9a721a12bbc803b44f645561ecb1e1",
 "icons/Icon-512.png": "96e752610906ba2a93c65f8abe1645f1",
-"index.html": "d5934467e2d6f00e33627f5b09448894",
-"/": "d5934467e2d6f00e33627f5b09448894",
+"index.html": "13f478a8b5ff4480f92f6de46b4fb842",
+"/": "13f478a8b5ff4480f92f6de46b4fb842",
 "index-template.html": "59277a55de811cc11c1a92caf6a9393f",
 "canvaskit/profiling/canvaskit.wasm": "95a45378b69e77af5ed2bc72b2209b94",
 "canvaskit/profiling/canvaskit.js": "38164e5a72bdad0faa4ce740c9b8e564",
@@ -22,7 +22,7 @@ const RESOURCES = {
 "version.json": "415b8059a14cd583a0af7a654c75237d",
 "favicon.png": "5280fbad97e6d12eec2ddb8a177f62c7",
 "manifest.json": "8f3938b6b6203a32f1eb64fa965181cf",
-"main.dart.js": "7e7a2a2c4202665c8ea1da5eabdf8f52"
+"main.dart.js": "d71f9c03c6dd30099f2bbed6282b4417"
 };
 
 // The application shell files that are downloaded before a service worker can
