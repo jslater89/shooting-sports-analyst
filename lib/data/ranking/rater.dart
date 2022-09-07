@@ -134,8 +134,10 @@ class Rater {
   void _addShootersFromMatch(PracticalMatch match) {
     var shooters = _getShooters(match);
     for(Shooter s in shooters) {
-      if(processMemberNumber(s.memberNumber).isNotEmpty && !s.reentry && s.memberNumber.length > 3) {
-        knownShooters[processMemberNumber(s.memberNumber)] ??= ratingSystem.newShooterRating(s, date: match.date); // ratingSystem.defaultRating
+      var processed = processMemberNumber(s.memberNumber);
+      if(processed.isNotEmpty && !s.reentry && s.memberNumber.length > 3) {
+        s.memberNumber = processed;
+        knownShooters[s.memberNumber] ??= ratingSystem.newShooterRating(s, date: match.date); // ratingSystem.defaultRating
       }
     }
   }
@@ -203,7 +205,7 @@ class Rater {
     }
   }
 
-  List<Shooter> _getShooters(PracticalMatch match) {
+  List<Shooter> _getShooters(PracticalMatch match, {bool verify = false}) {
     var shooters = <Shooter>[];
     if(_filters != null) {
       shooters = match.filterShooters(
@@ -217,11 +219,20 @@ class Rater {
     else {
       shooters = match.filterShooters(allowReentries: false);
     }
+
+    for(var shooter in shooters) {
+      shooter.memberNumber = processMemberNumber(shooter.memberNumber);
+    }
+
+    if(verify) {
+      shooters.retainWhere((element) => _verifyShooter(element));
+    }
+
     return shooters;
   }
 
   void _rankMatch(PracticalMatch match) {
-    var shooters = _getShooters(match);
+    var shooters = _getShooters(match, verify: true);
     var scores = match.getScores(shooters: shooters, scoreDQ: byStage);
 
     // Based on strength of competition, vary rating gain between 25% and 150%.
@@ -229,7 +240,7 @@ class Rater {
     for(var shooter in shooters) {
       matchStrength += _strengthForClass(shooter.classification);
 
-      var rating = knownShooters[processMemberNumber(shooter.memberNumber)];
+      var rating = knownShooters[shooter.memberNumber];
       if(rating != null) {
         rating.lastClassification = shooter.classification ?? rating.lastClassification;
       }
@@ -257,7 +268,7 @@ class Rater {
     totalConnectedness = 0.0;
     totalShooters = 0;
     for(var shooter in shooters) {
-      var rating = knownShooters[processMemberNumber(shooter.memberNumber)];
+      var rating = knownShooters[shooter.memberNumber];
 
       if(rating != null) {
         totalConnectedness += rating.connectedness;
@@ -275,13 +286,18 @@ class Rater {
     // Process ratings for each shooter.
     if(byStage) {
       for(Stage s in match.stages) {
+
+        var res = _filterScores(shooters, scores, s);
+        var filteredShooters = res.a;
+        var filteredScores = res.b;
+
         var weightMod = 1.0 + max(-0.20, min(0.10, (s.maxPoints - 120) /  400));
 
         if(ratingSystem.mode == RatingMode.wholeEvent) {
           _processWholeEvent(
             match: match,
             stage: s,
-            scores: scores,
+            scores: filteredScores,
             changes: changes,
             matchStrength: strengthMod,
             connectednessMod: connectednessMod,
@@ -289,13 +305,13 @@ class Rater {
           );
         }
         else {
-          for(int i = 0; i < shooters.length; i++) {
+          for(int i = 0; i < filteredShooters.length; i++) {
             if(ratingSystem.mode == RatingMode.roundRobin) {
               _processRoundRobin(
                 match: match,
                 stage: s,
-                shooters: shooters,
-                scores: scores,
+                shooters: filteredShooters,
+                scores: filteredScores,
                 startIndex: i,
                 changes: changes,
                 matchStrength: strengthMod,
@@ -307,8 +323,8 @@ class Rater {
               _processOneshot(
                 match: match,
                 stage: s,
-                shooter: shooters[i],
-                scores: scores,
+                shooter: filteredShooters[i],
+                scores: filteredScores,
                 changes: changes,
                 matchStrength: strengthMod,
                 connectednessMod: connectednessMod,
@@ -326,12 +342,16 @@ class Rater {
         changes.clear();
       }
     }
-    else {
+    else { // by match
+      var res = _filterScores(shooters, scores, null);
+      var filteredShooters = res.a;
+      var filteredScores = res.b;
+
       if(ratingSystem.mode == RatingMode.wholeEvent) {
         _processWholeEvent(
             match: match,
             stage: null,
-            scores: scores,
+            scores: filteredScores,
             changes: changes,
             matchStrength: strengthMod,
             connectednessMod: connectednessMod,
@@ -339,13 +359,13 @@ class Rater {
         );
       }
       else {
-        for(int i = 0; i < shooters.length; i++) {
+        for(int i = 0; i < filteredShooters.length; i++) {
           if(ratingSystem.mode == RatingMode.roundRobin) {
             _processRoundRobin(
               match: match,
               stage: null,
-              shooters: shooters,
-              scores: scores,
+              shooters: filteredShooters,
+              scores: filteredScores,
               startIndex: i,
               changes: changes,
               matchStrength: strengthMod,
@@ -357,8 +377,8 @@ class Rater {
             _processOneshot(
                 match: match,
                 stage: null,
-                shooter: shooters[i],
-                scores: scores,
+                shooter: filteredShooters[i],
+                scores: filteredScores,
                 changes: changes,
                 matchStrength: strengthMod,
                 connectednessMod: connectednessMod,
@@ -397,7 +417,6 @@ class Rater {
       averageAfter /= encounteredList.length;
       // debugPrint("Averages: ${averageBefore.toStringAsFixed(1)} -> ${averageAfter.toStringAsFixed(1)} vs. ${expectedConnectedness.toStringAsFixed(1)}");
     }
-
   }
 
   Map<Shooter, bool> _verifyCache = {};
@@ -417,7 +436,10 @@ class Rater {
       return false;
     }
 
-    String memNum = processMemberNumber(s.memberNumber);
+    // This is already processed, because _verifyShooter is only called from _getShooters
+    // after member numbers have been processed.
+    String memNum = s.memberNumber;
+
     if(knownShooters[memNum] == null) {
       _verifyCache[s] = false;
       return false;
@@ -439,6 +461,36 @@ class Rater {
 
     _verifyCache[s] = true;
     return true;
+  }
+
+  _Tuple<List<Shooter>, List<RelativeMatchScore>> _filterScores(List<Shooter> shooters, List<RelativeMatchScore> scores, Stage? stage) {
+    List<Shooter> filteredShooters = []..addAll(shooters);
+    List<RelativeMatchScore> filteredScores = []..addAll(scores);
+    for(var s in scores) {
+      if(stage != null) {
+        var stageScore = s.stageScores[stage];
+
+        if(stageScore == null) {
+          filteredScores.remove(s);
+          filteredShooters.remove(s.shooter);
+          print("WARN: null stage score");
+          continue;
+        }
+
+        if(!_isValid(stageScore)) {
+          filteredScores.remove(s);
+          filteredShooters.remove(s.shooter);
+        }
+      }
+      else {
+        if(_dnf(s)) {
+          filteredScores.remove(s);
+          filteredShooters.remove(s.shooter);
+        }
+      }
+    }
+
+    return _Tuple(filteredShooters, filteredScores);
   }
 
   void _processRoundRobin({
@@ -469,12 +521,8 @@ class Rater {
     for(int j = startIndex + 1; j < shooters.length; j++) {
       Shooter b = shooters[j];
 
-      if(!_verifyShooter(a) || !_verifyShooter(b)) {
-        continue;
-      }
-
-      String memNumA = processMemberNumber(a.memberNumber);
-      String memNumB = processMemberNumber(b.memberNumber);
+      String memNumA = a.memberNumber;
+      String memNumB = b.memberNumber;
 
       // unmarked reentries
       if(memNumA == memNumB) continue;
@@ -491,18 +539,6 @@ class Rater {
       if(stage != null) {
         RelativeScore aStageScore = aScore.stageScores[stage]!;
         RelativeScore bStageScore = bScore.stageScores[stage]!;
-
-        // Filter out badly marked classifier reshoots
-        if(aStageScore.score.hits == 0 && aStageScore.score.time <= 0.1) continue;
-        if(bStageScore.score.hits == 0 && bStageScore.score.time <= 0.1) continue;
-
-        // The George Williams Rule
-        if(aStageScore.stage!.type != Scoring.fixedTime && aStageScore.score.getHitFactor() > 30) continue;
-        if(bStageScore.stage!.type != Scoring.fixedTime && bStageScore.score.getHitFactor() > 30) continue;
-
-        // Filter out extremely short times that are probably DNFs or partial scores entered for DQs
-        if(aStageScore.score.time <= 0.5) continue;
-        if(bStageScore.score.time <= 0.5) continue;
 
         _encounteredMemberNumber(memNumA);
         _encounteredMemberNumber(memNumB);
@@ -529,9 +565,6 @@ class Rater {
         changes[bRating]![bStageScore]!.apply(update[bRating]!);
       }
       else {
-        // Filter out non-DQ DNFs
-        if(_dnf(aScore) || _dnf(bScore))
-
         _encounteredMemberNumber(memNumA);
         _encounteredMemberNumber(memNumB);
 
@@ -568,13 +601,9 @@ class Rater {
     required double connectednessMod,
     required double weightMod
   }) {
-    if(!_verifyShooter(shooter)) {
-      return;
-    }
-
     if(scores.length < 2) return;
 
-    String memNum = processMemberNumber(shooter.memberNumber);
+    String memNum = shooter.memberNumber;
 
     ShooterRating rating = knownShooters[memNum]!;
     changes[rating] ??= {};
@@ -592,25 +621,13 @@ class Rater {
     if(stage != null) {
       RelativeScore stageScore = score.stageScores[stage]!;
 
-      // Filter out badly marked classifier reshoots
-      if(stageScore.score.hits == 0 && stageScore.score.time <= 0.1) return;
-
-      // The George Williams Rule
-      if(stageScore.stage!.type != Scoring.fixedTime && stageScore.score.getHitFactor() > 30) return;
-
-      // Filter out extremely short times that are probably DNFs or partial scores entered for DQs
-      if(stageScore.score.time <= 0.5) return;
-
       _encounteredMemberNumber(memNum);
 
       var scoreMap = <ShooterRating, RelativeScore>{};
       var matchScoreMap = <ShooterRating, RelativeScore>{};
       for(var s in scores) {
-        if(!_verifyShooter(s.shooter)) continue;
-
-        String num = processMemberNumber(s.shooter.memberNumber);
+        String num = s.shooter.memberNumber;
         var otherScore = s.stageScores[stage]!;
-        if(otherScore.score.hits == 0 && otherScore.score.time == 0) continue;
         scoreMap[knownShooters[num]!] = otherScore;
         matchScoreMap[knownShooters[num]!] = s.total;
       }
@@ -631,18 +648,12 @@ class Rater {
       }
     }
     else {
-      // Filter out non-DQ DNFs
-      if(_dnf(score)) {
-        return;
-      }
-
       _encounteredMemberNumber(memNum);
 
       var scoreMap = <ShooterRating, RelativeScore>{};
       var matchScoreMap = <ShooterRating, RelativeScore>{};
       for(var s in scores) {
-        if(!_verifyShooter(s.shooter) || _dnf(score)) continue;
-        String num = processMemberNumber(s.shooter.memberNumber);
+        String num = s.shooter.memberNumber;
 
         scoreMap[knownShooters[num]!] ??= s.total;
         matchScoreMap[knownShooters[num]!] ??= s.total;
@@ -689,19 +700,13 @@ class Rater {
       var scoreMap = <ShooterRating, RelativeScore>{};
       var matchScoreMap = <ShooterRating, RelativeScore>{};
       for(var s in scores) {
-        if(!_verifyShooter(s.shooter)) continue;
-
-        String num = processMemberNumber(s.shooter.memberNumber);
+        String num = s.shooter.memberNumber;
 
         var otherScore = s.stageScores[stage]!;
-        var validScore = _isValid(otherScore);
-
-        if(validScore) {
-          _encounteredMemberNumber(num);
-          scoreMap[knownShooters[num]!] = otherScore;
-          matchScoreMap[knownShooters[num]!] = s.total;
-          changes[knownShooters[num]!] ??= {};
-        }
+        _encounteredMemberNumber(num);
+        scoreMap[knownShooters[num]!] = otherScore;
+        matchScoreMap[knownShooters[num]!] = s.total;
+        changes[knownShooters[num]!] ??= {};
       }
 
       var update = ratingSystem.updateShooterRatings(
@@ -729,12 +734,10 @@ class Rater {
       }
     }
     else {
-      // Filter out non-DQ DNFs
       var scoreMap = <ShooterRating, RelativeScore>{};
       var matchScoreMap = <ShooterRating, RelativeScore>{};
       for(var s in scores) {
-        if(!_verifyShooter(s.shooter) || _dnf(s)) continue;
-        String num = processMemberNumber(s.shooter.memberNumber);
+        String num = s.shooter.memberNumber;
 
         scoreMap[knownShooters[num]!] ??= s.total;
         matchScoreMap[knownShooters[num]!] ??= s.total;
@@ -775,7 +778,7 @@ class Rater {
     if(score.stage != null && score.stage!.type != Scoring.fixedTime && score.score.getHitFactor() > 30) return false;
 
     // Filter out extremely short times that are probably DNFs or partial scores entered for DQs
-    if(score.score.time <= 0.5) return false;
+    if(score.stage!.type != Scoring.fixedTime && score.score.time <= 0.5) return false;
 
     return true;
   }
@@ -794,8 +797,8 @@ class Rater {
     var firstClass = first.shooter.classification ?? Classification.U;
     var secondClass = second.shooter.classification ?? Classification.U;
 
-    var firstRating = knownShooters[processMemberNumber(first.shooter.memberNumber)];
-    var secondRating = knownShooters[processMemberNumber(second.shooter.memberNumber)];
+    var firstRating = knownShooters[first.shooter.memberNumber];
+    var secondRating = knownShooters[second.shooter.memberNumber];
 
     // People entered with empty or invalid member numbers
     if(firstRating == null || secondRating == null) {
@@ -987,4 +990,11 @@ class RaterStatistics {
     required this.histogram,
     required this.histogramsByClass,
   });
+}
+
+class _Tuple<T, U> {
+  T a;
+  U b;
+
+  _Tuple(this.a, this.b);
 }

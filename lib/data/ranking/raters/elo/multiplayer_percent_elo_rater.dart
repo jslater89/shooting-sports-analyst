@@ -89,7 +89,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     // our own score
     int usedScores = 1;
     var totalPercent = (aScore.percent * stageBlend) + (aMatchScore.percent * matchBlend);
-    int zeroes = aScore.percent < 0.1 ? 1 : 0;
+    int zeroes = aScore.relativePoints < 0.1 ? 1 : 0;
 
     for(var bRating in scores.keys) {
       var opponentScore = scores[bRating]!;
@@ -97,11 +97,6 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
 
       // No credit against ourselves
       if(opponentScore == aScore) continue;
-
-      // Ignore opponents who didn't record a score for the stage
-      if(opponentScore.score.hits == 0 && opponentScore.score.time <= 0.5) {
-        continue;
-      }
 
       if (opponentScore.relativePoints > highOpponentScore) {
         highOpponentScore = opponentScore.relativePoints;
@@ -143,10 +138,9 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
 
     var percentComponent = totalPercent == 0 ? 0 : (actualPercent / totalPercent);
 
-    // TODO: I'm not sure this is a valid way to do it.
-    //var placeBlend = (aScore.place * (1 - _matchBlend)) + (aMatchScore.place * _matchBlend);
-
-    var placeComponent = (usedScores - aScore.place) /  divisor;
+    // TODO: not sure this is a valid way to do this.
+    var placeBlend = (aScore.place * stageBlend) + (aMatchScore.place * matchBlend);
+    var placeComponent = (usedScores - placeBlend) /  divisor;
 
     // The first N matches you shoot get bonuses for initial placement.
     var placementMultiplier = aRating.ratingEvents.length < RatingSystem.initialPlacementMultipliers.length ?
@@ -170,7 +164,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
       debugPrint("### ${aRating.shooter.lastName} stats: $actualPercent of $usedScores shooters for ${aScore.stage?.name}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}, placement $placementMultiplier, zero $zeroMultiplier ($zeroes)");
       debugPrint("AS/ES: ${actualScore.toStringAsFixed(6)}/${expectedScore.toStringAsFixed(6)}");
       debugPrint("Actual/expected percent: ${(percentComponent * totalPercent * 100).toStringAsFixed(2)}/${(expectedScore * totalPercent * 100).toStringAsFixed(2)}");
-      debugPrint("Actual/expected place: ${aScore.place}/${(usedScores - (expectedScore * divisor)).toStringAsFixed(4)}");
+      debugPrint("Actual/expected place: $placeBlend/${(usedScores - (expectedScore * divisor)).toStringAsFixed(4)}");
       debugPrint("Rating±Change: ${aRating.rating.round()} + ${change.toStringAsFixed(2)} (${changeFromPercent.toStringAsFixed(2)} from pct, ${changeFromPlace.toStringAsFixed(2)} from place)");
       debugPrint("###");
       throw StateError("NaN/Infinite");
@@ -179,7 +173,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     var hf = aScore.score.getHitFactor(scoreDQ: aScore.score.stage != null);
     List<String> info = [
       "Actual/expected percent: ${(percentComponent * totalPercent * 100).toStringAsFixed(2)}/${(expectedScore * totalPercent * 100).toStringAsFixed(2)} on ${hf.toStringAsFixed(2)}HF",
-      "Actual/expected place: ${aScore.place}/${(usedScores - (expectedScore * divisor)).toStringAsFixed(4)}",
+      "Actual/expected place: $placeBlend/${(usedScores - (expectedScore * divisor)).toStringAsFixed(4)}",
       "Rating±Change: ${aRating.rating.round()} + ${change.toStringAsFixed(2)} (${changeFromPercent.toStringAsFixed(2)} from pct, ${changeFromPlace.toStringAsFixed(2)} from place)",
       "eff. K, multipliers: ${(effectiveK).toStringAsFixed(2)}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}, IP ${placementMultiplier.toStringAsFixed(2)}, Zero ${zeroMultiplier.toStringAsFixed(2)}, Conn ${connectednessMultiplier.toStringAsFixed(2)}, EW ${eventWeightMultiplier.toStringAsFixed(2)}",
     ];
@@ -246,7 +240,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
             children: [
               Expanded(flex: 4, child: Text("")),
               Expanded(flex: 2, child: Text("$place")),
-              Expanded(flex: 3, child: Text(Rater.processMemberNumber(rating.shooter.memberNumber))),
+              Expanded(flex: 3, child: Text(rating.shooter.memberNumber)),
               Expanded(flex: 6, child: Text(rating.shooter.getName(suffixes: false))),
               Expanded(flex: 2, child: Text("${rating.rating.round()}", textAlign: TextAlign.end)),
               Expanded(flex: 2, child: Text("${castRating.variance.toStringAsFixed(2)}", textAlign: TextAlign.end)),
@@ -276,7 +270,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
 
     for(var s in ratings) {
       s as EloShooterRating;
-      csv += "${Rater.processMemberNumber(s.shooter.memberNumber)},";
+      csv += "${s.shooter.memberNumber},";
       csv += "${s.shooter.getName()},";
       csv += "${s.rating.round()},${s.variance.toStringAsFixed(2)},${s.trend.toStringAsFixed(2)},${s.ratingEvents.length}\n";
     }

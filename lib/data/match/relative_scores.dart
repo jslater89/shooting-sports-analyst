@@ -20,7 +20,7 @@ extension MatchScoresToCSV on List<RelativeMatchScore> {
     var sorted = this.sorted((a, b) => a.total.place.compareTo(b.total.place));
 
     for(var score in sorted) {
-      csv += "${Rater.processMemberNumber(score.shooter.memberNumber)},";
+      csv += "${score.shooter.memberNumber},";
       csv += "${score.shooter.getName(suffixes: false)},";
       csv += "${score.total.relativePoints.toStringAsFixed(2)},";
       csv += "${(score.total.percent * 100).toStringAsFixed(2)}\n";

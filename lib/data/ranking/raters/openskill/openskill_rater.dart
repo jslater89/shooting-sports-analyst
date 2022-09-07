@@ -72,7 +72,7 @@ class OpenskillRater implements RatingSystem<OpenskillRating> {
           children: [
             Expanded(flex: _paddingFlex - _placeFlex, child: Text("")),
             Expanded(flex: _placeFlex, child: Text("$place")),
-            Expanded(flex: _memberNumFlex, child: Text(Rater.processMemberNumber(rating.shooter.memberNumber))),
+            Expanded(flex: _memberNumFlex, child: Text(rating.shooter.memberNumber)),
             Expanded(flex: _nameFlex, child: Text(rating.shooter.getName(suffixes: false))),
             Expanded(flex: _ordinalFlex, child: Text(rating.ordinal.toStringAsFixed(2))),
             Expanded(flex: _muFlex, child: Text(rating.mu.toStringAsFixed(2))),
@@ -126,7 +126,7 @@ class OpenskillRater implements RatingSystem<OpenskillRating> {
 
     for(var s in ratings) {
       s as OpenskillRating;
-      csv += "${Rater.processMemberNumber(s.shooter.memberNumber)},";
+      csv += "${s.shooter.memberNumber},";
       csv += "${s.shooter.getName()},";
       csv += "${s.ordinal.toStringAsFixed(2)},";
       csv += "${s.mu.toStringAsFixed(2)}";

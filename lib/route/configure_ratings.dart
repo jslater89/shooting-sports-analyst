@@ -378,7 +378,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                       CheckboxListTile(
                           title: Tooltip(
                             child: Text("Combine Open/PCC?"),
-                            message: "Combine ratings for Single Stack, Revolver, Production, and Limited 10 if checked.",
+                            message: "Combine ratings for Open and PCC if checked.",
                           ),
                           value: _combineOpenPCC,
                           onChanged: (value) {
@@ -392,7 +392,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                       CheckboxListTile(
                           title: Tooltip(
                             child: Text("Combine Limited/CO?"),
-                            message: "Combine ratings for Single Stack, Revolver, Production, and Limited 10 if checked.",
+                            message: "Combine ratings for Limited and Carry Optics if checked.",
                           ),
                           value: _combineLimitedCO,
                           onChanged: (value) {
@@ -478,7 +478,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Tooltip(
-                            message: "In by-stage mode, blend match percentage into stage percentage, to reduce the impact of single bad stages.",
+                            message: "In by-stage mode, blend match percentage into stage percentage, to reduce the impact of single bad stages.\n\n"
+                                "Match blend of 1.0 is equivalent to by-match mode.",
                             child: Padding(
                               padding: const EdgeInsets.only(left: 16),
                               child: Text("Match Blend", style: Theme.of(context).textTheme.subtitle1!),
@@ -505,8 +506,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Tooltip(
-                            message: "Percent/placement weight control how much weight the algorithm gives to percent finish "
-                                "vs. placement. Too little placement weight can cause initial ratings to adjust very slowly. "
+                            message: "Percent and placement weight control how much weight the algorithm gives to percent finish "
+                                "vs. placement.\n\nToo little placement weight can cause initial ratings to adjust very slowly or penalize high-end shooters in strong fields.\n\n"
                                 "Too much placement weight can unfairly penalize shooters who finish near strong competition in percentage terms.",
                             child: Padding(
                               padding: const EdgeInsets.only(left: 16),
