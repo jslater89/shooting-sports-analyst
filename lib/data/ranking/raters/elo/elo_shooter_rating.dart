@@ -11,6 +11,15 @@ class EloShooterRating extends ShooterRating<EloShooterRating> {
   double variance = 0;
   double trend = 0;
 
+  double get meanSquaredError {
+    double squaredSum = ratingEvents.map((e) {
+      e as EloRatingEvent;
+      return pow(e.error, 2) as double;
+    }).sum;
+
+    return sqrt(squaredSum);
+  }
+
   List<RatingEvent> ratingEvents = [];
 
   EloShooterRating(Shooter shooter, this.rating, {DateTime? date}) :

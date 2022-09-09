@@ -17,6 +17,7 @@ const _matchBlendKey = "matchBlend";
 
 class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
   static const ratingKey = "rating";
+  static const errorKey = "error";
 
   static const defaultK = 60.0;
   static const defaultPercentWeight = 0.4;
@@ -179,7 +180,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     ];
 
     return {
-      aRating: RatingChange(change: {ratingKey: change}, info: info),
+      aRating: RatingChange(change: {ratingKey: change, errorKey: expectedScore - actualScore}, info: info),
     };
   }
 
