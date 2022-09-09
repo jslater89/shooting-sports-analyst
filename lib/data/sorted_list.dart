@@ -63,7 +63,10 @@ class SortedList<T> {
   T get first => _backing.first;
   T get last => _backing.last;
 
-  Iterator<T> get iterator => _backing.iterator;
+  /// This returns the backing list directly. Do not modify it,
+  /// or the guarantees of SortedList will be lost.
+  Iterable<T> get iterable => _backing;
+  /// This returns a copy of the backing list.
   Iterable<T> get asIterable => []..addAll(_backing);
 
   Iterable<T> sorted(int Function(T a, T b) comparator) => _backing.sorted(comparator);

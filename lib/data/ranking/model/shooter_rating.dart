@@ -64,7 +64,7 @@ abstract class ShooterRating<T extends ShooterRating<T>> {
   // TODO: have this return the change, apply at the end
   void updateConnectedness() {
     var c = ShooterRating.baseConnectedness;
-    for(var connection in connectedShooters.asIterable) {
+    for(var connection in connectedShooters.iterable) {
       // Our connectedness increases by the connectedness of the other shooter, minus
       // the connectedness they get from us.
       var change = (connection.connectedness * ShooterRating.connectionPercentGain) - (_connectedness * ShooterRating.connectionPercentGain * connectionPercentGain);
@@ -97,8 +97,14 @@ abstract class ShooterRating<T extends ShooterRating<T>> {
     // if(Rater.processMemberNumber(this.shooter.memberNumber) == "122755")  print("Shooter $this has ${connectedShooters.length} connections, encountered ${encountered.length} shooters");
     int added = 0;
     int updated = 0;
+
+    Map<ShooterRating, ConnectedShooter> connMap = {};
+    for(var connection in connectedShooters.iterable) {
+      connMap[connection.shooter] = connection;
+    }
+
     for(var shooter in encountered) {
-      var currentConnection = connectedShooters.firstWhereOrNull((connection) => connection.shooter == shooter);
+      var currentConnection = connMap[shooter];
       if(currentConnection != null) {
         // if(Rater.processMemberNumber(this.shooter.memberNumber) == "122755")  print("Updated connection to $shooter");
         currentConnection.connectedness = shooter.connectedness;
@@ -124,7 +130,7 @@ abstract class ShooterRating<T extends ShooterRating<T>> {
 
     Set<ConnectedShooter> outdated = Set();
     DateTime oldestAllowed = now.subtract(connectionExpiration);
-    for(var connection in connectedShooters.asIterable) {
+    for(var connection in connectedShooters.iterable) {
       if(connection.lastSeen.isBefore(oldestAllowed)) {
         outdated.add(connection);
       }
