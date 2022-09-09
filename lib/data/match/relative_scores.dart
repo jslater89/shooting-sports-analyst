@@ -1,6 +1,5 @@
 import 'package:collection/collection.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 
 class RelativeMatchScore {
   RelativeMatchScore({required this.shooter});

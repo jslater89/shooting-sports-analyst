@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
@@ -7,6 +8,8 @@ import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:charts_flutter/flutter.dart' as charts;
 import 'package:charts_flutter/src/text_style.dart' as style;
 import 'package:charts_flutter/src/text_element.dart' as element;
+import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rating_change.dart';
+import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
 
 /// ShooterRatingChangeDialog displays per-stage changes for a shooter.
 class ShooterStatsDialog extends StatefulWidget {
@@ -57,7 +60,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
               children: [
                 Padding(
                   padding: const EdgeInsets.only(top: 8, bottom: 36),
-                  child: _buildChart(events)
+                  child: _buildChart(widget.rating)
                 ),
                 ..._buildShooterStats(context),
               ],
@@ -123,26 +126,53 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   charts.Series<_AccumulatedRatingEvent, int>? _series;
   charts.LineChart? _chart;
   late NumberFormat _nf;
+  late List<_AccumulatedRatingEvent> _ratings;
 
-  Widget _buildChart(List<RatingEvent> events) {
+  Widget _buildChart(ShooterRating rating) {
     double accumulator = 0;
     double minRating = 10000;
     double maxRating = -10000;
-    var ratings = events.map((e) {
-      if(e.newRating < minRating) minRating = e.newRating;
-      if(e.newRating > maxRating) maxRating = e.newRating;
-      return _AccumulatedRatingEvent(e, accumulator += e.ratingChange);
-    }).toList();
+    double minWithError = 10000;
+    double maxWithError = -10000;
 
     if(_series == null) {
-      _nf = NumberFormat("####");
+      _ratings = rating.ratingEvents.mapIndexed((i, e) {
+        if(e.newRating < minRating) minRating = e.newRating;
+        if(e.newRating > maxRating) maxRating = e.newRating;
 
+        double error = 0;
+        if(rating is EloShooterRating) {
+          print("offset: ${rating.ratingEvents.length} - $i = ${rating.ratingEvents.length - (i + 1)}");
+          error = rating.normalizedErrorWithWindow(offset: rating.ratingEvents.length - (i + 1));
+        }
+
+        var plusError = e.newRating + error;
+        var minusError = e.newRating - error;
+        if(plusError > maxWithError) maxWithError = plusError;
+        if(minusError < minWithError) minWithError = minusError;
+
+        return _AccumulatedRatingEvent(e, accumulator += e.ratingChange, error);
+      }).toList();
+      
+      _nf = NumberFormat("####");
       _series = charts.Series<_AccumulatedRatingEvent, int>(
         id: 'Results',
         colorFn: (_, __) => charts.MaterialPalette.blue.shadeDefault,
         measureFn: (_AccumulatedRatingEvent e, _) => e.baseEvent.newRating,
         domainFn: (_, int? index) => index!,
-        data: ratings,
+        measureLowerBoundFn: (e, i) {
+          if(rating is EloShooterRating) {
+            return e.baseEvent.newRating - e.errorAt;
+          }
+          return null;
+        },
+        measureUpperBoundFn: (e, i) {
+          if(rating is EloShooterRating) {
+            return e.baseEvent.newRating + e.errorAt;
+          }
+          return null;
+        },
+        data: _ratings,
       );
     }
 
@@ -157,7 +187,8 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
             maximumDomainDistancePx: 400,
           ),
           charts.LinePointHighlighter(
-              selectionModelType: charts.SelectionModelType.info
+            selectionModelType: charts.SelectionModelType.info,
+            symbolRenderer: _EloTooltipRenderer(),
           )
         ],
         selectionModels: [
@@ -165,7 +196,11 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
             type: charts.SelectionModelType.info,
             updatedListener: (model) {
               if(model.hasDatumSelection) {
-                final rating = ratings[model.selectedDatum[0].index!];
+                final rating = _ratings[model.selectedDatum[0].index!];
+                _EloTooltipRenderer.index = model.selectedDatum[0].index!;
+                _EloTooltipRenderer.indexTotal = _ratings.length;
+                _EloTooltipRenderer.rating = rating.baseEvent.newRating;
+                _EloTooltipRenderer.error = rating.errorAt;
                 _highlight(rating);
               }
             },
@@ -180,7 +215,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
           showAxisLine: true,
         ),
         primaryMeasureAxis: charts.NumericAxisSpec(
-          viewport: charts.NumericExtents(minRating - 100, maxRating + 100),
+          viewport: charts.NumericExtents(minWithError - 50, maxWithError + 50),
           tickProviderSpec: charts.BasicNumericTickProviderSpec(
             dataIsInWholeNumbers: true,
             desiredMinTickCount: 8,
@@ -249,6 +284,40 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
 class _AccumulatedRatingEvent {
   RatingEvent baseEvent;
   double accumulated;
+  double errorAt;
 
-  _AccumulatedRatingEvent(this.baseEvent, this.accumulated);
+  _AccumulatedRatingEvent(this.baseEvent, this.accumulated, this.errorAt);
+}
+
+class _EloTooltipRenderer extends charts.CircleSymbolRenderer {
+  static late double rating;
+  static late double error;
+  static late int index;
+  static late int indexTotal;
+
+  @override
+  void paint(charts.ChartCanvas canvas, Rectangle<num> bounds, {List<int>? dashPattern, charts.Color? fillColor, charts.FillPatternType? fillPattern, charts.Color? strokeColor, double? strokeWidthPx}) {
+    super.paint(canvas, bounds, dashPattern: dashPattern, fillColor: fillColor, strokeColor: strokeColor, strokeWidthPx: strokeWidthPx);
+
+    var proportion = index.toDouble() / (indexTotal.toDouble() - 1);
+    var leftOffset = -(proportion * 60) + 10;
+
+    var ratingText = "${rating.round()}";
+    if(error != 0) {
+      ratingText += "±${error.round()}";
+    }
+
+    canvas.drawRect(
+        Rectangle(bounds.left - 5, bounds.top - 30, bounds.width + 10, bounds.height + 10),
+        fill: charts.Color.transparent
+    );
+    var textStyle = style.TextStyle();
+    textStyle.color = charts.Color.black;
+    textStyle.fontSize = 12;
+    canvas.drawText(
+        element.TextElement("$ratingText", style: textStyle),
+        (bounds.left + leftOffset).round(),
+        (bounds.top - 40).round()
+    );
+  }
 }

@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 
 enum MatchLevel {

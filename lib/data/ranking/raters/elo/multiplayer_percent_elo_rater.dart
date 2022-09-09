@@ -49,7 +49,9 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     required this.byStage
   })
       : this.placeWeight = 1.0 - percentWeight,
-        this._matchBlend = byStage ? matchBlend : 0.0;
+        this._matchBlend = byStage ? matchBlend : 0.0 {
+    EloShooterRating.errorScale = this.scale;
+  }
 
   factory MultiplayerPercentEloRater.fromJson(Map<String, dynamic> json) {
     return MultiplayerPercentEloRater(
@@ -180,7 +182,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     ];
 
     return {
-      aRating: RatingChange(change: {ratingKey: change, errorKey: expectedScore - actualScore}, info: info),
+      aRating: RatingChange(change: {ratingKey: change, errorKey: (expectedScore - actualScore) * usedScores}, info: info),
     };
   }
 
@@ -199,27 +201,28 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
         Expanded(flex: 6, child: Text("Name")),
         Expanded(flex: 2, child: Text("Rating", textAlign: TextAlign.end)),
         Expanded(
-            flex: 2,
-            child: Tooltip(
-              message: "The average change in the shooter's rating per event, over the last 30 rating events.",
-              child: Text("Variance", textAlign: TextAlign.end),
-            )
+          flex: 2,
+          child: Tooltip(
+            message:
+              "An approximation of the error in this shooter's rating. The algorithm expects\n"
+              "with moderate confidence that the shooter's true rating is no further away than\n"
+              "this from the calculated rating.",
+            child: Text("Error", textAlign: TextAlign.end)
+          )
         ),
         Expanded(
-            flex: 2,
-            child:
-            Tooltip(
-                message: "The change in the shooter's rating, over the last 30 rating events.",
-                child: Text("Trend", textAlign: TextAlign.end)
-            )
+          flex: 2,
+          child: Tooltip(
+            message: "The change in the shooter's rating, over the last 30 rating events.",
+            child: Text("Trend", textAlign: TextAlign.end)
+          )
         ),
         Expanded(
-            flex: 2,
-            child:
-            Tooltip(
-                message: "The shooter's connectedness, a measure of how much he shoots against other shooters in the set.",
-                child: Text("Conn.", textAlign: TextAlign.end)
-            )
+          flex: 2,
+          child: Tooltip(
+            message: "The shooter's connectedness, a measure of how much he shoots against other shooters in the set.",
+            child: Text("Conn.", textAlign: TextAlign.end)
+          )
         ),
         Expanded(flex: 2, child: Text(byStage ? "Stages" : "Matches", textAlign: TextAlign.end)),
         Expanded(flex: 6, child: Text("")),
@@ -231,7 +234,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
   ScoreRow buildRatingRow({required BuildContext context, required int place, required ShooterRating rating}) {
     var trend = rating.rating - rating.averageRating().firstRating;
 
-    var castRating = rating as EloShooterRating;
+    rating as EloShooterRating;
 
     return ScoreRow(
       color: (place - 1) % 2 == 1 ? Colors.grey[200] : Colors.white,
@@ -244,7 +247,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
               Expanded(flex: 3, child: Text(rating.shooter.memberNumber)),
               Expanded(flex: 6, child: Text(rating.shooter.getName(suffixes: false))),
               Expanded(flex: 2, child: Text("${rating.rating.round()}", textAlign: TextAlign.end)),
-              Expanded(flex: 2, child: Text("${castRating.variance.toStringAsFixed(2)}", textAlign: TextAlign.end)),
+              Expanded(flex: 2, child: Text("${rating.normalizedErrorWithWindow().toStringAsFixed(1)}", textAlign: TextAlign.end)),
               Expanded(flex: 2, child: Text("${trend.round()}", textAlign: TextAlign.end)),
               Expanded(flex: 2, child: Text("${(rating.connectedness - ShooterRating.baseConnectedness).toStringAsFixed(1)}", textAlign: TextAlign.end)),
               Expanded(flex: 2, child: Text("${rating.ratingEvents.length}", textAlign: TextAlign.end,)),

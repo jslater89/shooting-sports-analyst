@@ -2,8 +2,6 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/src/widgets/basic.dart';
-import 'package:flutter/src/widgets/framework.dart';
 import 'package:uspsa_result_viewer/data/match/relative_scores.dart';
 import 'package:uspsa_result_viewer/data/match/shooter.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_change.dart';
@@ -11,7 +9,6 @@ import 'package:uspsa_result_viewer/data/ranking/model/rating_mode.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_system.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/openskill/model/plackett_luce.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/openskill/openskill_rating.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/openskill/openskill_rating_change.dart';

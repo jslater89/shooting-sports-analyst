@@ -5,19 +5,44 @@ import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_change.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rating_change.dart';
+import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 
 class EloShooterRating extends ShooterRating<EloShooterRating> {
+  static double errorScale = MultiplayerPercentEloRater.defaultScale;
+
   double rating;
   double variance = 0;
   double trend = 0;
 
   double get meanSquaredError {
-    double squaredSum = ratingEvents.map((e) {
+    return meanSquaredErrorWithWindow(window: ratingEvents.length);
+  }
+
+  double meanSquaredErrorWithWindow({int window = ShooterRating.baseTrendWindow, int offset = 0}) {
+    late List<RatingEvent> events;
+    if((window + offset) >= ratingEvents.length) {
+      if(offset < (ratingEvents.length)) events = ratingEvents.sublist(0, ratingEvents.length - offset);
+      else events = ratingEvents;
+    }
+    else {
+      events = ratingEvents.sublist(ratingEvents.length - (window + offset), ratingEvents.length - offset);
+    }
+
+    double squaredSum = events.map((e) {
       e as EloRatingEvent;
       return pow(e.error, 2) as double;
     }).sum;
 
-    return sqrt(squaredSum);
+    return squaredSum / events.length;
+  }
+
+  double get normalizedError {
+    return normalizedErrorWithWindow(window: ratingEvents.length);
+  }
+
+  double normalizedErrorWithWindow({int window = ShooterRating.baseTrendWindow, int offset = 0}) {
+    // magic number: seems to generate something
+    return meanSquaredErrorWithWindow(window: window, offset: offset) * (errorScale);
   }
 
   List<RatingEvent> ratingEvents = [];
@@ -34,8 +59,7 @@ class EloShooterRating extends ShooterRating<EloShooterRating> {
   }
 
   void updateTrends(List<RatingEvent> changes) {
-    double totalChange = changes.map(
-            (c) => (c as EloRatingEvent).ratingChange).sum;
+    double totalChange = changes.map((c) => (c as EloRatingEvent).ratingChange).sum;
 
     var trendWindow = min(ratingEvents.length, ShooterRating.baseTrendWindow);
 
