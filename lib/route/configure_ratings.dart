@@ -885,6 +885,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
             }
           }
 
+          print("Imported ${imported.name}");
+
           _loadProject(imported);
         }
         else {

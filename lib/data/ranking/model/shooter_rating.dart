@@ -33,6 +33,8 @@ abstract class ShooterRating<T extends ShooterRating<T>> {
   List<RatingEvent> get ratingEvents;
   set ratingEvents(List<RatingEvent> events);
 
+  int get length => ratingEvents.length;
+
   void updateFromEvents(List<RatingEvent> events);
 
   AverageRating averageRating({int window = ShooterRating.baseTrendWindow}) {

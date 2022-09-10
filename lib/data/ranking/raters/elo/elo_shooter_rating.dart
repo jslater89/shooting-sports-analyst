@@ -19,6 +19,10 @@ class EloShooterRating extends ShooterRating<EloShooterRating> {
   }
 
   double meanSquaredErrorWithWindow({int window = ShooterRating.baseTrendWindow, int offset = 0}) {
+    // With default settings, this yields a starting normalized error of 400,
+    // which more or less jives with observation.
+    if(ratingEvents.isEmpty) return 0.5;
+
     late List<RatingEvent> events;
     if((window + offset) >= ratingEvents.length) {
       if(offset < (ratingEvents.length)) events = ratingEvents.sublist(0, ratingEvents.length - offset);
@@ -36,13 +40,51 @@ class EloShooterRating extends ShooterRating<EloShooterRating> {
     return squaredSum / events.length;
   }
 
+  double decayingErrorWithWindow({
+    int window = ShooterRating.baseTrendWindow * 2,
+    int fullEffect = ShooterRating.baseTrendWindow,
+    int offset = 0,
+    double decayAfterFull = 0.9,
+  }) {
+    late List<RatingEvent> events;
+    if((window + offset) >= ratingEvents.length) {
+      if(offset < (ratingEvents.length)) events = ratingEvents.sublist(0, ratingEvents.length - offset);
+      else events = ratingEvents;
+    }
+    else {
+      events = ratingEvents.sublist(ratingEvents.length - (window + offset), ratingEvents.length - offset);
+    }
+
+    double currentDecay = 1.0;
+    double squaredSum = 0.0;
+    for(int i = 0; i < events.length; i++) {
+      var e = events[i] as EloRatingEvent;
+      if(i >= fullEffect) {
+        currentDecay *= decayAfterFull;
+      }
+
+      squaredSum += pow(e.error, 2) * currentDecay;
+    }
+    return squaredSum / events.length;
+  }
+
   double get normalizedError {
     return normalizedErrorWithWindow(window: ratingEvents.length);
   }
 
   double normalizedErrorWithWindow({int window = ShooterRating.baseTrendWindow, int offset = 0}) {
-    // magic number: seems to generate something reasonable
+    // Using scale as the magic number seems to generate something useful
     return meanSquaredErrorWithWindow(window: window, offset: offset) * (errorScale);
+  }
+
+  double normalizedDecayingErrorWithWindow({
+    int window = ShooterRating.baseTrendWindow * 2,
+    int fullEffect = ShooterRating.baseTrendWindow,
+    int offset = 0,
+    double decayAfterFull = 0.9,
+  }) {
+    // Using scale as the magic number seems to generate something useful
+    return decayingErrorWithWindow(window: window, fullEffect: fullEffect, offset: offset, decayAfterFull: decayAfterFull) * (errorScale);
   }
 
   List<RatingEvent> ratingEvents = [];

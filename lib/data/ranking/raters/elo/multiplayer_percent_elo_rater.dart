@@ -89,7 +89,10 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
 
     if(scores.length <= 1) {
       return {
-        shooters[0]: RatingChange(change: {ratingKey: 0}),
+        shooters[0]: RatingChange(change: {
+          ratingKey: 0,
+          errorKey: 0,
+        }),
       };
     }
 
@@ -132,7 +135,10 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
 
     if(usedScores == 1) {
       return {
-        shooters[0]: RatingChange(change: {ratingKey: 0}),
+        shooters[0]: RatingChange(change: {
+          ratingKey: 0,
+          errorKey: 0,
+        }),
       };
     }
 
@@ -204,7 +210,10 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     ];
 
     return {
-      aRating: RatingChange(change: {ratingKey: change, errorKey: (expectedScore - actualScore) * usedScores}, info: info),
+      aRating: RatingChange(change: {
+        ratingKey: change,
+        errorKey: (expectedScore - actualScore) * usedScores
+      }, info: info),
     };
   }
 
@@ -213,41 +222,51 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     return 1.0 / (1.0 + (pow(10, (lose - win) / scale)));
   }
 
+  static const _leadPaddingFlex = 1;
+  static const _placeFlex = 2;
+  static const _memNumFlex = 3;
+  static const _nameFlex = 5;
+  static const _ratingFlex = 2;
+  static const _uncertaintyFlex = 2;
+  static const _errorFlex = 2;
+  static const _connectednessFlex = 2;
+  static const _trendFlex = 2;
+  static const _stagesFlex = 2;
+  static const _trailPaddingFlex = 1;
+
   @override
   Row buildRatingKey(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.max,
       children: [
-        Expanded(flex: 6, child: Text("")),
-        Expanded(flex: 3, child: Text("Member #")),
-        Expanded(flex: 6, child: Text("Name")),
-        Expanded(flex: 2, child: Text("Rating", textAlign: TextAlign.end)),
+        Expanded(flex: _leadPaddingFlex + _placeFlex, child: Text("")),
+        Expanded(flex: _memNumFlex, child: Text("Member #")),
+        Expanded(flex: _nameFlex, child: Text("Name")),
+        Expanded(flex: _ratingFlex, child: Text("Rating", textAlign: TextAlign.end)),
         Expanded(
-          flex: 2,
-          child: Tooltip(
-            message:
-              "An approximation of the error in this shooter's rating. The algorithm expects\n"
-              "with moderate confidence that the shooter's true rating is no further away than\n"
-              "this from the calculated rating.",
-            child: Text("Error", textAlign: TextAlign.end)
-          )
+            flex: _errorFlex,
+            child: Tooltip(
+                message:
+                  "The likely error calculated by the rating system.",
+                child: Text("Raw Error", textAlign: TextAlign.end)
+            )
         ),
         Expanded(
-          flex: 2,
+          flex: _trendFlex,
           child: Tooltip(
             message: "The change in the shooter's rating, over the last 30 rating events.",
             child: Text("Trend", textAlign: TextAlign.end)
           )
         ),
         Expanded(
-          flex: 2,
+          flex: _connectednessFlex,
           child: Tooltip(
             message: "The shooter's connectedness, a measure of how much he shoots against other shooters in the set.",
             child: Text("Conn.", textAlign: TextAlign.end)
           )
         ),
-        Expanded(flex: 2, child: Text(byStage ? "Stages" : "Matches", textAlign: TextAlign.end)),
-        Expanded(flex: 6, child: Text("")),
+        Expanded(flex: _stagesFlex, child: Text(byStage ? "Stages" : "Matches", textAlign: TextAlign.end)),
+        Expanded(flex: _trailPaddingFlex, child: Text("")),
       ],
     );
   }
@@ -258,22 +277,24 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
 
     rating as EloShooterRating;
 
+    var error = rating.normalizedErrorWithWindow();
+
     return ScoreRow(
       color: (place - 1) % 2 == 1 ? Colors.grey[200] : Colors.white,
       child: Padding(
           padding: const EdgeInsets.all(2.0),
           child: Row(
             children: [
-              Expanded(flex: 4, child: Text("")),
-              Expanded(flex: 2, child: Text("$place")),
-              Expanded(flex: 3, child: Text(rating.shooter.memberNumber)),
-              Expanded(flex: 6, child: Text(rating.shooter.getName(suffixes: false))),
-              Expanded(flex: 2, child: Text("${rating.rating.round()}", textAlign: TextAlign.end)),
-              Expanded(flex: 2, child: Text("${rating.normalizedErrorWithWindow().toStringAsFixed(1)}", textAlign: TextAlign.end)),
-              Expanded(flex: 2, child: Text("${trend.round()}", textAlign: TextAlign.end)),
-              Expanded(flex: 2, child: Text("${(rating.connectedness - ShooterRating.baseConnectedness).toStringAsFixed(1)}", textAlign: TextAlign.end)),
-              Expanded(flex: 2, child: Text("${rating.ratingEvents.length}", textAlign: TextAlign.end,)),
-              Expanded(flex: 6, child: Text("")),
+              Expanded(flex: _leadPaddingFlex, child: Text("")),
+              Expanded(flex: _placeFlex, child: Text("$place")),
+              Expanded(flex: _memNumFlex, child: Text(rating.shooter.memberNumber)),
+              Expanded(flex: _nameFlex, child: Text(rating.shooter.getName(suffixes: false))),
+              Expanded(flex: _ratingFlex, child: Text("${rating.rating.round()}", textAlign: TextAlign.end)),
+              Expanded(flex: _errorFlex, child: Text("${error.toStringAsFixed(1)}", textAlign: TextAlign.end)),
+              Expanded(flex: _trendFlex, child: Text("${trend.round()}", textAlign: TextAlign.end)),
+              Expanded(flex: _connectednessFlex, child: Text("${(rating.connectedness - ShooterRating.baseConnectedness).toStringAsFixed(1)}", textAlign: TextAlign.end)),
+              Expanded(flex: _stagesFlex, child: Text("${rating.ratingEvents.length}", textAlign: TextAlign.end,)),
+              Expanded(flex: _trailPaddingFlex, child: Text("")),
             ],
           )
       ),
