@@ -58,6 +58,12 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
   }
 
   factory MultiplayerPercentEloRater.fromJson(Map<String, dynamic> json) {
+
+    // fix my oopsie
+    if(!(json[_errorAwareKKey] is bool)) {
+      json[_errorAwareKKey] = false;
+    }
+
     return MultiplayerPercentEloRater(
       K: (json[_kKey] ?? defaultK) as double,
       percentWeight: (json[_pctWeightKey] ?? defaultPercentWeight) as double,
@@ -160,14 +166,14 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     var zeroMultiplier = (zeroes / usedScores) < 0.1 ? 1 : 1 - 0.66 * ((min(0.3, (zeroes / usedScores) - 0.1)) / 0.3);
 
     var error = aRating.normalizedErrorWithWindow();
-    var errThreshold = EloShooterRating.errorScale / (K / 10);
+    var errThreshold = EloShooterRating.errorScale / (K / 7.5);
     var errMultiplier = 1.0;
     if(errorAwareK) {
       if (error >= errThreshold) {
         errMultiplier = 1 + ((error - errThreshold) / (EloShooterRating.errorScale - errThreshold)) * 1;
       }
-      else if (error < (errThreshold / 2)) {
-        errMultiplier = 1 - (((errThreshold / 2) - error) / (errThreshold / 2)) * 0.8;
+      else if (error < (errThreshold * 0.75)) {
+        errMultiplier = 1 - (((errThreshold * 0.75) - error) / (errThreshold * 0.75)) * 0.9;
       }
     }
 
@@ -316,7 +322,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     json[_pctWeightKey] = percentWeight;
     json[_scaleKey] = scale;
     json[_matchBlendKey] = _matchBlend;
-    json[_errorAwareKKey] = _errorAwareKKey;
+    json[_errorAwareKKey] = errorAwareK;
   }
 
   @override
