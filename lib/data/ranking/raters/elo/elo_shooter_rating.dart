@@ -41,7 +41,7 @@ class EloShooterRating extends ShooterRating<EloShooterRating> {
   }
 
   double normalizedErrorWithWindow({int window = ShooterRating.baseTrendWindow, int offset = 0}) {
-    // magic number: seems to generate something
+    // magic number: seems to generate something reasonable
     return meanSquaredErrorWithWindow(window: window, offset: offset) * (errorScale);
   }
 

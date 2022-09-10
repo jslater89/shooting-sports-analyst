@@ -142,7 +142,6 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
 
         double error = 0;
         if(rating is EloShooterRating) {
-          print("offset: ${rating.ratingEvents.length} - $i = ${rating.ratingEvents.length - (i + 1)}");
           error = rating.normalizedErrorWithWindow(offset: rating.ratingEvents.length - (i + 1));
         }
 

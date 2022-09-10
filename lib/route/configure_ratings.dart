@@ -150,6 +150,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       _scaleController.text = "${algorithm.scale}";
       _pctWeightController.text = "${algorithm.percentWeight}";
       _matchBlendController.text = "${algorithm.matchBlend}";
+      _errorAwareK = algorithm.errorAwareK;
     }
 
     getUrlDisplayNames();
@@ -191,6 +192,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   bool _byStage = true;
   bool _keepHistory = false;
   bool _combineLocap = true;
+  bool _errorAwareK = false;
   bool _combineOpenPCC = false;
   bool _combineLimitedCO = false;
 
@@ -245,6 +247,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       percentWeight: pctWeight,
       matchBlend: matchBlend,
       byStage: _byStage,
+      errorAwareK: _errorAwareK,
     );
     // var ratingSystem = OpenskillRater(byStage: _byStage);
 
@@ -416,6 +419,20 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                             });
                           }
                         }
+                      ),
+                      CheckboxListTile(
+                          title: Tooltip(
+                            child: Text("Error-aware K?"),
+                            message: "Modify K based on error in shooter rating.",
+                          ),
+                          value: _errorAwareK,
+                          onChanged: (value) {
+                            if(value != null) {
+                              setState(() {
+                                _errorAwareK = value;
+                              });
+                            }
+                          }
                       ),
                       Row(
                         mainAxisSize: MainAxisSize.max,
@@ -733,6 +750,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     setState(() {
       _byStage = true;
       _keepHistory = false;
+      _errorAwareK = false;
       _combineLocap = true;
       _combineOpenPCC = false;
       _combineLimitedCO = false;

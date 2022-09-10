@@ -14,6 +14,7 @@ const _kKey = "k";
 const _pctWeightKey = "pctWt";
 const _scaleKey = "scale";
 const _matchBlendKey = "matchBlend";
+const _errorAwareKKey = "errK";
 
 class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
   static const ratingKey = "rating";
@@ -41,12 +42,15 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
   @override
   final bool byStage;
 
+  final bool errorAwareK;
+
   MultiplayerPercentEloRater({
     this.K = defaultK,
     this.scale = defaultScale,
     this.percentWeight = defaultPercentWeight,
     double matchBlend = defaultMatchBlend,
-    required this.byStage
+    required this.byStage,
+    required this.errorAwareK,
   })
       : this.placeWeight = 1.0 - percentWeight,
         this._matchBlend = byStage ? matchBlend : 0.0 {
@@ -55,11 +59,12 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
 
   factory MultiplayerPercentEloRater.fromJson(Map<String, dynamic> json) {
     return MultiplayerPercentEloRater(
-        K: (json[_kKey] ?? defaultK) as double,
-        percentWeight: (json[_pctWeightKey] ?? defaultPercentWeight) as double,
-        scale: (json[_scaleKey] ?? defaultScale) as double,
-        matchBlend: (json[_matchBlendKey] ?? defaultMatchBlend) as double,
-        byStage: (json[RatingProject.byStageKey] ?? true) as bool,
+      K: (json[_kKey] ?? defaultK) as double,
+      percentWeight: (json[_pctWeightKey] ?? defaultPercentWeight) as double,
+      scale: (json[_scaleKey] ?? defaultScale) as double,
+      matchBlend: (json[_matchBlendKey] ?? defaultMatchBlend) as double,
+      byStage: (json[RatingProject.byStageKey] ?? true) as bool,
+      errorAwareK: (json[_errorAwareKKey] ?? false) as bool,
     );
   }
 
@@ -82,7 +87,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
       };
     }
 
-    var aRating = shooters[0];
+    var aRating = shooters[0] as EloShooterRating;
     var aScore = scores[aRating]!;
     var aMatchScore = matchScores[aRating]!;
 
@@ -141,7 +146,6 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
 
     var percentComponent = totalPercent == 0 ? 0 : (actualPercent / totalPercent);
 
-    // TODO: not sure this is a valid way to do this.
     var placeBlend = (aScore.place * stageBlend) + (aMatchScore.place * matchBlend);
     var placeComponent = (usedScores - placeBlend) /  divisor;
 
@@ -155,8 +159,20 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     // scaling K down (to 0.34, when 30%+ of people zero a stage).
     var zeroMultiplier = (zeroes / usedScores) < 0.1 ? 1 : 1 - 0.66 * ((min(0.3, (zeroes / usedScores) - 0.1)) / 0.3);
 
+    var error = aRating.normalizedErrorWithWindow();
+    var errThreshold = EloShooterRating.errorScale / (K / 10);
+    var errMultiplier = 1.0;
+    if(errorAwareK) {
+      if (error >= errThreshold) {
+        errMultiplier = 1 + ((error - errThreshold) / (EloShooterRating.errorScale - errThreshold)) * 1;
+      }
+      else if (error < (errThreshold / 2)) {
+        errMultiplier = 1 - (((errThreshold / 2) - error) / (errThreshold / 2)) * 0.8;
+      }
+    }
+
     var actualScore = percentComponent * percentWeight + placeComponent * placeWeight;
-    var effectiveK = K * placementMultiplier * matchStrengthMultiplier * zeroMultiplier * connectednessMultiplier * eventWeightMultiplier;
+    var effectiveK = K * placementMultiplier * matchStrengthMultiplier * zeroMultiplier * connectednessMultiplier * eventWeightMultiplier * errMultiplier;
 
     var changeFromPercent = effectiveK * (usedScores - 1) * (percentComponent * percentWeight - (expectedScore * percentWeight));
     var changeFromPlace = effectiveK * (usedScores - 1) * (placeComponent * placeWeight - (expectedScore * placeWeight));
@@ -178,7 +194,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
       "Actual/expected percent: ${(percentComponent * totalPercent * 100).toStringAsFixed(2)}/${(expectedScore * totalPercent * 100).toStringAsFixed(2)} on ${hf.toStringAsFixed(2)}HF",
       "Actual/expected place: $placeBlend/${(usedScores - (expectedScore * divisor)).toStringAsFixed(4)}",
       "Rating±Change: ${aRating.rating.round()} + ${change.toStringAsFixed(2)} (${changeFromPercent.toStringAsFixed(2)} from pct, ${changeFromPlace.toStringAsFixed(2)} from place)",
-      "eff. K, multipliers: ${(effectiveK).toStringAsFixed(2)}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}, IP ${placementMultiplier.toStringAsFixed(2)}, Zero ${zeroMultiplier.toStringAsFixed(2)}, Conn ${connectednessMultiplier.toStringAsFixed(2)}, EW ${eventWeightMultiplier.toStringAsFixed(2)}",
+      "eff. K, multipliers: ${(effectiveK).toStringAsFixed(2)}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}, IP ${placementMultiplier.toStringAsFixed(2)}, Zero ${zeroMultiplier.toStringAsFixed(2)}, Conn ${connectednessMultiplier.toStringAsFixed(2)}, EW ${eventWeightMultiplier.toStringAsFixed(2)}, Err ${errMultiplier.toStringAsFixed(2)}",
     ];
 
     return {
@@ -300,6 +316,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     json[_pctWeightKey] = percentWeight;
     json[_scaleKey] = scale;
     json[_matchBlendKey] = _matchBlend;
+    json[_errorAwareKKey] = _errorAwareKKey;
   }
 
   @override
