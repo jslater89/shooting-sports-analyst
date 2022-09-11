@@ -499,7 +499,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 "Match blend of 1.0 is equivalent to by-match mode.",
                             child: Padding(
                               padding: const EdgeInsets.only(left: 16),
-                              child: Text("Match Blend", style: Theme.of(context).textTheme.subtitle1!),
+                              child: Text("Match blend", style: Theme.of(context).textTheme.subtitle1!),
                             ),
                           ),
                           SizedBox(
@@ -528,7 +528,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 "Too much placement weight can unfairly penalize shooters who finish near strong competition in percentage terms.",
                             child: Padding(
                               padding: const EdgeInsets.only(left: 16),
-                              child: Text("Percent/Place Weight", style: Theme.of(context).textTheme.subtitle1!),
+                              child: Text("Percent/place weight", style: Theme.of(context).textTheme.subtitle1!),
                             ),
                           ),
                           Row(

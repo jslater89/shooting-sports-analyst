@@ -97,12 +97,18 @@ combined western PA/eastern PA/Maryland/Northern Virginia/Delaware set.
 * **Combine divisions**: if checked, these options will combine the named divisions. This is useful
   for low-participation divisions, so locap is checked by default, but not generally necessary for
   high-participation divisions.
+* **Error compensation**: if checked, the algorithm will consider its estimated error when adjusting
+  a shooter's rating. Ratings with low error (i.e., high confidence) will be adjusted more slowly.
+  Ratings with high error (low confidence) will be adjusted more quickly.
 * **K factor**: the K factor to be used by the Elo algorithm, which controls the volatility of
   ratings, increasing the speed at which they converge to their correct values at the cost of more
   noise in the ratings.
 * **Scale factor**: the scale factor used by the Elo algorithm's probability calculator, which
   controls the output range of the ratings. A higher scale factor yields a larger difference in
   rating units for a given difference in skill.
+* **Match blend**: in by-stage mode, a factor controlling how much to blend match results into stage
+  results. Values greater than zero calculate a shooter's score per stage as:
+  ((1 - blend) * stage) + (blend * match).
 * **Place/percent weight**: how much the Elo algorithm weights actual vs. expected performances in
   finish order and actual vs. expected performances in stage or match percentage. A mix of both
   parameters seems to yield the best results in empirical testing.
@@ -138,7 +144,7 @@ the local cache, the match name will be displayed rather than the raw URL.
 
 ### Ratings Screen
 Ratings are displayed in descending order of Elo. The tabs at the top of the screen select
-the division or division group of interest. _Ratings, trends, variances, and connectednesses are
+the division or division group of interest. _Ratings, trends, variances, and connectivities are
 not comparable across division groups._
 
 The dropdown below the tabs displaying a match name will be enabled if you have 'keep full history'
@@ -156,17 +162,24 @@ The action button in the top right corner will export the currently-selected div
 ratings to CSV, for analysis in other tools.
 
 #### Metrics
-Variance is the average of the absolute change in a competitor's rating over the past 30 rating
-events. Trend is the sum of their rating changes over the past 30 rating events.
+Error is the average error in the algorithm's prediction of a shooter's performances over the past
+45 events, normalized to account for the number of competitors in each rating event and scaled to
+very roughly the same scale as ratings. For Elo and/or statistics nerds, the formula is as follows,
+where Es is expected score, Ea is actual score, N is number of participants, and S is the scale
+parameter to the Elo algorithm. 
 
-A high variance and a trend of large absolute value means the rating system is still finding the
-correct rating for the shooter. A high variance and a small trend means the shooter's rating is
-approximately correct, but that he frequently overperforms or underperforms the rating algorithm's
-predictions. A low variance will usually be accompanied by a small to moderate trend, and indicates
-that the algorithm usually predicts the shooter's performances well.
+```(mean squared error of ((E_a - E_s) * N)) * S```
 
-Connectedness is a measure of how much the shooter competes against other people in the dataset.
-Competitors with low connectedness relative to others in their division or division group have not
+The initial error for all shooters is S / 2.
+
+High error indicates that the algorithm has recently missed predictions of the shooter's stage
+performances by larger amounts. Low error indicates that the algorithm's recent predictions for the
+shooter have been accurate.
+
+Trend is the sum of a shooter's rating changes over the past 30 rating events.
+
+Connectivity is a measure of how much the shooter competes against other people in the dataset.
+Competitors with low connectivity relative to others in their division or division group have not
 recently competed against many other people in the dataset, indicating a lesser degree of confidence
 in their rating.
 
@@ -229,25 +242,33 @@ low-level competition. If a shooter is classified at least M, is shooting agains
 than two classifications down, wins a rating event by at least 20%, and has a rating at least 200
 greater than the second-place finisher, K is reduced by 75% for the winner only.
 
-#### Connectedness
-The engine also calculates a connectedness multiplier for each match. In an ideal world, every
+#### Connectivity
+The engine also calculates a connectivity multiplier for each match. In an ideal world, every
 competitor would shoot against everyone else the same number of times. (An ideal world for
 determining ratings, at least.) In the real world, shooters compete at varying times and in
 varying places; some shooters travel widely in a region, and some stick to a few matches.
 
-A shooter's connectedness is 1% of the sum of the connectednesses of the 40 best-connected shooters
+A shooter's connectivity is 1% of the sum of the connectivities of the 40 best-connected shooters
 he has competed against in the last 60 days, updated when he shoots a match. (That is, connections
-will not expire unless a shooter is competing actively.) The purpose of connectedness is to measure
+will not expire unless a shooter is competing actively.) The purpose of connectivity is to measure
 the degree to which a shooter's current rating derives from the ratings of a broad range of other
 shooters in the dataset, even if he doesn't shoot against them directly. Highly connected shooters
 are rating carriers: their ratings account for performance against many other shooters, so matches
 that include them yield more reliable results.
 
-The rating engine determines the expected connectedness of a match by taking the average
-connectedness of all shooters at a match, and comparing it to the median of the connectednesses of
+The rating engine determines the expected connectivity of a match by taking the average
+connectivity of all shooters at a match, and comparing it to the median of the connectivities of
 all known shooters who have completed more than 30 stages or 5 matches. Matches more connected than
 the median receive a K multiplier of up to 120%. Matches less connected than the median receive a
 multiplier of down to 80%.
+
+#### Error compensation
+If error compensation is enabled, the algorithm applies a modifier to K based on the shooter's
+rating error. Using the default settings, if the error in a shooter's rating is greater than 100,
+K is increased by up to 100% at an error of 800. If the error in a shooter's rating is less than 75,
+K is decreased by up to 90% at an error of 0.
+
+The specific values for the error thresholds above depend upon the configured scale factor.
 
 #### Match-specific processing
 In match mode, the engine removes anyone with a DQ on record, or anyone who did not finish
