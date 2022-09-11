@@ -46,6 +46,8 @@ class EloShooterRating extends ShooterRating<EloShooterRating> {
     int offset = 0,
     double decayAfterFull = 0.9,
   }) {
+    if(ratingEvents.isEmpty) return 0.5;
+
     late List<RatingEvent> events;
     if((window + offset) >= ratingEvents.length) {
       if(offset < (ratingEvents.length)) events = ratingEvents.sublist(0, ratingEvents.length - offset);
@@ -57,15 +59,18 @@ class EloShooterRating extends ShooterRating<EloShooterRating> {
 
     double currentDecay = 1.0;
     double squaredSum = 0.0;
-    for(int i = 0; i < events.length; i++) {
-      var e = events[i] as EloRatingEvent;
+    double length = 0.0;
+    var reversed = events.reversed.toList();
+    for(int i = 0; i < reversed.length; i++) {
+      var e = reversed[i] as EloRatingEvent;
       if(i >= fullEffect) {
         currentDecay *= decayAfterFull;
       }
 
       squaredSum += pow(e.error, 2) * currentDecay;
+      length += 1.0 * currentDecay;
     }
-    return squaredSum / events.length;
+    return squaredSum / length;
   }
 
   double get normalizedError {

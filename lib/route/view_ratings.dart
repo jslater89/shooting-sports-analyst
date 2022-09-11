@@ -57,7 +57,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   late TextEditingController _minRatingsController;
   late TextEditingController _maxDaysController;
   int _minRatings = 0;
-  int _maxDays = 0;
+  int _maxDays = 365;
   
   late RatingHistory _history;
   _LoadingState _loadingState = _LoadingState.notStarted;
@@ -102,7 +102,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       }
       else {
         setState(() {
-          _maxDays = 0;
+          _maxDays = 365;
         });
       }
     });
@@ -329,6 +329,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                         controller: _maxDaysController,
                         autofocus: false,
                         decoration: InputDecoration(
+                          hintText: "365",
                           helperText: "Max. Age",
                         ),
                         keyboardType: TextInputType.number,

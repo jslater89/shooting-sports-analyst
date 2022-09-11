@@ -171,12 +171,20 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     // scaling K down (to 0.34, when 30%+ of people zero a stage).
     var zeroMultiplier = (zeroes / usedScores) < 0.1 ? 1 : 1 - 0.66 * ((min(0.3, (zeroes / usedScores) - 0.1)) / 0.3);
 
-    var error = aRating.normalizedErrorWithWindow();
+
+    // Adjust K based on the confidence in the shooter's rating.
+    // If we're more confident, we adjust less to smooth out performances.
+    // If we're less confident, we adjust more to find the correct rating faster.
+    var error = aRating.normalizedDecayingErrorWithWindow(
+      window: (ShooterRating.baseTrendWindow * 1.5).round(),
+      fullEffect: ShooterRating.baseTrendWindow,
+    );
+
     var errThreshold = EloShooterRating.errorScale / (K / 7.5);
     var errMultiplier = 1.0;
     if(errorAwareK) {
       if (error >= errThreshold) {
-        errMultiplier = 1 + ((error - errThreshold) / (EloShooterRating.errorScale - errThreshold)) * 1;
+        errMultiplier = 1 + min(1.0, ((error - errThreshold) / (EloShooterRating.errorScale - errThreshold))) * 1;
       }
       else if (error < (errThreshold * 0.75)) {
         errMultiplier = 1 - (((errThreshold * 0.75) - error) / (errThreshold * 0.75)) * 0.9;
@@ -222,9 +230,10 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     return 1.0 / (1.0 + (pow(10, (lose - win) / scale)));
   }
 
-  static const _leadPaddingFlex = 1;
-  static const _placeFlex = 2;
-  static const _memNumFlex = 3;
+  static const _leadPaddingFlex = 2;
+  static const _placeFlex = 1;
+  static const _memNumFlex = 2;
+  static const _classFlex = 1;
   static const _nameFlex = 5;
   static const _ratingFlex = 2;
   static const _uncertaintyFlex = 2;
@@ -241,6 +250,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
       children: [
         Expanded(flex: _leadPaddingFlex + _placeFlex, child: Text("")),
         Expanded(flex: _memNumFlex, child: Text("Member #")),
+        Expanded(flex: _classFlex, child: Text("Class")),
         Expanded(flex: _nameFlex, child: Text("Name")),
         Expanded(flex: _ratingFlex, child: Text("Rating", textAlign: TextAlign.end)),
         Expanded(
@@ -277,7 +287,10 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
 
     rating as EloShooterRating;
 
-    var error = rating.normalizedErrorWithWindow();
+    var error = rating.normalizedDecayingErrorWithWindow(
+      window: (ShooterRating.baseTrendWindow * 1.5).round(),
+      fullEffect: ShooterRating.baseTrendWindow,
+    );
 
     return ScoreRow(
       color: (place - 1) % 2 == 1 ? Colors.grey[200] : Colors.white,
@@ -288,6 +301,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
               Expanded(flex: _leadPaddingFlex, child: Text("")),
               Expanded(flex: _placeFlex, child: Text("$place")),
               Expanded(flex: _memNumFlex, child: Text(rating.shooter.memberNumber)),
+              Expanded(flex: _classFlex, child: Text(rating.lastClassification.displayString())),
               Expanded(flex: _nameFlex, child: Text(rating.shooter.getName(suffixes: false))),
               Expanded(flex: _ratingFlex, child: Text("${rating.rating.round()}", textAlign: TextAlign.end)),
               Expanded(flex: _errorFlex, child: Text("${error.toStringAsFixed(1)}", textAlign: TextAlign.end)),

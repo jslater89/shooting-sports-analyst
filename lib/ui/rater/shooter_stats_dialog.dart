@@ -135,6 +135,8 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     double minWithError = 10000;
     double maxWithError = -10000;
 
+    var size = MediaQuery.of(context).size;
+
     if(_series == null) {
       _ratings = rating.ratingEvents.mapIndexed((i, e) {
         if(e.newRating < minRating) minRating = e.newRating;
@@ -142,7 +144,13 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
 
         double error = 0;
         if(rating is EloShooterRating) {
-          error = rating.normalizedErrorWithWindow(offset: rating.ratingEvents.length - (i + 1));
+          error = rating.normalizedDecayingErrorWithWindow(
+            window: (ShooterRating.baseTrendWindow * 1.5).round(),
+            fullEffect: ShooterRating.baseTrendWindow,
+            offset: rating.ratingEvents.length - (i + 1),
+          );
+
+          // print("Comparison: ${error.toStringAsFixed(2)} vs ${e2.toStringAsFixed(2)}");
         }
 
         var plusError = e.newRating + error;
@@ -226,9 +234,10 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       );
     }
 
+    double width = max(600, (size.width / 2) * 0.9);
     return SizedBox(
-      height: 300,
-      width: 600,
+      height: width / 2,
+      width: width,
       child: _chart!,
     );
   }
