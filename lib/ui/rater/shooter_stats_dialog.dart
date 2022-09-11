@@ -51,71 +51,77 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
           )
         ],
       ),
-      content: Row(
+      content: Column(
         children: [
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              // mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 8, bottom: 36),
-                  child: _buildChart(widget.rating)
-                ),
-                ..._buildShooterStats(context),
-              ],
-            ),
+          Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 32),
+            child: _buildChart(widget.rating),
           ),
           Expanded(
-            child: Scrollbar(
-              controller: _controller,
-              thumbVisibility: true,
-              child: SingleChildScrollView(
-                controller: _controller,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ...events.reversed.map((e) =>
-                        Tooltip(
-                          message: e.info.join("\n"),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  key: GlobalObjectKey(e.hashCode),
-                                  color: e == _highlighted ? Colors.black12 : null,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.end,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    // mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ..._buildShooterStats(context),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Scrollbar(
+                    controller: _controller,
+                    thumbVisibility: true,
+                    child: SingleChildScrollView(
+                      controller: _controller,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ...events.reversed.map((e) =>
+                              Tooltip(
+                                message: e.info.join("\n"),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Expanded(
-                                        flex: 8,
-                                        child: Text("${e.eventName}", style: Theme.of(context).textTheme.bodyText2!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).errorColor : null)),
-                                      ),
-                                      Expanded(
-                                        flex: 2,
-                                        child: Align(
-                                            alignment: Alignment.centerRight,
-                                            child: Text("${e.ratingChange.toStringAsFixed(2)}", style: Theme.of(context).textTheme.bodyText2!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).errorColor : null))
+                                      Container(
+                                        key: GlobalObjectKey(e.hashCode),
+                                        color: e == _highlighted ? Colors.black12 : null,
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.end,
+                                          children: [
+                                            Expanded(
+                                              flex: 8,
+                                              child: Text("${e.eventName}", style: Theme.of(context).textTheme.bodyText2!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).errorColor : null)),
+                                            ),
+                                            Expanded(
+                                              flex: 2,
+                                              child: Align(
+                                                  alignment: Alignment.centerRight,
+                                                  child: Text("${e.ratingChange.toStringAsFixed(2)}", style: Theme.of(context).textTheme.bodyText2!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).errorColor : null))
+                                              ),
+                                            )
+                                          ],
                                         ),
+                                      ),
+                                      Divider(
+                                        height: 2,
+                                        thickness: 1,
                                       )
                                     ],
                                   ),
                                 ),
-                                Divider(
-                                  height: 2,
-                                  thickness: 1,
-                                )
-                              ],
-                            ),
-                          ),
-                        )
-                    ).toList()
-                  ],
+                              )
+                          ).toList()
+                        ],
+                      ),
+                    ),
+                  )
                 ),
-              ),
-            )
+              ],
+            ),
           ),
         ],
       ),
@@ -234,9 +240,10 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       );
     }
 
-    double width = max(600, (size.width / 2) * 0.9);
+    double width = max(600, size.width * 0.9);
+    double height = size.height > size.width ? width / 1.5 : width / 3;
     return SizedBox(
-      height: width / 2,
+      height: height,
       width: width,
       child: _chart!,
     );
