@@ -8,7 +8,6 @@ import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:charts_flutter/flutter.dart' as charts;
 import 'package:charts_flutter/src/text_style.dart' as style;
 import 'package:charts_flutter/src/text_element.dart' as element;
-import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rating_change.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
 
 /// ShooterRatingChangeDialog displays per-stage changes for a shooter.
@@ -197,7 +196,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
           charts.SelectNearest(
             eventTrigger: charts.SelectionTrigger.hover,
             selectionModelType: charts.SelectionModelType.info,
-            maximumDomainDistancePx: 400,
+            maximumDomainDistancePx: 100,
           ),
           charts.LinePointHighlighter(
             selectionModelType: charts.SelectionModelType.info,

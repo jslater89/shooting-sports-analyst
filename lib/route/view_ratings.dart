@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/ui/rater/rater_stats_dialog.dart';
@@ -193,6 +194,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     );
   }
 
+  List<ShooterRating> _ratings = [];
+
   Widget _ratingView() {
     final backgroundColor = Theme.of(context).backgroundColor;
 
@@ -226,7 +229,16 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
               if(_maxDays > 0) {
                 maxAge = Duration(days: _maxDays);
               }
-              return RaterView(rater: _history.raterFor(match, t), currentMatch: match, search: _searchTerm, minRatings: _minRatings, maxAge: maxAge);
+              return RaterView(
+                rater: _history.raterFor(match, t),
+                currentMatch: match,
+                search: _searchTerm,
+                minRatings: _minRatings,
+                maxAge: maxAge,
+                onRatingsFiltered: (ratings) {
+                  _ratings = ratings;
+                },
+              );
             }).toList(),
           ),
         )
@@ -374,7 +386,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
             if(_selectedMatch != null) {
               var tab = activeTabs[_tabController.index];
               var rater = _history.raterFor(_selectedMatch!, tab);
-              var csv = rater.toCSV();
+              var csv = rater.toCSV(ratings: _ratings);
               HtmlOr.saveFile("ratings-${tab.label}.csv", csv);
             }
           },

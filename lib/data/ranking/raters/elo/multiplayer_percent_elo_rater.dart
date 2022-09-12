@@ -3,11 +3,9 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rating_change.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
-import 'package:uspsa_result_viewer/data/sorted_list.dart';
 import 'package:uspsa_result_viewer/ui/score_row.dart';
 
 const _kKey = "k";
@@ -183,11 +181,12 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     var errThreshold = EloShooterRating.errorScale / (K / 7.5);
     var errMultiplier = 1.0;
     if(errorAwareK) {
+      var minThreshold = errThreshold;
       if (error >= errThreshold) {
         errMultiplier = 1 + min(1.0, ((error - errThreshold) / (EloShooterRating.errorScale - errThreshold))) * 1;
       }
-      else if (error < (errThreshold * 0.75)) {
-        errMultiplier = 1 - (((errThreshold * 0.75) - error) / (errThreshold * 0.75)) * 0.9;
+      else if (error < minThreshold) {
+        errMultiplier = 1 - ((minThreshold - error) / minThreshold) * 0.5;
       }
     }
 
@@ -236,6 +235,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
   static const _classFlex = 1;
   static const _nameFlex = 5;
   static const _ratingFlex = 2;
+  static const _matchChangeFlex = 2;
   static const _uncertaintyFlex = 2;
   static const _errorFlex = 2;
   static const _connectednessFlex = 2;
@@ -257,8 +257,16 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
             flex: _errorFlex,
             child: Tooltip(
                 message:
-                  "The likely error calculated by the rating system.",
-                child: Text("Raw Error", textAlign: TextAlign.end)
+                  "The error calculated by the rating system.",
+                child: Text("Error", textAlign: TextAlign.end)
+            )
+        ),
+        Expanded(
+            flex: _matchChangeFlex,
+            child: Tooltip(
+                message:
+                "The change in the shooter's rating at the last match.",
+                child: Text("Last ±", textAlign: TextAlign.end)
             )
         ),
         Expanded(
@@ -292,6 +300,18 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
       fullEffect: ShooterRating.baseTrendWindow,
     );
 
+    PracticalMatch? match;
+    double lastMatchChange = 0;
+    for(var event in rating.ratingEvents.reversed) {
+      if(match == null) {
+        match = event.match;
+      }
+      else if(match != event.match) {
+        break;
+      }
+      lastMatchChange += event.ratingChange;
+    }
+
     return ScoreRow(
       color: (place - 1) % 2 == 1 ? Colors.grey[200] : Colors.white,
       child: Padding(
@@ -305,6 +325,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
               Expanded(flex: _nameFlex, child: Text(rating.shooter.getName(suffixes: false))),
               Expanded(flex: _ratingFlex, child: Text("${rating.rating.round()}", textAlign: TextAlign.end)),
               Expanded(flex: _errorFlex, child: Text("${error.toStringAsFixed(1)}", textAlign: TextAlign.end)),
+              Expanded(flex: _matchChangeFlex, child: Text("${lastMatchChange.round()}", textAlign: TextAlign.end)),
               Expanded(flex: _trendFlex, child: Text("${trend.round()}", textAlign: TextAlign.end)),
               Expanded(flex: _connectednessFlex, child: Text("${(rating.connectedness - ShooterRating.baseConnectedness).toStringAsFixed(1)}", textAlign: TextAlign.end)),
               Expanded(flex: _stagesFlex, child: Text("${rating.ratingEvents.length}", textAlign: TextAlign.end,)),
@@ -327,13 +348,32 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
 
   @override
   String ratingsToCsv(List<ShooterRating> ratings) {
-    String csv = "Member#,Name,Rating,Variance,Trend,${byStage ? "Stages" : "Matches"}\n";
+    String csv = "Member#,Name,Rating,LastChange,Error,Trend,${byStage ? "Stages" : "Matches"}\n";
 
     for(var s in ratings) {
       s as EloShooterRating;
+      var trend = s.rating - s.averageRating().firstRating;
+
+      var error = s.normalizedDecayingErrorWithWindow(
+        window: (ShooterRating.baseTrendWindow * 1.5).round(),
+        fullEffect: ShooterRating.baseTrendWindow,
+      );
+
+      PracticalMatch? match;
+      double lastMatchChange = 0;
+      for(var event in s.ratingEvents.reversed) {
+        if(match == null) {
+          match = event.match;
+        }
+        else if(match != event.match) {
+          break;
+        }
+        lastMatchChange += event.ratingChange;
+      }
+
       csv += "${s.shooter.memberNumber},";
       csv += "${s.shooter.getName()},";
-      csv += "${s.rating.round()},${s.variance.toStringAsFixed(2)},${s.trend.toStringAsFixed(2)},${s.ratingEvents.length}\n";
+      csv += "${s.rating.round()},${lastMatchChange.round()},${error.toStringAsFixed(2)},${trend.toStringAsFixed(2)},${s.ratingEvents.length}\n";
     }
     return csv;
   }
@@ -361,7 +401,11 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
   }
 
   @override
-  RatingEvent newEvent({required ShooterRating rating, required String eventName, required RelativeScore score, List<String> info = const []}) {
-    return EloRatingEvent(oldRating: rating.rating, eventName: eventName, score: score, ratingChange: 0, info: info);
+  RatingEvent newEvent({
+    required PracticalMatch match,
+    Stage? stage,
+    required ShooterRating rating, required RelativeScore score, List<String> info = const []
+  }) {
+    return EloRatingEvent(oldRating: rating.rating, match: match, stage: stage, score: score, ratingChange: 0, info: info);
   }
 }

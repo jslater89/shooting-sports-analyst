@@ -8,8 +8,8 @@ class EloRatingEvent extends RatingEvent {
 
   double error;
 
-  EloRatingEvent({required this.oldRating, required String eventName, required RelativeScore score, List<String> info = const [], required this.ratingChange, this.error = 0})
-      : super(eventName: eventName, score: score, info: info);
+  EloRatingEvent({required this.oldRating, required PracticalMatch match, Stage? stage, required RelativeScore score, List<String> info = const [], required this.ratingChange, this.error = 0})
+      : super(match: match, stage: stage, score: score, info: info);
 
   EloRatingEvent.copy(EloRatingEvent other) :
       this.error = other.error,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:uspsa_result_viewer/data/match/practical_match.dart';
 import 'package:uspsa_result_viewer/data/match/relative_scores.dart';
 import 'package:uspsa_result_viewer/data/match/shooter.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_change.dart';
@@ -50,7 +51,11 @@ abstract class RatingSystem<T extends ShooterRating<T>> {
   /// Create a new shooter rating for the given information.
   ShooterRating newShooterRating(Shooter shooter, {DateTime? date});
 
-  RatingEvent newEvent({required ShooterRating rating, required String eventName, required RelativeScore score, List<String> info = const []});
+  RatingEvent newEvent({
+    required PracticalMatch match,
+    Stage? stage,
+    required ShooterRating rating, required RelativeScore score, List<String> info = const []
+  });
 
   /// Return a string containing a CSV representation of the
   /// given shooter ratings.

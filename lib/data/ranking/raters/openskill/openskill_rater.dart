@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/match/relative_scores.dart';
 import 'package:uspsa_result_viewer/data/match/shooter.dart';
+import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_change.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_mode.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_system.dart';
@@ -103,9 +104,12 @@ class OpenskillRater implements RatingSystem<OpenskillRating> {
   RatingMode get mode => RatingMode.wholeEvent;
 
   @override
-  RatingEvent newEvent({required ShooterRating rating, required String eventName, required RelativeScore score, List<String> info = const []}) {
+  RatingEvent newEvent({
+    required PracticalMatch match, Stage? stage,
+    required ShooterRating rating, required RelativeScore score, List<String> info = const []
+  }) {
     rating as OpenskillRating;
-    return OpenskillRatingEvent(initialMu: rating.mu, muChange: 0, sigmaChange: 0, eventName: eventName, score: score, info: info);
+    return OpenskillRatingEvent(initialMu: rating.mu, muChange: 0, sigmaChange: 0, match: match, stage: stage, score: score, info: info);
   }
 
   @override

@@ -15,11 +15,13 @@ class OpenskillRatingEvent extends RatingEvent {
     required this.initialMu,
     required this.muChange,
     required this.sigmaChange,
-    required String eventName,
+    required PracticalMatch match,
+    Stage? stage,
     required RelativeScore score,
     List<String> info = const [],
   }) : super(
-    eventName: eventName,
+    match: match,
+    stage: stage,
     score: score,
     info: info,
   );

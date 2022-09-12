@@ -265,8 +265,8 @@ multiplier of down to 80%.
 #### Error compensation
 If error compensation is enabled, the algorithm applies a modifier to K based on the shooter's
 rating error. Using the default settings, if the error in a shooter's rating is greater than 100,
-K is increased by up to 100% at an error of 800. If the error in a shooter's rating is less than 75,
-K is decreased by up to 90% at an error of 0.
+K is increased by up to 100% at an error of 800. If the error in a shooter's rating is less than
+100, K is decreased by up to 50% at an error of 0.
 
 The specific values for the error thresholds above depend upon the configured scale factor.
 

@@ -558,8 +558,8 @@ class Rater {
           eventWeightMultiplier: weightMod,
         );
 
-        changes[aRating]![aStageScore] ??= ratingSystem.newEvent(rating: aRating, eventName: "${match.name} - ${stage.name}", score: aStageScore);
-        changes[bRating]![bStageScore] ??= ratingSystem.newEvent(rating: bRating, eventName: "${match.name} - ${stage.name}", score: bStageScore);
+        changes[aRating]![aStageScore] ??= ratingSystem.newEvent(rating: aRating, match: match, stage: stage, score: aStageScore);
+        changes[bRating]![bStageScore] ??= ratingSystem.newEvent(rating: bRating, match: match, stage: stage, score: bStageScore);
 
         changes[aRating]![aStageScore]!.apply(update[aRating]!);
         changes[bRating]![bStageScore]!.apply(update[bRating]!);
@@ -582,8 +582,8 @@ class Rater {
           connectednessMultiplier: connectednessMod,
         );
 
-        changes[aRating]![aScore.total] ??= ratingSystem.newEvent(rating: aRating, eventName: "${match.name}", score: aScore.total);
-        changes[bRating]![bScore.total] ??= ratingSystem.newEvent(rating: bRating, eventName: "${match.name}", score: bScore.total);
+        changes[aRating]![aScore.total] ??= ratingSystem.newEvent(rating: aRating, match: match, score: aScore.total);
+        changes[bRating]![bScore.total] ??= ratingSystem.newEvent(rating: bRating, match: match, score: bScore.total);
 
         changes[aRating]![aScore.total]!.apply(update[aRating]!);
         changes[bRating]![bScore.total]!.apply(update[bRating]!);
@@ -642,7 +642,7 @@ class Rater {
       );
 
       if(!changes[rating]!.containsKey(stageScore)) {
-        changes[rating]![stageScore] = ratingSystem.newEvent(rating: rating, eventName: "${match.name} - ${stage.name}", score: stageScore);
+        changes[rating]![stageScore] = ratingSystem.newEvent(rating: rating, match: match, stage: stage, score: stageScore);
         changes[rating]![stageScore]!.apply(update[rating]!);
         changes[rating]![stageScore]!.info = update[rating]!.info;
       }
@@ -670,7 +670,7 @@ class Rater {
       if(changes[rating]!.isEmpty) {
         changes[rating]![score.total] = ratingSystem.newEvent(
           rating: rating,
-          eventName: "${match.name}",
+          match: match,
           score: score.total,
           info: update[rating]!.info,
         );
@@ -727,7 +727,7 @@ class Rater {
         }
 
         if (!changes[rating]!.containsKey(stageScore)) {
-          changes[rating]![stageScore] = ratingSystem.newEvent(rating: rating, eventName: "${match.name} - ${stage.name}", score: stageScore);
+          changes[rating]![stageScore] = ratingSystem.newEvent(rating: rating, match: match, stage: stage, score: stageScore);
           changes[rating]![stageScore]!.apply(update[rating]!);
           changes[rating]![stageScore]!.info = update[rating]!.info;
         }
@@ -759,7 +759,7 @@ class Rater {
         if (changes[rating]!.isEmpty) {
           changes[rating]![score.total] ??= ratingSystem.newEvent(
             rating: rating,
-            eventName: "${match.name}",
+            match: match,
             score: score.total,
             info: update[rating]!.info,
           );
@@ -837,8 +837,8 @@ class Rater {
     return false;
   }
 
-  String toCSV() {
-    var sortedShooters = uniqueShooters.sorted((a, b) => b.rating.compareTo(a.rating));
+  String toCSV({List<ShooterRating>? ratings}) {
+    var sortedShooters = ratings ?? uniqueShooters.sorted((a, b) => b.rating.compareTo(a.rating));
     return ratingSystem.ratingsToCsv(sortedShooters);
   }
 

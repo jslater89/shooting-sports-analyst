@@ -1,4 +1,4 @@
-import 'package:uspsa_result_viewer/data/match/relative_scores.dart';
+import 'package:uspsa_result_viewer/data/model.dart';
 
 class RatingChange {
   final Map<String, double> change;
@@ -13,7 +13,10 @@ class RatingChange {
 }
 
 abstract class RatingEvent {
-  String eventName;
+  String get eventName => "${match.name}" + (stage == null ? "" : " - ${stage!.name}");
+
+  PracticalMatch match;
+  Stage? stage;
   RelativeScore score;
   List<String> info;
 
@@ -21,12 +24,13 @@ abstract class RatingEvent {
   double get oldRating;
   double get newRating => oldRating + ratingChange;
 
-  RatingEvent({required this.eventName, required this.score, this.info = const []});
+  RatingEvent({required this.match, this.stage, required this.score, this.info = const []});
 
   void apply(RatingChange change);
 
   RatingEvent.copy(RatingEvent other) :
-        this.eventName = other.eventName,
+        this.match = other.match,
+        this.stage = other.stage,
         this.score = other.score,
         this.info = [...other.info];
 }

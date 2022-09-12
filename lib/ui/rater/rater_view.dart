@@ -9,13 +9,17 @@ import 'package:uspsa_result_viewer/ui/rater/shooter_stats_dialog.dart';
 import 'package:uspsa_result_viewer/ui/score_row.dart';
 
 class RaterView extends StatefulWidget {
-  const RaterView({Key? key, required this.rater, required this.currentMatch, this.search, this.maxAge, this.minRatings = 0}) : super(key: key);
+  const RaterView({
+    Key? key, required this.rater, required this.currentMatch, this.search, this.maxAge, this.minRatings = 0,
+    this.onRatingsFiltered,
+  }) : super(key: key);
 
   final String? search;
   final Duration? maxAge;
   final int minRatings;
   final Rater rater;
   final PracticalMatch currentMatch;
+  final void Function(List<ShooterRating>)? onRatingsFiltered;
 
   @override
   State<RaterView> createState() => _RaterViewState();
@@ -73,6 +77,8 @@ class _RaterViewState extends State<RaterView> {
       cutoff = cutoff.subtract(widget.maxAge!);
       sortedRatings = sortedRatings.where((r) => r.lastSeen.isAfter(cutoff)).toList();
     }
+
+    widget.onRatingsFiltered?.call(sortedRatings);
 
     return [
       Expanded(
