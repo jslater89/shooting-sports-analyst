@@ -146,7 +146,14 @@ extension _SortFunctions on RatingSortMode {
       case RatingSortMode.rating:
         return (a, b) => b.rating.compareTo(a.rating);
       case RatingSortMode.classification:
-        return (a, b) => a.lastClassification.index.compareTo(b.lastClassification.index);
+        return (a, b) {
+          if(a.lastClassification != b.lastClassification) {
+            return a.lastClassification.index.compareTo(b.lastClassification.index);
+          }
+          else {
+            return b.rating.compareTo(a.rating);
+          }
+        };
       case RatingSortMode.error:
           return (a, b) {
             if(a is EloShooterRating && b is EloShooterRating) {
