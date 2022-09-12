@@ -65,6 +65,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
   late List<RaterGroup> activeTabs;
 
+  RatingSortMode _sortMode = RatingSortMode.rating;
   PracticalMatch? _selectedMatch;
   MatchCache _matchCache = MatchCache();
   late TabController _tabController;
@@ -235,6 +236,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                 search: _searchTerm,
                 minRatings: _minRatings,
                 maxAge: maxAge,
+                sortMode: _sortMode,
                 onRatingsFiltered: (ratings) {
                   _ratings = ratings;
                 },
@@ -257,9 +259,11 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
           child: Padding(
             padding: const EdgeInsets.only(bottom: 10.0),
             child: Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.max,
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                alignment: WrapAlignment.center,
+                spacing: 20.0,
+                runSpacing: 10.0,
                 children: [
                   DropdownButton<PracticalMatch>(
                     underline: Container(
@@ -279,7 +283,26 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                       });
                     },
                   ),
-                  SizedBox(width: 20),
+                  DropdownButton<RatingSortMode>(
+                    underline: Container(
+                      height: 1,
+                      color: Colors.black,
+                    ),
+                    items: RatingSortMode.values.map((s) {
+                      return DropdownMenuItem(
+                        child: Text(s.uiLabel),
+                        value: s,
+                      );
+                    }).toList(),
+                    value: _sortMode,
+                    onChanged: (value) {
+                      if(value != null) {
+                        setState(() {
+                          _sortMode = value;
+                        });
+                      }
+                    },
+                  ),
                   SizedBox(
                     width: 200,
                     child: TextField(
@@ -314,11 +337,10 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                       ),
                     ),
                   ),
-                  SizedBox(width: 20),
                   Tooltip(
                     message: "Filter shooters with fewer than this many ${widget.settings.byStage ? "stages" : "matches"} from view.",
                     child: SizedBox(
-                      width: 100,
+                      width: 80,
                       child: TextField(
                         controller: _minRatingsController,
                         autofocus: false,
@@ -332,11 +354,10 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                       ),
                     ),
                   ),
-                  SizedBox(width: 20),
                   Tooltip(
                     message: "Filter shooters last seen more than this many days ago.",
                     child: SizedBox(
-                      width: 100,
+                      width: 80,
                       child: TextField(
                         controller: _maxDaysController,
                         autofocus: false,
