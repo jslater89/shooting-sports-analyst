@@ -41,6 +41,7 @@ dependencies:
       path: charts_flutter
   shared_preferences:
   path_provider:
+  sanitize_filename:
   hive: 2.2.3
 
 dev_dependencies:
