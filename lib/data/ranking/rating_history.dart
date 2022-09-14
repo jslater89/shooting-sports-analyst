@@ -31,7 +31,7 @@ class RatingHistory {
 
   RatingHistory({required List<PracticalMatch> matches, RatingHistorySettings? settings, this.progressCallback}) : this._matches = matches {
     if(settings != null) _settings = settings;
-    else _settings = RatingHistorySettings(algorithm: MultiplayerPercentEloRater(byStage: true, errorAwareK: false));
+    else _settings = RatingHistorySettings(algorithm: MultiplayerPercentEloRater(byStage: true));
   }
 
   Future<void> processInitialMatches() async {

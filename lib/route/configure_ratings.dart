@@ -192,7 +192,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   bool _byStage = true;
   bool _keepHistory = false;
   bool _combineLocap = true;
-  bool _errorAwareK = false;
+  bool _errorAwareK = true;
   bool _combineOpenPCC = false;
   bool _combineLimitedCO = false;
 
@@ -750,7 +750,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     setState(() {
       _byStage = true;
       _keepHistory = false;
-      _errorAwareK = false;
+      _errorAwareK = true;
       _combineLocap = true;
       _combineOpenPCC = false;
       _combineLimitedCO = false;

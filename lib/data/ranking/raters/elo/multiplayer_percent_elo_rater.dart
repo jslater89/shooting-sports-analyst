@@ -24,7 +24,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
   static const defaultPercentWeight = 0.4;
   static const defaultPlaceWeight = 0.6;
   static const defaultScale = 800.0;
-  static const defaultMatchBlend = 0.0;
+  static const defaultMatchBlend = 0.3;
 
   @override
   RatingMode get mode => RatingMode.oneShot;
@@ -50,7 +50,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     this.percentWeight = defaultPercentWeight,
     double matchBlend = defaultMatchBlend,
     required this.byStage,
-    required this.errorAwareK,
+    this.errorAwareK = true,
   })
       : this.placeWeight = 1.0 - percentWeight,
         this._matchBlend = byStage ? matchBlend : 0.0 {
@@ -61,7 +61,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
 
     // fix my oopsie
     if(!(json[_errorAwareKKey] is bool)) {
-      json[_errorAwareKKey] = false;
+      json[_errorAwareKKey] = true;
     }
 
     return MultiplayerPercentEloRater(
@@ -70,7 +70,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
       scale: (json[_scaleKey] ?? defaultScale) as double,
       matchBlend: (json[_matchBlendKey] ?? defaultMatchBlend) as double,
       byStage: (json[RatingProject.byStageKey] ?? true) as bool,
-      errorAwareK: (json[_errorAwareKKey] ?? false) as bool,
+      errorAwareK: (json[_errorAwareKKey] ?? true) as bool,
     );
   }
 
