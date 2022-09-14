@@ -34,7 +34,7 @@ class Controller extends ControlInterface {
 
   @override
   Future<String?> pickAndReadFileNow() async {
-    var result = await FilePicker.platform.pickFiles();
+    var result = await FilePicker.platform.pickFiles(initialDirectory: Directory.current.absolute.path + Platform.pathSeparator);
     if(result != null) {
       var f = result.files[0];
       var nativeFile = File(f.path ?? "/error!");
@@ -51,7 +51,7 @@ class Controller extends ControlInterface {
 
   @override
   void saveFile(String defaultName, String fileContents) async {
-    var path = await FilePicker.platform.saveFile(fileName: defaultName);
+    var path = await FilePicker.platform.saveFile(fileName: defaultName, initialDirectory: Directory.current.absolute.path + Platform.pathSeparator);
     if(path != null) {
       var file = File(path);
       await file.writeAsString(fileContents);

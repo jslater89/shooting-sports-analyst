@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:hive/hive.dart';
+import 'package:sanitize_filename/sanitize_filename.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
@@ -95,7 +96,7 @@ class RatingProjectManager {
   }
 
   Future<void> exportToFile(RatingProject project) async {
-    await HtmlOr.saveFile("${project.name.replaceAll(RegExp(r"[ ,+]+"), "-")}.json", project.toJson());
+    await HtmlOr.saveFile("${sanitizeFilename(project.name, replacement: "-").replaceAll(RegExp(r"\s+"), "-")}.json", project.toJson());
   }
 
   Future<RatingProject?> importFromFile() async {
