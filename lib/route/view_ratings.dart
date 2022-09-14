@@ -283,25 +283,28 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                       });
                     },
                   ),
-                  DropdownButton<RatingSortMode>(
-                    underline: Container(
-                      height: 1,
-                      color: Colors.black,
+                  Tooltip(
+                    message: "Sort rows by this field.",
+                    child: DropdownButton<RatingSortMode>(
+                      underline: Container(
+                        height: 1,
+                        color: Colors.black,
+                      ),
+                      items: RatingSortMode.values.map((s) {
+                        return DropdownMenuItem(
+                          child: Text(s.uiLabel),
+                          value: s,
+                        );
+                      }).toList(),
+                      value: _sortMode,
+                      onChanged: (value) {
+                        if(value != null) {
+                          setState(() {
+                            _sortMode = value;
+                          });
+                        }
+                      },
                     ),
-                    items: RatingSortMode.values.map((s) {
-                      return DropdownMenuItem(
-                        child: Text(s.uiLabel),
-                        value: s,
-                      );
-                    }).toList(),
-                    value: _sortMode,
-                    onChanged: (value) {
-                      if(value != null) {
-                        setState(() {
-                          _sortMode = value;
-                        });
-                      }
-                    },
                   ),
                   SizedBox(
                     width: 200,
