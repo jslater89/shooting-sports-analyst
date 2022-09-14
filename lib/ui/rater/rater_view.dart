@@ -135,7 +135,7 @@ extension RatingSortModeNames on RatingSortMode {
       case RatingSortMode.trend:
         return "Trend";
       case RatingSortMode.stages:
-        return "Length";
+        return "History";
     }
   }
 }
@@ -157,14 +157,8 @@ extension _SortFunctions on RatingSortMode {
       case RatingSortMode.error:
           return (a, b) {
             if(a is EloShooterRating && b is EloShooterRating) {
-              var aError = a.normalizedDecayingErrorWithWindow(
-                window: (ShooterRating.baseTrendWindow * 1.5).round(),
-                fullEffect: ShooterRating.baseTrendWindow,
-              );
-              var bError = b.normalizedDecayingErrorWithWindow(
-                window: (ShooterRating.baseTrendWindow * 1.5).round(),
-                fullEffect: ShooterRating.baseTrendWindow,
-              );
+              var aError = a.standardError;
+              var bError = b.standardError;
               return aError.compareTo(bError);
             }
             else throw ArgumentError();
@@ -172,29 +166,8 @@ extension _SortFunctions on RatingSortMode {
       case RatingSortMode.lastChange:
         return (a, b) {
           if(a is EloShooterRating && b is EloShooterRating) {
-            PracticalMatch? match;
-            double aLastMatchChange = 0;
-            for(var event in a.ratingEvents.reversed) {
-              if(match == null) {
-                match = event.match;
-              }
-              else if(match != event.match) {
-                break;
-              }
-              aLastMatchChange += event.ratingChange;
-            }
-
-            match = null;
-            double bLastMatchChange = 0;
-            for(var event in b.ratingEvents.reversed) {
-              if(match == null) {
-                match = event.match;
-              }
-              else if(match != event.match) {
-                break;
-              }
-              bLastMatchChange += event.ratingChange;
-            }
+            double aLastMatchChange = a.lastMatchChange;
+            double bLastMatchChange = b.lastMatchChange;
 
             return bLastMatchChange.compareTo(aLastMatchChange);
           }
@@ -202,8 +175,8 @@ extension _SortFunctions on RatingSortMode {
         };
       case RatingSortMode.trend:
         return (a, b) {
-          var aTrend = a.rating - a.averageRating().firstRating;
-          var bTrend = b.rating - b.averageRating().firstRating;
+          var aTrend = a.trend;
+          var bTrend = b.trend;
           return bTrend.compareTo(aTrend);
         };
       case RatingSortMode.stages:

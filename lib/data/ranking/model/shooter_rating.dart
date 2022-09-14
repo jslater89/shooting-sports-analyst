@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:uspsa_result_viewer/data/match/shooter.dart';
+import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/average_rating.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/connected_shooter.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_change.dart';
@@ -158,12 +159,27 @@ abstract class ShooterRating<T extends ShooterRating<T>> {
   }
 
   void updateTrends(List<RatingEvent> changes);
+  double get trend => rating - averageRating().firstRating;
 
   void copyRatingFrom(T other) {
     this._connectedness = other._connectedness;
     this.lastClassification = other.lastClassification;
     this.lastSeen = other.lastSeen;
     this.connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure)..addAll(other.connectedShooters.map((e) => ConnectedShooter.copy(e)));
+  }
+
+  double get lastMatchChange {
+    if(length == 0) return 0;
+
+    var lastMatch = ratingEvents.last.match;
+    return matchChange(lastMatch);
+  }
+
+  double matchChange(PracticalMatch match) {
+    double change = ratingEvents.where((e) => e.match == match)
+        .map((e) => e.ratingChange)
+        .reduce((a, b) => a + b);
+    return change;
   }
 
   ShooterRating(this.shooter, {DateTime? date}) :

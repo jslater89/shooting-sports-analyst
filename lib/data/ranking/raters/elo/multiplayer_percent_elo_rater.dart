@@ -214,7 +214,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     var hf = aScore.score.getHitFactor(scoreDQ: aScore.score.stage != null);
     List<String> info = [
       "Actual/expected percent: ${(percentComponent * totalPercent * 100).toStringAsFixed(2)}/${(expectedScore * totalPercent * 100).toStringAsFixed(2)} on ${hf.toStringAsFixed(2)}HF",
-      "Actual/expected place: $placeBlend/${(usedScores - (expectedScore * divisor)).toStringAsFixed(4)}",
+      "Actual/expected place: ${placeBlend.toStringAsFixed(1)}/${(usedScores - (expectedScore * divisor)).toStringAsFixed(1)}",
       "Rating±Change: ${aRating.rating.round()} + ${change.toStringAsFixed(2)} (${changeFromPercent.toStringAsFixed(2)} from pct, ${changeFromPlace.toStringAsFixed(2)} from place)",
       "eff. K, multipliers: ${(effectiveK).toStringAsFixed(2)}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}, IP ${placementMultiplier.toStringAsFixed(2)}, Zero ${zeroMultiplier.toStringAsFixed(2)}, Conn ${connectednessMultiplier.toStringAsFixed(2)}, EW ${eventWeightMultiplier.toStringAsFixed(2)}, Err ${errMultiplier.toStringAsFixed(2)}",
     ];
@@ -296,23 +296,11 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
 
   @override
   ScoreRow buildRatingRow({required BuildContext context, required int place, required ShooterRating rating}) {
-    var trend = rating.rating - rating.averageRating().firstRating;
-
     rating as EloShooterRating;
 
+    var trend = rating.trend;
     var error = rating.standardError;
-
-    PracticalMatch? match;
-    double lastMatchChange = 0;
-    for(var event in rating.ratingEvents.reversed) {
-      if(match == null) {
-        match = event.match;
-      }
-      else if(match != event.match) {
-        break;
-      }
-      lastMatchChange += event.ratingChange;
-    }
+    var lastMatchChange = rating.lastMatchChange;
 
     return ScoreRow(
       color: (place - 1) % 2 == 1 ? Colors.grey[200] : Colors.white,
