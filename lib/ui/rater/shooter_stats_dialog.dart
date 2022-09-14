@@ -149,11 +149,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
 
         double error = 0;
         if(rating is EloShooterRating) {
-          error = rating.normalizedDecayingErrorWithWindow(
-            window: (ShooterRating.baseTrendWindow * 1.5).round(),
-            fullEffect: ShooterRating.baseTrendWindow,
-            offset: rating.ratingEvents.length - (i + 1),
-          );
+          error = rating.standardErrorWithOffset(offset: rating.ratingEvents.length - (i + 1));
 
           // print("Comparison: ${error.toStringAsFixed(2)} vs ${e2.toStringAsFixed(2)}");
         }

@@ -11,7 +11,6 @@ class EloShooterRating extends ShooterRating<EloShooterRating> {
 
   double rating;
   double variance = 0;
-  double trend = 0;
 
   double get meanSquaredError {
     return meanSquaredErrorWithWindow(window: ratingEvents.length);
@@ -91,6 +90,19 @@ class EloShooterRating extends ShooterRating<EloShooterRating> {
     return decayingErrorWithWindow(window: window, fullEffect: fullEffect, offset: offset, decayAfterFull: decayAfterFull) * (errorScale);
   }
 
+  double get standardError => normalizedDecayingErrorWithWindow(
+    window: (ShooterRating.baseTrendWindow * 1.5).round(),
+    fullEffect: ShooterRating.baseTrendWindow,
+  );
+
+  double standardErrorWithOffset({int offset = 0}) {
+    return normalizedDecayingErrorWithWindow(
+      window: (ShooterRating.baseTrendWindow * 1.5).round(),
+      fullEffect: ShooterRating.baseTrendWindow,
+      offset: offset,
+    );
+  }
+
   List<RatingEvent> ratingEvents = [];
 
   EloShooterRating(Shooter shooter, this.rating, {DateTime? date}) :
@@ -105,19 +117,17 @@ class EloShooterRating extends ShooterRating<EloShooterRating> {
   }
 
   void updateTrends(List<RatingEvent> changes) {
-    double totalChange = changes.map((c) => (c as EloRatingEvent).ratingChange).sum;
-
     var trendWindow = min(ratingEvents.length, ShooterRating.baseTrendWindow);
+
+    var events = ratingEvents.sublist(ratingEvents.length - trendWindow);
 
     if(trendWindow == 0) {
       return;
     }
 
-    var totalVariance = variance * (trendWindow - 1) + totalChange.abs();
-    variance = totalVariance / (trendWindow.toDouble());
+    var stdDev = sqrt(events.map((e) => pow(e.ratingChange, 2)).sum / (events.length - 1));
 
-    var totalTrend = trend * (trendWindow - 1) + (totalChange >= 0 ? 1 : -1);
-    trend = totalTrend / (trendWindow);
+    variance = stdDev;
 
     // if(Rater.processMemberNumber(shooter.memberNumber) == "128393") {
     //   debugPrint("Trends for ${shooter.lastName}");
@@ -130,14 +140,12 @@ class EloShooterRating extends ShooterRating<EloShooterRating> {
     super.copyRatingFrom(other);
     this.rating = other.rating;
     this.variance = other.variance;
-    this.trend = other.trend;
     this.ratingEvents = other.ratingEvents.map((e) => EloRatingEvent.copy(e as EloRatingEvent)).toList();
   }
 
   EloShooterRating.copy(EloShooterRating other) :
         this.rating = other.rating,
         this.variance = other.variance,
-        this.trend = other.trend,
         this.ratingEvents = other.ratingEvents.map((e) => EloRatingEvent.copy(e as EloRatingEvent)).toList(),
         super.copy(other);
 

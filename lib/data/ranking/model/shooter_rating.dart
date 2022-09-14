@@ -31,7 +31,6 @@ abstract class ShooterRating<T extends ShooterRating<T>> {
   double get rating;
 
   List<RatingEvent> get ratingEvents;
-  set ratingEvents(List<RatingEvent> events);
 
   int get length => ratingEvents.length;
 

@@ -17,6 +17,8 @@ const _errorAwareKKey = "errK";
 class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
   static const ratingKey = "rating";
   static const errorKey = "error";
+  static const baseKKey = "baseK";
+  static const effectiveKKey = "effectiveKKey";
 
   static const defaultK = 60.0;
   static const defaultPercentWeight = 0.4;
@@ -90,6 +92,8 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
         shooters[0]: RatingChange(change: {
           ratingKey: 0,
           errorKey: 0,
+          baseKKey: 0,
+          effectiveKKey: 0,
         }),
       };
     }
@@ -136,6 +140,8 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
         shooters[0]: RatingChange(change: {
           ratingKey: 0,
           errorKey: 0,
+          baseKKey: 0,
+          effectiveKKey: 0,
         }),
       };
     }
@@ -173,10 +179,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     // Adjust K based on the confidence in the shooter's rating.
     // If we're more confident, we adjust less to smooth out performances.
     // If we're less confident, we adjust more to find the correct rating faster.
-    var error = aRating.normalizedDecayingErrorWithWindow(
-      window: (ShooterRating.baseTrendWindow * 1.5).round(),
-      fullEffect: ShooterRating.baseTrendWindow,
-    );
+    var error = aRating.standardError;
 
     var errThreshold = EloShooterRating.errorScale / (K / 7.5);
     var errMultiplier = 1.0;
@@ -219,7 +222,9 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     return {
       aRating: RatingChange(change: {
         ratingKey: change,
-        errorKey: (expectedScore - actualScore) * usedScores
+        errorKey: (expectedScore - actualScore) * usedScores,
+        baseKKey: K * (usedScores - 1),
+        effectiveKKey: effectiveK * (usedScores),
       }, info: info),
     };
   }
@@ -295,10 +300,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
 
     rating as EloShooterRating;
 
-    var error = rating.normalizedDecayingErrorWithWindow(
-      window: (ShooterRating.baseTrendWindow * 1.5).round(),
-      fullEffect: ShooterRating.baseTrendWindow,
-    );
+    var error = rating.standardError;
 
     PracticalMatch? match;
     double lastMatchChange = 0;
@@ -354,10 +356,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
       s as EloShooterRating;
       var trend = s.rating - s.averageRating().firstRating;
 
-      var error = s.normalizedDecayingErrorWithWindow(
-        window: (ShooterRating.baseTrendWindow * 1.5).round(),
-        fullEffect: ShooterRating.baseTrendWindow,
-      );
+      var error = s.standardError;
 
       PracticalMatch? match;
       double lastMatchChange = 0;
@@ -406,6 +405,6 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     Stage? stage,
     required ShooterRating rating, required RelativeScore score, List<String> info = const []
   }) {
-    return EloRatingEvent(oldRating: rating.rating, match: match, stage: stage, score: score, ratingChange: 0, info: info);
+    return EloRatingEvent(oldRating: rating.rating, match: match, stage: stage, score: score, ratingChange: 0, info: info, baseK: 0, effectiveK: 0);
   }
 }
