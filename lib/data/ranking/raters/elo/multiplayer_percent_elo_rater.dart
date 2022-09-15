@@ -2,10 +2,13 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/ranking/model/rating_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
+import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rating_change.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
+import 'package:uspsa_result_viewer/data/ranking/raters/elo/ui/elo_settings_ui.dart';
 import 'package:uspsa_result_viewer/ui/score_row.dart';
 
 const _kKey = "k";
@@ -14,7 +17,7 @@ const _scaleKey = "scale";
 const _matchBlendKey = "matchBlend";
 const _errorAwareKKey = "errK";
 
-class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
+class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating, EloSettings, EloSettingsController> {
   static const ratingKey = "rating";
   static const errorKey = "error";
   static const baseKKey = "baseK";
@@ -394,5 +397,15 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating> {
     required ShooterRating rating, required RelativeScore score, List<String> info = const []
   }) {
     return EloRatingEvent(oldRating: rating.rating, match: match, stage: stage, score: score, ratingChange: 0, info: info, baseK: 0, effectiveK: 0);
+  }
+
+  @override
+  EloSettingsController newSettingsController() {
+    return EloSettingsController();
+  }
+
+  @override
+  EloSettingsWidget newSettingsWidget(EloSettingsController controller) {
+    return EloSettingsWidget(controller: controller);
   }
 }

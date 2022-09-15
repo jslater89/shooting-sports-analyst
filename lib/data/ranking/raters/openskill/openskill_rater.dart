@@ -7,15 +7,18 @@ import 'package:uspsa_result_viewer/data/match/shooter.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_change.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_mode.dart';
+import 'package:uspsa_result_viewer/data/ranking/model/rating_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_system.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/openskill/model/plackett_luce.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/openskill/openskill_rating.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/openskill/openskill_rating_change.dart';
+import 'package:uspsa_result_viewer/data/ranking/raters/openskill/openskill_settings.dart';
+import 'package:uspsa_result_viewer/data/ranking/raters/openskill/ui/openskill_settings_ui.dart';
 import 'package:uspsa_result_viewer/ui/score_row.dart';
 
-class OpenskillRater implements RatingSystem<OpenskillRating> {
+class OpenskillRater implements RatingSystem<OpenskillRating, OpenskillSettings, OpenskillSettingsController> {
   static const muKey = "mu";
   static const sigmaKey = "sigma";
 
@@ -178,6 +181,16 @@ class OpenskillRater implements RatingSystem<OpenskillRating> {
     model.update(this, teams, changes);
 
     return changes;
+  }
+
+  @override
+  OpenskillSettingsController newSettingsController() {
+    return OpenskillSettingsController();
+  }
+
+  @override
+  OpenskillSettingsWidget newSettingsWidget(OpenskillSettingsController controller) {
+    return OpenskillSettingsWidget(controller: controller);
   }
 }
 

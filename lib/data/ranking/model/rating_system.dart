@@ -4,10 +4,11 @@ import 'package:uspsa_result_viewer/data/match/relative_scores.dart';
 import 'package:uspsa_result_viewer/data/match/shooter.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_change.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_mode.dart';
+import 'package:uspsa_result_viewer/data/ranking/model/rating_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
 import 'package:uspsa_result_viewer/ui/score_row.dart';
 
-abstract class RatingSystem<T extends ShooterRating<T>> {
+abstract class RatingSystem<T extends ShooterRating<T>, S extends RaterSettings<S>, C extends RaterSettingsController<S>> {
   RatingMode get mode;
   bool get byStage;
 
@@ -62,6 +63,16 @@ abstract class RatingSystem<T extends ShooterRating<T>> {
   String ratingsToCsv(List<ShooterRating> ratings);
 
   encodeToJson(Map<String, dynamic> json);
+
+  /// Return a new instance of a [RaterSettingsController] subclass for
+  /// the given rater type, which allows the UI to retrieve settings and
+  /// restore defaults.
+  RaterSettingsController<S> newSettingsController();
+
+  /// Return to get a widget tree which can be inserted into a child of a Column
+  /// wrapped in a SingleChildScrollView, which implements the settings for this
+  /// rating system.
+  RaterSettingsWidget<S, C> newSettingsWidget(C controller);
 
   static const initialPlacementMultipliers = [
     // 1.5,
