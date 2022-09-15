@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
+import 'package:uspsa_result_viewer/data/ranking/model/rating_settings.dart';
+import 'package:uspsa_result_viewer/data/ranking/model/rating_system.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
+import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
+import 'package:uspsa_result_viewer/data/ranking/raters/openskill/openskill_rater.dart';
+import 'package:uspsa_result_viewer/data/ranking/raters/openskill/openskill_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
 import 'package:uspsa_result_viewer/ui/confirm_dialog.dart';
@@ -32,6 +36,10 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   int? _matchCacheCurrent;
   int? _matchCacheTotal;
 
+  late RaterSettingsController _settingsController;
+  RaterSettingsWidget? _settingsWidget;
+  late RatingSystem _ratingSystem;
+
   Future<void> getUrlDisplayNames() async {
     var map = <String, String>{};
     await MatchCache().ready;
@@ -50,49 +58,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   @override
   void initState() {
     super.initState();
-
-    _pctWeightController.addListener(() {
-      if(_pctWeightController.text.length > 0) {
-        var newPctWeight = double.tryParse(_pctWeightController.text);
-        if(newPctWeight != null) {
-          if(newPctWeight > 1) {
-            // _pctWeightController.text = "1.0";
-            newPctWeight = 1.0;
-          }
-          else if(newPctWeight < 0) {
-            // _pctWeightController.text = "0.0";
-            newPctWeight = 0.0;
-          }
-
-          var splitNumber = _pctWeightController.text.split(".");
-          int fractionDigits = 2;
-          if(splitNumber.length > 1) {
-            var lastPart = splitNumber.last;
-            if(lastPart.length > 0) {
-              fractionDigits = lastPart.length;
-            }
-          }
-          _placeWeightController.text = (1.0 - newPctWeight).toStringAsFixed(fractionDigits);
-        }
-      }
-    });
-
-    _matchBlendController.addListener(() {
-      if(_matchBlendController.text.length > 0) {
-        var newBlend = double.tryParse(_matchBlendController.text);
-        if(newBlend != null) {
-          if(newBlend > 1) {
-            // _pctWeightController.text = "1.0";
-            newBlend = 1.0;
-          }
-          else if(newBlend < 0) {
-            // _pctWeightController.text = "0.0";
-            newBlend = 0.0;
-          }
-        }
-      }
-    });
-
     matchCacheReady = MatchCache.readyNow;
 
     if(!matchCacheReady) _warmUpMatchCache();
@@ -137,26 +102,27 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     setState(() {
       matchUrls = []..addAll(project.matchUrls);
       _keepHistory = project.settings.preserveHistory;
-      _byStage = project.settings.byStage;
       _combineLocap = project.settings.groups.contains(RaterGroup.locap);
       _combineLimitedCO = project.settings.groups.contains(RaterGroup.limitedCO);
       _combineOpenPCC = project.settings.groups.contains(RaterGroup.openPcc);
       _shooterAliases = project.settings.shooterAliases;
     });
     var algorithm = project.settings.algorithm;
-
-    if(algorithm is MultiplayerPercentEloRater) {
-      _kController.text = "${algorithm.K}";
-      _scaleController.text = "${algorithm.scale}";
-      _pctWeightController.text = "${algorithm.percentWeight}";
-      _matchBlendController.text = "${algorithm.matchBlend}";
-      _errorAwareK = algorithm.errorAwareK;
-    }
+    _ratingSystem = algorithm;
+    _settingsController = algorithm.newSettingsController();
+    setState(() {
+      _settingsWidget = null;
+    });
+    setState(() {
+      _settingsWidget = algorithm.newSettingsWidget(_settingsController);
+    });
+    _settingsController.currentSettings = algorithm.settings;
 
     getUrlDisplayNames();
 
     setState(() {
       _lastProjectName = project.name;
+      _settingsWidget = _settingsWidget;
     });
     debugPrint("Loaded ${project.name}");
   }
@@ -189,66 +155,35 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     );
   }
 
-  bool _byStage = true;
   bool _keepHistory = false;
   bool _combineLocap = true;
-  bool _errorAwareK = true;
   bool _combineOpenPCC = false;
   bool _combineLimitedCO = false;
 
   List<String> _memNumWhitelist = [];
   Map<String, String> _shooterAliases = defaultShooterAliases;
-
-  TextEditingController _kController = TextEditingController(text: "${MultiplayerPercentEloRater.defaultK}");
-  TextEditingController _scaleController = TextEditingController(text: "${MultiplayerPercentEloRater.defaultScale}");
-  TextEditingController _pctWeightController = TextEditingController(text: "${MultiplayerPercentEloRater.defaultPercentWeight}");
-  TextEditingController _placeWeightController = TextEditingController(text: "${MultiplayerPercentEloRater.defaultPlaceWeight}");
-  TextEditingController _matchBlendController = TextEditingController(text: "${MultiplayerPercentEloRater.defaultMatchBlend}");
-
   String _validationError = "";
 
   RatingHistorySettings? _makeAndValidateSettings() {
-    double? K = double.tryParse(_kController.text);
-    double? scale = double.tryParse(_scaleController.text);
-    double? pctWeight = double.tryParse(_pctWeightController.text);
-    double? matchBlend = double.tryParse(_matchBlendController.text);
-
-    if(K == null) {
+    var error = _settingsController.validate();
+    if(error != null) {
       setState(() {
-        _validationError = "K factor incorrectly formatted";
+        _validationError = error;
       });
       return null;
     }
 
-    if(scale == null) {
-      setState(() {
-        _validationError = "Scale factor incorrectly formatted";
-      });
-      return null;
-    }
+    var settings = _settingsController.currentSettings;
 
-    if(pctWeight == null || pctWeight > 1 || pctWeight < 0) {
-      setState(() {
-        _validationError = "Percent weight incorrectly formatted or out of range (0-1)";
-      });
-      return null;
+    if(_ratingSystem is MultiplayerPercentEloRater) {
+      settings as EloSettings;
+      _ratingSystem = MultiplayerPercentEloRater(settings: settings);
     }
-
-    if(matchBlend == null || matchBlend > 1 || matchBlend < 0) {
-      setState(() {
-        _validationError = "Match blend incorrectly formatted or out of range (0-1)";
-      });
-      return null;
+    else if(_ratingSystem is OpenskillRater) {
+      settings as OpenskillSettings;
+      // TODO
+      _ratingSystem = OpenskillRater(byStage: true);
     }
-
-    var ratingSystem = MultiplayerPercentEloRater(
-      K:  K,
-      scale: scale,
-      percentWeight: pctWeight,
-      matchBlend: matchBlend,
-      byStage: _byStage,
-      errorAwareK: _errorAwareK,
-    );
     // var ratingSystem = OpenskillRater(byStage: _byStage);
 
     var groups = RatingHistorySettings.groupsForSettings(
@@ -258,7 +193,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     );
 
     return RatingHistorySettings(
-      algorithm: ratingSystem,
+      algorithm: _ratingSystem,
       groups: groups,
       preserveHistory: _keepHistory,
       memberNumberWhitelist: _memNumWhitelist,
@@ -352,20 +287,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                       SizedBox(height: 10),
                       CheckboxListTile(
                         title: Tooltip(
-                          child: Text("By stage?"),
-                          message: "Calculate and update ratings after each stage if checked, or after each match if unchecked.",
-                        ),
-                        value: _byStage,
-                        onChanged: (value) {
-                          if(value != null) {
-                            setState(() {
-                              _byStage = value;
-                            });
-                          }
-                        }
-                      ),
-                      CheckboxListTile(
-                        title: Tooltip(
                           child: Text("Keep full history?"),
                           message: "Keep intermediate ratings after each match if checked, or keep only final ratings if unchecked.",
                         ),
@@ -420,164 +341,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                           }
                         }
                       ),
-                      CheckboxListTile(
-                          title: Tooltip(
-                            child: Text("Error-aware K?"),
-                            message: "Modify K based on error in shooter rating.",
-                          ),
-                          value: _errorAwareK,
-                          onChanged: (value) {
-                            if(value != null) {
-                              setState(() {
-                                _errorAwareK = value;
-                              });
-                            }
-                          }
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.max,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Tooltip(
-                            message: "K factor adjusts how volatile ratings are. A higher K means ratings will "
-                                "change more rapidly in response to missed predictions.",
-                            child: Padding(
-                              padding: const EdgeInsets.only(left: 16),
-                              child: Text("K factor", style: Theme.of(context).textTheme.subtitle1!),
-                            ),
-                          ),
-                          SizedBox(
-                            width: 100,
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 20),
-                              child: TextFormField(
-                                controller: _kController,
-                                textAlign: TextAlign.end,
-                                keyboardType: TextInputType.numberWithOptions(),
-                                inputFormatters: [
-                                  FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ]
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.max,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Tooltip(
-                            message: "Scale factor controls the spread of ratings. A higher scale factor yields ratings with "
-                                "larger differences in rating for the same difference in predicted skill.",
-                            child: Padding(
-                              padding: const EdgeInsets.only(left: 16),
-                              child: Text("Scale factor", style: Theme.of(context).textTheme.subtitle1!),
-                            ),
-                          ),
-                          SizedBox(
-                            width: 100,
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 20),
-                              child: TextFormField(
-                                controller: _scaleController,
-                                textAlign: TextAlign.end,
-                                keyboardType: TextInputType.numberWithOptions(),
-                                inputFormatters: [
-                                  FilteringTextInputFormatter(RegExp(r"[0-9]*"), allow: true),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ]
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.max,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Tooltip(
-                            message: "In by-stage mode, blend match percentage into stage percentage, to reduce the impact of single bad stages.\n\n"
-                                "Match blend of 1.0 is equivalent to by-match mode.",
-                            child: Padding(
-                              padding: const EdgeInsets.only(left: 16),
-                              child: Text("Match blend", style: Theme.of(context).textTheme.subtitle1!),
-                            ),
-                          ),
-                          SizedBox(
-                            width: 100,
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 20),
-                              child: TextFormField(
-                                controller: _matchBlendController,
-                                textAlign: TextAlign.end,
-                                keyboardType: TextInputType.numberWithOptions(),
-                                inputFormatters: [
-                                  FilteringTextInputFormatter(RegExp(r"[0-9\-\.]*"), allow: true),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ]
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.max,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Tooltip(
-                            message: "Percent and placement weight control how much weight the algorithm gives to percent finish "
-                                "vs. placement.\n\nToo little placement weight can cause initial ratings to adjust very slowly or penalize high-end shooters in strong fields.\n\n"
-                                "Too much placement weight can unfairly penalize shooters who finish near strong competition in percentage terms.",
-                            child: Padding(
-                              padding: const EdgeInsets.only(left: 16),
-                              child: Text("Percent/place weight", style: Theme.of(context).textTheme.subtitle1!),
-                            ),
-                          ),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SizedBox(
-                                width: 80,
-                                child: Padding(
-                                  padding: const EdgeInsets.only(right: 20),
-                                  child: Tooltip(
-                                    message: "Edit percent weight to change this field.",
-                                    child: TextFormField(
-                                      decoration: InputDecoration(
-                                        labelText: "Place Wt.",
-                                        floatingLabelBehavior: FloatingLabelBehavior.always,
-                                      ),
-                                      enabled: false,
-                                      controller: _placeWeightController,
-                                      textAlign: TextAlign.end,
-                                      keyboardType: TextInputType.numberWithOptions(),
-                                      inputFormatters: [
-                                        FilteringTextInputFormatter(RegExp(r"[0-9\-\.]*"), allow: true),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(
-                                width: 80,
-                                child: Padding(
-                                  padding: const EdgeInsets.only(right: 20),
-                                  child: TextFormField(
-                                    decoration: InputDecoration(
-                                      labelText: "Pct Wt.",
-                                      floatingLabelBehavior: FloatingLabelBehavior.always,
-                                    ),
-                                    controller: _pctWeightController,
-                                    textAlign: TextAlign.end,
-                                    keyboardType: TextInputType.numberWithOptions(),
-                                    inputFormatters: [
-                                      FilteringTextInputFormatter(RegExp(r"[0-9\-\.]*"), allow: true),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ]
-                      ),
+                      if(_settingsWidget != null) _settingsWidget!,
                     ],
                   ),
                 ),
@@ -748,9 +512,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
   void _restoreDefaults() {
     setState(() {
-      _byStage = true;
       _keepHistory = false;
-      _errorAwareK = true;
       _combineLocap = true;
       _combineOpenPCC = false;
       _combineLimitedCO = false;
@@ -758,9 +520,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       _shooterAliases = defaultShooterAliases;
       _memNumWhitelist = [];
     });
-    _kController.text = "${MultiplayerPercentEloRater.defaultK}";
-    _scaleController.text = "${MultiplayerPercentEloRater.defaultScale}";
-    _pctWeightController.text = "${MultiplayerPercentEloRater.defaultPercentWeight}";
+    _settingsController.restoreDefaults();
   }
 
   List<Widget> _generateActions() {

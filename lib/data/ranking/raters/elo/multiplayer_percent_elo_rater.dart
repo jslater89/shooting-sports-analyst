@@ -32,49 +32,33 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating, EloSe
   @override
   RatingMode get mode => RatingMode.oneShot;
 
-  /// K is the K parameter to the rating Elo algorithm
-  final double K;
-  final double percentWeight;
-  final double placeWeight;
-  final double scale;
-  final double _matchBlend;
+  final EloSettings settings;
 
-  double get matchBlend => _matchBlend;
-  double get stageBlend => 1 - _matchBlend;
+  /// K is the K parameter to the rating Elo algorithm
+  double get K => settings.K;
+  double get percentWeight => settings.percentWeight;
+  double get placeWeight => settings.placeWeight;
+  double get scale => settings.scale;
+
+  get matchBlend => settings.matchBlend;
+  get stageBlend => settings.stageBlend;
 
   @override
-  final bool byStage;
-
-  final bool errorAwareK;
+  bool get byStage => settings.byStage;
+  bool get errorAwareK => settings.errorAwareK;
 
   MultiplayerPercentEloRater({
-    this.K = defaultK,
-    this.scale = defaultScale,
-    this.percentWeight = defaultPercentWeight,
-    double matchBlend = defaultMatchBlend,
-    required this.byStage,
-    this.errorAwareK = true,
-  })
-      : this.placeWeight = 1.0 - percentWeight,
-        this._matchBlend = byStage ? matchBlend : 0.0 {
+    EloSettings? settings,
+  }) :
+      this.settings = settings != null ? settings : EloSettings() {
     EloShooterRating.errorScale = this.scale;
   }
 
   factory MultiplayerPercentEloRater.fromJson(Map<String, dynamic> json) {
+    var settings = EloSettings();
+    settings.loadFromJson(json);
 
-    // fix my oopsie
-    if(!(json[_errorAwareKKey] is bool)) {
-      json[_errorAwareKKey] = true;
-    }
-
-    return MultiplayerPercentEloRater(
-      K: (json[_kKey] ?? defaultK) as double,
-      percentWeight: (json[_pctWeightKey] ?? defaultPercentWeight) as double,
-      scale: (json[_scaleKey] ?? defaultScale) as double,
-      matchBlend: (json[_matchBlendKey] ?? defaultMatchBlend) as double,
-      byStage: (json[RatingProject.byStageKey] ?? true) as bool,
-      errorAwareK: (json[_errorAwareKKey] ?? true) as bool,
-    );
+    return MultiplayerPercentEloRater(settings: settings);
   }
 
   @override
@@ -382,12 +366,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating, EloSe
   @override
   void encodeToJson(Map<String, dynamic> json) {
     json[RatingProject.algorithmKey] = RatingProject.multiplayerEloValue;
-    json[RatingProject.byStageKey] = byStage;
-    json[_kKey] = K;
-    json[_pctWeightKey] = percentWeight;
-    json[_scaleKey] = scale;
-    json[_matchBlendKey] = _matchBlend;
-    json[_errorAwareKKey] = errorAwareK;
+    settings.encodeToJson(json);
   }
 
   @override
@@ -406,6 +385,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating, EloSe
 
   @override
   EloSettingsWidget newSettingsWidget(EloSettingsController controller) {
-    return EloSettingsWidget(controller: controller);
+    // create a new state when the controller changes
+    return EloSettingsWidget(key: Key("${controller.hashCode}"), controller: controller);
   }
 }

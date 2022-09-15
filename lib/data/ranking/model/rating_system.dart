@@ -61,7 +61,6 @@ abstract class RatingSystem<T extends ShooterRating<T>, S extends RaterSettings<
   /// Return a string containing a CSV representation of the
   /// given shooter ratings.
   String ratingsToCsv(List<ShooterRating> ratings);
-
   encodeToJson(Map<String, dynamic> json);
 
   /// Return a new instance of a [RaterSettingsController] subclass for
@@ -72,7 +71,13 @@ abstract class RatingSystem<T extends ShooterRating<T>, S extends RaterSettings<
   /// Return to get a widget tree which can be inserted into a child of a Column
   /// wrapped in a SingleChildScrollView, which implements the settings for this
   /// rating system.
+  ///
+  /// The function should use [controller] as a key to any stateful child widgets,
+  /// to ensure they're rebuilt when new settings are loaded.
   RaterSettingsWidget<S, C> newSettingsWidget(C controller);
+
+  /// Return the current settings for this rating system.
+  S get settings;
 
   static const initialPlacementMultipliers = [
     // 1.5,

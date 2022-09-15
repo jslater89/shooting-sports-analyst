@@ -1,4 +1,11 @@
 import 'package:uspsa_result_viewer/data/ranking/model/rating_settings.dart';
+import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
+
+const _kKey = "k";
+const _pctWeightKey = "pctWt";
+const _scaleKey = "scale";
+const _matchBlendKey = "matchBlend";
+const _errorAwareKKey = "errK";
 
 class EloSettings extends RaterSettings<EloSettings> {
   static const defaultK = 60.0;
@@ -31,19 +38,36 @@ class EloSettings extends RaterSettings<EloSettings> {
   }) : _matchBlend = matchBlend;
 
   void restoreDefaults() {
-
+    this.K = defaultK;
+    this.percentWeight = defaultPercentWeight;
+    this.scale = defaultScale;
+    this._matchBlend = defaultMatchBlend;
+    this.errorAwareK = true;
+    this.byStage = true;
   }
 
   @override
   encodeToJson(Map<String, dynamic> json) {
-    // TODO: implement encodeToJson
-    throw UnimplementedError();
+    json[RatingProject.byStageKey] = byStage;
+    json[_kKey] = K;
+    json[_pctWeightKey] = percentWeight;
+    json[_scaleKey] = scale;
+    json[_matchBlendKey] = _matchBlend;
+    json[_errorAwareKKey] = errorAwareK;
   }
 
   @override
   loadFromJson(Map<String, dynamic> json) {
-    // TODO: implement fromJson
-    throw UnimplementedError();
-  }
+    // fix my oopsie
+    if(!(json[_errorAwareKKey] is bool)) {
+      json[_errorAwareKKey] = true;
+    }
 
+    K = (json[_kKey] ?? defaultK) as double;
+    percentWeight = (json[_pctWeightKey] ?? defaultPercentWeight) as double;
+    scale = (json[_scaleKey] ?? defaultScale) as double;
+    matchBlend = (json[_matchBlendKey] ?? defaultMatchBlend) as double;
+    byStage = (json[RatingProject.byStageKey] ?? true) as bool;
+    errorAwareK = (json[_errorAwareKKey] ?? true) as bool;
+  }
 }

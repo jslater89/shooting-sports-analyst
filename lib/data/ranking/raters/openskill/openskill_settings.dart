@@ -46,4 +46,10 @@ class OpenskillSettings extends RaterSettings<OpenskillSettings> {
     throw UnimplementedError();
   }
 
+  @override
+  String? validate() {
+    // TODO: implement validate
+    throw UnimplementedError();
+  }
+
 }

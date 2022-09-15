@@ -181,6 +181,7 @@ class RatingProject {
   static const algorithmKey = "algo";
   static const multiplayerEloValue = "multiElo";
   static const openskillValue = "openskill";
+  static const pointsValue = "points";
 
   String name;
   RatingHistorySettings settings;

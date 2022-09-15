@@ -192,6 +192,10 @@ class OpenskillRater implements RatingSystem<OpenskillRating, OpenskillSettings,
   OpenskillSettingsWidget newSettingsWidget(OpenskillSettingsController controller) {
     return OpenskillSettingsWidget(controller: controller);
   }
+
+  @override
+  // TODO: implement settings
+  OpenskillSettings get settings => OpenskillSettings();
 }
 
 class OpenskillScore {

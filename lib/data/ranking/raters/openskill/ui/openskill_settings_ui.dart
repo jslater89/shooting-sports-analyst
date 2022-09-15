@@ -3,7 +3,7 @@ import 'package:uspsa_result_viewer/data/ranking/model/rating_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/openskill/openskill_settings.dart';
 
-class OpenskillSettingsController extends RaterSettingsController<OpenskillSettings> {
+class OpenskillSettingsController extends RaterSettingsController<OpenskillSettings> with ChangeNotifier {
   OpenskillSettings _currentSettings;
 
   OpenskillSettings get currentSettings => _currentSettings;
@@ -16,9 +16,19 @@ class OpenskillSettingsController extends RaterSettingsController<OpenskillSetti
         _currentSettings = initialSettings != null ? initialSettings : OpenskillSettings();
 
   @override
-  restoreDefaults() {
+  void restoreDefaults() {
     currentSettings.restoreDefaults();
     // notifyListeners();
+  }
+
+  @override
+  void settingsChanged() {
+
+  }
+
+  @override
+  String? validate() {
+    return "Not yet implemented";
   }
 }
 

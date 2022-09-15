@@ -5,10 +5,15 @@ abstract class RaterSettings<T extends RaterSettings<T>> {
   encodeToJson(Map<String, dynamic> json);
 }
 
-abstract class RaterSettingsController<T extends RaterSettings<T>> {
+abstract class RaterSettingsController<T extends RaterSettings<T>> implements ChangeNotifier {
   T get currentSettings;
   set currentSettings(T settings);
-  restoreDefaults();
+  void restoreDefaults();
+  void settingsChanged();
+
+  /// Return null if validation is successful, or an error message suitable
+  /// for on-screen display if validation fails.
+  String? validate();
 }
 
 abstract class RaterSettingsWidget<S extends RaterSettings<S>, T extends RaterSettingsController<S>> extends StatefulWidget {

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
+import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:uspsa_result_viewer/ui/filter_dialog.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart' as defaultAliases;
@@ -31,7 +32,11 @@ class RatingHistory {
 
   RatingHistory({required List<PracticalMatch> matches, RatingHistorySettings? settings, this.progressCallback}) : this._matches = matches {
     if(settings != null) _settings = settings;
-    else _settings = RatingHistorySettings(algorithm: MultiplayerPercentEloRater(byStage: true));
+    else _settings = RatingHistorySettings(
+      algorithm: MultiplayerPercentEloRater(settings: EloSettings(
+        byStage: true,
+      )),
+    );
   }
 
   Future<void> processInitialMatches() async {
