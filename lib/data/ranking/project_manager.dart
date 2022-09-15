@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/openskill/openskill_rater.dart';
+import 'package:uspsa_result_viewer/data/ranking/raters/points/points_rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
@@ -224,6 +225,8 @@ class RatingProject {
     switch(name) {
       case multiplayerEloValue:
         return MultiplayerPercentEloRater.fromJson(encodedProject);
+      case pointsValue:
+        return PointsRater.fromJson(encodedProject);
       default:
         throw ArgumentError();
     }

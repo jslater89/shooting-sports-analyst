@@ -7,6 +7,8 @@ import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.d
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/openskill/openskill_rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/openskill/openskill_settings.dart';
+import 'package:uspsa_result_viewer/data/ranking/raters/points/points_rater.dart';
+import 'package:uspsa_result_viewer/data/ranking/raters/points/points_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
 import 'package:uspsa_result_viewer/ui/confirm_dialog.dart';
@@ -183,6 +185,10 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       settings as OpenskillSettings;
       // TODO
       _ratingSystem = OpenskillRater(byStage: true);
+    }
+    else if(_ratingSystem is PointsRater) {
+      settings as PointsSettings;
+      _ratingSystem = PointsRater(settings);
     }
     // var ratingSystem = OpenskillRater(byStage: _byStage);
 

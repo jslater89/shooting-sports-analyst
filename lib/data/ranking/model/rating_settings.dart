@@ -17,5 +17,6 @@ abstract class RaterSettingsController<T extends RaterSettings<T>> implements Ch
 }
 
 abstract class RaterSettingsWidget<S extends RaterSettings<S>, T extends RaterSettingsController<S>> extends StatefulWidget {
-  RaterSettingsWidget({Key? key, required T controller}) : super(key: key);
+  /// Unless [key] is provided, it will change whenever [controller] changes.
+  RaterSettingsWidget({Key? key, required T controller}) : super(key: key ?? Key(controller.hashCode.toString()));
 }

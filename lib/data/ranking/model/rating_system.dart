@@ -9,6 +9,9 @@ import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
 import 'package:uspsa_result_viewer/ui/score_row.dart';
 
 abstract class RatingSystem<T extends ShooterRating<T>, S extends RaterSettings<S>, C extends RaterSettingsController<S>> {
+  /// Use in rating changes
+  static const ratingKey = "rating";
+
   RatingMode get mode;
   bool get byStage;
 
@@ -71,9 +74,6 @@ abstract class RatingSystem<T extends ShooterRating<T>, S extends RaterSettings<
   /// Return to get a widget tree which can be inserted into a child of a Column
   /// wrapped in a SingleChildScrollView, which implements the settings for this
   /// rating system.
-  ///
-  /// The function should use [controller] as a key to any stateful child widgets,
-  /// to ensure they're rebuilt when new settings are loaded.
   RaterSettingsWidget<S, C> newSettingsWidget(C controller);
 
   /// Return the current settings for this rating system.

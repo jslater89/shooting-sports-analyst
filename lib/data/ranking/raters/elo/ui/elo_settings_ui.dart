@@ -34,7 +34,7 @@ class EloSettingsController extends RaterSettingsController<EloSettings> with Ch
 
 class EloSettingsWidget extends RaterSettingsWidget<EloSettings, EloSettingsController> {
   EloSettingsWidget({Key? key, required this.controller}) :
-        super(key: key, controller: controller);
+        super(controller: controller);
 
   final EloSettingsController controller;
 
@@ -57,8 +57,8 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
   void initState() {
     super.initState();
     settings = widget.controller.currentSettings;
-    _kController.text = "${settings.K.round()}";
-    _scaleController.text = "${settings.scale.round()}";
+    _kController.text = "${settings.K.toStringAsFixed(1)}";
+    _scaleController.text = "${settings.scale.toStringAsFixed(1)}";
     _pctWeightController.text = "${settings.percentWeight}";
     _placeWeightController.text = "${settings.placeWeight}";
     _matchBlendController.text = "${settings.matchBlend}";
@@ -66,8 +66,8 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
     widget.controller.addListener(() {
       setState(() {
         settings = widget.controller.currentSettings;
-        _kController.text = "${settings.K.round()}";
-        _scaleController.text = "${settings.scale.round()}";
+        _kController.text = "${settings.K.toStringAsFixed(1)}";
+        _scaleController.text = "${settings.scale.toStringAsFixed(1)}";
         _pctWeightController.text = "${settings.percentWeight}";
         _placeWeightController.text = "${settings.placeWeight}";
         _matchBlendController.text = "${settings.matchBlend}";
@@ -107,13 +107,12 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
         var newBlend = double.tryParse(_matchBlendController.text);
         if(newBlend != null) {
           if(newBlend > 1) {
-            // _pctWeightController.text = "1.0";
             newBlend = 1.0;
           }
           else if(newBlend < 0) {
-            // _pctWeightController.text = "0.0";
             newBlend = 0.0;
           }
+          _matchBlendController.text = newBlend.toString();
         }
 
         _validateText();

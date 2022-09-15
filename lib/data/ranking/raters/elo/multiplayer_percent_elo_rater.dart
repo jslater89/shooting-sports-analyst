@@ -18,7 +18,6 @@ const _matchBlendKey = "matchBlend";
 const _errorAwareKKey = "errK";
 
 class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating, EloSettings, EloSettingsController> {
-  static const ratingKey = "rating";
   static const errorKey = "error";
   static const baseKKey = "baseK";
   static const effectiveKKey = "effectiveKKey";
@@ -77,7 +76,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating, EloSe
     if(scores.length <= 1) {
       return {
         shooters[0]: RatingChange(change: {
-          ratingKey: 0,
+          RatingSystem.ratingKey: 0,
           errorKey: 0,
           baseKKey: 0,
           effectiveKKey: 0,
@@ -125,7 +124,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating, EloSe
     if(usedScores == 1) {
       return {
         shooters[0]: RatingChange(change: {
-          ratingKey: 0,
+          RatingSystem.ratingKey: 0,
           errorKey: 0,
           baseKKey: 0,
           effectiveKKey: 0,
@@ -208,7 +207,7 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating, EloSe
 
     return {
       aRating: RatingChange(change: {
-        ratingKey: change,
+        RatingSystem.ratingKey: change,
         errorKey: (expectedScore - actualScore) * usedScores,
         baseKKey: K * (usedScores - 1),
         effectiveKKey: effectiveK * (usedScores),
@@ -386,6 +385,6 @@ class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating, EloSe
   @override
   EloSettingsWidget newSettingsWidget(EloSettingsController controller) {
     // create a new state when the controller changes
-    return EloSettingsWidget(key: Key("${controller.hashCode}"), controller: controller);
+    return EloSettingsWidget(controller: controller);
   }
 }
