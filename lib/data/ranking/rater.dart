@@ -754,17 +754,17 @@ class Rater {
       );
 
       for(var rating in scoreMap.keys) {
-        var score = scores.firstWhere((e) => e.shooter == rating.shooter);
+        var score = scoreMap[rating]!;
         // You only get one rating change per match.
         if (changes[rating]!.isEmpty) {
-          changes[rating]![score.total] ??= ratingSystem.newEvent(
+          changes[rating]![score] ??= ratingSystem.newEvent(
             rating: rating,
             match: match,
-            score: score.total,
+            score: score,
             info: update[rating]!.info,
           );
 
-          changes[rating]![score.total]!.apply(update[rating]!);
+          changes[rating]![score]!.apply(update[rating]!);
         }
       }
     }

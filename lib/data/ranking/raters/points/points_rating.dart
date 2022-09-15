@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:collection/collection.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_change.dart';
@@ -19,25 +21,24 @@ class PointsRating extends ShooterRating<PointsRating> {
     }
   }
 
-  double bestRating(PointsSettings settings) {
+  double bestRating(PointsSettings settings, double participationBonus) {
     if(settings.matchesToCount == 0) return rating;
-
     if(settings.matchesToCount < 0) throw UnimplementedError();
 
     var usedRatings = usedEvents(settings);
-    return usedRatings.map((e) => e.ratingChange).sum;
+    rating = usedRatings.map((e) => e.ratingChange).sum + participationBonus * length;
+    return rating;
   }
 
   List<RatingEvent> usedEvents(PointsSettings settings) {
+    var lastIndex = min(settings.matchesToCount, ratingEvents.length);
     var eventsByChange = ratingEvents.sorted((a, b) => b.ratingChange.compareTo(a.ratingChange));
-    var usedRatings = eventsByChange.sublist(0, settings.matchesToCount);
+    var usedRatings = eventsByChange.sublist(0, lastIndex);
     return usedRatings;
   }
 
   @override
-  void updateTrends(List<RatingEvent> changes) {
-    // TODO: implement updateTrends
-  }
+  void updateTrends(List<RatingEvent> changes) {}
 
   PointsRating(Shooter shooter, {DateTime? date}) : this.rating = 0, super(shooter, date: date);
 

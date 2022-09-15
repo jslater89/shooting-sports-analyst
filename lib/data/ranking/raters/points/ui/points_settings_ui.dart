@@ -72,7 +72,6 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
           else if (newBonus < 0) {
             newBonus = 0.0;
           }
-          _participationController.text = newBonus.toString();
         }
 
         _validateText();
@@ -89,7 +88,6 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
           else if (newFactor < 0) {
             newFactor = 0.0;
           }
-          _decayFactorController.text = newFactor.toString();
         }
 
         _validateText();
@@ -136,21 +134,34 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
       mainAxisAlignment: MainAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        DropdownButton<PointsMode>(
-          value: settings.mode,
-          onChanged: (mode) {
-            if(mode != null) {
-              setState(() {
-                settings.mode = mode;
-              });
-            }
-          },
-          items: PointsMode.values.map((v) =>
-            DropdownMenuItem<PointsMode>(
-              value: v,
-              child: Text(v.name),
-            )
-          ).toList(),
+        Row(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 16.0),
+              child: Text("Mode", style: Theme.of(context).textTheme.subtitle1!),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(right: 20.0),
+              child: DropdownButton<PointsMode>(
+                value: settings.mode,
+                onChanged: (mode) {
+                  if(mode != null) {
+                    setState(() {
+                      settings.mode = mode;
+                    });
+                  }
+                },
+                items: PointsMode.values.map((v) =>
+                  DropdownMenuItem<PointsMode>(
+                    value: v,
+                    child: Text(v.name),
+                  )
+                ).toList(),
+              ),
+            ),
+          ],
         ),
         Row( // match count
           mainAxisSize: MainAxisSize.max,
@@ -160,7 +171,7 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
               message: "If 0, use all matches. If greater than 0, use best N matches.",
               child: Padding(
                 padding: const EdgeInsets.only(left: 16),
-                child: Text("Matches to count"),
+                child: Text("Matches to count", style: Theme.of(context).textTheme.subtitle1!),
               )
             ),
             SizedBox(
@@ -187,34 +198,7 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
                 message: "The proportion of the top score to add to all participants' scores.",
                 child: Padding(
                   padding: const EdgeInsets.only(left: 16),
-                  child: Text("Participation bonus"),
-                )
-            ),
-            SizedBox(
-              width: 100,
-              child: Padding(
-                padding: EdgeInsets.only(right: 20),
-                child: TextFormField(
-                  controller: _participationController,
-                  textAlign: TextAlign.end,
-                  keyboardType: TextInputType.numberWithOptions(signed: false, decimal: true),
-                  inputFormatters: [
-                    FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
-                  ],
-                ),
-              ),
-            )
-          ],
-        ),
-        Row( // participation bonus
-          mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Tooltip(
-                message: "The proportion of the top score to add to all participants' scores.",
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 16),
-                  child: Text("Participation bonus"),
+                  child: Text("Participation bonus", style: Theme.of(context).textTheme.subtitle1!),
                 )
             ),
             SizedBox(
@@ -241,7 +225,7 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
                 message: "For decaying score mode, the score to give the winner.",
                 child: Padding(
                   padding: const EdgeInsets.only(left: 16),
-                  child: Text("Decay start"),
+                  child: Text("Decay start", style: Theme.of(context).textTheme.subtitle1!),
                 )
             ),
             SizedBox(
@@ -269,7 +253,7 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
                     "after the winner's.",
                 child: Padding(
                   padding: const EdgeInsets.only(left: 16),
-                  child: Text("Decay factor"),
+                  child: Text("Decay factor", style: Theme.of(context).textTheme.subtitle1!),
                 )
             ),
             SizedBox(

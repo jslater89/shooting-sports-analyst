@@ -2,26 +2,38 @@
 import 'package:collection/collection.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
+import 'package:uspsa_result_viewer/data/ranking/raters/points/points_rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/points/points_settings.dart';
 
-Map<ShooterRating, RatingChange> applyInversePlace(Map<ShooterRating, RelativeScore> scores, PointsSettings settings) {
-  var sortedEntries = scores.entries.sorted((e1, e2) => e2.value.percent.compareTo(e1.value.percent));
+class InversePlace extends PointsModel {
+  InversePlace(PointsSettings settings) : super(settings);
 
-  var bonus = sortedEntries.length * settings.participationBonus;
-  var shooters = sortedEntries.length;
+  int count = 0;
 
-  Map<ShooterRating, RatingChange> changes = {};
-  for(int i = 0; i < sortedEntries.length; i++) {
-    var entry = sortedEntries[i];
-    var rating = entry.key;
+  @override
+  Map<ShooterRating, RatingChange> apply(Map<ShooterRating, RelativeScore> scores) {
+    var sortedEntries = scores.entries.sorted((e1, e2) => e2.value.percent.compareTo(e1.value.percent));
 
-    var change = (shooters - i) + bonus;
+    count = sortedEntries.length;
 
-    changes[rating] = RatingChange(change: {
-      RatingSystem.ratingKey: change,
-    });
+    Map<ShooterRating, RatingChange> changes = {};
+    for(int i = 0; i < sortedEntries.length; i++) {
+      var entry = sortedEntries[i];
+      var rating = entry.key;
 
+      var change = (count - i).toDouble();
+
+      changes[rating] = RatingChange(change: {
+        RatingSystem.ratingKey: change,
+      });
+
+    }
+
+    return changes;
   }
 
-  return changes;
+  @override
+  // TODO: implement participationBonus
+  double get participationBonus => count * participationBonus;
+
 }

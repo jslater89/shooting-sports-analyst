@@ -41,6 +41,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   late RaterSettingsController _settingsController;
   RaterSettingsWidget? _settingsWidget;
   late RatingSystem _ratingSystem;
+  _ConfigurableRater? _currentRater = _ConfigurableRater.multiplayerElo;
+
 
   Future<void> getUrlDisplayNames() async {
     var map = <String, String>{};
@@ -119,6 +121,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       _settingsWidget = algorithm.newSettingsWidget(_settingsController);
     });
     _settingsController.currentSettings = algorithm.settings;
+    _currentRater = _currentRaterFor(algorithm);
 
     getUrlDisplayNames();
 
@@ -161,6 +164,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   bool _combineLocap = true;
   bool _combineOpenPCC = false;
   bool _combineLimitedCO = false;
+
+  ScrollController _settingsScroll = ScrollController();
+  ScrollController _matchScroll = ScrollController();
 
   List<String> _memNumWhitelist = [];
   Map<String, String> _shooterAliases = defaultShooterAliases;
@@ -283,72 +289,102 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 40),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(height: 10),
-                      Text("Settings", style: Theme.of(context).textTheme.labelLarge),
-                      SizedBox(height: 10),
-                      CheckboxListTile(
-                        title: Tooltip(
-                          child: Text("Keep full history?"),
-                          message: "Keep intermediate ratings after each match if checked, or keep only final ratings if unchecked.",
-                        ),
-                        value: _keepHistory,
-                        onChanged: (value) {
-                          if(value != null) {
-                            setState(() {
-                              _keepHistory = value;
-                            });
-                          }
-                        }
-                      ),
-                      CheckboxListTile(
+                  child: SingleChildScrollView(
+                    controller: _settingsScroll,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(height: 10),
+                        Text("Settings", style: Theme.of(context).textTheme.labelLarge),
+                        SizedBox(height: 10),
+                        CheckboxListTile(
                           title: Tooltip(
-                            child: Text("Combine Open/PCC?"),
-                            message: "Combine ratings for Open and PCC if checked.",
+                            child: Text("Keep full history?"),
+                            message: "Keep intermediate ratings after each match if checked, or keep only final ratings if unchecked.",
                           ),
-                          value: _combineOpenPCC,
+                          value: _keepHistory,
                           onChanged: (value) {
                             if(value != null) {
                               setState(() {
-                                _combineOpenPCC = value;
+                                _keepHistory = value;
                               });
                             }
                           }
-                      ),
-                      CheckboxListTile(
+                        ),
+                        CheckboxListTile(
+                            title: Tooltip(
+                              child: Text("Combine Open/PCC?"),
+                              message: "Combine ratings for Open and PCC if checked.",
+                            ),
+                            value: _combineOpenPCC,
+                            onChanged: (value) {
+                              if(value != null) {
+                                setState(() {
+                                  _combineOpenPCC = value;
+                                });
+                              }
+                            }
+                        ),
+                        CheckboxListTile(
+                            title: Tooltip(
+                              child: Text("Combine Limited/CO?"),
+                              message: "Combine ratings for Limited and Carry Optics if checked.",
+                            ),
+                            value: _combineLimitedCO,
+                            onChanged: (value) {
+                              if(value != null) {
+                                setState(() {
+                                  _combineLimitedCO = value;
+                                });
+                              }
+                            }
+                        ),
+                        CheckboxListTile(
                           title: Tooltip(
-                            child: Text("Combine Limited/CO?"),
-                            message: "Combine ratings for Limited and Carry Optics if checked.",
+                            child: Text("Combine locap?"),
+                            message: "Combine ratings for Single Stack, Revolver, Production, and Limited 10 if checked.",
                           ),
-                          value: _combineLimitedCO,
+                          value: _combineLocap,
                           onChanged: (value) {
                             if(value != null) {
                               setState(() {
-                                _combineLimitedCO = value;
+                                _combineLocap = value;
                               });
                             }
                           }
-                      ),
-                      CheckboxListTile(
-                        title: Tooltip(
-                          child: Text("Combine locap?"),
-                          message: "Combine ratings for Single Stack, Revolver, Production, and Limited 10 if checked.",
                         ),
-                        value: _combineLocap,
-                        onChanged: (value) {
-                          if(value != null) {
-                            setState(() {
-                              _combineLocap = value;
-                            });
-                          }
-                        }
-                      ),
-                      if(_settingsWidget != null) _settingsWidget!,
-                    ],
+                        Row(
+                          mainAxisSize: MainAxisSize.max,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(left: 16),
+                              child: Text("Rating engine", style: Theme.of(context).textTheme.subtitle1!),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(right: 20),
+                              child: DropdownButton<_ConfigurableRater>(
+                                value: _currentRater,
+                                onChanged: (v) {
+                                  if(v != null) {
+                                    confirmChangeRater(v);
+                                  }
+                                },
+                                items: _ConfigurableRater.values.map((r) =>
+                                    DropdownMenuItem<_ConfigurableRater>(
+                                      child: Text(r.name),
+                                      value: r,
+                                    )
+                                ).toList(),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if(_settingsWidget != null) _settingsWidget!,
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -435,47 +471,45 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                         ),
                         SizedBox(height: 10),
                         Expanded(
-                          child: Scrollbar(
-                            thumbVisibility: true,
-                            child: SingleChildScrollView(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // show newest additions at the top
-                                  for(var url in urlDisplayNames.keys.toList())
-                                    Row(
-                                      mainAxisSize: MainAxisSize.max,
-                                      children: [
-                                        Expanded(child: Text(urlDisplayNames[url]!, overflow: TextOverflow.fade)),
-                                        Tooltip(
-                                          message: "Remove this match from the cache, redownloading it.",
-                                          child: IconButton(
-                                            icon: Icon(Icons.refresh),
-                                            color: Theme.of(context).primaryColor,
-                                            onPressed: () {
-                                              MatchCache().deleteMatch(url);
-                                              setState(() {
-                                                urlDisplayNames[url] = url;
-                                              });
-                                            },
-                                          ),
-                                        ),
-                                        IconButton(
-                                          icon: Icon(Icons.remove),
+                          child: SingleChildScrollView(
+                            controller: _matchScroll,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // show newest additions at the top
+                                for(var url in urlDisplayNames.keys.toList())
+                                  Row(
+                                    mainAxisSize: MainAxisSize.max,
+                                    children: [
+                                      Expanded(child: Text(urlDisplayNames[url]!, overflow: TextOverflow.fade)),
+                                      Tooltip(
+                                        message: "Remove this match from the cache, redownloading it.",
+                                        child: IconButton(
+                                          icon: Icon(Icons.refresh),
                                           color: Theme.of(context).primaryColor,
                                           onPressed: () {
+                                            MatchCache().deleteMatch(url);
                                             setState(() {
-                                              matchUrls.remove(url);
-                                              urlDisplayNames.remove(url);
+                                              urlDisplayNames[url] = url;
                                             });
                                           },
-                                        )
-                                      ],
-                                    ),
-                                ],
-                              ),
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: Icon(Icons.remove),
+                                        color: Theme.of(context).primaryColor,
+                                        onPressed: () {
+                                          setState(() {
+                                            matchUrls.remove(url);
+                                            urlDisplayNames.remove(url);
+                                          });
+                                        },
+                                      )
+                                    ],
+                                  ),
+                              ],
                             ),
                           ),
                         ),
@@ -488,6 +522,45 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         ),
       ],
     );
+  }
+
+  Future<void> confirmChangeRater (_ConfigurableRater v) async {
+    var confirm = await showDialog<bool>(context: context, builder: (context) =>
+        ConfirmDialog(
+          title: "Change algorithm?",
+          content: Text("Current settings will be lost."),
+          positiveButtonLabel: "CONFIRM",
+        )
+    ) ?? false;
+
+    late RaterSettings settings;
+    if(confirm) {
+      switch(v) {
+        case _ConfigurableRater.multiplayerElo:
+          settings = EloSettings();
+          _ratingSystem = MultiplayerPercentEloRater(settings: settings as EloSettings);
+          _settingsController = _ratingSystem.newSettingsController();
+          break;
+        case _ConfigurableRater.points:
+          settings = PointsSettings();
+          _ratingSystem = PointsRater(settings as PointsSettings);
+          _settingsController = _ratingSystem.newSettingsController();
+          break;
+      }
+
+      setState(() {
+        _currentRater = v;
+        _settingsWidget = _ratingSystem.newSettingsWidget(_settingsController);
+      });
+      _settingsController.currentSettings = settings;
+    }
+  }
+
+  _ConfigurableRater _currentRaterFor(RatingSystem algorithm) {
+    if(algorithm is MultiplayerPercentEloRater) return _ConfigurableRater.multiplayerElo;
+    if(algorithm is PointsRater) return _ConfigurableRater.points;
+
+    throw UnsupportedError("Algorithm not yet supported");
   }
 
   Future<void> _saveProject(String name) async {
@@ -720,4 +793,9 @@ extension _MenuEntryUtils on _MenuEntry {
         return "Clear cache";
     }
   }
+}
+
+enum _ConfigurableRater {
+  multiplayerElo,
+  points,
 }

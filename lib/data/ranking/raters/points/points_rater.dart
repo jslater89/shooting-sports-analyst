@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter/src/widgets/basic.dart';
 import 'package:flutter/src/widgets/framework.dart';
 import 'package:uspsa_result_viewer/data/match/practical_match.dart';
@@ -20,7 +21,9 @@ import 'package:uspsa_result_viewer/data/ranking/raters/points/ui/points_setting
 import 'package:uspsa_result_viewer/ui/score_row.dart';
 
 class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSettingsController> {
-  PointsRater(this.settings);
+  PointsRater(this.settings) : model = PointsModel.fromSettings(settings);
+
+  final PointsModel model;
 
   factory PointsRater.fromJson(Map<String, dynamic> json) {
     var settings = PointsSettings();
@@ -31,14 +34,26 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
 
   @override
   Row buildRatingKey(BuildContext context) {
-    // TODO: implement buildRatingKey
-    throw UnimplementedError();
+    return Row();
   }
 
   @override
   ScoreRow buildRatingRow({required BuildContext context, required int place, required ShooterRating rating}) {
-    // TODO: implement buildRatingRow
-    throw UnimplementedError();
+    rating as PointsRating;
+    return ScoreRow(
+      color: (place - 1) % 2 == 1 ? Colors.grey[200] : Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(2.0),
+        child: Row(
+          children: [
+            Expanded(flex: 6, child: Text("")),
+            Expanded(flex: 4, child: Text(rating.shooter.getName(suffixes: false))),
+            Expanded(flex: 4, child: Text(rating.bestRating(settings, model.participationBonus).toStringAsFixed(1))),
+            Expanded(flex: 6, child: Text("")),
+          ]
+        )
+      )
+    );
   }
 
   @override
@@ -103,21 +118,29 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
     double eventWeightMultiplier = 1.0
   }) {
     late Map<ShooterRating, RatingChange> changes;
-    switch(settings.mode) {
-      case PointsMode.f1:
-        changes = applyF1Points(scores, settings);
-        break;
-      case PointsMode.inversePlace:
-        changes = applyInversePlace(scores, settings);
-        break;
-      case PointsMode.percentageFinish:
-        changes = applyPercentFinish(scores, settings);
-        break;
-      case PointsMode.decayingPoints:
-        changes = applyDecayingPoints(scores, settings);
-        break;
-    }
+    changes = model.apply(scores);
 
     return changes;
+  }
+}
+
+abstract class PointsModel {
+  final PointsSettings settings;
+  PointsModel(this.settings);
+
+  Map<ShooterRating, RatingChange> apply(Map<ShooterRating, RelativeScore> scores);
+  double get participationBonus;
+
+  static PointsModel fromSettings(PointsSettings settings) {
+    switch(settings.mode) {
+      case PointsMode.f1:
+        return F1Points(settings);
+      case PointsMode.inversePlace:
+        return InversePlace(settings);
+      case PointsMode.percentageFinish:
+        return PercentFinish(settings);
+      case PointsMode.decayingPoints:
+        return DecayingPoints(settings);
+    }
   }
 }
