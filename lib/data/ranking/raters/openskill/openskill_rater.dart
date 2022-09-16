@@ -18,7 +18,7 @@ import 'package:uspsa_result_viewer/data/ranking/raters/openskill/openskill_sett
 import 'package:uspsa_result_viewer/data/ranking/raters/openskill/ui/openskill_settings_ui.dart';
 import 'package:uspsa_result_viewer/ui/score_row.dart';
 
-class OpenskillRater implements RatingSystem<OpenskillRating, OpenskillSettings, OpenskillSettingsController> {
+class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, OpenskillSettingsController> {
   static const muKey = "mu";
   static const sigmaKey = "sigma";
 

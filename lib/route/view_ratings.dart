@@ -250,6 +250,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
   List<Widget> _buildRatingViewHeader() {
     var size = MediaQuery.of(context).size;
+    var sortModes = widget.settings.algorithm.supportedSorts;
 
     return [
       ConstrainedBox(
@@ -290,7 +291,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                         height: 1,
                         color: Colors.black,
                       ),
-                      items: RatingSortMode.values.map((s) {
+                      items: sortModes.map((s) {
                         return DropdownMenuItem(
                           child: Text(s.uiLabel),
                           value: s,

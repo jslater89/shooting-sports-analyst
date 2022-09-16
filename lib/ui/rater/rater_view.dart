@@ -81,7 +81,8 @@ class _RaterViewState extends State<RaterView> {
       sortedRatings = sortedRatings.where((r) => r.lastSeen.isAfter(cutoff));
     }
 
-    var asList = sortedRatings.sorted(widget.sortMode.comparator());
+    var comparator = widget.rater.ratingSystem.comparatorFor(widget.sortMode) ?? widget.sortMode.comparator();
+    var asList = sortedRatings.sorted(comparator);
     
     widget.onRatingsFiltered?.call(asList);
 
@@ -111,7 +112,6 @@ class _RaterViewState extends State<RaterView> {
   }
 }
 
-// TODO: rating system getSupportedSortModes, and getComparatorFor
 enum RatingSortMode {
   rating,
   classification,

@@ -18,6 +18,7 @@ import 'package:uspsa_result_viewer/data/ranking/raters/points/points_rating.dar
 import 'package:uspsa_result_viewer/data/ranking/raters/points/points_rating_change.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/points/points_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/points/ui/points_settings_ui.dart';
+import 'package:uspsa_result_viewer/ui/rater/rater_view.dart';
 import 'package:uspsa_result_viewer/ui/score_row.dart';
 
 class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSettingsController> {
@@ -116,6 +117,12 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
 
   @override
   PointsSettings settings;
+
+  List<RatingSortMode> get supportedSorts => [
+    RatingSortMode.rating,
+    RatingSortMode.classification,
+    RatingSortMode.stages,
+  ];
 
   @override
   Map<ShooterRating, RatingChange> updateShooterRatings({

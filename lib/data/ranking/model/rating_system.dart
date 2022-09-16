@@ -6,6 +6,7 @@ import 'package:uspsa_result_viewer/data/ranking/model/rating_change.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_mode.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
+import 'package:uspsa_result_viewer/ui/rater/rater_view.dart';
 import 'package:uspsa_result_viewer/ui/score_row.dart';
 
 abstract class RatingSystem<T extends ShooterRating<T>, S extends RaterSettings<S>, C extends RaterSettingsController<S>> {
@@ -78,6 +79,11 @@ abstract class RatingSystem<T extends ShooterRating<T>, S extends RaterSettings<
 
   /// Return the current settings for this rating system.
   S get settings;
+
+  List<RatingSortMode> get supportedSorts => RatingSortMode.values;
+  int Function(ShooterRating a, ShooterRating b)? comparatorFor(RatingSortMode mode) {
+    return null;
+  }
 
   static const initialPlacementMultipliers = [
     // 1.5,

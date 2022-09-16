@@ -17,9 +17,11 @@ class PointsRating extends ShooterRating<PointsRating> {
 
   double _rating = 0.0;
 
+  List<PointsRatingEvent> temporalEvents = [];
+
   @override
   /// The N best events.
-  List<RatingEvent> get ratingEvents => []..addAll(usedEvents().reversed);
+  List<RatingEvent> get ratingEvents => []..addAll(temporalEvents);
 
   /// All events, sorted high to low
   late SortedList<PointsRatingEvent> events;
@@ -27,6 +29,7 @@ class PointsRating extends ShooterRating<PointsRating> {
   @override
   void updateFromEvents(List<RatingEvent> events) {
     this.events.addAll(List.castFrom(events));
+    this.temporalEvents.addAll(List.castFrom(events));
 
     _rating = usedEvents().map((e) => e.ratingChange).sum;
     _lastSeen = this.events.sorted((a, b) => b.match.date!.compareTo(a.match.date!)).first.match.date!;
@@ -39,6 +42,14 @@ class PointsRating extends ShooterRating<PointsRating> {
   @override
   set lastSeen(DateTime d) {
     if(d.isAfter(_lastSeen)) _lastSeen = d;
+  }
+
+  Classification _lastClass = Classification.unknown;
+  Classification get lastClassification => _lastClass;
+  set lastClassification(Classification c) {
+    if(c.index < _lastClass.index) {
+      _lastClass = c;
+    }
   }
 
   List<RatingEvent> usedEvents() {
@@ -65,6 +76,7 @@ class PointsRating extends ShooterRating<PointsRating> {
         this.settings = other.settings,
         this.participationBonus = other.participationBonus,
         this._lastSeen = other._lastSeen,
+        this.temporalEvents = other.temporalEvents,
         super.copy(other);
 
   final int Function(PointsRatingEvent a, PointsRatingEvent b) _ratingComparator = (a, b) {

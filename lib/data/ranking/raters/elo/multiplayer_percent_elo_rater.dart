@@ -17,7 +17,7 @@ const _scaleKey = "scale";
 const _matchBlendKey = "matchBlend";
 const _errorAwareKKey = "errK";
 
-class MultiplayerPercentEloRater implements RatingSystem<EloShooterRating, EloSettings, EloSettingsController> {
+class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSettings, EloSettingsController> {
   static const errorKey = "error";
   static const baseKKey = "baseK";
   static const effectiveKKey = "effectiveKKey";
