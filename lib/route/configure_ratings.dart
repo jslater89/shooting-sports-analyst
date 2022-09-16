@@ -374,7 +374,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 },
                                 items: _ConfigurableRater.values.map((r) =>
                                     DropdownMenuItem<_ConfigurableRater>(
-                                      child: Text(r.name),
+                                      child: Text(r.uiLabel),
                                       value: r,
                                     )
                                 ).toList(),
@@ -798,4 +798,16 @@ extension _MenuEntryUtils on _MenuEntry {
 enum _ConfigurableRater {
   multiplayerElo,
   points,
+}
+
+extension _ConfigurableRaterUtils on _ConfigurableRater {
+  String get uiLabel {
+    switch(this) {
+
+      case _ConfigurableRater.multiplayerElo:
+        return "Elo";
+      case _ConfigurableRater.points:
+        return "Points series";
+    }
+  }
 }

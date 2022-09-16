@@ -152,25 +152,28 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
           children: [
             Padding(
               padding: const EdgeInsets.only(left: 16.0),
-              child: Text("Mode", style: Theme.of(context).textTheme.subtitle1!),
+              child: Text("Model", style: Theme.of(context).textTheme.subtitle1!),
             ),
-            Padding(
-              padding: const EdgeInsets.only(right: 20.0),
-              child: DropdownButton<PointsMode>(
-                value: settings.mode,
-                onChanged: (mode) {
-                  if(mode != null) {
-                    setState(() {
-                      settings.mode = mode;
-                    });
-                  }
-                },
-                items: PointsMode.values.map((v) =>
-                  DropdownMenuItem<PointsMode>(
-                    value: v,
-                    child: Text(v.name),
-                  )
-                ).toList(),
+            Tooltip(
+              message: settings.mode.tooltip,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 20.0),
+                child: DropdownButton<PointsMode>(
+                  value: settings.mode,
+                  onChanged: (mode) {
+                    if(mode != null) {
+                      setState(() {
+                        settings.mode = mode;
+                      });
+                    }
+                  },
+                  items: PointsMode.values.map((v) =>
+                    DropdownMenuItem<PointsMode>(
+                      value: v,
+                      child: Text(v.uiLabel),
+                    )
+                  ).toList(),
+                ),
               ),
             ),
           ],
@@ -207,7 +210,8 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Tooltip(
-                message: "The proportion of the top score to add to all participants' scores.",
+                message: "The proportion of the top score to add to all participants' scores.\n\n"
+                    "No effect for Inverse Points model: participation bonus is always 1.",
                 child: Padding(
                   padding: const EdgeInsets.only(left: 16),
                   child: Text("Participation bonus", style: Theme.of(context).textTheme.subtitle1!),

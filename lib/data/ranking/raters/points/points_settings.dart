@@ -90,3 +90,31 @@ enum PointsMode {
   /// P * K^(place)
   decayingPoints
 }
+
+extension PointsModeUtils on PointsMode {
+  String get uiLabel {
+    switch(this) {
+      case PointsMode.f1:
+        return "F1-style";
+      case PointsMode.inversePlace:
+        return "Inverse place";
+      case PointsMode.percentageFinish:
+        return "Percent finish";
+      case PointsMode.decayingPoints:
+        return "Decaying points";
+    }
+  }
+
+  String get tooltip {
+    switch(this) {
+      case PointsMode.f1:
+        return "Points to the top 10 finishers: 25, 18, 15, 12, 10, 8, 6, 4, 2, 1.";
+      case PointsMode.inversePlace:
+        return "N points to the winner, where N is the number of shooters; minus 1 for each place below 1st.";
+      case PointsMode.percentageFinish:
+        return "Points equal to each shooter's percentage finish.";
+      case PointsMode.decayingPoints:
+        return "Exponentially decaying points, starting at (decay start) and multiplied by (decay factor)^N, where N is place.";
+    }
+  }
+}
