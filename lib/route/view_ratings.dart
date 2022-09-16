@@ -416,15 +416,6 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
           },
         )
       ),
-      // Tooltip(
-      //   message: "Edit matches",
-      //   child: IconButton(
-      //     icon: Icon(Icons.list),
-      //     onPressed: () {
-      //       // TODO: show matches dialog
-      //     },
-      //   )
-      // )
     ];
   }
 

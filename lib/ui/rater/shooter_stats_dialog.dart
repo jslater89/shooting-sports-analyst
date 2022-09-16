@@ -127,6 +127,8 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     );
   }
 
+  // TODO: let raters build their own series, optionally?
+  // Mostly for points rater, which doesn't do charts well
   // Doesn't do recreating well
   charts.Series<_AccumulatedRatingEvent, int>? _series;
   charts.LineChart? _chart;

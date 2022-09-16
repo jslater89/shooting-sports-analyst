@@ -165,7 +165,6 @@ class RatingProjectManager {
   }
 }
 
-// TODO: distinct names for OpenSkill
 const _nameKey = "name";
 const _combineLocapKey = "combineLocap";
 const _combineLimitedCOKey = "combineLimCO";

@@ -111,7 +111,7 @@ class _RaterViewState extends State<RaterView> {
   }
 }
 
-// TODO: rating system getSupportedSortModes, and getSortModeFor
+// TODO: rating system getSupportedSortModes, and getComparatorFor
 enum RatingSortMode {
   rating,
   classification,

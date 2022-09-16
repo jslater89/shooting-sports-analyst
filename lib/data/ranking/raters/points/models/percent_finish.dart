@@ -22,7 +22,6 @@ class PercentFinish extends PointsModel {
   }
 
   @override
-  // TODO: implement participationBonus
   double get participationBonus => 100 * settings.participationBonus;
 
 }

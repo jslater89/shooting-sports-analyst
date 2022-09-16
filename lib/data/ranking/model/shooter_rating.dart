@@ -63,7 +63,6 @@ abstract class ShooterRating<T extends ShooterRating<T>> {
   double _connectedness = ShooterRating.baseConnectedness;
   double get connectedness => _connectedness;
 
-  // TODO: have this return the change, apply at the end
   void updateConnectedness() {
     var c = ShooterRating.baseConnectedness;
     for(var connection in connectedShooters.iterable) {
