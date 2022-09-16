@@ -33,5 +33,5 @@ class InversePlace extends PointsModel {
   }
 
   @override
-  double get participationBonus => 1;
+  double get participationBonus => settings.participationBonus > 0 ? 1 : 0;
 }

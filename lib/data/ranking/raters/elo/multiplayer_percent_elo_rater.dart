@@ -232,7 +232,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   static const _connectednessFlex = 2;
   static const _trendFlex = 2;
   static const _stagesFlex = 2;
-  static const _trailPaddingFlex = 1;
+  static const _trailPaddingFlex = 2;
 
   @override
   Row buildRatingKey(BuildContext context) {
@@ -304,7 +304,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
               Expanded(flex: _matchChangeFlex, child: Text("${lastMatchChange.round()}", textAlign: TextAlign.end)),
               Expanded(flex: _trendFlex, child: Text("${trend.round()}", textAlign: TextAlign.end)),
               Expanded(flex: _connectednessFlex, child: Text("${(rating.connectedness - ShooterRating.baseConnectedness).toStringAsFixed(1)}", textAlign: TextAlign.end)),
-              Expanded(flex: _stagesFlex, child: Text("${rating.ratingEvents.length}", textAlign: TextAlign.end,)),
+              Expanded(flex: _stagesFlex, child: Text("${rating.length}", textAlign: TextAlign.end,)),
               Expanded(flex: _trailPaddingFlex, child: Text("")),
             ],
           )

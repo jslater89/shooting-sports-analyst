@@ -26,7 +26,7 @@ class EloSettings extends RaterSettings<EloSettings> {
   double get matchBlend => _matchBlend;
   set matchBlend(double m) => _matchBlend = m;
 
-  double get stageBlend => stageBlend;
+  double get stageBlend => 1 - _matchBlend;
 
   EloSettings({
     this.K = defaultK,

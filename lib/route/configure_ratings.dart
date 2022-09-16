@@ -149,7 +149,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         appBar: AppBar(
           title: Text(_lastProjectName == null ? "Shooter Rating Calculator" : "Project $_lastProjectName"),
           centerTitle: true,
-          actions: _generateActions(),
+          actions: MatchCache.readyNow ? _generateActions() : null,
           bottom: _operationInProgress ? PreferredSize(
             preferredSize: Size(double.infinity, 5),
             child: LinearProgressIndicator(value: null, backgroundColor: primaryColor, valueColor: animation),
@@ -364,23 +364,30 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                             children: [
                               Padding(
                                 padding: const EdgeInsets.only(left: 16),
-                                child: Text("Rating engine", style: Theme.of(context).textTheme.subtitle1!),
+                                child: Tooltip(
+                                  message: "The rating algorithm to use. Switching algorithms discards all settings below\n"
+                                      "this dropdown!",
+                                  child: Text("Rating engine", style: Theme.of(context).textTheme.subtitle1!)
+                                ),
                               ),
                               Padding(
                                 padding: const EdgeInsets.only(right: 20),
-                                child: DropdownButton<_ConfigurableRater>(
-                                  value: _currentRater,
-                                  onChanged: (v) {
-                                    if(v != null) {
-                                      confirmChangeRater(v);
-                                    }
-                                  },
-                                  items: _ConfigurableRater.values.map((r) =>
-                                      DropdownMenuItem<_ConfigurableRater>(
-                                        child: Text(r.uiLabel),
-                                        value: r,
-                                      )
-                                  ).toList(),
+                                child: Tooltip(
+                                  message: _currentRater?.tooltip,
+                                  child: DropdownButton<_ConfigurableRater>(
+                                    value: _currentRater,
+                                    onChanged: (v) {
+                                      if(v != null) {
+                                        confirmChangeRater(v);
+                                      }
+                                    },
+                                    items: _ConfigurableRater.values.map((r) =>
+                                        DropdownMenuItem<_ConfigurableRater>(
+                                          child: Text(r.uiLabel),
+                                          value: r,
+                                        )
+                                    ).toList(),
+                                  ),
                                 ),
                               ),
                             ],
@@ -598,6 +605,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   }
 
   void _restoreDefaults() {
+    _settingsController.restoreDefaults();
     setState(() {
       _keepHistory = false;
       _combineLocap = true;
@@ -607,7 +615,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       _shooterAliases = defaultShooterAliases;
       _memNumWhitelist = [];
     });
-    _settingsController.restoreDefaults();
   }
 
   List<Widget> _generateActions() {
@@ -811,11 +818,19 @@ enum _ConfigurableRater {
 extension _ConfigurableRaterUtils on _ConfigurableRater {
   String get uiLabel {
     switch(this) {
-
       case _ConfigurableRater.multiplayerElo:
         return "Elo";
       case _ConfigurableRater.points:
         return "Points series";
+    }
+  }
+
+  String get tooltip {
+    switch(this) {
+      case _ConfigurableRater.multiplayerElo:
+        return "Elo, modified for use in multiplayer games and customized for USPSA.";
+      case _ConfigurableRater.points:
+        return "Incrementing best-N-of-M points, for scoring a club or section series.";
     }
   }
 }

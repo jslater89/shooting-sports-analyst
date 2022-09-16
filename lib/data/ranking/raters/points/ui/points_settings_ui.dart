@@ -8,6 +8,8 @@ class PointsSettingsController extends RaterSettingsController<PointsSettings> w
   PointsSettings _currentSettings;
   String? lastError;
 
+  bool _restoreDefaults = false;
+
   PointsSettings get currentSettings => _currentSettings;
   set currentSettings(PointsSettings ps) {
     _currentSettings = ps;
@@ -20,6 +22,7 @@ class PointsSettingsController extends RaterSettingsController<PointsSettings> w
   @override
   void restoreDefaults() {
     _currentSettings.restoreDefaults();
+    _restoreDefaults = true;
     notifyListeners();
   }
 
@@ -101,6 +104,15 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
         }
 
         _validateText();
+      }
+    });
+
+    widget.controller.addListener(() {
+      if(widget.controller._restoreDefaults) {
+        setState(() {
+          settings = widget.controller._currentSettings;
+        });
+        widget.controller._restoreDefaults = false;
       }
     });
   }
@@ -211,7 +223,7 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
           children: [
             Tooltip(
                 message: "The proportion of the top score to add to all participants' scores.\n\n"
-                    "No effect for Inverse Points model: participation bonus is always 1.",
+                    "No effect for Inverse Points model: if this is greater than 0, the bonus is always 1.",
                 child: Padding(
                   padding: const EdgeInsets.only(left: 16),
                   child: Text("Participation bonus", style: Theme.of(context).textTheme.subtitle1!),

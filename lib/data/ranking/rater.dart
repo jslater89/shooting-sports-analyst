@@ -879,13 +879,15 @@ class Rater {
   }
 
   void _calculateStats() {
+    var bucketSize = ratingSystem.histogramBucketSize(knownShooters.length, _matches.length);
+
     var count = knownShooters.length;
     var allRatings = knownShooters.values.map((r) => r.rating);
 
     var histogram = <int, int>{};
     for(var rating in allRatings) {
       // Buckets 100 wide
-      var bucket = (0 + (rating / 100).floor());
+      var bucket = (0 + (rating / bucketSize).floor());
 
       var value = histogram[bucket] ?? 0;
       value += 1;
@@ -912,7 +914,7 @@ class Rater {
       histogramsByClass[classification] = {};
       for(var rating in ratingsInClass) {
         // Buckets 100 wide
-        var bucket = (0 + (rating / 100).floor());
+        var bucket = (0 + (rating / bucketSize).floor());
 
         var value = histogramsByClass[classification]![bucket] ?? 0;
         value += 1;
@@ -931,6 +933,7 @@ class Rater {
       minByClass: minsByClass,
       maxByClass: maxesByClass,
       histogramsByClass: histogramsByClass,
+      histogramBucketSize: bucketSize,
     );
   }
 
@@ -969,6 +972,7 @@ class RaterStatistics {
   double minRating;
   double maxRating;
 
+  int histogramBucketSize;
   Map<int, int> histogram;
 
   Map<Classification, int> countByClass;
@@ -987,6 +991,7 @@ class RaterStatistics {
     required this.averageByClass,
     required this.minByClass,
     required this.maxByClass,
+    required this.histogramBucketSize,
     required this.histogram,
     required this.histogramsByClass,
   });

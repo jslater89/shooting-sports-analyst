@@ -33,9 +33,29 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
     return PointsRater(settings);
   }
 
+  static const _leadPaddingFlex = 4;
+  static const _placeFlex = 1;
+  static const _memNumFlex = 2;
+  static const _classFlex = 1;
+  static const _nameFlex = 3;
+  static const _ratingFlex = 2;
+  static const _stagesFlex = 2;
+  static const _trailPaddingFlex = 4;
+
   @override
   Row buildRatingKey(BuildContext context) {
-    return Row();
+    return Row(
+      mainAxisSize: MainAxisSize.max,
+      children: [
+        Expanded(flex: _leadPaddingFlex + _placeFlex, child: Text("")),
+        Expanded(flex: _memNumFlex, child: Text("Member #")),
+        Expanded(flex: _classFlex, child: Text("Class")),
+        Expanded(flex: _nameFlex, child: Text("Name")),
+        Expanded(flex: _ratingFlex, child: Text("Points", textAlign: TextAlign.end)),
+        Expanded(flex: _stagesFlex, child: Text("Matches", textAlign: TextAlign.end)),
+        Expanded(flex: _trailPaddingFlex, child: Text("")),
+      ],
+    );
   }
 
   @override
@@ -56,10 +76,14 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
         padding: const EdgeInsets.all(2.0),
         child: Row(
           children: [
-            Expanded(flex: 6, child: Text("")),
-            Expanded(flex: 4, child: Text(rating.shooter.getName(suffixes: false))),
-            Expanded(flex: 4, child: Text(ratingText)),
-            Expanded(flex: 6, child: Text("")),
+            Expanded(flex: _leadPaddingFlex, child: Text("")),
+            Expanded(flex: _placeFlex, child: Text("$place")),
+            Expanded(flex: _memNumFlex, child: Text(rating.shooter.memberNumber)),
+            Expanded(flex: _classFlex, child: Text(rating.lastClassification.displayString())),
+            Expanded(flex: _nameFlex, child: Text(rating.shooter.getName(suffixes: false))),
+            Expanded(flex: _ratingFlex, child: Text("$ratingText", textAlign: TextAlign.end)),
+            Expanded(flex: _stagesFlex, child: Text("${rating.length}", textAlign: TextAlign.end,)),
+            Expanded(flex: _trailPaddingFlex, child: Text("")),
           ]
         )
       )
@@ -81,7 +105,28 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
   }
 
   @override
+  int histogramBucketSize(int shooters, int matchCount) {
+    // About 10% of the maximum points available
+    switch(settings.mode) {
+      case PointsMode.f1:
+        return (0.1 * 25 * matchCount).round();
+      case PointsMode.inversePlace:
+        return (0.1 * 0.2 * shooters * matchCount).round();
+      case PointsMode.percentageFinish:
+        return (0.1 * 100 * matchCount).round();
+      case PointsMode.decayingPoints:
+        return (0.1 * settings.decayingPointsStart * matchCount).round();
+    }
+  }
+
+  @override
   RatingMode get mode => RatingMode.wholeEvent;
+
+  @override
+  String nameForSort(RatingSortMode mode) {
+    if(mode == RatingSortMode.rating) return "Points";
+    return super.nameForSort(mode);
+  }
 
   @override
   RatingEvent newEvent({

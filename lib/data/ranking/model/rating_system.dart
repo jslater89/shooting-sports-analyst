@@ -41,14 +41,7 @@ abstract class RatingSystem<T extends ShooterRating<T>, S extends RaterSettings<
     double eventWeightMultiplier = 1.0
   });
 
-  /// Return a Row containing labels for a table of shooter ratings.
-  Row buildRatingKey(BuildContext context);
-
-  /// Return a ScoreRow containing values for a given shooter rating in a table of shooter ratings.
-  ///
-  /// [rating] is guaranteed to be the subclass of ShooterRating corresponding to this
-  /// rating system.
-  ScoreRow buildRatingRow({required BuildContext context, required int place, required ShooterRating rating});
+  // ****** Self-describing data classes ******
 
   /// Return a deep copy of the provided shooter rating.
   ShooterRating copyShooterRating(T rating);
@@ -67,6 +60,22 @@ abstract class RatingSystem<T extends ShooterRating<T>, S extends RaterSettings<
   String ratingsToCsv(List<ShooterRating> ratings);
   encodeToJson(Map<String, dynamic> json);
 
+  /// Return the current settings for this rating system.
+  S get settings;
+
+  // ****** Self-describing UI ******
+
+  List<RatingSortMode> get supportedSorts => RatingSortMode.values;
+  int Function(ShooterRating a, ShooterRating b)? comparatorFor(RatingSortMode mode) {
+    return null;
+  }
+  String nameForSort(RatingSortMode mode) {
+    return mode.uiLabel;
+  }
+  int histogramBucketSize(int shooters, int matchCount) {
+    return 100;
+  }
+
   /// Return a new instance of a [RaterSettingsController] subclass for
   /// the given rater type, which allows the UI to retrieve settings and
   /// restore defaults.
@@ -77,13 +86,15 @@ abstract class RatingSystem<T extends ShooterRating<T>, S extends RaterSettings<
   /// rating system.
   RaterSettingsWidget<S, C> newSettingsWidget(C controller);
 
-  /// Return the current settings for this rating system.
-  S get settings;
+  /// Return a Row containing labels for a table of shooter ratings.
+  Row buildRatingKey(BuildContext context);
 
-  List<RatingSortMode> get supportedSorts => RatingSortMode.values;
-  int Function(ShooterRating a, ShooterRating b)? comparatorFor(RatingSortMode mode) {
-    return null;
-  }
+  /// Return a ScoreRow containing values for a given shooter rating in a table of shooter ratings.
+  ///
+  /// [rating] is guaranteed to be the subclass of ShooterRating corresponding to this
+  /// rating system.
+  ScoreRow buildRatingRow({required BuildContext context, required int place, required ShooterRating rating});
+
 
   static const initialPlacementMultipliers = [
     // 1.5,

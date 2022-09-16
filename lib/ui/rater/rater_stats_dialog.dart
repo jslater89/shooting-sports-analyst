@@ -150,7 +150,7 @@ class RaterStatsDialog extends StatelessWidget {
 
     var labels = <String>[];
     for(int i = minKey; i < maxKey + 1; i += 1) {
-      labels.add((i * 100).toString());
+      labels.add((i * statistics.histogramBucketSize).toString());
     }
 
     ChartData chartData = ChartData(

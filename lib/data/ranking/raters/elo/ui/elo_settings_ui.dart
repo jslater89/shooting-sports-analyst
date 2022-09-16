@@ -7,7 +7,14 @@ class EloSettingsController extends RaterSettingsController<EloSettings> with Ch
   EloSettings _currentSettings;
   String? lastError;
 
-  EloSettings get currentSettings => _currentSettings;
+  bool _shouldValidate = false;
+  bool _restoreDefaults = false;
+
+  EloSettings get currentSettings {
+    _shouldValidate = true;
+    return _currentSettings;
+  }
+
   set currentSettings(EloSettings s) {
     _currentSettings = s;
     notifyListeners();
@@ -18,7 +25,8 @@ class EloSettingsController extends RaterSettingsController<EloSettings> with Ch
 
   @override
   void restoreDefaults() {
-    currentSettings.restoreDefaults();
+    _restoreDefaults = true;
+    _currentSettings.restoreDefaults();
     notifyListeners();
   }
 
@@ -56,22 +64,50 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
   @override
   void initState() {
     super.initState();
-    settings = widget.controller.currentSettings;
+    settings = widget.controller._currentSettings;
     _kController.text = "${settings.K.toStringAsFixed(1)}";
-    _scaleController.text = "${settings.scale.toStringAsFixed(1)}";
+    _scaleController.text = "${settings.scale.round()}";
     _pctWeightController.text = "${settings.percentWeight}";
     _placeWeightController.text = "${settings.placeWeight}";
     _matchBlendController.text = "${settings.matchBlend}";
 
     widget.controller.addListener(() {
       setState(() {
-        settings = widget.controller.currentSettings;
-        _kController.text = "${settings.K.toStringAsFixed(1)}";
-        _scaleController.text = "${settings.scale.toStringAsFixed(1)}";
-        _pctWeightController.text = "${settings.percentWeight}";
-        _placeWeightController.text = "${settings.placeWeight}";
-        _matchBlendController.text = "${settings.matchBlend}";
+        if(widget.controller._shouldValidate) {
+          print("validating text");
+          _validateText();
+          widget.controller._shouldValidate = false;
+        }
+        else if(widget.controller._restoreDefaults) {
+          print("restoring defaults");
+          settings = widget.controller._currentSettings;
+          _kController.text = "${settings.K.toStringAsFixed(1)}";
+          _scaleController.text = "${settings.scale.round()}";
+          _pctWeightController.text = "${settings.percentWeight}";
+          _placeWeightController.text = "${settings.placeWeight}";
+          _matchBlendController.text = "${settings.matchBlend}";
+        }
+        else {
+          print("other notification");
+          settings = widget.controller._currentSettings;
+          _kController.text = "${settings.K.toStringAsFixed(1)}";
+          _scaleController.text = "${settings.scale.round()}";
+          _pctWeightController.text = "${settings.percentWeight}";
+          _placeWeightController.text = "${settings.placeWeight}";
+          _matchBlendController.text = "${settings.matchBlend}";
+        }
       });
+    });
+
+    _kController.addListener(() {
+      if(int.tryParse(_kController.text) != null) {
+        _validateText();
+      }
+    });
+    _scaleController.addListener(() {
+      if(int.tryParse(_scaleController.text) != null) {
+        _validateText();
+      }
     });
 
     _pctWeightController.addListener(() {
@@ -112,7 +148,6 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
           else if(newBlend < 0) {
             newBlend = 0.0;
           }
-          _matchBlendController.text = newBlend.toString();
         }
 
         _validateText();
@@ -220,8 +255,11 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Tooltip(
-              message: "Scale factor controls the spread of ratings. A higher scale factor yields ratings with "
-                  "larger differences in rating for the same difference in predicted skill.",
+              message:
+                  "Scale factor controls the spread of ratings, and how much predictive weight the algorithm assigns to\n"
+                  "small differences in score. A high scale factor increases the range of ratings assigned, and also tells\n"
+                  "the algorithm to treat close scores as nearly the same. A low scale factor decreases the range of ratings\n"
+                  "assigned, and tells the algorithm that small score differences are more meaningful.",
               child: Padding(
                 padding: const EdgeInsets.only(left: 16),
                 child: Text("Scale factor", style: Theme.of(context).textTheme.subtitle1!),
@@ -248,8 +286,10 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Tooltip(
-              message: "In by-stage mode, blend match percentage into stage percentage, to reduce the impact of single bad stages.\n\n"
-                  "Match blend of 1.0 is equivalent to by-match mode.",
+              message:
+                  "In by-stage mode, blend match finish into stage finish, to reduce the impact of single bad stages.\n"
+                  "0.3, for example, means that a shooter's calculated score on each stage comes 70% from his finish\n"
+                  "on that stage, and 30% from his overall match finish. No effect in by-match mode.",
               child: Padding(
                 padding: const EdgeInsets.only(left: 16),
                 child: Text("Match blend", style: Theme.of(context).textTheme.subtitle1!),
@@ -264,7 +304,7 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
                   textAlign: TextAlign.end,
                   keyboardType: TextInputType.numberWithOptions(),
                   inputFormatters: [
-                    FilteringTextInputFormatter(RegExp(r"[0-9\-\.]*"), allow: true),
+                    FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
                   ],
                 ),
               ),
@@ -276,9 +316,9 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Tooltip(
-              message: "Percent and placement weight control how much weight the algorithm gives to percent finish "
-                  "vs. placement.\n\nToo little placement weight can cause initial ratings to adjust very slowly or penalize high-end shooters in strong fields.\n\n"
-                  "Too much placement weight can unfairly penalize shooters who finish near strong competition in percentage terms.",
+              message: "Percent and placement weight control how much weight the algorithm gives to percent finish vs. placement.\n"
+                  "Place weight allows good shooters in crowded fields an opportunity to gain rating by beating their peers. Percent\n"
+                  "weight allows lower-level shooters to advance without having to beat high-level competition outright.",
               child: Padding(
                 padding: const EdgeInsets.only(left: 16),
                 child: Text("Percent/place weight", style: Theme.of(context).textTheme.subtitle1!),
@@ -303,7 +343,7 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
                         textAlign: TextAlign.end,
                         keyboardType: TextInputType.numberWithOptions(),
                         inputFormatters: [
-                          FilteringTextInputFormatter(RegExp(r"[0-9\-\.]*"), allow: true),
+                          FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
                         ],
                       ),
                     ),

@@ -293,7 +293,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                       ),
                       items: sortModes.map((s) {
                         return DropdownMenuItem(
-                          child: Text(s.uiLabel),
+                          child: Text(widget.settings.algorithm.nameForSort(s)),
                           value: s,
                         );
                       }).toList(),
