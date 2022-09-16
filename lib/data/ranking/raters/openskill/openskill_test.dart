@@ -3,6 +3,8 @@ import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/openskill/openskill_rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/openskill/openskill_rating.dart';
 
+import 'openskill_settings.dart';
+
 class OpenskillTest {
   static void run() {
 
@@ -17,8 +19,8 @@ class OpenskillTest {
     austen.memberNumber = "54321";
 
     List<OpenskillRating> ratings = [
-      OpenskillRating(austen, OpenskillRater.defaultMu, OpenskillRater.defaultSigma),
-      OpenskillRating(william, OpenskillRater.defaultMu, OpenskillRater.defaultSigma),
+      OpenskillRating(austen, OpenskillSettings.defaultMu, OpenskillSettings.defaultSigma),
+      OpenskillRating(william, OpenskillSettings.defaultMu, OpenskillSettings.defaultSigma),
     ];
 
     var scores = {
@@ -30,7 +32,7 @@ class OpenskillTest {
         ..score = (Score(shooter: william)..a=5..time=5)
     };
 
-    var rater = OpenskillRater(byStage: false);
+    var rater = OpenskillRater(settings: OpenskillSettings());
     var changes = rater.updateShooterRatings(shooters: ratings, scores: scores, matchScores: scores);
 
     print(changes);

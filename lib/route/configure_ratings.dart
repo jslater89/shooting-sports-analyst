@@ -189,8 +189,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     }
     else if(_ratingSystem is OpenskillRater) {
       settings as OpenskillSettings;
-      // TODO
-      _ratingSystem = OpenskillRater(byStage: true);
+      _ratingSystem = OpenskillRater(settings: settings);
     }
     else if(_ratingSystem is PointsRater) {
       settings as PointsSettings;
@@ -561,6 +560,11 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
           _ratingSystem = PointsRater(settings as PointsSettings);
           _settingsController = _ratingSystem.newSettingsController();
           break;
+        case _ConfigurableRater.openskill:
+          settings = OpenskillSettings();
+          _ratingSystem = OpenskillRater(settings: settings as OpenskillSettings);
+          _settingsController = _ratingSystem.newSettingsController();
+          break;
       }
 
       setState(() {
@@ -812,6 +816,7 @@ extension _MenuEntryUtils on _MenuEntry {
 
 enum _ConfigurableRater {
   multiplayerElo,
+  openskill,
   points,
 }
 
@@ -822,6 +827,8 @@ extension _ConfigurableRaterUtils on _ConfigurableRater {
         return "Elo";
       case _ConfigurableRater.points:
         return "Points series";
+      case _ConfigurableRater.openskill:
+        return "OpenSkill";
     }
   }
 
@@ -831,6 +838,8 @@ extension _ConfigurableRaterUtils on _ConfigurableRater {
         return "Elo, modified for use in multiplayer games and customized for USPSA.";
       case _ConfigurableRater.points:
         return "Incrementing best-N-of-M points, for scoring a club or section series.";
+      case _ConfigurableRater.openskill:
+        return "OpenSkill, a Bayesian online rating system similar to Microsoft TrueSkill.";
     }
   }
 }

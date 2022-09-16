@@ -28,7 +28,7 @@ class OpenskillSettingsController extends RaterSettingsController<OpenskillSetti
 
   @override
   String? validate() {
-    return "Not yet implemented";
+    return _currentSettings.validate();
   }
 }
 
@@ -47,7 +47,6 @@ class OpenskillSettingsWidget extends RaterSettingsWidget<OpenskillSettings, Ope
 class _OpenskillSettingsWidgetState extends State<OpenskillSettingsWidget> {
   @override
   Widget build(BuildContext context) {
-    // TODO: implement build
-    throw UnimplementedError();
+    return Text("Not yet implemented");
   }
 }

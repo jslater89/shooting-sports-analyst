@@ -32,15 +32,11 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
   static const _connectednessFlex = 2;
   static const _eventsFlex = 2;
 
-  static const defaultMu = 25.0;
-  static const defaultSigma = 25/3;
-  static const defaultBeta = 25/3/2; // half of defaultSigma
-  static const defaultTau = 25/3/10;
-  static const defaultEpsilon = 0.0001;
+  final OpenskillSettings settings;
 
-  final double beta = defaultBeta;
-  final double epsilon = defaultEpsilon;
-  final double tau = defaultTau;
+  double get beta => settings.beta;
+  double get epsilon => OpenskillSettings.defaultEpsilon;
+  double get tau => settings.tau;
   double get betaSquared => beta * beta;
 
   @override
@@ -85,13 +81,15 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
     );
   }
 
-  OpenskillRater({required this.byStage});
+  OpenskillRater({required this.settings});
   factory OpenskillRater.fromJson(Map<String, dynamic> json) {
-    return OpenskillRater(byStage: (json[RatingProject.byStageKey] ?? true) as bool);
+    var settings = OpenskillSettings();
+    settings.loadFromJson(json);
+    return OpenskillRater(settings: settings);
   }
 
   @override
-  bool byStage;
+  bool get byStage => settings.byStage;
 
   @override
   OpenskillRating copyShooterRating(OpenskillRating rating) {
@@ -119,8 +117,8 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
   OpenskillRating newShooterRating(Shooter shooter, {DateTime? date}) {
     return OpenskillRating(
       shooter,
-      initialClassRatings[shooter.classification]?.elementAt(_muIndex) ?? defaultMu,
-      initialClassRatings[shooter.classification]?.elementAt(_sigmaIndex) ?? defaultSigma,
+      initialClassRatings[shooter.classification]?.elementAt(_muIndex) ?? OpenskillSettings.defaultMu,
+      initialClassRatings[shooter.classification]?.elementAt(_sigmaIndex) ?? OpenskillSettings.defaultSigma,
     );
   }
 
@@ -144,14 +142,14 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
   static const _muIndex = 0;
   static const _sigmaIndex = 1;
   static const initialClassRatings = {
-    Classification.GM: [defaultMu + 25, defaultSigma],
-    Classification.M: [defaultMu + 20, defaultSigma],
-    Classification.A: [defaultMu + 15, defaultSigma],
-    Classification.B: [defaultMu + 10, defaultSigma],
-    Classification.C: [defaultMu + 5, defaultSigma],
-    Classification.D: [defaultMu, defaultSigma],
-    Classification.U: [defaultMu + 5, defaultSigma],
-    Classification.unknown: [defaultMu, defaultSigma],
+    Classification.GM: [OpenskillSettings.defaultMu + 25, OpenskillSettings.defaultSigma],
+    Classification.M: [OpenskillSettings.defaultMu + 20, OpenskillSettings.defaultSigma],
+    Classification.A: [OpenskillSettings.defaultMu + 15, OpenskillSettings.defaultSigma],
+    Classification.B: [OpenskillSettings.defaultMu + 10, OpenskillSettings.defaultSigma],
+    Classification.C: [OpenskillSettings.defaultMu + 5, OpenskillSettings.defaultSigma],
+    Classification.D: [OpenskillSettings.defaultMu, OpenskillSettings.defaultSigma],
+    Classification.U: [OpenskillSettings.defaultMu + 5, OpenskillSettings.defaultSigma],
+    Classification.unknown: [OpenskillSettings.defaultMu, OpenskillSettings.defaultSigma],
   };
 
   @override
@@ -192,10 +190,6 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
   OpenskillSettingsWidget newSettingsWidget(OpenskillSettingsController controller) {
     return OpenskillSettingsWidget(controller: controller);
   }
-
-  @override
-  // TODO: implement settings
-  OpenskillSettings get settings => OpenskillSettings();
 }
 
 class OpenskillScore {
@@ -215,7 +209,7 @@ class OpenskillScore {
   double muChange = 0.0;
   double sigmaChange = 0.0;
 
-  OpenskillScore(this.rating, this.actualScore, {double tau = OpenskillRater.defaultTau}) :
+  OpenskillScore(this.rating, this.actualScore, {double? tau}) :
       mu = rating.mu,
-      sigma = sqrt((rating.sigma * rating.sigma) + (tau * tau));
+      sigma = sqrt((rating.sigma * rating.sigma) + pow(tau ?? OpenskillSettings.defaultTau, 2));
 }
