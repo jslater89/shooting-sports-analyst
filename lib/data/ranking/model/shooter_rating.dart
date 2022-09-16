@@ -26,7 +26,9 @@ abstract class ShooterRating<T extends ShooterRating<T>> {
   static const maxConnections = 40;
 
   final Shooter shooter;
-  Classification lastClassification;
+  Classification _lastClass;
+  Classification get lastClassification => _lastClass;
+  set lastClassification(Classification c) => _lastClass = c;
   DateTime lastSeen;
 
   double get rating;
@@ -182,12 +184,12 @@ abstract class ShooterRating<T extends ShooterRating<T>> {
   }
 
   ShooterRating(this.shooter, {DateTime? date}) :
-      this.lastClassification = shooter.classification ?? Classification.U,
+      this._lastClass = shooter.classification ?? Classification.U,
       this.lastSeen = date ?? DateTime.now();
 
   ShooterRating.copy(ShooterRating other) :
       this.shooter = other.shooter,
-      this.lastClassification = other.lastClassification,
+      this._lastClass = other.lastClassification,
       this._connectedness = other._connectedness,
       this.lastSeen = other.lastSeen,
       this.connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure)..addAll(other.connectedShooters.map((e) => ConnectedShooter.copy(e)));

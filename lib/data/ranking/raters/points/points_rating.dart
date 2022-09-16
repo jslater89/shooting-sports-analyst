@@ -44,7 +44,7 @@ class PointsRating extends ShooterRating<PointsRating> {
     if(d.isAfter(_lastSeen)) _lastSeen = d;
   }
 
-  Classification _lastClass = Classification.unknown;
+  late Classification _lastClass;
   Classification get lastClassification => _lastClass;
   set lastClassification(Classification c) {
     if(c.index < _lastClass.index) {
@@ -64,10 +64,11 @@ class PointsRating extends ShooterRating<PointsRating> {
   PointsRating(
     Shooter shooter,
     this.settings,
-    {required this.participationBonus, DateTime? date}) :
-        super(shooter, date: date) {
+    {required this.participationBonus, DateTime? date}) : super(shooter, date: date)
+  {
     this.events = SortedList(comparator: _ratingComparator);
     if(date?.isAfter(_lastSeen) ?? false) _lastSeen = date!;
+    _lastClass = shooter.classification ?? Classification.unknown;
   }
 
   PointsRating.copy(PointsRating other) :
@@ -76,6 +77,7 @@ class PointsRating extends ShooterRating<PointsRating> {
         this.settings = other.settings,
         this.participationBonus = other.participationBonus,
         this._lastSeen = other._lastSeen,
+        this._lastClass = other._lastClass,
         this.temporalEvents = other.temporalEvents,
         super.copy(other);
 
