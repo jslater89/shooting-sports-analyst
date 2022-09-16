@@ -40,6 +40,15 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
   @override
   ScoreRow buildRatingRow({required BuildContext context, required int place, required ShooterRating rating}) {
     rating as PointsRating;
+
+    var ratingText = "";
+    if(settings.mode == PointsMode.inversePlace) {
+      ratingText = rating.rating.round().toString();
+    }
+    else {
+      ratingText = rating.rating.toStringAsFixed(1);
+    }
+
     return ScoreRow(
       color: (place - 1) % 2 == 1 ? Colors.grey[200] : Colors.white,
       child: Padding(
@@ -48,7 +57,7 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
           children: [
             Expanded(flex: 6, child: Text("")),
             Expanded(flex: 4, child: Text(rating.shooter.getName(suffixes: false))),
-            Expanded(flex: 4, child: Text(rating.bestRating(settings, model.participationBonus).toStringAsFixed(1))),
+            Expanded(flex: 4, child: Text(ratingText)),
             Expanded(flex: 6, child: Text("")),
           ]
         )
@@ -96,7 +105,7 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
 
   @override
   PointsRating newShooterRating(Shooter shooter, {DateTime? date}) {
-    return PointsRating(shooter, date: date);
+    return PointsRating(shooter, settings, date: date, participationBonus: model.participationBonus);
   }
 
   @override

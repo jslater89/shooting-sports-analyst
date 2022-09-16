@@ -7,10 +7,17 @@ class SortedList<T> {
   SortedList({required int Function(T a, T b) comparator}) : _comparator = comparator;
   SortedList.comparable() {
     _comparator = (T a, T b) => (a as Comparable).compareTo(b);
-}
+  }
+  SortedList.copy(SortedList<T> other) :
+      this._backing = <T>[]..addAll(other._backing),
+      this._comparator = other._comparator;
 
   T operator[](int index) {
     return _backing[index];
+  }
+
+  List<T> sublist(int start, [int? end]) {
+    return _backing.sublist(start, end ?? length);
   }
 
   void add(T item) {

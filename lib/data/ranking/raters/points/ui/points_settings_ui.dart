@@ -62,6 +62,16 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
     _decayStartController.text = "${settings.decayingPointsStart}";
     _decayFactorController.text = "${settings.decayingPointsFactor}";
 
+    _matchCountController.addListener(() {
+      var newCount = int.tryParse(_matchCountController.text);
+      if(newCount != null) _validateText();
+    });
+
+    _decayStartController.addListener(() {
+      var newDecay = double.tryParse(_decayStartController.text);
+      if(newDecay != null) _validateText();
+    });
+
     _participationController.addListener(() {
       if (_participationController.text.length > 0) {
         var newBonus = double.tryParse(_participationController.text);
@@ -126,6 +136,8 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
     settings.decayingPointsStart = decayStart;
     settings.decayingPointsFactor = decayFactor;
     widget.controller.lastError = null;
+
+    print("updated settings");
   }
 
   @override

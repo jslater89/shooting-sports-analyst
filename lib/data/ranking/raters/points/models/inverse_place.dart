@@ -33,7 +33,5 @@ class InversePlace extends PointsModel {
   }
 
   @override
-  // TODO: implement participationBonus
-  double get participationBonus => count * participationBonus;
-
+  double get participationBonus => 1;
 }
