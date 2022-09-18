@@ -25,6 +25,7 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
   static const _paddingFlex = 6;
   static const _placeFlex = 2;
   static const _memberNumFlex = 3;
+  static const _classFlex = 1;
   static const _nameFlex = 6;
   static const _ordinalFlex = 2;
   static const _muFlex = 2;
@@ -47,10 +48,12 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
           Expanded(flex: _paddingFlex - _placeFlex, child: Text("")),
           Expanded(flex: _placeFlex, child: Text("")),
           Expanded(flex: _memberNumFlex, child: Text("Member #")),
+          Expanded(flex: _classFlex, child: Text("Class")),
           Expanded(flex: _nameFlex, child: Text("Name")),
-          Expanded(flex: _ordinalFlex, child: Text("Rating")),
-          Expanded(flex: _muFlex, child: Text("Mu")),
-          Expanded(flex: _sigmaFlex, child: Text("Sigma")),
+          Expanded(flex: _ordinalFlex, child: Text("Rating", textAlign: TextAlign.end)),
+          Expanded(flex: _muFlex, child: Text("Mu", textAlign: TextAlign.end)),
+          Expanded(flex: _sigmaFlex, child: Text("Sigma", textAlign: TextAlign.end)),
+          Expanded(flex: _eventsFlex, child: Text(byStage ? "Stages" : "Matches", textAlign: TextAlign.end)),
           Expanded(flex: _paddingFlex, child: Text("")),
         ]
     );
@@ -70,10 +73,12 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
             Expanded(flex: _paddingFlex - _placeFlex, child: Text("")),
             Expanded(flex: _placeFlex, child: Text("$place")),
             Expanded(flex: _memberNumFlex, child: Text(rating.shooter.memberNumber)),
+            Expanded(flex: _classFlex, child: Text(rating.lastClassification.displayString())),
             Expanded(flex: _nameFlex, child: Text(rating.shooter.getName(suffixes: false))),
-            Expanded(flex: _ordinalFlex, child: Text(rating.ordinal.toStringAsFixed(2))),
-            Expanded(flex: _muFlex, child: Text(rating.mu.toStringAsFixed(2))),
-            Expanded(flex: _sigmaFlex, child: Text(rating.sigma.toStringAsFixed(3))),
+            Expanded(flex: _ordinalFlex, child: Text(rating.ordinal.toStringAsFixed(1), textAlign: TextAlign.end)),
+            Expanded(flex: _muFlex, child: Text(rating.mu.toStringAsFixed(1), textAlign: TextAlign.end)),
+            Expanded(flex: _sigmaFlex, child: Text(rating.sigma.toStringAsFixed(2), textAlign: TextAlign.end)),
+            Expanded(flex: _eventsFlex, child: Text("${rating.length}", textAlign: TextAlign.end,)),
             Expanded(flex: _paddingFlex, child: Text("")),
           ]
         )
@@ -98,7 +103,8 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
 
   @override
   encodeToJson(Map<String, dynamic> json) {
-    // TODO: settings
+    json[RatingProject.algorithmKey] = RatingProject.openskillValue;
+    settings.encodeToJson(json);
   }
 
   @override
@@ -190,6 +196,9 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
   OpenskillSettingsWidget newSettingsWidget(OpenskillSettingsController controller) {
     return OpenskillSettingsWidget(controller: controller);
   }
+
+  @override
+  int histogramBucketSize(int shooters, int matchCount) => 10;
 }
 
 class OpenskillScore {

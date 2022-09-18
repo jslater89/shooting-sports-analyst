@@ -16,8 +16,9 @@ class OpenskillSettings extends RaterSettings<OpenskillSettings> {
   /// approach 0, but beta means ratings will always be able to move.
   static const defaultBeta = 25/3/2; // half of defaultSigma
 
-  /// tau is a factor blended into a team's sigma-squared.
-  static const defaultTau = 25/3/10;
+  /// tau is an amount to add to sigma at every rating event, which
+  /// allows fluidity in ratings as player skill changes.
+  static const defaultTau = 25/3/30;
 
   /// epsilon is a minimum sigma to avoid math hinkiness.
   static const defaultEpsilon = 0.0001;

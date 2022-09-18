@@ -226,6 +226,8 @@ class RatingProject {
         return MultiplayerPercentEloRater.fromJson(encodedProject);
       case pointsValue:
         return PointsRater.fromJson(encodedProject);
+      case openskillValue:
+        return OpenskillRater.fromJson(encodedProject);
       default:
         throw ArgumentError();
     }

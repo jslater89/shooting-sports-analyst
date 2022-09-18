@@ -382,7 +382,10 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                     },
                                     items: _ConfigurableRater.values.map((r) =>
                                         DropdownMenuItem<_ConfigurableRater>(
-                                          child: Text(r.uiLabel),
+                                          child: Tooltip(
+                                            message: r.tooltip,
+                                            child: Text(r.uiLabel)
+                                          ),
                                           value: r,
                                         )
                                     ).toList(),
@@ -578,6 +581,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   _ConfigurableRater _currentRaterFor(RatingSystem algorithm) {
     if(algorithm is MultiplayerPercentEloRater) return _ConfigurableRater.multiplayerElo;
     if(algorithm is PointsRater) return _ConfigurableRater.points;
+    if(algorithm is OpenskillRater) return _ConfigurableRater.openskill;
 
     throw UnsupportedError("Algorithm not yet supported");
   }
@@ -839,7 +843,9 @@ extension _ConfigurableRaterUtils on _ConfigurableRater {
       case _ConfigurableRater.points:
         return "Incrementing best-N-of-M points, for scoring a club or section series.";
       case _ConfigurableRater.openskill:
-        return "OpenSkill, a Bayesian online rating system similar to Microsoft TrueSkill.";
+        return
+          "OpenSkill, a Bayesian online rating system similar to Microsoft TrueSkill.\n\n"
+          "It doesn't work as well as Elo, and depends heavily on large sample sizes.";
     }
   }
 }

@@ -74,21 +74,19 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
     widget.controller.addListener(() {
       setState(() {
         if(widget.controller._shouldValidate) {
-          print("validating text");
           _validateText();
           widget.controller._shouldValidate = false;
         }
         else if(widget.controller._restoreDefaults) {
-          print("restoring defaults");
           settings = widget.controller._currentSettings;
           _kController.text = "${settings.K.toStringAsFixed(1)}";
           _scaleController.text = "${settings.scale.round()}";
           _pctWeightController.text = "${settings.percentWeight}";
           _placeWeightController.text = "${settings.placeWeight}";
           _matchBlendController.text = "${settings.matchBlend}";
+          widget.controller._restoreDefaults = false;
         }
         else {
-          print("other notification");
           settings = widget.controller._currentSettings;
           _kController.text = "${settings.K.toStringAsFixed(1)}";
           _scaleController.text = "${settings.scale.round()}";
@@ -100,12 +98,12 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
     });
 
     _kController.addListener(() {
-      if(int.tryParse(_kController.text) != null) {
+      if(double.tryParse(_kController.text) != null) {
         _validateText();
       }
     });
     _scaleController.addListener(() {
-      if(int.tryParse(_scaleController.text) != null) {
+      if(double.tryParse(_scaleController.text) != null) {
         _validateText();
       }
     });
