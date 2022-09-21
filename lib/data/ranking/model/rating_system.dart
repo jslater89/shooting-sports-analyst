@@ -6,6 +6,7 @@ import 'package:uspsa_result_viewer/data/ranking/model/rating_change.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_mode.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
+import 'package:uspsa_result_viewer/data/ranking/prediction/match_prediction.dart';
 import 'package:uspsa_result_viewer/ui/rater/rater_view.dart';
 import 'package:uspsa_result_viewer/ui/score_row.dart';
 
@@ -95,6 +96,11 @@ abstract class RatingSystem<T extends ShooterRating<T>, S extends RaterSettings<
   /// rating system.
   ScoreRow buildRatingRow({required BuildContext context, required int place, required ShooterRating rating});
 
+  /// Return ShooterPredictions for the list of shooters.
+  List<ShooterPrediction> predict(List<ShooterRating> ratings);
+
+  /// Return an error measure for the given predictions and result.
+  double validate({required PracticalMatch result, required List<ShooterPrediction> predictions});
 
   static const initialPlacementMultipliers = [
     // 1.5,

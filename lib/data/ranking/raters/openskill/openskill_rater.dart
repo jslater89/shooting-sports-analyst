@@ -10,6 +10,7 @@ import 'package:uspsa_result_viewer/data/ranking/model/rating_mode.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_system.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
+import 'package:uspsa_result_viewer/data/ranking/prediction/match_prediction.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/openskill/model/plackett_luce.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/openskill/openskill_rating.dart';
@@ -199,6 +200,18 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
 
   @override
   int histogramBucketSize(int shooters, int matchCount) => 10;
+
+  @override
+  List<ShooterPrediction> predict(List<ShooterRating> ratings) {
+    // TODO: implement predict
+    throw UnimplementedError();
+  }
+
+  @override
+  double validate({required PracticalMatch result, required List<ShooterPrediction> predictions}) {
+    // TODO: implement validate
+    throw UnimplementedError();
+  }
 }
 
 class OpenskillScore {

@@ -243,6 +243,10 @@ class Rater {
       var rating = knownShooters[shooter.memberNumber];
       if(rating != null) {
         rating.lastClassification = shooter.classification ?? rating.lastClassification;
+
+        // Update the shooter's name: the most recent one is probably the most interesting/useful
+        rating.shooter.firstName = shooter.firstName;
+        rating.shooter.lastName = shooter.lastName;
       }
     }
     matchStrength = matchStrength / shooters.length;
@@ -449,10 +453,10 @@ class Rater {
       return true;
     }
 
-    if(s.memberNumber.length <= 3) {
-      _verifyCache[s] = false;
-      return false;
-    }
+    // if(s.memberNumber.length <= 3) {
+    //   _verifyCache[s] = false;
+    //   return false;
+    // }
 
     if(s.firstName.endsWith("2") || s.lastName.endsWith("2") || s.firstName.endsWith("3") || s.firstName.endsWith("3")) {
       _verifyCache[s] = false;

@@ -42,6 +42,9 @@ dependencies:
   shared_preferences:
   path_provider:
   sanitize_filename:
+  normal:
+  fluttericon:
+  google_fonts:
   hive: 2.2.3
 
 dev_dependencies:

@@ -1,11 +1,16 @@
 
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:fluttericon/rpg_awesome_icons.dart';
 import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
+import 'package:uspsa_result_viewer/ui/rater/prediction/prediction_view.dart';
+import 'package:uspsa_result_viewer/ui/rater/prediction/registration_parser.dart';
 import 'package:uspsa_result_viewer/ui/rater/rater_stats_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/rater_view.dart';
 
@@ -143,7 +148,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       appBar: AppBar(
         title: Text("Shooter Rating Calculator"),
         centerTitle: true,
-        actions: actions,
+        actions: _loadingState == _LoadingState.done ? actions : null,
         bottom: _operationInProgress ? PreferredSize(
           preferredSize: Size(double.infinity, 5),
           child: LinearProgressIndicator(value: null, backgroundColor: primaryColor, valueColor: animation),
@@ -387,6 +392,35 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
   List<Widget> _generateActions() {
     return [
+      Tooltip(
+        message: "Predict the outcome of a match based on ratings.",
+        child: IconButton(
+          icon: Icon(RpgAwesome.crystal_ball),
+          onPressed: () async {
+            var tab = activeTabs[_tabController.index];
+            var rater = _history.raterFor(_selectedMatch!, tab);
+
+            var count = min(50, rater.knownShooters.length ~/ 2);
+            var options = rater.knownShooters.values.toSet().toList();
+            options.sort((a, b) => b.rating.compareTo(a.rating));
+            var shooters = <ShooterRating>[];
+            // var random = Random();
+            // for(int i = 0; i < count; i++) {
+            //   var index = random.nextInt(options.length);
+            //   var shooter = options[index];
+            //   shooters.add(shooter);
+            //   options.remove(shooter);
+            // }
+            var divisions = tab.divisions;
+            shooters = await getRegistrations("https://practiscore.com/racegun-nationals/squadding/printhtml", divisions, options) ?? [];
+
+            var predictions = rater.ratingSystem.predict(shooters);
+            Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+              return PredictionView(predictions: predictions);
+            }));
+          },
+        ),
+      ),
       Tooltip(
           message: "View statistics for this division or group.",
           child: IconButton(

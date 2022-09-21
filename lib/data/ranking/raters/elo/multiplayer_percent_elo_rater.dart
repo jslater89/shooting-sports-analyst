@@ -1,8 +1,11 @@
 import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:normal/normal.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_settings.dart';
+import 'package:uspsa_result_viewer/data/ranking/prediction/match_prediction.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.dart';
@@ -45,6 +48,8 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   @override
   bool get byStage => settings.byStage;
   bool get errorAwareK => settings.errorAwareK;
+
+  late double errThreshold = EloShooterRating.errorScale / (K / 7.5);
 
   MultiplayerPercentEloRater({
     EloSettings? settings,
@@ -167,7 +172,6 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     // If we're less confident, we adjust more to find the correct rating faster.
     var error = aRating.standardError;
 
-    var errThreshold = EloShooterRating.errorScale / (K / 7.5);
     var errMultiplier = 1.0;
     if(errorAwareK) {
       var minThreshold = errThreshold;
@@ -386,5 +390,74 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   EloSettingsWidget newSettingsWidget(EloSettingsController controller) {
     // create a new state when the controller changes
     return EloSettingsWidget(controller: controller);
+  }
+
+  static const monteCarloTrials = 1000;
+
+  @override
+  List<ShooterPrediction> predict(List<ShooterRating> ratings) {
+    List<EloShooterRating> eloRatings = List.castFrom(ratings);
+    List<ShooterPrediction> predictions = [];
+
+    for(var rating in eloRatings) {
+      var error = rating.standardError;
+      var stdDev = error;
+
+      var compressionFactor = 0.85;
+      var compressionCenter = 100.0;
+      if(error > compressionCenter) stdDev = compressionCenter + pow(stdDev - compressionCenter, compressionFactor);
+      else stdDev = compressionCenter - pow(compressionCenter - stdDev, compressionFactor);
+
+      // var errMultiplier = 1.0;
+      // if (error >= errThreshold) {
+      //   errMultiplier = 1 + min(1.0, ((error - errThreshold) / (EloShooterRating.errorScale - errThreshold))) * 1;
+      // }
+      // else if (error < errThreshold) {
+      //   errMultiplier = 1 - ((errThreshold - error) / errThreshold) * 0.5;
+      // }
+      // stdDev = stdDev * errMultiplier;
+
+      var shortTrend = rating.rating - rating.averageRating(window: 15).firstRating;
+      var mediumTrend = rating.rating - rating.averageRating(window: 30).firstRating;
+      var longTrend = rating.rating - rating.averageRating(window: 60).firstRating;
+
+      var trendShiftMaxVal = 400;
+      var trendShiftMaxMagnitude = 0.9;
+      var averageTrend = (shortTrend + mediumTrend + longTrend) / 3;
+      var trendShiftProportion = max(-1.0, min(1.0, averageTrend / trendShiftMaxVal));
+      var trendShift = trendShiftProportion * trendShiftMaxMagnitude;
+
+      List<double> possibleRatings = Normal.generate(monteCarloTrials, mean: rating.rating, variance: stdDev * stdDev);
+      List<double> expectedScores = [];
+      for(var maybeRating in possibleRatings) {
+        var expectedScore = 0.0;
+        for(var opponent in eloRatings) {
+          if(opponent == rating) continue;
+          expectedScore += _probability(opponent.rating, maybeRating);
+        }
+        var n = ratings.length;
+        expectedScore = expectedScore / ((n * (n-1)) / 2);
+        expectedScores.add(expectedScore);
+      }
+
+      var averagePerformance = expectedScores.average;
+      var variance = expectedScores.map((e) => pow(e - averagePerformance, 2)).average;
+      var performanceDeviation = sqrt(variance);
+
+      predictions.add(ShooterPrediction(
+        shooter: rating,
+        mean: averagePerformance,
+        ciOffset: trendShift,
+        sigma: performanceDeviation,
+      ));
+    }
+
+    return predictions;
+  }
+
+  @override
+  double validate({required PracticalMatch result, required List<ShooterPrediction> predictions}) {
+    // TODO: implement validate
+    throw UnimplementedError();
   }
 }

@@ -178,7 +178,7 @@ enum RaterGroup {
   limitedCO,
 }
 
-extension _InternalUtilities on RaterGroup {
+extension Utilities on RaterGroup {
   List<Division> get divisions {
     switch(this) {
       case RaterGroup.open:

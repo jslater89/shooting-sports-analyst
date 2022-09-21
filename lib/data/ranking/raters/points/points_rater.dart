@@ -9,6 +9,7 @@ import 'package:uspsa_result_viewer/data/ranking/model/rating_mode.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_system.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
+import 'package:uspsa_result_viewer/data/ranking/prediction/match_prediction.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/points/models/decaying_points.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/points/models/f1_points.dart';
@@ -182,6 +183,18 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
     changes = model.apply(scores);
 
     return changes;
+  }
+
+  @override
+  List<ShooterPrediction> predict(List<ShooterRating> ratings) {
+    // TODO: implement predict
+    throw UnimplementedError();
+  }
+
+  @override
+  double validate({required PracticalMatch result, required List<ShooterPrediction> predictions}) {
+    // TODO: implement validate
+    throw UnimplementedError();
   }
 }
 
