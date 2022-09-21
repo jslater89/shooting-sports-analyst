@@ -135,7 +135,7 @@ class Rater {
     var shooters = _getShooters(match);
     for(Shooter s in shooters) {
       var processed = processMemberNumber(s.memberNumber);
-      if(processed.isNotEmpty && !s.reentry && s.memberNumber.length > 3) {
+      if(processed.isNotEmpty && !s.reentry) {
         s.memberNumber = processed;
         knownShooters[s.memberNumber] ??= ratingSystem.newShooterRating(s, date: match.date); // ratingSystem.defaultRating
       }

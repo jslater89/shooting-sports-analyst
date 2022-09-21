@@ -392,7 +392,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     return EloSettingsWidget(controller: controller);
   }
 
-  static const monteCarloTrials = 1000;
+  static const monteCarloTrials = 500;
 
   @override
   List<ShooterPrediction> predict(List<ShooterRating> ratings) {
