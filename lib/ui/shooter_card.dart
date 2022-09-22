@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
-import 'package:uspsa_result_viewer/ui/captioned_text.dart';
+import 'package:uspsa_result_viewer/ui/widget/captioned_text.dart';
 
 class ShooterResultCard extends StatelessWidget {
   final RelativeMatchScore? matchScore;

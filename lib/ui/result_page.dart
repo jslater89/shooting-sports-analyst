@@ -8,10 +8,10 @@ import 'package:uspsa_result_viewer/data/search_query_parser.dart';
 import 'package:uspsa_result_viewer/data/sort_mode.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/ui/about_dialog.dart';
-import 'package:uspsa_result_viewer/ui/filter_controls.dart';
+import 'package:uspsa_result_viewer/ui/widget/filter_controls.dart';
 import 'package:uspsa_result_viewer/ui/filter_dialog.dart';
 import 'package:uspsa_result_viewer/ui/match_breakdown.dart';
-import 'package:uspsa_result_viewer/ui/score_list.dart';
+import 'package:uspsa_result_viewer/ui/widget/score_list.dart';
 
 class ResultPage extends StatefulWidget {
   final PracticalMatch? canonicalMatch;

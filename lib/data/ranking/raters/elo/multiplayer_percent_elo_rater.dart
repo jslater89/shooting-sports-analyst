@@ -12,7 +12,7 @@ import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.d
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rating_change.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/ui/elo_settings_ui.dart';
-import 'package:uspsa_result_viewer/ui/score_row.dart';
+import 'package:uspsa_result_viewer/ui/widget/score_row.dart';
 
 const _kKey = "k";
 const _pctWeightKey = "pctWt";
@@ -392,7 +392,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     return EloSettingsWidget(controller: controller);
   }
 
-  static const monteCarloTrials = 500;
+  static const monteCarloTrials = 1000;
 
   @override
   List<ShooterPrediction> predict(List<ShooterRating> ratings) {

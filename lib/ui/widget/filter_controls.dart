@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/sort_mode.dart';
 import 'package:uspsa_result_viewer/ui/filter_dialog.dart';
-import 'package:uspsa_result_viewer/ui/stage_select_dialog.dart';
+import 'package:uspsa_result_viewer/ui/widget/stage_select_dialog.dart';
 
 class FilterControls extends StatefulWidget {
   final SortMode sortMode;

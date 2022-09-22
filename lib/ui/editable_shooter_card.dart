@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
-import 'package:uspsa_result_viewer/ui/captioned_text.dart';
+import 'package:uspsa_result_viewer/ui/widget/captioned_text.dart';
 import 'package:uspsa_result_viewer/ui/shooter_card.dart';
 
 /// EditableShooterCard should _not_ be barrier-dismissable.

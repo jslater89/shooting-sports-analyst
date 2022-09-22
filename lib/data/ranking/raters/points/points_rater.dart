@@ -20,7 +20,7 @@ import 'package:uspsa_result_viewer/data/ranking/raters/points/points_rating_cha
 import 'package:uspsa_result_viewer/data/ranking/raters/points/points_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/points/ui/points_settings_ui.dart';
 import 'package:uspsa_result_viewer/ui/rater/rater_view.dart';
-import 'package:uspsa_result_viewer/ui/score_row.dart';
+import 'package:uspsa_result_viewer/ui/widget/score_row.dart';
 
 class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSettingsController> {
   PointsRater(this.settings) : model = PointsModel.fromSettings(settings);

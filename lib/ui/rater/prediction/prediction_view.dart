@@ -2,6 +2,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:uspsa_result_viewer/data/ranking/prediction/match_prediction.dart';
+import 'package:uspsa_result_viewer/ui/widget/box_and_whisker.dart';
 
 class PredictionView extends StatelessWidget {
   const PredictionView({Key? key, required this.predictions}) : super(key: key);
@@ -20,8 +21,8 @@ class PredictionView extends StatelessWidget {
       if(predMax < minValue) minValue = predMin;
     }
 
-    maxValue *= 1.05;
-    minValue *= 0.90;
+    maxValue *= 1.01;
+    minValue *= 0.99;
 
     final backgroundColor = Colors.white;
 
@@ -41,11 +42,11 @@ class PredictionView extends StatelessWidget {
             // header
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.only(top: 8.0),
+                padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
                 child: ListView.separated(
                   itemCount: predictions.length,
                   itemBuilder: (context, i) {
-                    return _buildPredictionsRow(sortedPredictions[i], windows, rangePerWindow, minValue);
+                    return _buildPredictionsRow(sortedPredictions[i], windows, rangePerWindow, minValue, maxValue);
                   },
                   separatorBuilder: (context, _i) {
                     return Divider();
@@ -60,9 +61,9 @@ class PredictionView extends StatelessWidget {
   }
 
   static const int _nameFlex = 1;
-  static const int _whiskerPlotFlex = 6;
+  static const int _whiskerPlotFlex = 5;
 
-  Widget _buildPredictionsRow(ShooterPrediction pred, int windows, double rangePerWindow, double min) {
+  Widget _buildPredictionsRow(ShooterPrediction pred, int windows, double rangePerWindow, double min, double max) {
     return Row(
       children: [
         Expanded(
@@ -70,8 +71,20 @@ class PredictionView extends StatelessWidget {
           child: Text(pred.shooter.shooter.getName(suffixes: false)),
         ),
         Expanded(
+          // Text(_whiskerPlot(pred, windows, rangePerWindow, min), style: GoogleFonts.inconsolata())
           flex: _whiskerPlotFlex,
-          child: Text(_whiskerPlot(pred, windows, rangePerWindow, min), style: GoogleFonts.inconsolata())
+          child: BoxAndWhiskerPlot(
+            minimum: pred.lowerWhisker,
+            lowerQuartile: pred.lowerBox,
+            median: pred.center,
+            upperQuartile: pred.upperBox,
+            maximum: pred.upperWhisker,
+            direction: PlotDirection.horizontal,
+            rangeMin: min,
+            rangeMax: max,
+            fillBox: true,
+            boxSize: 12,
+          )
         )
       ],
     );
