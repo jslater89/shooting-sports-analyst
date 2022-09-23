@@ -403,16 +403,46 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
             var count = min(50, rater.knownShooters.length ~/ 2);
             var options = rater.knownShooters.values.toSet().toList();
             options.sort((a, b) => b.rating.compareTo(a.rating));
-            var shooters = <ShooterRating>[];
-            // var random = Random();
-            // for(int i = 0; i < count; i++) {
-            //   var index = random.nextInt(options.length);
-            //   var shooter = options[index];
-            //   shooters.add(shooter);
-            //   options.remove(shooter);
-            // }
+            List<ShooterRating>? shooters = [];
             var divisions = tab.divisions;
-            shooters = await getRegistrations("https://practiscore.com/racegun-nationals/squadding/printhtml", divisions, options) ?? [];
+
+            print(divisions);
+
+            TextEditingController _urlController = TextEditingController();
+            var url = await showDialog<String>(context: context, builder: (context) {
+              return AlertDialog(
+                title: Text("Enter 'Print HTML squadding' link"),
+                content: TextFormField(
+                  decoration: InputDecoration(
+                    hintText: "https://practiscore.com/match-name/squadding/printhtml"
+                  ),
+                  controller: _urlController,
+                ),
+                actions: [
+                  TextButton(
+                    child: Text("CANCEL"),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                  TextButton(
+                    child: Text("OK"),
+                    onPressed: () => Navigator.of(context).pop(_urlController.text),
+                  )
+                ],
+              );
+            });
+
+            if(url == null) {
+              return;
+            }
+
+            shooters = await getRegistrations(url, divisions, options);
+
+            if(shooters == null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text("Unable to retrieve registrations"))
+              );
+              return;
+            }
 
             var predictions = rater.ratingSystem.predict(shooters);
             Navigator.of(context).push(MaterialPageRoute(builder: (context) {

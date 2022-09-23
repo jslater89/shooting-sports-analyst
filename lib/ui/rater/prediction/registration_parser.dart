@@ -29,7 +29,7 @@ List<ShooterRating> _parseRegistrations(String registrationHtml, List<Division> 
   var ratings = <ShooterRating>[];
 
   // Match a line
-  var shooterRegex = RegExp(r"\d+\.\s+(?<name>.*)\s+\((?<division>\w+)\s+\/\s+(?<class>\w+)\)");
+  var shooterRegex = RegExp(r"\d+\.\s+(?<name>.*)\s+\((?<division>[\w\s]+)\s+\/\s+(?<class>\w+)\)");
   for(var line in registrationHtml.split("\n")) {
     var match = shooterRegex.firstMatch(line);
     if(match != null) {
@@ -74,12 +74,12 @@ ShooterRating? _findShooter(String processedName, Classification classification,
     return firstGuess;
   }
 
-  var secondGuess = knownShooters.firstWhereOrNull((rating) {
+  var secondGuess = knownShooters.where((rating) {
     return processedName.endsWith(_processShooterName(rating.shooter)[1]) && rating.lastClassification == classification;
-  });
+  }).toList();
 
-  if(secondGuess != null) {
-    return secondGuess;
+  if(secondGuess.length == 1) {
+    return secondGuess[0];
   }
 
   return null;
