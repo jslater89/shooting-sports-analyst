@@ -610,6 +610,7 @@ class Rater {
     String memNum = shooter.memberNumber;
 
     ShooterRating rating = knownShooters[memNum]!;
+
     changes[rating] ??= {};
     RelativeMatchScore score = scores.firstWhere((score) => score.shooter == shooter);
 
@@ -624,6 +625,11 @@ class Rater {
 
     if(stage != null) {
       RelativeScore stageScore = score.stageScores[stage]!;
+
+      // If the shooter has already had a rating change for this stage, don't recalc.
+      for(var existingScore in changes[rating]!.keys) {
+        if(existingScore.stage == stage) return;
+      }
 
       _encounteredMemberNumber(memNum);
 
