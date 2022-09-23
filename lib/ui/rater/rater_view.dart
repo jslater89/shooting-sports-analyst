@@ -115,6 +115,8 @@ class _RaterViewState extends State<RaterView> {
 enum RatingSortMode {
   rating,
   classification,
+  firstName,
+  lastName,
   error,
   lastChange,
   trend,
@@ -136,6 +138,10 @@ extension RatingSortModeNames on RatingSortMode {
         return "Trend";
       case RatingSortMode.stages:
         return "History";
+      case RatingSortMode.firstName:
+        return "First Name";
+      case RatingSortMode.lastName:
+        return "Last Name";
     }
   }
 }
@@ -181,6 +187,10 @@ extension _SortFunctions on RatingSortMode {
         };
       case RatingSortMode.stages:
         return (a, b) => b.ratingEvents.length.compareTo(a.ratingEvents.length);
+      case RatingSortMode.firstName:
+        return (a, b) => a.shooter.firstName.compareTo(b.shooter.firstName);
+      case RatingSortMode.lastName:
+        return (a, b) => a.shooter.lastName.compareTo(b.shooter.lastName);
     }
   }
 }

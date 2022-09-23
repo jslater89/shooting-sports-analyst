@@ -418,7 +418,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                       Text("Enter a link to the match registration or squadding page."),
                       TextFormField(
                         decoration: InputDecoration(
-                          hintText: "https://practiscore.com/match-name/squadding/printhtml"
+                          hintText: "https://practiscore.com/match-name/register"
                         ),
                         controller: _urlController,
                       ),
@@ -473,6 +473,9 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
               if(newRegistrations != null) {
                 shooters.addAll(newRegistrations);
+              }
+              else {
+                return;
               }
             }
 

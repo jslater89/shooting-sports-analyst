@@ -167,6 +167,8 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
   List<RatingSortMode> get supportedSorts => [
     RatingSortMode.rating,
     RatingSortMode.classification,
+    RatingSortMode.firstName,
+    RatingSortMode.lastName,
     RatingSortMode.stages,
   ];
 

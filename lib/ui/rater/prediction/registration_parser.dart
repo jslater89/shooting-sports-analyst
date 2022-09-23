@@ -61,14 +61,13 @@ RegistrationResult _parseRegistrations(String registrationHtml, List<Division> d
       if(!divisions.contains(d)) continue;
 
       var classification = ClassificationFrom.string(match.namedGroup("class")!);
-      var processedName = _processRegistrationName(shooterName);
-      var foundShooter = _findShooter(processedName, classification, knownShooters);
+      var foundShooter = _findShooter(shooterName, classification, knownShooters);
 
       if(foundShooter != null) {
         ratings.add(foundShooter);
       }
       else {
-        print("Missing shooter for: $processedName");
+        print("Missing shooter for: $shooterName");
         unmatched.add(
           Registration(name: shooterName, division: d, classification: classification)
         );
@@ -90,7 +89,8 @@ List<String> _processShooterName(Shooter shooter) {
   ];
 }
 
-ShooterRating? _findShooter(String processedName, Classification classification, List<ShooterRating> knownShooters) {
+ShooterRating? _findShooter(String shooterName, Classification classification, List<ShooterRating> knownShooters) {
+  var processedName = _processRegistrationName(shooterName);
   var firstGuess = knownShooters.firstWhereOrNull((rating) {
     return _processShooterName(rating.shooter).join() == processedName;
   });
@@ -105,6 +105,25 @@ ShooterRating? _findShooter(String processedName, Classification classification,
 
   if(secondGuess.length == 1) {
     return secondGuess[0];
+  }
+
+  // Catch e.g. Robert Hall -> Rob Hall
+  var thirdGuess = knownShooters.where((rating) {
+    if(rating.lastClassification == classification) {
+      var processedShooterName = _processShooterName(rating.shooter);
+      var lastName = _processRegistrationName(shooterName.split(" ").last);
+      var firstName = _processRegistrationName(shooterName.split(" ").first);
+
+      if((lastName.endsWith(processedShooterName[1]) || lastName.startsWith(processedShooterName[1]))
+            && (firstName.startsWith(processedShooterName[0]) || processedShooterName[0].startsWith(firstName))) {
+        return true;
+      }
+    }
+    return false;
+  }).toList();
+
+  if(thirdGuess.length == 1) {
+    return thirdGuess[0];
   }
 
   return null;

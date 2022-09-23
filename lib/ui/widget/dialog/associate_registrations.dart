@@ -63,11 +63,14 @@ class _AssociateRegistrationsDialogState extends State<AssociateRegistrationsDia
                                       return firstPattern || secondPattern;
                                     }).toList();
 
-                                    var length = min(10, matches.length);
+                                    var length = min(50, matches.length);
                                     return matches.sublist(0, length);
                                   },
                                   itemBuilder: (context, rating) {
-                                    return Text("${rating.shooter.getName(suffixes: false)} (${rating.shooter.division.displayString()} ${rating.shooter.classification.displayString()})");
+                                    return Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text("${rating.shooter.getName(suffixes: false)} (${rating.shooter.division.displayString()} ${rating.shooter.classification.displayString()})"),
+                                    );
                                   },
                                   onSuggestionSelected: (rating) {
                                     setState(() {
