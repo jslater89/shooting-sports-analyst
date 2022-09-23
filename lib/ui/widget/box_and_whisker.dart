@@ -46,22 +46,25 @@ class BoxAndWhiskerPlot extends StatelessWidget {
       width: width,
       height: height,
       child: ClipRect(
-        child: CustomPaint(
-          size: Size(width, height),
-          painter: _BoxPlotPainter(
-            direction: direction,
-            fillBox: fillBox,
-            lowerBoxColor: lowerBoxColor,
-            lowerQuartile: lowerQuartile,
-            maximum: maximum,
-            median: median,
-            minimum: minimum,
-            rangeMax: rangeMax,
-            rangeMin: rangeMin,
-            strokeWidth: strokeWidth,
-            upperBoxColor: upperBoxColor,
-            upperQuartile: upperQuartile,
-            whiskerColor: whiskerColor,
+        child: Padding(
+          padding: EdgeInsets.all(1.0),
+          child: CustomPaint(
+            size: Size(width, height),
+            painter: _BoxPlotPainter(
+              direction: direction,
+              fillBox: fillBox,
+              lowerBoxColor: lowerBoxColor,
+              lowerQuartile: lowerQuartile,
+              maximum: maximum,
+              median: median,
+              minimum: minimum,
+              rangeMax: rangeMax,
+              rangeMin: rangeMin,
+              strokeWidth: strokeWidth,
+              upperBoxColor: upperBoxColor,
+              upperQuartile: upperQuartile,
+              whiskerColor: whiskerColor,
+            ),
           ),
         ),
       ),
@@ -105,80 +108,122 @@ class _BoxPlotPainter extends CustomPainter {
   
   @override
   void paint(Canvas canvas, Size size) {
-    if(direction == PlotDirection.horizontal) {
-      Paint linePaint = Paint();
-      linePaint.strokeWidth = strokeWidth;
-      linePaint.color = whiskerColor;
+    Paint linePaint = Paint();
+    linePaint.strokeWidth = strokeWidth;
+    linePaint.color = whiskerColor;
+    linePaint.strokeCap = StrokeCap.butt;
 
-      Paint contrastingLinePaint = Paint();
-      contrastingLinePaint.strokeWidth = strokeWidth;
-      contrastingLinePaint.color = whiskerColor;
-      if(fillBox && whiskerColor == upperBoxColor || whiskerColor == lowerBoxColor) {
-        contrastingLinePaint.color = Colors.white;
+    Paint contrastingLinePaint = Paint();
+    contrastingLinePaint.strokeWidth = strokeWidth;
+    contrastingLinePaint.color = whiskerColor;
+    contrastingLinePaint.strokeCap = StrokeCap.butt;
+    if(fillBox && (whiskerColor == upperBoxColor || whiskerColor == lowerBoxColor)) {
+      contrastingLinePaint.color = Colors.white;
+    }
+
+    Paint lowerBoxPaint = Paint();
+    lowerBoxPaint.strokeWidth = strokeWidth;
+    lowerBoxPaint.strokeCap = StrokeCap.square;
+    lowerBoxPaint.color = lowerBoxColor;
+    lowerBoxPaint.style = fillBox ? PaintingStyle.fill : PaintingStyle.stroke;
+
+    Paint upperBoxPaint = Paint();
+    upperBoxPaint.strokeWidth = strokeWidth;
+    lowerBoxPaint.strokeCap = StrokeCap.square;
+    upperBoxPaint.color = upperBoxColor;
+    upperBoxPaint.style = fillBox ? PaintingStyle.fill : PaintingStyle.stroke;
+
+    // We'll draw the whiskers at this height
+    var crossDimension = (direction == PlotDirection.horizontal ? size.height : size.width);
+    var mainDimension = (direction == PlotDirection.horizontal ? size.width : size.height);
+    double halfHeight = (crossDimension / 2).roundToDouble();
+
+    // The ratio of values to pixels
+    double valueToPixel = 0.0;
+
+    double range;
+    if(rangeMin != null) {
+      if(rangeMax == null) {
+        throw ArgumentError("If rangeMin is provided, rangeMax must not be null");
       }
-
-      Paint lowerBoxPaint = Paint();
-      lowerBoxPaint.strokeWidth = strokeWidth;
-      lowerBoxPaint.color = lowerBoxColor;
-      lowerBoxPaint.style = fillBox ? PaintingStyle.fill : PaintingStyle.stroke;
-
-      Paint upperBoxPaint = Paint();
-      upperBoxPaint.strokeWidth = strokeWidth;
-      upperBoxPaint.color = upperBoxColor;
-      upperBoxPaint.style = fillBox ? PaintingStyle.fill : PaintingStyle.stroke;
-
-      // We'll draw the whiskers at this height
-      double halfHeight = size.height / 2;
-
-      // The ratio of values to pixels
-      double valueToPixel = 0.0;
-
-      double range;
-      if(rangeMin != null) {
-        if(rangeMax == null) {
-          throw ArgumentError("If rangeMin is provided, rangeMax must not be null");
-        }
-        if(rangeMax! < rangeMin!) {
-          throw ArgumentError("rangeMax must be greater than rangeMin");
-        }
-        range = rangeMax! - rangeMin!;
+      if(rangeMax! < rangeMin!) {
+        throw ArgumentError("rangeMax must be greater than rangeMin");
       }
-      else {
-        range = maximum - minimum;
-      }
-
-      var leftEdge = rangeMin ?? 0.0;
-
-      if(rangeMax != null && rangeMin != null && rangeMax! > rangeMin!) {
-        valueToPixel = size.width / range;
-      }
-      else {
-        valueToPixel = size.width / (maximum - minimum);
-      }
-
-      // Put center and the whisker ends directly on a pixel, for more consistent appearance
-      double lowerWhiskerStart = ((minimum - leftEdge) * valueToPixel).roundToDouble();
-      double lowerWhiskerEnd = (lowerQuartile - leftEdge) * valueToPixel;
-      double center = ((median - leftEdge) * valueToPixel).roundToDouble();
-      double upperWhiskerStart = (upperQuartile - leftEdge) * valueToPixel;
-      double upperWhiskerEnd = ((maximum - leftEdge) * valueToPixel).roundToDouble();
-
-      canvas.drawLine(Offset(lowerWhiskerStart, 0), Offset(lowerWhiskerStart, size.height), linePaint);
-      canvas.drawLine(Offset(lowerWhiskerStart, halfHeight), Offset(lowerWhiskerEnd, halfHeight), linePaint);
-      canvas.drawRect(Rect.fromPoints(Offset(lowerWhiskerEnd, 0), Offset(center, size.height)), lowerBoxPaint);
-      canvas.drawRect(Rect.fromPoints(Offset(center, 0), Offset(upperWhiskerStart, size.height)), upperBoxPaint);
-      canvas.drawLine(Offset(center, 0), Offset(center, size.height), contrastingLinePaint);
-      canvas.drawLine(Offset(upperWhiskerEnd, 0), Offset(upperWhiskerEnd, size.height), linePaint);
-      canvas.drawLine(Offset(upperWhiskerStart, halfHeight), Offset(upperWhiskerEnd, halfHeight), linePaint);
+      range = rangeMax! - rangeMin!;
     }
     else {
-      throw UnimplementedError();
+      range = maximum - minimum;
     }
+
+    var leftEdge = rangeMin ?? 0.0;
+
+    if(rangeMax != null && rangeMin != null && rangeMax! > rangeMin!) {
+      valueToPixel = mainDimension / range;
+    }
+    else {
+      valueToPixel = mainDimension / (maximum - minimum);
+    }
+
+    // Put center and the whisker ends directly on a pixel, for more consistent appearance
+    double lowerWhiskerStart = ((minimum - leftEdge) * valueToPixel).roundToDouble();
+    double lowerWhiskerEnd = ((lowerQuartile - leftEdge) * valueToPixel).roundToDouble();
+    double center = ((median - leftEdge) * valueToPixel).roundToDouble();
+    double upperWhiskerStart = ((upperQuartile - leftEdge) * valueToPixel).roundToDouble();
+    double upperWhiskerEnd = ((maximum - leftEdge) * valueToPixel).roundToDouble();
+    
+    double crossStart = 0.0;
+    double crossEnd = crossDimension;
+
+    canvas.drawLine(_offsetFor(lowerWhiskerStart, crossStart), _offsetFor(lowerWhiskerStart, crossEnd), linePaint);
+    canvas.drawLine(_offsetFor(lowerWhiskerStart, halfHeight), _offsetFor(lowerWhiskerEnd, halfHeight), linePaint);
+
+    if(fillBox) {
+      canvas.drawRect(Rect.fromPoints(_offsetFor(lowerWhiskerEnd, crossStart), _offsetFor(center, crossEnd)), lowerBoxPaint);
+      canvas.drawRect(Rect.fromPoints(_offsetFor(center, crossStart), _offsetFor(upperWhiskerStart, crossEnd)), upperBoxPaint);
+    }
+    else {
+      canvas.drawLine(_offsetFor(lowerWhiskerEnd, crossStart), _offsetFor(lowerWhiskerEnd, crossEnd), lowerBoxPaint);
+      canvas.drawLine(_offsetFor(lowerWhiskerEnd, crossStart), _offsetFor(center, crossStart), lowerBoxPaint);
+      canvas.drawLine(_offsetFor(lowerWhiskerEnd, crossEnd), _offsetFor(center, crossEnd), lowerBoxPaint);
+
+      canvas.drawLine(_offsetFor(upperWhiskerStart - strokeWidth / 2, crossStart), _offsetFor(upperWhiskerStart - strokeWidth / 2, crossEnd), upperBoxPaint);
+      canvas.drawLine(_offsetFor(upperWhiskerStart, crossStart), _offsetFor(center, crossStart), upperBoxPaint);
+      canvas.drawLine(_offsetFor(upperWhiskerStart, crossEnd), _offsetFor(center, crossEnd), upperBoxPaint);
+    }
+
+    canvas.drawLine(_offsetFor(center, crossStart), _offsetFor(center, crossEnd), contrastingLinePaint);
+
+    canvas.drawLine(_offsetFor(upperWhiskerEnd, crossStart), _offsetFor(upperWhiskerEnd, crossEnd), linePaint);
+    canvas.drawLine(_offsetFor(upperWhiskerStart, halfHeight), _offsetFor(upperWhiskerEnd, halfHeight), linePaint);
+  }
+
+
+  /// [main] is the value along the axis of interest. [cross] is the value
+  /// across the axis of interest (the height of the box/whiskers if horizontal),
+  /// [direction] is the direction of the plot.
+  Offset _offsetFor(double main, double cross) {
+    return Offset(
+      direction == PlotDirection.horizontal ? main : cross,
+      direction == PlotDirection.horizontal ? cross : main,
+    );
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return true;
+  bool shouldRepaint(covariant _BoxPlotPainter o) {
+    return o.median != median
+      || o.minimum != minimum
+      || o.maximum != maximum
+      || o.lowerQuartile != lowerQuartile
+      || o.upperQuartile != upperQuartile
+      || o.fillBox != fillBox
+      || o.direction != direction
+      || o.lowerBoxColor != lowerBoxColor
+      || o.upperBoxColor != upperBoxColor
+      || o.whiskerColor != whiskerColor
+      || o.rangeMin != rangeMin
+      || o.rangeMax != rangeMax
+      || strokeWidth != strokeWidth
+    ;
   }
   
 }

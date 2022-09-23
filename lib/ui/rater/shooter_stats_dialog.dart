@@ -60,6 +60,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
             child: Row(
               children: [
                 Expanded(
+                  flex: 3,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.start,
                     // mainAxisSize: MainAxisSize.min,
@@ -69,6 +70,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                   ),
                 ),
                 Expanded(
+                  flex: 5,
                   child: Scrollbar(
                     controller: _controller,
                     thumbVisibility: true,
@@ -92,7 +94,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                                           mainAxisAlignment: MainAxisAlignment.end,
                                           children: [
                                             Expanded(
-                                              flex: 8,
+                                              flex: 10,
                                               child: Text("${e.eventName}", style: Theme.of(context).textTheme.bodyText2!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).errorColor : null)),
                                             ),
                                             Expanded(

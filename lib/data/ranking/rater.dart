@@ -909,6 +909,7 @@ class Rater {
     var maxesByClass = <Classification, double>{};
     var countsByClass = <Classification, int>{};
     Map<Classification, Map<int, int>> histogramsByClass = {};
+    Map<Classification, List<double>> ratingsByClass = {};
 
     for(var classification in Classification.values) {
       if(classification == Classification.unknown) continue;
@@ -916,6 +917,7 @@ class Rater {
       var shootersInClass = knownShooters.values.where((r) => r.lastClassification == classification);
       var ratingsInClass = shootersInClass.map((r) => r.rating);
 
+      ratingsByClass[classification] = ratingsInClass.sorted((a, b) => a.compareTo(b));
       averagesByClass[classification] = ratingsInClass.length > 0 ? ratingsInClass.average : 0;
       minsByClass[classification] = ratingsInClass.length > 0 ? ratingsInClass.min : 0;
       maxesByClass[classification] = ratingsInClass.length > 0 ? ratingsInClass.max : 0;
@@ -944,6 +946,7 @@ class Rater {
       maxByClass: maxesByClass,
       histogramsByClass: histogramsByClass,
       histogramBucketSize: bucketSize,
+      ratingsByClass: ratingsByClass,
     );
   }
 
@@ -991,6 +994,7 @@ class RaterStatistics {
   Map<Classification, double> maxByClass;
 
   Map<Classification, Map<int, int>> histogramsByClass;
+  Map<Classification, List<double>> ratingsByClass;
 
   RaterStatistics({
     required this.shooters,
@@ -1004,6 +1008,7 @@ class RaterStatistics {
     required this.histogramBucketSize,
     required this.histogram,
     required this.histogramsByClass,
+    required this.ratingsByClass,
   });
 }
 

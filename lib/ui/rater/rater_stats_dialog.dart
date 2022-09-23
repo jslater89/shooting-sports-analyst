@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_charts/flutter_charts.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
+import 'package:uspsa_result_viewer/ui/widget/box_and_whisker.dart';
 
 class RaterStatsDialog extends StatelessWidget {
   const RaterStatsDialog(this.statistics, {Key? key}) : super(key: key);
@@ -108,6 +109,47 @@ class RaterStatsDialog extends StatelessWidget {
   }
 
   Widget buildHistogram(BuildContext context) {
+    return _barChartHistogram(context);
+    // return _boxPlotHistogram(context);
+  }
+
+  Widget _boxPlotHistogram(BuildContext context) {
+    Map<Classification, Widget> plots = {};
+
+    for(var cls in Classification.values.reversed) {
+      if(cls == Classification.unknown) continue;
+
+      var ratings = statistics.ratingsByClass[cls]!;
+      var len = ratings.length;
+
+      plots[cls] = BoxAndWhiskerPlot(
+        direction: PlotDirection.horizontal,
+        minimum: ratings.first,
+        maximum: ratings.last,
+        median: ratings[len ~/ 2],
+        lowerQuartile: ratings[(len * .25).round()],
+        upperQuartile: ratings[min(len - 1, (len * .75).round())],
+        rangeMin: statistics.minRating,
+        rangeMax: statistics.maxRating,
+        fillBox: false,
+        strokeWidth: 2.0,
+      );
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.max,
+      children: plots.keys.map((cls) {
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.all(8.0),
+            child: plots[cls]!,
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _barChartHistogram(BuildContext context) {
     ChartOptions chartOptions = const ChartOptions(
       legendOptions: LegendOptions(
         //isLegendContainerShown: false,
@@ -165,7 +207,8 @@ class RaterStatsDialog extends StatelessWidget {
         Colors.green,
         Colors.blue,
         Color.fromARGB(0xff, 0x09, 0x1f, 0x92),
-        Colors.deepPurple],
+        Colors.deepPurple
+      ],
     );
 
     var barChartContainer = VerticalBarChartTopContainer(
