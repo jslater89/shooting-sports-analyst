@@ -103,11 +103,11 @@ class PredictionView extends StatelessWidget {
   }
 
   static const int _padding = 2;
-  static const int _nameFlex = 4;
-  static const int _classFlex = 1;
-  static const int _ratingFlex = 1;
-  static const int _95ciFlex = 1;
-  static const int _whiskerPlotFlex = 10;
+  static const int _nameFlex = 8;
+  static const int _classFlex = 2;
+  static const int _ratingFlex = 2;
+  static const int _95ciFlex = 3;
+  static const int _whiskerPlotFlex = 20;
   static const double _whiskerPlotPadding = 20;
   static const double _rowHeight = 20;
 
@@ -172,6 +172,7 @@ class PredictionView extends StatelessWidget {
                   rangeMax: renderMax,
                   fillBox: true,
                   boxSize: 12,
+                  strokeWidth: 1.5,
                 ),
               )
             ),

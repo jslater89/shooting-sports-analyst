@@ -45,26 +45,24 @@ class BoxAndWhiskerPlot extends StatelessWidget {
     return SizedBox(
       width: width,
       height: height,
-      child: ClipRect(
-        child: Padding(
-          padding: EdgeInsets.all(1.0),
-          child: CustomPaint(
-            size: Size(width, height),
-            painter: _BoxPlotPainter(
-              direction: direction,
-              fillBox: fillBox,
-              lowerBoxColor: lowerBoxColor,
-              lowerQuartile: lowerQuartile,
-              maximum: maximum,
-              median: median,
-              minimum: minimum,
-              rangeMax: rangeMax,
-              rangeMin: rangeMin,
-              strokeWidth: strokeWidth,
-              upperBoxColor: upperBoxColor,
-              upperQuartile: upperQuartile,
-              whiskerColor: whiskerColor,
-            ),
+      child: Padding(
+        padding: EdgeInsets.all(strokeWidth / 2),
+        child: CustomPaint(
+          size: Size(width, height),
+          painter: _BoxPlotPainter(
+            direction: direction,
+            fillBox: fillBox,
+            lowerBoxColor: lowerBoxColor,
+            lowerQuartile: lowerQuartile,
+            maximum: maximum,
+            median: median,
+            minimum: minimum,
+            rangeMax: rangeMax,
+            rangeMin: rangeMin,
+            strokeWidth: strokeWidth,
+            upperBoxColor: upperBoxColor,
+            upperQuartile: upperQuartile,
+            whiskerColor: whiskerColor,
           ),
         ),
       ),
@@ -123,13 +121,13 @@ class _BoxPlotPainter extends CustomPainter {
 
     Paint lowerBoxPaint = Paint();
     lowerBoxPaint.strokeWidth = strokeWidth;
-    lowerBoxPaint.strokeCap = StrokeCap.square;
+    lowerBoxPaint.strokeCap = StrokeCap.butt;
     lowerBoxPaint.color = lowerBoxColor;
     lowerBoxPaint.style = fillBox ? PaintingStyle.fill : PaintingStyle.stroke;
 
     Paint upperBoxPaint = Paint();
     upperBoxPaint.strokeWidth = strokeWidth;
-    lowerBoxPaint.strokeCap = StrokeCap.square;
+    lowerBoxPaint.strokeCap = StrokeCap.butt;
     upperBoxPaint.color = upperBoxColor;
     upperBoxPaint.style = fillBox ? PaintingStyle.fill : PaintingStyle.stroke;
 
@@ -182,13 +180,15 @@ class _BoxPlotPainter extends CustomPainter {
       canvas.drawRect(Rect.fromPoints(_offsetFor(center, crossStart), _offsetFor(upperWhiskerStart, crossEnd)), upperBoxPaint);
     }
     else {
+      // crosspiece
       canvas.drawLine(_offsetFor(lowerWhiskerEnd, crossStart), _offsetFor(lowerWhiskerEnd, crossEnd), lowerBoxPaint);
-      canvas.drawLine(_offsetFor(lowerWhiskerEnd, crossStart), _offsetFor(center, crossStart), lowerBoxPaint);
-      canvas.drawLine(_offsetFor(lowerWhiskerEnd, crossEnd), _offsetFor(center, crossEnd), lowerBoxPaint);
+      // box sides
+      canvas.drawLine(_offsetFor(lowerWhiskerEnd - strokeWidth / 2, crossStart), _offsetFor(center, crossStart), lowerBoxPaint);
+      canvas.drawLine(_offsetFor(lowerWhiskerEnd - strokeWidth / 2, crossEnd), _offsetFor(center, crossEnd), lowerBoxPaint);
 
-      canvas.drawLine(_offsetFor(upperWhiskerStart - strokeWidth / 2, crossStart), _offsetFor(upperWhiskerStart - strokeWidth / 2, crossEnd), upperBoxPaint);
-      canvas.drawLine(_offsetFor(upperWhiskerStart, crossStart), _offsetFor(center, crossStart), upperBoxPaint);
-      canvas.drawLine(_offsetFor(upperWhiskerStart, crossEnd), _offsetFor(center, crossEnd), upperBoxPaint);
+      canvas.drawLine(_offsetFor(upperWhiskerStart, crossStart), _offsetFor(upperWhiskerStart, crossEnd), upperBoxPaint);
+      canvas.drawLine(_offsetFor(center, crossStart), _offsetFor(upperWhiskerStart + strokeWidth / 2, crossStart), upperBoxPaint);
+      canvas.drawLine(_offsetFor(center, crossEnd), _offsetFor(upperWhiskerStart + strokeWidth / 2, crossEnd), upperBoxPaint);
     }
 
     canvas.drawLine(_offsetFor(center, crossStart), _offsetFor(center, crossEnd), contrastingLinePaint);

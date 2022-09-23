@@ -109,15 +109,13 @@ ShooterRating? _findShooter(String shooterName, Classification classification, L
 
   // Catch e.g. Robert Hall -> Rob Hall
   var thirdGuess = knownShooters.where((rating) {
-    if(rating.lastClassification == classification) {
-      var processedShooterName = _processShooterName(rating.shooter);
-      var lastName = _processRegistrationName(shooterName.split(" ").last);
-      var firstName = _processRegistrationName(shooterName.split(" ").first);
+    var processedShooterName = _processShooterName(rating.shooter);
+    var lastName = _processRegistrationName(shooterName.split(" ").last);
+    var firstName = _processRegistrationName(shooterName.split(" ").first);
 
-      if((lastName.endsWith(processedShooterName[1]) || lastName.startsWith(processedShooterName[1]))
-            && (firstName.startsWith(processedShooterName[0]) || processedShooterName[0].startsWith(firstName))) {
-        return true;
-      }
+    if((lastName.endsWith(processedShooterName[1]) || lastName.startsWith(processedShooterName[1]))
+          && (firstName.startsWith(processedShooterName[0]) || processedShooterName[0].startsWith(firstName))) {
+      return true;
     }
     return false;
   }).toList();
