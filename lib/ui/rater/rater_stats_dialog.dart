@@ -123,26 +123,33 @@ class RaterStatsDialog extends StatelessWidget {
       var len = ratings.length;
 
       plots[cls] = BoxAndWhiskerPlot(
-        direction: PlotDirection.horizontal,
+        direction: PlotDirection.vertical,
         minimum: ratings.first,
         maximum: ratings.last,
         median: ratings[len ~/ 2],
-        lowerQuartile: ratings[(len * .25).round()],
-        upperQuartile: ratings[min(len - 1, (len * .75).round())],
-        rangeMin: statistics.minRating,
-        rangeMax: statistics.maxRating,
+        lowerQuartile: ratings[(len * .25).floor()],
+        upperQuartile: ratings[min(len - 1, (len * .75).floor())],
+        rangeMin: statistics.minRating * 0.975,
+        rangeMax: statistics.maxRating * 1.025,
         fillBox: false,
         strokeWidth: 2.0,
       );
     }
 
-    return Column(
+    return Row(
       mainAxisSize: MainAxisSize.max,
       children: plots.keys.map((cls) {
         return Expanded(
-          child: Padding(
-            padding: EdgeInsets.all(8.0),
-            child: plots[cls]!,
+          child: Column(
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: plots[cls]!,
+                ),
+              ),
+              Text(cls.displayString()),
+            ],
           ),
         );
       }).toList(),

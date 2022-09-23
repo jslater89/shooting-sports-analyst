@@ -103,9 +103,13 @@ class _BoxPlotPainter extends CustomPainter {
     required this.upperBoxColor,
     required this.fillBox
   });
-  
+
+  double height = 0.0;
+
   @override
   void paint(Canvas canvas, Size size) {
+    height = size.height;
+
     Paint linePaint = Paint();
     linePaint.strokeWidth = strokeWidth;
     linePaint.color = whiskerColor;
@@ -204,7 +208,7 @@ class _BoxPlotPainter extends CustomPainter {
   Offset _offsetFor(double main, double cross) {
     return Offset(
       direction == PlotDirection.horizontal ? main : cross,
-      direction == PlotDirection.horizontal ? cross : main,
+      direction == PlotDirection.horizontal ? cross : height - main,
     );
   }
 
