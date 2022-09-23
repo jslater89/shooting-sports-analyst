@@ -13,6 +13,7 @@ import 'package:uspsa_result_viewer/ui/rater/prediction/prediction_view.dart';
 import 'package:uspsa_result_viewer/ui/rater/prediction/registration_parser.dart';
 import 'package:uspsa_result_viewer/ui/rater/rater_stats_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/rater_view.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/associate_registrations.dart';
 
 class RatingsViewPage extends StatefulWidget {
   const RatingsViewPage({Key? key, required this.settings, required this.matchUrls}) : super(key: key);
@@ -406,17 +407,23 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
             List<ShooterRating>? shooters = [];
             var divisions = tab.divisions;
 
-            print(divisions);
-
             TextEditingController _urlController = TextEditingController();
             var url = await showDialog<String>(context: context, builder: (context) {
               return AlertDialog(
-                title: Text("Enter 'Print HTML squadding' link"),
-                content: TextFormField(
-                  decoration: InputDecoration(
-                    hintText: "https://practiscore.com/match-name/squadding/printhtml"
+                title: Text("Enter match link"),
+                content: Container(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text("Enter a link to the match registration or squadding page."),
+                      TextFormField(
+                        decoration: InputDecoration(
+                          hintText: "https://practiscore.com/match-name/squadding/printhtml"
+                        ),
+                        controller: _urlController,
+                      ),
+                    ],
                   ),
-                  controller: _urlController,
                 ),
                 actions: [
                   TextButton(
@@ -425,7 +432,19 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                   ),
                   TextButton(
                     child: Text("OK"),
-                    onPressed: () => Navigator.of(context).pop(_urlController.text),
+                    onPressed: () {
+                      var url = _urlController.text;
+                      if(url.endsWith("/register")) {
+                        url = url.replaceFirst("/register", "/squadding/printhtml");
+                      }
+                      else if(url.endsWith("/squadding")) {
+                        url += "/printhtml";
+                      }
+                      else if(url.endsWith("/") && !url.contains("squadding")) {
+                        url += "squadding/printhtml";
+                      }
+                      Navigator.of(context).pop(url);
+                    }
                   )
                 ],
               );
@@ -435,11 +454,31 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
               return;
             }
 
-            shooters = await getRegistrations(url, divisions, options);
-
-            if(shooters == null) {
+            var registrationResult = await getRegistrations(url, divisions, options);
+            if(registrationResult == null) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("Unable to retrieve registrations"))
+                  SnackBar(content: Text("Unable to retrieve registrations"))
+              );
+              return;
+            }
+
+            shooters.addAll(registrationResult.registrations);
+
+            if(registrationResult.unmatchedShooters.isNotEmpty) {
+              var newRegistrations = await showDialog<List<ShooterRating>>(context: context, builder: (context) {
+                return AssociateRegistrationsDialog(
+                  registrations: registrationResult,
+                  possibleMappings: options.where((element) => !registrationResult.registrations.contains(element)).toList());
+              }, barrierDismissible: false);
+
+              if(newRegistrations != null) {
+                shooters.addAll(newRegistrations);
+              }
+            }
+
+            if(shooters.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text("No shooters with matching registrations found."))
               );
               return;
             }

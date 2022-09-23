@@ -45,6 +45,7 @@ dependencies:
   normal:
   fluttericon:
   google_fonts:
+  flutter_typeahead:
   hive: 2.2.3
 
 dev_dependencies:

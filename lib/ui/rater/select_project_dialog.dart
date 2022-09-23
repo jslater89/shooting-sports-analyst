@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
-import 'package:uspsa_result_viewer/ui/confirm_dialog.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/confirm_dialog.dart';
 
 class SelectProjectDialog extends StatefulWidget {
   const SelectProjectDialog({Key? key, required this.projectNames}) : super(key: key);

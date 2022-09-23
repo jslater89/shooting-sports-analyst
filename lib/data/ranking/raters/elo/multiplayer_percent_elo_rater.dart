@@ -14,12 +14,6 @@ import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.d
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/ui/elo_settings_ui.dart';
 import 'package:uspsa_result_viewer/ui/widget/score_row.dart';
 
-const _kKey = "k";
-const _pctWeightKey = "pctWt";
-const _scaleKey = "scale";
-const _matchBlendKey = "matchBlend";
-const _errorAwareKKey = "errK";
-
 class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSettings, EloSettingsController> {
   static const errorKey = "error";
   static const baseKKey = "baseK";

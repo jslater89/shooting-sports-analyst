@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/ui/about_dialog.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/about_dialog.dart';
 
 class EmptyScaffold extends StatelessWidget {
   final Widget? child;

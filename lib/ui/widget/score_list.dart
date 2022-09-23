@@ -2,9 +2,9 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/ui/editable_shooter_card.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/editable_shooter_card.dart';
 import 'package:uspsa_result_viewer/ui/widget/score_row.dart';
-import 'package:uspsa_result_viewer/ui/shooter_card.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/shooter_card.dart';
 
 class ScoreList extends StatelessWidget {
   final PracticalMatch? match;

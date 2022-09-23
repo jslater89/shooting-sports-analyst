@@ -3,7 +3,29 @@ import 'package:uspsa_result_viewer/data/match/shooter.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
 import 'package:http/http.dart' as http;
 
-Future<List<ShooterRating>?> getRegistrations(String url, List<Division> divisions, List<ShooterRating> knownShooters) async {
+class RegistrationResult {
+  final List<ShooterRating> registrations;
+  final List<Registration> unmatchedShooters;
+
+  RegistrationResult(
+    this.registrations,
+    this.unmatchedShooters,
+  );
+}
+
+class Registration {
+  final String name;
+  final Division division;
+  final Classification classification;
+
+  Registration({
+    required this.name,
+    required this.division,
+    required this.classification
+  });
+}
+
+Future<RegistrationResult?> getRegistrations(String url, List<Division> divisions, List<ShooterRating> knownShooters) async {
   if(!url.endsWith("printhtml")) {
     print("Wrong URL");
     return null;
@@ -13,8 +35,7 @@ Future<List<ShooterRating>?> getRegistrations(String url, List<Division> divisio
     var response = await http.get(Uri.parse(url));
     if(response.statusCode < 400) {
       var responseHtml = response.body;
-      var shooters = _parseRegistrations(responseHtml, divisions, knownShooters);
-      return shooters;
+      return _parseRegistrations(responseHtml, divisions, knownShooters);
     }
     else {
       print("Failed to get registration URL: $response");
@@ -25,8 +46,9 @@ Future<List<ShooterRating>?> getRegistrations(String url, List<Division> divisio
   return null;
 }
 
-List<ShooterRating> _parseRegistrations(String registrationHtml, List<Division> divisions, List<ShooterRating> knownShooters) {
+RegistrationResult _parseRegistrations(String registrationHtml, List<Division> divisions, List<ShooterRating> knownShooters) {
   var ratings = <ShooterRating>[];
+  var unmatched = <Registration>[];
 
   // Match a line
   var shooterRegex = RegExp(r"\d+\.\s+(?<name>.*)\s+\((?<division>[\w\s]+)\s+\/\s+(?<class>\w+)\)");
@@ -47,11 +69,14 @@ List<ShooterRating> _parseRegistrations(String registrationHtml, List<Division> 
       }
       else {
         print("Missing shooter for: $processedName");
+        unmatched.add(
+          Registration(name: shooterName, division: d, classification: classification)
+        );
       }
     }
   }
 
-  return ratings;
+  return RegistrationResult(ratings, unmatched);
 }
 
 String _processRegistrationName(String name) {
