@@ -397,10 +397,11 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       var error = rating.standardError;
       var stdDev = error;
 
-      var compressionFactor = 0.85;
+      var lowerCompressionFactor = 0.75;
+      var upperCompressionFactor = 0.9;
       var compressionCenter = 100.0;
-      if(error > compressionCenter) stdDev = compressionCenter + pow(stdDev - compressionCenter, compressionFactor);
-      else stdDev = compressionCenter - pow(compressionCenter - stdDev, compressionFactor);
+      if(error > compressionCenter) stdDev = compressionCenter + pow(stdDev - compressionCenter, upperCompressionFactor);
+      else stdDev = compressionCenter - pow(compressionCenter - stdDev, lowerCompressionFactor);
 
       // var errMultiplier = 1.0;
       // if (error >= errThreshold) {
