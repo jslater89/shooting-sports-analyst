@@ -2,6 +2,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:uspsa_result_viewer/data/ranking/prediction/match_prediction.dart';
+import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/ui/widget/box_and_whisker.dart';
 import 'package:uspsa_result_viewer/ui/widget/score_row.dart';
 
@@ -29,6 +30,32 @@ class PredictionView extends StatelessWidget {
       appBar: AppBar(
         title: Text("Predictions"),
         centerTitle: true,
+        actions: [
+          Tooltip(
+            message: "Download predictions as CSV",
+            child: IconButton(
+              icon: Icon(Icons.save_alt),
+              onPressed: () async {
+                String contents = "Name,Member Number,Class,5%,35%,Mean,65%,95%\n";
+
+                for(var pred in sortedPredictions) {
+                  double midLow = (_percentFloor + pred.lowerBox / highPrediction * _percentMult) * 100;
+                  double midHigh = (_percentFloor + pred.upperBox / highPrediction * _percentMult) * 100;
+                  double mean = (_percentFloor + pred.center / highPrediction * _percentMult) * 100;
+                  double low = (_percentFloor + pred.lowerWhisker / highPrediction * _percentMult) * 100;
+                  double high = (_percentFloor + pred.upperWhisker / highPrediction * _percentMult) * 100;
+
+                  contents += "${pred.shooter.shooter.getName(suffixes: false)},";
+                  contents += "${pred.shooter.shooter.memberNumber},";
+                  contents += "${pred.shooter.lastClassification.name},";
+                  contents += "$low,$midLow,$mean,$midHigh,$high\n";
+                }
+
+                HtmlOr.saveFile("predictions.csv", contents);
+              },
+            ),
+          ),
+        ],
       ),
       body: Container(
         color: backgroundColor,
@@ -110,18 +137,17 @@ class PredictionView extends StatelessWidget {
   static const int _whiskerPlotFlex = 20;
   static const double _whiskerPlotPadding = 20;
   static const double _rowHeight = 20;
+  static const double _percentFloor = 0.25;
+  static const double _percentMult = 1 - _percentFloor;
 
   Widget _buildPredictionsRow(ShooterPrediction pred, double min, double max, double highPrediction, int index) {
     double renderMin = min * 0.95;
     double renderMax = max * 1.01;
 
-    double percentFloor = 0.3;
-    double percentMult = 1 - percentFloor;
-
-    double boxLowPercent = (percentFloor + pred.lowerBox / highPrediction * percentMult) * 100;
-    double boxHighPercent = (percentFloor + pred.upperBox / highPrediction * percentMult) * 100;
-    double whiskerLowPercent = (percentFloor + pred.lowerWhisker / highPrediction * percentMult) * 100;
-    double whiskerHighPercent = (percentFloor + pred.upperWhisker / highPrediction * percentMult) * 100;
+    double boxLowPercent = (_percentFloor + pred.lowerBox / highPrediction * _percentMult) * 100;
+    double boxHighPercent = (_percentFloor + pred.upperBox / highPrediction * _percentMult) * 100;
+    double whiskerLowPercent = (_percentFloor + pred.lowerWhisker / highPrediction * _percentMult) * 100;
+    double whiskerHighPercent = (_percentFloor + pred.upperWhisker / highPrediction * _percentMult) * 100;
 
     return ConstrainedBox(
       constraints: BoxConstraints(
