@@ -135,7 +135,7 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
     Stage? stage,
     required ShooterRating rating,
     required RelativeScore score,
-    List<String> info = const []
+    Map<String, List<dynamic>> info = const {}
   }) {
     return PointsRatingEvent(oldRating: rating.rating, ratingChange: 0, match: match, score: score, info: info);
   }

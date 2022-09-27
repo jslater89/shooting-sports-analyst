@@ -32,20 +32,21 @@ dependencies:
   collection: ^1.15.0-nullsafety.4
   file_picker: ^4.0.0
   url_launcher: ^6.0.2
-  intl:
-  flutter_charts: # old charts
+  sprintf: ^6.0.0
+  intl: ^0.17.0
+  flutter_charts: ^0.5.0
   charts_flutter: # new charts
     git:
       url: https://github.com/jslater89/charts_flutter
       ref: master
       path: charts_flutter
   shared_preferences:
-  path_provider:
-  sanitize_filename:
-  normal:
-  fluttericon:
-  google_fonts:
-  flutter_typeahead:
+  path_provider: ^2.0.11
+  sanitize_filename: ^1.0.4
+  normal: ^0.6.0
+  fluttericon: ^2.0.0
+  google_fonts: ^2.3.3
+  flutter_typeahead: ^4.1.1
   hive: 2.2.3
 
 dev_dependencies:

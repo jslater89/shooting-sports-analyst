@@ -9,7 +9,7 @@ class PointsRatingEvent extends RatingEvent {
     required this.ratingChange,
     required PracticalMatch match,
     required RelativeScore score,
-    List<String> info = const [],
+    Map<String, List<dynamic>> info = const {}
   }) : super(match: match, score: score, info: info);
 
   PointsRatingEvent.copy(PointsRatingEvent other) :

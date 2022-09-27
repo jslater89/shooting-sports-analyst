@@ -18,7 +18,7 @@ class OpenskillRatingEvent extends RatingEvent {
     required PracticalMatch match,
     Stage? stage,
     required RelativeScore score,
-    List<String> info = const [],
+    Map<String, List<dynamic>> info = const {}
   }) : super(
     match: match,
     stage: stage,

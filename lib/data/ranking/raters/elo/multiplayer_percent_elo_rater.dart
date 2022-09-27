@@ -12,6 +12,7 @@ import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.d
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rating_change.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/ui/elo_settings_ui.dart';
+import 'package:uspsa_result_viewer/data/ranking/timings.dart';
 import 'package:uspsa_result_viewer/ui/widget/score_row.dart';
 
 class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSettings, EloSettingsController> {
@@ -24,6 +25,8 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   static const defaultPlaceWeight = 0.6;
   static const defaultScale = 800.0;
   static const defaultMatchBlend = 0.3;
+
+  Timings timings = Timings();
 
   @override
   RatingMode get mode => RatingMode.oneShot;
@@ -95,6 +98,8 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     var totalPercent = (aScore.percent * stageBlend) + (aMatchScore.percent * matchBlend);
     int zeroes = aScore.relativePoints < 0.1 ? 1 : 0;
 
+    late DateTime start;
+    if(Timings.enabled) start = DateTime.now();
     for(var bRating in scores.keys) {
       var opponentScore = scores[bRating]!;
       var opponentMatchScore = matchScores[bRating]!;
@@ -119,6 +124,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       totalPercent += (opponentScore.percent * stageBlend) + (opponentMatchScore.percent * matchBlend);
       usedScores++;
     }
+    if(Timings.enabled) timings.calcExpectedScore += (DateTime.now().difference(start).inMicroseconds).toDouble();
 
     if(usedScores == 1) {
       return {
@@ -131,6 +137,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       };
     }
 
+    if(Timings.enabled) start = DateTime.now();
     var divisor = (usedScores * (usedScores - 1)) / 2;
 
     // TODO: solve my expected-percent-above-100 issue
@@ -145,9 +152,9 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       totalPercent += (actualPercent - 1.0);
     }
 
-    var percentComponent = totalPercent == 0 ? 0 : (actualPercent / totalPercent);
+    var percentComponent = totalPercent == 0 ? 0.0 : (actualPercent / totalPercent);
 
-    var placeBlend = (aScore.place * stageBlend) + (aMatchScore.place * matchBlend);
+    var placeBlend = ((aScore.place * stageBlend) + (aMatchScore.place * matchBlend)).toDouble();
     var placeComponent = (usedScores - placeBlend) /  divisor;
 
     // The first N matches you shoot get bonuses for initial placement.
@@ -184,6 +191,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     var changeFromPlace = effectiveK * (usedScores - 1) * (placeComponent * placeWeight - (expectedScore * placeWeight));
 
     var change = changeFromPlace + changeFromPercent;
+    if(Timings.enabled) timings.updateRatings += (DateTime.now().difference(start).inMicroseconds).toDouble();
 
     if(change.isNaN || change.isInfinite) {
       debugPrint("### ${aRating.shooter.lastName} stats: $actualPercent of $usedScores shooters for ${aScore.stage?.name}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}, placement $placementMultiplier, zero $zeroMultiplier ($zeroes)");
@@ -195,13 +203,15 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       throw StateError("NaN/Infinite");
     }
 
+    if(Timings.enabled) start = DateTime.now();
     var hf = aScore.score.getHitFactor(scoreDQ: aScore.score.stage != null);
-    List<String> info = [
-      "Actual/expected percent: ${(percentComponent * totalPercent * 100).toStringAsFixed(2)}/${(expectedScore * totalPercent * 100).toStringAsFixed(2)} on ${hf.toStringAsFixed(2)}HF",
-      "Actual/expected place: ${placeBlend.toStringAsFixed(1)}/${(usedScores - (expectedScore * divisor)).toStringAsFixed(1)}",
-      "Rating±Change: ${aRating.rating.round()} + ${change.toStringAsFixed(2)} (${changeFromPercent.toStringAsFixed(2)} from pct, ${changeFromPlace.toStringAsFixed(2)} from place)",
-      "eff. K, multipliers: ${(effectiveK).toStringAsFixed(2)}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}, IP ${placementMultiplier.toStringAsFixed(2)}, Zero ${zeroMultiplier.toStringAsFixed(2)}, Conn ${connectednessMultiplier.toStringAsFixed(2)}, EW ${eventWeightMultiplier.toStringAsFixed(2)}, Err ${errMultiplier.toStringAsFixed(2)}",
-    ];
+    Map<String, List<dynamic>> info = {
+      "Actual/expected percent: %00.2f/%00.2f on %00.2fHF": [percentComponent * totalPercent * 100, expectedScore * totalPercent * 100, hf],
+      "Actual/expected place: %00.1f/%00.1f": [placeBlend, usedScores - (expectedScore * divisor)],
+      "Rating ± Change: %00.0f + %00.2f (%00.2f from pct, %00.2f from place)": [aRating.rating, change, changeFromPercent, changeFromPlace],
+      "eff. K, multipliers: %00.2f, SoS %00.3f, IP %00.3f, Zero %00.3f, Conn %00.3f, EW %00.3f, Err %00.3f": [effectiveK, matchStrengthMultiplier, placementMultiplier, zeroMultiplier, connectednessMultiplier, eventWeightMultiplier, errMultiplier]
+    };
+    if(Timings.enabled) timings.printInfo += (DateTime.now().difference(start).inMicroseconds).toDouble();
 
     return {
       aRating: RatingChange(change: {
@@ -370,7 +380,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   RatingEvent newEvent({
     required PracticalMatch match,
     Stage? stage,
-    required ShooterRating rating, required RelativeScore score, List<String> info = const []
+    required ShooterRating rating, required RelativeScore score, Map<String, List<dynamic>> info = const {}
   }) {
     return EloRatingEvent(oldRating: rating.rating, match: match, stage: stage, score: score, ratingChange: 0, info: info, baseK: 0, effectiveK: 0);
   }

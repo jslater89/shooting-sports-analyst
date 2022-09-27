@@ -169,12 +169,29 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   String? _loadingEventName;
 
   Widget _matchLoadingIndicator() {
+    Widget loadingText;
+
+    if(_loadingEventName != null) {
+      loadingText = Row(
+        mainAxisSize: MainAxisSize.max,
+        children: [
+          Expanded(child: Container()),
+          Expanded(flex: 1, child: Text("Now: ${_loadingState.label}", style: Theme.of(context).textTheme.subtitle2)),
+          Expanded(flex: 4, child: Text(_loadingEventName!, overflow: TextOverflow.ellipsis, softWrap: false)),
+          Expanded(child: Container())
+        ],
+      );
+    }
+    else {
+      loadingText = Text("Now: ${_loadingState.label}", style: Theme.of(context).textTheme.subtitle2);
+    }
+
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text("Loading...", style: Theme.of(context).textTheme.subtitle1),
-          Text("Now: ${_loadingState.label}${_loadingEventName != null ? " ($_loadingEventName)" : ""}", style: Theme.of(context).textTheme.subtitle2),
+          loadingText,
           SizedBox(height: 10),
           if(_totalProgress > 0)
             LinearProgressIndicator(

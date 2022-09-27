@@ -114,7 +114,7 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
   @override
   RatingEvent newEvent({
     required PracticalMatch match, Stage? stage,
-    required ShooterRating rating, required RelativeScore score, List<String> info = const []
+    required ShooterRating rating, required RelativeScore score, Map<String, List<dynamic>> info = const {}
   }) {
     rating as OpenskillRating;
     return OpenskillRatingEvent(initialMu: rating.mu, muChange: 0, sigmaChange: 0, match: match, stage: stage, score: score, info: info);

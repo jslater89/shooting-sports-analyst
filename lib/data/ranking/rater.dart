@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
+import 'package:uspsa_result_viewer/data/ranking/timings.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
 
 class Rater {
@@ -17,6 +18,8 @@ class Rater {
   bool byStage;
   List<String> memberNumberWhitelist;
   Future<void> Function(int, int, String? eventName)? progressCallback;
+
+  Timings timings = Timings();
 
   Set<ShooterRating> get uniqueShooters => <ShooterRating>{}..addAll(knownShooters.values);
 
@@ -31,24 +34,38 @@ class Rater {
       return a.date!.compareTo(b.date!);
     });
 
+    late DateTime start;
+
+    if(Timings.enabled) start = DateTime.now();
     for(PracticalMatch m in _matches) {
       _addShootersFromMatch(m);
     }
+    if(Timings.enabled) timings.addShootersMillis = (DateTime.now().difference(start).inMicroseconds).toDouble();
+    if(Timings.enabled) timings.shooterCount = knownShooters.length;
 
+    if(Timings.enabled) start = DateTime.now();
     _deduplicateShooters();
+    if(Timings.enabled) timings.dedupShootersMillis = (DateTime.now().difference(start).inMicroseconds).toDouble();
   }
 
   Future<void> calculateInitialRatings() async {
     int totalSteps = _matches.length;
     int currentSteps = 0;
+    late DateTime start;
+
     for(PracticalMatch m in _matches) {
+      if(Timings.enabled) start = DateTime.now();
       _rankMatch(m);
+      if(Timings.enabled) timings.rateMatchesMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
+      if(Timings.enabled) timings.matchCount += 1;
 
       currentSteps += 1;
       await progressCallback?.call(currentSteps, totalSteps, m.name);
     }
 
+    if(Timings.enabled) start = DateTime.now();
     _removeUnseenShooters();
+    if(Timings.enabled) timings.removeUnseenShootersMillis += (DateTime.now().difference(start).inMicroseconds);
 
     debugPrint("Initial ratings complete for ${knownShooters.length} shooters in ${_matches.length} matches in ${_filters != null ? _filters!.activeDivisions.toList() : "all divisions"}");
   }
@@ -232,9 +249,14 @@ class Rater {
   }
 
   void _rankMatch(PracticalMatch match) {
+    late DateTime start;
+    if(Timings.enabled) start = DateTime.now();
     var shooters = _getShooters(match, verify: true);
     var scores = match.getScores(shooters: shooters, scoreDQ: byStage);
+    if(Timings.enabled) timings.getShootersAndScoresMillis += (DateTime.now().difference(start).inMicroseconds);
 
+
+    if(Timings.enabled) start = DateTime.now();
     // Based on strength of competition, vary rating gain between 25% and 150%.
     var matchStrength = 0.0;
     for(var shooter in shooters) {
@@ -247,11 +269,17 @@ class Rater {
         // Update the shooter's name: the most recent one is probably the most interesting/useful
         rating.shooter.firstName = shooter.firstName;
         rating.shooter.lastName = shooter.lastName;
+
+        // Update the shooter's member number: the CSV exports are more useful if it's the most
+        // recent one. // TODO: this would be handy, but it changes the math somehow (not removing unseen?)
+        // rating.shooter.memberNumber = shooter.memberNumber;
       }
     }
     matchStrength = matchStrength / shooters.length;
     double strengthMod =  (1.0 + max(-0.75, min(0.5, ((matchStrength) - _strengthForClass(Classification.A)) * 0.2))) * (match.level?.strengthBonus ?? 1.0);
+    if(Timings.enabled) timings.matchStrengthMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
 
+    if(Timings.enabled) start = DateTime.now();
     // Based on connectedness, vary rating gain between 80% and 120%
     var totalConnectedness = 0.0;
     var totalShooters = 0.0;
@@ -281,12 +309,14 @@ class Rater {
     }
     var localAverageConnectedness = totalConnectedness / (totalShooters > 0 ? totalShooters : 1.0);
     var connectednessMod = /*1.0;*/ 1.0 + max(-0.2, min(0.2, (((localAverageConnectedness / connectednessDenominator) - 1.0) * 2))); // * 1: how much to adjust the percentages by
+    if(Timings.enabled) timings.connectednessModMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
 
     // debugPrint("Connectedness for ${match.name}: ${localAverageConnectedness.toStringAsFixed(2)}/${connectednessDenominator.toStringAsFixed(2)} => ${connectednessMod.toStringAsFixed(3)}");
 
     Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes = {};
     Set<ShooterRating> shootersAtMatch = Set();
 
+    if(Timings.enabled) start = DateTime.now();
     // Process ratings for each shooter.
     if(byStage) {
       for(Stage s in match.stages) {
@@ -296,6 +326,16 @@ class Rater {
         var filteredScores = res.b;
 
         var weightMod = 1.0 + max(-0.20, min(0.10, (s.maxPoints - 120) /  400));
+
+        Map<ShooterRating, RelativeScore> stageScoreMap = {};
+        Map<ShooterRating, RelativeScore> matchScoreMap = {};
+
+        for(var score in filteredScores) {
+          String num = score.shooter.memberNumber;
+          var otherScore = score.stageScores[s]!;
+          stageScoreMap[knownShooters[num]!] = otherScore;
+          matchScoreMap[knownShooters[num]!] = score.total;
+        }
 
         if(ratingSystem.mode == RatingMode.wholeEvent) {
           _processWholeEvent(
@@ -329,6 +369,8 @@ class Rater {
                 stage: s,
                 shooter: filteredShooters[i],
                 scores: filteredScores,
+                stageScores: stageScoreMap,
+                matchScores: matchScoreMap,
                 changes: changes,
                 matchStrength: strengthMod,
                 connectednessMod: connectednessMod,
@@ -350,6 +392,13 @@ class Rater {
       var res = _filterScores(shooters, scores, null);
       var filteredShooters = res.a;
       var filteredScores = res.b;
+
+      Map<ShooterRating, RelativeScore> matchScoreMap = {};
+
+      for(var score in filteredScores) {
+        String num = score.shooter.memberNumber;
+        matchScoreMap[knownShooters[num]!] = score.total;
+      }
 
       if(ratingSystem.mode == RatingMode.wholeEvent) {
         _processWholeEvent(
@@ -383,6 +432,8 @@ class Rater {
                 stage: null,
                 shooter: filteredShooters[i],
                 scores: filteredScores,
+                stageScores: matchScoreMap,
+                matchScores: matchScoreMap,
                 changes: changes,
                 matchStrength: strengthMod,
                 connectednessMod: connectednessMod,
@@ -398,7 +449,9 @@ class Rater {
       }
       changes.clear();
     }
+    if(Timings.enabled) timings.rateShootersMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
 
+    if(Timings.enabled) start = DateTime.now();
     if(match.date != null && shooters.length > 1) {
       var averageBefore = 0.0;
       var averageAfter = 0.0;
@@ -421,6 +474,7 @@ class Rater {
       averageAfter /= encounteredList.length;
       // debugPrint("Averages: ${averageBefore.toStringAsFixed(1)} -> ${averageAfter.toStringAsFixed(1)} vs. ${expectedConnectedness.toStringAsFixed(1)}");
     }
+    if(Timings.enabled) timings.updateConnectednessMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
   }
 
   Map<Shooter, bool> _verifyCache = {};
@@ -601,6 +655,8 @@ class Rater {
     required Shooter shooter,
     required List<RelativeMatchScore> scores,
     required Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes,
+    required Map<ShooterRating, RelativeScore> stageScores,
+    required Map<ShooterRating, RelativeScore> matchScores,
     required double matchStrength,
     required double connectednessMod,
     required double weightMod
@@ -614,6 +670,8 @@ class Rater {
     changes[rating] ??= {};
     RelativeMatchScore score = scores.firstWhere((score) => score.shooter == shooter);
 
+    late DateTime start;
+    if(Timings.enabled) start = DateTime.now();
     // Check for pubstomp
     var pubstompMod = 1.0;
     if(score.total.percent >= 1.0) {
@@ -622,6 +680,7 @@ class Rater {
       }
     }
     matchStrength *= pubstompMod;
+    if(Timings.enabled) timings.pubstompMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
 
     if(stage != null) {
       RelativeScore stageScore = score.stageScores[stage]!;
@@ -633,23 +692,16 @@ class Rater {
 
       _encounteredMemberNumber(memNum);
 
-      var scoreMap = <ShooterRating, RelativeScore>{};
-      var matchScoreMap = <ShooterRating, RelativeScore>{};
-      for(var s in scores) {
-        String num = s.shooter.memberNumber;
-        var otherScore = s.stageScores[stage]!;
-        scoreMap[knownShooters[num]!] = otherScore;
-        matchScoreMap[knownShooters[num]!] = s.total;
-      }
-
+      if(Timings.enabled) start = DateTime.now();
       var update = ratingSystem.updateShooterRatings(
         shooters: [rating],
-        scores: scoreMap,
-        matchScores: matchScoreMap,
+        scores: stageScores,
+        matchScores: matchScores,
         matchStrengthMultiplier: matchStrength,
         connectednessMultiplier: connectednessMod,
         eventWeightMultiplier: weightMod,
       );
+      if(Timings.enabled) timings.updateMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
 
       if(!changes[rating]!.containsKey(stageScore)) {
         changes[rating]![stageScore] = ratingSystem.newEvent(rating: rating, match: match, stage: stage, score: stageScore);
@@ -660,18 +712,10 @@ class Rater {
     else {
       _encounteredMemberNumber(memNum);
 
-      var scoreMap = <ShooterRating, RelativeScore>{};
-      var matchScoreMap = <ShooterRating, RelativeScore>{};
-      for(var s in scores) {
-        String num = s.shooter.memberNumber;
-
-        scoreMap[knownShooters[num]!] ??= s.total;
-        matchScoreMap[knownShooters[num]!] ??= s.total;
-      }
       var update = ratingSystem.updateShooterRatings(
         shooters: [rating],
-        scores: scoreMap,
-        matchScores: matchScoreMap,
+        scores: matchScores,
+        matchScores: matchScores,
         matchStrengthMultiplier: matchStrength,
         connectednessMultiplier: connectednessMod,
       );

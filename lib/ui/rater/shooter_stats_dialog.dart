@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:sprintf/sprintf.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:charts_flutter/flutter.dart' as charts;
@@ -81,7 +82,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                         children: [
                           ...events.reversed.map((e) =>
                               Tooltip(
-                                message: e.info.join("\n"),
+                                message: e.info.keys.map((line) => sprintf(line, e.info[line])).join("\n"),
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 12.0),
                                   child: Column(

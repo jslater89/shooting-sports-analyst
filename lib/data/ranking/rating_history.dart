@@ -4,6 +4,7 @@ import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
+import 'package:uspsa_result_viewer/data/ranking/timings.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart' as defaultAliases;
 import 'package:intl/intl.dart';
@@ -145,6 +146,7 @@ class RatingHistory {
   Future<Rater> _raterForGroup(List<PracticalMatch> matches, RaterGroup group, [Future<void> Function(int, int, String?)? progressCallback]) async {
     var divisionMap = <Division, bool>{};
     group.divisions.forEach((element) => divisionMap[element] = true);
+    Timings().reset();
     var r = Rater(
         matches: matches,
         ratingSystem: _settings.algorithm,
@@ -160,6 +162,9 @@ class RatingHistory {
     );
 
     await r.calculateInitialRatings();
+
+    if(Timings.enabled) print("Timings for $group: ${r.timings}");
+
     return r;
   }
 }
