@@ -165,7 +165,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     // differences in performance of those people, compared to each other or compared
     // to the field that didn't zero it. If more than 10% of people zero a stage, start
     // scaling K down (to 0.34, when 30%+ of people zero a stage).
-    var zeroMultiplier = (zeroes / usedScores) < 0.1 ? 1 : 1 - 0.66 * ((min(0.3, (zeroes / usedScores) - 0.1)) / 0.3);
+    var zeroMultiplier = (zeroes / usedScores) < 0.1 ? 1.0 : 1 - 0.66 * ((min(0.3, (zeroes / usedScores) - 0.1)) / 0.3);
 
 
     // Adjust K based on the confidence in the shooter's rating.
