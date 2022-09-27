@@ -176,8 +176,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         mainAxisSize: MainAxisSize.max,
         children: [
           Expanded(child: Container()),
-          Expanded(flex: 1, child: Text("Now: ${_loadingState.label}", style: Theme.of(context).textTheme.subtitle2)),
-          Expanded(flex: 4, child: Text(_loadingEventName!, overflow: TextOverflow.ellipsis, softWrap: false)),
+          Expanded(flex: 2, child: Text("Now: ${_loadingState.label}", style: Theme.of(context).textTheme.subtitle2, textAlign: TextAlign.center)),
+          Expanded(flex: 2, child: Text(_loadingEventName!, overflow: TextOverflow.ellipsis, softWrap: false)),
           Expanded(child: Container())
         ],
       );
