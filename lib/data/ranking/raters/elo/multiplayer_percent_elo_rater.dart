@@ -174,13 +174,15 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     var error = aRating.standardError;
 
     var errMultiplier = 1.0;
+    final maxMultiplier = 1.0;
+    final minMultiplier = 0.5;
     if(errorAwareK) {
       var minThreshold = errThreshold;
       if (error >= errThreshold) {
-        errMultiplier = 1 + min(1.0, ((error - errThreshold) / (EloShooterRating.errorScale - errThreshold))) * 1;
+        errMultiplier = 1 + min(1.0, ((error - errThreshold) / (EloShooterRating.errorScale - errThreshold))) * maxMultiplier;
       }
       else if (error < minThreshold) {
-        errMultiplier = 1 - ((minThreshold - error) / minThreshold) * 0.5;
+        errMultiplier = 1 - ((minThreshold - error) / minThreshold) * minMultiplier;
       }
     }
 
