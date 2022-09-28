@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:normal/normal.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_settings.dart';
+import 'package:uspsa_result_viewer/data/ranking/prediction/gumbel.dart';
 import 'package:uspsa_result_viewer/data/ranking/prediction/match_prediction.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
@@ -435,6 +436,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       var trendShift = trendShiftProportion * trendShiftMaxMagnitude;
 
       List<double> possibleRatings = Normal.generate(monteCarloTrials, mean: rating.rating, variance: stdDev * stdDev);
+      //List<double> possibleRatings = Gumbel.generate(monteCarloTrials, mu: rating.rating, beta: stdDev);
       List<double> expectedScores = [];
       for(var maybeRating in possibleRatings) {
         var expectedScore = 0.0;
