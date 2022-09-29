@@ -52,6 +52,22 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: "^0.10.0"
+
+flutter_icons:
+  android: false
+  ios: false
+  image_path: "assets/icon.png"
+  web:
+    generate: true
+    image_path: "assets/icon.png"
+    background_color: "#ffffff"
+    theme_color: "#c19a6c"
+  windows:
+    generate: true
+    image_path: "assets/icon.png"
+    icon_size: 256
+
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
