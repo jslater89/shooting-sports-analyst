@@ -49,11 +49,15 @@ class Controller extends ControlInterface {
   @override
   bool get needsProxy => false;
 
+  String? lastDirectoryPath;
+
   @override
   void saveFile(String defaultName, String fileContents) async {
-    var path = await FilePicker.platform.saveFile(fileName: defaultName, initialDirectory: Directory.current.absolute.path + Platform.pathSeparator);
+    print("Last directory? $lastDirectoryPath");
+    var path = await FilePicker.platform.saveFile(fileName: defaultName, initialDirectory: lastDirectoryPath ?? Directory.current.absolute.path + Platform.pathSeparator);
     if(path != null) {
       var file = File(path);
+      lastDirectoryPath = file.parent.absolute.path;
       await file.writeAsString(fileContents);
     }
   }
