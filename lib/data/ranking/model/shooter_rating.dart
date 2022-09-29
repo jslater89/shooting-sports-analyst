@@ -101,9 +101,16 @@ abstract class ShooterRating<T extends ShooterRating<T>> {
     int added = 0;
     int updated = 0;
 
+    DateTime oldestAllowed = now.subtract(connectionExpiration);
     Map<ShooterRating, ConnectedShooter> connMap = {};
-    for(var connection in connectedShooters.iterable) {
-      connMap[connection.shooter] = connection;
+    for(var connection in connectedShooters.asIterable) {
+      if(connection.lastSeen.isAfter(oldestAllowed)) {
+        connMap[connection.shooter] = connection;
+      }
+      else {
+        // This is kosher because asIterable returns a copy
+        connectedShooters.remove(connection);
+      }
     }
 
     for(var shooter in encountered) {
@@ -130,17 +137,6 @@ abstract class ShooterRating<T extends ShooterRating<T>> {
       }
     }
     // if(Rater.processMemberNumber(this.shooter.memberNumber) == "122755") print("Now has ${connectedShooters.length} connections, added $added, updated $updated of ${encountered.length - 1}");
-
-    Set<ConnectedShooter> outdated = Set();
-    DateTime oldestAllowed = now.subtract(connectionExpiration);
-    for(var connection in connectedShooters.iterable) {
-      if(connection.lastSeen.isBefore(oldestAllowed)) {
-        outdated.add(connection);
-      }
-    }
-
-    // if(Rater.processMemberNumber(this.shooter.memberNumber) == "122755") print("${outdated.length} were outdated");
-    connectedShooters.removeAll(outdated);
 
     if(connectedShooters.length > maxConnections) {
       int nToRemove = connectedShooters.length - maxConnections;
