@@ -131,6 +131,7 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
   Widget build(BuildContext context) {
     if(_match == null) {
       return EmptyScaffold(
+        title: "Match Result Viewer",
         operationInProgress: _operationInProgress,
         onInnerContextAssigned: (context) => _innerContext = context,
         child: Center(

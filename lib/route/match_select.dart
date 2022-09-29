@@ -53,6 +53,7 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
     var size = MediaQuery.of(context).size;
 
     return EmptyScaffold(
+      title: "Main Menu",
       operationInProgress: _operationInProgress,
       onInnerContextAssigned: (context) {
         _innerContext = context;

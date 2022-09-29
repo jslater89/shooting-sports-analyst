@@ -61,6 +61,7 @@ class _UploadedResultPageState extends State<UploadedResultPage> {
 
     if(_match == null) {
       return EmptyScaffold(
+        title: "Match Result Viewer",
         operationInProgress: _operationInProgress,
         onInnerContextAssigned: (context) => _innerContext = context,
         child: Center(

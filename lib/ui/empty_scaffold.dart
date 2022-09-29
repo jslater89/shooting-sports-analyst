@@ -19,7 +19,7 @@ class EmptyScaffold extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-      title: Text(title ?? "Match Results Viewer"),
+      title: Text(title ?? "USPSA Analyst"),
         centerTitle: true,
         actions: [
           IconButton(
