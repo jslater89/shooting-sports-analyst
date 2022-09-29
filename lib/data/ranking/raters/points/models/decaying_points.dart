@@ -30,8 +30,4 @@ class DecayingPoints extends PointsModel {
 
     return changes;
   }
-
-  @override
-  double get participationBonus => settings.decayingPointsStart * settings.participationBonus;
-
 }

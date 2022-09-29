@@ -30,9 +30,6 @@ class F1Points extends PointsModel {
 
     return changes;
   }
-
-  @override
-  double get participationBonus => _points[0] * settings.participationBonus;
 }
 
 const _points = [

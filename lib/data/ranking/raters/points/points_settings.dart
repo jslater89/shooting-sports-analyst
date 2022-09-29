@@ -14,7 +14,7 @@ class PointsSettings extends RaterSettings<PointsSettings> {
   static const defaultPointsMode = PointsMode.percentageFinish;
   static const defaultDecayingPointsStart = 30.0;
   static const defaultDecayingPointsFactor = 0.8;
-  static const defaultParticipationBonus = 0.0;
+  static const defaultParticipationBonus = 1.0;
 
   /// How many matches to count.
   ///

@@ -108,10 +108,17 @@ class PredictionView extends StatelessWidget {
           child: Text("Rating", textAlign: TextAlign.end),
         ),
         Expanded(
-          flex: _95ciFlex * 2,
+            flex: _95ciFlex,
+            child: Tooltip(
+                message: "The approximate percentage corresponding to the lower bound of the algorithm's 95% confidence interval.",
+                child: Text("5% CI", textAlign: TextAlign.end)
+            )
+        ),
+        Expanded(
+          flex: _95ciFlex,
           child: Tooltip(
-            message: "The approximate percentages corresponding to the algorithm's 95% confidence prediction.",
-            child: Text("95% CI", textAlign: TextAlign.center)
+              message: "The approximate percentage corresponding to the upper bound of the algorithm's 95% confidence interval.",
+            child: Text("95% CI", textAlign: TextAlign.end)
           )
         ),
         SizedBox(width: _whiskerPlotPadding),

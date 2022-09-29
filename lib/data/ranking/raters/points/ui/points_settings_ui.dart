@@ -222,8 +222,9 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Tooltip(
-                message: "The proportion of the top score to add to all participants' scores.\n\n"
-                    "No effect for Inverse Points model: if this is greater than 0, the bonus is always 1.",
+                message: "The number of points to award to each participant for attending a match.\n\n"
+                    "Participation bonus is awarded for every match a shooter attends, regardless of\n"
+                    "the matches to count setting.",
                 child: Padding(
                   padding: const EdgeInsets.only(left: 16),
                   child: Text("Participation bonus", style: Theme.of(context).textTheme.subtitle1!),

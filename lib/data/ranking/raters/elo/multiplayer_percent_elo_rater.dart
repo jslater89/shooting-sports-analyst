@@ -416,14 +416,14 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       if(error > compressionCenter) stdDev = compressionCenter + pow(stdDev - compressionCenter, upperCompressionFactor);
       else stdDev = compressionCenter - pow(compressionCenter - stdDev, lowerCompressionFactor);
 
-      // var errMultiplier = 1.0;
-      // if (error >= errThreshold) {
-      //   errMultiplier = 1 + min(1.0, ((error - errThreshold) / (EloShooterRating.errorScale - errThreshold))) * 1;
-      // }
-      // else if (error < errThreshold) {
-      //   errMultiplier = 1 - ((errThreshold - error) / errThreshold) * 0.5;
-      // }
-      // stdDev = stdDev * errMultiplier;
+      var errMultiplier = 1.0;
+      if (error >= errThreshold) {
+        errMultiplier = 1 + min(1.0, ((error - errThreshold) / (EloShooterRating.errorScale - errThreshold))) * 1;
+      }
+      else if (error < errThreshold) {
+        errMultiplier = 1 - ((errThreshold - error) / errThreshold) * 0.5;
+      }
+      stdDev = stdDev * errMultiplier;
 
       var shortTrend = rating.rating - rating.averageRating(window: 15).firstRating;
       var mediumTrend = rating.rating - rating.averageRating(window: 30).firstRating;
@@ -435,8 +435,8 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       var trendShiftProportion = max(-1.0, min(1.0, averageTrend / trendShiftMaxVal));
       var trendShift = trendShiftProportion * trendShiftMaxMagnitude;
 
-      List<double> possibleRatings = Normal.generate(monteCarloTrials, mean: rating.rating, variance: stdDev * stdDev);
-      //List<double> possibleRatings = Gumbel.generate(monteCarloTrials, mu: rating.rating, beta: stdDev);
+      //List<double> possibleRatings = Normal.generate(monteCarloTrials, mean: rating.rating, variance: stdDev * stdDev);
+      List<double> possibleRatings = Gumbel.generate(monteCarloTrials, mu: rating.rating, beta: stdDev);
       List<double> expectedScores = [];
       for(var maybeRating in possibleRatings) {
         var expectedScore = 0.0;

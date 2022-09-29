@@ -205,7 +205,7 @@ abstract class PointsModel {
   PointsModel(this.settings);
 
   Map<ShooterRating, RatingChange> apply(Map<ShooterRating, RelativeScore> scores);
-  double get participationBonus;
+  double get participationBonus => settings.participationBonus;
 
   static PointsModel fromSettings(PointsSettings settings) {
     switch(settings.mode) {
