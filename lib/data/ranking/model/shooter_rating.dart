@@ -113,9 +113,13 @@ abstract class ShooterRating<T extends ShooterRating<T>> {
       }
     }
 
+    var lowValueConnections = SortedList<ConnectedShooter>(comparator: (a, b) => a.connectedness.compareTo(b.connectedness));
+
     for(var shooter in encountered) {
       var currentConnection = connMap[shooter];
       if(currentConnection != null) {
+        lowValueConnections.add(currentConnection);
+
         // if(Rater.processMemberNumber(this.shooter.memberNumber) == "122755")  print("Updated connection to $shooter");
         currentConnection.connectedness = shooter.connectedness;
         currentConnection.lastSeen = now;
@@ -123,13 +127,15 @@ abstract class ShooterRating<T extends ShooterRating<T>> {
       }
       else if(shooter != this) {
         // if(Rater.processMemberNumber(this.shooter.memberNumber) == "122755")  print("Added connection to $shooter");
-        connectedShooters.add(
-            ConnectedShooter(
-              shooter: shooter,
-              connectedness: shooter.connectedness,
-              lastSeen: now,
-            )
+        var newConnection = ConnectedShooter(
+          shooter: shooter,
+          connectedness: shooter.connectedness,
+          lastSeen: now,
         );
+        connectedShooters.add(
+          newConnection
+        );
+        lowValueConnections.add(newConnection);
         added++;
       }
       else {
@@ -140,14 +146,13 @@ abstract class ShooterRating<T extends ShooterRating<T>> {
 
     if(connectedShooters.length > maxConnections) {
       int nToRemove = connectedShooters.length - maxConnections;
-      var sorted = connectedShooters.sorted((a, b) => a.connectedness.compareTo(b.connectedness));
+      var sorted = lowValueConnections;
 
       int i = 0;
-      for(var connection in sorted) {
+      for(var connection in sorted.iterable) {
         if(i >= nToRemove) break;
 
         connectedShooters.remove(connection);
-
         i++;
       }
 
