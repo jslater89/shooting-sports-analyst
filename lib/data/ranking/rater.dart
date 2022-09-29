@@ -293,9 +293,9 @@ class Rater {
         totalShooters += 1;
       }
     }
-    var globalAverageConnectedness = totalShooters < 1 ? 105 : totalConnectedness / totalShooters;
-    var globalMedianConnectedness = totalShooters < 1 ? 105 : connectednesses[connectednesses.length ~/ 2];
-    var connectednessDenominator = globalMedianConnectedness;
+    var globalAverageConnectedness = totalShooters < 1 ? 105.0 : totalConnectedness / totalShooters;
+    var globalMedianConnectedness = totalShooters < 1 ? 105.0 : connectednesses[connectednesses.length ~/ 2];
+    var connectednessDenominator = max(105.0, globalMedianConnectedness);
 
     totalConnectedness = 0.0;
     totalShooters = 0;
