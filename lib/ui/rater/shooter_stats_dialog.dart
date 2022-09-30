@@ -10,6 +10,7 @@ import 'package:charts_flutter/flutter.dart' as charts;
 import 'package:charts_flutter/src/text_style.dart' as style;
 import 'package:charts_flutter/src/text_element.dart' as element;
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
+import 'package:uspsa_result_viewer/html_or/html_or.dart';
 
 /// ShooterRatingChangeDialog displays per-stage changes for a shooter.
 class ShooterStatsDialog extends StatefulWidget {
@@ -41,9 +42,11 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Tooltip(
+          GestureDetector(
             child: Text("Ratings for ${widget.rating.shooter.getName(suffixes: false)} (${widget.rating.lastClassification.name})"),
-            message: "Click a point on the chart to highlight the associated rating event."
+            onTap: () {
+              HtmlOr.openLink("https://uspsa.org/classification/${widget.rating.shooter.originalMemberNumber}");
+            },
           ),
           IconButton(
             icon: Icon(Icons.close),

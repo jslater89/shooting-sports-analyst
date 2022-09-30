@@ -5,7 +5,20 @@ import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 class Shooter {
   String firstName = "";
   String lastName = "";
-  String memberNumber = "";
+
+  String _memberNumber = "";
+  late final String originalMemberNumber;
+  bool _hasOriginalMemberNumber = false;
+
+  String get memberNumber => _memberNumber;
+  set memberNumber(String m) {
+    if(!_hasOriginalMemberNumber) {
+      originalMemberNumber = m.toUpperCase().replaceAll(RegExp(r"[^A-Z0-9]"), "");
+      _hasOriginalMemberNumber = true;
+    }
+    _memberNumber = m;
+  }
+
   bool reentry = false;
   bool dq = false;
 
