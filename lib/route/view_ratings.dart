@@ -412,6 +412,9 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   List<Widget> _generateActions() {
     if(_selectedMatch == null) return [];
 
+    // These are replicated in actions below, because generateActions is only
+    // called when the state of this widget changes, and tab switching happens
+    // fully below this widget.
     var tab = activeTabs[_tabController.index];
     var rater = _history.raterFor(_selectedMatch!, tab);
 
@@ -422,6 +425,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
           child: IconButton(
             icon: Icon(RpgAwesome.crystal_ball),
             onPressed: () {
+              var tab = activeTabs[_tabController.index];
+              var rater = _history.raterFor(_selectedMatch!, tab);
               _startPredictionView(rater, tab);
             },
           ),

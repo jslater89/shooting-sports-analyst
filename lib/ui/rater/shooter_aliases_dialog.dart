@@ -32,73 +32,75 @@ class _ShooterAliasesDialogState extends State<ShooterAliasesDialog> {
           minWidth: 600,
           maxWidth: 800,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text("Enter shooter aliases in lowercase without spaces. For example, enter 'Max Michel Jr.' as 'maxmicheljr.'.\n\n"
-                "Aliases are only necessary when a shooter switches to a lifetime "
-                "member number, and the name he registered with at the first match using his "
-                "lifetime member number differs from the name he registered with at his first "
-                "match in the dataset.", style: Theme.of(context).textTheme.bodyText2),
-            SizedBox(height: 5),
-            Text(_errorText, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).errorColor)),
-            SizedBox(height: 15),
-            Row(
-              children: [
-                Expanded(
-                  flex: 4,
-                  child: Text("This name is the same shooter..."),
-                ),
-                Expanded(
-                  flex: 4,
-                  child: Text("...as this name"),
-                ),
-                Expanded(
-                  flex: 1,
-                  child: Container(),
-                ),
-              ],
-            ),
-            Row(
-              children: [
-                Expanded(
-                  flex: 4,
-                  child: Padding(
-                    padding: const EdgeInsets.all(4.0),
-                    child: TextField(
-                      controller: _aliasController,
-                    ),
+        child: Container(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text("Enter shooter aliases in lowercase without spaces. For example, enter 'Max Michel Jr.' as 'maxmicheljr.'.\n\n"
+                  "Aliases are only necessary when a shooter switches to a lifetime "
+                  "member number, and the name he registered with at the first match using his "
+                  "lifetime member number differs from the name he registered with at his first "
+                  "match in the dataset.", style: Theme.of(context).textTheme.bodyText2),
+              SizedBox(height: 5),
+              Text(_errorText, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).errorColor)),
+              SizedBox(height: 15),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 4,
+                    child: Text("This name is the same shooter..."),
                   ),
-                ),
-                Expanded(
-                  flex: 4,
-                  child: Padding(
-                    padding: const EdgeInsets.all(4.0),
-                    child: TextField(
-                      controller: _nameController,
-                    ),
-                  )
-                ),
-                Expanded(
-                  flex: 1,
-                  child: IconButton(
-                    icon: Icon(Icons.add),
-                    onPressed: () {
-                      _addAlias();
-                    },
+                  Expanded(
+                    flex: 4,
+                    child: Text("...as this name"),
                   ),
-                ),
-              ],
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: _buildAliasRows(),
-                ),
+                  Expanded(
+                    flex: 1,
+                    child: Container(),
+                  ),
+                ],
               ),
-            )
-          ],
+              Row(
+                children: [
+                  Expanded(
+                    flex: 4,
+                    child: Padding(
+                      padding: const EdgeInsets.all(4.0),
+                      child: TextField(
+                        controller: _aliasController,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 4,
+                    child: Padding(
+                      padding: const EdgeInsets.all(4.0),
+                      child: TextField(
+                        controller: _nameController,
+                      ),
+                    )
+                  ),
+                  Expanded(
+                    flex: 1,
+                    child: IconButton(
+                      icon: Icon(Icons.add),
+                      onPressed: () {
+                        _addAlias();
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: _buildAliasRows(),
+                  ),
+                ),
+              )
+            ],
+          ),
         ),
       ),
       actions: [

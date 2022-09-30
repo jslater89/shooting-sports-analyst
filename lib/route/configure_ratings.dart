@@ -774,7 +774,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       case _MenuEntry.numberWhitelist:
         var whitelist = await showDialog<List<String>>(context: context, builder: (context) {
           return MemberNumberWhitelistDialog(_memNumWhitelist);
-        }) ?? [];
+        }, barrierDismissible: false) ?? [];
 
         _memNumWhitelist = whitelist;
         break;

@@ -15,25 +15,29 @@ class _EnterUrlsDialogState extends State<EnterUrlsDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text("Add Matches"),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(width: 600),
-          Text("Enter match URLs one per line."),
-          Text(_errorText, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).errorColor)),
-          Expanded(
-            child: SingleChildScrollView(
-              child: TextField(
-                keyboardType: TextInputType.multiline,
-                maxLines: null,
-                decoration: InputDecoration(
-                  hintText: "https://practiscore.com/results/new/..."
+      content: SizedBox(
+        width: 600,
+        child: Container(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text("Enter match URLs one per line."),
+              Text(_errorText, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).errorColor)),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: TextField(
+                    keyboardType: TextInputType.multiline,
+                    maxLines: null,
+                    decoration: InputDecoration(
+                      hintText: "https://practiscore.com/results/new/..."
+                    ),
+                    controller: urlController,
+                  ),
                 ),
-                controller: urlController,
-              ),
-            ),
-          )
-        ],
+              )
+            ],
+          ),
+        ),
       ),
       actions: [
         TextButton(

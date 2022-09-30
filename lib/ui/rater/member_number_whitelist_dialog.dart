@@ -25,28 +25,33 @@ class _MemberNumberWhitelistDialogState extends State<MemberNumberWhitelistDialo
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text("Whitelist Members"),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(width: 600),
-          Text("Enter only the numeric part of member numbers, one per line."),
-          Text(_errorText, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).errorColor)),
-          Expanded(
-            child: SingleChildScrollView(
-              child: TextField(
-                keyboardType: TextInputType.multiline,
-                maxLines: null,
-                decoration: InputDecoration(
-                  hintText: "102675..."
+      content: Container(
+        child: SizedBox(
+          width: 600,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text("Whitelisted member numbers will be included in the ratings, even if they fail "
+                  "validation in some way. Enter one per line."),
+              Text(_errorText, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).errorColor)),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: TextField(
+                    keyboardType: TextInputType.multiline,
+                    maxLines: null,
+                    decoration: InputDecoration(
+                      hintText: "102675..."
+                    ),
+                    controller: nameController,
+                    inputFormatters: [
+                      FilteringTextInputFormatter(RegExp(r"[0-9\n]"), allow: true)
+                    ],
+                  ),
                 ),
-                controller: nameController,
-                inputFormatters: [
-                  FilteringTextInputFormatter(RegExp(r"[0-9\n]"), allow: true)
-                ],
-              ),
-            ),
-          )
-        ],
+              )
+            ],
+          ),
+        ),
       ),
       actions: [
         TextButton(
