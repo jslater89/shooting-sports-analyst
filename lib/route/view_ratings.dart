@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:fluttericon/rpg_awesome_icons.dart';
 import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
@@ -409,107 +410,23 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   }
 
   List<Widget> _generateActions() {
+    if(_selectedMatch == null) return [];
+
+    var tab = activeTabs[_tabController.index];
+    var rater = _history.raterFor(_selectedMatch!, tab);
+
     return [
-      Tooltip(
-        message: "Predict the outcome of a match based on ratings.",
-        child: IconButton(
-          icon: Icon(RpgAwesome.crystal_ball),
-          onPressed: () async {
-            var tab = activeTabs[_tabController.index];
-            var rater = _history.raterFor(_selectedMatch!, tab);
-
-            var count = min(50, rater.knownShooters.length ~/ 2);
-            var options = rater.knownShooters.values.toSet().toList();
-            options.sort((a, b) => b.rating.compareTo(a.rating));
-            List<ShooterRating>? shooters = [];
-            var divisions = tab.divisions;
-
-            TextEditingController _urlController = TextEditingController();
-            var url = await showDialog<String>(context: context, builder: (context) {
-              return AlertDialog(
-                title: Text("Enter match link"),
-                content: Container(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text("Enter a link to the match registration or squadding page."),
-                      TextFormField(
-                        decoration: InputDecoration(
-                          hintText: "https://practiscore.com/match-name/register"
-                        ),
-                        controller: _urlController,
-                      ),
-                    ],
-                  ),
-                ),
-                actions: [
-                  TextButton(
-                    child: Text("CANCEL"),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                  TextButton(
-                    child: Text("OK"),
-                    onPressed: () {
-                      var url = _urlController.text;
-                      if(url.endsWith("/register")) {
-                        url = url.replaceFirst("/register", "/squadding/printhtml");
-                      }
-                      else if(url.endsWith("/squadding")) {
-                        url += "/printhtml";
-                      }
-                      else if(url.endsWith("/") && !url.contains("squadding")) {
-                        url += "squadding/printhtml";
-                      }
-                      Navigator.of(context).pop(url);
-                    }
-                  )
-                ],
-              );
-            });
-
-            if(url == null) {
-              return;
-            }
-
-            var registrationResult = await getRegistrations(url, divisions, options);
-            if(registrationResult == null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("Unable to retrieve registrations"))
-              );
-              return;
-            }
-
-            shooters.addAll(registrationResult.registrations);
-
-            if(registrationResult.unmatchedShooters.isNotEmpty) {
-              var newRegistrations = await showDialog<List<ShooterRating>>(context: context, builder: (context) {
-                return AssociateRegistrationsDialog(
-                  registrations: registrationResult,
-                  possibleMappings: options.where((element) => !registrationResult.registrations.contains(element)).toList());
-              }, barrierDismissible: false);
-
-              if(newRegistrations != null) {
-                shooters.addAll(newRegistrations);
-              }
-              else {
-                return;
-              }
-            }
-
-            if(shooters.isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("No shooters with matching registrations found."))
-              );
-              return;
-            }
-
-            var predictions = rater.ratingSystem.predict(shooters);
-            Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-              return PredictionView(predictions: predictions);
-            }));
-          },
+      if(rater.ratingSystem.supportsPrediction)
+        Tooltip(
+          message: "Predict the outcome of a match based on ratings.",
+          child: IconButton(
+            icon: Icon(RpgAwesome.crystal_ball),
+            onPressed: () {
+              _startPredictionView(rater, tab);
+            },
+          ),
         ),
-      ),
+      // end if: supports ratings
       Tooltip(
           message: "View statistics for this division or group.",
           child: IconButton(
@@ -541,6 +458,97 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         )
       ),
     ];
+  }
+
+  Future<void> _startPredictionView(Rater rater, RaterGroup tab) async {
+    var options = rater.knownShooters.values.toSet().toList();
+    options.sort((a, b) => b.rating.compareTo(a.rating));
+    List<ShooterRating>? shooters = [];
+    var divisions = tab.divisions;
+
+    TextEditingController _urlController = TextEditingController();
+    var url = await showDialog<String>(context: context, builder: (context) {
+      return AlertDialog(
+        title: Text("Enter match link"),
+        content: Container(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text("Enter a link to the match registration or squadding page."),
+              TextFormField(
+                decoration: InputDecoration(
+                    hintText: "https://practiscore.com/match-name/register"
+                ),
+                controller: _urlController,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            child: Text("CANCEL"),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          TextButton(
+              child: Text("OK"),
+              onPressed: () {
+                var url = _urlController.text;
+                if(url.endsWith("/register")) {
+                  url = url.replaceFirst("/register", "/squadding/printhtml");
+                }
+                else if(url.endsWith("/squadding")) {
+                  url += "/printhtml";
+                }
+                else if(url.endsWith("/") && !url.contains("squadding")) {
+                  url += "squadding/printhtml";
+                }
+                Navigator.of(context).pop(url);
+              }
+          )
+        ],
+      );
+    });
+
+    if(url == null) {
+      return;
+    }
+
+    var registrationResult = await getRegistrations(url, divisions, options);
+    if(registrationResult == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Unable to retrieve registrations"))
+      );
+      return;
+    }
+
+    shooters.addAll(registrationResult.registrations);
+
+    if(registrationResult.unmatchedShooters.isNotEmpty) {
+      var newRegistrations = await showDialog<List<ShooterRating>>(context: context, builder: (context) {
+        return AssociateRegistrationsDialog(
+            registrations: registrationResult,
+            possibleMappings: options.where((element) => !registrationResult.registrations.contains(element)).toList());
+      }, barrierDismissible: false);
+
+      if(newRegistrations != null) {
+        shooters.addAll(newRegistrations);
+      }
+      else {
+        return;
+      }
+    }
+
+    if(shooters.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("No shooters with matching registrations found."))
+      );
+      return;
+    }
+
+    var predictions = rater.ratingSystem.predict(shooters);
+    Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+      return PredictionView(predictions: predictions);
+    }));
   }
 
   Future<bool> _getMatchResultFiles(List<String> urls) async {

@@ -343,3 +343,16 @@ Due to the manner in which the engine calculates win probability, a shooter will
 for placing first in a rating event; probability of win approaches 100% as the rating gap increases
 but never quite gets there. Expected percentage, on the other hand, can (and does) rise above what
 a shooter is able to obtain.
+
+### Predictions
+Only the Elo rating engine supports predictions at present.
+
+The engine generates predictions using a Monte Carlo simulation. Following the Elo assumption that
+player performances follow a Gumbel distribution, the engine generates 1000 'true ratings' for each
+player, using the engine rating as mu and a scaled, reduced dynamic range rating error as beta.
+These parameters were hand-tuned.
+
+Each player's win probability is calculated for each possible true rating, and these probabilities
+become the prediction. Predictions are converted to percentages by assuming that the predicted
+winner's 5th octile probability is 100%, and that zero win probability corresponds to a 25% finish.
+Again, these parameters were hand-tuned.

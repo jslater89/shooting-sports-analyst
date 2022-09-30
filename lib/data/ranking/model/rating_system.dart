@@ -99,8 +99,14 @@ abstract class RatingSystem<T extends ShooterRating<T>, S extends RaterSettings<
   /// Return ShooterPredictions for the list of shooters.
   List<ShooterPrediction> predict(List<ShooterRating> ratings);
 
+  /// Return true if this rating system can generate predictions.
+  bool get supportsPrediction => false;
+
   /// Return an error measure for the given predictions and result.
   double validate({required PracticalMatch result, required List<ShooterPrediction> predictions});
+
+  /// Return true if this rating system can validate predictions.
+  bool get supportsValidation => false;
 
   static const initialPlacementMultipliers = [
     // 1.5,

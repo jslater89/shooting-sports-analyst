@@ -402,6 +402,9 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   static const monteCarloTrials = 1000;
 
   @override
+  bool get supportsPrediction => true;
+
+  @override
   List<ShooterPrediction> predict(List<ShooterRating> ratings) {
     List<EloShooterRating> eloRatings = List.castFrom(ratings);
     List<ShooterPrediction> predictions = [];
@@ -410,7 +413,8 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       var error = rating.standardError;
       var stdDev = error;
 
-      var lowerCompressionFactor = 0.75;
+      // Smaller compression factors mean more compression, 1.0 means no compression.
+      var lowerCompressionFactor = 0.8;
       var upperCompressionFactor = 0.9;
       var compressionCenter = 100.0;
       if(error > compressionCenter) stdDev = compressionCenter + pow(stdDev - compressionCenter, upperCompressionFactor);
