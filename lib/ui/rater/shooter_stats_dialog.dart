@@ -42,11 +42,14 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          GestureDetector(
-            child: Text("Ratings for ${widget.rating.shooter.getName(suffixes: false)} (${widget.rating.lastClassification.name})"),
-            onTap: () {
-              HtmlOr.openLink("https://uspsa.org/classification/${widget.rating.shooter.originalMemberNumber}");
-            },
+          MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              child: Text("Ratings for ${widget.rating.shooter.getName(suffixes: false)} (${widget.rating.lastClassification.name})"),
+              onTap: () {
+                HtmlOr.openLink("https://uspsa.org/classification/${widget.rating.shooter.originalMemberNumber}");
+              },
+            ),
           ),
           IconButton(
             icon: Icon(Icons.close),

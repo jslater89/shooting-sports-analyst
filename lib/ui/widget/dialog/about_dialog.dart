@@ -17,9 +17,9 @@ void showAbout(BuildContext context, Size screenSize) {
                       children: [
                         TextSpan(
                             style: Theme.of(context).textTheme.bodyText1,
-                            text: "A Flutter web app for displaying USPSA scores. You can also embed this widget into "
-                                "your match website, automatically loading your results file from a provided Internet "
-                                "address.\n\n"
+                            text: "A Flutter desktop application for viewing, analyzing, and predicting USPSA match results. "
+                                "A web application is also available for viewing results only, and can be embedded into your "
+                                "match website if you want to host your own results.\n\n"
                                 "Visit the repository at "
                         ),
                         TextSpan(
@@ -32,7 +32,7 @@ void showAbout(BuildContext context, Size screenSize) {
                         ),
                         TextSpan(
                             style: Theme.of(context).textTheme.bodyText1,
-                            text: " for more information.\n\nuspsa_result_viewer v${VersionInfo.version}\n© Jay Slater ${DateTime.now().year}\nGPL 3.0+"
+                            text: " for more information.\n\nUSPSA Analyst v${VersionInfo.version}\n© Jay Slater ${DateTime.now().year}\nGPL 3.0+"
                         )
                       ]
                   )

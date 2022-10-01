@@ -126,15 +126,18 @@ class ShooterResultCard extends StatelessWidget {
 
   Widget _buildShooterLink(BuildContext context, Shooter shooter) {
     if(shooter.memberNumber != "") {
-      return GestureDetector(
-        onTap: () {
-          HtmlOr.openLink("https://uspsa.org/classification/${shooter.memberNumber}");
-        },
-        child: Text(
-          "${shooter.getName()} - ${shooter.division.displayString()} ${shooter.classification.displayString()}",
-          style: Theme.of(context).textTheme.headline6!.copyWith(
-            color: Theme.of(context).primaryColor,
-            decoration: TextDecoration.underline,
+      return MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: () {
+            HtmlOr.openLink("https://uspsa.org/classification/${shooter.memberNumber}");
+          },
+          child: Text(
+            "${shooter.getName()} - ${shooter.division.displayString()} ${shooter.classification.displayString()}",
+            style: Theme.of(context).textTheme.headline6!.copyWith(
+              color: Theme.of(context).primaryColor,
+              decoration: TextDecoration.underline,
+            ),
           ),
         ),
       );
