@@ -78,16 +78,7 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
     _participationController.addListener(() {
       if (_participationController.text.length > 0) {
         var newBonus = double.tryParse(_participationController.text);
-        if (newBonus != null) {
-          if (newBonus > 1) {
-            newBonus = 1.0;
-          }
-          else if (newBonus < 0) {
-            newBonus = 0.0;
-          }
-        }
-
-        _validateText();
+        if(newBonus != null) _validateText();
       }
     });
 
@@ -128,8 +119,8 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
       return;
     }
 
-    if(participationBonus == null || participationBonus > 1 || participationBonus < 0) {
-      widget.controller.lastError = "Participation bonus incorrectly formatted or out of range";
+    if(participationBonus == null) {
+      widget.controller.lastError = "Participation bonus incorrectly formatted";
       return;
     }
 
@@ -148,8 +139,6 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
     settings.decayingPointsStart = decayStart;
     settings.decayingPointsFactor = decayFactor;
     widget.controller.lastError = null;
-
-    print("updated settings");
   }
 
   @override
