@@ -15,9 +15,10 @@ For more information on the rating engine, see [README-Elo.md](https://github.co
 
 ## Result Viewer
 The result viewer includes a number of features Practiscore lacks:
-* Combining results for multiple divisions (i.e., all four locap divisions).
+* Combining results for multiple divisions (e.g., all four locap divisions)
 * Removing stages from the match: "Who would have won if we only shot stages 1 to 3 today?"
-* Complex querying: `?revolver and gm or production or "bill duda"`
+* Complex querying: e.g. `?revolver and gm or production or "bill duda"` to search for Production
+shooters, Revolver grandmasters, and Bill Duda
 * Optionally scoring DQed shooters on stages they completed
 * Optionally filtering second entries from the results
 
