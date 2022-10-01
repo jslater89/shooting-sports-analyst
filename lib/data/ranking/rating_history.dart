@@ -103,7 +103,7 @@ class RatingHistory {
             _ratersByDivision[m]![group] = await _raterForGroup(innerMatches, group);
 
             stepsFinished += 1;
-            await progressCallback?.call(stepsFinished, totalSteps, "${toBeginningOfSentenceCase(group.name)} - ${m.name}");
+            await progressCallback?.call(stepsFinished, totalSteps, "${group.uiLabel} - ${m.name}");
           }
           else {
             Rater newRater = Rater.copy(_ratersByDivision[lastMatch]![group]!);
@@ -111,7 +111,7 @@ class RatingHistory {
             _ratersByDivision[m]![group] = newRater;
 
             stepsFinished += 1;
-            await progressCallback?.call(stepsFinished, totalSteps, "${toBeginningOfSentenceCase(group.name)} - ${m.name}");
+            await progressCallback?.call(stepsFinished, totalSteps, "${group.uiLabel} - ${m.name}");
           }
         }
 
@@ -129,7 +129,7 @@ class RatingHistory {
       for (var group in _settings.groups) {
         _ratersByDivision[m]![group] = await _raterForGroup(_matches, group, (_1, _2, eventName) async {
           stepsFinished += 1;
-          await progressCallback?.call(stepsFinished, totalSteps, "${toBeginningOfSentenceCase(group.name)} - $eventName");
+          await progressCallback?.call(stepsFinished, totalSteps, "${group.uiLabel} - $eventName");
         });
       }
     }
@@ -183,7 +183,7 @@ enum RaterGroup {
   limitedCO,
 }
 
-extension Utilities on RaterGroup {
+extension RaterGroupUtilities on RaterGroup {
   List<Division> get divisions {
     switch(this) {
       case RaterGroup.open:
@@ -208,6 +208,33 @@ extension Utilities on RaterGroup {
         return [Division.open, Division.pcc];
       case RaterGroup.limitedCO:
         return [Division.limited, Division.carryOptics];
+    }
+  }
+
+  String get uiLabel {
+    switch(this) {
+      case RaterGroup.open:
+        return "Open";
+      case RaterGroup.limited:
+        return "Limited";
+      case RaterGroup.pcc:
+        return "PCC";
+      case RaterGroup.carryOptics:
+        return "Carry Optics";
+      case RaterGroup.singleStack:
+        return "Single Stack";
+      case RaterGroup.production:
+        return "Production";
+      case RaterGroup.limited10:
+        return "Limited 10";
+      case RaterGroup.revolver:
+        return "Revolver";
+      case RaterGroup.locap:
+        return "Locap";
+      case RaterGroup.openPcc:
+        return "Open/PCC";
+      case RaterGroup.limitedCO:
+        return "Limited/CO";
     }
   }
 }

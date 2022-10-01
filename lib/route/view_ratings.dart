@@ -173,15 +173,33 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     Widget loadingText;
 
     if(_loadingEventName != null) {
-      loadingText = Row(
-        mainAxisSize: MainAxisSize.max,
-        children: [
-          Expanded(child: Container()),
-          Expanded(flex: 2, child: Text("Now: ${_loadingState.label}", style: Theme.of(context).textTheme.subtitle2, textAlign: TextAlign.center)),
-          Expanded(flex: 2, child: Text(_loadingEventName!, overflow: TextOverflow.ellipsis, softWrap: false)),
-          Expanded(child: Container())
-        ],
-      );
+      var parts = _loadingEventName!.split(" - ");
+
+      if(parts.length >= 2) {
+        var divisionText = parts[0];
+        var eventText = parts.sublist(1).join(" - ");
+        loadingText = Row(
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            Expanded(child: Container()),
+            Expanded(flex: 6, child: Text("Now: ${_loadingState.label}", style: Theme.of(context).textTheme.subtitle2, textAlign: TextAlign.center)),
+            Expanded(flex: 2, child: Text(divisionText, overflow: TextOverflow.ellipsis, softWrap: false, textAlign: TextAlign.center)),
+            Expanded(flex: 6, child: Text(eventText, overflow: TextOverflow.ellipsis, softWrap: false, textAlign: TextAlign.center)),
+            Expanded(child: Container())
+          ],
+        );
+      }
+      else {
+        loadingText = Row(
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            Expanded(child: Container()),
+            Expanded(flex: 3, child: Text("Now: ${_loadingState.label}", style: Theme.of(context).textTheme.subtitle2, textAlign: TextAlign.center)),
+            Expanded(flex: 3, child: Text(_loadingEventName!, overflow: TextOverflow.ellipsis, softWrap: false)),
+            Expanded(child: Container())
+          ],
+        );
+      }
     }
     else {
       loadingText = Text("Now: ${_loadingState.label}", style: Theme.of(context).textTheme.subtitle2);
