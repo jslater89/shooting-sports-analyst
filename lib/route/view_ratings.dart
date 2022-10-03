@@ -458,9 +458,9 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
               if(_selectedMatch != null) {
                 var tab = activeTabs[_tabController.index];
                 var rater = _history.raterFor(_selectedMatch!, tab);
-                var statistics = rater.getStatistics();
+                var statistics = rater.getStatistics(ratings: _ratings);
                 showDialog(context: context, builder: (context) {
-                  return RaterStatsDialog(statistics);
+                  return RaterStatsDialog(tab, statistics);
                 });
               }
             },

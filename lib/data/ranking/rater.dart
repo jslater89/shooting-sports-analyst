@@ -926,17 +926,23 @@ class Rater {
   }
 
   RaterStatistics? _cachedStats;
-  RaterStatistics getStatistics() {
-    if(_cachedStats == null) _calculateStats();
+  RaterStatistics getStatistics({List<ShooterRating>? ratings}) {
+    if(ratings != null) return _calculateStats(ratings);
+
+    if(_cachedStats == null) _cachedStats = _calculateStats(null);
 
     return _cachedStats!;
   }
 
-  void _calculateStats() {
-    var bucketSize = ratingSystem.histogramBucketSize(knownShooters.length, _matches.length);
+  RaterStatistics _calculateStats(List<ShooterRating>? ratings) {
+    if(ratings == null) {
+      ratings = knownShooters.values.toList();
+    }
 
-    var count = knownShooters.length;
-    var allRatings = knownShooters.values.map((r) => r.rating);
+    var bucketSize = ratingSystem.histogramBucketSize(ratings.length, _matches.length);
+
+    var count = ratings.length;
+    var allRatings = ratings.map((r) => r.rating);
 
     var histogram = <int, int>{};
     for(var rating in allRatings) {
@@ -958,7 +964,7 @@ class Rater {
     for(var classification in Classification.values) {
       if(classification == Classification.unknown) continue;
 
-      var shootersInClass = knownShooters.values.where((r) => r.lastClassification == classification);
+      var shootersInClass = ratings.where((r) => r.lastClassification == classification);
       var ratingsInClass = shootersInClass.map((r) => r.rating);
 
       ratingsByClass[classification] = ratingsInClass.sorted((a, b) => a.compareTo(b));
@@ -978,7 +984,7 @@ class Rater {
       }
     }
 
-    _cachedStats = RaterStatistics(
+    return RaterStatistics(
       shooters: count,
       averageRating: allRatings.average,
       minRating: allRatings.min,
