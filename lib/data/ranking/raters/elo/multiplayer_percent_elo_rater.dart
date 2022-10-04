@@ -462,14 +462,11 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       }
       stdDev = stdDev * errMultiplier;
 
-      var shortTrend = rating.rating - rating.averageRating(window: 15).firstRating;
-      var mediumTrend = rating.rating - rating.averageRating(window: 30).firstRating;
-      var longTrend = rating.rating - rating.averageRating(window: 60).firstRating;
+      var trends = [rating.shortTrend, rating.mediumTrend, rating.longTrend];
 
       var trendShiftMaxVal = 400;
       var trendShiftMaxMagnitude = 0.9;
-      var averageTrend = (shortTrend + mediumTrend + longTrend) / 3;
-      var trendShiftProportion = max(-1.0, min(1.0, averageTrend / trendShiftMaxVal));
+      var trendShiftProportion = max(-1.0, min(1.0, trends.average / trendShiftMaxVal));
       var trendShift = trendShiftProportion * trendShiftMaxMagnitude;
 
       //List<double> possibleRatings = Normal.generate(monteCarloTrials, mean: rating.rating, variance: stdDev * stdDev);
@@ -511,6 +508,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     Map<ShooterRating, ShooterPrediction> shootersToPredictions = {};
     Map<ShooterPrediction, SimpleMatchResult> actualOutcomes = {};
     double errorSum = 0;
+    List<double> errors = [];
 
     for(var prediction in predictions) {
       shootersToPredictions[prediction.shooter] = prediction;
@@ -530,6 +528,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       var params = _calculateScoreParams(aRating: shooter, aScore: score, aMatchScore: matchScore, scores: scores, matchScores: matchScores);
       var eloScore = _calculateActualScore(score: score, matchScore: matchScore, params: params);
 
+      errors.add(eloScore.score - prediction.mean);
       errorSum += pow(eloScore.score - prediction.mean, 2);
       actualOutcomes[prediction] = SimpleMatchResult(raterScore: eloScore.score, percent: matchScore.percent, place: matchScore.place);
 
@@ -541,8 +540,9 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       }
     }
 
-    print("Actual outcomes for ${actualOutcomes.length} shooters yielded an error sum of $errorSum");
-    print("Correct: $correct68/$correct95/${actualOutcomes.length} (${(correct68 / actualOutcomes.length * 100).toStringAsFixed(1)}%/${(correct95 / actualOutcomes.length * 100).toStringAsFixed(1)}%)");
+    print("Actual outcomes for ${actualOutcomes.length} shooters yielded an error sum of ${errors.sum} and an average error of ${errors.average.toStringAsPrecision(3)}");
+    print("Std. dev: ${(sqrt(errorSum) / predictions.length).toStringAsPrecision(3)} of ${predictions.map((e) => e.mean).average}");
+    print("Score correct: $correct68/$correct95/${actualOutcomes.length} (${(correct68 / actualOutcomes.length * 100).toStringAsFixed(1)}%/${(correct95 / actualOutcomes.length * 100).toStringAsFixed(1)}%)");
 
     return PredictionOutcome(
       error: (sqrt(errorSum) / predictions.length), actualResults: actualOutcomes

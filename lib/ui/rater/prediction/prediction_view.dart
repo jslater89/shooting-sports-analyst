@@ -1,4 +1,5 @@
 import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
@@ -58,90 +59,15 @@ class _PredictionViewState extends State<PredictionView> {
         title: Text("Predictions"),
         centerTitle: true,
         actions: [
-          Tooltip(
-            message: "Check predictions",
-            child: IconButton(
-              icon: Icon(Icons.candlestick_chart),
-              onPressed: () async {
-                await MatchCache().ready;
-
-                var matchUrl = await getMatchUrl(context);
-
-                if(matchUrl == null) return;
-
-                var match = await MatchCache().getMatch(matchUrl);
-                if(match == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unable to retrieve match")));
-                  return;
-                }
-
-                var filters = widget.rater.filters!;
-                var shooters = match.filterShooters(
-                  filterMode: filters.mode,
-                  divisions: filters.activeDivisions.toList(),
-                  powerFactors: [],
-                  classes: [],
-                  allowReentries: false,
-                );
-                var scores = match.getScores(
-                  shooters: shooters,
-                  scoreDQ: false,
-                );
-
-                var matchScores = <ShooterRating, RelativeScore>{};
-                List<ShooterRating> knownShooters = [];
-
-                // Some raters may demand the same number of predictions
-                // and shooters to get the expected/actual score calculation
-                // correct. Only add shooters for which we have ratings,
-                // predictions, and scores.
-                for(var shooter in shooters) {
-                  var rating = widget.rater.ratingFor(shooter);
-                  if(rating != null) {
-                    var score = scores.firstWhereOrNull((element) => element.shooter == shooter);
-                    var prediction = widget.predictions.firstWhereOrNull((element) => element.shooter == rating);
-                    if(score != null && prediction != null) {
-                      matchScores[rating] = score.total;
-                      knownShooters.add(rating);
-                    }
-                  }
-                  else {
-                    print("No rating for ${shooter.getName(suffixes: false)}");
-                  }
-                }
-
-                var outcome = widget.rater.ratingSystem.validate(
-                    shooters: knownShooters,
-                    scores: matchScores,
-                    matchScores: matchScores,
-                    predictions: widget.predictions
-                );
-
-                int correct68 = 0;
-                int correct95 = 0;
-                int total = 0;
-                for(var pred in widget.predictions) {
-                  double boxLowPercent = (PredictionView._percentFloor + pred.lowerBox / highPrediction * PredictionView._percentMult) * 100;
-                  double whiskerLowPercent = (PredictionView._percentFloor + pred.lowerWhisker / highPrediction * PredictionView._percentMult) * 100;
-                  double whiskerHighPercent = (PredictionView._percentFloor + pred.upperWhisker / highPrediction * PredictionView._percentMult) * 100;
-                  double boxHighPercent = (PredictionView._percentFloor + pred.upperBox / highPrediction * PredictionView._percentMult) * 100;
-                  double? outcomePercent;
-
-                  if(outcome.actualResults[pred] != null) {
-                    total += 1;
-                    outcomePercent = outcome.actualResults[pred]!.percent * 100;
-                    if(outcomePercent >= whiskerLowPercent && outcomePercent <= whiskerHighPercent) correct95 += 1;
-                    if(outcomePercent >= boxLowPercent && outcomePercent <= boxHighPercent) correct68 += 1;
-                  }
-                }
-                print("Correct: $correct68/$correct95/$total (${(correct68 / total * 100).toStringAsFixed(1)}%/${(correct95 / total * 100).toStringAsFixed(1)}%)");
-
-                setState(() {
-                  outcomes = outcome.actualResults;
-                });
-              },
+          if(kDebugMode)
+            Tooltip(
+              message: "Check predictions",
+              child: IconButton(
+                icon: Icon(Icons.candlestick_chart),
+                onPressed: () => _validate(highPrediction),
+              ),
             ),
-          ),
+          // endif kDebugMode
           Tooltip(
             message: "Download predictions as CSV",
             child: IconButton(
@@ -196,6 +122,87 @@ class _PredictionViewState extends State<PredictionView> {
         ),
       ),
     );
+  }
+
+  void _validate(double highPrediction) async {
+    await MatchCache().ready;
+
+    var matchUrl = await getMatchUrl(context);
+
+    if(matchUrl == null) return;
+
+    var match = await MatchCache().getMatch(matchUrl);
+    if(match == null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unable to retrieve match")));
+      return;
+    }
+
+    var filters = widget.rater.filters!;
+    var shooters = match.filterShooters(
+      filterMode: filters.mode,
+      divisions: filters.activeDivisions.toList(),
+      powerFactors: [],
+      classes: [],
+      allowReentries: false,
+    );
+    var scores = match.getScores(
+      shooters: shooters,
+      scoreDQ: false,
+    );
+
+    var matchScores = <ShooterRating, RelativeScore>{};
+    List<ShooterRating> knownShooters = [];
+
+    // Some raters may demand the same number of predictions
+    // and shooters to get the expected/actual score calculation
+    // correct. Only add shooters for which we have ratings,
+    // predictions, and scores.
+    for(var shooter in shooters) {
+      var rating = widget.rater.ratingFor(shooter);
+      if(rating != null) {
+        var score = scores.firstWhereOrNull((element) => element.shooter == shooter);
+        var prediction = widget.predictions.firstWhereOrNull((element) => element.shooter == rating);
+        if(score != null && prediction != null) {
+          matchScores[rating] = score.total;
+          knownShooters.add(rating);
+        }
+      }
+      else {
+        print("No rating for ${shooter.getName(suffixes: false)}");
+      }
+    }
+
+    print("Registrants: ${shooters.length} Predictions: ${shooters.length} Matched: ${knownShooters.length}");
+
+    var outcome = widget.rater.ratingSystem.validate(
+        shooters: knownShooters,
+        scores: matchScores,
+        matchScores: matchScores,
+        predictions: widget.predictions
+    );
+
+    int correct68 = 0;
+    int correct95 = 0;
+    int total = 0;
+    for(var pred in widget.predictions) {
+      double boxLowPercent = (PredictionView._percentFloor + pred.lowerBox / highPrediction * PredictionView._percentMult) * 100;
+      double whiskerLowPercent = (PredictionView._percentFloor + pred.lowerWhisker / highPrediction * PredictionView._percentMult) * 100;
+      double whiskerHighPercent = (PredictionView._percentFloor + pred.upperWhisker / highPrediction * PredictionView._percentMult) * 100;
+      double boxHighPercent = (PredictionView._percentFloor + pred.upperBox / highPrediction * PredictionView._percentMult) * 100;
+      double? outcomePercent;
+
+      if(outcome.actualResults[pred] != null) {
+        total += 1;
+        outcomePercent = outcome.actualResults[pred]!.percent * 100;
+        if(outcomePercent >= whiskerLowPercent && outcomePercent <= whiskerHighPercent) correct95 += 1;
+        if(outcomePercent >= boxLowPercent && outcomePercent <= boxHighPercent) correct68 += 1;
+      }
+    }
+    print("Pct. correct: $correct68/$correct95/$total (${(correct68 / total * 100).toStringAsFixed(1)}%/${(correct95 / total * 100).toStringAsFixed(1)}%)");
+
+    setState(() {
+      outcomes = outcome.actualResults;
+    });
   }
 
   Widget _buildPredictionsHeader() {
@@ -262,7 +269,7 @@ class _PredictionViewState extends State<PredictionView> {
     var outcome = outcomes[pred];
     if(outcome != null && outcome.percent > 0.2) {
       outcomePercent = outcome.percent * 100;
-      referenceLines = [outcome.percent * 100];
+      referenceLines = [outcome.raterScore];
     }
 
     return ConstrainedBox(
@@ -305,14 +312,14 @@ class _PredictionViewState extends State<PredictionView> {
                     "95% confidence: ${whiskerLowPercent.toStringAsFixed(1)}-${whiskerHighPercent.toStringAsFixed(1)}%" + (
                     outcomePercent != null ? "\nOutcome: ${outcomePercent.toStringAsFixed(1)}%" : ""),
                 child: BoxAndWhiskerPlot(
-                  minimum: whiskerLowPercent,
-                  lowerQuartile: boxLowPercent,
-                  median: meanPercent,
-                  upperQuartile: boxHighPercent,
-                  maximum: whiskerHighPercent,
+                  minimum: pred.lowerWhisker,
+                  lowerQuartile: pred.lowerBox,
+                  median: pred.mean,
+                  upperQuartile: pred.upperBox,
+                  maximum: pred.upperWhisker,
                   direction: PlotDirection.horizontal,
-                  rangeMin: 20,
-                  rangeMax: 102.5,
+                  rangeMin: renderMin,
+                  rangeMax: renderMax,
                   fillBox: true,
                   boxSize: 12,
                   strokeWidth: 1.5,
