@@ -37,7 +37,7 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
   }
 
   void _launchPresetPractiscore({String? url}) async {
-    var matchId = await _getMatchId(presetUrl: url);
+    var matchId = await getMatchId(context, presetUrl: url);
     if(matchId != null) {
       HtmlOr.navigateTo(context, "/web/$matchId");
     }
@@ -134,7 +134,7 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
           setState(() {
             _operationInProgress = true;
           });
-          var matchId = await _getMatchId();
+          var matchId = await getMatchId(context);
           setState(() {
             _operationInProgress = false;
           });
@@ -161,49 +161,5 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
 
   Future<void> _uploadResultsFile(Function(String?) onFileContents) async {
     HtmlOr.pickAndReadFile(context, onFileContents);
-  }
-
-  Future<String?> _getMatchId({String? presetUrl}) async {
-    var matchUrl = presetUrl ?? await showDialog<String>(context: context, builder: (context) {
-      var controller = TextEditingController();
-      return AlertDialog(
-        title: Text("Enter PractiScore match URL"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text("Copy the URL to the match's PractiScore results page and paste it in the field below.",
-              softWrap: true,),
-            TextField(
-              controller: controller,
-              decoration: InputDecoration(
-                hintText: "https://practiscore.com/results/new/...",
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-              child: Text("CANCEL"),
-              onPressed: () {
-                Navigator.of(context).pop();
-              }
-          ),
-          TextButton(
-              child: Text("OK"),
-              onPressed: () {
-                Navigator.of(context).pop(controller.text);
-              }
-          ),
-        ],
-      );
-    });
-
-    if(matchUrl == null) {
-      return null;
-    }
-
-    var matchId = processMatchUrl(matchUrl, context: _innerContext);
-
-    return matchId;
   }
 }

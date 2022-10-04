@@ -13,7 +13,9 @@ import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.d
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rating_change.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/ui/elo_settings_ui.dart';
+import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/ranking/timings.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/score_row.dart';
 
 class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSettings, EloSettingsController> {
@@ -91,6 +93,100 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     var aScore = scores[aRating]!;
     var aMatchScore = matchScores[aRating]!;
 
+    late DateTime start;
+    if(Timings.enabled) start = DateTime.now();
+    var params = _calculateScoreParams(aRating: aRating, aScore: aScore, aMatchScore: aMatchScore, scores: scores, matchScores: matchScores);
+    if(Timings.enabled) timings.calcExpectedScore += (DateTime.now().difference(start).inMicroseconds).toDouble();
+
+    if(params.usedScores == 1) {
+      return {
+        shooters[0]: RatingChange(change: {
+          RatingSystem.ratingKey: 0,
+          errorKey: 0,
+          baseKKey: 0,
+          effectiveKKey: 0,
+        }),
+      };
+    }
+
+    if(Timings.enabled) start = DateTime.now();
+
+    var actualScore = _calculateActualScore(score: aScore, matchScore: aMatchScore, params: params);
+
+    // The first N matches you shoot get bonuses for initial placement.
+    var placementMultiplier = aRating.ratingEvents.length < RatingSystem.initialPlacementMultipliers.length ?
+      RatingSystem.initialPlacementMultipliers[aRating.ratingEvents.length] : 1.0;
+
+    // If lots of people zero a stage, we can't reason effectively about the relative
+    // differences in performance of those people, compared to each other or compared
+    // to the field that didn't zero it. If more than 10% of people zero a stage, start
+    // scaling K down (to 0.34, when 30%+ of people zero a stage).
+    var zeroMultiplier = (params.zeroes / params.usedScores) < 0.1 ? 1.0 : 1 - 0.66 * ((min(0.3, (params.zeroes / params.usedScores) - 0.1)) / 0.3);
+
+
+    // Adjust K based on the confidence in the shooter's rating.
+    // If we're more confident, we adjust less to smooth out performances.
+    // If we're less confident, we adjust more to find the correct rating faster.
+    var error = aRating.standardError;
+
+    var errMultiplier = 1.0;
+    final maxMultiplier = 1.0;
+    final minMultiplier = 0.5;
+    if(errorAwareK) {
+      var minThreshold = errThreshold;
+      if (error >= errThreshold) {
+        errMultiplier = 1 + min(1.0, ((error - errThreshold) / (EloShooterRating.errorScale - errThreshold))) * maxMultiplier;
+      }
+      else if (error < minThreshold) {
+        errMultiplier = 1 - ((minThreshold - error) / minThreshold) * minMultiplier;
+      }
+    }
+
+    var effectiveK = K * placementMultiplier * matchStrengthMultiplier * zeroMultiplier * connectednessMultiplier * eventWeightMultiplier * errMultiplier;
+
+    var changeFromPercent = effectiveK * (params.usedScores - 1) * (actualScore.percentComponent * percentWeight - (params.expectedScore * percentWeight));
+    var changeFromPlace = effectiveK * (params.usedScores - 1) * (actualScore.placeComponent * placeWeight - (params.expectedScore * placeWeight));
+
+    var change = changeFromPlace + changeFromPercent;
+    if(Timings.enabled) timings.updateRatings += (DateTime.now().difference(start).inMicroseconds).toDouble();
+
+    if(change.isNaN || change.isInfinite) {
+      debugPrint("### ${aRating.shooter.lastName} stats: ${actualScore.actualPercent} of ${params.usedScores} shooters for ${aScore.stage?.name}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}, placement $placementMultiplier, zero $zeroMultiplier (${params.zeroes})");
+      debugPrint("AS/ES: ${actualScore.score.toStringAsFixed(6)}/${params.expectedScore.toStringAsFixed(6)}");
+      debugPrint("Actual/expected percent: ${(actualScore.percentComponent * params.totalPercent * 100).toStringAsFixed(2)}/${(params.expectedScore * params.totalPercent * 100).toStringAsFixed(2)}");
+      debugPrint("Actual/expected place: ${actualScore.placeBlend}/${(params.usedScores - (params.expectedScore * params.divisor)).toStringAsFixed(4)}");
+      debugPrint("Rating±Change: ${aRating.rating.round()} + ${change.toStringAsFixed(2)} (${changeFromPercent.toStringAsFixed(2)} from pct, ${changeFromPlace.toStringAsFixed(2)} from place)");
+      debugPrint("###");
+      throw StateError("NaN/Infinite");
+    }
+
+    if(Timings.enabled) start = DateTime.now();
+    var hf = aScore.score.getHitFactor(scoreDQ: aScore.score.stage != null);
+    Map<String, List<dynamic>> info = {
+      "Actual/expected percent: %00.2f/%00.2f on %00.2fHF": [actualScore.percentComponent * params.totalPercent * 100, params.expectedScore * params.totalPercent * 100, hf],
+      "Actual/expected place: %00.1f/%00.1f": [actualScore.placeBlend, params.usedScores - (params.expectedScore * params.divisor)],
+      "Rating ± Change: %00.0f + %00.2f (%00.2f from pct, %00.2f from place)": [aRating.rating, change, changeFromPercent, changeFromPlace],
+      "eff. K, multipliers: %00.2f, SoS %00.3f, IP %00.3f, Zero %00.3f, Conn %00.3f, EW %00.3f, Err %00.3f": [effectiveK, matchStrengthMultiplier, placementMultiplier, zeroMultiplier, connectednessMultiplier, eventWeightMultiplier, errMultiplier]
+    };
+    if(Timings.enabled) timings.printInfo += (DateTime.now().difference(start).inMicroseconds).toDouble();
+
+    return {
+      aRating: RatingChange(change: {
+        RatingSystem.ratingKey: change,
+        errorKey: (params.expectedScore - actualScore.score) * params.usedScores,
+        baseKKey: K * (params.usedScores - 1),
+        effectiveKKey: effectiveK * (params.usedScores),
+      }, info: info),
+    };
+  }
+
+  _ScoreParameters _calculateScoreParams({
+    required ShooterRating aRating,
+    required RelativeScore aScore,
+    required RelativeScore aMatchScore,
+    required Map<ShooterRating, RelativeScore> scores,
+    required Map<ShooterRating, RelativeScore> matchScores,
+  }) {
     double expectedScore = 0;
     var highOpponentScore = 0.0;
 
@@ -99,8 +195,6 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     var totalPercent = (aScore.percent * stageBlend) + (aMatchScore.percent * matchBlend);
     int zeroes = aScore.relativePoints < 0.1 ? 1 : 0;
 
-    late DateTime start;
-    if(Timings.enabled) start = DateTime.now();
     for(var bRating in scores.keys) {
       var opponentScore = scores[bRating]!;
       var opponentMatchScore = matchScores[bRating]!;
@@ -125,105 +219,41 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       totalPercent += (opponentScore.percent * stageBlend) + (opponentMatchScore.percent * matchBlend);
       usedScores++;
     }
-    if(Timings.enabled) timings.calcExpectedScore += (DateTime.now().difference(start).inMicroseconds).toDouble();
 
-    if(usedScores == 1) {
-      return {
-        shooters[0]: RatingChange(change: {
-          RatingSystem.ratingKey: 0,
-          errorKey: 0,
-          baseKKey: 0,
-          effectiveKKey: 0,
-        }),
-      };
+    var divisor = ((usedScores * (usedScores - 1)) / 2);
+    return _ScoreParameters(
+      expectedScore: expectedScore / divisor,
+      highOpponentScore: highOpponentScore,
+      totalPercent: totalPercent,
+      divisor: divisor,
+      usedScores: usedScores,
+      zeroes: zeroes,
+    );
+  }
+  
+  _ActualScore _calculateActualScore({
+    required RelativeScore score,
+    required RelativeScore matchScore,
+    required _ScoreParameters params,
+  }) {
+    var actualPercent = (score.percent * stageBlend) + (matchScore.percent * matchBlend);
+    if(score.percent == 1.0 && params.highOpponentScore > 0.1) {
+      actualPercent = score.relativePoints / params.highOpponentScore;
+      params.totalPercent += (actualPercent - 1.0);
     }
 
-    if(Timings.enabled) start = DateTime.now();
-    var divisor = (usedScores * (usedScores - 1)) / 2;
+    var percentComponent = params.totalPercent == 0 ? 0.0 : (actualPercent / params.totalPercent);
 
-    // TODO: solve my expected-percent-above-100 issue
-    // I might be able to solve this by distributing percent actual score more like it's distributed for placement:
-    // pick a floor for percent points for last place, and adjust the intervals on the way up by relative finish.
-    // This is, however, a good soft cap on pubstompers.
-    expectedScore = (expectedScore) / divisor;
+    var placeBlend = ((score.place * stageBlend) + (matchScore.place * matchBlend)).toDouble();
+    var placeComponent = (params.usedScores - placeBlend) /  params.divisor;
 
-    var actualPercent = (aScore.percent * stageBlend) + (aMatchScore.percent * matchBlend);
-    if(aScore.percent == 1.0 && highOpponentScore > 0.1) {
-      actualPercent = aScore.relativePoints / highOpponentScore;
-      totalPercent += (actualPercent - 1.0);
-    }
-
-    var percentComponent = totalPercent == 0 ? 0.0 : (actualPercent / totalPercent);
-
-    var placeBlend = ((aScore.place * stageBlend) + (aMatchScore.place * matchBlend)).toDouble();
-    var placeComponent = (usedScores - placeBlend) /  divisor;
-
-    // The first N matches you shoot get bonuses for initial placement.
-    var placementMultiplier = aRating.ratingEvents.length < RatingSystem.initialPlacementMultipliers.length ?
-      RatingSystem.initialPlacementMultipliers[aRating.ratingEvents.length] : 1.0;
-
-    // If lots of people zero a stage, we can't reason effectively about the relative
-    // differences in performance of those people, compared to each other or compared
-    // to the field that didn't zero it. If more than 10% of people zero a stage, start
-    // scaling K down (to 0.34, when 30%+ of people zero a stage).
-    var zeroMultiplier = (zeroes / usedScores) < 0.1 ? 1.0 : 1 - 0.66 * ((min(0.3, (zeroes / usedScores) - 0.1)) / 0.3);
-
-
-    // Adjust K based on the confidence in the shooter's rating.
-    // If we're more confident, we adjust less to smooth out performances.
-    // If we're less confident, we adjust more to find the correct rating faster.
-    var error = aRating.standardError;
-
-    var errMultiplier = 1.0;
-    final maxMultiplier = 1.0;
-    final minMultiplier = 0.5;
-    if(errorAwareK) {
-      var minThreshold = errThreshold;
-      if (error >= errThreshold) {
-        errMultiplier = 1 + min(1.0, ((error - errThreshold) / (EloShooterRating.errorScale - errThreshold))) * maxMultiplier;
-      }
-      else if (error < minThreshold) {
-        errMultiplier = 1 - ((minThreshold - error) / minThreshold) * minMultiplier;
-      }
-    }
-
-    var actualScore = percentComponent * percentWeight + placeComponent * placeWeight;
-    var effectiveK = K * placementMultiplier * matchStrengthMultiplier * zeroMultiplier * connectednessMultiplier * eventWeightMultiplier * errMultiplier;
-
-    var changeFromPercent = effectiveK * (usedScores - 1) * (percentComponent * percentWeight - (expectedScore * percentWeight));
-    var changeFromPlace = effectiveK * (usedScores - 1) * (placeComponent * placeWeight - (expectedScore * placeWeight));
-
-    var change = changeFromPlace + changeFromPercent;
-    if(Timings.enabled) timings.updateRatings += (DateTime.now().difference(start).inMicroseconds).toDouble();
-
-    if(change.isNaN || change.isInfinite) {
-      debugPrint("### ${aRating.shooter.lastName} stats: $actualPercent of $usedScores shooters for ${aScore.stage?.name}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}, placement $placementMultiplier, zero $zeroMultiplier ($zeroes)");
-      debugPrint("AS/ES: ${actualScore.toStringAsFixed(6)}/${expectedScore.toStringAsFixed(6)}");
-      debugPrint("Actual/expected percent: ${(percentComponent * totalPercent * 100).toStringAsFixed(2)}/${(expectedScore * totalPercent * 100).toStringAsFixed(2)}");
-      debugPrint("Actual/expected place: $placeBlend/${(usedScores - (expectedScore * divisor)).toStringAsFixed(4)}");
-      debugPrint("Rating±Change: ${aRating.rating.round()} + ${change.toStringAsFixed(2)} (${changeFromPercent.toStringAsFixed(2)} from pct, ${changeFromPlace.toStringAsFixed(2)} from place)");
-      debugPrint("###");
-      throw StateError("NaN/Infinite");
-    }
-
-    if(Timings.enabled) start = DateTime.now();
-    var hf = aScore.score.getHitFactor(scoreDQ: aScore.score.stage != null);
-    Map<String, List<dynamic>> info = {
-      "Actual/expected percent: %00.2f/%00.2f on %00.2fHF": [percentComponent * totalPercent * 100, expectedScore * totalPercent * 100, hf],
-      "Actual/expected place: %00.1f/%00.1f": [placeBlend, usedScores - (expectedScore * divisor)],
-      "Rating ± Change: %00.0f + %00.2f (%00.2f from pct, %00.2f from place)": [aRating.rating, change, changeFromPercent, changeFromPlace],
-      "eff. K, multipliers: %00.2f, SoS %00.3f, IP %00.3f, Zero %00.3f, Conn %00.3f, EW %00.3f, Err %00.3f": [effectiveK, matchStrengthMultiplier, placementMultiplier, zeroMultiplier, connectednessMultiplier, eventWeightMultiplier, errMultiplier]
-    };
-    if(Timings.enabled) timings.printInfo += (DateTime.now().difference(start).inMicroseconds).toDouble();
-
-    return {
-      aRating: RatingChange(change: {
-        RatingSystem.ratingKey: change,
-        errorKey: (expectedScore - actualScore) * usedScores,
-        baseKKey: K * (usedScores - 1),
-        effectiveKKey: effectiveK * (usedScores),
-      }, info: info),
-    };
+    return _ActualScore(
+      placeComponent: placeComponent,
+      percentComponent: percentComponent,
+      actualPercent: actualPercent,
+      placeBlend: placeBlend,
+      score: percentComponent * percentWeight + placeComponent * placeWeight
+    );
   }
 
   /// Return the probability that win beats lose.
@@ -405,6 +435,9 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   bool get supportsPrediction => true;
 
   @override
+  bool get supportsValidation => true;
+
+  @override
   List<ShooterPrediction> predict(List<ShooterRating> ratings) {
     List<EloShooterRating> eloRatings = List.castFrom(ratings);
     List<ShooterPrediction> predictions = [];
@@ -469,8 +502,84 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   }
 
   @override
-  double validate({required PracticalMatch result, required List<ShooterPrediction> predictions}) {
-    // TODO: implement validate
-    throw UnimplementedError();
+  PredictionOutcome validate({
+    required List<ShooterRating> shooters,
+    required Map<ShooterRating, RelativeScore> scores,
+    required Map<ShooterRating, RelativeScore> matchScores,
+    required List<ShooterPrediction> predictions
+  }) {
+    Map<ShooterRating, ShooterPrediction> shootersToPredictions = {};
+    Map<ShooterPrediction, SimpleMatchResult> actualOutcomes = {};
+    double errorSum = 0;
+
+    for(var prediction in predictions) {
+      shootersToPredictions[prediction.shooter] = prediction;
+    }
+
+    int correct95 = 0;
+    int correct68 = 0;
+    for(var shooter in shooters) {
+      var prediction = shootersToPredictions[shooter];
+      if(prediction == null) {
+        print("Null prediction for $shooter");
+        continue;
+      }
+
+      var score = scores[shooter]!;
+      var matchScore = matchScores[shooter]!;
+      var params = _calculateScoreParams(aRating: shooter, aScore: score, aMatchScore: matchScore, scores: scores, matchScores: matchScores);
+      var eloScore = _calculateActualScore(score: score, matchScore: matchScore, params: params);
+
+      errorSum += pow(eloScore.score - prediction.mean, 2);
+      actualOutcomes[prediction] = SimpleMatchResult(raterScore: eloScore.score, percent: matchScore.percent, place: matchScore.place);
+
+      if(eloScore.score >= prediction.mean - prediction.twoSigma + prediction.shift && eloScore.score <= prediction.mean + prediction.twoSigma + prediction.shift) {
+        correct95 += 1;
+      }
+      if(eloScore.score >= prediction.mean - prediction.oneSigma + prediction.shift && eloScore.score <= prediction.mean + prediction.oneSigma + prediction.shift) {
+        correct68 += 1;
+      }
+    }
+
+    print("Actual outcomes for ${actualOutcomes.length} shooters yielded an error sum of $errorSum");
+    print("Correct: $correct68/$correct95/${actualOutcomes.length} (${(correct68 / actualOutcomes.length * 100).toStringAsFixed(1)}%/${(correct95 / actualOutcomes.length * 100).toStringAsFixed(1)}%)");
+
+    return PredictionOutcome(
+      error: (sqrt(errorSum) / predictions.length), actualResults: actualOutcomes
+    );
   }
+}
+
+class _ScoreParameters {
+  double expectedScore;
+  double highOpponentScore;
+  double totalPercent;
+  double divisor;
+  int usedScores;
+  int zeroes;
+
+  _ScoreParameters({
+    required this.expectedScore,
+    required this.highOpponentScore,
+    required this.totalPercent,
+    required this.divisor,
+    required this.usedScores,
+    required this.zeroes,
+  });
+}
+
+class _ActualScore {
+  final double score;
+  final double placeComponent;
+  final double percentComponent;
+  final double actualPercent;
+  final double placeBlend;
+
+  _ActualScore({
+    required this.placeComponent,
+    required this.percentComponent,
+    required this.actualPercent,
+    required this.placeBlend,
+    required this.score,
+  });
 }

@@ -117,3 +117,55 @@ Future<PracticalMatch?> getPractiscoreMatchHeadless(String matchId) async {
   }
   return null;
 }
+
+Future<String?> getMatchId(BuildContext context, {String? presetUrl}) async {
+  var matchUrl = presetUrl ??
+      await getMatchUrl(context);
+
+  if (matchUrl == null) {
+    return null;
+  }
+
+  var matchId = processMatchUrl(matchUrl, context: context);
+
+  return matchId;
+}
+
+Future<String?> getMatchUrl(BuildContext context) {
+  return showDialog<String>(
+    context: context,
+    builder: (context) {
+      var controller = TextEditingController();
+      return AlertDialog(
+        title: Text("Enter PractiScore match URL"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "Copy the URL to the match's PractiScore results page and paste it in the field below.",
+              softWrap: true,
+            ),
+            TextField(
+              controller: controller,
+              decoration: InputDecoration(
+                hintText: "https://practiscore.com/results/new/...",
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              child: Text("CANCEL"),
+              onPressed: () {
+                Navigator.of(context).pop();
+              }),
+          TextButton(
+              child: Text("OK"),
+              onPressed: () {
+                Navigator.of(context).pop(controller.text);
+              }),
+        ],
+      );
+    }
+  );
+}

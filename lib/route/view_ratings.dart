@@ -570,7 +570,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
     var predictions = rater.ratingSystem.predict(shooters);
     Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-      return PredictionView(predictions: predictions);
+      return PredictionView(rater: rater, predictions: predictions);
     }));
   }
 

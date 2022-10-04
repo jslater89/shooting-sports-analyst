@@ -7,6 +7,7 @@ import 'package:uspsa_result_viewer/data/ranking/model/rating_mode.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/ranking/prediction/match_prediction.dart';
+import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/ui/rater/rater_view.dart';
 import 'package:uspsa_result_viewer/ui/widget/score_row.dart';
 
@@ -97,13 +98,21 @@ abstract class RatingSystem<T extends ShooterRating<T>, S extends RaterSettings<
   ScoreRow buildRatingRow({required BuildContext context, required int place, required ShooterRating rating});
 
   /// Return ShooterPredictions for the list of shooters.
-  List<ShooterPrediction> predict(List<ShooterRating> ratings);
+  List<ShooterPrediction> predict(List<ShooterRating> ratings) {
+    throw UnimplementedError();
+  }
 
   /// Return true if this rating system can generate predictions.
   bool get supportsPrediction => false;
 
   /// Return an error measure for the given predictions and result.
-  double validate({required PracticalMatch result, required List<ShooterPrediction> predictions});
+  PredictionOutcome validate({
+    required List<ShooterRating> shooters,
+    required Map<ShooterRating, RelativeScore> scores,
+    required Map<ShooterRating, RelativeScore> matchScores, required List<ShooterPrediction> predictions
+  }) {
+    throw UnimplementedError();
+  }
 
   /// Return true if this rating system can validate predictions.
   bool get supportsValidation => false;
@@ -130,4 +139,26 @@ abstract class RatingSystem<T extends ShooterRating<T>, S extends RaterSettings<
     1.2,
     1.1,
   ];
+}
+
+class PredictionOutcome {
+  double error;
+  Map<ShooterPrediction, SimpleMatchResult> actualResults;
+
+  PredictionOutcome({
+    required this.error,
+    required this.actualResults,
+  });
+}
+
+class SimpleMatchResult {
+  double raterScore;
+  double percent;
+  int place;
+
+  SimpleMatchResult({
+    required this.raterScore,
+    required this.percent,
+    required this.place,
+  });
 }

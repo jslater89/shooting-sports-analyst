@@ -14,7 +14,12 @@ class Rater {
   Map<String, String> _memberNumberMappings = {};
   Set<String> _memberNumbersEncountered = Set<String>();
   RatingSystem ratingSystem;
+
   FilterSet? _filters;
+
+  /// Do not mutate this property.
+  FilterSet? get filters => _filters;
+
   bool byStage;
   List<String> memberNumberWhitelist;
   Future<void> Function(int, int, String? eventName)? progressCallback;
@@ -132,7 +137,6 @@ class Rater {
       knownShooters[mappedNumber] = knownShooters[actualNumber]!;
     }
   }
-
   
   void addMatch(PracticalMatch match) {
     _cachedStats = null;
@@ -157,6 +161,11 @@ class Rater {
         knownShooters[s.memberNumber] ??= ratingSystem.newShooterRating(s, date: match.date); // ratingSystem.defaultRating
       }
     }
+  }
+
+  ShooterRating? ratingFor(Shooter s) {
+    var processed = processMemberNumber(s.memberNumber);
+    return knownShooters[processed];
   }
 
   void _deduplicateShooters() {
