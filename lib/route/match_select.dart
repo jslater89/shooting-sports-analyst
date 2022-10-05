@@ -14,7 +14,6 @@ class MatchSelectPage extends StatefulWidget {
 }
 
 class _MatchSelectPageState extends State<MatchSelectPage> {
-  late BuildContext _innerContext;
   bool _operationInProgress = false;
   bool _launchingFromParam = false;
 
@@ -55,9 +54,6 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
     return EmptyScaffold(
       title: "Main Menu",
       operationInProgress: _operationInProgress,
-      onInnerContextAssigned: (context) {
-        _innerContext = context;
-      },
       child: _launchingFromParam ? Center(child: Text("Launching...")) : SizedBox(
         height: size.height,
         width: size.width,

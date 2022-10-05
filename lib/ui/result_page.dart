@@ -15,9 +15,8 @@ import 'package:uspsa_result_viewer/ui/widget/score_list.dart';
 
 class ResultPage extends StatefulWidget {
   final PracticalMatch? canonicalMatch;
-  final Function(BuildContext) onInnerContextAssigned;
 
-  const ResultPage({Key? key, required this.canonicalMatch, required this.onInnerContextAssigned}) : super(key: key);
+  const ResultPage({Key? key, required this.canonicalMatch}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() {
@@ -117,7 +116,7 @@ class _ResultPageState extends State<ResultPage> {
     List<Shooter> filteredShooters = _filterShooters();
 
     if(filteredShooters.length == 0) {
-      ScaffoldMessenger.of(_innerContext).showSnackBar(SnackBar(content: Text("Filters match 0 shooters!")));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Filters match 0 shooters!")));
       setState(() {
         _baseScores = [];
         _searchedScores = [];
