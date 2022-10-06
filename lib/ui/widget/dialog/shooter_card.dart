@@ -125,12 +125,12 @@ class ShooterResultCard extends StatelessWidget {
 
 
   Widget _buildShooterLink(BuildContext context, Shooter shooter) {
-    if(shooter.memberNumber != "") {
+    if(shooter.originalMemberNumber != "") {
       return MouseRegion(
         cursor: SystemMouseCursors.click,
         child: GestureDetector(
           onTap: () {
-            HtmlOr.openLink("https://uspsa.org/classification/${shooter.memberNumber}");
+            HtmlOr.openLink("https://uspsa.org/classification/${shooter.originalMemberNumber}");
           },
           child: Text(
             "${shooter.getName()} - ${shooter.division.displayString()} ${shooter.classification.displayString()}",

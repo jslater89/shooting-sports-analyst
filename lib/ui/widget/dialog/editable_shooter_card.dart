@@ -479,12 +479,12 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
 
   Widget _buildShooterLink(BuildContext context, Shooter shooter) {
     var children = <Widget>[];
-    if(shooter.memberNumber != "") {
+    if(shooter.originalMemberNumber != "") {
       children.add(MouseRegion(
         cursor: SystemMouseCursors.click,
         child: GestureDetector(
           onTap: () {
-            HtmlOr.openLink("https://uspsa.org/classification/${shooter.memberNumber}");
+            HtmlOr.openLink("https://uspsa.org/classification/${shooter.originalMemberNumber}");
           },
           child: Text(
             "${shooter.getName()} - ${shooter.division.displayString()} ${shooter.classification.displayString()}",

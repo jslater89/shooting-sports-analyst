@@ -41,6 +41,8 @@ class Shooter {
     var newShooter = Shooter()
       ..firstName = firstName
       ..lastName = lastName
+      ..originalMemberNumber = originalMemberNumber
+      .._hasOriginalMemberNumber = _hasOriginalMemberNumber
       ..memberNumber = memberNumber
       ..reentry = reentry
       ..dq = dq
