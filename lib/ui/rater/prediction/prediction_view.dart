@@ -183,7 +183,7 @@ class _PredictionViewState extends State<PredictionView> {
     int correct68 = 0;
     int correct95 = 0;
     int total = 0;
-    for(var pred in widget.predictions) {
+    for(var pred in outcome.actualResults.keys) {
       double boxLowPercent = (PredictionView._percentFloor + pred.lowerBox / highPrediction * PredictionView._percentMult) * 100;
       double whiskerLowPercent = (PredictionView._percentFloor + pred.lowerWhisker / highPrediction * PredictionView._percentMult) * 100;
       double whiskerHighPercent = (PredictionView._percentFloor + pred.upperWhisker / highPrediction * PredictionView._percentMult) * 100;
