@@ -7,7 +7,6 @@ import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_
 import 'package:uspsa_result_viewer/data/ranking/timings.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart' as defaultAliases;
-import 'package:intl/intl.dart';
 
 /// RatingHistory turns a sequence of [PracticalMatch]es into a series of
 /// [Rater]s.

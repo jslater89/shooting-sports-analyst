@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
@@ -15,8 +15,9 @@ import 'package:uspsa_result_viewer/ui/widget/score_list.dart';
 
 class ResultPage extends StatefulWidget {
   final PracticalMatch? canonicalMatch;
+  final String appChromeLabel;
 
-  const ResultPage({Key? key, required this.canonicalMatch}) : super(key: key);
+  const ResultPage({Key? key, required this.canonicalMatch, this.appChromeLabel = "USPSA Analyst"}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() {
@@ -67,12 +68,14 @@ class _ResultPageState extends State<ResultPage> {
   void initState() {
     super.initState();
 
-    SystemChrome.setApplicationSwitcherDescription(
-      ApplicationSwitcherDescription(
-        label: "Results: ${widget.canonicalMatch!.name}",
-        primaryColor: 0x3f51b5, // Colors.indigo
-      )
-    );
+    if(kIsWeb) {
+      SystemChrome.setApplicationSwitcherDescription(
+          ApplicationSwitcherDescription(
+            label: "Results: ${widget.canonicalMatch!.name}",
+            primaryColor: 0x3f51b5, // Colors.indigo
+          )
+      );
+    }
 
     _appFocus = FocusNode();
     _currentMatch = widget.canonicalMatch!.copy();
@@ -420,12 +423,12 @@ class _ResultPageState extends State<ResultPage> {
       focusNode: _appFocus!,
       child: WillPopScope(
         onWillPop: () async {
-          SystemChrome.setApplicationSwitcherDescription(
-              ApplicationSwitcherDescription(
-                label: "Match Results Viewer",
-                primaryColor: 0x3f51b5, // Colors.indigo
-              )
-          );
+          if(kIsWeb) {
+            SystemChrome.setApplicationSwitcherDescription(ApplicationSwitcherDescription(
+              label: "USPSA Analyst",
+              primaryColor: 0x3f51b5, // Colors.indigo
+            ));
+          }
           return true;
         },
         child: GestureDetector(

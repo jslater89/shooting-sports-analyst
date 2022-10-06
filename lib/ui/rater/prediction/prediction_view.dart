@@ -8,7 +8,6 @@ import 'package:uspsa_result_viewer/data/ranking/prediction/match_prediction.dar
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
-import 'package:uspsa_result_viewer/route/match_select.dart';
 import 'package:uspsa_result_viewer/ui/widget/box_and_whisker.dart';
 import 'package:uspsa_result_viewer/ui/widget/score_row.dart';
 

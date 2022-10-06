@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:uspsa_result_viewer/data/match/practical_match.dart';
 import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_system.dart';
@@ -17,6 +18,7 @@ import 'package:uspsa_result_viewer/ui/rater/enter_urls_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/member_number_whitelist_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/select_project_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/shooter_aliases_dialog.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/match_cache_chooser_dialog.dart';
 
 class ConfigureRatingsPage extends StatefulWidget {
   const ConfigureRatingsPage({Key? key, required this.onSettingsReady}) : super(key: key);
@@ -436,6 +438,34 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 getUrlDisplayNames();
                               },
                             ),
+                            Tooltip(
+                              message: "Add a match from the match cache",
+                              child: IconButton(
+                                icon: Icon(Icons.dataset_linked),
+                                color: Theme.of(context).primaryColor,
+                                onPressed: () async {
+                                  var match = await showDialog<PracticalMatch>(context: context, builder: (context) {
+                                    return MatchCacheChooserDialog();
+                                  }, barrierDismissible: false);
+
+                                  if(match == null) return;
+
+                                  var url = MatchCache().getUrl(match);
+
+                                  if(url == null) return;
+
+                                  if(!matchUrls.contains(url)) {
+                                    matchUrls.insert(0, url);
+                                  }
+
+                                  setState(() {
+                                    // matchUrls
+                                  });
+
+                                  getUrlDisplayNames();
+                                },
+                              ),
+                            ),
                             IconButton(
                               icon: Icon(Icons.remove),
                               color: Theme.of(context).primaryColor,
@@ -506,7 +536,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                             icon: Icon(Icons.refresh),
                                             color: Theme.of(context).primaryColor,
                                             onPressed: () {
-                                              MatchCache().deleteMatch(url);
+                                              MatchCache().deleteMatchByUrl(url);
                                               setState(() {
                                                 urlDisplayNames[url] = url;
                                               });

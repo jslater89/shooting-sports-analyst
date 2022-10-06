@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:hive/hive.dart';
@@ -105,6 +106,21 @@ class MatchCache {
     return "$_cachePrefix$idString";
   }
 
+  int get length => _cache.length;
+  int? _cachedSize;
+  int get size {
+    if(_cachedSize != null) return _cachedSize!;
+
+    // DB not used on web, so we can do this
+    var dbFile = File(_box.path!);
+
+    if(dbFile.existsSync()) {
+      _cachedSize = dbFile.statSync().size;
+      return _cachedSize!;
+    }
+    return 0;
+  }
+
   Future<void> save([Future<void> Function(int, int)? progressCallback]) async {
     Set<_MatchCacheEntry> alreadySaved = Set();
     int totalProgress = _cache.values.length;
@@ -126,6 +142,7 @@ class MatchCache {
 
       // Box saves in a background isolate
       _box.put(path, entry.match.reportContents);
+      _cachedSize = null;
       alreadySaved.add(entry);
       print("Saved ${entry.match.name} to $path");
 
@@ -134,19 +151,37 @@ class MatchCache {
     }
   }
 
-  Future<bool> deleteMatch(String matchUrl) async {
+  Future<bool> deleteMatchByUrl(String matchUrl) {
     var id = matchUrl.split("/").last;
     var entry = _cache[id];
 
+    return _deleteEntry(entry);
+  }
+
+  Future<bool> deleteMatch(PracticalMatch match) {
+    var entry = _cache.entries.firstWhereOrNull((e) => e.value.match == match);
+    return _deleteEntry(entry?.value);
+  }
+
+  Future<bool> _deleteEntry(_MatchCacheEntry? entry) async {
     if(entry != null) {
       for(var id in entry.ids) {
         _cache.remove(id);
       }
       await _box.delete(_generatePath(entry));
+      _cachedSize = null;
       return true;
     }
-
     return false;
+  }
+
+  String? getUrl(PracticalMatch match) {
+    var entry = _cache.entries.firstWhereOrNull((element) => element.value.match == match);
+
+    if(entry != null) {
+      return "https://practiscore.com/results/new/${entry.key}";
+    }
+    return null;
   }
 
   PracticalMatch? getMatchImmediate(String matchUrl) {
@@ -192,6 +227,11 @@ class MatchCache {
     }
 
     return null;
+  }
+
+  List<PracticalMatch> allMatches() {
+    var matchSet = Set<PracticalMatch>()..addAll(_cache.values.map((e) => e.match));
+    return matchSet.toList();
   }
 
   Future<void> _migrate() async {

@@ -1,12 +1,14 @@
 import 'dart:convert';
 // ignore: avoid_web_libraries_in_flutter
-import 'package:uspsa_result_viewer/data/ranking/raters/openskill/openskill_test.dart';
+import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
 import 'package:uspsa_result_viewer/main.dart';
 import 'package:uspsa_result_viewer/ui/empty_scaffold.dart';
+import 'package:uspsa_result_viewer/ui/result_page.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/match_cache_chooser_dialog.dart';
 
 class MatchSelectPage extends StatefulWidget {
   @override
@@ -57,22 +59,23 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
       child: _launchingFromParam ? Center(child: Text("Launching...")) : SizedBox(
         height: size.height,
         width: size.width,
-        child: size.width > 750 ? Column(
+        child: size.width > 800 ? Column(
           children: [
             Row(
+              mainAxisSize: MainAxisSize.max,
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: _selectButtons(column: false),
             ),
             SizedBox(height: 50),
-            if(HtmlOr.isDesktop) _raterLink(),
+            if(HtmlOr.isDesktop) _desktopLinks(column: false),
           ],
         ) : SingleChildScrollView(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               ..._selectButtons(column: true),
-              if(HtmlOr.isDesktop) _raterLink(),
+              if(HtmlOr.isDesktop) _desktopLinks(column: true),
             ]
           ),
         ),
@@ -80,27 +83,67 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
     );
   }
 
-  Widget _raterLink() {
-    return GestureDetector(
-      onTap: () {
-        Navigator.of(context).pushNamed('/rater');
-      },
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.list, size: 230, color: Colors.grey,),
-          Text("Click to generate ratings for shooters in a list of matches", style: Theme
-              .of(context)
-              .textTheme
-              .subtitle1!
-              .apply(color: Colors.grey)),
-        ],
+  Widget _desktopLinks({required bool column}) {
+    var children = [
+      GestureDetector(
+        onTap: () async {
+          PracticalMatch? match = await showDialog<PracticalMatch>(
+            context: context, builder: (context) => MatchCacheChooserDialog(),
+            barrierDismissible: false,
+          );
+          if(match != null) {
+            Navigator.of(context).push(MaterialPageRoute(builder: (context) => ResultPage(canonicalMatch: match)));
+          }
+        },
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.dataset, size: 230, color: Colors.grey,),
+            Text("View and manage matches in the match cache", style: Theme
+                .of(context)
+                .textTheme
+                .subtitle1!
+                .apply(color: Colors.grey)),
+          ],
+        ),
       ),
-    );
+      GestureDetector(
+        onTap: () {
+          Navigator.of(context).pushNamed('/rater');
+        },
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.insights, size: 230, color: Colors.grey,),
+            Text("Click to generate ratings for shooters in a list of matches", style: Theme
+                .of(context)
+                .textTheme
+                .subtitle1!
+                .apply(color: Colors.grey)),
+          ],
+        ),
+      ),
+    ];
+    if(column) {
+      return Column(
+        children: [
+          ...children,
+          SizedBox(height: 50)
+        ]
+      );
+    }
+    else {
+      return Row(
+        mainAxisSize: MainAxisSize.max,
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children.map((e) => Expanded(child: e)).toList(),
+      );
+    }
   }
 
   List<Widget> _selectButtons({bool column = false}) {
-    return [
+    var children = <Widget>[
       GestureDetector(
         onTap: () async {
           _uploadResultsFile((contents) async {
@@ -144,7 +187,7 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
           children: [
             SizedBox(height: column ? 0 : 50),
             Icon(Icons.cloud_download, size: 230, color: Colors.grey,),
-            Text("Click to download a report.txt file from PractiScore", style: Theme
+            Text("Click to download a report.txt file from Practiscore", style: Theme
                 .of(context)
                 .textTheme
                 .subtitle1!
@@ -153,6 +196,12 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
         ),
       ),
     ];
+
+    if(!column) {
+      children = children.map((e) => Expanded(child: e)).toList();
+    }
+
+    return children;
   }
 
   Future<void> _uploadResultsFile(Function(String?) onFileContents) async {

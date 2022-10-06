@@ -15,6 +15,7 @@ import 'package:uspsa_result_viewer/ui/rater/prediction/registration_parser.dart
 import 'package:uspsa_result_viewer/ui/rater/rater_stats_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/rater_view.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/associate_registrations.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/url_entry_dialog.dart';
 
 class RatingsViewPage extends StatefulWidget {
   const RatingsViewPage({Key? key, required this.settings, required this.matchUrls}) : super(key: key);
@@ -489,51 +490,33 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     List<ShooterRating>? shooters = [];
     var divisions = tab.divisions;
 
-    TextEditingController _urlController = TextEditingController();
     var url = await showDialog<String>(context: context, builder: (context) {
-      return AlertDialog(
-        title: Text("Enter match link"),
-        content: Container(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text("Enter a link to the match registration or squadding page."),
-              TextFormField(
-                decoration: InputDecoration(
-                    hintText: "https://practiscore.com/match-name/register"
-                ),
-                controller: _urlController,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            child: Text("CANCEL"),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          TextButton(
-              child: Text("OK"),
-              onPressed: () {
-                var url = _urlController.text;
-                if(url.endsWith("/register")) {
-                  url = url.replaceFirst("/register", "/squadding/printhtml");
-                }
-                else if(url.endsWith("/squadding")) {
-                  url += "/printhtml";
-                }
-                else if(url.endsWith("/") && !url.contains("squadding")) {
-                  url += "squadding/printhtml";
-                }
-                Navigator.of(context).pop(url);
-              }
-          )
-        ],
+      return UrlEntryDialog(
+        hintText: "https://practiscore.com/match-name/register",
+        descriptionText: "Enter a link to the match registration or squadding page.",
+        validator: (url) {
+          if(url.endsWith("/register") || url.endsWith("/squadding") || url.endsWith("/printhtml")) {
+            return null;
+          }
+          else {
+            return "Enter a match registration or squadding URL.";
+          }
+        }
       );
     });
 
     if(url == null) {
       return;
+    }
+
+    if(url.endsWith("/register")) {
+      url = url.replaceFirst("/register", "/squadding/printhtml");
+    }
+    else if(url.endsWith("/squadding")) {
+      url += "/printhtml";
+    }
+    else if(url.endsWith("/") && !url.contains("squadding")) {
+      url += "squadding/printhtml";
     }
 
     var registrationResult = await getRegistrations(url, divisions, options);
