@@ -569,8 +569,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     });
 
     var localUrls = []..addAll(urls);
+    var failedMatches = <String>[];
 
-    int failures = 0;
     var urlsByFuture = <Future<PracticalMatch?>, String>{};
     while(localUrls.isNotEmpty) {
 
@@ -605,7 +605,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         }
         else {
           _matchUrls.remove(url);
-          failures += 1;
+          failedMatches.add(url);
         }
       }
 
@@ -681,13 +681,53 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
     await _history.processInitialMatches();
 
-    debugPrint("History ready with ${_history.matches.length} matches after ${urls.length} URLs and $failures failures");
+    debugPrint("History ready with ${_history.matches.length} matches after ${urls.length} URLs and ${failedMatches.length} failures");
     setState(() {
       _selectedMatch = _history.matches.last;
       _loadingState = _LoadingState.done;
     });
 
-    if(failures > 0) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to download $failures matches")));
+    if(failedMatches.isNotEmpty) ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Failed to download ${failedMatches.length} matches"),
+        action: SnackBarAction(
+          label: "VIEW",
+          onPressed: () {
+            showDialog(context: context, builder: (context) {
+              return AlertDialog(
+                title: Text("Failed matches"),
+                content: SizedBox(
+                  width: 500,
+                  child: ListView.builder(
+                    itemCount: failedMatches.length,
+                    itemBuilder: (context, i) {
+                      return MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: GestureDetector(
+                          onTap: () {
+                            HtmlOr.openLink(failedMatches[i]);
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(4.0),
+                            child: Text(failedMatches[i],
+                              overflow: TextOverflow.fade,
+                              softWrap: false,
+                              style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                                decoration: TextDecoration.underline,
+                                color: Colors.blueAccent,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                )
+              );
+            });
+          },
+        ),
+      ));
     return true;
   }
 }
