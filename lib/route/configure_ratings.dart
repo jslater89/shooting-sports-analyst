@@ -12,6 +12,7 @@ import 'package:uspsa_result_viewer/data/ranking/raters/points/points_rater.dart
 import 'package:uspsa_result_viewer/data/ranking/raters/points/points_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
+import 'package:uspsa_result_viewer/ui/rater/enter_practiscore_source_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/confirm_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/enter_name_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/enter_urls_dialog.dart';
@@ -51,10 +52,24 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     await MatchCache().ready;
     var cache = MatchCache();
 
+    Map<PracticalMatch, bool> knownMatches = {};
+    Map<String, bool> urlsToRemove = {};
     for(var url in matchUrls) {
       var match = await cache.getMatch(url, localOnly: true);
-      map[url] = match?.name ?? url;
+
+      if(knownMatches[match] ?? false) {
+        urlsToRemove[url] = true;
+        print("Already saw ${match?.name}, removing $url");
+      }
+      else {
+        map[url] = match?.name ?? url;
+        if(match != null) {
+          knownMatches[match] = true;
+          print("Saw ${match.name} at $url, marking true");
+        }
+      }
     }
+    matchUrls.removeWhere((element) => urlsToRemove[element] ?? false);
 
     setState(() {
       urlDisplayNames = map;
@@ -439,6 +454,32 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                               },
                             ),
                             Tooltip(
+                              message: "Add match links parsed from Practiscore page source.",
+                              child: IconButton(
+                                icon: Icon(Icons.add_link),
+                                color: Theme.of(context).primaryColor,
+                                onPressed: () async {
+                                  var urls = await showDialog<List<String>>(context: context, builder: (context) {
+                                    return EnterPractiscoreSourceDialog();
+                                  }, barrierDismissible: false);
+
+                                  if(urls == null) return;
+
+                                  for(var url in urls.reversed) {
+                                    if(!matchUrls.contains(url)) {
+                                      matchUrls.insert(0, url);
+                                    }
+                                  }
+
+                                  setState(() {
+                                    // matchUrls
+                                  });
+
+                                  getUrlDisplayNames();
+                                },
+                              ),
+                            ),
+                            Tooltip(
                               message: "Add a match from the match cache",
                               child: IconButton(
                                 icon: Icon(Icons.dataset_linked),
@@ -500,7 +541,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                     // Sort uncached matches to the top
                                     if(matchA == null && matchB == null) return 0;
                                     if(matchA == null && matchB != null) return -1;
-                                    if(matchA != null && matchB == null) return 0;
+                                    if(matchA != null && matchB == null) return 1;
 
                                     // Sort remaining matches by date descending
                                     return matchB!.date!.compareTo(matchA!.date!);

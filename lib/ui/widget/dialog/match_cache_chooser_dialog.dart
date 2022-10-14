@@ -19,6 +19,8 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
   int matchCacheCurrent = 0;
   int matchCacheTotal = 0;
 
+  bool addedMatch = false;
+
   List<PracticalMatch> matches = [];
   List<PracticalMatch> searchedMatches = [];
 
@@ -86,6 +88,7 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
             // Don't allow premature closing
             onPressed: cache != null ? () {
               Navigator.of(context).pop();
+              if(addedMatch) cache!.save();
             } : null,
           )
         ],
@@ -146,11 +149,15 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
                 ));
 
                 if(url != null) {
+                  var hasMatch = await cache!.getMatch(url, localOnly: true);
+                  if(hasMatch != null) return;
+
                   var matchFuture = cache!.getMatch(url);
                   var match = await showDialog<PracticalMatch>(context: context, builder: (c) => LoadingDialog(waitOn: matchFuture));
                   if(match != null) {
                     setState(() {
                       _updateMatches();
+                      addedMatch = true;
                     });
                   }
                 }
@@ -167,7 +174,10 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
               return ListTile(
                 title: Text(searchedMatches[i].name!, overflow: TextOverflow.ellipsis),
                 visualDensity: VisualDensity(vertical: -4),
-                onTap: () => Navigator.of(context).pop(searchedMatches[i]),
+                onTap: () {
+                  Navigator.of(context).pop(searchedMatches[i]);
+                  if(addedMatch) cache!.save();
+                },
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [

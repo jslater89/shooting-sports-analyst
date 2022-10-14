@@ -64,12 +64,25 @@ class MatchCache {
         var reportContents = _box.get(path);
 
         var ids = path.replaceFirst(_cachePrefix, "").split(_cacheSeparator);
+        var deduplicatedIds = Set<String>()..addAll(ids);
+        ids = deduplicatedIds.toList();
 
         if(reportContents != null) {
           var match = await processScoreFile(reportContents);
           var entry = _MatchCacheEntry(match: match, ids: ids);
           for(var id in ids) {
             id = id.replaceAll("/","");
+
+            // This is either a two-ID entry (short and UUID), or a one-ID entry
+            // (UUID-only, because we always get the UUID if we only have the short ID).
+            // If it's a UUID-only entry, only replace an entry in the cache if we haven't
+            // already loaded a corresponding two-ID entry.
+            if(ids.length == 1 && _cache.containsKey(id)) {
+              if(verboseParse) print("Skipping one-ID entry for $id: already loaded as two-ID entry");
+              continue;
+            }
+
+            // If the above doesn't apply, or if we're
             _cache[id] = entry;
           }
 
@@ -193,16 +206,30 @@ class MatchCache {
     return null;
   }
 
-  Future<PracticalMatch?> getMatch(String matchUrl, {bool forceUpdate = false, bool localOnly = false}) async {
+  Future<PracticalMatch?> getMatch(String matchUrl, {bool forceUpdate = false, bool localOnly = false, bool checkCanonId = true}) async {
     var id = matchUrl.split("/").last;
     if(!forceUpdate && _cache.containsKey(id)) {
       // debugPrint("Using cache for $id");
       return _cache[id]!.match;
     }
 
-    if(localOnly) return null;
+    if(localOnly && !checkCanonId) return null;
 
     var canonId = await processMatchUrl(matchUrl);
+
+    // If this ID corresponds to a known canonical ID, make a new
+    // entry containing both.
+    if(id != canonId && canonId != null && _cache.containsKey(canonId)) {
+      var newEntry = _MatchCacheEntry(
+        match: _cache[canonId]!.match,
+        ids: [id, canonId]
+      );
+      _cache[id] = newEntry;
+      _cache[canonId] = newEntry;
+      return _cache[id]!.match;
+    }
+
+    if(localOnly) return null;
 
     if(canonId != null) {
       var match = await getPractiscoreMatchHeadless(canonId);

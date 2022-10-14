@@ -110,7 +110,7 @@ Future<PracticalMatch?> getPractiscoreMatchHeadless(String matchId) async {
       }
     }
 
-    debugPrint("Didn't work: ${response.statusCode} ${response.body}");
+    if(verboseParse) debugPrint("Didn't work: ${response.statusCode} ${response.body}");
   }
   catch(err) {
     debugPrint("download error pt. 2: $err ${err.runtimeType}");
