@@ -11,6 +11,7 @@ import 'package:charts_flutter/src/text_style.dart' as style;
 import 'package:charts_flutter/src/text_element.dart' as element;
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
+import 'package:uspsa_result_viewer/ui/result_page.dart';
 
 /// ShooterRatingChangeDialog displays per-stage changes for a shooter.
 class ShooterStatsDialog extends StatefulWidget {
@@ -205,10 +206,15 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
             selectionModelType: charts.SelectionModelType.info,
             maximumDomainDistancePx: 100,
           ),
+          charts.SelectNearest(
+            eventTrigger: charts.SelectionTrigger.tap,
+            selectionModelType: charts.SelectionModelType.action,
+            maximumDomainDistancePx: 100,
+          ),
           charts.LinePointHighlighter(
             selectionModelType: charts.SelectionModelType.info,
             symbolRenderer: _EloTooltipRenderer(),
-          )
+          ),
         ],
         selectionModels: [
           charts.SelectionModelConfig(
@@ -221,6 +227,18 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                 _EloTooltipRenderer.rating = rating.baseEvent.newRating;
                 _EloTooltipRenderer.error = rating.errorAt;
                 _highlight(rating);
+              }
+            },
+          ),
+          charts.SelectionModelConfig(
+            type: charts.SelectionModelType.action,
+            updatedListener: (model) {
+              if(model.hasDatumSelection) {
+                final rating = _ratings[model.selectedDatum[0].index!];
+                Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+                  return ResultPage(canonicalMatch: rating.baseEvent.match, allowWhatIf: false);
+                }));
+
               }
             },
           )

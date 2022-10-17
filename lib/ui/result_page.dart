@@ -16,8 +16,9 @@ import 'package:uspsa_result_viewer/ui/widget/score_list.dart';
 class ResultPage extends StatefulWidget {
   final PracticalMatch? canonicalMatch;
   final String appChromeLabel;
+  final bool allowWhatIf;
 
-  const ResultPage({Key? key, required this.canonicalMatch, this.appChromeLabel = "USPSA Analyst"}) : super(key: key);
+  const ResultPage({Key? key, required this.canonicalMatch, this.appChromeLabel = "USPSA Analyst", this.allowWhatIf = true}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() {
@@ -295,7 +296,7 @@ class _ResultPageState extends State<ResultPage> {
 
     List<Widget> actions = [];
 
-    if(_currentMatch != null && _whatIfMode) {
+    if(_currentMatch != null && _whatIfMode && widget.allowWhatIf) {
       actions.add(
           Tooltip(
               message: "Exit what-if mode, restoring the original match scores.",
@@ -329,19 +330,19 @@ class _ResultPageState extends State<ResultPage> {
           )
       );
     }
-    else if(_currentMatch != null && !_whatIfMode) {
+    else if(_currentMatch != null && !_whatIfMode && widget.allowWhatIf) {
       actions.add(
-          Tooltip(
-              message: "Enter what-if mode, allowing you to edit stage scores.",
-              child: IconButton(
-                  icon: Icon(Icons.edit),
-                  onPressed: () async {
-                    setState(() {
-                      _whatIfMode = true;
-                    });
-                  }
-              )
-          )
+        Tooltip(
+            message: "Enter what-if mode, allowing you to edit stage scores.",
+            child: IconButton(
+                icon: Icon(Icons.edit),
+                onPressed: () async {
+                  setState(() {
+                    _whatIfMode = true;
+                  });
+                }
+            )
+        )
       );
     }
     if(_currentMatch != null) {

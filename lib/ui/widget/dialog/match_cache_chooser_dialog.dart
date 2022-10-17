@@ -6,8 +6,11 @@ import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/loading_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/url_entry_dialog.dart';
 
+/// Choose matches from the match cache, or a list of matches.
 class MatchCacheChooserDialog extends StatefulWidget {
-  const MatchCacheChooserDialog({Key? key}) : super(key: key);
+  const MatchCacheChooserDialog({Key? key, this.matches}) : super(key: key);
+
+  final List<PracticalMatch>? matches;
 
   @override
   State<MatchCacheChooserDialog> createState() => _MatchCacheChooserDialogState();
@@ -60,7 +63,12 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
   }
 
   void _updateMatches() {
-    matches = cache!.allMatches();
+    if(widget.matches != null) {
+      matches = [...widget.matches!];
+    }
+    else {
+      matches = cache!.allMatches();
+    }
     matches.sort((a, b) => b.date!.compareTo(a.date!));
 
     if(searchController.text.isNotEmpty) {
@@ -127,7 +135,10 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text("${cache!.length} entries, ${(cache!.size / (1024 * 1024)).toStringAsFixed(1)}mb"),
+        if(widget.matches == null) Tooltip(
+          child: Text("Cache stats: ${cache!.length} entries, ${(cache!.size / (1024 * 1024)).toStringAsFixed(1)}mb"),
+          message: "Note that the cache may contain multiple entries "
+        ),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -140,7 +151,7 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
                 controller: searchController,
               ),
             ),
-            IconButton(
+            if(widget.matches == null) IconButton(
               icon: Icon(Icons.add),
               onPressed: () async {
                 var url = await showDialog<String>(context: context, builder: (context) => UrlEntryDialog(

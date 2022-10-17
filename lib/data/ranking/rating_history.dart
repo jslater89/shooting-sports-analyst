@@ -22,6 +22,10 @@ class RatingHistory {
     }
   }
 
+  List<PracticalMatch> get allMatches {
+      return []..addAll(_matches);
+  }
+
   late RatingHistorySettings _settings;
 
   /// Maps matches to a map of [Rater]s, which hold the incremental ratings

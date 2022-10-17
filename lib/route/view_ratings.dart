@@ -14,7 +14,9 @@ import 'package:uspsa_result_viewer/ui/rater/prediction/prediction_view.dart';
 import 'package:uspsa_result_viewer/ui/rater/prediction/registration_parser.dart';
 import 'package:uspsa_result_viewer/ui/rater/rater_stats_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/rater_view.dart';
+import 'package:uspsa_result_viewer/ui/result_page.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/associate_registrations.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/match_cache_chooser_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/url_entry_dialog.dart';
 
 class RatingsViewPage extends StatefulWidget {
@@ -451,6 +453,24 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
           ),
         ),
       // end if: supports ratings
+      Tooltip(
+        message: "View results for a match in the dataset.",
+        child: IconButton(
+          icon: Icon(Icons.list),
+          onPressed: () async {
+            var match = await showDialog<PracticalMatch>(
+              context: context,
+              builder: (context) => MatchCacheChooserDialog(matches: _history.allMatches)
+            );
+
+            if(match != null) {
+              Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+                return ResultPage(canonicalMatch: match, allowWhatIf: false);
+              }));
+            }
+          },
+        )
+      ),
       Tooltip(
           message: "View statistics for this division or group.",
           child: IconButton(
