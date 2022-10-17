@@ -507,17 +507,19 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     double errorSum = 0;
     List<double> errors = [];
 
-    late List<ShooterPrediction> newPredictions;
-    // We have to re-predict if we don't have the same number of shooters and
-    // predictions, because probabilities depend on N.
-    if(shooters.length != predictions.length) {
-      // TODO: edit the original predictions with the new values, for drawing on the chart?
-      predictions = predict(shooters);
-      print("Re-predicted: mismatch in shooter/prediction count");
-    }
-    newPredictions = predict(shooters);
+    // TODO: fix this, see other TODO
+    // late List<ShooterPrediction> newPredictions;
+    // // We have to re-predict if we don't have the same number of shooters and
+    // // predictions, because probabilities depend on N.
+    // if(shooters.length != predictions.length) {
+    //   // TODO: edit the original predictions with the new values, for drawing on the chart?
+    //   predictions = predict(shooters);
+    //   print("Re-predicted: mismatch in shooter/prediction count");
+    // }
+    // newPredictions = predict(shooters);
+    //
 
-    for (var prediction in newPredictions) {
+    for (var prediction in predictions) {
       shootersToPredictions[prediction.shooter] = prediction;
     }
 
@@ -548,11 +550,11 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     }
 
     print("Actual outcomes for ${actualOutcomes.length} shooters yielded an error sum of ${errors.sum} and an average error of ${errors.average.toStringAsPrecision(3)}");
-    print("Std. dev: ${(sqrt(errorSum) / newPredictions.length).toStringAsPrecision(3)} of ${newPredictions.map((e) => e.mean).average}");
+    print("Std. dev: ${(sqrt(errorSum) / predictions.length).toStringAsPrecision(3)} of ${predictions.map((e) => e.mean).average}");
     print("Score correct: $correct68/$correct95/${actualOutcomes.length} (${(correct68 / actualOutcomes.length * 100).toStringAsFixed(1)}%/${(correct95 / actualOutcomes.length * 100).toStringAsFixed(1)}%)");
 
     return PredictionOutcome(
-      error: (sqrt(errorSum) / newPredictions.length), actualResults: actualOutcomes
+      error: (sqrt(errorSum) / predictions.length), actualResults: actualOutcomes
     );
   }
 }

@@ -257,6 +257,9 @@ class _PredictionViewState extends State<PredictionView> {
     double renderMin = min * 0.95;
     double renderMax = max * 1.01;
 
+    double renderMinPercent = (PredictionView._percentFloor + renderMin / highPrediction * PredictionView._percentMult) * 100;
+    double renderMaxPercent = (PredictionView._percentFloor + renderMax / highPrediction * PredictionView._percentMult) * 100;
+
     double boxLowPercent = (PredictionView._percentFloor + pred.lowerBox / highPrediction * PredictionView._percentMult) * 100;
     double boxHighPercent = (PredictionView._percentFloor + pred.upperBox / highPrediction * PredictionView._percentMult) * 100;
     double meanPercent = (PredictionView._percentFloor + pred.mean / highPrediction * PredictionView._percentMult) * 100;
@@ -268,7 +271,7 @@ class _PredictionViewState extends State<PredictionView> {
     var outcome = outcomes[pred];
     if(outcome != null && outcome.percent > 0.2) {
       outcomePercent = outcome.percent * 100;
-      referenceLines = [outcome.raterScore];
+      referenceLines = [outcomePercent];
     }
 
     return ConstrainedBox(
@@ -311,14 +314,14 @@ class _PredictionViewState extends State<PredictionView> {
                     "95% confidence: ${whiskerLowPercent.toStringAsFixed(1)}-${whiskerHighPercent.toStringAsFixed(1)}%" + (
                     outcomePercent != null ? "\nOutcome: ${outcomePercent.toStringAsFixed(1)}%" : ""),
                 child: BoxAndWhiskerPlot(
-                  minimum: pred.lowerWhisker,
-                  lowerQuartile: pred.lowerBox,
-                  median: pred.mean,
-                  upperQuartile: pred.upperBox,
-                  maximum: pred.upperWhisker,
+                  minimum: whiskerLowPercent,
+                  lowerQuartile: boxLowPercent,
+                  median: meanPercent,
+                  upperQuartile: boxHighPercent,
+                  maximum: whiskerHighPercent,
                   direction: PlotDirection.horizontal,
-                  rangeMin: renderMin,
-                  rangeMax: renderMax,
+                  rangeMin: renderMinPercent,
+                  rangeMax: renderMaxPercent,
                   fillBox: true,
                   boxSize: 12,
                   strokeWidth: 1.5,
