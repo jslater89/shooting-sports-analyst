@@ -17,8 +17,17 @@ class ResultPage extends StatefulWidget {
   final PracticalMatch? canonicalMatch;
   final String appChromeLabel;
   final bool allowWhatIf;
+  final Stage? initialStage;
+  final FilterSet? initialFilters;
 
-  const ResultPage({Key? key, required this.canonicalMatch, this.appChromeLabel = "USPSA Analyst", this.allowWhatIf = true}) : super(key: key);
+  const ResultPage({
+    Key? key,
+    required this.canonicalMatch,
+    this.appChromeLabel = "USPSA Analyst",
+    this.allowWhatIf = true,
+    this.initialFilters,
+    this.initialStage,
+  }) : super(key: key);
 
   @override
   State<StatefulWidget> createState() {
@@ -81,10 +90,19 @@ class _ResultPageState extends State<ResultPage> {
     _appFocus = FocusNode();
     _currentMatch = widget.canonicalMatch!.copy();
     _filteredStages = []..addAll(_currentMatch!.stages);
+
     var scores = _currentMatch!.getScores(scoreDQ: _filters.scoreDQs, stages: _filteredStages);
 
     _baseScores = scores;
     _searchedScores = []..addAll(_baseScores);
+
+    if(widget.initialStage != null) {
+      var stageCopy = _currentMatch!.lookupStage(widget.initialStage!);
+      if(stageCopy != null) _applyStage(StageMenuItem(stageCopy));
+    }
+    if(widget.initialFilters != null) {
+      _applyFilters(widget.initialFilters!);
+    }
   }
 
   @override

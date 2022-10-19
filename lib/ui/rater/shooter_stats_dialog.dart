@@ -12,6 +12,7 @@ import 'package:charts_flutter/src/text_element.dart' as element;
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/ui/result_page.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
 
 /// ShooterRatingChangeDialog displays per-stage changes for a shooter.
 class ShooterStatsDialog extends StatefulWidget {
@@ -95,24 +96,29 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Container(
-                                        key: GlobalObjectKey(e.hashCode),
-                                        color: e == _highlighted ? Colors.black12 : null,
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.end,
-                                          children: [
-                                            Expanded(
-                                              flex: 10,
-                                              child: Text("${e.eventName}", style: Theme.of(context).textTheme.bodyText2!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).errorColor : null)),
-                                            ),
-                                            Expanded(
-                                              flex: 2,
-                                              child: Align(
-                                                  alignment: Alignment.centerRight,
-                                                  child: Text("${e.ratingChange.toStringAsFixed(2)}", style: Theme.of(context).textTheme.bodyText2!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).errorColor : null))
+                                      GestureDetector(
+                                        onTap: () {
+                                          _launchScoreView(e);
+                                        },
+                                        child: Container(
+                                          key: GlobalObjectKey(e.hashCode),
+                                          color: e == _highlighted ? Colors.black12 : null,
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.end,
+                                            children: [
+                                              Expanded(
+                                                flex: 10,
+                                                child: Text("${e.eventName}", style: Theme.of(context).textTheme.bodyText2!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).errorColor : null)),
                                               ),
-                                            )
-                                          ],
+                                              Expanded(
+                                                flex: 2,
+                                                child: Align(
+                                                    alignment: Alignment.centerRight,
+                                                    child: Text("${e.ratingChange.toStringAsFixed(2)}", style: Theme.of(context).textTheme.bodyText2!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).errorColor : null))
+                                                ),
+                                              )
+                                            ],
+                                          ),
                                         ),
                                       ),
                                       Divider(
@@ -235,10 +241,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
             updatedListener: (model) {
               if(model.hasDatumSelection) {
                 final rating = _ratings[model.selectedDatum[0].index!];
-                Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-                  return ResultPage(canonicalMatch: rating.baseEvent.match, allowWhatIf: false);
-                }));
-
+                _launchScoreView(rating.baseEvent);
               }
             },
           )
@@ -271,6 +274,20 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       width: width,
       child: _chart!,
     );
+  }
+
+  void _launchScoreView(RatingEvent e) {
+    var filters = FilterSet(empty: true)
+      ..mode = FilterMode.or
+      ..divisions = FilterSet.divisionListToMap([widget.rating.shooter.division!]);
+    Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+      return ResultPage(
+        canonicalMatch: e.match,
+        initialStage: e.stage,
+        initialFilters: filters,
+        allowWhatIf: false,
+      );
+    }));
   }
 
   void _highlight(_AccumulatedRatingEvent e) {
