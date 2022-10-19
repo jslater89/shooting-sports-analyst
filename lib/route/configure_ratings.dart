@@ -52,6 +52,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     await MatchCache().ready;
     var cache = MatchCache();
 
+    // Deduplicate
     Map<PracticalMatch, bool> knownMatches = {};
     Map<String, bool> urlsToRemove = {};
     for(var url in matchUrls) {
@@ -59,13 +60,13 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
       if(knownMatches[match] ?? false) {
         urlsToRemove[url] = true;
-        print("Already saw ${match?.name}, removing $url");
+        // print("Already saw ${match?.name}, removing $url");
       }
       else {
         map[url] = match?.name ?? url;
         if(match != null) {
           knownMatches[match] = true;
-          print("Saw ${match.name} at $url, marking true");
+          // print("Saw ${match.name} at $url, marking true");
         }
       }
     }
@@ -430,33 +431,36 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                         Row(
                           children: [
                             Text("Matches (${matchUrls.length})", style: Theme.of(context).textTheme.labelLarge),
-                            IconButton(
-                              icon: Icon(Icons.add),
-                              color: Theme.of(context).primaryColor,
-                              onPressed: () async {
-                                var urls = await showDialog<List<String>>(context: context, builder: (context) {
-                                  return EnterUrlsDialog();
-                                }, barrierDismissible: false);
+                            Tooltip(
+                              message: "Add a match from a PractiScore results page link.",
+                              child: IconButton(
+                                icon: Icon(Icons.add),
+                                color: Theme.of(context).primaryColor,
+                                onPressed: () async {
+                                  var urls = await showDialog<List<String>>(context: context, builder: (context) {
+                                    return EnterUrlsDialog();
+                                  }, barrierDismissible: false);
 
-                                if(urls == null) return;
+                                  if(urls == null) return;
 
-                                for(var url in urls.reversed) {
-                                  if(!matchUrls.contains(url)) {
-                                    matchUrls.insert(0, url);
+                                  for(var url in urls.reversed) {
+                                    if(!matchUrls.contains(url)) {
+                                      matchUrls.insert(0, url);
+                                    }
                                   }
-                                }
 
-                                setState(() {
-                                  // matchUrls
-                                });
+                                  setState(() {
+                                    // matchUrls
+                                  });
 
-                                getUrlDisplayNames();
-                              },
+                                  getUrlDisplayNames();
+                                },
+                              ),
                             ),
                             Tooltip(
-                              message: "Add match links parsed from Practiscore page source.",
+                              message: "Add match links parsed from PractiScore page source.",
                               child: IconButton(
-                                icon: Icon(Icons.add_link),
+                                icon: Icon(Icons.link),
                                 color: Theme.of(context).primaryColor,
                                 onPressed: () async {
                                   var urls = await showDialog<List<String>>(context: context, builder: (context) {
@@ -480,9 +484,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                               ),
                             ),
                             Tooltip(
-                              message: "Add a match from the match cache",
+                              message: "Add a match from the match cache.",
                               child: IconButton(
-                                icon: Icon(Icons.dataset_linked),
+                                icon: Icon(Icons.dataset),
                                 color: Theme.of(context).primaryColor,
                                 onPressed: () async {
                                   var match = await showDialog<PracticalMatch>(context: context, builder: (context) {
@@ -507,23 +511,26 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 },
                               ),
                             ),
-                            IconButton(
-                              icon: Icon(Icons.remove),
-                              color: Theme.of(context).primaryColor,
-                              onPressed: () async {
-                                var delete = await showDialog<bool>(context: context, builder: (context) {
-                                  return ConfirmDialog(
-                                    content: Text("This will clear all currently-selected matches."),
-                                  );
-                                });
-
-                                if(delete ?? false) {
-                                  setState(() {
-                                    matchUrls.clear();
-                                    urlDisplayNames.clear();
+                            Tooltip(
+                              message: "Remove all matches from the list.",
+                              child: IconButton(
+                                icon: Icon(Icons.remove),
+                                color: Theme.of(context).primaryColor,
+                                onPressed: () async {
+                                  var delete = await showDialog<bool>(context: context, builder: (context) {
+                                    return ConfirmDialog(
+                                      content: Text("This will clear all currently-selected matches."),
+                                    );
                                   });
+
+                                  if(delete ?? false) {
+                                    setState(() {
+                                      matchUrls.clear();
+                                      urlDisplayNames.clear();
+                                    });
+                                  }
                                 }
-                              }
+                              ),
                             ),
                             Tooltip(
                               message: "Sort matches from most recent to least recent. Non-cached matches will be displayed first.",
