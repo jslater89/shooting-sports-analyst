@@ -12,6 +12,12 @@ class EloShooterRating extends ShooterRating<EloShooterRating> {
   double rating;
   double variance = 0;
 
+  double get shortTrend => rating - averageRating(window: ShooterRating.baseTrendWindow ~/ 2).firstRating;
+  double get mediumTrend => rating - averageRating(window: ShooterRating.baseTrendWindow).firstRating;
+  double get longTrend => rating - averageRating(window: ShooterRating.baseTrendWindow * 2).firstRating;
+
+  // double get trend => (shortTrend + mediumTrend + longTrend) / 3;
+
   double get meanSquaredError {
     return meanSquaredErrorWithWindow(window: ratingEvents.length);
   }

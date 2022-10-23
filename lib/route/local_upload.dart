@@ -13,7 +13,6 @@ class UploadedResultPage extends StatefulWidget {
 
 class _UploadedResultPageState extends State<UploadedResultPage> {
   PracticalMatch? _match;
-  BuildContext? _innerContext;
   String? _resultString;
   bool _operationInProgress = false;
 
@@ -30,12 +29,11 @@ class _UploadedResultPageState extends State<UploadedResultPage> {
           .arguments as String?;
 
       if (_resultString == null) {
-        if(_innerContext != null) {
-          ScaffoldMessenger.of(_innerContext!).showSnackBar(SnackBar(content: Text("No file given. Go back and try again.")));
-          setState(() {
-            _operationInProgress = false;
-          });
-        }
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("No file given. Go back and try again.")));
+        setState(() {
+          _operationInProgress = false;
+        });
+
       }
 
       PracticalMatch m = await processScoreFile(_resultString!);
@@ -44,12 +42,10 @@ class _UploadedResultPageState extends State<UploadedResultPage> {
       });
     }
     catch(err) {
-      if(_innerContext != null) {
-        ScaffoldMessenger.of(_innerContext!).showSnackBar(SnackBar(content: Text("No file given. Go back and try again.")));
-        setState(() {
-          _operationInProgress = false;
-        });
-      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("No file given. Go back and try again.")));
+      setState(() {
+        _operationInProgress = false;
+      });
     }
   }
 
@@ -63,7 +59,6 @@ class _UploadedResultPageState extends State<UploadedResultPage> {
       return EmptyScaffold(
         title: "Match Result Viewer",
         operationInProgress: _operationInProgress,
-        onInnerContextAssigned: (context) => _innerContext = context,
         child: Center(
           child: Text("Processing..."),
         ),
@@ -72,7 +67,6 @@ class _UploadedResultPageState extends State<UploadedResultPage> {
 
     return ResultPage(
       canonicalMatch: _match,
-      onInnerContextAssigned: (context) => _innerContext = context,
     );
   }
 }

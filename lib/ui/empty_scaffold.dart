@@ -5,9 +5,8 @@ class EmptyScaffold extends StatelessWidget {
   final Widget? child;
   final String? title;
   final bool? operationInProgress;
-  final Function(BuildContext)? onInnerContextAssigned;
 
-  const EmptyScaffold({Key? key, this.child, this.operationInProgress = false, this.onInnerContextAssigned, this.title}) : super(key: key);
+  const EmptyScaffold({Key? key, this.child, this.operationInProgress = false, this.title}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +35,6 @@ class EmptyScaffold extends StatelessWidget {
       ),
       body: Builder(
         builder: (context) {
-          if(onInnerContextAssigned != null) onInnerContextAssigned!(context);
           return child!;
         },
       ),

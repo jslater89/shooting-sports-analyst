@@ -479,16 +479,19 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
 
   Widget _buildShooterLink(BuildContext context, Shooter shooter) {
     var children = <Widget>[];
-    if(shooter.memberNumber != "") {
-      children.add(GestureDetector(
-        onTap: () {
-          HtmlOr.openLink("https://uspsa.org/classification/${shooter.memberNumber}");
-        },
-        child: Text(
-          "${shooter.getName()} - ${shooter.division.displayString()} ${shooter.classification.displayString()}",
-          style: Theme.of(context).textTheme.headline6!.copyWith(
-            color: Theme.of(context).primaryColor,
-            decoration: TextDecoration.underline,
+    if(shooter.originalMemberNumber != "") {
+      children.add(MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: () {
+            HtmlOr.openLink("https://uspsa.org/classification/${shooter.originalMemberNumber}");
+          },
+          child: Text(
+            "${shooter.getName()} - ${shooter.division.displayString()} ${shooter.classification.displayString()}",
+            style: Theme.of(context).textTheme.headline6!.copyWith(
+              color: Theme.of(context).primaryColor,
+              decoration: TextDecoration.underline,
+            ),
           ),
         ),
       ));

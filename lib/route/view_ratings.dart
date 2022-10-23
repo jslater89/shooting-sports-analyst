@@ -14,7 +14,10 @@ import 'package:uspsa_result_viewer/ui/rater/prediction/prediction_view.dart';
 import 'package:uspsa_result_viewer/ui/rater/prediction/registration_parser.dart';
 import 'package:uspsa_result_viewer/ui/rater/rater_stats_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/rater_view.dart';
+import 'package:uspsa_result_viewer/ui/result_page.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/associate_registrations.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/match_cache_chooser_dialog.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/url_entry_dialog.dart';
 
 class RatingsViewPage extends StatefulWidget {
   const RatingsViewPage({Key? key, required this.settings, required this.matchUrls}) : super(key: key);
@@ -173,15 +176,33 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     Widget loadingText;
 
     if(_loadingEventName != null) {
-      loadingText = Row(
-        mainAxisSize: MainAxisSize.max,
-        children: [
-          Expanded(child: Container()),
-          Expanded(flex: 2, child: Text("Now: ${_loadingState.label}", style: Theme.of(context).textTheme.subtitle2, textAlign: TextAlign.center)),
-          Expanded(flex: 2, child: Text(_loadingEventName!, overflow: TextOverflow.ellipsis, softWrap: false)),
-          Expanded(child: Container())
-        ],
-      );
+      var parts = _loadingEventName!.split(" - ");
+
+      if(parts.length >= 2) {
+        var divisionText = parts[0];
+        var eventText = parts.sublist(1).join(" - ");
+        loadingText = Row(
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            Expanded(child: Container()),
+            Expanded(flex: 6, child: Text("Now: ${_loadingState.label}", style: Theme.of(context).textTheme.subtitle2, textAlign: TextAlign.center)),
+            Expanded(flex: 2, child: Text(divisionText, overflow: TextOverflow.ellipsis, softWrap: false, textAlign: TextAlign.center)),
+            Expanded(flex: 6, child: Text(eventText, overflow: TextOverflow.ellipsis, softWrap: false, textAlign: TextAlign.center)),
+            Expanded(child: Container())
+          ],
+        );
+      }
+      else {
+        loadingText = Row(
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            Expanded(child: Container()),
+            Expanded(flex: 3, child: Text("Now: ${_loadingState.label}", style: Theme.of(context).textTheme.subtitle2, textAlign: TextAlign.center)),
+            Expanded(flex: 3, child: Text(_loadingEventName!, overflow: TextOverflow.ellipsis, softWrap: false)),
+            Expanded(child: Container())
+          ],
+        );
+      }
     }
     else {
       loadingText = Text("Now: ${_loadingState.label}", style: Theme.of(context).textTheme.subtitle2);
@@ -433,6 +454,24 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         ),
       // end if: supports ratings
       Tooltip(
+        message: "View results for a match in the dataset.",
+        child: IconButton(
+          icon: Icon(Icons.list),
+          onPressed: () async {
+            var match = await showDialog<PracticalMatch>(
+              context: context,
+              builder: (context) => MatchCacheChooserDialog(matches: _history.allMatches)
+            );
+
+            if(match != null) {
+              Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+                return ResultPage(canonicalMatch: match, allowWhatIf: false);
+              }));
+            }
+          },
+        )
+      ),
+      Tooltip(
           message: "View statistics for this division or group.",
           child: IconButton(
             icon: Icon(Icons.bar_chart),
@@ -440,9 +479,9 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
               if(_selectedMatch != null) {
                 var tab = activeTabs[_tabController.index];
                 var rater = _history.raterFor(_selectedMatch!, tab);
-                var statistics = rater.getStatistics();
+                var statistics = rater.getStatistics(ratings: _ratings);
                 showDialog(context: context, builder: (context) {
-                  return RaterStatsDialog(statistics);
+                  return RaterStatsDialog(tab, statistics);
                 });
               }
             },
@@ -471,51 +510,33 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     List<ShooterRating>? shooters = [];
     var divisions = tab.divisions;
 
-    TextEditingController _urlController = TextEditingController();
     var url = await showDialog<String>(context: context, builder: (context) {
-      return AlertDialog(
-        title: Text("Enter match link"),
-        content: Container(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text("Enter a link to the match registration or squadding page."),
-              TextFormField(
-                decoration: InputDecoration(
-                    hintText: "https://practiscore.com/match-name/register"
-                ),
-                controller: _urlController,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            child: Text("CANCEL"),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          TextButton(
-              child: Text("OK"),
-              onPressed: () {
-                var url = _urlController.text;
-                if(url.endsWith("/register")) {
-                  url = url.replaceFirst("/register", "/squadding/printhtml");
-                }
-                else if(url.endsWith("/squadding")) {
-                  url += "/printhtml";
-                }
-                else if(url.endsWith("/") && !url.contains("squadding")) {
-                  url += "squadding/printhtml";
-                }
-                Navigator.of(context).pop(url);
-              }
-          )
-        ],
+      return UrlEntryDialog(
+        hintText: "https://practiscore.com/match-name/register",
+        descriptionText: "Enter a link to the match registration or squadding page.",
+        validator: (url) {
+          if(url.endsWith("/register") || url.endsWith("/squadding") || url.endsWith("/printhtml")) {
+            return null;
+          }
+          else {
+            return "Enter a match registration or squadding URL.";
+          }
+        }
       );
     });
 
     if(url == null) {
       return;
+    }
+
+    if(url.endsWith("/register")) {
+      url = url.replaceFirst("/register", "/squadding/printhtml");
+    }
+    else if(url.endsWith("/squadding")) {
+      url += "/printhtml";
+    }
+    else if(url.endsWith("/") && !url.contains("squadding")) {
+      url += "squadding/printhtml";
     }
 
     var registrationResult = await getRegistrations(url, divisions, options);
@@ -552,7 +573,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
     var predictions = rater.ratingSystem.predict(shooters);
     Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-      return PredictionView(predictions: predictions);
+      return PredictionView(rater: rater, predictions: predictions);
     }));
   }
 
@@ -568,8 +589,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     });
 
     var localUrls = []..addAll(urls);
+    var failedMatches = <String>[];
 
-    int failures = 0;
     var urlsByFuture = <Future<PracticalMatch?>, String>{};
     while(localUrls.isNotEmpty) {
 
@@ -604,7 +625,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         }
         else {
           _matchUrls.remove(url);
-          failures += 1;
+          failedMatches.add(url);
         }
       }
 
@@ -680,13 +701,53 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
     await _history.processInitialMatches();
 
-    debugPrint("History ready with ${_history.matches.length} matches after ${urls.length} URLs and $failures failures");
+    debugPrint("History ready with ${_history.matches.length} matches after ${urls.length} URLs and ${failedMatches.length} failures");
     setState(() {
       _selectedMatch = _history.matches.last;
       _loadingState = _LoadingState.done;
     });
 
-    if(failures > 0) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to download $failures matches")));
+    if(failedMatches.isNotEmpty) ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Failed to download ${failedMatches.length} matches"),
+        action: SnackBarAction(
+          label: "VIEW",
+          onPressed: () {
+            showDialog(context: context, builder: (context) {
+              return AlertDialog(
+                title: Text("Failed matches"),
+                content: SizedBox(
+                  width: 500,
+                  child: ListView.builder(
+                    itemCount: failedMatches.length,
+                    itemBuilder: (context, i) {
+                      return MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: GestureDetector(
+                          onTap: () {
+                            HtmlOr.openLink(failedMatches[i]);
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(4.0),
+                            child: Text(failedMatches[i],
+                              overflow: TextOverflow.fade,
+                              softWrap: false,
+                              style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                                decoration: TextDecoration.underline,
+                                color: Colors.blueAccent,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                )
+              );
+            });
+          },
+        ),
+      ));
     return true;
   }
 }

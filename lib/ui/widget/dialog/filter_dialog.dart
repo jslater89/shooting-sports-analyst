@@ -29,6 +29,15 @@ class FilterSet {
   }
 
   Iterable<Division> get activeDivisions => divisions.keys.where((div) => divisions[div] ?? false);
+
+  static Map<Division, bool> divisionListToMap(List<Division> divisions) {
+    Map<Division, bool> map = {};
+    for(var d in Division.values) {
+      map[d] = divisions.contains(d);
+    }
+
+    return map;
+  }
 }
 
 class FilterDialog extends StatefulWidget {

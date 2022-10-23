@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:hive/hive.dart';
@@ -63,12 +64,25 @@ class MatchCache {
         var reportContents = _box.get(path);
 
         var ids = path.replaceFirst(_cachePrefix, "").split(_cacheSeparator);
+        var deduplicatedIds = Set<String>()..addAll(ids);
+        ids = deduplicatedIds.toList();
 
         if(reportContents != null) {
           var match = await processScoreFile(reportContents);
           var entry = _MatchCacheEntry(match: match, ids: ids);
           for(var id in ids) {
             id = id.replaceAll("/","");
+
+            // This is either a two-ID entry (short and UUID), or a one-ID entry
+            // (UUID-only, because we always get the UUID if we only have the short ID).
+            // If it's a UUID-only entry, only replace an entry in the cache if we haven't
+            // already loaded a corresponding two-ID entry.
+            if(ids.length == 1 && _cache.containsKey(id)) {
+              if(verboseParse) print("Skipping one-ID entry for $id: already loaded as two-ID entry");
+              continue;
+            }
+
+            // If the above doesn't apply, or if we're
             _cache[id] = entry;
           }
 
@@ -105,6 +119,21 @@ class MatchCache {
     return "$_cachePrefix$idString";
   }
 
+  int get length => _cache.length;
+  int? _cachedSize;
+  int get size {
+    if(_cachedSize != null) return _cachedSize!;
+
+    // DB not used on web, so we can do this
+    var dbFile = File(_box.path!);
+
+    if(dbFile.existsSync()) {
+      _cachedSize = dbFile.statSync().size;
+      return _cachedSize!;
+    }
+    return 0;
+  }
+
   Future<void> save([Future<void> Function(int, int)? progressCallback]) async {
     Set<_MatchCacheEntry> alreadySaved = Set();
     int totalProgress = _cache.values.length;
@@ -126,6 +155,7 @@ class MatchCache {
 
       // Box saves in a background isolate
       _box.put(path, entry.match.reportContents);
+      _cachedSize = null;
       alreadySaved.add(entry);
       print("Saved ${entry.match.name} to $path");
 
@@ -134,19 +164,37 @@ class MatchCache {
     }
   }
 
-  Future<bool> deleteMatch(String matchUrl) async {
+  Future<bool> deleteMatchByUrl(String matchUrl) {
     var id = matchUrl.split("/").last;
     var entry = _cache[id];
 
+    return _deleteEntry(entry);
+  }
+
+  Future<bool> deleteMatch(PracticalMatch match) {
+    var entry = _cache.entries.firstWhereOrNull((e) => e.value.match == match);
+    return _deleteEntry(entry?.value);
+  }
+
+  Future<bool> _deleteEntry(_MatchCacheEntry? entry) async {
     if(entry != null) {
       for(var id in entry.ids) {
         _cache.remove(id);
       }
       await _box.delete(_generatePath(entry));
+      _cachedSize = null;
       return true;
     }
-
     return false;
+  }
+
+  String? getUrl(PracticalMatch match) {
+    var entry = _cache.entries.firstWhereOrNull((element) => element.value.match == match);
+
+    if(entry != null) {
+      return "https://practiscore.com/results/new/${entry.key}";
+    }
+    return null;
   }
 
   PracticalMatch? getMatchImmediate(String matchUrl) {
@@ -158,16 +206,30 @@ class MatchCache {
     return null;
   }
 
-  Future<PracticalMatch?> getMatch(String matchUrl, {bool forceUpdate = false, bool localOnly = false}) async {
+  Future<PracticalMatch?> getMatch(String matchUrl, {bool forceUpdate = false, bool localOnly = false, bool checkCanonId = true}) async {
     var id = matchUrl.split("/").last;
     if(!forceUpdate && _cache.containsKey(id)) {
       // debugPrint("Using cache for $id");
       return _cache[id]!.match;
     }
 
-    if(localOnly) return null;
+    if(localOnly && !checkCanonId) return null;
 
     var canonId = await processMatchUrl(matchUrl);
+
+    // If this ID corresponds to a known canonical ID, make a new
+    // entry containing both.
+    if(id != canonId && canonId != null && _cache.containsKey(canonId)) {
+      var newEntry = _MatchCacheEntry(
+        match: _cache[canonId]!.match,
+        ids: [id, canonId]
+      );
+      _cache[id] = newEntry;
+      _cache[canonId] = newEntry;
+      return _cache[id]!.match;
+    }
+
+    if(localOnly) return null;
 
     if(canonId != null) {
       var match = await getPractiscoreMatchHeadless(canonId);
@@ -192,6 +254,11 @@ class MatchCache {
     }
 
     return null;
+  }
+
+  List<PracticalMatch> allMatches() {
+    var matchSet = Set<PracticalMatch>()..addAll(_cache.values.map((e) => e.match));
+    return matchSet.toList();
   }
 
   Future<void> _migrate() async {

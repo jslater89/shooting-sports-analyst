@@ -25,7 +25,6 @@ class PractiscoreResultPage extends StatefulWidget {
 
 class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
   PracticalMatch? _match;
-  late BuildContext _innerContext;
   bool _operationInProgress = false;
 
   @override
@@ -58,7 +57,7 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
     catch(err) {
 
     }
-    ScaffoldMessenger.of(_innerContext).showSnackBar(SnackBar(content: Text("Failed to download result file from ${widget.resultUrl}.")));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to download result file from ${widget.resultUrl}.")));
   }
 
   Future<void> _getPractiscoreMatch() async {
@@ -80,7 +79,7 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
         }
       }
       else if(response.statusCode == 404) {
-        ScaffoldMessenger.of(_innerContext).showSnackBar(SnackBar(content: Text("No match record exists at given URL.")));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("No match record exists at given URL.")));
         debugPrint("No match record at $reportUrl");
         return;
       }
@@ -94,7 +93,7 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
         http.ClientException ce = err;
         debugPrint("${ce.uri} ${ce.message}");
       }
-      ScaffoldMessenger.of(_innerContext).showSnackBar(SnackBar(content: Text("Failed to download match report.")));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to download match report.")));
       return;
     }
 
@@ -124,7 +123,7 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
     catch(err) {
       debugPrint("download error pt. 2: $err ${err.runtimeType}");
     }
-    ScaffoldMessenger.of(_innerContext).showSnackBar(SnackBar(content: Text("Failed to download match report.")));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to download match report.")));
   }
 
   @override
@@ -133,7 +132,6 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
       return EmptyScaffold(
         title: "Match Result Viewer",
         operationInProgress: _operationInProgress,
-        onInnerContextAssigned: (context) => _innerContext = context,
         child: Center(
           child: Text("Downloading..."),
         ),
@@ -142,7 +140,6 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
 
     return ResultPage(
       canonicalMatch: _match,
-      onInnerContextAssigned: (context) => _innerContext = context,
     );
   }
 }

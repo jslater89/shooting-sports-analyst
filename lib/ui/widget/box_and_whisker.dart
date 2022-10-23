@@ -12,6 +12,8 @@ class BoxAndWhiskerPlot extends StatelessWidget {
     this.rangeMin,
     this.rangeMax,
     this.boxSize,
+    this.referenceLines = const [],
+    this.referenceLineColor = Colors.green,
     this.whiskerColor = Colors.black,
     this.lowerBoxColor = Colors.black,
     this.upperBoxColor = Colors.black,
@@ -27,10 +29,13 @@ class BoxAndWhiskerPlot extends StatelessWidget {
 
   final PlotDirection direction;
 
+  final List<double> referenceLines;
+
   final double? rangeMin;
   final double? rangeMax;
   final double? boxSize;
   final double strokeWidth;
+  final Color referenceLineColor;
   final Color whiskerColor;
   final Color lowerBoxColor;
   final Color upperBoxColor;
@@ -63,6 +68,8 @@ class BoxAndWhiskerPlot extends StatelessWidget {
             upperBoxColor: upperBoxColor,
             upperQuartile: upperQuartile,
             whiskerColor: whiskerColor,
+            referenceLines: referenceLines,
+            referenceLineColor: referenceLineColor,
           ),
         ),
       ),
@@ -87,6 +94,8 @@ class _BoxPlotPainter extends CustomPainter {
   final Color lowerBoxColor;
   final Color upperBoxColor;
   final bool fillBox;
+  final List<double> referenceLines;
+  final Color referenceLineColor;
 
   _BoxPlotPainter({
     required this.minimum,
@@ -101,14 +110,18 @@ class _BoxPlotPainter extends CustomPainter {
     required this.whiskerColor,
     required this.lowerBoxColor,
     required this.upperBoxColor,
-    required this.fillBox
+    required this.fillBox,
+    required this.referenceLines,
+    required this.referenceLineColor,
   });
 
   double height = 0.0;
+  double width = 0.0;
 
   @override
   void paint(Canvas canvas, Size size) {
     height = size.height;
+    width = size.width;
 
     Paint linePaint = Paint();
     linePaint.strokeWidth = strokeWidth;
@@ -139,6 +152,11 @@ class _BoxPlotPainter extends CustomPainter {
     var crossDimension = (direction == PlotDirection.horizontal ? size.height : size.width);
     var mainDimension = (direction == PlotDirection.horizontal ? size.width : size.height);
     double halfHeight = (crossDimension / 2).roundToDouble();
+
+    Paint referenceLinePaint = Paint();
+    referenceLinePaint.strokeWidth = strokeWidth;
+    referenceLinePaint.color = referenceLineColor;
+    referenceLinePaint.strokeCap = StrokeCap.butt;
 
     // The ratio of values to pixels
     double valueToPixel = 0.0;
@@ -172,6 +190,11 @@ class _BoxPlotPainter extends CustomPainter {
     double center = ((median - leftEdge) * valueToPixel).roundToDouble();
     double upperWhiskerStart = ((upperQuartile - leftEdge) * valueToPixel).roundToDouble();
     double upperWhiskerEnd = ((maximum - leftEdge) * valueToPixel).roundToDouble();
+
+    var lines = [];
+    for(var line in referenceLines) {
+      lines.add(((line - leftEdge) * valueToPixel).roundToDouble());
+    }
     
     double crossStart = 0.0;
     double crossEnd = crossDimension;
@@ -199,6 +222,10 @@ class _BoxPlotPainter extends CustomPainter {
 
     canvas.drawLine(_offsetFor(upperWhiskerEnd, crossStart), _offsetFor(upperWhiskerEnd, crossEnd), linePaint);
     canvas.drawLine(_offsetFor(upperWhiskerStart, halfHeight), _offsetFor(upperWhiskerEnd, halfHeight), linePaint);
+
+    for(var line in lines) {
+      canvas.drawLine(_offsetFor(line, crossStart), _offsetFor(line, crossEnd), referenceLinePaint);
+    }
   }
 
 

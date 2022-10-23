@@ -7,7 +7,6 @@ import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:uspsa_result_viewer/ui/rater/shooter_stats_dialog.dart';
-import 'package:uspsa_result_viewer/ui/widget/score_row.dart';
 
 class RaterView extends StatefulWidget {
   const RaterView({

@@ -41,7 +41,7 @@ PracticalMatch _processResultLines({required List<String> infoLines, required Li
   Map<int, Shooter> shootersByFileId = _readCompetitorLines(match, competitorLines);
   Map<int, Stage> stagesByFileId = _readStageLines(match, stageLines);
 
-  int stageScoreCount = _readScoreLines(stageScoreLines, shootersByFileId, stagesByFileId);
+  int stageScoreCount = _readScoreLines(match.name ?? "(unnamed match)", stageScoreLines, shootersByFileId, stagesByFileId);
 
   for(Shooter s in match.shooters) {
     for(Stage stage in match.stages) {
@@ -108,7 +108,8 @@ Map<int, Shooter> _readCompetitorLines(PracticalMatch match, List<String> compet
     try {
       List<String> splitLine = line.split(",");
       Shooter s = Shooter()
-        ..memberNumber = splitLine[_MEMBER_NUM]
+        // remove dashes, spaces, etc. from member number, go all uppercase
+        ..memberNumber = splitLine[_MEMBER_NUM].toUpperCase().replaceAll(RegExp(r"[^0-9A-Z]"), "")
         ..firstName = splitLine[_FIRST_NAME]
         ..lastName = splitLine[_LAST_NAME]
         ..reentry = splitLine[_REENTRY].toLowerCase() == "yes"
@@ -149,14 +150,16 @@ Map<int, Stage> _readStageLines(PracticalMatch match, List<String> stageLines) {
         classifier: splitLine[_CLASSIFIER].toLowerCase() == "yes",
         classifierNumber: splitLine[_CLASSIFIER_NUM],
         name: splitLine[_STAGE_NAME],
-        type: ScoringFrom.string(splitLine[_SCORING])
+        // default scoring to Comstock for matches (looking at you, Doc Welt)
+        // that somehow manage to generate an invalid scores file
+        type: splitLine.length > _SCORING ? ScoringFrom.string(splitLine[_SCORING]) : Scoring.comstock,
       );
 
       stagesById[i++] = s;
       maxPoints += s.maxPoints;
       match.stages.add(s);
     } catch(err) {
-      print("Error parsing stage: $line $err");
+      print("Error parsing stage for ${match.name ?? "(unnamed match)"}: $line $err");
     }
   }
 
@@ -189,7 +192,7 @@ const int _T5 = 24;
 const int _TIME = 25;
 const int _RAW_POINTS = 26;
 const int _TOTAL_POINTS = 27;
-int _readScoreLines(List<String> stageScoreLines, Map<int, Shooter> shootersByFileId, Map<int, Stage> stagesByFileId) {
+int _readScoreLines(String matchName, List<String> stageScoreLines, Map<int, Shooter> shootersByFileId, Map<int, Stage> stagesByFileId) {
   int i = 0;
   for(String line in stageScoreLines) {
     try {
@@ -204,6 +207,19 @@ int _readScoreLines(List<String> stageScoreLines, Map<int, Shooter> shootersByFi
       if(shooter == null) {
         throw("Null shooter ${int.parse(splitLine[_SHOOTER_ID])}!");
       }
+
+      // For times greater than 1000 seconds, Practiscore displays them
+      // as "1,000.00" and stores them as "1.000.00"
+      bool correctedTime = false;
+
+      var timeField = splitLine[_TIME];
+      var originalTimeField = timeField;
+      while(timeField.split(".").length > 2) {
+        timeField = timeField.replaceFirst(".", "");
+        correctedTime = true;
+      }
+
+      if(verboseParse && correctedTime) print("Corrected time $originalTimeField to $timeField");
 
       Score s = Score(shooter: shooter, stage: stage)
         ..a = int.parse(splitLine[_A])
@@ -224,7 +240,7 @@ int _readScoreLines(List<String> stageScoreLines, Map<int, Shooter> shootersByFi
         ..t3 = double.parse(splitLine[_T3])
         ..t4 = double.parse(splitLine[_T4])
         ..t5 = double.parse(splitLine[_T5])
-        ..time = double.parse(splitLine[_TIME]);
+        ..time = double.parse(timeField);
         //..rawPoints = int.parse(splitLine[_RAW_POINTS])
         //..totalPoints = int.parse(splitLine[_TOTAL_POINTS]);
 
@@ -252,7 +268,7 @@ int _readScoreLines(List<String> stageScoreLines, Map<int, Shooter> shootersByFi
 
       i++;
     } catch(err) {
-      print("Error parsing score: $line $err");
+      print("Error parsing score in $matchName: $line $err");
     }
   }
 

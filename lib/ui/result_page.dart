@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
@@ -15,9 +15,19 @@ import 'package:uspsa_result_viewer/ui/widget/score_list.dart';
 
 class ResultPage extends StatefulWidget {
   final PracticalMatch? canonicalMatch;
-  final Function(BuildContext) onInnerContextAssigned;
+  final String appChromeLabel;
+  final bool allowWhatIf;
+  final Stage? initialStage;
+  final FilterSet? initialFilters;
 
-  const ResultPage({Key? key, required this.canonicalMatch, required this.onInnerContextAssigned}) : super(key: key);
+  const ResultPage({
+    Key? key,
+    required this.canonicalMatch,
+    this.appChromeLabel = "USPSA Analyst",
+    this.allowWhatIf = true,
+    this.initialFilters,
+    this.initialStage,
+  }) : super(key: key);
 
   @override
   State<StatefulWidget> createState() {
@@ -68,20 +78,31 @@ class _ResultPageState extends State<ResultPage> {
   void initState() {
     super.initState();
 
-    SystemChrome.setApplicationSwitcherDescription(
-      ApplicationSwitcherDescription(
-        label: "Results: ${widget.canonicalMatch!.name}",
-        primaryColor: 0x3f51b5, // Colors.indigo
-      )
-    );
+    if(kIsWeb) {
+      SystemChrome.setApplicationSwitcherDescription(
+          ApplicationSwitcherDescription(
+            label: "Results: ${widget.canonicalMatch!.name}",
+            primaryColor: 0x3f51b5, // Colors.indigo
+          )
+      );
+    }
 
     _appFocus = FocusNode();
     _currentMatch = widget.canonicalMatch!.copy();
     _filteredStages = []..addAll(_currentMatch!.stages);
+
     var scores = _currentMatch!.getScores(scoreDQ: _filters.scoreDQs, stages: _filteredStages);
 
     _baseScores = scores;
     _searchedScores = []..addAll(_baseScores);
+
+    if(widget.initialStage != null) {
+      var stageCopy = _currentMatch!.lookupStage(widget.initialStage!);
+      if(stageCopy != null) _applyStage(StageMenuItem(stageCopy));
+    }
+    if(widget.initialFilters != null) {
+      _applyFilters(widget.initialFilters!);
+    }
   }
 
   @override
@@ -117,7 +138,7 @@ class _ResultPageState extends State<ResultPage> {
     List<Shooter> filteredShooters = _filterShooters();
 
     if(filteredShooters.length == 0) {
-      ScaffoldMessenger.of(_innerContext).showSnackBar(SnackBar(content: Text("Filters match 0 shooters!")));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Filters match 0 shooters!")));
       setState(() {
         _baseScores = [];
         _searchedScores = [];
@@ -293,7 +314,7 @@ class _ResultPageState extends State<ResultPage> {
 
     List<Widget> actions = [];
 
-    if(_currentMatch != null && _whatIfMode) {
+    if(_currentMatch != null && _whatIfMode && widget.allowWhatIf) {
       actions.add(
           Tooltip(
               message: "Exit what-if mode, restoring the original match scores.",
@@ -327,19 +348,19 @@ class _ResultPageState extends State<ResultPage> {
           )
       );
     }
-    else if(_currentMatch != null && !_whatIfMode) {
+    else if(_currentMatch != null && !_whatIfMode && widget.allowWhatIf) {
       actions.add(
-          Tooltip(
-              message: "Enter what-if mode, allowing you to edit stage scores.",
-              child: IconButton(
-                  icon: Icon(Icons.edit),
-                  onPressed: () async {
-                    setState(() {
-                      _whatIfMode = true;
-                    });
-                  }
-              )
-          )
+        Tooltip(
+            message: "Enter what-if mode, allowing you to edit stage scores.",
+            child: IconButton(
+                icon: Icon(Icons.edit),
+                onPressed: () async {
+                  setState(() {
+                    _whatIfMode = true;
+                  });
+                }
+            )
+        )
       );
     }
     if(_currentMatch != null) {
@@ -421,12 +442,12 @@ class _ResultPageState extends State<ResultPage> {
       focusNode: _appFocus!,
       child: WillPopScope(
         onWillPop: () async {
-          SystemChrome.setApplicationSwitcherDescription(
-              ApplicationSwitcherDescription(
-                label: "Match Results Viewer",
-                primaryColor: 0x3f51b5, // Colors.indigo
-              )
-          );
+          if(kIsWeb) {
+            SystemChrome.setApplicationSwitcherDescription(ApplicationSwitcherDescription(
+              label: "USPSA Analyst",
+              primaryColor: 0x3f51b5, // Colors.indigo
+            ));
+          }
           return true;
         },
         child: GestureDetector(

@@ -14,7 +14,12 @@ class Rater {
   Map<String, String> _memberNumberMappings = {};
   Set<String> _memberNumbersEncountered = Set<String>();
   RatingSystem ratingSystem;
+
   FilterSet? _filters;
+
+  /// Do not mutate this property.
+  FilterSet? get filters => _filters;
+
   bool byStage;
   List<String> memberNumberWhitelist;
   Future<void> Function(int, int, String? eventName)? progressCallback;
@@ -132,7 +137,6 @@ class Rater {
       knownShooters[mappedNumber] = knownShooters[actualNumber]!;
     }
   }
-
   
   void addMatch(PracticalMatch match) {
     _cachedStats = null;
@@ -157,6 +161,11 @@ class Rater {
         knownShooters[s.memberNumber] ??= ratingSystem.newShooterRating(s, date: match.date); // ratingSystem.defaultRating
       }
     }
+  }
+
+  ShooterRating? ratingFor(Shooter s) {
+    var processed = processMemberNumber(s.memberNumber);
+    return knownShooters[processed];
   }
 
   void _deduplicateShooters() {
@@ -926,17 +935,23 @@ class Rater {
   }
 
   RaterStatistics? _cachedStats;
-  RaterStatistics getStatistics() {
-    if(_cachedStats == null) _calculateStats();
+  RaterStatistics getStatistics({List<ShooterRating>? ratings}) {
+    if(ratings != null) return _calculateStats(ratings);
+
+    if(_cachedStats == null) _cachedStats = _calculateStats(null);
 
     return _cachedStats!;
   }
 
-  void _calculateStats() {
-    var bucketSize = ratingSystem.histogramBucketSize(knownShooters.length, _matches.length);
+  RaterStatistics _calculateStats(List<ShooterRating>? ratings) {
+    if(ratings == null) {
+      ratings = knownShooters.values.toList();
+    }
 
-    var count = knownShooters.length;
-    var allRatings = knownShooters.values.map((r) => r.rating);
+    var bucketSize = ratingSystem.histogramBucketSize(ratings.length, _matches.length);
+
+    var count = ratings.length;
+    var allRatings = ratings.map((r) => r.rating);
 
     var histogram = <int, int>{};
     for(var rating in allRatings) {
@@ -958,7 +973,7 @@ class Rater {
     for(var classification in Classification.values) {
       if(classification == Classification.unknown) continue;
 
-      var shootersInClass = knownShooters.values.where((r) => r.lastClassification == classification);
+      var shootersInClass = ratings.where((r) => r.lastClassification == classification);
       var ratingsInClass = shootersInClass.map((r) => r.rating);
 
       ratingsByClass[classification] = ratingsInClass.sorted((a, b) => a.compareTo(b));
@@ -978,7 +993,7 @@ class Rater {
       }
     }
 
-    _cachedStats = RaterStatistics(
+    return RaterStatistics(
       shooters: count,
       averageRating: allRatings.average,
       minRating: allRatings.min,

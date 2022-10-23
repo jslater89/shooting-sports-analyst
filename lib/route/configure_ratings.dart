@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:uspsa_result_viewer/data/match/practical_match.dart';
 import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_system.dart';
@@ -11,12 +12,14 @@ import 'package:uspsa_result_viewer/data/ranking/raters/points/points_rater.dart
 import 'package:uspsa_result_viewer/data/ranking/raters/points/points_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
+import 'package:uspsa_result_viewer/ui/rater/enter_practiscore_source_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/confirm_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/enter_name_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/enter_urls_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/member_number_whitelist_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/select_project_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/shooter_aliases_dialog.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/match_cache_chooser_dialog.dart';
 
 class ConfigureRatingsPage extends StatefulWidget {
   const ConfigureRatingsPage({Key? key, required this.onSettingsReady}) : super(key: key);
@@ -49,10 +52,25 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     await MatchCache().ready;
     var cache = MatchCache();
 
+    // Deduplicate
+    Map<PracticalMatch, bool> knownMatches = {};
+    Map<String, bool> urlsToRemove = {};
     for(var url in matchUrls) {
       var match = await cache.getMatch(url, localOnly: true);
-      map[url] = match?.name ?? url;
+
+      if(knownMatches[match] ?? false) {
+        urlsToRemove[url] = true;
+        // print("Already saw ${match?.name}, removing $url");
+      }
+      else {
+        map[url] = match?.name ?? url;
+        if(match != null) {
+          knownMatches[match] = true;
+          // print("Saw ${match.name} at $url, marking true");
+        }
+      }
     }
+    matchUrls.removeWhere((element) => urlsToRemove[element] ?? false);
 
     setState(() {
       urlDisplayNames = map;
@@ -413,46 +431,106 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                         Row(
                           children: [
                             Text("Matches (${matchUrls.length})", style: Theme.of(context).textTheme.labelLarge),
-                            IconButton(
-                              icon: Icon(Icons.add),
-                              color: Theme.of(context).primaryColor,
-                              onPressed: () async {
-                                var urls = await showDialog<List<String>>(context: context, builder: (context) {
-                                  return EnterUrlsDialog();
-                                }, barrierDismissible: false);
+                            Tooltip(
+                              message: "Add a match from a PractiScore results page link.",
+                              child: IconButton(
+                                icon: Icon(Icons.add),
+                                color: Theme.of(context).primaryColor,
+                                onPressed: () async {
+                                  var urls = await showDialog<List<String>>(context: context, builder: (context) {
+                                    return EnterUrlsDialog();
+                                  }, barrierDismissible: false);
 
-                                if(urls == null) return;
+                                  if(urls == null) return;
 
-                                for(var url in urls.reversed) {
+                                  for(var url in urls.reversed) {
+                                    if(!matchUrls.contains(url)) {
+                                      matchUrls.insert(0, url);
+                                    }
+                                  }
+
+                                  setState(() {
+                                    // matchUrls
+                                  });
+
+                                  getUrlDisplayNames();
+                                },
+                              ),
+                            ),
+                            Tooltip(
+                              message: "Add match links parsed from PractiScore page source.",
+                              child: IconButton(
+                                icon: Icon(Icons.link),
+                                color: Theme.of(context).primaryColor,
+                                onPressed: () async {
+                                  var urls = await showDialog<List<String>>(context: context, builder: (context) {
+                                    return EnterPractiscoreSourceDialog();
+                                  }, barrierDismissible: false);
+
+                                  if(urls == null) return;
+
+                                  for(var url in urls.reversed) {
+                                    if(!matchUrls.contains(url)) {
+                                      matchUrls.insert(0, url);
+                                    }
+                                  }
+
+                                  setState(() {
+                                    // matchUrls
+                                  });
+
+                                  getUrlDisplayNames();
+                                },
+                              ),
+                            ),
+                            Tooltip(
+                              message: "Add a match from the match cache.",
+                              child: IconButton(
+                                icon: Icon(Icons.dataset),
+                                color: Theme.of(context).primaryColor,
+                                onPressed: () async {
+                                  var match = await showDialog<PracticalMatch>(context: context, builder: (context) {
+                                    return MatchCacheChooserDialog();
+                                  }, barrierDismissible: false);
+
+                                  if(match == null) return;
+
+                                  var url = MatchCache().getUrl(match);
+
+                                  if(url == null) return;
+
                                   if(!matchUrls.contains(url)) {
                                     matchUrls.insert(0, url);
                                   }
-                                }
 
-                                setState(() {
-                                  // matchUrls
-                                });
-
-                                getUrlDisplayNames();
-                              },
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.remove),
-                              color: Theme.of(context).primaryColor,
-                              onPressed: () async {
-                                var delete = await showDialog<bool>(context: context, builder: (context) {
-                                  return ConfirmDialog(
-                                    content: Text("This will clear all currently-selected matches."),
-                                  );
-                                });
-
-                                if(delete ?? false) {
                                   setState(() {
-                                    matchUrls.clear();
-                                    urlDisplayNames.clear();
+                                    // matchUrls
                                   });
+
+                                  getUrlDisplayNames();
+                                },
+                              ),
+                            ),
+                            Tooltip(
+                              message: "Remove all matches from the list.",
+                              child: IconButton(
+                                icon: Icon(Icons.remove),
+                                color: Theme.of(context).primaryColor,
+                                onPressed: () async {
+                                  var delete = await showDialog<bool>(context: context, builder: (context) {
+                                    return ConfirmDialog(
+                                      content: Text("This will clear all currently-selected matches."),
+                                    );
+                                  });
+
+                                  if(delete ?? false) {
+                                    setState(() {
+                                      matchUrls.clear();
+                                      urlDisplayNames.clear();
+                                    });
+                                  }
                                 }
-                              }
+                              ),
                             ),
                             Tooltip(
                               message: "Sort matches from most recent to least recent. Non-cached matches will be displayed first.",
@@ -470,7 +548,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                     // Sort uncached matches to the top
                                     if(matchA == null && matchB == null) return 0;
                                     if(matchA == null && matchB != null) return -1;
-                                    if(matchA != null && matchB == null) return 0;
+                                    if(matchA != null && matchB == null) return 1;
 
                                     // Sort remaining matches by date descending
                                     return matchB!.date!.compareTo(matchA!.date!);
@@ -506,7 +584,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                             icon: Icon(Icons.refresh),
                                             color: Theme.of(context).primaryColor,
                                             onPressed: () {
-                                              MatchCache().deleteMatch(url);
+                                              MatchCache().deleteMatchByUrl(url);
                                               setState(() {
                                                 urlDisplayNames[url] = url;
                                               });

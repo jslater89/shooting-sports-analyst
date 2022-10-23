@@ -11,6 +11,8 @@ import 'package:charts_flutter/src/text_style.dart' as style;
 import 'package:charts_flutter/src/text_element.dart' as element;
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
+import 'package:uspsa_result_viewer/ui/result_page.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
 
 /// ShooterRatingChangeDialog displays per-stage changes for a shooter.
 class ShooterStatsDialog extends StatefulWidget {
@@ -42,11 +44,14 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          GestureDetector(
-            child: Text("Ratings for ${widget.rating.shooter.getName(suffixes: false)} (${widget.rating.lastClassification.name})"),
-            onTap: () {
-              HtmlOr.openLink("https://uspsa.org/classification/${widget.rating.shooter.originalMemberNumber}");
-            },
+          MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              child: Text("Ratings for ${widget.rating.shooter.getName(suffixes: false)} (${widget.rating.lastClassification.name})"),
+              onTap: () {
+                HtmlOr.openLink("https://uspsa.org/classification/${widget.rating.shooter.originalMemberNumber}");
+              },
+            ),
           ),
           IconButton(
             icon: Icon(Icons.close),
@@ -91,24 +96,29 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Container(
-                                        key: GlobalObjectKey(e.hashCode),
-                                        color: e == _highlighted ? Colors.black12 : null,
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.end,
-                                          children: [
-                                            Expanded(
-                                              flex: 10,
-                                              child: Text("${e.eventName}", style: Theme.of(context).textTheme.bodyText2!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).errorColor : null)),
-                                            ),
-                                            Expanded(
-                                              flex: 2,
-                                              child: Align(
-                                                  alignment: Alignment.centerRight,
-                                                  child: Text("${e.ratingChange.toStringAsFixed(2)}", style: Theme.of(context).textTheme.bodyText2!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).errorColor : null))
+                                      GestureDetector(
+                                        onTap: () {
+                                          _launchScoreView(e);
+                                        },
+                                        child: Container(
+                                          key: GlobalObjectKey(e.hashCode),
+                                          color: e == _highlighted ? Colors.black12 : null,
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.end,
+                                            children: [
+                                              Expanded(
+                                                flex: 10,
+                                                child: Text("${e.eventName}", style: Theme.of(context).textTheme.bodyText2!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).errorColor : null)),
                                               ),
-                                            )
-                                          ],
+                                              Expanded(
+                                                flex: 2,
+                                                child: Align(
+                                                    alignment: Alignment.centerRight,
+                                                    child: Text("${e.ratingChange.toStringAsFixed(2)}", style: Theme.of(context).textTheme.bodyText2!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).errorColor : null))
+                                                ),
+                                              )
+                                            ],
+                                          ),
                                         ),
                                       ),
                                       Divider(
@@ -202,10 +212,15 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
             selectionModelType: charts.SelectionModelType.info,
             maximumDomainDistancePx: 100,
           ),
+          charts.SelectNearest(
+            eventTrigger: charts.SelectionTrigger.tap,
+            selectionModelType: charts.SelectionModelType.action,
+            maximumDomainDistancePx: 100,
+          ),
           charts.LinePointHighlighter(
             selectionModelType: charts.SelectionModelType.info,
             symbolRenderer: _EloTooltipRenderer(),
-          )
+          ),
         ],
         selectionModels: [
           charts.SelectionModelConfig(
@@ -218,6 +233,15 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                 _EloTooltipRenderer.rating = rating.baseEvent.newRating;
                 _EloTooltipRenderer.error = rating.errorAt;
                 _highlight(rating);
+              }
+            },
+          ),
+          charts.SelectionModelConfig(
+            type: charts.SelectionModelType.action,
+            updatedListener: (model) {
+              if(model.hasDatumSelection) {
+                final rating = _ratings[model.selectedDatum[0].index!];
+                _launchScoreView(rating.baseEvent);
               }
             },
           )
@@ -250,6 +274,20 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       width: width,
       child: _chart!,
     );
+  }
+
+  void _launchScoreView(RatingEvent e) {
+    var filters = FilterSet(empty: true)
+      ..mode = FilterMode.or
+      ..divisions = FilterSet.divisionListToMap([widget.rating.shooter.division!]);
+    Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+      return ResultPage(
+        canonicalMatch: e.match,
+        initialStage: e.stage,
+        initialFilters: filters,
+        allowWhatIf: false,
+      );
+    }));
   }
 
   void _highlight(_AccumulatedRatingEvent e) {
