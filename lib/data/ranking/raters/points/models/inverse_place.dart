@@ -21,7 +21,9 @@ class InversePlace extends PointsModel {
       var entry = sortedEntries[i];
       var rating = entry.key;
 
-      var change = (count - i).toDouble();
+      // 1st place beats everyone except for himself
+      var shootersBeat = (count - (i + 1));
+      var change = shootersBeat.toDouble();
 
       changes[rating] = RatingChange(change: {
         RatingSystem.ratingKey: change,
