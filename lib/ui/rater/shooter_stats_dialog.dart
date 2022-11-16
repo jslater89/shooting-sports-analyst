@@ -19,7 +19,7 @@ class ShooterStatsDialog extends StatefulWidget {
   const ShooterStatsDialog({Key? key, required this.rating, required this.match}) : super(key: key);
 
   final ShooterRating rating;
-  final PracticalMatch match;
+  final HitFactorMatch match;
 
   @override
   State<ShooterStatsDialog> createState() => _ShooterStatsDialogState();

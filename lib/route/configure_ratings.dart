@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/match/practical_match.dart';
+import 'package:uspsa_result_viewer/data/match/hitfactor/hitfactor_match.dart';
 import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_system.dart';
@@ -53,7 +53,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     var cache = MatchCache();
 
     // Deduplicate
-    Map<PracticalMatch, bool> knownMatches = {};
+    Map<HitFactorMatch, bool> knownMatches = {};
     Map<String, bool> urlsToRemove = {};
     for(var url in matchUrls) {
       var match = await cache.getMatch(url, localOnly: true);
@@ -489,7 +489,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 icon: Icon(Icons.dataset),
                                 color: Theme.of(context).primaryColor,
                                 onPressed: () async {
-                                  var match = await showDialog<PracticalMatch>(context: context, builder: (context) {
+                                  var match = await showDialog<HitFactorMatch>(context: context, builder: (context) {
                                     return MatchCacheChooserDialog();
                                   }, barrierDismissible: false);
 

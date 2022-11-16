@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
+import 'package:uspsa_result_viewer/data/match/match.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
@@ -9,7 +10,7 @@ import 'package:uspsa_result_viewer/data/ranking/timings.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
 
 class Rater {
-  List<PracticalMatch> _matches;
+  List<HitFactorMatch> _matches;
   Map<String, ShooterRating> knownShooters = {};
   Map<String, String> _memberNumberMappings = {};
   Set<String> _memberNumbersEncountered = Set<String>();
@@ -28,7 +29,7 @@ class Rater {
 
   Set<ShooterRating> get uniqueShooters => <ShooterRating>{}..addAll(knownShooters.values);
 
-  Rater({required List<PracticalMatch> matches, required this.ratingSystem, FilterSet? filters, this.byStage = false, this.progressCallback, this.memberNumberWhitelist = const []}) : this._matches = matches, this._filters = filters {
+  Rater({required List<HitFactorMatch> matches, required this.ratingSystem, FilterSet? filters, this.byStage = false, this.progressCallback, this.memberNumberWhitelist = const []}) : this._matches = matches, this._filters = filters {
     _matches.sort((a, b) {
       if(a.date == null && b.date == null) {
         return 0;
@@ -42,7 +43,7 @@ class Rater {
     late DateTime start;
 
     if(Timings.enabled) start = DateTime.now();
-    for(PracticalMatch m in _matches) {
+    for(HitFactorMatch m in _matches) {
       _addShootersFromMatch(m);
     }
     if(Timings.enabled) timings.addShootersMillis = (DateTime.now().difference(start).inMicroseconds).toDouble();
@@ -58,7 +59,7 @@ class Rater {
     int currentSteps = 0;
     late DateTime start;
 
-    for(PracticalMatch m in _matches) {
+    for(HitFactorMatch m in _matches) {
       if(Timings.enabled) start = DateTime.now();
       _rankMatch(m);
       if(Timings.enabled) timings.rateMatchesMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
@@ -138,7 +139,7 @@ class Rater {
     }
   }
   
-  void addMatch(PracticalMatch match) {
+  void addMatch(HitFactorMatch match) {
     _cachedStats = null;
     _matches.add(match);
 
@@ -152,7 +153,7 @@ class Rater {
     debugPrint("Ratings update complete for ${knownShooters.length} shooters in ${_matches.length} matches in ${_filters != null ? _filters!.activeDivisions.toList() : "all divisions"}");
   }
 
-  void _addShootersFromMatch(PracticalMatch match) {
+  void _addShootersFromMatch(HitFactorMatch match) {
     var shooters = _getShooters(match);
     for(Shooter s in shooters) {
       var processed = processMemberNumber(s.memberNumber);
@@ -231,7 +232,7 @@ class Rater {
     }
   }
 
-  List<Shooter> _getShooters(PracticalMatch match, {bool verify = false}) {
+  List<Shooter> _getShooters(HitFactorMatch match, {bool verify = false}) {
     var shooters = <Shooter>[];
     if(_filters != null) {
       shooters = match.filterShooters(
@@ -257,7 +258,7 @@ class Rater {
     return shooters;
   }
 
-  void _rankMatch(PracticalMatch match) {
+  void _rankMatch(HitFactorMatch match) {
     late DateTime start;
     if(Timings.enabled) start = DateTime.now();
     var shooters = _getShooters(match, verify: true);
@@ -285,7 +286,7 @@ class Rater {
       }
     }
     matchStrength = matchStrength / shooters.length;
-    double strengthMod =  (1.0 + max(-0.75, min(0.5, ((matchStrength) - _strengthForClass(Classification.A)) * 0.2))) * (match.level?.strengthBonus ?? 1.0);
+    double strengthMod =  (1.0 + max(-0.75, min(0.5, ((matchStrength) - _strengthForClass(USPSAClassification.A)) * 0.2))) * (match.level?.strengthBonus ?? 1.0);
     if(Timings.enabled) timings.matchStrengthMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
 
     if(Timings.enabled) start = DateTime.now();
@@ -561,7 +562,7 @@ class Rater {
   }
 
   void _processRoundRobin({
-    required PracticalMatch match,
+    required HitFactorMatch match,
     Stage? stage,
     required List<Shooter> shooters,
     required List<RelativeMatchScore> scores,
@@ -659,7 +660,7 @@ class Rater {
   }
 
   void _processOneshot({
-    required PracticalMatch match,
+    required HitFactorMatch match,
     Stage? stage,
     required Shooter shooter,
     required List<RelativeMatchScore> scores,
@@ -744,7 +745,7 @@ class Rater {
   }
 
   void _processWholeEvent({
-    required PracticalMatch match,
+    required HitFactorMatch match,
     Stage? stage,
     required List<RelativeMatchScore> scores,
     required Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes,
@@ -857,8 +858,8 @@ class Rater {
     var firstScore = first.total;
     var secondScore = second.total;
 
-    var firstClass = first.shooter.classification ?? Classification.U;
-    var secondClass = second.shooter.classification ?? Classification.U;
+    var firstClass = first.shooter.classification ?? USPSAClassification.U;
+    var secondClass = second.shooter.classification ?? USPSAClassification.U;
 
     var firstRating = knownShooters[first.shooter.memberNumber];
     var secondRating = knownShooters[second.shooter.memberNumber];
@@ -880,7 +881,7 @@ class Rater {
     // 3. The winner's rating is at least 200 higher than the next shooter's.
     if(firstScore.percent >= 1.0
         && (firstScore.relativePoints / secondScore.relativePoints > 1.20)
-        && firstClass.index <= Classification.M.index
+        && firstClass.index <= USPSAClassification.M.index
         && secondClass.index - firstClass.index >= 2
         && firstRating.rating - secondRating.rating > 200) {
       // print("Pubstomp multiplier for $firstRating over $secondRating");
@@ -913,22 +914,22 @@ class Rater {
     }
   }
 
-  double _strengthForClass(Classification? c) {
+  double _strengthForClass(USPSAClassification? c) {
     switch(c) {
-      case Classification.GM:
+      case USPSAClassification.GM:
         return 10;
-      case Classification.M:
+      case USPSAClassification.M:
         return 6;
-      case Classification.A:
+      case USPSAClassification.A:
         return 4;
-      case Classification.B:
+      case USPSAClassification.B:
         return 3;
-      case Classification.C:
+      case USPSAClassification.C:
         return 2;
-      case Classification.D:
+      case USPSAClassification.D:
         return 1;
-      case Classification.U:
-        return _strengthForClass(Classification.C);
+      case USPSAClassification.U:
+        return _strengthForClass(USPSAClassification.C);
       default:
         return 2.5;
     }
@@ -963,15 +964,15 @@ class Rater {
       histogram[bucket] = value;
     }
 
-    var averagesByClass = <Classification, double>{};
-    var minsByClass = <Classification, double>{};
-    var maxesByClass = <Classification, double>{};
-    var countsByClass = <Classification, int>{};
-    Map<Classification, Map<int, int>> histogramsByClass = {};
-    Map<Classification, List<double>> ratingsByClass = {};
+    var averagesByClass = <USPSAClassification, double>{};
+    var minsByClass = <USPSAClassification, double>{};
+    var maxesByClass = <USPSAClassification, double>{};
+    var countsByClass = <USPSAClassification, int>{};
+    Map<USPSAClassification, Map<int, int>> histogramsByClass = {};
+    Map<USPSAClassification, List<double>> ratingsByClass = {};
 
-    for(var classification in Classification.values) {
-      if(classification == Classification.unknown) continue;
+    for(var classification in USPSAClassification.values) {
+      if(classification == USPSAClassification.unknown) continue;
 
       var shootersInClass = ratings.where((r) => r.lastClassification == classification);
       var ratingsInClass = shootersInClass.map((r) => r.rating);
@@ -1047,13 +1048,13 @@ class RaterStatistics {
   int histogramBucketSize;
   Map<int, int> histogram;
 
-  Map<Classification, int> countByClass;
-  Map<Classification, double> averageByClass;
-  Map<Classification, double> minByClass;
-  Map<Classification, double> maxByClass;
+  Map<USPSAClassification, int> countByClass;
+  Map<USPSAClassification, double> averageByClass;
+  Map<USPSAClassification, double> minByClass;
+  Map<USPSAClassification, double> maxByClass;
 
-  Map<Classification, Map<int, int>> histogramsByClass;
-  Map<Classification, List<double>> ratingsByClass;
+  Map<USPSAClassification, Map<int, int>> histogramsByClass;
+  Map<USPSAClassification, List<double>> ratingsByClass;
 
   RaterStatistics({
     required this.shooters,

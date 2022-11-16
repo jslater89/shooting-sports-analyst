@@ -109,7 +109,7 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
 
   @override
   RatingEvent newEvent({
-    required PracticalMatch match, Stage? stage,
+    required HitFactorMatch match, Stage? stage,
     required ShooterRating rating, required RelativeScore score, Map<String, List<dynamic>> info = const {}
   }) {
     rating as OpenskillRating;
@@ -145,14 +145,14 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
   static const _muIndex = 0;
   static const _sigmaIndex = 1;
   static const initialClassRatings = {
-    Classification.GM: [OpenskillSettings.defaultMu + 25, OpenskillSettings.defaultSigma],
-    Classification.M: [OpenskillSettings.defaultMu + 20, OpenskillSettings.defaultSigma],
-    Classification.A: [OpenskillSettings.defaultMu + 15, OpenskillSettings.defaultSigma],
-    Classification.B: [OpenskillSettings.defaultMu + 10, OpenskillSettings.defaultSigma],
-    Classification.C: [OpenskillSettings.defaultMu + 5, OpenskillSettings.defaultSigma],
-    Classification.D: [OpenskillSettings.defaultMu, OpenskillSettings.defaultSigma],
-    Classification.U: [OpenskillSettings.defaultMu + 5, OpenskillSettings.defaultSigma],
-    Classification.unknown: [OpenskillSettings.defaultMu, OpenskillSettings.defaultSigma],
+    USPSAClassification.GM: [OpenskillSettings.defaultMu + 25, OpenskillSettings.defaultSigma],
+    USPSAClassification.M: [OpenskillSettings.defaultMu + 20, OpenskillSettings.defaultSigma],
+    USPSAClassification.A: [OpenskillSettings.defaultMu + 15, OpenskillSettings.defaultSigma],
+    USPSAClassification.B: [OpenskillSettings.defaultMu + 10, OpenskillSettings.defaultSigma],
+    USPSAClassification.C: [OpenskillSettings.defaultMu + 5, OpenskillSettings.defaultSigma],
+    USPSAClassification.D: [OpenskillSettings.defaultMu, OpenskillSettings.defaultSigma],
+    USPSAClassification.U: [OpenskillSettings.defaultMu + 5, OpenskillSettings.defaultSigma],
+    USPSAClassification.unknown: [OpenskillSettings.defaultMu, OpenskillSettings.defaultSigma],
   };
 
   @override

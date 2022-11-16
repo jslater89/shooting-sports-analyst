@@ -370,7 +370,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
       var error = s.standardError;
 
-      PracticalMatch? match;
+      HitFactorMatch? match;
       double lastMatchChange = 0;
       for(var event in s.ratingEvents.reversed) {
         if(match == null) {
@@ -390,14 +390,14 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   }
 
   static const initialClassRatings = {
-    Classification.GM: 1300.0,
-    Classification.M: 1200.0,
-    Classification.A: 1100.0,
-    Classification.B: 1000.0,
-    Classification.C: 900.0,
-    Classification.D: 800.0,
-    Classification.U: 900.0,
-    Classification.unknown: 800.0,
+    USPSAClassification.GM: 1300.0,
+    USPSAClassification.M: 1200.0,
+    USPSAClassification.A: 1100.0,
+    USPSAClassification.B: 1000.0,
+    USPSAClassification.C: 900.0,
+    USPSAClassification.D: 800.0,
+    USPSAClassification.U: 900.0,
+    USPSAClassification.unknown: 800.0,
   };
 
   @override
@@ -408,7 +408,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
   @override
   RatingEvent newEvent({
-    required PracticalMatch match,
+    required HitFactorMatch match,
     Stage? stage,
     required ShooterRating rating, required RelativeScore score, Map<String, List<dynamic>> info = const {}
   }) {

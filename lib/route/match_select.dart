@@ -4,7 +4,7 @@ import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
+import 'package:uspsa_result_viewer/data/parser/practiscore_parser.dart';
 import 'package:uspsa_result_viewer/main.dart';
 import 'package:uspsa_result_viewer/ui/empty_scaffold.dart';
 import 'package:uspsa_result_viewer/ui/result_page.dart';
@@ -87,7 +87,7 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
     var children = [
       GestureDetector(
         onTap: () async {
-          PracticalMatch? match = await showDialog<PracticalMatch>(
+          HitFactorMatch? match = await showDialog<HitFactorMatch>(
             context: context, builder: (context) => MatchCacheChooserDialog(),
             barrierDismissible: false,
           );

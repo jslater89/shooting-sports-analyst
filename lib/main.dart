@@ -55,7 +55,7 @@ void main() async {
   ));
   globals.router.define('/web/:matchId', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
     handlerFunc: (context, params) {
-      return PractiscoreResultPage(matchId: params['matchId']![0],);
+      return PractiscoreResultPage(hitFactorMatchId: params['matchId']![0],);
     }
   ));
 

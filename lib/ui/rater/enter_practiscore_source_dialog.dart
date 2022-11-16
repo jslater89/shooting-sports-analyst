@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/score_list_parser.dart';
+import 'package:uspsa_result_viewer/data/parser/score_list_parser.dart';
 
 class EnterPractiscoreSourceDialog extends StatefulWidget {
   const EnterPractiscoreSourceDialog({Key? key}) : super(key: key);
