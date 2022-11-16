@@ -57,6 +57,7 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
 
   TextEditingController _kController = TextEditingController(text: "${EloSettings.defaultK}");
   TextEditingController _scaleController = TextEditingController(text: "${EloSettings.defaultScale}");
+  TextEditingController _baseController = TextEditingController(text: "${EloSettings.defaultProbabilityBase}");
   TextEditingController _pctWeightController = TextEditingController(text: "${EloSettings.defaultPercentWeight}");
   TextEditingController _placeWeightController = TextEditingController(text: "${EloSettings.defaultPlaceWeight}");
   TextEditingController _matchBlendController = TextEditingController(text: "${EloSettings.defaultMatchBlend}");
@@ -67,6 +68,7 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
     settings = widget.controller._currentSettings;
     _kController.text = "${settings.K.toStringAsFixed(1)}";
     _scaleController.text = "${settings.scale.round()}";
+    _baseController.text = "${settings.probabilityBase.toStringAsFixed(1)}";
     _pctWeightController.text = "${settings.percentWeight}";
     _placeWeightController.text = "${settings.placeWeight}";
     _matchBlendController.text = "${settings.matchBlend}";
@@ -80,6 +82,7 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
         else if(widget.controller._restoreDefaults) {
           settings = widget.controller._currentSettings;
           _kController.text = "${settings.K.toStringAsFixed(1)}";
+          _baseController.text = "${settings.probabilityBase.toStringAsFixed(1)}";
           _scaleController.text = "${settings.scale.round()}";
           _pctWeightController.text = "${settings.percentWeight}";
           _placeWeightController.text = "${settings.placeWeight}";
@@ -89,6 +92,7 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
         else {
           settings = widget.controller._currentSettings;
           _kController.text = "${settings.K.toStringAsFixed(1)}";
+          _baseController.text = "${settings.probabilityBase.toStringAsFixed(1)}";
           _scaleController.text = "${settings.scale.round()}";
           _pctWeightController.text = "${settings.percentWeight}";
           _placeWeightController.text = "${settings.placeWeight}";
@@ -99,6 +103,11 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
 
     _kController.addListener(() {
       if(double.tryParse(_kController.text) != null) {
+        _validateText();
+      }
+    });
+    _baseController.addListener(() {
+      if(double.tryParse(_baseController.text) != null) {
         _validateText();
       }
     });
@@ -158,6 +167,7 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
     double? scale = double.tryParse(_scaleController.text);
     double? pctWeight = double.tryParse(_pctWeightController.text);
     double? matchBlend = double.tryParse(_matchBlendController.text);
+    double? base = double.tryParse(_baseController.text);
 
     if(K == null) {
       widget.controller.lastError = "K factor incorrectly formatted";
@@ -166,6 +176,11 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
 
     if(scale == null) {
       widget.controller.lastError = "Scale factor incorrectly formatted";
+      return;
+    }
+
+    if(base == null) {
+      widget.controller.lastError = "Probability base incorrectly formatted";
       return;
     }
 
@@ -181,6 +196,7 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
 
     settings.K = K;
     settings.scale = scale;
+    settings.probabilityBase = base;
     settings.percentWeight = pctWeight;
     settings.matchBlend = matchBlend;
     widget.controller.lastError = null;
@@ -247,6 +263,36 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
               ),
             ),
           ]
+        ),
+        Row(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Tooltip(
+                message:
+                  "Probability base determines how much a rating difference of the scale factor means, in terms of\n"
+                  "win likelihood. A probability base of 10 (the default) means that a shooter whose rating is better\n"
+                  "than another shooter's by the scale factor is 10 times more likely to win than to lose.",
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: Text("Probability base", style: Theme.of(context).textTheme.subtitle1!),
+                ),
+              ),
+              SizedBox(
+                width: 100,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 20),
+                  child: TextFormField(
+                    controller: _baseController,
+                    textAlign: TextAlign.end,
+                    keyboardType: TextInputType.numberWithOptions(),
+                    inputFormatters: [
+                      FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
+                    ],
+                  ),
+                ),
+              ),
+            ]
         ),
         Row(
           mainAxisSize: MainAxisSize.max,

@@ -35,8 +35,19 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
   /// K is the K parameter to the rating Elo algorithm
   double get K => settings.K;
+
+  /// Probability base is the base used for the exponentiation in
+  /// the Elo probability function, and says that someone with a
+  /// rating margin of [scale] over another player is [probabilityBase]
+  /// times more likely to win.
+  double get probabilityBase => settings.probabilityBase;
+
   double get percentWeight => settings.percentWeight;
   double get placeWeight => settings.placeWeight;
+
+  /// Scale is the scale parameter to the Elo probability function, and
+  /// says that a rating difference of [scale] means the higher-rated
+  /// player is [probabilityBase] times more likely to win.
   double get scale => settings.scale;
 
   get matchBlend => settings.matchBlend;
@@ -255,7 +266,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
   /// Return the probability that win beats lose.
   double _probability(double lose, double win) {
-    return 1.0 / (1.0 + (pow(10, (lose - win) / scale)));
+    return 1.0 / (1.0 + (pow(probabilityBase, (lose - win) / scale)));
   }
 
   static const _leadPaddingFlex = 2;
