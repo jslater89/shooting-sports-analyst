@@ -115,7 +115,7 @@ Map<int, Shooter> _readCompetitorLines(HitFactorMatch match, List<String> compet
         ..lastName = splitLine[_LAST_NAME]
         ..reentry = splitLine[_REENTRY].toLowerCase() == "yes"
         ..classification = USPSAClassificationFrom.string(splitLine[_CLASS])
-        ..division = DivisionFrom.string(splitLine[_DIVISION])
+        ..division = USPSADivisionFrom.string(splitLine[_DIVISION])
         ..powerFactor = PowerFactorFrom.string(splitLine[_POWER_FACTOR])
         ..dq = splitLine[_DQ_PISTOL].toLowerCase() == "yes" || splitLine[_DQ_RIFLE].toLowerCase() == "yes" || splitLine[_DQ_SHOTGUN].toLowerCase() == "yes";
 

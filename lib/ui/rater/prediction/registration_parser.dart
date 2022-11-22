@@ -15,7 +15,7 @@ class RegistrationResult {
 
 class Registration {
   final String name;
-  final Division division;
+  final USPSADivision division;
   final USPSAClassification classification;
 
   Registration({
@@ -25,7 +25,7 @@ class Registration {
   });
 }
 
-Future<RegistrationResult?> getRegistrations(String url, List<Division> divisions, List<ShooterRating> knownShooters) async {
+Future<RegistrationResult?> getRegistrations(String url, List<USPSADivision> divisions, List<ShooterRating> knownShooters) async {
   if(!url.endsWith("printhtml")) {
     print("Wrong URL");
     return null;
@@ -46,7 +46,7 @@ Future<RegistrationResult?> getRegistrations(String url, List<Division> division
   return null;
 }
 
-RegistrationResult _parseRegistrations(String registrationHtml, List<Division> divisions, List<ShooterRating> knownShooters) {
+RegistrationResult _parseRegistrations(String registrationHtml, List<USPSADivision> divisions, List<ShooterRating> knownShooters) {
   var ratings = <ShooterRating>[];
   var unmatched = <Registration>[];
 
@@ -56,7 +56,7 @@ RegistrationResult _parseRegistrations(String registrationHtml, List<Division> d
     var match = shooterRegex.firstMatch(line);
     if(match != null) {
       var shooterName = match.namedGroup("name")!;
-      var d = DivisionFrom.string(match.namedGroup("division")!);
+      var d = USPSADivisionFrom.string(match.namedGroup("division")!);
 
       if(!divisions.contains(d)) continue;
 

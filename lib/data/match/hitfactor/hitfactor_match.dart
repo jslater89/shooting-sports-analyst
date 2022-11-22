@@ -1,10 +1,11 @@
+import 'package:uspsa_result_viewer/data/match/hitfactor/hitfactor_shooter.dart';
 import 'package:uspsa_result_viewer/data/match/match.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 
 class HitFactorMatch extends PracticalMatch {
   late String reportContents;
 
-  List<Shooter> shooters = [];
+  List<HitFactorShooter> shooters = [];
   List<Stage> stages = [];
 
   int? maxPoints;
@@ -40,7 +41,7 @@ class HitFactorMatch extends PracticalMatch {
   List<Shooter> filterShooters({
     FilterMode? filterMode,
     bool? allowReentries = true,
-    List<Division> divisions = Division.values,
+    List<USPSADivision> divisions = USPSADivision.values,
     List<PowerFactor> powerFactors = PowerFactor.values,
     List<USPSAClassification> classes = USPSAClassification.values,
   }) {

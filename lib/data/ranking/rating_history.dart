@@ -99,7 +99,7 @@ class RatingHistory {
         var innerMatches = <HitFactorMatch>[]..addAll(currentMatches);
         _ratersByDivision[m] ??= {};
         for (var group in _settings.groups) {
-          var divisionMap = <Division, bool>{};
+          var divisionMap = <USPSADivision, bool>{};
           group.divisions.forEach((element) => divisionMap[element] = true);
 
           if (lastMatch == null) {
@@ -147,7 +147,7 @@ class RatingHistory {
   }
   
   Future<Rater> _raterForGroup(List<HitFactorMatch> matches, RaterGroup group, [Future<void> Function(int, int, String?)? progressCallback]) async {
-    var divisionMap = <Division, bool>{};
+    var divisionMap = <USPSADivision, bool>{};
     group.divisions.forEach((element) => divisionMap[element] = true);
     Timings().reset();
     var r = Rater(
@@ -187,30 +187,30 @@ enum RaterGroup {
 }
 
 extension RaterGroupUtilities on RaterGroup {
-  List<Division> get divisions {
+  List<USPSADivision> get divisions {
     switch(this) {
       case RaterGroup.open:
-        return [Division.open];
+        return [USPSADivision.open];
       case RaterGroup.limited:
-        return [Division.limited];
+        return [USPSADivision.limited];
       case RaterGroup.pcc:
-        return [Division.pcc];
+        return [USPSADivision.pcc];
       case RaterGroup.carryOptics:
-        return [Division.carryOptics];
+        return [USPSADivision.carryOptics];
       case RaterGroup.locap:
-        return [Division.singleStack, Division.limited10, Division.production, Division.revolver];
+        return [USPSADivision.singleStack, USPSADivision.limited10, USPSADivision.production, USPSADivision.revolver];
       case RaterGroup.singleStack:
-        return [Division.singleStack];
+        return [USPSADivision.singleStack];
       case RaterGroup.production:
-        return [Division.production];
+        return [USPSADivision.production];
       case RaterGroup.limited10:
-        return [Division.limited10];
+        return [USPSADivision.limited10];
       case RaterGroup.revolver:
-        return [Division.revolver];
+        return [USPSADivision.revolver];
       case RaterGroup.openPcc:
-        return [Division.open, Division.pcc];
+        return [USPSADivision.open, USPSADivision.pcc];
       case RaterGroup.limitedCO:
-        return [Division.limited, Division.carryOptics];
+        return [USPSADivision.limited, USPSADivision.carryOptics];
     }
   }
 

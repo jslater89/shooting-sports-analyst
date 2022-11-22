@@ -120,10 +120,10 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
   }
 
   Widget _buildDivisionDropdown(BuildContext context, Shooter shooter) {
-    return DropdownButton<Division>(
+    return DropdownButton<USPSADivision>(
       value: shooter.division,
-      items: Division.values.map((division) {
-        return DropdownMenuItem<Division>(
+      items: USPSADivision.values.map((division) {
+        return DropdownMenuItem<USPSADivision>(
           child: Text(division.displayString()),
           value: division,
         );

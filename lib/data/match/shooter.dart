@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:uspsa_result_viewer/data/match/match.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/parser/hitfactor/results_file_parser.dart';
 
@@ -19,12 +20,9 @@ class Shooter {
     _memberNumber = m;
   }
 
+  PowerFactor? powerFactor;
   bool reentry = false;
   bool dq = false;
-
-  Division? division;
-  USPSAClassification? classification;
-  PowerFactor? powerFactor;
 
   Map<Stage, Score> stageScores = {};
 
@@ -37,25 +35,15 @@ class Shooter {
     return components.join(" ");
   }
 
-  Shooter copy(HitFactorMatch parent) {
-    var newShooter = Shooter()
-      ..firstName = firstName
-      ..lastName = lastName
-      ..originalMemberNumber = originalMemberNumber
-      .._hasOriginalMemberNumber = _hasOriginalMemberNumber
-      ..memberNumber = memberNumber
-      ..reentry = reentry
-      ..dq = dq
-      ..division = division
-      ..classification = classification
-      ..powerFactor = powerFactor
-      ..stageScores = {};
-
-    stageScores.forEach((stage, score) {
-      newShooter.stageScores[parent.lookupStage(stage)!] = score.copy(newShooter, stage);
-    });
-
-    return newShooter;
+  void copyFrom(Shooter other, PracticalMatch parent) {
+    firstName = other.firstName;
+    lastName = other.lastName;
+    originalMemberNumber = other.originalMemberNumber;
+    _hasOriginalMemberNumber = other._hasOriginalMemberNumber;
+    memberNumber = other.memberNumber;
+    reentry = other.reentry;
+    dq = other.dq;
+    powerFactor = other.powerFactor;
   }
 
   @override
@@ -64,7 +52,7 @@ class Shooter {
   }
 }
 
-enum Division {
+enum USPSADivision {
   pcc,
   open,
   limited,
@@ -76,64 +64,136 @@ enum Division {
   unknown,
 }
 
-extension DivisionFrom on Division {
-  static Division string(String s) {
+extension USPSADivisionFrom on USPSADivision {
+  static USPSADivision string(String s) {
     s = s.trim().toLowerCase();
     switch(s) {
-      case "pcc": return Division.pcc;
-      case "pistol caliber carbine": return Division.pcc;
+      case "pcc": return USPSADivision.pcc;
+      case "pistol caliber carbine": return USPSADivision.pcc;
 
-      case "open": return Division.open;
+      case "open": return USPSADivision.open;
 
       case "ltd":
-      case "limited": return Division.limited;
+      case "limited": return USPSADivision.limited;
 
       case "co":
-      case "carry optics": return Division.carryOptics;
+      case "carry optics": return USPSADivision.carryOptics;
 
       case "l10":
       case "ltd10":
-      case "limited 10": return Division.limited10;
+      case "limited 10": return USPSADivision.limited10;
 
       case "prod":
-      case "production": return Division.production;
+      case "production": return USPSADivision.production;
 
       case "ss":
-      case "single stack": return Division.singleStack;
+      case "single stack": return USPSADivision.singleStack;
 
       case "rev":
       case "revo":
-      case "revolver": return Division.revolver;
+      case "revolver": return USPSADivision.revolver;
       default: {
         if(verboseParse) debugPrint("Unknown division: $s");
-        return Division.unknown;
+        return USPSADivision.unknown;
       }
     }
   }
 }
 
-extension DDisplayString on Division? {
+extension USPSADivisionDisplay on USPSADivision? {
   String displayString() {
     switch(this) {
 
-      case Division.pcc:
+      case USPSADivision.pcc:
         return "PCC";
-      case Division.open:
+      case USPSADivision.open:
         return "Open";
-      case Division.limited:
+      case USPSADivision.limited:
         return "Limited";
-      case Division.carryOptics:
+      case USPSADivision.carryOptics:
         return "Carry Optics";
-      case Division.limited10:
+      case USPSADivision.limited10:
         return "Limited 10";
-      case Division.production:
+      case USPSADivision.production:
         return "Production";
-      case Division.singleStack:
+      case USPSADivision.singleStack:
         return "Single Stack";
-      case Division.revolver:
+      case USPSADivision.revolver:
         return "Revolver";
       default:
         return "INVALID DIVISION";
+    }
+  }
+}
+
+enum ICOREDivision {
+  open,
+  limited,
+  limited6,
+  classic,
+  unknown;
+
+  static ICOREDivision fromString(String s) {
+    s = s.trim().toLowerCase();
+    switch(s) {
+      case "o":
+      case "open": return ICOREDivision.open;
+
+      case "l":
+      case "lim":
+      case "limited": return ICOREDivision.limited;
+
+      case "l6":
+      case "lim6":
+      case "limited6":
+      case "limited 6": return ICOREDivision.limited6;
+
+      case "c":
+      case "classic": return ICOREDivision.classic;
+
+      default: return ICOREDivision.unknown;
+    }
+  }
+
+  String displayString() {
+    switch(this) {
+      case ICOREDivision.open:
+        return "Open";
+      case ICOREDivision.limited:
+        return "Limited";
+      case ICOREDivision.limited6:
+        return "Limited 6";
+      case ICOREDivision.classic:
+        return "Classic";
+      case ICOREDivision.unknown:
+        return "Unknown";
+    }
+  }
+}
+
+enum IDPADivision {
+  cdp,
+  esp,
+  co,
+  ssp,
+  ccp,
+  rev,
+  bug,
+  pcc,
+  unknown;
+
+  static IDPADivision fromString(String s) {
+    s = s.trim().toLowerCase();
+    switch(s) {
+      case "cdp": return IDPADivision.cdp;
+      case "esp": return IDPADivision.esp;
+      case "co": return IDPADivision.co;
+      case "ssp": return IDPADivision.ssp;
+      case "ccp": return IDPADivision.ccp;
+      case "rev": return IDPADivision.rev;
+      case "bug": return IDPADivision.bug;
+      case "pcc": return IDPADivision.pcc;
+      default: return IDPADivision.unknown;
     }
   }
 }

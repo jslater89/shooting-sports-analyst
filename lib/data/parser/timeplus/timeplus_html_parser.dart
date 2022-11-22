@@ -32,7 +32,7 @@ Future<TimePlusMatch?> processTimePlusHtml(String matchId, String indexHtml) asy
     var responses = await Future.wait(responseFutures);
     for(var r in responses) {
       if(r.statusCode < 300) {
-        stageHtml.add(r.body);
+        stageHtml.add(r.body.replaceAll("</title>","</title>\n").replaceAll("</div>","</div>\n").replaceAll("</tr>","</tr>\n"));
       }
       else {
         print("Response error: ${r.statusCode} ${r.body}");

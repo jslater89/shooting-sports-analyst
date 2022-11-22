@@ -20,7 +20,7 @@ class _LiteralReplacement {
 
 class SearchQueryElement {
   USPSAClassification? classification;
-  Division? division;
+  USPSADivision? division;
   PowerFactor? powerFactor;
   String? name;
 
@@ -156,19 +156,19 @@ PowerFactor? _matchPowerFactor(String query) {
   else return null;
 }
 
-Division? _matchDivision(String query) {
+USPSADivision? _matchDivision(String query) {
   query.replaceAll(RegExp(r"\s"), '');
 
-  if(query.startsWith("pc")) return Division.pcc;
-  else if(query.startsWith("pi")) return Division.pcc;
-  else if(query.startsWith("op")) return Division.open;
-  else if(query.startsWith(RegExp("l.*1"))) return Division.limited10;
-  else if(query.startsWith("li")) return Division.limited;
-  else if(query.startsWith("ca")) return Division.carryOptics;
-  else if(query.startsWith("co")) return Division.carryOptics;
-  else if(query.startsWith("si")) return Division.singleStack;
-  else if(query.startsWith("ss")) return Division.singleStack;
-  else if(query.startsWith("pr")) return Division.production;
-  else if(query.startsWith("re")) return Division.revolver;
+  if(query.startsWith("pc")) return USPSADivision.pcc;
+  else if(query.startsWith("pi")) return USPSADivision.pcc;
+  else if(query.startsWith("op")) return USPSADivision.open;
+  else if(query.startsWith(RegExp("l.*1"))) return USPSADivision.limited10;
+  else if(query.startsWith("li")) return USPSADivision.limited;
+  else if(query.startsWith("ca")) return USPSADivision.carryOptics;
+  else if(query.startsWith("co")) return USPSADivision.carryOptics;
+  else if(query.startsWith("si")) return USPSADivision.singleStack;
+  else if(query.startsWith("ss")) return USPSADivision.singleStack;
+  else if(query.startsWith("pr")) return USPSADivision.production;
+  else if(query.startsWith("re")) return USPSADivision.revolver;
   else return null;
 }

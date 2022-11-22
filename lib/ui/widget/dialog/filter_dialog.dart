@@ -6,7 +6,7 @@ class FilterSet {
   bool reentries = true;
   bool scoreDQs = true;
 
-  late Map<Division, bool> divisions;
+  late Map<USPSADivision, bool> divisions;
   late Map<USPSAClassification, bool> classifications;
   late Map<PowerFactor, bool> powerFactors;
 
@@ -15,7 +15,7 @@ class FilterSet {
     classifications = {};
     powerFactors = {};
 
-    for (Division d in Division.values) {
+    for (USPSADivision d in USPSADivision.values) {
       divisions[d] = !empty;
     }
 
@@ -28,11 +28,11 @@ class FilterSet {
     }
   }
 
-  Iterable<Division> get activeDivisions => divisions.keys.where((div) => divisions[div] ?? false);
+  Iterable<USPSADivision> get activeDivisions => divisions.keys.where((div) => divisions[div] ?? false);
 
-  static Map<Division, bool> divisionListToMap(List<Division> divisions) {
-    Map<Division, bool> map = {};
-    for(var d in Division.values) {
+  static Map<USPSADivision, bool> divisionListToMap(List<USPSADivision> divisions) {
+    Map<USPSADivision, bool> map = {};
+    for(var d in USPSADivision.values) {
       map[d] = divisions.contains(d);
     }
 
@@ -174,65 +174,65 @@ class _FilterDialogState extends State<FilterDialog> {
       CheckboxListTile(
         title: Text("PCC"),
         controlAffinity: ListTileControlAffinity.leading,
-        value: _filters!.divisions[Division.pcc],
+        value: _filters!.divisions[USPSADivision.pcc],
         onChanged: (bool? value) {
-          _updateFilter(_filters!.divisions, Division.pcc, value);
+          _updateFilter(_filters!.divisions, USPSADivision.pcc, value);
         },
       ),
       CheckboxListTile(
         title: Text("Open"),
         controlAffinity: ListTileControlAffinity.leading,
-        value: _filters!.divisions[Division.open],
+        value: _filters!.divisions[USPSADivision.open],
         onChanged: (bool? value) {
-          _updateFilter(_filters!.divisions, Division.open, value);
+          _updateFilter(_filters!.divisions, USPSADivision.open, value);
         },
       ),
       CheckboxListTile(
         title: Text("Limited"),
         controlAffinity: ListTileControlAffinity.leading,
-        value: _filters!.divisions[Division.limited],
+        value: _filters!.divisions[USPSADivision.limited],
         onChanged: (bool? value) {
-          _updateFilter(_filters!.divisions, Division.limited, value);
+          _updateFilter(_filters!.divisions, USPSADivision.limited, value);
         },
       ),
       CheckboxListTile(
         title: Text("Limited 10"),
         controlAffinity: ListTileControlAffinity.leading,
-        value: _filters!.divisions[Division.limited10],
+        value: _filters!.divisions[USPSADivision.limited10],
         onChanged: (bool? value) {
-          _updateFilter(_filters!.divisions, Division.limited10, value);
+          _updateFilter(_filters!.divisions, USPSADivision.limited10, value);
         },
       ),
       CheckboxListTile(
         title: Text("Carry Optics"),
         controlAffinity: ListTileControlAffinity.leading,
-        value: _filters!.divisions[Division.carryOptics],
+        value: _filters!.divisions[USPSADivision.carryOptics],
         onChanged: (bool? value) {
-          _updateFilter(_filters!.divisions, Division.carryOptics, value);
+          _updateFilter(_filters!.divisions, USPSADivision.carryOptics, value);
         },
       ),
       CheckboxListTile(
         title: Text("Production"),
         controlAffinity: ListTileControlAffinity.leading,
-        value: _filters!.divisions[Division.production],
+        value: _filters!.divisions[USPSADivision.production],
         onChanged: (bool? value) {
-          _updateFilter(_filters!.divisions, Division.production, value);
+          _updateFilter(_filters!.divisions, USPSADivision.production, value);
         },
       ),
       CheckboxListTile(
         title: Text("Single Stack"),
         controlAffinity: ListTileControlAffinity.leading,
-        value: _filters!.divisions[Division.singleStack],
+        value: _filters!.divisions[USPSADivision.singleStack],
         onChanged: (bool? value) {
-          _updateFilter(_filters!.divisions, Division.singleStack, value);
+          _updateFilter(_filters!.divisions, USPSADivision.singleStack, value);
         },
       ),
       CheckboxListTile(
         title: Text("Revolver"),
         controlAffinity: ListTileControlAffinity.leading,
-        value: _filters!.divisions[Division.revolver],
+        value: _filters!.divisions[USPSADivision.revolver],
         onChanged: (bool? value) {
-          _updateFilter(_filters!.divisions, Division.revolver, value);
+          _updateFilter(_filters!.divisions, USPSADivision.revolver, value);
         },
       ),
     ];
@@ -355,7 +355,7 @@ class _FilterDialogState extends State<FilterDialog> {
           var filters = FilterSet();
           filters.reentries =_filters!.reentries;
           filters.scoreDQs = _filters!.scoreDQs;
-          filters.divisions[Division.pcc] = false;
+          filters.divisions[USPSADivision.pcc] = false;
 
           setState(() {
             _filters = filters;
@@ -368,11 +368,11 @@ class _FilterDialogState extends State<FilterDialog> {
           var filters = FilterSet();
           filters.reentries =_filters!.reentries;
           filters.scoreDQs = _filters!.scoreDQs;
-          filters.divisions[Division.pcc] = false;
-          filters.divisions[Division.limited10] = false;
-          filters.divisions[Division.production] = false;
-          filters.divisions[Division.singleStack] = false;
-          filters.divisions[Division.revolver] = false;
+          filters.divisions[USPSADivision.pcc] = false;
+          filters.divisions[USPSADivision.limited10] = false;
+          filters.divisions[USPSADivision.production] = false;
+          filters.divisions[USPSADivision.singleStack] = false;
+          filters.divisions[USPSADivision.revolver] = false;
 
           setState(() {
             _filters = filters;
@@ -385,10 +385,10 @@ class _FilterDialogState extends State<FilterDialog> {
             var filters = FilterSet();
             filters.reentries =_filters!.reentries;
             filters.scoreDQs = _filters!.scoreDQs;
-            filters.divisions[Division.pcc] = false;
-            filters.divisions[Division.open] = false;
-            filters.divisions[Division.limited] = false;
-            filters.divisions[Division.carryOptics] = false;
+            filters.divisions[USPSADivision.pcc] = false;
+            filters.divisions[USPSADivision.open] = false;
+            filters.divisions[USPSADivision.limited] = false;
+            filters.divisions[USPSADivision.carryOptics] = false;
 
             setState(() {
               _filters = filters;

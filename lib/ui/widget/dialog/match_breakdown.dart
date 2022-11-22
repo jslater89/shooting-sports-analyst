@@ -12,7 +12,7 @@ class MatchBreakdown extends StatelessWidget {
     // totals go in null, null
     Map<_DivisionClass, int> shooterCounts = {};
 
-    for(Division d in Division.values) {
+    for(USPSADivision d in USPSADivision.values) {
       for(USPSAClassification c in USPSAClassification.values) {
         shooterCounts[_DivisionClass(d, c)] = 0;
 
@@ -51,7 +51,7 @@ class MatchBreakdown extends StatelessWidget {
   Widget _buildTable(Map<_DivisionClass, int> shooterCounts) {
     var rows = <TableRow>[];
 
-    var divisions = <Division>[]..addAll(Division.values)..remove(Division.unknown);
+    var divisions = <USPSADivision>[]..addAll(USPSADivision.values)..remove(USPSADivision.unknown);
 
     var columns = <Widget>[
       Align(alignment: Alignment.centerRight, child: Text("")),
@@ -73,7 +73,7 @@ class MatchBreakdown extends StatelessWidget {
     );
 
     int i = 0;
-    for(Division d in divisions) {
+    for(USPSADivision d in divisions) {
       var columns = <Widget>[];
 
       columns.add(Text(d.displayString()));
@@ -154,7 +154,7 @@ class MatchBreakdown extends StatelessWidget {
 }
 
 class _DivisionClass {
-  final Division? division;
+  final USPSADivision? division;
   final USPSAClassification? classification;
 
   _DivisionClass(this.division, this.classification);
