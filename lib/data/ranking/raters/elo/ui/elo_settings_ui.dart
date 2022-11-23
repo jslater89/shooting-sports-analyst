@@ -81,8 +81,8 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
     _errorAwareZeroController.text = "${settings.errorAwareZeroValue.toStringAsFixed(0)}";
     _errorAwareMinThresholdController.text = "${settings.errorAwareMinThreshold.toStringAsFixed(0)}";
     _errorAwareMaxThresholdController.text = "${settings.errorAwareMaxThreshold.toStringAsFixed(0)}";
-    _errorAwareLowerMultController.text = "${settings.errorAwareLowerMultiplier.toStringAsFixed(2)}";
-    _errorAwareUpperMultController.text = "${settings.errorAwareUpperMultiplier.toStringAsFixed(2)}";
+    _errorAwareLowerMultController.text = "${(1 - settings.errorAwareLowerMultiplier).toStringAsFixed(2)}";
+    _errorAwareUpperMultController.text = "${(settings.errorAwareUpperMultiplier + 1).toStringAsFixed(2)}";
 
     widget.controller.addListener(() {
       setState(() {
@@ -270,8 +270,8 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
       return;
     }
 
-    if(errorAwareUpper == null || errorAwareLower < 0) {
-      widget.controller.lastError = "Error aware upper multiplier incorrectly formatted or out of range (> 0)";
+    if(errorAwareUpper == null || errorAwareUpper < 1) {
+      widget.controller.lastError = "Error aware upper multiplier incorrectly formatted or out of range (> 1)";
       return;
     }
 
@@ -283,8 +283,14 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
     settings.errorAwareZeroValue = errorAwareZero;
     settings.errorAwareMinThreshold = errorAwareMin;
     settings.errorAwareMaxThreshold = errorAwareMax;
-    settings.errorAwareLowerMultiplier = errorAwareLower;
-    settings.errorAwareUpperMultiplier = errorAwareUpper;
+
+    // Convert from raw multipliers to the forms we expect in the
+    // algorithm:
+    // lower mult is 1 - (errorAwareLower)
+    // upper mult is 1 + (errorAwareUpper)
+    settings.errorAwareLowerMultiplier = 1 - errorAwareLower;
+    settings.errorAwareUpperMultiplier = errorAwareUpper - 1;
+
     widget.controller.lastError = null;
   }
 
@@ -487,16 +493,16 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
             ),
           ]
         ),
-        Divider(),
+        Divider(endIndent: 20),
         CheckboxListTile(
           title: Tooltip(
             child: Text("Error-aware K?"),
             message: "Modify K based on error in shooter rating.\n\n"
-                "K will be multiplied by (1 - lower multiplier) when rating error is at the\n"
+                "K will be multiplied by (lower multiplier) when rating error is at the\n"
                 "zero value, starting at the minimum threshold. It will remain unchanged when\n"
                 "error is between the minimum and maximum thresholds. It will be increased when\n"
-                "error is above the maximum threshold, by (1 + upper multiplier) when error is\n"
-                "equal to scale."
+                "error is above the maximum threshold, multiplied by (upper multiplier) when\n"
+                "error is equal to scale."
           ),
           value: settings.errorAwareK,
           onChanged: (value) {

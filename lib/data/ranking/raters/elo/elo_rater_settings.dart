@@ -14,17 +14,17 @@ const _errorAwareLowerMultiplierKey = "errLow";
 const _errorAwareUpperMultiplierKey = "errUp";
 
 class EloSettings extends RaterSettings<EloSettings> {
-  static const defaultK = 60.0;
-  static const defaultProbabilityBase = 10.0;
+  static const defaultK = 40.0;
+  static const defaultProbabilityBase = 4.0;
   static const defaultPercentWeight = 0.4;
   static const defaultPlaceWeight = 0.6;
-  static const defaultScale = 800.0;
+  static const defaultScale = 400.0;
   static const defaultMatchBlend = 0.3;
-  static const defaultErrorAwareMaxThreshold = 75.0;
-  static const defaultErrorAwareMinThreshold = 75.0;
+  static const defaultErrorAwareMaxThreshold = 40.0;
+  static const defaultErrorAwareMinThreshold = 10.0;
   static const defaultErrorAwareZeroValue = 0.0;
-  static const defaultErrorAwareUpperMultiplier = 2.0;
-  static const defaultErrorAwareLowerMultiplier = 0.45;
+  static const defaultErrorAwareUpperMultiplier = 3.0;
+  static const defaultErrorAwareLowerMultiplier = 0.2;
 
   double K;
   /// The base of the exponent in the Elo win probability format.
