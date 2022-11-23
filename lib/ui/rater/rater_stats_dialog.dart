@@ -68,19 +68,19 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
       ),
       classKeyRow(context),
       Divider(height: 2, thickness: 1.5),
-      rowForClass(context, Classification.GM),
+      rowForClass(context, USPSAClassification.GM),
       Divider(height: 2, thickness: 1),
-      rowForClass(context, Classification.M),
+      rowForClass(context, USPSAClassification.M),
       Divider(height: 2, thickness: 1),
-      rowForClass(context, Classification.A),
+      rowForClass(context, USPSAClassification.A),
       Divider(height: 2, thickness: 1),
-      rowForClass(context, Classification.B),
+      rowForClass(context, USPSAClassification.B),
       Divider(height: 2, thickness: 1),
-      rowForClass(context, Classification.C),
+      rowForClass(context, USPSAClassification.C),
       Divider(height: 2, thickness: 1),
-      rowForClass(context, Classification.D),
+      rowForClass(context, USPSAClassification.D),
       Divider(height: 2, thickness: 1),
-      rowForClass(context, Classification.U),
+      rowForClass(context, USPSAClassification.U),
       Divider(height: 2, thickness: 1),
       Padding(
         padding: const EdgeInsets.only(top: 16.0, bottom: 8),
@@ -112,7 +112,7 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
     );
   }
 
-  Widget rowForClass(BuildContext context, Classification clas) {
+  Widget rowForClass(BuildContext context, USPSAClassification clas) {
     return Row(
       children: [
         Expanded(flex: 2, child: Text(clas.name, style: Theme.of(context).textTheme.bodyText2)),
@@ -136,13 +136,13 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
   }
 
   Widget _boxPlot(BuildContext context) {
-    Map<Classification, Widget> plots = {};
+    Map<USPSAClassification, Widget> plots = {};
 
     double maxOverall = double.negativeInfinity;
     double minOverall = double.infinity;
 
-    for(var cls in Classification.values.reversed) {
-      if(cls == Classification.unknown) continue;
+    for(var cls in USPSAClassification.values.reversed) {
+      if(cls == USPSAClassification.unknown) continue;
 
       var ratings = widget.statistics.ratingsByClass[cls]!;
       var len = ratings.length;
@@ -243,8 +243,8 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
     var keys = widget.statistics.histogram.keys.toList();
     keys.sort();
 
-    for(var classification in Classification.values /*.reversed */) {
-      if(classification == Classification.unknown) continue;
+    for(var classification in USPSAClassification.values /*.reversed */) {
+      if(classification == USPSAClassification.unknown) continue;
 
       var classHist = widget.statistics.histogramsByClass[classification]!;
 
@@ -267,9 +267,9 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
       xUserLabels: labels,
       dataRowsLegends: legends,
       chartOptions: chartOptions,
-      dataRowsColors: Classification.values
+      dataRowsColors: USPSAClassification.values
           //.reversed
-          .where((c) => c != Classification.unknown)
+          .where((c) => c != USPSAClassification.unknown)
           .map((c) => c.color
       ).toList(),
     );
@@ -287,25 +287,25 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
   }
 }
 
-extension _ChartColor on Classification {
+extension _ChartColor on USPSAClassification {
   Color get color {
     switch(this) {
 
-      case Classification.GM:
+      case USPSAClassification.GM:
         return Colors.red;
-      case Classification.M:
+      case USPSAClassification.M:
         return Colors.orange;
-      case Classification.A:
+      case USPSAClassification.A:
         return Colors.yellow;
-      case Classification.B:
+      case USPSAClassification.B:
         return Colors.green;
-      case Classification.C:
+      case USPSAClassification.C:
         return Colors.blue;
-      case Classification.D:
+      case USPSAClassification.D:
         return Color.fromARGB(0xff, 0x09, 0x1f, 0x92);
-      case Classification.U:
+      case USPSAClassification.U:
         return Colors.deepPurple;
-      case Classification.unknown:
+      case USPSAClassification.unknown:
         return Colors.deepPurple;
     }
   }

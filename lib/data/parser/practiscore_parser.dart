@@ -2,7 +2,7 @@ import 'package:collection/collection.dart' show IterableExtension;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/results_file_parser.dart';
+import 'package:uspsa_result_viewer/data/parser/hitfactor/results_file_parser.dart';
 import 'package:uspsa_result_viewer/route/practiscore_url.dart';
 
 
@@ -12,9 +12,10 @@ String getClubNameToken(String source) {
   return token;
 }
 
-String? getPractiscoreWebReportUrl(String source) {
-  var webReportLine = source.split("\n").firstWhere((element) => element.contains("/reports/web"));
-  return webReportLine.split('"').firstWhereOrNull((element) => element.contains("reports/web"));
+String? getPractiscoreMatchId(String source) {
+  var htmlResultLine = source.split("\n").firstWhere((element) => element.contains("/results/html"));
+  var htmlResultUrl = htmlResultLine.split('"').firstWhereOrNull((element) => element.contains("results/html"));
+  return htmlResultUrl?.split("/").last;
 }
 
 Future<String?> processMatchUrl(String matchUrl, {BuildContext? context}) async {
@@ -33,15 +34,8 @@ Future<String?> processMatchUrl(String matchUrl, {BuildContext? context}) async 
         return null;
       }
       else if(response.statusCode == 200) {
-        var foundUrl = getPractiscoreWebReportUrl(response.body);
-        if(foundUrl != null) {
-          matchId = foundUrl.split("/").last;
-        }
-        else {
-          if(context != null) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unable to determine web report URL.")));
-          debugPrint("Unable to determine web report URL");
-          return null;
-        }
+        var matchId = getPractiscoreMatchId(response.body);
+        return matchId;
       }
       else {
         debugPrint("${response.statusCode} ${response.body}");
@@ -59,7 +53,7 @@ Future<String?> processMatchUrl(String matchUrl, {BuildContext? context}) async 
   return matchId;
 }
 
-Future<PracticalMatch?> getPractiscoreMatchHeadless(String matchId) async {
+Future<HitFactorMatch?> getHitFactorMatchHeadless(String matchId) async {
   var proxyUrl = getProxyUrl();
   var reportUrl = "${proxyUrl}https://practiscore.com/reports/web/$matchId";
   if(verboseParse) debugPrint("Report download URL: $reportUrl");
@@ -70,7 +64,7 @@ Future<PracticalMatch?> getPractiscoreMatchHeadless(String matchId) async {
     if(response.statusCode < 400) {
       responseString = response.body;
       if (responseString.startsWith(r"$")) {
-        var match = await processScoreFile(responseString);
+        var match = await processHitFactorScoreFile(responseString);
         return match;
       }
     }
@@ -105,7 +99,7 @@ Future<PracticalMatch?> getPractiscoreMatchHeadless(String matchId) async {
     if(response.statusCode < 400) {
       var responseString = response.body;
       if (responseString.startsWith(r"$")) {
-        var match = await processScoreFile(responseString);
+        var match = await processHitFactorScoreFile(responseString);
         return match;
       }
     }

@@ -35,8 +35,19 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
   /// K is the K parameter to the rating Elo algorithm
   double get K => settings.K;
+
+  /// Probability base is the base used for the exponentiation in
+  /// the Elo probability function, and says that someone with a
+  /// rating margin of [scale] over another player is [probabilityBase]
+  /// times more likely to win.
+  double get probabilityBase => settings.probabilityBase;
+
   double get percentWeight => settings.percentWeight;
   double get placeWeight => settings.placeWeight;
+
+  /// Scale is the scale parameter to the Elo probability function, and
+  /// says that a rating difference of [scale] means the higher-rated
+  /// player is [probabilityBase] times more likely to win.
   double get scale => settings.scale;
 
   get matchBlend => settings.matchBlend;
@@ -45,8 +56,6 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   @override
   bool get byStage => settings.byStage;
   bool get errorAwareK => settings.errorAwareK;
-
-  late double errThreshold = EloShooterRating.errorScale / (K / 7.5);
 
   MultiplayerPercentEloRater({
     EloSettings? settings,
@@ -127,15 +136,20 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     var error = aRating.standardError;
 
     var errMultiplier = 1.0;
-    final maxMultiplier = 1.0;
-    final minMultiplier = 0.5;
     if(errorAwareK) {
-      var minThreshold = errThreshold;
+      var errThreshold = settings.errorAwareMaxThreshold;
+      final maxMultiplier = settings.errorAwareUpperMultiplier;
+      final minMultiplier = settings.errorAwareLowerMultiplier;
+      var minThreshold = settings.errorAwareMinThreshold;
+      var zeroValue = settings.errorAwareZeroValue;
       if (error >= errThreshold) {
-        errMultiplier = 1 + min(1.0, ((error - errThreshold) / (EloShooterRating.errorScale - errThreshold))) * maxMultiplier;
+        errMultiplier = 1 + min(1.0, ((error - errThreshold) / (settings.scale - errThreshold))) * maxMultiplier;
       }
-      else if (error < minThreshold) {
-        errMultiplier = 1 - ((minThreshold - error) / minThreshold) * minMultiplier;
+      else if (error < minThreshold && error >= zeroValue) {
+        errMultiplier = 1 - ((minThreshold - error - zeroValue) / (minThreshold - zeroValue)) * minMultiplier;
+      }
+      else if (error < zeroValue) {
+        errMultiplier = 1 - minMultiplier;
       }
     }
 
@@ -147,14 +161,14 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     var change = changeFromPlace + changeFromPercent;
     if(Timings.enabled) timings.updateRatings += (DateTime.now().difference(start).inMicroseconds).toDouble();
 
-    if(change.isNaN || change.isInfinite) {
+    if(change.isNaN || change.isInfinite || change.abs() > 1000) {
       debugPrint("### ${aRating.shooter.lastName} stats: ${actualScore.actualPercent} of ${params.usedScores} shooters for ${aScore.stage?.name}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}, placement $placementMultiplier, zero $zeroMultiplier (${params.zeroes})");
       debugPrint("AS/ES: ${actualScore.score.toStringAsFixed(6)}/${params.expectedScore.toStringAsFixed(6)}");
       debugPrint("Actual/expected percent: ${(actualScore.percentComponent * params.totalPercent * 100).toStringAsFixed(2)}/${(params.expectedScore * params.totalPercent * 100).toStringAsFixed(2)}");
       debugPrint("Actual/expected place: ${actualScore.placeBlend}/${(params.usedScores - (params.expectedScore * params.divisor)).toStringAsFixed(4)}");
       debugPrint("Rating±Change: ${aRating.rating.round()} + ${change.toStringAsFixed(2)} (${changeFromPercent.toStringAsFixed(2)} from pct, ${changeFromPlace.toStringAsFixed(2)} from place)");
       debugPrint("###");
-      throw StateError("NaN/Infinite");
+      throw StateError("NaN/Infinite/really big");
     }
 
     if(Timings.enabled) start = DateTime.now();
@@ -255,7 +269,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
   /// Return the probability that win beats lose.
   double _probability(double lose, double win) {
-    return 1.0 / (1.0 + (pow(10, (lose - win) / scale)));
+    return 1.0 / (1.0 + (pow(probabilityBase, (lose - win) / scale)));
   }
 
   static const _leadPaddingFlex = 2;
@@ -370,7 +384,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
       var error = s.standardError;
 
-      PracticalMatch? match;
+      HitFactorMatch? match;
       double lastMatchChange = 0;
       for(var event in s.ratingEvents.reversed) {
         if(match == null) {
@@ -390,14 +404,14 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   }
 
   static const initialClassRatings = {
-    Classification.GM: 1300.0,
-    Classification.M: 1200.0,
-    Classification.A: 1100.0,
-    Classification.B: 1000.0,
-    Classification.C: 900.0,
-    Classification.D: 800.0,
-    Classification.U: 900.0,
-    Classification.unknown: 800.0,
+    USPSAClassification.GM: 1300.0,
+    USPSAClassification.M: 1200.0,
+    USPSAClassification.A: 1100.0,
+    USPSAClassification.B: 1000.0,
+    USPSAClassification.C: 900.0,
+    USPSAClassification.D: 800.0,
+    USPSAClassification.U: 900.0,
+    USPSAClassification.unknown: 800.0,
   };
 
   @override
@@ -408,7 +422,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
   @override
   RatingEvent newEvent({
-    required PracticalMatch match,
+    required HitFactorMatch match,
     Stage? stage,
     required ShooterRating rating, required RelativeScore score, Map<String, List<dynamic>> info = const {}
   }) {
@@ -450,12 +464,14 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       if(error > compressionCenter) stdDev = compressionCenter + pow(stdDev - compressionCenter, upperCompressionFactor);
       else stdDev = compressionCenter - pow(compressionCenter - stdDev, lowerCompressionFactor);
 
+      var errThreshold = settings.errorAwareMaxThreshold;
+      var minThreshold = settings.errorAwareMinThreshold;
       var errMultiplier = 1.0;
       if (error >= errThreshold) {
-        errMultiplier = 1 + min(1.0, ((error - errThreshold) / (EloShooterRating.errorScale - errThreshold))) * 1;
+        errMultiplier = 1 + min(1.0, ((error - errThreshold) / (settings.scale - errThreshold))) * 1;
       }
-      else if (error < errThreshold) {
-        errMultiplier = 1 - ((errThreshold - error) / errThreshold) * 0.5;
+      else if (error < minThreshold) {
+        errMultiplier = 1 - ((minThreshold - error) / minThreshold) * 0.5;
       }
       stdDev = stdDev * errMultiplier;
 

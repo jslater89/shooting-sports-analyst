@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/ui/rater/enter_urls_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/loading_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/url_entry_dialog.dart';
 
@@ -10,7 +11,7 @@ import 'package:uspsa_result_viewer/ui/widget/dialog/url_entry_dialog.dart';
 class MatchCacheChooserDialog extends StatefulWidget {
   const MatchCacheChooserDialog({Key? key, this.matches}) : super(key: key);
 
-  final List<PracticalMatch>? matches;
+  final List<HitFactorMatch>? matches;
 
   @override
   State<MatchCacheChooserDialog> createState() => _MatchCacheChooserDialogState();
@@ -24,8 +25,8 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
 
   bool addedMatch = false;
 
-  List<PracticalMatch> matches = [];
-  List<PracticalMatch> searchedMatches = [];
+  List<HitFactorMatch> matches = [];
+  List<HitFactorMatch> searchedMatches = [];
 
   TextEditingController searchController = TextEditingController();
 
@@ -154,24 +155,9 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
             if(widget.matches == null) IconButton(
               icon: Icon(Icons.add),
               onPressed: () async {
-                var url = await showDialog<String>(context: context, builder: (context) => UrlEntryDialog(
-                  descriptionText: "Enter a link to a Practiscore results page.",
-                  hintText: "https://practiscore.com/results/new/..."
-                ));
+                var urls = await showDialog<List<String>>(context: context, builder: (context) => EnterUrlsDialog());
 
-                if(url != null) {
-                  var hasMatch = await cache!.getMatch(url, localOnly: true);
-                  if(hasMatch != null) return;
-
-                  var matchFuture = cache!.getMatch(url);
-                  var match = await showDialog<PracticalMatch>(context: context, builder: (c) => LoadingDialog(waitOn: matchFuture));
-                  if(match != null) {
-                    setState(() {
-                      _updateMatches();
-                      addedMatch = true;
-                    });
-                  }
-                }
+                _addMatches(urls);
               },
             )
           ],
@@ -215,5 +201,32 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
         ))
       ],
     );
+  }
+
+  Future<void> _addMatches(List<String>? urls) async {
+    if(urls != null) {
+      var futures = <Future<HitFactorMatch?>>[];
+      for (var url in urls) {
+        var hasMatch = await cache!.getMatch(url, localOnly: true);
+        if(hasMatch != null) continue;
+
+        futures.add(cache!.getMatch(url));
+      }
+
+      var matches = await showDialog<List<HitFactorMatch?>>(
+        context: context,
+        builder: (context) => LoadingDialog<List<HitFactorMatch?>>(waitOn: Future.wait(futures)),
+        barrierDismissible: false,
+      );
+
+      if(matches == null) return;
+      for(var m in matches) {
+        if(m != null) {
+          _updateMatches();
+          addedMatch = true;
+          break;
+        }
+      }
+    }
   }
 }

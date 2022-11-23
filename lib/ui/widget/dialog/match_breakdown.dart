@@ -13,7 +13,7 @@ class MatchBreakdown extends StatelessWidget {
     Map<_DivisionClass, int> shooterCounts = {};
 
     for(Division d in Division.values) {
-      for(Classification c in Classification.values) {
+      for(USPSAClassification c in USPSAClassification.values) {
         shooterCounts[_DivisionClass(d, c)] = 0;
 
         // Yes, I know it repeats a bunch of times
@@ -77,7 +77,7 @@ class MatchBreakdown extends StatelessWidget {
       var columns = <Widget>[];
 
       columns.add(Text(d.displayString()));
-      for(Classification c in Classification.values) {
+      for(USPSAClassification c in USPSAClassification.values) {
         columns.add(
           Align(
             child: Text("${shooterCounts[_DivisionClass(d, c)]}"),
@@ -107,7 +107,7 @@ class MatchBreakdown extends StatelessWidget {
 
     columns = <Widget>[];
     columns.add(Text("Total"));
-    for(Classification c in Classification.values) {
+    for(USPSAClassification c in USPSAClassification.values) {
       columns.add(
         Align(
           child: Text("${shooterCounts[_DivisionClass(null, c)]}"),
@@ -155,7 +155,7 @@ class MatchBreakdown extends StatelessWidget {
 
 class _DivisionClass {
   final Division? division;
-  final Classification? classification;
+  final USPSAClassification? classification;
 
   _DivisionClass(this.division, this.classification);
   

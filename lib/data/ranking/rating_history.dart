@@ -8,12 +8,12 @@ import 'package:uspsa_result_viewer/data/ranking/timings.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart' as defaultAliases;
 
-/// RatingHistory turns a sequence of [PracticalMatch]es into a series of
+/// RatingHistory turns a sequence of [HitFactorMatch]es into a series of
 /// [Rater]s.
 class RatingHistory {
-  /// The [PracticalMatch]es this rating history contains
-  List<PracticalMatch> _matches;
-  List<PracticalMatch> get matches {
+  /// The [HitFactorMatch]es this rating history contains
+  List<HitFactorMatch> _matches;
+  List<HitFactorMatch> get matches {
     if(_settings.preserveHistory) {
       return []..addAll(_matches);
     }
@@ -22,7 +22,7 @@ class RatingHistory {
     }
   }
 
-  List<PracticalMatch> get allMatches {
+  List<HitFactorMatch> get allMatches {
       return []..addAll(_matches);
   }
 
@@ -30,11 +30,11 @@ class RatingHistory {
 
   /// Maps matches to a map of [Rater]s, which hold the incremental ratings
   /// after that match has been processed.
-  Map<PracticalMatch, Map<RaterGroup, Rater>> _ratersByDivision = {};
+  Map<HitFactorMatch, Map<RaterGroup, Rater>> _ratersByDivision = {};
 
   Future<void> Function(int currentSteps, int totalSteps, String? eventName)? progressCallback;
 
-  RatingHistory({required List<PracticalMatch> matches, RatingHistorySettings? settings, this.progressCallback}) : this._matches = matches {
+  RatingHistory({required List<HitFactorMatch> matches, RatingHistorySettings? settings, this.progressCallback}) : this._matches = matches {
     if(settings != null) _settings = settings;
     else _settings = RatingHistorySettings(
       algorithm: MultiplayerPercentEloRater(settings: EloSettings(
@@ -48,7 +48,7 @@ class RatingHistory {
     return _processInitialMatches();
   }
 
-  Rater raterFor(PracticalMatch match, RaterGroup group) {
+  Rater raterFor(HitFactorMatch match, RaterGroup group) {
     if(!_settings.groups.contains(group)) throw ArgumentError("Invalid group");
     if(!_matches.contains(match)) throw ArgumentError("Invalid match");
 
@@ -82,8 +82,8 @@ class RatingHistory {
       return a.date!.compareTo(b.date!);
     });
 
-    var currentMatches = <PracticalMatch>[];
-    PracticalMatch? lastMatch;
+    var currentMatches = <HitFactorMatch>[];
+    HitFactorMatch? lastMatch;
 
     await progressCallback?.call(0, 1, null);
 
@@ -92,11 +92,11 @@ class RatingHistory {
 
       // debugPrint("Total steps, history preserved: $totalSteps");
 
-      for (PracticalMatch match in _matches) {
+      for (HitFactorMatch match in _matches) {
         var m = match;
         currentMatches.add(m);
         debugPrint("Considering match ${m.name}");
-        var innerMatches = <PracticalMatch>[]..addAll(currentMatches);
+        var innerMatches = <HitFactorMatch>[]..addAll(currentMatches);
         _ratersByDivision[m] ??= {};
         for (var group in _settings.groups) {
           var divisionMap = <Division, bool>{};
@@ -146,7 +146,7 @@ class RatingHistory {
     print("Total of ${countUniqueShooters()} shooters, ${_matches.length} matches, and $stageCount stages");
   }
   
-  Future<Rater> _raterForGroup(List<PracticalMatch> matches, RaterGroup group, [Future<void> Function(int, int, String?)? progressCallback]) async {
+  Future<Rater> _raterForGroup(List<HitFactorMatch> matches, RaterGroup group, [Future<void> Function(int, int, String?)? progressCallback]) async {
     var divisionMap = <Division, bool>{};
     group.divisions.forEach((element) => divisionMap[element] = true);
     Timings().reset();

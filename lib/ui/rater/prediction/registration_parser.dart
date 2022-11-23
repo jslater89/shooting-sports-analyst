@@ -16,7 +16,7 @@ class RegistrationResult {
 class Registration {
   final String name;
   final Division division;
-  final Classification classification;
+  final USPSAClassification classification;
 
   Registration({
     required this.name,
@@ -60,7 +60,7 @@ RegistrationResult _parseRegistrations(String registrationHtml, List<Division> d
 
       if(!divisions.contains(d)) continue;
 
-      var classification = ClassificationFrom.string(match.namedGroup("class")!);
+      var classification = USPSAClassificationFrom.string(match.namedGroup("class")!);
       var foundShooter = _findShooter(shooterName, classification, knownShooters);
 
       if(foundShooter != null) {
@@ -89,7 +89,7 @@ List<String> _processShooterName(Shooter shooter) {
   ];
 }
 
-ShooterRating? _findShooter(String shooterName, Classification classification, List<ShooterRating> knownShooters) {
+ShooterRating? _findShooter(String shooterName, USPSAClassification classification, List<ShooterRating> knownShooters) {
   var processedName = _processRegistrationName(shooterName);
   var firstGuess = knownShooters.firstWhereOrNull((rating) {
     return _processShooterName(rating.shooter).join() == processedName;

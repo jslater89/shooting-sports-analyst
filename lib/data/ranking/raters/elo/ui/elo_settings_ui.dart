@@ -57,9 +57,16 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
 
   TextEditingController _kController = TextEditingController(text: "${EloSettings.defaultK}");
   TextEditingController _scaleController = TextEditingController(text: "${EloSettings.defaultScale}");
+  TextEditingController _baseController = TextEditingController(text: "${EloSettings.defaultProbabilityBase}");
   TextEditingController _pctWeightController = TextEditingController(text: "${EloSettings.defaultPercentWeight}");
   TextEditingController _placeWeightController = TextEditingController(text: "${EloSettings.defaultPlaceWeight}");
   TextEditingController _matchBlendController = TextEditingController(text: "${EloSettings.defaultMatchBlend}");
+
+  TextEditingController _errorAwareZeroController = TextEditingController(text: "${EloSettings.defaultErrorAwareZeroValue}");
+  TextEditingController _errorAwareMinThresholdController = TextEditingController(text: "${EloSettings.defaultErrorAwareMinThreshold}");
+  TextEditingController _errorAwareMaxThresholdController = TextEditingController(text: "${EloSettings.defaultErrorAwareMaxThreshold}");
+  TextEditingController _errorAwareLowerMultController = TextEditingController(text: "${EloSettings.defaultErrorAwareLowerMultiplier}");
+  TextEditingController _errorAwareUpperMultController = TextEditingController(text: "${EloSettings.defaultErrorAwareUpperMultiplier}");
 
   @override
   void initState() {
@@ -67,9 +74,15 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
     settings = widget.controller._currentSettings;
     _kController.text = "${settings.K.toStringAsFixed(1)}";
     _scaleController.text = "${settings.scale.round()}";
+    _baseController.text = "${settings.probabilityBase.toStringAsFixed(1)}";
     _pctWeightController.text = "${settings.percentWeight}";
     _placeWeightController.text = "${settings.placeWeight}";
     _matchBlendController.text = "${settings.matchBlend}";
+    _errorAwareZeroController.text = "${settings.errorAwareZeroValue.toStringAsFixed(0)}";
+    _errorAwareMinThresholdController.text = "${settings.errorAwareMinThreshold.toStringAsFixed(0)}";
+    _errorAwareMaxThresholdController.text = "${settings.errorAwareMaxThreshold.toStringAsFixed(0)}";
+    _errorAwareLowerMultController.text = "${(1 - settings.errorAwareLowerMultiplier).toStringAsFixed(2)}";
+    _errorAwareUpperMultController.text = "${(settings.errorAwareUpperMultiplier + 1).toStringAsFixed(2)}";
 
     widget.controller.addListener(() {
       setState(() {
@@ -80,25 +93,42 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
         else if(widget.controller._restoreDefaults) {
           settings = widget.controller._currentSettings;
           _kController.text = "${settings.K.toStringAsFixed(1)}";
+          _baseController.text = "${settings.probabilityBase.toStringAsFixed(1)}";
           _scaleController.text = "${settings.scale.round()}";
           _pctWeightController.text = "${settings.percentWeight}";
           _placeWeightController.text = "${settings.placeWeight}";
           _matchBlendController.text = "${settings.matchBlend}";
+          _errorAwareZeroController.text = "${settings.errorAwareZeroValue.toStringAsFixed(0)}";
+          _errorAwareMinThresholdController.text = "${settings.errorAwareMinThreshold.toStringAsFixed(0)}";
+          _errorAwareMaxThresholdController.text = "${settings.errorAwareMaxThreshold.toStringAsFixed(0)}";
+          _errorAwareLowerMultController.text = "${settings.errorAwareLowerMultiplier.toStringAsFixed(2)}";
+          _errorAwareUpperMultController.text = "${settings.errorAwareUpperMultiplier.toStringAsFixed(2)}";
           widget.controller._restoreDefaults = false;
         }
         else {
           settings = widget.controller._currentSettings;
           _kController.text = "${settings.K.toStringAsFixed(1)}";
+          _baseController.text = "${settings.probabilityBase.toStringAsFixed(1)}";
           _scaleController.text = "${settings.scale.round()}";
           _pctWeightController.text = "${settings.percentWeight}";
           _placeWeightController.text = "${settings.placeWeight}";
           _matchBlendController.text = "${settings.matchBlend}";
+          _errorAwareZeroController.text = "${settings.errorAwareZeroValue.toStringAsFixed(0)}";
+          _errorAwareMinThresholdController.text = "${settings.errorAwareMinThreshold.toStringAsFixed(0)}";
+          _errorAwareMaxThresholdController.text = "${settings.errorAwareMaxThreshold.toStringAsFixed(0)}";
+          _errorAwareLowerMultController.text = "${settings.errorAwareLowerMultiplier.toStringAsFixed(2)}";
+          _errorAwareUpperMultController.text = "${settings.errorAwareUpperMultiplier.toStringAsFixed(2)}";
         }
       });
     });
 
     _kController.addListener(() {
       if(double.tryParse(_kController.text) != null) {
+        _validateText();
+      }
+    });
+    _baseController.addListener(() {
+      if(double.tryParse(_baseController.text) != null) {
         _validateText();
       }
     });
@@ -151,6 +181,36 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
         _validateText();
       }
     });
+
+    _errorAwareZeroController.addListener(() {
+      if(double.tryParse(_errorAwareZeroController.text) != null) {
+        _validateText();
+      }
+    });
+
+    _errorAwareMinThresholdController.addListener(() {
+      if(double.tryParse(_errorAwareMinThresholdController.text) != null) {
+        _validateText();
+      }
+    });
+
+    _errorAwareMaxThresholdController.addListener(() {
+      if(double.tryParse(_errorAwareMaxThresholdController.text) != null) {
+        _validateText();
+      }
+    });
+
+    _errorAwareLowerMultController.addListener(() {
+      if(double.tryParse(_errorAwareLowerMultController.text) != null) {
+        _validateText();
+      }
+    });
+
+    _errorAwareUpperMultController.addListener(() {
+      if(double.tryParse(_errorAwareLowerMultController.text) != null) {
+        _validateText();
+      }
+    });
   }
 
   void _validateText() {
@@ -158,6 +218,12 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
     double? scale = double.tryParse(_scaleController.text);
     double? pctWeight = double.tryParse(_pctWeightController.text);
     double? matchBlend = double.tryParse(_matchBlendController.text);
+    double? base = double.tryParse(_baseController.text);
+    double? errorAwareZero = double.tryParse(_errorAwareZeroController.text);
+    double? errorAwareMin = double.tryParse(_errorAwareMinThresholdController.text);
+    double? errorAwareMax = double.tryParse(_errorAwareMaxThresholdController.text);
+    double? errorAwareUpper = double.tryParse(_errorAwareUpperMultController.text);
+    double? errorAwareLower = double.tryParse(_errorAwareLowerMultController.text);
 
     if(K == null) {
       widget.controller.lastError = "K factor incorrectly formatted";
@@ -166,6 +232,11 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
 
     if(scale == null) {
       widget.controller.lastError = "Scale factor incorrectly formatted";
+      return;
+    }
+
+    if(base == null) {
+      widget.controller.lastError = "Probability base incorrectly formatted";
       return;
     }
 
@@ -179,10 +250,47 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
       return;
     }
 
+    if(errorAwareZero == null || errorAwareZero < 0) {
+      widget.controller.lastError = "Error aware zero incorrectly formatted or out of range (> 0)";
+      return;
+    }
+
+    if(errorAwareMin == null || errorAwareMin < errorAwareZero) {
+      widget.controller.lastError = "Error aware minimum threshold incorrectly formatted or out of range (> error aware zero)";
+      return;
+    }
+
+    if(errorAwareMax == null || errorAwareMax < errorAwareMin) {
+      widget.controller.lastError = "Error aware maximum threshold incorrectly formatted or out of range (> minimum threshold)";
+      return;
+    }
+
+    if(errorAwareLower == null || errorAwareLower > 1 || errorAwareLower < 0) {
+      widget.controller.lastError = "Error aware lower multiplier incorrectly formatted or out of range (0-1)";
+      return;
+    }
+
+    if(errorAwareUpper == null || errorAwareUpper < 1) {
+      widget.controller.lastError = "Error aware upper multiplier incorrectly formatted or out of range (> 1)";
+      return;
+    }
+
     settings.K = K;
     settings.scale = scale;
+    settings.probabilityBase = base;
     settings.percentWeight = pctWeight;
     settings.matchBlend = matchBlend;
+    settings.errorAwareZeroValue = errorAwareZero;
+    settings.errorAwareMinThreshold = errorAwareMin;
+    settings.errorAwareMaxThreshold = errorAwareMax;
+
+    // Convert from raw multipliers to the forms we expect in the
+    // algorithm:
+    // lower mult is 1 - (errorAwareLower)
+    // upper mult is 1 + (errorAwareUpper)
+    settings.errorAwareLowerMultiplier = 1 - errorAwareLower;
+    settings.errorAwareUpperMultiplier = errorAwareUpper - 1;
+
     widget.controller.lastError = null;
   }
 
@@ -202,20 +310,6 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
             if(value != null) {
               setState(() {
                 settings.byStage = value;
-              });
-            }
-          }
-        ),
-        CheckboxListTile(
-          title: Tooltip(
-            child: Text("Error-aware K?"),
-            message: "Modify K based on error in shooter rating.",
-          ),
-          value: settings.errorAwareK,
-          onChanged: (value) {
-            if(value != null) {
-              setState(() {
-                settings.errorAwareK = value;
               });
             }
           }
@@ -247,6 +341,36 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
               ),
             ),
           ]
+        ),
+        Row(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Tooltip(
+                message:
+                  "Probability base determines how much a rating difference of the scale factor means, in terms of\n"
+                  "win likelihood. A probability base of 10 (the default) means that a shooter whose rating is better\n"
+                  "than another shooter's by the scale factor is 10 times more likely to win than to lose.",
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: Text("Probability base", style: Theme.of(context).textTheme.subtitle1!),
+                ),
+              ),
+              SizedBox(
+                width: 100,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 20),
+                  child: TextFormField(
+                    controller: _baseController,
+                    textAlign: TextAlign.end,
+                    keyboardType: TextInputType.numberWithOptions(),
+                    inputFormatters: [
+                      FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
+                    ],
+                  ),
+                ),
+              ),
+            ]
         ),
         Row(
           mainAxisSize: MainAxisSize.max,
@@ -366,6 +490,166 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
                   ),
                 ),
               ],
+            ),
+          ]
+        ),
+        Divider(endIndent: 20),
+        CheckboxListTile(
+          title: Tooltip(
+            child: Text("Error-aware K?"),
+            message: "Modify K based on error in shooter rating.\n\n"
+                "K will be multiplied by (lower multiplier) when rating error is at the\n"
+                "zero value, starting at the minimum threshold. It will remain unchanged when\n"
+                "error is between the minimum and maximum thresholds. It will be increased when\n"
+                "error is above the maximum threshold, multiplied by (upper multiplier) when\n"
+                "error is equal to scale."
+          ),
+          value: settings.errorAwareK,
+          onChanged: (value) {
+            if(value != null) {
+              setState(() {
+                settings.errorAwareK = value;
+              });
+            }
+          }
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Tooltip(
+              message: "Controls the rating error where the lower multiplier will be fully applied.",
+              child: Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Text("Zero value", style: Theme.of(context).textTheme.subtitle1!),
+              ),
+            ),
+            SizedBox(
+              width: 100,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 20),
+                child: TextFormField(
+                  enabled: settings.errorAwareK,
+                  controller: _errorAwareZeroController,
+                  textAlign: TextAlign.end,
+                  keyboardType: TextInputType.numberWithOptions(),
+                  inputFormatters: [
+                    FilteringTextInputFormatter(RegExp(r"[0-9]*"), allow: true),
+                  ],
+                ),
+              ),
+            ),
+          ]
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Tooltip(
+              message: "Controls the rating error where the lower multiplier will begin to be applied.",
+              child: Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Text("Min threshold", style: Theme.of(context).textTheme.subtitle1!),
+              ),
+            ),
+            SizedBox(
+              width: 100,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 20),
+                child: TextFormField(
+                  enabled: settings.errorAwareK,
+                  controller: _errorAwareMinThresholdController,
+                  textAlign: TextAlign.end,
+                  keyboardType: TextInputType.numberWithOptions(),
+                  inputFormatters: [
+                    FilteringTextInputFormatter(RegExp(r"[0-9]*"), allow: true),
+                  ],
+                ),
+              ),
+            ),
+          ]
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Tooltip(
+              message: "Controls the rating error where the upper multiplier will begin to be applied.",
+              child: Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Text("Max threshold", style: Theme.of(context).textTheme.subtitle1!),
+              ),
+            ),
+            SizedBox(
+              width: 100,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 20),
+                child: TextFormField(
+                  enabled: settings.errorAwareK,
+                  controller: _errorAwareMaxThresholdController,
+                  textAlign: TextAlign.end,
+                  keyboardType: TextInputType.numberWithOptions(),
+                  inputFormatters: [
+                    FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
+                  ],
+                ),
+              ),
+            ),
+          ]
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Tooltip(
+              message: "Controls the amount of K reduction when rating error is below the minimum threshold.",
+              child: Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Text("Lower multiplier", style: Theme.of(context).textTheme.subtitle1!),
+              ),
+            ),
+            SizedBox(
+              width: 100,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 20),
+                child: TextFormField(
+                  enabled: settings.errorAwareK,
+                  controller: _errorAwareLowerMultController,
+                  textAlign: TextAlign.end,
+                  keyboardType: TextInputType.numberWithOptions(),
+                  inputFormatters: [
+                    FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
+                  ],
+                ),
+              ),
+            ),
+          ]
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Tooltip(
+              message: "Controls the amount of K increase when rating error is above the maximum threshold.",
+              child: Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Text("Upper multiplier", style: Theme.of(context).textTheme.subtitle1!),
+              ),
+            ),
+            SizedBox(
+              width: 100,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 20),
+                child: TextFormField(
+                  enabled: settings.errorAwareK,
+                  controller: _errorAwareUpperMultController,
+                  textAlign: TextAlign.end,
+                  keyboardType: TextInputType.numberWithOptions(),
+                  inputFormatters: [
+                    FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
+                  ],
+                ),
+              ),
             ),
           ]
         ),

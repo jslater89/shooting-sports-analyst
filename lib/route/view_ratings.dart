@@ -63,7 +63,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   bool _operationInProgress = false;
 
   /// Maps URLs to matches
-  Map<String, PracticalMatch?> _matchUrls = {};
+  Map<String, HitFactorMatch?> _matchUrls = {};
   late TextEditingController _searchController;
   late TextEditingController _minRatingsController;
   late TextEditingController _maxDaysController;
@@ -76,7 +76,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   late List<RaterGroup> activeTabs;
 
   RatingSortMode _sortMode = RatingSortMode.rating;
-  PracticalMatch? _selectedMatch;
+  HitFactorMatch? _selectedMatch;
   MatchCache _matchCache = MatchCache();
   late TabController _tabController;
 
@@ -311,13 +311,13 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                 spacing: 20.0,
                 runSpacing: 10.0,
                 children: [
-                  DropdownButton<PracticalMatch>(
+                  DropdownButton<HitFactorMatch>(
                     underline: Container(
                       height: 1,
                       color: Colors.black,
                     ),
                     items: _history.matches.reversed.map((m) {
-                      return DropdownMenuItem<PracticalMatch>(
+                      return DropdownMenuItem<HitFactorMatch>(
                         child: Text(m.name ?? "<unnamed match>"),
                         value: m,
                       );
@@ -458,7 +458,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         child: IconButton(
           icon: Icon(Icons.list),
           onPressed: () async {
-            var match = await showDialog<PracticalMatch>(
+            var match = await showDialog<HitFactorMatch>(
               context: context,
               builder: (context) => MatchCacheChooserDialog(matches: _history.allMatches)
             );
@@ -591,10 +591,10 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     var localUrls = []..addAll(urls);
     var failedMatches = <String>[];
 
-    var urlsByFuture = <Future<PracticalMatch?>, String>{};
+    var urlsByFuture = <Future<HitFactorMatch?>, String>{};
     while(localUrls.isNotEmpty) {
 
-      var futures = <Future<PracticalMatch?>>[];
+      var futures = <Future<HitFactorMatch?>>[];
       var urlsThisStep = [];
       if(localUrls.length < 10) {
         urlsThisStep = []..addAll(localUrls);
@@ -655,7 +655,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     //   }
     // }
 
-    var actualMatches = <PracticalMatch>[
+    var actualMatches = <HitFactorMatch>[
       for(var m in _matchUrls.values)
         if(m != null) m
     ];

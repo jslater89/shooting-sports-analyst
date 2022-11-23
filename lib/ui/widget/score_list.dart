@@ -7,7 +7,7 @@ import 'package:uspsa_result_viewer/ui/widget/score_row.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/shooter_card.dart';
 
 class ScoreList extends StatelessWidget {
-  final PracticalMatch? match;
+  final HitFactorMatch? match;
   final int? maxPoints;
   final Stage? stage;
   final List<RelativeMatchScore> baseScores;
