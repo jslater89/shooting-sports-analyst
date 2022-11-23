@@ -57,8 +57,6 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   bool get byStage => settings.byStage;
   bool get errorAwareK => settings.errorAwareK;
 
-  late double errThreshold = EloShooterRating.errorScale / (K / 7.5);
-
   MultiplayerPercentEloRater({
     EloSettings? settings,
   }) :
@@ -138,15 +136,20 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     var error = aRating.standardError;
 
     var errMultiplier = 1.0;
-    final maxMultiplier = 1.0;
-    final minMultiplier = 0.5;
     if(errorAwareK) {
-      var minThreshold = errThreshold;
+      var errThreshold = settings.errorAwareMaxThreshold;
+      final maxMultiplier = settings.errorAwareUpperMultiplier;
+      final minMultiplier = settings.errorAwareLowerMultiplier;
+      var minThreshold = settings.errorAwareMinThreshold;
+      var zeroValue = settings.errorAwareZeroValue;
       if (error >= errThreshold) {
-        errMultiplier = 1 + min(1.0, ((error - errThreshold) / (EloShooterRating.errorScale - errThreshold))) * maxMultiplier;
+        errMultiplier = 1 + min(1.0, ((error - errThreshold) / (settings.scale - errThreshold))) * maxMultiplier;
       }
-      else if (error < minThreshold) {
-        errMultiplier = 1 - ((minThreshold - error) / minThreshold) * minMultiplier;
+      else if (error < minThreshold && error >= zeroValue) {
+        errMultiplier = 1 - ((minThreshold - error - zeroValue) / (minThreshold - zeroValue)) * minMultiplier;
+      }
+      else if (error < zeroValue) {
+        errMultiplier = 1 - minMultiplier;
       }
     }
 
@@ -158,14 +161,14 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     var change = changeFromPlace + changeFromPercent;
     if(Timings.enabled) timings.updateRatings += (DateTime.now().difference(start).inMicroseconds).toDouble();
 
-    if(change.isNaN || change.isInfinite) {
+    if(change.isNaN || change.isInfinite || change.abs() > 1000) {
       debugPrint("### ${aRating.shooter.lastName} stats: ${actualScore.actualPercent} of ${params.usedScores} shooters for ${aScore.stage?.name}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}, placement $placementMultiplier, zero $zeroMultiplier (${params.zeroes})");
       debugPrint("AS/ES: ${actualScore.score.toStringAsFixed(6)}/${params.expectedScore.toStringAsFixed(6)}");
       debugPrint("Actual/expected percent: ${(actualScore.percentComponent * params.totalPercent * 100).toStringAsFixed(2)}/${(params.expectedScore * params.totalPercent * 100).toStringAsFixed(2)}");
       debugPrint("Actual/expected place: ${actualScore.placeBlend}/${(params.usedScores - (params.expectedScore * params.divisor)).toStringAsFixed(4)}");
       debugPrint("Rating±Change: ${aRating.rating.round()} + ${change.toStringAsFixed(2)} (${changeFromPercent.toStringAsFixed(2)} from pct, ${changeFromPlace.toStringAsFixed(2)} from place)");
       debugPrint("###");
-      throw StateError("NaN/Infinite");
+      throw StateError("NaN/Infinite/really big");
     }
 
     if(Timings.enabled) start = DateTime.now();
@@ -461,12 +464,14 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       if(error > compressionCenter) stdDev = compressionCenter + pow(stdDev - compressionCenter, upperCompressionFactor);
       else stdDev = compressionCenter - pow(compressionCenter - stdDev, lowerCompressionFactor);
 
+      var errThreshold = settings.errorAwareMaxThreshold;
+      var minThreshold = settings.errorAwareMinThreshold;
       var errMultiplier = 1.0;
       if (error >= errThreshold) {
-        errMultiplier = 1 + min(1.0, ((error - errThreshold) / (EloShooterRating.errorScale - errThreshold))) * 1;
+        errMultiplier = 1 + min(1.0, ((error - errThreshold) / (settings.scale - errThreshold))) * 1;
       }
-      else if (error < errThreshold) {
-        errMultiplier = 1 - ((errThreshold - error) / errThreshold) * 0.5;
+      else if (error < minThreshold) {
+        errMultiplier = 1 - ((minThreshold - error) / minThreshold) * 0.5;
       }
       stdDev = stdDev * errMultiplier;
 
