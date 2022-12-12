@@ -1,7 +1,18 @@
-import 'package:uspsa_result_viewer/data/match/match.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 
-class HitFactorMatch extends PracticalMatch {
+enum MatchLevel {
+  I,
+  II,
+  III,
+  IV,
+}
+
+class PracticalMatch {
+  String? name;
+  String? rawDate;
+  DateTime? date;
+  MatchLevel? level;
+
   late String reportContents;
 
   List<Shooter> shooters = [];
@@ -10,8 +21,8 @@ class HitFactorMatch extends PracticalMatch {
   int? maxPoints;
   int stageScoreCount = 0;
 
-  HitFactorMatch copy() {
-    var newMatch = HitFactorMatch()
+  PracticalMatch copy() {
+    var newMatch = PracticalMatch()
       ..name = name
       ..rawDate = rawDate
       ..date = date
@@ -42,7 +53,7 @@ class HitFactorMatch extends PracticalMatch {
     bool? allowReentries = true,
     List<Division> divisions = Division.values,
     List<PowerFactor> powerFactors = PowerFactor.values,
-    List<USPSAClassification> classes = USPSAClassification.values,
+    List<Classification> classes = Classification.values,
   }) {
     List<Shooter> filteredShooters = [];
 

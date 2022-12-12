@@ -9,31 +9,11 @@ class Score {
   double t1 = 0, t2 = 0, t3 = 0, t4 = 0, t5 = 0;
   double time = 0;
 
-  /// IDPA points down
-  int pointsDown = 0;
-
-  /// IDPA/ICORE procedurals
-  double timePenalty = 0;
-
-  /// ICORE time bonuses; a negative number
-  double timeBonus = 0;
-
-  // Hits recorded as expected for USPSA.
-  // ICORE
-  int a = 0, b = 0, c = 0, d = 0, m = 0, ns = 0, npm = 0, x = 0;
+  int a = 0, b = 0, c = 0, d = 0, m = 0, ns = 0, npm = 0;
   int procedural = 0, lateShot = 0, extraShot = 0, extraHit = 0, otherPenalty = 0;
 
   /// Number of times a target was hit
   int get hits => a + b + c + d + ns;
-
-  /// Final time scored as IDPA
-  double get idpaTime => time + (pointsDown * 1) + timePenalty;
-
-  /// Final time scored as ICORE
-  double get icoreTime => time + (b * 1) + (c * 2) + (m * 5) + (ns * 5) + timePenalty + timeBonus;
-
-  /// USPSA, scored like an ICORE match
-  double get uspsaTimePlus => time + (c * 1) + (d * 2) + (m * 5) + (ns * 5) + (penaltyCount * 5);
 
   Score({
     required this.shooter,
@@ -48,14 +28,10 @@ class Score {
       ..t4 = t4
       ..t5 = t5
       ..time = time
-      ..pointsDown = pointsDown
-      ..timeBonus = timeBonus
-      ..timePenalty = timePenalty
       ..a = a
       ..b = b
       ..c = c
       ..d = d
-      ..x = x
       ..m = m
       ..ns = ns
       ..npm = npm

@@ -17,7 +17,7 @@ class RatingChange {
 abstract class RatingEvent {
   String get eventName => "${match.name}" + (stage == null ? "" : " - ${stage!.name}");
 
-  HitFactorMatch match;
+  PracticalMatch match;
   Stage? stage;
   RelativeScore score;
   Map<String, List<dynamic>> info;

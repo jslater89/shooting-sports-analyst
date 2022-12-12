@@ -44,9 +44,9 @@ class PointsRating extends ShooterRating<PointsRating> {
     if(d.isAfter(_lastSeen)) _lastSeen = d;
   }
 
-  late USPSAClassification _lastClass;
-  USPSAClassification get lastClassification => _lastClass;
-  set lastClassification(USPSAClassification c) {
+  late Classification _lastClass;
+  Classification get lastClassification => _lastClass;
+  set lastClassification(Classification c) {
     if(c.index < _lastClass.index) {
       _lastClass = c;
     }
@@ -68,7 +68,7 @@ class PointsRating extends ShooterRating<PointsRating> {
   {
     this.events = SortedList(comparator: _ratingComparator);
     if(date?.isAfter(_lastSeen) ?? false) _lastSeen = date!;
-    _lastClass = shooter.classification ?? USPSAClassification.unknown;
+    _lastClass = shooter.classification ?? Classification.unknown;
   }
 
   PointsRating.copy(PointsRating other) :

@@ -14,7 +14,7 @@ import 'package:uspsa_result_viewer/ui/widget/dialog/match_breakdown.dart';
 import 'package:uspsa_result_viewer/ui/widget/score_list.dart';
 
 class ResultPage extends StatefulWidget {
-  final HitFactorMatch? canonicalMatch;
+  final PracticalMatch? canonicalMatch;
   final String appChromeLabel;
   final bool allowWhatIf;
   final Stage? initialStage;
@@ -43,7 +43,7 @@ class _ResultPageState extends State<ResultPage> {
   ScrollController _horizontalScrollController = ScrollController();
 
   late BuildContext _innerContext;
-  HitFactorMatch? _currentMatch;
+  PracticalMatch? _currentMatch;
 
   bool _operationInProgress = false;
 

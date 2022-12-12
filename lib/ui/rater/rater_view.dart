@@ -19,7 +19,7 @@ class RaterView extends StatefulWidget {
   final Duration? maxAge;
   final int minRatings;
   final Rater rater;
-  final HitFactorMatch currentMatch;
+  final PracticalMatch currentMatch;
   final RatingSortMode sortMode;
   final void Function(List<ShooterRating>)? onRatingsFiltered;
 

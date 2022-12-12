@@ -1,11 +1,10 @@
 import 'package:flutter/foundation.dart';
-import 'package:uspsa_result_viewer/data/match/match.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:intl/intl.dart';
 
 const verboseParse = false;
 
-Future<HitFactorMatch> processHitFactorScoreFile(String fileContents) async {
+Future<PracticalMatch> processScoreFile(String fileContents) async {
   String reportFile = fileContents.replaceAll("\r\n", "\n");
   List<String> lines = reportFile.split("\n");
 
@@ -26,7 +25,7 @@ Future<HitFactorMatch> processHitFactorScoreFile(String fileContents) async {
       stageScoreLines.add(l);
   }
 
-  HitFactorMatch canonicalMatch = _processResultLines(
+  PracticalMatch canonicalMatch = _processResultLines(
     infoLines: infoLines,
     competitorLines: competitorLines,
     stageLines: stageLines,
@@ -35,8 +34,8 @@ Future<HitFactorMatch> processHitFactorScoreFile(String fileContents) async {
   return canonicalMatch;
 }
 
-HitFactorMatch _processResultLines({required List<String> infoLines, required List<String> competitorLines, required List<String> stageLines, required List<String> stageScoreLines}) {
-  HitFactorMatch match = HitFactorMatch();
+PracticalMatch _processResultLines({required List<String> infoLines, required List<String> competitorLines, required List<String> stageLines, required List<String> stageScoreLines}) {
+  PracticalMatch match = PracticalMatch();
   _readInfoLines(match, infoLines);
 
   Map<int, Shooter> shootersByFileId = _readCompetitorLines(match, competitorLines);
@@ -63,7 +62,7 @@ const String _MATCH_DATE = r"$INFO Match date:";
 const String _MATCH_LEVEL = r"$INFO Match Level:";
 final DateFormat _df = DateFormat("MM/dd/yyyy");
 
-void _readInfoLines(HitFactorMatch match, List<String> infoLines) {
+void _readInfoLines(PracticalMatch match, List<String> infoLines) {
   for(String line in infoLines) {
     if(line.startsWith(_MATCH_NAME)) {
       // print("Found match name");
@@ -101,7 +100,7 @@ const int _REENTRY = 7;
 const int _CLASS = 8;
 const int _DIVISION = 9;
 const int _POWER_FACTOR = 12;
-Map<int, Shooter> _readCompetitorLines(HitFactorMatch match, List<String> competitorLines) {
+Map<int, Shooter> _readCompetitorLines(PracticalMatch match, List<String> competitorLines) {
   Map<int, Shooter> shootersById = {};
 
   int i = 1;
@@ -114,7 +113,7 @@ Map<int, Shooter> _readCompetitorLines(HitFactorMatch match, List<String> compet
         ..firstName = splitLine[_FIRST_NAME]
         ..lastName = splitLine[_LAST_NAME]
         ..reentry = splitLine[_REENTRY].toLowerCase() == "yes"
-        ..classification = USPSAClassificationFrom.string(splitLine[_CLASS])
+        ..classification = ClassificationFrom.string(splitLine[_CLASS])
         ..division = DivisionFrom.string(splitLine[_DIVISION])
         ..powerFactor = PowerFactorFrom.string(splitLine[_POWER_FACTOR])
         ..dq = splitLine[_DQ_PISTOL].toLowerCase() == "yes" || splitLine[_DQ_RIFLE].toLowerCase() == "yes" || splitLine[_DQ_SHOTGUN].toLowerCase() == "yes";
@@ -137,7 +136,7 @@ const int _CLASSIFIER = 4;
 const int _CLASSIFIER_NUM = 5;
 const int _STAGE_NAME = 6;
 const int _SCORING = 7;
-Map<int, Stage> _readStageLines(HitFactorMatch match, List<String> stageLines) {
+Map<int, Stage> _readStageLines(PracticalMatch match, List<String> stageLines) {
   Map<int, Stage> stagesById = {};
 
   int i = 1;

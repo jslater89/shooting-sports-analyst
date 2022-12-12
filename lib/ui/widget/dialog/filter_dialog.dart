@@ -7,7 +7,7 @@ class FilterSet {
   bool scoreDQs = true;
 
   late Map<Division, bool> divisions;
-  late Map<USPSAClassification, bool> classifications;
+  late Map<Classification, bool> classifications;
   late Map<PowerFactor, bool> powerFactors;
 
   FilterSet({bool empty = false}) {
@@ -19,7 +19,7 @@ class FilterSet {
       divisions[d] = !empty;
     }
 
-    for (USPSAClassification c in USPSAClassification.values) {
+    for (Classification c in Classification.values) {
       classifications[c] = !empty;
     }
 
@@ -244,57 +244,57 @@ class _FilterDialogState extends State<FilterDialog> {
       CheckboxListTile(
         title: Text("GM"),
         controlAffinity: ListTileControlAffinity.leading,
-        value: _filters!.classifications[USPSAClassification.GM],
+        value: _filters!.classifications[Classification.GM],
         onChanged: (bool? value) {
-          _updateFilter(_filters!.classifications, USPSAClassification.GM, value);
+          _updateFilter(_filters!.classifications, Classification.GM, value);
         },
       ),
       CheckboxListTile(
         title: Text("M"),
         controlAffinity: ListTileControlAffinity.leading,
-        value: _filters!.classifications[USPSAClassification.M],
+        value: _filters!.classifications[Classification.M],
         onChanged: (bool? value) {
-          _updateFilter(_filters!.classifications, USPSAClassification.M, value);
+          _updateFilter(_filters!.classifications, Classification.M, value);
         },
       ),
       CheckboxListTile(
         title: Text("A"),
         controlAffinity: ListTileControlAffinity.leading,
-        value: _filters!.classifications[USPSAClassification.A],
+        value: _filters!.classifications[Classification.A],
         onChanged: (bool? value) {
-          _updateFilter(_filters!.classifications, USPSAClassification.A, value);
+          _updateFilter(_filters!.classifications, Classification.A, value);
         },
       ),
       CheckboxListTile(
         title: Text("B"),
         controlAffinity: ListTileControlAffinity.leading,
-        value: _filters!.classifications[USPSAClassification.B],
+        value: _filters!.classifications[Classification.B],
         onChanged: (bool? value) {
-          _updateFilter(_filters!.classifications, USPSAClassification.B, value);
+          _updateFilter(_filters!.classifications, Classification.B, value);
         },
       ),
       CheckboxListTile(
         title: Text("C"),
         controlAffinity: ListTileControlAffinity.leading,
-        value: _filters!.classifications[USPSAClassification.C],
+        value: _filters!.classifications[Classification.C],
         onChanged: (bool? value) {
-          _updateFilter(_filters!.classifications, USPSAClassification.C, value);
+          _updateFilter(_filters!.classifications, Classification.C, value);
         },
       ),
       CheckboxListTile(
         title: Text("D"),
         controlAffinity: ListTileControlAffinity.leading,
-        value: _filters!.classifications[USPSAClassification.D],
+        value: _filters!.classifications[Classification.D],
         onChanged: (bool? value) {
-          _updateFilter(_filters!.classifications, USPSAClassification.D, value);
+          _updateFilter(_filters!.classifications, Classification.D, value);
         },
       ),
       CheckboxListTile(
         title: Text("U"),
         controlAffinity: ListTileControlAffinity.leading,
-        value: _filters!.classifications[USPSAClassification.U],
+        value: _filters!.classifications[Classification.U],
         onChanged: (bool? value) {
-          _updateFilter(_filters!.classifications, USPSAClassification.U, value);
+          _updateFilter(_filters!.classifications, Classification.U, value);
         },
       )
     ];

@@ -14,7 +14,7 @@ class EloRatingEvent extends RatingEvent {
 
   EloRatingEvent({
     required this.oldRating,
-    required HitFactorMatch match,
+    required PracticalMatch match,
     Stage? stage,
     required RelativeScore score,
     Map<String, List<dynamic>> info = const {},

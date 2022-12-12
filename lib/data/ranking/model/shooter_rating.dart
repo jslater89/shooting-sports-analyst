@@ -25,9 +25,9 @@ abstract class ShooterRating<T extends ShooterRating<T>> {
   static const maxConnections = 40;
 
   final Shooter shooter;
-  USPSAClassification _lastClass;
-  USPSAClassification get lastClassification => _lastClass;
-  set lastClassification(USPSAClassification c) => _lastClass = c;
+  Classification _lastClass;
+  Classification get lastClassification => _lastClass;
+  set lastClassification(Classification c) => _lastClass = c;
   DateTime lastSeen;
 
   double get rating;
@@ -176,7 +176,7 @@ abstract class ShooterRating<T extends ShooterRating<T>> {
     return matchChange(lastMatch);
   }
 
-  double matchChange(HitFactorMatch match) {
+  double matchChange(PracticalMatch match) {
     double change = ratingEvents.where((e) => e.match == match)
         .map((e) => e.ratingChange)
         .reduce((a, b) => a + b);
@@ -184,7 +184,7 @@ abstract class ShooterRating<T extends ShooterRating<T>> {
   }
 
   ShooterRating(this.shooter, {DateTime? date}) :
-      this._lastClass = shooter.classification ?? USPSAClassification.U,
+      this._lastClass = shooter.classification ?? Classification.U,
       this.lastSeen = date ?? DateTime.now();
 
   ShooterRating.copy(ShooterRating other) :
