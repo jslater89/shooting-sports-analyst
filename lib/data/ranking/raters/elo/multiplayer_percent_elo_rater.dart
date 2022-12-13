@@ -365,12 +365,12 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   }
 
   @override
-  ShooterRating<EloShooterRating> copyShooterRating(EloShooterRating rating) {
+  ShooterRating copyShooterRating(EloShooterRating rating) {
     return EloShooterRating.copy(rating);
   }
 
   @override
-  ShooterRating<EloShooterRating> newShooterRating(Shooter shooter, {DateTime? date}) {
+  ShooterRating newShooterRating(Shooter shooter, {DateTime? date}) {
     return EloShooterRating(shooter, initialClassRatings[shooter.classification] ?? 800.0, date: date);
   }
 

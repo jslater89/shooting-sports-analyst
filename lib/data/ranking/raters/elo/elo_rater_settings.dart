@@ -13,7 +13,7 @@ const _errorAwareZeroValueKey = "errZero";
 const _errorAwareLowerMultiplierKey = "errLow";
 const _errorAwareUpperMultiplierKey = "errUp";
 
-class EloSettings extends RaterSettings<EloSettings> {
+class EloSettings extends RaterSettings {
   static const defaultK = 40.0;
   static const defaultProbabilityBase = 4.0;
   static const defaultPercentWeight = 0.4;

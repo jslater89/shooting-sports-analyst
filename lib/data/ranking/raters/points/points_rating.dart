@@ -8,7 +8,7 @@ import 'package:uspsa_result_viewer/data/ranking/raters/points/points_rating_cha
 import 'package:uspsa_result_viewer/data/ranking/raters/points/points_settings.dart';
 import 'package:uspsa_result_viewer/data/sorted_list.dart';
 
-class PointsRating extends ShooterRating<PointsRating> {
+class PointsRating extends ShooterRating {
   final PointsSettings settings;
   final double participationBonus;
 

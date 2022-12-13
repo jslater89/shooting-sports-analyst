@@ -6,7 +6,7 @@ const _decayingPointsStartKey = "ptsDecayStart";
 const _decayingPointsFactorKey = "ptsDecayFtr";
 const _participationBonusKey = "ptsParticipationBonus";
 
-class PointsSettings extends RaterSettings<PointsSettings> {
+class PointsSettings extends RaterSettings {
   final bool byStage = false;
 
   /// About one match a month seems fair.

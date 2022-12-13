@@ -4,7 +4,7 @@ const _betaKey = "osBeta";
 const _tauKey = "osTau";
 const _byStageKey = "osByStage";
 
-class OpenskillSettings extends RaterSettings<OpenskillSettings> {
+class OpenskillSettings extends RaterSettings {
   /// mu is the center of a team's performance distribution.
   static const defaultMu = 25.0;
 

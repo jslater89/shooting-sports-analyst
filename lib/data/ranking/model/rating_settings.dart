@@ -1,13 +1,13 @@
 import 'package:flutter/widgets.dart';
 
-abstract class RaterSettings<T extends RaterSettings<T>> {
+abstract class RaterSettings {
   loadFromJson(Map<String, dynamic> json);
   encodeToJson(Map<String, dynamic> json);
 }
 
-abstract class RaterSettingsController<T extends RaterSettings<T>> implements ChangeNotifier {
+abstract class RaterSettingsController<T extends RaterSettings> implements ChangeNotifier {
   T get currentSettings;
-  set currentSettings(T settings);
+  set currentSettings(covariant T settings);
   void restoreDefaults();
   void settingsChanged();
 
@@ -16,7 +16,7 @@ abstract class RaterSettingsController<T extends RaterSettings<T>> implements Ch
   String? validate();
 }
 
-abstract class RaterSettingsWidget<S extends RaterSettings<S>, T extends RaterSettingsController<S>> extends StatefulWidget {
+abstract class RaterSettingsWidget<S extends RaterSettings, T extends RaterSettingsController<S>> extends StatefulWidget {
   /// Unless [key] is provided, it will change whenever [controller] changes.
   RaterSettingsWidget({Key? key, required T controller}) : super(key: key ?? Key(controller.hashCode.toString()));
 }

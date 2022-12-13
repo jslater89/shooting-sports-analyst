@@ -6,7 +6,7 @@ import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rating_change.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 
-class EloShooterRating extends ShooterRating<EloShooterRating> {
+class EloShooterRating extends ShooterRating {
   static double errorScale = MultiplayerPercentEloRater.defaultScale;
 
   double rating;

@@ -8,7 +8,7 @@ import 'package:uspsa_result_viewer/data/ranking/model/rating_change.dart';
 import 'package:uspsa_result_viewer/data/sorted_list.dart';
 
 
-abstract class ShooterRating<T extends ShooterRating<T>> {
+abstract class ShooterRating {
   // The weird generic is required so that subclasses can implement
   // [copyRatingFrom].
 
@@ -162,7 +162,7 @@ abstract class ShooterRating<T extends ShooterRating<T>> {
   void updateTrends(List<RatingEvent> changes);
   double get trend => rating - averageRating().firstRating;
 
-  void copyRatingFrom(T other) {
+  void copyRatingFrom(covariant ShooterRating other) {
     this._connectedness = other._connectedness;
     this.lastClassification = other.lastClassification;
     this.lastSeen = other.lastSeen;
