@@ -47,12 +47,38 @@ class RatingHistory {
     if(_ratersByDivision.length > 0) throw StateError("Called processInitialMatches twice");
     return _processInitialMatches();
   }
+  
+  // Returns false if the match already exists
+  Future<bool> addMatch(PracticalMatch match) async {
+    if(matches.contains(match)) return false;
+
+    var oldMatch = _lastMatch;
+    _matches.add(match);
+
+    for(var group in _settings.groups) {
+      var raters = _ratersByDivision[oldMatch]!;
+      var rater = raters[group]!;
+
+      _lastMatch = match;
+      _ratersByDivision[_lastMatch!] ??= {};
+      var newRater = Rater.copy(rater);
+      newRater.addMatch(match);
+      _ratersByDivision[_lastMatch]![group] = newRater;
+    }
+
+    if(!_settings.preserveHistory) {
+      _ratersByDivision.remove(oldMatch);
+    }
+
+    return true;
+  }
 
   Rater raterFor(PracticalMatch match, RaterGroup group) {
     if(!_settings.groups.contains(group)) throw ArgumentError("Invalid group");
     if(!_matches.contains(match)) throw ArgumentError("Invalid match");
 
-    return _ratersByDivision[match]![group]!;
+    var raters = _ratersByDivision[match]!;
+    return raters[group]!;
   }
 
   int countUniqueShooters() {
@@ -67,6 +93,9 @@ class RatingHistory {
     return memberNumbers.length;
   }
 
+  /// Used to key the matches map for online match-adding
+  PracticalMatch? _lastMatch;
+  
   Future<void> _processInitialMatches() async {
     debugPrint("Loading matches");
 
@@ -83,7 +112,6 @@ class RatingHistory {
     });
 
     var currentMatches = <PracticalMatch>[];
-    PracticalMatch? lastMatch;
 
     await progressCallback?.call(0, 1, null);
 
@@ -102,14 +130,14 @@ class RatingHistory {
           var divisionMap = <Division, bool>{};
           group.divisions.forEach((element) => divisionMap[element] = true);
 
-          if (lastMatch == null) {
+          if (_lastMatch == null) {
             _ratersByDivision[m]![group] = await _raterForGroup(innerMatches, group);
 
             stepsFinished += 1;
             await progressCallback?.call(stepsFinished, totalSteps, "${group.uiLabel} - ${m.name}");
           }
           else {
-            Rater newRater = Rater.copy(_ratersByDivision[lastMatch]![group]!);
+            Rater newRater = Rater.copy(_ratersByDivision[_lastMatch]![group]!);
             newRater.addMatch(m);
             _ratersByDivision[m]![group] = newRater;
 
@@ -118,7 +146,7 @@ class RatingHistory {
           }
         }
 
-        lastMatch = m;
+        _lastMatch = m;
       }
     }
     else {
@@ -126,11 +154,11 @@ class RatingHistory {
 
       // debugPrint("Total steps, history discarded: $totalSteps");
 
-      var m = _matches.last;
-      _ratersByDivision[m] ??= {};
+      _lastMatch = _matches.last;
+      _ratersByDivision[_lastMatch!] ??= {};
 
       for (var group in _settings.groups) {
-        _ratersByDivision[m]![group] = await _raterForGroup(_matches, group, (_1, _2, eventName) async {
+        _ratersByDivision[_lastMatch]![group] = await _raterForGroup(_matches, group, (_1, _2, eventName) async {
           stepsFinished += 1;
           await progressCallback?.call(stepsFinished, totalSteps, "${group.uiLabel} - $eventName");
         });

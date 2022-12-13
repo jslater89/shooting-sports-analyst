@@ -454,6 +454,26 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         ),
       // end if: supports ratings
       Tooltip(
+          message: "Add a new match to the ratings.",
+          child: IconButton(
+            icon: Icon(Icons.playlist_add),
+            onPressed: () async {
+              var match = await showDialog<PracticalMatch>(
+                  context: context,
+                  builder: (context) => MatchCacheChooserDialog()
+              );
+
+              if(match != null) {
+                _history.addMatch(match);
+
+                setState(() {
+                  _selectedMatch = _history.matches.last;
+                });
+              }
+            },
+          )
+      ),
+      Tooltip(
         message: "View results for a match in the dataset.",
         child: IconButton(
           icon: Icon(Icons.list),

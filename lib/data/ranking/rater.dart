@@ -142,25 +142,40 @@ class Rater {
     _cachedStats = null;
     _matches.add(match);
 
-    _addShootersFromMatch(match);
+    int changed = _addShootersFromMatch(match);
     _deduplicateShooters();
 
     _rankMatch(match);
 
     _removeUnseenShooters();
 
-    debugPrint("Ratings update complete for ${knownShooters.length} shooters in ${_matches.length} matches in ${_filters != null ? _filters!.activeDivisions.toList() : "all divisions"}");
+    debugPrint("Ratings update complete for $changed shooters (${knownShooters.length} total) in ${_matches.length} matches in ${_filters != null ? _filters!.activeDivisions.toList() : "all divisions"}");
   }
 
-  void _addShootersFromMatch(PracticalMatch match) {
+  /// Returns the number of shooters added or updated.
+  int _addShootersFromMatch(PracticalMatch match) {
+    int added = 0;
+    int updated = 0;
     var shooters = _getShooters(match);
     for(Shooter s in shooters) {
       var processed = processMemberNumber(s.memberNumber);
       if(processed.isNotEmpty && !s.reentry) {
         s.memberNumber = processed;
-        knownShooters[s.memberNumber] ??= ratingSystem.newShooterRating(s, date: match.date); // ratingSystem.defaultRating
+        if(knownShooters[s.memberNumber] == null) {
+          knownShooters[s.memberNumber] = ratingSystem.newShooterRating(s, date: match.date); // ratingSystem.defaultRating
+          added += 1;
+        }
+        else {
+          // Update names for existing shooters, to eliminate the Mel Rodero -> Mel Rodero II problem
+          var rating = knownShooters[s.memberNumber]!;
+          rating.shooter.firstName = s.firstName;
+          rating.shooter.lastName = s.lastName;
+          updated += 1;
+        }
       }
     }
+
+    return added + updated;
   }
 
   ShooterRating? ratingFor(Shooter s) {
@@ -181,14 +196,12 @@ class Rater {
       namesToNumbers[finalName] ??= [];
       namesToNumbers[finalName]!.add(num);
 
-      // if(name.startsWith("maxmichel")) {
-      //   print("Breakpoint");
-      // }
       _memberNumberMappings[num] ??= num;
     }
 
     for(var name in namesToNumbers.keys) {
       var list = namesToNumbers[name]!;
+
       if(list.length == 2) {
         // If the shooter is already mapped, or if both numbers are 5-digit non-lifetime numbers, continue
         if((knownShooters[list[0]] == knownShooters[list[1]]) || (list[0].length > 4 && list[1].length > 4)) continue;
