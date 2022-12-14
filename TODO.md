@@ -10,3 +10,23 @@
 4. Improve speed of deduplication
 
 6. Fetch matches by club since date (maybe?)
+
+7. Database!
+* Isar? SQLite?
+* The main goal, at this time, is to save ratings and later load them, so that large datasets
+like the L2+ set aren't quite such a pain to use, with the recalculating every time.
+* A future goal is to be able to lazily load ratings/histories from a database, to limit
+memory pressure.
+* Isar has speed on its side, it looks like.
+* SQLite allows exporting the data in a format anyone who knows SQL can analyze, which is
+community-focused.
+* Let's do SQLite.
+
+7.1. Preliminary work
+1. Floor serializers/deserializers for everything.
+    * alison-brie-everything.gif
+    * Matches and related infrastructure, rating objects
+    * DB value objects to convert to/from app objects
+        * This also lets me JSONify them, in pursuit of Project Firehose
+        * App objects 100% are not set up to be serialized
+2. Project Improved Projects
