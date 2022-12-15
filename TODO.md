@@ -29,4 +29,9 @@ community-focused.
     * DB value objects to convert to/from app objects
         * This also lets me JSONify them, in pursuit of Project Firehose
         * App objects 100% are not set up to be serialized
+    * Schema/schemata
+        * One big DB, or DBs per project with just the matches they need?
+        * I'll want a way to export full project databases anyway, so I think I
+        need to go with DBs per project.
+            * Also saves me having to redo the match cache, for now.
 2. Project Improved Projects
