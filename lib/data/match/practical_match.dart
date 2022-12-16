@@ -13,6 +13,8 @@ class PracticalMatch {
   DateTime? date;
   MatchLevel? level;
 
+  late String practiscoreId;
+  String? practiscoreIdShort;
   late String reportContents;
 
   List<Shooter> shooters = [];

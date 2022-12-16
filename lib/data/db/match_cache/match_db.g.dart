@@ -95,9 +95,9 @@ class _$MatchDatabase extends MatchDatabase {
         await database.execute(
             'CREATE TABLE IF NOT EXISTS `stages` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `matchId` INTEGER NOT NULL, `name` TEXT NOT NULL, `minRounds` INTEGER NOT NULL, `maxPoints` INTEGER NOT NULL, `classifier` INTEGER NOT NULL, `classifierNumber` TEXT NOT NULL, `type` INTEGER NOT NULL)');
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `shooters` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `matchId` INTEGER NOT NULL, `firstName` TEXT NOT NULL, `lastName` TEXT NOT NULL, `memberNumber` TEXT NOT NULL, `originalMemberNumber` TEXT NOT NULL, `reentry` INTEGER NOT NULL, `dq` INTEGER NOT NULL, `division` INTEGER NOT NULL, `classification` INTEGER NOT NULL, `powerFactor` INTEGER NOT NULL, FOREIGN KEY (`matchId`) REFERENCES `matches` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)');
+            'CREATE TABLE IF NOT EXISTS `shooters` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `matchId` INTEGER NOT NULL, `firstName` TEXT NOT NULL, `lastName` TEXT NOT NULL, `memberNumber` TEXT NOT NULL, `originalMemberNumber` TEXT NOT NULL, `reentry` INTEGER NOT NULL, `dq` INTEGER NOT NULL, `division` INTEGER NOT NULL, `classification` INTEGER NOT NULL, `powerFactor` INTEGER NOT NULL, FOREIGN KEY (`matchId`) REFERENCES `matches` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE)');
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `scores` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `shooterId` INTEGER NOT NULL, `stageId` INTEGER NOT NULL, `t1` REAL NOT NULL, `t2` REAL NOT NULL, `t3` REAL NOT NULL, `t4` REAL NOT NULL, `t5` REAL NOT NULL, `time` REAL NOT NULL, `a` INTEGER NOT NULL, `b` INTEGER NOT NULL, `c` INTEGER NOT NULL, `d` INTEGER NOT NULL, `m` INTEGER NOT NULL, `ns` INTEGER NOT NULL, `npm` INTEGER NOT NULL, `procedural` INTEGER NOT NULL, `lateShot` INTEGER NOT NULL, `extraShot` INTEGER NOT NULL, `extraHit` INTEGER NOT NULL, `otherPenalty` INTEGER NOT NULL, FOREIGN KEY (`stageId`) REFERENCES `stages` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`shooterId`) REFERENCES `shooters` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)');
+            'CREATE TABLE IF NOT EXISTS `scores` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `shooterId` INTEGER NOT NULL, `stageId` INTEGER NOT NULL, `t1` REAL NOT NULL, `t2` REAL NOT NULL, `t3` REAL NOT NULL, `t4` REAL NOT NULL, `t5` REAL NOT NULL, `time` REAL NOT NULL, `a` INTEGER NOT NULL, `b` INTEGER NOT NULL, `c` INTEGER NOT NULL, `d` INTEGER NOT NULL, `m` INTEGER NOT NULL, `ns` INTEGER NOT NULL, `npm` INTEGER NOT NULL, `procedural` INTEGER NOT NULL, `lateShot` INTEGER NOT NULL, `extraShot` INTEGER NOT NULL, `extraHit` INTEGER NOT NULL, `otherPenalty` INTEGER NOT NULL, FOREIGN KEY (`stageId`) REFERENCES `stages` (`id`) ON UPDATE NO ACTION ON DELETE RESTRICT, FOREIGN KEY (`shooterId`) REFERENCES `shooters` (`id`) ON UPDATE NO ACTION ON DELETE RESTRICT)');
 
         await callback?.onCreate?.call(database, version);
       },
@@ -168,8 +168,9 @@ class _$MatchDao extends MatchDao {
   }
 
   @override
-  Future<void> save(DbMatch match) async {
-    await _dbMatchInsertionAdapter.insert(match, OnConflictStrategy.abort);
+  Future<int> save(DbMatch match) {
+    return _dbMatchInsertionAdapter.insertAndReturnId(
+        match, OnConflictStrategy.replace);
   }
 }
 
@@ -177,13 +178,28 @@ class _$StageDao extends StageDao {
   _$StageDao(
     this.database,
     this.changeListener,
-  ) : _queryAdapter = QueryAdapter(database);
+  )   : _queryAdapter = QueryAdapter(database),
+        _dbStageInsertionAdapter = InsertionAdapter(
+            database,
+            'stages',
+            (DbStage item) => <String, Object?>{
+                  'id': item.id,
+                  'matchId': item.matchId,
+                  'name': item.name,
+                  'minRounds': item.minRounds,
+                  'maxPoints': item.maxPoints,
+                  'classifier': item.classifier ? 1 : 0,
+                  'classifierNumber': item.classifierNumber,
+                  'type': _scoringConverter.encode(item.type)
+                });
 
   final sqflite.DatabaseExecutor database;
 
   final StreamController<String> changeListener;
 
   final QueryAdapter _queryAdapter;
+
+  final InsertionAdapter<DbStage> _dbStageInsertionAdapter;
 
   @override
   Future<List<DbStage>> all() async {
@@ -211,19 +227,44 @@ class _$StageDao extends StageDao {
             type: _scoringConverter.decode(row['type'] as int)),
         arguments: [id]);
   }
+
+  @override
+  Future<int> save(DbStage stage) {
+    return _dbStageInsertionAdapter.insertAndReturnId(
+        stage, OnConflictStrategy.replace);
+  }
 }
 
 class _$ShooterDao extends ShooterDao {
   _$ShooterDao(
     this.database,
     this.changeListener,
-  ) : _queryAdapter = QueryAdapter(database);
+  )   : _queryAdapter = QueryAdapter(database),
+        _dbShooterInsertionAdapter = InsertionAdapter(
+            database,
+            'shooters',
+            (DbShooter item) => <String, Object?>{
+                  'id': item.id,
+                  'matchId': item.matchId,
+                  'firstName': item.firstName,
+                  'lastName': item.lastName,
+                  'memberNumber': item.memberNumber,
+                  'originalMemberNumber': item.originalMemberNumber,
+                  'reentry': item.reentry ? 1 : 0,
+                  'dq': item.dq ? 1 : 0,
+                  'division': _divisionConverter.encode(item.division),
+                  'classification':
+                      _classificationConverter.encode(item.classification),
+                  'powerFactor': _powerFactorConverter.encode(item.powerFactor)
+                });
 
   final sqflite.DatabaseExecutor database;
 
   final StreamController<String> changeListener;
 
   final QueryAdapter _queryAdapter;
+
+  final InsertionAdapter<DbShooter> _dbShooterInsertionAdapter;
 
   @override
   Future<List<DbShooter>> forMatchId(int id) async {
@@ -244,19 +285,53 @@ class _$ShooterDao extends ShooterDao {
                 _powerFactorConverter.decode(row['powerFactor'] as int)),
         arguments: [id]);
   }
+
+  @override
+  Future<int> save(DbShooter shooter) {
+    return _dbShooterInsertionAdapter.insertAndReturnId(
+        shooter, OnConflictStrategy.abort);
+  }
 }
 
 class _$ScoreDao extends ScoreDao {
   _$ScoreDao(
     this.database,
     this.changeListener,
-  ) : _queryAdapter = QueryAdapter(database);
+  )   : _queryAdapter = QueryAdapter(database),
+        _dbScoreInsertionAdapter = InsertionAdapter(
+            database,
+            'scores',
+            (DbScore item) => <String, Object?>{
+                  'id': item.id,
+                  'shooterId': item.shooterId,
+                  'stageId': item.stageId,
+                  't1': item.t1,
+                  't2': item.t2,
+                  't3': item.t3,
+                  't4': item.t4,
+                  't5': item.t5,
+                  'time': item.time,
+                  'a': item.a,
+                  'b': item.b,
+                  'c': item.c,
+                  'd': item.d,
+                  'm': item.m,
+                  'ns': item.ns,
+                  'npm': item.npm,
+                  'procedural': item.procedural,
+                  'lateShot': item.lateShot,
+                  'extraShot': item.extraShot,
+                  'extraHit': item.extraHit,
+                  'otherPenalty': item.otherPenalty
+                });
 
   final sqflite.DatabaseExecutor database;
 
   final StreamController<String> changeListener;
 
   final QueryAdapter _queryAdapter;
+
+  final InsertionAdapter<DbScore> _dbScoreInsertionAdapter;
 
   @override
   Future<List<DbScore>> stageScoresForShooter(
@@ -299,6 +374,12 @@ class _$ScoreDao extends ScoreDao {
         'SELECT scores.* FROM scores JOIN stages WHERE stages.matchId = ?1 AND shooterId = ?2',
         mapper: (Map<String, Object?> row) => DbScore(id: row['id'] as int?, shooterId: row['shooterId'] as int, stageId: row['stageId'] as int, t1: row['t1'] as double, t2: row['t2'] as double, t3: row['t3'] as double, t4: row['t4'] as double, t5: row['t5'] as double, time: row['time'] as double, a: row['a'] as int, b: row['b'] as int, c: row['c'] as int, d: row['d'] as int, m: row['m'] as int, ns: row['ns'] as int, npm: row['npm'] as int, procedural: row['procedural'] as int, lateShot: row['lateShot'] as int, extraShot: row['extraShot'] as int, extraHit: row['extraHit'] as int, otherPenalty: row['otherPenalty'] as int),
         arguments: [matchId, shooterId]);
+  }
+
+  @override
+  Future<int> save(DbScore score) {
+    return _dbScoreInsertionAdapter.insertAndReturnId(
+        score, OnConflictStrategy.abort);
   }
 }
 

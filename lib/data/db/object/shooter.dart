@@ -1,5 +1,6 @@
 
 import 'package:floor/floor.dart';
+import 'package:uspsa_result_viewer/data/db/match_cache/match_db.dart';
 import 'package:uspsa_result_viewer/data/db/object/match.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 
@@ -8,7 +9,7 @@ import 'package:uspsa_result_viewer/data/model.dart';
 @Entity(
   tableName: "shooters",
   foreignKeys: [
-    ForeignKey(childColumns: ["matchId"], parentColumns: ["id"], entity: DbMatch)
+    ForeignKey(childColumns: ["matchId"], parentColumns: ["id"], entity: DbMatch, onDelete: ForeignKeyAction.cascade)
   ]
 )
 class DbShooter {
@@ -45,12 +46,35 @@ class DbShooter {
     required this.classification,
     required this.powerFactor,
   });
+
+  static Future<DbShooter> serialize(Shooter shooter, DbMatch parent, MatchStore store) async {
+    var dbShooter = DbShooter(
+      matchId: parent.id!,
+      firstName: shooter.firstName,
+      lastName: shooter.lastName,
+      memberNumber: shooter.memberNumber,
+      originalMemberNumber: shooter.originalMemberNumber,
+      reentry: shooter.reentry,
+      dq: shooter.dq,
+      division: shooter.division!,
+      classification: shooter.classification!,
+      powerFactor: shooter.powerFactor!,
+    );
+
+    var id = await store.shooters.save(dbShooter);
+    dbShooter.id = id;
+
+    return dbShooter;
+  }
 }
 
 @dao
 abstract class ShooterDao {
   @Query("SELECT * FROM shooters WHERE matchId = :id")
   Future<List<DbShooter>> forMatchId(int id);
+
+  @insert
+  Future<int> save(DbShooter shooter);
 }
 
 class DivisionConverter extends TypeConverter<Division, int> {

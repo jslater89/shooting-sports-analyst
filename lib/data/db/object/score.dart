@@ -1,14 +1,20 @@
 // We store stage scores only. Everything else is calculated at runtime.
 
 import 'package:floor/floor.dart';
+import 'package:uspsa_result_viewer/data/db/match_cache/match_db.dart';
 import 'package:uspsa_result_viewer/data/db/object/shooter.dart';
 import 'package:uspsa_result_viewer/data/db/object/stage.dart';
+import 'package:uspsa_result_viewer/data/match/score.dart';
 
+/// A shooter's stage score in a match.
+///
+/// When deleting a match, sadly, you have to delete scores separately first,
+/// then you can delete the match and stage/shooter will cascade.
 @Entity(
     tableName: "scores",
     foreignKeys: [
-      ForeignKey(childColumns: ["stageId"], parentColumns: ["id"], entity: DbStage),
-      ForeignKey(childColumns: ["shooterId"], parentColumns: ["id"], entity: DbShooter)
+      ForeignKey(childColumns: ["stageId"], parentColumns: ["id"], entity: DbStage, onDelete: ForeignKeyAction.restrict),
+      ForeignKey(childColumns: ["shooterId"], parentColumns: ["id"], entity: DbShooter, onDelete: ForeignKeyAction.restrict)
     ]
 )
 class DbScore {
@@ -47,6 +53,36 @@ class DbScore {
     required this.extraHit,
     required this.otherPenalty,
   });
+
+  static Future<DbScore> serialize(Score score, DbShooter shooter, DbStage stage, MatchStore store) async {
+    var dbScore = DbScore(
+      shooterId: shooter.id!,
+      stageId: stage.id!,
+      t1: score.t1,
+      t2: score.t2,
+      t3: score.t3,
+      t4: score.t4,
+      t5: score.t5,
+      time: score.time,
+      a: score.a,
+      b: score.b,
+      c: score.c,
+      d: score.d,
+      m: score.m,
+      ns: score.ns,
+      npm: score.npm,
+      procedural: score.procedural,
+      lateShot: score.lateShot,
+      extraShot: score.extraShot,
+      extraHit: score.extraHit,
+      otherPenalty: score.otherPenalty,
+    );
+
+    int id = await store.scores.save(dbScore);
+    dbScore.id = id;
+
+    return dbScore;
+  }
 }
 
 @dao
@@ -60,4 +96,7 @@ abstract class ScoreDao {
       "WHERE stages.matchId = :matchId "
       "AND shooterId = :shooterId")
   Future<List<DbScore>> matchScoresForShooter(int matchId, int shooterId);
+
+  @insert
+  Future<int> save(DbScore score);
 }

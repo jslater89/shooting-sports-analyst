@@ -1,11 +1,15 @@
 // ignore: avoid_web_libraries_in_flutter
 
 import 'dart:convert';
+import 'dart:io';
 
 
+import 'package:floor/floor.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:uspsa_result_viewer/data/db/match_cache/match_db.dart';
+import 'package:uspsa_result_viewer/data/db/object/match.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/route/local_upload.dart';
 import 'package:uspsa_result_viewer/route/match_select.dart';
@@ -13,6 +17,8 @@ import 'package:uspsa_result_viewer/route/practiscore_url.dart';
 import 'package:uspsa_result_viewer/route/ratings.dart';
 import 'configure_nonweb.dart' if (dart.library.html) 'configure_web.dart';
 import 'package:fluro/fluro.dart' as fluro;
+
+import 'data/results_file_parser.dart';
 
 class GlobalData {
   String? _resultsFileUrl;
@@ -74,6 +80,15 @@ void main() async {
     var path = await getApplicationSupportDirectory();
     Hive.init(path.absolute.path);
   }
+
+  // sqfliteDatabaseFactory.setDatabasesPath(".");
+  // var testDb = await $FloorMatchDatabase.databaseBuilder("test.sqlite").build();
+  // var fileContents = await File("report.txt").readAsString();
+  // var match = await processScoreFile(fileContents);
+  // match.practiscoreIdShort = "12345";
+  // match.practiscoreId = "long-uuid-id";
+  //
+  // var dbMatch = await DbMatch.serialize(match, testDb);
 
   runApp(MyApp());
 }
