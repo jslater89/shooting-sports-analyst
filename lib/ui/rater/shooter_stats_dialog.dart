@@ -47,9 +47,9 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
           MouseRegion(
             cursor: SystemMouseCursors.click,
             child: GestureDetector(
-              child: Text("Ratings for ${widget.rating.shooter.getName(suffixes: false)} (${widget.rating.lastClassification.name})"),
+              child: Text("Ratings for ${widget.rating.getName(suffixes: false)} (${widget.rating.lastClassification.name})"),
               onTap: () {
-                HtmlOr.openLink("https://uspsa.org/classification/${widget.rating.shooter.originalMemberNumber}");
+                HtmlOr.openLink("https://uspsa.org/classification/${widget.rating.originalMemberNumber}");
               },
             ),
           ),
@@ -279,7 +279,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   void _launchScoreView(RatingEvent e) {
     var filters = FilterSet(empty: true)
       ..mode = FilterMode.or
-      ..divisions = FilterSet.divisionListToMap([widget.rating.shooter.division!]);
+      ..divisions = FilterSet.divisionListToMap([widget.rating.division!]);
     Navigator.of(context).push(MaterialPageRoute(builder: (context) {
       return ResultPage(
         canonicalMatch: e.match,

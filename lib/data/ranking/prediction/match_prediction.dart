@@ -31,6 +31,6 @@ class ShooterPrediction {
 
   @override
   String toString() {
-    return "${shooter.shooter.getName(suffixes: false)}: ${mean.toStringAsPrecision(4)} ± ${twoSigma.toStringAsPrecision(4)}";
+    return "${shooter.getName(suffixes: false)}: ${mean.toStringAsPrecision(4)} ± ${twoSigma.toStringAsPrecision(4)}";
   }
 }

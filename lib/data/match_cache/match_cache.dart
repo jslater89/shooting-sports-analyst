@@ -10,6 +10,7 @@ import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 
 Future<void> Function(int, int)? matchCacheProgressCallback;
 
+// TODO: migration2: back with the SQLite database
 class MatchCache {
   static MatchCache? _instance;
   factory MatchCache() {

@@ -69,9 +69,9 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
           children: [
             Expanded(flex: _paddingFlex - _placeFlex, child: Text("")),
             Expanded(flex: _placeFlex, child: Text("$place")),
-            Expanded(flex: _memberNumFlex, child: Text(rating.shooter.memberNumber)),
+            Expanded(flex: _memberNumFlex, child: Text(rating.memberNumber)),
             Expanded(flex: _classFlex, child: Text(rating.lastClassification.displayString())),
-            Expanded(flex: _nameFlex, child: Text(rating.shooter.getName(suffixes: false))),
+            Expanded(flex: _nameFlex, child: Text(rating.getName(suffixes: false))),
             Expanded(flex: _ordinalFlex, child: Text(rating.ordinal.toStringAsFixed(1), textAlign: TextAlign.end)),
             Expanded(flex: _muFlex, child: Text(rating.mu.toStringAsFixed(1), textAlign: TextAlign.end)),
             Expanded(flex: _sigmaFlex, child: Text(rating.sigma.toStringAsFixed(2), textAlign: TextAlign.end)),
@@ -131,8 +131,8 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
 
     for(var s in ratings) {
       s as OpenskillRating;
-      csv += "${s.shooter.memberNumber},";
-      csv += "${s.shooter.getName()},";
+      csv += "${s.originalMemberNumber},";
+      csv += "${s.getName()},";
       csv += "${s.ordinal.toStringAsFixed(2)},";
       csv += "${s.mu.toStringAsFixed(2)}";
       csv += "${s.sigma.toStringAsFixed(2)}";

@@ -7,11 +7,7 @@ import 'package:uspsa_result_viewer/data/ranking/model/connected_shooter.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_change.dart';
 import 'package:uspsa_result_viewer/data/sorted_list.dart';
 
-
-abstract class ShooterRating {
-  // The weird generic is required so that subclasses can implement
-  // [copyRatingFrom].
-
+abstract class ShooterRating extends Shooter {
   /// The number of events over which trend/variance are calculated.
   static const baseTrendWindow = 30;
 
@@ -24,10 +20,7 @@ abstract class ShooterRating {
   static const baseConnectedness = 100.0;
   static const maxConnections = 40;
 
-  final Shooter shooter;
-  Classification _lastClass;
-  Classification get lastClassification => _lastClass;
-  set lastClassification(Classification c) => _lastClass = c;
+  Classification lastClassification;
   DateTime lastSeen;
 
   double get rating;
@@ -183,14 +176,22 @@ abstract class ShooterRating {
     return change;
   }
 
-  ShooterRating(this.shooter, {DateTime? date}) :
-      this._lastClass = shooter.classification ?? Classification.U,
-      this.lastSeen = date ?? DateTime.now();
+  void copyVitalsFrom(Shooter other) {
+    this.firstName = other.firstName;
+    this.lastName = other.lastName;
+  }
+
+  ShooterRating(Shooter shooter, {DateTime? date}) :
+      this.lastClassification = shooter.classification ?? Classification.U,
+      this.lastSeen = date ?? DateTime.now() {
+    super.copyVitalsFrom(shooter);
+  }
 
   ShooterRating.copy(ShooterRating other) :
-      this.shooter = other.shooter,
-      this._lastClass = other.lastClassification,
+      this.lastClassification = other.lastClassification,
       this._connectedness = other._connectedness,
       this.lastSeen = other.lastSeen,
-      this.connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure)..addAll(other.connectedShooters.map((e) => ConnectedShooter.copy(e)));
+      this.connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure)..addAll(other.connectedShooters.map((e) => ConnectedShooter.copy(e))) {
+    super.copyVitalsFrom(other);
+  }
 }

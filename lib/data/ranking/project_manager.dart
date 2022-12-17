@@ -186,6 +186,7 @@ class RatingProject {
   String name;
   RatingHistorySettings settings;
   List<String> matchUrls;
+  // TODO: start storing/caching match IDs instead of URLS
   
   RatingProject({
     required this.name,

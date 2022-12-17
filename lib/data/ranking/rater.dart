@@ -168,8 +168,8 @@ class Rater {
         else {
           // Update names for existing shooters, to eliminate the Mel Rodero -> Mel Rodero II problem
           var rating = knownShooters[s.memberNumber]!;
-          rating.shooter.firstName = s.firstName;
-          rating.shooter.lastName = s.lastName;
+          rating.firstName = s.firstName;
+          rating.lastName = s.lastName;
           updated += 1;
         }
       }
@@ -187,7 +187,7 @@ class Rater {
     Map<String, List<String>> namesToNumbers = {};
 
     for(var num in knownShooters.keys) {
-      var shooter = knownShooters[num]!.shooter;
+      var shooter = knownShooters[num]!;
       var name = "${shooter.firstName.toLowerCase().replaceAll(RegExp(r"\s+"), "")}"
           + "${shooter.lastName.toLowerCase().replaceAll(RegExp(r"\s+"), "")}";
 
@@ -289,8 +289,8 @@ class Rater {
         rating.lastClassification = shooter.classification ?? rating.lastClassification;
 
         // Update the shooter's name: the most recent one is probably the most interesting/useful
-        rating.shooter.firstName = shooter.firstName;
-        rating.shooter.lastName = shooter.lastName;
+        rating.firstName = shooter.firstName;
+        rating.lastName = shooter.lastName;
 
         // Update the shooter's member number: the CSV exports are more useful if it's the most
         // recent one. // TODO: this would be handy, but it changes the math somehow (not removing unseen?)
@@ -798,7 +798,7 @@ class Rater {
         var stageScore = scoreMap[rating];
 
         if(stageScore == null) {
-          print("Null stage score for ${rating.shooter} on ${stage.name}");
+          print("Null stage score for $rating on ${stage.name}");
           continue;
         }
 

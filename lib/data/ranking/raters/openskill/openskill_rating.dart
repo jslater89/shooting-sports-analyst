@@ -48,6 +48,6 @@ class OpenskillRating extends ShooterRating {
 
   @override
   String toString() {
-    return "${shooter.getName(suffixes: false)} ${rating.round()} ($hashCode)";
+    return "${getName(suffixes: false)} ${rating.round()} ($hashCode)";
   }
 }

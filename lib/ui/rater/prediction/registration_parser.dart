@@ -92,7 +92,7 @@ List<String> _processShooterName(Shooter shooter) {
 ShooterRating? _findShooter(String shooterName, Classification classification, List<ShooterRating> knownShooters) {
   var processedName = _processRegistrationName(shooterName);
   var firstGuess = knownShooters.firstWhereOrNull((rating) {
-    return _processShooterName(rating.shooter).join() == processedName;
+    return _processShooterName(rating).join() == processedName;
   });
 
   if(firstGuess != null) {
@@ -100,7 +100,7 @@ ShooterRating? _findShooter(String shooterName, Classification classification, L
   }
 
   var secondGuess = knownShooters.where((rating) {
-    return processedName.endsWith(_processShooterName(rating.shooter)[1]) && rating.lastClassification == classification;
+    return processedName.endsWith(_processShooterName(rating)[1]) && rating.lastClassification == classification;
   }).toList();
 
   if(secondGuess.length == 1) {
@@ -109,7 +109,7 @@ ShooterRating? _findShooter(String shooterName, Classification classification, L
 
   // Catch e.g. Robert Hall -> Rob Hall
   var thirdGuess = knownShooters.where((rating) {
-    var processedShooterName = _processShooterName(rating.shooter);
+    var processedShooterName = _processShooterName(rating);
     var lastName = _processRegistrationName(shooterName.split(" ").last);
     var firstName = _processRegistrationName(shooterName.split(" ").first);
 

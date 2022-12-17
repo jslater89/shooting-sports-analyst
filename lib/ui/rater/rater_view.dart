@@ -71,7 +71,7 @@ class _RaterViewState extends State<RaterView> {
     // });
 
     if(widget.search != null && widget.search!.isNotEmpty) {
-      sortedRatings = sortedRatings.where((r) => r.shooter.getName(suffixes: false).toLowerCase().contains(widget.search!.toLowerCase())).toList();
+      sortedRatings = sortedRatings.where((r) => r.getName(suffixes: false).toLowerCase().contains(widget.search!.toLowerCase())).toList();
     }
 
     if(widget.maxAge != null) {
@@ -187,9 +187,9 @@ extension _SortFunctions on RatingSortMode {
       case RatingSortMode.stages:
         return (a, b) => b.ratingEvents.length.compareTo(a.ratingEvents.length);
       case RatingSortMode.firstName:
-        return (a, b) => a.shooter.firstName.compareTo(b.shooter.firstName);
+        return (a, b) => a.firstName.compareTo(b.firstName);
       case RatingSortMode.lastName:
-        return (a, b) => a.shooter.lastName.compareTo(b.shooter.lastName);
+        return (a, b) => a.lastName.compareTo(b.lastName);
     }
   }
 }

@@ -162,7 +162,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     if(Timings.enabled) timings.updateRatings += (DateTime.now().difference(start).inMicroseconds).toDouble();
 
     if(change.isNaN || change.isInfinite || change.abs() > 1000) {
-      debugPrint("### ${aRating.shooter.lastName} stats: ${actualScore.actualPercent} of ${params.usedScores} shooters for ${aScore.stage?.name}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}, placement $placementMultiplier, zero $zeroMultiplier (${params.zeroes})");
+      debugPrint("### ${aRating.lastName} stats: ${actualScore.actualPercent} of ${params.usedScores} shooters for ${aScore.stage?.name}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}, placement $placementMultiplier, zero $zeroMultiplier (${params.zeroes})");
       debugPrint("AS/ES: ${actualScore.score.toStringAsFixed(6)}/${params.expectedScore.toStringAsFixed(6)}");
       debugPrint("Actual/expected percent: ${(actualScore.percentComponent * params.totalPercent * 100).toStringAsFixed(2)}/${(params.expectedScore * params.totalPercent * 100).toStringAsFixed(2)}");
       debugPrint("Actual/expected place: ${actualScore.placeBlend}/${(params.usedScores - (params.expectedScore * params.divisor)).toStringAsFixed(4)}");
@@ -348,9 +348,9 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
             children: [
               Expanded(flex: _leadPaddingFlex, child: Text("")),
               Expanded(flex: _placeFlex, child: Text("$place")),
-              Expanded(flex: _memNumFlex, child: Text(rating.shooter.memberNumber)),
+              Expanded(flex: _memNumFlex, child: Text(rating.originalMemberNumber)),
               Expanded(flex: _classFlex, child: Text(rating.lastClassification.displayString())),
-              Expanded(flex: _nameFlex, child: Text(rating.shooter.getName(suffixes: false))),
+              Expanded(flex: _nameFlex, child: Text(rating.getName(suffixes: false))),
               Expanded(flex: _ratingFlex, child: Text("${rating.rating.round()}", textAlign: TextAlign.end)),
               Expanded(flex: _errorFlex, child: Text("${error.toStringAsFixed(1)}", textAlign: TextAlign.end)),
               Expanded(flex: _matchChangeFlex, child: Text("${lastMatchChange.round()}", textAlign: TextAlign.end)),
@@ -396,8 +396,8 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
         lastMatchChange += event.ratingChange;
       }
 
-      csv += "${s.shooter.memberNumber},";
-      csv += "${s.shooter.getName()},";
+      csv += "${s.originalMemberNumber},";
+      csv += "${s.getName(suffixes: false)},";
       csv += "${s.rating.round()},${lastMatchChange.round()},${error.toStringAsFixed(2)},${trend.toStringAsFixed(2)},${s.ratingEvents.length}\n";
     }
     return csv;

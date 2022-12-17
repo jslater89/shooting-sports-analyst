@@ -7,13 +7,14 @@ class Shooter {
   String lastName = "";
 
   String _memberNumber = "";
-  late final String originalMemberNumber;
+  String _originalMemberNumber = "";
+  String get originalMemberNumber => _originalMemberNumber;
   bool _hasOriginalMemberNumber = false;
 
   String get memberNumber => _memberNumber;
   set memberNumber(String m) {
     if(!_hasOriginalMemberNumber) {
-      originalMemberNumber = m.toUpperCase().replaceAll(RegExp(r"[^A-Z0-9]"), "");
+      _originalMemberNumber = m.toUpperCase().replaceAll(RegExp(r"[^A-Z0-9]"), "");
       _hasOriginalMemberNumber = true;
     }
     _memberNumber = m;
@@ -41,7 +42,7 @@ class Shooter {
     var newShooter = Shooter()
       ..firstName = firstName
       ..lastName = lastName
-      ..originalMemberNumber = originalMemberNumber
+      .._originalMemberNumber = _originalMemberNumber
       .._hasOriginalMemberNumber = _hasOriginalMemberNumber
       ..memberNumber = memberNumber
       ..reentry = reentry
@@ -56,6 +57,36 @@ class Shooter {
     });
 
     return newShooter;
+  }
+
+  Shooter copyWithoutScores() {
+    var newShooter = Shooter()
+      ..firstName = firstName
+      ..lastName = lastName
+      .._originalMemberNumber = _originalMemberNumber
+      .._hasOriginalMemberNumber = _hasOriginalMemberNumber
+      ..memberNumber = memberNumber
+      ..reentry = reentry
+      ..dq = dq
+      ..division = division
+      ..classification = classification
+      ..powerFactor = powerFactor
+      ..stageScores = {};
+
+    return newShooter;
+  }
+
+  void copyVitalsFrom(Shooter other) {
+    firstName = other.firstName;
+    lastName = other.lastName;
+    _originalMemberNumber = other._originalMemberNumber;
+    _hasOriginalMemberNumber = other._hasOriginalMemberNumber;
+    memberNumber = other.memberNumber;
+    reentry = other.reentry;
+    dq = other.dq;
+    division = other.division;
+    classification = other.classification;
+    powerFactor = other.powerFactor;
   }
 
   @override

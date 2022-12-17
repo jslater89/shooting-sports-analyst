@@ -1,7 +1,7 @@
 
 import 'package:floor/floor.dart';
-import 'package:uspsa_result_viewer/data/db/match_cache/match_db.dart';
 import 'package:uspsa_result_viewer/data/db/object/match.dart';
+import 'package:uspsa_result_viewer/data/db/project/project_db.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 
 /// DbShooter is _non-deduplicated_. They're match entries, not shooters
