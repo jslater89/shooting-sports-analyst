@@ -28,6 +28,8 @@ class RatingHistory {
 
   late RatingHistorySettings _settings;
 
+  List<RaterGroup> get groups => []..addAll(_settings.groups);
+
   /// Maps matches to a map of [Rater]s, which hold the incremental ratings
   /// after that match has been processed.
   Map<PracticalMatch, Map<RaterGroup, Rater>> _ratersByDivision = {};

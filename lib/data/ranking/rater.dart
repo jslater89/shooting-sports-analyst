@@ -13,6 +13,10 @@ class Rater {
   Map<String, ShooterRating> knownShooters = {};
   Map<String, String> _memberNumberMappings = {};
   Set<String> _memberNumbersEncountered = Set<String>();
+
+  Map<String, String> get memberNumberMappings => {}..addAll(_memberNumberMappings);
+  Set<String> get memberNumbersEncountered => <String>{}..addAll(_memberNumbersEncountered);
+
   RatingSystem ratingSystem;
 
   FilterSet? _filters;

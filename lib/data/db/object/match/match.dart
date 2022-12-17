@@ -129,6 +129,9 @@ abstract class MatchDao {
 
   @Insert(onConflict: OnConflictStrategy.replace)
   Future<int> save(DbMatch match);
+
+  @Query('SELECT * FROM matches WHERE longPsId = :longId')
+  Future<DbMatch?> byPractiscoreId(String longId);
 }
 
 class MatchLevelConverter extends TypeConverter<MatchLevel, int> {
