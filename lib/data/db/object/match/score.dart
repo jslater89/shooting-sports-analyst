@@ -5,6 +5,7 @@ import 'package:uspsa_result_viewer/data/db/object/match/shooter.dart';
 import 'package:uspsa_result_viewer/data/db/object/match/stage.dart';
 import 'package:uspsa_result_viewer/data/db/project/project_db.dart';
 import 'package:uspsa_result_viewer/data/match/score.dart';
+import 'package:uspsa_result_viewer/data/model.dart';
 
 /// A shooter's stage score in a match.
 ///
@@ -54,6 +55,31 @@ class DbScore {
     required this.otherPenalty,
   });
 
+  Score deserialize(Shooter shooter, Stage stage) {
+    var score = Score(shooter: shooter);
+    score.stage = stage;
+    score.t1 = t1;
+    score.t2 = t2;
+    score.t3 = t3;
+    score.t4 = t4;
+    score.t5 = t5;
+    score.time = time;
+    score.a = a;
+    score.b = b;
+    score.c = c;
+    score.d = d;
+    score.m = m;
+    score.ns = ns;
+    score.npm = npm;
+    score.procedural = procedural;
+    score.lateShot = lateShot;
+    score.extraShot = extraShot;
+    score.extraHit = extraHit;
+    score.otherPenalty = otherPenalty;
+
+    return score;
+  }
+
   static Future<DbScore> serialize(Score score, DbShooter shooter, DbStage stage, MatchStore store) async {
     var dbScore = DbScore(
       shooterId: shooter.id!,
@@ -90,7 +116,7 @@ abstract class ScoreDao {
   @Query("SELECT * FROM scores "
       "WHERE stageId = :stageId "
       "AND shooterId = :shooterId")
-  Future<List<DbScore>> stageScoresForShooter(int stageId, int shooterId);
+  Future<DbScore?> stageScoreForShooter(int stageId, int shooterId);
 
   @Query("SELECT scores.* FROM scores JOIN stages "
       "WHERE stages.matchId = :matchId "

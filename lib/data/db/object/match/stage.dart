@@ -18,17 +18,31 @@ class DbStage {
   bool classifier;
   String classifierNumber;
 
-  Scoring type;
+  Scoring scoring;
 
   DbStage({
+    this.id,
     required this.matchId,
     required this.name,
     required this.minRounds,
     required this.maxPoints,
     required this.classifier,
     required this.classifierNumber,
-    required this.type,
+    required this.scoring,
   });
+
+  Stage deserialize() {
+    Stage s = Stage(
+      type: this.scoring,
+      minRounds: this.minRounds,
+      maxPoints: this.maxPoints,
+      classifierNumber: this.classifierNumber,
+      classifier: this.classifier,
+      name: this.name,
+    );
+
+    return s;
+  }
 
   static Future<DbStage> serialize(Stage stage, DbMatch parent, MatchStore store) async {
     var dbStage = DbStage(
@@ -38,7 +52,7 @@ class DbStage {
       matchId: parent.id!,
       maxPoints: stage.maxPoints,
       minRounds: stage.minRounds,
-      type: stage.type
+      scoring: stage.type
     );
 
     int id = await store.stages.save(dbStage);

@@ -40,8 +40,46 @@ class DbMatch {
     return store.shooters.forMatchId(id!);
   }
 
-  PracticalMatch deserialize(MatchStore store) {
-    throw UnimplementedError();
+  Future<PracticalMatch> deserialize(MatchStore store) async {
+    var match = PracticalMatch();
+    match.name = this.name;
+    match.practiscoreId = this.longPsId;
+    match.practiscoreIdShort = this.shortPsId;
+    match.reportContents = this.reportContents;
+    match.date = this.date;
+    match.rawDate = this.rawDate;
+    match.level = this.level;
+
+    var dbStages = await store.stages.forMatchId(this.id!);
+    var stagesByDbId = <int, Stage>{};
+    for(var dbStage in dbStages) {
+      var stage = dbStage.deserialize();
+      stagesByDbId[dbStage.id!] = stage;
+      match.stages.add(stage);
+    }
+
+    var dbShooters = await store.shooters.forMatchId(this.id!);
+    var shootersById = <int, Shooter>{};
+    for(var dbShooter in dbShooters) {
+      var shooter = dbShooter.deserialize();
+      shootersById[dbShooter.id!] = shooter;
+      match.shooters.add(shooter);
+
+      for(var dbStageId in stagesByDbId.keys) {
+        var dbScore = await store.scores.stageScoreForShooter(dbStageId, dbShooter.id!);
+
+        // TODO: remove this if it turns out I save stage scores for DQs too
+        if(dbScore == null) {
+          print("WARN: missing stage score");
+          continue;
+        }
+
+        var stage = stagesByDbId[dbStageId]!;
+        shooter.stageScores[stagesByDbId[dbStageId]!] = dbScore.deserialize(shooter, stage);
+      }
+    }
+
+    return match;
   }
 
   static Future<DbMatch> serialize(PracticalMatch match, MatchStore store) async {
@@ -77,6 +115,8 @@ class DbMatch {
         scoreFutures.add(DbScore.serialize(score, dbShooter, stageMapping[stage]!, store));
       }
     }
+
+    await Future.wait(scoreFutures);
 
     return dbMatch;
   }

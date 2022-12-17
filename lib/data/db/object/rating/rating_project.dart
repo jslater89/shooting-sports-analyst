@@ -2,9 +2,6 @@ import 'package:floor/floor.dart';
 
 @Entity(
   tableName: "ratingProjects",
-  foreignKeys: [
-    ForeignKey(childColumns: ["projectId"], parentColumns: ["id"], entity: DbRatingProjectMatch)
-  ]
 )
 class DbRatingProject {
   @PrimaryKey(autoGenerate: true)

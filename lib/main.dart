@@ -8,6 +8,8 @@ import 'package:floor/floor.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:uspsa_result_viewer/data/db/object/match/match.dart';
+import 'package:uspsa_result_viewer/data/db/project/project_db.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/route/local_upload.dart';
 import 'package:uspsa_result_viewer/route/match_select.dart';
@@ -80,13 +82,18 @@ void main() async {
   }
 
   // sqfliteDatabaseFactory.setDatabasesPath(".");
-  // var testDb = await $FloorMatchDatabase.databaseBuilder("test.sqlite").build();
+  // var testDb = await $FloorProjectDatabase.databaseBuilder("test.sqlite").build();
   // var fileContents = await File("report.txt").readAsString();
   // var match = await processScoreFile(fileContents);
   // match.practiscoreIdShort = "12345";
   // match.practiscoreId = "long-uuid-id";
   //
   // var dbMatch = await DbMatch.serialize(match, testDb);
+  // match = await dbMatch.deserialize(testDb);
+  // var scores = match.getScores();
+  // for(var score in scores) {
+  //   print("Shooter: ${score.shooter.getName()} ${(score.total.percent * 100).toStringAsFixed(2)}%");
+  // }
 
   runApp(MyApp());
 }

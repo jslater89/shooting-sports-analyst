@@ -47,6 +47,24 @@ class DbShooter {
     required this.powerFactor,
   });
 
+  Shooter deserialize() {
+    var shooter = Shooter();
+    shooter.firstName = this.firstName;
+    shooter.lastName = this.lastName;
+
+    // Leverage the member number setter to do this for us
+    shooter.memberNumber = this.originalMemberNumber;
+    shooter.memberNumber = this.memberNumber;
+
+    shooter.reentry = this.reentry;
+    shooter.dq = this.dq;
+    shooter.division = this.division;
+    shooter.classification = this.classification;
+    shooter.powerFactor = this.powerFactor;
+
+    return shooter;
+  }
+
   static Future<DbShooter> serialize(Shooter shooter, DbMatch parent, MatchStore store) async {
     var dbShooter = DbShooter(
       matchId: parent.id!,
