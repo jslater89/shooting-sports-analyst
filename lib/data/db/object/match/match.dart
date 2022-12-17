@@ -1,7 +1,7 @@
 import 'package:floor/floor.dart';
-import 'package:uspsa_result_viewer/data/db/object/score.dart';
-import 'package:uspsa_result_viewer/data/db/object/shooter.dart';
-import 'package:uspsa_result_viewer/data/db/object/stage.dart';
+import 'package:uspsa_result_viewer/data/db/object/match/score.dart';
+import 'package:uspsa_result_viewer/data/db/object/match/shooter.dart';
+import 'package:uspsa_result_viewer/data/db/object/match/stage.dart';
 import 'package:uspsa_result_viewer/data/db/project/project_db.dart';
 import 'package:uspsa_result_viewer/data/match/practical_match.dart';
 import 'package:uspsa_result_viewer/data/match/shooter.dart';

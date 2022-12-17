@@ -2,15 +2,15 @@ import 'dart:async';
 import 'package:floor/floor.dart';
 import 'package:sqflite/sqflite.dart' as sqflite;
 
-import 'package:uspsa_result_viewer/data/db/object/match.dart';
+import 'package:uspsa_result_viewer/data/db/object/match/match.dart';
 import 'package:uspsa_result_viewer/data/db/object/rating/elo/db_elo_rating.dart';
 import 'package:uspsa_result_viewer/data/db/object/rating/rating_event.dart';
 import 'package:uspsa_result_viewer/data/db/object/rating/rating_project.dart';
 import 'package:uspsa_result_viewer/data/db/object/rating/shooter_rating.dart';
-import 'package:uspsa_result_viewer/data/db/object/score.dart';
-import 'package:uspsa_result_viewer/data/db/object/scoring.dart';
-import 'package:uspsa_result_viewer/data/db/object/shooter.dart';
-import 'package:uspsa_result_viewer/data/db/object/stage.dart';
+import 'package:uspsa_result_viewer/data/db/object/match/score.dart';
+import 'package:uspsa_result_viewer/data/db/object/match/scoring.dart';
+import 'package:uspsa_result_viewer/data/db/object/match/shooter.dart';
+import 'package:uspsa_result_viewer/data/db/object/match/stage.dart';
 
 part 'project_db.g.dart';
 

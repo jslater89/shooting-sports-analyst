@@ -1,7 +1,7 @@
 
 import 'package:floor/floor.dart';
 import 'package:uspsa_result_viewer/data/db/object/rating/rating_types.dart';
-import 'package:uspsa_result_viewer/data/db/object/shooter.dart';
+import 'package:uspsa_result_viewer/data/db/object/match/shooter.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 

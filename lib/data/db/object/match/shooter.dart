@@ -1,6 +1,6 @@
 
 import 'package:floor/floor.dart';
-import 'package:uspsa_result_viewer/data/db/object/match.dart';
+import 'package:uspsa_result_viewer/data/db/object/match/match.dart';
 import 'package:uspsa_result_viewer/data/db/project/project_db.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 
