@@ -11,6 +11,8 @@ class DbRatingEvent {
   int matchId;
   int? stageId;
 
+  // TODO: score values
+
   String infoKeys;
   String infoValues;
 
@@ -24,11 +26,6 @@ class DbRatingEvent {
     required this.infoKeys,
     required this.infoValues,
   });
-}
-
-@dao
-abstract class RatingEventDao {
-
 }
 
 abstract class RatingEventExtension {

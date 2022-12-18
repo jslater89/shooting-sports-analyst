@@ -81,19 +81,19 @@ void main() async {
     Hive.init(path.absolute.path);
   }
 
-  // sqfliteDatabaseFactory.setDatabasesPath(".");
-  // var testDb = await $FloorProjectDatabase.databaseBuilder("test.sqlite").build();
-  // var fileContents = await File("report.txt").readAsString();
-  // var match = await processScoreFile(fileContents);
-  // match.practiscoreIdShort = "12345";
-  // match.practiscoreId = "long-uuid-id";
-  //
-  // var dbMatch = await DbMatch.serialize(match, testDb);
-  // match = await dbMatch.deserialize(testDb);
-  // var scores = match.getScores();
-  // for(var score in scores) {
-  //   print("Shooter: ${score.shooter.getName()} ${(score.total.percent * 100).toStringAsFixed(2)}%");
-  // }
+  sqfliteDatabaseFactory.setDatabasesPath(".");
+  var testDb = await $FloorProjectDatabase.databaseBuilder("test.sqlite").build();
+  var fileContents = await File("report.txt").readAsString();
+  var match = await processScoreFile(fileContents);
+  match.practiscoreIdShort = "12345";
+  match.practiscoreId = "long-uuid-id";
+
+  var dbMatch = await DbMatch.serialize(match, testDb);
+  match = await dbMatch.deserialize(testDb);
+  var scores = match.getScores();
+  for(var score in scores) {
+    print("Shooter: ${score.shooter.getName()} ${(score.total.percent * 100).toStringAsFixed(2)}%");
+  }
 
   runApp(MyApp());
 }

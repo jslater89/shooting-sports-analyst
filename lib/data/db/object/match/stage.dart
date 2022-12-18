@@ -9,8 +9,8 @@ class DbStage {
   @PrimaryKey(autoGenerate: true)
   int? id;
 
-  @ForeignKey(childColumns: ["matchId"], parentColumns: ["id"], entity: DbMatch, onDelete: ForeignKeyAction.cascade)
-  int matchId;
+  @ForeignKey(childColumns: ["matchId"], parentColumns: ["longPsId"], entity: DbMatch, onDelete: ForeignKeyAction.cascade)
+  String matchId;
 
   String name;
   int minRounds = 0;
@@ -49,7 +49,7 @@ class DbStage {
       name: stage.name,
       classifier: stage.classifier,
       classifierNumber: stage.classifierNumber,
-      matchId: parent.id!,
+      matchId: parent.psId,
       maxPoints: stage.maxPoints,
       minRounds: stage.minRounds,
       scoring: stage.type
@@ -68,7 +68,7 @@ abstract class StageDao {
   Future<List<DbStage>> all();
 
   @Query("SELECT * FROM stages WHERE matchId = :id")
-  Future<List<DbStage>> forMatchId(int id);
+  Future<List<DbStage>> forMatchId(String id);
 
   @Insert(onConflict: OnConflictStrategy.replace)
   Future<int> save(DbStage stage);

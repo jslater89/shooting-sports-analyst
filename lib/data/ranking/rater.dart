@@ -43,7 +43,14 @@ class Rater {
 
   Set<ShooterRating> get uniqueShooters => <ShooterRating>{}..addAll(knownShooters.values);
 
-  Rater({required List<PracticalMatch> matches, required this.ratingSystem, FilterSet? filters, this.byStage = false, this.progressCallback, this.memberNumberWhitelist = const []}) : this._matches = matches, this._filters = filters {
+  Rater({
+    required List<PracticalMatch> matches,
+    required this.ratingSystem,
+    FilterSet? filters,
+    this.byStage = false,
+    this.progressCallback,
+    this.memberNumberWhitelist = const []}) : this._matches = matches, this._filters = filters
+  {
     _matches.sort((a, b) {
       if(a.date == null && b.date == null) {
         return 0;

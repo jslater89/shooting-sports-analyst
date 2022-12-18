@@ -1,6 +1,8 @@
 import 'package:floor/floor.dart';
 import 'package:uspsa_result_viewer/data/db/object/rating/rating_event.dart';
 import 'package:uspsa_result_viewer/data/db/object/rating/shooter_rating.dart';
+import 'package:uspsa_result_viewer/data/db/project/project_db.dart';
+import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
 
 @Entity(tableName: "eloRatings")
 class DbEloRating extends RatingExtension {
@@ -15,6 +17,17 @@ class DbEloRating extends RatingExtension {
     required this.rating,
     required this.variance,
   });
+
+  static Future<DbEloRating> serialize(EloShooterRating rating, DbShooterRating dbRating, ProjectStore store) async {
+    var dbEloRating = DbEloRating(
+      parentId: dbRating.id!,
+      rating: rating.rating,
+      variance: rating.variance,
+    );
+    
+    await store.eloRatings.saveRating(dbEloRating);
+    return dbEloRating;
+  }
 }
 
 @dao
@@ -24,6 +37,12 @@ abstract class EloRatingDao {
 
   @Query("SELECT * FROM eloRatingEvents WHERE parentId = :eventId")
   Future<List<DbEloEvent>> extensionForEvent(int eventId);
+
+  @insert
+  Future<int> saveRating(DbEloRating rating);
+
+  @insert
+  Future<int> saveEvent(DbRatingEvent rating);
 }
 
 @Entity(tableName: "eloRatingEvents")

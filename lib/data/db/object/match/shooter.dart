@@ -9,14 +9,14 @@ import 'package:uspsa_result_viewer/data/model.dart';
 @Entity(
   tableName: "shooters",
   foreignKeys: [
-    ForeignKey(childColumns: ["matchId"], parentColumns: ["id"], entity: DbMatch, onDelete: ForeignKeyAction.cascade)
+    ForeignKey(childColumns: ["matchId"], parentColumns: ["psId"], entity: DbMatch, onDelete: ForeignKeyAction.cascade)
   ]
 )
 class DbShooter {
   @PrimaryKey(autoGenerate: true)
   int? id;
 
-  int matchId;
+  String matchId;
 
   String firstName;
   String lastName;
@@ -67,7 +67,7 @@ class DbShooter {
 
   static Future<DbShooter> serialize(Shooter shooter, DbMatch parent, MatchStore store) async {
     var dbShooter = DbShooter(
-      matchId: parent.id!,
+      matchId: parent.psId,
       firstName: shooter.firstName,
       lastName: shooter.lastName,
       memberNumber: shooter.memberNumber,
@@ -89,7 +89,7 @@ class DbShooter {
 @dao
 abstract class ShooterDao {
   @Query("SELECT * FROM shooters WHERE matchId = :id")
-  Future<List<DbShooter>> forMatchId(int id);
+  Future<List<DbShooter>> forMatchId(String id);
 
   @insert
   Future<int> save(DbShooter shooter);
