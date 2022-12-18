@@ -1,4 +1,6 @@
+import 'package:flutter_test/flutter_test.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 
 void main() async {
@@ -9,12 +11,36 @@ void main() async {
 
   var rater = history.raterFor(history.matches.last, RaterGroup.open);
 
-  assert(rater.uniqueShooters.length == 2);
+  test("simple shooter deduplication", () {
+    expect(rater.uniqueShooters.length, 2);
+    var doe = rater.uniqueShooters.firstWhere((element) => element.lastName == "Doe");
+    expect(doe.memberNumber, "1234");
+    expect(doe.originalMemberNumber, "L1234");
+
+    // 3 one-stage matches
+    expect(doe.length, 3);
+  });
+
+  test("copied deduplication", () {
+    var newRater = Rater.copy(rater);
+    expect(newRater.uniqueShooters.length, 2);
+  });
+
+  await history.addMatch(rdMemberNumberTestData());
+
+  rater = history.raterFor(history.matches.last, RaterGroup.open);
+  test("post-initial mapping", () {
+    expect(rater.uniqueShooters.length, 2);
+    var johnson = rater.uniqueShooters.firstWhere((element) => element.lastName == "Johnson");
+    expect(johnson.memberNumber, "5432");
+    expect(johnson.originalMemberNumber, "L5432");
+  });
 }
 
 List<PracticalMatch> deduplicationTestData() {
   PracticalMatch m1 = PracticalMatch();
   m1.name = "Match 1";
+  m1.reportContents = "";
   m1.practiscoreId = "1";
   m1.level = MatchLevel.I;
   m1.date = DateTime(2022, 12, 1, 0, 0, 0);
@@ -70,10 +96,13 @@ List<PracticalMatch> deduplicationTestData() {
   m1.shooters = [shooter1, shooter1b];
   m1.stages = [s1];
   m1.maxPoints = s1.maxPoints;
+  
+  // match 2
 
   PracticalMatch m2 = PracticalMatch();
   m2.name = "Match 2";
   m2.practiscoreId = "2";
+  m2.reportContents = "";
   m2.level = MatchLevel.I;
   m2.date = DateTime(2022, 12, 2, 0, 0, 0);
 
@@ -128,6 +157,130 @@ List<PracticalMatch> deduplicationTestData() {
   m2.shooters = [shooter2, shooter2b];
   m2.stages = [s2];
   m2.maxPoints = s2.maxPoints;
+  
+  // match 3
 
-  return [m1, m2];
+  PracticalMatch m3 = PracticalMatch();
+  m3.name = "Match 2";
+  m3.practiscoreId = "2";
+  m3.reportContents = "";
+  m3.level = MatchLevel.I;
+  m3.date = DateTime(2022, 12, 2, 0, 0, 0);
+
+  Stage s3 = Stage(
+    name: "Stage 2",
+    classifier: false,
+    classifierNumber: "",
+    maxPoints: 10,
+    minRounds: 2,
+    type: Scoring.comstock,
+  );
+
+  Shooter shooter3 = Shooter();
+  shooter3.firstName = "John";
+  shooter3.lastName = "Doe";
+  shooter3.memberNumber = "A12345";
+  shooter3.powerFactor = PowerFactor.minor;
+  shooter3.division = Division.open;
+  shooter3.classification = Classification.B;
+  shooter3.reentry = false;
+  shooter3.dq = false;
+
+  shooter3.stageScores = {
+    s3: Score(
+        shooter: shooter3,
+        stage: s3
+    )
+      ..a=1
+      ..c=1
+      ..time=3.5
+  };
+
+  Shooter shooter3b = Shooter();
+  shooter3b.firstName = "Bob";
+  shooter3b.lastName = "Johnson";
+  shooter3b.memberNumber = "A54321";
+  shooter3b.powerFactor = PowerFactor.minor;
+  shooter3b.division = Division.open;
+  shooter3b.classification = Classification.B;
+  shooter3b.reentry = false;
+  shooter3b.dq = false;
+
+  shooter3b.stageScores = {
+    s3: Score(
+        shooter: shooter3b,
+        stage: s3
+    )
+      ..c=2
+      ..time=3.25
+  };
+
+  m3.shooters = [shooter3, shooter3b];
+  m3.stages = [s3];
+  m3.maxPoints = s3.maxPoints;
+
+  return [m1, m2, m3];
+}
+
+PracticalMatch rdMemberNumberTestData() {
+  PracticalMatch m3 = PracticalMatch();
+  m3.name = "Match 2";
+  m3.practiscoreId = "2";
+  m3.reportContents = "";
+  m3.level = MatchLevel.I;
+  m3.date = DateTime(2022, 12, 2, 0, 0, 0);
+
+  Stage s3 = Stage(
+    name: "Stage 2",
+    classifier: false,
+    classifierNumber: "",
+    maxPoints: 10,
+    minRounds: 2,
+    type: Scoring.comstock,
+  );
+
+  Shooter shooter3 = Shooter();
+  shooter3.firstName = "John";
+  shooter3.lastName = "Doe";
+  shooter3.memberNumber = "L1234";
+  shooter3.powerFactor = PowerFactor.minor;
+  shooter3.division = Division.open;
+  shooter3.classification = Classification.B;
+  shooter3.reentry = false;
+  shooter3.dq = false;
+
+  shooter3.stageScores = {
+    s3: Score(
+        shooter: shooter3,
+        stage: s3
+    )
+      ..a=1
+      ..c=1
+      ..time=3.5
+  };
+
+  Shooter shooter3b = Shooter();
+  shooter3b.firstName = "Bob";
+  shooter3b.lastName = "Johnson";
+  shooter3b.memberNumber = "L5432";
+  shooter3b.powerFactor = PowerFactor.minor;
+  shooter3b.division = Division.open;
+  shooter3b.classification = Classification.B;
+  shooter3b.reentry = false;
+  shooter3b.dq = false;
+
+  shooter3b.stageScores = {
+    s3: Score(
+        shooter: shooter3b,
+        stage: s3
+    )
+      ..c=2
+      ..time=3.25
+  };
+
+  m3.shooters = [shooter3, shooter3b];
+  m3.stages = [s3];
+  m3.maxPoints = s3.maxPoints;
+  
+  return m3;
 }

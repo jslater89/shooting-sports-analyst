@@ -10,8 +10,19 @@ import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
 
 class Rater {
   List<PracticalMatch> _matches;
+
+  /// Maps processed member numbers to shooter ratings.
+  ///
+  /// Contains only canonical entries. Other member numbers for shooters are
+  /// in _memberNumberMappings.
   Map<String, ShooterRating> knownShooters = {};
+
+  /// Contains all mappings for normal-to-lifetime member number switches.
+  ///
+  /// All member numbers are processed.
   Map<String, String> _memberNumberMappings = {};
+
+  /// Contains every member number encountered, who has shot at least one stage.
   Set<String> _memberNumbersEncountered = Set<String>();
 
   Map<String, String> get memberNumberMappings => {}..addAll(_memberNumberMappings);
@@ -88,57 +99,13 @@ class Rater {
       this._filters = other._filters,
       this.memberNumberWhitelist = other.memberNumberWhitelist,
       this.ratingSystem = other.ratingSystem {
-    List<String> secondPass = [];
     for(var entry in _memberNumberMappings.entries) {
-      if(entry.key == entry.value) {
+      if (entry.key == entry.value) {
         // If, per the member number mappings, this is the canonical mapping, copy it immediately.
         // (The canonical mapping is the one where mappings[num] = num—i.e., no mapping)
-        knownShooters[entry.value] = ratingSystem.copyShooterRating(other.knownShooters[entry.value]!);
+        knownShooters[entry.value] = ratingSystem.copyShooterRating(other.knownShooter(entry.value));
       }
-      else {
-        if(other.knownShooters[entry.key] != null && other.knownShooters[entry.key] == other.knownShooters[entry.value]) {
-          // If, in the source rater, the mapped and actual member numbers point to the same person, add to the
-          // second-pass list to assign the mapping later.
-          secondPass.add(entry.key);
-        }
-        else {
-          debugPrint("This encountered mapped/actual member number? ${_memberNumbersEncountered.contains(entry.key)}/${_memberNumbersEncountered.contains(entry.value)}");
-          debugPrint("Other encountered mapped/actual member number? ${other._memberNumbersEncountered.contains(entry.key)}/${other._memberNumbersEncountered.contains(entry.value)}");
-          debugPrint("This mapped/actual, other mapped/actual: ${knownShooters[entry.key]} ${knownShooters[entry.value]} ${other.knownShooters[entry.key]} ${other.knownShooters[entry.value]}");
-          debugPrint("Member number mapping ${entry.key} -> ${entry.value} appears invalid");
-
-          _memberNumbersEncountered.remove(entry.key);
-          _memberNumberMappings.remove(entry.key);
-          _memberNumbersEncountered.remove(entry.value);
-
-          if(other.knownShooters[entry.key] != null) {
-            debugPrint("Copied shooter ${other.knownShooters[entry.key]!} for ${entry.key}");
-            knownShooters[entry.key] = other.knownShooters[entry.key]!;
-          }
-          else {
-            _memberNumbersEncountered.remove(entry.key);
-          }
-
-          if(other.knownShooters[entry.value] != null) {
-            debugPrint("Copied shooter ${other.knownShooters[entry.value]!} for ${entry.value}");
-            knownShooters[entry.value] = other.knownShooters[entry.value]!;
-          }
-          else {
-            _memberNumbersEncountered.remove(entry.value);
-          }
-        }
-      }
-    }
-
-    for(var mappedNumber in secondPass) {
-      var actualNumber = _memberNumberMappings[mappedNumber]!;
-      // debugPrint("Mapped $mappedNumber to $actualNumber with ${knownShooters[actualNumber]?.ratingEvents.length} ratings during copy");
-
-      if(knownShooters[actualNumber] == null) {
-        // break
-      }
-
-      knownShooters[mappedNumber] = knownShooters[actualNumber]!;
+      // Otherwise, it's an non-canonical number, so we can skip it
     }
   }
   
@@ -165,13 +132,13 @@ class Rater {
       var processed = processMemberNumber(s.memberNumber);
       if(processed.isNotEmpty && !s.reentry) {
         s.memberNumber = processed;
-        if(knownShooters[s.memberNumber] == null) {
+        var rating = maybeKnownShooter(s.memberNumber);
+        if(rating == null) {
           knownShooters[s.memberNumber] = ratingSystem.newShooterRating(s, date: match.date); // ratingSystem.defaultRating
           added += 1;
         }
         else {
-          // Update names for existing shooters, to eliminate the Mel Rodero -> Mel Rodero II problem
-          var rating = knownShooters[s.memberNumber]!;
+          // Update names for existing shooters on add, to eliminate the Mel Rodero -> Mel Rodero II problem in the L2+ set
           rating.firstName = s.firstName;
           rating.lastName = s.lastName;
           updated += 1;
@@ -182,9 +149,23 @@ class Rater {
     return added + updated;
   }
 
+  ShooterRating? maybeKnownShooter(String processedMemberNumber) {
+    var shooter = knownShooters[processedMemberNumber];
+    if(shooter == null) {
+      var number = _memberNumberMappings[processedMemberNumber];
+      if(number != processedMemberNumber) shooter = knownShooters[number];
+    }
+
+    return shooter;
+  }
+
+  ShooterRating knownShooter(String processedMemberNumber) {
+    return maybeKnownShooter(processedMemberNumber)!;
+  }
+
   ShooterRating? ratingFor(Shooter s) {
     var processed = processMemberNumber(s.memberNumber);
-    return knownShooters[processed];
+    return maybeKnownShooter(processed);
   }
 
   void _deduplicateShooters() {
@@ -203,12 +184,37 @@ class Rater {
       _memberNumberMappings[num] ??= num;
     }
 
+    // TODO: three-step mapping
+    // Say we have John Doe, A12345 in the set already, and
+    // John Doe, L1234 shows up. We have:
+    // 1. John Doe, A12345 with history
+    // 2. John Doe, L1234 with no history
+    // 3. _memberNumberMappings[12345] = 12345, and _memberNumberMappings[1234] = 1234;
+    //
+    // We get:
+    // 1. John Doe, L1234 with history
+    // 2. _memberNumberMappings[12345] = 1234, and ...[1234] = 1234;
+    //
+    // If we add another number for Doe (AD8, say) after the first update, we have:
+    // 1. John Doe, L1234 with history
+    // 2. John Doe, AD8 with no history
+    // 3. _memberNumberMappings[12345] and [1234] = 1234
+    //
+    // We want:
+    // 1. John Doe, AD8 with history
+    // 2. _memberNumberMappings[12345], [1234], and [8] = 8
+    //
+    // We won't currently get that, because we don't have any reference to 12345
+    // to update it--it's not in knownShooters.keys anymore. At the moment, though,
+    // that will only cause trouble if someone uses their A/TY/FY number after getting
+    // both a lifetime number and a BoD/pres number, which seems unlikely.
+
     for(var name in namesToNumbers.keys) {
       var list = namesToNumbers[name]!;
 
       if(list.length == 2) {
         // If the shooter is already mapped, or if both numbers are 5-digit non-lifetime numbers, continue
-        if((knownShooters[list[0]] == knownShooters[list[1]]) || (list[0].length > 4 && list[1].length > 4)) continue;
+        if((_memberNumberMappings[list[0]] == list[1] || _memberNumberMappings[list[1]] == list[0]) || (list[0].length > 4 && list[1].length > 4)) continue;
 
         debugPrint("Shooter $name has two member numbers, mapping: $list (${knownShooters[list[0]]}, ${knownShooters[list[1]]})");
 
@@ -219,19 +225,40 @@ class Rater {
           throw StateError("Both ratings have events");
         }
 
-        if (rating0.ratingEvents.length == 0) {
-          rating0.copyRatingFrom(rating1);
-          knownShooters[list[1]] = rating0;
-          _memberNumberMappings[list[1]] = list[0];
+        // We're either at the adding-initial-matches stage, or two people with the
+        // same name and different tiers of member number are shooting the same match,
+        // and I'm not a psychic. Map the longer one to the shorter one.
+        if (rating0.length == 0 && rating1.length == 0) {
+          if(rating0.memberNumber.length < rating1.memberNumber.length) {
+            rating0.copyRatingFrom(rating1);
+            knownShooters.remove(list[1]);
+            _memberNumberMappings[list[1]] = list[0];
 
-          // debugPrint("Mapped r1-r0 ${list[1]} to ${list[0]} with ${rating0.ratingEvents.length} ratings during deduplication");
+            // debugPrint("Mapped r1-r0 ${list[1]} to ${list[0]} with ${rating0.ratingEvents.length} events during deduplication");
+          }
+          else {
+            rating1.copyRatingFrom(rating0);
+            knownShooters.remove(list[0]);
+            _memberNumberMappings[list[0]] = list[1];
+
+            // debugPrint("Mapped r0-r1 ${list[0]} to ${list[1]} with ${rating1.ratingEvents.length} events during deduplication");
+          }
         }
         else {
-          rating1.copyRatingFrom(rating0);
-          knownShooters[list[0]] = rating1;
-          _memberNumberMappings[list[0]] = list[1];
+          if (rating0.ratingEvents.length == 0) {
+            rating0.copyRatingFrom(rating1);
+            knownShooters.remove(list[1]);
+            _memberNumberMappings[list[1]] = list[0];
 
-          // debugPrint("Mapped r0-r1 ${list[0]} to ${list[1]} with ${rating1.ratingEvents.length} ratings during deduplication");
+            // debugPrint("Mapped r1-r0 ${list[1]} to ${list[0]} with ${rating0.ratingEvents.length} events during deduplication");
+          }
+          else { // rating1.ratingEvents.length == 0
+            rating1.copyRatingFrom(rating0);
+            knownShooters.remove(list[0]);
+            _memberNumberMappings[list[0]] = list[1];
+
+            // debugPrint("Mapped r0-r1 ${list[0]} to ${list[1]} with ${rating1.ratingEvents.length} events during deduplication");
+          }
         }
       }
     }
@@ -288,7 +315,7 @@ class Rater {
     for(var shooter in shooters) {
       matchStrength += _strengthForClass(shooter.classification);
 
-      var rating = knownShooters[shooter.memberNumber];
+      var rating = maybeKnownShooter(shooter.memberNumber);
       if(rating != null) {
         rating.lastClassification = shooter.classification ?? rating.lastClassification;
 
@@ -326,7 +353,7 @@ class Rater {
     totalConnectedness = 0.0;
     totalShooters = 0;
     for(var shooter in shooters) {
-      var rating = knownShooters[shooter.memberNumber];
+      var rating = maybeKnownShooter(shooter.memberNumber);
 
       if(rating != null) {
         totalConnectedness += rating.connectedness;
@@ -359,8 +386,9 @@ class Rater {
         for(var score in filteredScores) {
           String num = score.shooter.memberNumber;
           var otherScore = score.stageScores[s]!;
-          stageScoreMap[knownShooters[num]!] = otherScore;
-          matchScoreMap[knownShooters[num]!] = score.total;
+          var rating = knownShooter(num);
+          stageScoreMap[rating] = otherScore;
+          matchScoreMap[rating] = score.total;
         }
 
         if(ratingSystem.mode == RatingMode.wholeEvent) {
@@ -423,7 +451,7 @@ class Rater {
 
       for(var score in filteredScores) {
         String num = score.shooter.memberNumber;
-        matchScoreMap[knownShooters[num]!] = score.total;
+        matchScoreMap[knownShooter(num)] = score.total;
       }
 
       if(ratingSystem.mode == RatingMode.wholeEvent) {
@@ -524,7 +552,7 @@ class Rater {
     // after member numbers have been processed.
     String memNum = s.memberNumber;
 
-    if(knownShooters[memNum] == null) {
+    if(maybeKnownShooter(memNum) == null) {
       _verifyCache[s] = false;
       return false;
     }
@@ -611,8 +639,8 @@ class Rater {
       // unmarked reentries
       if(memNumA == memNumB) continue;
 
-      ShooterRating aRating = knownShooters[memNumA]!;
-      ShooterRating bRating = knownShooters[memNumB]!;
+      ShooterRating aRating = knownShooter(memNumA);
+      ShooterRating bRating = knownShooter(memNumB);
 
       changes[aRating] ??= {};
       changes[bRating] ??= {};
@@ -691,7 +719,7 @@ class Rater {
 
     String memNum = shooter.memberNumber;
 
-    ShooterRating rating = knownShooters[memNum]!;
+    ShooterRating rating = knownShooter(memNum);
 
     changes[rating] ??= {};
     RelativeMatchScore score = scores.firstWhere((score) => score.shooter == shooter);
@@ -784,9 +812,9 @@ class Rater {
 
         var otherScore = s.stageScores[stage]!;
         _encounteredMemberNumber(num);
-        scoreMap[knownShooters[num]!] = otherScore;
-        matchScoreMap[knownShooters[num]!] = s.total;
-        changes[knownShooters[num]!] ??= {};
+        scoreMap[knownShooter(num)] = otherScore;
+        matchScoreMap[knownShooter(num)] = s.total;
+        changes[knownShooter(num)] ??= {};
       }
 
       var update = ratingSystem.updateShooterRatings(
@@ -819,9 +847,9 @@ class Rater {
       for(var s in scores) {
         String num = s.shooter.memberNumber;
 
-        scoreMap[knownShooters[num]!] ??= s.total;
-        matchScoreMap[knownShooters[num]!] ??= s.total;
-        changes[knownShooters[num]!] ??= {};
+        scoreMap[knownShooter(num)] ??= s.total;
+        matchScoreMap[knownShooter(num)] ??= s.total;
+        changes[knownShooter(num)] ??= {};
         _encounteredMemberNumber(num);
       }
 
@@ -877,8 +905,8 @@ class Rater {
     var firstClass = first.shooter.classification ?? Classification.U;
     var secondClass = second.shooter.classification ?? Classification.U;
 
-    var firstRating = knownShooters[first.shooter.memberNumber];
-    var secondRating = knownShooters[second.shooter.memberNumber];
+    var firstRating = maybeKnownShooter(first.shooter.memberNumber);
+    var secondRating = maybeKnownShooter(second.shooter.memberNumber);
 
     // People entered with empty or invalid member numbers
     if(firstRating == null || secondRating == null) {
