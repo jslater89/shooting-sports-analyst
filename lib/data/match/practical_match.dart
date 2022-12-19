@@ -198,6 +198,7 @@ class PracticalMatch {
 
 class Stage {
   String name;
+  int internalId;
   int minRounds = 0;
   int maxPoints = 0;
   bool classifier;
@@ -206,6 +207,7 @@ class Stage {
 
   Stage({
     required this.name,
+    required this.internalId,
     required this.minRounds,
     required this.maxPoints,
     required this.classifier,
@@ -215,6 +217,7 @@ class Stage {
 
   Stage copy() {
     return Stage(
+      internalId: internalId,
       name: name,
       minRounds: minRounds,
       maxPoints: maxPoints,

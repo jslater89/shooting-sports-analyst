@@ -108,6 +108,8 @@ Map<int, Shooter> _readCompetitorLines(PracticalMatch match, List<String> compet
     try {
       List<String> splitLine = line.split(",");
       Shooter s = Shooter()
+        // 
+        ..entryNumber = i
         // remove dashes, spaces, etc. from member number, go all uppercase
         ..memberNumber = splitLine[_MEMBER_NUM].toUpperCase().replaceAll(RegExp(r"[^0-9A-Z]"), "")
         ..firstName = splitLine[_FIRST_NAME]
@@ -145,6 +147,7 @@ Map<int, Stage> _readStageLines(PracticalMatch match, List<String> stageLines) {
     try {
       List<String> splitLine = line.split(",");
       Stage s = Stage(
+        internalId: i,
         minRounds: int.parse(splitLine[_MIN_ROUNDS]),
         maxPoints: int.parse(splitLine[_MAX_POINTS]),
         classifier: splitLine[_CLASSIFIER].toLowerCase() == "yes",

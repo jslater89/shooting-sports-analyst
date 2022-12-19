@@ -6,6 +6,7 @@ class Shooter {
   String firstName = "";
   String lastName = "";
 
+  int entryNumber = -1;
   String _memberNumber = "";
   String originalMemberNumber = "";
 
@@ -39,6 +40,7 @@ class Shooter {
     var newShooter = Shooter()
       ..firstName = firstName
       ..lastName = lastName
+      ..entryNumber = entryNumber
       ..originalMemberNumber = originalMemberNumber
       ..memberNumber = memberNumber
       ..reentry = reentry
@@ -59,6 +61,7 @@ class Shooter {
     var newShooter = Shooter()
       ..firstName = firstName
       ..lastName = lastName
+      ..entryNumber = entryNumber
       ..originalMemberNumber = originalMemberNumber
       ..memberNumber = memberNumber
       ..reentry = reentry
@@ -74,6 +77,7 @@ class Shooter {
   void copyVitalsFrom(Shooter other) {
     firstName = other.firstName;
     lastName = other.lastName;
+    entryNumber = other.entryNumber;
     originalMemberNumber = other.originalMemberNumber;
     memberNumber = other.memberNumber;
     reentry = other.reentry;

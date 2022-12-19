@@ -104,9 +104,15 @@ class DbScore {
       otherPenalty: score.otherPenalty,
     );
 
-    int id = await store.scores.save(dbScore);
-    dbScore.id = id;
-
+    var existing = await store.scores.stageScoreForShooter(stage.id!, shooter.id!);
+    if(existing != null) {
+      dbScore.id = existing.id!;
+      await store.scores.updateExisting(dbScore);
+    }
+    else {
+      int id = await store.scores.save(dbScore);
+      dbScore.id = id;
+    }
     return dbScore;
   }
 }
@@ -125,4 +131,7 @@ abstract class ScoreDao {
 
   @insert
   Future<int> save(DbScore score);
+
+  @Update(onConflict: OnConflictStrategy.replace)
+  Future<int> updateExisting(DbScore score);
 }

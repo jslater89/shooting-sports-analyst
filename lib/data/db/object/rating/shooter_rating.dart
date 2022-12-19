@@ -30,6 +30,7 @@ class DbShooterRating extends DbShooter {
     required this.group,
 
     super.id,
+    super.entryNumber = 0, // entry number not needed for shooter ratings
     required super.matchId,
     required super.firstName,
     required super.lastName,
@@ -93,6 +94,9 @@ class DbShooterRating extends DbShooter {
 abstract class ShooterRatingDao {
   @insert
   Future<int> save(DbShooterRating rating);
+
+  @Query("SELECT * FROM shooterRatings")
+  Future<List<DbShooterRating>> all();
 }
 
 abstract class RatingExtension {

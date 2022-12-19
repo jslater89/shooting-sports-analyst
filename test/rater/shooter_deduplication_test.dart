@@ -47,6 +47,7 @@ List<PracticalMatch> deduplicationTestData() {
 
   Stage s1 = Stage(
     name: "Stage 1",
+    internalId: 1,
     classifier: false,
     classifierNumber: "",
     maxPoints: 10,
@@ -108,6 +109,7 @@ List<PracticalMatch> deduplicationTestData() {
 
   Stage s2 = Stage(
     name: "Stage 2",
+    internalId: 1,
     classifier: false,
     classifierNumber: "",
     maxPoints: 10,
@@ -168,7 +170,8 @@ List<PracticalMatch> deduplicationTestData() {
   m3.date = DateTime(2022, 12, 2, 0, 0, 0);
 
   Stage s3 = Stage(
-    name: "Stage 2",
+    name: "Stage 3",
+    internalId: 1,
     classifier: false,
     classifierNumber: "",
     maxPoints: 10,
@@ -232,6 +235,7 @@ PracticalMatch rdMemberNumberTestData() {
 
   Stage s3 = Stage(
     name: "Stage 2",
+    internalId: 1,
     classifier: false,
     classifierNumber: "",
     maxPoints: 10,

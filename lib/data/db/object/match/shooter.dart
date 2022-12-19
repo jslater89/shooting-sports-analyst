@@ -10,12 +10,19 @@ import 'package:uspsa_result_viewer/data/model.dart';
   tableName: "shooters",
   foreignKeys: [
     ForeignKey(childColumns: ["matchId"], parentColumns: ["psId"], entity: DbMatch, onDelete: ForeignKeyAction.cascade)
+  ],
+  indices: [
+    Index(
+      value: ["entryNumber", "matchId"],
+      unique: true,
+    )
   ]
 )
 class DbShooter {
   @PrimaryKey(autoGenerate: true)
   int? id;
 
+  int entryNumber;
   String matchId;
 
   String firstName;
@@ -35,6 +42,7 @@ class DbShooter {
 
   DbShooter({
     this.id,
+    required this.entryNumber,
     required this.matchId,
     required this.firstName,
     required this.lastName,
@@ -68,6 +76,7 @@ class DbShooter {
   static Future<DbShooter> serialize(Shooter shooter, DbMatch parent, MatchStore store) async {
     var dbShooter = DbShooter(
       matchId: parent.psId,
+      entryNumber: shooter.entryNumber,
       firstName: shooter.firstName,
       lastName: shooter.lastName,
       memberNumber: shooter.memberNumber,
@@ -79,9 +88,15 @@ class DbShooter {
       powerFactor: shooter.powerFactor!,
     );
 
-    var id = await store.shooters.save(dbShooter);
-    dbShooter.id = id;
-
+    var existing = await store.shooters.findExisting(parent.psId, dbShooter.entryNumber);
+    if(existing != null) {
+      dbShooter.id = existing.id;
+      await store.shooters.updateExisting(dbShooter);
+    }
+    else {
+      var id = await store.shooters.save(dbShooter);
+      dbShooter.id = id;
+    }
     return dbShooter;
   }
 }
@@ -90,6 +105,12 @@ class DbShooter {
 abstract class ShooterDao {
   @Query("SELECT * FROM shooters WHERE matchId = :id")
   Future<List<DbShooter>> forMatchId(String id);
+
+  @Query("SELECT * FROM shooters WHERE matchId = :matchId AND entryNumber = :entryNumber")
+  Future<DbShooter?> findExisting(String matchId, int entryNumber);
+
+  @Update(onConflict: OnConflictStrategy.replace)
+  Future<int> updateExisting(DbShooter shooter);
 
   @insert
   Future<int> save(DbShooter shooter);
