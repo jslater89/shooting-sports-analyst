@@ -64,15 +64,24 @@ class MatchCache {
       if(path.startsWith(_cachePrefix)) {
         var reportContents = _box.get(path);
 
-        var ids = path.replaceFirst(_cachePrefix, "").split(_cacheSeparator);
+        List<String> ids = path.replaceFirst(_cachePrefix, "").split(_cacheSeparator);
         var deduplicatedIds = Set<String>()..addAll(ids);
         ids = deduplicatedIds.toList();
 
         if(reportContents != null) {
           var match = await processScoreFile(reportContents);
           var entry = _MatchCacheEntry(match: match, ids: ids);
+          String? shortId;
+          late String longId;
           for(var id in ids) {
             id = id.replaceAll("/","");
+
+            if(id.length > 10) {
+              longId = id;
+            }
+            else {
+              shortId = id;
+            }
 
             // This is either a two-ID entry (short and UUID), or a one-ID entry
             // (UUID-only, because we always get the UUID if we only have the short ID).
@@ -86,6 +95,9 @@ class MatchCache {
             // If the above doesn't apply, or if we're
             _cache[id] = entry;
           }
+
+          match.practiscoreId = longId;
+          match.practiscoreIdShort = shortId;
 
           matches += 1;
           stages += match.stages.length;

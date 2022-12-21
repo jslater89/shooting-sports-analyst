@@ -13,15 +13,17 @@ import 'package:uspsa_result_viewer/data/model.dart';
   ],
   indices: [
     Index(
-      value: ["entryNumber", "matchId"],
+      value: ["matchId", "entryNumber"],
       unique: true,
     )
-  ]
+  ],
+  primaryKeys: [
+    "matchId",
+    "entryNumber"
+  ],
+  withoutRowid: true,
 )
 class DbShooter {
-  @PrimaryKey(autoGenerate: true)
-  int? id;
-
   int entryNumber;
   String matchId;
 
@@ -41,7 +43,6 @@ class DbShooter {
   PowerFactor powerFactor;
 
   DbShooter({
-    this.id,
     required this.entryNumber,
     required this.matchId,
     required this.firstName,
@@ -73,8 +74,8 @@ class DbShooter {
     return shooter;
   }
 
-  static Future<DbShooter> serialize(Shooter shooter, DbMatch parent, MatchStore store) async {
-    var dbShooter = DbShooter(
+  static DbShooter convert(Shooter shooter, DbMatch parent) {
+    return DbShooter(
       matchId: parent.psId,
       entryNumber: shooter.entryNumber,
       firstName: shooter.firstName,
@@ -87,15 +88,17 @@ class DbShooter {
       classification: shooter.classification!,
       powerFactor: shooter.powerFactor!,
     );
+  }
+
+  static Future<DbShooter> serialize(Shooter shooter, DbMatch parent, MatchStore store) async {
+    var dbShooter = convert(shooter, parent);
 
     var existing = await store.shooters.findExisting(parent.psId, dbShooter.entryNumber);
     if(existing != null) {
-      dbShooter.id = existing.id;
       await store.shooters.updateExisting(dbShooter);
     }
     else {
-      var id = await store.shooters.save(dbShooter);
-      dbShooter.id = id;
+      await store.shooters.save(dbShooter);
     }
     return dbShooter;
   }
@@ -114,6 +117,9 @@ abstract class ShooterDao {
 
   @insert
   Future<int> save(DbShooter shooter);
+
+  @insert
+  Future<void> saveAll(List<DbShooter> shooter);
 }
 
 class DivisionConverter extends TypeConverter<Division, int> {

@@ -21,7 +21,7 @@ class DbMatch {
   DateTime date;
   MatchLevel level;
 
-  String reportContents;
+  String reportContents = "";
 
   DbMatch({
     this.shortPsId,
@@ -30,7 +30,7 @@ class DbMatch {
     required this.date,
     required this.rawDate,
     required this.level,
-    required this.reportContents,
+    //required this.reportContents,
   });
 
   Future<List<DbStage>> stages(MatchStore store) {
@@ -55,7 +55,7 @@ class DbMatch {
     var stagesByDbId = <int, Stage>{};
     for(var dbStage in dbStages) {
       var stage = dbStage.deserialize();
-      stagesByDbId[dbStage.id!] = stage;
+      stagesByDbId[dbStage.internalId] = stage;
       match.stages.add(stage);
     }
 
@@ -63,11 +63,11 @@ class DbMatch {
     var shootersById = <int, Shooter>{};
     for(var dbShooter in dbShooters) {
       var shooter = dbShooter.deserialize();
-      shootersById[dbShooter.id!] = shooter;
+      shootersById[dbShooter.entryNumber] = shooter;
       match.shooters.add(shooter);
 
       for(var dbStageId in stagesByDbId.keys) {
-        var dbScore = await store.scores.stageScoreForShooter(dbStageId, dbShooter.id!);
+        var dbScore = await store.scores.stageScoreForShooter(dbStageId, dbShooter.entryNumber, this.psId);
 
         // TODO: remove this if it turns out I save stage scores for DQs too
         if(dbScore == null) {
@@ -92,7 +92,7 @@ class DbMatch {
       rawDate: match.rawDate!,
       psId: match.practiscoreId,
       shortPsId: match.practiscoreIdShort,
-      reportContents: match.reportContents,
+      // reportContents: match.reportContents,
     );
 
     await store.matches.save(dbMatch);
@@ -100,23 +100,31 @@ class DbMatch {
     Map<Stage, DbStage> stageMapping = {};
 
     for(var stage in match.stages) {
-      var dbStage = await DbStage.serialize(stage, dbMatch, store);
+      var dbStage = DbStage.convert(stage, dbMatch);
       stageMapping[stage] = dbStage;
     }
 
-    List<Future> scoreFutures = [];
+    store.stages.saveAll(stageMapping.values.toList());
+
+    List<DbShooter> shooters = [];
+    List<DbScore> scores = [];
     for(var shooter in match.shooters) {
-      var dbShooter = await DbShooter.serialize(shooter, dbMatch, store);
+      var dbShooter = DbShooter.convert(shooter, dbMatch);
+      shooters.add(dbShooter);
 
       for(var mapEntry in shooter.stageScores.entries) {
         var stage = mapEntry.key;
         var score = mapEntry.value;
 
-        scoreFutures.add(DbScore.serialize(score, dbShooter, stageMapping[stage]!, store));
+        var dbScore = DbScore.convert(score, dbShooter, stageMapping[stage]!, dbMatch);
+        scores.add(dbScore);
       }
     }
 
-    await Future.wait(scoreFutures);
+    await store.shooters.saveAll(shooters);
+    await store.scores.saveAll(scores);
+
+    print("Serialized ${match.shooters.length} shooters");
 
     return dbMatch;
   }

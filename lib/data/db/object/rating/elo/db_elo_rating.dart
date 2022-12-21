@@ -6,6 +6,7 @@ import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.d
 
 @Entity(tableName: "eloRatings")
 class DbEloRating extends RatingExtension {
+  // TODO: rowid? entrynumber?
   @primaryKey
   int parentId;
 
@@ -20,7 +21,7 @@ class DbEloRating extends RatingExtension {
 
   static Future<DbEloRating> serialize(EloShooterRating rating, DbShooterRating dbRating, ProjectStore store) async {
     var dbEloRating = DbEloRating(
-      parentId: dbRating.id!,
+      parentId: dbRating.entryNumber,
       rating: rating.rating,
       variance: rating.variance,
     );

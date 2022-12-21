@@ -14,6 +14,8 @@ import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 
 @Entity(tableName: "shooterRatings")
 class DbShooterRating extends DbShooter {
+  @primaryKey
+  int? id;
 
   int project;
   RaterGroup group;
@@ -29,8 +31,7 @@ class DbShooterRating extends DbShooter {
     required this.project,
     required this.group,
 
-    super.id,
-    super.entryNumber = 0, // entry number not needed for shooter ratings
+    required super.entryNumber,
     required super.matchId,
     required super.firstName,
     required super.lastName,
@@ -67,10 +68,10 @@ class DbShooterRating extends DbShooter {
       dq: rating.dq,
       division: rating.division!,
       classification: rating.classification!,
-      powerFactor: rating.powerFactor!
+      powerFactor: rating.powerFactor!,
+      entryNumber: rating.entryNumber,
     );
-    var id = await store.ratings.save(dbRating);
-    dbRating.id = id;
+    await store.ratings.save(dbRating);
 
     switch(dbRating.ratingSystem) {
       case RatingType.elo:

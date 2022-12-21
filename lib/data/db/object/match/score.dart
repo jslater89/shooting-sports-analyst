@@ -1,6 +1,7 @@
 // We store stage scores only. Everything else is calculated at runtime.
 
 import 'package:floor/floor.dart';
+import 'package:uspsa_result_viewer/data/db/object/match/match.dart';
 import 'package:uspsa_result_viewer/data/db/object/match/shooter.dart';
 import 'package:uspsa_result_viewer/data/db/object/match/stage.dart';
 import 'package:uspsa_result_viewer/data/db/project/project_db.dart';
@@ -12,18 +13,21 @@ import 'package:uspsa_result_viewer/data/model.dart';
 /// When deleting a match, sadly, you have to delete scores separately first,
 /// then you can delete the match and stage/shooter will cascade.
 @Entity(
-    tableName: "scores",
-    foreignKeys: [
-      ForeignKey(childColumns: ["stageId"], parentColumns: ["id"], entity: DbStage, onDelete: ForeignKeyAction.restrict),
-      ForeignKey(childColumns: ["shooterId"], parentColumns: ["id"], entity: DbShooter, onDelete: ForeignKeyAction.restrict)
-    ]
+  tableName: "scores",
+  foreignKeys: [
+    ForeignKey(childColumns: ["matchId"], parentColumns: ["psId"], entity: DbMatch, onDelete: ForeignKeyAction.restrict),
+  ],
+  primaryKeys: [
+    "matchId",
+    "shooterNumber",
+    "stageNumber"
+  ],
+  withoutRowid: true,
 )
 class DbScore {
-  @PrimaryKey(autoGenerate: true)
-  int? id;
-
-  int shooterId;
-  int stageId;
+  String matchId;
+  int shooterNumber;
+  int stageNumber;
 
   double t1, t2, t3, t4, t5;
   double time;
@@ -32,9 +36,9 @@ class DbScore {
   int procedural, lateShot, extraShot, extraHit, otherPenalty;
 
   DbScore({
-    this.id,
-    required this.shooterId,
-    required this.stageId,
+    required this.matchId,
+    required this.shooterNumber,
+    required this.stageNumber,
     required this.t1,
     required this.t2,
     required this.t3,
@@ -80,10 +84,11 @@ class DbScore {
     return score;
   }
 
-  static Future<DbScore> serialize(Score score, DbShooter shooter, DbStage stage, MatchStore store) async {
-    var dbScore = DbScore(
-      shooterId: shooter.id!,
-      stageId: stage.id!,
+  static DbScore convert(Score score, DbShooter shooter, DbStage stage, DbMatch match) {
+    return DbScore(
+      shooterNumber: shooter.entryNumber,
+      matchId: match.psId,
+      stageNumber: stage.internalId,
       t1: score.t1,
       t2: score.t2,
       t3: score.t3,
@@ -103,15 +108,17 @@ class DbScore {
       extraHit: score.extraHit,
       otherPenalty: score.otherPenalty,
     );
+  }
 
-    var existing = await store.scores.stageScoreForShooter(stage.id!, shooter.id!);
+  static Future<DbScore> serialize(Score score, DbShooter shooter, DbStage stage, DbMatch match, MatchStore store) async {
+    var dbScore = convert(score, shooter, stage, match);
+
+    var existing = await store.scores.stageScoreForShooter(stage.internalId, shooter.entryNumber, match.psId);
     if(existing != null) {
-      dbScore.id = existing.id!;
       await store.scores.updateExisting(dbScore);
     }
     else {
       int id = await store.scores.save(dbScore);
-      dbScore.id = id;
     }
     return dbScore;
   }
@@ -121,8 +128,9 @@ class DbScore {
 abstract class ScoreDao {
   @Query("SELECT * FROM scores "
       "WHERE stageId = :stageId "
-      "AND shooterId = :shooterId")
-  Future<DbScore?> stageScoreForShooter(int stageId, int shooterId);
+      "AND shooterId = :shooterId "
+      "AND matchId = :matchId")
+  Future<DbScore?> stageScoreForShooter(int stageId, int shooterId, String matchId);
 
   @Query("SELECT scores.* FROM scores JOIN stages "
       "WHERE stages.matchId = :matchId "
@@ -131,6 +139,9 @@ abstract class ScoreDao {
 
   @insert
   Future<int> save(DbScore score);
+
+  @insert
+  Future<void> saveAll(List<DbScore> score);
 
   @Update(onConflict: OnConflictStrategy.replace)
   Future<int> updateExisting(DbScore score);

@@ -10,6 +10,8 @@ import 'package:hive/hive.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uspsa_result_viewer/data/db/object/match/match.dart';
 import 'package:uspsa_result_viewer/data/db/project/project_db.dart';
+import 'package:uspsa_result_viewer/data/match/practical_match.dart';
+import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/route/local_upload.dart';
 import 'package:uspsa_result_viewer/route/match_select.dart';
@@ -81,19 +83,33 @@ void main() async {
     Hive.init(path.absolute.path);
   }
 
-  sqfliteDatabaseFactory.setDatabasesPath(".");
-  var testDb = await $FloorProjectDatabase.databaseBuilder("test.sqlite").build();
-  var fileContents = await File("report.txt").readAsString();
-  var match = await processScoreFile(fileContents);
-  match.practiscoreIdShort = "12345";
-  match.practiscoreId = "long-uuid-id";
-
-  var dbMatch = await DbMatch.serialize(match, testDb);
-  match = await dbMatch.deserialize(testDb);
-  var scores = match.getScores();
-  for(var score in scores) {
-    print("Shooter: ${score.shooter.getName()} ${(score.total.percent * 100).toStringAsFixed(2)}%");
-  }
+  // sqfliteDatabaseFactory.setDatabasesPath(".");
+  // var testDb = await $FloorProjectDatabase.databaseBuilder("l2s.sqlite").build();
+  // var fileContents = await File("report.txt").readAsString();
+  // var match = await processScoreFile(fileContents);
+  // match.practiscoreIdShort = "12345";
+  // match.practiscoreId = "long-uuid-id";
+  //
+  // await MatchCache().ready;
+  // var start = DateTime.now();
+  //
+  // testDb.database.execute("PRAGMA synchronous = OFF");
+  // testDb.database.execute("PRAGMA journal_mode = WAL");
+  // for(var match in MatchCache().allMatches()) {
+  //   var level = (match.level ?? MatchLevel.I);
+  //   if(level != MatchLevel.I) {
+  //     var innerStart = DateTime.now();
+  //     await DbMatch.serialize(match, testDb);
+  //     var duration = DateTime.now().difference(innerStart);
+  //
+  //     var rows = match.stages.length + match.shooters.length + match.stageScoreCount;
+  //     print("Finished ${match.name} with $rows rows at ${((rows / duration.inMilliseconds) * 1000).round()}/sec");
+  //   }
+  // }
+  //
+  // var duration = DateTime.now().difference(start);
+  //
+  // print("Dumped L2s to DB in ${duration.inMilliseconds}ms");
 
   runApp(MyApp());
 }

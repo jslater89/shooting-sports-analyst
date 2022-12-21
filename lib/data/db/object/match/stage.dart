@@ -11,12 +11,14 @@ import 'package:uspsa_result_viewer/data/model.dart';
       value: ["matchId", "internalId"],
       unique: true,
     )
-  ]
+  ],
+  primaryKeys: [
+    "matchId",
+    "internalId",
+  ],
+  withoutRowid: true,
 )
 class DbStage {
-  @PrimaryKey(autoGenerate: true)
-  int? id;
-
   @ForeignKey(childColumns: ["matchId"], parentColumns: ["longPsId"], entity: DbMatch, onDelete: ForeignKeyAction.cascade)
   String matchId;
 
@@ -31,7 +33,6 @@ class DbStage {
   Scoring scoring;
 
   DbStage({
-    this.id,
     required this.internalId,
     required this.matchId,
     required this.name,
@@ -56,26 +57,28 @@ class DbStage {
     return s;
   }
 
-  static Future<DbStage> serialize(Stage stage, DbMatch parent, MatchStore store) async {
-    var dbStage = DbStage(
-      name: stage.name,
-      internalId: stage.internalId,
-      classifier: stage.classifier,
-      classifierNumber: stage.classifierNumber,
-      matchId: parent.psId,
-      maxPoints: stage.maxPoints,
-      minRounds: stage.minRounds,
-      scoring: stage.type
+  static DbStage convert(Stage stage, DbMatch parent) {
+    return DbStage(
+        name: stage.name,
+        internalId: stage.internalId,
+        classifier: stage.classifier,
+        classifierNumber: stage.classifierNumber,
+        matchId: parent.psId,
+        maxPoints: stage.maxPoints,
+        minRounds: stage.minRounds,
+        scoring: stage.type
     );
+  }
+
+  static Future<DbStage> serialize(Stage stage, DbMatch parent, MatchStore store) async {
+    var dbStage = convert(stage, parent);
 
     var existing = await store.stages.byInternalId(parent.psId, stage.internalId);
     if(existing != null) {
-      dbStage.id = existing.id;
       await store.stages.updateExisting(dbStage);
     }
     else {
       int id = await store.stages.save(dbStage);
-      dbStage.id = id;
     }
     return dbStage;
   }
@@ -97,4 +100,7 @@ abstract class StageDao {
 
   @Update(onConflict: OnConflictStrategy.replace)
   Future<int> updateExisting(DbStage stage);
+
+  @insert
+  Future<void> saveAll(List<DbStage> stages);
 }
