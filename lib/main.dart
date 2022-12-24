@@ -83,33 +83,33 @@ void main() async {
     Hive.init(path.absolute.path);
   }
 
-  // sqfliteDatabaseFactory.setDatabasesPath(".");
-  // var testDb = await $FloorProjectDatabase.databaseBuilder("l2s.sqlite").build();
-  // var fileContents = await File("report.txt").readAsString();
-  // var match = await processScoreFile(fileContents);
-  // match.practiscoreIdShort = "12345";
-  // match.practiscoreId = "long-uuid-id";
-  //
-  // await MatchCache().ready;
-  // var start = DateTime.now();
-  //
-  // testDb.database.execute("PRAGMA synchronous = OFF");
-  // testDb.database.execute("PRAGMA journal_mode = WAL");
-  // for(var match in MatchCache().allMatches()) {
-  //   var level = (match.level ?? MatchLevel.I);
-  //   if(level != MatchLevel.I) {
-  //     var innerStart = DateTime.now();
-  //     await DbMatch.serialize(match, testDb);
-  //     var duration = DateTime.now().difference(innerStart);
-  //
-  //     var rows = match.stages.length + match.shooters.length + match.stageScoreCount;
-  //     print("Finished ${match.name} with $rows rows at ${((rows / duration.inMilliseconds) * 1000).round()}/sec");
-  //   }
-  // }
-  //
-  // var duration = DateTime.now().difference(start);
-  //
-  // print("Dumped L2s to DB in ${duration.inMilliseconds}ms");
+  sqfliteDatabaseFactory.setDatabasesPath(".");
+  var testDb = await $FloorProjectDatabase.databaseBuilder("test.sqlite").build();
+  var fileContents = await File("report.txt").readAsString();
+  var match = await processScoreFile(fileContents);
+  match.practiscoreIdShort = "12345";
+  match.practiscoreId = "long-uuid-id";
+
+  await MatchCache().ready;
+  var start = DateTime.now();
+
+  testDb.database.execute("PRAGMA synchronous = OFF");
+  testDb.database.execute("PRAGMA journal_mode = WAL");
+  for(var match in MatchCache().allMatches()) {
+    var level = (match.level ?? MatchLevel.I);
+    if(level != MatchLevel.I) {
+      var innerStart = DateTime.now();
+      await DbMatch.serialize(match, testDb);
+      var duration = DateTime.now().difference(innerStart);
+
+      var rows = match.stages.length + match.shooters.length + match.stageScoreCount;
+      print("Finished ${match.name} with $rows rows at ${((rows / duration.inMilliseconds) * 1000).round()}/sec");
+    }
+  }
+
+  var duration = DateTime.now().difference(start);
+
+  print("Dumped L2s to DB in ${duration.inMilliseconds}ms");
 
   runApp(MyApp());
 }

@@ -31,7 +31,7 @@ class DbShooterRating extends DbShooter {
     required this.project,
     required this.group,
 
-    required super.entryNumber,
+    required super.internalId,
     required super.matchId,
     required super.firstName,
     required super.lastName,
@@ -69,7 +69,7 @@ class DbShooterRating extends DbShooter {
       division: rating.division!,
       classification: rating.classification!,
       powerFactor: rating.powerFactor!,
-      entryNumber: rating.entryNumber,
+      internalId: rating.internalId,
     );
     await store.ratings.save(dbRating);
 

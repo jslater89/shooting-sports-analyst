@@ -86,7 +86,7 @@ class DbScore {
 
   static DbScore convert(Score score, DbShooter shooter, DbStage stage, DbMatch match) {
     return DbScore(
-      shooterNumber: shooter.entryNumber,
+      shooterNumber: shooter.internalId,
       matchId: match.psId,
       stageNumber: stage.internalId,
       t1: score.t1,
@@ -113,7 +113,7 @@ class DbScore {
   static Future<DbScore> serialize(Score score, DbShooter shooter, DbStage stage, DbMatch match, MatchStore store) async {
     var dbScore = convert(score, shooter, stage, match);
 
-    var existing = await store.scores.stageScoreForShooter(stage.internalId, shooter.entryNumber, match.psId);
+    var existing = await store.scores.stageScoreForShooter(stage.internalId, shooter.internalId, match.psId);
     if(existing != null) {
       await store.scores.updateExisting(dbScore);
     }

@@ -108,8 +108,8 @@ Map<int, Shooter> _readCompetitorLines(PracticalMatch match, List<String> compet
     try {
       List<String> splitLine = line.split(",");
       Shooter s = Shooter()
-        // 
-        ..entryNumber = i
+        // PS shooter number, for deduplication in matches
+        ..internalId = i
         // remove dashes, spaces, etc. from member number, go all uppercase
         ..memberNumber = splitLine[_MEMBER_NUM].toUpperCase().replaceAll(RegExp(r"[^0-9A-Z]"), "")
         ..firstName = splitLine[_FIRST_NAME]

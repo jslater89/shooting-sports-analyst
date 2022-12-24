@@ -63,11 +63,11 @@ class DbMatch {
     var shootersById = <int, Shooter>{};
     for(var dbShooter in dbShooters) {
       var shooter = dbShooter.deserialize();
-      shootersById[dbShooter.entryNumber] = shooter;
+      shootersById[dbShooter.internalId] = shooter;
       match.shooters.add(shooter);
 
       for(var dbStageId in stagesByDbId.keys) {
-        var dbScore = await store.scores.stageScoreForShooter(dbStageId, dbShooter.entryNumber, this.psId);
+        var dbScore = await store.scores.stageScoreForShooter(dbStageId, dbShooter.internalId, this.psId);
 
         // TODO: remove this if it turns out I save stage scores for DQs too
         if(dbScore == null) {

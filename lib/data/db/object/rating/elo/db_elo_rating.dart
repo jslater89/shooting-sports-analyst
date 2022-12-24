@@ -21,7 +21,7 @@ class DbEloRating extends RatingExtension {
 
   static Future<DbEloRating> serialize(EloShooterRating rating, DbShooterRating dbRating, ProjectStore store) async {
     var dbEloRating = DbEloRating(
-      parentId: dbRating.entryNumber,
+      parentId: dbRating.internalId,
       rating: rating.rating,
       variance: rating.variance,
     );

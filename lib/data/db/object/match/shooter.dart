@@ -13,18 +13,19 @@ import 'package:uspsa_result_viewer/data/model.dart';
   ],
   indices: [
     Index(
-      value: ["matchId", "entryNumber"],
+      value: ["matchId", "internalId"],
       unique: true,
     )
   ],
   primaryKeys: [
     "matchId",
-    "entryNumber"
+    "internalId"
   ],
   withoutRowid: true,
 )
 class DbShooter {
-  int entryNumber;
+  /// The shooter's PractiScore entry number.
+  int internalId;
   String matchId;
 
   String firstName;
@@ -43,7 +44,7 @@ class DbShooter {
   PowerFactor powerFactor;
 
   DbShooter({
-    required this.entryNumber,
+    required this.internalId,
     required this.matchId,
     required this.firstName,
     required this.lastName,
@@ -77,7 +78,7 @@ class DbShooter {
   static DbShooter convert(Shooter shooter, DbMatch parent) {
     return DbShooter(
       matchId: parent.psId,
-      entryNumber: shooter.entryNumber,
+      internalId: shooter.internalId,
       firstName: shooter.firstName,
       lastName: shooter.lastName,
       memberNumber: shooter.memberNumber,
@@ -93,7 +94,7 @@ class DbShooter {
   static Future<DbShooter> serialize(Shooter shooter, DbMatch parent, MatchStore store) async {
     var dbShooter = convert(shooter, parent);
 
-    var existing = await store.shooters.findExisting(parent.psId, dbShooter.entryNumber);
+    var existing = await store.shooters.findExisting(parent.psId, dbShooter.internalId);
     if(existing != null) {
       await store.shooters.updateExisting(dbShooter);
     }
@@ -109,8 +110,8 @@ abstract class ShooterDao {
   @Query("SELECT * FROM shooters WHERE matchId = :id")
   Future<List<DbShooter>> forMatchId(String id);
 
-  @Query("SELECT * FROM shooters WHERE matchId = :matchId AND entryNumber = :entryNumber")
-  Future<DbShooter?> findExisting(String matchId, int entryNumber);
+  @Query("SELECT * FROM shooters WHERE matchId = :matchId AND internalId = :internalId")
+  Future<DbShooter?> findExisting(String matchId, int internalId);
 
   @Update(onConflict: OnConflictStrategy.replace)
   Future<int> updateExisting(DbShooter shooter);
