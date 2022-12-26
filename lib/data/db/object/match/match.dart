@@ -124,7 +124,7 @@ class DbMatch {
     await store.shooters.saveAll(shooters);
     await store.scores.saveAll(scores);
 
-    print("Serialized ${match.shooters.length} shooters");
+    // print("Serialized ${match.shooters.length} shooters");
 
     return dbMatch;
   }
@@ -139,7 +139,7 @@ abstract class MatchDao {
   @Insert(onConflict: OnConflictStrategy.replace)
   Future<void> save(DbMatch match);
 
-  @Query('SELECT * FROM matches WHERE longPsId = :longId')
+  @Query('SELECT * FROM matches WHERE psId = :longId')
   Future<DbMatch?> byPractiscoreId(String longId);
 }
 

@@ -1,9 +1,12 @@
 import 'package:floor/floor.dart';
 import 'package:uspsa_result_viewer/data/db/object/match/match.dart';
+import 'package:uspsa_result_viewer/data/db/object/rating/elo/db_elo_rating.dart';
+import 'package:uspsa_result_viewer/data/db/object/rating/rating_types.dart';
 import 'package:uspsa_result_viewer/data/db/object/rating/shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/db/project/project_db.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
+import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 
 @Entity(
@@ -14,6 +17,10 @@ class DbRatingProject {
   int? id;
 
   String name;
+
+  /// Reproduced in the settings, but used to determine
+  /// what ShooterRating/RatingEvent subclass to use
+  RatingType algorithm;
 
   /// Contains the JSON representation of the settings used
   /// to create the project, which is easier to inflate.
@@ -34,15 +41,17 @@ class DbRatingProject {
   DbRatingProject({
     this.id,
     required this.name,
+    required this.algorithm,
     required this.settings,
   });
 
   static Future<DbRatingProject> serialize(RatingHistory history, RatingProject settings, ProjectStore store) async {
-    var dbProject = DbRatingProject(name: settings.name, settings: settings.toJson());
+    var dbProject = DbRatingProject(name: settings.name, algorithm: RatingType.fromSettings(settings.settings), settings: settings.toJson());
     int id = await store.projects.save(dbProject);
     dbProject.id = id;
 
     var matchesToDbIds = <PracticalMatch, String>{};
+    var dbLinks = <DbRatingProjectMatch>[];
     for(var match in history.allMatches) {
       // check if present in match DB using PS IDs; if not, save
       var dbMatch = await store.matches.byPractiscoreId(match.practiscoreId);
@@ -52,23 +61,45 @@ class DbRatingProject {
       matchesToDbIds[match] = dbMatch.psId;
 
       // create match-project DB item
-      await store.projects.createLinkBetween(dbProject, dbMatch);
+      dbLinks.add(store.projects.createLinkBetween(dbProject, dbMatch));
     }
+    await store.projects.saveLinks(dbLinks);
+    print("Saved links");
 
     for(var group in history.groups) {
       // for each group, save member mappings, ratings, and rating events
+      var mappings = <DbMemberNumberMapping>[];
+
       var rater = history.raterFor(history.allMatches.last, group);
       for(var mapping in rater.memberNumberMappings.entries) {
         if(mapping.key != mapping.value) {
-          store.projects.saveMemberNumberMapping(DbMemberNumberMapping(
-            projectId: dbProject.id!, group: group, number: mapping.key, mapping: mapping.value
+          mappings.add(DbMemberNumberMapping(
+              projectId: dbProject.id!, group: group, number: mapping.key, mapping: mapping.value
           ));
         }
       }
+      await store.projects.saveMemberNumberMappings(mappings);
+      print("Saved number mappings for $group");
 
+      // encountered numbers: all 'number' cols in mappings, plus all member numbers
+      // in ratings.
+
+      var ratings = <DbEloRating>[];
+      var events = <DbEloEvent>[];
       for(var rating in rater.knownShooters.values) {
-        DbShooterRating.serialize(rating, dbProject, group, matchesToDbIds, store);
+        switch(dbProject.algorithm) {
+          case RatingType.elo:
+            ratings.add(DbEloRating.convert(rating as EloShooterRating, dbProject, group));
+            events.addAll(DbEloEvent.fromRating(rating, dbProject, group, matchesToDbIds));
+            break;
+          default: throw UnsupportedError("not yet implemented");
+        }
       }
+
+      await store.eloRatings.saveRatings(ratings);
+      print("Saved ratings for $group");
+      await store.eloRatings.saveEvents(events);
+      print("Saved events for $group");
     }
 
     return dbProject;
@@ -83,12 +114,18 @@ abstract class RatingProjectDao {
   @insert
   Future<int> saveLink(DbRatingProjectMatch match);
 
-  Future<int> createLinkBetween(DbRatingProject project, DbMatch match) {
-    return saveLink(DbRatingProjectMatch(projectId: project.id!, matchId: match.psId));
+  @insert
+  Future<void> saveLinks(List<DbRatingProjectMatch> matches);
+
+  DbRatingProjectMatch createLinkBetween(DbRatingProject project, DbMatch match) {
+    return DbRatingProjectMatch(projectId: project.id!, matchId: match.psId);
   }
 
   @insert
   Future<void> saveMemberNumberMapping(DbMemberNumberMapping mapping);
+
+  @insert
+  Future<void> saveMemberNumberMappings(List<DbMemberNumberMapping> mapping);
 }
 
 @Entity(tableName: "ratingProjects_matches")
@@ -114,13 +151,8 @@ class DbRatingProjectMatch {
 /// Although, I think we can probably store this globally in the future...
 @Entity(
   tableName: "memberNumberMappings",
-  indices: [
-    Index(value: [
-      "projectId", "group", "number", "mapping"
-    ], unique: true)
-  ],
   primaryKeys: [
-    "projectId", "group"
+    "projectId", "group", "number", "mapping",
   ],
   withoutRowid: true,
 )

@@ -9,9 +9,12 @@ import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uspsa_result_viewer/data/db/object/match/match.dart';
+import 'package:uspsa_result_viewer/data/db/object/rating/rating_project.dart';
 import 'package:uspsa_result_viewer/data/db/project/project_db.dart';
 import 'package:uspsa_result_viewer/data/match/practical_match.dart';
 import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
+import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
+import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/route/local_upload.dart';
 import 'package:uspsa_result_viewer/route/match_select.dart';
@@ -85,31 +88,57 @@ void main() async {
 
   sqfliteDatabaseFactory.setDatabasesPath(".");
   var testDb = await $FloorProjectDatabase.databaseBuilder("test.sqlite").build();
-  var fileContents = await File("report.txt").readAsString();
-  var match = await processScoreFile(fileContents);
-  match.practiscoreIdShort = "12345";
-  match.practiscoreId = "long-uuid-id";
-
-  await MatchCache().ready;
-  var start = DateTime.now();
-
   testDb.database.execute("PRAGMA synchronous = OFF");
   testDb.database.execute("PRAGMA journal_mode = WAL");
-  for(var match in MatchCache().allMatches()) {
-    var level = (match.level ?? MatchLevel.I);
-    if(level != MatchLevel.I) {
-      var innerStart = DateTime.now();
-      await DbMatch.serialize(match, testDb);
-      var duration = DateTime.now().difference(innerStart);
 
-      var rows = match.stages.length + match.shooters.length + match.stageScoreCount;
-      print("Finished ${match.name} with $rows rows at ${((rows / duration.inMilliseconds) * 1000).round()}/sec");
-    }
+  print("Warming match/project cache");
+  await Future.wait([
+    MatchCache().ready,
+    RatingProjectManager().ready,
+  ]);
+  print("Match/project cache ready");
+
+  var projectSettings = RatingProjectManager().loadProject("L2+ 2020+")!;
+
+  var matches = <PracticalMatch>[];
+  for(var matchUrl in projectSettings.matchUrls) {
+    var m = await MatchCache().getMatch(matchUrl);
+    if(m != null) matches.add(m);
   }
 
-  var duration = DateTime.now().difference(start);
+  print("Calculating ratings");
+  RatingHistory h = RatingHistory(matches: matches, settings: projectSettings.settings);
+  await h.processInitialMatches();
+  print("Done, starting DB dump");
 
-  print("Dumped L2s to DB in ${duration.inMilliseconds}ms");
+  var start = DateTime.now();
+  await DbRatingProject.serialize(h, projectSettings, testDb);
+
+  var duration = DateTime.now().difference(start);
+  print("Dumped WPA ratings to DB in ${duration.inMilliseconds}ms");
+
+  // var fileContents = await File("report.txt").readAsString();
+  // var match = await processScoreFile(fileContents);
+  // match.practiscoreIdShort = "12345";
+  // match.practiscoreId = "long-uuid-id";
+  //
+  // await MatchCache().ready;
+  // var start = DateTime.now();
+  // for(var match in MatchCache().allMatches()) {
+  //   var level = (match.level ?? MatchLevel.I);
+  //   if(level != MatchLevel.I) {
+  //     var innerStart = DateTime.now();
+  //     await DbMatch.serialize(match, testDb);
+  //     var duration = DateTime.now().difference(innerStart);
+  //
+  //     var rows = match.stages.length + match.shooters.length + match.stageScoreCount;
+  //     print("Finished ${match.name} with $rows rows at ${((rows / duration.inMilliseconds) * 1000).round()}/sec");
+  //   }
+  // }
+  //
+  // var duration = DateTime.now().difference(start);
+  //
+  // print("Dumped L2s to DB in ${duration.inMilliseconds}ms");
 
   runApp(MyApp());
 }

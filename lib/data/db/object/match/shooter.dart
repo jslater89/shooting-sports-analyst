@@ -23,38 +23,26 @@ import 'package:uspsa_result_viewer/data/model.dart';
   ],
   withoutRowid: true,
 )
-class DbShooter {
+class DbShooter extends DbShooterVitals {
   /// The shooter's PractiScore entry number.
   int internalId;
   String matchId;
 
-  String firstName;
-  String lastName;
-
-  // When deserializing, set originalMemberNumber,
-  // then memberNumber.
-  String memberNumber;
-  String originalMemberNumber;
-
   bool reentry;
   bool dq;
-
-  Division division;
-  Classification classification;
-  PowerFactor powerFactor;
 
   DbShooter({
     required this.internalId,
     required this.matchId,
-    required this.firstName,
-    required this.lastName,
-    required this.memberNumber,
-    required this.originalMemberNumber,
+    required super.firstName,
+    required super.lastName,
+    required super.memberNumber,
+    required super.originalMemberNumber,
     required this.reentry,
     required this.dq,
-    required this.division,
-    required this.classification,
-    required this.powerFactor,
+    required super.division,
+    required super.classification,
+    required super.powerFactor,
   });
 
   Shooter deserialize() {
@@ -103,6 +91,30 @@ class DbShooter {
     }
     return dbShooter;
   }
+}
+
+abstract class DbShooterVitals {
+  String firstName;
+  String lastName;
+
+  // When deserializing, set originalMemberNumber,
+  // then memberNumber.
+  String memberNumber;
+  String originalMemberNumber;
+
+  Division division;
+  Classification classification;
+  PowerFactor powerFactor;
+
+  DbShooterVitals({
+    required this.firstName,
+    required this.lastName,
+    required this.memberNumber,
+    required this.originalMemberNumber,
+    required this.division,
+    required this.classification,
+    required this.powerFactor,
+  });
 }
 
 @dao

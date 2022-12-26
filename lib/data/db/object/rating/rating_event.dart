@@ -1,15 +1,14 @@
 
 import 'package:floor/floor.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 
-@Entity(tableName: "ratingEvents")
-class DbRatingEvent {
-  @PrimaryKey(autoGenerate: true)
-  int? id;
-
-  int ratingId;
-  int matchId;
-  int? stageId;
+abstract class DbRatingEvent {
+  String memberNumber;
+  int projectId;
+  RaterGroup group;
+  String matchId;
+  int stageId;
 
   // TODO: score values
 
@@ -19,15 +18,12 @@ class DbRatingEvent {
   static const separator = "|.|";
 
   DbRatingEvent({
-    this.id,
-    required this.ratingId,
+    required this.memberNumber,
+    required this.projectId,
+    required this.group,
     required this.matchId,
-    this.stageId,
+    this.stageId = -1,
     required this.infoKeys,
     required this.infoValues,
   });
-}
-
-abstract class RatingEventExtension {
-  int get parentId;
 }

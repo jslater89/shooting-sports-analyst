@@ -16,7 +16,6 @@ part 'project_db.g.dart';
 
 // TODO: I think I need a Rater item, to store number mappings and encountered numbers
 
-
 /// ProjectDatabase is the application database, pending renaming.
 ///
 /// Schemas, generally:
@@ -30,12 +29,10 @@ part 'project_db.g.dart';
 /// Rating side
 ///   RatingProject
 ///     MemberNumberMapping belongs to RatingProject, has Group (enum)
+///     EncounteredShooter belongs to RatingProject, has Group (enum)
 ///     RatingProjectMatch belongs to RatingProject, has Match
 ///     ShooterRating belongs to RatingProject, has Group (enum)
-///       EloRating belongs to ShooterRating (openskill, points...)
-///       RatingEvent belongs to ShooterRating
-///         EloEvent belongs to RatingEvent (openskill, points...)
-///
+///       ShooterRating is one of three types, based on project algorithm
 @Database(
     version: 1,
     entities: [
@@ -45,8 +42,6 @@ part 'project_db.g.dart';
       DbScore,
       DbRatingProject,
       DbRatingProjectMatch,
-      DbShooterRating,
-      DbRatingEvent,
       DbEloRating,
       DbEloEvent,
       DbMemberNumberMapping,
@@ -68,7 +63,6 @@ abstract class ProjectDatabase extends FloorDatabase implements ProjectStore {
   ShooterDao get shooters;
   ScoreDao get scores;
   RatingProjectDao get projects;
-  ShooterRatingDao get ratings;
   EloRatingDao get eloRatings;
 }
 
@@ -86,7 +80,6 @@ class DateTimeConverter extends TypeConverter<DateTime, int> {
 
 abstract class ProjectStore extends MatchStore {
   RatingProjectDao get projects;
-  ShooterRatingDao get ratings;
   EloRatingDao get eloRatings;
 }
 
