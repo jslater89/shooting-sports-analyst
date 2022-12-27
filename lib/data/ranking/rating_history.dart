@@ -280,6 +280,8 @@ class RatingHistorySettings {
   RatingSystem algorithm;
   Map<String, String> shooterAliases;
 
+  // TODO: toJson here, or store in DB directly with only algorithm settings in JSON
+
   RatingHistorySettings({
     this.preserveHistory = false,
     this.groups = const [RaterGroup.open, RaterGroup.limited, RaterGroup.pcc, RaterGroup.carryOptics, RaterGroup.locap],

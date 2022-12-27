@@ -201,6 +201,17 @@ class MatchCache {
     return false;
   }
 
+  void insert(PracticalMatch match) {
+    var ids = [
+      match.practiscoreId,
+      if(match.practiscoreIdShort != null) match.practiscoreIdShort!,
+    ];
+    var entry = _MatchCacheEntry(match: match, ids: ids);
+    for(var id in ids) {
+      _cache[id] = entry;
+    }
+  }
+
   String? getUrl(PracticalMatch match) {
     var entry = _cache.entries.firstWhereOrNull((element) => element.value.match == match);
 

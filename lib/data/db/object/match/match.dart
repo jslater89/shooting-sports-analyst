@@ -141,6 +141,14 @@ abstract class MatchDao {
 
   @Query('SELECT * FROM matches WHERE psId = :longId')
   Future<DbMatch?> byPractiscoreId(String longId);
+
+  @Query('''
+  SELECT matches.* from matches
+  INNER JOIN ratingProjects_matches
+  ON matches.psId = ratingProjects_matches.matchId
+  AND ratingProjects.projectId = :ratingProjectId
+  ''')
+  Future<List<DbMatch>> byRatingProject(int ratingProjectId);
 }
 
 class MatchLevelConverter extends TypeConverter<MatchLevel, int> {

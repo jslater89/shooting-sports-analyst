@@ -1,9 +1,12 @@
+import 'dart:convert';
+
 import 'package:floor/floor.dart';
 import 'package:uspsa_result_viewer/data/db/object/match/match.dart';
 import 'package:uspsa_result_viewer/data/db/object/rating/elo/db_elo_rating.dart';
 import 'package:uspsa_result_viewer/data/db/object/rating/rating_types.dart';
 import 'package:uspsa_result_viewer/data/db/object/rating/shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/db/project/project_db.dart';
+import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
@@ -64,7 +67,6 @@ class DbRatingProject {
       dbLinks.add(store.projects.createLinkBetween(dbProject, dbMatch));
     }
     await store.projects.saveLinks(dbLinks);
-    print("Saved links");
 
     for(var group in history.groups) {
       // for each group, save member mappings, ratings, and rating events
@@ -79,7 +81,6 @@ class DbRatingProject {
         }
       }
       await store.projects.saveMemberNumberMappings(mappings);
-      print("Saved number mappings for $group");
 
       // encountered numbers: all 'number' cols in mappings, plus all member numbers
       // in ratings.
@@ -97,12 +98,53 @@ class DbRatingProject {
       }
 
       await store.eloRatings.saveRatings(ratings);
-      print("Saved ratings for $group");
       await store.eloRatings.saveEvents(events);
-      print("Saved events for $group");
     }
 
     return dbProject;
+  }
+
+  Future<RatingHistory> deserialize(ProjectDatabase db) async {
+    var settings = RatingProject.fromJson(jsonDecode(this.settings)).settings;
+
+    var matches = await _loadMatchesIfNotLoaded(db);
+
+    var project = RatingHistory(matches: matches, settings: settings);
+
+    for(var group in settings.groups) {
+      // Create a rater
+
+      // Load ratings, events, and member number mappings
+
+      // Add rater to project
+    }
+
+    return project;
+  }
+
+  Future<List<PracticalMatch>> _loadMatchesIfNotLoaded(MatchStore db) async {
+    var future = MatchCache().ready;
+    var dbMatches = await db.matches.byRatingProject(this.id!);
+    await future;
+
+    List<PracticalMatch> matches = [];
+    var cache = MatchCache();
+    var inserted = false;
+    for(var dbMatch in dbMatches) {
+      var existing = cache.getMatchImmediate(dbMatch.psId);
+      if(existing != null) {
+        matches.add(existing);
+        continue;
+      }
+
+      var match = await dbMatch.deserialize(db);
+      matches.add(match);
+      cache.insert(match);
+      inserted = true;
+    }
+
+    if(inserted) cache.save();
+    return matches;
   }
 }
 
@@ -133,9 +175,9 @@ class DbRatingProjectMatch {
   @PrimaryKey(autoGenerate: true)
   int? id;
 
-  @ForeignKey(childColumns: ["projectId"], parentColumns: ["id"], entity: DbRatingProject)
+  @ForeignKey(childColumns: ["projectId"], parentColumns: ["id"], entity: DbRatingProject, onDelete: ForeignKeyAction.cascade)
   int projectId;
-  @ForeignKey(childColumns: ["matchId"], parentColumns: ["psId"], entity: DbMatch)
+  @ForeignKey(childColumns: ["matchId"], parentColumns: ["psId"], entity: DbMatch, onDelete: ForeignKeyAction.restrict)
   String matchId;
 
   DbRatingProjectMatch({
