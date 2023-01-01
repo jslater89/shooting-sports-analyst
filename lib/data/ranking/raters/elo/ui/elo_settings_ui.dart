@@ -349,8 +349,8 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
               Tooltip(
                 message:
                   "Probability base determines how much a rating difference of the scale factor means, in terms of\n"
-                  "win likelihood. A probability base of 10 (the default) means that a shooter whose rating is better\n"
-                  "than another shooter's by the scale factor is 10 times more likely to win than to lose.",
+                  "win likelihood. A probability base of 4 means that a shooter whose rating is better\n"
+                  "than another shooter's by the scale factor is 4 times more likely to win than to lose.",
                 child: Padding(
                   padding: const EdgeInsets.only(left: 16),
                   child: Text("Probability base", style: Theme.of(context).textTheme.subtitle1!),

@@ -5,6 +5,11 @@
 * Only the last N shooters you shoot with count.
 * If you shoot with someone again while they're still on your list, move them to the front
   and update the amount gained to account for any changes in their connectedness.
+1.1. Improved connectedness?
+* Currently the slowest part of the rating algorithm. Some way to update everyone in one shot
+without having to iterate over their connected shooters would be great.
+* Or even just a more meaningful measure, like number of competitors you've shot against since time
+X?
 
 3. Option to require minimum N stages for display
 4. Improve speed of deduplication
@@ -35,3 +40,6 @@ community-focused.
         need to go with DBs per project.
             * Also saves me having to redo the match cache, for now.
 2. Project Improved Projects
+
+7.2 1/1/23 DB update
+    *
