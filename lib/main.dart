@@ -85,6 +85,12 @@ void main() async {
   if(!HtmlOr.isWeb) {
     var path = await getApplicationSupportDirectory();
     Hive.init(path.absolute.path);
+
+    // Start warming up the match cache immediately, since we're almost always going to want it
+    matchCacheProgressCallback = (_1, _2) async {
+      await Future.delayed(Duration(milliseconds: 1));
+    };
+    MatchCache();
   }
 
   // sqfliteDatabaseFactory.setDatabasesPath(".");
