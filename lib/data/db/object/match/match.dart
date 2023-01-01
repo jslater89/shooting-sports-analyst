@@ -146,7 +146,7 @@ abstract class MatchDao {
   SELECT matches.* from matches
   INNER JOIN ratingProjects_matches
   ON matches.psId = ratingProjects_matches.matchId
-  AND ratingProjects.projectId = :ratingProjectId
+  AND ratingProjects_matches.projectId = :ratingProjectId
   ''')
   Future<List<DbMatch>> byRatingProject(int ratingProjectId);
 }

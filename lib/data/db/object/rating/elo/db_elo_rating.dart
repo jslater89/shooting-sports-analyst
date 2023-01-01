@@ -3,7 +3,11 @@ import 'package:uspsa_result_viewer/data/db/object/rating/rating_event.dart';
 import 'package:uspsa_result_viewer/data/db/object/rating/rating_project.dart';
 import 'package:uspsa_result_viewer/data/db/object/rating/shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/db/project/project_db.dart';
+import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/ranking/model/rating_change.dart';
+import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
+import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rating_change.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
@@ -11,7 +15,7 @@ import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 @Entity(
   tableName: "eloRatings",
   withoutRowid: true,
-  primaryKeys: ['project', 'group', 'memberNumber'],
+  primaryKeys: ['project', 'raterGroup', 'memberNumber'],
 )
 class DbEloRating extends DbShooterRating {
   double rating;
@@ -32,7 +36,7 @@ class DbEloRating extends DbShooterRating {
     required super.division,
     required super.classification,
     required super.powerFactor,
-    required super.group,
+    required super.raterGroup,
   });
 
   static DbEloRating convert(EloShooterRating rating, DbRatingProject project, RaterGroup group) {
@@ -49,7 +53,7 @@ class DbEloRating extends DbShooterRating {
       division: rating.division!,
       classification: rating.classification!,
       powerFactor: rating.powerFactor!,
-      group: group,
+      raterGroup: group,
     );
 
     return dbEloRating;
@@ -61,18 +65,54 @@ class DbEloRating extends DbShooterRating {
     await store.eloRatings.saveRating(dbEloRating);
     return dbEloRating;
   }
+
+  @override
+  ShooterRating deserialize(List<DbRatingEvent> events, List<String> memberNumbers) {
+    var rating = EloShooterRating.fromDb(this);
+
+    var cache = MatchCache();
+    var event = events.first;
+    var byStage = event.stageId >= 0;
+
+    for(var event in events) {
+      late RelativeScore score;
+
+      var match = cache.getMatchImmediate(event.matchId)!;
+      var shooters = match.filterShooters(
+        divisions: raterGroup.divisions,
+        allowReentries: false,
+      );
+
+      var shooter = shooters.firstWhere((s) => memberNumbers.contains(s.memberNumber));
+
+      // if this is a by-stage rating, get the stage score.
+      if(byStage) {
+        var stage = match.stages[event.stageId - 1];
+        var scores = match.getScores(shooters: shooters, stages: [stage]);
+        score = scores.firstWhere((e) => e.shooter == shooter).stageScores[stage]!;
+      }
+      else {
+        var scores = match.getScores(shooters: shooters);
+        score = scores.firstWhere((e) => e.shooter == shooter).total;
+      }
+
+      rating.ratingEvents.addAll(events.map((e) => e.deserialize(match, score)));
+    }
+
+    return rating;
+  }
 }
 
 @dao
 abstract class EloRatingDao {
-  @Query("SELECT * FROM eloRatings WHERE project = :projectId AND group = :groupIndex")
-  Future<List<DbEloRating>> ratingsForGroup(int projectId, int groupIndex);
+  @Query("SELECT * FROM eloRatings WHERE project = :projectId AND raterGroup = :group")
+  Future<List<DbEloRating>> ratingsForGroup(int projectId, RaterGroup group);
 
-  @Query("SELECT * FROM eloRatings WHERE project = :projectId AND group = :groupIndex AND memberNumber = :memberNumber")
-  Future<DbEloRating?> ratingForMember(int projectId, int groupIndex, String memberNumber);
+  @Query("SELECT * FROM eloRatings WHERE project = :projectId AND raterGroup = :group AND memberNumber = :memberNumber")
+  Future<DbEloRating?> ratingForMember(int projectId, RaterGroup group, String memberNumber);
 
-  @Query("SELECT * FROM eloRatingEvents WHERE project = :projectId AND group = :groupIndex AND memberNumber = :memberNumber")
-  Future<List<DbEloEvent>> eventsForMember(int projectId, int groupIndex, String memberNumber);
+  @Query("SELECT * FROM eloRatingEvents WHERE projectId = :projectId AND raterGroup = :group AND memberNumber = :memberNumber")
+  Future<List<DbEloEvent>> eventsForMember(int projectId, RaterGroup group, String memberNumber);
 
   @insert
   Future<int> saveRating(DbEloRating rating);
@@ -90,7 +130,7 @@ abstract class EloRatingDao {
 
 @Entity(
   tableName: "eloRatingEvents",
-  primaryKeys: ['project', 'group', 'memberNumber', 'matchId', 'stageId'],
+  primaryKeys: ['project', 'raterGroup', 'memberNumber', 'matchId', 'stageId'],
   withoutRowid: true,
 )
 class DbEloEvent extends DbRatingEvent {
@@ -108,7 +148,7 @@ class DbEloEvent extends DbRatingEvent {
     required this.error,
 
     required super.projectId,
-    required super.group,
+    required super.raterGroup,
     required super.memberNumber,
     required super.matchId,
     super.stageId,
@@ -124,7 +164,7 @@ class DbEloEvent extends DbRatingEvent {
       events.add(
         DbEloEvent(
           projectId: project.id!,
-          group: group,
+          raterGroup: group,
           memberNumber: rating.memberNumber,
           matchId: matchesToDbIds[event.match]!,
           stageId: event.stage?.internalId ?? -1,
@@ -141,5 +181,19 @@ class DbEloEvent extends DbRatingEvent {
     }
 
     return events;
+  }
+
+  @override
+  RatingEvent deserialize(PracticalMatch match, RelativeScore score) {
+    var event = EloRatingEvent(
+      oldRating: oldRating,
+      match: match,
+      score: score,
+      ratingChange: ratingChange,
+      baseK: baseK,
+      effectiveK: effectiveK
+    );
+
+    return event;
   }
 }

@@ -2,6 +2,9 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
+import 'package:uspsa_result_viewer/data/db/object/rating/rating_event.dart';
+import 'package:uspsa_result_viewer/data/db/object/rating/rating_project.dart';
+import 'package:uspsa_result_viewer/data/db/object/rating/shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
@@ -38,6 +41,7 @@ class Rater {
   bool byStage;
   List<String> memberNumberWhitelist;
   Future<void> Function(int, int, String? eventName)? progressCallback;
+  final int progressCallbackInterval;
 
   Timings timings = Timings();
 
@@ -49,6 +53,7 @@ class Rater {
     FilterSet? filters,
     this.byStage = false,
     this.progressCallback,
+    this.progressCallbackInterval = 5,
     this.memberNumberWhitelist = const []}) : this._matches = matches, this._filters = filters
   {
     _matches.sort((a, b) {
@@ -75,6 +80,35 @@ class Rater {
     if(Timings.enabled) timings.dedupShootersMillis = (DateTime.now().difference(start).inMicroseconds).toDouble();
   }
 
+  void deserializeFrom(List<DbMemberNumberMapping> mappings, List<DbShooterRating> ratings, Map<DbShooterRating, List<DbRatingEvent>> eventsByRating) {
+    // Mappings contains only the interesting ones, i.e. number != mapping
+    // The rest get added later.
+
+    // Track the reverse mappings for now, so that we can tell the rating
+    // deserializer a mapped shooter's first number.
+    // TODO: triple mappings will break this; needs to be a list!
+    var reverseMappings = <String, String>{};
+    for(var m in mappings) {
+      _memberNumberMappings[m.number] = m.mapping;
+      reverseMappings[m.mapping] = m.number;
+    }
+
+    for(var r in ratings) {
+      var numbers = [r.memberNumber];
+
+      // If we have a reverse mapping (i.e., new member number to old),
+      // add that to the list
+      if(reverseMappings.containsKey(r.memberNumber)) {
+        numbers.add(reverseMappings[r.memberNumber]!);
+      }
+
+      ShooterRating rating = r.deserialize(eventsByRating[r]!, numbers);
+      _memberNumbersEncountered.add(rating.memberNumber);
+      _memberNumbersEncountered.add(processMemberNumber(rating.originalMemberNumber));
+      knownShooters[rating.memberNumber] = rating;
+    }
+  }
+
   Future<void> calculateInitialRatings() async {
     int totalSteps = _matches.length;
     int currentSteps = 0;
@@ -87,7 +121,7 @@ class Rater {
       if(Timings.enabled) timings.matchCount += 1;
 
       currentSteps += 1;
-      await progressCallback?.call(currentSteps, totalSteps, m.name);
+      if(currentSteps % progressCallbackInterval == 0) await progressCallback?.call(currentSteps, totalSteps, m.name);
     }
 
     if(Timings.enabled) start = DateTime.now();
@@ -105,6 +139,7 @@ class Rater {
       this._memberNumberMappings = {}..addAll(other._memberNumberMappings),
       this._filters = other._filters,
       this.memberNumberWhitelist = other.memberNumberWhitelist,
+      this.progressCallbackInterval = other.progressCallbackInterval,
       this.ratingSystem = other.ratingSystem {
     for(var entry in _memberNumberMappings.entries) {
       if (entry.key == entry.value) {
@@ -192,6 +227,7 @@ class Rater {
     }
 
     // TODO: three-step mapping
+    // TODO: see other TODO in this file about triple mapping
     // Say we have John Doe, A12345 in the set already, and
     // John Doe, L1234 shows up. We have:
     // 1. John Doe, A12345 with history

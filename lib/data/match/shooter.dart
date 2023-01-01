@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:uspsa_result_viewer/data/db/object/match/shooter.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 
@@ -82,6 +83,19 @@ class Shooter {
     memberNumber = other.memberNumber;
     reentry = other.reentry;
     dq = other.dq;
+    division = other.division;
+    classification = other.classification;
+    powerFactor = other.powerFactor;
+  }
+
+  void copyDbVitalsFrom(DbShooterVitals other) {
+    firstName = other.firstName;
+    lastName = other.lastName;
+    internalId = -1;
+    originalMemberNumber = other.originalMemberNumber;
+    memberNumber = other.memberNumber;
+    reentry = false;
+    dq = false;
     division = other.division;
     classification = other.classification;
     powerFactor = other.powerFactor;

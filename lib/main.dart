@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:io';
 
 
+import 'package:collection/collection.dart';
 import 'package:floor/floor.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
@@ -98,7 +99,7 @@ void main() async {
   ]);
   print("Match/project cache ready");
 
-  var projectSettings = RatingProjectManager().loadProject("L2+ 2020+")!;
+  var projectSettings = RatingProjectManager().loadProject("WPA And Friends 2020-2022")!;
 
   var matches = <PracticalMatch>[];
   for(var matchUrl in projectSettings.matchUrls) {
@@ -107,16 +108,32 @@ void main() async {
   }
 
   print("Calculating ratings");
+  var start = DateTime.now();
   RatingHistory h = RatingHistory(matches: matches, settings: projectSettings.settings);
   await h.processInitialMatches();
-  print("Done, starting DB dump");
-
-  var start = DateTime.now();
-  await DbRatingProject.serialize(h, projectSettings, testDb);
 
   var duration = DateTime.now().difference(start);
+  print("Done in ${duration.inMilliseconds}ms, starting DB dump");
+
+  for(var rating in h.raterFor(h.matches.last, RaterGroup.open).uniqueShooters.sorted((a, b) => b.rating.compareTo(a.rating)).sublist(0, 5)) {
+    print("$rating");
+  }
+
+  start = DateTime.now();
+  var dbProject = await DbRatingProject.serialize(h, projectSettings, testDb);
+
+  duration = DateTime.now().difference(start);
   print("Dumped WPA ratings to DB in ${duration.inMilliseconds}ms");
 
+  start = DateTime.now();
+  var deserialized = await dbProject.deserialize(testDb);
+  duration = DateTime.now().difference(start);
+
+  print("Restored WPA ratings from DB in ${duration.inMilliseconds}ms");
+
+  for(var rating in deserialized.raterFor(h.matches.last, RaterGroup.open).uniqueShooters.sorted((a, b) => b.rating.compareTo(a.rating)).sublist(0, 5)) {
+    print("$rating");
+  }
   // var fileContents = await File("report.txt").readAsString();
   // var match = await processScoreFile(fileContents);
   // match.practiscoreIdShort = "12345";

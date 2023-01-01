@@ -3,12 +3,14 @@ import 'dart:convert';
 import 'package:floor/floor.dart';
 import 'package:uspsa_result_viewer/data/db/object/match/match.dart';
 import 'package:uspsa_result_viewer/data/db/object/rating/elo/db_elo_rating.dart';
+import 'package:uspsa_result_viewer/data/db/object/rating/rating_event.dart';
 import 'package:uspsa_result_viewer/data/db/object/rating/rating_types.dart';
 import 'package:uspsa_result_viewer/data/db/object/rating/shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/db/project/project_db.dart';
 import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
+import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 
@@ -76,7 +78,7 @@ class DbRatingProject {
       for(var mapping in rater.memberNumberMappings.entries) {
         if(mapping.key != mapping.value) {
           mappings.add(DbMemberNumberMapping(
-              projectId: dbProject.id!, group: group, number: mapping.key, mapping: mapping.value
+              projectId: dbProject.id!, raterGroup: group, number: mapping.key, mapping: mapping.value
           ));
         }
       }
@@ -106,26 +108,45 @@ class DbRatingProject {
 
   Future<RatingHistory> deserialize(ProjectDatabase db) async {
     var settings = RatingProject.fromJson(jsonDecode(this.settings)).settings;
+    var dbMatches = await db.matches.byRatingProject(this.id!);
 
-    var matches = await _loadMatchesIfNotLoaded(db);
+    var matches = await _loadMatchesIfNotLoaded(db, dbMatches);
 
     var project = RatingHistory(matches: matches, settings: settings);
 
+    var raters = <RaterGroup, Rater>{};
+
     for(var group in settings.groups) {
       // Create a rater
+      var r = Rater(
+        matches: matches,
+        ratingSystem: settings.algorithm,
+        byStage: settings.byStage,
+        filters: group.filters,
+      );
 
       // Load ratings, events, and member number mappings
+      List<DbMemberNumberMapping> mappings = await db.projects.getMemberNumberMappings(this.id!, group);
+      List<DbShooterRating> ratings = await db.eloRatings.ratingsForGroup(this.id!, group);
+      Map<DbShooterRating, List<DbRatingEvent>> eventsByShooter = {};
+      for(var rating in ratings) {
+        var events = await db.eloRatings.eventsForMember(this.id!, group, rating.memberNumber);
+        eventsByShooter[rating] = events;
+      }
+
+      r.deserializeFrom(mappings, ratings, eventsByShooter);
 
       // Add rater to project
+      raters[group] = r;
     }
+
+    project.loadRatings(raters);
 
     return project;
   }
 
-  Future<List<PracticalMatch>> _loadMatchesIfNotLoaded(MatchStore db) async {
-    var future = MatchCache().ready;
-    var dbMatches = await db.matches.byRatingProject(this.id!);
-    await future;
+  Future<List<PracticalMatch>> _loadMatchesIfNotLoaded(MatchStore db, List<DbMatch> dbMatches) async {
+    await MatchCache().ready;
 
     List<PracticalMatch> matches = [];
     var cache = MatchCache();
@@ -168,6 +189,9 @@ abstract class RatingProjectDao {
 
   @insert
   Future<void> saveMemberNumberMappings(List<DbMemberNumberMapping> mapping);
+
+  @Query("SELECT * FROM memberNumberMappings WHERE projectId = :projectId AND raterGroup = :group")
+  Future<List<DbMemberNumberMapping>> getMemberNumberMappings(int projectId, RaterGroup group);
 }
 
 @Entity(tableName: "ratingProjects_matches")
@@ -194,20 +218,20 @@ class DbRatingProjectMatch {
 @Entity(
   tableName: "memberNumberMappings",
   primaryKeys: [
-    "projectId", "group", "number", "mapping",
+    "projectId", "raterGroup", "number", "mapping",
   ],
   withoutRowid: true,
 )
 class DbMemberNumberMapping {
   int projectId;
-  RaterGroup group;
+  RaterGroup raterGroup;
 
   String number;
   String mapping;
 
   DbMemberNumberMapping({
     required this.projectId,
-    required this.group,
+    required this.raterGroup,
     required this.number,
     required this.mapping,
   });

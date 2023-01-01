@@ -27,6 +27,7 @@ class RatingHistory {
   }
 
   late RatingHistorySettings _settings;
+  final int progressCallbackInterval = 5;
 
   List<RaterGroup> get groups => []..addAll(_settings.groups);
 
@@ -48,6 +49,10 @@ class RatingHistory {
   Future<void> processInitialMatches() async {
     if(_ratersByDivision.length > 0) throw StateError("Called processInitialMatches twice");
     return _processInitialMatches();
+  }
+
+  void loadRatings(Map<RaterGroup, Rater> ratings) {
+    _ratersByDivision[_matches.last] = ratings;
   }
   
   // Returns false if the match already exists
@@ -118,7 +123,7 @@ class RatingHistory {
     await progressCallback?.call(0, 1, null);
 
     if(_settings.preserveHistory) {
-      int totalSteps = matches.length * _settings.groups.length;
+      int totalSteps = ((_settings.groups.length * _matches.length) / progressCallbackInterval).round();
 
       // debugPrint("Total steps, history preserved: $totalSteps");
 
@@ -152,7 +157,7 @@ class RatingHistory {
       }
     }
     else {
-      int totalSteps = _settings.groups.length * _matches.length;
+      int totalSteps = ((_settings.groups.length * _matches.length) / progressCallbackInterval).round();
 
       // debugPrint("Total steps, history discarded: $totalSteps");
 
@@ -181,17 +186,12 @@ class RatingHistory {
     group.divisions.forEach((element) => divisionMap[element] = true);
     Timings().reset();
     var r = Rater(
-        matches: matches,
-        ratingSystem: _settings.algorithm,
-        byStage: _settings.byStage,
-        filters: FilterSet(
-          empty: true,
-        )
-          ..mode = FilterMode.or
-          ..divisions = divisionMap
-          ..reentries = false
-          ..scoreDQs = false,
-        progressCallback: progressCallback,
+      matches: matches,
+      ratingSystem: _settings.algorithm,
+      byStage: _settings.byStage,
+      filters: group.filters,
+      progressCallback: progressCallback,
+      progressCallbackInterval: progressCallbackInterval
     );
 
     await r.calculateInitialRatings();
@@ -213,10 +213,24 @@ enum RaterGroup {
   revolver,
   locap,
   openPcc,
-  limitedCO,
-}
+  limitedCO;
 
-extension RaterGroupUtilities on RaterGroup {
+  FilterSet get filters {
+    return FilterSet(
+      empty: true,
+    )
+      ..mode = FilterMode.or
+      ..divisions = divisionMap
+      ..reentries = false
+      ..scoreDQs = false;
+  }
+
+  Map<Division, bool> get divisionMap {
+    var divisionMap = <Division, bool>{};
+    divisions.forEach((element) => divisionMap[element] = true);
+    return divisionMap;
+  }
+
   List<Division> get divisions {
     switch(this) {
       case RaterGroup.open:

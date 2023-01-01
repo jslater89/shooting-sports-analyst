@@ -706,7 +706,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       _loadingState = _LoadingState.processingScores;
     });
 
-    await Future.delayed(Duration(milliseconds: 100));
+    await Future.delayed(Duration(milliseconds: 1));
 
     _history = RatingHistory(settings: widget.settings, matches: actualMatches, progressCallback: (currentSteps, totalSteps, eventName) async {
       setState(() {

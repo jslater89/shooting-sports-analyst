@@ -4,17 +4,18 @@ import 'package:sqflite/sqflite.dart' as sqflite;
 
 import 'package:uspsa_result_viewer/data/db/object/match/match.dart';
 import 'package:uspsa_result_viewer/data/db/object/rating/elo/db_elo_rating.dart';
-import 'package:uspsa_result_viewer/data/db/object/rating/rating_event.dart';
 import 'package:uspsa_result_viewer/data/db/object/rating/rating_project.dart';
 import 'package:uspsa_result_viewer/data/db/object/rating/shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/db/object/match/score.dart';
 import 'package:uspsa_result_viewer/data/db/object/match/scoring.dart';
 import 'package:uspsa_result_viewer/data/db/object/match/shooter.dart';
 import 'package:uspsa_result_viewer/data/db/object/match/stage.dart';
+import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 
 part 'project_db.g.dart';
 
 // TODO: I think I need a Rater item, to store number mappings and encountered numbers
+// update 1/1/22: not really?
 
 /// ProjectDatabase is the application database, pending renaming.
 ///
