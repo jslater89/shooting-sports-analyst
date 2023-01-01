@@ -87,53 +87,53 @@ void main() async {
     Hive.init(path.absolute.path);
   }
 
-  sqfliteDatabaseFactory.setDatabasesPath(".");
-  var testDb = await $FloorProjectDatabase.databaseBuilder("test.sqlite").build();
-  testDb.database.execute("PRAGMA synchronous = OFF");
-  testDb.database.execute("PRAGMA journal_mode = WAL");
-
-  print("Warming match/project cache");
-  await Future.wait([
-    MatchCache().ready,
-    RatingProjectManager().ready,
-  ]);
-  print("Match/project cache ready");
-
-  var projectSettings = RatingProjectManager().loadProject("WPA And Friends 2020-2022")!;
-
-  var matches = <PracticalMatch>[];
-  for(var matchUrl in projectSettings.matchUrls) {
-    var m = await MatchCache().getMatch(matchUrl);
-    if(m != null) matches.add(m);
-  }
-
-  print("Calculating ratings");
-  var start = DateTime.now();
-  RatingHistory h = RatingHistory(matches: matches, settings: projectSettings.settings);
-  await h.processInitialMatches();
-
-  var duration = DateTime.now().difference(start);
-  print("Done in ${duration.inMilliseconds}ms, starting DB dump");
-
-  for(var rating in h.raterFor(h.matches.last, RaterGroup.open).uniqueShooters.sorted((a, b) => b.rating.compareTo(a.rating)).sublist(0, 5)) {
-    print("$rating");
-  }
-
-  start = DateTime.now();
-  var dbProject = await DbRatingProject.serialize(h, projectSettings, testDb);
-
-  duration = DateTime.now().difference(start);
-  print("Dumped WPA ratings to DB in ${duration.inMilliseconds}ms");
-
-  start = DateTime.now();
-  var deserialized = await dbProject.deserialize(testDb);
-  duration = DateTime.now().difference(start);
-
-  print("Restored WPA ratings from DB in ${duration.inMilliseconds}ms");
-
-  for(var rating in deserialized.raterFor(h.matches.last, RaterGroup.open).uniqueShooters.sorted((a, b) => b.rating.compareTo(a.rating)).sublist(0, 5)) {
-    print("$rating");
-  }
+  // sqfliteDatabaseFactory.setDatabasesPath(".");
+  // var testDb = await $FloorProjectDatabase.databaseBuilder("test.sqlite").build();
+  // testDb.database.execute("PRAGMA synchronous = OFF");
+  // testDb.database.execute("PRAGMA journal_mode = WAL");
+  //
+  // print("Warming match/project cache");
+  // await Future.wait([
+  //   MatchCache().ready,
+  //   RatingProjectManager().ready,
+  // ]);
+  // print("Match/project cache ready");
+  //
+  // var projectSettings = RatingProjectManager().loadProject("WPA And Friends 2020-2022")!;
+  //
+  // var matches = <PracticalMatch>[];
+  // for(var matchUrl in projectSettings.matchUrls) {
+  //   var m = await MatchCache().getMatch(matchUrl);
+  //   if(m != null) matches.add(m);
+  // }
+  //
+  // print("Calculating ratings");
+  // var start = DateTime.now();
+  // RatingHistory h = RatingHistory(matches: matches, settings: projectSettings.settings);
+  // await h.processInitialMatches();
+  //
+  // var duration = DateTime.now().difference(start);
+  // print("Done in ${duration.inMilliseconds}ms, starting DB dump");
+  //
+  // for(var rating in h.raterFor(h.matches.last, RaterGroup.open).uniqueShooters.sorted((a, b) => b.rating.compareTo(a.rating)).sublist(0, 5)) {
+  //   print("$rating");
+  // }
+  //
+  // start = DateTime.now();
+  // var dbProject = await DbRatingProject.serialize(h, projectSettings, testDb);
+  //
+  // duration = DateTime.now().difference(start);
+  // print("Dumped WPA ratings to DB in ${duration.inMilliseconds}ms");
+  //
+  // start = DateTime.now();
+  // var deserialized = await dbProject.deserialize(testDb);
+  // duration = DateTime.now().difference(start);
+  //
+  // print("Restored WPA ratings from DB in ${duration.inMilliseconds}ms");
+  //
+  // for(var rating in deserialized.raterFor(h.matches.last, RaterGroup.open).uniqueShooters.sorted((a, b) => b.rating.compareTo(a.rating)).sublist(0, 5)) {
+  //   print("$rating");
+  // }
   // var fileContents = await File("report.txt").readAsString();
   // var match = await processScoreFile(fileContents);
   // match.practiscoreIdShort = "12345";
