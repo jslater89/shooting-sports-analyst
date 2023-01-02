@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/parser/hitfactor/results_file_parser.dart';
+import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 import 'package:uspsa_result_viewer/ui/empty_scaffold.dart';
 import 'package:uspsa_result_viewer/ui/result_page.dart';
 
@@ -12,7 +12,7 @@ class UploadedResultPage extends StatefulWidget {
 }
 
 class _UploadedResultPageState extends State<UploadedResultPage> {
-  HitFactorMatch? _match;
+  PracticalMatch? _match;
   String? _resultString;
   bool _operationInProgress = false;
 
@@ -36,7 +36,7 @@ class _UploadedResultPageState extends State<UploadedResultPage> {
 
       }
 
-      HitFactorMatch m = await processHitFactorScoreFile(_resultString!);
+      PracticalMatch m = await processScoreFile(_resultString!);
       setState(() {
         _match = m;
       });

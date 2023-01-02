@@ -1,17 +1,15 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:uspsa_result_viewer/data/db/object/match/shooter.dart';
+import 'package:uspsa_result_viewer/data/db/object/rating/shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/average_rating.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/connected_shooter.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_change.dart';
 import 'package:uspsa_result_viewer/data/sorted_list.dart';
 
-
-abstract class ShooterRating<T extends ShooterRating<T>> {
-  // The weird generic is required so that subclasses can implement
-  // [copyRatingFrom].
-
+abstract class ShooterRating extends Shooter {
   /// The number of events over which trend/variance are calculated.
   static const baseTrendWindow = 30;
 
@@ -24,10 +22,7 @@ abstract class ShooterRating<T extends ShooterRating<T>> {
   static const baseConnectedness = 100.0;
   static const maxConnections = 40;
 
-  final Shooter shooter;
-  USPSAClassification _lastClass;
-  USPSAClassification get lastClassification => _lastClass;
-  set lastClassification(USPSAClassification c) => _lastClass = c;
+  Classification lastClassification;
   DateTime lastSeen;
 
   double get rating;
@@ -162,7 +157,7 @@ abstract class ShooterRating<T extends ShooterRating<T>> {
   void updateTrends(List<RatingEvent> changes);
   double get trend => rating - averageRating().firstRating;
 
-  void copyRatingFrom(T other) {
+  void copyRatingFrom(covariant ShooterRating other) {
     this._connectedness = other._connectedness;
     this.lastClassification = other.lastClassification;
     this.lastSeen = other.lastSeen;
@@ -176,21 +171,35 @@ abstract class ShooterRating<T extends ShooterRating<T>> {
     return matchChange(lastMatch);
   }
 
-  double matchChange(HitFactorMatch match) {
+  double matchChange(PracticalMatch match) {
     double change = ratingEvents.where((e) => e.match == match)
         .map((e) => e.ratingChange)
         .reduce((a, b) => a + b);
     return change;
   }
 
-  ShooterRating(this.shooter, {DateTime? date}) :
-      this._lastClass = shooter.classification ?? USPSAClassification.U,
-      this.lastSeen = date ?? DateTime.now();
+  void copyVitalsFrom(Shooter other) {
+    this.firstName = other.firstName;
+    this.lastName = other.lastName;
+  }
+
+  ShooterRating(Shooter shooter, {DateTime? date}) :
+      this.lastClassification = shooter.classification ?? Classification.U,
+      this.lastSeen = date ?? DateTime.now() {
+    super.copyVitalsFrom(shooter);
+  }
+
+  ShooterRating.fromVitals(DbShooterRating rating) :
+      this.lastClassification = rating.lastClassification,
+      this.lastSeen = rating.lastSeen {
+    super.copyDbVitalsFrom(rating);
+  }
 
   ShooterRating.copy(ShooterRating other) :
-      this.shooter = other.shooter,
-      this._lastClass = other.lastClassification,
+      this.lastClassification = other.lastClassification,
       this._connectedness = other._connectedness,
       this.lastSeen = other.lastSeen,
-      this.connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure)..addAll(other.connectedShooters.map((e) => ConnectedShooter.copy(e)));
+      this.connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure)..addAll(other.connectedShooters.map((e) => ConnectedShooter.copy(e))) {
+    super.copyVitalsFrom(other);
+  }
 }

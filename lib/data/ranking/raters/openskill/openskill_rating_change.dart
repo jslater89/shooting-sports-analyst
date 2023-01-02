@@ -15,7 +15,7 @@ class OpenskillRatingEvent extends RatingEvent {
     required this.initialMu,
     required this.muChange,
     required this.sigmaChange,
-    required HitFactorMatch match,
+    required PracticalMatch match,
     Stage? stage,
     required RelativeScore score,
     Map<String, List<dynamic>> info = const {}

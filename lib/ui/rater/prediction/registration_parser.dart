@@ -16,7 +16,7 @@ class RegistrationResult {
 class Registration {
   final String name;
   final Division division;
-  final USPSAClassification classification;
+  final Classification classification;
 
   Registration({
     required this.name,
@@ -60,7 +60,7 @@ RegistrationResult _parseRegistrations(String registrationHtml, List<Division> d
 
       if(!divisions.contains(d)) continue;
 
-      var classification = USPSAClassificationFrom.string(match.namedGroup("class")!);
+      var classification = ClassificationFrom.string(match.namedGroup("class")!);
       var foundShooter = _findShooter(shooterName, classification, knownShooters);
 
       if(foundShooter != null) {
@@ -89,10 +89,10 @@ List<String> _processShooterName(Shooter shooter) {
   ];
 }
 
-ShooterRating? _findShooter(String shooterName, USPSAClassification classification, List<ShooterRating> knownShooters) {
+ShooterRating? _findShooter(String shooterName, Classification classification, List<ShooterRating> knownShooters) {
   var processedName = _processRegistrationName(shooterName);
   var firstGuess = knownShooters.firstWhereOrNull((rating) {
-    return _processShooterName(rating.shooter).join() == processedName;
+    return _processShooterName(rating).join() == processedName;
   });
 
   if(firstGuess != null) {
@@ -100,7 +100,7 @@ ShooterRating? _findShooter(String shooterName, USPSAClassification classificati
   }
 
   var secondGuess = knownShooters.where((rating) {
-    return processedName.endsWith(_processShooterName(rating.shooter)[1]) && rating.lastClassification == classification;
+    return processedName.endsWith(_processShooterName(rating)[1]) && rating.lastClassification == classification;
   }).toList();
 
   if(secondGuess.length == 1) {
@@ -109,7 +109,7 @@ ShooterRating? _findShooter(String shooterName, USPSAClassification classificati
 
   // Catch e.g. Robert Hall -> Rob Hall
   var thirdGuess = knownShooters.where((rating) {
-    var processedShooterName = _processShooterName(rating.shooter);
+    var processedShooterName = _processShooterName(rating);
     var lastName = _processRegistrationName(shooterName.split(" ").last);
     var firstName = _processRegistrationName(shooterName.split(" ").first);
 

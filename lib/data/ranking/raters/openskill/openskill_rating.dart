@@ -3,7 +3,7 @@ import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/openskill/openskill_rating_change.dart';
 
-class OpenskillRating extends ShooterRating<OpenskillRating> {
+class OpenskillRating extends ShooterRating {
   @override
   double get rating => ordinal;
 
@@ -48,6 +48,6 @@ class OpenskillRating extends ShooterRating<OpenskillRating> {
 
   @override
   String toString() {
-    return "${shooter.getName(suffixes: false)} ${rating.round()} ($hashCode)";
+    return "${getName(suffixes: false)} ${rating.round()} ($hashCode)";
   }
 }

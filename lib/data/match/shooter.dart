@@ -1,20 +1,20 @@
 import 'package:flutter/foundation.dart';
+import 'package:uspsa_result_viewer/data/db/object/match/shooter.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/parser/hitfactor/results_file_parser.dart';
+import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 
 class Shooter {
   String firstName = "";
   String lastName = "";
 
+  int internalId = -1;
   String _memberNumber = "";
-  late final String originalMemberNumber;
-  bool _hasOriginalMemberNumber = false;
+  String originalMemberNumber = "";
 
   String get memberNumber => _memberNumber;
   set memberNumber(String m) {
-    if(!_hasOriginalMemberNumber) {
+    if(originalMemberNumber.isEmpty) {
       originalMemberNumber = m.toUpperCase().replaceAll(RegExp(r"[^A-Z0-9]"), "");
-      _hasOriginalMemberNumber = true;
     }
     _memberNumber = m;
   }
@@ -23,7 +23,7 @@ class Shooter {
   bool dq = false;
 
   Division? division;
-  USPSAClassification? classification;
+  Classification? classification;
   PowerFactor? powerFactor;
 
   Map<Stage, Score> stageScores = {};
@@ -37,12 +37,12 @@ class Shooter {
     return components.join(" ");
   }
 
-  Shooter copy(HitFactorMatch parent) {
+  Shooter copy(PracticalMatch parent) {
     var newShooter = Shooter()
       ..firstName = firstName
       ..lastName = lastName
+      ..internalId = internalId
       ..originalMemberNumber = originalMemberNumber
-      .._hasOriginalMemberNumber = _hasOriginalMemberNumber
       ..memberNumber = memberNumber
       ..reentry = reentry
       ..dq = dq
@@ -56,6 +56,49 @@ class Shooter {
     });
 
     return newShooter;
+  }
+
+  Shooter copyWithoutScores() {
+    var newShooter = Shooter()
+      ..firstName = firstName
+      ..lastName = lastName
+      ..internalId = internalId
+      ..originalMemberNumber = originalMemberNumber
+      ..memberNumber = memberNumber
+      ..reentry = reentry
+      ..dq = dq
+      ..division = division
+      ..classification = classification
+      ..powerFactor = powerFactor
+      ..stageScores = {};
+
+    return newShooter;
+  }
+
+  void copyVitalsFrom(Shooter other) {
+    firstName = other.firstName;
+    lastName = other.lastName;
+    internalId = other.internalId;
+    originalMemberNumber = other.originalMemberNumber;
+    memberNumber = other.memberNumber;
+    reentry = other.reentry;
+    dq = other.dq;
+    division = other.division;
+    classification = other.classification;
+    powerFactor = other.powerFactor;
+  }
+
+  void copyDbVitalsFrom(DbShooterVitals other) {
+    firstName = other.firstName;
+    lastName = other.lastName;
+    internalId = -1;
+    originalMemberNumber = other.originalMemberNumber;
+    memberNumber = other.memberNumber;
+    reentry = false;
+    dq = false;
+    division = other.division;
+    classification = other.classification;
+    powerFactor = other.powerFactor;
   }
 
   @override
@@ -138,8 +181,7 @@ extension DDisplayString on Division? {
   }
 }
 
-/// USPSA/ICORE-style letter-grade plus M/GM classification.
-enum USPSAClassification {
+enum Classification {
   GM,
   M,
   A,
@@ -150,92 +192,52 @@ enum USPSAClassification {
   unknown,
 }
 
-extension USPSAClassificationFrom on USPSAClassification {
-  static USPSAClassification string(String s) {
+extension ClassificationFrom on Classification {
+  static Classification string(String s) {
     s = s.trim().toLowerCase();
 
-    if(s.isEmpty) return USPSAClassification.U;
+    if(s.isEmpty) return Classification.U;
 
     switch(s) {
-      case "gm": return USPSAClassification.GM;
-      case "grandmaster": return USPSAClassification.GM;
-      case "g": return USPSAClassification.GM;
-      case "m": return USPSAClassification.M;
-      case "master": return USPSAClassification.M;
-      case "a": return USPSAClassification.A;
-      case "b": return USPSAClassification.B;
-      case "c": return USPSAClassification.C;
-      case "d": return USPSAClassification.D;
-      case "u": return USPSAClassification.U;
-      case "x": return USPSAClassification.U;
+      case "gm": return Classification.GM;
+      case "grandmaster": return Classification.GM;
+      case "g": return Classification.GM;
+      case "m": return Classification.M;
+      case "master": return Classification.M;
+      case "a": return Classification.A;
+      case "b": return Classification.B;
+      case "c": return Classification.C;
+      case "d": return Classification.D;
+      case "u": return Classification.U;
+      case "x": return Classification.U;
       default:
         if(verboseParse) debugPrint("Unknown classification: $s");
-        return USPSAClassification.U;
+        return Classification.U;
     }
   }
 }
 
-extension CDisplayString on USPSAClassification? {
+extension CDisplayString on Classification? {
   String displayString() {
     switch(this) {
 
-      case USPSAClassification.GM:
+      case Classification.GM:
         return "GM";
-      case USPSAClassification.M:
+      case Classification.M:
         return "M";
-      case USPSAClassification.A:
+      case Classification.A:
         return "A";
-      case USPSAClassification.B:
+      case Classification.B:
         return "B";
-      case USPSAClassification.C:
+      case Classification.C:
         return "C";
-      case USPSAClassification.D:
+      case Classification.D:
         return "D";
-      case USPSAClassification.U:
+      case Classification.U:
         return "U";
-      case USPSAClassification.unknown:
+      case Classification.unknown:
         return "?";
       default: return "?";
-    }
-  }
-}
-
-enum IDPAClassification {
-  DM,
-  MA,
-  EX,
-  SS,
-  MM,
-  NV,
-  UN,
-  unknown,
-}
-
-extension IDPAClassificationFrom on IDPAClassification {
-  static IDPAClassification string(String s) {
-    s = s.trim().toLowerCase();
-
-    if(s.isEmpty) return IDPAClassification.UN;
-
-    switch(s) {
-      case "dm": return IDPAClassification.DM;
-      case "distinguished master": return IDPAClassification.DM;
-      case "m": return IDPAClassification.MA;
-      case "master": return IDPAClassification.MA;
-      case "ma": return IDPAClassification.MA;
-      case "ex": return IDPAClassification.EX;
-      case "expert": return IDPAClassification.EX;
-      case "ss": return IDPAClassification.SS;
-      case "sharpshooter": return IDPAClassification.SS;
-      case "mm": return IDPAClassification.MM;
-      case "marksman": return IDPAClassification.MM;
-      case "nv": return IDPAClassification.NV;
-      case "novice": return IDPAClassification.NV;
-      case "un": return IDPAClassification.UN;
-      case "unclassified": return IDPAClassification.UN;
-      default:
-        if(verboseParse) debugPrint("Unknown classification: $s");
-        return IDPAClassification.UN;
     }
   }
 }

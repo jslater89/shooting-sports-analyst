@@ -4,20 +4,18 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/parser/practiscore_parser.dart';
-import 'package:uspsa_result_viewer/data/parser/hitfactor/results_file_parser.dart';
-import 'package:uspsa_result_viewer/data/parser/timeplus/timeplus_html_parser.dart';
+import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
+import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/ui/empty_scaffold.dart';
 import 'package:uspsa_result_viewer/ui/result_page.dart';
 import 'package:http/http.dart' as http;
 
 class PractiscoreResultPage extends StatefulWidget {
-  final String? hitFactorMatchId;
-  final String? timePlusMatchId;
+  final String? matchId;
   final String? resultUrl;
 
-  const PractiscoreResultPage({Key? key, this.hitFactorMatchId, this.resultUrl, this.timePlusMatchId}) : super(key: key);
+  const PractiscoreResultPage({Key? key, this.matchId, this.resultUrl}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() {
@@ -26,16 +24,15 @@ class PractiscoreResultPage extends StatefulWidget {
 }
 
 class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
-  HitFactorMatch? _match;
+  PracticalMatch? _match;
   bool _operationInProgress = false;
 
   @override
   void initState() {
     super.initState();
 
-    if(widget.hitFactorMatchId != null)       _getMatch();
-    else if(widget.timePlusMatchId != null)   _getTimePlusMatch();
-    else if(widget.resultUrl != null)         _getResultFileMatch();
+    if(widget.matchId != null)        _getPractiscoreMatch();
+    else if(widget.resultUrl != null) _getResultFileMatch();
     else throw StateError("missing match ID or result URL");
   }
 
@@ -45,7 +42,7 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
       if(response.statusCode < 400) {
         var responseString = response.body;
         if (responseString.startsWith("\$")) {
-          var match = await processHitFactorScoreFile(responseString);
+          var match = await processScoreFile(responseString);
           setState(() {
             _match = match;
           });
@@ -63,19 +60,9 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to download result file from ${widget.resultUrl}.")));
   }
 
-  Future<void> _getMatch() async {
+  Future<void> _getPractiscoreMatch() async {
     var proxyUrl = getProxyUrl();
-    String reportUrl;
-    if(widget.hitFactorMatchId != null) {
-      reportUrl = "${proxyUrl}https://practiscore.com/reports/web/${widget.hitFactorMatchId}";
-    }
-    else if(widget.timePlusMatchId != null) {
-      reportUrl = "${proxyUrl}https://practiscore.com/results/html/${widget.timePlusMatchId}";
-    }
-    else {
-      throw StateError("No URL for getMatch()");
-    }
-
+    var reportUrl = "${proxyUrl}https://practiscore.com/reports/web/${widget.matchId}";
     debugPrint("Report download URL: $reportUrl");
 
     var responseString = "";
@@ -84,14 +71,11 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
       if(response.statusCode < 400) {
         responseString = response.body;
         if (responseString.startsWith(r"$")) {
-          var match = await processHitFactorScoreFile(responseString);
+          var match = await processScoreFile(responseString);
           setState(() {
             _match = match;
           });
           return;
-        }
-        else if (responseString.startsWith("<html>")) {
-          var match = await processTimePlusHtml(widget.timePlusMatchId!, responseString);
         }
       }
       else if(response.statusCode == 404) {
@@ -120,13 +104,13 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
         '_token': token,
         'ClubName': 'None',
         'ClubCode': 'None',
-        'matchId': widget.hitFactorMatchId,
+        'matchId': widget.matchId,
       };
       var response = await http.post(Uri.parse(reportUrl), body: body);
       if(response.statusCode < 400) {
         var responseString = response.body;
         if (responseString.startsWith(r"$")) {
-          var match = await processHitFactorScoreFile(responseString);
+          var match = await processScoreFile(responseString);
           setState(() {
             _match = match;
           });
@@ -140,10 +124,6 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
       debugPrint("download error pt. 2: $err ${err.runtimeType}");
     }
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to download match report.")));
-  }
-  
-  Future<void> _getTimePlusMatch() async {
-    
   }
 
   @override

@@ -5,11 +5,12 @@ import 'package:collection/collection.dart';
 import 'package:hive/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/parser/practiscore_parser.dart';
-import 'package:uspsa_result_viewer/data/parser/hitfactor/results_file_parser.dart';
+import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
+import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 
 Future<void> Function(int, int)? matchCacheProgressCallback;
 
+// TODO: migration2: back with the SQLite database
 class MatchCache {
   static MatchCache? _instance;
   factory MatchCache() {
@@ -63,15 +64,24 @@ class MatchCache {
       if(path.startsWith(_cachePrefix)) {
         var reportContents = _box.get(path);
 
-        var ids = path.replaceFirst(_cachePrefix, "").split(_cacheSeparator);
+        List<String> ids = path.replaceFirst(_cachePrefix, "").split(_cacheSeparator);
         var deduplicatedIds = Set<String>()..addAll(ids);
         ids = deduplicatedIds.toList();
 
         if(reportContents != null) {
-          var match = await processHitFactorScoreFile(reportContents);
+          var match = await processScoreFile(reportContents);
           var entry = _MatchCacheEntry(match: match, ids: ids);
+          String? shortId;
+          late String longId;
           for(var id in ids) {
             id = id.replaceAll("/","");
+
+            if(id.length > 10) {
+              longId = id;
+            }
+            else {
+              shortId = id;
+            }
 
             // This is either a two-ID entry (short and UUID), or a one-ID entry
             // (UUID-only, because we always get the UUID if we only have the short ID).
@@ -85,6 +95,9 @@ class MatchCache {
             // If the above doesn't apply, or if we're
             _cache[id] = entry;
           }
+
+          match.practiscoreId = longId;
+          match.practiscoreIdShort = shortId;
 
           matches += 1;
           stages += match.stages.length;
@@ -171,7 +184,7 @@ class MatchCache {
     return _deleteEntry(entry);
   }
 
-  Future<bool> deleteMatch(HitFactorMatch match) {
+  Future<bool> deleteMatch(PracticalMatch match) {
     var entry = _cache.entries.firstWhereOrNull((e) => e.value.match == match);
     return _deleteEntry(entry?.value);
   }
@@ -188,7 +201,18 @@ class MatchCache {
     return false;
   }
 
-  String? getUrl(HitFactorMatch match) {
+  void insert(PracticalMatch match) {
+    var ids = [
+      match.practiscoreId,
+      if(match.practiscoreIdShort != null) match.practiscoreIdShort!,
+    ];
+    var entry = _MatchCacheEntry(match: match, ids: ids);
+    for(var id in ids) {
+      _cache[id] = entry;
+    }
+  }
+
+  String? getUrl(PracticalMatch match) {
     var entry = _cache.entries.firstWhereOrNull((element) => element.value.match == match);
 
     if(entry != null) {
@@ -197,7 +221,7 @@ class MatchCache {
     return null;
   }
 
-  HitFactorMatch? getMatchImmediate(String matchUrl) {
+  PracticalMatch? getMatchImmediate(String matchUrl) {
     var id = matchUrl.split("/").last;
     if(_cache.containsKey(id)) {
       return _cache[id]!.match;
@@ -206,7 +230,7 @@ class MatchCache {
     return null;
   }
 
-  Future<HitFactorMatch?> getMatch(String matchUrl, {bool forceUpdate = false, bool localOnly = false, bool checkCanonId = true}) async {
+  Future<PracticalMatch?> getMatch(String matchUrl, {bool forceUpdate = false, bool localOnly = false, bool checkCanonId = true}) async {
     var id = matchUrl.split("/").last;
     if(!forceUpdate && _cache.containsKey(id)) {
       // debugPrint("Using cache for $id");
@@ -232,7 +256,7 @@ class MatchCache {
     if(localOnly) return null;
 
     if(canonId != null) {
-      var match = await getHitFactorMatchHeadless(canonId);
+      var match = await getPractiscoreMatchHeadless(canonId);
       if(match != null) {
         var ids = [canonId];
         if(id != canonId) ids.insert(0, id);
@@ -256,8 +280,8 @@ class MatchCache {
     return null;
   }
 
-  List<HitFactorMatch> allMatches() {
-    var matchSet = Set<HitFactorMatch>()..addAll(_cache.values.map((e) => e.match));
+  List<PracticalMatch> allMatches() {
+    var matchSet = Set<PracticalMatch>()..addAll(_cache.values.map((e) => e.match));
     return matchSet.toList();
   }
 
@@ -281,7 +305,7 @@ class MatchCache {
 }
 
 class _MatchCacheEntry {
-  final HitFactorMatch match;
+  final PracticalMatch match;
   final List<String> ids;
 
   _MatchCacheEntry({required this.match, required this.ids});

@@ -58,8 +58,8 @@ class _AssociateRegistrationsDialogState extends State<AssociateRegistrationsDia
                                 child: TypeAheadField<ShooterRating>(
                                   suggestionsCallback: (search) {
                                     var matches = remainingOptions.where((r) {
-                                      var firstPattern = r.shooter.getName(suffixes: false).toLowerCase().startsWith(search.toLowerCase());
-                                      var secondPattern = r.shooter.lastName.toLowerCase().startsWith(search.toLowerCase());
+                                      var firstPattern = r.getName(suffixes: false).toLowerCase().startsWith(search.toLowerCase());
+                                      var secondPattern = r.lastName.toLowerCase().startsWith(search.toLowerCase());
                                       return firstPattern || secondPattern;
                                     }).toList();
 
@@ -69,7 +69,7 @@ class _AssociateRegistrationsDialogState extends State<AssociateRegistrationsDia
                                   itemBuilder: (context, rating) {
                                     return Padding(
                                       padding: const EdgeInsets.all(8.0),
-                                      child: Text("${rating.shooter.getName(suffixes: false)} (${rating.shooter.division.displayString()} ${rating.shooter.classification.displayString()})"),
+                                      child: Text("${rating.getName(suffixes: false)} (${rating.division.displayString()} ${rating.classification.displayString()})"),
                                     );
                                   },
                                   onSuggestionSelected: (rating) {
@@ -78,7 +78,7 @@ class _AssociateRegistrationsDialogState extends State<AssociateRegistrationsDia
                                       selectedMappings[unmatched] = rating;
                                       remainingOptions.remove(rating);
                                     });
-                                    controller.text = "${rating.shooter.getName(suffixes: false)} (${rating.shooter.division.displayString()} ${rating.shooter.classification.displayString()})";
+                                    controller.text = "${rating.getName(suffixes: false)} (${rating.division.displayString()} ${rating.classification.displayString()})";
                                   },
                                   textFieldConfiguration: TextFieldConfiguration(
                                     controller: controller,

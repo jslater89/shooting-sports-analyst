@@ -1,12 +1,13 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:uspsa_result_viewer/data/db/object/rating/elo/db_elo_rating.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rating_change.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 
-class EloShooterRating extends ShooterRating<EloShooterRating> {
+class EloShooterRating extends ShooterRating {
   static double errorScale = MultiplayerPercentEloRater.defaultScale;
 
   double rating;
@@ -114,6 +115,11 @@ class EloShooterRating extends ShooterRating<EloShooterRating> {
   EloShooterRating(Shooter shooter, this.rating, {DateTime? date}) :
       super(shooter, date: date);
 
+  EloShooterRating.fromDb(DbEloRating rating) :
+      rating = rating.rating,
+      variance = rating.variance,
+      super.fromVitals(rating);
+
   void updateFromEvents(List<RatingEvent> events) {
     for(var e in events) {
       e as EloRatingEvent;
@@ -157,6 +163,6 @@ class EloShooterRating extends ShooterRating<EloShooterRating> {
 
   @override
   String toString() {
-    return "${shooter.getName(suffixes: false)} ${rating.round()} ($hashCode)";
+    return "${getName(suffixes: false)} ${rating.round()} ($hashCode)";
   }
 }

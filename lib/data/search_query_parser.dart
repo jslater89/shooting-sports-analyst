@@ -19,7 +19,7 @@ class _LiteralReplacement {
 }
 
 class SearchQueryElement {
-  USPSAClassification? classification;
+  Classification? classification;
   Division? division;
   PowerFactor? powerFactor;
   String? name;
@@ -108,7 +108,7 @@ SearchQueryElement? _parseGroup(String group) {
       element.division = div;
     }
     else if(RegExp(r"^gm$|^[mabcdu]$").hasMatch(item)) {
-      element.classification = USPSAClassificationFrom.string(item);
+      element.classification = ClassificationFrom.string(item);
     }
     else {
       debugPrint("Bad item: $item");

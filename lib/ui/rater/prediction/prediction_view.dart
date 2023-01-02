@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/parser/practiscore_parser.dart';
+import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
 import 'package:uspsa_result_viewer/data/ranking/prediction/match_prediction.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
@@ -81,8 +81,8 @@ class _PredictionViewState extends State<PredictionView> {
                   double low = (PredictionView._percentFloor + pred.lowerWhisker / highPrediction * PredictionView._percentMult) * 100;
                   double high = (PredictionView._percentFloor + pred.upperWhisker / highPrediction * PredictionView._percentMult) * 100;
 
-                  contents += "${pred.shooter.shooter.getName(suffixes: false)},";
-                  contents += "${pred.shooter.shooter.memberNumber},";
+                  contents += "${pred.shooter.getName(suffixes: false)},";
+                  contents += "${pred.shooter.memberNumber},";
                   contents += "${pred.shooter.lastClassification.name},";
                   contents += "$low,$midLow,$mean,$midHigh,$high\n";
                 }
@@ -288,7 +288,7 @@ class _PredictionViewState extends State<PredictionView> {
             ),
             Expanded(
               flex: PredictionView._nameFlex,
-              child: Text(pred.shooter.shooter.getName(suffixes: false)),
+              child: Text(pred.shooter.getName(suffixes: false)),
             ),
             Expanded(
               flex: PredictionView._classFlex,

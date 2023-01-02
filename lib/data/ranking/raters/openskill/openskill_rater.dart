@@ -69,9 +69,9 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
           children: [
             Expanded(flex: _paddingFlex - _placeFlex, child: Text("")),
             Expanded(flex: _placeFlex, child: Text("$place")),
-            Expanded(flex: _memberNumFlex, child: Text(rating.shooter.memberNumber)),
+            Expanded(flex: _memberNumFlex, child: Text(rating.memberNumber)),
             Expanded(flex: _classFlex, child: Text(rating.lastClassification.displayString())),
-            Expanded(flex: _nameFlex, child: Text(rating.shooter.getName(suffixes: false))),
+            Expanded(flex: _nameFlex, child: Text(rating.getName(suffixes: false))),
             Expanded(flex: _ordinalFlex, child: Text(rating.ordinal.toStringAsFixed(1), textAlign: TextAlign.end)),
             Expanded(flex: _muFlex, child: Text(rating.mu.toStringAsFixed(1), textAlign: TextAlign.end)),
             Expanded(flex: _sigmaFlex, child: Text(rating.sigma.toStringAsFixed(2), textAlign: TextAlign.end)),
@@ -109,7 +109,7 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
 
   @override
   RatingEvent newEvent({
-    required HitFactorMatch match, Stage? stage,
+    required PracticalMatch match, Stage? stage,
     required ShooterRating rating, required RelativeScore score, Map<String, List<dynamic>> info = const {}
   }) {
     rating as OpenskillRating;
@@ -131,8 +131,8 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
 
     for(var s in ratings) {
       s as OpenskillRating;
-      csv += "${s.shooter.memberNumber},";
-      csv += "${s.shooter.getName()},";
+      csv += "${s.originalMemberNumber},";
+      csv += "${s.getName()},";
       csv += "${s.ordinal.toStringAsFixed(2)},";
       csv += "${s.mu.toStringAsFixed(2)}";
       csv += "${s.sigma.toStringAsFixed(2)}";
@@ -145,14 +145,14 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
   static const _muIndex = 0;
   static const _sigmaIndex = 1;
   static const initialClassRatings = {
-    USPSAClassification.GM: [OpenskillSettings.defaultMu + 25, OpenskillSettings.defaultSigma],
-    USPSAClassification.M: [OpenskillSettings.defaultMu + 20, OpenskillSettings.defaultSigma],
-    USPSAClassification.A: [OpenskillSettings.defaultMu + 15, OpenskillSettings.defaultSigma],
-    USPSAClassification.B: [OpenskillSettings.defaultMu + 10, OpenskillSettings.defaultSigma],
-    USPSAClassification.C: [OpenskillSettings.defaultMu + 5, OpenskillSettings.defaultSigma],
-    USPSAClassification.D: [OpenskillSettings.defaultMu, OpenskillSettings.defaultSigma],
-    USPSAClassification.U: [OpenskillSettings.defaultMu + 5, OpenskillSettings.defaultSigma],
-    USPSAClassification.unknown: [OpenskillSettings.defaultMu, OpenskillSettings.defaultSigma],
+    Classification.GM: [OpenskillSettings.defaultMu + 25, OpenskillSettings.defaultSigma],
+    Classification.M: [OpenskillSettings.defaultMu + 20, OpenskillSettings.defaultSigma],
+    Classification.A: [OpenskillSettings.defaultMu + 15, OpenskillSettings.defaultSigma],
+    Classification.B: [OpenskillSettings.defaultMu + 10, OpenskillSettings.defaultSigma],
+    Classification.C: [OpenskillSettings.defaultMu + 5, OpenskillSettings.defaultSigma],
+    Classification.D: [OpenskillSettings.defaultMu, OpenskillSettings.defaultSigma],
+    Classification.U: [OpenskillSettings.defaultMu + 5, OpenskillSettings.defaultSigma],
+    Classification.unknown: [OpenskillSettings.defaultMu, OpenskillSettings.defaultSigma],
   };
 
   @override

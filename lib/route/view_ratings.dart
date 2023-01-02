@@ -63,7 +63,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   bool _operationInProgress = false;
 
   /// Maps URLs to matches
-  Map<String, HitFactorMatch?> _matchUrls = {};
+  Map<String, PracticalMatch?> _matchUrls = {};
   late TextEditingController _searchController;
   late TextEditingController _minRatingsController;
   late TextEditingController _maxDaysController;
@@ -76,7 +76,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   late List<RaterGroup> activeTabs;
 
   RatingSortMode _sortMode = RatingSortMode.rating;
-  HitFactorMatch? _selectedMatch;
+  PracticalMatch? _selectedMatch;
   MatchCache _matchCache = MatchCache();
   late TabController _tabController;
 
@@ -311,13 +311,13 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                 spacing: 20.0,
                 runSpacing: 10.0,
                 children: [
-                  DropdownButton<HitFactorMatch>(
+                  DropdownButton<PracticalMatch>(
                     underline: Container(
                       height: 1,
                       color: Colors.black,
                     ),
                     items: _history.matches.reversed.map((m) {
-                      return DropdownMenuItem<HitFactorMatch>(
+                      return DropdownMenuItem<PracticalMatch>(
                         child: Text(m.name ?? "<unnamed match>"),
                         value: m,
                       );
@@ -454,11 +454,31 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         ),
       // end if: supports ratings
       Tooltip(
+          message: "Add a new match to the ratings.",
+          child: IconButton(
+            icon: Icon(Icons.playlist_add),
+            onPressed: () async {
+              var match = await showDialog<PracticalMatch>(
+                  context: context,
+                  builder: (context) => MatchCacheChooserDialog()
+              );
+
+              if(match != null) {
+                _history.addMatch(match);
+
+                setState(() {
+                  _selectedMatch = _history.matches.last;
+                });
+              }
+            },
+          )
+      ),
+      Tooltip(
         message: "View results for a match in the dataset.",
         child: IconButton(
           icon: Icon(Icons.list),
           onPressed: () async {
-            var match = await showDialog<HitFactorMatch>(
+            var match = await showDialog<PracticalMatch>(
               context: context,
               builder: (context) => MatchCacheChooserDialog(matches: _history.allMatches)
             );
@@ -591,10 +611,10 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     var localUrls = []..addAll(urls);
     var failedMatches = <String>[];
 
-    var urlsByFuture = <Future<HitFactorMatch?>, String>{};
+    var urlsByFuture = <Future<PracticalMatch?>, String>{};
     while(localUrls.isNotEmpty) {
 
-      var futures = <Future<HitFactorMatch?>>[];
+      var futures = <Future<PracticalMatch?>>[];
       var urlsThisStep = [];
       if(localUrls.length < 10) {
         urlsThisStep = []..addAll(localUrls);
@@ -655,7 +675,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     //   }
     // }
 
-    var actualMatches = <HitFactorMatch>[
+    var actualMatches = <PracticalMatch>[
       for(var m in _matchUrls.values)
         if(m != null) m
     ];
@@ -686,7 +706,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       _loadingState = _LoadingState.processingScores;
     });
 
-    await Future.delayed(Duration(milliseconds: 100));
+    await Future.delayed(Duration(milliseconds: 1));
 
     _history = RatingHistory(settings: widget.settings, matches: actualMatches, progressCallback: (currentSteps, totalSteps, eventName) async {
       setState(() {

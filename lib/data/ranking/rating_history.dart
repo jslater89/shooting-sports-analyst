@@ -8,12 +8,12 @@ import 'package:uspsa_result_viewer/data/ranking/timings.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart' as defaultAliases;
 
-/// RatingHistory turns a sequence of [HitFactorMatch]es into a series of
+/// RatingHistory turns a sequence of [PracticalMatch]es into a series of
 /// [Rater]s.
 class RatingHistory {
-  /// The [HitFactorMatch]es this rating history contains
-  List<HitFactorMatch> _matches;
-  List<HitFactorMatch> get matches {
+  /// The [PracticalMatch]es this rating history contains
+  List<PracticalMatch> _matches;
+  List<PracticalMatch> get matches {
     if(_settings.preserveHistory) {
       return []..addAll(_matches);
     }
@@ -22,19 +22,22 @@ class RatingHistory {
     }
   }
 
-  List<HitFactorMatch> get allMatches {
+  List<PracticalMatch> get allMatches {
       return []..addAll(_matches);
   }
 
   late RatingHistorySettings _settings;
+  final int progressCallbackInterval = 5;
+
+  List<RaterGroup> get groups => []..addAll(_settings.groups);
 
   /// Maps matches to a map of [Rater]s, which hold the incremental ratings
   /// after that match has been processed.
-  Map<HitFactorMatch, Map<RaterGroup, Rater>> _ratersByDivision = {};
+  Map<PracticalMatch, Map<RaterGroup, Rater>> _ratersByDivision = {};
 
   Future<void> Function(int currentSteps, int totalSteps, String? eventName)? progressCallback;
 
-  RatingHistory({required List<HitFactorMatch> matches, RatingHistorySettings? settings, this.progressCallback}) : this._matches = matches {
+  RatingHistory({required List<PracticalMatch> matches, RatingHistorySettings? settings, this.progressCallback}) : this._matches = matches {
     if(settings != null) _settings = settings;
     else _settings = RatingHistorySettings(
       algorithm: MultiplayerPercentEloRater(settings: EloSettings(
@@ -48,11 +51,41 @@ class RatingHistory {
     return _processInitialMatches();
   }
 
-  Rater raterFor(HitFactorMatch match, RaterGroup group) {
+  void loadRatings(Map<RaterGroup, Rater> ratings) {
+    _ratersByDivision[_matches.last] = ratings;
+  }
+  
+  // Returns false if the match already exists
+  Future<bool> addMatch(PracticalMatch match) async {
+    if(matches.contains(match)) return false;
+
+    var oldMatch = _lastMatch;
+    _matches.add(match);
+
+    for(var group in _settings.groups) {
+      var raters = _ratersByDivision[oldMatch]!;
+      var rater = raters[group]!;
+
+      _lastMatch = match;
+      _ratersByDivision[_lastMatch!] ??= {};
+      var newRater = Rater.copy(rater);
+      newRater.addMatch(match);
+      _ratersByDivision[_lastMatch]![group] = newRater;
+    }
+
+    if(!_settings.preserveHistory) {
+      _ratersByDivision.remove(oldMatch);
+    }
+
+    return true;
+  }
+
+  Rater raterFor(PracticalMatch match, RaterGroup group) {
     if(!_settings.groups.contains(group)) throw ArgumentError("Invalid group");
     if(!_matches.contains(match)) throw ArgumentError("Invalid match");
 
-    return _ratersByDivision[match]![group]!;
+    var raters = _ratersByDivision[match]!;
+    return raters[group]!;
   }
 
   int countUniqueShooters() {
@@ -67,6 +100,9 @@ class RatingHistory {
     return memberNumbers.length;
   }
 
+  /// Used to key the matches map for online match-adding
+  PracticalMatch? _lastMatch;
+  
   Future<void> _processInitialMatches() async {
     debugPrint("Loading matches");
 
@@ -82,34 +118,33 @@ class RatingHistory {
       return a.date!.compareTo(b.date!);
     });
 
-    var currentMatches = <HitFactorMatch>[];
-    HitFactorMatch? lastMatch;
+    var currentMatches = <PracticalMatch>[];
 
     await progressCallback?.call(0, 1, null);
 
     if(_settings.preserveHistory) {
-      int totalSteps = matches.length * _settings.groups.length;
+      int totalSteps = ((_settings.groups.length * _matches.length) / progressCallbackInterval).round();
 
       // debugPrint("Total steps, history preserved: $totalSteps");
 
-      for (HitFactorMatch match in _matches) {
+      for (PracticalMatch match in _matches) {
         var m = match;
         currentMatches.add(m);
         debugPrint("Considering match ${m.name}");
-        var innerMatches = <HitFactorMatch>[]..addAll(currentMatches);
+        var innerMatches = <PracticalMatch>[]..addAll(currentMatches);
         _ratersByDivision[m] ??= {};
         for (var group in _settings.groups) {
           var divisionMap = <Division, bool>{};
           group.divisions.forEach((element) => divisionMap[element] = true);
 
-          if (lastMatch == null) {
+          if (_lastMatch == null) {
             _ratersByDivision[m]![group] = await _raterForGroup(innerMatches, group);
 
             stepsFinished += 1;
             await progressCallback?.call(stepsFinished, totalSteps, "${group.uiLabel} - ${m.name}");
           }
           else {
-            Rater newRater = Rater.copy(_ratersByDivision[lastMatch]![group]!);
+            Rater newRater = Rater.copy(_ratersByDivision[_lastMatch]![group]!);
             newRater.addMatch(m);
             _ratersByDivision[m]![group] = newRater;
 
@@ -118,19 +153,19 @@ class RatingHistory {
           }
         }
 
-        lastMatch = m;
+        _lastMatch = m;
       }
     }
     else {
-      int totalSteps = _settings.groups.length * _matches.length;
+      int totalSteps = ((_settings.groups.length * _matches.length) / progressCallbackInterval).round();
 
       // debugPrint("Total steps, history discarded: $totalSteps");
 
-      var m = _matches.last;
-      _ratersByDivision[m] ??= {};
+      _lastMatch = _matches.last;
+      _ratersByDivision[_lastMatch!] ??= {};
 
       for (var group in _settings.groups) {
-        _ratersByDivision[m]![group] = await _raterForGroup(_matches, group, (_1, _2, eventName) async {
+        _ratersByDivision[_lastMatch]![group] = await _raterForGroup(_matches, group, (_1, _2, eventName) async {
           stepsFinished += 1;
           await progressCallback?.call(stepsFinished, totalSteps, "${group.uiLabel} - $eventName");
         });
@@ -146,22 +181,17 @@ class RatingHistory {
     print("Total of ${countUniqueShooters()} shooters, ${_matches.length} matches, and $stageCount stages");
   }
   
-  Future<Rater> _raterForGroup(List<HitFactorMatch> matches, RaterGroup group, [Future<void> Function(int, int, String?)? progressCallback]) async {
+  Future<Rater> _raterForGroup(List<PracticalMatch> matches, RaterGroup group, [Future<void> Function(int, int, String?)? progressCallback]) async {
     var divisionMap = <Division, bool>{};
     group.divisions.forEach((element) => divisionMap[element] = true);
     Timings().reset();
     var r = Rater(
-        matches: matches,
-        ratingSystem: _settings.algorithm,
-        byStage: _settings.byStage,
-        filters: FilterSet(
-          empty: true,
-        )
-          ..mode = FilterMode.or
-          ..divisions = divisionMap
-          ..reentries = false
-          ..scoreDQs = false,
-        progressCallback: progressCallback,
+      matches: matches,
+      ratingSystem: _settings.algorithm,
+      byStage: _settings.byStage,
+      filters: group.filters,
+      progressCallback: progressCallback,
+      progressCallbackInterval: progressCallbackInterval
     );
 
     await r.calculateInitialRatings();
@@ -183,10 +213,24 @@ enum RaterGroup {
   revolver,
   locap,
   openPcc,
-  limitedCO,
-}
+  limitedCO;
 
-extension RaterGroupUtilities on RaterGroup {
+  FilterSet get filters {
+    return FilterSet(
+      empty: true,
+    )
+      ..mode = FilterMode.or
+      ..divisions = divisionMap
+      ..reentries = false
+      ..scoreDQs = false;
+  }
+
+  Map<Division, bool> get divisionMap {
+    var divisionMap = <Division, bool>{};
+    divisions.forEach((element) => divisionMap[element] = true);
+    return divisionMap;
+  }
+
   List<Division> get divisions {
     switch(this) {
       case RaterGroup.open:
@@ -249,6 +293,8 @@ class RatingHistorySettings {
   List<String> memberNumberWhitelist;
   RatingSystem algorithm;
   Map<String, String> shooterAliases;
+
+  // TODO: toJson here, or store in DB directly with only algorithm settings in JSON
 
   RatingHistorySettings({
     this.preserveHistory = false,

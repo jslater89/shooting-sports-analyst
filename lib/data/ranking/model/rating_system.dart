@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/match/hitfactor/hitfactor_match.dart';
+import 'package:uspsa_result_viewer/data/match/practical_match.dart';
 import 'package:uspsa_result_viewer/data/match/relative_scores.dart';
 import 'package:uspsa_result_viewer/data/match/shooter.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_change.dart';
@@ -10,7 +10,7 @@ import 'package:uspsa_result_viewer/data/ranking/prediction/match_prediction.dar
 import 'package:uspsa_result_viewer/ui/rater/rater_view.dart';
 import 'package:uspsa_result_viewer/ui/widget/score_row.dart';
 
-abstract class RatingSystem<T extends ShooterRating<T>, S extends RaterSettings<S>, C extends RaterSettingsController<S>> {
+abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C extends RaterSettingsController<S>> {
   /// Use in rating changes
   static const ratingKey = "rating";
 
@@ -51,7 +51,7 @@ abstract class RatingSystem<T extends ShooterRating<T>, S extends RaterSettings<
   ShooterRating newShooterRating(Shooter shooter, {DateTime? date});
 
   RatingEvent newEvent({
-    required HitFactorMatch match,
+    required PracticalMatch match,
     Stage? stage,
     required ShooterRating rating, required RelativeScore score, Map<String, List<dynamic>> info = const {}
   });

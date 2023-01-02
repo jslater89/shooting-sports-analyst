@@ -1,7 +1,20 @@
-import 'package:uspsa_result_viewer/data/match/match.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 
-class HitFactorMatch extends PracticalMatch {
+enum MatchLevel {
+  I,
+  II,
+  III,
+  IV,
+}
+
+class PracticalMatch {
+  String? name;
+  String? rawDate;
+  DateTime? date;
+  MatchLevel? level;
+
+  late String practiscoreId;
+  String? practiscoreIdShort;
   late String reportContents;
 
   List<Shooter> shooters = [];
@@ -10,8 +23,8 @@ class HitFactorMatch extends PracticalMatch {
   int? maxPoints;
   int stageScoreCount = 0;
 
-  HitFactorMatch copy() {
-    var newMatch = HitFactorMatch()
+  PracticalMatch copy() {
+    var newMatch = PracticalMatch()
       ..name = name
       ..rawDate = rawDate
       ..date = date
@@ -42,7 +55,7 @@ class HitFactorMatch extends PracticalMatch {
     bool? allowReentries = true,
     List<Division> divisions = Division.values,
     List<PowerFactor> powerFactors = PowerFactor.values,
-    List<USPSAClassification> classes = USPSAClassification.values,
+    List<Classification> classes = Classification.values,
   }) {
     List<Shooter> filteredShooters = [];
 
@@ -185,6 +198,7 @@ class HitFactorMatch extends PracticalMatch {
 
 class Stage {
   String name;
+  int internalId;
   int minRounds = 0;
   int maxPoints = 0;
   bool classifier;
@@ -193,6 +207,7 @@ class Stage {
 
   Stage({
     required this.name,
+    required this.internalId,
     required this.minRounds,
     required this.maxPoints,
     required this.classifier,
@@ -202,6 +217,7 @@ class Stage {
 
   Stage copy() {
     return Stage(
+      internalId: internalId,
       name: name,
       minRounds: minRounds,
       maxPoints: maxPoints,
