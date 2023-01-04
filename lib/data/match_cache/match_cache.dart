@@ -280,6 +280,30 @@ class MatchCache {
     return null;
   }
 
+  Future<List<PracticalMatch>> batchGet(List<String> urls, {void Function(String, PracticalMatch?)? callback}) async {
+    List<PracticalMatch> downloaded = [];
+    while(urls.isNotEmpty) {
+      int batchSize = 0;
+      List<String> batchUrls = [];
+      while(urls.isNotEmpty && batchSize < 5) {
+        batchUrls.add(urls.removeLast());
+        batchSize++;
+      }
+
+      for(var url in batchUrls) {
+        var match = await getMatch(url);
+
+        if(callback != null) {
+          callback(url, match);
+        }
+
+        if(match != null) downloaded.add(match);
+      }
+    }
+
+    return downloaded;
+  }
+
   List<PracticalMatch> allMatches() {
     var matchSet = Set<PracticalMatch>()..addAll(_cache.values.map((e) => e.match));
     return matchSet.toList();

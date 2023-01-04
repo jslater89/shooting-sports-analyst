@@ -12,7 +12,9 @@ import 'package:uspsa_result_viewer/data/ranking/raters/points/points_rater.dart
 import 'package:uspsa_result_viewer/data/ranking/raters/points/points_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
+import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/ui/rater/enter_practiscore_source_dialog.dart';
+import 'package:uspsa_result_viewer/ui/result_page.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/confirm_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/enter_name_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/enter_urls_dialog.dart';
@@ -55,6 +57,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     // Deduplicate
     Map<PracticalMatch, bool> knownMatches = {};
     Map<String, bool> urlsToRemove = {};
+
+    List<String> unknownUrls = [];
+
     for(var url in matchUrls) {
       var match = await cache.getMatch(url, localOnly: true);
 
@@ -63,17 +68,32 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         // print("Already saw ${match?.name}, removing $url");
       }
       else {
-        map[url] = match?.name ?? url;
+        urlDisplayNames[url] = match?.name ?? url;
         if(match != null) {
           knownMatches[match] = true;
           // print("Saw ${match.name} at $url, marking true");
+        }
+        else {
+          unknownUrls.add(url);
         }
       }
     }
     matchUrls.removeWhere((element) => urlsToRemove[element] ?? false);
 
-    setState(() {
-      urlDisplayNames = map;
+    if(mounted) {
+      setState(() {
+        // urlDisplayNames update
+      });
+    }
+
+    print("Getting ${unknownUrls.length} unknown URLs");
+    cache.batchGet(unknownUrls, callback: (url, match) {
+      if(match != null && mounted) {
+        print("Fetched ${match.name} from ${url.split("/").last}");
+        setState(() {
+          urlDisplayNames[url] = match.name ?? url;
+        });
+      }
     });
   }
 
@@ -121,6 +141,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   }
 
   void _loadProject(RatingProject project) {
+    urlDisplayNames = {};
     setState(() {
       matchUrls = []..addAll(project.matchUrls);
       _keepHistory = project.settings.preserveHistory;

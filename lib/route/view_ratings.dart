@@ -160,7 +160,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       title = _history.settings.project.name;
     }
     catch(e) {
-      print("Tried to get title before setup done");
+      // Should maybe make history.project nullable rather than late, since
+      // we hit this hard
       title = "Shooter Rating Calculator";
     }
 
