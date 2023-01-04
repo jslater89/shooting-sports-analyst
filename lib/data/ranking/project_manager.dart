@@ -173,6 +173,7 @@ const _keepHistoryKey = "keepHistory";
 const _urlsKey = "urls";
 const _whitelistKey = "memNumWhitelist";
 const _aliasesKey = "aliases";
+const _memberNumberMappingsKey = "numMappings";
 
 // Values for the multiplayer percent elo rater.
 
@@ -186,8 +187,7 @@ class RatingProject {
   String name;
   RatingHistorySettings settings;
   List<String> matchUrls;
-  // TODO: start storing/caching match IDs instead of URLS
-  
+
   RatingProject({
     required this.name,
     required this.settings,
@@ -213,12 +213,17 @@ class RatingProject {
       memberNumberWhitelist: ((encodedProject[_whitelistKey] ?? []) as List<dynamic>).map((item) => item as String).toList(),
       shooterAliases: ((encodedProject[_aliasesKey] ?? defaultShooterAliases) as Map<String, dynamic>).map<String, String>((k, v) =>
         MapEntry(k, v as String)
-      )
+      ),
+      memberNumberMappings: ((encodedProject[_memberNumberMappingsKey] ?? {}) as Map<String, dynamic>).map<String, String>((k, v) =>
+        MapEntry(k, v as String)
+      ),
     );
     var matchUrls = (encodedProject[_urlsKey] as List<dynamic>).map((item) => item as String).toList();
     var name = encodedProject[_nameKey] as String;
 
-    return RatingProject(name: name, settings: settings, matchUrls: matchUrls);
+    var rp = RatingProject(name: name, settings: settings, matchUrls: matchUrls);
+    settings.project = rp;
+    return rp;
   }
 
   static RatingSystem _algorithmForName(String name, Map<String, dynamic> encodedProject) {
@@ -244,6 +249,7 @@ class RatingProject {
     map[_urlsKey] = matchUrls;
     map[_whitelistKey] = settings.memberNumberWhitelist;
     map[_aliasesKey] = settings.shooterAliases;
+    map[_memberNumberMappingsKey] = settings.memberNumberMappings;
 
     /// Alg-specific settings
     settings.algorithm.encodeToJson(map);

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.dart';
@@ -27,6 +28,7 @@ class RatingHistory {
   }
 
   late RatingHistorySettings _settings;
+  RatingHistorySettings get settings => _settings;
   final int progressCallbackInterval = 5;
 
   List<RaterGroup> get groups => []..addAll(_settings.groups);
@@ -37,13 +39,15 @@ class RatingHistory {
 
   Future<void> Function(int currentSteps, int totalSteps, String? eventName)? progressCallback;
 
-  RatingHistory({required List<PracticalMatch> matches, RatingHistorySettings? settings, this.progressCallback}) : this._matches = matches {
-    if(settings != null) _settings = settings;
-    else _settings = RatingHistorySettings(
+  RatingHistory({RatingProject? project, required List<PracticalMatch> matches, this.progressCallback}) : this._matches = matches {
+    project ??= RatingProject(name: "Unnamed Project", settings: RatingHistorySettings(
       algorithm: MultiplayerPercentEloRater(settings: EloSettings(
         byStage: true,
       )),
-    );
+    ), matchUrls: matches.map((m) => m.practiscoreId).toList());
+
+    _settings = project.settings;
+    _settings.project = project;
   }
 
   Future<void> processInitialMatches() async {
@@ -287,12 +291,18 @@ enum RaterGroup {
 }
 
 class RatingHistorySettings {
+  /// The [RatingProject] this settings object's history
+  /// belongs to.
+  late RatingProject project;
+
+  // All of the below are serialized
   bool get byStage => algorithm.byStage;
   bool preserveHistory;
   List<RaterGroup> groups;
   List<String> memberNumberWhitelist;
   RatingSystem algorithm;
   Map<String, String> shooterAliases;
+  Map<String, String> memberNumberMappings;
 
   // TODO: toJson here, or store in DB directly with only algorithm settings in JSON
 
@@ -302,6 +312,7 @@ class RatingHistorySettings {
     required this.algorithm,
     this.memberNumberWhitelist = const [],
     this.shooterAliases = defaultAliases.defaultShooterAliases,
+    this.memberNumberMappings = const {},
   });
 
   static List<RaterGroup> groupsForSettings({bool combineOpenPCC = false, bool combineLimitedCO = false, bool combineLocap = true}) {

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:fluttericon/rpg_awesome_icons.dart';
 import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
@@ -20,10 +21,15 @@ import 'package:uspsa_result_viewer/ui/widget/dialog/match_cache_chooser_dialog.
 import 'package:uspsa_result_viewer/ui/widget/dialog/url_entry_dialog.dart';
 
 class RatingsViewPage extends StatefulWidget {
-  const RatingsViewPage({Key? key, required this.settings, required this.matchUrls}) : super(key: key);
+  const RatingsViewPage({
+    Key? key, 
+    required this.project,
+  }) : super(key: key);
 
-  final RatingHistorySettings settings;
-  final List<String> matchUrls;
+  final RatingProject project;
+  
+  RatingHistorySettings get settings => project.settings;
+  List<String> get matchUrls => project.matchUrls;
 
   @override
   State<RatingsViewPage> createState() => _RatingsViewPageState();
@@ -149,9 +155,18 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
     List<Widget> actions = _generateActions();
 
+    var title = "";
+    try {
+      title = _history.settings.project.name;
+    }
+    catch(e) {
+      print("Tried to get title before setup done");
+      title = "Shooter Rating Calculator";
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: Text("Shooter Rating Calculator"),
+        title: Text(title),
         centerTitle: true,
         actions: _loadingState == _LoadingState.done ? actions : null,
         bottom: _operationInProgress ? PreferredSize(
@@ -708,7 +723,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
     await Future.delayed(Duration(milliseconds: 1));
 
-    _history = RatingHistory(settings: widget.settings, matches: actualMatches, progressCallback: (currentSteps, totalSteps, eventName) async {
+    _history = RatingHistory(project: widget.project, matches: actualMatches, progressCallback: (currentSteps, totalSteps, eventName) async {
       setState(() {
         _currentProgress = currentSteps;
         _totalProgress = totalSteps;

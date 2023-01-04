@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/route/configure_ratings.dart';
 import 'package:uspsa_result_viewer/route/view_ratings.dart';
@@ -11,27 +12,24 @@ class RatingsContainerPage extends StatefulWidget {
 }
 
 class _RatingsContainerPageState extends State<RatingsContainerPage> {
-  RatingHistorySettings? settings;
-  List<String>? matchUrls;
+  RatingProject? project;
 
-  bool get configured => settings != null && matchUrls != null;
+  bool get configured => project != null;
 
   @override
   Widget build(BuildContext context) {
     if(!configured) {
       return ConfigureRatingsPage(
-        onSettingsReady: (RatingHistorySettings settings, List<String> matchUrls) async {
+        onSettingsReady: (RatingProject project) async {
           setState(() {
-            this.settings = settings;
-            this.matchUrls = matchUrls;
+            this.project = project;
           });
         }
       );
     }
     else {
       return RatingsViewPage(
-        settings: settings!,
-        matchUrls: matchUrls!,
+        project: this.project!,
       );
     }
   }

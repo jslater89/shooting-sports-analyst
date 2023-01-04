@@ -24,7 +24,7 @@ import 'package:uspsa_result_viewer/ui/widget/dialog/match_cache_chooser_dialog.
 class ConfigureRatingsPage extends StatefulWidget {
   const ConfigureRatingsPage({Key? key, required this.onSettingsReady}) : super(key: key);
 
-  final void Function(RatingHistorySettings, List<String>) onSettingsReady;
+  final void Function(RatingProject) onSettingsReady;
 
   @override
   State<ConfigureRatingsPage> createState() => _ConfigureRatingsPageState();
@@ -260,7 +260,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
             children: [
               ElevatedButton(
                 child: Text("ADVANCE"),
-                onPressed: () {
+                onPressed: () async {
                   var settings = _makeAndValidateSettings();
 
                   if(settings == null) return;
@@ -279,9 +279,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                     return;
                   }
 
-                  _saveProject(RatingProjectManager.autosaveName);
+                  var project = await _saveProject(RatingProjectManager.autosaveName);
 
-                  widget.onSettingsReady(settings, matchUrls);
+                  if(project != null) widget.onSettingsReady(project);
                 },
               ),
               SizedBox(width: 20),
@@ -664,11 +664,11 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     throw UnsupportedError("Algorithm not yet supported");
   }
 
-  Future<void> _saveProject(String name) async {
+  Future<RatingProject?> _saveProject(String name) async {
     var settings = _makeAndValidateSettings();
     if(settings == null || name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("You must provide valid settings (including match URLs) to save.")));
-      return;
+      return null;
     }
 
     bool isAutosave = name == RatingProjectManager.autosaveName;
@@ -688,6 +688,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         _lastProjectName = project.name;
       });
     }
+
+    return project;
   }
 
   void _restoreDefaults() {

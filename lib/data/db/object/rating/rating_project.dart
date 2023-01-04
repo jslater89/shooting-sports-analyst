@@ -107,21 +107,21 @@ class DbRatingProject {
   }
 
   Future<RatingHistory> deserialize(ProjectDatabase db) async {
-    var settings = RatingProject.fromJson(jsonDecode(this.settings)).settings;
+    var project = RatingProject.fromJson(jsonDecode(this.settings));
     var dbMatches = await db.matches.byRatingProject(this.id!);
 
     var matches = await _loadMatchesIfNotLoaded(db, dbMatches);
 
-    var project = RatingHistory(matches: matches, settings: settings);
+    var history = RatingHistory(matches: matches, project: project);
 
     var raters = <RaterGroup, Rater>{};
 
-    for(var group in settings.groups) {
+    for(var group in project.settings.groups) {
       // Create a rater
       var r = Rater(
         matches: matches,
-        ratingSystem: settings.algorithm,
-        byStage: settings.byStage,
+        ratingSystem: project.settings.algorithm,
+        byStage: project.settings.byStage,
         filters: group.filters,
       );
 
@@ -140,9 +140,9 @@ class DbRatingProject {
       raters[group] = r;
     }
 
-    project.loadRatings(raters);
+    history.loadRatings(raters);
 
-    return project;
+    return history;
   }
 
   Future<List<PracticalMatch>> _loadMatchesIfNotLoaded(MatchStore db, List<DbMatch> dbMatches) async {
