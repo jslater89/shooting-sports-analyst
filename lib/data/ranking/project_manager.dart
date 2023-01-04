@@ -214,7 +214,7 @@ class RatingProject {
       shooterAliases: ((encodedProject[_aliasesKey] ?? defaultShooterAliases) as Map<String, dynamic>).map<String, String>((k, v) =>
         MapEntry(k, v as String)
       ),
-      memberNumberMappings: ((encodedProject[_memberNumberMappingsKey] ?? {}) as Map<String, dynamic>).map<String, String>((k, v) =>
+      memberNumberMappings: ((encodedProject[_memberNumberMappingsKey] ?? <String, dynamic>{}) as Map<String, dynamic>).map<String, String>((k, v) =>
         MapEntry(k, v as String)
       ),
     );
