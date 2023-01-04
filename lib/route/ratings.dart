@@ -28,8 +28,30 @@ class _RatingsContainerPageState extends State<RatingsContainerPage> {
       );
     }
     else {
-      return RatingsViewPage(
-        project: this.project!,
+      return WillPopScope(
+        onWillPop: () async {
+          return await showDialog<bool>(context: context, builder: (context) => AlertDialog(
+            title: Text("Return to menu?"),
+            content: Text("If you leave this page, you will need to recalculate ratings to view it again."),
+            actions: [
+              TextButton(
+                child: Text("STAY HERE"),
+                onPressed: () {
+                  Navigator.of(context).pop(false);
+                },
+              ),
+              TextButton(
+                child: Text("MAIN MENU"),
+                onPressed: () {
+                  Navigator.of(context).pop(true);
+                },
+              )
+            ],
+          )) ?? false;
+        },
+        child: RatingsViewPage(
+          project: this.project!,
+        ),
       );
     }
   }
