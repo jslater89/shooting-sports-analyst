@@ -13,8 +13,8 @@ String getClubNameToken(String source) {
 }
 
 String? getPractiscoreWebReportUrl(String source) {
-  var webReportLine = source.split("\n").firstWhere((element) => element.contains("/reports/web"));
-  return webReportLine.split('"').firstWhereOrNull((element) => element.contains("reports/web"));
+  var webReportLine = source.split("\n").firstWhereOrNull((element) => element.contains("/reports/web"));
+  return webReportLine?.split('"').firstWhereOrNull((element) => element.contains("reports/web"));
 }
 
 Future<String?> processMatchUrl(String matchUrl, {BuildContext? context}) async {
@@ -39,7 +39,7 @@ Future<String?> processMatchUrl(String matchUrl, {BuildContext? context}) async 
         }
         else {
           if(context != null) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unable to determine web report URL.")));
-          debugPrint("Unable to determine web report URL");
+          debugPrint("Unable to determine web report URL (probably not hit factor)");
           return null;
         }
       }
