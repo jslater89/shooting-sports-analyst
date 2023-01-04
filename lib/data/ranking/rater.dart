@@ -1040,6 +1040,7 @@ class Rater {
 
     var count = ratings.length;
     var allRatings = ratings.map((r) => r.rating);
+    var allHistoryLengths = ratings.map((r) => r.ratingEvents.length);
 
     var histogram = <int, int>{};
     for(var rating in allRatings) {
@@ -1086,6 +1087,7 @@ class Rater {
       averageRating: allRatings.average,
       minRating: allRatings.min,
       maxRating: allRatings.max,
+      averageHistory: allHistoryLengths.average,
       histogram: histogram,
       countByClass: countsByClass,
       averageByClass: averagesByClass,
@@ -1131,6 +1133,7 @@ class RaterStatistics {
   double averageRating;
   double minRating;
   double maxRating;
+  double averageHistory;
 
   int histogramBucketSize;
   Map<int, int> histogram;
@@ -1148,6 +1151,7 @@ class RaterStatistics {
     required this.averageRating,
     required this.minRating,
     required this.maxRating,
+    required this.averageHistory,
     required this.countByClass,
     required this.averageByClass,
     required this.minByClass,
