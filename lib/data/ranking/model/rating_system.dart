@@ -108,7 +108,8 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
   PredictionOutcome validate({
     required List<ShooterRating> shooters,
     required Map<ShooterRating, RelativeScore> scores,
-    required Map<ShooterRating, RelativeScore> matchScores, required List<ShooterPrediction> predictions
+    required Map<ShooterRating, RelativeScore> matchScores,
+    required List<ShooterPrediction> predictions
   }) {
     throw UnimplementedError();
   }
