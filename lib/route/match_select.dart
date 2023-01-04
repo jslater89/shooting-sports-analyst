@@ -88,7 +88,7 @@ class _MatchSelectPageState extends State<MatchSelectPage> {
       GestureDetector(
         onTap: () async {
           PracticalMatch? match = await showDialog<PracticalMatch>(
-            context: context, builder: (context) => MatchCacheChooserDialog(),
+            context: context, builder: (context) => MatchCacheChooserDialog(showStats: true),
             barrierDismissible: false,
           );
           if(match != null) {

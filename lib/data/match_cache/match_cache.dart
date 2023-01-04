@@ -147,6 +147,16 @@ class MatchCache {
     return 0;
   }
 
+  int get uniqueMatches {
+    Set<_MatchCacheEntry> entries = <_MatchCacheEntry>{};
+
+    for(var e in _cache.values) {
+      entries.add(e);
+    }
+
+    return entries.length;
+  }
+
   Future<void> save([Future<void> Function(int, int)? progressCallback]) async {
     Set<_MatchCacheEntry> alreadySaved = Set();
     int totalProgress = _cache.values.length;
