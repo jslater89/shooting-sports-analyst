@@ -594,11 +594,40 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   // show newest additions at the top
-                                  for(var url in urlDisplayNames.keys.toList())
+                                  for(var url in matchUrls)
                                     Row(
                                       mainAxisSize: MainAxisSize.max,
                                       children: [
-                                        Expanded(child: Text(urlDisplayNames[url]!, overflow: TextOverflow.fade)),
+                                        Expanded(
+                                          child: MouseRegion(
+                                            cursor: SystemMouseCursors.click,
+                                            child: GestureDetector(
+                                              onTap: () {
+                                                if(!MatchCache.readyNow) {
+                                                  print("Match cache not ready");
+                                                  return;
+                                                }
+                                                var cache = MatchCache();
+
+                                                var match = cache.getMatchImmediate(url);
+                                                if(match != null && (match.name?.isNotEmpty ?? false)) {
+                                                  Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+                                                    return ResultPage(canonicalMatch: match, allowWhatIf: false);
+                                                  }));
+                                                }
+                                                else {
+                                                  HtmlOr.openLink(url);
+                                                }
+                                              },
+                                              child: Text(
+                                                urlDisplayNames[url] != null && urlDisplayNames[url]!.isNotEmpty ?
+                                                  urlDisplayNames[url]! :
+                                                  urlDisplayNames[url] != null ? "$url (missing name)" : url,
+                                                overflow: TextOverflow.fade
+                                              ),
+                                            ),
+                                          )
+                                        ),
                                         Tooltip(
                                           message: "Remove this match from the cache, redownloading it.",
                                           child: IconButton(
