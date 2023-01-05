@@ -215,7 +215,7 @@ class RatingProject {
       shooterAliases: ((encodedProject[_aliasesKey] ?? defaultShooterAliases) as Map<String, dynamic>).map<String, String>((k, v) =>
         MapEntry(k, v as String)
       ),
-      memberNumberMappings: ((encodedProject[_memberNumberMappingsKey] ?? <String, dynamic>{}) as Map<String, dynamic>).map<String, String>((k, v) =>
+      userMemberNumberMappings: ((encodedProject[_memberNumberMappingsKey] ?? <String, dynamic>{}) as Map<String, dynamic>).map<String, String>((k, v) =>
         MapEntry(k, v as String)
       ),
       memberNumberMappingBlacklist: ((encodedProject[_memberNumberMappingBlacklistKey] ?? <String, dynamic>{}) as Map<String, dynamic>).map<String, String>((k, v) =>
@@ -252,7 +252,7 @@ class RatingProject {
     map[_urlsKey] = matchUrls;
     map[_whitelistKey] = settings.memberNumberWhitelist;
     map[_aliasesKey] = settings.shooterAliases;
-    map[_memberNumberMappingsKey] = settings.memberNumberMappings;
+    map[_memberNumberMappingsKey] = settings.userMemberNumberMappings;
     map[_memberNumberMappingBlacklistKey] = settings.memberNumberMappingBlacklist;
 
     /// Alg-specific settings

@@ -113,6 +113,7 @@ class Rater {
         this._memberNumbersEncountered = Set()..addAll(other._memberNumbersEncountered),
         this._memberNumberMappings = {}..addAll(other._memberNumberMappings),
         this._memberNumberMappingBlacklist = {}..addAll(other._memberNumberMappingBlacklist),
+        this._userMemberNumberMappings = {}..addAll(other._userMemberNumberMappings),
         this._shooterAliases = {}..addAll(other._shooterAliases),
         this._filters = other._filters,
         this.memberNumberWhitelist = other.memberNumberWhitelist,
@@ -253,6 +254,11 @@ class Rater {
     Map<String, String> detectedUserMappings = {};
 
     for(var num in knownShooters.keys) {
+      var userMapping = _userMemberNumberMappings[num];
+      if(userMapping != null) {
+        detectedUserMappings[num] = userMapping;
+      }
+
       var shooter = knownShooters[num]!;
       var name = _processName(shooter);
 
@@ -268,13 +274,23 @@ class Rater {
     for(var sourceNumber in detectedUserMappings.keys) {
       var targetNumber = detectedUserMappings[sourceNumber]!;
       var target = knownShooters[targetNumber];
-      var source = knownShooters[sourceNumber]!;
+      var source = knownShooters[sourceNumber];
 
-      if(target != null) {
+      if(source != null && target != null) {
         createdUserMappings.add(sourceNumber);
         createdUserMappings.add(targetNumber);
 
-        _mapRatings(target, source);
+        if(target.length == 0) {
+          _mapRatings(target, source);
+          print("Mapping $source to $target: manual mapping");
+        }
+        else if(target.length != 0 && source.length == 0) {
+          _mapRatings(source, target);
+          print("Mapping $target to $source: manual mapping");
+        }
+        else if(target.length != 0 && source.length != 0) {
+          throw StateError("manual mapping $source and $target, but both have rating history!");
+        }
       }
     }
 
@@ -312,6 +328,7 @@ class Rater {
       for(var num in list) {
         if(createdUserMappings.contains(num)) {
           ignore = true;
+          print("Ignoring $num: mapped manually");
           break;
         }
       }
@@ -320,7 +337,10 @@ class Rater {
       if(list.length == 2) {
         // If the shooter is already mapped, or if both numbers are 5-digit non-lifetime numbers, continue
         if((_memberNumberMappings[list[0]] == list[1] || _memberNumberMappings[list[1]] == list[0]) || (list[0].length > 4 && list[1].length > 4)) continue;
-        if(_memberNumberMappingBlacklist[list[0]] == list[1] || _memberNumberMappingBlacklist[list[1]] == list[0]) continue;
+        if(_memberNumberMappingBlacklist[list[0]] == list[1] || _memberNumberMappingBlacklist[list[1]] == list[0]) {
+          debugPrint("Ignoring $name with two member numbers due to blacklist");
+          continue;
+        }
 
         debugPrint("Shooter $name has two member numbers, mapping: $list (${knownShooters[list[0]]}, ${knownShooters[list[1]]})");
 

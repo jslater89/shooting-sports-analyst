@@ -200,6 +200,8 @@ class RatingHistory {
       progressCallback: progressCallback,
       progressCallbackInterval: progressCallbackInterval,
       shooterAliases: _settings.shooterAliases,
+      memberNumberMappingBlacklist: _settings.memberNumberMappingBlacklist,
+      userMemberNumberMappings: _settings.userMemberNumberMappings,
     );
 
     await r.calculateInitialRatings();
@@ -307,7 +309,7 @@ class RatingHistorySettings {
   /// shooters, and tries to determine if any name maps to more than one member number. If it
   /// does, the rater combines the two ratings.
   Map<String, String> shooterAliases;
-  Map<String, String> memberNumberMappings;
+  Map<String, String> userMemberNumberMappings;
 
   /// A map of member number mappings that should _not_ be made automatically.
   ///
@@ -327,7 +329,7 @@ class RatingHistorySettings {
     required this.algorithm,
     this.memberNumberWhitelist = const [],
     this.shooterAliases = defaultAliases.defaultShooterAliases,
-    this.memberNumberMappings = const {},
+    this.userMemberNumberMappings = const {},
     this.memberNumberMappingBlacklist = const {},
   });
 

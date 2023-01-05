@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
+import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 
 void main() async {
@@ -35,6 +37,52 @@ void main() async {
     expect(johnson.memberNumber, "5432");
     expect(johnson.originalMemberNumber, "L5432");
   });
+
+  // Fresh set
+  matches = deduplicationTestData();
+  RatingHistorySettings settings = RatingHistorySettings(algorithm: MultiplayerPercentEloRater());
+  settings.memberNumberMappingBlacklist = {"12345": "1234"};
+  var project = RatingProject(name: "Test", settings: settings, matchUrls: []);
+
+  history = RatingHistory(project: project, matches: matches);
+  await history.processInitialMatches();
+  rater = history.raterFor(history.matches.last, RaterGroup.open);
+
+  test("blacklisted mappings", () {
+    expect(rater.uniqueShooters.length, 3);
+    var does = rater.uniqueShooters.where((s) => s.lastName == "Doe");
+    expect(does.length, 2);
+    bool seen1 = false;
+    bool seen2 = false;
+    for(var d in does) {
+      if(d.originalMemberNumber.startsWith("L")) seen1 = true;
+      if(d.originalMemberNumber.startsWith("A")) seen2 = true;
+    }
+    expect(seen1, true);
+    expect(seen2, true);
+  });
+
+  // Fresh set
+  matches = deduplicationTestData();
+  settings = RatingHistorySettings(algorithm: MultiplayerPercentEloRater());
+  settings.memberNumberMappingBlacklist = {"12345": "1234"};
+  settings.userMemberNumberMappings = {"12345": "54321"};
+  project = RatingProject(name: "Test", settings: settings, matchUrls: []);
+
+  history = RatingHistory(project: project, matches: matches);
+  await history.processInitialMatches();
+  rater = history.raterFor(history.matches.last, RaterGroup.open);
+
+  test("user mappings and blacklist", () {
+    expect(rater.uniqueShooters.length, 2);
+    var does = rater.uniqueShooters.where((s) => s.lastName == "Doe");
+    expect(does.length, 1);
+    var johnsons = rater.uniqueShooters.where((s) => s.lastName == "Johnson");
+    expect(johnsons.length, 1);
+    expect(rater.memberNumberMappings["12345"], "54321");
+  });
+
+  // TODO: test more esoteric combinations here
 }
 
 List<PracticalMatch> deduplicationTestData() {
