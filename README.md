@@ -41,7 +41,9 @@ This is a pretty standard Flutter desktop/web application. I use `fvm` to lock i
 because of some unsolved bugs in later Flutter versions, and some breaking changes to scrollbars on
 desktop platforms I haven't solved yet.
 
-Before building, use `flutter pub run flutter_launcher_icons:main` to generate icons.
+Before building, use `flutter pub run flutter_launcher_icons:main` to generate icons, and
+`flutter pub run build_runner build` to do any code generation steps required by whatever I happen
+to be hacking on at the moment.
 
 ### Windows and Linux
 Run the appropriate script for your platform.
