@@ -132,7 +132,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       length: activeTabs.length,
       vsync: this,
       initialIndex: 0,
-      animationDuration: Duration(seconds: 0)
+      // TODO: Flutter broke this again, go back to seconds: 0 when fixed
+      animationDuration: Duration(microseconds: 1)
     );
 
     _init();
