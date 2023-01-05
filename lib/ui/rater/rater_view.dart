@@ -91,6 +91,7 @@ class _RaterViewState extends State<RaterView> {
           thumbVisibility: true,
           child: ListView.builder(itemBuilder: (context, i) {
             return GestureDetector(
+              key: Key(asList[i].memberNumber),
               onTap: () {
                 showDialog(context: context, builder: (context) {
                   return ShooterStatsDialog(rating: asList[i], match: widget.currentMatch);

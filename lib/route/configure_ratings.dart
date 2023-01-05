@@ -162,7 +162,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     _settingsController.currentSettings = algorithm.settings;
     _currentRater = _currentRaterFor(algorithm);
 
-    getUrlDisplayNames();
+    // also gets display names
+    _sortMatches();
 
     setState(() {
       _lastProjectName = project.name;
@@ -559,23 +560,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 icon: Icon(Icons.sort),
                                 color: Theme.of(context).primaryColor,
                                 onPressed: () async {
-                                  var cache = MatchCache();
-                                  await cache.ready;
-
-                                  matchUrls.sort((a, b) {
-                                    var matchA = cache.getMatchImmediate(a);
-                                    var matchB = cache.getMatchImmediate(b);
-
-                                    // Sort uncached matches to the top
-                                    if(matchA == null && matchB == null) return 0;
-                                    if(matchA == null && matchB != null) return -1;
-                                    if(matchA != null && matchB == null) return 1;
-
-                                    // Sort remaining matches by date descending
-                                    return matchB!.date!.compareTo(matchA!.date!);
-                                  });
-
-                                  getUrlDisplayNames();
+                                  _sortMatches();
                                 }
                               ),
                             ),
@@ -667,6 +652,29 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         ),
       ],
     );
+  }
+
+  void _sortMatches() async {
+    var cache = MatchCache();
+    await cache.ready;
+
+    matchUrls.sort((a, b) {
+      var matchA = cache.getMatchImmediate(a);
+      var matchB = cache.getMatchImmediate(b);
+
+      // Sort uncached matches to the top
+      if(matchA == null && matchB == null) return 0;
+      if(matchA == null && matchB != null) return -1;
+      if(matchA != null && matchB == null) return 1;
+
+      // Sort remaining matches by date descending, then by name ascending
+      var dateSort = matchB!.date!.compareTo(matchA!.date!);
+      if(dateSort != 0) return dateSort;
+
+      return matchA.name!.compareTo(matchB.name!);
+    });
+
+    getUrlDisplayNames();
   }
 
   Future<void> confirmChangeRater (_ConfigurableRater v) async {

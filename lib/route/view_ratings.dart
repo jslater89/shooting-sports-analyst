@@ -77,6 +77,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   int _maxDays = 365;
   
   late RatingHistory _history;
+  bool _historyChanged = false;
   _LoadingState _loadingState = _LoadingState.notStarted;
 
   late List<RaterGroup> activeTabs;
@@ -165,17 +166,57 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       title = "Shooter Rating Calculator";
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-        centerTitle: true,
-        actions: _loadingState == _LoadingState.done ? actions : null,
-        bottom: _operationInProgress ? PreferredSize(
-          preferredSize: Size(double.infinity, 5),
-          child: LinearProgressIndicator(value: null, backgroundColor: primaryColor, valueColor: animation),
-        ) : null,
+    return WillPopScope(
+      onWillPop: () async {
+        var message = "If you leave this page, you will need to recalculate ratings to view it again.";
+
+        if(_historyChanged) {
+          message += "\n\nYou have unsaved changes to this rating project. Save first?";
+        }
+        return await showDialog<bool>(context: context, builder: (context) => AlertDialog(
+          title: Text("Return to main menu?"),
+          content: Text(message),
+          actions: [
+            TextButton(
+              child: Text("STAY HERE"),
+              onPressed: () {
+                Navigator.of(context).pop(false);
+              },
+            ),
+            TextButton(
+              child: Text("LEAVE" + (_historyChanged ? " WITHOUT SAVING" : "")),
+              onPressed: () {
+                Navigator.of(context).pop(true);
+              },
+            ),
+            if(_historyChanged) TextButton(
+              child: Text("SAVE AND LEAVE"),
+              onPressed: () async {
+                var pm = RatingProjectManager();
+                await pm.saveProject(_history.settings.project);
+
+                setState(() {
+                  _historyChanged = false;
+                });
+
+                Navigator.of(context).pop(true);
+              },
+            ),
+          ],
+        )) ?? false;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(title),
+          centerTitle: true,
+          actions: _loadingState == _LoadingState.done ? actions : null,
+          bottom: _operationInProgress ? PreferredSize(
+            preferredSize: Size(double.infinity, 5),
+            child: LinearProgressIndicator(value: null, backgroundColor: primaryColor, valueColor: animation),
+          ) : null,
+        ),
+        body: _body(),
       ),
-      body: _body(),
     );
   }
 
@@ -456,38 +497,59 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     var rater = _history.raterFor(_selectedMatch!, tab);
 
     return [
-      if(rater.ratingSystem.supportsPrediction)
-        Tooltip(
-          message: "Predict the outcome of a match based on ratings.",
-          child: IconButton(
-            icon: Icon(RpgAwesome.crystal_ball),
-            onPressed: () {
-              var tab = activeTabs[_tabController.index];
-              var rater = _history.raterFor(_selectedMatch!, tab);
-              _startPredictionView(rater, tab);
-            },
-          ),
+      if(rater.ratingSystem.supportsPrediction) Tooltip(
+        message: "Predict the outcome of a match based on ratings.",
+        child: IconButton(
+          icon: Icon(RpgAwesome.crystal_ball),
+          onPressed: () {
+            var tab = activeTabs[_tabController.index];
+            var rater = _history.raterFor(_selectedMatch!, tab);
+            _startPredictionView(rater, tab);
+          },
         ),
-      // end if: supports ratings
+      ), // end if: supports ratings
+      if(_historyChanged) Tooltip(
+        message: "Save the rating project.",
+        child: IconButton(
+          icon: Icon(Icons.save),
+          onPressed: () async {
+            var pm = RatingProjectManager();
+            await pm.saveProject(_history.settings.project);
+
+            setState(() {
+              _historyChanged = false;
+            });
+
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Saved project.")));
+          },
+        ),
+      ), // end if: history changed
       Tooltip(
-          message: "Add a new match to the ratings.",
-          child: IconButton(
-            icon: Icon(Icons.playlist_add),
-            onPressed: () async {
-              var match = await showDialog<PracticalMatch>(
-                  context: context,
-                  builder: (context) => MatchCacheChooserDialog()
-              );
+        message: "Add a new match to the ratings.",
+        child: IconButton(
+          icon: Icon(Icons.playlist_add),
+          onPressed: () async {
+            var match = await showDialog<PracticalMatch>(
+                context: context,
+                builder: (context) => MatchCacheChooserDialog(
+                  helpText:
+                      "Add a match to the rating list from the cache. Use the plus button to download a new one.\n\n"
+                      "You must save the project from the rating screen for the match to be included in future "
+                      "rating runs. In future rating runs, matches will be sorted by date even if not added in "
+                      "date order here.",
+                )
+            );
 
-              if(match != null) {
-                _history.addMatch(match);
+            if(match != null) {
+              _history.addMatch(match);
 
-                setState(() {
-                  _selectedMatch = _history.matches.last;
-                });
-              }
-            },
-          )
+              setState(() {
+                _selectedMatch = _history.matches.last;
+                _historyChanged = true;
+              });
+            }
+          },
+        )
       ),
       Tooltip(
         message: "View results for a match in the dataset.",

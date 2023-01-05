@@ -65,6 +65,7 @@ class RatingHistory {
 
     var oldMatch = _lastMatch;
     _matches.add(match);
+    _settings.project.matchUrls.add("https://practiscore.com/results/new/${match.practiscoreId}");
 
     for(var group in _settings.groups) {
       var raters = _ratersByDivision[oldMatch]!;

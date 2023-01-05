@@ -8,10 +8,16 @@ import 'package:uspsa_result_viewer/ui/widget/dialog/url_entry_dialog.dart';
 
 /// Choose matches from the match cache, or a list of matches.
 class MatchCacheChooserDialog extends StatefulWidget {
-  const MatchCacheChooserDialog({Key? key, this.matches, this.showStats = false}) : super(key: key);
+  const MatchCacheChooserDialog({
+    Key? key,
+    this.matches,
+    this.showStats = false,
+    this.helpText,
+  }) : super(key: key);
 
   final bool showStats;
   final List<PracticalMatch>? matches;
+  final String? helpText;
 
   @override
   State<MatchCacheChooserDialog> createState() => _MatchCacheChooserDialogState();
@@ -136,10 +142,13 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if(widget.matches == null && widget.showStats) Tooltip(
+        if(widget.showStats) Tooltip(
           child: Text("Cache stats: ${cache!.length} entries, ${cache!.uniqueMatches} matches, ${(cache!.size / (1024 * 1024)).toStringAsFixed(1)}mb"),
           message: "Note that the cache may contain multiple entries for each match, one for each PractiScore "
               "ID format."
+        ),
+        if(widget.helpText != null) Text(
+          widget.helpText!
         ),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
