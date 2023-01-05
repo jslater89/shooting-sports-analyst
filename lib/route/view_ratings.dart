@@ -87,6 +87,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   MatchCache _matchCache = MatchCache();
   late TabController _tabController;
 
+  var _loadingScrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
@@ -279,8 +281,10 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
           SizedBox(height: 20),
           Expanded(
             child: Scrollbar(
+              controller: _loadingScrollController,
               thumbVisibility: true,
               child: SingleChildScrollView(
+                controller: _loadingScrollController,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [

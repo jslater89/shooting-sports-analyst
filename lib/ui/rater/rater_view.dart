@@ -38,6 +38,8 @@ class _RaterViewState extends State<RaterView> {
     );
   }
 
+  var _scrollController = ScrollController();
+
   List<Widget> _buildRatingKey() {
     var screenSize = MediaQuery.of(context).size;
     return [ConstrainedBox(
@@ -88,23 +90,26 @@ class _RaterViewState extends State<RaterView> {
     return [
       Expanded(
         child: Scrollbar(
+          controller: _scrollController,
           thumbVisibility: true,
-          child: ListView.builder(itemBuilder: (context, i) {
-            return GestureDetector(
-              key: Key(asList[i].memberNumber),
-              onTap: () {
-                showDialog(context: context, builder: (context) {
-                  return ShooterStatsDialog(rating: asList[i], match: widget.currentMatch);
-                });
-              },
-              child: widget.rater.ratingSystem.buildRatingRow(
-                context: context,
-                place: i + 1,
-                rating: asList[i],
-              )
-            );
-          },
-          itemCount: sortedRatings.length,
+          child: ListView.builder(
+            itemBuilder: (context, i) {
+              return GestureDetector(
+                key: Key(asList[i].memberNumber),
+                onTap: () {
+                  showDialog(context: context, builder: (context) {
+                    return ShooterStatsDialog(rating: asList[i], match: widget.currentMatch);
+                  });
+                },
+                child: widget.rater.ratingSystem.buildRatingRow(
+                  context: context,
+                  place: i + 1,
+                  rating: asList[i],
+                )
+              );
+            },
+            itemCount: sortedRatings.length,
+            controller: _scrollController,
           ),
         ),
       )
