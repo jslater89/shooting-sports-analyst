@@ -174,6 +174,7 @@ const _urlsKey = "urls";
 const _whitelistKey = "memNumWhitelist";
 const _aliasesKey = "aliases";
 const _memberNumberMappingsKey = "numMappings";
+const _memberNumberMappingBlacklistKey = "numMapBlacklist";
 
 // Values for the multiplayer percent elo rater.
 
@@ -217,6 +218,9 @@ class RatingProject {
       memberNumberMappings: ((encodedProject[_memberNumberMappingsKey] ?? <String, dynamic>{}) as Map<String, dynamic>).map<String, String>((k, v) =>
         MapEntry(k, v as String)
       ),
+      memberNumberMappingBlacklist: ((encodedProject[_memberNumberMappingBlacklistKey] ?? <String, dynamic>{}) as Map<String, dynamic>).map<String, String>((k, v) =>
+          MapEntry(k, v as String)
+      ),
     );
     var matchUrls = (encodedProject[_urlsKey] as List<dynamic>).map((item) => item as String).toList();
     var name = encodedProject[_nameKey] as String;
@@ -250,6 +254,7 @@ class RatingProject {
     map[_whitelistKey] = settings.memberNumberWhitelist;
     map[_aliasesKey] = settings.shooterAliases;
     map[_memberNumberMappingsKey] = settings.memberNumberMappings;
+    map[_memberNumberMappingBlacklistKey] = settings.memberNumberMappingBlacklist;
 
     /// Alg-specific settings
     settings.algorithm.encodeToJson(map);

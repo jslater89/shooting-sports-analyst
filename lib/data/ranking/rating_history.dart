@@ -196,7 +196,8 @@ class RatingHistory {
       byStage: _settings.byStage,
       filters: group.filters,
       progressCallback: progressCallback,
-      progressCallbackInterval: progressCallbackInterval
+      progressCallbackInterval: progressCallbackInterval,
+      shooterAliases: _settings.shooterAliases,
     );
 
     await r.calculateInitialRatings();
@@ -302,10 +303,25 @@ class RatingHistorySettings {
   List<RaterGroup> groups;
   List<String> memberNumberWhitelist;
   RatingSystem algorithm;
+  /// A map of shooter name changes, used to backstop automatic shooter number change detection.
+  ///
+  /// Number change detection looks through a map of shooters-to-member-numbers after adding
+  /// shooters, and tries to determine if any name maps to more than one member number. If it
+  /// does, the rater combines the two ratings.
   Map<String, String> shooterAliases;
   Map<String, String> memberNumberMappings;
 
-  // TODO: toJson here, or store in DB directly with only algorithm settings in JSON
+  /// A map of member number mappings that should _not_ be made automatically.
+  ///
+  /// If a candidate member number change appears in this map, in either direction
+  /// (i.e., map[old] = new or map[new] = old), the shooter ratings corresponding
+  /// to those numbers will not be merged.
+  Map<String, String> memberNumberMappingBlacklist;
+
+  // TODO: implement user-defined member number mappings
+  // Check the list; if after adding shooters we have a situation where
+  // both ends of the mapping are present, add that mapping and delete the
+  // member numbers from the list of mappings under consideration.
 
   RatingHistorySettings({
     this.preserveHistory = false,
@@ -314,6 +330,7 @@ class RatingHistorySettings {
     this.memberNumberWhitelist = const [],
     this.shooterAliases = defaultAliases.defaultShooterAliases,
     this.memberNumberMappings = const {},
+    this.memberNumberMappingBlacklist = const {},
   });
 
   static List<RaterGroup> groupsForSettings({bool combineOpenPCC = false, bool combineLimitedCO = false, bool combineLocap = true}) {

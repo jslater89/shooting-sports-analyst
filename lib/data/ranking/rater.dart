@@ -25,6 +25,22 @@ class Rater {
   /// All member numbers are processed.
   Map<String, String> _memberNumberMappings = {};
 
+  /// Contains mappings that should not be made automatically.
+  ///
+  /// Any mapping that appears in this map, in either direction,
+  /// will not be established automatically.
+  Map<String, String> _memberNumberMappingBlacklist = {};
+
+  /// Contains member number mappings configured in the project settings.
+  ///
+  /// These will be used preferentially. Member numbers appearing as keys
+  /// in this table will _not_ be automatically mapped.
+  Map<String, String> _userMemberNumberMappings = {};
+
+  /// Contains processed names (lowercase, no punctuation) used to assist
+  /// the automatic member number mapper in doing its job.
+  Map<String, String> _shooterAliases = {};
+
   /// Contains every member number encountered, who has shot at least one stage.
   Set<String> _memberNumbersEncountered = Set<String>();
 
@@ -54,8 +70,18 @@ class Rater {
     this.byStage = false,
     this.progressCallback,
     this.progressCallbackInterval = 5,
-    this.memberNumberWhitelist = const []}) : this._matches = matches, this._filters = filters
+    Map<String, String>? shooterAliases,
+    Map<String, String> userMemberNumberMappings = const {},
+    Map<String, String> memberNumberMappingBlacklist = const {},
+    this.memberNumberWhitelist = const []})
+      : this._matches = matches,
+        this._filters = filters,
+        this._memberNumberMappingBlacklist = memberNumberMappingBlacklist,
+        this._userMemberNumberMappings = userMemberNumberMappings
   {
+    if(shooterAliases != null) this._shooterAliases = shooterAliases;
+    else this._shooterAliases = defaultShooterAliases; 
+
     _matches.sort((a, b) {
       if(a.date == null && b.date == null) {
         return 0;
@@ -79,6 +105,29 @@ class Rater {
     _deduplicateShooters();
     if(Timings.enabled) timings.dedupShootersMillis = (DateTime.now().difference(start).inMicroseconds).toDouble();
   }
+
+  Rater.copy(Rater other) :
+        this.knownShooters = {},
+        this._matches = other._matches.map((m) => m.copy()).toList(),
+        this.byStage = other.byStage,
+        this._memberNumbersEncountered = Set()..addAll(other._memberNumbersEncountered),
+        this._memberNumberMappings = {}..addAll(other._memberNumberMappings),
+        this._memberNumberMappingBlacklist = {}..addAll(other._memberNumberMappingBlacklist),
+        this._shooterAliases = {}..addAll(other._shooterAliases),
+        this._filters = other._filters,
+        this.memberNumberWhitelist = other.memberNumberWhitelist,
+        this.progressCallbackInterval = other.progressCallbackInterval,
+        this.ratingSystem = other.ratingSystem {
+    for(var entry in _memberNumberMappings.entries) {
+      if (entry.key == entry.value) {
+        // If, per the member number mappings, this is the canonical mapping, copy it immediately.
+        // (The canonical mapping is the one where mappings[num] = num—i.e., no mapping)
+        knownShooters[entry.value] = ratingSystem.copyShooterRating(other.knownShooter(entry.value));
+      }
+      // Otherwise, it's an non-canonical number, so we can skip it
+    }
+  }
+
 
   void deserializeFrom(List<DbMemberNumberMapping> mappings, List<DbShooterRating> ratings, Map<DbShooterRating, List<DbRatingEvent>> eventsByRating) {
     // Mappings contains only the interesting ones, i.e. number != mapping
@@ -131,26 +180,6 @@ class Rater {
     debugPrint("Initial ratings complete for ${knownShooters.length} shooters in ${_matches.length} matches in ${_filters != null ? _filters!.activeDivisions.toList() : "all divisions"}");
   }
 
-  Rater.copy(Rater other) :
-      this.knownShooters = {},
-      this._matches = other._matches.map((m) => m.copy()).toList(),
-      this.byStage = other.byStage,
-      this._memberNumbersEncountered = Set()..addAll(other._memberNumbersEncountered),
-      this._memberNumberMappings = {}..addAll(other._memberNumberMappings),
-      this._filters = other._filters,
-      this.memberNumberWhitelist = other.memberNumberWhitelist,
-      this.progressCallbackInterval = other.progressCallbackInterval,
-      this.ratingSystem = other.ratingSystem {
-    for(var entry in _memberNumberMappings.entries) {
-      if (entry.key == entry.value) {
-        // If, per the member number mappings, this is the canonical mapping, copy it immediately.
-        // (The canonical mapping is the one where mappings[num] = num—i.e., no mapping)
-        knownShooters[entry.value] = ratingSystem.copyShooterRating(other.knownShooter(entry.value));
-      }
-      // Otherwise, it's an non-canonical number, so we can skip it
-    }
-  }
-  
   void addMatch(PracticalMatch match) {
     _cachedStats = null;
     _matches.add(match);
@@ -210,20 +239,43 @@ class Rater {
     return maybeKnownShooter(processed);
   }
 
+  String _processName(ShooterRating shooter) {
+    String name = "${shooter.firstName.toLowerCase().replaceAll(RegExp(r"\s+"), "")}"
+        + "${shooter.lastName.toLowerCase().replaceAll(RegExp(r"\s+"), "")}";
+    name = name.replaceAll(RegExp(r"[^a-zA-Z0-9]"), "");
+
+    return name;
+  }
+
   void _deduplicateShooters() {
     Map<String, List<String>> namesToNumbers = {};
 
+    Map<String, String> detectedUserMappings = {};
+
     for(var num in knownShooters.keys) {
       var shooter = knownShooters[num]!;
-      var name = "${shooter.firstName.toLowerCase().replaceAll(RegExp(r"\s+"), "")}"
-          + "${shooter.lastName.toLowerCase().replaceAll(RegExp(r"\s+"), "")}";
+      var name = _processName(shooter);
 
-      var finalName = defaultShooterAliases[name] ?? name;
+      var finalName = _shooterAliases[name] ?? name;
 
       namesToNumbers[finalName] ??= [];
       namesToNumbers[finalName]!.add(num);
 
       _memberNumberMappings[num] ??= num;
+    }
+
+    Set<String> createdUserMappings = {};
+    for(var sourceNumber in detectedUserMappings.keys) {
+      var targetNumber = detectedUserMappings[sourceNumber]!;
+      var target = knownShooters[targetNumber];
+      var source = knownShooters[sourceNumber]!;
+
+      if(target != null) {
+        createdUserMappings.add(sourceNumber);
+        createdUserMappings.add(targetNumber);
+
+        _mapRatings(target, source);
+      }
     }
 
     // TODO: three-step mapping
@@ -255,9 +307,20 @@ class Rater {
     for(var name in namesToNumbers.keys) {
       var list = namesToNumbers[name]!;
 
+      // Skip anyone we've mapped manually
+      bool ignore = false;
+      for(var num in list) {
+        if(createdUserMappings.contains(num)) {
+          ignore = true;
+          break;
+        }
+      }
+      if(ignore) continue;
+
       if(list.length == 2) {
         // If the shooter is already mapped, or if both numbers are 5-digit non-lifetime numbers, continue
         if((_memberNumberMappings[list[0]] == list[1] || _memberNumberMappings[list[1]] == list[0]) || (list[0].length > 4 && list[1].length > 4)) continue;
+        if(_memberNumberMappingBlacklist[list[0]] == list[1] || _memberNumberMappingBlacklist[list[1]] == list[0]) continue;
 
         debugPrint("Shooter $name has two member numbers, mapping: $list (${knownShooters[list[0]]}, ${knownShooters[list[1]]})");
 
@@ -273,38 +336,36 @@ class Rater {
         // and I'm not a psychic. Map the longer one to the shorter one.
         if (rating0.length == 0 && rating1.length == 0) {
           if(rating0.memberNumber.length < rating1.memberNumber.length) {
-            rating0.copyRatingFrom(rating1);
-            knownShooters.remove(list[1]);
-            _memberNumberMappings[list[1]] = list[0];
+            _mapRatings(rating0, rating1);
 
             // debugPrint("Mapped r1-r0 ${list[1]} to ${list[0]} with ${rating0.ratingEvents.length} events during deduplication");
           }
           else {
-            rating1.copyRatingFrom(rating0);
-            knownShooters.remove(list[0]);
-            _memberNumberMappings[list[0]] = list[1];
+            _mapRatings(rating1, rating0);
 
             // debugPrint("Mapped r0-r1 ${list[0]} to ${list[1]} with ${rating1.ratingEvents.length} events during deduplication");
           }
         }
         else {
           if (rating0.ratingEvents.length == 0) {
-            rating0.copyRatingFrom(rating1);
-            knownShooters.remove(list[1]);
-            _memberNumberMappings[list[1]] = list[0];
+            _mapRatings(rating0, rating1);
 
             // debugPrint("Mapped r1-r0 ${list[1]} to ${list[0]} with ${rating0.ratingEvents.length} events during deduplication");
           }
           else { // rating1.ratingEvents.length == 0
-            rating1.copyRatingFrom(rating0);
-            knownShooters.remove(list[0]);
-            _memberNumberMappings[list[0]] = list[1];
+            _mapRatings(rating1, rating0);
 
             // debugPrint("Mapped r0-r1 ${list[0]} to ${list[1]} with ${rating1.ratingEvents.length} events during deduplication");
           }
         }
       }
     }
+  }
+  
+  void _mapRatings(ShooterRating target, ShooterRating source) {
+    target.copyRatingFrom(source);
+    knownShooters.remove(source.memberNumber);
+    _memberNumberMappings[source.memberNumber] = target.memberNumber;
   }
 
   void _removeUnseenShooters() {
