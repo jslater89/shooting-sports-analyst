@@ -161,7 +161,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
     var title = "";
     try {
-      title = _history.settings.project.name;
+      title = _history.project.name;
     }
     catch(e) {
       // Should maybe make history.project nullable rather than late, since
@@ -196,7 +196,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
               child: Text("SAVE AND LEAVE"),
               onPressed: () async {
                 var pm = RatingProjectManager();
-                await pm.saveProject(_history.settings.project);
+                await pm.saveProject(_history.project);
 
                 setState(() {
                   _historyChanged = false;
@@ -519,7 +519,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
           icon: Icon(Icons.save),
           onPressed: () async {
             var pm = RatingProjectManager();
-            await pm.saveProject(_history.settings.project);
+            await pm.saveProject(_history.project);
 
             setState(() {
               _historyChanged = false;

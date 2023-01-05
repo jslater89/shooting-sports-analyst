@@ -33,6 +33,8 @@ class RatingHistory {
 
   List<RaterGroup> get groups => []..addAll(_settings.groups);
 
+  late RatingProject project;
+
   /// Maps matches to a map of [Rater]s, which hold the incremental ratings
   /// after that match has been processed.
   Map<PracticalMatch, Map<RaterGroup, Rater>> _ratersByDivision = {};
@@ -46,8 +48,8 @@ class RatingHistory {
       )),
     ), matchUrls: matches.map((m) => m.practiscoreId).toList());
 
+    this.project = project;
     _settings = project.settings;
-    _settings.project = project;
   }
 
   Future<void> processInitialMatches() async {
@@ -65,7 +67,7 @@ class RatingHistory {
 
     var oldMatch = _lastMatch;
     _matches.add(match);
-    _settings.project.matchUrls.add("https://practiscore.com/results/new/${match.practiscoreId}");
+    project.matchUrls.add("https://practiscore.com/results/new/${match.practiscoreId}");
 
     for(var group in _settings.groups) {
       var raters = _ratersByDivision[oldMatch]!;
@@ -293,10 +295,6 @@ enum RaterGroup {
 }
 
 class RatingHistorySettings {
-  /// The [RatingProject] this settings object's history
-  /// belongs to.
-  late RatingProject project;
-
   // All of the below are serialized
   bool get byStage => algorithm.byStage;
   bool preserveHistory;

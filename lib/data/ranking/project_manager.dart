@@ -226,7 +226,6 @@ class RatingProject {
     var name = encodedProject[_nameKey] as String;
 
     var rp = RatingProject(name: name, settings: settings, matchUrls: matchUrls);
-    settings.project = rp;
     return rp;
   }
 
