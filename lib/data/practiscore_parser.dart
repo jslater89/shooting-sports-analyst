@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 import 'package:uspsa_result_viewer/route/practiscore_url.dart';
+import 'package:uspsa_result_viewer/util.dart';
 
 
 String getClubNameToken(String source) {
@@ -59,7 +60,7 @@ Future<String?> processMatchUrl(String matchUrl, {BuildContext? context}) async 
   return matchId;
 }
 
-Future<PracticalMatch?> getPractiscoreMatchHeadless(String matchId) async {
+Future<Result<PracticalMatch, MatchGetError>> getPractiscoreMatchHeadless(String matchId) async {
   var proxyUrl = getProxyUrl();
   var reportUrl = "${proxyUrl}https://practiscore.com/reports/web/$matchId";
   if(verboseParse) debugPrint("Report download URL: $reportUrl");
@@ -76,7 +77,7 @@ Future<PracticalMatch?> getPractiscoreMatchHeadless(String matchId) async {
     }
     else if(response.statusCode == 404) {
       debugPrint("No match record at $reportUrl");
-      return null;
+      return Result.err(MatchGetError.noMatch);
     }
 
     if(verboseParse) debugPrint("response: ${response.body.split("\n").first}");
@@ -89,7 +90,7 @@ Future<PracticalMatch?> getPractiscoreMatchHeadless(String matchId) async {
       http.ClientException ce = err;
       debugPrint("${ce.uri} ${ce.message}");
     }
-    return null;
+    return Result.err(MatchGetError.network);
   }
 
   try {
@@ -115,7 +116,7 @@ Future<PracticalMatch?> getPractiscoreMatchHeadless(String matchId) async {
   catch(err) {
     debugPrint("download error pt. 2: $err ${err.runtimeType}");
   }
-  return null;
+  return Result.err(MatchGetError.network);
 }
 
 Future<String?> getMatchId(BuildContext context, {String? presetUrl}) async {

@@ -10,6 +10,7 @@ import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
+import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/ui/rater/prediction/prediction_view.dart';
 import 'package:uspsa_result_viewer/ui/rater/prediction/registration_parser.dart';
@@ -19,6 +20,7 @@ import 'package:uspsa_result_viewer/ui/result_page.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/associate_registrations.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/match_cache_chooser_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/url_entry_dialog.dart';
+import 'package:uspsa_result_viewer/util.dart';
 
 class RatingsViewPage extends StatefulWidget {
   const RatingsViewPage({
@@ -692,12 +694,12 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     });
 
     var localUrls = []..addAll(urls);
-    var failedMatches = <String>[];
+    var failedMatches = <String, MatchGetError>{};
 
-    var urlsByFuture = <Future<PracticalMatch?>, String>{};
+    var urlsByFuture = <Future<Result<PracticalMatch, MatchGetError>>, String>{};
     while(localUrls.isNotEmpty) {
 
-      var futures = <Future<PracticalMatch?>>[];
+      var futures = <Future<Result<PracticalMatch, MatchGetError>>>[];
       var urlsThisStep = [];
       if(localUrls.length < 10) {
         urlsThisStep = []..addAll(localUrls);
@@ -721,14 +723,14 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       await Future.wait(futures);
 
       for(var future in futures) {
-        var match = await future;
+        var result = await future;
         var url = urlsByFuture[future]!;
-        if(match != null) {
-          _matchUrls[url] = match;
+        if(result.isOk()) {
+          _matchUrls[url] = result.unwrap();
         }
         else {
           _matchUrls.remove(url);
-          failedMatches.add(url);
+          failedMatches[url] = result.unwrapErr();
         }
       }
 
@@ -813,26 +815,29 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     if(failedMatches.isNotEmpty) ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text("Failed to download ${failedMatches.length} matches"),
+        duration: Duration(seconds: 10),
         action: SnackBarAction(
           label: "VIEW",
           onPressed: () {
             showDialog(context: context, builder: (context) {
+              var keys = failedMatches.keys.toList();
               return AlertDialog(
                 title: Text("Failed matches"),
                 content: SizedBox(
                   width: 500,
                   child: ListView.builder(
-                    itemCount: failedMatches.length,
+                    itemCount: keys.length,
                     itemBuilder: (context, i) {
+                      var key = keys[i];
                       return MouseRegion(
                         cursor: SystemMouseCursors.click,
                         child: GestureDetector(
                           onTap: () {
-                            HtmlOr.openLink(failedMatches[i]);
+                            HtmlOr.openLink(key);
                           },
                           child: Padding(
                             padding: const EdgeInsets.all(4.0),
-                            child: Text(failedMatches[i],
+                            child: Text("$key (${failedMatches[key]})",
                               overflow: TextOverflow.fade,
                               softWrap: false,
                               style: Theme.of(context).textTheme.bodyMedium!.copyWith(

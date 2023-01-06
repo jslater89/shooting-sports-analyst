@@ -3,8 +3,10 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/loading_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/url_entry_dialog.dart';
+import 'package:uspsa_result_viewer/util.dart';
 
 /// Choose matches from the match cache, or a list of matches.
 class MatchCacheChooserDialog extends StatefulWidget {
@@ -171,16 +173,21 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
                 ));
 
                 if(url != null) {
-                  var hasMatch = await cache!.getMatch(url, localOnly: true);
-                  if(hasMatch != null) return;
+                  var result = await cache!.getMatch(url, localOnly: true);
+                  if(result.isOk()) return;
 
-                  var matchFuture = cache!.getMatch(url);
-                  var match = await showDialog<PracticalMatch>(context: context, builder: (c) => LoadingDialog(waitOn: matchFuture));
-                  if(match != null) {
-                    setState(() {
-                      _updateMatches();
-                      addedMatch = true;
-                    });
+                  var resultFuture = cache!.getMatch(url);
+                  var res2 = await showDialog<Result<PracticalMatch, MatchGetError>>(context: context, builder: (c) => LoadingDialog(waitOn: resultFuture));
+                  if(res2 != null) {
+                    if(res2.isOk()) {
+                      setState(() {
+                        _updateMatches();
+                        addedMatch = true;
+                      });
+                    }
+                    else {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res2.unwrapErr().message)));
+                    }
                   }
                 }
               },

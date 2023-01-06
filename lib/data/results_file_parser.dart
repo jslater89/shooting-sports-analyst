@@ -1,10 +1,29 @@
 import 'package:flutter/foundation.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:intl/intl.dart';
+import 'package:uspsa_result_viewer/util.dart';
 
 const verboseParse = false;
 
-Future<PracticalMatch> processScoreFile(String fileContents) async {
+enum MatchGetError implements Error {
+  notHitFactor,
+  network,
+  noMatch,
+  notInCache,
+  formatError;
+
+  String get message {
+    switch(this) {
+      case MatchGetError.notHitFactor: return "Not a hit factor match";
+      case MatchGetError.network: return "Network error downloading match";
+      case MatchGetError.noMatch: return "No match found with ID";
+      case MatchGetError.notInCache: return "Match not in cache";
+      case MatchGetError.formatError: return "report.txt file format error";
+    }
+  }
+}
+
+Future<Result<PracticalMatch, MatchGetError>> processScoreFile(String fileContents) async {
   String reportFile = fileContents.replaceAll("\r\n", "\n");
   List<String> lines = reportFile.split("\n");
 
@@ -31,7 +50,7 @@ Future<PracticalMatch> processScoreFile(String fileContents) async {
     stageLines: stageLines,
     stageScoreLines: stageScoreLines,
   )..reportContents = reportFile;
-  return canonicalMatch;
+  return Result.ok(canonicalMatch);
 }
 
 PracticalMatch _processResultLines({required List<String> infoLines, required List<String> competitorLines, required List<String> stageLines, required List<String> stageScoreLines}) {

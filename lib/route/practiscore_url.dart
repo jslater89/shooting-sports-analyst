@@ -42,10 +42,15 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
       if(response.statusCode < 400) {
         var responseString = response.body;
         if (responseString.startsWith("\$")) {
-          var match = await processScoreFile(responseString);
-          setState(() {
-            _match = match;
-          });
+          var result = await processScoreFile(responseString);
+          if(result.isOk()) {
+            setState(() {
+              _match = result.unwrap();
+            });
+          }
+          else {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.unwrapErr().message)));
+          }
         }
         else {
           debugPrint("Bad file contents");
@@ -71,10 +76,15 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
       if(response.statusCode < 400) {
         responseString = response.body;
         if (responseString.startsWith(r"$")) {
-          var match = await processScoreFile(responseString);
-          setState(() {
-            _match = match;
-          });
+          var result = await processScoreFile(responseString);
+          if(result.isOk()) {
+            setState(() {
+              _match = result.unwrap();
+            });
+          }
+          else {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.unwrapErr().message)));
+          }
           return;
         }
       }
@@ -110,10 +120,15 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
       if(response.statusCode < 400) {
         var responseString = response.body;
         if (responseString.startsWith(r"$")) {
-          var match = await processScoreFile(responseString);
-          setState(() {
-            _match = match;
-          });
+          var result = await processScoreFile(responseString);
+          if(result.isOk()) {
+            setState(() {
+              _match = result.unwrap();
+            });
+          }
+          else {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.unwrapErr().message)));
+          }
           return;
         }
       }
