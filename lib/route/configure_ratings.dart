@@ -778,6 +778,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       _validationError = "";
       _shooterAliases = defaultShooterAliases;
       _memNumWhitelist = [];
+      _memNumMappingBlacklist = {};
+      _memNumMappings = {};
+      _hiddenShooters = [];
     });
   }
 
@@ -851,26 +854,29 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         ),
       ),
       Tooltip(
-        message: "Enter aliases for shooters whose names and member numbers change.",
+        message: "Import a project from a JSON file.",
         child: IconButton(
-          icon: Icon(Icons.add_link),
-          onPressed: () async {
-            var aliases = await showDialog<Map<String, String>>(context: context, builder: (context) {
-              return ShooterAliasesDialog(_shooterAliases);
-            }, barrierDismissible: false);
-
-            if(aliases != null) {
-              _shooterAliases = aliases;
-            }
+          icon: Icon(Icons.upload),
+          onPressed: () {
+            _handleClick(_MenuEntry.import);
           },
-        ),
+        )
+      ),
+      Tooltip(
+          message: "Export a project to a JSON file.",
+          child: IconButton(
+            icon: Icon(Icons.download),
+            onPressed: () {
+              _handleClick(_MenuEntry.export);
+            },
+          )
       ),
       PopupMenuButton<_MenuEntry>(
         onSelected: (item) => _handleClick(item),
         tooltip: null,
         itemBuilder: (context) {
           List<PopupMenuEntry<_MenuEntry>> items = [];
-          for(var item in _MenuEntry.values) {
+          for(var item in _MenuEntry.menu) {
             items.add(PopupMenuItem(
               child: Text(item.label),
               value: item,
@@ -1013,6 +1019,16 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
           _hiddenShooters = hidden;
         }
         break;
+
+
+      case _MenuEntry.shooterAliases:
+        var aliases = await showDialog<Map<String, String>>(context: context, builder: (context) {
+          return ShooterAliasesDialog(_shooterAliases);
+        }, barrierDismissible: false);
+
+        if(aliases != null) {
+          _shooterAliases = aliases;
+        }
     }
   }
 }
@@ -1024,10 +1040,18 @@ enum _MenuEntry {
   numberMappings,
   numberMappingBlacklist,
   numberWhitelist,
-  clearCache,
-}
+  shooterAliases,
+  clearCache;
 
-extension _MenuEntryUtils on _MenuEntry {
+  static List<_MenuEntry> get menu => [
+    hiddenShooters,
+    numberMappings,
+    numberMappingBlacklist,
+    numberWhitelist,
+    shooterAliases,
+    clearCache,
+  ];
+
   String get label {
     switch(this) {
       case _MenuEntry.import:
@@ -1044,6 +1068,8 @@ extension _MenuEntryUtils on _MenuEntry {
         return "Member whitelist";
       case _MenuEntry.clearCache:
         return "Clear cache";
+      case _MenuEntry.shooterAliases:
+        return "Shooter aliases";
     }
   }
 }
