@@ -197,8 +197,9 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
             if(_historyChanged) TextButton(
               child: Text("SAVE AND LEAVE"),
               onPressed: () async {
+                // This project is also the autosave, so save it there too
                 var pm = RatingProjectManager();
-                await pm.saveProject(_history.project);
+                await pm.saveProject(_history.project, mapName: RatingProjectManager.autosaveName);
 
                 setState(() {
                   _historyChanged = false;
@@ -520,8 +521,9 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         child: IconButton(
           icon: Icon(Icons.save),
           onPressed: () async {
+            // This project is also the autosave, so save it there too
             var pm = RatingProjectManager();
-            await pm.saveProject(_history.project);
+            await pm.saveProject(_history.project, mapName: RatingProjectManager.autosaveName);
 
             setState(() {
               _historyChanged = false;
@@ -793,7 +795,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
     await Future.delayed(Duration(milliseconds: 1));
 
-    _history = RatingHistory(project: widget.project, matches: actualMatches, progressCallback: (currentSteps, totalSteps, eventName) async {
+    // Copy the project so we can edit it in the rater view without breaking
+    _history = RatingHistory(project: widget.project.copy(), matches: actualMatches, progressCallback: (currentSteps, totalSteps, eventName) async {
       setState(() {
         _currentProgress = currentSteps;
         _totalProgress = totalSteps;
@@ -818,40 +821,84 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         duration: Duration(seconds: 10),
         action: SnackBarAction(
           label: "VIEW",
-          onPressed: () {
-            showDialog(context: context, builder: (context) {
-              var keys = failedMatches.keys.toList();
-              return AlertDialog(
-                title: Text("Failed matches"),
-                content: SizedBox(
-                  width: 500,
-                  child: ListView.builder(
-                    itemCount: keys.length,
-                    itemBuilder: (context, i) {
-                      var key = keys[i];
-                      return MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: GestureDetector(
-                          onTap: () {
-                            HtmlOr.openLink(key);
+          onPressed: () async {
+            await showDialog(context: context, builder: (context) {
+              return StatefulBuilder(
+                builder: (context, setState) {
+                  return AlertDialog(
+                    title: Text("Failed matches"),
+                    scrollable: true,
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextButton(
+                          child: Text("REMOVE ALL"),
+                          onPressed: () {
+                            _history.project.matchUrls.removeWhere((element) => failedMatches.keys.contains(element));
+                            setState(() {
+                              failedMatches.clear();
+                              _historyChanged = true;
+                            });
+
+                            Navigator.of(context).pop();
                           },
-                          child: Padding(
-                            padding: const EdgeInsets.all(4.0),
-                            child: Text("$key (${failedMatches[key]})",
-                              overflow: TextOverflow.fade,
-                              softWrap: false,
-                              style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                                decoration: TextDecoration.underline,
-                                color: Colors.blueAccent,
+                        ),
+                        for(var key in failedMatches.keys) Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              child: GestureDetector(
+                                onTap: () {
+                                  HtmlOr.openLink(key);
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.all(4.0),
+                                  child: Text(key,
+                                    overflow: TextOverflow.fade,
+                                    softWrap: false,
+                                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                                      decoration: TextDecoration.underline,
+                                      color: Colors.blueAccent,
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                )
+                            SizedBox(width: 5),
+                            Padding(
+                              padding: const EdgeInsets.all(4.0),
+                              child: Text(failedMatches[key]?.message ?? ""),
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.remove),
+                              onPressed: () {
+                                _history.project.matchUrls.remove(key);
+                                setState(() {
+                                  _historyChanged = true;
+                                  failedMatches.remove(key);
+                                });
+
+                                if(failedMatches.isEmpty) Navigator.of(context).pop();
+                              },
+                            ),
+                          ],
+                        )
+                      ],
+                    ),
+                    actions: [
+                      TextButton(
+                        child: Text("CLOSE"),
+                        onPressed: Navigator.of(context).pop,
+                      )
+                    ],
+                  );
+                }
               );
+            });
+
+            setState(() {
+              // catch any changes made by the dialog
             });
           },
         ),

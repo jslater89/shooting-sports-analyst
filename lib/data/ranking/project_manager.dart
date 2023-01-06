@@ -195,6 +195,10 @@ class RatingProject {
     required this.matchUrls,
   });
 
+  RatingProject copy() {
+    return RatingProject.fromJson(jsonDecode(this.toJson()));
+  }
+
   factory RatingProject.fromJson(Map<String, dynamic> encodedProject) {
     var combineOpenPCC = (encodedProject[_combineOpenPCCKey] ?? false) as bool;
     var combineLimitedCO = (encodedProject[_combineLimitedCOKey] ?? false) as bool;
