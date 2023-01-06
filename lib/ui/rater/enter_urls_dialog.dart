@@ -3,10 +3,11 @@ import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 
 class EnterUrlsDialog extends StatefulWidget {
   const EnterUrlsDialog({
-    Key? key, required this.cache,
+    Key? key, required this.cache, this.existingUrls = const [],
   }) : super(key: key);
 
   final MatchCache cache;
+  final List<String> existingUrls;
 
   @override
   State<EnterUrlsDialog> createState() => _EnterUrlsDialogState();
@@ -53,12 +54,12 @@ class _EnterUrlsDialogState extends State<EnterUrlsDialog> {
               ),
               SizedBox(height: 8),
               for(var url in matchUrls) SizedBox(
-                width: 400,
+                width: 500,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   mainAxisSize: MainAxisSize.max,
                   children: [
-                    Text(displayNames[url] ?? url, overflow: TextOverflow.fade),
+                    Expanded(child: Text(displayNames[url] ?? url, overflow: TextOverflow.fade)),
                     SizedBox(width: 10),
                     IconButton(
                       icon: Icon(Icons.remove),
@@ -110,6 +111,17 @@ class _EnterUrlsDialogState extends State<EnterUrlsDialog> {
         displayNames[url] = match.name ?? "$url (missing name)";
       });
     }
+    else {
+      var err = res.unwrapErr();
+      if(err.unrecoverable) {
+        var matchId = url
+            .split("/")
+            .last;
+        setState(() {
+          displayNames[url] = "URL invalid: ${err.message.toLowerCase()} (id: $matchId)";
+        });
+      }
+    }
   }
 
   bool validate(String url) {
@@ -125,7 +137,16 @@ class _EnterUrlsDialogState extends State<EnterUrlsDialog> {
       });
       return false;
     }
+    else if(matchUrls.contains(url) || widget.existingUrls.contains(url)) {
+      setState(() {
+        _errorText = "Project already uses match";
+      });
+      return false;
+    }
     else {
+      setState(() {
+        _errorText = "";
+      });
       return true;
     }
   }

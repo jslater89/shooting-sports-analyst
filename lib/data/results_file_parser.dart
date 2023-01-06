@@ -21,6 +21,17 @@ enum MatchGetError implements Error {
       case MatchGetError.formatError: return "report.txt file format error";
     }
   }
+
+  bool get unrecoverable {
+    switch(this) {
+      case MatchGetError.notHitFactor:
+      case MatchGetError.noMatch:
+      case MatchGetError.formatError:
+        return true;
+      default:
+        return false;
+    }
+  }
 }
 
 Future<Result<PracticalMatch, MatchGetError>> processScoreFile(String fileContents) async {

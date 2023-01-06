@@ -470,7 +470,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 color: Theme.of(context).primaryColor,
                                 onPressed: () async {
                                   var urls = await showDialog<List<String>>(context: context, builder: (context) {
-                                    return EnterUrlsDialog(cache: MatchCache());
+                                    return EnterUrlsDialog(cache: MatchCache(), existingUrls: matchUrls);
                                   }, barrierDismissible: false);
 
                                   if(urls == null) return;
