@@ -155,6 +155,10 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       _combineLimitedCO = project.settings.groups.contains(RaterGroup.limitedCO);
       _combineOpenPCC = project.settings.groups.contains(RaterGroup.openPcc);
       _shooterAliases = project.settings.shooterAliases;
+      _memNumMappings = project.settings.userMemberNumberMappings;
+      _memNumMappingBlacklist = project.settings.memberNumberMappingBlacklist;
+      _memNumWhitelist = project.settings.memberNumberWhitelist;
+      _hiddenShooters = project.settings.hiddenShooters;
     });
     var algorithm = project.settings.algorithm;
     _ratingSystem = algorithm;
@@ -217,6 +221,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   List<String> _memNumWhitelist = [];
   Map<String, String> _memNumMappings = {};
   Map<String, String> _shooterAliases = defaultShooterAliases;
+  Map<String, String> _memNumMappingBlacklist = {};
+  List<String> _hiddenShooters = [];
   String _validationError = "";
 
   RatingHistorySettings? _makeAndValidateSettings() {
@@ -256,6 +262,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       preserveHistory: _keepHistory,
       memberNumberWhitelist: _memNumWhitelist,
       userMemberNumberMappings: _memNumMappings,
+      memberNumberMappingBlacklist: _memNumMappingBlacklist,
+      hiddenShooters: _hiddenShooters,
       shooterAliases: _shooterAliases,
     );
   }
@@ -955,9 +963,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         var mappings = await showDialog<Map<String, String>>(context: context, builder: (context) {
           return MemberNumberMapDialog(
             title: "Manual member number mappings",
-            helpText: "Enter a source and target member number mapping here, in the event that "
-                "the automatic member number mapping does not correctly link two member numbers belonging "
-                "to the same shooter. Member numbers entered here will only be mapped to each other. "
+            helpText: "If the automatic member number mapper does not correctly merge ratings "
+                "on two member numbers belonging to the same shooter, you can add manual mappings "
+                "here. Member numbers entered here will only be mapped to each other. "
                 "Prefixes are removed automatically.",
             sourceHintText: "A123456",
             targetHintText: "L1234",
@@ -969,6 +977,42 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
           _memNumMappings = mappings;
         }
         break;
+
+      case _MenuEntry.numberMappingBlacklist:
+        var mappings = await showDialog<Map<String, String>>(context: context, builder: (context) {
+          return MemberNumberMapDialog(
+            title: "Member number mapping blacklist",
+            helpText: "Pairs of member numbers given here will never be mapped to one another. Enter a pair "
+                "of member numbers here when the automatic member number mapping process incorrectly merges "
+                "two distinct shooters who share a name.",
+            sourceHintText: "A123456",
+            targetHintText: "L1234",
+            initialMap: _memNumMappingBlacklist,
+          );
+        });
+
+        if(mappings != null) {
+          _memNumMappingBlacklist = mappings;
+        }
+        break;
+
+
+      case _MenuEntry.hiddenShooters:
+        var hidden = await showDialog<List<String>>(context: context, builder: (context) {
+          return MemberNumberDialog(
+            title: "Hide shooters",
+            helpText: "Hidden shooters will be used to calculate ratings, but not shown in the "
+                "display. Use this, for example, to hide non-local shooters from local ratings.\n\n"
+                "This setting can be edited after ratings are calculated.",
+            hintText: "A102675",
+            initialList: _hiddenShooters,
+          );
+        }, barrierDismissible: false);
+
+        if(hidden != null) {
+          _hiddenShooters = hidden;
+        }
+        break;
     }
   }
 }
@@ -976,7 +1020,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 enum _MenuEntry {
   import,
   export,
+  hiddenShooters,
   numberMappings,
+  numberMappingBlacklist,
   numberWhitelist,
   clearCache,
 }
@@ -988,8 +1034,12 @@ extension _MenuEntryUtils on _MenuEntry {
         return "Import";
       case _MenuEntry.export:
         return "Export";
+      case _MenuEntry.hiddenShooters:
+        return "Hide shooters";
       case _MenuEntry.numberMappings:
-        return "Manual member number mappings";
+        return "Map member numbers";
+      case _MenuEntry.numberMappingBlacklist:
+        return "Number mapping blacklist";
       case _MenuEntry.numberWhitelist:
         return "Member whitelist";
       case _MenuEntry.clearCache:

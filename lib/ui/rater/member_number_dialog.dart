@@ -112,6 +112,12 @@ class _MemberNumberDialogState extends State<MemberNumberDialog> {
       });
       return;
     }
+    else if(numbers.contains(input)) {
+      setState(() {
+        errorText = "List already contains that number.";
+      });
+      return;
+    }
     else {
       setState(() {
         errorText = "";

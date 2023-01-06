@@ -12,6 +12,7 @@ import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
+import 'package:uspsa_result_viewer/ui/rater/member_number_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/prediction/prediction_view.dart';
 import 'package:uspsa_result_viewer/ui/rater/prediction/registration_parser.dart';
 import 'package:uspsa_result_viewer/ui/rater/rater_stats_dialog.dart';
@@ -594,6 +595,31 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
               }
             },
           )
+      ),
+      Tooltip(
+        message: "Edit hidden shooters",
+        child: IconButton(
+          icon: Icon(Icons.remove_red_eye_rounded),
+          onPressed: () async {
+            var existingHidden = _history.settings.hiddenShooters;
+            var hidden = await showDialog<List<String>>(context: context, builder: (context) {
+              return MemberNumberDialog(
+                title: "Hide shooters",
+                helpText: "Hidden shooters will be used to calculate ratings, but not shown in the "
+                    "display. Use this, for example, to hide non-local shooters from local ratings.",
+                hintText: "A102675",
+                initialList: existingHidden,
+              );
+            }, barrierDismissible: false);
+
+            if(hidden != null) {
+              setState(() {
+                _history.settings.hiddenShooters = hidden;
+                _historyChanged = true;
+              });
+            }
+          },
+        )
       ),
       Tooltip(
         message: "Download ratings as CSV",
