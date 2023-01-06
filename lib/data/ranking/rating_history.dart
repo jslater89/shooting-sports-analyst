@@ -309,6 +309,12 @@ class RatingHistorySettings {
   /// shooters, and tries to determine if any name maps to more than one member number. If it
   /// does, the rater combines the two ratings.
   Map<String, String> shooterAliases;
+
+  /// A map of user-specified member number mappings. Should be in [Rater.processMemberNumber] format.
+  ///
+  /// Mappings may be made in either direction, but will preferentially be made from key to value:
+  /// map[A1234] = L123 will try to map A1234 to L123 first. If L123 has rating events but A1234 doesn't,
+  /// when both numbers are encountered for the first time, it will make the mapping in the other direction.
   Map<String, String> userMemberNumberMappings;
 
   /// A map of member number mappings that should _not_ be made automatically.
@@ -316,12 +322,18 @@ class RatingHistorySettings {
   /// If a candidate member number change appears in this map, in either direction
   /// (i.e., map[old] = new or map[new] = old), the shooter ratings corresponding
   /// to those numbers will not be merged.
+  ///
+  /// Should be in [Rater.processMemberNumber] format.
   Map<String, String> memberNumberMappingBlacklist;
 
-  // TODO: implement user-defined member number mappings
-  // Check the list; if after adding shooters we have a situation where
-  // both ends of the mapping are present, add that mapping and delete the
-  // member numbers from the list of mappings under consideration.
+  /// A list of shooters to hide from the rating display, based on member number.
+  ///
+  /// They are still used to calculate ratings, but not shown in the UI or exported
+  /// to CSV, so that users can generate e.g. a club or section leaderboard, without
+  /// having a bunch of traveling L2 shooters in the mix.
+  ///
+  /// Should be in [Rater.processMemberNumber] format.
+  List<String> hiddenShooters;
 
   RatingHistorySettings({
     this.preserveHistory = false,
@@ -331,6 +343,7 @@ class RatingHistorySettings {
     this.shooterAliases = defaultAliases.defaultShooterAliases,
     this.userMemberNumberMappings = const {},
     this.memberNumberMappingBlacklist = const {},
+    this.hiddenShooters = const [],
   });
 
   static List<RaterGroup> groupsForSettings({bool combineOpenPCC = false, bool combineLimitedCO = false, bool combineLocap = true}) {

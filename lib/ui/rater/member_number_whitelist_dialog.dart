@@ -40,7 +40,7 @@ class _MemberNumberWhitelistDialogState extends State<MemberNumberWhitelistDialo
                     keyboardType: TextInputType.multiline,
                     maxLines: null,
                     decoration: InputDecoration(
-                      hintText: "102675..."
+                      hintText: "A102675..."
                     ),
                     controller: nameController,
                     inputFormatters: [

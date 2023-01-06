@@ -350,6 +350,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                 onRatingsFiltered: (ratings) {
                   _ratings = ratings;
                 },
+                hiddenShooters: _history.settings.hiddenShooters,
               );
             }).toList(),
           ),

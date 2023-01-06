@@ -13,6 +13,7 @@ class RaterView extends StatefulWidget {
     Key? key, required this.rater, required this.currentMatch, this.search, this.maxAge, this.minRatings = 0,
     this.sortMode = RatingSortMode.rating,
     this.onRatingsFiltered,
+    this.hiddenShooters = const [],
   }) : super(key: key);
 
   final String? search;
@@ -21,6 +22,10 @@ class RaterView extends StatefulWidget {
   final Rater rater;
   final PracticalMatch currentMatch;
   final RatingSortMode sortMode;
+
+  /// A list of shooters to hide from the results. Entries are member numbers.
+  final List<String> hiddenShooters;
+
   final void Function(List<ShooterRating>)? onRatingsFiltered;
 
   @override
@@ -64,6 +69,11 @@ class _RaterViewState extends State<RaterView> {
 
   int _ratingWindow = 12;
   List<Widget> _buildRatingRows() {
+    var hiddenShooters = [];
+    for(int i = 0; i < widget.hiddenShooters.length; i++) {
+      hiddenShooters.add(Rater.processMemberNumber(widget.hiddenShooters[i]));
+    }
+
     var sortedRatings = widget.rater.uniqueShooters.where((e) => e.ratingEvents.length >= widget.minRatings);
     // var sortedRatings = widget.rater.uniqueShooters.where((e) => e.ratingEvents.length > widget.minRatings).sorted((a, b) {
     //   var bRating = b.averageRating(window: _ratingWindow);
@@ -72,14 +82,18 @@ class _RaterViewState extends State<RaterView> {
     //   return bRating.averageOfIntermediates.compareTo(aRating.averageOfIntermediates);
     // });
 
-    if(widget.search != null && widget.search!.isNotEmpty) {
-      sortedRatings = sortedRatings.where((r) => r.getName(suffixes: false).toLowerCase().contains(widget.search!.toLowerCase())).toList();
-    }
-
     if(widget.maxAge != null) {
       var cutoff = widget.currentMatch.date ?? DateTime.now();
       cutoff = cutoff.subtract(widget.maxAge!);
       sortedRatings = sortedRatings.where((r) => r.lastSeen.isAfter(cutoff));
+    }
+
+    if(widget.search != null && widget.search!.isNotEmpty) {
+      sortedRatings = sortedRatings.where((r) => r.getName(suffixes: false).toLowerCase().contains(widget.search!.toLowerCase())).toList();
+    }
+
+    if(widget.hiddenShooters.isNotEmpty) {
+      sortedRatings = sortedRatings.where((r) => !hiddenShooters.contains(r.memberNumber));
     }
 
     var comparator = widget.rater.ratingSystem.comparatorFor(widget.sortMode) ?? widget.sortMode.comparator();

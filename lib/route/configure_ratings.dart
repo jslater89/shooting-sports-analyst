@@ -15,6 +15,8 @@ import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/ui/rater/enter_practiscore_source_dialog.dart';
+import 'package:uspsa_result_viewer/ui/rater/member_number_dialog.dart';
+import 'package:uspsa_result_viewer/ui/rater/member_number_map_dialog.dart';
 import 'package:uspsa_result_viewer/ui/result_page.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/confirm_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/enter_name_dialog.dart';
@@ -214,6 +216,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   ScrollController _matchScroll = ScrollController();
 
   List<String> _memNumWhitelist = [];
+  Map<String, String> _memNumMappings = {};
   Map<String, String> _shooterAliases = defaultShooterAliases;
   String _validationError = "";
 
@@ -253,6 +256,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       groups: groups,
       preserveHistory: _keepHistory,
       memberNumberWhitelist: _memNumWhitelist,
+      userMemberNumberMappings: _memNumMappings,
       shooterAliases: _shooterAliases,
     );
   }
@@ -916,10 +920,18 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
       case _MenuEntry.numberWhitelist:
         var whitelist = await showDialog<List<String>>(context: context, builder: (context) {
-          return MemberNumberWhitelistDialog(_memNumWhitelist);
-        }, barrierDismissible: false) ?? [];
+          return MemberNumberDialog(
+            title: "Whitelist member numbers",
+            helpText: "Whitelisted member numbers will be included in the ratings, even if they fail "
+                "validation in some way. Enter one per line. Prefixes (TY, A, L, etc.) will be removed automatically.",
+            hintText: "A102675",
+            initialList: _memNumWhitelist,
+          );
+        }, barrierDismissible: false);
 
-        _memNumWhitelist = whitelist;
+        if(whitelist != null) {
+          _memNumWhitelist = whitelist;
+        }
         break;
 
 
@@ -935,6 +947,27 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
           await MatchCache().ready;
           MatchCache().clear();
         }
+        break;
+
+
+      case _MenuEntry.numberMappings:
+        var mappings = await showDialog<Map<String, String>>(context: context, builder: (context) {
+          return MemberNumberMapDialog(
+            title: "Manual member number mappings",
+            helpText: "Enter a source and target member number mapping here, in the event that "
+                "the automatic member number mapping does not correctly link two member numbers belonging "
+                "to the same shooter. Member numbers entered here will only be mapped to each other. "
+                "Prefixes are removed automatically.",
+            sourceHintText: "A123456",
+            targetHintText: "L1234",
+            initialMap: _memNumMappings,
+          );
+        });
+
+        if(mappings != null) {
+          _memNumMappings = mappings;
+        }
+        break;
     }
   }
 }
@@ -942,6 +975,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 enum _MenuEntry {
   import,
   export,
+  numberMappings,
   numberWhitelist,
   clearCache,
 }
@@ -953,6 +987,8 @@ extension _MenuEntryUtils on _MenuEntry {
         return "Import";
       case _MenuEntry.export:
         return "Export";
+      case _MenuEntry.numberMappings:
+        return "Manual member number mappings";
       case _MenuEntry.numberWhitelist:
         return "Member whitelist";
       case _MenuEntry.clearCache:
