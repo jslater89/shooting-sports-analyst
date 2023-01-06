@@ -21,7 +21,6 @@ import 'package:uspsa_result_viewer/ui/result_page.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/confirm_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/enter_name_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/enter_urls_dialog.dart';
-import 'package:uspsa_result_viewer/ui/rater/member_number_whitelist_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/select_project_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/shooter_aliases_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/match_cache_chooser_dialog.dart';
@@ -281,6 +280,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         ),
       );
     }
+
+    // Match cache is ready from here on down
     return Column(
       children: [
         Padding(
@@ -469,7 +470,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 color: Theme.of(context).primaryColor,
                                 onPressed: () async {
                                   var urls = await showDialog<List<String>>(context: context, builder: (context) {
-                                    return EnterUrlsDialog();
+                                    return EnterUrlsDialog(cache: MatchCache());
                                   }, barrierDismissible: false);
 
                                   if(urls == null) return;

@@ -65,6 +65,7 @@ class _MemberNumberDialogState extends State<MemberNumberDialog> {
                 },
               ),
             ),
+            SizedBox(height: 8),
             for(var number in numbers) SizedBox(
               width: widget.width / 3,
               child: Row(

@@ -97,6 +97,7 @@ class _MemberNumberMapDialogState extends State<MemberNumberMapDialog> {
                 ],
               ),
             ),
+            SizedBox(height: 8),
             for(var source in mappings.keys) SizedBox(
               width: widget.width / 3,
               child: Row(
