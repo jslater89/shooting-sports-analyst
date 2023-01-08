@@ -15,11 +15,13 @@ class MatchCacheChooserDialog extends StatefulWidget {
     this.matches,
     this.showStats = false,
     this.helpText,
+    this.multiple = false,
   }) : super(key: key);
 
   final bool showStats;
   final List<PracticalMatch>? matches;
   final String? helpText;
+  final bool multiple;
 
   @override
   State<MatchCacheChooserDialog> createState() => _MatchCacheChooserDialogState();
@@ -35,6 +37,7 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
 
   List<PracticalMatch> matches = [];
   List<PracticalMatch> searchedMatches = [];
+  Set<PracticalMatch> selectedMatches = {};
 
   TextEditingController searchController = TextEditingController();
 
@@ -117,6 +120,20 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
         ),
         child: cache != null ? _matchSelectBody() : _loadingIndicatorBody()
       ),
+      actions: [
+        if(widget.multiple) TextButton(
+          child: Text("CANCEL"),
+          onPressed: () {
+            Navigator.of(context).pop(null);
+          },
+        ),
+        if(widget.multiple) TextButton(
+          child: Text("CONFIRM"),
+          onPressed: () {
+            Navigator.of(context).pop(selectedMatches.toList());
+          },
+        )
+      ],
     );
   }
 
@@ -149,9 +166,15 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
           message: "Note that the cache may contain multiple entries for each match, one for each PractiScore "
               "ID format."
         ),
+        if(widget.showStats) SizedBox(height: 5),
         if(widget.helpText != null) Text(
           widget.helpText!
         ),
+        if(widget.helpText != null) SizedBox(height: 5),
+        if(widget.multiple) Text(
+          "${selectedMatches.length} matches selected"
+        ),
+        if(widget.multiple) SizedBox(height: 5),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -204,12 +227,29 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
                 title: Text(searchedMatches[i].name!, overflow: TextOverflow.ellipsis),
                 visualDensity: VisualDensity(vertical: -4),
                 onTap: () {
-                  Navigator.of(context).pop(searchedMatches[i]);
+                  if(widget.multiple) {
+                    if(selectedMatches.contains(searchedMatches[i])) {
+                      setState(() {
+                        selectedMatches.remove(searchedMatches[i]);
+                      });
+                    }
+                    else {
+                      setState(() {
+                        selectedMatches.add(searchedMatches[i]);
+                      });
+                    }
+                  }
+                  else {
+                    Navigator.of(context).pop(searchedMatches[i]);
+                  }
                   if(addedMatch) cache!.save();
                 },
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    if(widget.multiple && selectedMatches.contains(searchedMatches[i])) Icon(
+                      Icons.check,
+                    ),
                     IconButton(
                       icon: Icon(Icons.delete),
                       onPressed: () async {

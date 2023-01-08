@@ -529,18 +529,21 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 icon: Icon(Icons.dataset),
                                 color: Theme.of(context).primaryColor,
                                 onPressed: () async {
-                                  var match = await showDialog<PracticalMatch>(context: context, builder: (context) {
-                                    return MatchCacheChooserDialog();
+                                  var matches = await showDialog<List<PracticalMatch>>(context: context, builder: (context) {
+                                    return MatchCacheChooserDialog(multiple: true);
                                   }, barrierDismissible: false);
 
-                                  if(match == null) return;
+                                  print("Matches from cache: $matches");
 
-                                  var url = MatchCache().getUrl(match);
+                                  if(matches == null) return;
 
-                                  if(url == null) return;
+                                  for(var match in matches) {
+                                    var url = MatchCache().getUrl(match);
+                                    if (url == null) throw StateError("impossible");
 
-                                  if(!matchUrls.contains(url)) {
-                                    matchUrls.insert(0, url);
+                                    if (!matchUrls.contains(url)) {
+                                      matchUrls.insert(0, url);
+                                    }
                                   }
 
                                   setState(() {
@@ -791,16 +794,29 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         child: IconButton(
           icon: Icon(Icons.create_new_folder_outlined),
           onPressed: () async {
+            var controller = TextEditingController();
             var confirm = await showDialog<bool>(context: context, builder: (context) =>
               ConfirmDialog(
-                content: Text("Creating a new project will reset settings to default and clear all currently-selected matches."),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text("Creating a new project will reset settings to default and clear all currently-selected matches."),
+                    TextField(
+                      controller: controller,
+                      decoration: InputDecoration(
+                        hintText: "Project Name",
+                      ),
+                    )
+                  ],
+                ),
                 positiveButtonLabel: "CREATE",
+                negativeButtonLabel: "CANCEL",
               )
             );
 
             if(confirm ?? false) {
               setState(() {
-                _lastProjectName = "New Project";
+                _lastProjectName = controller.text.trim().isNotEmpty ? controller.text.trim() : "New Project";
 
                 matchUrls.clear();
                 urlDisplayNames.clear();
