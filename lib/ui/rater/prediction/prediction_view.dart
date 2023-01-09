@@ -130,11 +130,13 @@ class _PredictionViewState extends State<PredictionView> {
 
     if(matchUrl == null) return;
 
-    var match = await MatchCache().getMatch(matchUrl);
-    if(match == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unable to retrieve match")));
+    var result = await MatchCache().getMatch(matchUrl);
+    if(result.isErr()) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.unwrapErr().message)));
       return;
     }
+
+    var match = result.unwrap();
 
     var filters = widget.rater.filters!;
     var shooters = match.filterShooters(

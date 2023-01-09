@@ -173,6 +173,9 @@ const _keepHistoryKey = "keepHistory";
 const _urlsKey = "urls";
 const _whitelistKey = "memNumWhitelist";
 const _aliasesKey = "aliases";
+const _memberNumberMappingsKey = "numMappings";
+const _memberNumberMappingBlacklistKey = "numMapBlacklist";
+const _hiddenShootersKey = "hiddenShooters";
 
 // Values for the multiplayer percent elo rater.
 
@@ -186,13 +189,16 @@ class RatingProject {
   String name;
   RatingHistorySettings settings;
   List<String> matchUrls;
-  // TODO: start storing/caching match IDs instead of URLS
-  
+
   RatingProject({
     required this.name,
     required this.settings,
     required this.matchUrls,
   });
+
+  RatingProject copy() {
+    return RatingProject.fromJson(jsonDecode(this.toJson()));
+  }
 
   factory RatingProject.fromJson(Map<String, dynamic> encodedProject) {
     var combineOpenPCC = (encodedProject[_combineOpenPCCKey] ?? false) as bool;
@@ -213,12 +219,20 @@ class RatingProject {
       memberNumberWhitelist: ((encodedProject[_whitelistKey] ?? []) as List<dynamic>).map((item) => item as String).toList(),
       shooterAliases: ((encodedProject[_aliasesKey] ?? defaultShooterAliases) as Map<String, dynamic>).map<String, String>((k, v) =>
         MapEntry(k, v as String)
-      )
+      ),
+      userMemberNumberMappings: ((encodedProject[_memberNumberMappingsKey] ?? <String, dynamic>{}) as Map<String, dynamic>).map<String, String>((k, v) =>
+        MapEntry(k, v as String)
+      ),
+      memberNumberMappingBlacklist: ((encodedProject[_memberNumberMappingBlacklistKey] ?? <String, dynamic>{}) as Map<String, dynamic>).map<String, String>((k, v) =>
+          MapEntry(k, v as String)
+      ),
+      hiddenShooters: ((encodedProject[_hiddenShootersKey] ?? []) as List<dynamic>).map((item) => item as String).toList(),
     );
     var matchUrls = (encodedProject[_urlsKey] as List<dynamic>).map((item) => item as String).toList();
     var name = encodedProject[_nameKey] as String;
 
-    return RatingProject(name: name, settings: settings, matchUrls: matchUrls);
+    var rp = RatingProject(name: name, settings: settings, matchUrls: matchUrls);
+    return rp;
   }
 
   static RatingSystem _algorithmForName(String name, Map<String, dynamic> encodedProject) {
@@ -244,6 +258,9 @@ class RatingProject {
     map[_urlsKey] = matchUrls;
     map[_whitelistKey] = settings.memberNumberWhitelist;
     map[_aliasesKey] = settings.shooterAliases;
+    map[_memberNumberMappingsKey] = settings.userMemberNumberMappings;
+    map[_memberNumberMappingBlacklistKey] = settings.memberNumberMappingBlacklist;
+    map[_hiddenShootersKey] = settings.hiddenShooters;
 
     /// Alg-specific settings
     settings.algorithm.encodeToJson(map);

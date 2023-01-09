@@ -178,10 +178,6 @@ class MyApp extends StatelessWidget {
       ),
       initialRoute: '/',
       onGenerateRoute: globals.router.generator,
-      // The default desktop behavior is dumb in 3.3.0
-      // scrollBehavior: ScrollConfiguration.of(context).copyWith(
-      //   platform: TargetPlatform.android,
-      // ),
     );
   }
 }

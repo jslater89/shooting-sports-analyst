@@ -96,28 +96,31 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      GestureDetector(
-                                        onTap: () {
-                                          _launchScoreView(e);
-                                        },
-                                        child: Container(
-                                          key: GlobalObjectKey(e.hashCode),
-                                          color: e == _highlighted ? Colors.black12 : null,
-                                          child: Row(
-                                            mainAxisAlignment: MainAxisAlignment.end,
-                                            children: [
-                                              Expanded(
-                                                flex: 10,
-                                                child: Text("${e.eventName}", style: Theme.of(context).textTheme.bodyText2!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).errorColor : null)),
-                                              ),
-                                              Expanded(
-                                                flex: 2,
-                                                child: Align(
-                                                    alignment: Alignment.centerRight,
-                                                    child: Text("${e.ratingChange.toStringAsFixed(2)}", style: Theme.of(context).textTheme.bodyText2!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).errorColor : null))
+                                      MouseRegion(
+                                        cursor: SystemMouseCursors.click,
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            _launchScoreView(e);
+                                          },
+                                          child: Container(
+                                            key: GlobalObjectKey(e.hashCode),
+                                            color: e == _highlighted ? Colors.black12 : null,
+                                            child: Row(
+                                              mainAxisAlignment: MainAxisAlignment.end,
+                                              children: [
+                                                Expanded(
+                                                  flex: 10,
+                                                  child: Text("${e.eventName}", style: Theme.of(context).textTheme.bodyText2!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).errorColor : null)),
                                                 ),
-                                              )
-                                            ],
+                                                Expanded(
+                                                  flex: 2,
+                                                  child: Align(
+                                                      alignment: Alignment.centerRight,
+                                                      child: Text("${e.ratingChange.toStringAsFixed(2)}", style: Theme.of(context).textTheme.bodyText2!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).errorColor : null))
+                                                  ),
+                                                )
+                                              ],
+                                            ),
                                           ),
                                         ),
                                       ),

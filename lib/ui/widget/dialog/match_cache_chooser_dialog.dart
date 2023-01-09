@@ -3,14 +3,25 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/loading_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/url_entry_dialog.dart';
+import 'package:uspsa_result_viewer/util.dart';
 
 /// Choose matches from the match cache, or a list of matches.
 class MatchCacheChooserDialog extends StatefulWidget {
-  const MatchCacheChooserDialog({Key? key, this.matches}) : super(key: key);
+  const MatchCacheChooserDialog({
+    Key? key,
+    this.matches,
+    this.showStats = false,
+    this.helpText,
+    this.multiple = false,
+  }) : super(key: key);
 
+  final bool showStats;
   final List<PracticalMatch>? matches;
+  final String? helpText;
+  final bool multiple;
 
   @override
   State<MatchCacheChooserDialog> createState() => _MatchCacheChooserDialogState();
@@ -26,6 +37,7 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
 
   List<PracticalMatch> matches = [];
   List<PracticalMatch> searchedMatches = [];
+  Set<PracticalMatch> selectedMatches = {};
 
   TextEditingController searchController = TextEditingController();
 
@@ -108,6 +120,20 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
         ),
         child: cache != null ? _matchSelectBody() : _loadingIndicatorBody()
       ),
+      actions: [
+        if(widget.multiple) TextButton(
+          child: Text("CANCEL"),
+          onPressed: () {
+            Navigator.of(context).pop(null);
+          },
+        ),
+        if(widget.multiple) TextButton(
+          child: Text("CONFIRM"),
+          onPressed: () {
+            Navigator.of(context).pop(selectedMatches.toList());
+          },
+        )
+      ],
     );
   }
 
@@ -135,10 +161,20 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if(widget.matches == null) Tooltip(
-          child: Text("Cache stats: ${cache!.length} entries, ${(cache!.size / (1024 * 1024)).toStringAsFixed(1)}mb"),
-          message: "Note that the cache may contain multiple entries "
+        if(widget.showStats) Tooltip(
+          child: Text("Cache stats: ${cache!.length} entries, ${cache!.uniqueMatches} matches, ${(cache!.size / (1024 * 1024)).toStringAsFixed(1)}mb"),
+          message: "Note that the cache may contain multiple entries for each match, one for each PractiScore "
+              "ID format."
         ),
+        if(widget.showStats) SizedBox(height: 5),
+        if(widget.helpText != null) Text(
+          widget.helpText!
+        ),
+        if(widget.helpText != null) SizedBox(height: 5),
+        if(widget.multiple) Text(
+          "${selectedMatches.length} matches selected"
+        ),
+        if(widget.multiple) SizedBox(height: 5),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -160,16 +196,21 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
                 ));
 
                 if(url != null) {
-                  var hasMatch = await cache!.getMatch(url, localOnly: true);
-                  if(hasMatch != null) return;
+                  var result = await cache!.getMatch(url, localOnly: true);
+                  if(result.isOk()) return;
 
-                  var matchFuture = cache!.getMatch(url);
-                  var match = await showDialog<PracticalMatch>(context: context, builder: (c) => LoadingDialog(waitOn: matchFuture));
-                  if(match != null) {
-                    setState(() {
-                      _updateMatches();
-                      addedMatch = true;
-                    });
+                  var resultFuture = cache!.getMatch(url);
+                  var res2 = await showDialog<Result<PracticalMatch, MatchGetError>>(context: context, builder: (c) => LoadingDialog(waitOn: resultFuture));
+                  if(res2 != null) {
+                    if(res2.isOk()) {
+                      setState(() {
+                        _updateMatches();
+                        addedMatch = true;
+                      });
+                    }
+                    else {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res2.unwrapErr().message)));
+                    }
                   }
                 }
               },
@@ -186,12 +227,29 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
                 title: Text(searchedMatches[i].name!, overflow: TextOverflow.ellipsis),
                 visualDensity: VisualDensity(vertical: -4),
                 onTap: () {
-                  Navigator.of(context).pop(searchedMatches[i]);
+                  if(widget.multiple) {
+                    if(selectedMatches.contains(searchedMatches[i])) {
+                      setState(() {
+                        selectedMatches.remove(searchedMatches[i]);
+                      });
+                    }
+                    else {
+                      setState(() {
+                        selectedMatches.add(searchedMatches[i]);
+                      });
+                    }
+                  }
+                  else {
+                    Navigator.of(context).pop(searchedMatches[i]);
+                  }
                   if(addedMatch) cache!.save();
                 },
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    if(widget.multiple && selectedMatches.contains(searchedMatches[i])) Icon(
+                      Icons.check,
+                    ),
                     IconButton(
                       icon: Icon(Icons.delete),
                       onPressed: () async {

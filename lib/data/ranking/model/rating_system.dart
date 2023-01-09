@@ -59,7 +59,7 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
   /// Return a string containing a CSV representation of the
   /// given shooter ratings.
   String ratingsToCsv(List<ShooterRating> ratings);
-  encodeToJson(Map<String, dynamic> json);
+  void encodeToJson(Map<String, dynamic> json);
 
   /// Return the current settings for this rating system.
   S get settings;

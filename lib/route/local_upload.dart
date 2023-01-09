@@ -36,10 +36,15 @@ class _UploadedResultPageState extends State<UploadedResultPage> {
 
       }
 
-      PracticalMatch m = await processScoreFile(_resultString!);
-      setState(() {
-        _match = m;
-      });
+      var result = await processScoreFile(_resultString!);
+      if(result.isOk()) {
+        setState(() {
+          _match = result.unwrap();
+        });
+      }
+      else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.unwrapErr().message)));
+      }
     }
     catch(err) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("No file given. Go back and try again.")));

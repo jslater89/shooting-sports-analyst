@@ -15,3 +15,32 @@ int fastStringHash(String string) {
 
   return hash;
 }
+
+abstract class Error {
+  String get message;
+}
+
+// My Rust is showing
+class Result<T, E extends Error> {
+  final T? _result;
+  final E? _error;
+
+  bool isOk() {
+    return _result != null;
+  }
+
+  bool isErr() {
+    return _error != null;
+  }
+
+  T unwrap() {
+    return _result!;
+  }
+
+  E unwrapErr() {
+    return _error!;
+  }
+
+  Result.ok(T result) : this._result = result, this._error = null;
+  Result.err(E error) : this._error = error, this._result = null;
+}

@@ -61,6 +61,8 @@ class Timings {
 
   double removeUnseenShootersMillis = 0.0;
 
+  double get sum => addShootersMillis + dedupShootersMillis + rateMatchesMillis + removeUnseenShootersMillis;
+
   @override
   String toString() {
     var content = "TIMINGS:\n";
@@ -79,6 +81,7 @@ class Timings {
     content += "\t\t\tPrint info: ${printInfo.toStringAsFixed(1)}\n";
     content += "\tUpdate connectedness: ${updateConnectednessMillis.toStringAsFixed(1)}\n";
     content += "Remove unseen shooters: ${removeUnseenShootersMillis.toStringAsFixed(1)}\n";
+    content += "Total: ${sum.toStringAsFixed(1)}, ${(sum / (shooterCount * matchCount)).toStringAsFixed(3)} per match entry";
 
     return content;
   }

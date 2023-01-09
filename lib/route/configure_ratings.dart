@@ -12,11 +12,15 @@ import 'package:uspsa_result_viewer/data/ranking/raters/points/points_rater.dart
 import 'package:uspsa_result_viewer/data/ranking/raters/points/points_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
+import 'package:uspsa_result_viewer/data/results_file_parser.dart';
+import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/ui/rater/enter_practiscore_source_dialog.dart';
+import 'package:uspsa_result_viewer/ui/rater/member_number_dialog.dart';
+import 'package:uspsa_result_viewer/ui/rater/member_number_map_dialog.dart';
+import 'package:uspsa_result_viewer/ui/result_page.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/confirm_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/enter_name_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/enter_urls_dialog.dart';
-import 'package:uspsa_result_viewer/ui/rater/member_number_whitelist_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/select_project_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/shooter_aliases_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/match_cache_chooser_dialog.dart';
@@ -24,7 +28,7 @@ import 'package:uspsa_result_viewer/ui/widget/dialog/match_cache_chooser_dialog.
 class ConfigureRatingsPage extends StatefulWidget {
   const ConfigureRatingsPage({Key? key, required this.onSettingsReady}) : super(key: key);
 
-  final void Function(RatingHistorySettings, List<String>) onSettingsReady;
+  final void Function(RatingProject) onSettingsReady;
 
   @override
   State<ConfigureRatingsPage> createState() => _ConfigureRatingsPageState();
@@ -55,25 +59,47 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     // Deduplicate
     Map<PracticalMatch, bool> knownMatches = {};
     Map<String, bool> urlsToRemove = {};
-    for(var url in matchUrls) {
-      var match = await cache.getMatch(url, localOnly: true);
 
-      if(knownMatches[match] ?? false) {
-        urlsToRemove[url] = true;
-        // print("Already saw ${match?.name}, removing $url");
+    List<String> unknownUrls = [];
+
+    for(var url in matchUrls) {
+      var result = await cache.getMatch(url, localOnly: true);
+
+      if (result.isOk()) {
+        var match = result.unwrap();
+        if (knownMatches[match] ?? false) {
+          urlsToRemove[url] = true;
+        }
+        else {
+          knownMatches[match] = true;
+          if(match.name != null) urlDisplayNames[url] = match.name!;
+        }
       }
       else {
-        map[url] = match?.name ?? url;
-        if(match != null) {
-          knownMatches[match] = true;
-          // print("Saw ${match.name} at $url, marking true");
+        var err = result.unwrapErr();
+        if (err == MatchGetError.notInCache) {
+          unknownUrls.add(url);
         }
       }
     }
+
     matchUrls.removeWhere((element) => urlsToRemove[element] ?? false);
 
-    setState(() {
-      urlDisplayNames = map;
+    if(mounted) {
+      setState(() {
+        // urlDisplayNames update
+      });
+    }
+
+    print("Getting ${unknownUrls.length} unknown URLs");
+    cache.batchGet(unknownUrls, callback: (url, result) {
+      if(result.isOk() && mounted) {
+        var match = result.unwrap();
+        print("Fetched ${match.name} from ${url.split("/").last}");
+        setState(() {
+          urlDisplayNames[url] = match.name ?? url;
+        });
+      }
     });
   }
 
@@ -121,6 +147,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   }
 
   void _loadProject(RatingProject project) {
+    urlDisplayNames = {};
     setState(() {
       matchUrls = []..addAll(project.matchUrls);
       _keepHistory = project.settings.preserveHistory;
@@ -128,6 +155,10 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       _combineLimitedCO = project.settings.groups.contains(RaterGroup.limitedCO);
       _combineOpenPCC = project.settings.groups.contains(RaterGroup.openPcc);
       _shooterAliases = project.settings.shooterAliases;
+      _memNumMappings = project.settings.userMemberNumberMappings;
+      _memNumMappingBlacklist = project.settings.memberNumberMappingBlacklist;
+      _memNumWhitelist = project.settings.memberNumberWhitelist;
+      _hiddenShooters = project.settings.hiddenShooters;
     });
     var algorithm = project.settings.algorithm;
     _ratingSystem = algorithm;
@@ -141,7 +172,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     _settingsController.currentSettings = algorithm.settings;
     _currentRater = _currentRaterFor(algorithm);
 
-    getUrlDisplayNames();
+    // also gets display names
+    _sortMatches();
 
     setState(() {
       _lastProjectName = project.name;
@@ -187,7 +219,10 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   ScrollController _matchScroll = ScrollController();
 
   List<String> _memNumWhitelist = [];
+  Map<String, String> _memNumMappings = {};
   Map<String, String> _shooterAliases = defaultShooterAliases;
+  Map<String, String> _memNumMappingBlacklist = {};
+  List<String> _hiddenShooters = [];
   String _validationError = "";
 
   RatingHistorySettings? _makeAndValidateSettings() {
@@ -226,6 +261,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       groups: groups,
       preserveHistory: _keepHistory,
       memberNumberWhitelist: _memNumWhitelist,
+      userMemberNumberMappings: _memNumMappings,
+      memberNumberMappingBlacklist: _memNumMappingBlacklist,
+      hiddenShooters: _hiddenShooters,
       shooterAliases: _shooterAliases,
     );
   }
@@ -250,6 +288,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         ),
       );
     }
+
+    // Match cache is ready from here on down
     return Column(
       children: [
         Padding(
@@ -260,7 +300,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
             children: [
               ElevatedButton(
                 child: Text("ADVANCE"),
-                onPressed: () {
+                onPressed: () async {
                   var settings = _makeAndValidateSettings();
 
                   if(settings == null) return;
@@ -279,9 +319,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                     return;
                   }
 
-                  _saveProject(RatingProjectManager.autosaveName);
+                  var project = await _saveProject(RatingProjectManager.autosaveName);
 
-                  widget.onSettingsReady(settings, matchUrls);
+                  if(project != null) widget.onSettingsReady(project);
                 },
               ),
               SizedBox(width: 20),
@@ -438,7 +478,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 color: Theme.of(context).primaryColor,
                                 onPressed: () async {
                                   var urls = await showDialog<List<String>>(context: context, builder: (context) {
-                                    return EnterUrlsDialog();
+                                    return EnterUrlsDialog(cache: MatchCache(), existingUrls: matchUrls);
                                   }, barrierDismissible: false);
 
                                   if(urls == null) return;
@@ -489,18 +529,21 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 icon: Icon(Icons.dataset),
                                 color: Theme.of(context).primaryColor,
                                 onPressed: () async {
-                                  var match = await showDialog<PracticalMatch>(context: context, builder: (context) {
-                                    return MatchCacheChooserDialog();
+                                  var matches = await showDialog<List<PracticalMatch>>(context: context, builder: (context) {
+                                    return MatchCacheChooserDialog(multiple: true);
                                   }, barrierDismissible: false);
 
-                                  if(match == null) return;
+                                  print("Matches from cache: $matches");
 
-                                  var url = MatchCache().getUrl(match);
+                                  if(matches == null) return;
 
-                                  if(url == null) return;
+                                  for(var match in matches) {
+                                    var url = MatchCache().getUrl(match);
+                                    if (url == null) throw StateError("impossible");
 
-                                  if(!matchUrls.contains(url)) {
-                                    matchUrls.insert(0, url);
+                                    if (!matchUrls.contains(url)) {
+                                      matchUrls.insert(0, url);
+                                    }
                                   }
 
                                   setState(() {
@@ -538,23 +581,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 icon: Icon(Icons.sort),
                                 color: Theme.of(context).primaryColor,
                                 onPressed: () async {
-                                  var cache = MatchCache();
-                                  await cache.ready;
-
-                                  matchUrls.sort((a, b) {
-                                    var matchA = cache.getMatchImmediate(a);
-                                    var matchB = cache.getMatchImmediate(b);
-
-                                    // Sort uncached matches to the top
-                                    if(matchA == null && matchB == null) return 0;
-                                    if(matchA == null && matchB != null) return -1;
-                                    if(matchA != null && matchB == null) return 1;
-
-                                    // Sort remaining matches by date descending
-                                    return matchB!.date!.compareTo(matchA!.date!);
-                                  });
-
-                                  getUrlDisplayNames();
+                                  _sortMatches();
                                 }
                               ),
                             ),
@@ -573,11 +600,40 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   // show newest additions at the top
-                                  for(var url in urlDisplayNames.keys.toList())
+                                  for(var url in matchUrls)
                                     Row(
                                       mainAxisSize: MainAxisSize.max,
                                       children: [
-                                        Expanded(child: Text(urlDisplayNames[url]!, overflow: TextOverflow.fade)),
+                                        Expanded(
+                                          child: MouseRegion(
+                                            cursor: SystemMouseCursors.click,
+                                            child: GestureDetector(
+                                              onTap: () {
+                                                if(!MatchCache.readyNow) {
+                                                  print("Match cache not ready");
+                                                  return;
+                                                }
+                                                var cache = MatchCache();
+
+                                                var match = cache.getMatchImmediate(url);
+                                                if(match != null && (match.name?.isNotEmpty ?? false)) {
+                                                  Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+                                                    return ResultPage(canonicalMatch: match, allowWhatIf: false);
+                                                  }));
+                                                }
+                                                else {
+                                                  HtmlOr.openLink(url);
+                                                }
+                                              },
+                                              child: Text(
+                                                urlDisplayNames[url] != null && urlDisplayNames[url]!.isNotEmpty ?
+                                                  urlDisplayNames[url]! :
+                                                  urlDisplayNames[url] != null ? "$url (missing name)" : url,
+                                                overflow: TextOverflow.fade
+                                              ),
+                                            ),
+                                          )
+                                        ),
                                         Tooltip(
                                           message: "Remove this match from the cache, redownloading it.",
                                           child: IconButton(
@@ -617,6 +673,29 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         ),
       ],
     );
+  }
+
+  void _sortMatches() async {
+    var cache = MatchCache();
+    await cache.ready;
+
+    matchUrls.sort((a, b) {
+      var matchA = cache.getMatchImmediate(a);
+      var matchB = cache.getMatchImmediate(b);
+
+      // Sort uncached matches to the top
+      if(matchA == null && matchB == null) return 0;
+      if(matchA == null && matchB != null) return -1;
+      if(matchA != null && matchB == null) return 1;
+
+      // Sort remaining matches by date descending, then by name ascending
+      var dateSort = matchB!.date!.compareTo(matchA!.date!);
+      if(dateSort != 0) return dateSort;
+
+      return matchA.name!.compareTo(matchB.name!);
+    });
+
+    getUrlDisplayNames();
   }
 
   Future<void> confirmChangeRater (_ConfigurableRater v) async {
@@ -664,11 +743,11 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     throw UnsupportedError("Algorithm not yet supported");
   }
 
-  Future<void> _saveProject(String name) async {
+  Future<RatingProject?> _saveProject(String name) async {
     var settings = _makeAndValidateSettings();
     if(settings == null || name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("You must provide valid settings (including match URLs) to save.")));
-      return;
+      return null;
     }
 
     bool isAutosave = name == RatingProjectManager.autosaveName;
@@ -688,6 +767,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         _lastProjectName = project.name;
       });
     }
+
+    return project;
   }
 
   void _restoreDefaults() {
@@ -700,6 +781,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       _validationError = "";
       _shooterAliases = defaultShooterAliases;
       _memNumWhitelist = [];
+      _memNumMappingBlacklist = {};
+      _memNumMappings = {};
+      _hiddenShooters = [];
     });
   }
 
@@ -710,16 +794,29 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         child: IconButton(
           icon: Icon(Icons.create_new_folder_outlined),
           onPressed: () async {
+            var controller = TextEditingController();
             var confirm = await showDialog<bool>(context: context, builder: (context) =>
               ConfirmDialog(
-                content: Text("Creating a new project will reset settings to default and clear all currently-selected matches."),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text("Creating a new project will reset settings to default and clear all currently-selected matches."),
+                    TextField(
+                      controller: controller,
+                      decoration: InputDecoration(
+                        hintText: "Project Name",
+                      ),
+                    )
+                  ],
+                ),
                 positiveButtonLabel: "CREATE",
+                negativeButtonLabel: "CANCEL",
               )
             );
 
             if(confirm ?? false) {
               setState(() {
-                _lastProjectName = "New Project";
+                _lastProjectName = controller.text.trim().isNotEmpty ? controller.text.trim() : "New Project";
 
                 matchUrls.clear();
                 urlDisplayNames.clear();
@@ -773,26 +870,29 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         ),
       ),
       Tooltip(
-        message: "Enter aliases for shooters whose names and member numbers change.",
+        message: "Import a project from a JSON file.",
         child: IconButton(
-          icon: Icon(Icons.add_link),
-          onPressed: () async {
-            var aliases = await showDialog<Map<String, String>>(context: context, builder: (context) {
-              return ShooterAliasesDialog(_shooterAliases);
-            }, barrierDismissible: false);
-
-            if(aliases != null) {
-              _shooterAliases = aliases;
-            }
+          icon: Icon(Icons.upload),
+          onPressed: () {
+            _handleClick(_MenuEntry.import);
           },
-        ),
+        )
+      ),
+      Tooltip(
+          message: "Export a project to a JSON file.",
+          child: IconButton(
+            icon: Icon(Icons.download),
+            onPressed: () {
+              _handleClick(_MenuEntry.export);
+            },
+          )
       ),
       PopupMenuButton<_MenuEntry>(
         onSelected: (item) => _handleClick(item),
         tooltip: null,
         itemBuilder: (context) {
           List<PopupMenuEntry<_MenuEntry>> items = [];
-          for(var item in _MenuEntry.values) {
+          for(var item in _MenuEntry.menu) {
             items.add(PopupMenuItem(
               child: Text(item.label),
               value: item,
@@ -851,10 +951,18 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
       case _MenuEntry.numberWhitelist:
         var whitelist = await showDialog<List<String>>(context: context, builder: (context) {
-          return MemberNumberWhitelistDialog(_memNumWhitelist);
-        }, barrierDismissible: false) ?? [];
+          return MemberNumberDialog(
+            title: "Whitelist member numbers",
+            helpText: "Whitelisted member numbers will be included in the ratings, even if they fail "
+                "validation in some way. Enter one per line. Prefixes (TY, A, L, etc.) will be removed automatically.",
+            hintText: "A102675",
+            initialList: _memNumWhitelist,
+          );
+        }, barrierDismissible: false);
 
-        _memNumWhitelist = whitelist;
+        if(whitelist != null) {
+          _memNumWhitelist = whitelist;
+        }
         break;
 
 
@@ -870,6 +978,73 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
           await MatchCache().ready;
           MatchCache().clear();
         }
+        break;
+
+
+      case _MenuEntry.numberMappings:
+        var mappings = await showDialog<Map<String, String>>(context: context, builder: (context) {
+          return MemberNumberMapDialog(
+            title: "Manual member number mappings",
+            helpText: "If the automatic member number mapper does not correctly merge ratings "
+                "on two member numbers belonging to the same shooter, you can add manual mappings "
+                "here. Member numbers entered here will only be mapped to each other. "
+                "Prefixes are removed automatically.",
+            sourceHintText: "A123456",
+            targetHintText: "L1234",
+            initialMap: _memNumMappings,
+          );
+        });
+
+        if(mappings != null) {
+          _memNumMappings = mappings;
+        }
+        break;
+
+      case _MenuEntry.numberMappingBlacklist:
+        var mappings = await showDialog<Map<String, String>>(context: context, builder: (context) {
+          return MemberNumberMapDialog(
+            title: "Member number mapping blacklist",
+            helpText: "Pairs of member numbers given here will never be mapped to one another. Enter a pair "
+                "of member numbers here when the automatic member number mapping process incorrectly merges "
+                "two distinct shooters who share a name.",
+            sourceHintText: "A123456",
+            targetHintText: "L1234",
+            initialMap: _memNumMappingBlacklist,
+          );
+        });
+
+        if(mappings != null) {
+          _memNumMappingBlacklist = mappings;
+        }
+        break;
+
+
+      case _MenuEntry.hiddenShooters:
+        var hidden = await showDialog<List<String>>(context: context, builder: (context) {
+          return MemberNumberDialog(
+            title: "Hide shooters",
+            helpText: "Hidden shooters will be used to calculate ratings, but not shown in the "
+                "display. Use this, for example, to hide non-local shooters from local ratings.\n\n"
+                "This setting can be edited after ratings are calculated.",
+            hintText: "A102675",
+            initialList: _hiddenShooters,
+          );
+        }, barrierDismissible: false);
+
+        if(hidden != null) {
+          _hiddenShooters = hidden;
+        }
+        break;
+
+
+      case _MenuEntry.shooterAliases:
+        var aliases = await showDialog<Map<String, String>>(context: context, builder: (context) {
+          return ShooterAliasesDialog(_shooterAliases);
+        }, barrierDismissible: false);
+
+        if(aliases != null) {
+          _shooterAliases = aliases;
+        }
     }
   }
 }
@@ -877,21 +1052,40 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 enum _MenuEntry {
   import,
   export,
+  hiddenShooters,
+  numberMappings,
+  numberMappingBlacklist,
   numberWhitelist,
-  clearCache,
-}
+  shooterAliases,
+  clearCache;
 
-extension _MenuEntryUtils on _MenuEntry {
+  static List<_MenuEntry> get menu => [
+    hiddenShooters,
+    numberMappings,
+    numberMappingBlacklist,
+    numberWhitelist,
+    shooterAliases,
+    clearCache,
+  ];
+
   String get label {
     switch(this) {
       case _MenuEntry.import:
         return "Import";
       case _MenuEntry.export:
         return "Export";
+      case _MenuEntry.hiddenShooters:
+        return "Hide shooters";
+      case _MenuEntry.numberMappings:
+        return "Map member numbers";
+      case _MenuEntry.numberMappingBlacklist:
+        return "Number mapping blacklist";
       case _MenuEntry.numberWhitelist:
         return "Member whitelist";
       case _MenuEntry.clearCache:
         return "Clear cache";
+      case _MenuEntry.shooterAliases:
+        return "Shooter aliases";
     }
   }
 }

@@ -6,10 +6,13 @@ import 'package:flutter/services.dart';
 import 'package:fluttericon/rpg_awesome_icons.dart';
 import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
+import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
+import 'package:uspsa_result_viewer/ui/rater/member_number_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/prediction/prediction_view.dart';
 import 'package:uspsa_result_viewer/ui/rater/prediction/registration_parser.dart';
 import 'package:uspsa_result_viewer/ui/rater/rater_stats_dialog.dart';
@@ -18,12 +21,18 @@ import 'package:uspsa_result_viewer/ui/result_page.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/associate_registrations.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/match_cache_chooser_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/url_entry_dialog.dart';
+import 'package:uspsa_result_viewer/util.dart';
 
 class RatingsViewPage extends StatefulWidget {
-  const RatingsViewPage({Key? key, required this.settings, required this.matchUrls}) : super(key: key);
+  const RatingsViewPage({
+    Key? key, 
+    required this.project,
+  }) : super(key: key);
 
-  final RatingHistorySettings settings;
-  final List<String> matchUrls;
+  final RatingProject project;
+  
+  RatingHistorySettings get settings => project.settings;
+  List<String> get matchUrls => project.matchUrls;
 
   @override
   State<RatingsViewPage> createState() => _RatingsViewPageState();
@@ -71,6 +80,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   int _maxDays = 365;
   
   late RatingHistory _history;
+  bool _historyChanged = false;
   _LoadingState _loadingState = _LoadingState.notStarted;
 
   late List<RaterGroup> activeTabs;
@@ -79,6 +89,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   PracticalMatch? _selectedMatch;
   MatchCache _matchCache = MatchCache();
   late TabController _tabController;
+
+  var _loadingScrollController = ScrollController();
 
   @override
   void initState() {
@@ -123,7 +135,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       length: activeTabs.length,
       vsync: this,
       initialIndex: 0,
-      animationDuration: Duration(seconds: 0)
+      // TODO: Flutter broke this again, go back to seconds: 0 when fixed
+      animationDuration: Duration(microseconds: 1)
     );
 
     _init();
@@ -149,17 +162,68 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
     List<Widget> actions = _generateActions();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("Shooter Rating Calculator"),
-        centerTitle: true,
-        actions: _loadingState == _LoadingState.done ? actions : null,
-        bottom: _operationInProgress ? PreferredSize(
-          preferredSize: Size(double.infinity, 5),
-          child: LinearProgressIndicator(value: null, backgroundColor: primaryColor, valueColor: animation),
-        ) : null,
+    var title = "";
+    try {
+      title = _history.project.name;
+    }
+    catch(e) {
+      // Should maybe make history.project nullable rather than late, since
+      // we hit this hard
+      title = "Shooter Rating Calculator";
+    }
+
+    return WillPopScope(
+      onWillPop: () async {
+        var message = "If you leave this page, you will need to recalculate ratings to view it again.";
+
+        if(_historyChanged) {
+          message += "\n\nYou have unsaved changes to this rating project. Save first?";
+        }
+        return await showDialog<bool>(context: context, builder: (context) => AlertDialog(
+          title: Text("Return to main menu?"),
+          content: Text(message),
+          actions: [
+            TextButton(
+              child: Text("STAY HERE"),
+              onPressed: () {
+                Navigator.of(context).pop(false);
+              },
+            ),
+            TextButton(
+              child: Text("LEAVE" + (_historyChanged ? " WITHOUT SAVING" : "")),
+              onPressed: () {
+                Navigator.of(context).pop(true);
+              },
+            ),
+            if(_historyChanged) TextButton(
+              child: Text("SAVE AND LEAVE"),
+              onPressed: () async {
+                // This project is also the autosave, so save it there too
+                var pm = RatingProjectManager();
+                await pm.saveProject(_history.project, mapName: RatingProjectManager.autosaveName);
+
+                setState(() {
+                  _historyChanged = false;
+                });
+
+                Navigator.of(context).pop(true);
+              },
+            ),
+          ],
+        )) ?? false;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(title),
+          centerTitle: true,
+          actions: _loadingState == _LoadingState.done ? actions : null,
+          bottom: _operationInProgress ? PreferredSize(
+            preferredSize: Size(double.infinity, 5),
+            child: LinearProgressIndicator(value: null, backgroundColor: primaryColor, valueColor: animation),
+          ) : null,
+        ),
+        body: _body(),
       ),
-      body: _body(),
     );
   }
 
@@ -222,8 +286,10 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
           SizedBox(height: 20),
           Expanded(
             child: Scrollbar(
+              controller: _loadingScrollController,
               thumbVisibility: true,
               child: SingleChildScrollView(
+                controller: _loadingScrollController,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -285,6 +351,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                 onRatingsFiltered: (ratings) {
                   _ratings = ratings;
                 },
+                hiddenShooters: _history.settings.hiddenShooters,
               );
             }).toList(),
           ),
@@ -440,38 +507,60 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     var rater = _history.raterFor(_selectedMatch!, tab);
 
     return [
-      if(rater.ratingSystem.supportsPrediction)
-        Tooltip(
-          message: "Predict the outcome of a match based on ratings.",
-          child: IconButton(
-            icon: Icon(RpgAwesome.crystal_ball),
-            onPressed: () {
-              var tab = activeTabs[_tabController.index];
-              var rater = _history.raterFor(_selectedMatch!, tab);
-              _startPredictionView(rater, tab);
-            },
-          ),
+      if(rater.ratingSystem.supportsPrediction) Tooltip(
+        message: "Predict the outcome of a match based on ratings.",
+        child: IconButton(
+          icon: Icon(RpgAwesome.crystal_ball),
+          onPressed: () {
+            var tab = activeTabs[_tabController.index];
+            var rater = _history.raterFor(_selectedMatch!, tab);
+            _startPredictionView(rater, tab);
+          },
         ),
-      // end if: supports ratings
+      ), // end if: supports ratings
+      if(_historyChanged) Tooltip(
+        message: "Save the rating project.",
+        child: IconButton(
+          icon: Icon(Icons.save),
+          onPressed: () async {
+            // This project is also the autosave, so save it there too
+            var pm = RatingProjectManager();
+            await pm.saveProject(_history.project, mapName: RatingProjectManager.autosaveName);
+
+            setState(() {
+              _historyChanged = false;
+            });
+
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Saved project.")));
+          },
+        ),
+      ), // end if: history changed
       Tooltip(
-          message: "Add a new match to the ratings.",
-          child: IconButton(
-            icon: Icon(Icons.playlist_add),
-            onPressed: () async {
-              var match = await showDialog<PracticalMatch>(
-                  context: context,
-                  builder: (context) => MatchCacheChooserDialog()
-              );
+        message: "Add a new match to the ratings.",
+        child: IconButton(
+          icon: Icon(Icons.playlist_add),
+          onPressed: () async {
+            var match = await showDialog<PracticalMatch>(
+                context: context,
+                builder: (context) => MatchCacheChooserDialog(
+                  helpText:
+                      "Add a match to the rating list from the cache. Use the plus button to download a new one.\n\n"
+                      "You must save the project from the rating screen for the match to be included in future "
+                      "rating runs. In future rating runs, matches will be sorted by date even if not added in "
+                      "date order here.",
+                )
+            );
 
-              if(match != null) {
-                _history.addMatch(match);
+            if(match != null) {
+              _history.addMatch(match);
 
-                setState(() {
-                  _selectedMatch = _history.matches.last;
-                });
-              }
-            },
-          )
+              setState(() {
+                _selectedMatch = _history.matches.last;
+                _historyChanged = true;
+              });
+            }
+          },
+        )
       ),
       Tooltip(
         message: "View results for a match in the dataset.",
@@ -506,6 +595,31 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
               }
             },
           )
+      ),
+      Tooltip(
+        message: "Edit hidden shooters",
+        child: IconButton(
+          icon: Icon(Icons.remove_red_eye_rounded),
+          onPressed: () async {
+            var existingHidden = _history.settings.hiddenShooters;
+            var hidden = await showDialog<List<String>>(context: context, builder: (context) {
+              return MemberNumberDialog(
+                title: "Hide shooters",
+                helpText: "Hidden shooters will be used to calculate ratings, but not shown in the "
+                    "display. Use this, for example, to hide non-local shooters from local ratings.",
+                hintText: "A102675",
+                initialList: existingHidden,
+              );
+            }, barrierDismissible: false);
+
+            if(hidden != null) {
+              setState(() {
+                _history.settings.hiddenShooters = hidden;
+                _historyChanged = true;
+              });
+            }
+          },
+        )
       ),
       Tooltip(
         message: "Download ratings as CSV",
@@ -609,12 +723,12 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     });
 
     var localUrls = []..addAll(urls);
-    var failedMatches = <String>[];
+    var failedMatches = <String, MatchGetError>{};
 
-    var urlsByFuture = <Future<PracticalMatch?>, String>{};
+    var urlsByFuture = <Future<Result<PracticalMatch, MatchGetError>>, String>{};
     while(localUrls.isNotEmpty) {
 
-      var futures = <Future<PracticalMatch?>>[];
+      var futures = <Future<Result<PracticalMatch, MatchGetError>>>[];
       var urlsThisStep = [];
       if(localUrls.length < 10) {
         urlsThisStep = []..addAll(localUrls);
@@ -638,14 +752,14 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       await Future.wait(futures);
 
       for(var future in futures) {
-        var match = await future;
+        var result = await future;
         var url = urlsByFuture[future]!;
-        if(match != null) {
-          _matchUrls[url] = match;
+        if(result.isOk()) {
+          _matchUrls[url] = result.unwrap();
         }
         else {
           _matchUrls.remove(url);
-          failedMatches.add(url);
+          failedMatches[url] = result.unwrapErr();
         }
       }
 
@@ -708,7 +822,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
     await Future.delayed(Duration(milliseconds: 1));
 
-    _history = RatingHistory(settings: widget.settings, matches: actualMatches, progressCallback: (currentSteps, totalSteps, eventName) async {
+    // Copy the project so we can edit it in the rater view without breaking
+    _history = RatingHistory(project: widget.project.copy(), matches: actualMatches, progressCallback: (currentSteps, totalSteps, eventName) async {
       setState(() {
         _currentProgress = currentSteps;
         _totalProgress = totalSteps;
@@ -730,40 +845,87 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     if(failedMatches.isNotEmpty) ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text("Failed to download ${failedMatches.length} matches"),
+        duration: Duration(seconds: 10),
         action: SnackBarAction(
           label: "VIEW",
-          onPressed: () {
-            showDialog(context: context, builder: (context) {
-              return AlertDialog(
-                title: Text("Failed matches"),
-                content: SizedBox(
-                  width: 500,
-                  child: ListView.builder(
-                    itemCount: failedMatches.length,
-                    itemBuilder: (context, i) {
-                      return MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: GestureDetector(
-                          onTap: () {
-                            HtmlOr.openLink(failedMatches[i]);
+          onPressed: () async {
+            await showDialog(context: context, builder: (context) {
+              return StatefulBuilder(
+                builder: (context, setState) {
+                  return AlertDialog(
+                    title: Text("Failed matches"),
+                    scrollable: true,
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextButton(
+                          child: Text("REMOVE ALL"),
+                          onPressed: () {
+                            _history.project.matchUrls.removeWhere((element) => failedMatches.keys.contains(element));
+                            setState(() {
+                              failedMatches.clear();
+                              _historyChanged = true;
+                            });
+
+                            Navigator.of(context).pop();
                           },
-                          child: Padding(
-                            padding: const EdgeInsets.all(4.0),
-                            child: Text(failedMatches[i],
-                              overflow: TextOverflow.fade,
-                              softWrap: false,
-                              style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                                decoration: TextDecoration.underline,
-                                color: Colors.blueAccent,
+                        ),
+                        for(var key in failedMatches.keys) Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              child: GestureDetector(
+                                onTap: () {
+                                  HtmlOr.openLink(key);
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.all(4.0),
+                                  child: Text(key,
+                                    overflow: TextOverflow.fade,
+                                    softWrap: false,
+                                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                                      decoration: TextDecoration.underline,
+                                      color: Colors.blueAccent,
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                )
+                            SizedBox(width: 5),
+                            Padding(
+                              padding: const EdgeInsets.all(4.0),
+                              child: Text(failedMatches[key]?.message ?? ""),
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.remove),
+                              onPressed: () {
+                                _history.project.matchUrls.remove(key);
+                                setState(() {
+                                  _historyChanged = true;
+                                  failedMatches.remove(key);
+                                });
+
+                                if(failedMatches.isEmpty) Navigator.of(context).pop();
+                              },
+                            ),
+                          ],
+                        )
+                      ],
+                    ),
+                    actions: [
+                      TextButton(
+                        child: Text("CLOSE"),
+                        onPressed: Navigator.of(context).pop,
+                      )
+                    ],
+                  );
+                }
               );
+            });
+
+            setState(() {
+              // catch any changes made by the dialog
             });
           },
         ),

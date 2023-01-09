@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
+import 'package:uspsa_result_viewer/util.dart';
 
 Future<void> Function(int, int)? matchCacheProgressCallback;
 
@@ -69,7 +70,8 @@ class MatchCache {
         ids = deduplicatedIds.toList();
 
         if(reportContents != null) {
-          var match = await processScoreFile(reportContents);
+          // Anything that makes it to the cache is known good
+          var match = (await processScoreFile(reportContents)).unwrap();
           var entry = _MatchCacheEntry(match: match, ids: ids);
           String? shortId;
           late String longId;
@@ -145,6 +147,16 @@ class MatchCache {
       return _cachedSize!;
     }
     return 0;
+  }
+
+  int get uniqueMatches {
+    Set<_MatchCacheEntry> entries = <_MatchCacheEntry>{};
+
+    for(var e in _cache.values) {
+      entries.add(e);
+    }
+
+    return entries.length;
   }
 
   Future<void> save([Future<void> Function(int, int)? progressCallback]) async {
@@ -230,14 +242,14 @@ class MatchCache {
     return null;
   }
 
-  Future<PracticalMatch?> getMatch(String matchUrl, {bool forceUpdate = false, bool localOnly = false, bool checkCanonId = true}) async {
+  Future<Result<PracticalMatch, MatchGetError>> getMatch(String matchUrl, {bool forceUpdate = false, bool localOnly = false, bool checkCanonId = true}) async {
     var id = matchUrl.split("/").last;
     if(!forceUpdate && _cache.containsKey(id)) {
       // debugPrint("Using cache for $id");
-      return _cache[id]!.match;
+      return Result.ok(_cache[id]!.match);
     }
 
-    if(localOnly && !checkCanonId) return null;
+    if(localOnly && !checkCanonId) return Result.err(MatchGetError.notInCache);
 
     var canonId = await processMatchUrl(matchUrl);
 
@@ -250,14 +262,15 @@ class MatchCache {
       );
       _cache[id] = newEntry;
       _cache[canonId] = newEntry;
-      return _cache[id]!.match;
+      return Result.ok(_cache[id]!.match);
     }
 
-    if(localOnly) return null;
+    if(localOnly) return Result.err(MatchGetError.notInCache);
 
     if(canonId != null) {
-      var match = await getPractiscoreMatchHeadless(canonId);
-      if(match != null) {
+      var result = await getPractiscoreMatchHeadless(canonId);
+      if(result.isOk()) {
+        var match = result.unwrap();
         var ids = [canonId];
         if(id != canonId) ids.insert(0, id);
 
@@ -269,15 +282,40 @@ class MatchCache {
         if(id != canonId) _cache[id] = cacheEntry;
 
         _cache[canonId] = cacheEntry;
-        return match;
+        return result;
       }
-      print("Match is null");
+      else {
+        return result;
+      }
     }
     else {
       print("canon ID is null");
+      return Result.err(MatchGetError.notHitFactor);
+    }
+  }
+
+  Future<List<PracticalMatch>> batchGet(List<String> urls, {void Function(String, Result<PracticalMatch, MatchGetError>)? callback}) async {
+    List<PracticalMatch> downloaded = [];
+    while(urls.isNotEmpty) {
+      int batchSize = 0;
+      List<String> batchUrls = [];
+      while(urls.isNotEmpty && batchSize < 5) {
+        batchUrls.add(urls.removeLast());
+        batchSize++;
+      }
+
+      for(var url in batchUrls) {
+        var result = await getMatch(url);
+
+        if(callback != null) {
+          callback(url, result);
+        }
+
+        if(result.isOk()) downloaded.add(result.unwrap());
+      }
     }
 
-    return null;
+    return downloaded;
   }
 
   List<PracticalMatch> allMatches() {

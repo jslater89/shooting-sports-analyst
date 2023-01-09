@@ -62,6 +62,13 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
         ],
       ),
       Divider(height: 2, thickness: 1),
+      Row(
+        children: [
+          Expanded(flex: 4, child: Text("Average history length", style: Theme.of(context).textTheme.bodyText2)),
+          Expanded(flex: 2, child: Text("${widget.statistics.averageHistory.toStringAsFixed(1)}", style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)),
+        ],
+      ),
+      Divider(height: 2, thickness: 1),
       Padding(
         padding: const EdgeInsets.only(top: 16.0, bottom: 8),
         child: Text("Class statistics", style: Theme.of(context).textTheme.bodyText1),

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.dart';
@@ -27,9 +28,12 @@ class RatingHistory {
   }
 
   late RatingHistorySettings _settings;
+  RatingHistorySettings get settings => _settings;
   final int progressCallbackInterval = 5;
 
   List<RaterGroup> get groups => []..addAll(_settings.groups);
+
+  late RatingProject project;
 
   /// Maps matches to a map of [Rater]s, which hold the incremental ratings
   /// after that match has been processed.
@@ -37,13 +41,15 @@ class RatingHistory {
 
   Future<void> Function(int currentSteps, int totalSteps, String? eventName)? progressCallback;
 
-  RatingHistory({required List<PracticalMatch> matches, RatingHistorySettings? settings, this.progressCallback}) : this._matches = matches {
-    if(settings != null) _settings = settings;
-    else _settings = RatingHistorySettings(
+  RatingHistory({RatingProject? project, required List<PracticalMatch> matches, this.progressCallback}) : this._matches = matches {
+    project ??= RatingProject(name: "Unnamed Project", settings: RatingHistorySettings(
       algorithm: MultiplayerPercentEloRater(settings: EloSettings(
         byStage: true,
       )),
-    );
+    ), matchUrls: matches.map((m) => m.practiscoreId).toList());
+
+    this.project = project;
+    _settings = project.settings;
   }
 
   Future<void> processInitialMatches() async {
@@ -61,6 +67,7 @@ class RatingHistory {
 
     var oldMatch = _lastMatch;
     _matches.add(match);
+    project.matchUrls.add("https://practiscore.com/results/new/${match.practiscoreId}");
 
     for(var group in _settings.groups) {
       var raters = _ratersByDivision[oldMatch]!;
@@ -191,7 +198,10 @@ class RatingHistory {
       byStage: _settings.byStage,
       filters: group.filters,
       progressCallback: progressCallback,
-      progressCallbackInterval: progressCallbackInterval
+      progressCallbackInterval: progressCallbackInterval,
+      shooterAliases: _settings.shooterAliases,
+      memberNumberMappingBlacklist: _settings.memberNumberMappingBlacklist,
+      userMemberNumberMappings: _settings.userMemberNumberMappings,
     );
 
     await r.calculateInitialRatings();
@@ -287,14 +297,43 @@ enum RaterGroup {
 }
 
 class RatingHistorySettings {
+  // All of the below are serialized
   bool get byStage => algorithm.byStage;
   bool preserveHistory;
   List<RaterGroup> groups;
   List<String> memberNumberWhitelist;
   RatingSystem algorithm;
+  /// A map of shooter name changes, used to backstop automatic shooter number change detection.
+  ///
+  /// Number change detection looks through a map of shooters-to-member-numbers after adding
+  /// shooters, and tries to determine if any name maps to more than one member number. If it
+  /// does, the rater combines the two ratings.
   Map<String, String> shooterAliases;
 
-  // TODO: toJson here, or store in DB directly with only algorithm settings in JSON
+  /// A map of user-specified member number mappings. Should be in [Rater.processMemberNumber] format.
+  ///
+  /// Mappings may be made in either direction, but will preferentially be made from key to value:
+  /// map[A1234] = L123 will try to map A1234 to L123 first. If L123 has rating events but A1234 doesn't,
+  /// when both numbers are encountered for the first time, it will make the mapping in the other direction.
+  Map<String, String> userMemberNumberMappings;
+
+  /// A map of member number mappings that should _not_ be made automatically.
+  ///
+  /// If a candidate member number change appears in this map, in either direction
+  /// (i.e., map[old] = new or map[new] = old), the shooter ratings corresponding
+  /// to those numbers will not be merged.
+  ///
+  /// Should be in [Rater.processMemberNumber] format.
+  Map<String, String> memberNumberMappingBlacklist;
+
+  /// A list of shooters to hide from the rating display, based on member number.
+  ///
+  /// They are still used to calculate ratings, but not shown in the UI or exported
+  /// to CSV, so that users can generate e.g. a club or section leaderboard, without
+  /// having a bunch of traveling L2 shooters in the mix.
+  ///
+  /// Should be in [Rater.processMemberNumber] format.
+  List<String> hiddenShooters;
 
   RatingHistorySettings({
     this.preserveHistory = false,
@@ -302,6 +341,9 @@ class RatingHistorySettings {
     required this.algorithm,
     this.memberNumberWhitelist = const [],
     this.shooterAliases = defaultAliases.defaultShooterAliases,
+    this.userMemberNumberMappings = const {},
+    this.memberNumberMappingBlacklist = const {},
+    this.hiddenShooters = const [],
   });
 
   static List<RaterGroup> groupsForSettings({bool combineOpenPCC = false, bool combineLimitedCO = false, bool combineLocap = true}) {
