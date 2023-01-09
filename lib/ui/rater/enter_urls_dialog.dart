@@ -101,6 +101,7 @@ class _EnterUrlsDialogState extends State<EnterUrlsDialog> {
       displayNames[url] = url;
       matchUrls.add(url);
     });
+    urlController.clear();
   }
 
   void fetchName(String url) async {
