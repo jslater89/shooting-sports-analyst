@@ -52,7 +52,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
 
   Future<void> getUrlDisplayNames() async {
-    var map = <String, String>{};
     await MatchCache().ready;
     var cache = MatchCache();
 
@@ -63,7 +62,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     List<String> unknownUrls = [];
 
     for(var url in matchUrls) {
-      var result = await cache.getMatch(url, localOnly: true);
+      // Don't check canonical ID here, because it's slow
+      var result = await cache.getMatch(url, localOnly: true, checkCanonId: false);
 
       if (result.isOk()) {
         var match = result.unwrap();
@@ -99,6 +99,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         setState(() {
           urlDisplayNames[url] = match.name ?? url;
         });
+      }
+      else if(result.isErr()) {
+        print("Error getting match: ${result.unwrapErr()}");
       }
     });
   }
@@ -140,6 +143,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     var autosave = RatingProjectManager().loadProject(RatingProjectManager.autosaveName);
     if(autosave != null) {
       _loadProject(autosave);
+      getUrlDisplayNames();
     }
     else {
       debugPrint("Autosaved project is null");
@@ -928,6 +932,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
           print("Imported ${imported.name}");
 
           _loadProject(imported);
+          getUrlDisplayNames();
         }
         else {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unable to load file")));

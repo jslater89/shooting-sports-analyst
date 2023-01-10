@@ -304,14 +304,16 @@ class MatchCache {
         batchSize++;
       }
 
+      Map<String, Future<Result<PracticalMatch, MatchGetError>>> futures = {};
       for(var url in batchUrls) {
-        var result = await getMatch(url);
+        futures[url] = getMatch(url);
+      }
 
+      await Future.wait(futures.values);
+      for(var url in batchUrls) {
         if(callback != null) {
-          callback(url, result);
+          callback(url, await futures[url]!);
         }
-
-        if(result.isOk()) downloaded.add(result.unwrap());
       }
     }
 
