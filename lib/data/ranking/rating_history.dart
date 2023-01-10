@@ -132,7 +132,7 @@ class RatingHistory {
     if(_settings.preserveHistory) {
       int totalSteps = ((_settings.groups.length * _matches.length) / progressCallbackInterval).round();
 
-      // debugPrint("Total steps, history preserved: $totalSteps");
+      print("Total steps, history preserved: $totalSteps on ${_matches.length} matches and ${_settings.groups.length} groups");
 
       for (PracticalMatch match in _matches) {
         var m = match;
@@ -148,7 +148,9 @@ class RatingHistory {
             _ratersByDivision[m]![group] = await _raterForGroup(innerMatches, group);
 
             stepsFinished += 1;
-            await progressCallback?.call(stepsFinished, totalSteps, "${group.uiLabel} - ${m.name}");
+            if(stepsFinished % progressCallbackInterval == 0) {
+              await progressCallback?.call(stepsFinished ~/ progressCallbackInterval, totalSteps, "${group.uiLabel} - ${m.name}");
+            }
           }
           else {
             Rater newRater = Rater.copy(_ratersByDivision[_lastMatch]![group]!);
@@ -156,7 +158,9 @@ class RatingHistory {
             _ratersByDivision[m]![group] = newRater;
 
             stepsFinished += 1;
-            await progressCallback?.call(stepsFinished, totalSteps, "${group.uiLabel} - ${m.name}");
+            if(stepsFinished % progressCallbackInterval == 0) {
+              await progressCallback?.call(stepsFinished ~/ progressCallbackInterval, totalSteps, "${group.uiLabel} - ${m.name}");
+            }
           }
         }
 
@@ -166,7 +170,7 @@ class RatingHistory {
     else {
       int totalSteps = ((_settings.groups.length * _matches.length) / progressCallbackInterval).round();
 
-      // debugPrint("Total steps, history discarded: $totalSteps");
+      debugPrint("Total steps, history discarded: $totalSteps");
 
       _lastMatch = _matches.last;
       _ratersByDivision[_lastMatch!] ??= {};
