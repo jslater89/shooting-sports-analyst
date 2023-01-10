@@ -92,7 +92,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     }
 
     print("Getting ${unknownUrls.length} unknown URLs");
-    cache.batchGet(unknownUrls, callback: (url, result) {
+    var matches = await cache.batchGet(unknownUrls, callback: (url, result) {
       if(result.isOk() && mounted) {
         var match = result.unwrap();
         print("Fetched ${match.name} from ${url.split("/").last}");
@@ -104,6 +104,13 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         print("Error getting match: ${result.unwrapErr()}");
       }
     });
+
+    // Ordinarily, the match cache is saved during the rating loading screen,
+    // after we've downloaded matches but before we start doing the math.
+    // Put this here, so anything we download gets
+    if(matches.isNotEmpty) {
+      cache.save();
+    }
   }
 
   @override
