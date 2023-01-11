@@ -129,6 +129,23 @@ class Rater {
     }
   }
 
+  /// Add shooters from a set of matches without adding the matches, since we do the best job of shooter
+  /// mapping when we operate with as much data as possible.
+  ///
+  /// Used by keep-history mode.
+  void addAndDeduplicateShooters(List<PracticalMatch> matches) {
+    DateTime start = DateTime.now();
+    if(Timings.enabled) start = DateTime.now();
+    for(PracticalMatch m in matches) {
+      _addShootersFromMatch(m, encounter: true);
+    }
+    if(Timings.enabled) timings.addShootersMillis = (DateTime.now().difference(start).inMicroseconds).toDouble();
+    if(Timings.enabled) timings.shooterCount = knownShooters.length;
+
+    if(Timings.enabled) start = DateTime.now();
+    _deduplicateShooters();
+    if(Timings.enabled) timings.dedupShootersMillis = (DateTime.now().difference(start).inMicroseconds).toDouble();
+  }
 
   void deserializeFrom(List<DbMemberNumberMapping> mappings, List<DbShooterRating> ratings, Map<DbShooterRating, List<DbRatingEvent>> eventsByRating) {
     // Mappings contains only the interesting ones, i.e. number != mapping
@@ -196,7 +213,10 @@ class Rater {
   }
 
   /// Returns the number of shooters added or updated.
-  int _addShootersFromMatch(PracticalMatch match) {
+  ///
+  /// Use [encounter] if you want shooters to be added regardless of whether they appear
+  /// in scores. (i.e., shooters who DQ on the first stage, or are no-shows but still included in the data)
+  int _addShootersFromMatch(PracticalMatch match, {bool encounter = false}) {
     int added = 0;
     int updated = 0;
     var shooters = _getShooters(match);
@@ -206,8 +226,9 @@ class Rater {
         s.memberNumber = processed;
         var rating = maybeKnownShooter(s.memberNumber);
         if(rating == null) {
-          knownShooters[s.memberNumber] = ratingSystem.newShooterRating(s, date: match.date); // ratingSystem.defaultRating
+          knownShooters[s.memberNumber] = ratingSystem.newShooterRating(s, date: match.date);
           added += 1;
+          if(encounter) _encounteredMemberNumber(s.memberNumber);
         }
         else {
           // Update names for existing shooters on add, to eliminate the Mel Rodero -> Mel Rodero II problem in the L2+ set

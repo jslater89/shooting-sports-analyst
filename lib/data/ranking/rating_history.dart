@@ -29,7 +29,9 @@ class RatingHistory {
 
   late RatingHistorySettings _settings;
   RatingHistorySettings get settings => _settings;
-  final int progressCallbackInterval = 5;
+
+  // Prime, so we skip around the list better
+  final int progressCallbackInterval = 7;
 
   List<RaterGroup> get groups => []..addAll(_settings.groups);
 
@@ -145,7 +147,12 @@ class RatingHistory {
           group.divisions.forEach((element) => divisionMap[element] = true);
 
           if (_lastMatch == null) {
-            _ratersByDivision[m]![group] = await _raterForGroup(innerMatches, group);
+            var r = _raterForGroup(innerMatches, group);
+            r.addAndDeduplicateShooters(_matches);
+            _ratersByDivision[m]![group] = r;
+
+            await r.calculateInitialRatings();
+            if(Timings.enabled) print("Timings for $group: ${r.timings}");
 
             stepsFinished += 1;
             if(stepsFinished % progressCallbackInterval == 0) {
@@ -176,10 +183,12 @@ class RatingHistory {
       _ratersByDivision[_lastMatch!] ??= {};
 
       for (var group in _settings.groups) {
-        _ratersByDivision[_lastMatch]![group] = await _raterForGroup(_matches, group, (_1, _2, eventName) async {
+        var r = _raterForGroup(_matches, group, (_1, _2, eventName) async {
           stepsFinished += 1;
           await progressCallback?.call(stepsFinished, totalSteps, "${group.uiLabel} - $eventName");
         });
+        await r.calculateInitialRatings();
+        _ratersByDivision[_lastMatch]![group] = r;
       }
     }
 
@@ -192,7 +201,7 @@ class RatingHistory {
     print("Total of ${countUniqueShooters()} shooters, ${_matches.length} matches, and $stageCount stages");
   }
   
-  Future<Rater> _raterForGroup(List<PracticalMatch> matches, RaterGroup group, [Future<void> Function(int, int, String?)? progressCallback]) async {
+  Rater _raterForGroup(List<PracticalMatch> matches, RaterGroup group, [Future<void> Function(int, int, String?)? progressCallback]) {
     var divisionMap = <Division, bool>{};
     group.divisions.forEach((element) => divisionMap[element] = true);
     Timings().reset();
@@ -207,10 +216,6 @@ class RatingHistory {
       memberNumberMappingBlacklist: _settings.memberNumberMappingBlacklist,
       userMemberNumberMappings: _settings.userMemberNumberMappings,
     );
-
-    await r.calculateInitialRatings();
-
-    if(Timings.enabled) print("Timings for $group: ${r.timings}");
 
     return r;
   }
