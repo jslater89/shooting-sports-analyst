@@ -89,7 +89,11 @@ class _RaterViewState extends State<RaterView> {
     }
 
     if(widget.search != null && widget.search!.isNotEmpty) {
-      sortedRatings = sortedRatings.where((r) => r.getName(suffixes: false).toLowerCase().contains(widget.search!.toLowerCase())).toList();
+      sortedRatings = sortedRatings.where((r) =>
+          r.getName(suffixes: false).toLowerCase().contains(widget.search!.toLowerCase())
+          || r.memberNumber.toLowerCase().endsWith(widget.search!.toLowerCase())
+          || r.originalMemberNumber.toLowerCase().endsWith(widget.search!.toLowerCase())
+      ).toList();
     }
 
     if(widget.hiddenShooters.isNotEmpty) {
