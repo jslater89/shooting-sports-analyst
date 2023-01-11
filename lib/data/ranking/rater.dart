@@ -298,19 +298,14 @@ class Rater {
       var source = knownShooters[sourceNumber];
 
       if(source != null && target != null) {
-        createdUserMappings.add(sourceNumber);
-        createdUserMappings.add(targetNumber);
-
         if(target.length == 0) {
           _mapRatings(target, source);
           print("Mapping $source to $target: manual mapping");
+          createdUserMappings.add(sourceNumber);
+          createdUserMappings.add(targetNumber);
         }
-        else if(target.length != 0 && source.length == 0) {
-          _mapRatings(source, target);
-          print("Mapping $target to $source: manual mapping");
-        }
-        else if(target.length != 0 && source.length != 0) {
-          throw StateError("manual mapping $source and $target, but both have rating history!");
+        else {
+          throw StateError("manual mapping $source and $target, but $target has rating history!");
         }
       }
     }
@@ -340,6 +335,10 @@ class Rater {
     // to update it--it's not in knownShooters.keys anymore. At the moment, though,
     // that will only cause trouble if someone uses their A/TY/FY number after getting
     // both a lifetime number and a BoD/pres number, which seems unlikely.
+    //
+    // We'll want to improve the detection logic: basically, only map when we're going
+    // 'downhill', from a 5-6-digit A number to a 4-digit L number (or maybe a 4-5-digit L
+    // number?) to a 1-3-digit BoD/pres number. Or maybe not. Hard problem.
 
     for(var name in namesToNumbers.keys) {
       var list = namesToNumbers[name]!;
