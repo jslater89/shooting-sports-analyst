@@ -9,6 +9,7 @@ import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
+import 'package:uspsa_result_viewer/data/ranking/rating_error.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
@@ -711,6 +712,123 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     }));
   }
 
+  void _presentError(RatingError error) {
+    if(error is ShooterMappingError) {
+      _presentMappingError(error);
+    }
+    else if(error is ManualMappingBackwardError) {
+      _presentBackwardManualMappingError(error);
+    }
+  }
+
+  Future<void> _presentMappingError(ShooterMappingError error) async {
+    // We need to present a lot of information here:
+    // * The two culprit ratings, front and center, with links
+    //   to view their history and also their USPSA classification
+    //   pages.
+    // * Alternate member numbers for each of the culprits, if available.
+    //   (But we shouldn't have any, right?)
+    // A few scenarios:
+    // 1. Max Michel: he entered his name differently right as he switched
+    //    member numbers. Symptom: two ratings where there should be one.
+    //    The solution is a manual mapping (or a name alias).
+    // 1.1. Z. Z.: uses a different name in his first match with a new number,
+    //    which in keep-history mode results in two ratings.
+    // 2. R. M.: he entered garbage, and also fat-fingered his member
+    //    number. The solution is a name/number to number correction, to fix
+    //    his data whenever we come across it.
+    //    We'll also detect this sometimes.
+    // 3. John Smith and John Smith: two shooters are different people, but
+    //    share a name, and one is an A/TY/FY member while the other is a life
+    //    member. The solution here is a mapping blacklist.
+    //    Symptom: one rating where there should be two. We won't generally
+    //    auto-detect this.
+    // 0. Automatic mapping succeeds and is correct.
+
+    // The dialog shown here should offer fixes for 1.1 and 2, depending on whether
+    // an error is between two ratings representing one shooter who has used different
+    // names over time, or two ratings, one of which is a data entry error (or downstream
+    // of a data entry error).
+
+    // Showing the last few matches each rating shot, along with linking to the classification
+    // page, and possibly showing past names? would all be helpful.
+
+    // So basically, #2 is the only case we can 100% detect. It may signify
+    // a problem somewhere else, but we don't have a good way to dig into that.
+    //
+    // We can provide tools to investigate possible cases of #1 and #3, however,
+    // in the rater view. It also might detect some fat-fingered member numbers.
+    // Basically, some modals with a list of detected/created member number mappings,
+    // and a list of shooters with the same names. (Generate/save a names-to-numbers
+    // map at the end?)
+  }
+
+  Future<void> _presentBackwardManualMappingError(ManualMappingBackwardError error) async {
+    var canFix = error.source.length == 0;
+
+    String message;
+    if(canFix) {
+      message =
+          "The manual member number mapping below was entered in reverse: the source "
+              "rating (on the left) contains no history, while the target rating "
+              "(on the right) contains history. USPSA Analyst can fix this automatically, "
+              "or delete the user mapping.";
+    }
+    else {
+      message =
+      "The manual member number mapping below is invalid: both ratings contain history. "
+          "The member number mapping must be deleted before calculation can proceed.";
+    }
+
+    // apply fix: reverse the mapping
+    var fix = await showDialog<bool>(context: context, barrierDismissible: false, builder: (context) => AlertDialog(
+      title: Text("Manual mapping error"),
+      scrollable: true,
+      content: SizedBox(
+        width: 700,
+        child: Column(
+          children: [
+            Text(message),
+            Row(
+              mainAxisSize: MainAxisSize.max,
+              children: [
+                Expanded(
+                  child: RatingErrorCard(error.source, titlePrefix: "Source: "),
+                ),
+                Expanded(
+                  child: RatingErrorCard(error.target, titlePrefix: "Target: "),
+                )
+              ],
+            )
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          child: Text("DELETE MAPPING"),
+          onPressed: () {
+            Navigator.of(context).pop(false);
+          },
+        ),
+        if(canFix) TextButton(
+          child: Text("FIX MAPPING"),
+          onPressed: () {
+            Navigator.of(context).pop(true);
+          },
+        )
+      ],
+    ));
+
+    _history.settings.userMemberNumberMappings.remove(error.source.memberNumber);
+    if(fix ?? false) {
+      _history.settings.userMemberNumberMappings[error.target.memberNumber] = error.source.memberNumber;
+    }
+
+    _history.resetRaters();
+    _history.processInitialMatches();
+    // reset, recalculate
+  }
+
   Future<bool> _getMatchResultFiles(List<String> urls) async {
     setState(() {
       _loadingState = _LoadingState.readingCache;
@@ -834,7 +952,10 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       await Future.delayed(Duration(milliseconds: 1));
     });
 
-    await _history.processInitialMatches();
+    var result = await _history.processInitialMatches();
+    if(result.isErr()) {
+      _presentError(result.unwrapErr());
+    }
 
     debugPrint("History ready with ${_history.matches.length} matches after ${urls.length} URLs and ${failedMatches.length} failures");
     setState(() {

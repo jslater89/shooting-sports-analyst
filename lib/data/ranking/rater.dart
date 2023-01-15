@@ -7,6 +7,7 @@ import 'package:uspsa_result_viewer/data/db/object/rating/rating_project.dart';
 import 'package:uspsa_result_viewer/data/db/object/rating/shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
+import 'package:uspsa_result_viewer/data/ranking/rating_error.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
 import 'package:uspsa_result_viewer/data/ranking/timings.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
@@ -91,19 +92,6 @@ class Rater {
 
       return a.date!.compareTo(b.date!);
     });
-
-    late DateTime start;
-
-    if(Timings.enabled) start = DateTime.now();
-    for(PracticalMatch m in _matches) {
-      _addShootersFromMatch(m);
-    }
-    if(Timings.enabled) timings.addShootersMillis = (DateTime.now().difference(start).inMicroseconds).toDouble();
-    if(Timings.enabled) timings.shooterCount = knownShooters.length;
-
-    if(Timings.enabled) start = DateTime.now();
-    _deduplicateShooters();
-    if(Timings.enabled) timings.dedupShootersMillis = (DateTime.now().difference(start).inMicroseconds).toDouble();
   }
 
   Rater.copy(Rater other) :
@@ -132,8 +120,8 @@ class Rater {
   /// Add shooters from a set of matches without adding the matches, since we do the best job of shooter
   /// mapping when we operate with as much data as possible.
   ///
-  /// Used by keep-history mode.
-  void addAndDeduplicateShooters(List<PracticalMatch> matches) {
+  /// Used by keep-history mode. (Or maybe not.)
+  RatingResult addAndDeduplicateShooters(List<PracticalMatch> matches) {
     DateTime start = DateTime.now();
     if(Timings.enabled) start = DateTime.now();
     for(PracticalMatch m in matches) {
@@ -143,8 +131,10 @@ class Rater {
     if(Timings.enabled) timings.shooterCount = knownShooters.length;
 
     if(Timings.enabled) start = DateTime.now();
-    _deduplicateShooters();
+    var result = _deduplicateShooters();
     if(Timings.enabled) timings.dedupShootersMillis = (DateTime.now().difference(start).inMicroseconds).toDouble();
+
+    return result;
   }
 
   void deserializeFrom(List<DbMemberNumberMapping> mappings, List<DbShooterRating> ratings, Map<DbShooterRating, List<DbRatingEvent>> eventsByRating) {
@@ -176,10 +166,25 @@ class Rater {
     }
   }
 
-  Future<void> calculateInitialRatings() async {
+  Future<RatingResult> calculateInitialRatings() async {
+    late DateTime start;
+
+    if(Timings.enabled) start = DateTime.now();
+    for(PracticalMatch m in _matches) {
+      _addShootersFromMatch(m);
+    }
+    if(Timings.enabled) timings.addShootersMillis = (DateTime.now().difference(start).inMicroseconds).toDouble();
+    if(Timings.enabled) timings.shooterCount = knownShooters.length;
+
+    if(Timings.enabled) start = DateTime.now();
+
+    var dedupResult = _deduplicateShooters();
+    if(dedupResult.isErr()) return dedupResult;
+
+    if(Timings.enabled) timings.dedupShootersMillis = (DateTime.now().difference(start).inMicroseconds).toDouble();
+
     int totalSteps = _matches.length;
     int currentSteps = 0;
-    late DateTime start;
 
     for(PracticalMatch m in _matches) {
       if(Timings.enabled) start = DateTime.now();
@@ -196,20 +201,23 @@ class Rater {
     if(Timings.enabled) timings.removeUnseenShootersMillis += (DateTime.now().difference(start).inMicroseconds);
 
     debugPrint("Initial ratings complete for ${knownShooters.length} shooters in ${_matches.length} matches in ${_filters != null ? _filters!.activeDivisions.toList() : "all divisions"}");
+    return RatingResult.ok();
   }
 
-  void addMatch(PracticalMatch match) {
+  RatingResult addMatch(PracticalMatch match) {
     _cachedStats = null;
     _matches.add(match);
 
     int changed = _addShootersFromMatch(match);
-    _deduplicateShooters();
+    var result = _deduplicateShooters();
+    if(result.isErr()) return result;
 
     _rankMatch(match);
 
     _removeUnseenShooters();
 
     debugPrint("Ratings update complete for $changed shooters (${knownShooters.length} total) in ${_matches.length} matches in ${_filters != null ? _filters!.activeDivisions.toList() : "all divisions"}");
+    return RatingResult.ok();
   }
 
   /// Returns the number of shooters added or updated.
@@ -269,7 +277,7 @@ class Rater {
     return name;
   }
 
-  void _deduplicateShooters() {
+  RatingResult _deduplicateShooters() {
     Map<String, List<String>> namesToNumbers = {};
 
     Map<String, String> detectedUserMappings = {};
@@ -305,7 +313,10 @@ class Rater {
           createdUserMappings.add(targetNumber);
         }
         else {
-          throw StateError("manual mapping $source and $target, but $target has rating history!");
+          return RatingResult.err(ManualMappingBackwardError(
+            source: source,
+            target: target,
+          ));
         }
       }
     }
@@ -368,7 +379,20 @@ class Rater {
         var rating1 = knownShooters[list[1]]!;
 
         if (rating0.ratingEvents.length > 0 && rating1.ratingEvents.length > 0) {
-          throw StateError("Both ratings have events");
+          List<ShooterRating> culprits = [rating0, rating1];
+          List<ShooterRating> accomplices = [];
+          // All the member numbers mapped to these member numbers might also be interesting.
+          for(var target in _memberNumberMappings.values) {
+            if(target == rating0.memberNumber || target == rating1.memberNumber) {
+              var rating = knownShooters[target];
+              if(rating != null) accomplices.add(rating);
+            }
+          }
+          
+          return RatingResult.err(ShooterMappingError(
+            culprits: culprits,
+            accomplices: accomplices,
+          ));
         }
 
         // We're either at the adding-initial-matches stage, or two people with the
@@ -400,8 +424,12 @@ class Rater {
         }
       }
     }
+
+    return RatingResult.ok();
   }
-  
+
+  /// Map ratings from one shooter to another. [source]'s history will
+  /// be added to [target].
   void _mapRatings(ShooterRating target, ShooterRating source) {
     target.copyRatingFrom(source);
     knownShooters.remove(source.memberNumber);

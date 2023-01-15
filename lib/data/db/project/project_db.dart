@@ -14,9 +14,6 @@ import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 
 part 'project_db.g.dart';
 
-// TODO: I think I need a Rater item, to store number mappings and encountered numbers
-// update 1/1/22: not really?
-
 /// ProjectDatabase is the application database, pending renaming.
 ///
 /// Schemas, generally:

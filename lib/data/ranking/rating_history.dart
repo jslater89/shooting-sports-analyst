@@ -5,6 +5,7 @@ import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
+import 'package:uspsa_result_viewer/data/ranking/rating_error.dart';
 import 'package:uspsa_result_viewer/data/ranking/timings.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart' as defaultAliases;
@@ -54,7 +55,11 @@ class RatingHistory {
     _settings = project.settings;
   }
 
-  Future<void> processInitialMatches() async {
+  void resetRaters() {
+    _ratersByDivision.clear();
+  }
+
+  Future<RatingResult> processInitialMatches() async {
     if(_ratersByDivision.length > 0) throw StateError("Called processInitialMatches twice");
     return _processInitialMatches();
   }
@@ -112,7 +117,7 @@ class RatingHistory {
   /// Used to key the matches map for online match-adding
   PracticalMatch? _lastMatch;
   
-  Future<void> _processInitialMatches() async {
+  Future<RatingResult> _processInitialMatches() async {
     debugPrint("Loading matches");
 
     int stepsFinished = 0;
@@ -148,10 +153,12 @@ class RatingHistory {
 
           if (_lastMatch == null) {
             var r = _raterForGroup(innerMatches, group);
-            r.addAndDeduplicateShooters(_matches);
+            // r.addAndDeduplicateShooters(_matches);
             _ratersByDivision[m]![group] = r;
 
-            await r.calculateInitialRatings();
+            var result = await r.calculateInitialRatings();
+            if(result.isErr()) return result;
+
             if(Timings.enabled) print("Timings for $group: ${r.timings}");
 
             stepsFinished += 1;
@@ -161,7 +168,9 @@ class RatingHistory {
           }
           else {
             Rater newRater = Rater.copy(_ratersByDivision[_lastMatch]![group]!);
-            newRater.addMatch(m);
+            var result = newRater.addMatch(m);
+            if(result.isErr()) return result;
+
             _ratersByDivision[m]![group] = newRater;
 
             stepsFinished += 1;
@@ -187,7 +196,8 @@ class RatingHistory {
           stepsFinished += 1;
           await progressCallback?.call(stepsFinished, totalSteps, "${group.uiLabel} - $eventName");
         });
-        await r.calculateInitialRatings();
+        var result = await r.calculateInitialRatings();
+        if(result.isErr()) return result;
         _ratersByDivision[_lastMatch]![group] = r;
       }
     }
@@ -199,6 +209,7 @@ class RatingHistory {
       // scoreCount += m.getScores().length;
     }
     print("Total of ${countUniqueShooters()} shooters, ${_matches.length} matches, and $stageCount stages");
+    return RatingResult.ok();
   }
   
   Rater _raterForGroup(List<PracticalMatch> matches, RaterGroup group, [Future<void> Function(int, int, String?)? progressCallback]) {
