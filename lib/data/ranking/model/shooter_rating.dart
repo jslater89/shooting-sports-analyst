@@ -29,6 +29,9 @@ abstract class ShooterRating extends Shooter {
 
   List<RatingEvent> get ratingEvents;
 
+  /// Alternate member numbers this shooter is known by.
+  List<String> alternateMemberNumbers = [];
+
   int get length => ratingEvents.length;
 
   void updateFromEvents(List<RatingEvent> events);
@@ -161,6 +164,9 @@ abstract class ShooterRating extends Shooter {
     this._connectedness = other._connectedness;
     this.lastClassification = other.lastClassification;
     this.lastSeen = other.lastSeen;
+    if(!this.alternateMemberNumbers.contains(other.originalMemberNumber)) {
+      this.alternateMemberNumbers.add(other.originalMemberNumber);
+    }
     this.connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure)..addAll(other.connectedShooters.map((e) => ConnectedShooter.copy(e)));
   }
 

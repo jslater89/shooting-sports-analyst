@@ -9,8 +9,15 @@ class Shooter {
 
   int internalId = -1;
   String _memberNumber = "";
+
+  /// The shooter's mostly-unprocessed member number.
+  ///
+  /// All non-alphanumeric characters are removed, and any alphabetic
+  /// characters are made uppercase.
   String originalMemberNumber = "";
 
+  /// The shooter's processed member number, i.e., the member number
+  /// without any alphabetic characters.
   String get memberNumber => _memberNumber;
   set memberNumber(String m) {
     if(originalMemberNumber.isEmpty) {
