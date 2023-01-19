@@ -184,9 +184,10 @@ abstract class ShooterRating extends Shooter {
     return change;
   }
 
-  void copyVitalsFrom(Shooter other) {
+  void copyVitalsFrom(covariant ShooterRating other) {
     this.firstName = other.firstName;
     this.lastName = other.lastName;
+    this.alternateMemberNumbers = other.alternateMemberNumbers;
   }
 
   ShooterRating(Shooter shooter, {DateTime? date}) :
@@ -205,7 +206,9 @@ abstract class ShooterRating extends Shooter {
       this.lastClassification = other.lastClassification,
       this._connectedness = other._connectedness,
       this.lastSeen = other.lastSeen,
-      this.connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure)..addAll(other.connectedShooters.map((e) => ConnectedShooter.copy(e))) {
+      this.alternateMemberNumbers = other.alternateMemberNumbers,
+      this.connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure)..addAll(other.connectedShooters.map((e) => ConnectedShooter.copy(e)))
+  {
     super.copyVitalsFrom(other);
   }
 }

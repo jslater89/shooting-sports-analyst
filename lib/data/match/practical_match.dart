@@ -194,6 +194,15 @@ class PracticalMatch {
   String toString() {
     return name ?? "unnamed match";
   }
+
+  static int Function(PracticalMatch a, PracticalMatch b) dateComparator = (a, b) {
+    // Sort remaining matches by date descending, then by name ascending
+    var dateSort = b.date!.compareTo(a.date!);
+    if (dateSort != 0) return dateSort;
+
+    return a.name!.compareTo(b.name!);
+  };
+
 }
 
 class Stage {

@@ -282,6 +282,8 @@ class Rater {
 
     Map<String, String> detectedUserMappings = {};
 
+    Map<String, List<ShooterRating>> ratingsByName = {};
+
     for(var num in knownShooters.keys) {
       var userMapping = _userMemberNumberMappings[num];
       if(userMapping != null) {
@@ -295,6 +297,9 @@ class Rater {
 
       namesToNumbers[finalName] ??= [];
       namesToNumbers[finalName]!.add(num);
+
+      ratingsByName[finalName] ??= [];
+      ratingsByName[finalName]!.add(shooter);
 
       _memberNumberMappings[num] ??= num;
     }
@@ -380,13 +385,11 @@ class Rater {
 
         if (rating0.ratingEvents.length > 0 && rating1.ratingEvents.length > 0) {
           List<ShooterRating> culprits = [rating0, rating1];
-          List<ShooterRating> accomplices = [];
-          // All the member numbers mapped to these member numbers might also be interesting.
-          for(var target in _memberNumberMappings.values) {
-            if(target == rating0.memberNumber || target == rating1.memberNumber) {
-              var rating = knownShooters[target];
-              if(rating != null) accomplices.add(rating);
-            }
+          Map<ShooterRating, List<ShooterRating>> accomplices = {};
+
+          for(var culprit in culprits) {
+            accomplices[culprit] = []..addAll(ratingsByName[_processName(culprit)]!);
+            accomplices[culprit]!.remove(culprit);
           }
           
           return RatingResult.err(ShooterMappingError(
