@@ -236,6 +236,13 @@ class Rater {
     var shooters = _getShooters(match);
     for(Shooter s in shooters) {
       var processed = processMemberNumber(s.memberNumber);
+      var correction = _dataCorrections.getByInvalidNumber(processed);
+      if(correction != null) {
+        var name = _processName(s);
+        if(correction.name == name) {
+          processed = correction.correctedNumber;
+        }
+      }
       if(processed.isNotEmpty && !s.reentry) {
         s.memberNumber = processed;
         var rating = maybeKnownShooter(s.memberNumber);
@@ -275,7 +282,7 @@ class Rater {
     return maybeKnownShooter(processed);
   }
 
-  String _processName(ShooterRating shooter) {
+  String _processName(Shooter shooter) {
     String name = "${shooter.firstName.toLowerCase().replaceAll(RegExp(r"\s+"), "")}"
         + "${shooter.lastName.toLowerCase().replaceAll(RegExp(r"\s+"), "")}";
     name = name.replaceAll(RegExp(r"[^a-zA-Z0-9]"), "");
