@@ -23,6 +23,7 @@ abstract class ShooterRating extends Shooter {
   static const maxConnections = 40;
 
   Classification lastClassification;
+  DateTime firstSeen;
   DateTime lastSeen;
 
   double get rating;
@@ -192,12 +193,14 @@ abstract class ShooterRating extends Shooter {
 
   ShooterRating(Shooter shooter, {DateTime? date}) :
       this.lastClassification = shooter.classification ?? Classification.U,
+      this.firstSeen = date ?? DateTime.now(),
       this.lastSeen = date ?? DateTime.now() {
     super.copyVitalsFrom(shooter);
   }
 
   ShooterRating.fromVitals(DbShooterRating rating) :
       this.lastClassification = rating.lastClassification,
+      this.firstSeen = throw UnimplementedError(),
       this.lastSeen = rating.lastSeen {
     super.copyDbVitalsFrom(rating);
   }
@@ -206,6 +209,7 @@ abstract class ShooterRating extends Shooter {
       this.lastClassification = other.lastClassification,
       this._connectedness = other._connectedness,
       this.lastSeen = other.lastSeen,
+      this.firstSeen = other.firstSeen,
       this.alternateMemberNumbers = other.alternateMemberNumbers,
       this.connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure)..addAll(other.connectedShooters.map((e) => ConnectedShooter.copy(e)))
   {

@@ -21,6 +21,7 @@ import 'package:uspsa_result_viewer/ui/rater/rater_view.dart';
 import 'package:uspsa_result_viewer/ui/result_page.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/associate_registrations.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/match_cache_chooser_dialog.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/member_number_collision_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/url_entry_dialog.dart';
 import 'package:uspsa_result_viewer/util.dart';
 
@@ -761,6 +762,12 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     // Basically, some modals with a list of detected/created member number mappings,
     // and a list of shooters with the same names. (Generate/save a names-to-numbers
     // map at the end?)
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => MemberNumberCollisionDialog(data: error),
+    );
   }
 
   Future<void> _presentBackwardManualMappingError(ManualMappingBackwardError error) async {
@@ -955,6 +962,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     var result = await _history.processInitialMatches();
     if(result.isErr()) {
       _presentError(result.unwrapErr());
+      return false;
     }
 
     debugPrint("History ready with ${_history.matches.length} matches after ${urls.length} URLs and ${failedMatches.length} failures");
