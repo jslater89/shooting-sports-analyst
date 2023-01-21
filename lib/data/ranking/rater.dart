@@ -6,6 +6,7 @@ import 'package:uspsa_result_viewer/data/db/object/rating/rating_event.dart';
 import 'package:uspsa_result_viewer/data/db/object/rating/rating_project.dart';
 import 'package:uspsa_result_viewer/data/db/object/rating/shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/ranking/member_number_correction.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_error.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
@@ -31,6 +32,8 @@ class Rater {
   /// Any mapping that appears in this map, in either direction,
   /// will not be established automatically.
   Map<String, String> _memberNumberMappingBlacklist = {};
+
+  MemberNumberCorrectionContainer _dataCorrections;
 
   /// Contains member number mappings configured in the project settings.
   ///
@@ -74,11 +77,13 @@ class Rater {
     Map<String, String>? shooterAliases,
     Map<String, String> userMemberNumberMappings = const {},
     Map<String, String> memberNumberMappingBlacklist = const {},
+    required MemberNumberCorrectionContainer dataCorrections,
     this.memberNumberWhitelist = const []})
       : this._matches = matches,
         this._filters = filters,
         this._memberNumberMappingBlacklist = memberNumberMappingBlacklist,
-        this._userMemberNumberMappings = userMemberNumberMappings
+        this._userMemberNumberMappings = userMemberNumberMappings,
+        this._dataCorrections = dataCorrections
   {
     if(shooterAliases != null) this._shooterAliases = shooterAliases;
     else this._shooterAliases = defaultShooterAliases; 
@@ -102,6 +107,7 @@ class Rater {
         this._memberNumberMappings = {}..addAll(other._memberNumberMappings),
         this._memberNumberMappingBlacklist = {}..addAll(other._memberNumberMappingBlacklist),
         this._userMemberNumberMappings = {}..addAll(other._userMemberNumberMappings),
+        this._dataCorrections = other._dataCorrections,
         this._shooterAliases = {}..addAll(other._shooterAliases),
         this._filters = other._filters,
         this.memberNumberWhitelist = other.memberNumberWhitelist,

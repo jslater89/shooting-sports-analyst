@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'package:hive/hive.dart';
 import 'package:sanitize_filename/sanitize_filename.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uspsa_result_viewer/data/ranking/member_number_correction.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/openskill/openskill_rater.dart';
@@ -176,6 +177,7 @@ const _aliasesKey = "aliases";
 const _memberNumberMappingsKey = "numMappings";
 const _memberNumberMappingBlacklistKey = "numMapBlacklist";
 const _hiddenShootersKey = "hiddenShooters";
+const _memberNumberCorrectionsKey = "memNumCorrections";
 
 // Values for the multiplayer percent elo rater.
 
@@ -227,6 +229,7 @@ class RatingProject {
           MapEntry(k, v as String)
       ),
       hiddenShooters: ((encodedProject[_hiddenShootersKey] ?? []) as List<dynamic>).map((item) => item as String).toList(),
+      memberNumberCorrections: MemberNumberCorrectionContainer.fromJson((encodedProject[_memberNumberCorrectionsKey] ?? []) as List<dynamic>),
     );
     var matchUrls = (encodedProject[_urlsKey] as List<dynamic>).map((item) => item as String).toList();
     var name = encodedProject[_nameKey] as String;
@@ -261,6 +264,7 @@ class RatingProject {
     map[_memberNumberMappingsKey] = settings.userMemberNumberMappings;
     map[_memberNumberMappingBlacklistKey] = settings.memberNumberMappingBlacklist;
     map[_hiddenShootersKey] = settings.hiddenShooters;
+    map[_memberNumberCorrectionsKey] = settings.memberNumberCorrections.toJson();
 
     /// Alg-specific settings
     settings.algorithm.encodeToJson(map);

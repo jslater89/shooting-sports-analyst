@@ -9,6 +9,7 @@ import 'package:uspsa_result_viewer/data/db/object/rating/shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/db/project/project_db.dart';
 import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/ranking/member_number_correction.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
@@ -123,6 +124,7 @@ class DbRatingProject {
         ratingSystem: project.settings.algorithm,
         byStage: project.settings.byStage,
         filters: group.filters,
+        dataCorrections: MemberNumberCorrectionContainer(),
       );
 
       // Load ratings, events, and member number mappings

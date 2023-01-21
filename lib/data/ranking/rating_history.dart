@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/ranking/member_number_correction.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
@@ -226,6 +227,7 @@ class RatingHistory {
       shooterAliases: _settings.shooterAliases,
       memberNumberMappingBlacklist: _settings.memberNumberMappingBlacklist,
       userMemberNumberMappings: _settings.userMemberNumberMappings,
+      dataCorrections: _settings.memberNumberCorrections,
     );
 
     return r;
@@ -322,6 +324,8 @@ class RatingHistorySettings {
   bool preserveHistory;
   List<RaterGroup> groups;
   List<String> memberNumberWhitelist;
+  late MemberNumberCorrectionContainer memberNumberCorrections;
+
   RatingSystem algorithm;
   /// A map of shooter name changes, used to backstop automatic shooter number change detection.
   ///
@@ -364,7 +368,11 @@ class RatingHistorySettings {
     this.userMemberNumberMappings = const {},
     this.memberNumberMappingBlacklist = const {},
     this.hiddenShooters = const [],
-  });
+    MemberNumberCorrectionContainer? memberNumberCorrections
+  }) {
+    if(memberNumberCorrections != null) this.memberNumberCorrections = memberNumberCorrections;
+    else this.memberNumberCorrections = MemberNumberCorrectionContainer();
+  }
 
   static List<RaterGroup> groupsForSettings({bool combineOpenPCC = false, bool combineLimitedCO = false, bool combineLocap = true}) {
     var groups = <RaterGroup>[];
