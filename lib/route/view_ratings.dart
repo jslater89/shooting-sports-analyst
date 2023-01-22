@@ -539,51 +539,6 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         ),
       ), // end if: history changed
       Tooltip(
-        message: "Add a new match to the ratings.",
-        child: IconButton(
-          icon: Icon(Icons.playlist_add),
-          onPressed: () async {
-            var match = await showDialog<PracticalMatch>(
-                context: context,
-                builder: (context) => MatchCacheChooserDialog(
-                  helpText:
-                      "Add a match to the rating list from the cache. Use the plus button to download a new one.\n\n"
-                      "You must save the project from the rating screen for the match to be included in future "
-                      "rating runs. In future rating runs, matches will be sorted by date even if not added in "
-                      "date order here.",
-                )
-            );
-
-            if(match != null) {
-              _history.addMatch(match);
-
-              setState(() {
-                _selectedMatch = _history.matches.last;
-                _historyChanged = true;
-              });
-            }
-          },
-        )
-      ),
-      Tooltip(
-        message: "View results for a match in the dataset.",
-        child: IconButton(
-          icon: Icon(Icons.list),
-          onPressed: () async {
-            var match = await showDialog<PracticalMatch>(
-              context: context,
-              builder: (context) => MatchCacheChooserDialog(matches: _history.allMatches)
-            );
-
-            if(match != null) {
-              Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-                return ResultPage(canonicalMatch: match, allowWhatIf: false);
-              }));
-            }
-          },
-        )
-      ),
-      Tooltip(
           message: "View statistics for this division or group.",
           child: IconButton(
             icon: Icon(Icons.bar_chart),
@@ -624,46 +579,91 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
           },
         )
       ),
-      Tooltip(
-        message: "Fix data entry errors",
-        child: IconButton(
-          icon: Icon(Icons.mode_edit_sharp),
-          onPressed: () async {
-            var changed = await showDialog<bool>(barrierDismissible: false, context: context, builder: (context) => MemberNumberCorrectionListDialog(
-              title: "Fix data entry errors",
-              corrections: _history.settings.memberNumberCorrections,
-              width: 700,
-              nameHintText: "Name",
-              sourceHintText: "Invalid #",
-              targetHintText: "Corrected #",
-              helpText: "Use this feature to correct one-off data entry errors. If John Doe mistakenly enters "
-                  "A99999 for his member number, but his member number is actually A88888, enter 'John Doe' in "
-                  "the left field, 'A99999' in the center field, and 'A88888' in the right field.",
-            ));
-
-            if(changed ?? false) {
-              setState(() {
-                _historyChanged = true;
-              });
-            }
-          },
-        )
-      ),
-      Tooltip(
-        message: "Download ratings as CSV",
-        child: IconButton(
-          icon: Icon(Icons.save_alt),
-          onPressed: () async {
-            if(_selectedMatch != null) {
-              var tab = activeTabs[_tabController.index];
-              var rater = _history.raterFor(_selectedMatch!, tab);
-              var csv = rater.toCSV(ratings: _ratings);
-              HtmlOr.saveFile("ratings-${tab.label}.csv", csv);
-            }
-          },
-        )
-      ),
+      PopupMenuButton<_MenuEntry>(
+        onSelected: (item) => _handleClick(item),
+        itemBuilder: (context) {
+          List<PopupMenuEntry<_MenuEntry>> items = _MenuEntry.values.map((v) =>
+              PopupMenuItem(
+                child: Text(v.label),
+                value: v,
+              )
+          ).toList();
+          return items;
+        },
+      )
     ];
+  }
+
+  Future<void> _handleClick(_MenuEntry item) async {
+    switch(item) {
+
+      case _MenuEntry.csvExport:
+        if(_selectedMatch != null) {
+          var tab = activeTabs[_tabController.index];
+          var rater = _history.raterFor(_selectedMatch!, tab);
+          var csv = rater.toCSV(ratings: _ratings);
+          HtmlOr.saveFile("ratings-${tab.label}.csv", csv);
+        }
+        break;
+
+
+      case _MenuEntry.dataErrors:
+        var changed = await showDialog<bool>(barrierDismissible: false, context: context, builder: (context) => MemberNumberCorrectionListDialog(
+          title: "Fix data entry errors",
+          corrections: _history.settings.memberNumberCorrections,
+          width: 700,
+          nameHintText: "Name",
+          sourceHintText: "Invalid #",
+          targetHintText: "Corrected #",
+          helpText: "Use this feature to correct one-off data entry errors. If John Doe mistakenly enters "
+              "A99999 for his member number, but his member number is actually A88888, enter 'John Doe' in "
+              "the left field, 'A99999' in the center field, and 'A88888' in the right field.",
+        ));
+
+        if(changed ?? false) {
+          setState(() {
+            _historyChanged = true;
+          });
+        }
+        break;
+
+
+      case _MenuEntry.viewResults:
+        var match = await showDialog<PracticalMatch>(
+            context: context,
+            builder: (context) => MatchCacheChooserDialog(matches: _history.allMatches)
+        );
+
+        if(match != null) {
+          Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+            return ResultPage(canonicalMatch: match, allowWhatIf: false);
+          }));
+        }
+        break;
+
+
+      case _MenuEntry.addMatch:
+        var match = await showDialog<PracticalMatch>(
+            context: context,
+            builder: (context) => MatchCacheChooserDialog(
+              helpText:
+              "Add a match to the rating list from the cache. Use the plus button to download a new one.\n\n"
+                  "You must save the project from the rating screen for the match to be included in future "
+                  "rating runs. In future rating runs, matches will be sorted by date even if not added in "
+                  "date order here.",
+            )
+        );
+
+        if(match != null) {
+          _history.addMatch(match);
+
+          setState(() {
+            _selectedMatch = _history.matches.last;
+            _historyChanged = true;
+          });
+        }
+        break;
+    }
   }
 
   Future<void> _startPredictionView(Rater rater, RaterGroup tab) async {
@@ -1134,6 +1134,26 @@ extension _Utilities on RaterGroup {
         return "OPEN/PCC";
       case RaterGroup.limitedCO:
         return "LIM/CO";
+    }
+  }
+}
+
+enum _MenuEntry {
+  csvExport,
+  dataErrors,
+  viewResults,
+  addMatch;
+
+  String get label {
+    switch(this) {
+      case _MenuEntry.csvExport:
+        return "Export ratings as CSV";
+      case _MenuEntry.dataErrors:
+        return "Fix data entry errors";
+      case _MenuEntry.viewResults:
+        return "View match results";
+      case _MenuEntry.addMatch:
+        return "Add another match";
     }
   }
 }
