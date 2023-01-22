@@ -331,6 +331,7 @@ class Rater {
           createdUserMappings.add(targetNumber);
         }
         else {
+          print("Manual mapping backward");
           return RatingResult.err(ManualMappingBackwardError(
             source: source,
             target: target,
@@ -404,7 +405,8 @@ class Rater {
             accomplices[culprit] = []..addAll(ratingsByName[_processName(culprit)]!);
             accomplices[culprit]!.remove(culprit);
           }
-          
+
+          print("Error mapping shooters: both have events");
           return RatingResult.err(ShooterMappingError(
             culprits: culprits,
             accomplices: accomplices,

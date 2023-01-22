@@ -7,7 +7,9 @@ import 'package:sprintf/sprintf.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:charts_flutter/flutter.dart' as charts;
+// ignore: implementation_imports
 import 'package:charts_flutter/src/text_style.dart' as style;
+// ignore: implementation_imports
 import 'package:charts_flutter/src/text_element.dart' as element;
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
@@ -47,7 +49,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
           MouseRegion(
             cursor: SystemMouseCursors.click,
             child: GestureDetector(
-              child: Text("Ratings for ${widget.rating.getName(suffixes: false)} (${widget.rating.lastClassification.name})"),
+              child: Text("Ratings for ${widget.rating.getName(suffixes: false)} ${widget.rating.originalMemberNumber} (${widget.rating.lastClassification.name})"),
               onTap: () {
                 HtmlOr.openLink("https://uspsa.org/classification/${widget.rating.originalMemberNumber}");
               },

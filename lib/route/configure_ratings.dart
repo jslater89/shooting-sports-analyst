@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/match/practical_match.dart';
 import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
+import 'package:uspsa_result_viewer/data/ranking/member_number_correction.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_system.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
@@ -15,6 +16,7 @@ import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/ui/rater/enter_practiscore_source_dialog.dart';
+import 'package:uspsa_result_viewer/ui/rater/member_number_correction_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/member_number_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/member_number_map_dialog.dart';
 import 'package:uspsa_result_viewer/ui/result_page.dart';
@@ -170,6 +172,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       _memNumMappingBlacklist = project.settings.memberNumberMappingBlacklist;
       _memNumWhitelist = project.settings.memberNumberWhitelist;
       _hiddenShooters = project.settings.hiddenShooters;
+      _memNumCorrections = project.settings.memberNumberCorrections;
     });
     var algorithm = project.settings.algorithm;
     _ratingSystem = algorithm;
@@ -233,6 +236,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   Map<String, String> _memNumMappings = {};
   Map<String, String> _shooterAliases = defaultShooterAliases;
   Map<String, String> _memNumMappingBlacklist = {};
+  MemberNumberCorrectionContainer _memNumCorrections = MemberNumberCorrectionContainer();
   List<String> _hiddenShooters = [];
   String _validationError = "";
 
@@ -276,6 +280,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       memberNumberMappingBlacklist: _memNumMappingBlacklist,
       hiddenShooters: _hiddenShooters,
       shooterAliases: _shooterAliases,
+      memberNumberCorrections: _memNumCorrections,
     );
   }
 
@@ -795,6 +800,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       _memNumMappingBlacklist = {};
       _memNumMappings = {};
       _hiddenShooters = [];
+      _memNumCorrections = MemberNumberCorrectionContainer();
     });
   }
 
@@ -1057,6 +1063,17 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         if(aliases != null) {
           _shooterAliases = aliases;
         }
+        break;
+
+      case _MenuEntry.dataEntryErrors:
+        showDialog(context: context, builder: (context) => MemberNumberCorrectionListDialog(
+          title: "Fix data entry errors",
+          corrections: _memNumCorrections,
+          width: 700,
+          nameHintText: "Name",
+          sourceHintText: "Invalid #",
+          targetHintText: "Corrected #",
+        ));
     }
   }
 }
@@ -1065,6 +1082,7 @@ enum _MenuEntry {
   import,
   export,
   hiddenShooters,
+  dataEntryErrors,
   numberMappings,
   numberMappingBlacklist,
   numberWhitelist,
@@ -1073,6 +1091,7 @@ enum _MenuEntry {
 
   static List<_MenuEntry> get menu => [
     hiddenShooters,
+    dataEntryErrors,
     numberMappings,
     numberMappingBlacklist,
     numberWhitelist,
@@ -1088,12 +1107,14 @@ enum _MenuEntry {
         return "Export";
       case _MenuEntry.hiddenShooters:
         return "Hide shooters";
+      case _MenuEntry.dataEntryErrors:
+        return "Fix data entry errors";
       case _MenuEntry.numberMappings:
         return "Map member numbers";
       case _MenuEntry.numberMappingBlacklist:
         return "Number mapping blacklist";
       case _MenuEntry.numberWhitelist:
-        return "Member whitelist";
+        return "Member number whitelist";
       case _MenuEntry.clearCache:
         return "Clear cache";
       case _MenuEntry.shooterAliases:

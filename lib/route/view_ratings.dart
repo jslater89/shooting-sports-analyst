@@ -763,11 +763,27 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     // and a list of shooters with the same names. (Generate/save a names-to-numbers
     // map at the end?)
 
-    await showDialog(
+    var fix = await showDialog<CollisionFix>(
       context: context,
       barrierDismissible: false,
       builder: (context) => MemberNumberCollisionDialog(data: error),
     );
+
+    if(fix != null) {
+      // If we get a fix, apply it, reset, and re-rate.
+      _history.applyFix(fix);
+
+      // Save the fix here, too.
+      var pm = RatingProjectManager();
+      await pm.saveProject(_history.project, mapName: RatingProjectManager.autosaveName);
+
+      _history.resetRaters();
+      await _history.processInitialMatches();
+    }
+    else {
+      // If we somehow don't get a fix, go back to configure
+      Navigator.of(context).pop();
+    }
   }
 
   Future<void> _presentBackwardManualMappingError(ManualMappingBackwardError error) async {
@@ -831,9 +847,13 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       _history.settings.userMemberNumberMappings[error.target.memberNumber] = error.source.memberNumber;
     }
 
+    // Save the fix here, too.
+    var pm = RatingProjectManager();
+    await pm.saveProject(_history.project, mapName: RatingProjectManager.autosaveName);
+
+    // reset, recalculate
     _history.resetRaters();
     _history.processInitialMatches();
-    // reset, recalculate
   }
 
   Future<bool> _getMatchResultFiles(List<String> urls) async {

@@ -10,6 +10,7 @@ import 'package:uspsa_result_viewer/data/ranking/rating_error.dart';
 import 'package:uspsa_result_viewer/data/ranking/timings.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart' as defaultAliases;
+import 'package:uspsa_result_viewer/ui/widget/dialog/member_number_collision_dialog.dart';
 
 /// RatingHistory turns a sequence of [PracticalMatch]es into a series of
 /// [Rater]s.
@@ -57,7 +58,12 @@ class RatingHistory {
   }
 
   void resetRaters() {
+    _lastMatch = null;
     _ratersByDivision.clear();
+  }
+
+  void applyFix(CollisionFix fix) {
+    _settings.applyFix(fix);
   }
 
   Future<RatingResult> processInitialMatches() async {
@@ -372,6 +378,23 @@ class RatingHistorySettings {
   }) {
     if(memberNumberCorrections != null) this.memberNumberCorrections = memberNumberCorrections;
     else this.memberNumberCorrections = MemberNumberCorrectionContainer();
+  }
+
+  void applyFix(CollisionFix fix) {
+    switch(fix.action) {
+      case CollisionFixAction.mapping:
+        userMemberNumberMappings[fix.memberNumber1] = fix.memberNumber2;
+        break;
+      case CollisionFixAction.blacklist:
+        memberNumberMappingBlacklist[fix.memberNumber1] = fix.memberNumber2;
+        break;
+      case CollisionFixAction.dataFix:
+        memberNumberCorrections.add(MemberNumberCorrection(
+          name: fix.name1!,
+          invalidNumber: fix.memberNumber1,
+          correctedNumber: fix.memberNumber2
+        ));
+    }
   }
 
   static List<RaterGroup> groupsForSettings({bool combineOpenPCC = false, bool combineLimitedCO = false, bool combineLocap = true}) {

@@ -19,8 +19,8 @@ class MemberNumberCorrection {
   factory MemberNumberCorrection.fromJson(Map<String, dynamic> json) {
     return MemberNumberCorrection(
       name: json["name"] as String,
-      invalidNumber: json["invalidNumber"] as String,
-      correctedNumber: json["correctedNumber"] as String,
+      invalidNumber: json["invalidNo"] as String,
+      correctedNumber: json["correctNo"] as String,
     );
   }
 }
@@ -64,4 +64,6 @@ class MemberNumberCorrectionContainer {
     }
     return container;
   }
+
+  List<MemberNumberCorrection> get all => _byName.values.toList();
 }

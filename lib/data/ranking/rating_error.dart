@@ -49,10 +49,13 @@ class RatingErrorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: Column(
-        children: [
-          Text("$titlePrefix$rating"),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          children: [
+            Text("$titlePrefix${rating.getName(suffixes: false)} ${rating.originalMemberNumber}"),
+          ],
+        ),
       ),
     );
   }

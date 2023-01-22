@@ -6,6 +6,7 @@ import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_error.dart';
 import 'package:uspsa_result_viewer/ui/rater/shooter_stats_dialog.dart';
+import 'package:uspsa_result_viewer/ui/result_page.dart';
 
 class MemberNumberCollisionDialog extends StatefulWidget {
   const MemberNumberCollisionDialog({Key? key, required this.data}) : super(key: key);
@@ -75,7 +76,8 @@ class _MemberNumberCollisionDialogState extends State<MemberNumberCollisionDialo
                       memberNumber2: culprit2.memberNumber,
                     );
 
-                    print("Fix: $fix");
+                    print(fix.toString());
+                    Navigator.of(context).pop(fix);
                   },
                 ),
                 TextButton(
@@ -87,7 +89,8 @@ class _MemberNumberCollisionDialogState extends State<MemberNumberCollisionDialo
                       memberNumber2: culprit1.firstSeen.isBefore(culprit2.firstSeen) ? culprit2.memberNumber : culprit1.memberNumber,
                     );
 
-                    print("Fix: $fix");
+                    print(fix.toString());
+                    Navigator.of(context).pop(fix);
                   },
                 ),
                 TextButton(
@@ -97,7 +100,10 @@ class _MemberNumberCollisionDialogState extends State<MemberNumberCollisionDialo
                       culprit1: culprit1, culprit2: culprit2
                     ));
 
-                    print("Fix: $fix");
+                    print(fix.toString());
+                    if(fix != null) {
+                      Navigator.of(context).pop(fix);
+                    }
                   },
                 ),
               ],
@@ -144,7 +150,12 @@ class _MemberNumberCollisionDialogState extends State<MemberNumberCollisionDialo
               child: GestureDetector(
                 child: Text(match.name ?? "unnamed match"),
                 onTap: () {
-                  // TODO: launch match results
+                  Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+                    return ResultPage(
+                      canonicalMatch: match,
+                      allowWhatIf: false,
+                    );
+                  }));
                 },
               ),
             ),
