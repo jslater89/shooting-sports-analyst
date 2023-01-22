@@ -53,7 +53,10 @@ class PointsRating extends ShooterRating {
   }
 
   List<RatingEvent> usedEvents() {
-    int window = min(this.events.length, settings.matchesToCount);
+    int matchCount = settings.matchesToCount;
+    if(matchCount == 0) matchCount = this.events.length;
+
+    int window = min(this.events.length, matchCount);
     var usedEvents = this.events.sublist(0, window);
     return usedEvents;
   }

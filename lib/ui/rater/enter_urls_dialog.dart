@@ -32,7 +32,7 @@ class _EnterUrlsDialogState extends State<EnterUrlsDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text("Enter match URLs."),
+              Text("Enter match URLs. Press Enter or click the plus button to submit each one."),
               Text(_errorText, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).errorColor)),
               SizedBox(
                 width: 500,
