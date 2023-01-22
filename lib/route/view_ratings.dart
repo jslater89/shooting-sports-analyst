@@ -13,6 +13,7 @@ import 'package:uspsa_result_viewer/data/ranking/rating_error.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
+import 'package:uspsa_result_viewer/ui/rater/member_number_correction_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/member_number_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/prediction/prediction_view.dart';
 import 'package:uspsa_result_viewer/ui/rater/prediction/registration_parser.dart';
@@ -617,6 +618,31 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
             if(hidden != null) {
               setState(() {
                 _history.settings.hiddenShooters = hidden;
+                _historyChanged = true;
+              });
+            }
+          },
+        )
+      ),
+      Tooltip(
+        message: "Fix data entry errors",
+        child: IconButton(
+          icon: Icon(Icons.mode_edit_sharp),
+          onPressed: () async {
+            var changed = await showDialog<bool>(barrierDismissible: false, context: context, builder: (context) => MemberNumberCorrectionListDialog(
+              title: "Fix data entry errors",
+              corrections: _history.settings.memberNumberCorrections,
+              width: 700,
+              nameHintText: "Name",
+              sourceHintText: "Invalid #",
+              targetHintText: "Corrected #",
+              helpText: "Use this feature to correct one-off data entry errors. If John Doe mistakenly enters "
+                  "A99999 for his member number, but his member number is actually A88888, enter 'John Doe' in "
+                  "the left field, 'A99999' in the center field, and 'A88888' in the right field.",
+            ));
+
+            if(changed ?? false) {
+              setState(() {
                 _historyChanged = true;
               });
             }

@@ -39,6 +39,8 @@ class _MemberNumberCorrectionListDialogState extends State<MemberNumberCorrectio
   var sourceFocusNode = FocusNode();
   var targetFocusNode = FocusNode();
 
+  var changed = false;
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -131,6 +133,7 @@ class _MemberNumberCorrectionListDialogState extends State<MemberNumberCorrectio
                     icon: Icon(Icons.remove),
                     onPressed: () {
                       setState(() {
+                        changed = true;
                         widget.corrections.remove(correction);
                       });
                     },
@@ -145,13 +148,13 @@ class _MemberNumberCorrectionListDialogState extends State<MemberNumberCorrectio
         TextButton(
           child: Text("CANCEL"),
           onPressed: () {
-            Navigator.of(context).pop(null);
+            Navigator.of(context).pop(changed);
           },
         ),
         TextButton(
           child: Text("OK"),
           onPressed: () {
-            Navigator.of(context).pop(widget.corrections);
+            Navigator.of(context).pop(changed);
           },
         )
       ],
@@ -190,6 +193,7 @@ class _MemberNumberCorrectionListDialogState extends State<MemberNumberCorrectio
         invalidNumber: source,
         correctedNumber: target,
       ));
+      changed = true;
       nameController.clear();
       sourceController.clear();
       targetController.clear();
