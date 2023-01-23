@@ -5,7 +5,7 @@ If($args.count -lt 1) {
 	exit
 }
 
-flutter build windows
+fvm flutter build windows
 
 $Root = Get-Location
 cd .\build\windows\runner
