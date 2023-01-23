@@ -200,7 +200,7 @@ class _MemberNumberCollisionDialogState extends State<MemberNumberCollisionDialo
   Text get _helpMessage => const Text(
     "The automatic member number mapper thinks these two shooters are the same person, "
         "but either previously mapped them to other member numbers, or encountered them under "
-        "different names previously and did not map them to one another. You must take action "
+        "different names and did not map them to one another. You must take action "
         "manually to establish the relationship between these member numbers, if any, before "
         "rating can continue."
   );
