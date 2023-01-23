@@ -53,7 +53,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   _ConfigurableRater? _currentRater = _ConfigurableRater.multiplayerElo;
 
 
-  Future<void> getUrlDisplayNames() async {
+  /// Checks the match cache for URL names, and starts downloading any
+  /// matches that aren't in the cache.
+  Future<void> updateUrls() async {
     await MatchCache().ready;
     var cache = MatchCache();
 
@@ -152,7 +154,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     var autosave = RatingProjectManager().loadProject(RatingProjectManager.autosaveName);
     if(autosave != null) {
       _loadProject(autosave);
-      getUrlDisplayNames();
+      updateUrls();
     }
     else {
       debugPrint("Autosaved project is null");
@@ -509,7 +511,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                     // matchUrls
                                   });
 
-                                  getUrlDisplayNames();
+                                  updateUrls();
                                 },
                               ),
                             ),
@@ -535,7 +537,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                     // matchUrls
                                   });
 
-                                  getUrlDisplayNames();
+                                  updateUrls();
                                 },
                               ),
                             ),
@@ -566,7 +568,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                     // matchUrls
                                   });
 
-                                  getUrlDisplayNames();
+                                  updateUrls();
                                 },
                               ),
                             ),
@@ -660,6 +662,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                               setState(() {
                                                 urlDisplayNames[url] = url;
                                               });
+
+                                              updateUrls();
                                             },
                                           ),
                                         ),
@@ -711,7 +715,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       return matchA.name!.compareTo(matchB.name!);
     });
 
-    getUrlDisplayNames();
+    updateUrls();
   }
 
   Future<void> confirmChangeRater (_ConfigurableRater v) async {
@@ -945,7 +949,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
           print("Imported ${imported.name}");
 
           _loadProject(imported);
-          getUrlDisplayNames();
+          updateUrls();
         }
         else {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unable to load file")));
