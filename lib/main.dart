@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 
 import 'package:collection/collection.dart';
@@ -14,7 +15,9 @@ import 'package:uspsa_result_viewer/data/db/object/rating/rating_project.dart';
 import 'package:uspsa_result_viewer/data/db/project/project_db.dart';
 import 'package:uspsa_result_viewer/data/match/practical_match.dart';
 import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
+import 'package:uspsa_result_viewer/data/ranking/evolution/elo_tuner.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
+import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/route/local_upload.dart';
@@ -82,6 +85,29 @@ void main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
 
+  var random = Random();
+  List<Genome> genomes = Iterable.generate(20, (i) => EloGenome.randomGenome()).toList();
+  List<Genome> gen2 = Iterable.generate(20, (i) {
+    var a = EloGenome.toSettings(genomes[random.nextInt(20)]);
+    var b = EloGenome.toSettings(genomes[random.nextInt(20)]);
+    var output = EloTuner.breed(a, b);
+
+    return output.toGenome();
+  }).toList();
+  List<Genome> gen3 = Iterable.generate(20, (i) {
+    var a = EloGenome.toSettings(genomes[random.nextInt(20)]);
+    var b = EloGenome.toSettings(genomes[random.nextInt(20)]);
+    var output = EloTuner.breed(a, b);
+
+    return output.toGenome();
+  }).toList();
+
+  for(var g in gen3) {
+    print("$g");
+  }
+
+  print("Default genome: ${EloSettings().toGenome()}");
+
   if(!HtmlOr.isWeb) {
     var path = await getApplicationSupportDirectory();
     Hive.init(path.absolute.path);
@@ -92,76 +118,6 @@ void main() async {
     };
     MatchCache();
   }
-
-  // sqfliteDatabaseFactory.setDatabasesPath(".");
-  // var testDb = await $FloorProjectDatabase.databaseBuilder("test.sqlite").build();
-  // testDb.database.execute("PRAGMA synchronous = OFF");
-  // testDb.database.execute("PRAGMA journal_mode = WAL");
-  //
-  // print("Warming match/project cache");
-  // await Future.wait([
-  //   MatchCache().ready,
-  //   RatingProjectManager().ready,
-  // ]);
-  // print("Match/project cache ready");
-  //
-  // var projectSettings = RatingProjectManager().loadProject("WPA And Friends 2020-2022")!;
-  //
-  // var matches = <PracticalMatch>[];
-  // for(var matchUrl in projectSettings.matchUrls) {
-  //   var m = await MatchCache().getMatch(matchUrl);
-  //   if(m != null) matches.add(m);
-  // }
-  //
-  // print("Calculating ratings");
-  // var start = DateTime.now();
-  // RatingHistory h = RatingHistory(matches: matches, settings: projectSettings.settings);
-  // await h.processInitialMatches();
-  //
-  // var duration = DateTime.now().difference(start);
-  // print("Done in ${duration.inMilliseconds}ms, starting DB dump");
-  //
-  // for(var rating in h.raterFor(h.matches.last, RaterGroup.open).uniqueShooters.sorted((a, b) => b.rating.compareTo(a.rating)).sublist(0, 5)) {
-  //   print("$rating");
-  // }
-  //
-  // start = DateTime.now();
-  // var dbProject = await DbRatingProject.serialize(h, projectSettings, testDb);
-  //
-  // duration = DateTime.now().difference(start);
-  // print("Dumped WPA ratings to DB in ${duration.inMilliseconds}ms");
-  //
-  // start = DateTime.now();
-  // var deserialized = await dbProject.deserialize(testDb);
-  // duration = DateTime.now().difference(start);
-  //
-  // print("Restored WPA ratings from DB in ${duration.inMilliseconds}ms");
-  //
-  // for(var rating in deserialized.raterFor(h.matches.last, RaterGroup.open).uniqueShooters.sorted((a, b) => b.rating.compareTo(a.rating)).sublist(0, 5)) {
-  //   print("$rating");
-  // }
-  // var fileContents = await File("report.txt").readAsString();
-  // var match = await processScoreFile(fileContents);
-  // match.practiscoreIdShort = "12345";
-  // match.practiscoreId = "long-uuid-id";
-  //
-  // await MatchCache().ready;
-  // var start = DateTime.now();
-  // for(var match in MatchCache().allMatches()) {
-  //   var level = (match.level ?? MatchLevel.I);
-  //   if(level != MatchLevel.I) {
-  //     var innerStart = DateTime.now();
-  //     await DbMatch.serialize(match, testDb);
-  //     var duration = DateTime.now().difference(innerStart);
-  //
-  //     var rows = match.stages.length + match.shooters.length + match.stageScoreCount;
-  //     print("Finished ${match.name} with $rows rows at ${((rows / duration.inMilliseconds) * 1000).round()}/sec");
-  //   }
-  // }
-  //
-  // var duration = DateTime.now().difference(start);
-  //
-  // print("Dumped L2s to DB in ${duration.inMilliseconds}ms");
 
   runApp(MyApp());
 }

@@ -2,6 +2,9 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:uspsa_result_viewer/data/match/practical_match.dart';
+import 'package:uspsa_result_viewer/data/match/relative_scores.dart';
+import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
+import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
@@ -26,10 +29,17 @@ class EloEvaluator {
   });
 
   Future<double> evaluate(List<PracticalMatch> matches, List<PracticalMatch> tests, RaterGroup group) async {
-    var h = RatingHistory(matches: matches, settings: RatingHistorySettings(
-      algorithm: MultiplayerPercentEloRater(settings: settings),
-      groups: [group],
-    ));
+    var h = RatingHistory(
+      matches: matches,
+      project: RatingProject(
+        name: "Evolutionary test",
+        matchUrls: matches.map((e) => e.practiscoreId).toList(),
+        settings: RatingHistorySettings(
+          algorithm: MultiplayerPercentEloRater(settings: settings),
+          groups: [group],
+        )
+      )
+    );
 
     await h.processInitialMatches();
 
@@ -41,10 +51,16 @@ class EloEvaluator {
       // TODO: registrations
       var predictions = rater.ratingSystem.predict([]);
 
+      // TODO: only for the shooters we predicted?
+      var scoreOutput = m.getScores();
+
+      // TODO
+      var scores = <ShooterRating, RelativeScore>{};
+
       var evaluations = rater.ratingSystem.validate(
           shooters: [],
           scores: scores,
-          matchScores: matchScores,
+          matchScores: scores,
           predictions: predictions
       );
 
@@ -59,13 +75,14 @@ class EloTuner {
   /// A map of training data. Each entry represents a set of data on
   /// which to evaluate settings.
   ///
-  /// The settings
+  /// The key is a list of matches to be used to generate ratings. The
+  /// value is a list of matches to evaluate on.
   Map<List<PracticalMatch>, List<PracticalMatch>> trainingData;
 
   EloTuner({required this.trainingData});
 
   /// Chance for random mutations in genomes. Applied per variable.
-  static const mutationChance = 0.01;
+  static const mutationChance = 0.05;
   /// Mutations will change variables by no more than this much of their
   /// total range.
   static const mutationVolatility = 1.0;
@@ -88,7 +105,6 @@ class EloTuner {
     while(generation < generations) {
       runGeneration();
     }
-
   }
 
   Future<void> runGeneration() async {
@@ -103,7 +119,10 @@ class EloTuner {
   static EloSettings breed(EloSettings a, EloSettings b) {
     var gA = a.toGenome();
     var gB = b.toGenome();
-    var child = Genome();
+    var child = Genome(
+      continuousTraits: {},
+      intTraits: {},
+    );
 
     // k-point crossover
 
@@ -122,7 +141,7 @@ class EloTuner {
       var tB = gB.traits[trait]!;
       switch(action) {
         case EvolutionAction.change:
-          var value = trait.breed(tA, tB, -0.25);
+          var value = trait.breed(tA, tB, -0.50);
           child.setTrait(trait, value);
           break;
         case EvolutionAction.blend:
@@ -130,7 +149,7 @@ class EloTuner {
           child.setTrait(trait, value);
           break;
         case EvolutionAction.keep:
-          var value = trait.breed(tA, tB, 0.25);
+          var value = trait.breed(tA, tB, 0.50);
           child.setTrait(trait, value);
           break;
       }
@@ -166,12 +185,12 @@ extension EvolutionActionChoice on List<EvolutionAction> {
 }
 
 class Genome {
-  Map<ContinuousTrait, double> continuousTraits;
-  Map<IntegerTrait, int> intTraits;
+  late Map<ContinuousTrait, double> continuousTraits;
+  late Map<IntegerTrait, int> intTraits;
 
   Genome({
-    this.continuousTraits = const {},
-    this.intTraits = const {},
+    required this.continuousTraits,
+    required this.intTraits,
   });
 
   int get length => continuousTraits.length + intTraits.length;
@@ -185,24 +204,39 @@ class Genome {
       intTraits[trait] = value as int;
     }
   }
+
+  @override
+  String toString() {
+    var string = "Genome:\n";
+    for(var trait in continuousTraits.keys) {
+      string += "$trait: ${continuousTraits[trait]}\n";
+    }
+    for(var trait in intTraits.keys) {
+      string += "$trait: ${intTraits[trait]}\n";
+    }
+
+    string += "\n";
+
+    return string;
+  }
 }
 
 extension EloGenome on EloSettings {
-  static final kTrait = ContinuousTrait(10, 100);
-  static final baseTrait = ContinuousTrait(2, 20);
-  static final pctWeightTrait = PercentTrait();
-  static final scaleTrait = IntegerTrait(200, 1000);
-  static final matchBlendTrait = PercentTrait();
-  static final errorAwareTrait = BoolTrait();
+  static final kTrait = ContinuousTrait("K", 10, 100);
+  static final baseTrait = ContinuousTrait("Probability base", 2, 20);
+  static final pctWeightTrait = PercentTrait("Percent weight");
+  static final scaleTrait = IntegerTrait("Scale", 200, 1000);
+  static final matchBlendTrait = PercentTrait("Match blend");
+  static final errorAwareTrait = BoolTrait("Error aware");
 
-  static final errorAwareMaxAsPercentScaleTrait = ContinuousTrait(0.1, 1.5);
-  static final errorAwareMinAsPercentMaxTrait = PercentTrait();
-  static final errorAwareZeroAsPercentMinTrait = PercentTrait();
+  static final errorAwareMaxAsPercentScaleTrait = ContinuousTrait("Error aware max", 0.05, 0.75);
+  static final errorAwareMinAsPercentMaxTrait = PercentTrait("Error aware min");
+  static final errorAwareZeroAsPercentMinTrait = PercentTrait("Error aware zero");
 
   /// In UI terms, 1.5 to 5.0
-  static final errorAwareUpperMultiplierTrait = ContinuousTrait(0.5, 4.0);
+  static final errorAwareUpperMultiplierTrait = ContinuousTrait("Error aware upper mult.", 0.5, 4.0);
   /// In UI terms, 1 to 0.25
-  static final errorAwareLowerMultiplierTrait = ContinuousTrait(0.0, 0.75);
+  static final errorAwareLowerMultiplierTrait = ContinuousTrait("Error aware lower mult.", 0.0, 0.75);
 
   static final List<NumTrait> traits = [
     kTrait,
@@ -226,7 +260,7 @@ extension EloGenome on EloSettings {
         pctWeightTrait: this.percentWeight,
         matchBlendTrait: this.matchBlend,
         errorAwareZeroAsPercentMinTrait: this.errorAwareZeroValue / this.errorAwareMinThreshold,
-        errorAwareMinAsPercentMaxTrait: this.errorAwareMinThreshold / this.scale,
+        errorAwareMinAsPercentMaxTrait: this.errorAwareMinThreshold / this.errorAwareMaxThreshold,
         errorAwareMaxAsPercentScaleTrait: this.errorAwareMaxThreshold / this.scale,
         errorAwareUpperMultiplierTrait: this.errorAwareUpperMultiplier,
         errorAwareLowerMultiplierTrait: this.errorAwareLowerMultiplier,
@@ -235,6 +269,26 @@ extension EloGenome on EloSettings {
         scaleTrait: this.scale.round(),
         errorAwareTrait: BoolTrait.encode(this.errorAwareK),
       }
+    );
+  }
+
+  static Genome randomGenome() {
+    return Genome(
+        continuousTraits: {
+          kTrait: kTrait.random,
+          baseTrait: baseTrait.random,
+          pctWeightTrait: pctWeightTrait.random,
+          matchBlendTrait: matchBlendTrait.random,
+          errorAwareZeroAsPercentMinTrait: errorAwareZeroAsPercentMinTrait.random,
+          errorAwareMinAsPercentMaxTrait: errorAwareMinAsPercentMaxTrait.random,
+          errorAwareMaxAsPercentScaleTrait: errorAwareMaxAsPercentScaleTrait.random,
+          errorAwareUpperMultiplierTrait: errorAwareUpperMultiplierTrait.random,
+          errorAwareLowerMultiplierTrait: errorAwareLowerMultiplierTrait.random,
+        },
+        intTraits: {
+          scaleTrait: scaleTrait.random,
+          errorAwareTrait: errorAwareTrait.random,
+        }
     );
   }
 
@@ -264,6 +318,9 @@ extension EloGenome on EloSettings {
 }
 
 abstract class NumTrait {
+  final String name;
+  NumTrait(this.name);
+
   num get min;
   num get max;
 
@@ -282,13 +339,18 @@ abstract class NumTrait {
 
   // mutate this trait
   num mutate(covariant num a);
+
+  @override
+  String toString() {
+    return "$name ($min-$max)";
+  }
 }
 
 class ContinuousTrait extends NumTrait {
   final double min;
   final double max;
 
-  ContinuousTrait(this.min, this.max);
+  ContinuousTrait(super.name, this.min, this.max);
 
   double get range => max - min;
   double get random => _r.nextDouble() * range + min;
@@ -309,12 +371,12 @@ class ContinuousTrait extends NumTrait {
     var mutationMagnitude = _r.nextDouble() * range * EloTuner.mutationVolatility;
     var mutation = mutationMagnitude * (_r.nextBool() ? 1 : -1);
 
-    return a + mutation;
+    return clamp(a + mutation, softMin, softMax).toDouble();
   }
 }
 
 class PercentTrait extends ContinuousTrait {
-  PercentTrait() : super(0, 1);
+  PercentTrait(String name) : super(name, 0, 1);
 
   @override
   num clamp(num n, num min, num max) {
@@ -329,7 +391,7 @@ class IntegerTrait extends NumTrait {
   final int min;
   final int max;
 
-  IntegerTrait(this.min, this.max);
+  IntegerTrait(super.name, this.min, this.max);
 
   int get range => max - min;
   int get random => _r.nextInt(range + 1) + min;
@@ -338,7 +400,7 @@ class IntegerTrait extends NumTrait {
     var mutationAmount = (range * EloTuner.mutationVolatility).round();
     var mutation = mutationAmount * (_r.nextBool() ? 1 : -1);
 
-    return a + mutation;
+    return clamp(a + mutation, softMin, softMax).round();
   }
 
   int breed(int a, int b, [double aWeight = 0.0]) {
@@ -355,7 +417,7 @@ class IntegerTrait extends NumTrait {
 }
 
 class BoolTrait extends IntegerTrait {
-  BoolTrait() : super(0, 1);
+  BoolTrait(String name) : super(name, 0, 1);
 
   static bool decode(int v) {
     return v != 0;
