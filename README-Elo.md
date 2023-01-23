@@ -9,12 +9,16 @@ The rating system code is not currently optimized to the point that it is feasib
 in the web app. For large datasets, it processes hundreds of thousands of stage scores with
 math not well-suited to browser JavaScript engines, which makes it too slow for most cases.
 
+USPSA Analyst also saves match results locally, since downloading files is the slowest part of
+the rating process, and to avoid hammering PractiScore too hard, and browser storage is
+not up to the task.
+
 **Why do the tooltips in some shooter details say the expected place is 2nd or below, but the
 expected percentage is greater than 100%?**
 The long version is too long for a FAQ, but the short version is that the rating points up for
 grabs for percent finishes are spread more evenly among all competitors than the rating points
-for place finishes. Put another way, to climb past a certain point, finishing well in percentage
-terms can only take you so far: eventually, you'll need to start winning outright to climb further.
+for place finishes. Put another way, finishing well in percentage terms can only take you so 
+far: eventually, you'll need to start placing well in absolute terms to gain rating points.
 
 See the "percent vs. placement" header in the algorithm explainer section of this document for a
 somewhat deeper treatment.
@@ -31,32 +35,20 @@ Lastly, try adjusting the settings. The default settings are a compromise betwee
 an established shooter new to the dataset can reach the correct rating, and the amount of noise in
 the ratings of shooters already present in the set.
 
-For ratings that converge more quickly, but vary more rapidly around the average, try K=60, percent
-weight=0.25. For ratings that reach equilibrium more slowly but vary less, try K=50, percent
-weight=0.50.
-
-For ratings based on match performance instead of stage performance, try K=150 and scale 400, with
-the default 0.4 percent weight, and disable the 'by stage' option.
-
 **Why are the ratings wrong, in that someone worse than me has a higher rating?**
 There are a few reasons why this might be.
 
 The first is that it takes a relatively large difference in rating before the algorithm expects
-one person to consistently beat another. A rating difference of 100 between two players indicates
-that the algorithm thinks the higher-rated player will beat the lower-rated player about 57% of the
-time, which is essentially a toss-up. With a rating difference of 200, the weaker is still expected
-to win 36% of matchups. Only at 800 rating difference (with the default settings) is does the
-algorithm consider a matchup nearly a sure thing: a 91% chance for the higher-rated player to win.
-
-All of that to say, a rating difference of 100 points doesn't matter very much, so if the better
-shooter is within that margin, you can more or less ignore the difference.
+one person to consistently beat another. A rating difference of 50 or 100 points doesn't matter 
+very much, so if the better shooter is within that margin, you can more or less ignore the
+difference.
 
 The second is that Elo rewards volume, to a point. The algorithm makes an effort to minimize this
 effect, but it is still present. Given equal skill, the person shooting 100 matches will likely be
 rated more closely to their actual skill than the person shooting 10.
 
 The third is that the algorithm strongly rewards consistency: it's easy to lose a lot of points by
-bombing a stage, but hard to climb back up.
+bombing a stage, but hard to climb back up. 
 
 The fourth possibility is that you are classified M or GM and shoot mostly against much weaker
 competition. The algorithm contains a modifier that prevents highly-classed shooters from gaining
@@ -69,7 +61,7 @@ Download and unzip the files. No installation is necessary.
 For Windows, you will need the latest [Visual C++ runtime](https://aka.ms/vs/17/release/vc_redist.x64.exe),
 which you likely already have installed.
 
-To enter the Elo rater, click the bottom icon from the application's main screen.
+To enter the Elo rater, click the bottom right from the application's main screen.
 
 ### Obtaining quality results
 The rating algorithm is not perfect, and there are some things you can do to increase the quality
@@ -100,9 +92,18 @@ combined western PA/eastern PA/Maryland/Northern Virginia/Delaware set.
 * **Error compensation**: if checked, the algorithm will consider its estimated error when adjusting
   a shooter's rating. Ratings with low error (i.e., high confidence) will be adjusted more slowly.
   Ratings with high error (low confidence) will be adjusted more quickly.
+* **Rating engine**: choose from three rating engines. Elo is the default and best option. OpenSkill
+  is a Bayesian rating system similar to Microsoft TrueSkill, which unfortunately seems to converge
+  too slowly for USPSA analysis. Points series provides several ways to run a club or regional
+  points series.
+
+##### Elo settings
 * **K factor**: the K factor to be used by the Elo algorithm, which controls the volatility of
   ratings, increasing the speed at which they converge to their correct values at the cost of more
   noise in the ratings.
+* **Probability base**: the base of the exponent in the Elo probability algorithm. A probability 
+  base of 5 means that a shooter whose rating is better than another rating by the scale factor is
+  probability-base times more likely to finish ahead in score.
 * **Scale factor**: the scale factor used by the Elo algorithm's probability calculator, which
   controls the output range of the ratings. A higher scale factor yields a larger difference in
   rating units for a given difference in skill.
@@ -112,18 +113,27 @@ combined western PA/eastern PA/Maryland/Northern Virginia/Delaware set.
 * **Place/percent weight**: how much the Elo algorithm weights actual vs. expected performances in
   finish order and actual vs. expected performances in stage or match percentage. A mix of both
   parameters seems to yield the best results in empirical testing.
+* **Error-aware K**: a modification to the Elo algorithm that adjusts the K factor per shooter when
+  a shooter's error is high or low. Shooters with high error get a larger K factor, so that the
+  algorithm can find their correct rating more quickly, while shooters with low error get a smaller
+  K factor, to reduce the volatility of their ratings.
+* **Error-aware K options**: *Lower multiplier* is the multiplier applied to K factor for shooters
+  with low error. It interpolates from 1.0, at *min threshold*, to *lower multiplier*, at
+  *zero value*. *Upper multiplier* is the multiplier applied to K factor for shooters with high
+  error. It interpolates from 1.0, at *upper threshold*, to *upper multiplier* at *scale factor*.
+
+##### Points series settings
+* **Model**: how to distribute points. F1-style gives out points to the top 10 finishers according
+  to the 2022 Formula 1 rules. Inverse place gives shooters one point for each person they beat.
+  Percent finish gives shooters points equal to their finishing percentage. Decaying point gives
+  the winner *decay start* points, 2nd place *decay start* × *decay factor* points, 3rd place
+  *decay start* × *decay factor* × *decay factor*, and so on.
 
 #### Match selection
-Use the plus button to add matches, supplying Practiscore match result URLs to the resulting dialog. 
-You can paste multiple match URLs into the dialog, one per line. The application will remove
-duplicate URLs.
-
-Use the minus button at the top of the match list to clear it. Use the minus button next to each
-URL to remove it individually. The refresh button next to each match will remove it from the cache,
-forcing a redownload from Practiscore. This is useful in the event that match results change.
-
 During match processing, matches are downloaded to a local cache. If a URL is already present in
 the local cache, the match name will be displayed rather than the raw URL.
+
+Matches may be added to projects from the match cache, or by URL.
 
 #### Action bar items
 * **Create a new project**: clear all matches, restore settings to default, and reset the project
@@ -133,14 +143,16 @@ the local cache, the match name will be displayed rather than the raw URL.
 * **Export to file**: export the current settings to a file which can be shared between users.
 * **Import from file**: import settings from a file.
 * **Save/load**: save or load a project from the application's internal storage.
-* **Enter aliases**: add aliases for shooters whose names and member numbers both change. The engine
-  attempts to detect member number changes (i.e., if people change to a lifetime membership), but
-  can only do so if a shooter's name is the same both when he first appears in the dataset, and when
-  his member number changes. For example, Max Michel entered his name as 'Max Michel Jr.' in 2020,
-  started entering his name as 'Max Michel' in early 2021, and bought a lifetime membership in late
-  2021. Because his name changed before he bought his lifetime membership, an alias is required.
-* **Member whitelist**: whitelist members from reshoot detection. If a member number is present on
-  this list, the associated member will be included in match results if his name ends in '2' or '3'.
+* **Hide shooters**: enter a list of shooters who will be used for ratings, but not displayed. This
+  can be used to hide traveling shooters at major matches from local ratings.
+* **Fix data entry errors**: provide corrections for incorrectly-entered member numbers.
+* **Map member numbers**: define pairs of member numbers that map to the same shooter, in the event
+  that automatic member number mapping fails.
+* **Number mapping blacklist**: define pairs of member numbers that should not be mapped together,
+  in the event that two shooters share the same name and are caught by the member number mapper.
+* **Member whitelist**: define member numbers that will be included in the ratings even if their
+  shooters fail validation in some way. (Most commonly, this happens when a shooter who enters a 
+  match twice enters a name ending in '2', or analogous cases.)
 
 ### Ratings Screen
 Ratings are displayed in descending order of Elo. The tabs at the top of the screen select
@@ -264,11 +276,9 @@ multiplier of down to 80%.
 
 #### Error compensation
 If error compensation is enabled, the algorithm applies a modifier to K based on the shooter's
-rating error. Using the default settings, if the error in a shooter's rating is greater than 100,
-K is increased by up to 100% at an error of 800. If the error in a shooter's rating is less than
-100, K is decreased by up to 50% at an error of 0.
-
-The specific values for the error thresholds above depend upon the configured scale factor.
+rating error. Using the default settings, if the error in a shooter's rating is greater than 40,
+K is increased by up to 300% at an error of 400. If the error in a shooter's rating is less than
+10, K is decreased by up to 20% at an error of 0.
 
 #### Match-specific processing
 In match mode, the engine removes anyone with a DQ on record, or anyone who did not finish
@@ -283,9 +293,9 @@ In stage mode, the engine ignores DNFed stages, but _includes_ stages a disquali
 completed before disqualifying.
 
 Observation suggests that stages that many shooters zero do not provide much usable information
-about the relative performances between shooters. As such, y-stage mode also examines the scores for
-each stage, and applies a negative modifier to K if more than 10% of shooters zeroed it, from 100% K
-at 10% to 34% K at 30%.
+about the relative performances between shooters. As such, by-stage mode also examines the scores
+for each stage, and applies a negative modifier to K if more than 10% of shooters zeroed it, from
+100% K at 10% to 34% K at 30%.
 
 A shooter's stage score will not be counted if the time is less than a tenth of a second on a
 non-fixed-time course of fire, as this typically indicates a data entry error.
