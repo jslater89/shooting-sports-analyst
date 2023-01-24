@@ -27,6 +27,7 @@ import 'package:uspsa_result_viewer/route/ratings.dart';
 import 'configure_nonweb.dart' if (dart.library.html) 'configure_web.dart';
 import 'package:fluro/fluro.dart' as fluro;
 
+import 'data/ranking/evolution/genome.dart';
 import 'data/results_file_parser.dart';
 
 class GlobalData {
@@ -95,8 +96,8 @@ void main() async {
     return output.toGenome();
   }).toList();
   List<Genome> gen3 = Iterable.generate(20, (i) {
-    var a = EloGenome.toSettings(genomes[random.nextInt(20)]);
-    var b = EloGenome.toSettings(genomes[random.nextInt(20)]);
+    var a = EloGenome.toSettings(gen2[random.nextInt(20)]);
+    var b = EloGenome.toSettings(gen2[random.nextInt(20)]);
     var output = EloTuner.breed(a, b);
 
     return output.toGenome();
