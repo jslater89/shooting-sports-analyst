@@ -10,12 +10,12 @@ import 'package:uspsa_result_viewer/ui/empty_scaffold.dart';
 import 'package:uspsa_result_viewer/ui/result_page.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/match_cache_chooser_dialog.dart';
 
-class MatchSelectPage extends StatefulWidget {
+class HomePage extends StatefulWidget {
   @override
-  _MatchSelectPageState createState() => _MatchSelectPageState();
+  _HomePageState createState() => _HomePageState();
 }
 
-class _MatchSelectPageState extends State<MatchSelectPage> {
+class _HomePageState extends State<HomePage> {
   bool _operationInProgress = false;
   bool _launchingFromParam = false;
 
