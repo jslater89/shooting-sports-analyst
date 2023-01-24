@@ -1,8 +1,7 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
-import 'package:uspsa_result_viewer/data/match/practical_match.dart';
-import 'package:uspsa_result_viewer/data/match/relative_scores.dart';
+import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.dart';
@@ -48,13 +47,15 @@ class EloEvaluator {
     double errorSum = 0;
 
     for(var m in tests) {
+      Map<Shooter, ShooterRating> registrations = {};
+
       // TODO: registrations
       var predictions = rater.ratingSystem.predict([]);
 
       // TODO: only for the shooters we predicted?
       var scoreOutput = m.getScores();
 
-      // TODO
+      // TODO: use registration map
       var scores = <ShooterRating, RelativeScore>{};
 
       var evaluations = rater.ratingSystem.validate(
@@ -119,49 +120,8 @@ class EloTuner {
   static EloSettings breed(EloSettings a, EloSettings b) {
     var gA = a.toGenome();
     var gB = b.toGenome();
-    var child = Genome(
-      continuousTraits: {},
-      intTraits: {},
-    );
 
-    // k-point crossover
-
-    List<int> crossoverIndices = List.generate(EloGenome.traits.length, (i) => i)..shuffle()..sublist(0, crossoverPoints)..sort();
-    EvolutionAction action = EvolutionAction.values.choose();
-
-    for(int i = 0; i < EloGenome.traits.length; i++) {
-      // Pick a new action when we hit a crossover index
-      if(crossoverIndices.isNotEmpty && i == crossoverIndices[0]) {
-        crossoverIndices.removeAt(0);
-        action = EvolutionAction.values.choose();
-      }
-
-      var trait = EloGenome.traits[i];
-      var tA = gA.traits[trait]!;
-      var tB = gB.traits[trait]!;
-      switch(action) {
-        case EvolutionAction.change:
-          var value = trait.breed(tA, tB, -0.50);
-          child.setTrait(trait, value);
-          break;
-        case EvolutionAction.blend:
-          var value = trait.breed(tA, tB);
-          child.setTrait(trait, value);
-          break;
-        case EvolutionAction.keep:
-          var value = trait.breed(tA, tB, 0.50);
-          child.setTrait(trait, value);
-          break;
-      }
-    }
-
-    // mutation
-    for(var trait in EloGenome.traits) {
-      if(_r.nextDouble() < mutationChance) {
-        // That's not a pretty line.
-        child.setTrait(trait, trait.mutate(child.traits[trait]!));
-      }
-    }
+    var child = Genome.breed(gA, gB, crossoverPoints: crossoverPoints, mutationChance: mutationChance);
 
     return EloGenome.toSettings(child);
   }
@@ -219,6 +179,64 @@ class Genome {
 
     return string;
   }
+
+  bool compatibleWith(Genome other) {
+    if(this.length != other.length) return false;
+
+    var otherTraits = other.traits;
+    for(var trait in this.traits.keys) {
+      if(!other.traits.containsKey(trait)) return false;
+    }
+
+    return true;
+  }
+
+  factory Genome.breed(Genome gA, Genome gB, {int crossoverPoints = 3, double mutationChance = 0.05}) {
+    var child = Genome(
+      continuousTraits: {},
+      intTraits: {},
+    );
+
+    // k-point crossover
+    List<int> crossoverIndices = List.generate(EloGenome.traits.length, (i) => i)..shuffle()..sublist(0, crossoverPoints)..sort();
+    EvolutionAction action = EvolutionAction.values.choose();
+
+    for(int i = 0; i < EloGenome.traits.length; i++) {
+      // Pick a new action when we hit a crossover index
+      if(crossoverIndices.isNotEmpty && i == crossoverIndices[0]) {
+        crossoverIndices.removeAt(0);
+        action = EvolutionAction.values.choose();
+      }
+
+      var trait = EloGenome.traits[i];
+      var tA = gA.traits[trait]!;
+      var tB = gB.traits[trait]!;
+      switch(action) {
+        case EvolutionAction.change:
+          var value = trait.breed(tA, tB, -0.50);
+          child.setTrait(trait, value);
+          break;
+        case EvolutionAction.blend:
+          var value = trait.breed(tA, tB);
+          child.setTrait(trait, value);
+          break;
+        case EvolutionAction.keep:
+          var value = trait.breed(tA, tB, 0.50);
+          child.setTrait(trait, value);
+          break;
+      }
+    }
+
+    // mutation
+    for(var trait in EloGenome.traits) {
+      if(_r.nextDouble() < mutationChance) {
+        // That's not a pretty line.
+        child.setTrait(trait, trait.mutate(child.traits[trait]!));
+      }
+    }
+
+    return child;
+  }
 }
 
 extension EloGenome on EloSettings {
@@ -274,21 +292,21 @@ extension EloGenome on EloSettings {
 
   static Genome randomGenome() {
     return Genome(
-        continuousTraits: {
-          kTrait: kTrait.random,
-          baseTrait: baseTrait.random,
-          pctWeightTrait: pctWeightTrait.random,
-          matchBlendTrait: matchBlendTrait.random,
-          errorAwareZeroAsPercentMinTrait: errorAwareZeroAsPercentMinTrait.random,
-          errorAwareMinAsPercentMaxTrait: errorAwareMinAsPercentMaxTrait.random,
-          errorAwareMaxAsPercentScaleTrait: errorAwareMaxAsPercentScaleTrait.random,
-          errorAwareUpperMultiplierTrait: errorAwareUpperMultiplierTrait.random,
-          errorAwareLowerMultiplierTrait: errorAwareLowerMultiplierTrait.random,
-        },
-        intTraits: {
-          scaleTrait: scaleTrait.random,
-          errorAwareTrait: errorAwareTrait.random,
-        }
+      continuousTraits: {
+        kTrait: kTrait.random,
+        baseTrait: baseTrait.random,
+        pctWeightTrait: pctWeightTrait.random,
+        matchBlendTrait: matchBlendTrait.random,
+        errorAwareZeroAsPercentMinTrait: errorAwareZeroAsPercentMinTrait.random,
+        errorAwareMinAsPercentMaxTrait: errorAwareMinAsPercentMaxTrait.random,
+        errorAwareMaxAsPercentScaleTrait: errorAwareMaxAsPercentScaleTrait.random,
+        errorAwareUpperMultiplierTrait: errorAwareUpperMultiplierTrait.random,
+        errorAwareLowerMultiplierTrait: errorAwareLowerMultiplierTrait.random,
+      },
+      intTraits: {
+        scaleTrait: scaleTrait.random,
+        errorAwareTrait: errorAwareTrait.random,
+      }
     );
   }
 
@@ -343,6 +361,25 @@ abstract class NumTrait {
   @override
   String toString() {
     return "$name ($min-$max)";
+  }
+
+  bool compatibleWith(NumTrait other) {
+    return this.name == other.name && this.min == other.min && this.max == other.max;
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if(!(other is NumTrait)) return false;
+    return compatibleWith(other);
+  }
+
+  @override
+  int get hashCode {
+    var hash = 5381;
+    hash = hash * 127 + name.hashCode;
+    hash = hash * 63 + min.hashCode;
+    hash = hash * 31 + max.hashCode;
+    return hash;
   }
 }
 

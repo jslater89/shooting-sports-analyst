@@ -106,7 +106,11 @@ void main() async {
     print("$g");
   }
 
-  print("Default genome: ${EloSettings().toGenome()}");
+  var defaultGenome = EloSettings().toGenome();
+  var backAndForth = EloGenome.toSettings(defaultGenome).toGenome();
+  print("Default genome: $defaultGenome");
+  print("Forth genome: $backAndForth");
+  print("Compatible? ${defaultGenome.compatibleWith(backAndForth)}");
 
   if(!HtmlOr.isWeb) {
     var path = await getApplicationSupportDirectory();
