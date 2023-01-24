@@ -229,13 +229,17 @@ class IntegerTrait extends NumTrait {
   int breed(int a, int b, [int aWeight = 0]) {
     var proportion = _r.nextDouble();
 
-    // If aWeight is 0.25, we want [0.0..0.75], so proportion is tilted toward A.
-    //
-    // If aWeight is -0.25, we want [0.25..1], so proportion is tilted toward B.
-    proportion = proportion * (1 - aWeight.abs());
-    if(aWeight < 0) proportion += aWeight.abs();
-
-    return clamp(a * proportion + b * (1 - proportion), softMin, softMax).round();
+    var modRange = range * Genome.continuousParameterBreedVariability;
+    var change = (proportion * modRange) - modRange / 2;
+    if(aWeight > 0) {
+      return clamp(a + change, softMin, softMax).round();
+    }
+    else if(aWeight < 0) {
+      return clamp(b + change, softMin, softMax).round();
+    }
+    else { // aWeight == 0
+      return clamp(a * proportion + b * (1 - proportion), softMin, softMax).round();
+    }
   }
 }
 

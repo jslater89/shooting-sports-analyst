@@ -5,8 +5,9 @@ class EmptyScaffold extends StatelessWidget {
   final Widget? child;
   final String? title;
   final bool? operationInProgress;
+  final List<Widget> actions;
 
-  const EmptyScaffold({Key? key, this.child, this.operationInProgress = false, this.title}) : super(key: key);
+  const EmptyScaffold({Key? key, this.child, this.operationInProgress = false, this.title, this.actions = const []}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -21,12 +22,13 @@ class EmptyScaffold extends StatelessWidget {
       title: Text(title ?? "USPSA Analyst"),
         centerTitle: true,
         actions: [
+          ...actions,
           IconButton(
             icon: Icon(Icons.help),
             onPressed: () {
               showAbout(context, size);
             },
-          )
+          ),
         ],
         bottom: operationInProgress! ? PreferredSize(
           preferredSize: Size(double.infinity, 5),

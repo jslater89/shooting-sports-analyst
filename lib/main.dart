@@ -21,7 +21,7 @@ import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.d
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/route/local_upload.dart';
-import 'package:uspsa_result_viewer/route/match_select.dart';
+import 'package:uspsa_result_viewer/route/home_page.dart';
 import 'package:uspsa_result_viewer/route/practiscore_url.dart';
 import 'package:uspsa_result_viewer/route/ratings.dart';
 import 'configure_nonweb.dart' if (dart.library.html) 'configure_web.dart';
@@ -56,7 +56,7 @@ void main() async {
   globals.router.define('/', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
     handlerFunc: (context, params) {
       debugPrint("$params");
-      return MatchSelectPage();
+      return HomePage();
     }
   ));
   globals.router.define('/local', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(

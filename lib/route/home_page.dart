@@ -1,5 +1,7 @@
 import 'dart:convert';
 // ignore: avoid_web_libraries_in_flutter
+import 'package:flutter/foundation.dart';
+import 'package:fluttericon/rpg_awesome_icons.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 
@@ -53,8 +55,27 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     var size = MediaQuery.of(context).size;
 
+    var extraActions = <Widget>[];
+    if(!kIsWeb && kDebugMode) {
+      extraActions.add(Tooltip(
+        richMessage: TextSpan(
+          children: [
+            TextSpan(text: "Stand back! I'm going to try "),
+            TextSpan(text: "science!", style: TextStyle(fontStyle: FontStyle.italic)),
+          ]
+        ),
+        child: IconButton(
+          icon: Icon(RpgAwesome.bubbling_potion),
+          onPressed: () {
+
+          },
+        ),
+      ));
+    }
+
     return EmptyScaffold(
       title: "Main Menu",
+      actions: extraActions,
       operationInProgress: _operationInProgress,
       child: _launchingFromParam ? Center(child: Text("Launching...")) : SizedBox(
         height: size.height,
