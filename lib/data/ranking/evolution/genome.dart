@@ -1,5 +1,6 @@
 
 
+import 'dart:ffi';
 import 'dart:math';
 
 import 'package:uspsa_result_viewer/data/ranking/evolution/elo_tuner.dart';
@@ -24,6 +25,8 @@ class Genome {
     required this.intTraits,
   });
 
+  Genome.empty() : this.continuousTraits = {}, this.intTraits = {};
+
   int get length => continuousTraits.length + intTraits.length;
   Map<NumTrait, num> get traits => Map.fromEntries([...continuousTraits.entries, ...intTraits.entries]);
 
@@ -34,6 +37,16 @@ class Genome {
     else if(trait is IntegerTrait) {
       intTraits[trait] = value as int;
     }
+  }
+
+  NumTrait? traitByName(String name) {
+    for(var trait in continuousTraits.keys) {
+      if(trait.name == name) return trait;
+    }
+    for(var trait in intTraits.keys) {
+      if(trait.name == name) return trait;
+    }
+    return null;
   }
 
   @override
@@ -262,5 +275,91 @@ class BoolTrait extends IntegerTrait {
     if(aWeight > 0) return a;
     else if(aWeight < 0) return b;
     else return _r.nextInt(2);
+  }
+}
+
+extension PopulationStatistics on List<Genome> {
+  /// Returns the minimum values for each trait in this list. All genomes must be compatible.
+  ///
+  /// [BoolTrait]s are replaced with [PercentTrait]s indicating what percentage of genomes lack the gene.
+  Genome minimums() {
+    if(this.isEmpty) return Genome.empty();
+
+    var model = this.first;
+    var output = Genome.empty();
+    for(var trait in model.continuousTraits.keys) {
+      output.setTrait(trait, trait.softMax);
+      for(var genome in this) {
+        if(genome.continuousTraits[trait]! < output.continuousTraits[trait]!) {
+          output.setTrait(trait, genome.continuousTraits[trait]!);
+        }
+      }
+    }
+
+    for(var trait in model.intTraits.keys) {
+      if(trait is BoolTrait) {
+        int have = 0;
+        int total = this.length;
+
+        for(var genome in this) {
+          if(genome.intTraits[trait] == 1) have += 1;
+        }
+
+        var percent = (total - have) / total;
+        output.setTrait(PercentTrait("${trait.name}"), percent);
+      }
+      else {
+        output.setTrait(trait, trait.softMax.round());
+        for (var genome in this) {
+          if (genome.intTraits[trait]! < output.intTraits[trait]!) {
+            output.setTrait(trait, genome.intTraits[trait]!);
+          }
+        }
+      }
+    }
+
+    return output;
+  }
+
+  /// Returns the maximum values for each trait in this list. All genomes must be compatible.
+  ///
+  /// [BoolTrait]s are replaced with [PercentTrait]s indicating what percentage of genomes have the gene.
+  Genome maximums() {
+    if(this.isEmpty) return Genome.empty();
+
+    var model = this.first;
+    var output = Genome.empty();
+    for(var trait in model.continuousTraits.keys) {
+      output.setTrait(trait, trait.softMin);
+      for(var genome in this) {
+        if(genome.continuousTraits[trait]! > output.continuousTraits[trait]!) {
+          output.setTrait(trait, genome.continuousTraits[trait]!);
+        }
+      }
+    }
+
+    for(var trait in model.intTraits.keys) {
+      if(trait is BoolTrait) {
+        int have = 0;
+        int total = this.length;
+
+        for(var genome in this) {
+          if(genome.intTraits[trait] == 1) have += 1;
+        }
+
+        var percent = have / total;
+        output.setTrait(PercentTrait("${trait.name}"), percent);
+      }
+      else {
+        output.setTrait(trait, trait.softMin.round());
+        for (var genome in this) {
+          if (genome.intTraits[trait]! > output.intTraits[trait]!) {
+            output.setTrait(trait, genome.intTraits[trait]!);
+          }
+        }
+      }
+    }
+
+    return output;
   }
 }

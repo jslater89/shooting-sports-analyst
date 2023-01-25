@@ -34,7 +34,7 @@ class RatingHistory {
   RatingHistorySettings get settings => _settings;
 
   // Prime, so we skip around the list better
-  final int progressCallbackInterval = 7;
+  static const int progressCallbackInterval = 7;
 
   List<RaterGroup> get groups => []..addAll(_settings.groups);
 

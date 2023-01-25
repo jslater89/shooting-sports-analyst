@@ -16,11 +16,13 @@ class _MatchCacheLoadingIndicatorState extends State<MatchCacheLoadingIndicator>
   void initState() {
     super.initState();
     matchCacheProgressCallback = (current, total) async {
-      setState(() {
-        _matchCacheCurrent = current;
-        _matchCacheTotal = total;
-      });
-      await Future.delayed(Duration(milliseconds: 1));
+      if(mounted) {
+        setState(() {
+          _matchCacheCurrent = current;
+          _matchCacheTotal = total;
+        });
+        await Future.delayed(Duration(milliseconds: 1));
+      }
     };
   }
 

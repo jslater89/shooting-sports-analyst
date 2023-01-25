@@ -130,7 +130,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     await Future.delayed(Duration(milliseconds: 1));
 
     await MatchCache().ready;
-    setState(() {
+    if(mounted) setState(() {
       matchCacheReady = true;
     });
   }

@@ -16,7 +16,7 @@ class EloEvaluator {
   EloSettings settings;
 
   /// The calculated errors for each set of predictions.
-  Map<RatingHistory, double> errors = {};
+  Map<String, double> errors = {};
 
   /// The total error across all predictions in the training
   /// set, which is the quantity we want to minimize.
@@ -26,7 +26,7 @@ class EloEvaluator {
     required this.settings,
   });
 
-  Future<double> evaluate(EloEvaluationData data) async {
+  Future<double> evaluate(EloEvaluationData data, [Future<void> Function(int, int)? callback]) async {
     var h = RatingHistory(
       verbose: false,
       matches: data.trainingData,
@@ -37,7 +37,10 @@ class EloEvaluator {
           algorithm: MultiplayerPercentEloRater(settings: settings),
           groups: [data.group],
         )
-      )
+      ),
+      progressCallback: (current, total, name) async {
+        await callback?.call(current, total);
+      },
     );
 
     print("Processing matches");
@@ -70,7 +73,7 @@ class EloEvaluator {
           predictions: predictions
       );
 
-      errors[h] = evaluations.error;
+      errors[data.name] = evaluations.error;
     }
     print("Validation done");
 
@@ -85,6 +88,14 @@ class EloEvaluationData {
   final RaterGroup group;
 
   EloEvaluationData({required this.name, required this.trainingData, required this.evaluationData, required this.group});
+}
+
+class EloEvaluation {
+  final int id;
+  final EloSettings settings;
+  final double error;
+
+  EloEvaluation(this.id, this.settings, {required this.error});
 }
 
 class EloTuner {
@@ -106,30 +117,42 @@ class EloTuner {
 
   /// Contains a list of evaluated Elo settings, where the list index is the
   /// generation and the map is from Elo settings to error sums on [trainingData].
-  late List<Map<EloSettings, double>> evaluations = [];
+  late List<List<EloEvaluation>> evaluations = [];
 
-  Future<void> tune(List<EloSettings> initialPopulation, int generations) async {
+  Future<void> tune(List<EloSettings> initialPopulation, int generations, Future<void> Function(EvaluationProgressUpdate) callback) async {
     var generation = 0;
 
     currentPopulation = [];
     currentPopulation.addAll(initialPopulation);
 
+    await callback(EvaluationProgressUpdate(
+      currentGeneration: 0,
+      totalGenerations: generations,
+      currentGenome: 0,
+      totalGenomes: currentPopulation.length,
+      evaluations: evaluations,
+      currentTrainingSet: 0,
+      totalTrainingSets: trainingData.length,
+      currentMatch: 0,
+      totalMatches: trainingData[trainingData.keys.first]!.trainingData.length,
+    ));
+
     while(generation < generations) {
-      await runGeneration(generation);
+      await runGeneration(generation, generations, callback);
       generation += 1;
     }
 
     var finalEvaluations = evaluations.last;
-    var bestSettings = finalEvaluations.keys.sorted((a, b) => finalEvaluations[a]!.compareTo(finalEvaluations[b]!));
+    var bestSettings = finalEvaluations.sorted((a, b) => a.error.compareTo(b.error));
 
-    print("Tuning complete! Best settings: ${bestSettings.first.toGenome()} with error ${finalEvaluations[bestSettings]}");
+    print("Tuning complete! Best settings: ${bestSettings.first.settings.toGenome()} with error ${bestSettings.first.error}");
   }
 
-  Future<void> runGeneration(int generation) async {
+  Future<void> runGeneration(int generation, int totalGenerations, Future<void> Function(EvaluationProgressUpdate) callback) async {
     print("Starting generation $generation with ${currentPopulation.length} members");
     var evaluators = <EloEvaluator>[];
 
-    evaluations.add({});
+    evaluations.add([]);
 
     for(var settings in currentPopulation) {
       evaluators.add(EloEvaluator(settings: settings));
@@ -139,15 +162,42 @@ class EloTuner {
 
     int genomeIndex = 0;
     for(var evaluator in evaluators) {
+      int trainingIndex = 0;
       for(var name in trainingData.keys) {
+        var data = trainingData[name]!;
         print("Gen $generation: evaluating genome $genomeIndex on $name");
-        await evaluator.evaluate(trainingData[name]!);
-        // TODO: progress callback
+        await evaluator.evaluate(trainingData[name]!, (current, total) async {
+          await callback(EvaluationProgressUpdate(
+            currentGeneration: generation,
+            totalGenerations: totalGenerations,
+            currentGenome: genomeIndex,
+            totalGenomes: currentPopulation.length,
+            evaluations: evaluations,
+            currentTrainingSet: trainingIndex,
+            totalTrainingSets: trainingData.length,
+            currentMatch: current * RatingHistory.progressCallbackInterval,
+            totalMatches: data.trainingData.length,
+          ));
+        });
+
+        await callback(EvaluationProgressUpdate(
+          currentGeneration: generation,
+          totalGenerations: totalGenerations,
+          currentGenome: genomeIndex,
+          totalGenomes: currentPopulation.length,
+          evaluations: evaluations,
+          currentTrainingSet: trainingIndex,
+          totalTrainingSets: trainingData.length,
+          currentMatch: data.trainingData.length - 1,
+          totalMatches: data.trainingData.length,
+        ));
+        trainingIndex += 1;
       }
 
-      evaluations.last[evaluator.settings] = evaluator.totalError;
+      evaluations.last.add(EloEvaluation(genomeIndex, evaluator.settings, error: evaluator.totalError));
+      evaluations.last.sort((a, b) => a.error.compareTo(b.error));
+
       print("Gen $generation: total error for $genomeIndex: ${evaluator.totalError}");
-      // TODO: progress callback
 
       genomeIndex += 1;
     }
@@ -192,7 +242,7 @@ class EloTuner {
   List<double> _calculateWeights(int count) {
     List<double> nonNormalized = [];
     for(int i = 0; i < count; i++) {
-      nonNormalized.add(math.exp(-0.15 * i));
+      nonNormalized.add(math.exp(-0.1 * i));
     }
     var sum = nonNormalized.sum;
     var normalized = nonNormalized.map((v) => v / sum).toList();
@@ -328,4 +378,29 @@ extension EloGenome on EloSettings {
       errorAwareUpperMultiplier: traits[errorAwareUpperMultiplierTrait]!.toDouble(),
     );
   }
+}
+
+class EvaluationProgressUpdate {
+  int currentGeneration;
+  int totalGenerations;
+  int currentGenome;
+  int totalGenomes;
+  int currentTrainingSet;
+  int totalTrainingSets;
+  int currentMatch;
+  int totalMatches;
+
+  List<List<EloEvaluation>> evaluations;
+
+  EvaluationProgressUpdate({
+    required this.currentGeneration,
+    required this.totalGenerations,
+    required this.currentGenome,
+    required this.totalGenomes,
+    required this.evaluations,
+    required this.currentTrainingSet,
+    required this.totalTrainingSets,
+    required this.currentMatch,
+    required this.totalMatches,
+  });
 }
