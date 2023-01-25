@@ -26,6 +26,7 @@ import 'package:uspsa_result_viewer/ui/rater/enter_urls_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/select_project_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/shooter_aliases_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/match_cache_chooser_dialog.dart';
+import 'package:uspsa_result_viewer/ui/widget/match_cache_loading_indicator.dart';
 
 class ConfigureRatingsPage extends StatefulWidget {
   const ConfigureRatingsPage({Key? key, required this.onSettingsReady}) : super(key: key);
@@ -43,9 +44,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   List<String> matchUrls = [];
   Map<String, String> urlDisplayNames = {};
   String? _lastProjectName;
-
-  int? _matchCacheCurrent;
-  int? _matchCacheTotal;
 
   late RaterSettingsController _settingsController;
   RaterSettingsWidget? _settingsWidget;
@@ -131,13 +129,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     // Allow time for the 'loading' screen to display
     await Future.delayed(Duration(milliseconds: 1));
 
-    matchCacheProgressCallback = (current, total) async {
-      setState(() {
-        _matchCacheCurrent = current;
-        _matchCacheTotal = total;
-      });
-      await Future.delayed(Duration(milliseconds: 1));
-    };
     await MatchCache().ready;
     setState(() {
       matchCacheReady = true;
@@ -295,13 +286,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
           mainAxisSize: MainAxisSize.max,
           children: [
             SizedBox(height: 128, width: width),
-            Text("Loading match cache...", style: Theme.of(context).textTheme.subtitle1),
-            if(_matchCacheTotal != null && _matchCacheTotal! > 0)
-              SizedBox(height: 16),
-            if(_matchCacheTotal != null && _matchCacheTotal! > 0)
-              LinearProgressIndicator(
-                value: (_matchCacheCurrent ?? 0) / (_matchCacheTotal ?? 1),
-              ),
+            MatchCacheLoadingIndicator(),
           ],
         ),
       );

@@ -3,6 +3,7 @@ import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/evolution/genome.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
+import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
@@ -25,39 +26,44 @@ class EloEvaluator {
     required this.settings,
   });
 
-  Future<double> evaluate(List<PracticalMatch> matches, List<PracticalMatch> tests, RaterGroup group) async {
+  Future<double> evaluate(EloEvaluationData data) async {
     var h = RatingHistory(
-      matches: matches,
+      matches: data.trainingData,
       project: RatingProject(
         name: "Evolutionary test",
-        matchUrls: matches.map((e) => e.practiscoreId).toList(),
+        matchUrls: data.trainingData.map((e) => e.practiscoreId).toList(),
         settings: RatingHistorySettings(
           algorithm: MultiplayerPercentEloRater(settings: settings),
-          groups: [group],
+          groups: [data.group],
         )
       )
     );
 
+    print("Processing matches");
     await h.processInitialMatches();
+    print("Matches processed");
 
-    var rater = h.raterFor(h.matches.last, group);
+    var rater = h.raterFor(h.matches.last, data.group);
 
-    double errorSum = 0;
-
-    for(var m in tests) {
+    print("Predicting matches and validating predictions");
+    for(var m in data.evaluationData) {
       Map<Shooter, ShooterRating> registrations = {};
+      for(var shooter in m.shooters) {
+        var rating = rater.knownShooters[Rater.processMemberNumber(shooter.memberNumber)];
+        if(rating != null )registrations[shooter] = rating;
+      }
 
-      // TODO: registrations
-      var predictions = rater.ratingSystem.predict([]);
+      var predictions = rater.ratingSystem.predict(registrations.values.toList());
+      var scoreOutput = m.getScores(shooters: registrations.keys.toList());
 
-      // TODO: only for the shooters we predicted?
-      var scoreOutput = m.getScores();
-
-      // TODO: use registration map
       var scores = <ShooterRating, RelativeScore>{};
+      for(var s in scoreOutput) {
+        var rating = registrations[s.shooter];
+        if(rating != null) scores[rating] = s.total;
+      }
 
       var evaluations = rater.ratingSystem.validate(
-          shooters: [],
+          shooters: registrations.values.toList(),
           scores: scores,
           matchScores: scores,
           predictions: predictions
@@ -65,20 +71,27 @@ class EloEvaluator {
 
       errors[h] = evaluations.error;
     }
+    print("Validation done");
 
     return totalError;
   }
 }
 
+class EloEvaluationData {
+  final String name;
+  final List<PracticalMatch> trainingData;
+  final List<PracticalMatch> evaluationData;
+  final RaterGroup group;
+
+  EloEvaluationData({required this.name, required this.trainingData, required this.evaluationData, required this.group});
+}
+
 class EloTuner {
   /// A map of training data. Each entry represents a set of data on
   /// which to evaluate settings.
-  ///
-  /// The key is a list of matches to be used to generate ratings. The
-  /// value is a list of matches to evaluate on.
-  Map<List<PracticalMatch>, List<PracticalMatch>> trainingData;
+  Map<String, EloEvaluationData> trainingData;
 
-  EloTuner({required this.trainingData});
+  EloTuner(List<EloEvaluationData> data) : trainingData = {}..addEntries(data.map((d) => MapEntry(d.name, d)));
 
   /// Chance for random mutations in genomes. Applied per variable.
   static const mutationChance = 0.05;
@@ -90,6 +103,10 @@ class EloTuner {
 
   late List<EloSettings> currentPopulation;
 
+  /// Contains a list of evaluated Elo settings, where the list index is the
+  /// generation and the map is from Elo settings to error sums on [trainingData].
+  late List<Map<EloSettings, double>> evaluations = [];
+
   Future<void> tune(List<EloSettings> initialPopulation, int generations) async {
     var generation = 0;
 
@@ -97,17 +114,96 @@ class EloTuner {
     currentPopulation.addAll(initialPopulation);
 
     while(generation < generations) {
-      runGeneration();
+      await runGeneration(generation);
+      generation += 1;
     }
+
+    var finalEvaluations = evaluations.last;
+    var bestSettings = finalEvaluations.keys.sorted((a, b) => finalEvaluations[a]!.compareTo(finalEvaluations[b]!));
+
+    print("Tuning complete! Best settings: ${bestSettings.first.toGenome()} with error ${finalEvaluations[bestSettings]}");
   }
 
-  Future<void> runGeneration() async {
+  Future<void> runGeneration(int generation) async {
+    print("Starting generation $generation with ${currentPopulation.length} members");
     var evaluators = <EloEvaluator>[];
+
+    evaluations.add({});
+
     for(var settings in currentPopulation) {
-      // make, predict, evaluate
+      evaluators.add(EloEvaluator(settings: settings));
+    }
+
+    // TODO: progress callback
+
+    int genomeIndex = 0;
+    for(var evaluator in evaluators) {
+      for(var name in trainingData.keys) {
+        print("Evaluating genome $genomeIndex on $name");
+        await evaluator.evaluate(trainingData[name]!);
+        // TODO: progress callback
+      }
+
+      evaluations.last[evaluator.settings] = evaluator.totalError;
+      print("Total error for $genomeIndex: ${evaluator.totalError}");
+      // TODO: progress callback
+
+      genomeIndex += 1;
     }
 
     evaluators.sort((a, b) => a.totalError.compareTo(b.totalError));
+
+    List<EloSettings> newPopulation = [];
+    // Keep top N
+    int toKeep = (currentPopulation.length * populationRetentionRatio).round();
+    for(int i = 0; i < toKeep; i++) newPopulation.add(evaluators[i].settings);
+
+    // Breed the rest, picking from a weighted list
+
+    int remaining = currentPopulation.length - toKeep;
+    List<double> weightThresholds = _calculateWeights(currentPopulation.length);
+    for(int i = 0; i < remaining; i++) {
+      var parentA = _pickFrom(evaluators, weightThresholds);
+      var parentB = _pickFrom(evaluators, weightThresholds, parentA);
+
+      var newSettings = EloTuner.breed(parentA, parentB);
+      newPopulation.add(newSettings);
+    }
+
+    currentPopulation = newPopulation;
+
+    print("Generation complete");
+  }
+
+  EloSettings _pickFrom(List<EloEvaluator> evaluators, weightThresholds, [EloSettings? exclude]) {
+    double roll = _r.nextDouble();
+    for(int i = 0; i < evaluators.length; i++) {
+      // The first time the roll is below the weight threshold, that's the one we want
+      if(roll < weightThresholds[i] && evaluators[i].settings != exclude) {
+        print("Chose the ${i}th best for breeding");
+        return evaluators[i].settings;
+      }
+    }
+
+    throw StateError("pickFrom failed");
+  }
+
+  List<double> _calculateWeights(int count) {
+    List<double> nonNormalized = [];
+    for(int i = 0; i < count; i++) {
+      nonNormalized.add(math.exp(-0.15 * i));
+    }
+    var sum = nonNormalized.sum;
+    var normalized = nonNormalized.map((v) => v / sum).toList();
+
+    List<double> thresholds = [];
+    double accumulator = 0;
+    for(var w in normalized) {
+      accumulator += w;
+      thresholds.add(accumulator);
+    }
+
+    return thresholds;
   }
 
   static EloSettings breed(EloSettings a, EloSettings b) {

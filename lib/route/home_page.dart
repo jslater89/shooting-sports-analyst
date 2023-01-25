@@ -8,6 +8,7 @@ import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
 import 'package:uspsa_result_viewer/main.dart';
+import 'package:uspsa_result_viewer/route/elo_tuner_page.dart';
 import 'package:uspsa_result_viewer/ui/empty_scaffold.dart';
 import 'package:uspsa_result_viewer/ui/result_page.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/match_cache_chooser_dialog.dart';
@@ -67,7 +68,7 @@ class _HomePageState extends State<HomePage> {
         child: IconButton(
           icon: Icon(RpgAwesome.bubbling_potion),
           onPressed: () {
-
+            Navigator.of(context).push(MaterialPageRoute(builder: (context) => EloTunerPage()));
           },
         ),
       ));
