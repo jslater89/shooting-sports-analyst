@@ -39,6 +39,7 @@ class RatingHistory {
   List<RaterGroup> get groups => []..addAll(_settings.groups);
 
   late RatingProject project;
+  bool verbose;
 
   /// Maps matches to a map of [Rater]s, which hold the incremental ratings
   /// after that match has been processed.
@@ -46,7 +47,7 @@ class RatingHistory {
 
   Future<void> Function(int currentSteps, int totalSteps, String? eventName)? progressCallback;
 
-  RatingHistory({RatingProject? project, required List<PracticalMatch> matches, this.progressCallback}) : this._matches = matches {
+  RatingHistory({RatingProject? project, required List<PracticalMatch> matches, this.progressCallback, this.verbose = true}) : this._matches = matches {
     project ??= RatingProject(name: "Unnamed Project", settings: RatingHistorySettings(
       algorithm: MultiplayerPercentEloRater(settings: EloSettings(
         byStage: true,
@@ -125,7 +126,7 @@ class RatingHistory {
   PracticalMatch? _lastMatch;
   
   Future<RatingResult> _processInitialMatches() async {
-    debugPrint("Loading matches");
+    if(verbose) debugPrint("Loading matches");
 
     int stepsFinished = 0;
 
@@ -146,7 +147,7 @@ class RatingHistory {
     if(_settings.preserveHistory) {
       int totalSteps = ((_settings.groups.length * _matches.length) / progressCallbackInterval).round();
 
-      print("Total steps, history preserved: $totalSteps on ${_matches.length} matches and ${_settings.groups.length} groups");
+      if(verbose) print("Total steps, history preserved: $totalSteps on ${_matches.length} matches and ${_settings.groups.length} groups");
 
       for (PracticalMatch match in _matches) {
         var m = match;
@@ -193,7 +194,7 @@ class RatingHistory {
     else {
       int totalSteps = ((_settings.groups.length * _matches.length) / progressCallbackInterval).round();
 
-      debugPrint("Total steps, history discarded: $totalSteps");
+      if(verbose) debugPrint("Total steps, history discarded: $totalSteps");
 
       _lastMatch = _matches.last;
       _ratersByDivision[_lastMatch!] ??= {};
@@ -234,6 +235,7 @@ class RatingHistory {
       memberNumberMappingBlacklist: _settings.memberNumberMappingBlacklist,
       userMemberNumberMappings: _settings.userMemberNumberMappings,
       dataCorrections: _settings.memberNumberCorrections,
+      verbose: verbose,
     );
 
     return r;

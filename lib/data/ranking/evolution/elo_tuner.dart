@@ -28,6 +28,7 @@ class EloEvaluator {
 
   Future<double> evaluate(EloEvaluationData data) async {
     var h = RatingHistory(
+      verbose: false,
       matches: data.trainingData,
       project: RatingProject(
         name: "Evolutionary test",
@@ -139,13 +140,13 @@ class EloTuner {
     int genomeIndex = 0;
     for(var evaluator in evaluators) {
       for(var name in trainingData.keys) {
-        print("Evaluating genome $genomeIndex on $name");
+        print("Gen $generation: evaluating genome $genomeIndex on $name");
         await evaluator.evaluate(trainingData[name]!);
         // TODO: progress callback
       }
 
       evaluations.last[evaluator.settings] = evaluator.totalError;
-      print("Total error for $genomeIndex: ${evaluator.totalError}");
+      print("Gen $generation: total error for $genomeIndex: ${evaluator.totalError}");
       // TODO: progress callback
 
       genomeIndex += 1;
@@ -172,7 +173,7 @@ class EloTuner {
 
     currentPopulation = newPopulation;
 
-    print("Generation complete");
+    print("Generation $generation complete");
   }
 
   EloSettings _pickFrom(List<EloEvaluator> evaluators, weightThresholds, [EloSettings? exclude]) {
@@ -234,10 +235,10 @@ extension EvolutionActionChoice on List<EvolutionAction> {
 }
 
 extension EloGenome on EloSettings {
-  static final kTrait = ContinuousTrait("K", 10, 100);
+  static final kTrait = ContinuousTrait("K", 10, 120);
   static final baseTrait = ContinuousTrait("Probability base", 2, 20);
   static final pctWeightTrait = PercentTrait("Percent weight");
-  static final scaleTrait = IntegerTrait("Scale", 200, 1000);
+  static final scaleTrait = IntegerTrait("Scale", 200, 1500);
   static final matchBlendTrait = PercentTrait("Match blend");
   static final errorAwareTrait = BoolTrait("Error aware");
 

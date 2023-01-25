@@ -62,6 +62,7 @@ class Rater {
   List<String> memberNumberWhitelist;
   Future<void> Function(int, int, String? eventName)? progressCallback;
   final int progressCallbackInterval;
+  bool verbose;
 
   Timings timings = Timings();
 
@@ -78,6 +79,7 @@ class Rater {
     Map<String, String> userMemberNumberMappings = const {},
     Map<String, String> memberNumberMappingBlacklist = const {},
     required MemberNumberCorrectionContainer dataCorrections,
+    this.verbose = true,
     this.memberNumberWhitelist = const []})
       : this._matches = matches,
         this._filters = filters,
@@ -110,6 +112,7 @@ class Rater {
         this._dataCorrections = other._dataCorrections,
         this._shooterAliases = {}..addAll(other._shooterAliases),
         this._filters = other._filters,
+        this.verbose = other.verbose,
         this.memberNumberWhitelist = other.memberNumberWhitelist,
         this.progressCallbackInterval = other.progressCallbackInterval,
         this.ratingSystem = other.ratingSystem {
@@ -326,12 +329,12 @@ class Rater {
       if(source != null && target != null) {
         if(target.length == 0) {
           _mapRatings(target, source);
-          print("Mapping $source to $target: manual mapping");
+          if(verbose) print("Mapping $source to $target: manual mapping");
           createdUserMappings.add(sourceNumber);
           createdUserMappings.add(targetNumber);
         }
         else {
-          print("Manual mapping backward");
+          if(verbose) print("Manual mapping backward");
           return RatingResult.err(ManualMappingBackwardError(
             source: source,
             target: target,
@@ -378,7 +381,7 @@ class Rater {
       for(var num in list) {
         if(createdUserMappings.contains(num)) {
           ignore = true;
-          print("Ignoring $num: mapped manually");
+          if(verbose) print("Ignoring $num: mapped manually");
           break;
         }
       }
@@ -388,11 +391,11 @@ class Rater {
         // If the shooter is already mapped, or if both numbers are 5-digit non-lifetime numbers, continue
         if((_memberNumberMappings[list[0]] == list[1] || _memberNumberMappings[list[1]] == list[0]) || (list[0].length > 4 && list[1].length > 4)) continue;
         if(_memberNumberMappingBlacklist[list[0]] == list[1] || _memberNumberMappingBlacklist[list[1]] == list[0]) {
-          debugPrint("Ignoring $name with two member numbers due to blacklist");
+          if(verbose) debugPrint("Ignoring $name with two member numbers due to blacklist");
           continue;
         }
 
-        debugPrint("Shooter $name has two member numbers, mapping: $list (${knownShooters[list[0]]}, ${knownShooters[list[1]]})");
+        if(verbose) debugPrint("Shooter $name has two member numbers, mapping: $list (${knownShooters[list[0]]}, ${knownShooters[list[1]]})");
 
         var rating0 = knownShooters[list[0]]!;
         var rating1 = knownShooters[list[1]]!;

@@ -53,33 +53,33 @@ class _EloTunerPageState extends State<EloTunerPage> {
 
     tuner = EloTuner([
       EloEvaluationData(
-        name: "Area Matches/A4/A8",
+        name: "Area Matches/A4/A8 Open",
         group: RaterGroup.open,
         trainingData: matches,
         evaluationData: calibrationMatches,
       ),
       EloEvaluationData(
-        name: "Area Matches/A4",
+        name: "Area Matches/A4 CO",
         group: RaterGroup.carryOptics,
         trainingData: matches,
         evaluationData: calibrationMatches,
       ),
       EloEvaluationData(
-        name: "Area Matches/A4",
+        name: "Area Matches/A4 Limited",
         group: RaterGroup.limited,
         trainingData: matches,
         evaluationData: calibrationMatches,
       ),
     ]);
 
-    List<Genome> genomes = Iterable.generate(13, (i) => EloGenome.randomGenome()).toList();
+    List<Genome> genomes = Iterable.generate(27, (i) => EloGenome.randomGenome()).toList();
     genomes.add(EloSettings().toGenome());
     genomes.add(EloSettings().toGenome());
     genomes.add(EloSettings().toGenome());
 
     List<EloSettings> initialPopulation = genomes.map((g) => EloGenome.toSettings(g)).toList();
 
-    tuner!.tune(initialPopulation, 5);
+    tuner!.tune(initialPopulation, 3);
   }
 
   @override

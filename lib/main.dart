@@ -86,33 +86,6 @@ void main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
 
-  var random = Random();
-  List<Genome> genomes = Iterable.generate(20, (i) => EloGenome.randomGenome()).toList();
-  List<Genome> gen2 = Iterable.generate(20, (i) {
-    var a = EloGenome.toSettings(genomes[random.nextInt(20)]);
-    var b = EloGenome.toSettings(genomes[random.nextInt(20)]);
-    var output = EloTuner.breed(a, b);
-
-    return output.toGenome();
-  }).toList();
-  List<Genome> gen3 = Iterable.generate(20, (i) {
-    var a = EloGenome.toSettings(gen2[random.nextInt(20)]);
-    var b = EloGenome.toSettings(gen2[random.nextInt(20)]);
-    var output = EloTuner.breed(a, b);
-
-    return output.toGenome();
-  }).toList();
-
-  for(var g in gen3) {
-    print("$g");
-  }
-
-  var defaultGenome = EloSettings().toGenome();
-  var backAndForth = EloGenome.toSettings(defaultGenome).toGenome();
-  print("Default genome: $defaultGenome");
-  print("Forth genome: $backAndForth");
-  print("Compatible? ${defaultGenome.compatibleWith(backAndForth)}");
-
   if(!HtmlOr.isWeb) {
     var path = await getApplicationSupportDirectory();
     Hive.init(path.absolute.path);
