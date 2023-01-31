@@ -4,12 +4,17 @@ import 'dart:ui' as ui show Color;
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_charts/flutter_charts.dart';
+import 'package:uspsa_result_viewer/data/match/practical_match.dart';
 import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/ranking/evolution/elo_tuner.dart';
 import 'package:uspsa_result_viewer/data/ranking/evolution/genome.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
+import 'package:uspsa_result_viewer/html_or/html_or.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/confirm_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/match_cache_loading_indicator.dart';
+import 'package:uspsa_result_viewer/data/ranking/evolution/l2s_data.dart' as l2s;
+import 'package:uspsa_result_viewer/data/ranking/evolution/wpa_data.dart' as wpa;
 
 class EloTunerPage extends StatefulWidget {
   const EloTunerPage({Key? key}) : super(key: key);
@@ -39,51 +44,71 @@ class _EloTunerPageState extends State<EloTunerPage> {
     });
 
     var cache = MatchCache();
-    var matches = cache.allMatches().where((m) =>
-        m.name!.contains(RegExp(r"Area [1-8]"))
-    ).toList();
-    var calibrationMatches = matches.where((m) =>
-        m.name!.contains(RegExp(r"2022.*Area 4")) || m.name!.contains(RegExp(r"2022.*Area 8"))
-    ).toList();
+    List<PracticalMatch> l2Test = [];
+    List<PracticalMatch> l2Calibration = [];
+    List<PracticalMatch> wpaTest = [];
+    List<PracticalMatch> wpaCalibration = [];
 
-    for(var m in calibrationMatches) {
-      matches.remove(m);
+    for(var url in l2s.calibration) {
+      l2Calibration.add(cache.getMatchImmediate(url)!);
+    }
+    for(var url in l2s.test) {
+      l2Test.add(cache.getMatchImmediate(url)!);
+    }
+    for(var url in wpa.calibration) {
+      wpaCalibration.add(cache.getMatchImmediate(url)!);
+    }
+    for(var url in wpa.test) {
+      wpaTest.add(cache.getMatchImmediate(url)!);
     }
 
-    print("Tuning dataset:");
-    print("Training matches (${matches.length}): $matches");
-    print("Calibration matches (${calibrationMatches.length}): $calibrationMatches");
+    print("WPA: ${wpaCalibration.length} calibration matches, ${wpaTest.length} eval matches");
+    print("L2s: ${l2Calibration.length} calibration matches, ${l2Test.length} eval matches");
 
     tuner = EloTuner([
       EloEvaluationData(
-        name: "Area Matches/A4/A8 Open",
+        name: "L2s Open",
         group: RaterGroup.open,
-        trainingData: matches,
-        evaluationData: calibrationMatches,
+        trainingData: l2Calibration,
+        evaluationData: l2Test,
       ),
       EloEvaluationData(
-        name: "Area Matches/A4 CO",
+        name: "L2s CO",
         group: RaterGroup.carryOptics,
-        trainingData: matches,
-        evaluationData: calibrationMatches,
+        trainingData: l2Calibration,
+        evaluationData: l2Test,
       ),
       EloEvaluationData(
-        name: "Area Matches/A4 Limited",
+        name: "L2s Limited",
         group: RaterGroup.limited,
-        trainingData: matches,
-        evaluationData: calibrationMatches,
+        trainingData: l2Calibration,
+        evaluationData: l2Test,
+      ),
+      EloEvaluationData(
+        name: "WPA Open",
+        group: RaterGroup.open,
+        trainingData: wpaCalibration,
+        evaluationData: wpaTest
+      ),
+      EloEvaluationData(
+        name: "WPA CO",
+        group: RaterGroup.carryOptics,
+        trainingData: wpaCalibration,
+        evaluationData: wpaTest,
       ),
     ]);
 
-    List<Genome> genomes = Iterable.generate(33, (i) => EloGenome.randomGenome()).toList();
-    genomes.addAll(Iterable.generate(7, (i) => EloSettings().toGenome()));
+    List<Genome> genomes = [];
+    genomes.addAll(Iterable.generate(5, (i) => EloSettings().toGenome()));
+    genomes.addAll(Iterable.generate(35, (i) => EloGenome.randomGenome()).toList());
+
 
     List<EloSettings> initialPopulation = genomes.map((g) => EloGenome.toSettings(g)).toList();
 
     // show the UI
     await(Future.delayed(Duration(milliseconds: 500)));
 
-    tuner!.tune(initialPopulation, 6, (update) async {
+    tuner!.tune(initialPopulation, 5, (update) async {
       _updateUi(update);
 
       // Let the UI get an update in edgewise
@@ -102,12 +127,34 @@ class _EloTunerPageState extends State<EloTunerPage> {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        // TODO: ask to quit
-        return true;
+        var quit = await showDialog<bool>(context: context, builder: (context) =>
+          ConfirmDialog(
+            title: "Quit?",
+            content: Text("Are you sure?"),
+            negativeButtonLabel: "Cancel",
+            positiveButtonLabel: "Quit",
+          )
+        );
+        return quit ?? false;
       },
       child: Scaffold(
         appBar: AppBar(
           title: Center(child: Text("Elo Tuner")),
+          actions: [
+            Tooltip(
+              message: "Export",
+              child: IconButton(
+                icon: Icon(Icons.save_alt),
+                onPressed: () {
+                  if(lastUpdate == null) return;
+                  var update = lastUpdate!;
+
+                  var fileContents = update.evaluations.last.map((e) => e.settings.toString()).join("\n\n");
+                  HtmlOr.saveFile("sorted-elo-settings.txt", fileContents);
+                },
+              ),
+            )
+          ],
         ),
         body:
           !matchCacheReady ? _loadingIndicator() : _body(),
@@ -138,8 +185,6 @@ class _EloTunerPageState extends State<EloTunerPage> {
     var minimums = topTen.minimums();
     var maximums = topTen.maximums();
 
-    print("mins: $minimums");
-
     var percentErrorAwareTrait = maximums.traitByName(EloGenome.errorAwareTrait.name);
     var percentErrorAware = (maximums.continuousTraits[percentErrorAwareTrait] ?? 0) * 100;
 
@@ -164,10 +209,10 @@ class _EloTunerPageState extends State<EloTunerPage> {
           ),
         ),
         Expanded(
-          flex: 1,
           child: Column(
             children: [
               Expanded(
+                flex: 5,
                 child: Padding(
                   padding: EdgeInsets.all(2),
                   child: Card(
@@ -183,6 +228,7 @@ class _EloTunerPageState extends State<EloTunerPage> {
                 ),
               ),
               Expanded(
+                flex: 2,
                 child: Padding(
                   padding: EdgeInsets.all(2),
                   child: Card(
@@ -191,11 +237,35 @@ class _EloTunerPageState extends State<EloTunerPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text("K: ${minimums.traits[EloGenome.kTrait]?.toStringAsFixed(1) ?? "n/a"}-${maximums.traits[EloGenome.kTrait]?.toStringAsFixed(1) ?? "n/a"}"),
-                          Text("Scale: ${minimums.traits[EloGenome.scaleTrait]?.toStringAsFixed(1) ?? "n/a"}-${maximums.traits[EloGenome.scaleTrait]?.toStringAsFixed(1) ?? "n/a"}"),
-                          Text("Prob. Base: ${minimums.traits[EloGenome.baseTrait]?.toStringAsFixed(1) ?? "n/a"}-${maximums.traits[EloGenome.baseTrait]?.toStringAsFixed(1) ?? "n/a"}"),
-                          Text("Match Blend: ${minimums.traits[EloGenome.matchBlendTrait]?.toStringAsFixed(2) ?? "n/a"}-${maximums.traits[EloGenome.matchBlendTrait]?.toStringAsFixed(2) ?? "n/a"}"),
-                          Text("Error Aware: ${percentErrorAware.toStringAsFixed(1)}%"),
+                          Text("Population Statistics", style: Theme.of(context).textTheme.subtitle1),
+                          SizedBox(height: 5),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            mainAxisSize: MainAxisSize.max,
+                            children: [
+                              Expanded(child: Text("K: ${minimums.traits[EloGenome.kTrait]?.toStringAsFixed(1) ?? "n/a"}-${maximums.traits[EloGenome.kTrait]?.toStringAsFixed(1) ?? "n/a"}")),
+                              Expanded(child: Text("Scale: ${minimums.traits[EloGenome.scaleTrait]?.toStringAsFixed(1) ?? "n/a"}-${maximums.traits[EloGenome.scaleTrait]?.toStringAsFixed(1) ?? "n/a"}")),
+                              Expanded(child: Text("Prob. Base: ${minimums.traits[EloGenome.baseTrait]?.toStringAsFixed(1) ?? "n/a"}-${maximums.traits[EloGenome.baseTrait]?.toStringAsFixed(1) ?? "n/a"}")),
+                            ],
+                          ),
+                          SizedBox(height: 5),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            mainAxisSize: MainAxisSize.max,
+                            children: [
+                              Expanded(child: Text("Match Blend: ${minimums.traits[EloGenome.matchBlendTrait]?.toStringAsFixed(2) ?? "n/a"}-${maximums.traits[EloGenome.matchBlendTrait]?.toStringAsFixed(2) ?? "n/a"}")),
+                              Expanded(child: Text("Pct. Weight: ${minimums.traits[EloGenome.pctWeightTrait]?.toStringAsFixed(2) ?? "n/a"}-${maximums.traits[EloGenome.pctWeightTrait]?.toStringAsFixed(2) ?? "n/a"}")),
+                            ],
+                          ),
+                          SizedBox(height: 5),
+                          Text("Error Aware: ${percentErrorAware.toStringAsFixed(1)}% "),
+                          SizedBox(height: 5),
+                          Text("Err Thresholds: ${minimums.traits[EloGenome.errorAwareMaxAsPercentScaleTrait]?.toStringAsFixed(2) ?? "n/a"}-${maximums.traits[EloGenome.errorAwareMaxAsPercentScaleTrait]?.toStringAsFixed(2) ?? "n/a"}/"
+                              "${minimums.traits[EloGenome.errorAwareMinAsPercentMaxTrait]?.toStringAsFixed(2) ?? "n/a"}-${maximums.traits[EloGenome.errorAwareMinAsPercentMaxTrait]?.toStringAsFixed(2) ?? "n/a"}/"
+                              "${minimums.traits[EloGenome.errorAwareZeroAsPercentMinTrait]?.toStringAsFixed(2) ?? "n/a"}-${maximums.traits[EloGenome.errorAwareZeroAsPercentMinTrait]?.toStringAsFixed(2) ?? "n/a"}"),
+                          SizedBox(height: 5),
+                          Text("Err Multipliers: ${minimums.traits[EloGenome.errorAwareLowerMultiplierTrait]?.toStringAsFixed(2) ?? "n/a"}-${maximums.traits[EloGenome.errorAwareLowerMultiplierTrait]?.toStringAsFixed(2) ?? "n/a"}/"
+                              "${minimums.traits[EloGenome.errorAwareUpperMultiplierTrait]?.toStringAsFixed(2) ?? "n/a"}-${maximums.traits[EloGenome.errorAwareUpperMultiplierTrait]?.toStringAsFixed(2) ?? "n/a"}"),
                         ],
                       ),
                     ),
@@ -264,13 +334,39 @@ class _EloTunerPageState extends State<EloTunerPage> {
       child: Card(
         child: Padding(
           padding: const EdgeInsets.all(4.0),
-          child: Text("#${index + 1} Genome ${eval.id + 1} "
-            "Err $roundedError "
-            "K:${settings.K.toStringAsFixed(1)} "
-            "PB:${settings.probabilityBase.toStringAsFixed(1)} "
-            "Sc:${settings.scale.round()} "
-            "MB: ${settings.matchBlend.toStringAsFixed(2)} "
-            "EA: ${settings.errorAwareK} ",
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("#${index + 1} Genome ${eval.id + 1} "
+                "(Err $roundedError)", style: Theme.of(context).textTheme.subtitle1,
+              ),
+              SizedBox(height: 5),
+              Column(
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.max,
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      Text("K: ${settings.K.toStringAsFixed(1)}"),
+                      Text("PB: ${settings.probabilityBase.toStringAsFixed(1)}"),
+                      Text("Sc: ${settings.scale.round()}"),
+                      Text("Pct. Wt.: ${settings.percentWeight.toStringAsFixed(2)}"),
+                      Text("MB: ${settings.matchBlend.toStringAsFixed(2)}"),
+                      if(settings.errorAwareK) Text("Err thresh: ${settings.errorAwareZeroValue.round()}/${settings.errorAwareMinThreshold.round()}/${settings.errorAwareMaxThreshold.round()}"),
+                      if(settings.errorAwareK) Text("Err mult: ${(1 - settings.errorAwareLowerMultiplier).toStringAsFixed(2)}/${(settings.errorAwareUpperMultiplier + 1).toStringAsFixed(2)}")
+                    ],
+                  ),
+                  SizedBox(height: 5),
+                  Row(
+                    mainAxisSize: MainAxisSize.max,
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+
+                    ],
+                  ),
+                ],
+              )
+            ],
           ),
         ),
       ),

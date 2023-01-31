@@ -1,6 +1,7 @@
 import 'package:collection/collection.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/evolution/genome.dart';
+import 'package:uspsa_result_viewer/data/ranking/evolution/predator_prey.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
@@ -11,7 +12,26 @@ import 'dart:math' as math;
 
 var _r = math.Random();
 
-class EloEvaluator {
+// TODO: multi-objective predator-prey
+/*
+It seems like the right choice, on reading about it a little. We do actually have several
+functions we're evaluating on, even if they aren't yet explicit:
+
+1. Minimize Elo error (expected/actual score).
+2. Make good *ordinal* predictions for the top 10-15% of shooters at a match. I don't
+think I can do percentage predictions because those are so loosey-goosey hand-tuned.
+3. Have the average rating be close to 1000. I think this is a freebie, though.
+4. Have the Sailer/Nils/JJ/Hetherington ratings be between 2000 and 3000, with the
+most points for coming in around 2700.
+5. Make good ordinal predictions all the way down the list.
+6? Minimize rating error at the terminal end of calibration.
+
+I may think of others, but this is a pretty good set to start with.
+
+I think, for the collection of
+ */
+
+class EloEvaluator extends Prey {
   /// The settings used for this iteration.
   EloSettings settings;
 
@@ -125,6 +145,8 @@ class EloTuner {
     currentPopulation = [];
     currentPopulation.addAll(initialPopulation);
 
+    print("Tuning with ${initialPopulation.length} genomes, $generations generations, and ${trainingData.length} test sets");
+
     await callback(EvaluationProgressUpdate(
       currentGeneration: 0,
       totalGenerations: generations,
@@ -158,8 +180,6 @@ class EloTuner {
       evaluators.add(EloEvaluator(settings: settings));
     }
 
-    // TODO: progress callback
-
     int genomeIndex = 0;
     for(var evaluator in evaluators) {
       int trainingIndex = 0;
@@ -179,23 +199,24 @@ class EloTuner {
             totalMatches: data.trainingData.length,
           ));
         });
-
-        await callback(EvaluationProgressUpdate(
-          currentGeneration: generation,
-          totalGenerations: totalGenerations,
-          currentGenome: genomeIndex,
-          totalGenomes: currentPopulation.length,
-          evaluations: evaluations,
-          currentTrainingSet: trainingIndex,
-          totalTrainingSets: trainingData.length,
-          currentMatch: data.trainingData.length - 1,
-          totalMatches: data.trainingData.length,
-        ));
         trainingIndex += 1;
       }
 
       evaluations.last.add(EloEvaluation(genomeIndex, evaluator.settings, error: evaluator.totalError));
       evaluations.last.sort((a, b) => a.error.compareTo(b.error));
+
+      await callback(EvaluationProgressUpdate(
+        currentGeneration: generation,
+        totalGenerations: totalGenerations,
+        currentGenome: genomeIndex,
+        totalGenomes: currentPopulation.length,
+        evaluations: evaluations,
+        currentTrainingSet: trainingIndex,
+        totalTrainingSets: trainingData.length,
+        currentMatch: 0,
+        totalMatches: 0,
+      ));
+      trainingIndex += 1;
 
       print("Gen $generation: total error for $genomeIndex: ${evaluator.totalError}");
 
@@ -236,7 +257,8 @@ class EloTuner {
       }
     }
 
-    throw StateError("pickFrom failed");
+    // If we pick the last one twice, pick the second-to-last one instead.
+    return evaluators[evaluators.length - 2].settings;
   }
 
   List<double> _calculateWeights(int count) {

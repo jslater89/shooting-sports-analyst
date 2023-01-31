@@ -1,6 +1,5 @@
 
 
-import 'dart:ffi';
 import 'dart:math';
 
 import 'package:uspsa_result_viewer/data/ranking/evolution/elo_tuner.dart';

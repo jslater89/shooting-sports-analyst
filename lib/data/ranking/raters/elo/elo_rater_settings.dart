@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:uspsa_result_viewer/data/ranking/model/rating_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 
@@ -127,5 +129,13 @@ class EloSettings extends RaterSettings {
     errorAwareMaxThreshold = (json[_errorAwareMaxThresholdKey] ?? defaultErrorAwareMaxThreshold) as double;
     errorAwareLowerMultiplier = (json[_errorAwareLowerMultiplierKey] ?? defaultErrorAwareLowerMultiplier) as double;
     errorAwareUpperMultiplier = (json[_errorAwareUpperMultiplierKey] ?? defaultErrorAwareUpperMultiplier) as double;
+  }
+
+  @override
+  String toString() {
+    var encoder = JsonEncoder.withIndent("  ");
+    var json = <String, dynamic>{};
+    encodeToJson(json);
+    return encoder.convert(json);
   }
 }
