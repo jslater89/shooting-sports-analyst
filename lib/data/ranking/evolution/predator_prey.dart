@@ -1,20 +1,19 @@
-import 'dart:html';
 import 'dart:math';
 
-import 'package:uspsa_result_viewer/data/ranking/evolution/elo_tuner.dart';
+abstract class GridEntity<P> {
+  Location? location;
 
-abstract class GridOccupant<P> {
-  
+  GridEntity({this.location});
 }
 
-abstract class Prey extends GridOccupant<Prey> {
-
+abstract class Prey extends GridEntity<Prey> {
+  Prey({super.location});
 }
 
-class Predator<P> extends GridOccupant<P> {
+class Predator<P> extends GridEntity<P> {
   Map<double Function(P), double> weights;
 
-  Predator(this.weights);
+  Predator({required this.weights, required super.location});
 
   P? worstPrey(List<P> adjacent) {
     P? worst;
@@ -40,21 +39,26 @@ typedef Location = Point<int>;
 // TODO:
 // Paper has:
 // 240 prey preferred, 20 predators
-// 30x30 to 50x50 lattice
+// 30x30 to 50x50 lattice (between 3.75 and 10.4 cells per prey)
+//    That's 22x22 to 36x36 for us@10/120.
 // 50% move probability
 //
 
 // TODO: figure out the public interface for this
 /// A grid of predators and prey.
 class PredatorPreyGrid<P extends Prey> {
+  // controls how many predators we want; different numbers of predators
+  // per evaluation will implicitly weight one over the others.
   int get predatorsPerEvaluation => 2;
   int get predatorCount => evaluations.length * predatorsPerEvaluation;
+
+  // 12 is the factor from the paper
   int get preferredPopulationSize => predatorCount * 12;
 
   final int gridSize;
   Random _r = Random();
-  List<List<GridOccupant<P>?>> _grid;
-  Map<GridOccupant<P>, Location> _locations = {};
+  List<List<GridEntity<P>?>> _grid;
+  Map<GridEntity<P>, Location> _locations = {};
   List<double Function(P)> evaluations;
 
   PredatorPreyGrid({required this.gridSize, required this.evaluations}) : _grid = List.generate(
@@ -84,7 +88,8 @@ class PredatorPreyGrid<P extends Prey> {
     }
   }
 
-  /// Get the GridOccupants surrounding a given cell.
+  /// Get the cells surrounding a cell, taking into
+  /// account the wraparound/toroidal shape of the world.
   List<Location> neighbors(Location cell) {
     int x = cell.x;
     int y = cell.y;
@@ -143,7 +148,7 @@ class PredatorPreyGrid<P extends Prey> {
     return preds;
   }
 
-  List<GridOccupant> get allOccupants {
+  List<GridEntity> get allEntities {
     return []..addAll(_locations.keys);
   }
 
@@ -156,8 +161,8 @@ class PredatorPreyGrid<P extends Prey> {
   }
 
   /// Finds a given occupant, returning its location or null.
-  Location? locationOf(GridOccupant occupant) {
-    return _locations[occupant];
+  Location? locationOf(GridEntity entity) {
+    return entity.location;
   }
 
   /// Moves an entity to a neighboring empty cell, returning the
@@ -165,7 +170,7 @@ class PredatorPreyGrid<P extends Prey> {
   ///
   /// If [entity] is not currently on the grid, then it is placed
   /// at random.
-  Location? move(GridOccupant<P> entity) {
+  Location? move(GridEntity<P> entity) {
     var loc = locationOf(entity);
 
     if(loc == null) {
@@ -186,7 +191,7 @@ class PredatorPreyGrid<P extends Prey> {
 
   /// Removes an occupant at the given location, returning the occupant
   /// if one was present, or null.
-  GridOccupant<P>? removeAtLocation(Location cell) {
+  GridEntity<P>? removeAtLocation(Location cell) {
     var oldOccupant = occupant(cell);
     if(oldOccupant != null) {
       _locations.remove(oldOccupant);
@@ -197,7 +202,7 @@ class PredatorPreyGrid<P extends Prey> {
 
   /// Places an occupant in a given cell, removing and returning the old occupant,
   /// if present.
-  GridOccupant<P>? replaceOccupant(Location cell, GridOccupant<P> newOccupant) {
+  GridEntity<P>? replaceOccupant(Location cell, GridEntity<P> newOccupant) {
     var oldOccupant = removeAtLocation(cell);
     _setOccupant(cell, newOccupant);
     return oldOccupant;
@@ -207,7 +212,7 @@ class PredatorPreyGrid<P extends Prey> {
   /// times to generate a valid random coordinate.
   /// 
   /// If random placement fails, returns (-1, -1).
-  Location placeOccupant(GridOccupant<P> occupant, [int numRetries = 100]) {
+  Location placeOccupant(GridEntity<P> occupant, [int numRetries = 100]) {
     for(int i = 0; i < numRetries; i++) {
       var location = _randomPoint();
       if(this.occupant(location) == null) {
@@ -220,16 +225,17 @@ class PredatorPreyGrid<P extends Prey> {
   }
   
   /// Set the occupant of a given cell.
-  void _setOccupant(Location cell, GridOccupant<P> occupant) {
+  void _setOccupant(Location cell, GridEntity<P> occupant) {
     if(this.occupant(cell) != null) {
       throw ArgumentError();
     }
     _grid[cell.y][cell.x] = occupant;
+    occupant.location = cell;
     _locations[occupant] = cell;
   }
 
   /// Get the occupant of a given cell.
-  GridOccupant<P>? occupant(Location cell) {
+  GridEntity<P>? occupant(Location cell) {
     return _grid[cell.y][cell.x];
   }
 

@@ -1,3 +1,6 @@
+import 'dart:isolate';
+import 'dart:math';
+
 import 'package:collection/collection.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/evolution/genome.dart';
@@ -6,6 +9,7 @@ import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.dart';
+import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'dart:math' as math;
@@ -24,11 +28,9 @@ think I can do percentage predictions because those are so loosey-goosey hand-tu
 4. Have the Sailer/Nils/JJ/Hetherington ratings be between 2000 and 3000, with the
 most points for coming in around 2700.
 5. Make good ordinal predictions all the way down the list.
-6? Minimize rating error at the terminal end of calibration.
+6? Minimize rating errors at the terminal end of calibration.
 
 I may think of others, but this is a pretty good set to start with.
-
-I think, for the collection of
  */
 
 class EloEvaluator extends Prey {
@@ -41,6 +43,20 @@ class EloEvaluator extends Prey {
   /// The total error across all predictions in the training
   /// set, which is the quantity we want to minimize.
   double get totalError => errors.values.sum;
+  
+  /// The average rating output.
+  Map<String, double> averageRatings = {};
+  double get averageRating => averageRatings.values.average;
+
+  Map<String, double> averageRatingErrors = {};
+  double get averageRatingError => averageRatingErrors.values.average;
+  
+  /// The average maximum rating.
+  Map<String, double> maxRatingDiffs = {};
+  double get averageMaxRatingDiff => maxRatingDiffs.values.average;
+
+  Map<String, int> topNOrdinalErrors = {};
+  int get totalTopNOrdinalError => topNOrdinalErrors.values.sum;
 
   EloEvaluator({
     required this.settings,
@@ -51,12 +67,12 @@ class EloEvaluator extends Prey {
       verbose: false,
       matches: data.trainingData,
       project: RatingProject(
-        name: "Evolutionary test",
-        matchUrls: data.trainingData.map((e) => e.practiscoreId).toList(),
-        settings: RatingHistorySettings(
-          algorithm: MultiplayerPercentEloRater(settings: settings),
-          groups: [data.group],
-        )
+          name: "Evolutionary test",
+          matchUrls: data.trainingData.map((e) => e.practiscoreId).toList(),
+          settings: RatingHistorySettings(
+            algorithm: MultiplayerPercentEloRater(settings: settings),
+            groups: [data.group],
+          )
       ),
       progressCallback: (current, total, name) async {
         await callback?.call(current, total);
@@ -64,18 +80,32 @@ class EloEvaluator extends Prey {
     );
 
     print("Processing matches");
+
     await h.processInitialMatches();
+
+    // TODO: make it JsonSerializable?
+    // h = await Isolate.run<RatingHistory>(() async {
+    //   await h.processInitialMatches();
+    //   return h;
+    // });
     print("Matches processed");
 
     var rater = h.raterFor(h.matches.last, data.group);
+    var sorted = rater.knownShooters.values.sorted((a, b) => b.rating.compareTo(a.rating));
+    averageRatings[data.name] = sorted.map((r) => r.rating).average;
+    maxRatingDiffs[data.name] = (data.expectedMaxRating - sorted.first.rating).abs();
+    averageRatingErrors[data.name] = sorted.map((r) => (r as EloShooterRating).standardError).average;
 
     print("Predicting matches and validating predictions");
     for(var m in data.evaluationData) {
+      int ordinalErrors = 0;
       Map<Shooter, ShooterRating> registrations = {};
       for(var shooter in m.shooters) {
         var rating = rater.knownShooters[Rater.processMemberNumber(shooter.memberNumber)];
-        if(rating != null )registrations[shooter] = rating;
+        if(rating != null) registrations[shooter] = rating;
       }
+
+      int topN = max(1, (registrations.length * 0.15).round());
 
       var predictions = rater.ratingSystem.predict(registrations.values.toList());
       var scoreOutput = m.getScores(shooters: registrations.keys.toList());
@@ -93,12 +123,39 @@ class EloEvaluator extends Prey {
           predictions: predictions
       );
 
+      var ordinalSorted = evaluations.actualResults.keys.sorted((a, b) => b.ordinal.compareTo(a.ordinal));
+      for(int i = 1; i <= topN; i++) {
+        ordinalErrors += (i - (evaluations.actualResults[ordinalSorted[i]]!.place)).abs();
+      }
+
       errors[data.name] = evaluations.error;
+      topNOrdinalErrors[data.name] = ordinalErrors;
     }
     print("Validation done");
 
     return totalError;
   }
+
+  Map<double Function(EloEvaluator), double> evaluations = {};
+  static List<double Function(EloEvaluator)> evaluationFunctions = [
+    (e) {
+      return e.totalError;
+    },
+    (e) {
+      // I think this is valid: the best people in a dataset of about 200-300
+      // matches should end up at about 2700.
+      return e.averageMaxRatingDiff;
+    },
+    (e) {
+      return (1000 - e.averageRating).abs();
+    },
+    (e) {
+      return e.totalTopNOrdinalError.toDouble();
+    },
+    (e) {
+      return e.averageRatingError;
+    }
+  ];
 }
 
 class EloEvaluationData {
@@ -106,8 +163,9 @@ class EloEvaluationData {
   final List<PracticalMatch> trainingData;
   final List<PracticalMatch> evaluationData;
   final RaterGroup group;
+  final double expectedMaxRating;
 
-  EloEvaluationData({required this.name, required this.trainingData, required this.evaluationData, required this.group});
+  EloEvaluationData({required this.name, required this.trainingData, required this.evaluationData, required this.group, required this.expectedMaxRating});
 }
 
 class EloEvaluation {
@@ -181,8 +239,12 @@ class EloTuner {
     }
 
     int genomeIndex = 0;
+    var sw = Stopwatch();
+
     for(var evaluator in evaluators) {
       int trainingIndex = 0;
+      sw.reset();
+      sw.start();
       for(var name in trainingData.keys) {
         var data = trainingData[name]!;
         print("Gen $generation: evaluating genome $genomeIndex on $name");
@@ -201,6 +263,8 @@ class EloTuner {
         });
         trainingIndex += 1;
       }
+      sw.stop();
+      print("Gen $generation: evaluating genome $genomeIndex took ${(sw.elapsedMilliseconds/1000)}s");
 
       evaluations.last.add(EloEvaluation(genomeIndex, evaluator.settings, error: evaluator.totalError));
       evaluations.last.sort((a, b) => a.error.compareTo(b.error));

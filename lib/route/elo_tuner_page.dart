@@ -71,30 +71,35 @@ class _EloTunerPageState extends State<EloTunerPage> {
         group: RaterGroup.open,
         trainingData: l2Calibration,
         evaluationData: l2Test,
+        expectedMaxRating: 2800, // Sailer tax?
       ),
       EloEvaluationData(
         name: "L2s CO",
         group: RaterGroup.carryOptics,
         trainingData: l2Calibration,
         evaluationData: l2Test,
+        expectedMaxRating: 2700,
       ),
       EloEvaluationData(
         name: "L2s Limited",
         group: RaterGroup.limited,
         trainingData: l2Calibration,
         evaluationData: l2Test,
+        expectedMaxRating: 2700,
       ),
       EloEvaluationData(
         name: "WPA Open",
         group: RaterGroup.open,
         trainingData: wpaCalibration,
-        evaluationData: wpaTest
+        evaluationData: wpaTest,
+        expectedMaxRating: 2300,
       ),
       EloEvaluationData(
         name: "WPA CO",
         group: RaterGroup.carryOptics,
         trainingData: wpaCalibration,
         evaluationData: wpaTest,
+        expectedMaxRating: 2300,
       ),
     ]);
 
