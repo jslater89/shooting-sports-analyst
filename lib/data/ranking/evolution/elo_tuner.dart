@@ -33,7 +33,7 @@ most points for coming in around 2700.
 I may think of others, but this is a pretty good set to start with.
  */
 
-class EloEvaluator extends Prey {
+class EloEvaluator extends Prey<EloEvaluator> {
   /// The settings used for this iteration.
   EloSettings settings;
 
@@ -117,10 +117,11 @@ class EloEvaluator extends Prey {
       }
 
       var evaluations = rater.ratingSystem.validate(
-          shooters: registrations.values.toList(),
-          scores: scores,
-          matchScores: scores,
-          predictions: predictions
+        shooters: registrations.values.toList(),
+        scores: scores,
+        matchScores: scores,
+        predictions: predictions,
+        chatty: false,
       );
 
       var ordinalSorted = evaluations.actualResults.keys.sorted((a, b) => b.ordinal.compareTo(a.ordinal));
@@ -136,27 +137,36 @@ class EloEvaluator extends Prey {
     return totalError;
   }
 
-  Map<double Function(EloEvaluator), double> evaluations = {};
-  static List<double Function(EloEvaluator)> evaluationFunctions = [
-    (e) {
+  bool get evaluated => evaluations.isNotEmpty;
+
+  Map<EloEvalFunction, double> evaluations = {};
+  static Map<String, EloEvalFunction> evaluationFunctions = {
+    "totErr": (e) {
       return e.totalError;
     },
-    (e) {
+    "maxRat": (e) {
       // I think this is valid: the best people in a dataset of about 200-300
       // matches should end up at about 2700.
       return e.averageMaxRatingDiff;
     },
-    (e) {
+    "avgRat": (e) {
       return (1000 - e.averageRating).abs();
     },
-    (e) {
+    "ord": (e) {
       return e.totalTopNOrdinalError.toDouble();
     },
-    (e) {
+    "avgErr": (e) {
       return e.averageRatingError;
     }
-  ];
+  };
+
+  @override
+  String toString() {
+    return "EloEvaluator $hashCode";
+  }
 }
+
+typedef EloEvalFunction = double Function(EloEvaluator);
 
 class EloEvaluationData {
   final String name;
@@ -166,6 +176,10 @@ class EloEvaluationData {
   final double expectedMaxRating;
 
   EloEvaluationData({required this.name, required this.trainingData, required this.evaluationData, required this.group, required this.expectedMaxRating});
+
+  int get totalSteps {
+    return trainingData.map((m) => m.stages.length).sum;
+  }
 }
 
 class EloEvaluation {
@@ -181,7 +195,9 @@ class EloTuner {
   /// which to evaluate settings.
   Map<String, EloEvaluationData> trainingData;
 
-  EloTuner(List<EloEvaluationData> data) : trainingData = {}..addEntries(data.map((d) => MapEntry(d.name, d)));
+  EloTuner(List<EloEvaluationData> data, {int gridSize = 28, required this.callback}) :
+        trainingData = {}..addEntries(data.map((d) => MapEntry(d.name, d))),
+        grid = PredatorPreyGrid<EloEvaluator>(gridSize: gridSize, evaluations: EloEvaluator.evaluationFunctions.values.toList());
 
   /// Chance for random mutations in genomes. Applied per variable.
   static const mutationChance = 0.05;
@@ -191,124 +207,237 @@ class EloTuner {
   /// each generation. (The rest will be offspring.)
   static const populationRetentionRatio = 0.1;
 
-  late List<EloSettings> currentPopulation;
+  static const movementRatio = 0.5;
 
-  /// Contains a list of evaluated Elo settings, where the list index is the
-  /// generation and the map is from Elo settings to error sums on [trainingData].
-  late List<List<EloEvaluation>> evaluations = [];
+  List<EloEvaluator> currentPopulation = [];
+  Set<EloEvaluator> nonDominated = {};
 
-  Future<void> tune(List<EloSettings> initialPopulation, int generations, Future<void> Function(EvaluationProgressUpdate) callback) async {
-    var generation = 0;
+  PredatorPreyGrid<EloEvaluator> grid;
+
+  int currentGeneration = 0;
+  bool paused = false;
+
+  Future<void> Function(EvaluationProgressUpdate) callback;
+
+  Future<void> tune() async {
+
+    await callback(EvaluationProgressUpdate(
+      currentGeneration: 0,
+      currentOperation: "Data Setup",
+    ));
+
+    List<Genome> genomes = [];
+    genomes.addAll(Iterable.generate(10, (i) => EloSettings().toGenome()));
+    genomes.addAll(Iterable.generate((grid.preferredPopulationSize * 1.25).round() - 10, (i) => EloGenome.randomGenome()).toList());
+
+    List<EloEvaluator> initialPopulation = genomes.map((g) => EloGenome.toSettings(g)).map((s) => EloEvaluator(settings: s)).toList();
+    initialPopulation.shuffle(_r);
 
     currentPopulation = [];
     currentPopulation.addAll(initialPopulation);
 
-    print("Tuning with ${initialPopulation.length} genomes, $generations generations, and ${trainingData.length} test sets");
+    print("Tuning with ${initialPopulation.length} genomes and ${trainingData.length} test sets");
+    
+    for(var p in currentPopulation) {
+      Location? placed;
+      while(placed == null) {
+        placed = grid.placeEntity(p);
+      }
+    }
+    for(var f in EloEvaluator.evaluationFunctions.values.toList()) {
+      var predators = List.generate(grid.predatorsPerEvaluation, (index) => Predator<EloEvaluator>(weights: {f: 1}));
+      for(var p in predators) {
+        Location? placed;
+        while(placed == null) {
+          placed = grid.placeEntity(p);
+        }
+      }
+    }
 
     await callback(EvaluationProgressUpdate(
       currentGeneration: 0,
-      totalGenerations: generations,
-      currentGenome: 0,
-      totalGenomes: currentPopulation.length,
-      evaluations: evaluations,
-      currentTrainingSet: 0,
-      totalTrainingSets: trainingData.length,
-      currentMatch: 0,
-      totalMatches: trainingData[trainingData.keys.first]!.trainingData.length,
+      currentOperation: "Startup",
     ));
 
-    while(generation < generations) {
-      await runGeneration(generation, generations, callback);
-      generation += 1;
-    }
-
-    var finalEvaluations = evaluations.last;
-    var bestSettings = finalEvaluations.sorted((a, b) => a.error.compareTo(b.error));
-
-    print("Tuning complete! Best settings: ${bestSettings.first.settings.toGenome()} with error ${bestSettings.first.error}");
+    runUntilPaused();
   }
 
-  Future<void> runGeneration(int generation, int totalGenerations, Future<void> Function(EvaluationProgressUpdate) callback) async {
-    print("Starting generation $generation with ${currentPopulation.length} members");
-    var evaluators = <EloEvaluator>[];
+  void _updateNonDominated() {
+    nonDominated.clear();
 
-    evaluations.add([]);
+    // Solution A dominates solution B if A is better in all error measures than B.
+    // Non-dominated solutions are those for which no solutions are better in all error measures.
 
-    for(var settings in currentPopulation) {
-      evaluators.add(EloEvaluator(settings: settings));
+    // Check to see if B dominates A, for all B in population. If no B dominates A,
+    // A is non-dominated.
+    for(var a in currentPopulation) {
+      if(!a.evaluated) continue;
+
+      var dominated = false;
+      for(var b in currentPopulation) {
+        if(a == b) continue;
+        if(!b.evaluated) continue;
+
+        if(_dominates(b, a)) {
+          dominated = true;
+          // print("${b.hashCode} dominates ${a.hashCode}");
+          break;
+        }
+      }
+      if(!dominated) {
+        nonDominated.add(a);
+      }
+    }
+  }
+
+  bool _dominates(EloEvaluator top, EloEvaluator bottom) {
+    for(var f in EloEvaluator.evaluationFunctions.values.toList()) {
+      /// We're minimizing, so a dominant solution has errors all lower
+      /// than its... dominee?
+      if(bottom.evaluations[f]! < top.evaluations[f]!) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  Future<void> runUntilPaused() async {
+    while(!paused) {
+      await runGeneration(callback);
+      currentGeneration += 1;
+      await callback(EvaluationProgressUpdate(
+        currentGeneration: currentGeneration,
+        currentOperation: "Updating nondominated solutions",
+      ));
+      _updateNonDominated();
     }
 
+    print("After $currentGeneration generations, ${nonDominated.length} non-dominated solutions exist.");
+  }
+
+  Future<void> runGeneration(Future<void> Function(EvaluationProgressUpdate) callback) async {
+    print("Starting generation $currentGeneration with ${currentPopulation.length} members");
+    
     int genomeIndex = 0;
+    var totalDuration = 0;
     var sw = Stopwatch();
 
-    for(var evaluator in evaluators) {
-      int trainingIndex = 0;
-      sw.reset();
-      sw.start();
-      for(var name in trainingData.keys) {
-        var data = trainingData[name]!;
-        print("Gen $generation: evaluating genome $genomeIndex on $name");
-        await evaluator.evaluate(trainingData[name]!, (current, total) async {
-          await callback(EvaluationProgressUpdate(
-            currentGeneration: generation,
-            totalGenerations: totalGenerations,
-            currentGenome: genomeIndex,
-            totalGenomes: currentPopulation.length,
-            evaluations: evaluations,
-            currentTrainingSet: trainingIndex,
-            totalTrainingSets: trainingData.length,
-            currentMatch: current * RatingHistory.progressCallbackInterval,
-            totalMatches: data.trainingData.length,
-          ));
-        });
-        trainingIndex += 1;
+    await callback(EvaluationProgressUpdate(
+      currentGeneration: currentGeneration,
+      currentOperation: "Moving prey",
+    ));
+
+    // move prey
+    Set<EloEvaluator> moved = {};
+    for(int i = 0; i < 10; i++) {
+      if(moved.length == currentPopulation.length) {
+        break;
       }
-      sw.stop();
-      print("Gen $generation: evaluating genome $genomeIndex took ${(sw.elapsedMilliseconds/1000)}s");
 
-      evaluations.last.add(EloEvaluation(genomeIndex, evaluator.settings, error: evaluator.totalError));
-      evaluations.last.sort((a, b) => a.error.compareTo(b.error));
+      for (var p in currentPopulation) {
+        if(moved.contains(p)) continue;
 
-      await callback(EvaluationProgressUpdate(
-        currentGeneration: generation,
-        totalGenerations: totalGenerations,
-        currentGenome: genomeIndex,
-        totalGenomes: currentPopulation.length,
-        evaluations: evaluations,
-        currentTrainingSet: trainingIndex,
-        totalTrainingSets: trainingData.length,
-        currentMatch: 0,
-        totalMatches: 0,
-      ));
-      trainingIndex += 1;
+        if(!p.evaluated) {
+          int totalProgress = 0;
+          int totalSteps = trainingData.values.map((d) => d.trainingData.length * RatingHistory.progressCallbackInterval).sum;
+          for(var data in trainingData.values) {
+            await p.evaluate(data, (progress, total) async {
+              totalProgress += progress;
+              await callback(EvaluationProgressUpdate(
+                currentGeneration: currentGeneration,
+                currentOperation: "Evaluating genome ${p.hashCode}",
+                evaluationTarget: p.settings.toGenome(),
+                evaluationProgress: totalProgress,
+                evaluationTotal: totalSteps,
+              ));
+            });
+          }
+          for(var f in EloEvaluator.evaluationFunctions.values.toList()) {
+            p.evaluations[f] = f(p);
+          }
+          _updateNonDominated();
+          await callback(EvaluationProgressUpdate(
+            currentGeneration: currentGeneration,
+            currentOperation: "Moving prey",
+          ));
+        }
 
-      print("Gen $generation: total error for $genomeIndex: ${evaluator.totalError}");
+        if(_r.nextDouble() < 0.5) {
+          moved.add(p);
+          continue;
+        }
 
-      genomeIndex += 1;
+        grid.move(p);
+        moved.add(p);
+      }
     }
 
-    evaluators.sort((a, b) => a.totalError.compareTo(b.totalError));
+    await callback(EvaluationProgressUpdate(
+      currentGeneration: currentGeneration,
+      currentOperation: "Moving predators",
+    ));
+    // do predator steps
+    int predatorSteps = grid.predatorSteps;
+    print("$predatorSteps predator actions");
 
-    List<EloSettings> newPopulation = [];
-    // Keep top N
-    int toKeep = (currentPopulation.length * populationRetentionRatio).round();
-    for(int i = 0; i < toKeep; i++) newPopulation.add(evaluators[i].settings);
+    int preyEaten = 0;
+    // get predators once, rather than at every loop iteration
+    // (oops)
+    var predators = grid.predators;
+    for(var pred in predators) {
+      for (int i = 0; i < predatorSteps; i++) {
+        var adjacentPrey = grid.preyNeighbors(pred.location!);
+        var target = pred.worstPrey(adjacentPrey);
+        print("Predator ${pred.hashCode} at ${pred.location} has ${adjacentPrey.length} neighboring prey");
 
-    // Breed the rest, picking from a weighted list
-
-    int remaining = currentPopulation.length - toKeep;
-    List<double> weightThresholds = _calculateWeights(currentPopulation.length);
-    for(int i = 0; i < remaining; i++) {
-      var parentA = _pickFrom(evaluators, weightThresholds);
-      var parentB = _pickFrom(evaluators, weightThresholds, parentA);
-
-      var newSettings = EloTuner.breed(parentA, parentB);
-      newPopulation.add(newSettings);
+        if (target == null) {
+          grid.move(pred);
+        }
+        else {
+          print("Predator eats ${target.hashCode} at ${target.location}!");
+          grid.replaceEntity(target.location!, pred);
+          currentPopulation.remove(target);
+          preyEaten += 1;
+        }
+      }
     }
 
-    currentPopulation = newPopulation;
+    print("${predators.length} predators ate $preyEaten prey, for a current population of ${currentPopulation.length}");
 
-    print("Generation $generation complete");
+    await callback(EvaluationProgressUpdate(
+      currentGeneration: currentGeneration,
+      currentOperation: "Breeding prey",
+    ));
+    // breed prey
+    List<EloEvaluator> toPlace = [];
+    for(var p1 in grid.prey) {
+      var neighbors = grid.preyNeighbors(p1.location!);
+      if(neighbors.isNotEmpty) {
+        var p2 = neighbors[_r.nextInt(neighbors.length)];
+
+        var p1Settings = p1.settings;
+        var p2Settings = p2.settings;
+
+        var childSettings = EloGenome.toSettings(Genome.breed(p1Settings.toGenome(), p2Settings.toGenome(), crossoverPoints: crossoverPoints, mutationChance: mutationChance));
+        var child = EloEvaluator(settings: childSettings);
+
+        toPlace.add(child);
+      }
+      else {
+        print("${p1.hashCode} has ${neighbors.length} neighboring prey");
+      }
+    }
+
+    print("${toPlace.length} new children");
+
+    for(var child in toPlace) {
+      var location = grid.placeEntity(child);
+      if(location != Location(-1, -1)) {
+        currentPopulation.add(child);
+      }
+    }
+
+    print("After breeding, ${currentPopulation.length} prey");
   }
 
   EloSettings _pickFrom(List<EloEvaluator> evaluators, weightThresholds, [EloSettings? exclude]) {
@@ -468,25 +597,16 @@ extension EloGenome on EloSettings {
 
 class EvaluationProgressUpdate {
   int currentGeneration;
-  int totalGenerations;
-  int currentGenome;
-  int totalGenomes;
-  int currentTrainingSet;
-  int totalTrainingSets;
-  int currentMatch;
-  int totalMatches;
-
-  List<List<EloEvaluation>> evaluations;
+  Genome? evaluationTarget;
+  int? evaluationProgress;
+  int? evaluationTotal;
+  String currentOperation;
 
   EvaluationProgressUpdate({
     required this.currentGeneration,
-    required this.totalGenerations,
-    required this.currentGenome,
-    required this.totalGenomes,
-    required this.evaluations,
-    required this.currentTrainingSet,
-    required this.totalTrainingSets,
-    required this.currentMatch,
-    required this.totalMatches,
+    required this.currentOperation,
+    this.evaluationTarget,
+    this.evaluationProgress,
+    this.evaluationTotal,
   });
 }

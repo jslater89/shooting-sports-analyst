@@ -109,7 +109,8 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
     required List<ShooterRating> shooters,
     required Map<ShooterRating, RelativeScore> scores,
     required Map<ShooterRating, RelativeScore> matchScores,
-    required List<ShooterPrediction> predictions
+    required List<ShooterPrediction> predictions,
+    bool chatty = true,
   }) {
     throw UnimplementedError();
   }

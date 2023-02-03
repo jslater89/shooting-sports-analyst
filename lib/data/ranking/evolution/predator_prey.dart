@@ -1,19 +1,26 @@
 import 'dart:math';
 
 abstract class GridEntity<P> {
-  Location? location;
+  Location? _location;
+  set location(Location? l) {
+    lastLocation = _location;
+    _location = l;
+  }
+  Location? get location => _location;
 
-  GridEntity({this.location});
+  Location? lastLocation;
+
+  GridEntity({Location? location}) : this._location = location;
 }
 
-abstract class Prey extends GridEntity<Prey> {
+abstract class Prey<P> extends GridEntity<P> {
   Prey({super.location});
 }
 
 class Predator<P> extends GridEntity<P> {
   Map<double Function(P), double> weights;
 
-  Predator({required this.weights, required super.location});
+  Predator({required this.weights, super.location});
 
   P? worstPrey(List<P> adjacent) {
     P? worst;
@@ -49,7 +56,7 @@ typedef Location = Point<int>;
 class PredatorPreyGrid<P extends Prey> {
   // controls how many predators we want; different numbers of predators
   // per evaluation will implicitly weight one over the others.
-  int get predatorsPerEvaluation => 2;
+  int get predatorsPerEvaluation => 1;
   int get predatorCount => evaluations.length * predatorsPerEvaluation;
 
   // 12 is the factor from the paper
@@ -68,11 +75,6 @@ class PredatorPreyGrid<P extends Prey> {
         gridSize,
         (index) => null,
   ));
-
-  /// Get the coordinates surrounding a given cell.
-  List<Location> neighboringCells(Location cell) {
-    return [];
-  }
 
   int _wrap(int x) {
     if(x < 0) {
@@ -119,30 +121,30 @@ class PredatorPreyGrid<P extends Prey> {
 
   /// Get the neighbors without an occupant around cell.
   List<Location> unoccupiedNeighbors(Location cell) {
-    return neighboringCells(cell).where((element) => _grid[cell.y][cell.x] == null).toList();
+    return neighbors(cell).where((c) => entityAt(c) == null).toList();
   }
 
   /// Get the prey neighbors around a given cell.
   List<P> preyNeighbors(Location cell) {
-    var cells = neighboringCells(cell);
+    var cells = neighbors(cell);
     List<P> prey = [];
     for(var c in cells) {
-      var occupant = _grid[c.y][c.x];
-      if(occupant is P) {
-        prey.add(occupant as P);
+      var o = entityAt(c);
+      if(o is P) {
+        prey.add(o as P);
       }
     }
     return prey;
   }
 
   /// Get the predator neighbors around a given cell.
-  List<Predator> predatorNeighbors(Location cell) {
-    var cells = neighboringCells(cell);
-    List<Predator> preds = [];
+  List<Predator<P>> predatorNeighbors(Location cell) {
+    var cells = neighbors(cell);
+    List<Predator<P>> preds = [];
     for(var c in cells) {
-      var occupant = _grid[c.y][c.x];
-      if(occupant is Predator) {
-        preds.add(occupant as Predator);
+      var o = entityAt(c);
+      if(o is Predator) {
+        preds.add(o as Predator<P>);
       }
     }
     return preds;
@@ -152,57 +154,44 @@ class PredatorPreyGrid<P extends Prey> {
     return []..addAll(_locations.keys);
   }
 
-  List<Predator> get predators {
-    return []..addAll(_locations.keys.whereType());
+  List<Predator<P>> get predators {
+    return []..addAll(_locations.keys.where((e) => e is Predator).map((e) => e as Predator<P>));
   }
 
   List<P> get prey {
-    return []..addAll(_locations.keys.whereType());
-  }
-
-  /// Finds a given occupant, returning its location or null.
-  Location? locationOf(GridEntity entity) {
-    return entity.location;
-  }
-
-  /// Moves an entity to a neighboring empty cell, returning the
-  /// new location or null, if no move was made.
-  ///
-  /// If [entity] is not currently on the grid, then it is placed
-  /// at random.
-  Location? move(GridEntity<P> entity) {
-    var loc = locationOf(entity);
-
-    if(loc == null) {
-      return placeOccupant(entity);
-    }
-
-    List<Location> candidates = unoccupiedNeighbors(loc);
-    if(candidates.isNotEmpty) {
-      var newLoc = candidates[_r.nextInt(candidates.length)];
-
-      // no old entity, because we're looking at unoccupied neighbors
-      replaceOccupant(newLoc, entity);
-
-      return newLoc;
-    }
-    return null;
+    return []..addAll(_locations.keys.where((e) => e is Prey).map((e) => e as P));
   }
 
   /// Removes an occupant at the given location, returning the occupant
   /// if one was present, or null.
   GridEntity<P>? removeAtLocation(Location cell) {
-    var oldOccupant = occupant(cell);
+    var oldOccupant = entityAt(cell);
     if(oldOccupant != null) {
       _locations.remove(oldOccupant);
+      oldOccupant.location = null;
       _grid[cell.y][cell.x] = null;
     }
     return oldOccupant;
   }
 
+  Location? move(GridEntity<P> entity) {
+    var availableDestinations = unoccupiedNeighbors(entity.location!);
+    if(availableDestinations.length == 0) return null;
+
+    // Prefer not to move where we just came from
+    var newLocation = availableDestinations[_r.nextInt(availableDestinations.length)];
+    if(newLocation == entity.lastLocation) {
+      newLocation = availableDestinations[_r.nextInt(availableDestinations.length)];
+    }
+
+    replaceEntity(newLocation, entity);
+    return newLocation;
+  }
+
   /// Places an occupant in a given cell, removing and returning the old occupant,
   /// if present.
-  GridEntity<P>? replaceOccupant(Location cell, GridEntity<P> newOccupant) {
+  GridEntity<P>? replaceEntity(Location cell, GridEntity<P> newOccupant) {
+    removeAtLocation(newOccupant.location!);
     var oldOccupant = removeAtLocation(cell);
     _setOccupant(cell, newOccupant);
     return oldOccupant;
@@ -212,10 +201,13 @@ class PredatorPreyGrid<P extends Prey> {
   /// times to generate a valid random coordinate.
   /// 
   /// If random placement fails, returns (-1, -1).
-  Location placeOccupant(GridEntity<P> occupant, [int numRetries = 100]) {
+  Location placeEntity(GridEntity<P> occupant, [int numRetries = 100]) {
+    if(occupant.location != null) {
+      throw ArgumentError("Can't randomly place an already-placed entity");
+    }
     for(int i = 0; i < numRetries; i++) {
       var location = _randomPoint();
-      if(this.occupant(location) == null) {
+      if(this.entityAt(location) == null) {
         _setOccupant(location, occupant);
         return location;
       }
@@ -226,7 +218,7 @@ class PredatorPreyGrid<P extends Prey> {
   
   /// Set the occupant of a given cell.
   void _setOccupant(Location cell, GridEntity<P> occupant) {
-    if(this.occupant(cell) != null) {
+    if(entityAt(cell) != null) {
       throw ArgumentError();
     }
     _grid[cell.y][cell.x] = occupant;
@@ -235,7 +227,7 @@ class PredatorPreyGrid<P extends Prey> {
   }
 
   /// Get the occupant of a given cell.
-  GridEntity<P>? occupant(Location cell) {
+  GridEntity<P>? entityAt(Location cell) {
     return _grid[cell.y][cell.x];
   }
 
@@ -243,8 +235,8 @@ class PredatorPreyGrid<P extends Prey> {
     return Location(_r.nextInt(_grid.length), _r.nextInt(_grid.length));
   }
 
-  int get _predatorSteps {
+  int get predatorSteps {
     int pop = prey.length;
-    return max(0, ((pop - preferredPopulationSize) / predatorCount).floor());
+    return max(0, (pop - (preferredPopulationSize * 0.5)) / predatorCount).floor();
   }
 }

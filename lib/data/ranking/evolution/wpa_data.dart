@@ -1,3 +1,9 @@
+final List<String> smallTest = [
+  "https://practiscore.com/results/new/186886",
+  "https://practiscore.com/results/new/185925",
+  "https://practiscore.com/results/new/185097",
+  "https://practiscore.com/results/new/bffe3150-a9d3-43d2-b8b0-8b2bdbd71c55",
+];
 final List<String> test = [
   "https://practiscore.com/results/new/186886",
   "https://practiscore.com/results/new/185925",
@@ -10,6 +16,28 @@ final List<String> test = [
   "https://practiscore.com/results/new/183769",
   "https://practiscore.com/results/new/183328",
   "https://practiscore.com/results/new/182990"
+];
+final List<String> smallCalibration = [
+  "https://practiscore.com/results/new/182090",
+  "https://practiscore.com/results/new/182247",
+  "https://practiscore.com/results/new/ac2589c8-73c1-466e-813a-7c71f7dfb842",
+  "https://practiscore.com/results/new/182015",
+  "https://practiscore.com/results/new/181366",
+  "https://practiscore.com/results/new/d5cd7527-fcbc-45df-878d-0386f50950ad",
+  "https://practiscore.com/results/new/181487",
+  "https://practiscore.com/results/new/180712",
+  "https://practiscore.com/results/new/180453",
+  "https://practiscore.com/results/new/180047",
+  "https://practiscore.com/results/new/179937",
+  "https://practiscore.com/results/new/178980",
+  "https://practiscore.com/results/new/179348",
+  "https://practiscore.com/results/new/179044",
+  "https://practiscore.com/results/new/178396",
+  "https://practiscore.com/results/new/857d4325-8e25-47d4-8a70-e63cad6018af",
+  "https://practiscore.com/results/new/177683",
+  "https://practiscore.com/results/new/46a17f47-5bac-490a-a55c-29edd3886645",
+  "https://practiscore.com/results/new/176957",
+  "https://practiscore.com/results/new/176917",
 ];
 final List<String> calibration = [
   "https://practiscore.com/results/new/182090",

@@ -516,7 +516,8 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     required List<ShooterRating> shooters,
     required Map<ShooterRating, RelativeScore> scores,
     required Map<ShooterRating, RelativeScore> matchScores,
-    required List<ShooterPrediction> predictions
+    required List<ShooterPrediction> predictions,
+    bool chatty = true,
   }) {
     Map<ShooterRating, ShooterPrediction> shootersToPredictions = {};
     Map<ShooterPrediction, SimpleMatchResult> actualOutcomes = {};
@@ -565,9 +566,11 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       }
     }
 
-    print("Actual outcomes for ${actualOutcomes.length} shooters yielded an error sum of ${errors.sum} and an average error of ${errors.average.toStringAsPrecision(3)}");
-    print("Std. dev: ${(sqrt(errorSum) / predictions.length).toStringAsPrecision(3)} of ${predictions.map((e) => e.mean).average}");
-    print("Score correct: $correct68/$correct95/${actualOutcomes.length} (${(correct68 / actualOutcomes.length * 100).toStringAsFixed(1)}%/${(correct95 / actualOutcomes.length * 100).toStringAsFixed(1)}%)");
+    if(chatty) {
+      print("Actual outcomes for ${actualOutcomes.length} shooters yielded an error sum of ${errors.sum} and an average error of ${errors.average.toStringAsPrecision(3)}");
+      print("Std. dev: ${(sqrt(errorSum) / predictions.length).toStringAsPrecision(3)} of ${predictions.map((e) => e.mean).average}");
+      print("Score correct: $correct68/$correct95/${actualOutcomes.length} (${(correct68 / actualOutcomes.length * 100).toStringAsFixed(1)}%/${(correct95 / actualOutcomes.length * 100).toStringAsFixed(1)}%)");
+    }
 
     return PredictionOutcome(
       error: (sqrt(errorSum) / predictions.length), actualResults: actualOutcomes

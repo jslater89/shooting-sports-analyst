@@ -49,16 +49,16 @@ class _EloTunerPageState extends State<EloTunerPage> {
     List<PracticalMatch> wpaTest = [];
     List<PracticalMatch> wpaCalibration = [];
 
-    for(var url in l2s.calibration) {
+    for(var url in l2s.smallCalibration) {
       l2Calibration.add(cache.getMatchImmediate(url)!);
     }
-    for(var url in l2s.test) {
+    for(var url in l2s.smallTest) {
       l2Test.add(cache.getMatchImmediate(url)!);
     }
-    for(var url in wpa.calibration) {
+    for(var url in wpa.smallCalibration) {
       wpaCalibration.add(cache.getMatchImmediate(url)!);
     }
-    for(var url in wpa.test) {
+    for(var url in wpa.smallTest) {
       wpaTest.add(cache.getMatchImmediate(url)!);
     }
 
@@ -80,20 +80,20 @@ class _EloTunerPageState extends State<EloTunerPage> {
         evaluationData: l2Test,
         expectedMaxRating: 2700,
       ),
-      EloEvaluationData(
-        name: "L2s Limited",
-        group: RaterGroup.limited,
-        trainingData: l2Calibration,
-        evaluationData: l2Test,
-        expectedMaxRating: 2700,
-      ),
-      EloEvaluationData(
-        name: "WPA Open",
-        group: RaterGroup.open,
-        trainingData: wpaCalibration,
-        evaluationData: wpaTest,
-        expectedMaxRating: 2300,
-      ),
+      // EloEvaluationData(
+      //   name: "L2s Limited",
+      //   group: RaterGroup.limited,
+      //   trainingData: l2Calibration,
+      //   evaluationData: l2Test,
+      //   expectedMaxRating: 2700,
+      // ),
+      // EloEvaluationData(
+      //   name: "WPA Open",
+      //   group: RaterGroup.open,
+      //   trainingData: wpaCalibration,
+      //   evaluationData: wpaTest,
+      //   expectedMaxRating: 2300,
+      // ),
       EloEvaluationData(
         name: "WPA CO",
         group: RaterGroup.carryOptics,
@@ -101,24 +101,17 @@ class _EloTunerPageState extends State<EloTunerPage> {
         evaluationData: wpaTest,
         expectedMaxRating: 2300,
       ),
-    ]);
-
-    List<Genome> genomes = [];
-    genomes.addAll(Iterable.generate(5, (i) => EloSettings().toGenome()));
-    genomes.addAll(Iterable.generate(35, (i) => EloGenome.randomGenome()).toList());
-
-
-    List<EloSettings> initialPopulation = genomes.map((g) => EloGenome.toSettings(g)).toList();
-
-    // show the UI
-    await(Future.delayed(Duration(milliseconds: 500)));
-
-    tuner!.tune(initialPopulation, 5, (update) async {
+    ], callback: (update) async {
       _updateUi(update);
 
       // Let the UI get an update in edgewise
       await Future.delayed(Duration(milliseconds: 33));
     });
+
+    // show the UI
+    await(Future.delayed(Duration(milliseconds: 500)));
+
+    tuner!.tune();
   }
 
   EvaluationProgressUpdate? lastUpdate;
@@ -146,15 +139,23 @@ class _EloTunerPageState extends State<EloTunerPage> {
         appBar: AppBar(
           title: Center(child: Text("Elo Tuner")),
           actions: [
+            if(tuner != null) Tooltip(
+              message: "Export",
+              child: IconButton(
+                icon: Icon(tuner!.paused ? Icons.play_arrow : Icons.pause),
+                onPressed: () {
+                  setState(() {
+                    tuner!.paused = !tuner!.paused;
+                  });
+                },
+              ),
+            ),
             Tooltip(
               message: "Export",
               child: IconButton(
                 icon: Icon(Icons.save_alt),
                 onPressed: () {
-                  if(lastUpdate == null) return;
-                  var update = lastUpdate!;
-
-                  var fileContents = update.evaluations.last.map((e) => e.settings.toString()).join("\n\n");
+                  var fileContents = tuner!.currentPopulation.map((e) => e.settings.toString()).join("\n\n");
                   HtmlOr.saveFile("sorted-elo-settings.txt", fileContents);
                 },
               ),
@@ -179,12 +180,13 @@ class _EloTunerPageState extends State<EloTunerPage> {
   }
 
   Widget _body() {
-    if(lastUpdate == null || lastUpdate!.evaluations.isEmpty) {
+    if(tuner == null || lastUpdate == null || tuner!.nonDominated.isEmpty) {
       return Center(child: Text("Awaiting data..."));
     }
 
+    var t = tuner!;
     var update = lastUpdate!;
-    var currentPopulation = update.evaluations.last;
+    var currentPopulation = t.nonDominated.toList();
 
     var topTen = currentPopulation.sublist(0, min(currentPopulation.length, 10)).map((e) => e.settings.toGenome()).toList();
     var minimums = topTen.minimums();
@@ -193,17 +195,21 @@ class _EloTunerPageState extends State<EloTunerPage> {
     var percentErrorAwareTrait = maximums.traitByName(EloGenome.errorAwareTrait.name);
     var percentErrorAware = (maximums.continuousTraits[percentErrorAwareTrait] ?? 0) * 100;
 
+    var genomeString = "";
+    if(update.evaluationTarget != null) {
+      genomeString += "(progress: ${update.evaluationProgress}/${update.evaluationTotal})";
+    }
+
+    int unevaluated = t.currentPopulation.where((e) => !e.evaluated).length;
+
     return Row(
       children: [
         Expanded(
           flex: 2,
           child: Column(
             children: [
-              Text("Generation ${update.currentGeneration + 1}/${update.totalGenerations}, "
-                  "Genome ${update.currentGenome + 1}/${update.totalGenomes}, "
-                  "Training Set ${update.currentTrainingSet + 1}/${update.totalTrainingSets}, "
-                  "Match ${update.currentMatch}/${update.totalMatches}",
-                style: Theme.of(context).textTheme.headlineSmall),
+              Text("Generation ${update.currentGeneration + 1}: ${update.currentOperation} $genomeString",
+                style: Theme.of(context).textTheme.headline5),
               Expanded(
                 child: ListView.builder(
                   itemCount: currentPopulation.length,
@@ -217,7 +223,7 @@ class _EloTunerPageState extends State<EloTunerPage> {
           child: Column(
             children: [
               Expanded(
-                flex: 5,
+                flex: 7,
                 child: Padding(
                   padding: EdgeInsets.all(2),
                   child: Card(
@@ -233,7 +239,7 @@ class _EloTunerPageState extends State<EloTunerPage> {
                 ),
               ),
               Expanded(
-                flex: 2,
+                flex: 3,
                 child: Padding(
                   padding: EdgeInsets.all(2),
                   child: Card(
@@ -243,6 +249,10 @@ class _EloTunerPageState extends State<EloTunerPage> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Text("Population Statistics", style: Theme.of(context).textTheme.subtitle1),
+                          SizedBox(height: 5),
+                          Text("${t.nonDominated.length}/${t.currentPopulation.length} nondominated solutions"),
+                          SizedBox(height: 5),
+                          Text("$unevaluated solutions to evaluate"),
                           SizedBox(height: 5),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -285,65 +295,83 @@ class _EloTunerPageState extends State<EloTunerPage> {
   }
 
   Widget _buildChart(EvaluationProgressUpdate update) {
-    if(update.evaluations.isEmpty) return Container();
+    return Container();
 
-    List<double> minErrors = [];
-    List<double> avgErrors = [];
-    List<double> maxErrors = [];
-    List<String> xLabels = [];
-    List<String> yLabels = [
-      "Min.",
-      "Avg.",
-      "Max.",
-    ];
-
-    int genIndex = 1;
-    for(var generation in update.evaluations) {
-      var errors = generation.map((e) => e.error).toList();
-      if(errors.isNotEmpty) {
-        minErrors.add(errors.min * 1000);
-        maxErrors.add(errors.max * 1000);
-        avgErrors.add(errors.average * 1000);
-        xLabels.add("$genIndex");
-        genIndex += 1;
-      }
-      else if(genIndex == 1 && errors.isEmpty) {
-        return Container();
-      }
-    }
-
-    ChartData data = ChartData(dataRows: [minErrors, avgErrors, maxErrors], xUserLabels: xLabels, dataRowsLegends: yLabels, chartOptions: ChartOptions(
-      lineChartOptions: LineChartOptions(
-        hotspotInnerPaintColor: Colors.grey.shade300,
-      )
-    ), dataRowsColors: [
-      ui.Color.fromRGBO(Colors.blue.red, Colors.blue.green, Colors.blue.blue, 1.0),
-      ui.Color.fromRGBO(Colors.green.red, Colors.green.green, Colors.green.blue, 1.0),
-      ui.Color.fromRGBO(Colors.red.red, Colors.red.green, Colors.red.blue, 1.0),
-    ]);
-
-    return LineChart(
-      painter: LineChartPainter(
-        lineChartContainer: LineChartTopContainer(
-          chartData: data,
-        ),
-      ),
-    );
+    // List<double> minErrors = [];
+    // List<double> avgErrors = [];
+    // List<double> maxErrors = [];
+    // List<String> xLabels = [];
+    // List<String> yLabels = [
+    //   "Min.",
+    //   "Avg.",
+    //   "Max.",
+    // ];
+    //
+    // int genIndex = 1;
+    // for(var generation in update.evaluations) {
+    //   var errors = generation.map((e) => e.error).toList();
+    //   if(errors.isNotEmpty) {
+    //     minErrors.add(errors.min * 1000);
+    //     maxErrors.add(errors.max * 1000);
+    //     avgErrors.add(errors.average * 1000);
+    //     xLabels.add("$genIndex");
+    //     genIndex += 1;
+    //   }
+    //   else if(genIndex == 1 && errors.isEmpty) {
+    //     return Container();
+    //   }
+    // }
+    //
+    // ChartData data = ChartData(dataRows: [minErrors, avgErrors, maxErrors], xUserLabels: xLabels, dataRowsLegends: yLabels, chartOptions: ChartOptions(
+    //   lineChartOptions: LineChartOptions(
+    //     hotspotInnerPaintColor: Colors.grey.shade300,
+    //   )
+    // ), dataRowsColors: [
+    //   ui.Color.fromRGBO(Colors.blue.red, Colors.blue.green, Colors.blue.blue, 1.0),
+    //   ui.Color.fromRGBO(Colors.green.red, Colors.green.green, Colors.green.blue, 1.0),
+    //   ui.Color.fromRGBO(Colors.red.red, Colors.red.green, Colors.red.blue, 1.0),
+    // ]);
+    //
+    // return LineChart(
+    //   painter: LineChartPainter(
+    //     lineChartContainer: LineChartTopContainer(
+    //       chartData: data,
+    //     ),
+    //   ),
+    // );
   }
 
-  Widget _buildEvalCard(EloEvaluation eval, int index) {
-    var roundedError = (eval.error * 1000).toStringAsPrecision(3);
+  List<Widget> errorWidgets(EloEvaluator eval) {
+    if(!eval.evaluated) return [];
+
+    List<Widget> result = [];
+    for(var name in EloEvaluator.evaluationFunctions.keys) {
+      var evaluation = eval.evaluations[EloEvaluator.evaluationFunctions[name]!]!;
+      result.add(Text(
+        "$name: ${evaluation < 1 ? evaluation.toStringAsPrecision(2) : evaluation.toStringAsFixed(2)}"
+      ));
+      result.add(SizedBox(width: 8));
+    }
+    return result;
+  }
+
+  Widget _buildEvalCard(EloEvaluator eval, int index) {
     var settings = eval.settings;
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 2, horizontal: 4),
       child: Card(
+        color: tuner!.nonDominated.contains(eval) ? null : Colors.grey.shade200,
         child: Padding(
           padding: const EdgeInsets.all(4.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("#${index + 1} Genome ${eval.id + 1} "
-                "(Err $roundedError)", style: Theme.of(context).textTheme.subtitle1,
+              Row(
+                children: [
+                  Text("#${index + 1} Genome ${eval.hashCode} ", style: Theme.of(context).textTheme.subtitle1),
+                  SizedBox(width: 8),
+                  ...errorWidgets(eval)
+                ],
               ),
               SizedBox(height: 5),
               Column(
