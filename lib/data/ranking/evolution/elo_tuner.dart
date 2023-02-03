@@ -129,7 +129,10 @@ class EloEvaluator extends Prey<EloEvaluator> {
         ordinalErrors += (i - (evaluations.actualResults[ordinalSorted[i]]!.place)).abs();
       }
 
-      errors[data.name] = evaluations.error;
+      // I think unnormalizing here is right because it'll help stop the 'best system rates
+      // everyone equally and is thus never that wrong' problem.
+      errors[data.name] = evaluations.error * predictions.length;
+
       topNOrdinalErrors[data.name] = ordinalErrors;
     }
     print("Validation done");
@@ -195,12 +198,13 @@ class EloTuner {
   /// which to evaluate settings.
   Map<String, EloEvaluationData> trainingData;
 
-  EloTuner(List<EloEvaluationData> data, {int gridSize = 28, required this.callback}) :
+  EloTuner(List<EloEvaluationData> data, {int gridSize = 18, required this.callback}) :
         trainingData = {}..addEntries(data.map((d) => MapEntry(d.name, d))),
+        maxEvaluations = {}..addEntries(EloEvaluator.evaluationFunctions.values.map((f) => MapEntry(f, 0.0))),
         grid = PredatorPreyGrid<EloEvaluator>(gridSize: gridSize, evaluations: EloEvaluator.evaluationFunctions.values.toList());
 
   /// Chance for random mutations in genomes. Applied per variable.
-  static const mutationChance = 0.05;
+  static const mutationChance = 0.10;
   /// The number of crossovers in k-point crossover.
   static const crossoverPoints = 2;
   /// Retain this proportion of the best population from
@@ -212,10 +216,14 @@ class EloTuner {
   List<EloEvaluator> currentPopulation = [];
   Set<EloEvaluator> nonDominated = {};
 
+  List<EloEvaluator> get evaluatedPopulation => currentPopulation.where((e) => e.evaluated).toList();
+
   PredatorPreyGrid<EloEvaluator> grid;
 
   int currentGeneration = 0;
+  int totalEvaluations = 0;
   bool paused = false;
+  Map<EloEvalFunction, double> maxEvaluations = {};
 
   Future<void> Function(EvaluationProgressUpdate) callback;
 
@@ -339,7 +347,7 @@ class EloTuner {
 
         if(!p.evaluated) {
           int totalProgress = 0;
-          int totalSteps = trainingData.values.map((d) => d.trainingData.length * RatingHistory.progressCallbackInterval).sum;
+          int totalSteps = trainingData.values.map((d) => d.trainingData.length).sum;
           for(var data in trainingData.values) {
             await p.evaluate(data, (progress, total) async {
               totalProgress += progress;
@@ -353,9 +361,14 @@ class EloTuner {
             });
           }
           for(var f in EloEvaluator.evaluationFunctions.values.toList()) {
-            p.evaluations[f] = f(p);
+            var e = f(p);
+            p.evaluations[f] = e;
+            if(e > maxEvaluations[f]!) {
+              maxEvaluations[f] = e;
+            }
           }
           _updateNonDominated();
+          totalEvaluations += 1;
           await callback(EvaluationProgressUpdate(
             currentGeneration: currentGeneration,
             currentOperation: "Moving prey",
@@ -399,6 +412,10 @@ class EloTuner {
           currentPopulation.remove(target);
           preyEaten += 1;
         }
+        await callback(EvaluationProgressUpdate(
+          currentGeneration: currentGeneration,
+          currentOperation: "Moving predators",
+        ));
       }
     }
 

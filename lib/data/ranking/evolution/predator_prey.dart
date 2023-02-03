@@ -51,7 +51,6 @@ typedef Location = Point<int>;
 // 50% move probability
 //
 
-// TODO: figure out the public interface for this
 /// A grid of predators and prey.
 class PredatorPreyGrid<P extends Prey> {
   // controls how many predators we want; different numbers of predators
@@ -68,6 +67,7 @@ class PredatorPreyGrid<P extends Prey> {
   Map<GridEntity<P>, Location> _locations = {};
   List<double Function(P)> evaluations;
 
+  // TODO: density args for preds/prey
   PredatorPreyGrid({required this.gridSize, required this.evaluations}) : _grid = List.generate(
       growable: false,
       gridSize, (index) => List.generate(
@@ -237,6 +237,6 @@ class PredatorPreyGrid<P extends Prey> {
 
   int get predatorSteps {
     int pop = prey.length;
-    return max(0, (pop - (preferredPopulationSize * 0.5)) / predatorCount).floor();
+    return max(0, (pop - (preferredPopulationSize * 0.75)) / predatorCount).floor();
   }
 }

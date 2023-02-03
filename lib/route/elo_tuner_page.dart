@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'dart:ui' as ui show Color;
 
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +10,8 @@ import 'package:uspsa_result_viewer/data/ranking/evolution/genome.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
+import 'package:uspsa_result_viewer/ui/rater/evolution/predator_prey_view.dart';
+import 'package:uspsa_result_viewer/ui/rater/evolution/solution_space_chart.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/confirm_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/match_cache_loading_indicator.dart';
 import 'package:uspsa_result_viewer/data/ranking/evolution/l2s_data.dart' as l2s;
@@ -27,6 +28,7 @@ class _EloTunerPageState extends State<EloTunerPage> {
   bool matchCacheReady = false;
 
   EloTuner? tuner;
+  EloEvaluator? selected;
 
   @override
   void initState() {
@@ -140,12 +142,16 @@ class _EloTunerPageState extends State<EloTunerPage> {
           title: Center(child: Text("Elo Tuner")),
           actions: [
             if(tuner != null) Tooltip(
-              message: "Export",
+              message: "Pause",
               child: IconButton(
                 icon: Icon(tuner!.paused ? Icons.play_arrow : Icons.pause),
                 onPressed: () {
                   setState(() {
                     tuner!.paused = !tuner!.paused;
+
+                    if(!tuner!.paused) {
+                      tuner!.runUntilPaused();
+                    }
                   });
                 },
               ),
@@ -155,7 +161,7 @@ class _EloTunerPageState extends State<EloTunerPage> {
               child: IconButton(
                 icon: Icon(Icons.save_alt),
                 onPressed: () {
-                  var fileContents = tuner!.currentPopulation.map((e) => e.settings.toString()).join("\n\n");
+                  var fileContents = tuner!.nonDominated.map((e) => e.settings.toString()).join("\n\n");
                   HtmlOr.saveFile("sorted-elo-settings.txt", fileContents);
                 },
               ),
@@ -202,143 +208,121 @@ class _EloTunerPageState extends State<EloTunerPage> {
 
     int unevaluated = t.currentPopulation.where((e) => !e.evaluated).length;
 
-    return Row(
+    return Column(
       children: [
         Expanded(
-          flex: 2,
-          child: Column(
+          child: Row(
             children: [
-              Text("Generation ${update.currentGeneration + 1}: ${update.currentOperation} $genomeString",
-                style: Theme.of(context).textTheme.headline5),
               Expanded(
-                child: ListView.builder(
-                  itemCount: currentPopulation.length,
-                  itemBuilder: (context, i) => _buildEvalCard(currentPopulation[i], i),
+                flex: 2,
+                child: Column(
+                  children: [
+                    Text("Generation ${update.currentGeneration + 1}: ${update.currentOperation} $genomeString",
+                      style: Theme.of(context).textTheme.headline5),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: currentPopulation.length,
+                        itemBuilder: (context, i) => _buildEvalCard(currentPopulation[i], i),
+                      ),
+                    )
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  children: [
+                    Expanded(
+                      flex: 4,
+                      child: Padding(
+                        padding: EdgeInsets.all(2),
+                        child: Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Container(
+                                width: double.infinity,
+                                height: double.infinity,
+                                child: PredatorPreyView<EloEvaluator>(grid: t.grid, nonDominated: t.nonDominated, highlight: selected),
+                            ),
+                          ),
+                        )
+                      ),
+                    ),
+                    Expanded(
+                      flex: 4,
+                      child: Padding(
+                        padding: EdgeInsets.all(2),
+                        child: Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Container(
+                              width: double.infinity,
+                              height: double.infinity,
+                              child: SolutionSpaceCharts(tuner: t, highlight: selected),
+                            ),
+                          ),
+                        )
+                      ),
+                    ),
+                  ],
                 ),
               )
             ],
           ),
         ),
-        Expanded(
-          child: Column(
-            children: [
-              Expanded(
-                flex: 7,
-                child: Padding(
-                  padding: EdgeInsets.all(2),
-                  child: Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Container(
-                        width: double.infinity,
-                        height: double.infinity,
-                        child: _buildChart(update)
-                      ),
+        Padding(
+            padding: EdgeInsets.all(2),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisSize: MainAxisSize.max,
+                      children: [
+                        Expanded(child: Text("Population Statistics", style: Theme.of(context).textTheme.subtitle1)),
+                        Expanded(child: Text("${t.nonDominated.length}/${t.currentPopulation.length} nondominated solutions")),
+                        Expanded(child: Text("$unevaluated solutions to evaluate")),
+                        Expanded(child: Text("${t.totalEvaluations} total solutions evaluated")),
+                      ]
                     ),
-                  )
-                ),
-              ),
-              Expanded(
-                flex: 3,
-                child: Padding(
-                  padding: EdgeInsets.all(2),
-                  child: Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Text("Population Statistics", style: Theme.of(context).textTheme.subtitle1),
-                          SizedBox(height: 5),
-                          Text("${t.nonDominated.length}/${t.currentPopulation.length} nondominated solutions"),
-                          SizedBox(height: 5),
-                          Text("$unevaluated solutions to evaluate"),
-                          SizedBox(height: 5),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            mainAxisSize: MainAxisSize.max,
-                            children: [
-                              Expanded(child: Text("K: ${minimums.traits[EloGenome.kTrait]?.toStringAsFixed(1) ?? "n/a"}-${maximums.traits[EloGenome.kTrait]?.toStringAsFixed(1) ?? "n/a"}")),
-                              Expanded(child: Text("Scale: ${minimums.traits[EloGenome.scaleTrait]?.toStringAsFixed(1) ?? "n/a"}-${maximums.traits[EloGenome.scaleTrait]?.toStringAsFixed(1) ?? "n/a"}")),
-                              Expanded(child: Text("Prob. Base: ${minimums.traits[EloGenome.baseTrait]?.toStringAsFixed(1) ?? "n/a"}-${maximums.traits[EloGenome.baseTrait]?.toStringAsFixed(1) ?? "n/a"}")),
-                            ],
-                          ),
-                          SizedBox(height: 5),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            mainAxisSize: MainAxisSize.max,
-                            children: [
-                              Expanded(child: Text("Match Blend: ${minimums.traits[EloGenome.matchBlendTrait]?.toStringAsFixed(2) ?? "n/a"}-${maximums.traits[EloGenome.matchBlendTrait]?.toStringAsFixed(2) ?? "n/a"}")),
-                              Expanded(child: Text("Pct. Weight: ${minimums.traits[EloGenome.pctWeightTrait]?.toStringAsFixed(2) ?? "n/a"}-${maximums.traits[EloGenome.pctWeightTrait]?.toStringAsFixed(2) ?? "n/a"}")),
-                            ],
-                          ),
-                          SizedBox(height: 5),
-                          Text("Error Aware: ${percentErrorAware.toStringAsFixed(1)}% "),
-                          SizedBox(height: 5),
-                          Text("Err Thresholds: ${minimums.traits[EloGenome.errorAwareMaxAsPercentScaleTrait]?.toStringAsFixed(2) ?? "n/a"}-${maximums.traits[EloGenome.errorAwareMaxAsPercentScaleTrait]?.toStringAsFixed(2) ?? "n/a"}/"
+                    SizedBox(height: 5),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisSize: MainAxisSize.max,
+                      children: [
+                        Expanded(child: Text("K: ${minimums.traits[EloGenome.kTrait]?.toStringAsFixed(1) ?? "n/a"}-${maximums.traits[EloGenome.kTrait]?.toStringAsFixed(1) ?? "n/a"}")),
+                        Expanded(child: Text("Scale: ${minimums.traits[EloGenome.scaleTrait]?.toStringAsFixed(1) ?? "n/a"}-${maximums.traits[EloGenome.scaleTrait]?.toStringAsFixed(1) ?? "n/a"}")),
+                        Expanded(child: Text("Prob. Base: ${minimums.traits[EloGenome.baseTrait]?.toStringAsFixed(1) ?? "n/a"}-${maximums.traits[EloGenome.baseTrait]?.toStringAsFixed(1) ?? "n/a"}")),
+                        Expanded(child: Text("Match Blend: ${minimums.traits[EloGenome.matchBlendTrait]?.toStringAsFixed(2) ?? "n/a"}-${maximums.traits[EloGenome.matchBlendTrait]?.toStringAsFixed(2) ?? "n/a"}")),
+                        Expanded(child: Text("Pct. Weight: ${minimums.traits[EloGenome.pctWeightTrait]?.toStringAsFixed(2) ?? "n/a"}-${maximums.traits[EloGenome.pctWeightTrait]?.toStringAsFixed(2) ?? "n/a"}")),
+                      ],
+                    ),
+                    SizedBox(height: 5),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisSize: MainAxisSize.max,
+                      children: [
+                        Expanded(child: Text("Error Aware: ${percentErrorAware.toStringAsFixed(1)}% ")),
+                        Expanded(
+                          child: Text("Err Thresholds: ${minimums.traits[EloGenome.errorAwareMaxAsPercentScaleTrait]?.toStringAsFixed(2) ?? "n/a"}-${maximums.traits[EloGenome.errorAwareMaxAsPercentScaleTrait]?.toStringAsFixed(2) ?? "n/a"}/"
                               "${minimums.traits[EloGenome.errorAwareMinAsPercentMaxTrait]?.toStringAsFixed(2) ?? "n/a"}-${maximums.traits[EloGenome.errorAwareMinAsPercentMaxTrait]?.toStringAsFixed(2) ?? "n/a"}/"
                               "${minimums.traits[EloGenome.errorAwareZeroAsPercentMinTrait]?.toStringAsFixed(2) ?? "n/a"}-${maximums.traits[EloGenome.errorAwareZeroAsPercentMinTrait]?.toStringAsFixed(2) ?? "n/a"}"),
-                          SizedBox(height: 5),
-                          Text("Err Multipliers: ${minimums.traits[EloGenome.errorAwareLowerMultiplierTrait]?.toStringAsFixed(2) ?? "n/a"}-${maximums.traits[EloGenome.errorAwareLowerMultiplierTrait]?.toStringAsFixed(2) ?? "n/a"}/"
+                        ),
+                        Expanded(
+                          child: Text("Err Multipliers: ${minimums.traits[EloGenome.errorAwareLowerMultiplierTrait]?.toStringAsFixed(2) ?? "n/a"}-${maximums.traits[EloGenome.errorAwareLowerMultiplierTrait]?.toStringAsFixed(2) ?? "n/a"}/"
                               "${minimums.traits[EloGenome.errorAwareUpperMultiplierTrait]?.toStringAsFixed(2) ?? "n/a"}-${maximums.traits[EloGenome.errorAwareUpperMultiplierTrait]?.toStringAsFixed(2) ?? "n/a"}"),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  )
+                  ],
                 ),
-              )
-            ],
-          ),
-        )
+              ),
+            )
+        ),
       ],
     );
-  }
-
-  Widget _buildChart(EvaluationProgressUpdate update) {
-    return Container();
-
-    // List<double> minErrors = [];
-    // List<double> avgErrors = [];
-    // List<double> maxErrors = [];
-    // List<String> xLabels = [];
-    // List<String> yLabels = [
-    //   "Min.",
-    //   "Avg.",
-    //   "Max.",
-    // ];
-    //
-    // int genIndex = 1;
-    // for(var generation in update.evaluations) {
-    //   var errors = generation.map((e) => e.error).toList();
-    //   if(errors.isNotEmpty) {
-    //     minErrors.add(errors.min * 1000);
-    //     maxErrors.add(errors.max * 1000);
-    //     avgErrors.add(errors.average * 1000);
-    //     xLabels.add("$genIndex");
-    //     genIndex += 1;
-    //   }
-    //   else if(genIndex == 1 && errors.isEmpty) {
-    //     return Container();
-    //   }
-    // }
-    //
-    // ChartData data = ChartData(dataRows: [minErrors, avgErrors, maxErrors], xUserLabels: xLabels, dataRowsLegends: yLabels, chartOptions: ChartOptions(
-    //   lineChartOptions: LineChartOptions(
-    //     hotspotInnerPaintColor: Colors.grey.shade300,
-    //   )
-    // ), dataRowsColors: [
-    //   ui.Color.fromRGBO(Colors.blue.red, Colors.blue.green, Colors.blue.blue, 1.0),
-    //   ui.Color.fromRGBO(Colors.green.red, Colors.green.green, Colors.green.blue, 1.0),
-    //   ui.Color.fromRGBO(Colors.red.red, Colors.red.green, Colors.red.blue, 1.0),
-    // ]);
-    //
-    // return LineChart(
-    //   painter: LineChartPainter(
-    //     lineChartContainer: LineChartTopContainer(
-    //       chartData: data,
-    //     ),
-    //   ),
-    // );
   }
 
   List<Widget> errorWidgets(EloEvaluator eval) {
@@ -359,47 +343,61 @@ class _EloTunerPageState extends State<EloTunerPage> {
     var settings = eval.settings;
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 2, horizontal: 4),
-      child: Card(
-        color: tuner!.nonDominated.contains(eval) ? null : Colors.grey.shade200,
-        child: Padding(
-          padding: const EdgeInsets.all(4.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text("#${index + 1} Genome ${eval.hashCode} ", style: Theme.of(context).textTheme.subtitle1),
-                  SizedBox(width: 8),
-                  ...errorWidgets(eval)
-                ],
-              ),
-              SizedBox(height: 5),
-              Column(
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.max,
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      Text("K: ${settings.K.toStringAsFixed(1)}"),
-                      Text("PB: ${settings.probabilityBase.toStringAsFixed(1)}"),
-                      Text("Sc: ${settings.scale.round()}"),
-                      Text("Pct. Wt.: ${settings.percentWeight.toStringAsFixed(2)}"),
-                      Text("MB: ${settings.matchBlend.toStringAsFixed(2)}"),
-                      if(settings.errorAwareK) Text("Err thresh: ${settings.errorAwareZeroValue.round()}/${settings.errorAwareMinThreshold.round()}/${settings.errorAwareMaxThreshold.round()}"),
-                      if(settings.errorAwareK) Text("Err mult: ${(1 - settings.errorAwareLowerMultiplier).toStringAsFixed(2)}/${(settings.errorAwareUpperMultiplier + 1).toStringAsFixed(2)}")
-                    ],
-                  ),
-                  SizedBox(height: 5),
-                  Row(
-                    mainAxisSize: MainAxisSize.max,
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
+      child: GestureDetector(
+        onTap: () {
+          if(selected == eval) {
+            setState(() {
+              selected = null;
+            });
+          }
+          else {
+            setState(() {
+              selected = eval;
+            });
+          }
+        },
+        child: Card(
+          color: tuner!.nonDominated.contains(eval) ? null : Colors.grey.shade200,
+          child: Padding(
+            padding: const EdgeInsets.all(4.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text("#${index + 1} Genome ${eval.hashCode} ", style: Theme.of(context).textTheme.subtitle1),
+                    SizedBox(width: 8),
+                    ...errorWidgets(eval)
+                  ],
+                ),
+                SizedBox(height: 5),
+                Column(
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.max,
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        Text("K: ${settings.K.toStringAsFixed(1)}"),
+                        Text("PB: ${settings.probabilityBase.toStringAsFixed(1)}"),
+                        Text("Sc: ${settings.scale.round()}"),
+                        Text("Pct. Wt.: ${settings.percentWeight.toStringAsFixed(2)}"),
+                        Text("MB: ${settings.matchBlend.toStringAsFixed(2)}"),
+                        if(settings.errorAwareK) Text("Err thresh: ${settings.errorAwareZeroValue.round()}/${settings.errorAwareMinThreshold.round()}/${settings.errorAwareMaxThreshold.round()}"),
+                        if(settings.errorAwareK) Text("Err mult: ${(1 - settings.errorAwareLowerMultiplier).toStringAsFixed(2)}/${(settings.errorAwareUpperMultiplier + 1).toStringAsFixed(2)}")
+                      ],
+                    ),
+                    SizedBox(height: 5),
+                    Row(
+                      mainAxisSize: MainAxisSize.max,
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
 
-                    ],
-                  ),
-                ],
-              )
-            ],
+                      ],
+                    ),
+                  ],
+                )
+              ],
+            ),
           ),
         ),
       ),
