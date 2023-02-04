@@ -1,4 +1,5 @@
 import 'package:charts_flutter/flutter.dart' as charts;
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_charts/flutter_charts.dart';
 import 'package:uspsa_result_viewer/data/ranking/evolution/elo_evaluation.dart';
@@ -50,7 +51,7 @@ class _SolutionSpaceChartsState extends State<SolutionSpaceCharts> with TickerPr
                   child: Text("MTE"),
                 ),
                 Tab(
-                  child: Text("TEO"),
+                  child: Text("PAR"),
                 )
               ]
             ),
@@ -64,10 +65,107 @@ class _SolutionSpaceChartsState extends State<SolutionSpaceCharts> with TickerPr
               _maxVsAvgRatPlot(),
               _maxVsAvgErrPlot(),
               _maxVsTotErrPlot(),
-              _totErrVsOrdPlot(),
+              _switchableParetoPlot(),
             ]
           ),
         )
+      ],
+    );
+  }
+
+  List<String> fnNames = [
+    "totErr",
+    "maxRat",
+    "avgRat",
+    "ord",
+    "avgErr",
+  ];
+  String xName = "maxRat";
+  String yName = "avgRat";
+  Widget _switchableParetoPlot() {
+    EloEvalFunction? fX = EloEvaluator.evaluationFunctions.entries.firstWhereOrNull((f) => f.key == xName)?.value;
+    EloEvalFunction? fY = EloEvaluator.evaluationFunctions.entries.firstWhereOrNull((f) => f.key == yName)?.value;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if(fX != null && fY != null)
+          Expanded(child: ParetoFrontChart(tuner: widget.tuner, fX: fX, fY: fY, highlight: widget.highlight)),
+        if(fX == null || fY == null)
+          Expanded(child: Center(child: Text("No chart selected"))),
+        Row(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text("X:"),
+            SizedBox(width: 5),
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                child: Icon(Icons.chevron_left),
+                onTap: () {
+                  var idx = fnNames.indexOf(xName);
+                  idx -= 1;
+                  if(idx < 0) idx = fnNames.length - 1;
+                  setState(() {
+                    xName = fnNames[idx];
+                  });
+                },
+              ),
+            ),
+            SizedBox(width: 5),
+            SizedBox(width: 50, child: Text(xName, textAlign: TextAlign.center)),
+            SizedBox(width: 5),
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                child: Icon(Icons.chevron_right),
+                onTap: () {
+                  var idx = fnNames.indexOf(xName);
+                  idx += 1;
+                  idx = idx % fnNames.length;
+                  setState(() {
+                    xName = fnNames[idx];
+                  });
+                },
+              ),
+            ),
+            SizedBox(width: 10),
+            Text("Y:"),
+            SizedBox(width: 5),
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                child: Icon(Icons.chevron_left),
+                onTap: () {
+                  var idx = fnNames.indexOf(yName);
+                  idx -= 1;
+                  if(idx < 0) idx = fnNames.length - 1;
+                  setState(() {
+                    yName = fnNames[idx];
+                  });
+                },
+              ),
+            ),
+            SizedBox(width: 5),
+            SizedBox(width: 50, child: Text(yName, textAlign: TextAlign.center)),
+            SizedBox(width: 5),
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                child: Icon(Icons.chevron_right),
+                onTap: () {
+                  var idx = fnNames.indexOf(yName);
+                  idx += 1;
+                  idx = idx % fnNames.length;
+                  setState(() {
+                    yName = fnNames[idx];
+                  });
+                },
+              ),
+            ),
+            SizedBox(width: 10),
+          ],
+        ),
       ],
     );
   }

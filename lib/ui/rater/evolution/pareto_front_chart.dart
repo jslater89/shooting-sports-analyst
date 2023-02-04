@@ -95,14 +95,14 @@ class _ParetoFrontPainter extends CustomPainter {
       var y = height - e.evaluations[fY]! * yConversion;
 
       var paint = (e == highlight) ? highlightPaint : preyPaint;
-      canvas.drawCircle(Offset(x, y), 2.5, paint);
+      canvas.drawCircle(Offset(left + x, y - top), 2.5, paint);
     }
     for(var e in nondominated) {
       var x = e.evaluations[fX]! * xConversion;
       var y = height - e.evaluations[fY]! * yConversion;
 
       var paint = (e == highlight) ? highlightPaint : nondominatedPreyPaint;
-      canvas.drawCircle(Offset(x, y), 2.5, paint);
+      canvas.drawCircle(Offset(left + x, y - top), 2.5, paint);
     }
   }
 

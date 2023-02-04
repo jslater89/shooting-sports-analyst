@@ -32,6 +32,17 @@ class _EloTunerPageState extends State<EloTunerPage> {
   EloTuner? tuner;
   EloEvaluator? selected;
 
+  List<String> fnNames = [
+    "",
+    "totErr",
+    "maxRat",
+    "avgRat",
+    "ord",
+    "avgErr",
+  ];
+  String firstSort = "";
+  String secondSort = "";
+
   @override
   void initState() {
     super.initState();
@@ -54,17 +65,23 @@ class _EloTunerPageState extends State<EloTunerPage> {
     List<PracticalMatch> wpaCalibration = [];
 
     for(var url in l2s.calibration) {
-      l2Calibration.add(cache.getMatchImmediate(url)!);
+      l2Calibration.add((await cache.getMatch(url)).unwrap());
+      print("Got $url");
     }
     for(var url in l2s.test) {
-      l2Test.add(cache.getMatchImmediate(url)!);
+      l2Test.add((await cache.getMatch(url)).unwrap());
+      print("Got $url");
     }
     for(var url in wpa.calibration) {
-      wpaCalibration.add(cache.getMatchImmediate(url)!);
+      wpaCalibration.add((await cache.getMatch(url)).unwrap());
+      print("Got $url");
     }
     for(var url in wpa.test) {
-      wpaTest.add(cache.getMatchImmediate(url)!);
+      wpaTest.add((await cache.getMatch(url)).unwrap());
+      print("Got $url");
     }
+
+    cache.save();
 
     print("WPA: ${wpaCalibration.length} calibration matches, ${wpaTest.length} eval matches");
     print("L2s: ${l2Calibration.length} calibration matches, ${l2Test.length} eval matches");
@@ -226,6 +243,32 @@ class _EloTunerPageState extends State<EloTunerPage> {
       currentPopulation = t.nonDominated.toList();
     }
 
+    var sortFn1 = EloEvaluator.evaluationFunctions.entries.firstWhereOrNull((f) => f.key == firstSort)?.value;
+    var sortFn2 = EloEvaluator.evaluationFunctions.entries.firstWhereOrNull((f) => f.key == secondSort)?.value;
+
+    if(sortFn1 != null && sortFn2 != null) {
+      currentPopulation.sort((a, b) {
+        if(!a.evaluated && b.evaluated) return 1;
+        if(a.evaluated && !b.evaluated) return -1;
+        if(!a.evaluated && !b.evaluated) return 0;
+
+        var aScore = (a.evaluations[sortFn1]! / t.maxEvaluations[sortFn1]! + a.evaluations[sortFn2]! / t.maxEvaluations[sortFn2]!);
+        var bScore = (b.evaluations[sortFn1]! / t.maxEvaluations[sortFn1]! + b.evaluations[sortFn2]! / t.maxEvaluations[sortFn2]!);
+        return aScore.compareTo(bScore);
+      });
+    }
+    else if(sortFn1 != null) {
+      currentPopulation.sort((a, b) {
+        if(!a.evaluated && b.evaluated) return 1;
+        if(a.evaluated && !b.evaluated) return -1;
+        if(!a.evaluated && !b.evaluated) return 0;
+
+        var aScore = (a.evaluations[sortFn1]! / t.maxEvaluations[sortFn1]!);
+        var bScore = (b.evaluations[sortFn1]! / t.maxEvaluations[sortFn1]!);
+        return aScore.compareTo(bScore);
+      });
+    }
+
     var topTen = currentPopulation.sublist(0, min(currentPopulation.length, 10)).map((e) => e.settings.toGenome()).toList();
     var minimums = topTen.minimums();
     var maximums = topTen.maximums();
@@ -251,6 +294,7 @@ class _EloTunerPageState extends State<EloTunerPage> {
                   children: [
                     Text("Generation ${update.currentGeneration + 1}: ${update.currentOperation} $genomeString",
                       style: Theme.of(context).textTheme.headline5),
+                    _sortControls(),
                     Expanded(
                       child: ListView.builder(
                         itemCount: currentPopulation.length,
@@ -280,7 +324,7 @@ class _EloTunerPageState extends State<EloTunerPage> {
                       ),
                     ),
                     Expanded(
-                      flex: 4,
+                      flex: 5,
                       child: Padding(
                         padding: EdgeInsets.all(2),
                         child: Card(
@@ -353,6 +397,83 @@ class _EloTunerPageState extends State<EloTunerPage> {
               ),
             )
         ),
+      ],
+    );
+  }
+
+  Widget _sortControls() {
+    return Row(
+      mainAxisSize: MainAxisSize.max,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text("X:"),
+        SizedBox(width: 5),
+        MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            child: Icon(Icons.chevron_left),
+            onTap: () {
+              var idx = fnNames.indexOf(firstSort);
+              idx -= 1;
+              if(idx < 0) idx = fnNames.length - 1;
+              setState(() {
+                firstSort = fnNames[idx];
+              });
+            },
+          ),
+        ),
+        SizedBox(width: 5),
+        SizedBox(width: 50, child: Text(firstSort, textAlign: TextAlign.center)),
+        SizedBox(width: 5),
+        MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            child: Icon(Icons.chevron_right),
+            onTap: () {
+              var idx = fnNames.indexOf(firstSort);
+              idx += 1;
+              idx = idx % fnNames.length;
+              setState(() {
+                firstSort = fnNames[idx];
+              });
+            },
+          ),
+        ),
+        SizedBox(width: 10),
+        Text("Y:"),
+        SizedBox(width: 5),
+        MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            child: Icon(Icons.chevron_left),
+            onTap: () {
+              var idx = fnNames.indexOf(secondSort);
+              idx -= 1;
+              if(idx < 0) idx = fnNames.length - 1;
+              setState(() {
+                secondSort = fnNames[idx];
+              });
+            },
+          ),
+        ),
+        SizedBox(width: 5),
+        SizedBox(width: 50, child: Text(secondSort, textAlign: TextAlign.center)),
+        SizedBox(width: 5),
+        MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            child: Icon(Icons.chevron_right),
+            onTap: () {
+              var idx = fnNames.indexOf(secondSort);
+              idx += 1;
+              idx = idx % fnNames.length;
+              setState(() {
+                secondSort = fnNames[idx];
+              });
+            },
+          ),
+        ),
+        SizedBox(width: 10),
       ],
     );
   }
