@@ -42,6 +42,7 @@ class _EloTunerPageState extends State<EloTunerPage> {
   ];
   String firstSort = "";
   String secondSort = "";
+  String thirdSort = "";
 
   @override
   void initState() {
@@ -245,8 +246,26 @@ class _EloTunerPageState extends State<EloTunerPage> {
 
     var sortFn1 = EloEvaluator.evaluationFunctions.entries.firstWhereOrNull((f) => f.key == firstSort)?.value;
     var sortFn2 = EloEvaluator.evaluationFunctions.entries.firstWhereOrNull((f) => f.key == secondSort)?.value;
+    var sortFn3 = EloEvaluator.evaluationFunctions.entries.firstWhereOrNull((f) => f.key == thirdSort)?.value;
 
-    if(sortFn1 != null && sortFn2 != null) {
+    if(sortFn1 != null && sortFn2 != null && sortFn3 != null) {
+      currentPopulation.sort((a, b) {
+        if(!a.evaluated && b.evaluated) return 1;
+        if(a.evaluated && !b.evaluated) return -1;
+        if(!a.evaluated && !b.evaluated) return 0;
+
+        var aScore =
+          (a.evaluations[sortFn1]! / t.maxEvaluations[sortFn1]!
+              + a.evaluations[sortFn2]! / t.maxEvaluations[sortFn2]!
+              + a.evaluations[sortFn3]! / t.maxEvaluations[sortFn3]!);
+        var bScore =
+          (b.evaluations[sortFn1]! / t.maxEvaluations[sortFn1]!
+              + b.evaluations[sortFn2]! / t.maxEvaluations[sortFn2]!
+              + b.evaluations[sortFn3]! / t.maxEvaluations[sortFn3]!);
+        return aScore.compareTo(bScore);
+      });
+    }
+    else if(sortFn1 != null && sortFn2 != null) {
       currentPopulation.sort((a, b) {
         if(!a.evaluated && b.evaluated) return 1;
         if(a.evaluated && !b.evaluated) return -1;
@@ -269,9 +288,9 @@ class _EloTunerPageState extends State<EloTunerPage> {
       });
     }
 
-    var topTen = currentPopulation.sublist(0, min(currentPopulation.length, 10)).map((e) => e.settings.toGenome()).toList();
-    var minimums = topTen.minimums();
-    var maximums = topTen.maximums();
+    var genomes = currentPopulation.map((e) => e.settings.toGenome()).toList();
+    var minimums = genomes.minimums();
+    var maximums = genomes.maximums();
 
     var percentErrorAwareTrait = maximums.traitByName(EloGenome.errorAwareTrait.name);
     var percentErrorAware = (maximums.continuousTraits[percentErrorAwareTrait] ?? 0) * 100;
@@ -406,7 +425,7 @@ class _EloTunerPageState extends State<EloTunerPage> {
       mainAxisSize: MainAxisSize.max,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text("X:"),
+        Text("A:"),
         SizedBox(width: 5),
         MouseRegion(
           cursor: SystemMouseCursors.click,
@@ -440,7 +459,7 @@ class _EloTunerPageState extends State<EloTunerPage> {
           ),
         ),
         SizedBox(width: 10),
-        Text("Y:"),
+        Text("B:"),
         SizedBox(width: 5),
         MouseRegion(
           cursor: SystemMouseCursors.click,
@@ -474,6 +493,39 @@ class _EloTunerPageState extends State<EloTunerPage> {
           ),
         ),
         SizedBox(width: 10),
+        Text("C:"),
+        SizedBox(width: 5),
+        MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            child: Icon(Icons.chevron_left),
+            onTap: () {
+              var idx = fnNames.indexOf(thirdSort);
+              idx -= 1;
+              if(idx < 0) idx = fnNames.length - 1;
+              setState(() {
+                thirdSort = fnNames[idx];
+              });
+            },
+          ),
+        ),
+        SizedBox(width: 5),
+        SizedBox(width: 50, child: Text(thirdSort, textAlign: TextAlign.center)),
+        SizedBox(width: 5),
+        MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            child: Icon(Icons.chevron_right),
+            onTap: () {
+              var idx = fnNames.indexOf(thirdSort);
+              idx += 1;
+              idx = idx % fnNames.length;
+              setState(() {
+                thirdSort = fnNames[idx];
+              });
+            },
+          ),
+        ),
       ],
     );
   }
