@@ -53,16 +53,16 @@ class _EloTunerPageState extends State<EloTunerPage> {
     List<PracticalMatch> wpaTest = [];
     List<PracticalMatch> wpaCalibration = [];
 
-    for(var url in l2s.smallCalibration) {
+    for(var url in l2s.calibration) {
       l2Calibration.add(cache.getMatchImmediate(url)!);
     }
-    for(var url in l2s.smallTest) {
+    for(var url in l2s.test) {
       l2Test.add(cache.getMatchImmediate(url)!);
     }
-    for(var url in wpa.smallCalibration) {
+    for(var url in wpa.calibration) {
       wpaCalibration.add(cache.getMatchImmediate(url)!);
     }
-    for(var url in wpa.smallTest) {
+    for(var url in wpa.test) {
       wpaTest.add(cache.getMatchImmediate(url)!);
     }
 
