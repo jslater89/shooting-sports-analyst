@@ -1,6 +1,7 @@
 import 'package:charts_flutter/flutter.dart' as charts;
 import 'package:flutter/material.dart';
 import 'package:flutter_charts/flutter_charts.dart';
+import 'package:uspsa_result_viewer/data/ranking/evolution/elo_evaluation.dart';
 import 'package:uspsa_result_viewer/data/ranking/evolution/elo_tuner.dart';
 import 'dart:ui' as ui show Color;
 

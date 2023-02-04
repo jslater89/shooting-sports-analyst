@@ -9,6 +9,7 @@ import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/member_number_correction.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_error.dart';
+import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
 import 'package:uspsa_result_viewer/data/ranking/timings.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
@@ -74,7 +75,7 @@ class Rater {
     FilterSet? filters,
     this.byStage = false,
     this.progressCallback,
-    this.progressCallbackInterval = 5,
+    this.progressCallbackInterval = RatingHistory.progressCallbackInterval,
     Map<String, String>? shooterAliases,
     Map<String, String> userMemberNumberMappings = const {},
     Map<String, String> memberNumberMappingBlacklist = const {},

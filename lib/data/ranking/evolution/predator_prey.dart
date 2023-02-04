@@ -55,7 +55,7 @@ typedef Location = Point<int>;
 class PredatorPreyGrid<P extends Prey> {
   // controls how many predators we want; different numbers of predators
   // per evaluation will implicitly weight one over the others.
-  int get predatorsPerEvaluation => 1;
+  int get predatorsPerEvaluation => 2;
   int get predatorCount => evaluations.length * predatorsPerEvaluation;
 
   // 12 is the factor from the paper

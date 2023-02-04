@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_charts/flutter_charts.dart';
 import 'package:uspsa_result_viewer/data/match/practical_match.dart';
 import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
+import 'package:uspsa_result_viewer/data/ranking/evolution/elo_evaluation.dart';
 import 'package:uspsa_result_viewer/data/ranking/evolution/elo_tuner.dart';
 import 'package:uspsa_result_viewer/data/ranking/evolution/genome.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.dart';
@@ -26,6 +27,7 @@ class EloTunerPage extends StatefulWidget {
 
 class _EloTunerPageState extends State<EloTunerPage> {
   bool matchCacheReady = false;
+  bool showingDominated = false;
 
   EloTuner? tuner;
   EloEvaluator? selected;
@@ -108,7 +110,8 @@ class _EloTunerPageState extends State<EloTunerPage> {
 
       // Let the UI get an update in edgewise
       await Future.delayed(Duration(milliseconds: 33));
-    });
+    }, gridSize: 26,
+    );
 
     // show the UI
     await(Future.delayed(Duration(milliseconds: 500)));
@@ -142,6 +145,17 @@ class _EloTunerPageState extends State<EloTunerPage> {
           title: Center(child: Text("Elo Tuner")),
           actions: [
             if(tuner != null) Tooltip(
+              message: "Toggle dominated",
+              child: IconButton(
+                icon: Icon(showingDominated ? Icons.remove_red_eye_outlined : Icons.remove_red_eye_rounded),
+                onPressed: () {
+                  setState(() {
+                    showingDominated = !showingDominated;
+                  });
+                },
+              ),
+            ),
+            if(tuner != null) Tooltip(
               message: "Pause",
               child: IconButton(
                 icon: Icon(tuner!.paused ? Icons.play_arrow : Icons.pause),
@@ -156,12 +170,24 @@ class _EloTunerPageState extends State<EloTunerPage> {
                 },
               ),
             ),
-            Tooltip(
+            if(tuner != null) Tooltip(
               message: "Export",
               child: IconButton(
                 icon: Icon(Icons.save_alt),
                 onPressed: () {
-                  var fileContents = tuner!.nonDominated.map((e) => e.settings.toString()).join("\n\n");
+                  var fileContents = tuner!.nonDominated.map((e) {
+                    String output = "Genome ${e.hashCode}";
+                    if(tuner!.nonDominated.contains(e)) output += " (non-dom)";
+                    output += "\n";
+
+                    for(var name in EloEvaluator.evaluationFunctions.keys) {
+                      var evaluation = e.evaluations[EloEvaluator.evaluationFunctions[name]!]!;
+                      output += "$name: ${evaluation < 1 ? evaluation.toStringAsPrecision(2) : evaluation.toStringAsFixed(2)}, ";
+                    }
+                    output += "\n";
+                    output += e.settings.toString();
+                    return output;
+                  }).join("\n\n");
                   HtmlOr.saveFile("sorted-elo-settings.txt", fileContents);
                 },
               ),
@@ -192,7 +218,13 @@ class _EloTunerPageState extends State<EloTunerPage> {
 
     var t = tuner!;
     var update = lastUpdate!;
-    var currentPopulation = t.nonDominated.toList();
+    List<EloEvaluator> currentPopulation;
+    if(showingDominated) {
+      currentPopulation = []..addAll(t.currentPopulation);
+    }
+    else {
+      currentPopulation = t.nonDominated.toList();
+    }
 
     var topTen = currentPopulation.sublist(0, min(currentPopulation.length, 10)).map((e) => e.settings.toGenome()).toList();
     var minimums = topTen.minimums();
@@ -341,6 +373,10 @@ class _EloTunerPageState extends State<EloTunerPage> {
 
   Widget _buildEvalCard(EloEvaluator eval, int index) {
     var settings = eval.settings;
+    Color? color = tuner!.nonDominated.contains(eval) ? null : Colors.grey.shade200;
+    if(selected == eval) {
+      color = Colors.yellowAccent.shade100;
+    }
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 2, horizontal: 4),
       child: GestureDetector(
@@ -357,7 +393,7 @@ class _EloTunerPageState extends State<EloTunerPage> {
           }
         },
         child: Card(
-          color: tuner!.nonDominated.contains(eval) ? null : Colors.grey.shade200,
+          color: color,
           child: Padding(
             padding: const EdgeInsets.all(4.0),
             child: Column(
