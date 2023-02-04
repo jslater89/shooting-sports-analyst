@@ -16,8 +16,10 @@ class MatchCacheChooserDialog extends StatefulWidget {
     this.showStats = false,
     this.helpText,
     this.multiple = false,
+    this.showIds = false,
   }) : super(key: key);
 
+  final bool showIds;
   final bool showStats;
   final List<PracticalMatch>? matches;
   final String? helpText;
@@ -225,6 +227,8 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
             itemBuilder: (context, i) {
               return ListTile(
                 title: Text(searchedMatches[i].name!, overflow: TextOverflow.ellipsis),
+                subtitle: !widget.showIds ? null
+                  : SelectableText("${searchedMatches[i].practiscoreId}   ${searchedMatches[i].practiscoreIdShort ?? ""}"),
                 visualDensity: VisualDensity(vertical: -4),
                 onTap: () {
                   if(widget.multiple) {

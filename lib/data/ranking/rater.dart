@@ -54,7 +54,7 @@ class Rater {
 
   RatingSystem ratingSystem;
 
-  FilterSet? _filters;
+  FilterSet _filters;
 
   /// Do not mutate this property.
   FilterSet? get filters => _filters;
@@ -69,10 +69,12 @@ class Rater {
 
   Set<ShooterRating> get uniqueShooters => <ShooterRating>{}..addAll(knownShooters.values);
 
+  Map<String, List<Division>> recognizedDivisions = {};
+
   Rater({
     required List<PracticalMatch> matches,
     required this.ratingSystem,
-    FilterSet? filters,
+    required FilterSet filters,
     this.byStage = false,
     this.progressCallback,
     this.progressCallbackInterval = RatingHistory.progressCallbackInterval,
@@ -81,6 +83,7 @@ class Rater {
     Map<String, String> memberNumberMappingBlacklist = const {},
     required MemberNumberCorrectionContainer dataCorrections,
     this.verbose = true,
+    this.recognizedDivisions = const {},
     this.memberNumberWhitelist = const []})
       : this._matches = matches,
         this._filters = filters,
@@ -197,6 +200,28 @@ class Rater {
     int currentSteps = 0;
 
     for(PracticalMatch m in _matches) {
+      var onlyDivisions = recognizedDivisions[m.practiscoreId];
+      if(onlyDivisions != null) {
+        var divisionsOfInterest = _filters.divisions.entries.where((e) => e.value).map((e) => e.key).toList();
+
+        // Process this iff onlyDivisions contains at least one division of interest
+        // e.g. this rater/dOI is prod, oD is open/limited; oD contains 0 of dOI, so
+        // skip.
+        //
+        // e.g. this rater/dOI is lim/CO, oD is open/limited; oD contains 1 of dOI,
+        // so don't skip.
+        bool skip = true;
+        for(var d in divisionsOfInterest) {
+          if(onlyDivisions.contains(d)) {
+            skip = false;
+            break;
+          }
+        }
+        if(skip) {
+          continue;
+        }
+      }
+
       if(Timings.enabled) start = DateTime.now();
       _rankMatch(m);
       if(Timings.enabled) timings.rateMatchesMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
