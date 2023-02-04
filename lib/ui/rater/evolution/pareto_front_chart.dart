@@ -156,19 +156,33 @@ class _ParetoFrontPainter extends CustomPainter {
     highlightPaint.strokeWidth = 0;
     highlightPaint.color = Colors.yellow.shade600;
 
+    EloEvaluator? foundHighlight;
     for(var e in dominated) {
+      if(e == highlight) {
+        foundHighlight = e;
+        continue;
+      }
       var x = e.evaluations[fX]! * xConversion;
       var y = height - e.evaluations[fY]! * yConversion;
 
-      var paint = (e == highlight) ? highlightPaint : preyPaint;
-      canvas.drawCircle(Offset(left + x, y - top), 2.5, paint);
+      canvas.drawCircle(Offset(left + x, y - top), 2.5, preyPaint);
     }
     for(var e in nondominated) {
+      if(e == highlight) {
+        foundHighlight = e;
+        continue;
+      }
       var x = e.evaluations[fX]! * xConversion;
       var y = height - e.evaluations[fY]! * yConversion;
 
-      var paint = (e == highlight) ? highlightPaint : nondominatedPreyPaint;
-      canvas.drawCircle(Offset(left + x, y - top), 2.5, paint);
+      canvas.drawCircle(Offset(left + x, y - top), 2.5, nondominatedPreyPaint);
+    }
+
+    if(foundHighlight != null) {
+      var x = foundHighlight.evaluations[fX]! * xConversion;
+      var y = height - foundHighlight.evaluations[fY]! * yConversion;
+
+      canvas.drawCircle(Offset(left + x, y - top), 2.5, highlightPaint);
     }
   }
 
