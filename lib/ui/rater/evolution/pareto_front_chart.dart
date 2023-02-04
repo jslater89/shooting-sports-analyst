@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/ranking/evolution/elo_evaluation.dart';
 import 'package:uspsa_result_viewer/data/ranking/evolution/elo_tuner.dart';
@@ -51,9 +53,12 @@ class _ParetoFrontPainter extends CustomPainter {
     fXMax *= 1.05;
     fYMax *= 1.1;
 
+    double fXCenter = fXMax / 2;
+    double fYCenter = fYMax / 2;
+
     double width = size.width - 10;
-    double height = size.height - 10;
-    double left = 10;
+    double height = size.height - 25;
+    double left = 25;
     double top = 10;
 
     double xRange = width - left;
@@ -77,6 +82,67 @@ class _ParetoFrontPainter extends CustomPainter {
     p1 = Offset(left, height);
     p2 = Offset(width, height);
     canvas.drawLine(p1, p2, linePaint);
+
+    p1 = Offset(left, yCenter);
+    p2 = Offset(width, yCenter);
+    canvas.drawLine(p1, p2, linePaint);
+
+    p1 = Offset(xCenter, top);
+    p2 = Offset(xCenter, height);
+    canvas.drawLine(p1, p2, linePaint);
+
+    var xMaxText = fXMax < 1 ? fXMax.toStringAsPrecision(2) : fXMax.toStringAsFixed(2);
+    var xCenterText = fXCenter < 1 ? fXCenter.toStringAsPrecision(2) : fXCenter.toStringAsFixed(2);
+    var yMaxText = fYMax < 1 ? fYMax.toStringAsPrecision(2) : fYMax.toStringAsFixed(2);
+    var yCenterText = fYCenter < 1 ? fYCenter.toStringAsPrecision(2) : fYCenter.toStringAsFixed(2);
+
+    TextPainter tp = TextPainter(
+      text: TextSpan(text: xMaxText, style: TextStyle(color: Colors.grey.shade500, fontSize: 14)),
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.ltr,
+    );
+    tp.layout();
+    tp.paint(canvas, Offset(width - tp.width, height + 4));
+
+    tp = TextPainter(
+      text: TextSpan(text: xCenterText, style: TextStyle(color: Colors.grey.shade500, fontSize: 14)),
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.ltr,
+    );
+    tp.layout();
+    tp.paint(canvas, Offset(xCenter - tp.width / 2, height + 4));
+
+    canvas.save();
+    canvas.translate(left - 4, top);
+
+    tp = TextPainter(
+      text: TextSpan(text: yMaxText, style: TextStyle(color: Colors.grey.shade500, fontSize: 14)),
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.ltr,
+    );
+    tp.layout();
+
+    canvas.translate(-tp.height, tp.width);
+    canvas.rotate(-90 * pi/180);
+
+    tp.paint(canvas, Offset(0, 0));
+    canvas.restore();
+
+    canvas.save();
+    canvas.translate(left - 2, yCenter);
+
+    tp = TextPainter(
+      text: TextSpan(text: yCenterText, style: TextStyle(color: Colors.grey.shade500, fontSize: 14)),
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.ltr,
+    );
+    tp.layout();
+
+    canvas.translate(-tp.height, tp.width / 2);
+    canvas.rotate(-90 * pi/180);
+
+    tp.paint(canvas, Offset(0, 0));
+    canvas.restore();
 
     Paint preyPaint = Paint();
     preyPaint.strokeWidth = 0;
