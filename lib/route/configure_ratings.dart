@@ -346,332 +346,336 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
             mainAxisSize: MainAxisSize.max,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 40),
-                  child: Scrollbar(
-                    controller: _settingsScroll,
-                    thumbVisibility: true,
-                    child: SingleChildScrollView(
+              FocusTraversalGroup(
+                child: Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 40),
+                    child: Scrollbar(
                       controller: _settingsScroll,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(height: 10),
-                          Text("Settings", style: Theme.of(context).textTheme.labelLarge),
-                          SizedBox(height: 10),
-                          CheckboxListTile(
-                            title: Tooltip(
-                              child: Text("Keep full history?"),
-                              message: "Keep intermediate ratings after each match if checked, or keep only final ratings if unchecked.",
-                            ),
-                            value: _keepHistory,
-                            onChanged: (value) {
-                              if(value != null) {
-                                setState(() {
-                                  _keepHistory = value;
-                                });
-                              }
-                            }
-                          ),
-                          CheckboxListTile(
+                      thumbVisibility: true,
+                      child: SingleChildScrollView(
+                        controller: _settingsScroll,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(height: 10),
+                            Text("Settings", style: Theme.of(context).textTheme.labelLarge),
+                            SizedBox(height: 10),
+                            CheckboxListTile(
                               title: Tooltip(
-                                child: Text("Combine Open/PCC?"),
-                                message: "Combine ratings for Open and PCC if checked.",
+                                child: Text("Keep full history?"),
+                                message: "Keep intermediate ratings after each match if checked, or keep only final ratings if unchecked.",
                               ),
-                              value: _combineOpenPCC,
+                              value: _keepHistory,
                               onChanged: (value) {
                                 if(value != null) {
                                   setState(() {
-                                    _combineOpenPCC = value;
+                                    _keepHistory = value;
                                   });
                                 }
                               }
-                          ),
-                          CheckboxListTile(
-                              title: Tooltip(
-                                child: Text("Combine Limited/CO?"),
-                                message: "Combine ratings for Limited and Carry Optics if checked.",
-                              ),
-                              value: _combineLimitedCO,
-                              onChanged: (value) {
-                                if(value != null) {
-                                  setState(() {
-                                    _combineLimitedCO = value;
-                                  });
-                                }
-                              }
-                          ),
-                          CheckboxListTile(
-                            title: Tooltip(
-                              child: Text("Combine locap?"),
-                              message: "Combine ratings for Single Stack, Revolver, Production, and Limited 10 if checked.",
                             ),
-                            value: _combineLocap,
-                            onChanged: (value) {
-                              if(value != null) {
-                                setState(() {
-                                  _combineLocap = value;
-                                });
-                              }
-                            }
-                          ),
-                          Row(
-                            mainAxisSize: MainAxisSize.max,
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(left: 16),
-                                child: Tooltip(
-                                  message: "The rating algorithm to use. Switching algorithms discards all settings below\n"
-                                      "this dropdown!",
-                                  child: Text("Rating engine", style: Theme.of(context).textTheme.subtitle1!)
+                            CheckboxListTile(
+                                title: Tooltip(
+                                  child: Text("Combine Open/PCC?"),
+                                  message: "Combine ratings for Open and PCC if checked.",
                                 ),
+                                value: _combineOpenPCC,
+                                onChanged: (value) {
+                                  if(value != null) {
+                                    setState(() {
+                                      _combineOpenPCC = value;
+                                    });
+                                  }
+                                }
+                            ),
+                            CheckboxListTile(
+                                title: Tooltip(
+                                  child: Text("Combine Limited/CO?"),
+                                  message: "Combine ratings for Limited and Carry Optics if checked.",
+                                ),
+                                value: _combineLimitedCO,
+                                onChanged: (value) {
+                                  if(value != null) {
+                                    setState(() {
+                                      _combineLimitedCO = value;
+                                    });
+                                  }
+                                }
+                            ),
+                            CheckboxListTile(
+                              title: Tooltip(
+                                child: Text("Combine locap?"),
+                                message: "Combine ratings for Single Stack, Revolver, Production, and Limited 10 if checked.",
                               ),
-                              Padding(
-                                padding: const EdgeInsets.only(right: 20),
-                                child: Tooltip(
-                                  message: _currentRater?.tooltip,
-                                  child: DropdownButton<_ConfigurableRater>(
-                                    value: _currentRater,
-                                    onChanged: (v) {
-                                      if(v != null) {
-                                        confirmChangeRater(v);
-                                      }
-                                    },
-                                    items: _ConfigurableRater.values.map((r) =>
-                                        DropdownMenuItem<_ConfigurableRater>(
-                                          child: Tooltip(
-                                            message: r.tooltip,
-                                            child: Text(r.uiLabel)
-                                          ),
-                                          value: r,
-                                        )
-                                    ).toList(),
+                              value: _combineLocap,
+                              onChanged: (value) {
+                                if(value != null) {
+                                  setState(() {
+                                    _combineLocap = value;
+                                  });
+                                }
+                              }
+                            ),
+                            Row(
+                              mainAxisSize: MainAxisSize.max,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 16),
+                                  child: Tooltip(
+                                    message: "The rating algorithm to use. Switching algorithms discards all settings below\n"
+                                        "this dropdown!",
+                                    child: Text("Rating engine", style: Theme.of(context).textTheme.subtitle1!)
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          if(_settingsWidget != null) _settingsWidget!,
-                        ],
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 20),
+                                  child: Tooltip(
+                                    message: _currentRater?.tooltip,
+                                    child: DropdownButton<_ConfigurableRater>(
+                                      value: _currentRater,
+                                      onChanged: (v) {
+                                        if(v != null) {
+                                          confirmChangeRater(v);
+                                        }
+                                      },
+                                      items: _ConfigurableRater.values.map((r) =>
+                                          DropdownMenuItem<_ConfigurableRater>(
+                                            child: Tooltip(
+                                              message: r.tooltip,
+                                              child: Text(r.uiLabel)
+                                            ),
+                                            value: r,
+                                          )
+                                      ).toList(),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if(_settingsWidget != null) _settingsWidget!,
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-              Expanded(
-                child:
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 40),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text("Matches (${matchUrls.length})", style: Theme.of(context).textTheme.labelLarge),
-                            Tooltip(
-                              message: "Add a match from a PractiScore results page link.",
-                              child: IconButton(
-                                icon: Icon(Icons.add),
-                                color: Theme.of(context).primaryColor,
-                                onPressed: () async {
-                                  var urls = await showDialog<List<String>>(context: context, builder: (context) {
-                                    return EnterUrlsDialog(cache: MatchCache(), existingUrls: matchUrls);
-                                  }, barrierDismissible: false);
+              FocusTraversalGroup(
+                child: Expanded(
+                  child:
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 40),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text("Matches (${matchUrls.length})", style: Theme.of(context).textTheme.labelLarge),
+                              Tooltip(
+                                message: "Add a match from a PractiScore results page link.",
+                                child: IconButton(
+                                  icon: Icon(Icons.add),
+                                  color: Theme.of(context).primaryColor,
+                                  onPressed: () async {
+                                    var urls = await showDialog<List<String>>(context: context, builder: (context) {
+                                      return EnterUrlsDialog(cache: MatchCache(), existingUrls: matchUrls);
+                                    }, barrierDismissible: false);
 
-                                  if(urls == null) return;
+                                    if(urls == null) return;
 
-                                  for(var url in urls.reversed) {
-                                    if(!matchUrls.contains(url)) {
-                                      matchUrls.insert(0, url);
+                                    for(var url in urls.reversed) {
+                                      if(!matchUrls.contains(url)) {
+                                        matchUrls.insert(0, url);
+                                      }
                                     }
-                                  }
 
-                                  setState(() {
-                                    // matchUrls
-                                  });
-
-                                  updateUrls();
-                                },
-                              ),
-                            ),
-                            Tooltip(
-                              message: "Add match links parsed from PractiScore page source.",
-                              child: IconButton(
-                                icon: Icon(Icons.link),
-                                color: Theme.of(context).primaryColor,
-                                onPressed: () async {
-                                  var urls = await showDialog<List<String>>(context: context, builder: (context) {
-                                    return EnterPractiscoreSourceDialog();
-                                  }, barrierDismissible: false);
-
-                                  if(urls == null) return;
-
-                                  for(var url in urls.reversed) {
-                                    if(!matchUrls.contains(url)) {
-                                      matchUrls.insert(0, url);
-                                    }
-                                  }
-
-                                  setState(() {
-                                    // matchUrls
-                                  });
-
-                                  updateUrls();
-                                },
-                              ),
-                            ),
-                            Tooltip(
-                              message: "Add a match from the match cache.",
-                              child: IconButton(
-                                icon: Icon(Icons.dataset),
-                                color: Theme.of(context).primaryColor,
-                                onPressed: () async {
-                                  var matches = await showDialog<List<PracticalMatch>>(context: context, builder: (context) {
-                                    return MatchCacheChooserDialog(multiple: true);
-                                  }, barrierDismissible: false);
-
-                                  print("Matches from cache: $matches");
-
-                                  if(matches == null) return;
-
-                                  for(var match in matches) {
-                                    var url = MatchCache().getUrl(match);
-                                    if (url == null) throw StateError("impossible");
-
-                                    if (!matchUrls.contains(url)) {
-                                      matchUrls.insert(0, url);
-                                    }
-                                  }
-
-                                  setState(() {
-                                    // matchUrls
-                                  });
-
-                                  updateUrls();
-                                },
-                              ),
-                            ),
-                            Tooltip(
-                              message: "Remove all matches from the list.",
-                              child: IconButton(
-                                icon: Icon(Icons.remove),
-                                color: Theme.of(context).primaryColor,
-                                onPressed: () async {
-                                  var delete = await showDialog<bool>(context: context, builder: (context) {
-                                    return ConfirmDialog(
-                                      content: Text("This will clear all currently-selected matches."),
-                                    );
-                                  });
-
-                                  if(delete ?? false) {
                                     setState(() {
-                                      matchUrls.clear();
-                                      urlDisplayNames.clear();
+                                      // matchUrls
                                     });
-                                  }
-                                }
-                              ),
-                            ),
-                            Tooltip(
-                              message: "Sort matches from most recent to least recent. Non-cached matches will be displayed first.",
-                              child: IconButton(
-                                icon: Icon(Icons.sort),
-                                color: Theme.of(context).primaryColor,
-                                onPressed: () async {
-                                  _sortMatches();
-                                }
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 10),
-                        Expanded(
-                          child: Scrollbar(
-                            controller: _matchScroll,
-                            thumbVisibility: true,
-                            child: SingleChildScrollView(
-                              controller: _matchScroll,
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // show newest additions at the top
-                                  for(var url in matchUrls)
-                                    Row(
-                                      mainAxisSize: MainAxisSize.max,
-                                      children: [
-                                        Expanded(
-                                          child: MouseRegion(
-                                            cursor: SystemMouseCursors.click,
-                                            child: GestureDetector(
-                                              onTap: () {
-                                                if(!MatchCache.readyNow) {
-                                                  print("Match cache not ready");
-                                                  return;
-                                                }
-                                                var cache = MatchCache();
 
-                                                var match = cache.getMatchImmediate(url);
-                                                if(match != null && (match.name?.isNotEmpty ?? false)) {
-                                                  Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-                                                    return ResultPage(canonicalMatch: match, allowWhatIf: false);
-                                                  }));
-                                                }
-                                                else {
-                                                  HtmlOr.openLink(url);
-                                                }
-                                              },
-                                              child: Text(
-                                                urlDisplayNames[url] != null && urlDisplayNames[url]!.isNotEmpty ?
-                                                  urlDisplayNames[url]! :
-                                                  urlDisplayNames[url] != null ? "$url (missing name)" : url,
-                                                overflow: TextOverflow.fade
+                                    updateUrls();
+                                  },
+                                ),
+                              ),
+                              Tooltip(
+                                message: "Add match links parsed from PractiScore page source.",
+                                child: IconButton(
+                                  icon: Icon(Icons.link),
+                                  color: Theme.of(context).primaryColor,
+                                  onPressed: () async {
+                                    var urls = await showDialog<List<String>>(context: context, builder: (context) {
+                                      return EnterPractiscoreSourceDialog();
+                                    }, barrierDismissible: false);
+
+                                    if(urls == null) return;
+
+                                    for(var url in urls.reversed) {
+                                      if(!matchUrls.contains(url)) {
+                                        matchUrls.insert(0, url);
+                                      }
+                                    }
+
+                                    setState(() {
+                                      // matchUrls
+                                    });
+
+                                    updateUrls();
+                                  },
+                                ),
+                              ),
+                              Tooltip(
+                                message: "Add a match from the match cache.",
+                                child: IconButton(
+                                  icon: Icon(Icons.dataset),
+                                  color: Theme.of(context).primaryColor,
+                                  onPressed: () async {
+                                    var matches = await showDialog<List<PracticalMatch>>(context: context, builder: (context) {
+                                      return MatchCacheChooserDialog(multiple: true);
+                                    }, barrierDismissible: false);
+
+                                    print("Matches from cache: $matches");
+
+                                    if(matches == null) return;
+
+                                    for(var match in matches) {
+                                      var url = MatchCache().getUrl(match);
+                                      if (url == null) throw StateError("impossible");
+
+                                      if (!matchUrls.contains(url)) {
+                                        matchUrls.insert(0, url);
+                                      }
+                                    }
+
+                                    setState(() {
+                                      // matchUrls
+                                    });
+
+                                    updateUrls();
+                                  },
+                                ),
+                              ),
+                              Tooltip(
+                                message: "Remove all matches from the list.",
+                                child: IconButton(
+                                  icon: Icon(Icons.remove),
+                                  color: Theme.of(context).primaryColor,
+                                  onPressed: () async {
+                                    var delete = await showDialog<bool>(context: context, builder: (context) {
+                                      return ConfirmDialog(
+                                        content: Text("This will clear all currently-selected matches."),
+                                      );
+                                    });
+
+                                    if(delete ?? false) {
+                                      setState(() {
+                                        matchUrls.clear();
+                                        urlDisplayNames.clear();
+                                      });
+                                    }
+                                  }
+                                ),
+                              ),
+                              Tooltip(
+                                message: "Sort matches from most recent to least recent. Non-cached matches will be displayed first.",
+                                child: IconButton(
+                                  icon: Icon(Icons.sort),
+                                  color: Theme.of(context).primaryColor,
+                                  onPressed: () async {
+                                    _sortMatches();
+                                  }
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 10),
+                          Expanded(
+                            child: Scrollbar(
+                              controller: _matchScroll,
+                              thumbVisibility: true,
+                              child: SingleChildScrollView(
+                                controller: _matchScroll,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // show newest additions at the top
+                                    for(var url in matchUrls)
+                                      Row(
+                                        mainAxisSize: MainAxisSize.max,
+                                        children: [
+                                          Expanded(
+                                            child: MouseRegion(
+                                              cursor: SystemMouseCursors.click,
+                                              child: GestureDetector(
+                                                onTap: () {
+                                                  if(!MatchCache.readyNow) {
+                                                    print("Match cache not ready");
+                                                    return;
+                                                  }
+                                                  var cache = MatchCache();
+
+                                                  var match = cache.getMatchImmediate(url);
+                                                  if(match != null && (match.name?.isNotEmpty ?? false)) {
+                                                    Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+                                                      return ResultPage(canonicalMatch: match, allowWhatIf: false);
+                                                    }));
+                                                  }
+                                                  else {
+                                                    HtmlOr.openLink(url);
+                                                  }
+                                                },
+                                                child: Text(
+                                                  urlDisplayNames[url] != null && urlDisplayNames[url]!.isNotEmpty ?
+                                                    urlDisplayNames[url]! :
+                                                    urlDisplayNames[url] != null ? "$url (missing name)" : url,
+                                                  overflow: TextOverflow.fade
+                                                ),
                                               ),
+                                            )
+                                          ),
+                                          Tooltip(
+                                            message: "Remove this match from the cache, redownloading it.",
+                                            child: IconButton(
+                                              icon: Icon(Icons.refresh),
+                                              color: Theme.of(context).primaryColor,
+                                              onPressed: () {
+                                                MatchCache().deleteMatchByUrl(url);
+                                                setState(() {
+                                                  urlDisplayNames[url] = url;
+                                                });
+
+                                                updateUrls();
+                                              },
                                             ),
-                                          )
-                                        ),
-                                        Tooltip(
-                                          message: "Remove this match from the cache, redownloading it.",
-                                          child: IconButton(
-                                            icon: Icon(Icons.refresh),
+                                          ),
+                                          IconButton(
+                                            icon: Icon(Icons.remove),
                                             color: Theme.of(context).primaryColor,
                                             onPressed: () {
-                                              MatchCache().deleteMatchByUrl(url);
                                               setState(() {
-                                                urlDisplayNames[url] = url;
+                                                matchUrls.remove(url);
+                                                urlDisplayNames.remove(url);
                                               });
-
-                                              updateUrls();
                                             },
-                                          ),
-                                        ),
-                                        IconButton(
-                                          icon: Icon(Icons.remove),
-                                          color: Theme.of(context).primaryColor,
-                                          onPressed: () {
-                                            setState(() {
-                                              matchUrls.remove(url);
-                                              urlDisplayNames.remove(url);
-                                            });
-                                          },
-                                        )
-                                      ],
-                                    ),
-                                ],
+                                          )
+                                        ],
+                                      ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  )
+                        ],
+                      ),
+                    )
+                ),
               )
             ],
           ),

@@ -123,7 +123,65 @@ enum Division {
   production,
   singleStack,
   revolver,
-  unknown,
+  unknown;
+
+  static Division fromString(String s) {
+    s = s.trim().toLowerCase();
+    switch(s) {
+      case "pcc": return Division.pcc;
+      case "pistol caliber carbine": return Division.pcc;
+
+      case "open": return Division.open;
+
+      case "ltd":
+      case "limited": return Division.limited;
+
+      case "co":
+      case "carry optics": return Division.carryOptics;
+
+      case "l10":
+      case "ltd10":
+      case "limited 10": return Division.limited10;
+
+      case "prod":
+      case "production": return Division.production;
+
+      case "ss":
+      case "single stack": return Division.singleStack;
+
+      case "rev":
+      case "revo":
+      case "revolver": return Division.revolver;
+      default: {
+        if(verboseParse) debugPrint("Unknown division: $s");
+        return Division.unknown;
+      }
+    }
+  }
+
+  String displayString() {
+    switch(this) {
+
+      case Division.pcc:
+        return "PCC";
+      case Division.open:
+        return "Open";
+      case Division.limited:
+        return "Limited";
+      case Division.carryOptics:
+        return "Carry Optics";
+      case Division.limited10:
+        return "Limited 10";
+      case Division.production:
+        return "Production";
+      case Division.singleStack:
+        return "Single Stack";
+      case Division.revolver:
+        return "Revolver";
+      default:
+        return "INVALID DIVISION";
+    }
+  }
 }
 
 extension DivisionFrom on Division {

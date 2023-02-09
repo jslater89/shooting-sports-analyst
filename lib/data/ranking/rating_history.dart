@@ -235,6 +235,7 @@ class RatingHistory {
       memberNumberMappingBlacklist: _settings.memberNumberMappingBlacklist,
       userMemberNumberMappings: _settings.userMemberNumberMappings,
       dataCorrections: _settings.memberNumberCorrections,
+      recognizedDivisions: _settings.recognizedDivisions,
       verbose: verbose,
     );
 
@@ -367,6 +368,16 @@ class RatingHistorySettings {
   /// Should be in [Rater.processMemberNumber] format.
   List<String> hiddenShooters;
 
+  /// A list of match IDs that only recognize certain divisions, mapped to the divisions
+  /// they recognize.
+  ///
+  /// If a match ID occurs in the keys of this map, then only the divisions in the associated
+  /// entry will be used for rating updates. Use it so JJ doesn't get a huge Open boost from
+  /// winning Open at Prod/PCC Nationals, or other similar cases.
+  ///
+  /// Match IDs should be PracticalMatch.practiscoreId.
+  Map<String, List<Division>> recognizedDivisions;
+
   RatingHistorySettings({
     this.preserveHistory = false,
     this.groups = const [RaterGroup.open, RaterGroup.limited, RaterGroup.pcc, RaterGroup.carryOptics, RaterGroup.locap],
@@ -376,6 +387,9 @@ class RatingHistorySettings {
     this.userMemberNumberMappings = const {},
     this.memberNumberMappingBlacklist = const {},
     this.hiddenShooters = const [],
+    this.recognizedDivisions = const {
+      "433b1840-0e57-4397-8dae-1107bfe468a7": [Division.production, Division.pcc],
+    },
     MemberNumberCorrectionContainer? memberNumberCorrections
   }) {
     if(memberNumberCorrections != null) this.memberNumberCorrections = memberNumberCorrections;

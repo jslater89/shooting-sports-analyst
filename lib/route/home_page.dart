@@ -110,7 +110,7 @@ class _HomePageState extends State<HomePage> {
       GestureDetector(
         onTap: () async {
           PracticalMatch? match = await showDialog<PracticalMatch>(
-            context: context, builder: (context) => MatchCacheChooserDialog(showStats: true),
+            context: context, builder: (context) => MatchCacheChooserDialog(showStats: true, showIds: true),
             barrierDismissible: false,
           );
           if(match != null) {
