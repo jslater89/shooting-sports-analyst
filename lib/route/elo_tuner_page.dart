@@ -17,6 +17,7 @@ import 'package:uspsa_result_viewer/ui/widget/dialog/confirm_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/match_cache_loading_indicator.dart';
 import 'package:uspsa_result_viewer/data/ranking/evolution/l2s_data.dart' as l2s;
 import 'package:uspsa_result_viewer/data/ranking/evolution/wpa_data.dart' as wpa;
+import 'package:uspsa_result_viewer/data/ranking/evolution/east_data.dart' as east;
 
 class EloTunerPage extends StatefulWidget {
   const EloTunerPage({Key? key}) : super(key: key);
@@ -64,21 +65,31 @@ class _EloTunerPageState extends State<EloTunerPage> {
     List<PracticalMatch> l2Calibration = [];
     List<PracticalMatch> wpaTest = [];
     List<PracticalMatch> wpaCalibration = [];
+    List<PracticalMatch> eastTest = [];
+    List<PracticalMatch> eastCalibration = [];
 
-    for(var url in l2s.smallCalibration) {
+    for(var url in l2s.calibration) {
       l2Calibration.add((await cache.getMatch(url)).unwrap());
       print("Got $url");
     }
-    for(var url in l2s.smallTest) {
+    for(var url in l2s.test) {
       l2Test.add((await cache.getMatch(url)).unwrap());
       print("Got $url");
     }
-    for(var url in wpa.smallCalibration) {
+    for(var url in wpa.calibration) {
       wpaCalibration.add((await cache.getMatch(url)).unwrap());
       print("Got $url");
     }
-    for(var url in wpa.smallTest) {
+    for(var url in wpa.test) {
       wpaTest.add((await cache.getMatch(url)).unwrap());
+      print("Got $url");
+    }
+    for(var url in east.calibration) {
+      eastCalibration.add((await cache.getMatch(url)).unwrap());
+      print("Got $url");
+    }
+    for(var url in east.test) {
+      eastTest.add((await cache.getMatch(url)).unwrap());
       print("Got $url");
     }
 
@@ -86,6 +97,7 @@ class _EloTunerPageState extends State<EloTunerPage> {
 
     print("WPA: ${wpaCalibration.length} calibration matches, ${wpaTest.length} eval matches");
     print("L2s: ${l2Calibration.length} calibration matches, ${l2Test.length} eval matches");
+    print("East: ${eastCalibration.length} calibration matches, ${eastTest.length} eval matches");
 
       tuner = EloTuner([
         EloEvaluationData(
@@ -123,12 +135,19 @@ class _EloTunerPageState extends State<EloTunerPage> {
           evaluationData: wpaTest,
           expectedMaxRating: 2300,
         ),
+        EloEvaluationData(
+          name: "East CO",
+          group: RaterGroup.carryOptics,
+          trainingData: eastCalibration,
+          evaluationData: eastTest,
+          expectedMaxRating: 2400,
+        ),
       ], callback: (update) async {
         _updateUi(update);
 
         // Let the UI get an update in edgewise
         await Future.delayed(Duration(milliseconds: 33));
-      }, gridSize: 18,
+      }, gridSize: 20,
     );
 
     // show the UI

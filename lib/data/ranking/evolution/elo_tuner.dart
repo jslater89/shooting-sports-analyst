@@ -274,7 +274,7 @@ class EloTuner {
         var p2Settings = p2.settings;
 
         var childSettings = EloGenome.toSettings(Genome.breed(p1Settings.toGenome(), p2Settings.toGenome(), crossoverPoints: crossoverPoints, mutationChance: mutationChance));
-        var child = EloEvaluator(generation: currentGeneration, settings: childSettings);
+        var child = EloEvaluator(generation: currentGeneration + 1, settings: childSettings);
 
         toPlace.add(child);
       }
