@@ -288,7 +288,7 @@ class _EloTunerPageState extends State<EloTunerPage> {
       });
     }
 
-    var genomes = currentPopulation.map((e) => e.settings.toGenome()).toList();
+    var genomes = currentPopulation.map((e) => e.settings.toGenome()).toList().sublist(0, min(25, currentPopulation.length));
     var minimums = genomes.minimums();
     var maximums = genomes.maximums();
 
