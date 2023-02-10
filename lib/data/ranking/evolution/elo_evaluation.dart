@@ -30,6 +30,8 @@ import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 
 class EloEvaluator extends Prey<EloEvaluator> {
+  int generation;
+
   /// The settings used for this iteration.
   EloSettings settings;
 
@@ -55,6 +57,7 @@ class EloEvaluator extends Prey<EloEvaluator> {
   int get totalTopNOrdinalError => topNOrdinalErrors.values.sum;
 
   EloEvaluator({
+    required this.generation,
     required this.settings,
   });
 
@@ -89,7 +92,7 @@ class EloEvaluator extends Prey<EloEvaluator> {
     var sorted = rater.knownShooters.values.sorted((a, b) => b.rating.compareTo(a.rating));
     averageRatings[data.name] = sorted.map((r) => r.rating).average;
     maxRatingDiffs[data.name] = (data.expectedMaxRating - sorted.first.rating).abs();
-    averageRatingErrors[data.name] = sorted.map((r) => (r as EloShooterRating).standardError).average;
+    averageRatingErrors[data.name] = sorted.map((r) => (r as EloShooterRating).meanSquaredErrorWithWindow()).average;
 
     lastProgress += 1;
     for(var m in data.evaluationData) {
@@ -160,7 +163,7 @@ class EloEvaluator extends Prey<EloEvaluator> {
 
   @override
   String toString() {
-    return "EloEvaluator $hashCode";
+    return "EloEvaluator $generation.$hashCode";
   }
 }
 

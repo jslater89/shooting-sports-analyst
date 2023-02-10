@@ -31,6 +31,7 @@ class EloTuner {
 
   List<EloEvaluator> currentPopulation = [];
   Set<EloEvaluator> nonDominated = {};
+  Map<EloEvalFunction, double> firstGenerationMaximums = {};
 
   List<EloEvaluator> get evaluatedPopulation => currentPopulation.where((e) => e.evaluated).toList();
 
@@ -50,11 +51,15 @@ class EloTuner {
       currentOperation: "Data Setup",
     ));
 
+    for(var evalFn in EloEvaluator.evaluationFunctions.values) {
+      firstGenerationMaximums[evalFn] = 0;
+    }
+
     List<Genome> genomes = [];
     genomes.addAll(Iterable.generate(10, (i) => EloSettings().toGenome()));
     genomes.addAll(Iterable.generate((grid.preferredPopulationSize * 1.1).round() - 10, (i) => EloGenome.randomGenome()).toList());
 
-    List<EloEvaluator> initialPopulation = genomes.map((g) => EloGenome.toSettings(g)).map((s) => EloEvaluator(settings: s)).toList();
+    List<EloEvaluator> initialPopulation = genomes.map((g) => EloGenome.toSettings(g)).map((s) => EloEvaluator(generation: 0, settings: s)).toList();
     initialPopulation.shuffle(_r);
 
     currentPopulation = [];
@@ -197,6 +202,17 @@ class EloTuner {
           print("Evaluation took ${sw.elapsedMilliseconds / 1000}s");
         }
 
+        if(currentGeneration == 0) {
+          for(var evalName in EloEvaluator.evaluationFunctions.keys) {
+            var evalFn = EloEvaluator.evaluationFunctions[evalName]!;
+
+            var eval = p.evaluations[evalFn]!;
+            if(eval > firstGenerationMaximums[evalFn]!) {
+              firstGenerationMaximums[evalFn] = eval;
+            }
+          }
+        }
+
         if(_r.nextDouble() < 0.5) {
           moved.add(p);
           continue;
@@ -258,7 +274,7 @@ class EloTuner {
         var p2Settings = p2.settings;
 
         var childSettings = EloGenome.toSettings(Genome.breed(p1Settings.toGenome(), p2Settings.toGenome(), crossoverPoints: crossoverPoints, mutationChance: mutationChance));
-        var child = EloEvaluator(settings: childSettings);
+        var child = EloEvaluator(generation: currentGeneration, settings: childSettings);
 
         toPlace.add(child);
       }

@@ -65,19 +65,19 @@ class _EloTunerPageState extends State<EloTunerPage> {
     List<PracticalMatch> wpaTest = [];
     List<PracticalMatch> wpaCalibration = [];
 
-    for(var url in l2s.calibration) {
+    for(var url in l2s.smallCalibration) {
       l2Calibration.add((await cache.getMatch(url)).unwrap());
       print("Got $url");
     }
-    for(var url in l2s.test) {
+    for(var url in l2s.smallTest) {
       l2Test.add((await cache.getMatch(url)).unwrap());
       print("Got $url");
     }
-    for(var url in wpa.calibration) {
+    for(var url in wpa.smallCalibration) {
       wpaCalibration.add((await cache.getMatch(url)).unwrap());
       print("Got $url");
     }
-    for(var url in wpa.test) {
+    for(var url in wpa.smallTest) {
       wpaTest.add((await cache.getMatch(url)).unwrap());
       print("Got $url");
     }
@@ -87,48 +87,48 @@ class _EloTunerPageState extends State<EloTunerPage> {
     print("WPA: ${wpaCalibration.length} calibration matches, ${wpaTest.length} eval matches");
     print("L2s: ${l2Calibration.length} calibration matches, ${l2Test.length} eval matches");
 
-    tuner = EloTuner([
-      EloEvaluationData(
-        name: "L2s Open",
-        group: RaterGroup.open,
-        trainingData: l2Calibration,
-        evaluationData: l2Test,
-        expectedMaxRating: 2800, // Sailer tax?
-      ),
-      EloEvaluationData(
-        name: "L2s CO",
-        group: RaterGroup.carryOptics,
-        trainingData: l2Calibration,
-        evaluationData: l2Test,
-        expectedMaxRating: 2700,
-      ),
-      // EloEvaluationData(
-      //   name: "L2s Limited",
-      //   group: RaterGroup.limited,
-      //   trainingData: l2Calibration,
-      //   evaluationData: l2Test,
-      //   expectedMaxRating: 2700,
-      // ),
-      // EloEvaluationData(
-      //   name: "WPA Open",
-      //   group: RaterGroup.open,
-      //   trainingData: wpaCalibration,
-      //   evaluationData: wpaTest,
-      //   expectedMaxRating: 2300,
-      // ),
-      EloEvaluationData(
-        name: "WPA CO",
-        group: RaterGroup.carryOptics,
-        trainingData: wpaCalibration,
-        evaluationData: wpaTest,
-        expectedMaxRating: 2300,
-      ),
-    ], callback: (update) async {
-      _updateUi(update);
+      tuner = EloTuner([
+        EloEvaluationData(
+          name: "L2s Open",
+          group: RaterGroup.open,
+          trainingData: l2Calibration,
+          evaluationData: l2Test,
+          expectedMaxRating: 2700,
+        ),
+        EloEvaluationData(
+          name: "L2s CO",
+          group: RaterGroup.carryOptics,
+          trainingData: l2Calibration,
+          evaluationData: l2Test,
+          expectedMaxRating: 2700,
+        ),
+        EloEvaluationData(
+          name: "L2s Limited",
+          group: RaterGroup.limited,
+          trainingData: l2Calibration,
+          evaluationData: l2Test,
+          expectedMaxRating: 2700,
+        ),
+        // EloEvaluationData(
+        //   name: "WPA Open",
+        //   group: RaterGroup.open,
+        //   trainingData: wpaCalibration,
+        //   evaluationData: wpaTest,
+        //   expectedMaxRating: 2300,
+        // ),
+        EloEvaluationData(
+          name: "WPA CO",
+          group: RaterGroup.carryOptics,
+          trainingData: wpaCalibration,
+          evaluationData: wpaTest,
+          expectedMaxRating: 2300,
+        ),
+      ], callback: (update) async {
+        _updateUi(update);
 
-      // Let the UI get an update in edgewise
-      await Future.delayed(Duration(milliseconds: 33));
-    }, gridSize: 26,
+        // Let the UI get an update in edgewise
+        await Future.delayed(Duration(milliseconds: 33));
+      }, gridSize: 18,
     );
 
     // show the UI
@@ -194,7 +194,7 @@ class _EloTunerPageState extends State<EloTunerPage> {
                 icon: Icon(Icons.save_alt),
                 onPressed: () {
                   var fileContents = tuner!.nonDominated.map((e) {
-                    String output = "Genome ${e.hashCode}";
+                    String output = "Genome ${e.generation}.${e.hashCode}";
                     if(tuner!.nonDominated.contains(e)) output += " (non-dom)";
                     output += "\n";
 
@@ -574,7 +574,7 @@ class _EloTunerPageState extends State<EloTunerPage> {
               children: [
                 Row(
                   children: [
-                    Text("#${index + 1} Genome ${eval.hashCode} ", style: Theme.of(context).textTheme.subtitle1),
+                    Text("#${index + 1} Genome ${eval.generation}.${eval.hashCode} ", style: Theme.of(context).textTheme.subtitle1),
                     SizedBox(width: 8),
                     ...errorWidgets(eval)
                   ],

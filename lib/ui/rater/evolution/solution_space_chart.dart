@@ -224,7 +224,7 @@ class _SolutionSpaceChartsState extends State<SolutionSpaceCharts> with TickerPr
         continue;
       }
       evaluatorLines.add(e.evaluations.keys.map((f) {
-        var vMax = widget.tuner.maxEvaluations[f]!;
+        var vMax = widget.tuner.firstGenerationMaximums[f]!;
         return (e.evaluations[f]! / vMax) * 100;
       }).toList());
       colors.add(Colors.green.shade500);
@@ -238,7 +238,7 @@ class _SolutionSpaceChartsState extends State<SolutionSpaceCharts> with TickerPr
         continue;
       }
       evaluatorLines.add(e.evaluations.keys.map((f) {
-        var vMax = widget.tuner.maxEvaluations[f]!;
+        var vMax = widget.tuner.firstGenerationMaximums[f]!;
         return (e.evaluations[f]! / vMax) * 100;
       }).toList());
       colors.add(Colors.black.withAlpha(96));
@@ -247,7 +247,7 @@ class _SolutionSpaceChartsState extends State<SolutionSpaceCharts> with TickerPr
 
     if(highlight != null) {
       evaluatorLines.add(highlight.evaluations.keys.map((f) {
-        var vMax = widget.tuner.maxEvaluations[f]!;
+        var vMax = widget.tuner.firstGenerationMaximums[f]!;
         return (highlight!.evaluations[f]! / vMax) * 100;
       }).toList());
       colors.add(Colors.yellow.shade600);

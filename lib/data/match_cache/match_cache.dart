@@ -94,7 +94,6 @@ class MatchCache {
               continue;
             }
 
-            // If the above doesn't apply, or if we're
             _cache[id] = entry;
           }
 
@@ -271,6 +270,10 @@ class MatchCache {
       var result = await getPractiscoreMatchHeadless(canonId);
       if(result.isOk()) {
         var match = result.unwrap();
+        match.practiscoreId = canonId;
+        if(id != canonId) {
+          match.practiscoreIdShort = id;
+        }
         var ids = [canonId];
         if(id != canonId) ids.insert(0, id);
 
