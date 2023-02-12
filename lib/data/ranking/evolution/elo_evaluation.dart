@@ -124,8 +124,10 @@ class EloEvaluator extends Prey<EloEvaluator> {
       );
 
       var ordinalSorted = evaluations.actualResults.keys.sorted((a, b) => b.ordinal.compareTo(a.ordinal));
-      for(int i = 1; i <= topN; i++) {
-        ordinalErrors += (i - (evaluations.actualResults[ordinalSorted[i]]!.place)).abs();
+      if(ordinalSorted.length > 0) {
+        for (int i = 1; i <= topN; i++) {
+          ordinalErrors += (i - (evaluations.actualResults[ordinalSorted[i - 1]]!.place)).abs();
+        }
       }
 
       // I think unnormalizing here is right because it'll help stop the 'best system rates
