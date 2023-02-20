@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import 'package:uspsa_result_viewer/data/ranking/evolution/elo_evaluation.dart';
+
 abstract class GridEntity<P> {
   Location? _location;
   set location(Location? l) {
@@ -201,7 +203,7 @@ class PredatorPreyGrid<P extends Prey> {
   /// times to generate a valid random coordinate.
   /// 
   /// If random placement fails, returns (-1, -1).
-  Location placeEntity(GridEntity<P> occupant, [int numRetries = 100]) {
+  Location? placeEntity(GridEntity<P> occupant, [int numRetries = 100]) {
     if(occupant.location != null) {
       throw ArgumentError("Can't randomly place an already-placed entity");
     }
@@ -213,7 +215,7 @@ class PredatorPreyGrid<P extends Prey> {
       }
     }
     
-    return Location(-1, -1);
+    return null;
   }
   
   /// Set the occupant of a given cell.

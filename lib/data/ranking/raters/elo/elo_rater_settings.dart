@@ -54,7 +54,7 @@ class EloSettings extends RaterSettings {
 
   /// If error is less than this value, K will be decreased.
   double errorAwareMinThreshold;
-  ///
+  /// K will be multiplied by the full value of [errorAwareLowerMultiplier] at or below this level.
   double errorAwareZeroValue;
   /// Controls K when error is less than [errorAwareMinThreshold].
   ///

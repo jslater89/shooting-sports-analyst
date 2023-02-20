@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_settings.dart';
@@ -101,9 +103,10 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
           _errorAwareZeroController.text = "${settings.errorAwareZeroValue.toStringAsFixed(0)}";
           _errorAwareMinThresholdController.text = "${settings.errorAwareMinThreshold.toStringAsFixed(0)}";
           _errorAwareMaxThresholdController.text = "${settings.errorAwareMaxThreshold.toStringAsFixed(0)}";
-          _errorAwareLowerMultController.text = "${settings.errorAwareLowerMultiplier.toStringAsFixed(2)}";
-          _errorAwareUpperMultController.text = "${settings.errorAwareUpperMultiplier.toStringAsFixed(2)}";
+          _errorAwareLowerMultController.text = "${(1 - settings.errorAwareLowerMultiplier).toStringAsFixed(2)}";
+          _errorAwareUpperMultController.text = "${(settings.errorAwareUpperMultiplier + 1).toStringAsFixed(2)}";
           widget.controller._restoreDefaults = false;
+          _validateText();
         }
         else {
           settings = widget.controller._currentSettings;
@@ -118,23 +121,24 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
           _errorAwareMaxThresholdController.text = "${settings.errorAwareMaxThreshold.toStringAsFixed(0)}";
           _errorAwareLowerMultController.text = "${settings.errorAwareLowerMultiplier.toStringAsFixed(2)}";
           _errorAwareUpperMultController.text = "${settings.errorAwareUpperMultiplier.toStringAsFixed(2)}";
+          _validateText();
         }
       });
     });
 
     _kController.addListener(() {
       if(double.tryParse(_kController.text) != null) {
-        _validateText();
+        if(!widget.controller._restoreDefaults) _validateText();
       }
     });
     _baseController.addListener(() {
       if(double.tryParse(_baseController.text) != null) {
-        _validateText();
+        if(!widget.controller._restoreDefaults) _validateText();
       }
     });
     _scaleController.addListener(() {
       if(double.tryParse(_scaleController.text) != null) {
-        _validateText();
+        if(!widget.controller._restoreDefaults) _validateText();
       }
     });
 
@@ -162,7 +166,7 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
           _placeWeightController.text = (1.0 - newPctWeight).toStringAsFixed(fractionDigits);
         }
 
-        _validateText();
+        if(!widget.controller._restoreDefaults) _validateText();
       }
     });
 
@@ -178,37 +182,37 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
           }
         }
 
-        _validateText();
+        if(!widget.controller._restoreDefaults) _validateText();
       }
     });
 
     _errorAwareZeroController.addListener(() {
       if(double.tryParse(_errorAwareZeroController.text) != null) {
-        _validateText();
+        if(!widget.controller._restoreDefaults) _validateText();
       }
     });
 
     _errorAwareMinThresholdController.addListener(() {
       if(double.tryParse(_errorAwareMinThresholdController.text) != null) {
-        _validateText();
+        if(!widget.controller._restoreDefaults) _validateText();
       }
     });
 
     _errorAwareMaxThresholdController.addListener(() {
       if(double.tryParse(_errorAwareMaxThresholdController.text) != null) {
-        _validateText();
+        if(!widget.controller._restoreDefaults) _validateText();
       }
     });
 
     _errorAwareLowerMultController.addListener(() {
       if(double.tryParse(_errorAwareLowerMultController.text) != null) {
-        _validateText();
+        if(!widget.controller._restoreDefaults) _validateText();
       }
     });
 
     _errorAwareUpperMultController.addListener(() {
       if(double.tryParse(_errorAwareLowerMultController.text) != null) {
-        _validateText();
+        if(!widget.controller._restoreDefaults) _validateText();
       }
     });
   }

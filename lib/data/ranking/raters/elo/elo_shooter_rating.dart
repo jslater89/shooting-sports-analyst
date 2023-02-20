@@ -13,6 +13,24 @@ class EloShooterRating extends ShooterRating {
   double rating;
   double variance = 0;
 
+  double get direction {
+    if(ratingEvents.isEmpty) return 0;
+
+    late List<RatingEvent> events;
+    if(ShooterRating.baseTrendWindow >= ratingEvents.length) {
+      events = ratingEvents;
+    }
+    else {
+      events = ratingEvents.sublist(ratingEvents.length - ShooterRating.baseTrendWindow, ratingEvents.length);
+    }
+
+    int total = events.length;
+    int positive = events.where((element) => element.ratingChange > 0).length;
+
+    // Center around zero, expand to range [-1, 1]
+    return ((positive / total) - 0.5) * 2.0;
+  }
+
   double get shortTrend => rating - averageRating(window: ShooterRating.baseTrendWindow ~/ 2).firstRating;
   double get mediumTrend => rating - averageRating(window: ShooterRating.baseTrendWindow).firstRating;
   double get longTrend => rating - averageRating(window: ShooterRating.baseTrendWindow * 2).firstRating;

@@ -287,7 +287,7 @@ class EloTuner {
 
     for(var child in toPlace) {
       var location = grid.placeEntity(child);
-      if(location != Location(-1, -1)) {
+      if(location != null) {
         currentPopulation.add(child);
       }
     }
