@@ -248,27 +248,22 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
                   }
                   if(addedMatch) cache!.save();
                 },
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if(widget.multiple && selectedMatches.contains(searchedMatches[i])) Icon(
-                      Icons.check,
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.delete),
-                      onPressed: () async {
-                        var match = searchedMatches[i];
-                        var deletedFuture = cache!.deleteMatch(match);
+                leading: widget.multiple && selectedMatches.contains(searchedMatches[i]) ? Icon(
+                  Icons.check,
+                ) : null,
+                trailing: IconButton(
+                  icon: Icon(Icons.delete),
+                  onPressed: () async {
+                    var match = searchedMatches[i];
+                    var deletedFuture = cache!.deleteMatch(match);
 
-                        var deleted = await showDialog<bool>(context: context, builder: (c) => LoadingDialog(title: "Deleting...", waitOn: deletedFuture));
-                        if(deleted ?? false) {
-                          setState(() {
-                            _updateMatches();
-                          });
-                        }
-                      },
-                    )
-                  ],
+                    var deleted = await showDialog<bool>(context: context, builder: (c) => LoadingDialog(title: "Deleting...", waitOn: deletedFuture));
+                    if(deleted ?? false) {
+                      setState(() {
+                        _updateMatches();
+                      });
+                    }
+                  },
                 ),
               );
             },
