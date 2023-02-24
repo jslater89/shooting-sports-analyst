@@ -235,7 +235,7 @@ class Rater {
     _removeUnseenShooters();
     if(Timings.enabled) timings.removeUnseenShootersMillis += (DateTime.now().difference(start).inMicroseconds);
 
-    debugPrint("Initial ratings complete for ${knownShooters.length} shooters in ${_matches.length} matches in ${_filters != null ? _filters!.activeDivisions.toList() : "all divisions"}");
+    debugPrint("Initial ratings complete for ${knownShooters.length} shooters in ${_matches.length} matches in ${_filters.activeDivisions.toList()}");
     return RatingResult.ok();
   }
 
@@ -413,60 +413,110 @@ class Rater {
       }
       if(ignore) continue;
 
-      if(list.length == 2) {
-        // If the shooter is already mapped, or if both numbers are 5-digit non-lifetime numbers, continue
-        if((_memberNumberMappings[list[0]] == list[1] || _memberNumberMappings[list[1]] == list[0]) || (list[0].length > 4 && list[1].length > 4)) continue;
-        if(_memberNumberMappingBlacklist[list[0]] == list[1] || _memberNumberMappingBlacklist[list[1]] == list[0]) {
-          if(verbose) debugPrint("Ignoring $name with two member numbers due to blacklist");
+      if(list.length >= 2) {
+        // There are three categories of number, and we only map from 'high' to 'low':
+        // 4-6 digit A/TY/FY (>=9000)
+        // 3-4 digit L (>=L100)
+        // 1-3-digit B (>=B1)
+        // 1-3-digit AD/RD (<=99)
+
+        // To automatically map any given shooter, we need:
+        // 1. No more than 4 numbers
+        // 2. One number per category
+        // 3. At most one number with history
+        // 4. Numbers not already mapped to the target.
+        // 5. No numbers mapped to any numbers that aren't in list
+        // 6. Blacklisted numbers removed. TODO: blacklisting needs to be one-way.
+        //    Say there's John Smith A123, L12, and John Smith L34. Blacklist A123 -> L34 means,
+        //    A123 should not be mapped to L34.
+
+        // Verify 1 and 2
+        Map<_MemNumType, String> numbers = {};
+        bool automaticMappingFailed = false;
+        for(var n in list) {
+          var type = _MemNumType.classify(n);
+
+          if(numbers[type] != null) {
+            // TODO: this currently catches case 5
+            if(verbose) print("Ignoring $name with numbers $list: multiple numbers of type ${type.name}");
+            automaticMappingFailed = true;
+            break;
+          }
+
+          numbers[type] = n;
+        }
+
+        if(automaticMappingFailed) {
           continue;
         }
 
-        if(verbose) debugPrint("Shooter $name has two member numbers, mapping: $list (${knownShooters[list[0]]}, ${knownShooters[list[1]]})");
-
-        var rating0 = knownShooters[list[0]]!;
-        var rating1 = knownShooters[list[1]]!;
-
-        if (rating0.ratingEvents.length > 0 && rating1.ratingEvents.length > 0) {
-          List<ShooterRating> culprits = [rating0, rating1];
-          Map<ShooterRating, List<ShooterRating>> accomplices = {};
-
-          for(var culprit in culprits) {
-            accomplices[culprit] = []..addAll(ratingsByName[_processName(culprit)]!);
-            accomplices[culprit]!.remove(culprit);
-          }
-
-          print("Error mapping shooters: both have events");
-          return RatingResult.err(ShooterMappingError(
-            culprits: culprits,
-            accomplices: accomplices,
-          ));
+        int historyCount = 0;
+        for(var n in numbers.values) {
+          var rating = knownShooters[n];
+          if(rating != null && rating.length > 0) historyCount++;
         }
 
-        // We're either at the adding-initial-matches stage, or two people with the
-        // same name and different tiers of member number are shooting the same match,
-        // and I'm not a psychic. Map the longer one to the shorter one.
-        if (rating0.length == 0 && rating1.length == 0) {
-          if(rating0.memberNumber.length < rating1.memberNumber.length) {
-            _mapRatings(rating0, rating1);
+        if(historyCount > 1) {
+          if(verbose) print("Ignoring $name with numbers $list: $historyCount ratings have history");
+          continue;
+        }
 
-            // debugPrint("Mapped r1-r0 ${list[1]} to ${list[0]} with ${rating0.ratingEvents.length} events during deduplication");
+        var bestNumber = _MemNumType.targetNumber(numbers);
+
+        // Whether any of the numbers are not mapped to [bestNumber].
+        bool unmapped = false;
+
+        // Whether any of the numbers are mapped to something not in the list of numbers. If this is
+        // true, we have a weird state where something is mapped and not supposed to be.
+        bool crossMapped = false;
+
+        List<String> blacklisted = [];
+
+        for(var n in numbers.values) {
+          if(_memberNumberMappings[n] == bestNumber) {
+            unmapped = true;
           }
           else {
-            _mapRatings(rating1, rating0);
-
-            // debugPrint("Mapped r0-r1 ${list[0]} to ${list[1]} with ${rating1.ratingEvents.length} events during deduplication");
+            var target = _memberNumberMappings[n];
+            if(!numbers.values.contains(target)) crossMapped = true;
+            if(_memberNumberMappingBlacklist[n] == target) {
+              blacklisted.add(n);
+            }
           }
         }
-        else {
-          if (rating0.ratingEvents.length == 0) {
-            _mapRatings(rating0, rating1);
 
-            // debugPrint("Mapped r1-r0 ${list[1]} to ${list[0]} with ${rating0.ratingEvents.length} events during deduplication");
+        for(var n in blacklisted) {
+          numbers.removeWhere((key, value) => value == n);
+        }
+
+        if(!unmapped) {
+          if(verbose) print("Nothing to do for $name and $list; all mapped to $bestNumber already");
+          continue;
+        }
+
+        if(crossMapped) {
+          if(verbose) print("$name with $list has cross mappings");
+          continue;
+        }
+
+        // TODO: return error with multiple possible mappings
+
+        if(verbose) debugPrint("Shooter $name has >2 member numbers, mapping: $list to $bestNumber");
+
+        var target = knownShooters[bestNumber]!;
+
+        for(var n in numbers.values) {
+          if(n == bestNumber) continue;
+
+          var source = knownShooters[n];
+          if(source != null) {
+            // If source was not previously mapped, do the full mapping.
+            _mapRatings(target, source);
           }
-          else { // rating1.ratingEvents.length == 0
-            _mapRatings(rating1, rating0);
-
-            // debugPrint("Mapped r0-r1 ${list[0]} to ${list[1]} with ${rating1.ratingEvents.length} events during deduplication");
+          else {
+            // Otherwise, source was previously mapped, so just update the source->target
+            // entry in the map to point to the new true rating.
+            _memberNumberMappings[n] = bestNumber;
           }
         }
       }
@@ -481,6 +531,18 @@ class Rater {
     target.copyRatingFrom(source);
     knownShooters.remove(source.memberNumber);
     _memberNumberMappings[source.memberNumber] = target.memberNumber;
+
+    // Three-step mapping. If the target of another member number mapping
+    // is the source of this mapping, map the source of that mapping to the
+    // target of this mapping.
+    for(var sourceNum in _memberNumberMappings.keys) {
+      var targetNum = _memberNumberMappings[sourceNum]!;
+
+      if(targetNum == source.memberNumber && _memberNumberMappings[sourceNum] != target.memberNumber) {
+        print("Additionally mapping $sourceNum to ${target.memberNumber}");
+        _memberNumberMappings[sourceNum] = target.memberNumber;
+      }
+    }
   }
 
   void _removeUnseenShooters() {
@@ -496,18 +558,13 @@ class Rater {
 
   List<Shooter> _getShooters(PracticalMatch match, {bool verify = false}) {
     var shooters = <Shooter>[];
-    if(_filters != null) {
-      shooters = match.filterShooters(
-        filterMode: _filters!.mode,
-        divisions: _filters!.activeDivisions.toList(),
-        powerFactors: [],
-        classes: [],
-        allowReentries: false,
-      );
-    }
-    else {
-      shooters = match.filterShooters(allowReentries: false);
-    }
+    shooters = match.filterShooters(
+      filterMode: _filters.mode,
+      divisions: _filters.activeDivisions.toList(),
+      powerFactors: [],
+      classes: [],
+      allowReentries: false,
+    );
 
     for(var shooter in shooters) {
       shooter.memberNumber = processMemberNumber(shooter.memberNumber);
@@ -1288,7 +1345,14 @@ class Rater {
   static Map<String, String> _processMemNumCache = {};
   static String processMemberNumber(String no) {
     if(_processMemNumCache.containsKey(no)) return _processMemNumCache[no]!;
-    var no2 = no.replaceAll(RegExp(r"[^0-9]"), "");
+    var no2 = no.toUpperCase().replaceAll(RegExp(r"[^A-Z0-9]"), "").replaceAll(RegExp(r"TY?|FY?|A"), "");
+
+    // If a member number contains no numbers, ignore it.
+    if(!no2.contains(RegExp(r"[0-9]+"))) return "";
+
+    // If a member number is all zeroes, ignore it.
+    if(no2.contains(RegExp(r"^0+$"))) return "";
+
     _processMemNumCache[no] = no2;
     return no2;
   }
@@ -1349,4 +1413,28 @@ class _Tuple<T, U> {
   U b;
 
   _Tuple(this.a, this.b);
+}
+
+enum _MemNumType {
+  associate,
+  lifetime,
+  benefactor,
+  regionDirector;
+
+  static _MemNumType classify(String number) {
+    if(number.startsWith("RD")) return _MemNumType.regionDirector;
+    if(number.startsWith("B")) return _MemNumType.benefactor;
+    if(number.startsWith("L")) return _MemNumType.lifetime;
+
+    return _MemNumType.associate;
+  }
+
+  static String targetNumber(Map<_MemNumType, String> numbers) {
+    for(var type in _MemNumType.values.reversed) {
+      var v = numbers[type];
+      if(v != null) return v;
+    }
+
+    throw ArgumentError("Empty map provided");
+  }
 }
