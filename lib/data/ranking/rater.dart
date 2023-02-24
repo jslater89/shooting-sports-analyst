@@ -729,16 +729,21 @@ class Rater {
       var averageBefore = 0.0;
       var averageAfter = 0.0;
 
-      var encounteredList = shootersAtMatch.toList();
+      // We need only consider at most the best [ShooterRating.maxConnections] connections. If a shooter's list is
+      // empty, we'll fill their list with these shooters. If a shooter's list is not empty, we can end up with at
+      // most maxConnections new entries in the list, by definition.
+      var encounteredList = shootersAtMatch
+          .sorted((a, b) => b.connectedness.compareTo(a.connectedness))
+          .sublist(0, min(ShooterRating.maxConnections, shootersAtMatch.length));
 
       // debugPrint("Updating connectedness at ${match.name} for ${shootersAtMatch.length} of ${knownShooters.length} shooters");
-      for (var rating in encounteredList) {
+      for (var rating in shootersAtMatch) {
         averageBefore += rating.connectedness;
         rating.updateConnections(match.date!, encounteredList);
         rating.lastSeen = match.date!;
       }
 
-      for (var rating in encounteredList) {
+      for (var rating in shootersAtMatch) {
         rating.updateConnectedness();
         averageAfter += rating.connectedness;
       }

@@ -207,6 +207,7 @@ class RatingHistory {
         var result = await r.calculateInitialRatings();
         if(result.isErr()) return result;
         _ratersByDivision[_lastMatch]![group] = r;
+        if(Timings.enabled) print("Timings for $group: ${r.timings}");
       }
     }
 

@@ -112,12 +112,11 @@ abstract class ShooterRating extends Shooter {
     }
 
     var lowValueConnections = SortedList<ConnectedShooter>(comparator: (a, b) => a.connectedness.compareTo(b.connectedness));
+    lowValueConnections.addAll(connectedShooters.iterable);
 
     for(var shooter in encountered) {
       var currentConnection = connMap[shooter];
       if(currentConnection != null) {
-        lowValueConnections.add(currentConnection);
-
         // if(Rater.processMemberNumber(this.shooter.memberNumber) == "122755")  print("Updated connection to $shooter");
         currentConnection.connectedness = shooter.connectedness;
         currentConnection.lastSeen = now;
@@ -125,14 +124,19 @@ abstract class ShooterRating extends Shooter {
       }
       else if(shooter != this) {
         // if(Rater.processMemberNumber(this.shooter.memberNumber) == "122755")  print("Added connection to $shooter");
+
+        // No need to add this connection if our list is full and it's worst than our current worst connection.
+        if(lowValueConnections.length >= maxConnections) {
+          var worstConnection = lowValueConnections.first;
+          if(shooter.connectedness < worstConnection.connectedness) continue;
+        }
+
         var newConnection = ConnectedShooter(
           shooter: shooter,
           connectedness: shooter.connectedness,
           lastSeen: now,
         );
-        connectedShooters.add(
-          newConnection
-        );
+        connectedShooters.add(newConnection);
         lowValueConnections.add(newConnection);
         added++;
       }

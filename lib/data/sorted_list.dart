@@ -83,6 +83,9 @@ class SortedList<T> {
   String toString() {
     return _backing.toString();
   }
+
+  bool get isNotEmpty => _backing.isNotEmpty;
+  bool get isEmpty => _backing.isEmpty;
 }
 
 extension NumericOperations on SortedList<num> {
