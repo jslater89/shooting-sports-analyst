@@ -13,6 +13,7 @@ import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
 import 'package:uspsa_result_viewer/data/ranking/timings.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
+import 'package:fuzzywuzzy/fuzzywuzzy.dart' as strdiff;
 
 class Rater {
   List<PracticalMatch> _matches;
@@ -30,8 +31,10 @@ class Rater {
 
   /// Contains mappings that should not be made automatically.
   ///
-  /// Any mapping that appears in this map, in either direction,
-  /// will not be established automatically.
+  /// Keys in this map will not be mapped to values in this map.
+  /// More precisely, if the target number for an N-number mapping
+  /// is a value in this map, the key to that value will not be
+  /// included in the N-number mapping.
   Map<String, String> _memberNumberMappingBlacklist = {};
 
   MemberNumberCorrectionContainer _dataCorrections;
@@ -421,47 +424,115 @@ class Rater {
         // 1-3-digit AD/RD (<=99)
 
         // To automatically map any given shooter, we need:
-        // 1. No more than 4 numbers
-        // 2. One number per category
+        // 1. No more than 4 numbers (minus manual mappings/)
+        // 2. One number per category (minus manual mappings)
         // 3. At most one number with history
         // 4. Numbers not already mapped to the target.
         // 5. No numbers mapped to any numbers that aren't in list
-        // 6. Blacklisted numbers removed. TODO: blacklisting needs to be one-way.
+        // 6. Blacklisted numbers removed.
         //    Say there's John Smith A123, L12, and John Smith L34. Blacklist A123 -> L34 means,
         //    A123 should not be mapped to L34.
 
         // Verify 1 and 2
-        Map<_MemNumType, String> numbers = {};
+        Map<_MemNumType, List<String>> numbers = {};
         bool automaticMappingFailed = false;
+        _MemNumType? failedType;
         for(var n in list) {
           var type = _MemNumType.classify(n);
+          numbers[type] ??= [];
 
-          if(numbers[type] != null) {
-            // TODO: this currently catches case 5
-            if(verbose) print("Ignoring $name with numbers $list: multiple numbers of type ${type.name}");
-            automaticMappingFailed = true;
-            break;
+          numbers[type]!.add(n);
+        }
+
+        for(var type in numbers.keys) {
+          var nList = numbers[type]!;
+          if(nList.length == 1) continue;
+
+          // To have >1 number in the same type and still be able to map
+          // automatically, it must be part of a valid user mapping.
+          Set<String> legalValues = {};
+          for(var n in nList) {
+            var userMapping = _userMemberNumberMappings[n];
+            if(userMapping != null && nList.contains(userMapping)) {
+              legalValues.add(n);
+              legalValues.add(userMapping);
+            }
           }
 
-          numbers[type] = n;
+          for(var n in nList) {
+            if(!legalValues.contains(n)) {
+              automaticMappingFailed = true;
+              failedType = type;
+            }
+          }
         }
 
         if(automaticMappingFailed) {
+          if(verbose) print("Ignoring $name with numbers $list: multiple numbers of type ${failedType?.name}");
+          // TODO: checking none/loose/strict
+          // none never bails
+          // loose bails for
+          if(failedType != null && numbers[failedType]!.length == 2) {
+            var n1 = numbers[failedType]![0];
+            var n2 = numbers[failedType]![1];
+            if (strdiff.ratio(n1, n2) > 80) {
+              var s1 = knownShooters[n1];
+              var s2 = knownShooters[n2];
+              if(s1 != null && s2 != null) {
+                print("Fixable error for $s1 and $s2");
+                return RatingResult.err(ShooterMappingError(
+                  culprits: [s1, s2],
+                  accomplices: {},
+                ));
+              }
+            }
+          }
           continue;
         }
 
-        int historyCount = 0;
+        List<ShooterRating> withHistory = [];
         for(var n in numbers.values) {
           var rating = knownShooters[n];
-          if(rating != null && rating.length > 0) historyCount++;
+          if(rating != null && rating.length > 0) withHistory.add(rating);
         }
 
-        if(historyCount > 1) {
-          if(verbose) print("Ignoring $name with numbers $list: $historyCount ratings have history");
-          continue;
+        if(withHistory.length > 1) {
+          if(verbose) print("Ignoring $name with numbers $list: ${withHistory.length} ratings have history: $withHistory");
+          Map<ShooterRating, List<ShooterRating>> accomplices = {};
+
+          for(var culprit in withHistory) {
+            accomplices[culprit] = []..addAll(ratingsByName[_processName(culprit)]!);
+            accomplices[culprit]!.remove(culprit);
+          }
+
+          return RatingResult.err(ShooterMappingError(
+            culprits: withHistory,
+            accomplices: accomplices,
+          ));
         }
 
-        var bestNumber = _MemNumType.targetNumber(numbers);
+        var bestNumberOptions = _MemNumType.targetNumber(numbers);
+        String? bestCandidate;
+
+        // options will only be length > 1 if we have a manual mapping in the best number options,
+        // so pick the first one that's a target.
+        if(bestNumberOptions.length > 1) {
+          bool found = false;
+          for(var n in bestNumberOptions) {
+            var m = _userMemberNumberMappings[n];
+            if(m != null) {
+              bestCandidate = m;
+              found = true;
+              break;
+            }
+          }
+          if(!found) throw StateError("bestNumber not set");
+        }
+        else {
+          bestCandidate = bestNumberOptions.first;
+        }
+
+        String bestNumber = bestCandidate!;
 
         // Whether any of the numbers are not mapped to [bestNumber].
         bool unmapped = false;
@@ -470,23 +541,27 @@ class Rater {
         // true, we have a weird state where something is mapped and not supposed to be.
         bool crossMapped = false;
 
+        // A list of blacklisted member numbers.
+        // Should this come sooner?
         List<String> blacklisted = [];
 
-        for(var n in numbers.values) {
-          if(_memberNumberMappings[n] == bestNumber) {
-            unmapped = true;
-          }
-          else {
-            var target = _memberNumberMappings[n];
-            if(!numbers.values.contains(target)) crossMapped = true;
-            if(_memberNumberMappingBlacklist[n] == target) {
-              blacklisted.add(n);
+        for(var nList in numbers.values) {
+          for(var n in nList) {
+            if (_memberNumberMappings[n] == bestNumber) {
+              unmapped = true;
+            }
+            else {
+              var target = _memberNumberMappings[n];
+              if (!numbers.values.flattened.contains(target)) crossMapped = true;
+              if (_memberNumberMappingBlacklist[n] == target) {
+                blacklisted.add(n);
+              }
             }
           }
         }
 
         for(var n in blacklisted) {
-          numbers.removeWhere((key, value) => value == n);
+          numbers.removeWhere((key, value) => value.contains(n));
         }
 
         if(!unmapped) {
@@ -501,11 +576,11 @@ class Rater {
 
         // TODO: return error with multiple possible mappings
 
-        if(verbose) debugPrint("Shooter $name has >2 member numbers, mapping: $list to $bestNumber");
+        if(verbose) debugPrint("Shooter $name has >=2 member numbers, mapping: $list to $bestNumber");
 
         var target = knownShooters[bestNumber]!;
 
-        for(var n in numbers.values) {
+        for(var n in numbers.values.flattened) {
           if(n == bestNumber) continue;
 
           var source = knownShooters[n];
@@ -1345,7 +1420,7 @@ class Rater {
   static Map<String, String> _processMemNumCache = {};
   static String processMemberNumber(String no) {
     if(_processMemNumCache.containsKey(no)) return _processMemNumCache[no]!;
-    var no2 = no.toUpperCase().replaceAll(RegExp(r"[^A-Z0-9]"), "").replaceAll(RegExp(r"TY?|FY?|A"), "");
+    var no2 = no.toUpperCase().replaceAll(RegExp(r"[^FYTABLRD0-9]"), "").replaceAll(RegExp(r"[ATYF]{1,2}"), "");
 
     // If a member number contains no numbers, ignore it.
     if(!no2.contains(RegExp(r"[0-9]+"))) return "";
@@ -1429,7 +1504,7 @@ enum _MemNumType {
     return _MemNumType.associate;
   }
 
-  static String targetNumber(Map<_MemNumType, String> numbers) {
+  static List<String> targetNumber(Map<_MemNumType, List<String>> numbers) {
     for(var type in _MemNumType.values.reversed) {
       var v = numbers[type];
       if(v != null) return v;

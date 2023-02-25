@@ -402,6 +402,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.2.0"
+  fuzzywuzzy:
+    dependency: "direct main"
+    description:
+      name: fuzzywuzzy
+      sha256: f685751951297e560361b6416d9ba62d40231599d7b3e8c078318990d3bab84a
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.0"
   glob:
     dependency: transitive
     description:
@@ -1088,5 +1096,5 @@ packages:
     source: hosted
     version: "3.1.1"
 sdks:
-  dart: ">=2.19.0 <4.0.0"
+  dart: ">=2.19.0 <3.0.0"
   flutter: ">=3.3.0"

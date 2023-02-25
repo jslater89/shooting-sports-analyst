@@ -739,13 +739,16 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     }));
   }
 
-  void _presentError(RatingError error) {
+  void _presentError(RatingError error) async {
     if(error is ShooterMappingError) {
-      _presentMappingError(error);
+      await _presentMappingError(error);
     }
     else if(error is ManualMappingBackwardError) {
-      _presentBackwardManualMappingError(error);
+      await _presentBackwardManualMappingError(error);
     }
+
+    _history.resetRaters();
+    _processMatches();
   }
 
   Future<void> _presentMappingError(ShooterMappingError error) async {
@@ -802,9 +805,6 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       // Save the fix here, too.
       var pm = RatingProjectManager();
       await pm.saveProject(_history.project, mapName: RatingProjectManager.autosaveName);
-
-      _history.resetRaters();
-      await _history.processInitialMatches();
     }
     else {
       // If we somehow don't get a fix, go back to configure
@@ -876,12 +876,9 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     // Save the fix here, too.
     var pm = RatingProjectManager();
     await pm.saveProject(_history.project, mapName: RatingProjectManager.autosaveName);
-
-    // reset, recalculate
-    _history.resetRaters();
-    _history.processInitialMatches();
   }
 
+  var failedMatches = <String, MatchGetError>{};
   Future<bool> _getMatchResultFiles(List<String> urls) async {
     setState(() {
       _loadingState = _LoadingState.readingCache;
@@ -894,7 +891,6 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     });
 
     var localUrls = []..addAll(urls);
-    var failedMatches = <String, MatchGetError>{};
 
     var urlsByFuture = <Future<Result<PracticalMatch, MatchGetError>>, String>{};
     while(localUrls.isNotEmpty) {
@@ -1005,6 +1001,103 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       await Future.delayed(Duration(milliseconds: 1));
     });
 
+    var result = await _processMatches();
+
+    if(failedMatches.isNotEmpty) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Failed to download ${failedMatches.length} matches"),
+          duration: Duration(seconds: 10),
+          action: SnackBarAction(
+            label: "VIEW",
+            onPressed: () async {
+              await showDialog(context: context, builder: (context) {
+                return StatefulBuilder(
+                    builder: (context, setState) {
+                      return AlertDialog(
+                        title: Text("Failed matches"),
+                        scrollable: true,
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            TextButton(
+                              child: Text("REMOVE ALL"),
+                              onPressed: () {
+                                _history.project.matchUrls.removeWhere((element) => failedMatches.keys.contains(element));
+                                setState(() {
+                                  failedMatches.clear();
+                                  _historyChanged = true;
+                                });
+
+                                Navigator.of(context).pop();
+                              },
+                            ),
+                            for(var key in failedMatches.keys) Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                MouseRegion(
+                                  cursor: SystemMouseCursors.click,
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      HtmlOr.openLink(key);
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(4.0),
+                                      child: Text(key,
+                                        overflow: TextOverflow.fade,
+                                        softWrap: false,
+                                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                                          decoration: TextDecoration.underline,
+                                          color: Colors.blueAccent,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: 5),
+                                Padding(
+                                  padding: const EdgeInsets.all(4.0),
+                                  child: Text(failedMatches[key]?.message ?? ""),
+                                ),
+                                IconButton(
+                                  icon: Icon(Icons.remove),
+                                  onPressed: () {
+                                    _history.project.matchUrls.remove(key);
+                                    setState(() {
+                                      _historyChanged = true;
+                                      failedMatches.remove(key);
+                                    });
+
+                                    if(failedMatches.isEmpty) Navigator.of(context).pop();
+                                  },
+                                ),
+                              ],
+                            )
+                          ],
+                        ),
+                        actions: [
+                          TextButton(
+                            child: Text("CLOSE"),
+                            onPressed: Navigator.of(context).pop,
+                          )
+                        ],
+                      );
+                    }
+                );
+              });
+
+              setState(() {
+                // catch any changes made by the dialog
+              });
+            },
+          ),
+        ));
+
+    return result;
+  }
+
+  Future<bool> _processMatches() async {
+    var urls = widget.matchUrls;
+
     var result = await _history.processInitialMatches();
     if(result.isErr()) {
       _presentError(result.unwrapErr());
@@ -1017,94 +1110,6 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       _loadingState = _LoadingState.done;
     });
 
-    if(failedMatches.isNotEmpty) ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Failed to download ${failedMatches.length} matches"),
-        duration: Duration(seconds: 10),
-        action: SnackBarAction(
-          label: "VIEW",
-          onPressed: () async {
-            await showDialog(context: context, builder: (context) {
-              return StatefulBuilder(
-                builder: (context, setState) {
-                  return AlertDialog(
-                    title: Text("Failed matches"),
-                    scrollable: true,
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        TextButton(
-                          child: Text("REMOVE ALL"),
-                          onPressed: () {
-                            _history.project.matchUrls.removeWhere((element) => failedMatches.keys.contains(element));
-                            setState(() {
-                              failedMatches.clear();
-                              _historyChanged = true;
-                            });
-
-                            Navigator.of(context).pop();
-                          },
-                        ),
-                        for(var key in failedMatches.keys) Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            MouseRegion(
-                              cursor: SystemMouseCursors.click,
-                              child: GestureDetector(
-                                onTap: () {
-                                  HtmlOr.openLink(key);
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.all(4.0),
-                                  child: Text(key,
-                                    overflow: TextOverflow.fade,
-                                    softWrap: false,
-                                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                                      decoration: TextDecoration.underline,
-                                      color: Colors.blueAccent,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 5),
-                            Padding(
-                              padding: const EdgeInsets.all(4.0),
-                              child: Text(failedMatches[key]?.message ?? ""),
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.remove),
-                              onPressed: () {
-                                _history.project.matchUrls.remove(key);
-                                setState(() {
-                                  _historyChanged = true;
-                                  failedMatches.remove(key);
-                                });
-
-                                if(failedMatches.isEmpty) Navigator.of(context).pop();
-                              },
-                            ),
-                          ],
-                        )
-                      ],
-                    ),
-                    actions: [
-                      TextButton(
-                        child: Text("CLOSE"),
-                        onPressed: Navigator.of(context).pop,
-                      )
-                    ],
-                  );
-                }
-              );
-            });
-
-            setState(() {
-              // catch any changes made by the dialog
-            });
-          },
-        ),
-      ));
     return true;
   }
 }

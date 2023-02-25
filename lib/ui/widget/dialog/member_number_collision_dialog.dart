@@ -186,7 +186,7 @@ class _MemberNumberCollisionDialogState extends State<MemberNumberCollisionDialo
                     showDialog(context: context, builder: (context) => ShooterStatsDialog(rating: shooter, match: shooter.ratingEvents.last.match));
                   }
                   else {
-                    launch("https://uspsa.org/classification/${shooter.originalMemberNumber}");
+                    launchUrl(Uri.parse("https://uspsa.org/classification/${shooter.originalMemberNumber}"));
                   }
                 },
               )
@@ -261,6 +261,7 @@ class _DataFixDialog extends StatefulWidget {
 
 class _DataFixDialogState extends State<_DataFixDialog> {
   late ShooterRating badRating;
+  late ShooterRating goodRating;
 
   String? errorText;
 
@@ -273,13 +274,20 @@ class _DataFixDialogState extends State<_DataFixDialog> {
     super.initState();
 
     badRating = widget.culprit1;
+    goodRating = widget.culprit2;
 
     updateText();
   }
 
   void switchRatings() {
-    if(badRating == widget.culprit1) badRating = widget.culprit2;
-    else badRating = widget.culprit1;
+    if(badRating == widget.culprit1) {
+      badRating = widget.culprit2;
+      goodRating = widget.culprit1;
+    }
+    else {
+      badRating = widget.culprit1;
+      goodRating = widget.culprit2;
+    }
 
     updateText();
   }
@@ -287,6 +295,7 @@ class _DataFixDialogState extends State<_DataFixDialog> {
   void updateText() {
     nameController.text = badRating.getName(suffixes: false);
     wrongNumberController.text = badRating.memberNumber;
+    rightNumberController.text = goodRating.memberNumber;
   }
 
   CollisionFix? createFix() {
