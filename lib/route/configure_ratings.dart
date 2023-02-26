@@ -982,7 +982,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
           return MemberNumberDialog(
             title: "Whitelist member numbers",
             helpText: "Whitelisted member numbers will be included in the ratings, even if they fail "
-                "validation in some way. Enter one per line. Prefixes (TY, A, L, etc.) will be removed automatically.",
+                "validation in some way. Enter one per line. Enter complete member numbers including prefixes. "
+                "They will be post-processed automatically if needed.",
             hintText: "A102675",
             initialList: _memNumWhitelist,
           );
@@ -1015,8 +1016,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
             title: "Manual member number mappings",
             helpText: "If the automatic member number mapper does not correctly merge ratings "
                 "on two member numbers belonging to the same shooter, you can add manual mappings "
-                "here. Member numbers entered here will only be mapped to each other. "
-                "Prefixes are removed automatically.",
+                "here. Enter complete member numbers, including prefixes.\n\n"
+                "Prefer the 'fix data entry errors' option unless mapping an associate number to a "
+                "lifetime or benefactor member number.",
             sourceHintText: "A123456",
             targetHintText: "L1234",
             initialMap: _memNumMappings,
@@ -1032,9 +1034,11 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         var mappings = await showDialog<Map<String, String>>(context: context, builder: (context) {
           return MemberNumberMapDialog(
             title: "Member number mapping blacklist",
-            helpText: "Pairs of member numbers given here will never be mapped to one another. Enter a pair "
-                "of member numbers here when the automatic member number mapping process incorrectly merges "
-                "two distinct shooters who share a name.",
+            helpText: "The automatic member number mapper will treat numbers entered here as different. "
+                "For numbers of the same type (associate to associate, lifetime to lifetime, etc.), this "
+                "will prevent a pair of numbers from being detected as a data entry error. For numbers of "
+                "different types (associate to lifetime, etc.), this will prevent the number on the left from "
+                "being mapped to the number on the right.",
             sourceHintText: "A123456",
             targetHintText: "L1234",
             initialMap: _memNumMappingBlacklist,
@@ -1077,15 +1081,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
       case _MenuEntry.dataEntryErrors:
         showDialog(context: context, builder: (context) => MemberNumberCorrectionListDialog(
-          title: "Fix data entry errors",
           corrections: _memNumCorrections,
           width: 700,
-          nameHintText: "Name",
-          sourceHintText: "Invalid #",
-          targetHintText: "Corrected #",
-          helpText: "Use this feature to correct one-off data entry errors. If John Doe mistakenly enters "
-              "A99999 for his member number, but his member number is actually A88888, enter 'John Doe' in "
-              "the left field, 'A99999' in the center field, and 'A88888' in the right field.",
         ));
     }
   }

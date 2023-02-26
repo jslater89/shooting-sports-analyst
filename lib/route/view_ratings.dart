@@ -609,15 +609,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
       case _MenuEntry.dataErrors:
         var changed = await showDialog<bool>(barrierDismissible: false, context: context, builder: (context) => MemberNumberCorrectionListDialog(
-          title: "Fix data entry errors",
           corrections: _history.settings.memberNumberCorrections,
           width: 700,
-          nameHintText: "Name",
-          sourceHintText: "Invalid #",
-          targetHintText: "Corrected #",
-          helpText: "Use this feature to correct one-off data entry errors. If John Doe mistakenly enters "
-              "A99999 for his member number, but his member number is actually A88888, enter 'John Doe' in "
-              "the left field, 'A99999' in the center field, and 'A88888' in the right field.",
         ));
 
         if(changed ?? false) {

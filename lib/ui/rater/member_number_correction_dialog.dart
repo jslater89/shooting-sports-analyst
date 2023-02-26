@@ -8,11 +8,13 @@ class MemberNumberCorrectionListDialog extends StatefulWidget {
   const MemberNumberCorrectionListDialog({
     Key? key,
     required this.corrections,
-    required this.title,
-    this.helpText,
-    this.nameHintText,
-    this.sourceHintText,
-    this.targetHintText,
+    this.title = "Fix data entry errors",
+    this.helpText = "Use this feature to correct one-off data entry errors. If John Doe mistakenly enters "
+        "A99999 for his member number, but his member number is actually A88888, enter 'John Doe' in "
+        "the left field, 'A99999' in the center field, and 'A88888' in the right field.",
+    this.nameHintText = "Name",
+    this.sourceHintText = "Invalid #",
+    this.targetHintText = "Corrected #",
     this.width = 600,
   }) : super(key: key);
 
