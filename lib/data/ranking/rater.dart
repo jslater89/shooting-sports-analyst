@@ -406,19 +406,27 @@ class Rater {
         _MemNumType? failedType;
         for(var n in list) {
           var type = _MemNumType.classify(n);
-          var userMapping = _userMemberNumberMappings[n];
           numbers[type] ??= [];
-
           numbers[type]!.add(n);
-          if(userMapping != null) {
-            type = _MemNumType.classify(userMapping);
-            numbers[type]!.add(userMapping);
-          }
         }
 
+        var bestNumberOptions = _MemNumType.targetNumber(numbers);
+        String? bestCandidate;
+
+        if(bestNumberOptions.length == 1) bestCandidate = bestNumberOptions.first;
+
         for(var type in numbers.keys) {
-          var nList = numbers[type]!;
-          if(nList.length == 1) continue;
+          // New list so we can remove blacklisted options
+          var nList = []..addAll(numbers[type]!);
+
+          for(var n in nList) {
+            if(bestCandidate != null && _memberNumberMappingBlacklist[n] == bestCandidate) {
+              numbers[_MemNumType.classify(bestCandidate)]!.remove(bestCandidate);
+            }
+          }
+
+          nList = []..addAll(numbers[type]!);
+          if(nList.length <= 1) continue;
 
           // To have >1 number in the same type and still be able to map
           // automatically, it must be part of a valid user mapping.
@@ -441,9 +449,6 @@ class Rater {
 
         if(automaticMappingFailed) {
           if(verbose) print("Ignoring $name with numbers $list: multiple numbers of type ${failedType?.name}");
-          // TODO: checking none/loose/strict
-          // none never bails
-          // loose bails for
           if(checkDataEntryErrors && failedType != null && numbers[failedType]!.length == 2) {
             var n1 = numbers[failedType]![0];
             var n2 = numbers[failedType]![1];
@@ -473,7 +478,7 @@ class Rater {
               var s1 = knownShooters[n1];
               var s2 = knownShooters[n2];
               if(s1 != null && s2 != null) {
-                print("Fixable error for $s1 and $s2");
+                print("Fixable error for $n1->$s1 and $n2->$s2");
                 return RatingResult.err(ShooterMappingError(
                   culprits: [s1, s2],
                   accomplices: {},
@@ -490,8 +495,9 @@ class Rater {
           }
         }
 
-        var bestNumberOptions = _MemNumType.targetNumber(numbers);
-        String? bestCandidate;
+        // Reset this, now that we've filtered out everything we can.
+        bestNumberOptions = _MemNumType.targetNumber(numbers);
+        bestCandidate = null;
 
         // options will only be length > 1 if we have a manual mapping in the best number options,
         // so pick the first one that's a target.
@@ -575,7 +581,7 @@ class Rater {
           ));
         }
 
-        if(verbose) debugPrint("Shooter $name has >=2 member numbers, mapping: $list to $bestNumber");
+        if(verbose) debugPrint("Shooter $name has >=2 member numbers, mapping: ${numbers.values.flattened.toList()} to $bestNumber");
 
         var target = knownShooters[bestNumber]!;
 
@@ -1495,6 +1501,10 @@ enum _MemNumType {
   benefactor,
   regionDirector;
 
+  bool betterThan(_MemNumType other) {
+    return other.index > this.index;
+  }
+
   static _MemNumType classify(String number) {
     if(number.startsWith("RD")) return _MemNumType.regionDirector;
     if(number.startsWith("B")) return _MemNumType.benefactor;
@@ -1506,7 +1516,7 @@ enum _MemNumType {
   static List<String> targetNumber(Map<_MemNumType, List<String>> numbers) {
     for(var type in _MemNumType.values.reversed) {
       var v = numbers[type];
-      if(v != null) return v;
+      if(v != null && v.isNotEmpty) return v;
     }
 
     throw ArgumentError("Empty map provided");

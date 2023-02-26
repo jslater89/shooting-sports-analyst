@@ -181,6 +181,6 @@ class EloShooterRating extends ShooterRating {
 
   @override
   String toString() {
-    return "${getName(suffixes: false)} ${rating.round()} ($hashCode)";
+    return "${getName(suffixes: false)} $memberNumber ${rating.round()} ($hashCode)";
   }
 }

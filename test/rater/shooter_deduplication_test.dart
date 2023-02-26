@@ -3,86 +3,106 @@ import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
+import 'package:uspsa_result_viewer/data/ranking/rating_error.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 
 void main() async {
-  var matches = deduplicationTestData();
 
-  var history = RatingHistory(matches: matches, progressCallback: (a, b, c) async {});
-  await history.processInitialMatches();
+  group("simple deduplication", () {
+    test("simple shooter deduplication", () async {
+      var matches = deduplicationTestData();
 
-  var rater = history.raterFor(history.matches.last, RaterGroup.open);
+      var history = RatingHistory(matches: matches, progressCallback: (a, b, c) async {});
+      await history.processInitialMatches();
 
-  test("simple shooter deduplication", () {
-    expect(rater.uniqueShooters.length, 2);
-    var doe = rater.uniqueShooters.firstWhere((element) => element.lastName == "Doe");
-    expect(doe.memberNumber, "1234");
-    expect(doe.originalMemberNumber, "L1234");
+      var rater = history.raterFor(history.matches.last, RaterGroup.open);
 
-    // 3 one-stage matches
-    expect(doe.length, 3);
+      expect(rater.uniqueShooters.length, 2);
+      var doe = rater.uniqueShooters.firstWhere((element) => element.lastName == "Doe");
+      expect(doe.memberNumber, "L1234");
+      expect(doe.originalMemberNumber, "L1234");
+
+      // 3 one-stage matches
+      expect(doe.length, 3);
+    });
+
+    test("copied deduplication", () async {
+      var matches = deduplicationTestData();
+
+      var history = RatingHistory(matches: matches, progressCallback: (a, b, c) async {});
+      await history.processInitialMatches();
+
+      var rater = history.raterFor(history.matches.last, RaterGroup.open);
+
+      var newRater = Rater.copy(rater);
+      expect(newRater.uniqueShooters.length, 2);
+    });
+
+    test("post-initial mapping", () async {
+      var matches = deduplicationTestData();
+
+      var history = RatingHistory(matches: matches, progressCallback: (a, b, c) async {});
+      await history.processInitialMatches();
+
+      await history.addMatch(rdMemberNumberTestData());
+      var rater = history.raterFor(history.matches.last, RaterGroup.open);
+      expect(rater.uniqueShooters.length, 2);
+      var johnson = rater.uniqueShooters.firstWhere((element) => element.lastName == "Johnson");
+      expect(johnson.memberNumber, "L5432");
+      expect(johnson.originalMemberNumber, "L5432");
+    });
+
   });
 
-  test("copied deduplication", () {
-    var newRater = Rater.copy(rater);
-    expect(newRater.uniqueShooters.length, 2);
+  group("blacklist testing", () {
+    test("blacklisted mappings", () async {
+      var matches = deduplicationTestData();
+      RatingHistorySettings settings = RatingHistorySettings(algorithm: MultiplayerPercentEloRater());
+      settings.memberNumberMappingBlacklist = {"12345": "L1234"};
+      var project = RatingProject(name: "Test", settings: settings, matchUrls: []);
+      var history = RatingHistory(project: project, matches: matches);
+      await history.processInitialMatches();
+      var rater = history.raterFor(history.matches.last, RaterGroup.open);
+
+      expect(rater.uniqueShooters.length, 3);
+      var does = rater.uniqueShooters.where((s) => s.lastName == "Doe");
+      expect(does.length, 2);
+      bool seen1 = false;
+      bool seen2 = false;
+      for(var d in does) {
+        if(d.originalMemberNumber.startsWith("L")) seen1 = true;
+        if(d.originalMemberNumber.startsWith("A")) seen2 = true;
+      }
+      expect(seen1, true);
+      expect(seen2, true);
+    });
+
+    test("user mappings and blacklist", () async {
+      var matches = deduplicationTestData();
+      RatingHistorySettings settings = RatingHistorySettings(algorithm: MultiplayerPercentEloRater());
+      settings.memberNumberMappingBlacklist = {"12345": "L1234"};
+      settings.userMemberNumberMappings = {"12345": "54321"};
+      var project = RatingProject(name: "Test", settings: settings, matchUrls: []);
+      var history = RatingHistory(project: project, matches: matches);
+      var result = await history.processInitialMatches();
+
+      if(result.isErr()) {
+        var err = result.unwrapErr() as ShooterMappingError;
+        print(err.culprits);
+        print(err.accomplices);
+      }
+      expect(result.isOk(), true);
+
+      var rater = history.raterFor(history.matches.last, RaterGroup.open);
+
+      expect(rater.uniqueShooters.length, 2);
+      var does = rater.uniqueShooters.where((s) => s.lastName == "Doe");
+      expect(does.length, 1);
+      var johnsons = rater.uniqueShooters.where((s) => s.lastName == "Johnson");
+      expect(johnsons.length, 1);
+      expect(rater.memberNumberMappings["12345"], "54321");
+    });
   });
-
-  await history.addMatch(rdMemberNumberTestData());
-
-  rater = history.raterFor(history.matches.last, RaterGroup.open);
-  test("post-initial mapping", () {
-    expect(rater.uniqueShooters.length, 2);
-    var johnson = rater.uniqueShooters.firstWhere((element) => element.lastName == "Johnson");
-    expect(johnson.memberNumber, "5432");
-    expect(johnson.originalMemberNumber, "L5432");
-  });
-
-  // Fresh set
-  matches = deduplicationTestData();
-  RatingHistorySettings settings = RatingHistorySettings(algorithm: MultiplayerPercentEloRater());
-  settings.memberNumberMappingBlacklist = {"12345": "1234"};
-  var project = RatingProject(name: "Test", settings: settings, matchUrls: []);
-
-  history = RatingHistory(project: project, matches: matches);
-  await history.processInitialMatches();
-  rater = history.raterFor(history.matches.last, RaterGroup.open);
-
-  test("blacklisted mappings", () {
-    expect(rater.uniqueShooters.length, 3);
-    var does = rater.uniqueShooters.where((s) => s.lastName == "Doe");
-    expect(does.length, 2);
-    bool seen1 = false;
-    bool seen2 = false;
-    for(var d in does) {
-      if(d.originalMemberNumber.startsWith("L")) seen1 = true;
-      if(d.originalMemberNumber.startsWith("A")) seen2 = true;
-    }
-    expect(seen1, true);
-    expect(seen2, true);
-  });
-
-  // Fresh set
-  matches = deduplicationTestData();
-  settings = RatingHistorySettings(algorithm: MultiplayerPercentEloRater());
-  settings.memberNumberMappingBlacklist = {"12345": "1234"};
-  settings.userMemberNumberMappings = {"12345": "54321"};
-  project = RatingProject(name: "Test", settings: settings, matchUrls: []);
-
-  history = RatingHistory(project: project, matches: matches);
-  await history.processInitialMatches();
-  rater = history.raterFor(history.matches.last, RaterGroup.open);
-
-  test("user mappings and blacklist", () {
-    expect(rater.uniqueShooters.length, 2);
-    var does = rater.uniqueShooters.where((s) => s.lastName == "Doe");
-    expect(does.length, 1);
-    var johnsons = rater.uniqueShooters.where((s) => s.lastName == "Johnson");
-    expect(johnsons.length, 1);
-    expect(rater.memberNumberMappings["12345"], "54321");
-  });
-
-  // TODO: test more esoteric combinations here
 }
 
 List<PracticalMatch> deduplicationTestData() {
@@ -211,7 +231,7 @@ List<PracticalMatch> deduplicationTestData() {
   // match 3
 
   PracticalMatch m3 = PracticalMatch();
-  m3.name = "Match 2";
+  m3.name = "Match 3";
   m3.practiscoreId = "2";
   m3.reportContents = "";
   m3.level = MatchLevel.I;
@@ -275,7 +295,7 @@ List<PracticalMatch> deduplicationTestData() {
 
 PracticalMatch rdMemberNumberTestData() {
   PracticalMatch m3 = PracticalMatch();
-  m3.name = "Match 2";
+  m3.name = "Match 4";
   m3.practiscoreId = "2";
   m3.reportContents = "";
   m3.level = MatchLevel.I;

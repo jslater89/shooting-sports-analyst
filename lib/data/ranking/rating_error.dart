@@ -37,8 +37,8 @@ class ManualMappingBackwardError extends RatingError {
   ManualMappingBackwardError({required this.source, required this.target});
 }
 
-class RatingResult extends Result<void, RatingError> {
-  RatingResult.ok() : super.ok(null);
+class RatingResult extends Result<bool, RatingError> {
+  RatingResult.ok() : super.ok(true);
   RatingResult.err(super.error) : super.err();
 }
 
