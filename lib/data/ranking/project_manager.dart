@@ -265,6 +265,7 @@ class RatingProject {
   String toJson() {
     Map<String, dynamic> map = {};
     map[_nameKey] = name;
+    map[_checkDataEntryKey] = settings.checkDataEntryErrors;
     map[_combineLocapKey] = settings.groups.contains(RaterGroup.locap);
     map[_combineOpenPCCKey] = settings.groups.contains(RaterGroup.openPcc);
     map[_combineLimitedCOKey] = settings.groups.contains(RaterGroup.limitedCO);

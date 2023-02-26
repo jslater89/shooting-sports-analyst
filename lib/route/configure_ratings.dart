@@ -157,6 +157,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     setState(() {
       matchUrls = []..addAll(project.matchUrls);
       _keepHistory = project.settings.preserveHistory;
+      _checkDataEntryErrors = project.settings.checkDataEntryErrors;
       _combineLocap = project.settings.groups.contains(RaterGroup.locap);
       _combineLimitedCO = project.settings.groups.contains(RaterGroup.limitedCO);
       _combineOpenPCC = project.settings.groups.contains(RaterGroup.openPcc);
