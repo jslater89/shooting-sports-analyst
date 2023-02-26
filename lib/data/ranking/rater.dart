@@ -349,29 +349,6 @@ class Rater {
       _memberNumberMappings[num] ??= num;
     }
 
-    Set<String> createdUserMappings = {};
-    for(var sourceNumber in detectedUserMappings.keys) {
-      var targetNumber = detectedUserMappings[sourceNumber]!;
-      var target = knownShooters[targetNumber];
-      var source = knownShooters[sourceNumber];
-
-      if(source != null && target != null) {
-        if(target.length == 0) {
-          _mapRatings(target, source);
-          if(verbose) print("Mapping $source to $target: manual mapping");
-          createdUserMappings.add(sourceNumber);
-          createdUserMappings.add(targetNumber);
-        }
-        else {
-          if(verbose) print("Manual mapping backward");
-          return RatingResult.err(ManualMappingBackwardError(
-            source: source,
-            target: target,
-          ));
-        }
-      }
-    }
-
     // TODO: three-step mapping
     // TODO: see other TODO in this file about triple mapping
     // Say we have John Doe, A12345 in the set already, and
@@ -405,17 +382,6 @@ class Rater {
     for(var name in namesToNumbers.keys) {
       var list = namesToNumbers[name]!;
 
-      // Skip anyone we've mapped manually
-      bool ignore = false;
-      for(var num in list) {
-        if(createdUserMappings.contains(num)) {
-          ignore = true;
-          if(verbose) print("Ignoring $num: mapped manually");
-          break;
-        }
-      }
-      if(ignore) continue;
-
       if(list.length >= 2) {
         // There are three categories of number, and we only map from 'high' to 'low':
         // 4-6 digit A/TY/FY (>=9000)
@@ -439,9 +405,14 @@ class Rater {
         _MemNumType? failedType;
         for(var n in list) {
           var type = _MemNumType.classify(n);
+          var userMapping = _userMemberNumberMappings[n];
           numbers[type] ??= [];
 
           numbers[type]!.add(n);
+          if(userMapping != null) {
+            type = _MemNumType.classify(userMapping);
+            numbers[type]!.add(userMapping);
+          }
         }
 
         for(var type in numbers.keys) {
@@ -475,7 +446,18 @@ class Rater {
           if(failedType != null && numbers[failedType]!.length == 2) {
             var n1 = numbers[failedType]![0];
             var n2 = numbers[failedType]![1];
-            if (strdiff.ratio(n1, n2) > 80) {
+
+            // Blacklisting two numbers in the same type means we should ignore them.
+            // TODO: need another dialog to disambiguate, in this case:
+            // John Doe           John Doe
+            //  A12345             A67890
+            //  L1234
+            // Need to be able to say "There are N John Does, one of whom has these numbers, and
+            // the other of whom has this/these numbers."
+            if(_memberNumberMappingBlacklist[n1] == n2 || _memberNumberMappingBlacklist[n2] == n1) {
+              continue;
+            }
+            else if (strdiff.ratio(n1, n2) > 65) {
               var s1 = knownShooters[n1];
               var s2 = knownShooters[n2];
               if(s1 != null && s2 != null) {
@@ -483,32 +465,17 @@ class Rater {
                 return RatingResult.err(ShooterMappingError(
                   culprits: [s1, s2],
                   accomplices: {},
+                  dataEntry: true,
                 ));
               }
             }
+            else {
+              continue;
+            }
           }
-          continue;
-        }
-
-        List<ShooterRating> withHistory = [];
-        for(var n in numbers.values) {
-          var rating = knownShooters[n];
-          if(rating != null && rating.length > 0) withHistory.add(rating);
-        }
-
-        if(withHistory.length > 1) {
-          if(verbose) print("Ignoring $name with numbers $list: ${withHistory.length} ratings have history: $withHistory");
-          Map<ShooterRating, List<ShooterRating>> accomplices = {};
-
-          for(var culprit in withHistory) {
-            accomplices[culprit] = []..addAll(ratingsByName[_processName(culprit)]!);
-            accomplices[culprit]!.remove(culprit);
+          else {
+            continue;
           }
-
-          return RatingResult.err(ShooterMappingError(
-            culprits: withHistory,
-            accomplices: accomplices,
-          ));
         }
 
         var bestNumberOptions = _MemNumType.targetNumber(numbers);
@@ -574,7 +541,27 @@ class Rater {
           continue;
         }
 
-        // TODO: return error with multiple possible mappings
+        // If, after all other checks, we still have two shooters with history...
+        List<ShooterRating> withHistory = [];
+        for(var n in numbers.values) {
+          var rating = knownShooters[n];
+          if(rating != null && rating.length > 0) withHistory.add(rating);
+        }
+
+        if(withHistory.length > 1) {
+          if(verbose) print("Ignoring $name with numbers $list: ${withHistory.length} ratings have history: $withHistory");
+          Map<ShooterRating, List<ShooterRating>> accomplices = {};
+
+          for(var culprit in withHistory) {
+            accomplices[culprit] = []..addAll(ratingsByName[_processName(culprit)]!);
+            accomplices[culprit]!.remove(culprit);
+          }
+
+          return RatingResult.err(ShooterMappingError(
+            culprits: withHistory,
+            accomplices: accomplices,
+          ));
+        }
 
         if(verbose) debugPrint("Shooter $name has >=2 member numbers, mapping: $list to $bestNumber");
 

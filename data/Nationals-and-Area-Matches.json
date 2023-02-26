@@ -1,1 +1,485 @@
-{"name":"Nationals and Area Matches","combineLocap":false,"combineOpPCC":false,"combineLimCO":false,"keepHistory":false,"urls":["https://practiscore.com/results/new/186615","https://practiscore.com/results/new/184732","https://practiscore.com/results/new/183968","https://practiscore.com/results/new/181797","https://practiscore.com/results/new/180171","https://practiscore.com/results/new/179598","https://practiscore.com/results/new/178742","https://practiscore.com/results/new/177171","https://practiscore.com/results/new/175816","https://practiscore.com/results/new/169680","https://practiscore.com/results/new/168263","https://practiscore.com/results/new/167354","https://practiscore.com/results/new/165379","https://practiscore.com/results/new/0ec0cf18-90b8-4bfe-a741-cef417f57ee7","https://practiscore.com/results/new/150803","https://practiscore.com/results/new/150676","https://practiscore.com/results/new/150048","https://practiscore.com/results/new/148135","https://practiscore.com/results/new/146707","https://practiscore.com/results/new/145355","https://practiscore.com/results/new/143211","https://practiscore.com/results/new/142725","https://practiscore.com/results/new/139302","https://practiscore.com/results/new/134571","https://practiscore.com/results/new/09b745af-437a-4812-b0b3-a264f01460a2","https://practiscore.com/results/new/131991","https://practiscore.com/results/new/122157","https://practiscore.com/results/new/121099","https://practiscore.com/results/new/120572","https://practiscore.com/results/new/119324","https://practiscore.com/results/new/0046b3d5-1bef-4c39-bf2b-b88c780e970d","https://practiscore.com/results/new/117974","https://practiscore.com/results/new/037aba45-6597-4f96-b252-cde146cc67cf","https://practiscore.com/results/new/117062","https://practiscore.com/results/new/116687","https://practiscore.com/results/new/116185","https://practiscore.com/results/new/115551","https://practiscore.com/results/new/113573","https://practiscore.com/results/new/109769","https://practiscore.com/results/new/78504839-42e2-4e2d-87d5-cec851e86562","https://practiscore.com/results/new/96963","https://practiscore.com/results/new/0adfc17d-f51c-4e35-a8ca-802c9b64d293","https://practiscore.com/results/new/96692","https://practiscore.com/results/new/4a21871c-5457-4fda-b2f6-10a1c2589a02","https://practiscore.com/results/new/93080","https://practiscore.com/results/new/1d2537da-10ef-49df-b3db-c6388c7c3b5b","https://practiscore.com/results/new/1e3856ae-c642-4d5f-af95-004cd274b9a6","https://practiscore.com/results/new/3b5608e3-2ba4-4793-8fef-f8cbdc08a520","https://practiscore.com/results/new/87404","https://practiscore.com/results/new/4f425413-5f85-488d-9c13-397e91ac5178","https://practiscore.com/results/new/07323e93-6c68-468e-8aa8-211e8cdfe573","https://practiscore.com/results/new/78750"],"memNumWhitelist":[],"aliases":{"maxmicheljr":"maxmichel"},"numMappings":{},"numMapBlacklist":{},"hiddenShooters":[],"memNumCorrections":[],"recDivs":{"433b1840-0e57-4397-8dae-1107bfe468a7":["production","pcc"]},"algo":"multiElo","byStage":true,"k":40.0,"probBase":4.0,"pctWt":0.4,"scale":400.0,"matchBlend":0.3,"errK":true,"errLow":0.19999999999999996,"errMaxThresh":40.0,"errMinThresh":10.0,"errUp":3.0,"errZero":0.0}
+{
+  "name": "Nationals and Area Matches",
+  "combineLocap": false,
+  "combineOpPCC": false,
+  "combineLimCO": false,
+  "keepHistory": false,
+  "urls": [
+    "https://practiscore.com/results/new/186615",
+    "https://practiscore.com/results/new/184732",
+    "https://practiscore.com/results/new/183968",
+    "https://practiscore.com/results/new/181797",
+    "https://practiscore.com/results/new/180171",
+    "https://practiscore.com/results/new/179598",
+    "https://practiscore.com/results/new/178742",
+    "https://practiscore.com/results/new/177171",
+    "https://practiscore.com/results/new/175816",
+    "https://practiscore.com/results/new/169680",
+    "https://practiscore.com/results/new/168263",
+    "https://practiscore.com/results/new/167354",
+    "https://practiscore.com/results/new/165379",
+    "https://practiscore.com/results/new/0ec0cf18-90b8-4bfe-a741-cef417f57ee7",
+    "https://practiscore.com/results/new/150803",
+    "https://practiscore.com/results/new/150676",
+    "https://practiscore.com/results/new/150048",
+    "https://practiscore.com/results/new/148135",
+    "https://practiscore.com/results/new/146707",
+    "https://practiscore.com/results/new/145355",
+    "https://practiscore.com/results/new/143211",
+    "https://practiscore.com/results/new/142725",
+    "https://practiscore.com/results/new/139302",
+    "https://practiscore.com/results/new/134571",
+    "https://practiscore.com/results/new/09b745af-437a-4812-b0b3-a264f01460a2",
+    "https://practiscore.com/results/new/131991",
+    "https://practiscore.com/results/new/122157",
+    "https://practiscore.com/results/new/121099",
+    "https://practiscore.com/results/new/120572",
+    "https://practiscore.com/results/new/119324",
+    "https://practiscore.com/results/new/0046b3d5-1bef-4c39-bf2b-b88c780e970d",
+    "https://practiscore.com/results/new/117974",
+    "https://practiscore.com/results/new/037aba45-6597-4f96-b252-cde146cc67cf",
+    "https://practiscore.com/results/new/117062",
+    "https://practiscore.com/results/new/116687",
+    "https://practiscore.com/results/new/116185",
+    "https://practiscore.com/results/new/115551",
+    "https://practiscore.com/results/new/113573",
+    "https://practiscore.com/results/new/109769",
+    "https://practiscore.com/results/new/78504839-42e2-4e2d-87d5-cec851e86562",
+    "https://practiscore.com/results/new/96963",
+    "https://practiscore.com/results/new/0adfc17d-f51c-4e35-a8ca-802c9b64d293",
+    "https://practiscore.com/results/new/96692",
+    "https://practiscore.com/results/new/4a21871c-5457-4fda-b2f6-10a1c2589a02",
+    "https://practiscore.com/results/new/93080",
+    "https://practiscore.com/results/new/1d2537da-10ef-49df-b3db-c6388c7c3b5b",
+    "https://practiscore.com/results/new/1e3856ae-c642-4d5f-af95-004cd274b9a6",
+    "https://practiscore.com/results/new/3b5608e3-2ba4-4793-8fef-f8cbdc08a520",
+    "https://practiscore.com/results/new/87404",
+    "https://practiscore.com/results/new/4f425413-5f85-488d-9c13-397e91ac5178",
+    "https://practiscore.com/results/new/07323e93-6c68-468e-8aa8-211e8cdfe573",
+    "https://practiscore.com/results/new/78750"
+  ],
+  "memNumWhitelist": [],
+  "aliases": {
+    "maxmicheljr": "maxmichel"
+  },
+  "numMappings": {},
+  "numMapBlacklist": {
+    "79715": "135453",
+    "81965": "108441",
+    "82210": "135200",
+    "113740": "114011",
+    "126957": "127956"
+  },
+  "hiddenShooters": [],
+  "memNumCorrections": [
+    {
+      "name": "mikeestrem",
+      "invalidNo": "246753",
+      "correctNo": "24653"
+    },
+    {
+      "name": "robertporter",
+      "invalidNo": "364944",
+      "correctNo": "36494"
+    },
+    {
+      "name": "keithnagelski",
+      "invalidNo": "106507Y",
+      "correctNo": "106507"
+    },
+    {
+      "name": "alfredomolina",
+      "invalidNo": "W88921",
+      "correctNo": "88921"
+    },
+    {
+      "name": "gregpurcell",
+      "invalidNo": "U23884",
+      "correctNo": "23884"
+    },
+    {
+      "name": "johnplatt",
+      "invalidNo": "371736",
+      "correctNo": "37136"
+    },
+    {
+      "name": "steveroesch",
+      "invalidNo": "U56427",
+      "correctNo": "56427"
+    },
+    {
+      "name": "robertcarranza",
+      "invalidNo": "1193493",
+      "correctNo": "119349"
+    },
+    {
+      "name": "firuzantahranci",
+      "invalidNo": "J137401",
+      "correctNo": "137401"
+    },
+    {
+      "name": "suevanblaricum",
+      "invalidNo": "48388",
+      "correctNo": "4888"
+    },
+    {
+      "name": "rickorr",
+      "invalidNo": "7406",
+      "correctNo": "74026"
+    },
+    {
+      "name": "donsandberg",
+      "invalidNo": "11842",
+      "correctNo": "118402"
+    },
+    {
+      "name": "michelleviscusi",
+      "invalidNo": "7765",
+      "correctNo": "77765"
+    },
+    {
+      "name": "alrealuyo",
+      "invalidNo": "4067",
+      "correctNo": "47067"
+    },
+    {
+      "name": "paulclark",
+      "invalidNo": "2070",
+      "correctNo": "20707"
+    },
+    {
+      "name": "sidashen",
+      "invalidNo": "9263",
+      "correctNo": "95263"
+    },
+    {
+      "name": "alejandrofernandez",
+      "invalidNo": "4051",
+      "correctNo": "40521"
+    },
+    {
+      "name": "tomcarpenter",
+      "invalidNo": "08477",
+      "correctNo": "8477"
+    },
+    {
+      "name": "jonhuspek",
+      "invalidNo": "2923",
+      "correctNo": "29923"
+    },
+    {
+      "name": "nealknudson",
+      "invalidNo": "YY42954",
+      "correctNo": "42954"
+    },
+    {
+      "name": "ryanvoykin",
+      "invalidNo": "128989",
+      "correctNo": "127989"
+    },
+    {
+      "name": "danarnette",
+      "invalidNo": "131514",
+      "correctNo": "121514"
+    },
+    {
+      "name": "richardmanjares",
+      "invalidNo": "120145",
+      "correctNo": "120146"
+    },
+    {
+      "name": "rafaelorellano",
+      "invalidNo": "135166",
+      "correctNo": "135116"
+    },
+    {
+      "name": "christopherhoward",
+      "invalidNo": "202801",
+      "correctNo": "102801"
+    },
+    {
+      "name": "chadjudd",
+      "invalidNo": "119479",
+      "correctNo": "119470"
+    },
+    {
+      "name": "philipgiannone",
+      "invalidNo": "119485",
+      "correctNo": "119475"
+    },
+    {
+      "name": "yishu",
+      "invalidNo": "109242",
+      "correctNo": "109249"
+    },
+    {
+      "name": "richwray",
+      "invalidNo": "104904",
+      "correctNo": "104094"
+    },
+    {
+      "name": "erikamitchell",
+      "invalidNo": "015555",
+      "correctNo": "105555"
+    },
+    {
+      "name": "danielcallahan",
+      "invalidNo": "115685",
+      "correctNo": "115686"
+    },
+    {
+      "name": "jerrydueitt",
+      "invalidNo": "108454",
+      "correctNo": "108354"
+    },
+    {
+      "name": "jimsteele",
+      "invalidNo": "134164",
+      "correctNo": "134163"
+    },
+    {
+      "name": "yoavamit",
+      "invalidNo": "139659",
+      "correctNo": "139569"
+    },
+    {
+      "name": "gordoncarrell",
+      "invalidNo": "R51332",
+      "correctNo": "51332"
+    },
+    {
+      "name": "shuhongli",
+      "invalidNo": "123973",
+      "correctNo": "123972"
+    },
+    {
+      "name": "dyllenhanleigh",
+      "invalidNo": "113250",
+      "correctNo": "113520"
+    },
+    {
+      "name": "robertcernigoj",
+      "invalidNo": "123476",
+      "correctNo": "123475"
+    },
+    {
+      "name": "keithdilworth",
+      "invalidNo": "L3284",
+      "correctNo": "L3294"
+    },
+    {
+      "name": "jamesstorey",
+      "invalidNo": "93721",
+      "correctNo": "97321"
+    },
+    {
+      "name": "stevenmcnamara",
+      "invalidNo": "76212",
+      "correctNo": "75212"
+    },
+    {
+      "name": "meghansmiley",
+      "invalidNo": "70930",
+      "correctNo": "70390"
+    },
+    {
+      "name": "mariadumbrique",
+      "invalidNo": "23331",
+      "correctNo": "113332"
+    },
+    {
+      "name": "christiansailer",
+      "invalidNo": "86982",
+      "correctNo": "L4698"
+    },
+    {
+      "name": "travisthompson",
+      "invalidNo": "L4963",
+      "correctNo": "L4936"
+    },
+    {
+      "name": "waynehelmick",
+      "invalidNo": "96422",
+      "correctNo": "96442"
+    },
+    {
+      "name": "rogerboyce",
+      "invalidNo": "69081",
+      "correctNo": "90681"
+    },
+    {
+      "name": "christophercollins",
+      "invalidNo": "85895",
+      "correctNo": "85985"
+    },
+    {
+      "name": "richardoh",
+      "invalidNo": "L3684",
+      "correctNo": "L3643"
+    },
+    {
+      "name": "jakisallis",
+      "invalidNo": "93414",
+      "correctNo": "94514"
+    },
+    {
+      "name": "rickpunu",
+      "invalidNo": "L2758",
+      "correctNo": "L2757"
+    },
+    {
+      "name": "jimtawzer",
+      "invalidNo": "87221",
+      "correctNo": "87721"
+    },
+    {
+      "name": "garychan",
+      "invalidNo": "54406",
+      "correctNo": "52406"
+    },
+    {
+      "name": "melissacabreros",
+      "invalidNo": "97988",
+      "correctNo": "97989"
+    },
+    {
+      "name": "davidpadovan",
+      "invalidNo": "67347",
+      "correctNo": "67947"
+    },
+    {
+      "name": "kellimckernan",
+      "invalidNo": "10868",
+      "correctNo": "101068"
+    },
+    {
+      "name": "ianmeyers",
+      "invalidNo": "L4678",
+      "correctNo": "L4768"
+    },
+    {
+      "name": "jjmalvarez",
+      "invalidNo": "62462",
+      "correctNo": "64462"
+    },
+    {
+      "name": "stephenhayes",
+      "invalidNo": "68760",
+      "correctNo": "68670"
+    },
+    {
+      "name": "ivanduenas",
+      "invalidNo": "76696",
+      "correctNo": "76697"
+    },
+    {
+      "name": "jonathanaurigui",
+      "invalidNo": "82854",
+      "correctNo": "82754"
+    },
+    {
+      "name": "jamesramos",
+      "invalidNo": "75542",
+      "correctNo": "65542"
+    },
+    {
+      "name": "juanrosado",
+      "invalidNo": "98830",
+      "correctNo": "97830"
+    },
+    {
+      "name": "chriszell",
+      "invalidNo": "94723",
+      "correctNo": "97423"
+    },
+    {
+      "name": "georgemackay",
+      "invalidNo": "87439",
+      "correctNo": "87438"
+    },
+    {
+      "name": "davidpape",
+      "invalidNo": "94283",
+      "correctNo": "94183"
+    },
+    {
+      "name": "scottgiesick",
+      "invalidNo": "L2971",
+      "correctNo": "L2781"
+    },
+    {
+      "name": "amandahill",
+      "invalidNo": "90961",
+      "correctNo": "80961"
+    },
+    {
+      "name": "evanthursby",
+      "invalidNo": "91875",
+      "correctNo": "91874"
+    },
+    {
+      "name": "franciscoromero",
+      "invalidNo": "88427",
+      "correctNo": "88426"
+    },
+    {
+      "name": "royfalcon",
+      "invalidNo": "79951",
+      "correctNo": "77951"
+    },
+    {
+      "name": "waldosamano",
+      "invalidNo": "97973",
+      "correctNo": "87973"
+    },
+    {
+      "name": "stephenlutman",
+      "invalidNo": "78964",
+      "correctNo": "78694"
+    },
+    {
+      "name": "jeffrockwell",
+      "invalidNo": "99509",
+      "correctNo": "99506"
+    },
+    {
+      "name": "kevinbock",
+      "invalidNo": "84867",
+      "correctNo": "84868"
+    },
+    {
+      "name": "anthonytomasso",
+      "invalidNo": "73853",
+      "correctNo": "73583"
+    },
+    {
+      "name": "claudiotondini",
+      "invalidNo": "15319",
+      "correctNo": "15317"
+    },
+    {
+      "name": "marcrichardson",
+      "invalidNo": "91400",
+      "correctNo": "91004"
+    }
+  ],
+  "recDivs": {
+    "433b1840-0e57-4397-8dae-1107bfe468a7": [
+      "production",
+      "pcc"
+    ]
+  },
+  "algo": "multiElo",
+  "byStage": true,
+  "k": 40.0,
+  "probBase": 4.0,
+  "pctWt": 0.4,
+  "scale": 400.0,
+  "matchBlend": 0.3,
+  "errK": true,
+  "errLow": 0.19999999999999996,
+  "errMaxThresh": 40.0,
+  "errMinThresh": 10.0,
+  "errUp": 3.0,
+  "errZero": 0.0
+}

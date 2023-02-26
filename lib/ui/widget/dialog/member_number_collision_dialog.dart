@@ -29,7 +29,7 @@ class _MemberNumberCollisionDialogState extends State<MemberNumberCollisionDialo
         width: 700,
         child: Column(
           children: [
-            _helpMessage,
+            widget.data.dataEntry ? _dataEntryHelp : _helpMessage,
             SizedBox(height: 10),
             Row(
               children: [
@@ -49,7 +49,7 @@ class _MemberNumberCollisionDialogState extends State<MemberNumberCollisionDialo
           mainAxisSize: MainAxisSize.max,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            TextButton(
+            if(!widget.data.dataEntry) TextButton(
               child: Text("MORE HELP"),
               onPressed: () {
                 showDialog(context: (context), builder: (context) => AlertDialog(
@@ -64,6 +64,7 @@ class _MemberNumberCollisionDialogState extends State<MemberNumberCollisionDialo
                 ));
               },
             ),
+            if(widget.data.dataEntry) Container(),
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -80,7 +81,7 @@ class _MemberNumberCollisionDialogState extends State<MemberNumberCollisionDialo
                     Navigator.of(context).pop(fix);
                   },
                 ),
-                TextButton(
+                if(!widget.data.dataEntry) TextButton(
                   child: Text("CREATE MAPPING"),
                   onPressed: () {
                     var fix = CollisionFix(
@@ -203,6 +204,12 @@ class _MemberNumberCollisionDialogState extends State<MemberNumberCollisionDialo
         "different names and did not map them to one another. You must take action "
         "manually to establish the relationship between these member numbers, if any, before "
         "rating can continue."
+  );
+
+  Text get _dataEntryHelp => const Text(
+      "The automatic member number mapper thinks this may be a typoed member number. If these two shooters "
+          "appear to be the same person, use the 'fix data' option to create a data correction. If these two "
+          "shooters share a name, but are not the same person, use the 'blacklist' option to suppress this message."
   );
 
   Text get _extraHelp => const Text(
@@ -367,7 +374,7 @@ class _DataFixDialogState extends State<_DataFixDialog> {
                     decoration: InputDecoration(
                       label: Text("Incorrect #")
                     ),
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r"[atyfblrdATYFBLRD0-9]"))],
                   ),
                 ),
                 const SizedBox(width: 5),
@@ -380,7 +387,7 @@ class _DataFixDialogState extends State<_DataFixDialog> {
                     decoration: InputDecoration(
                       label: Text("Correct #")
                     ),
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r"[atyfblrdATYFBLRD0-9]"))],
                   ),
                 ),
               ],

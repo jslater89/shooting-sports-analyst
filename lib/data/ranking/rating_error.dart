@@ -9,7 +9,7 @@ abstract class RatingError extends Error {
 }
 
 class ShooterMappingError extends RatingError {
-  ShooterMappingError({required this.culprits, required this.accomplices}) : super();
+  ShooterMappingError({required this.culprits, required this.accomplices, this.dataEntry = false}) : super();
 
   String get message => "Error mapping shooters";
 
@@ -23,6 +23,8 @@ class ShooterMappingError extends RatingError {
   /// Accomplices will contain, primarily, other shooters with identical names to the
   /// shooter in question, which may help reveal data entry errors.
   Map<ShooterRating, List<ShooterRating>> accomplices;
+
+  bool dataEntry;
 }
 
 class ManualMappingBackwardError extends RatingError {
