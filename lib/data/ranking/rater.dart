@@ -67,6 +67,7 @@ class Rater {
   Future<void> Function(int, int, String? eventName)? progressCallback;
   final int progressCallbackInterval;
   bool verbose;
+  bool checkDataEntryErrors;
 
   Timings timings = Timings();
 
@@ -81,6 +82,7 @@ class Rater {
     this.byStage = false,
     this.progressCallback,
     this.progressCallbackInterval = RatingHistory.progressCallbackInterval,
+    this.checkDataEntryErrors = true,
     Map<String, String>? shooterAliases,
     Map<String, String> userMemberNumberMappings = const {},
     Map<String, String> memberNumberMappingBlacklist = const {},
@@ -120,6 +122,7 @@ class Rater {
         this._shooterAliases = {}..addAll(other._shooterAliases),
         this._filters = other._filters,
         this.verbose = other.verbose,
+        this.checkDataEntryErrors = other.checkDataEntryErrors,
         this.memberNumberWhitelist = other.memberNumberWhitelist,
         this.progressCallbackInterval = other.progressCallbackInterval,
         this.ratingSystem = other.ratingSystem {
@@ -342,6 +345,7 @@ class Rater {
 
       namesToNumbers[finalName] ??= [];
       namesToNumbers[finalName]!.add(num);
+      if(userMapping != null) namesToNumbers[finalName]!.add(userMapping);
 
       ratingsByName[finalName] ??= [];
       ratingsByName[finalName]!.add(shooter);
@@ -390,14 +394,11 @@ class Rater {
         // 1-3-digit AD/RD (<=99)
 
         // To automatically map any given shooter, we need:
-        // 1. No more than 4 numbers (minus manual mappings/)
+        // 1. No more than 4 numbers (minus manual mappings)
         // 2. One number per category (minus manual mappings)
         // 3. At most one number with history
         // 4. Numbers not already mapped to the target.
         // 5. No numbers mapped to any numbers that aren't in list
-        // 6. Blacklisted numbers removed.
-        //    Say there's John Smith A123, L12, and John Smith L34. Blacklist A123 -> L34 means,
-        //    A123 should not be mapped to L34.
 
         // Verify 1 and 2
         Map<_MemNumType, List<String>> numbers = {};
@@ -443,17 +444,28 @@ class Rater {
           // TODO: checking none/loose/strict
           // none never bails
           // loose bails for
-          if(failedType != null && numbers[failedType]!.length == 2) {
+          if(checkDataEntryErrors && failedType != null && numbers[failedType]!.length == 2) {
             var n1 = numbers[failedType]![0];
             var n2 = numbers[failedType]![1];
 
             // Blacklisting two numbers in the same type means we should ignore them.
-            // TODO: need another dialog to disambiguate, in this case:
+
+            // TODO: we also need a blacklist solution for this:
             // John Doe           John Doe
             //  A12345             A67890
             //  L1234
-            // Need to be able to say "There are N John Does, one of whom has these numbers, and
-            // the other of whom has this/these numbers."
+            // What we need in the project settings is 'blacklist A67890 -> L1234'.
+            // We'll need to make blacklists into a list for each member number, since
+            // A67890 may be blacklisted against several numbers.
+            //
+            // Then we also need to check that before saying 'automatic mapping failed'.
+            // That is, if A67890's blacklist list contains the best target for this mapping,
+            // remove A67890 from the 'numbers' map.
+            //
+            // TODO: UI for this
+            // A dialog box with a column for 'is one shooter' and 'is not that shooter'.
+            // Everything in 'is not that shooter' will get blacklisted against everything in
+            // 'is one shooter'.
             if(_memberNumberMappingBlacklist[n1] == n2 || _memberNumberMappingBlacklist[n2] == n1) {
               continue;
             }

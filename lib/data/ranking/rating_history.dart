@@ -229,6 +229,7 @@ class RatingHistory {
       matches: matches,
       ratingSystem: _settings.algorithm,
       byStage: _settings.byStage,
+      checkDataEntryErrors: _settings.checkDataEntryErrors,
       filters: group.filters,
       progressCallback: progressCallback,
       progressCallbackInterval: progressCallbackInterval,
@@ -332,6 +333,7 @@ class RatingHistorySettings {
   // All of the below are serialized
   bool get byStage => algorithm.byStage;
   bool preserveHistory;
+  bool checkDataEntryErrors;
   List<RaterGroup> groups;
   List<String> memberNumberWhitelist;
   late MemberNumberCorrectionContainer memberNumberCorrections;
@@ -381,6 +383,7 @@ class RatingHistorySettings {
 
   RatingHistorySettings({
     this.preserveHistory = false,
+    this.checkDataEntryErrors = true,
     this.groups = const [RaterGroup.open, RaterGroup.limited, RaterGroup.pcc, RaterGroup.carryOptics, RaterGroup.locap],
     required this.algorithm,
     this.memberNumberWhitelist = const [],

@@ -221,6 +221,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   bool _combineLocap = true;
   bool _combineOpenPCC = false;
   bool _combineLimitedCO = false;
+  bool _checkDataEntryErrors = true;
 
   ScrollController _settingsScroll = ScrollController();
   ScrollController _matchScroll = ScrollController();
@@ -266,6 +267,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
     return RatingHistorySettings(
       algorithm: _ratingSystem,
+      checkDataEntryErrors: _checkDataEntryErrors,
       groups: groups,
       preserveHistory: _keepHistory,
       memberNumberWhitelist: _memNumWhitelist,
@@ -415,6 +417,20 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 if(value != null) {
                                   setState(() {
                                     _combineLocap = value;
+                                  });
+                                }
+                              }
+                            ),
+                            CheckboxListTile(
+                              title: Tooltip(
+                                child: Text("Check data entry errors?"),
+                                message: "Look for likely member number typos in the dataset if checked, and show a prompt with options to fix them.",
+                              ),
+                              value: _checkDataEntryErrors,
+                              onChanged: (value) {
+                                if(value != null) {
+                                  setState(() {
+                                    _checkDataEntryErrors = value;
                                   });
                                 }
                               }

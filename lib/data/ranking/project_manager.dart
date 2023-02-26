@@ -180,6 +180,7 @@ const _memberNumberMappingBlacklistKey = "numMapBlacklist";
 const _hiddenShootersKey = "hiddenShooters";
 const _memberNumberCorrectionsKey = "memNumCorrections";
 const _recognizedDivisionsKey = "recDivs";
+const _checkDataEntryKey = "checkDataEntry";
 
 // Values for the multiplayer percent elo rater.
 
@@ -220,6 +221,7 @@ class RatingProject {
 
     var settings = RatingHistorySettings(
       algorithm: algorithm,
+      checkDataEntryErrors: (encodedProject[_checkDataEntryKey] ?? true) as bool,
       preserveHistory: encodedProject[_keepHistoryKey] as bool,
       groups: RatingHistorySettings.groupsForSettings(
         combineOpenPCC: combineOpenPCC,
