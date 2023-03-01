@@ -10,6 +10,8 @@ rm uspsa-result-viewer.zip
 rm -rf uspsa-result-viewer
 cp -r bundle uspsa-result-viewer
 cp -r $PROJ_ROOT/assets uspsa-result-viewer
+cp $PROJ_ROOT/data/L2s-Since-2019.json uspsa-result-viewer
+cp $PROJ_ROOT/data/Nationals-and-Area-Matches.json uspsa-result-viewer
 mv uspsa-result-viewer/assets/linux-install.sh uspsa-result-viewer
 echo $VERSION > uspsa-result-viewer/version.txt
 zip -r uspsa-result-viewer.zip uspsa-result-viewer
