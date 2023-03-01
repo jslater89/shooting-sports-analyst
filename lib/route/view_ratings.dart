@@ -1132,6 +1132,10 @@ extension _Utilities on RaterGroup {
         return "OPEN/PCC";
       case RaterGroup.limitedCO:
         return "LIM/CO";
+      case RaterGroup.limitedOptics:
+        return "LO";
+      case RaterGroup.limOpsCO:
+        return "LO/CO";
     }
   }
 }

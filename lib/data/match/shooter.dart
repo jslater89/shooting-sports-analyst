@@ -119,6 +119,7 @@ enum Division {
   open,
   limited,
   carryOptics,
+  limitedOptics,
   limited10,
   production,
   singleStack,
@@ -138,6 +139,9 @@ enum Division {
 
       case "co":
       case "carry optics": return Division.carryOptics;
+
+      case "lo":
+      case "limited optics": return Division.limitedOptics;
 
       case "l10":
       case "ltd10":
@@ -232,6 +236,8 @@ extension DDisplayString on Division? {
         return "Limited";
       case Division.carryOptics:
         return "Carry Optics";
+      case Division.limitedOptics:
+        return "Limited Optics";
       case Division.limited10:
         return "Limited 10";
       case Division.production:

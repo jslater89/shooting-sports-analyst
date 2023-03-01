@@ -250,13 +250,15 @@ enum RaterGroup {
   limited,
   pcc,
   carryOptics,
+  limitedOptics,
   singleStack,
   production,
   limited10,
   revolver,
   locap,
   openPcc,
-  limitedCO;
+  limitedCO,
+  limOpsCO;
 
   FilterSet get filters {
     return FilterSet(
@@ -298,6 +300,10 @@ enum RaterGroup {
         return [Division.open, Division.pcc];
       case RaterGroup.limitedCO:
         return [Division.limited, Division.carryOptics];
+      case RaterGroup.limitedOptics:
+        return [Division.limitedOptics];
+      case RaterGroup.limOpsCO:
+        return [Division.limitedOptics, Division.carryOptics];
     }
   }
 
@@ -325,6 +331,10 @@ enum RaterGroup {
         return "Open/PCC";
       case RaterGroup.limitedCO:
         return "Limited/CO";
+      case RaterGroup.limitedOptics:
+        return "Limited Optics";
+      case RaterGroup.limOpsCO:
+        return "LO/CO";
     }
   }
 }
