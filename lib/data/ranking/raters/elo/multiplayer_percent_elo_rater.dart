@@ -377,7 +377,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
   @override
   String ratingsToCsv(List<ShooterRating> ratings) {
-    String csv = "Member#,Name,Rating,LastChange,Error,Trend,${byStage ? "Stages" : "Matches"}\n";
+    String csv = "Member#,Class,Name,Rating,LastChange,Error,Trend,Positivity,${byStage ? "Stages" : "Matches"}\n";
 
     for(var s in ratings) {
       s as EloShooterRating;
@@ -398,8 +398,13 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       }
 
       csv += "${s.originalMemberNumber},";
+      csv += "${s.lastClassification.name},";
       csv += "${s.getName(suffixes: false)},";
-      csv += "${s.rating.round()},${lastMatchChange.round()},${error.toStringAsFixed(2)},${trend.toStringAsFixed(2)},${s.ratingEvents.length}\n";
+      csv += "${s.rating.round()},${lastMatchChange.round()},"
+          "${error.toStringAsFixed(2)},"
+          "${trend.toStringAsFixed(2)},"
+          "${s.direction.toStringAsFixed(2)},"
+          "${s.ratingEvents.length}\n";
     }
     return csv;
   }
