@@ -297,6 +297,7 @@ class MatchCache {
     }
   }
 
+  Set<String> _urlsInFlight = {};
   Future<List<PracticalMatch>> batchGet(List<String> urls, {void Function(String, Result<PracticalMatch, MatchGetError>)? callback}) async {
     List<PracticalMatch> downloaded = [];
     while(urls.isNotEmpty) {
@@ -309,12 +310,16 @@ class MatchCache {
 
       Map<String, Future<Result<PracticalMatch, MatchGetError>>> futures = {};
       for(var url in batchUrls) {
-        futures[url] = getMatch(url);
+        if(!_urlsInFlight.contains(url)) {
+          _urlsInFlight.add(url);
+          futures[url] = getMatch(url);
+        }
       }
 
       await Future.wait(futures.values);
       for(var url in batchUrls) {
-        if(callback != null) {
+        _urlsInFlight.remove(url);
+        if(callback != null && futures.containsKey(url)) {
           callback(url, await futures[url]!);
         }
       }
