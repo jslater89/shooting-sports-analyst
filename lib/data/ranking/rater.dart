@@ -271,12 +271,13 @@ class Rater {
     var shooters = _getShooters(match);
     for(Shooter s in shooters) {
       var processed = processMemberNumber(s.memberNumber);
-      var correction = _dataCorrections.getByInvalidNumber(processed);
-      if(correction != null) {
-        var name = _processName(s);
-        if(correction.name == name) {
-          processed = correction.correctedNumber;
-        }
+      var corrections = _dataCorrections.getByInvalidNumber(processed);
+      for(var correction in corrections) {
+          var name = _processName(s);
+          if (correction.name == name) {
+            processed = correction.correctedNumber;
+            break;
+          }
       }
       if(processed.isNotEmpty && !s.reentry) {
         s.memberNumber = processed;
