@@ -10,6 +10,7 @@ import 'package:uspsa_result_viewer/data/db/object/match/score.dart';
 import 'package:uspsa_result_viewer/data/db/object/match/scoring.dart';
 import 'package:uspsa_result_viewer/data/db/object/match/shooter.dart';
 import 'package:uspsa_result_viewer/data/db/object/match/stage.dart';
+import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 
 part 'project_db.g.dart';

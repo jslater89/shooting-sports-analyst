@@ -156,7 +156,7 @@ class Rater {
     return result;
   }
 
-  void deserializeFrom(List<DbMemberNumberMapping> mappings, List<DbShooterRating> ratings, Map<DbShooterRating, List<DbRatingEvent>> eventsByRating) {
+  Future<void> deserializeFrom(List<DbMemberNumberMapping> mappings, List<DbShooterRating> ratings, Map<DbShooterRating, List<DbRatingEvent>> eventsByRating) async {
     // Mappings contains only the interesting ones, i.e. number != mapping
     // The rest get added later.
 
@@ -178,7 +178,7 @@ class Rater {
         numbers.add(reverseMappings[r.memberNumber]!);
       }
 
-      ShooterRating rating = r.deserialize(eventsByRating[r]!, numbers);
+      ShooterRating rating = await r.deserialize(eventsByRating[r]!, numbers);
       _memberNumbersEncountered.add(rating.memberNumber);
       _memberNumbersEncountered.add(processMemberNumber(rating.originalMemberNumber));
       knownShooters[rating.memberNumber] = rating;
@@ -241,7 +241,28 @@ class Rater {
     _removeUnseenShooters();
     if(Timings.enabled) timings.removeUnseenShootersMillis += (DateTime.now().difference(start).inMicroseconds);
 
+    List<int> matchLengths = [];
+    List<int> matchRoundCounts = [];
+    List<int> stageRoundCounts = [];
+
+    for(var m in _matches) {
+      matchLengths.add(m.stages.length);
+      var totalRounds = 0;
+      for(var s in m.stages) {
+        totalRounds += s.minRounds;
+        stageRoundCounts.add(s.minRounds);
+      }
+      matchRoundCounts.add(totalRounds);
+    }
+
+    matchLengths.sort();
+    matchRoundCounts.sort();
+    stageRoundCounts.sort();
+
     debugPrint("Initial ratings complete for ${knownShooters.length} shooters in ${_matches.length} matches in ${_filters.activeDivisions.toList()}");
+    debugPrint("Match length in stages (average/median): ${matchLengths.average.toStringAsFixed(1)}/${matchLengths[matchLengths.length ~/ 2]}");
+    debugPrint("Match length in rounds (average/median): ${matchRoundCounts.average.toStringAsFixed(1)}/${matchRoundCounts[matchRoundCounts.length ~/ 2]}");
+    debugPrint("Stage length in rounds (average/median): ${stageRoundCounts.average.toStringAsFixed(1)}/${stageRoundCounts[stageRoundCounts.length ~/ 2]}");
     return RatingResult.ok();
   }
 

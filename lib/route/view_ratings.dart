@@ -622,12 +622,13 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
 
       case _MenuEntry.viewResults:
-        var match = await showDialog<PracticalMatch>(
+        var indexEntry = await showDialog<MatchCacheIndexEntry>(
             context: context,
             builder: (context) => MatchCacheChooserDialog(matches: _history.allMatches)
         );
 
-        if(match != null) {
+        if(indexEntry != null) {
+          var match = await MatchCache().getByIndex(indexEntry);
           Navigator.of(context).push(MaterialPageRoute(builder: (context) {
             return ResultPage(canonicalMatch: match, allowWhatIf: false);
           }));
@@ -636,7 +637,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
 
       case _MenuEntry.addMatch:
-        var match = await showDialog<PracticalMatch>(
+        var entry = await showDialog<MatchCacheIndexEntry>(
             context: context,
             builder: (context) => MatchCacheChooserDialog(
               helpText:
@@ -647,7 +648,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
             )
         );
 
-        if(match != null) {
+        if(entry != null) {
+          var match = await MatchCache().getByIndex(entry);
           _history.addMatch(match);
 
           setState(() {

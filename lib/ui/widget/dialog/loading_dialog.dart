@@ -28,7 +28,7 @@ class _LoadingDialogState<T> extends State<LoadingDialog> {
     return AlertDialog(
       title: Text(widget.title),
       content: SizedBox(
-        height: 32,
+        height: 48,
         width: 32,
         child: Center(
           child: CircularProgressIndicator(

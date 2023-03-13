@@ -154,7 +154,7 @@ class DbRatingProject {
     var cache = MatchCache();
     var inserted = false;
     for(var dbMatch in dbMatches) {
-      var existing = cache.getMatchImmediate(dbMatch.psId);
+      var existing = await cache.getMatchImmediate(dbMatch.psId);
       if(existing != null) {
         matches.add(existing);
         continue;

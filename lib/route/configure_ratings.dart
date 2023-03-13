@@ -25,6 +25,7 @@ import 'package:uspsa_result_viewer/ui/rater/enter_name_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/enter_urls_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/select_project_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/shooter_aliases_dialog.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/loading_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/match_cache_chooser_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/match_cache_loading_indicator.dart';
 
@@ -56,6 +57,11 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   Future<void> updateUrls() async {
     await MatchCache().ready;
     var cache = MatchCache();
+
+    var loadingFuture = MatchCache().ensureUrlsLoaded(matchUrls, (a, b) async {
+      await Future.delayed(Duration(milliseconds: 1));
+    });
+    await showDialog(context: context, builder: (context) => LoadingDialog(waitOn: loadingFuture));
 
     // Deduplicate
     Map<PracticalMatch, bool> knownMatches = {};
@@ -552,16 +558,16 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                   icon: Icon(Icons.dataset),
                                   color: Theme.of(context).primaryColor,
                                   onPressed: () async {
-                                    var matches = await showDialog<List<PracticalMatch>>(context: context, builder: (context) {
+                                    var indexEntries = await showDialog<List<MatchCacheIndexEntry>>(context: context, builder: (context) {
                                       return MatchCacheChooserDialog(multiple: true);
                                     }, barrierDismissible: false);
 
-                                    print("Matches from cache: $matches");
+                                    print("Entries from cache: $indexEntries");
 
-                                    if(matches == null) return;
+                                    if(indexEntries == null) return;
 
-                                    for(var match in matches) {
-                                      var url = MatchCache().getUrl(match);
+                                    for(var entry in indexEntries) {
+                                      var url = MatchCache().getIndexUrl(entry);
                                       if (url == null) throw StateError("impossible");
 
                                       if (!matchUrls.contains(url)) {
@@ -631,14 +637,14 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                             child: MouseRegion(
                                               cursor: SystemMouseCursors.click,
                                               child: GestureDetector(
-                                                onTap: () {
+                                                onTap: () async {
                                                   if(!MatchCache.readyNow) {
                                                     print("Match cache not ready");
                                                     return;
                                                   }
                                                   var cache = MatchCache();
 
-                                                  var match = cache.getMatchImmediate(url);
+                                                  var match = await cache.getMatchImmediate(url);
                                                   if(match != null && (match.name?.isNotEmpty ?? false)) {
                                                     Navigator.of(context).push(MaterialPageRoute(builder: (context) {
                                                       return ResultPage(canonicalMatch: match, allowWhatIf: false);
@@ -706,8 +712,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     await cache.ready;
 
     matchUrls.sort((a, b) {
-      var matchA = cache.getMatchImmediate(a);
-      var matchB = cache.getMatchImmediate(b);
+      var matchA = cache.getIndexImmediate(a);
+      var matchB = cache.getIndexImmediate(b);
 
       // Sort uncached matches to the top
       if(matchA == null && matchB == null) return 0;
@@ -715,10 +721,10 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       if(matchA != null && matchB == null) return 1;
 
       // Sort remaining matches by date descending, then by name ascending
-      var dateSort = matchB!.date!.compareTo(matchA!.date!);
+      var dateSort = matchB!.matchDate.compareTo(matchA!.matchDate);
       if(dateSort != 0) return dateSort;
 
-      return matchA.name!.compareTo(matchB.name!);
+      return matchA.matchName.compareTo(matchB.matchName);
     });
 
     updateUrls();

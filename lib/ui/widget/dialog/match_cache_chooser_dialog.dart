@@ -37,9 +37,9 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
 
   bool addedMatch = false;
 
-  List<PracticalMatch> matches = [];
-  List<PracticalMatch> searchedMatches = [];
-  Set<PracticalMatch> selectedMatches = {};
+  List<MatchCacheIndexEntry> matches = [];
+  List<MatchCacheIndexEntry> searchedMatches = [];
+  Set<MatchCacheIndexEntry> selectedMatches = {};
 
   TextEditingController searchController = TextEditingController();
 
@@ -78,12 +78,18 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
 
   void _updateMatches() {
     if(widget.matches != null) {
-      matches = [...widget.matches!];
+      matches = [];
+      for(var m in widget.matches!) {
+        var idxEntry = cache!.indexEntryFor(m);
+        if(idxEntry != null) {
+          matches.add(idxEntry);
+        }
+      }
     }
     else {
-      matches = cache!.allMatches();
+      matches = cache!.allIndexEntries();
     }
-    matches.sort((a, b) => b.date!.compareTo(a.date!));
+    matches.sort((a, b) => b.matchDate.compareTo(a.matchDate));
 
     if(searchController.text.isNotEmpty) {
       _applySearch();
@@ -95,7 +101,7 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
 
   void _applySearch() {
     var search = searchController.text;
-    searchedMatches = matches.where((m) => m.name!.toLowerCase().contains(search.toLowerCase())).toList();
+    searchedMatches = matches.where((m) => m.matchName.toLowerCase().contains(search.toLowerCase())).toList();
   }
 
   @override
@@ -164,7 +170,8 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
       mainAxisSize: MainAxisSize.min,
       children: [
         if(widget.showStats) Tooltip(
-          child: Text("Cache stats: ${cache!.length} entries, ${cache!.uniqueMatches} matches, ${(cache!.size / (1024 * 1024)).toStringAsFixed(1)}mb"),
+          child: Text("Cache stats: ${cache!.cacheLength} entries, ${cache!.uniqueMatches} matches\n"
+              "Index stats: ${cache!.uniqueIndexEntries} entries, ${(cache!.size / (1024 * 1024)).toStringAsFixed(1)}mb"),
           message: "Note that the cache may contain multiple entries for each match, one for each PractiScore "
               "ID format."
         ),
@@ -226,9 +233,9 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
             itemCount: searchedMatches.length,
             itemBuilder: (context, i) {
               return ListTile(
-                title: Text(searchedMatches[i].name!, overflow: TextOverflow.ellipsis),
+                title: Text(searchedMatches[i].matchName, overflow: TextOverflow.ellipsis),
                 subtitle: !widget.showIds ? null
-                  : SelectableText("${searchedMatches[i].practiscoreId}   ${searchedMatches[i].practiscoreIdShort ?? ""}"),
+                  : SelectableText("${searchedMatches[i].ids.join(" ")}"),
                 visualDensity: VisualDensity(vertical: -4),
                 onTap: () {
                   if(widget.multiple) {
@@ -255,7 +262,7 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
                   icon: Icon(Icons.delete),
                   onPressed: () async {
                     var match = searchedMatches[i];
-                    var deletedFuture = cache!.deleteMatch(match);
+                    var deletedFuture = cache!.deleteIndexEntry(match);
 
                     var deleted = await showDialog<bool>(context: context, builder: (c) => LoadingDialog(title: "Deleting...", waitOn: deletedFuture));
                     if(deleted ?? false) {

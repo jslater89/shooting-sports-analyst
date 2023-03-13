@@ -2,6 +2,7 @@ import 'dart:convert';
 // ignore: avoid_web_libraries_in_flutter
 import 'package:flutter/foundation.dart';
 import 'package:fluttericon/rpg_awesome_icons.dart';
+import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 
@@ -109,11 +110,12 @@ class _HomePageState extends State<HomePage> {
     var children = [
       GestureDetector(
         onTap: () async {
-          PracticalMatch? match = await showDialog<PracticalMatch>(
+          MatchCacheIndexEntry? entry = await showDialog<MatchCacheIndexEntry>(
             context: context, builder: (context) => MatchCacheChooserDialog(showStats: true, showIds: true),
             barrierDismissible: false,
           );
-          if(match != null) {
+          if(entry != null) {
+            var match = await MatchCache().getByIndex(entry);
             Navigator.of(context).push(MaterialPageRoute(builder: (context) => ResultPage(canonicalMatch: match)));
           }
         },

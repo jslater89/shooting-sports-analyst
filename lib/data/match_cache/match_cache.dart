@@ -9,6 +9,8 @@ import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 import 'package:uspsa_result_viewer/util.dart';
 
+part 'match_cache.g.dart';
+
 Future<void> Function(int, int)? matchCacheProgressCallback;
 
 // TODO: migration2: back with the SQLite database
@@ -29,28 +31,80 @@ class MatchCache {
   late Future<bool> ready;
   static bool get readyNow => _instance != null && _instance!._ready.isCompleted;
 
+  /// Cache is the in-memory cache of matches. Matches are loaded into memory lazily.
+  ///
+  /// Matches known by multiple IDs (used as the key) point to the same cache entry.
   Map<String, _MatchCacheEntry> _cache = {};
+  /// Index is the full index of the cache. The index is always fully loaded when
+  /// loading the match cache.
+  Map<String, MatchCacheIndexEntry> _index = {};
   late SharedPreferences _prefs;
+  /// Box contains the on-disk packing of
   late Box<String> _box;
+  late Box<MatchCacheIndexEntry> _indexBox;
   static const _cachePrefix = "cache/";
   static const _cacheSeparator = "XxX";
   static const _migrated = "migrated?";
 
   void _init() async {
+    Hive.registerAdapter(MatchCacheIndexEntryAdapter());
     _instance!.ready = _instance!._ready.future;
     _box = await Hive.openBox<String>("match-cache");
+    _indexBox = await Hive.openBox<MatchCacheIndexEntry>("match-cache-index");
 
     if(!_box.containsKey(_migrated)) {
       _prefs = await SharedPreferences.getInstance();
       await _migrate();
     }
-
-    await _instance!.load();
+    
+    if(_indexBox.isEmpty) {
+      await _instance!._load();
+      await _firstTimeIndex();
+    }
+    else {
+      await _instance!._loadIndex();
+    }
 
     _ready.complete(true);
   }
 
-  Future<void> load() async {
+  Future<void> _firstTimeIndex() async {
+    print("Generating first-time index");
+    for(var entry in _cache.values) {
+      var idxEntry = MatchCacheIndexEntry.fromMatchEntry(entry);
+      for(var id in idxEntry.ids) {
+        _index[id] = idxEntry;
+      }
+      _indexBox.put(idxEntry.path, idxEntry);
+    }
+    print("Generated ${_index.length} index entries from ${_cache.values.length} matches");
+  }
+
+  Future<void> _loadIndex() async {
+    print("Loading index");
+    _index.clear();
+
+    int i = 0;
+    var paths = _indexBox.keys;
+    for(var path in paths) {
+      if(path.startsWith(_cachePrefix)) {
+        var indexEntry = _indexBox.get(path);
+        if(indexEntry != null) {
+          for (var id in indexEntry.ids) {
+            _index[id] = indexEntry;
+          }
+        }
+      }
+
+      i += 1;
+      if(i % 5 == 0) await matchCacheProgressCallback?.call(i, paths.length);
+    }
+
+    print("Loaded ${_index.length} index entries from ${paths.length} paths");
+  }
+
+  Future<void> _load() async {
+    print("Loading full cache");
     _cache.clear();
 
     var paths = _box.keys;
@@ -63,57 +117,76 @@ class MatchCache {
 
     for(var path in paths) {
       if(path.startsWith(_cachePrefix)) {
-        var reportContents = _box.get(path);
+        var match = await _loadMatch(path);
 
-        List<String> ids = path.replaceFirst(_cachePrefix, "").split(_cacheSeparator);
-        var deduplicatedIds = Set<String>()..addAll(ids);
-        ids = deduplicatedIds.toList();
-
-        if(reportContents != null) {
-          // Anything that makes it to the cache is known good
-          var match = (await processScoreFile(reportContents)).unwrap();
-          var entry = _MatchCacheEntry(match: match, ids: ids);
-          String? shortId;
-          late String longId;
-          for(var id in ids) {
-            id = id.replaceAll("/","");
-
-            if(id.length > 10) {
-              longId = id;
-            }
-            else {
-              shortId = id;
-            }
-
-            // This is either a two-ID entry (short and UUID), or a one-ID entry
-            // (UUID-only, because we always get the UUID if we only have the short ID).
-            // If it's a UUID-only entry, only replace an entry in the cache if we haven't
-            // already loaded a corresponding two-ID entry.
-            if(ids.length == 1 && _cache.containsKey(id)) {
-              if(verboseParse) print("Skipping one-ID entry for $id: already loaded as two-ID entry");
-              continue;
-            }
-
-            _cache[id] = entry;
-          }
-
-          match.practiscoreId = longId;
-          match.practiscoreIdShort = shortId;
-
+        if(match != null) {
           matches += 1;
           stages += match.stages.length;
           shooters += match.shooters.length;
           stageScores += match.stageScoreCount;
-
-          if(verboseParse) print("Loaded ${entry.match.name} from $path to $ids");
         }
 
         i += 1;
-        await matchCacheProgressCallback?.call(i, paths.length);
+        if(i % 5 == 0) await matchCacheProgressCallback?.call(i, paths.length);
       }
     }
 
     print("Loaded $matches cached matches, with $stages stages, $shooters shooters, and $stageScores stage scores");
+  }
+
+  Future<PracticalMatch?> _loadMatch(String path) async {
+    List<String> ids = path.replaceFirst(_cachePrefix, "").split(_cacheSeparator);
+    var deduplicatedIds = Set<String>()..addAll(ids);
+    ids = deduplicatedIds.toList();
+
+    PracticalMatch? match;
+    for(var id in ids) {
+      var m = _cache[id]?.match;
+      if(m != null) match = m;
+    }
+
+    if(match != null) return match;
+
+    var reportContents = _box.get(path);
+
+    if(reportContents != null) {
+      // Anything that makes it to the cache is known good
+      var match = (await processScoreFile(reportContents)).unwrap();
+      var entry = _MatchCacheEntry(match: match, ids: ids);
+      String? shortId;
+      late String longId;
+      for(var id in ids) {
+        id = id.replaceAll("/","");
+
+        if(id.length > 10) {
+          longId = id;
+        }
+        else {
+          shortId = id;
+        }
+
+        // This is either a two-ID entry (short and UUID), or a one-ID entry
+        // (UUID-only, because we always get the UUID if we only have the short ID).
+        // If it's a UUID-only entry, only replace an entry in the cache if we haven't
+        // already loaded a corresponding two-ID entry.
+        if(ids.length == 1 && _cache.containsKey(id)) {
+          if(verboseParse) print("Skipping one-ID entry for $id: already loaded as two-ID entry");
+          continue;
+        }
+
+        _cache[id] = entry;
+      }
+
+      match.practiscoreId = longId;
+      match.practiscoreIdShort = shortId;
+
+      if(verboseParse) print("Loaded ${entry.match.name} from $path to $ids");
+      return match;
+    }
+    else {
+      print("Failed to load $path!");
+      return null;
+    }
   }
 
   void clear() {
@@ -128,21 +201,18 @@ class MatchCache {
     }
   }
 
-  String _generatePath(_MatchCacheEntry entry) {
-    var idString = entry.ids.sorted((a,b) => a.compareTo(b)).join(_cacheSeparator);
-    return "$_cachePrefix$idString";
-  }
-
-  int get length => _cache.length;
+  int get length => _index.length;
+  int get cacheLength => _cache.length;
   int? _cachedSize;
   int get size {
     if(_cachedSize != null) return _cachedSize!;
 
     // DB not used on web, so we can do this
     var dbFile = File(_box.path!);
+    var indexFile = File(_indexBox.path!);
 
     if(dbFile.existsSync()) {
-      _cachedSize = dbFile.statSync().size;
+      _cachedSize = dbFile.statSync().size + indexFile.statSync().size;
       return _cachedSize!;
     }
     return 0;
@@ -158,6 +228,43 @@ class MatchCache {
     return entries.length;
   }
 
+  int get uniqueIndexEntries {
+    Set<MatchCacheIndexEntry> entries = <MatchCacheIndexEntry>{};
+
+    for(var e in _index.values) {
+      entries.add(e);
+    }
+
+    return entries.length;
+  }
+
+  /// Ensure that any previously-downloaded matches in the given list of URLs
+  /// are fully loaded to memory.
+  Future<void> ensureUrlsLoaded(List<String> matchUrls, [Future<void> Function(int, int)? progressCallback]) async {
+    int i = 0;
+    for(var url in matchUrls) {
+      var idxEntry = getIndexImmediate(url);
+      if(idxEntry != null) {
+        await _loadMatch(idxEntry.path);
+      }
+
+      i += 1;
+      if(i % 5 == 0) await progressCallback?.call(i, matchUrls.length);
+    }
+  }
+
+  /// Ensure that the matches represented by the given index entries
+  /// are fully loaded.
+  Future<void> ensureLoaded(List<MatchCacheIndexEntry> entries, [Future<void> Function(int, int)? progressCallback]) async {
+    int i = 0;
+    for(var entry in entries) {
+      await _loadMatch(entry.path);
+
+      i += 1;
+      if(i % 5 == 0) await matchCacheProgressCallback?.call(i, entries.length);
+    }
+  }
+
   Future<void> save([Future<void> Function(int, int)? progressCallback]) async {
     Set<_MatchCacheEntry> alreadySaved = Set();
     int totalProgress = _cache.values.length;
@@ -170,7 +277,7 @@ class MatchCache {
         continue;
       }
 
-      var path = _generatePath(entry);
+      var path = entry.generatePath();
       if(_box.containsKey(path)) {
         currentProgress += 1;
         await progressCallback?.call(currentProgress, totalProgress);
@@ -179,12 +286,13 @@ class MatchCache {
 
       // Box saves in a background isolate
       _box.put(path, entry.match.reportContents);
+      _indexBox.put(path, MatchCacheIndexEntry.fromMatchEntry(entry));
       _cachedSize = null;
       alreadySaved.add(entry);
       print("Saved ${entry.match.name} to $path");
 
       currentProgress += 1;
-      await progressCallback?.call(currentProgress, totalProgress);
+      if(currentProgress % 5 == 0) await matchCacheProgressCallback?.call(currentProgress, totalProgress);
     }
   }
 
@@ -200,12 +308,19 @@ class MatchCache {
     return _deleteEntry(entry?.value);
   }
 
+  Future<bool> deleteIndexEntry(MatchCacheIndexEntry entry) {
+    var e = _cache[entry.ids.first];
+    return _deleteEntry(e);
+  }
+
   Future<bool> _deleteEntry(_MatchCacheEntry? entry) async {
     if(entry != null) {
       for(var id in entry.ids) {
         _cache.remove(id);
+        _index.remove(id);
       }
-      await _box.delete(_generatePath(entry));
+      await _box.delete(entry.generatePath());
+      await _indexBox.delete(entry.generatePath());
       _cachedSize = null;
       return true;
     }
@@ -218,8 +333,10 @@ class MatchCache {
       if(match.practiscoreIdShort != null) match.practiscoreIdShort!,
     ];
     var entry = _MatchCacheEntry(match: match, ids: ids);
+    var index = MatchCacheIndexEntry.fromMatchEntry(entry);
     for(var id in ids) {
       _cache[id] = entry;
+      _index[id] = index;
     }
   }
 
@@ -232,20 +349,55 @@ class MatchCache {
     return null;
   }
 
-  PracticalMatch? getMatchImmediate(String matchUrl) {
+  String? getIndexUrl(MatchCacheIndexEntry indexEntry) {
+    var entry = _index.entries.firstWhereOrNull((element) => element.value == indexEntry);
+
+    if(entry != null) {
+      return "https://practiscore.com/results/new/${entry.key}";
+    }
+    return null;
+  }
+
+  MatchCacheIndexEntry? getIndexImmediate(String matchUrl) {
     var id = matchUrl.split("/").last;
+    return _index[id];
+  }
+
+  Future<PracticalMatch?> getMatchImmediate(String matchUrl) {
+    var id = matchUrl.split("/").last;
+    return _loadIndexed(id);
+  }
+
+  Future<PracticalMatch> getByIndex(MatchCacheIndexEntry index) async {
+    return (await _loadIndexed(index.ids.first))!;
+  }
+
+  Future<PracticalMatch?> _loadIndexed(String id) async {
     if(_cache.containsKey(id)) {
       return _cache[id]!.match;
     }
+    else if(_index.containsKey(id)) {
+      return _loadMatch(_index[id]!.path);
+    }
+    else {
+      return null;
+    }
+  }
 
-    return null;
+  void _insert(_MatchCacheEntry entry) {
+    var indexEntry = MatchCacheIndexEntry.fromMatchEntry(entry);
+    for(var id in entry.ids) {
+      _cache[id] = entry;
+      _index[id] = indexEntry;
+    }
   }
 
   Future<Result<PracticalMatch, MatchGetError>> getMatch(String matchUrl, {bool forceUpdate = false, bool localOnly = false, bool checkCanonId = true}) async {
     var id = matchUrl.split("/").last;
-    if(!forceUpdate && _cache.containsKey(id)) {
+    if(!forceUpdate && _index.containsKey(id)) {
       // debugPrint("Using cache for $id");
-      return Result.ok(_cache[id]!.match);
+      var match = await _loadIndexed(id);
+      return Result.ok(match!);
     }
 
     if(localOnly && !checkCanonId) return Result.err(MatchGetError.notInCache);
@@ -259,8 +411,7 @@ class MatchCache {
         match: _cache[canonId]!.match,
         ids: [id, canonId]
       );
-      _cache[id] = newEntry;
-      _cache[canonId] = newEntry;
+      _insert(newEntry);
       return Result.ok(_cache[id]!.match);
     }
 
@@ -277,14 +428,7 @@ class MatchCache {
         var ids = [canonId];
         if(id != canonId) ids.insert(0, id);
 
-        var cacheEntry = _MatchCacheEntry(
-          ids: ids,
-          match: match,
-        );
-
-        if(id != canonId) _cache[id] = cacheEntry;
-
-        _cache[canonId] = cacheEntry;
+        insert(match);
         return result;
       }
       else {
@@ -328,9 +472,18 @@ class MatchCache {
     return downloaded;
   }
 
+  MatchCacheIndexEntry? indexEntryFor(PracticalMatch match) {
+    return _index[match.practiscoreId];
+  }
+
   List<PracticalMatch> allMatches() {
     var matchSet = Set<PracticalMatch>()..addAll(_cache.values.map((e) => e.match));
     return matchSet.toList();
+  }
+
+  List<MatchCacheIndexEntry> allIndexEntries() {
+    var idxSet = Set<MatchCacheIndexEntry>()..addAll(_index.values);
+    return idxSet.toList();
   }
 
   Future<void> _migrate() async {
@@ -352,9 +505,50 @@ class MatchCache {
   }
 }
 
-class _MatchCacheEntry {
+@HiveType(typeId: 0)
+class MatchCacheIndexEntry extends _PathedEntry {
+  /// The path created by generatePath for this and the associated match.
+  @HiveField(3)
+  final String path;
+
+  /// The name of the match.
+  @HiveField(0)
+  final String matchName;
+
+  /// The date of the match.
+  @HiveField(1)
+  final DateTime matchDate;
+
+  /// All IDs this match is known by.
+  @HiveField(2)
+  final List<String> ids;
+
+  MatchCacheIndexEntry({required this.path, required this.matchName, required this.matchDate, required this.ids});
+
+  MatchCacheIndexEntry.fromMatchEntry(_MatchCacheEntry entry) :
+      path = entry.generatePath(),
+      matchName = entry.match.name ?? "Unnamed Match",
+      matchDate = entry.match.date ?? DateTime(2015, 1, 1),
+      ids = entry.ids;
+
+  @override
+  String toString() {
+    return "$matchName $ids";
+  }
+}
+
+class _MatchCacheEntry extends _PathedEntry {
   final PracticalMatch match;
   final List<String> ids;
 
   _MatchCacheEntry({required this.match, required this.ids});
+}
+
+abstract class _PathedEntry {
+  List<String> get ids;
+
+  String generatePath() {
+    var idString = this.ids.sorted((a,b) => a.compareTo(b)).join(MatchCache._cacheSeparator);
+    return "${MatchCache._cachePrefix}$idString";
+  }
 }

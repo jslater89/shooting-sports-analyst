@@ -66,7 +66,7 @@ class DbEloRating extends DbShooterRating {
   }
 
   @override
-  ShooterRating deserialize(List<DbRatingEvent> events, List<String> memberNumbers) {
+  Future<ShooterRating> deserialize(List<DbRatingEvent> events, List<String> memberNumbers) async {
     var rating = EloShooterRating.fromDb(this);
 
     var cache = MatchCache();
@@ -76,7 +76,9 @@ class DbEloRating extends DbShooterRating {
     for(var event in events) {
       late RelativeScore score;
 
-      var match = cache.getMatchImmediate(event.matchId)!;
+      var match = await cache.getMatchImmediate(event.matchId);
+      match!;
+
       var shooters = match.filterShooters(
         divisions: raterGroup.divisions,
         allowReentries: false,

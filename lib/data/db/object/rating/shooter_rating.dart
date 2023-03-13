@@ -28,7 +28,7 @@ abstract class DbShooterRating extends DbShooterVitals {
     required super.powerFactor
   });
 
-  ShooterRating deserialize(List<DbRatingEvent> events, List<String> memberNumbers);
+  Future<ShooterRating> deserialize(List<DbRatingEvent> events, List<String> memberNumbers);
 }
 
 class RaterGroupConverter extends TypeConverter<RaterGroup, int> {
