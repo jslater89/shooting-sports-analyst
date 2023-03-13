@@ -892,12 +892,14 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
               );
             });
 
-            var project = RatingProjectManager().loadProject(projectName ?? "");
-            if(project != null) {
-              _loadProject(project);
-              setState(() {
-                _lastProjectName = project.name;
-              });
+            if(projectName != null) {
+              var project = RatingProjectManager().loadProject(projectName);
+              if (project != null) {
+                _loadProject(project);
+                setState(() {
+                  _lastProjectName = project.name;
+                });
+              }
             }
           },
         ),
