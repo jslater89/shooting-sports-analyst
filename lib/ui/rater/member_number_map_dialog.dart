@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/confirm_dialog.dart';
 
 class MemberNumberMapDialog extends StatefulWidget {
   const MemberNumberMapDialog({
@@ -129,7 +130,17 @@ class _MemberNumberMapDialogState extends State<MemberNumberMapDialog> {
         ),
         TextButton(
           child: Text("OK"),
-          onPressed: () {
+          onPressed: () async {
+            if(sourceController.text.isNotEmpty && targetController.text.isNotEmpty) {
+              var confirm = await showDialog<bool>(context: context, builder: (c) =>
+                  ConfirmDialog(
+                    content: Text("The input field contains unsubmitted information. Do you want to discard it?"),
+                    positiveButtonLabel: "DISCARD",
+                  ));
+              if(confirm == null || !confirm) {
+                return;
+              }
+            }
             Navigator.of(context).pop(mappings);
           },
         )

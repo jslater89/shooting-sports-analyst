@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/confirm_dialog.dart';
 
 class MemberNumberDialog extends StatefulWidget {
   const MemberNumberDialog({
@@ -97,7 +98,17 @@ class _MemberNumberDialogState extends State<MemberNumberDialog> {
         ),
         TextButton(
           child: Text("OK"),
-          onPressed: () {
+          onPressed: () async {
+            if(inputController.text.isNotEmpty) {
+              var confirm = await showDialog<bool>(context: context, builder: (c) =>
+                  ConfirmDialog(
+                    content: Text("The input field contains unsubmitted information. Do you want to discard it?"),
+                    positiveButtonLabel: "DISCARD",
+                  ));
+              if(confirm == null || !confirm) {
+                return;
+              }
+            }
             Navigator.of(context).pop(numbers);
           },
         )

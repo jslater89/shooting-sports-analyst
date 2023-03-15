@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/confirm_dialog.dart';
 
 class ShooterAliasesDialog extends StatefulWidget {
   const ShooterAliasesDialog(this.initialAliases, {Key? key}) : super(key: key);
@@ -112,10 +113,20 @@ class _ShooterAliasesDialogState extends State<ShooterAliasesDialog> {
         ),
         TextButton(
           child: Text("OK"),
-          onPressed: () {
+          onPressed: () async {
             Map<String, String> aliasMap = Map.fromEntries(
               aliases.map((a) => MapEntry<String, String>(a.alias, a.name))
             );
+            if(_nameController.text.isNotEmpty && _aliasController.text.isNotEmpty) {
+              var confirm = await showDialog<bool>(context: context, builder: (c) =>
+                  ConfirmDialog(
+                    content: Text("The input fields contain unsubmitted information. Do you want to discard it?"),
+                    positiveButtonLabel: "DISCARD",
+                  ));
+              if(confirm == null || !confirm) {
+                return;
+              }
+            }
             Navigator.of(context).pop(aliasMap);
           },
         )

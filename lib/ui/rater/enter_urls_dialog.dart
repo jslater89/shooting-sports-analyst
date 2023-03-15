@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/confirm_dialog.dart';
 
 class EnterUrlsDialog extends StatefulWidget {
   const EnterUrlsDialog({
@@ -85,7 +86,19 @@ class _EnterUrlsDialogState extends State<EnterUrlsDialog> {
         ),
         TextButton(
           child: Text("OK"),
-          onPressed: () {
+          onPressed: () async {
+
+            if(urlController.text.isNotEmpty) {
+              var confirm = await showDialog<bool>(context: context, builder: (c) =>
+                ConfirmDialog(
+                  content: Text("The input field contains unsubmitted information. Do you want to discard it?"),
+                  positiveButtonLabel: "DISCARD",
+                ));
+              if(confirm == null || !confirm) {
+                return;
+              }
+            }
+
             Navigator.of(context).pop(matchUrls);
           },
         )
