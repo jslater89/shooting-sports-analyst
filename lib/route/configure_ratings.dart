@@ -275,6 +275,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     return RatingHistorySettings(
       algorithm: _ratingSystem,
       checkDataEntryErrors: _checkDataEntryErrors,
+      transientDataEntryErrorSkip: false,
       groups: groups,
       preserveHistory: _keepHistory,
       memberNumberWhitelist: _memNumWhitelist,

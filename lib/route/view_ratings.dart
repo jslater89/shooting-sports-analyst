@@ -736,7 +736,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
   void _presentError(RatingError error) async {
     if(error is ShooterMappingError) {
-      await _presentMappingError(error);
+      var shouldContinue = await _presentMappingError(error);
+      if(!shouldContinue) return;
     }
     else if(error is ManualMappingBackwardError) {
       await _presentBackwardManualMappingError(error);
@@ -746,7 +747,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     _processMatches();
   }
 
-  Future<void> _presentMappingError(ShooterMappingError error) async {
+  Future<bool> _presentMappingError(ShooterMappingError error) async {
     // We need to present a lot of information here:
     // * The two culprit ratings, front and center, with links
     //   to view their history and also their USPSA classification
@@ -794,16 +795,23 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     );
 
     if(fix != null) {
+      if(fix.action == CollisionFixAction.abort) {
+        Navigator.of(context).pop();
+        return false;
+      }
+
       // If we get a fix, apply it, reset, and re-rate.
       _history.applyFix(fix);
 
       // Save the fix here, too.
       var pm = RatingProjectManager();
       await pm.saveProject(_history.project, mapName: RatingProjectManager.autosaveName);
+      return true;
     }
     else {
       // If we somehow don't get a fix, go back to configure
       Navigator.of(context).pop();
+      return false;
     }
   }
 

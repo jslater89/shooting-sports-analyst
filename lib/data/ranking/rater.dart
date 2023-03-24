@@ -278,7 +278,7 @@ class Rater {
 
     _removeUnseenShooters();
 
-    debugPrint("Ratings update complete for $changed shooters (${knownShooters.length} total) in ${_matches.length} matches in ${_filters != null ? _filters!.activeDivisions.toList() : "all divisions"}");
+    debugPrint("Ratings update complete for $changed shooters (${knownShooters.length} total) in ${_matches.length} matches in ${_filters.activeDivisions.toList()}");
     return RatingResult.ok();
   }
 
@@ -1441,7 +1441,7 @@ class Rater {
 
   @override
   String toString() {
-    return "Rater for ${_matches.last.name} with ${_filters?.divisions}";
+    return "Rater for ${_matches.last.name} with ${_filters.divisions}";
   }
 
   static Map<String, String> _processMemNumCache = {};

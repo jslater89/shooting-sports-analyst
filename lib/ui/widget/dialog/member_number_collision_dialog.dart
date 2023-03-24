@@ -47,8 +47,34 @@ class _MemberNumberCollisionDialogState extends State<MemberNumberCollisionDialo
       actions: [
         Row(
           mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.start,
           children: [
+            Tooltip(
+              message: "Cancel calculation and return to main menu.",
+              child: TextButton(
+                child: Text("ABORT"),
+                onPressed: () {
+                  Navigator.of(context).pop(CollisionFix(
+                      action: CollisionFixAction.abort,
+                      memberNumber1: "",
+                      memberNumber2: ""
+                  ));
+                },
+              ),
+            ),
+            if(widget.data.dataEntry) Tooltip(
+              message: "Skip remaining data entry errors on this run.",
+              child: TextButton(
+                child: Text("SKIP REMAINING"),
+                onPressed: () {
+                  Navigator.of(context).pop(CollisionFix(
+                    action: CollisionFixAction.skipRemainingDataErrors,
+                    memberNumber1: "",
+                    memberNumber2: ""
+                  ));
+                },
+              ),
+            ),
             if(!widget.data.dataEntry) TextButton(
               child: Text("MORE HELP"),
               onPressed: () {
@@ -64,51 +90,46 @@ class _MemberNumberCollisionDialogState extends State<MemberNumberCollisionDialo
                 ));
               },
             ),
-            if(widget.data.dataEntry) Container(),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextButton(
-                  child: Text("BLACKLIST"),
-                  onPressed: () {
-                    var fix = CollisionFix(
-                      action: CollisionFixAction.blacklist,
-                      memberNumber1: culprit1.memberNumber,
-                      memberNumber2: culprit2.memberNumber,
-                    );
+            Expanded(child: Container()),
+            TextButton(
+              child: Text("BLACKLIST"),
+              onPressed: () {
+                var fix = CollisionFix(
+                  action: CollisionFixAction.blacklist,
+                  memberNumber1: culprit1.memberNumber,
+                  memberNumber2: culprit2.memberNumber,
+                );
 
-                    print(fix.toString());
-                    Navigator.of(context).pop(fix);
-                  },
-                ),
-                if(!widget.data.dataEntry) TextButton(
-                  child: Text("CREATE MAPPING"),
-                  onPressed: () {
-                    var fix = CollisionFix(
-                      action: CollisionFixAction.mapping,
-                      memberNumber1: culprit1.firstSeen.isBefore(culprit2.firstSeen) ? culprit1.memberNumber : culprit2.memberNumber,
-                      memberNumber2: culprit1.firstSeen.isBefore(culprit2.firstSeen) ? culprit2.memberNumber : culprit1.memberNumber,
-                    );
+                print(fix.toString());
+                Navigator.of(context).pop(fix);
+              },
+            ),
+            if(!widget.data.dataEntry) TextButton(
+              child: Text("CREATE MAPPING"),
+              onPressed: () {
+                var fix = CollisionFix(
+                  action: CollisionFixAction.mapping,
+                  memberNumber1: culprit1.firstSeen.isBefore(culprit2.firstSeen) ? culprit1.memberNumber : culprit2.memberNumber,
+                  memberNumber2: culprit1.firstSeen.isBefore(culprit2.firstSeen) ? culprit2.memberNumber : culprit1.memberNumber,
+                );
 
-                    print(fix.toString());
-                    Navigator.of(context).pop(fix);
-                  },
-                ),
-                TextButton(
-                  child: Text("FIX DATA"),
-                  onPressed: () async {
-                    var fix = await showDialog<CollisionFix>(context: context, builder: (context) => _DataFixDialog(
-                      culprit1: culprit1, culprit2: culprit2
-                    ));
+                print(fix.toString());
+                Navigator.of(context).pop(fix);
+              },
+            ),
+            TextButton(
+              child: Text("FIX DATA"),
+              onPressed: () async {
+                var fix = await showDialog<CollisionFix>(context: context, builder: (context) => _DataFixDialog(
+                    culprit1: culprit1, culprit2: culprit2
+                ));
 
-                    print(fix.toString());
-                    if(fix != null) {
-                      Navigator.of(context).pop(fix);
-                    }
-                  },
-                ),
-              ],
-            )
+                print(fix.toString());
+                if(fix != null) {
+                  Navigator.of(context).pop(fix);
+                }
+              },
+            ),
           ],
         ),
       ],
@@ -229,14 +250,16 @@ enum CollisionFixAction {
   mapping,
   blacklist,
   dataFix,
+  abort,
+  skipRemainingDataErrors,
 }
 
 class CollisionFix {
   final CollisionFixAction action;
   final String? name1;
-  /// The source for a manual mapping
+  /// The source for a manual mapping.
   final String memberNumber1;
-  ///
+  /// The target for a manual mapping.
   final String memberNumber2;
 
   CollisionFix({

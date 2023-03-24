@@ -229,7 +229,7 @@ class RatingHistory {
       matches: matches,
       ratingSystem: _settings.algorithm,
       byStage: _settings.byStage,
-      checkDataEntryErrors: _settings.checkDataEntryErrors,
+      checkDataEntryErrors: _settings.checkDataEntryErrors && !_settings.transientDataEntryErrorSkip,
       filters: group.filters,
       progressCallback: progressCallback,
       progressCallbackInterval: progressCallbackInterval,
@@ -343,6 +343,10 @@ class RatingHistorySettings {
   // All of the below are serialized
   bool get byStage => algorithm.byStage;
   bool preserveHistory;
+
+  /// If true, ignore data entry errors for this run only.
+  bool transientDataEntryErrorSkip;
+
   bool checkDataEntryErrors;
   List<RaterGroup> groups;
   List<String> memberNumberWhitelist;
@@ -394,6 +398,7 @@ class RatingHistorySettings {
   RatingHistorySettings({
     this.preserveHistory = false,
     this.checkDataEntryErrors = true,
+    this.transientDataEntryErrorSkip = false,
     this.groups = const [RaterGroup.open, RaterGroup.limited, RaterGroup.pcc, RaterGroup.carryOptics, RaterGroup.locap],
     required this.algorithm,
     this.memberNumberWhitelist = const [],
@@ -424,6 +429,12 @@ class RatingHistorySettings {
           invalidNumber: fix.memberNumber1,
           correctedNumber: fix.memberNumber2
         ));
+        break;
+      case CollisionFixAction.abort:
+        throw StateError("can't apply 'abort'");
+      case CollisionFixAction.skipRemainingDataErrors:
+        transientDataEntryErrorSkip = true;
+        break;
     }
   }
 
