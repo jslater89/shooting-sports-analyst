@@ -8,12 +8,14 @@ import 'package:uspsa_result_viewer/data/db/object/rating/shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/member_number_correction.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
+import 'package:uspsa_result_viewer/data/ranking/raters/openskill/model/model_utils.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_error.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
 import 'package:uspsa_result_viewer/data/ranking/timings.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
 import 'package:fuzzywuzzy/fuzzywuzzy.dart' as strdiff;
+import 'package:uspsa_result_viewer/util.dart';
 
 class Rater {
   List<PracticalMatch> _matches;
@@ -246,12 +248,18 @@ class Rater {
     List<int> stageRoundCounts = [];
 
     for(var m in _matches) {
-      matchLengths.add(m.stages.length);
       var totalRounds = 0;
+      var stages = 0;
       for(var s in m.stages) {
+        if(s.type == Scoring.chrono) continue;
+
+        stages += 1;
         totalRounds += s.minRounds;
         stageRoundCounts.add(s.minRounds);
+
+        if(s.minRounds <= 4) debugPrint("${m.name} ${s.name} ${s.minRounds}rds");
       }
+      matchLengths.add(stages);
       matchRoundCounts.add(totalRounds);
     }
 
@@ -259,10 +267,15 @@ class Rater {
     matchRoundCounts.sort();
     stageRoundCounts.sort();
 
+    var matchLengthMode = mode(matchLengths);
+    var stageRoundsMode = mode(stageRoundCounts);
+    var matchRoundsMode = mode(matchRoundCounts);
+
     debugPrint("Initial ratings complete for ${knownShooters.length} shooters in ${_matches.length} matches in ${_filters.activeDivisions.toList()}");
-    debugPrint("Match length in stages (average/median): ${matchLengths.average.toStringAsFixed(1)}/${matchLengths[matchLengths.length ~/ 2]}");
-    debugPrint("Match length in rounds (average/median): ${matchRoundCounts.average.toStringAsFixed(1)}/${matchRoundCounts[matchRoundCounts.length ~/ 2]}");
-    debugPrint("Stage length in rounds (average/median): ${stageRoundCounts.average.toStringAsFixed(1)}/${stageRoundCounts[stageRoundCounts.length ~/ 2]}");
+    debugPrint("Match length in stages (min/max/average/median/mode): ${matchLengths.min}/${matchLengths.max}/${matchLengths.average.toStringAsFixed(1)}/${matchLengths[matchLengths.length ~/ 2]}/$matchLengthMode");
+    debugPrint("Match length in rounds (average/median/mode): ${matchRoundCounts.min}/${matchRoundCounts.max}/${matchRoundCounts.average.toStringAsFixed(1)}/${matchRoundCounts[matchRoundCounts.length ~/ 2]}/$matchRoundsMode");
+    debugPrint("Stage length in rounds (average/median/mode): ${stageRoundCounts.min}/${stageRoundCounts.max}/${stageRoundCounts.average.toStringAsFixed(1)}/${stageRoundCounts[stageRoundCounts.length ~/ 2]}/$stageRoundsMode");
+    // debugPrint("Stage round counts: $stageRoundCounts");
     return RatingResult.ok();
   }
 

@@ -44,3 +44,18 @@ class Result<T, E extends Error> {
   Result.ok(T result) : this._result = result, this._error = null;
   Result.err(E error) : this._error = error, this._result = null;
 }
+
+List<int> mode(List<int> data) {
+  var freq = <int, int>{};
+  var maxFreq = 0;
+
+  for(var n in data) {
+    freq[n] ??= 0;
+    freq[n] = freq[n]! + 1;
+    if(freq[n]! > maxFreq) {
+      maxFreq = freq[n]!;
+    }
+  }
+
+  return freq.entries.where((e) => e.value == maxFreq).map((e) => e.key).toList();
+}
