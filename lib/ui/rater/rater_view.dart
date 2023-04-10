@@ -144,6 +144,7 @@ enum RatingSortMode {
   lastChange,
   trend,
   stages,
+  pointsPerMatch,
 }
 
 extension RatingSortModeNames on RatingSortMode {
@@ -165,6 +166,8 @@ extension RatingSortModeNames on RatingSortMode {
         return "First Name";
       case RatingSortMode.lastName:
         return "Last Name";
+      case RatingSortMode.pointsPerMatch:
+        return "Points/Match";
     }
   }
 }
@@ -214,6 +217,12 @@ extension _SortFunctions on RatingSortMode {
         return (a, b) => a.firstName.compareTo(b.firstName);
       case RatingSortMode.lastName:
         return (a, b) => a.lastName.compareTo(b.lastName);
+      case RatingSortMode.pointsPerMatch:
+        return (a, b) {
+          var aPpm = a.rating / a.length;
+          var bPpm = b.rating / b.length;
+          return bPpm.compareTo(aPpm);
+        };
     }
   }
 }

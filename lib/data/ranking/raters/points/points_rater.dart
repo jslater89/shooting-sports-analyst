@@ -37,6 +37,7 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
   static const _nameFlex = 3;
   static const _ratingFlex = 2;
   static const _stagesFlex = 2;
+  static const _ppmFlex = 2;
   static const _trailPaddingFlex = 4;
 
   @override
@@ -50,6 +51,7 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
         Expanded(flex: _nameFlex, child: Text("Name")),
         Expanded(flex: _ratingFlex, child: Text("Points", textAlign: TextAlign.end)),
         Expanded(flex: _stagesFlex, child: Text("Matches", textAlign: TextAlign.end)),
+        Expanded(flex: _ppmFlex, child: Text("Points/Match", textAlign: TextAlign.end)),
         Expanded(flex: _trailPaddingFlex, child: Text("")),
       ],
     );
@@ -60,12 +62,14 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
     rating as PointsRating;
 
     var ratingText = "";
-    if(settings.mode == PointsMode.inversePlace) {
+    if(settings.mode == PointsMode.inversePlace || settings.mode == PointsMode.f1) {
       ratingText = rating.rating.round().toString();
     }
     else {
       ratingText = rating.rating.toStringAsFixed(1);
     }
+
+    var ppmText = (rating.rating / rating.length).toStringAsFixed(1);
 
     return ScoreRow(
       color: (place - 1) % 2 == 1 ? Colors.grey[200] : Colors.white,
@@ -79,7 +83,8 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
             Expanded(flex: _classFlex, child: Text(rating.lastClassification.displayString())),
             Expanded(flex: _nameFlex, child: Text(rating.getName(suffixes: false))),
             Expanded(flex: _ratingFlex, child: Text("$ratingText", textAlign: TextAlign.end)),
-            Expanded(flex: _stagesFlex, child: Text("${rating.length}", textAlign: TextAlign.end,)),
+            Expanded(flex: _stagesFlex, child: Text("${rating.length}", textAlign: TextAlign.end)),
+            Expanded(flex: _ppmFlex, child: Text("$ppmText", textAlign: TextAlign.end)),
             Expanded(flex: _trailPaddingFlex, child: Text("")),
           ]
         )
@@ -162,6 +167,7 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
 
   List<RatingSortMode> get supportedSorts => [
     RatingSortMode.rating,
+    RatingSortMode.pointsPerMatch,
     RatingSortMode.classification,
     RatingSortMode.firstName,
     RatingSortMode.lastName,
