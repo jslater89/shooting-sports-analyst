@@ -7,15 +7,14 @@ PROJ_ROOT=`pwd`
 rm -rf mac-distribution
 mkdir mac-distribution
 cd mac-distribution
-if [ ! -f "$PROJ_ROOT/USPSA_Result_Viewer.app.zip" ]; then
+if [ ! -f "$PROJ_ROOT/USPSA_Analyst.app.zip" ]; then
     echo "Download a Codemagic build to the repository root before packaging."
     exit
 fi
 
-mv "$PROJ_ROOT/USPSA_Result_Viewer.app.zip" .
-unzip "USPSA_Result_Viewer.app.zip"
-mv "USPSA Result Viewer.app" "USPSA Analyst.app"
-rm "USPSA_Result_Viewer.app.zip"
+mv "$PROJ_ROOT/USPSA_Analyst.app.zip" .
+unzip "USPSA_Analyst.app.zip"
+rm "USPSA_Analyst.app.zip"
 mkdir data
 cp $PROJ_ROOT/data/L2s-Since-2019.json data/
 cp $PROJ_ROOT/data/Nationals-and-Area-Matches.json data/

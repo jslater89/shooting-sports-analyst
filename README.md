@@ -53,13 +53,12 @@ to install a GNOME application entry for the debug version, or run `linux-instal
 unzipped release to install a GNOME application entry for that version.
 
 ### MacOS
-The desktop application should work on MacOS, but I'm not paying the $100 Apple Developer tax and
-jumping through the code-signing hoops to build a distributable application. Apple is awful to
-developers, and I don't see any reason to reward them for it.
+An unsigned MacOS release is available, if I seem like the trustworthy sort to you. Download the
+release zip file, unzip it, right-click on the unzipped folder and select "New Terminal at Folder",
+and enter `./install.sh`. This will copy USPSA Analyst to your Applications folder, and prompt you
+for your password or Touch ID to grant permission to run USPSA Analyst.
 
-If you're the adventurous sort, you can [install Flutter](https://docs.flutter.dev/get-started/install/macos),
-the framework in which USPSA Analyst is built, build the app using the Flutter command line
-interface, and run the app using Xcode.
+After installing, Analyst should be available in Launchpad and Spotlight.
 
 ### Web
 Copy web/index-template.html to web/index.html, then use `flutter build web`.
