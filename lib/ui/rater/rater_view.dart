@@ -143,6 +143,7 @@ enum RatingSortMode {
   error,
   lastChange,
   trend,
+  direction,
   stages,
   pointsPerMatch,
 }
@@ -168,6 +169,8 @@ extension RatingSortModeNames on RatingSortMode {
         return "Last Name";
       case RatingSortMode.pointsPerMatch:
         return "Points/Match";
+      case RatingSortMode.direction:
+        return "Direction";
     }
   }
 }
@@ -200,6 +203,16 @@ extension _SortFunctions on RatingSortMode {
           if(a is EloShooterRating && b is EloShooterRating) {
             double aLastMatchChange = a.lastMatchChange;
             double bLastMatchChange = b.lastMatchChange;
+
+            return bLastMatchChange.compareTo(aLastMatchChange);
+          }
+          throw ArgumentError();
+        };
+      case RatingSortMode.direction:
+        return (a, b) {
+          if(a is EloShooterRating && b is EloShooterRating) {
+            double aLastMatchChange = a.direction;
+            double bLastMatchChange = b.direction;
 
             return bLastMatchChange.compareTo(aLastMatchChange);
           }

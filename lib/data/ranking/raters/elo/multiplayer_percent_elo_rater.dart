@@ -13,6 +13,7 @@ import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rating_change.da
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/ui/elo_settings_ui.dart';
 import 'package:uspsa_result_viewer/data/ranking/timings.dart';
+import 'package:uspsa_result_viewer/ui/rater/rater_view.dart';
 import 'package:uspsa_result_viewer/ui/widget/score_row.dart';
 
 class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSettings, EloSettingsController> {
@@ -283,6 +284,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   static const _errorFlex = 2;
   static const _connectednessFlex = 2;
   static const _trendFlex = 2;
+  static const _directionFlex = 2;
   static const _stagesFlex = 2;
   static const _trailPaddingFlex = 2;
 
@@ -320,6 +322,13 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
           )
         ),
         Expanded(
+            flex: _directionFlex,
+            child: Tooltip(
+                message: "The shooter's rating trajectory: 100 if all of the last 30 rating events were positive, -100 if all were negative.",
+                child: Text("Direction", textAlign: TextAlign.end)
+            )
+        ),
+        Expanded(
           flex: _connectednessFlex,
           child: Tooltip(
             message: "The shooter's connectedness, a measure of how much he shoots against other shooters in the set.",
@@ -337,6 +346,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     rating as EloShooterRating;
 
     var trend = rating.trend.round();
+    var positivity = (rating.direction * 100).round();
     // var trend = rating.direction.toStringAsFixed(2);
     var error = rating.standardError;
     var lastMatchChange = rating.lastMatchChange;
@@ -356,6 +366,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
               Expanded(flex: _errorFlex, child: Text("${error.toStringAsFixed(1)}", textAlign: TextAlign.end)),
               Expanded(flex: _matchChangeFlex, child: Text("${lastMatchChange.round()}", textAlign: TextAlign.end)),
               Expanded(flex: _trendFlex, child: Text("$trend", textAlign: TextAlign.end)),
+              Expanded(flex: _directionFlex, child: Text("$positivity", textAlign: TextAlign.end)),
               Expanded(flex: _connectednessFlex, child: Text("${(rating.connectedness - ShooterRating.baseConnectedness).toStringAsFixed(1)}", textAlign: TextAlign.end)),
               Expanded(flex: _stagesFlex, child: Text("${rating.length}", textAlign: TextAlign.end,)),
               Expanded(flex: _trailPaddingFlex, child: Text("")),
@@ -447,6 +458,18 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   }
 
   static const monteCarloTrials = 1000;
+
+  List<RatingSortMode> get supportedSorts => [
+    RatingSortMode.rating,
+    RatingSortMode.classification,
+    RatingSortMode.firstName,
+    RatingSortMode.lastName,
+    RatingSortMode.error,
+    RatingSortMode.lastChange,
+    RatingSortMode.trend,
+    RatingSortMode.direction,
+    RatingSortMode.stages,
+  ];
 
   @override
   bool get supportsPrediction => true;

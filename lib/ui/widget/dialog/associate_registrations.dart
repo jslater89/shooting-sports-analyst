@@ -73,6 +73,7 @@ class _AssociateRegistrationsDialogState extends State<AssociateRegistrationsDia
                                     );
                                   },
                                   onSuggestionSelected: (rating) {
+                                    debugPrint("Selected $rating");
                                     setState(() {
                                       enabled = false;
                                       selectedMappings[unmatched] = rating;
