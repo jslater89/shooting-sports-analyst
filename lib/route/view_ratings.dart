@@ -728,7 +728,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       return;
     }
 
-    var predictions = rater.ratingSystem.predict(shooters);
+    int seed = _history.matches.last.date?.millisecondsSinceEpoch ?? 1054124681;
+    var predictions = rater.ratingSystem.predict(shooters, seed: seed);
     Navigator.of(context).push(MaterialPageRoute(builder: (context) {
       return PredictionView(rater: rater, predictions: predictions);
     }));

@@ -478,21 +478,30 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   bool get supportsValidation => true;
 
   @override
-  List<ShooterPrediction> predict(List<ShooterRating> ratings) {
+  List<ShooterPrediction> predict(List<ShooterRating> ratings, {int? seed}) {
     List<EloShooterRating> eloRatings = List.castFrom(ratings);
     List<ShooterPrediction> predictions = [];
+
+    if(seed != null) {
+      Gumbel.random = Random(seed);
+    }
 
     for(var rating in eloRatings) {
       var error = rating.standardError;
       var stdDev = error;
 
-      // Smaller compression factors mean more compression, 1.0 means no compression.
-      var lowerCompressionFactor = 0.8;
-      var upperCompressionFactor = 0.9;
-      var compressionCenter = 100.0;
+      // Compression reduces the amount by which rating error far from compressionCenter
+      // varies the size of error bars.
+      // Smaller compression factors will yield wider error bars for people further from compressionCenter.
+      // Essentially, this is a fluff factor to keep the system from predicting tiny errors for top shooters.
+      var lowerCompressionFactor = 0.8; // todo: 0.25
+      var upperCompressionFactor = 0.9; // todo: 0.9
+      var compressionCenter = 100.0; // todo: settings.K
       if(error > compressionCenter) stdDev = compressionCenter + pow(stdDev - compressionCenter, upperCompressionFactor);
       else stdDev = compressionCenter - pow(compressionCenter - stdDev, lowerCompressionFactor);
 
+      // If rating error is very high, increase the size of error bars. If it's very low, reduce the
+      // size of error bars.
       var errThreshold = settings.errorAwareMaxThreshold;
       var minThreshold = settings.errorAwareMinThreshold;
       var errMultiplier = 1.0;
@@ -504,12 +513,18 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       }
       stdDev = stdDev * errMultiplier;
 
+      // Offset the ratings up or down around the center, based on the shooter's
+      // trend. (If you're on an upward run, you get some upward shaping.)
       var trends = [rating.shortTrend, rating.mediumTrend, rating.longTrend];
 
-      var trendShiftMaxVal = 400;
+      var trendShiftMaxVal = settings.scale; // todo: settings.K * 2
       var trendShiftMaxMagnitude = 0.9;
       var trendShiftProportion = max(-1.0, min(1.0, trends.average / trendShiftMaxVal));
       var trendShift = trendShiftProportion * trendShiftMaxMagnitude;
+
+      // Starting with the shooter's calculated rating, generate a bunch of potential ratings that could be the
+      // actual, accurate representation of the shooter's skill, and average the win probability of all of those
+      // potential ratings against the rest of the field.
 
       //List<double> possibleRatings = Normal.generate(monteCarloTrials, mean: rating.rating, variance: stdDev * stdDev);
       List<double> possibleRatings = Gumbel.generate(monteCarloTrials, mu: rating.rating, beta: stdDev);

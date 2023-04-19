@@ -42,3 +42,5 @@ void showAbout(BuildContext context, Size screenSize) {
       }
   );
 }
+
+// https://practiscore.com/support

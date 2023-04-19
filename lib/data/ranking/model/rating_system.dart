@@ -97,7 +97,9 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
   ScoreRow buildRatingRow({required BuildContext context, required int place, required ShooterRating rating});
 
   /// Return ShooterPredictions for the list of shooters.
-  List<ShooterPrediction> predict(List<ShooterRating> ratings) {
+  ///
+  /// Provide a [seed] for repeatable predictions, if desired.
+  List<ShooterPrediction> predict(List<ShooterRating> ratings, {int? seed}) {
     throw UnimplementedError();
   }
 
