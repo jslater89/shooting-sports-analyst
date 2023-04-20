@@ -516,6 +516,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       // Offset the ratings up or down around the center, based on the shooter's
       // trend. (If you're on an upward run, you get some upward shaping.)
       var trends = [rating.shortTrend, rating.mediumTrend, rating.longTrend];
+      // var trends = [rating.shortDirection, rating.direction, rating.longDirection];
 
       var trendShiftMaxVal = settings.scale; // todo: settings.K * 2
       var trendShiftMaxMagnitude = 0.9;
