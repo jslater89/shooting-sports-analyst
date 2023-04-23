@@ -350,12 +350,17 @@ class MatchCache {
   }
 
   String? getIndexUrl(MatchCacheIndexEntry indexEntry) {
-    var entry = _index.entries.firstWhereOrNull((element) => element.value == indexEntry);
+    var entries = _index.entries.where((element) => element.value == indexEntry).toList();
 
-    if(entry != null) {
-      return "https://practiscore.com/results/new/${entry.key}";
-    }
-    return null;
+    if(entries.isEmpty) return null;
+
+    if(entries.length == 1) return "https://practiscore.com/results/new/${entries[0].key}";
+
+    // Return the shorter ID, if present. That way, we never lose the short-id mapping
+    // if we use this method to get a URL to re-fetch a match.
+    var entry = entries.map((e) => e.key).reduce((a, b) => a.length < b.length ? a : b);
+
+    return "https://practiscore.com/results/new/$entry";
   }
 
   MatchCacheIndexEntry? getIndexImmediate(String matchUrl) {

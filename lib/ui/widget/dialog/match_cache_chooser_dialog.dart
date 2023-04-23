@@ -258,19 +258,41 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
                 leading: widget.multiple && selectedMatches.contains(searchedMatches[i]) ? Icon(
                   Icons.check,
                 ) : null,
-                trailing: IconButton(
-                  icon: Icon(Icons.delete),
-                  onPressed: () async {
-                    var match = searchedMatches[i];
-                    var deletedFuture = cache!.deleteIndexEntry(match);
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.refresh),
+                      onPressed: () async {
+                        var match = searchedMatches[i];
+                        var url = MatchCache().getIndexUrl(match)!; // can't be in this dialog unless in cache
 
-                    var deleted = await showDialog<bool>(context: context, builder: (c) => LoadingDialog(title: "Deleting...", waitOn: deletedFuture));
-                    if(deleted ?? false) {
-                      setState(() {
-                        _updateMatches();
-                      });
-                    }
-                  },
+                        await cache!.deleteIndexEntry(match);
+                        var result = await MatchCache().getMatch(url, forceUpdate: true);
+
+                        if(result.isOk()) {
+                          if(mounted) setState(() {
+                            _updateMatches();
+                          });
+                        }
+                        else debugPrint("Unable to get match: ${result.unwrapErr()}");
+                      },
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.delete),
+                      onPressed: () async {
+                        var match = searchedMatches[i];
+                        var deletedFuture = cache!.deleteIndexEntry(match);
+
+                        var deleted = await showDialog<bool>(context: context, builder: (c) => LoadingDialog(title: "Deleting...", waitOn: deletedFuture));
+                        if(deleted ?? false) {
+                          setState(() {
+                            _updateMatches();
+                          });
+                        }
+                      },
+                    ),
+                  ],
                 ),
               );
             },

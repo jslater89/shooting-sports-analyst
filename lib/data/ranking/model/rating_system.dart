@@ -82,7 +82,7 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
   /// restore defaults.
   RaterSettingsController<S> newSettingsController();
 
-  /// Return to get a widget tree which can be inserted into a child of a Column
+  /// Return a widget tree which can be inserted into a child of a Column
   /// wrapped in a SingleChildScrollView, which implements the settings for this
   /// rating system.
   RaterSettingsWidget<S, C> newSettingsWidget(C controller);
