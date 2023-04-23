@@ -271,6 +271,7 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
                         var result = await MatchCache().getMatch(url, forceUpdate: true);
 
                         if(result.isOk()) {
+                          cache!.save();
                           if(mounted) setState(() {
                             _updateMatches();
                           });
