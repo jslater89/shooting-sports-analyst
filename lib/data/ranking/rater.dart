@@ -246,6 +246,7 @@ class Rater {
     List<int> matchLengths = [];
     List<int> matchRoundCounts = [];
     List<int> stageRoundCounts = [];
+    List<double> dqsPer100 = [];
 
     for(var m in _matches) {
       var totalRounds = 0;
@@ -261,11 +262,18 @@ class Rater {
       }
       matchLengths.add(stages);
       matchRoundCounts.add(totalRounds);
+
+      int dqs = 0;
+      for(var s in m.shooters) {
+        if(s.dq) dqs += 1;
+      }
+      dqsPer100.add(dqs * (100 / m.shooters.length));
     }
 
     matchLengths.sort();
     matchRoundCounts.sort();
     stageRoundCounts.sort();
+    dqsPer100.sort();
 
     var matchLengthMode = mode(matchLengths);
     var stageRoundsMode = mode(stageRoundCounts);
@@ -275,6 +283,7 @@ class Rater {
     debugPrint("Match length in stages (min/max/average/median/mode): ${matchLengths.min}/${matchLengths.max}/${matchLengths.average.toStringAsFixed(1)}/${matchLengths[matchLengths.length ~/ 2]}/$matchLengthMode");
     debugPrint("Match length in rounds (average/median/mode): ${matchRoundCounts.min}/${matchRoundCounts.max}/${matchRoundCounts.average.toStringAsFixed(1)}/${matchRoundCounts[matchRoundCounts.length ~/ 2]}/$matchRoundsMode");
     debugPrint("Stage length in rounds (average/median/mode): ${stageRoundCounts.min}/${stageRoundCounts.max}/${stageRoundCounts.average.toStringAsFixed(1)}/${stageRoundCounts[stageRoundCounts.length ~/ 2]}/$stageRoundsMode");
+    debugPrint("DQs per 100 shooters (average/median): ${dqsPer100.min.toStringAsFixed(3)}/${dqsPer100.max.toStringAsFixed(3)}/${dqsPer100.average.toStringAsFixed(3)}/${dqsPer100[dqsPer100.length ~/ 2].toStringAsFixed(3)}");
     // debugPrint("Stage round counts: $stageRoundCounts");
     return RatingResult.ok();
   }
