@@ -974,7 +974,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     await Future.delayed(Duration(milliseconds: 100));
 
     int lastPause = -100;
-    await _matchCache.save((currentSteps, totalSteps) async {
+    await _matchCache.save(progressCallback: (currentSteps, totalSteps) async {
       if((currentSteps - lastPause) > 10) {
         lastPause = currentSteps;
         setState(() {

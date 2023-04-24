@@ -266,11 +266,17 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
                       onPressed: () async {
                         var match = searchedMatches[i];
                         var url = MatchCache().getIndexUrl(match)!; // can't be in this dialog unless in cache
+                        print("refreshing: $url");
 
-                        await cache!.deleteIndexEntry(match);
+                        var deleted = await cache!.deleteIndexEntry(match);
+                        if(!deleted) {
+                          print("Unable to delete!");
+                        }
+
                         var result = await MatchCache().getMatch(url, forceUpdate: true);
 
                         if(result.isOk()) {
+                          print("Refreshed ${result.unwrap().name} (${result.unwrap().practiscoreId} ${result.unwrap().practiscoreIdShort})");
                           cache!.save();
                           if(mounted) setState(() {
                             _updateMatches();
