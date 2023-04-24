@@ -494,9 +494,9 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       // varies the size of error bars.
       // Smaller compression factors will yield wider error bars for people further from compressionCenter.
       // Essentially, this is a fluff factor to keep the system from predicting tiny errors for top shooters.
-      var lowerCompressionFactor = 0.8; // todo: 0.25
-      var upperCompressionFactor = 0.9; // todo: 0.9
-      var compressionCenter = 100.0; // todo: settings.K
+      var lowerCompressionFactor = 0.8;
+      var upperCompressionFactor = 0.9;
+      var compressionCenter = 100.0;
       if(error > compressionCenter) stdDev = compressionCenter + pow(stdDev - compressionCenter, upperCompressionFactor);
       else stdDev = compressionCenter - pow(compressionCenter - stdDev, lowerCompressionFactor);
 
@@ -518,7 +518,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       var trends = [rating.shortTrend, rating.mediumTrend, rating.longTrend];
       // var trends = [rating.shortDirection, rating.direction, rating.longDirection];
 
-      var trendShiftMaxVal = settings.scale; // todo: settings.K * 2
+      var trendShiftMaxVal = settings.K * 2; // todo: settings.K * 2
       var trendShiftMaxMagnitude = 0.9;
       var trendShiftProportion = max(-1.0, min(1.0, trends.average / trendShiftMaxVal));
       var trendShift = trendShiftProportion * trendShiftMaxMagnitude;

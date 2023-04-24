@@ -72,7 +72,7 @@ class _PredictionViewState extends State<PredictionView> {
             child: IconButton(
               icon: Icon(Icons.save_alt),
               onPressed: () async {
-                String contents = "Name,Member Number,Class,5%,35%,Mean,65%,95%\n";
+                String contents = "Name,Member Number,Class,5%,35%,Mean,65%,95%,Actual Percent\n";
 
                 for(var pred in sortedPredictions) {
                   double midLow = (PredictionView._percentFloor + pred.lowerBox / highPrediction * PredictionView._percentMult) * 100;
@@ -80,11 +80,18 @@ class _PredictionViewState extends State<PredictionView> {
                   double mean = (PredictionView._percentFloor + pred.center / highPrediction * PredictionView._percentMult) * 100;
                   double low = (PredictionView._percentFloor + pred.lowerWhisker / highPrediction * PredictionView._percentMult) * 100;
                   double high = (PredictionView._percentFloor + pred.upperWhisker / highPrediction * PredictionView._percentMult) * 100;
+                  var outcome = outcomes[pred];
 
                   contents += "${pred.shooter.getName(suffixes: false)},";
-                  contents += "${pred.shooter.memberNumber},";
+                  contents += "${pred.shooter.originalMemberNumber},";
                   contents += "${pred.shooter.lastClassification.name},";
-                  contents += "$low,$midLow,$mean,$midHigh,$high\n";
+                  contents += "$low,$midLow,$mean,$midHigh,$high";
+
+                  if(outcome != null) {
+                    contents += ",${outcome.percent * 100}";
+                  }
+
+                  contents += "\n";
                 }
 
                 HtmlOr.saveFile("predictions.csv", contents);

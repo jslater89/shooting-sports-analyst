@@ -8,6 +8,14 @@ class LoadingDialog<T> extends StatefulWidget {
 
   @override
   State<LoadingDialog> createState() => _LoadingDialogState<T>();
+
+  static Future<T> show<T>({required BuildContext context, required Future<T> waitOn, String title = "Loading..."}) async {
+    var result = await showDialog(context: context, barrierDismissible: false, builder: (context) =>
+      LoadingDialog(title: title, waitOn: waitOn)
+    );
+
+    return result!;
+  }
 }
 
 class _LoadingDialogState<T> extends State<LoadingDialog> {

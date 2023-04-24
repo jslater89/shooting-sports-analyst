@@ -193,7 +193,10 @@ class _BoxPlotPainter extends CustomPainter {
 
     var lines = [];
     for(var line in referenceLines) {
-      lines.add(((line - leftEdge) * valueToPixel).roundToDouble());
+      var coord = (line - leftEdge) * valueToPixel;
+      if(coord >= 0) {
+        lines.add(coord.roundToDouble());
+      }
     }
     
     double crossStart = 0.0;

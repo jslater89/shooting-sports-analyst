@@ -273,7 +273,7 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
                           print("Unable to delete!");
                         }
 
-                        var result = await MatchCache().getMatch(url, forceUpdate: true);
+                        var result = await LoadingDialog.show(context: context, waitOn: MatchCache().getMatch(url, forceUpdate: true));
 
                         if(result.isOk()) {
                           print("Refreshed ${result.unwrap().name} (${result.unwrap().practiscoreId} ${result.unwrap().practiscoreIdShort})");
