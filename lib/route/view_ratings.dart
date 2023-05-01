@@ -1147,6 +1147,10 @@ extension _Utilities on RaterGroup {
         return "LO";
       case RaterGroup.limOpsCO:
         return "LO/CO";
+      case RaterGroup.limitedLO:
+        return "LIM/LO";
+      case RaterGroup.limLoCo:
+        return "LIM/LO/CO";
     }
   }
 }

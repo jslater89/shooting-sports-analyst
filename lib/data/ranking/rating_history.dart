@@ -258,7 +258,9 @@ enum RaterGroup {
   locap,
   openPcc,
   limitedCO,
-  limOpsCO;
+  limitedLO,
+  limOpsCO,
+  limLoCo;
 
   FilterSet get filters {
     return FilterSet(
@@ -304,6 +306,10 @@ enum RaterGroup {
         return [Division.limitedOptics];
       case RaterGroup.limOpsCO:
         return [Division.limitedOptics, Division.carryOptics];
+      case RaterGroup.limLoCo:
+        return [Division.limited, Division.carryOptics, Division.limitedOptics];
+      case RaterGroup.limitedLO:
+        return [Division.limited, Division.limitedOptics];
     }
   }
 
@@ -335,6 +341,10 @@ enum RaterGroup {
         return "Limited Optics";
       case RaterGroup.limOpsCO:
         return "LO/CO";
+      case RaterGroup.limLoCo:
+        return "LO/CO/Limited";
+      case RaterGroup.limitedLO:
+        return "Limited/LO";
     }
   }
 }
@@ -438,14 +448,13 @@ class RatingHistorySettings {
     }
   }
 
-  static List<RaterGroup> groupsForSettings({bool combineOpenPCC = false, bool combineLimitedCO = false, bool combineLocap = true}) {
+  static List<RaterGroup> groupsForSettings({bool combineOpenPCC = false, LimLoCoCombination limLoCo = LimLoCoCombination.none, bool combineLocap = true}) {
     var groups = <RaterGroup>[];
 
     if(combineOpenPCC) groups.add(RaterGroup.openPcc);
     else groups.addAll([RaterGroup.open, RaterGroup.pcc]);
 
-    if(combineLimitedCO) groups.add(RaterGroup.limitedCO);
-    else groups.addAll([RaterGroup.limited, RaterGroup.carryOptics]);
+    groups.addAll(limLoCo.groups());
 
     if(combineLocap) groups.add(RaterGroup.locap);
     else groups.addAll([RaterGroup.production, RaterGroup.singleStack, RaterGroup.revolver, RaterGroup.limited10]);

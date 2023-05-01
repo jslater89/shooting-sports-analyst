@@ -165,7 +165,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       _keepHistory = project.settings.preserveHistory;
       _checkDataEntryErrors = project.settings.checkDataEntryErrors;
       _combineLocap = project.settings.groups.contains(RaterGroup.locap);
-      _combineLimitedCO = project.settings.groups.contains(RaterGroup.limitedCO);
+      _limLoCoMode = LimLoCoCombination.fromGroups(project.settings.groups);
       _combineOpenPCC = project.settings.groups.contains(RaterGroup.openPcc);
       _shooterAliases = project.settings.shooterAliases;
       _memNumMappings = project.settings.userMemberNumberMappings;
@@ -227,7 +227,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   bool _keepHistory = false;
   bool _combineLocap = true;
   bool _combineOpenPCC = false;
-  bool _combineLimitedCO = false;
+  LimLoCoCombination _limLoCoMode = LimLoCoCombination.none;
   bool _checkDataEntryErrors = true;
 
   ScrollController _settingsScroll = ScrollController();
@@ -268,7 +268,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
     var groups = RatingHistorySettings.groupsForSettings(
       combineLocap: _combineLocap,
-      combineLimitedCO: _combineLimitedCO,
+      limLoCo: _limLoCoMode,
       combineOpenPCC: _combineOpenPCC,
     );
 
@@ -401,19 +401,37 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                   }
                                 }
                             ),
-                            CheckboxListTile(
-                                title: Tooltip(
-                                  child: Text("Combine Limited/CO?"),
-                                  message: "Combine ratings for Limited and Carry Optics if checked.",
+                            Row(
+                              mainAxisSize: MainAxisSize.max,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 16),
+                                  child: Tooltip(
+                                    child: Text("Combine Limited/LO/CO?", style: Theme.of(context).textTheme.subtitle1!),
+                                    message: "How to combine ratings for Limited, Limited Optics, and Carry Optics.",
+                                  ),
                                 ),
-                                value: _combineLimitedCO,
-                                onChanged: (value) {
-                                  if(value != null) {
-                                    setState(() {
-                                      _combineLimitedCO = value;
-                                    });
-                                  }
-                                }
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 20),
+                                  child: DropdownButton<LimLoCoCombination>(
+                                    value: _limLoCoMode,
+                                    onChanged: (v) {
+                                      setState(() {
+                                        if(v != null) {
+                                          _limLoCoMode = v;
+                                        }
+                                      });
+                                    },
+                                    items: LimLoCoCombination.values.map((r) =>
+                                        DropdownMenuItem<LimLoCoCombination>(
+                                          child: Text(r.uiLabel),
+                                          value: r,
+                                        )
+                                    ).toList(),
+                                  ),
+                                ),
+                              ],
                             ),
                             CheckboxListTile(
                               title: Tooltip(
@@ -810,7 +828,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       _keepHistory = false;
       _combineLocap = true;
       _combineOpenPCC = false;
-      _combineLimitedCO = false;
+      _limLoCoMode = LimLoCoCombination.none;
       _validationError = "";
       _shooterAliases = defaultShooterAliases;
       _memNumWhitelist = [];

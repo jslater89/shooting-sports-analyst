@@ -170,6 +170,7 @@ class RatingProjectManager {
 const _nameKey = "name";
 const _combineLocapKey = "combineLocap";
 const _combineLimitedCOKey = "combineLimCO";
+const _limitedLoCoCombineModeKey = "combineLimLoCo";
 const _combineOpenPCCKey = "combineOpPCC";
 const _keepHistoryKey = "keepHistory";
 const _urlsKey = "urls";
@@ -207,8 +208,22 @@ class RatingProject {
 
   factory RatingProject.fromJson(Map<String, dynamic> encodedProject) {
     var combineOpenPCC = (encodedProject[_combineOpenPCCKey] ?? false) as bool;
-    var combineLimitedCO = (encodedProject[_combineLimitedCOKey] ?? false) as bool;
     var combineLocap = (encodedProject[_combineLocapKey] ?? true) as bool;
+
+    LimLoCoCombination limLoCoMode;
+    if(encodedProject.containsKey(_combineLimitedCOKey)) {
+      // old project
+      var combineLimitedCO = (encodedProject[_combineLimitedCOKey] ?? false) as bool;
+      if(combineLimitedCO) {
+        limLoCoMode = LimLoCoCombination.limCo;
+      }
+      else {
+        limLoCoMode = LimLoCoCombination.none;
+      }
+    }
+    else {
+      limLoCoMode = LimLoCoCombination.values.byName(encodedProject[_limitedLoCoCombineModeKey] ?? LimLoCoCombination.none.name);
+    }
 
     var algorithmName = (encodedProject[algorithmKey] ?? multiplayerEloValue) as String;
     var algorithm = _algorithmForName(algorithmName, encodedProject);
@@ -225,7 +240,7 @@ class RatingProject {
       preserveHistory: encodedProject[_keepHistoryKey] as bool,
       groups: RatingHistorySettings.groupsForSettings(
         combineOpenPCC: combineOpenPCC,
-        combineLimitedCO: combineLimitedCO,
+        limLoCo: limLoCoMode,
         combineLocap: combineLocap,
       ),
       memberNumberWhitelist: ((encodedProject[_whitelistKey] ?? []) as List<dynamic>).map((item) => item as String).toList(),
@@ -268,7 +283,7 @@ class RatingProject {
     map[_checkDataEntryKey] = settings.checkDataEntryErrors;
     map[_combineLocapKey] = settings.groups.contains(RaterGroup.locap);
     map[_combineOpenPCCKey] = settings.groups.contains(RaterGroup.openPcc);
-    map[_combineLimitedCOKey] = settings.groups.contains(RaterGroup.limitedCO);
+    map[_limitedLoCoCombineModeKey] = LimLoCoCombination.fromGroups(settings.groups).name;
     map[_keepHistoryKey] = settings.preserveHistory;
     map[_urlsKey] = matchUrls;
     map[_whitelistKey] = settings.memberNumberWhitelist;
@@ -286,5 +301,77 @@ class RatingProject {
 
     var encoded = jsonEncode(map);
     return encoded;
+  }
+}
+
+enum LimLoCoCombination {
+  none,
+  limCo,
+  limLo,
+  loCo,
+  all;
+
+  List<RaterGroup> groups() {
+    switch(this) {
+      case LimLoCoCombination.none:
+        return [
+          RaterGroup.limited,
+          RaterGroup.carryOptics,
+          RaterGroup.limitedOptics,
+        ];
+      case LimLoCoCombination.limCo:
+        return [
+          RaterGroup.limitedCO,
+          RaterGroup.limitedOptics,
+        ];
+      case LimLoCoCombination.limLo:
+        return [
+          RaterGroup.limitedLO,
+          RaterGroup.carryOptics,
+        ];
+      case LimLoCoCombination.loCo:
+        return [
+          RaterGroup.limOpsCO,
+          RaterGroup.limited,
+        ];
+      case LimLoCoCombination.all:
+        return [
+          RaterGroup.limLoCo,
+        ];
+    }
+  }
+
+  static LimLoCoCombination fromGroups(List<RaterGroup> groups) {
+    if(groups.contains(RaterGroup.limLoCo)) {
+      return LimLoCoCombination.all;
+    }
+    else if(groups.contains(RaterGroup.limOpsCO)) {
+      return LimLoCoCombination.loCo;
+    }
+    else if(groups.contains(RaterGroup.limitedLO)) {
+      return LimLoCoCombination.limLo;
+    }
+    else if(groups.contains(RaterGroup.limitedCO)) {
+      return LimLoCoCombination.limCo;
+    }
+    else {
+      return none;
+    }
+  }
+
+  String get uiLabel {
+    switch(this) {
+
+      case LimLoCoCombination.none:
+        return "All separate";
+      case LimLoCoCombination.limCo:
+        return "Combine LIM/CO";
+      case LimLoCoCombination.limLo:
+        return "Combine LIM/LO";
+      case LimLoCoCombination.loCo:
+        return "Combine LO/CO";
+      case LimLoCoCombination.all:
+        return "Combine all";
+    }
   }
 }
