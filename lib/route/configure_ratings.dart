@@ -115,7 +115,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
     // Ordinarily, the match cache is saved during the rating loading screen,
     // after we've downloaded matches but before we start doing the math.
-    // Put this here, so anything we download gets
+    // Put this here, so anything we download gets saved if we exit rather
+    // than advancing.
     if(matches.isNotEmpty) {
       cache.save();
     }
@@ -187,7 +188,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     _currentRater = _currentRaterFor(algorithm);
 
     // also gets display names
-    _sortMatches();
+    _sortMatches(false);
 
     setState(() {
       _lastProjectName = project.name;
@@ -629,8 +630,18 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                   icon: Icon(Icons.sort),
                                   color: Theme.of(context).primaryColor,
                                   onPressed: () async {
-                                    _sortMatches();
+                                    _sortMatches(false);
                                   }
+                                ),
+                              ),
+                              Tooltip(
+                                message: "Sort matches alphabetically. Non-cached matches will be displayed first.",
+                                child: IconButton(
+                                    icon: Icon(Icons.sort_by_alpha),
+                                    color: Theme.of(context).primaryColor,
+                                    onPressed: () async {
+                                      _sortMatches(true);
+                                    }
                                 ),
                               ),
                             ],
@@ -726,7 +737,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     );
   }
 
-  void _sortMatches() async {
+  void _sortMatches(bool alphabetic) async {
     var cache = MatchCache();
     await cache.ready;
 
@@ -740,10 +751,12 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       if(matchA != null && matchB == null) return 1;
 
       // Sort remaining matches by date descending, then by name ascending
-      var dateSort = matchB!.matchDate.compareTo(matchA!.matchDate);
-      if(dateSort != 0) return dateSort;
+      if(!alphabetic) {
+        var dateSort = matchB!.matchDate.compareTo(matchA!.matchDate);
+        if (dateSort != 0) return dateSort;
+      }
 
-      return matchA.matchName.compareTo(matchB.matchName);
+      return matchA!.matchName.compareTo(matchB!.matchName);
     });
 
     updateUrls();

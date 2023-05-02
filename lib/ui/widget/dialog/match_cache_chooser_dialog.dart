@@ -36,6 +36,7 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
   int matchCacheTotal = 0;
 
   bool addedMatch = false;
+  bool alphabeticSort = false;
 
   List<MatchCacheIndexEntry> matches = [];
   List<MatchCacheIndexEntry> searchedMatches = [];
@@ -89,7 +90,13 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
     else {
       matches = cache!.allIndexEntries();
     }
-    matches.sort((a, b) => b.matchDate.compareTo(a.matchDate));
+
+    if(alphabeticSort) {
+      matches.sort((a, b) => a.matchName.compareTo(b.matchName));
+    }
+    else {
+      matches.sort((a, b) => b.matchDate.compareTo(a.matchDate));
+    }
 
     if(searchController.text.isNotEmpty) {
       _applySearch();
@@ -223,6 +230,20 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
                   }
                 }
               },
+            ),
+            Tooltip(
+              message: alphabeticSort ?
+                  "Switch to date sort." :
+                  "Switch to alphabetic sort.",
+              child: IconButton(
+                icon: alphabeticSort ? Icon(Icons.sort_by_alpha) : Icon(Icons.sort),
+                onPressed: () {
+                  setState(() {
+                    alphabeticSort = !alphabeticSort;
+                  });
+                  _updateMatches();
+                },
+              ),
             )
           ],
         ),
@@ -232,8 +253,10 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
           child: ListView.separated(
             itemCount: searchedMatches.length,
             itemBuilder: (context, i) {
+              var name = searchedMatches[i].matchName;
+              if(name.isEmpty) name = "(match name not provided)";
               return ListTile(
-                title: Text(searchedMatches[i].matchName, overflow: TextOverflow.ellipsis),
+                title: Text(name, overflow: TextOverflow.ellipsis),
                 subtitle: !widget.showIds ? null
                   : SelectableText("${searchedMatches[i].ids.join(" ")}"),
                 visualDensity: VisualDensity(vertical: -4),
