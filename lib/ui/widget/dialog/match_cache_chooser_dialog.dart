@@ -35,7 +35,7 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
   int matchCacheCurrent = 0;
   int matchCacheTotal = 0;
 
-  bool addedMatch = false;
+  List<String> addedMatches = [];
   bool alphabeticSort = false;
 
   List<MatchCacheIndexEntry> matches = [];
@@ -123,7 +123,7 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
             // Don't allow premature closing
             onPressed: cache != null ? () {
               Navigator.of(context).pop();
-              if(addedMatch) cache!.save();
+              cache!.save(forceResave: addedMatches);
             } : null,
           )
         ],
@@ -221,7 +221,7 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
                     if(res2.isOk()) {
                       setState(() {
                         _updateMatches();
-                        addedMatch = true;
+                        addedMatches.add(res2.unwrap().practiscoreId);
                       });
                     }
                     else {
@@ -276,7 +276,7 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
                   else {
                     Navigator.of(context).pop(searchedMatches[i]);
                   }
-                  if(addedMatch) cache!.save();
+                  cache!.save(forceResave: addedMatches);
                 },
                 leading: widget.multiple && selectedMatches.contains(searchedMatches[i]) ? Icon(
                   Icons.check,
