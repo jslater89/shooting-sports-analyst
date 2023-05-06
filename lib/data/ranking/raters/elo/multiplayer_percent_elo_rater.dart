@@ -24,12 +24,6 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   static const doBackRating = false;
   static const backRatingErrorKey = "backRatingError";
 
-  static const defaultK = 60.0;
-  static const defaultPercentWeight = 0.4;
-  static const defaultPlaceWeight = 0.6;
-  static const defaultScale = 800.0;
-  static const defaultMatchBlend = 0.3;
-
   Timings timings = Timings();
 
   @override

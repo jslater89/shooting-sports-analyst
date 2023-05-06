@@ -6,18 +6,21 @@ import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
+import 'package:uspsa_result_viewer/ui/rater/rating_filter_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/shooter_stats_dialog.dart';
 
 class RaterView extends StatefulWidget {
   const RaterView({
     Key? key, required this.rater, required this.currentMatch, this.search, this.maxAge, this.minRatings = 0,
     this.sortMode = RatingSortMode.rating,
+    required this.filters,
     this.onRatingsFiltered,
     this.hiddenShooters = const [],
   }) : super(key: key);
 
   final String? search;
   final Duration? maxAge;
+  final RatingFilters filters;
   final int minRatings;
   final Rater rater;
   final PracticalMatch currentMatch;
@@ -86,6 +89,10 @@ class _RaterViewState extends State<RaterView> {
       var cutoff = widget.currentMatch.date ?? DateTime.now();
       cutoff = cutoff.subtract(widget.maxAge!);
       sortedRatings = sortedRatings.where((r) => r.lastSeen.isAfter(cutoff));
+    }
+
+    if(widget.filters.ladyOnly) {
+      sortedRatings = sortedRatings.where((r) => r.female);
     }
 
     if(widget.search != null && widget.search!.isNotEmpty) {

@@ -29,6 +29,8 @@ class Shooter {
   bool reentry = false;
   bool dq = false;
 
+  bool female = false;
+
   Division? division;
   Classification? classification;
   PowerFactor? powerFactor;
@@ -41,6 +43,7 @@ class Shooter {
     var components = [firstName, lastName];
     if(dq) components.add("(DQ)");
     if(reentry) components.add("(R)");
+    if(female) components.add("(F)");
     return components.join(" ");
   }
 
@@ -56,6 +59,7 @@ class Shooter {
       ..division = division
       ..classification = classification
       ..powerFactor = powerFactor
+      ..female = female
       ..stageScores = {};
 
     stageScores.forEach((stage, score) {
@@ -77,6 +81,7 @@ class Shooter {
       ..division = division
       ..classification = classification
       ..powerFactor = powerFactor
+      ..female = female
       ..stageScores = {};
 
     return newShooter;
@@ -93,6 +98,7 @@ class Shooter {
     division = other.division;
     classification = other.classification;
     powerFactor = other.powerFactor;
+    female = other.female;
   }
 
   void copyDbVitalsFrom(DbShooterVitals other) {
@@ -182,8 +188,10 @@ enum Division {
         return "Single Stack";
       case Division.revolver:
         return "Revolver";
-      default:
-        return "INVALID DIVISION";
+      case Division.limitedOptics:
+        return "Limited Optics";
+      case Division.unknown:
+        return "Unknown Division";
     }
   }
 }
@@ -191,64 +199,7 @@ enum Division {
 extension DivisionFrom on Division {
   static Division string(String s) {
     s = s.trim().toLowerCase();
-    switch(s) {
-      case "pcc": return Division.pcc;
-      case "pistol caliber carbine": return Division.pcc;
-
-      case "open": return Division.open;
-
-      case "ltd":
-      case "limited": return Division.limited;
-
-      case "co":
-      case "carry optics": return Division.carryOptics;
-
-      case "l10":
-      case "ltd10":
-      case "limited 10": return Division.limited10;
-
-      case "prod":
-      case "production": return Division.production;
-
-      case "ss":
-      case "single stack": return Division.singleStack;
-
-      case "rev":
-      case "revo":
-      case "revolver": return Division.revolver;
-      default: {
-        if(verboseParse) debugPrint("Unknown division: $s");
-        return Division.unknown;
-      }
-    }
-  }
-}
-
-extension DDisplayString on Division? {
-  String displayString() {
-    switch(this) {
-
-      case Division.pcc:
-        return "PCC";
-      case Division.open:
-        return "Open";
-      case Division.limited:
-        return "Limited";
-      case Division.carryOptics:
-        return "Carry Optics";
-      case Division.limitedOptics:
-        return "Limited Optics";
-      case Division.limited10:
-        return "Limited 10";
-      case Division.production:
-        return "Production";
-      case Division.singleStack:
-        return "Single Stack";
-      case Division.revolver:
-        return "Revolver";
-      default:
-        return "INVALID DIVISION";
-    }
+    return Division.fromString(s);
   }
 }
 

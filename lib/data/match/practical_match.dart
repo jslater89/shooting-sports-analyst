@@ -52,10 +52,11 @@ class PracticalMatch {
   /// Filters shooters by division, power factor, and classification.
   List<Shooter> filterShooters({
     FilterMode? filterMode,
-    bool? allowReentries = true,
+    bool allowReentries = true,
     List<Division> divisions = Division.values,
     List<PowerFactor> powerFactors = PowerFactor.values,
     List<Classification> classes = Classification.values,
+    bool ladyOnly = false,
   }) {
     List<Shooter> filteredShooters = [];
 
@@ -70,6 +71,10 @@ class PracticalMatch {
           if(allowReentries! || !s.reentry) filteredShooters.add(s);
         }
       }
+    }
+
+    if(ladyOnly) {
+      filteredShooters.retainWhere((s) => s.female);
     }
 
     return filteredShooters;

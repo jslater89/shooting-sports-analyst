@@ -19,8 +19,10 @@ import 'package:uspsa_result_viewer/ui/rater/prediction/prediction_view.dart';
 import 'package:uspsa_result_viewer/ui/rater/prediction/registration_parser.dart';
 import 'package:uspsa_result_viewer/ui/rater/rater_stats_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/rater_view.dart';
+import 'package:uspsa_result_viewer/ui/rater/rating_filter_dialog.dart';
 import 'package:uspsa_result_viewer/ui/result_page.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/associate_registrations.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/match_cache_chooser_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/member_number_collision_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/url_entry_dialog.dart';
@@ -81,6 +83,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   late TextEditingController _maxDaysController;
   int _minRatings = 0;
   int _maxDays = 365;
+  RatingFilters _filters = RatingFilters(ladyOnly: false);
   
   late RatingHistory _history;
   bool _historyChanged = false;
@@ -351,6 +354,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                 minRatings: _minRatings,
                 maxAge: maxAge,
                 sortMode: _sortMode,
+                filters: _filters,
                 onRatingsFiltered: (ratings) {
                   _ratings = ratings;
                 },
@@ -490,6 +494,23 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                         ],
                       ),
                     ),
+                  ),
+                  Tooltip(
+                    message: "Other filters.",
+                    child: IconButton(
+                      icon: Icon(Icons.filter_alt),
+                      onPressed: () async {
+                        var filters = await showDialog(context: context, builder: (context) =>
+                          RatingFilterDialog(filters: _filters),
+                        );
+
+                        if(filters != null) {
+                          setState(() {
+                            _filters = filters;
+                          });
+                        }
+                      },
+                    )
                   ),
                 ],
               ),

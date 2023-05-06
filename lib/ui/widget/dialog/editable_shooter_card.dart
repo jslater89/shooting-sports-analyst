@@ -487,7 +487,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
             HtmlOr.openLink("https://uspsa.org/classification/${shooter.originalMemberNumber}");
           },
           child: Text(
-            "${shooter.getName()} - ${shooter.division.displayString()} ${shooter.classification.displayString()}",
+            "${shooter.getName()} - ${shooter.division?.displayString() ?? "NO DIVISION"} ${shooter.classification.displayString()}",
             style: Theme.of(context).textTheme.headline6!.copyWith(
               color: Theme.of(context).primaryColor,
               decoration: TextDecoration.underline,
@@ -498,7 +498,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
     }
     else {
       children.add(Text(
-        "${shooter.getName()} - ${shooter.division.displayString()} ${shooter.classification.displayString()}",
+        "${shooter.getName()} - ${shooter.division?.displayString() ?? "NO DIVISION"} ${shooter.classification.displayString()}",
         style: Theme.of(context).textTheme.headline6,
       ));
     }

@@ -69,7 +69,7 @@ class _AssociateRegistrationsDialogState extends State<AssociateRegistrationsDia
                                   itemBuilder: (context, rating) {
                                     return Padding(
                                       padding: const EdgeInsets.all(8.0),
-                                      child: Text("${rating.getName(suffixes: false)} (${rating.division.displayString()} ${rating.classification.displayString()})"),
+                                      child: Text("${rating.getName(suffixes: false)} (${rating.division?.displayString() ?? "NO DIVISION"} ${rating.classification.displayString()})"),
                                     );
                                   },
                                   onSuggestionSelected: (rating) {
@@ -79,7 +79,7 @@ class _AssociateRegistrationsDialogState extends State<AssociateRegistrationsDia
                                       selectedMappings[unmatched] = rating;
                                       remainingOptions.remove(rating);
                                     });
-                                    controller.text = "${rating.getName(suffixes: false)} (${rating.division.displayString()} ${rating.classification.displayString()})";
+                                    controller.text = "${rating.getName(suffixes: false)} (${rating.division?.displayString() ?? "NO DIVISION"} ${rating.classification.displayString()})";
                                   },
                                   textFieldConfiguration: TextFieldConfiguration(
                                     controller: controller,

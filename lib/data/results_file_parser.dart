@@ -130,6 +130,10 @@ const int _REENTRY = 7;
 const int _CLASS = 8;
 const int _DIVISION = 9;
 const int _POWER_FACTOR = 12;
+const int _LADY = 33;
+const int _AGE = 34;
+const int _LAW_ENFORCEMENT = 35;
+const int _MILITARY = 36;
 Map<int, Shooter> _readCompetitorLines(PracticalMatch match, List<String> competitorLines) {
   Map<int, Shooter> shootersById = {};
 
@@ -148,6 +152,7 @@ Map<int, Shooter> _readCompetitorLines(PracticalMatch match, List<String> compet
         ..classification = ClassificationFrom.string(splitLine[_CLASS])
         ..division = DivisionFrom.string(splitLine[_DIVISION])
         ..powerFactor = PowerFactorFrom.string(splitLine[_POWER_FACTOR])
+        ..female = splitLine[_LADY].toLowerCase() == "yes"
         ..dq = splitLine[_DQ_PISTOL].toLowerCase() == "yes" || splitLine[_DQ_RIFLE].toLowerCase() == "yes" || splitLine[_DQ_SHOTGUN].toLowerCase() == "yes";
 
       shootersById[i++] = s;
