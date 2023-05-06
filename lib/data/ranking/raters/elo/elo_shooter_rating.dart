@@ -142,8 +142,9 @@ class EloShooterRating extends ShooterRating {
     var events = eventsForWindow();
     var errors = events.map((e) => (e as EloRatingEvent).backRatingError);
     var average = errors.average;
-    var variance = (errors.map((e) => pow(e - errors.average, 2)).sum) / errors.length;
-    return sqrt(variance);
+    return average;
+    // var variance = (errors.map((e) => pow(e - average, 2)).sum) / errors.length;
+    // return sqrt(variance);
   }
 
   List<RatingEvent> ratingEvents = [];

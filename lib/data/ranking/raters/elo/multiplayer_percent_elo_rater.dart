@@ -20,6 +20,8 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   static const errorKey = "error";
   static const baseKKey = "baseK";
   static const effectiveKKey = "effectiveK";
+
+  static const doBackRating = true;
   static const backRatingErrorKey = "backRatingError";
 
   static const defaultK = 60.0;
@@ -173,44 +175,73 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       throw StateError("NaN/Infinite/really big");
     }
 
-    // // Back-prediction: what would your rating have had to be, for your expected score to be
-    // // your actual score?
-    //
-    // // Assume that changing rating by K will fully correct
-    // // the difference; we'll calculate better step sizes after the
-    // // first iteration.
-    // var difference = actualScore.score - params.expectedScore;
-    // var stepSize = K;
-    // EloShooterRating backRating = EloShooterRating.copy(aRating);
-    //
-    // int steps = 0;
-    // while(stepSize.abs() >= K * 0.1 && steps < 10) {
-    //   backRating.rating += stepSize * difference.sign;
-    //
-    //   var backParams = _calculateScoreParams(
-    //       aRating: backRating,
-    //       aScore: aScore,
-    //       aMatchScore: aMatchScore,
-    //       scores: scores,
-    //       matchScores: matchScores);
-    //
-    //   var oldDifference = difference;
-    //   difference = actualScore.score - backParams.expectedScore;
-    //   var scoreChange = (oldDifference - difference).abs();
-    //
-    //   // We changed rating by stepSize, which changed the score miss by scoreChange.
-    //   // At rating differences <<< scale, the probability change is basically linear.
-    //   // So, assume a linear relationship and go from there.
-    //   var stepPerRating = scoreChange < actualScore.score * 0.01 ? 0 : scoreChange / stepSize;
-    //   stepSize = stepPerRating == 0 ? 0 : difference.abs() / stepPerRating;
-    //
-    //   if(stepPerRating.isNaN || stepPerRating.isInfinite || stepSize.isNaN || stepSize.isInfinite || backRating.rating.isNaN || backRating.rating.isInfinite) {
-    //     debugPrint("pause");
-    //     throw StateError("NaN");
-    //   }
-    //
-    //   steps += 1;
-    // }
+    var backRatingErr = 0.0;
+    var backRatingRaw = 0.0;
+    var stepSize = K * 2;
+    int steps = 0;
+
+    if(doBackRating) {
+      // Back-prediction: what would your rating have had to be, for your expected score to be
+      // your actual score?
+      EloShooterRating backRating = EloShooterRating.copy(aRating);
+
+      // Get an initial guess by working out how much changing the rating by the initial
+      // step size will change a score
+      var difference = actualScore.score - params.expectedScore;
+      var initialRating = EloShooterRating.copy(backRating);
+      initialRating.rating += stepSize * difference.sign;
+      var backParams = _calculateScoreParams(
+          aRating: initialRating,
+          aScore: aScore,
+          aMatchScore: aMatchScore,
+          scores: scores,
+          matchScores: matchScores);
+
+      var oldDifference = difference;
+      difference = actualScore.score - backParams.expectedScore;
+      var scoreChange = (oldDifference - difference).abs();
+      var scoreChangePerRating = scoreChange / stepSize;
+      stepSize = difference.abs() / scoreChangePerRating;
+
+      while (stepSize.abs() >= K * 0.1 && steps < 10) {
+        backRating.rating += stepSize * difference.sign;
+
+        var backParams = _calculateScoreParams(
+            aRating: backRating,
+            aScore: aScore,
+            aMatchScore: aMatchScore,
+            scores: scores,
+            matchScores: matchScores);
+
+        var oldDifference = difference;
+        difference = actualScore.score - backParams.expectedScore;
+        var scoreChange = (oldDifference - difference).abs();
+
+        // We changed rating by stepSize, which changed the score miss by scoreChange.
+        // At rating differences <<< scale, the probability change is basically linear.
+        // So, assume a linear relationship and go from there.
+        var scoreChangePerRating = scoreChange / stepSize;
+        stepSize = difference.abs() / scoreChangePerRating;
+
+        if (scoreChangePerRating.isNaN || scoreChangePerRating.isInfinite || stepSize.isNaN || stepSize.isInfinite || backRating.rating.isNaN ||
+            backRating.rating.isInfinite) {
+          debugPrint("pause");
+          throw StateError("NaN");
+        }
+
+        if(scoreChange < 0.05 * difference || stepSize > scale * 4) {
+          break;
+        }
+
+        steps += 1;
+      }
+
+
+      if(steps != 0) {
+        backRatingRaw = backRating.rating;
+        backRatingErr = aRating.rating - backRating.rating;
+      }
+    }
 
     if(Timings.enabled) start = DateTime.now();
     var hf = aScore.score.getHitFactor(scoreDQ: aScore.score.stage != null);
@@ -219,7 +250,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       "Actual/expected place: %00.1f/%00.1f": [actualScore.placeBlend, params.usedScores - (params.expectedScore * params.divisor)],
       "Rating ± Change: %00.0f + %00.2f (%00.2f from pct, %00.2f from place)": [aRating.rating, change, changeFromPercent, changeFromPlace],
       "eff. K, multipliers: %00.2f, SoS %00.3f, IP %00.3f, Zero %00.3f, Conn %00.3f, EW %00.3f, Err %00.3f": [effectiveK, matchStrengthMultiplier, placementMultiplier, zeroMultiplier, connectednessMultiplier, eventWeightMultiplier, errMultiplier],
-      // "Back rating/error/steps/size: %00.0f/%00.1f/%d/%00.2f": [backRating.rating, aRating.rating - backRating.rating, steps, stepSize],
+      if(doBackRating) "Back rating/error/steps/size: %00.0f/%00.1f/%d/%00.2f": [backRatingRaw, backRatingErr, steps, stepSize],
     };
     if(Timings.enabled) timings.printInfo += (DateTime.now().difference(start).inMicroseconds).toDouble();
 
@@ -229,7 +260,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
         errorKey: (params.expectedScore - actualScore.score) * params.usedScores,
         baseKKey: K * (params.usedScores - 1),
         effectiveKKey: effectiveK * (params.usedScores),
-        backRatingErrorKey: 0, //aRating.rating - backRating.rating,
+        backRatingErrorKey: backRatingErr
       }, info: info),
     };
   }
@@ -390,8 +421,8 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
     var trend = rating.trend.round();
     var positivity = (rating.direction * 100).round();
-    var error = rating.standardError;
-    // var error = rating.backRatingError;
+    // var error = rating.standardError;
+    var error = rating.backRatingError;
     var lastMatchChange = rating.lastMatchChange;
 
     return ScoreRow(
