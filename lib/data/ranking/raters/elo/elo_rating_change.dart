@@ -11,6 +11,7 @@ class EloRatingEvent extends RatingEvent {
   double effectiveK;
 
   double error;
+  double backRatingError;
 
   EloRatingEvent({
     required this.oldRating,
@@ -22,6 +23,7 @@ class EloRatingEvent extends RatingEvent {
     this.error = 0,
     required this.baseK,
     required this.effectiveK,
+    required this.backRatingError,
   }) : super(match: match, stage: stage, score: score, info: info);
 
   EloRatingEvent.copy(EloRatingEvent other) :
@@ -30,6 +32,7 @@ class EloRatingEvent extends RatingEvent {
       this.ratingChange = other.ratingChange,
       this.baseK = other.baseK,
       this.effectiveK = other.effectiveK,
+      this.backRatingError = other.backRatingError,
       super.copy(other);
 
   @override
@@ -38,5 +41,6 @@ class EloRatingEvent extends RatingEvent {
     error = change.change[MultiplayerPercentEloRater.errorKey]!;
     baseK = change.change[MultiplayerPercentEloRater.baseKKey]!;
     effectiveK = change.change[MultiplayerPercentEloRater.effectiveKKey]!;
+    backRatingError = change.change[MultiplayerPercentEloRater.backRatingErrorKey]!;
   }
 }

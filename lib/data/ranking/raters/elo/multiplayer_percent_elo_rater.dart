@@ -19,7 +19,8 @@ import 'package:uspsa_result_viewer/ui/widget/score_row.dart';
 class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSettings, EloSettingsController> {
   static const errorKey = "error";
   static const baseKKey = "baseK";
-  static const effectiveKKey = "effectiveKKey";
+  static const effectiveKKey = "effectiveK";
+  static const backRatingErrorKey = "backRatingError";
 
   static const defaultK = 60.0;
   static const defaultPercentWeight = 0.4;
@@ -172,13 +173,53 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       throw StateError("NaN/Infinite/really big");
     }
 
+    // // Back-prediction: what would your rating have had to be, for your expected score to be
+    // // your actual score?
+    //
+    // // Assume that changing rating by K will fully correct
+    // // the difference; we'll calculate better step sizes after the
+    // // first iteration.
+    // var difference = actualScore.score - params.expectedScore;
+    // var stepSize = K;
+    // EloShooterRating backRating = EloShooterRating.copy(aRating);
+    //
+    // int steps = 0;
+    // while(stepSize.abs() >= K * 0.1 && steps < 10) {
+    //   backRating.rating += stepSize * difference.sign;
+    //
+    //   var backParams = _calculateScoreParams(
+    //       aRating: backRating,
+    //       aScore: aScore,
+    //       aMatchScore: aMatchScore,
+    //       scores: scores,
+    //       matchScores: matchScores);
+    //
+    //   var oldDifference = difference;
+    //   difference = actualScore.score - backParams.expectedScore;
+    //   var scoreChange = (oldDifference - difference).abs();
+    //
+    //   // We changed rating by stepSize, which changed the score miss by scoreChange.
+    //   // At rating differences <<< scale, the probability change is basically linear.
+    //   // So, assume a linear relationship and go from there.
+    //   var stepPerRating = scoreChange < actualScore.score * 0.01 ? 0 : scoreChange / stepSize;
+    //   stepSize = stepPerRating == 0 ? 0 : difference.abs() / stepPerRating;
+    //
+    //   if(stepPerRating.isNaN || stepPerRating.isInfinite || stepSize.isNaN || stepSize.isInfinite || backRating.rating.isNaN || backRating.rating.isInfinite) {
+    //     debugPrint("pause");
+    //     throw StateError("NaN");
+    //   }
+    //
+    //   steps += 1;
+    // }
+
     if(Timings.enabled) start = DateTime.now();
     var hf = aScore.score.getHitFactor(scoreDQ: aScore.score.stage != null);
     Map<String, List<dynamic>> info = {
       "Actual/expected percent: %00.2f/%00.2f on %00.2fHF": [actualScore.percentComponent * params.totalPercent * 100, params.expectedScore * params.totalPercent * 100, hf],
       "Actual/expected place: %00.1f/%00.1f": [actualScore.placeBlend, params.usedScores - (params.expectedScore * params.divisor)],
       "Rating ± Change: %00.0f + %00.2f (%00.2f from pct, %00.2f from place)": [aRating.rating, change, changeFromPercent, changeFromPlace],
-      "eff. K, multipliers: %00.2f, SoS %00.3f, IP %00.3f, Zero %00.3f, Conn %00.3f, EW %00.3f, Err %00.3f": [effectiveK, matchStrengthMultiplier, placementMultiplier, zeroMultiplier, connectednessMultiplier, eventWeightMultiplier, errMultiplier]
+      "eff. K, multipliers: %00.2f, SoS %00.3f, IP %00.3f, Zero %00.3f, Conn %00.3f, EW %00.3f, Err %00.3f": [effectiveK, matchStrengthMultiplier, placementMultiplier, zeroMultiplier, connectednessMultiplier, eventWeightMultiplier, errMultiplier],
+      // "Back rating/error/steps/size: %00.0f/%00.1f/%d/%00.2f": [backRating.rating, aRating.rating - backRating.rating, steps, stepSize],
     };
     if(Timings.enabled) timings.printInfo += (DateTime.now().difference(start).inMicroseconds).toDouble();
 
@@ -188,6 +229,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
         errorKey: (params.expectedScore - actualScore.score) * params.usedScores,
         baseKKey: K * (params.usedScores - 1),
         effectiveKKey: effectiveK * (params.usedScores),
+        backRatingErrorKey: 0, //aRating.rating - backRating.rating,
       }, info: info),
     };
   }
@@ -224,6 +266,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
       var probability = _probability(bRating.rating, aRating.rating);
       if (probability.isNaN) {
+        debugPrint("NaN for ${bRating.rating} vs ${aRating.rating}");
         throw StateError("NaN");
       }
 
@@ -347,8 +390,8 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
     var trend = rating.trend.round();
     var positivity = (rating.direction * 100).round();
-    // var trend = rating.direction.toStringAsFixed(2);
     var error = rating.standardError;
+    // var error = rating.backRatingError;
     var lastMatchChange = rating.lastMatchChange;
 
     return ScoreRow(
@@ -443,7 +486,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     Stage? stage,
     required ShooterRating rating, required RelativeScore score, Map<String, List<dynamic>> info = const {}
   }) {
-    return EloRatingEvent(oldRating: rating.rating, match: match, stage: stage, score: score, ratingChange: 0, info: info, baseK: 0, effectiveK: 0);
+    return EloRatingEvent(oldRating: rating.rating, match: match, stage: stage, score: score, ratingChange: 0, info: info, baseK: 0, effectiveK: 0, backRatingError: 0);
   }
 
   @override

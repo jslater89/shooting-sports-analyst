@@ -192,7 +192,8 @@ class DbEloEvent extends DbRatingEvent {
       score: score,
       ratingChange: ratingChange,
       baseK: baseK,
-      effectiveK: effectiveK
+      effectiveK: effectiveK,
+      backRatingError: 0,
     );
 
     return event;

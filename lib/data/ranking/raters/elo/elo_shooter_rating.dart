@@ -45,12 +45,8 @@ class EloShooterRating extends ShooterRating {
     return meanSquaredErrorWithWindow(window: ratingEvents.length);
   }
 
-  double meanSquaredErrorWithWindow({int window = ShooterRating.baseTrendWindow, int offset = 0}) {
-    // With default settings, this yields a starting normalized error of 400,
-    // which more or less jives with observation.
-    if(ratingEvents.isEmpty) return 0.5;
-
-    late List<RatingEvent> events;
+  List<RatingEvent> eventsForWindow({int window = ShooterRating.baseTrendWindow, int offset = 0}) {
+    List<RatingEvent> events;
     if((window + offset) >= ratingEvents.length) {
       if(offset < (ratingEvents.length)) events = ratingEvents.sublist(0, ratingEvents.length - offset);
       else events = ratingEvents;
@@ -58,6 +54,16 @@ class EloShooterRating extends ShooterRating {
     else {
       events = ratingEvents.sublist(ratingEvents.length - (window + offset), ratingEvents.length - offset);
     }
+
+    return events;
+  }
+
+  double meanSquaredErrorWithWindow({int window = ShooterRating.baseTrendWindow, int offset = 0}) {
+    // With default settings, this yields a starting normalized error of 400,
+    // which more or less jives with observation.
+    if(ratingEvents.isEmpty) return 0.5;
+
+    var events = eventsForWindow(window: window, offset: offset);
 
     double squaredSum = events.map((e) {
       e as EloRatingEvent;
@@ -130,6 +136,14 @@ class EloShooterRating extends ShooterRating {
       fullEffect: ShooterRating.baseTrendWindow,
       offset: offset,
     );
+  }
+
+  double get backRatingError {
+    var events = eventsForWindow();
+    var errors = events.map((e) => (e as EloRatingEvent).backRatingError);
+    var average = errors.average;
+    var variance = (errors.map((e) => pow(e - errors.average, 2)).sum) / errors.length;
+    return sqrt(variance);
   }
 
   List<RatingEvent> ratingEvents = [];
