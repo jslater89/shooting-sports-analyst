@@ -21,7 +21,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   static const baseKKey = "baseK";
   static const effectiveKKey = "effectiveK";
 
-  static const doBackRating = true;
+  static const doBackRating = false;
   static const backRatingErrorKey = "backRatingError";
 
   static const defaultK = 60.0;
@@ -421,8 +421,8 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
     var trend = rating.trend.round();
     var positivity = (rating.direction * 100).round();
-    // var error = rating.standardError;
-    var error = rating.backRatingError;
+    var error = rating.standardError;
+    // var error = rating.backRatingError;
     var lastMatchChange = rating.lastMatchChange;
 
     return ScoreRow(
