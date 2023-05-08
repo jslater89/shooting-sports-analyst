@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
+
 /// FNV-1a 64bit hash algorithm optimized for Dart Strings.
 ///
 /// With regards to the authors of isar.dev.
 int fastStringHash(String string) {
-  var hash = 0xcbf29ce484222325;
+  var hash = kIsWeb ? 54123485436 : 0xcbf29ce484222325;
 
   var i = 0;
   while (i < string.length) {
