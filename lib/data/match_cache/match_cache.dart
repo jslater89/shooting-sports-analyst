@@ -68,6 +68,10 @@ class MatchCache {
     _ready.complete(true);
   }
 
+  String _removeQuery(String s) {
+    return s.split("?").first;
+  }
+
   Future<void> _firstTimeIndex() async {
     print("[MatchCache] Generating first-time index");
     for(var entry in _cache.values) {
@@ -92,6 +96,9 @@ class MatchCache {
         if(indexEntry != null) {
           print("[MatchCache] Loaded ${indexEntry.matchName} from ${indexEntry.ids}");
           for (var id in indexEntry.ids) {
+            if(id.contains("?")) {
+              id = _removeQuery(id);
+            }
             _index[id] = indexEntry;
           }
         }
@@ -135,6 +142,7 @@ class MatchCache {
     print("[MatchCache] Loaded $matches cached matches, with $stages stages, $shooters shooters, and $stageScores stage scores");
   }
 
+  /// Loads a match from the local cache. Does not download.
   Future<PracticalMatch?> _loadMatch(String path) async {
     List<String> ids = path.replaceFirst(_cachePrefix, "").split(_cacheSeparator);
     var deduplicatedIds = Set<String>()..addAll(ids);
@@ -158,6 +166,7 @@ class MatchCache {
       late String longId;
       for(var id in ids) {
         id = id.replaceAll("/","");
+        if(id.contains("?")) id = _removeQuery(id);
 
         if(id.length > 10) {
           longId = id;
@@ -272,12 +281,29 @@ class MatchCache {
     }
   }
 
+  /// Save a match to the cache.
   Future<void> save({Future<void> Function(int, int)? progressCallback, List<String> forceResave = const []}) async {
     Set<_MatchCacheEntry> alreadySaved = Set();
     int totalProgress = _cache.values.length;
     int currentProgress = 0;
 
     for(var entry in _cache.values) {
+      var originalPath = entry.generatePath();
+
+      List<String> ids = [];
+      bool idsChanged = false;
+      for(var id in entry.ids) {
+        if(id.contains("?")) {
+          id = _removeQuery(id);
+          idsChanged = true;
+        }
+        ids.add(id);
+      }
+      if(idsChanged) {
+        entry.ids.clear();
+        entry.ids.addAll(ids);
+      }
+
       if(alreadySaved.contains(entry)) {
         currentProgress += 1;
         await progressCallback?.call(currentProgress, totalProgress);
@@ -287,12 +313,19 @@ class MatchCache {
       var path = entry.generatePath();
 
       // If we already have the match saved to the full cache, and its IDs do not intersect
-      // with the list of IDs to force-resave, skip it.
-      if(_box.containsKey(path) && entry.ids.where((e) => forceResave.contains(e)).isEmpty) {
+      // with the list of IDs to force-resave, and its IDs were not changed to remove query
+      // strings, skip it.
+      if(!idsChanged && _box.containsKey(path) && entry.ids.where((e) => forceResave.contains(e)).isEmpty) {
         currentProgress += 1;
         await progressCallback?.call(currentProgress, totalProgress);
         // print("[MatchCache] Not resaving ${entry.match.name}");
         continue; // No need to resave
+      }
+
+      // If the IDs changed to remove a query string, remove the original entry.
+      if(idsChanged) {
+        _box.delete(originalPath);
+        _indexBox.delete(originalPath);
       }
 
       // Box saves in a background isolate
@@ -348,9 +381,15 @@ class MatchCache {
   }
 
   void insert(PracticalMatch match) {
+    String? shortId;
+    if(match.practiscoreIdShort != null) {
+      shortId = match.practiscoreIdShort!;
+      if(shortId.contains("?")) shortId = _removeQuery(shortId);
+    }
+
     var ids = [
       match.practiscoreId,
-      if(match.practiscoreIdShort != null) match.practiscoreIdShort!,
+      if(shortId != null) shortId,
     ];
     var entry = _MatchCacheEntry(match: match, ids: ids);
     var index = MatchCacheIndexEntry.fromMatchEntry(entry);
@@ -387,11 +426,13 @@ class MatchCache {
 
   MatchCacheIndexEntry? getIndexImmediate(String matchUrl) {
     var id = matchUrl.split("/").last;
+    if(id.contains("?")) id = _removeQuery(id);
     return _index[id];
   }
 
   Future<PracticalMatch?> getMatchImmediate(String matchUrl) {
     var id = matchUrl.split("/").last;
+    if(id.contains("?")) id = _removeQuery(id);
     return _loadIndexed(id);
   }
 
@@ -400,6 +441,8 @@ class MatchCache {
   }
 
   Future<PracticalMatch?> _loadIndexed(String id) async {
+    if(id.contains("?")) id = _removeQuery(id);
+
     if(_cache.containsKey(id)) {
       return _cache[id]!.match;
     }
@@ -414,6 +457,7 @@ class MatchCache {
   void _insert(_MatchCacheEntry entry) {
     var indexEntry = MatchCacheIndexEntry.fromMatchEntry(entry);
     for(var id in entry.ids) {
+      if(id.contains("?")) id = _removeQuery(id);
       _cache[id] = entry;
       _index[id] = indexEntry;
     }
@@ -423,6 +467,8 @@ class MatchCache {
 
   Future<Result<PracticalMatch, MatchGetError>> getMatch(String matchUrl, {bool forceUpdate = false, bool localOnly = false, bool checkCanonId = true}) async {
     var id = matchUrl.split("/").last;
+    if(id.contains("?")) id = _removeQuery(id);
+
     if(!forceUpdate && _index.containsKey(id)) {
       // print("[MatchCache] Using local cache for $id");
       var match = await _loadIndexed(id);
