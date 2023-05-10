@@ -6,6 +6,7 @@ import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
+import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:uspsa_result_viewer/ui/rater/rating_filter_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/shooter_stats_dialog.dart';
 
@@ -199,8 +200,17 @@ extension _SortFunctions on RatingSortMode {
       case RatingSortMode.error:
           return (a, b) {
             if(a is EloShooterRating && b is EloShooterRating) {
-              var aError = a.standardError;
-              var bError = b.standardError;
+              double aError;
+              double bError;
+
+              if(MultiplayerPercentEloRater.doBackRating) {
+                aError = a.backRatingError;
+                bError = b.backRatingError;
+              }
+              else {
+                aError = a.standardError;
+                bError = b.standardError;
+              }
               return aError.compareTo(bError);
             }
             else throw ArgumentError();

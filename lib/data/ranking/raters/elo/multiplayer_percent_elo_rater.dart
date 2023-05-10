@@ -224,6 +224,9 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
         }
 
         if(scoreChange < 0.05 * difference || stepSize > scale * 4) {
+          if(stepSize > scale * 4) {
+            backRating.rating = aRating.rating * 1.5;
+          }
           break;
         }
 
@@ -234,6 +237,10 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       if(steps != 0) {
         backRatingRaw = backRating.rating;
         backRatingErr = aRating.rating - backRating.rating;
+      }
+      else {
+        backRatingRaw = aRating.rating;
+        backRatingErr = 0;
       }
     }
 
@@ -358,6 +365,11 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
   @override
   Row buildRatingKey(BuildContext context) {
+    var errorText = "The error calculated by the rating system.";
+    if(doBackRating) {
+      errorText += " A negative number means the calculated rating\n"
+          "was too low. A positive number means the calculated rating was too high.";
+    }
     return Row(
       mainAxisSize: MainAxisSize.max,
       children: [
@@ -369,8 +381,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
         Expanded(
             flex: _errorFlex,
             child: Tooltip(
-                message:
-                  "The error calculated by the rating system.",
+                message: errorText,
                 child: Text("Error", textAlign: TextAlign.end)
             )
         ),
@@ -416,7 +427,9 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     var trend = rating.trend.round();
     var positivity = (rating.direction * 100).round();
     var error = rating.standardError;
-    // var error = rating.backRatingError;
+    if(doBackRating) {
+      error = rating.backRatingError;
+    }
     var lastMatchChange = rating.lastMatchChange;
 
     return ScoreRow(
