@@ -1,4 +1,5 @@
 import 'package:collection/collection.dart';
+import 'package:html_unescape/html_unescape_small.dart';
 import 'package:uspsa_result_viewer/data/match/shooter.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
 import 'package:http/http.dart' as http;
@@ -52,10 +53,11 @@ RegistrationResult _parseRegistrations(String registrationHtml, List<Division> d
 
   // Match a line
   var shooterRegex = RegExp(r'<span.*title="(?<name>.*)\s+\((?<division>[\w\s]+)\s+\/\s+(?<class>\w+)\)');
+  var unescape = HtmlUnescape();
   for(var line in registrationHtml.split("\n")) {
     var match = shooterRegex.firstMatch(line);
     if(match != null) {
-      var shooterName = match.namedGroup("name")!;
+      var shooterName = unescape.convert(match.namedGroup("name")!);
       var d = DivisionFrom.string(match.namedGroup("division")!);
 
       if(!divisions.contains(d)) continue;

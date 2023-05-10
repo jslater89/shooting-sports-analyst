@@ -583,12 +583,12 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
       // Offset the ratings up or down around the center, based on the shooter's
       // trend. (If you're on an upward run, you get some upward shaping.)
-      var trends = [rating.shortTrend, rating.mediumTrend, rating.longTrend];
       // var trends = [rating.shortDirection, rating.direction, rating.longDirection];
+      var trendAverage = rating.shortTrend * 0.45 + rating.mediumTrend * 0.35 + rating.longTrend * 0.20;
 
-      var trendShiftMaxVal = settings.K * 2; // todo: settings.K * 2
+      var trendShiftMaxVal = settings.scale / 2;
       var trendShiftMaxMagnitude = 0.9;
-      var trendShiftProportion = max(-1.0, min(1.0, trends.average / trendShiftMaxVal));
+      var trendShiftProportion = max(-1.0, min(1.0, trendAverage / trendShiftMaxVal));
       var trendShift = trendShiftProportion * trendShiftMaxMagnitude;
 
       // Starting with the shooter's calculated rating, generate a bunch of potential ratings that could be the
