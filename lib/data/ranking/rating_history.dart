@@ -260,7 +260,8 @@ enum RaterGroup {
   limitedCO,
   limitedLO,
   limOpsCO,
-  limLoCo;
+  limLoCo,
+  combined;
 
   FilterSet get filters {
     return FilterSet(
@@ -310,6 +311,8 @@ enum RaterGroup {
         return [Division.limited, Division.carryOptics, Division.limitedOptics];
       case RaterGroup.limitedLO:
         return [Division.limited, Division.limitedOptics];
+      case RaterGroup.combined:
+        return Division.values;
     }
   }
 
@@ -345,6 +348,8 @@ enum RaterGroup {
         return "LO/CO/Limited";
       case RaterGroup.limitedLO:
         return "Limited/LO";
+      case RaterGroup.combined:
+        return "Combined";
     }
   }
 }
