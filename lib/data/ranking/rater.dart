@@ -717,7 +717,9 @@ class Rater {
 
       var rating = maybeKnownShooter(shooter.memberNumber);
       if(rating != null) {
-        rating.lastClassification = shooter.classification ?? rating.lastClassification;
+        if(shooter.classification != null && shooter.classification!.index < rating.lastClassification.index) {
+          rating.lastClassification = shooter.classification!;
+        }
 
         // Update the shooter's name: the most recent one is probably the most interesting/useful
         rating.firstName = shooter.firstName;
