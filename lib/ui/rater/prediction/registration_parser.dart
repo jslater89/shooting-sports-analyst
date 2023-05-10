@@ -26,7 +26,7 @@ class Registration {
 }
 
 Future<RegistrationResult?> getRegistrations(String url, List<Division> divisions, List<ShooterRating> knownShooters) async {
-  if(!url.endsWith("printhtml")) {
+  if(!url.endsWith("squadding")) {
     print("Wrong URL");
     return null;
   }
@@ -51,7 +51,7 @@ RegistrationResult _parseRegistrations(String registrationHtml, List<Division> d
   var unmatched = <Registration>[];
 
   // Match a line
-  var shooterRegex = RegExp(r"\d+\.\s+(?<name>.*)\s+\((?<division>[\w\s]+)\s+\/\s+(?<class>\w+)\)");
+  var shooterRegex = RegExp(r'<span.*title="(?<name>.*)\s+\((?<division>[\w\s]+)\s+\/\s+(?<class>\w+)\)');
   for(var line in registrationHtml.split("\n")) {
     var match = shooterRegex.firstMatch(line);
     if(match != null) {

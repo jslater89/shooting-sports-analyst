@@ -690,7 +690,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
     var url = await showDialog<String>(context: context, builder: (context) {
       return UrlEntryDialog(
-        hintText: "https://practiscore.com/match-name/register",
+        hintText: "https://practiscore.com/match-name/squadding",
         descriptionText: "Enter a link to the match registration or squadding page.",
         validator: (url) {
           if(url.endsWith("/register") || url.endsWith("/squadding") || url.endsWith("/printhtml")) {
@@ -708,13 +708,13 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     }
 
     if(url.endsWith("/register")) {
-      url = url.replaceFirst("/register", "/squadding/printhtml");
-    }
-    else if(url.endsWith("/squadding")) {
-      url += "/printhtml";
+      url = url.replaceFirst("/register", "/squadding");
     }
     else if(url.endsWith("/") && !url.contains("squadding")) {
-      url += "squadding/printhtml";
+      url += "squadding";
+    }
+    else if(url.endsWith("/printhtml")) {
+      url = url.replaceFirst("/printhtml", "");
     }
 
     var registrationResult = await getRegistrations(url, divisions, options);
