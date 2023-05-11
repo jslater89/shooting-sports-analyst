@@ -25,6 +25,8 @@ class PracticalMatch {
 
   PracticalMatch copy() {
     var newMatch = PracticalMatch()
+      ..practiscoreId = practiscoreId
+      ..practiscoreIdShort = practiscoreIdShort
       ..name = name
       ..rawDate = rawDate
       ..date = date

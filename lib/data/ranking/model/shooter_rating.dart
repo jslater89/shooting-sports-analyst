@@ -44,16 +44,27 @@ abstract class ShooterRating extends Shooter {
   ///
   /// If the shooter was not rated prior to the match and none of the
   /// above cases apply, returns the shooter's current rating.
-  double ratingForEvent(PracticalMatch match, Stage? stage) {
+  double ratingForEvent(PracticalMatch match, Stage? stage, {bool beforeMatch = false}) {
+    // TODO: an option to return the rating immediately before the requested match
+    // even if the shooter shot it
+
     RatingEvent? candidateEvent;
     for(var e in ratingEvents.reversed) {
-      if(e.match == match && candidateEvent == null) {
+      if(e.match.practiscoreId == match.practiscoreId && (candidateEvent == null || beforeMatch)) {
         if(stage == null) {
           // Because we're going backward, this will get the last change from the
           // match.
           candidateEvent = e;
+
+          // Continue setting candidateEvent until we get to an event that isn't
+          // from the desired match, at which point we'll fall out via the
+          // break at the end of the loop, and return the oldRating because of
+          // candidateEvent.
+          if(beforeMatch) {
+            continue;
+          }
         }
-        else if(stage == e.stage) {
+        else if(stage.name == e.stage?.name) {
           candidateEvent = e;
         }
       }
@@ -65,7 +76,7 @@ abstract class ShooterRating extends Shooter {
     }
 
     if(candidateEvent != null) {
-      return candidateEvent.newRating;
+      return beforeMatch ? candidateEvent.oldRating : candidateEvent.newRating;
     }
     else {
       return rating;
@@ -83,10 +94,10 @@ abstract class ShooterRating extends Shooter {
   double? changeForEvent(PracticalMatch match, Stage? stage) {
     List<RatingEvent> events = [];
     for(var e in ratingEvents.reversed) {
-      if(stage == null && e.match == match) {
+      if(stage == null && e.match.practiscoreId == match.practiscoreId) {
         events.add(e);
       }
-      else if(e.match == match && e.stage == stage) {
+      else if(stage != null && e.match.practiscoreId == match.practiscoreId && e.stage?.name == stage.name) {
         events.add(e);
       }
     }
