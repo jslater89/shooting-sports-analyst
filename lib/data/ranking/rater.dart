@@ -902,6 +902,7 @@ class Rater {
       for(var r in changes.keys) {
         r.updateFromEvents(changes[r]!.values.toList());
         r.updateTrends(changes[r]!.values.toList());
+        shootersAtMatch.add(r);
       }
       changes.clear();
     }

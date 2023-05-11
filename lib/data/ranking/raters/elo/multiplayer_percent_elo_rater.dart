@@ -104,7 +104,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
     if(params.usedScores == 1) {
       return {
-        shooters[0]: RatingChange(change: {
+        aRating: RatingChange(change: {
           RatingSystem.ratingKey: 0,
           errorKey: 0,
           baseKKey: 0,
