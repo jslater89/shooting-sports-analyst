@@ -243,6 +243,7 @@ class RatingProject {
         limLoCo: limLoCoMode,
         combineLocap: combineLocap,
       ),
+      // groups: [RaterGroup.combined],
       memberNumberWhitelist: ((encodedProject[_whitelistKey] ?? []) as List<dynamic>).map((item) => item as String).toList(),
       shooterAliases: ((encodedProject[_aliasesKey] ?? defaultShooterAliases) as Map<String, dynamic>).map<String, String>((k, v) =>
         MapEntry(k, v as String)

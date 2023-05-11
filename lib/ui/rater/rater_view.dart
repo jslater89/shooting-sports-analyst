@@ -7,12 +7,17 @@ import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
+import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/ui/rater/rating_filter_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/shooter_stats_dialog.dart';
 
 class RaterView extends StatefulWidget {
   const RaterView({
-    Key? key, required this.rater, required this.currentMatch, this.search, this.maxAge, this.minRatings = 0,
+    Key? key,
+    required this.history,
+    required this.rater,
+    required this.currentMatch,
+    this.search, this.maxAge, this.minRatings = 0,
     this.sortMode = RatingSortMode.rating,
     required this.filters,
     this.onRatingsFiltered,
@@ -23,6 +28,7 @@ class RaterView extends StatefulWidget {
   final Duration? maxAge;
   final RatingFilters filters;
   final int minRatings;
+  final RatingHistory history;
   final Rater rater;
   final PracticalMatch currentMatch;
   final RatingSortMode sortMode;
@@ -123,8 +129,12 @@ class _RaterViewState extends State<RaterView> {
               return GestureDetector(
                 key: Key(asList[i].memberNumber),
                 onTap: () {
+                  var ratings = <RaterGroup, Rater>{};
+                  for(var group in widget.history.groups) {
+                    ratings[group] = widget.history.latestRaterFor(group);
+                  }
                   showDialog(context: context, builder: (context) {
-                    return ShooterStatsDialog(rating: asList[i], match: widget.currentMatch);
+                    return ShooterStatsDialog(rating: asList[i], match: widget.currentMatch, ratings: ratings);
                   });
                 },
                 child: widget.rater.ratingSystem.buildRatingRow(

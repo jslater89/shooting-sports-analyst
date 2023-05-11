@@ -2,6 +2,9 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/ranking/rater.dart';
+import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
+import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/editable_shooter_card.dart';
 import 'package:uspsa_result_viewer/ui/widget/score_row.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/shooter_card.dart';
@@ -19,6 +22,7 @@ class ScoreList extends StatelessWidget {
   final Function(Shooter, Stage?, bool wholeMatch) onScoreEdited;
   final List<Shooter> editedShooters;
   final bool whatIfMode;
+  final Map<RaterGroup, Rater>? ratings;
 
   const ScoreList({
     Key? key,
@@ -34,6 +38,7 @@ class ScoreList extends StatelessWidget {
     required this.onScoreEdited,
     this.whatIfMode = false,
     this.editedShooters = const [],
+    this.ratings,
   }) : super(key: key);
 
   @override
@@ -116,6 +121,10 @@ class ScoreList extends StatelessWidget {
                 Expanded(flex: 1, child: Text("Row")),
                 Expanded(flex: 1, child: Text("Place")),
                 Expanded(flex: 3, child: Text("Name")),
+                if(ratings != null) Expanded(flex: 1, child: Tooltip(
+                  message: "This shooter's rating prior to this match.",
+                  child: Text("Rating"),
+                )),
                 Expanded(flex: 1, child: Text("Class")),
                 Expanded(flex: 3, child: Text("Division")),
                 Expanded(flex: 1, child: Text("PF")),
@@ -164,6 +173,7 @@ class ScoreList extends StatelessWidget {
               Expanded(flex: 1, child: Text("${baseScores.indexOf(score) + 1}")),
               Expanded(flex: 1, child: Text("${score.total.place}")),
               Expanded(flex: 3, child: Text(score.shooter.getName())),
+              if(ratings != null) Expanded(flex: 1, child: Text(ratings!.lookup(score.shooter)?.ratingForEvent(match!, null).round().toString() ?? "n/a")),
               Expanded(flex: 1, child: Text(score.shooter.classification.displayString())),
               Expanded(flex: 3, child: Text(score.shooter.division?.displayString() ?? "NO DIVISION")),
               Expanded(flex: 1, child: Text(score.shooter.powerFactor.shortString())),
@@ -199,6 +209,10 @@ class ScoreList extends StatelessWidget {
                 Expanded(flex: 1, child: Text("Row")),
                 Expanded(flex: 1, child: Text("Place")),
                 Expanded(flex: 3, child: Text("Name")),
+                if(ratings != null) Expanded(flex: 1, child: Tooltip(
+                  message: "This shooter's rating prior to this match.",
+                  child: Text("Rating"),
+                )),
                 Expanded(flex: 1, child: Text("Class")),
                 Expanded(flex: 3, child: Text("Division")),
                 Expanded(flex: 1, child: Text("PF")),
@@ -249,6 +263,7 @@ class ScoreList extends StatelessWidget {
               Expanded(flex: 1, child: Text("${baseScores.indexOf(matchScore) + 1}")),
               Expanded(flex: 1, child: Text("${stageScore?.place}")),
               Expanded(flex: 3, child: Text(matchScore.shooter.getName())),
+              if(ratings != null) Expanded(flex: 1, child: Text(ratings!.lookup(matchScore.shooter)?.ratingForEvent(match!, null).round().toString() ?? "n/a")),
               Expanded(flex: 1, child: Text(matchScore.shooter.classification.displayString())),
               Expanded(flex: 3, child: Text(matchScore.shooter.division?.displayString() ?? "NO DIVISION")),
               Expanded(flex: 1, child: Text(matchScore.shooter.powerFactor.shortString())),
@@ -275,3 +290,14 @@ class ScoreList extends StatelessWidget {
   }
 }
 
+extension LookupShooterRating on Map<RaterGroup, Rater> {
+  ShooterRating? lookup(Shooter s) {
+    for(var group in this.keys) {
+      if(group.divisions.contains(s.division)) {
+        return this[group]!.ratingFor(s);
+      }
+    }
+
+    return null;
+  }
+}

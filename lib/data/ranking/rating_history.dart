@@ -102,6 +102,13 @@ class RatingHistory {
     return true;
   }
 
+  Rater latestRaterFor(RaterGroup group) {
+    if(!_settings.groups.contains(group)) throw ArgumentError("Invalid group");
+    var raters = _ratersByDivision[matches.last]!;
+
+    return raters[group]!;
+  }
+
   Rater raterFor(PracticalMatch match, RaterGroup group) {
     if(!_settings.groups.contains(group)) throw ArgumentError("Invalid group");
     if(!_matches.contains(match)) throw ArgumentError("Invalid match");

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sprintf/sprintf.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:charts_flutter/flutter.dart' as charts;
 // ignore: implementation_imports
@@ -12,16 +13,18 @@ import 'package:charts_flutter/src/text_style.dart' as style;
 // ignore: implementation_imports
 import 'package:charts_flutter/src/text_element.dart' as element;
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
+import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/ui/result_page.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
 
 /// ShooterRatingChangeDialog displays per-stage changes for a shooter.
 class ShooterStatsDialog extends StatefulWidget {
-  const ShooterStatsDialog({Key? key, required this.rating, required this.match}) : super(key: key);
+  const ShooterStatsDialog({Key? key, required this.rating, required this.match, this.ratings}) : super(key: key);
 
   final ShooterRating rating;
   final PracticalMatch match;
+  final Map<RaterGroup, Rater>? ratings;
 
   @override
   State<ShooterStatsDialog> createState() => _ShooterStatsDialogState();
@@ -291,6 +294,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         initialStage: e.stage,
         initialFilters: filters,
         allowWhatIf: false,
+        ratings: widget.ratings,
       );
     }));
   }

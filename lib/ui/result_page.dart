@@ -4,6 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/ranking/rater.dart';
+import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
+import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/search_query_parser.dart';
 import 'package:uspsa_result_viewer/data/sort_mode.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
@@ -20,6 +23,10 @@ class ResultPage extends StatefulWidget {
   final Stage? initialStage;
   final FilterSet? initialFilters;
 
+  /// A map of processed member IDs to shooter ratings
+  /// for the shooters in [canonicalMatch].
+  final Map<RaterGroup, Rater>? ratings;
+
   const ResultPage({
     Key? key,
     required this.canonicalMatch,
@@ -27,6 +34,7 @@ class ResultPage extends StatefulWidget {
     this.allowWhatIf = true,
     this.initialFilters,
     this.initialStage,
+    this.ratings,
   }) : super(key: key);
 
   @override
@@ -271,6 +279,7 @@ class _ResultPageState extends State<ResultPage> {
       match: _currentMatch,
       maxPoints: _matchMaxPoints,
       stage: _stage,
+      ratings: widget.ratings,
       scoreDQ: _filters.scoreDQs,
       verticalScrollController: _verticalScrollController,
       horizontalScrollController: _horizontalScrollController,

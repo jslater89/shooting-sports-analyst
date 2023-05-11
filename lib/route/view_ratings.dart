@@ -348,6 +348,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                 maxAge = Duration(days: _maxDays);
               }
               return RaterView(
+                history: _history,
                 rater: _history.raterFor(match, t),
                 currentMatch: match,
                 search: _searchTerm,
@@ -649,9 +650,14 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         );
 
         if(indexEntry != null) {
+          var ratings = <RaterGroup, Rater>{};
+          for(var group in _history.groups) {
+            ratings[group] = _history.latestRaterFor(group);
+          }
+
           var match = await MatchCache().getByIndex(indexEntry);
           Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-            return ResultPage(canonicalMatch: match, allowWhatIf: false);
+            return ResultPage(canonicalMatch: match, allowWhatIf: false, ratings: ratings);
           }));
         }
         break;

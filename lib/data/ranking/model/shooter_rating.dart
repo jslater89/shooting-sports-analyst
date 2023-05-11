@@ -30,6 +30,71 @@ abstract class ShooterRating extends Shooter {
 
   List<RatingEvent> get ratingEvents;
 
+  /// Returns the shooter's rating after accounting for the given event.
+  ///
+  /// If the shooter did not participate in the match, returns
+  /// the shooter's latest rating prior to the match.
+  ///
+  /// If the shooter participated in the match but not the given
+  /// stage (due to DQ, DNF, etc.), returns the shooter's rating
+  /// prior to the match.
+  ///
+  /// If stage is not provided, returns the shooter's rating after
+  /// the match.
+  ///
+  /// If the shooter was not rated prior to the match and none of the
+  /// above cases apply, returns the shooter's current rating.
+  double ratingForEvent(PracticalMatch match, Stage? stage) {
+    RatingEvent? candidateEvent;
+    for(var e in ratingEvents.reversed) {
+      if(e.match == match && candidateEvent == null) {
+        if(stage == null) {
+          // Because we're going backward, this will get the last change from the
+          // match.
+          candidateEvent = e;
+        }
+        else if(stage == e.stage) {
+          candidateEvent = e;
+        }
+      }
+      else if(candidateEvent == null && e.match.date!.isBefore(match.date!)) {
+        candidateEvent = e;
+      }
+
+      if(candidateEvent != null) break;
+    }
+
+    if(candidateEvent != null) {
+      return candidateEvent.newRating;
+    }
+    else {
+      return rating;
+    }
+  }
+
+  /// Returns the shooter's rating change for the given event.
+  ///
+  /// If stage is null, returns the shooter's total rating change
+  /// for the given match. If stage is not null, returns the rating
+  /// change for the given stage.
+  ///
+  /// If the shooter's rating did not change at the given event,
+  /// returns null.
+  double? changeForEvent(PracticalMatch match, Stage? stage) {
+    List<RatingEvent> events = [];
+    for(var e in ratingEvents.reversed) {
+      if(stage == null && e.match == match) {
+        events.add(e);
+      }
+      else if(e.match == match && e.stage == stage) {
+        events.add(e);
+      }
+    }
+
+    if(events.isEmpty) return null;
+    else return events.map((e) => e.ratingChange).sum;
+  }
+
   /// Alternate member numbers this shooter is known by.
   List<String> alternateMemberNumbers = [];
 

@@ -334,6 +334,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                   }
 
                   var project = await _saveProject(RatingProjectManager.autosaveName);
+                  // project?.settings.groups = [RaterGroup.combined];
 
                   if(project != null) widget.onSettingsReady(project);
                 },
