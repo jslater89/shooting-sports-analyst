@@ -54,8 +54,9 @@ class Score {
     return times;
   }
 
-  double getPercentTotalPoints({bool scoreDQ = true}) {
-    return getTotalPoints(scoreDQ: scoreDQ).toDouble() / stage!.maxPoints.toDouble();
+  double getPercentTotalPoints({bool scoreDQ = true, bool countPenalties = true, int? maxPoints}) {
+    maxPoints ??= stage!.maxPoints;
+    return getTotalPoints(scoreDQ: scoreDQ, countPenalties: countPenalties).toDouble() / maxPoints.toDouble();
   }
 
   double getHitFactor({bool scoreDQ = true}) {
@@ -96,9 +97,15 @@ class Score {
     return a * aValue + b * bValue + c * cValue + d * dValue;
   }
 
-  int getTotalPoints({bool scoreDQ = true}) {
+  int getTotalPoints({bool scoreDQ = true, bool countPenalties = true}) {
     if(!scoreDQ && (shooter.dq)) return 0;
-    else return max(0, rawPoints - penaltyPoints);
+
+    if(countPenalties) {
+      return max(0, rawPoints - penaltyPoints);
+    }
+    else {
+      return rawPoints;
+    }
   }
 
   @override

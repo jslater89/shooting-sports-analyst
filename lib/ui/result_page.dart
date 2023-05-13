@@ -1,8 +1,10 @@
 import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
@@ -66,7 +68,13 @@ class _ResultPageState extends State<ResultPage> {
   SortMode _sortMode = SortMode.score;
   String _lastQuery = "";
 
-  int get _matchMaxPoints => _filteredStages.map((stage) => stage.maxPoints).reduce((a, b) => a + b);
+  ScoreDisplaySettings _settings = ScoreDisplaySettings(
+    ratingMode: RatingDisplayMode.preMatch,
+    availablePointsCountPenalties: true,
+    fixedTimeAvailablePointsFromDivisionMax: true,
+  );
+
+  int get _matchMaxPoints => _filteredStages.map((stage) => stage.maxPoints).sum;
 
   List<Shooter> get _filteredShooters => _baseScores.map((score) => score.shooter).toList();
 
@@ -464,17 +472,19 @@ class _ResultPageState extends State<ResultPage> {
           onTap: () {
             _appFocus!.requestFocus();
           },
-          child: Scaffold(
-            appBar: AppBar(
-              title: Text(_currentMatch?.name ?? "Match Results Viewer"),
-              centerTitle: true,
-              actions: actions,
-              bottom: _operationInProgress ? PreferredSize(
-                preferredSize: Size(double.infinity, 5),
-                child: LinearProgressIndicator(value: null, backgroundColor: primaryColor, valueColor: animation),
-              ) : null,
-            ),
-            body: Builder(
+          child: ChangeNotifierProvider<ScoreDisplaySettingsModel>(
+            create: (_) => ScoreDisplaySettingsModel(_settings),
+            child: Scaffold(
+              appBar: AppBar(
+                title: Text(_currentMatch?.name ?? "Match Results Viewer"),
+                centerTitle: true,
+                actions: actions,
+                bottom: _operationInProgress ? PreferredSize(
+                  preferredSize: Size(double.infinity, 5),
+                  child: LinearProgressIndicator(value: null, backgroundColor: primaryColor, valueColor: animation),
+                ) : null,
+              ),
+              body: Builder(
                 builder: (context) {
                   _innerContext = context;
                   return Column(
@@ -488,10 +498,29 @@ class _ResultPageState extends State<ResultPage> {
                     ],
                   );
                 }
+              ),
             ),
           ),
         ),
       ),
     );
   }
+}
+
+class ScoreDisplaySettingsModel extends ValueNotifier<ScoreDisplaySettings> {
+  ScoreDisplaySettingsModel(super.value);
+}
+
+class ScoreDisplaySettings {
+  RatingDisplayMode ratingMode;
+  bool availablePointsCountPenalties;
+  bool fixedTimeAvailablePointsFromDivisionMax;
+
+  ScoreDisplaySettings({required this.ratingMode, required this.availablePointsCountPenalties, required this.fixedTimeAvailablePointsFromDivisionMax});
+}
+
+enum RatingDisplayMode {
+  preMatch,
+  postMatch,
+  change,
 }

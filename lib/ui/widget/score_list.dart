@@ -1,10 +1,12 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
+import 'package:uspsa_result_viewer/ui/result_page.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/editable_shooter_card.dart';
 import 'package:uspsa_result_viewer/ui/widget/score_row.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/shooter_card.dart';
@@ -149,7 +151,7 @@ class ScoreList extends StatelessWidget {
       onTap: () async {
         if(whatIfMode) {
           var scoreEdit = await (showDialog<ScoreEdit>(context: context, barrierDismissible: false, builder: (context) {
-            return EditableShooterCard(matchScore: score, scoreDQ: scoreDQ,);
+            return EditableShooterCard(matchScore: score, scoreDQ: scoreDQ);
           })) ?? null;
 
           if(scoreEdit != null && scoreEdit.rescore) {
@@ -180,7 +182,30 @@ class ScoreList extends StatelessWidget {
               Expanded(flex: 2, child: Text("${score.total.percent.asPercentage()}%")),
               Expanded(flex: 2, child: Text(score.total.relativePoints.toStringAsFixed(2))),
               Expanded(flex: 2, child: Text(score.total.score.time.toStringAsFixed(2))),
-              Expanded(flex: 3, child: Text("${score.total.score.getTotalPoints(scoreDQ: scoreDQ)} (${score.percentTotalPoints.asPercentage()}%)")),
+              Consumer<ScoreDisplaySettingsModel>(
+                builder: (context, model, _) {
+                  if(model.value.fixedTimeAvailablePointsFromDivisionMax) {
+                    Map<Stage, int> stageMax = {};
+                    for(var s in score.stageScores.keys) {
+                      if(s.type == Scoring.fixedTime) {
+                        var bestPoints = 0;
+                        for(var score in baseScores) {
+                          if(score.stageScores[s] != null && score.stageScores[s]!.score.rawPoints > bestPoints) {
+                            bestPoints = score.stageScores[s]!.score.rawPoints;
+                          }
+                        }
+                        stageMax[s] = bestPoints;
+                      }
+                    }
+                    return Expanded(flex: 3, child: Text("${score.total.score.getTotalPoints(scoreDQ: scoreDQ, countPenalties: model.value.availablePointsCountPenalties)} "
+                        "(${score.percentTotalPointsWithSettings(scoreDQ: true, countPenalties: true, stageMaxPoints: stageMax).asPercentage()}%)"));
+                  }
+                  else {
+                    return Expanded(flex: 3, child: Text("${score.total.score.getTotalPoints(scoreDQ: scoreDQ, countPenalties: model.value.availablePointsCountPenalties)} "
+                        "(${score.percentTotalPoints.asPercentage()}%)"));
+                  }
+                },
+              ),
               Expanded(flex: 5, child: Text("${score.total.score.a}A ${score.total.score.c}C ${score.total.score.d}D ${score.total.score.m}M ${score.total.score.ns}NS ${score.total.score.penaltyCount}P")),
             ],
           ),
@@ -267,7 +292,26 @@ class ScoreList extends StatelessWidget {
               Expanded(flex: 1, child: Text(matchScore.shooter.classification.displayString())),
               Expanded(flex: 3, child: Text(matchScore.shooter.division?.displayString() ?? "NO DIVISION")),
               Expanded(flex: 1, child: Text(matchScore.shooter.powerFactor.shortString())),
-              Expanded(flex: 3, child: Text("${stageScore?.score.getTotalPoints(scoreDQ: scoreDQ)} (${((stageScore?.score.getPercentTotalPoints(scoreDQ: scoreDQ) ?? 0).asPercentage(decimals: 1))}%)")),
+              Consumer<ScoreDisplaySettingsModel>(
+                builder: (context, model, _) {
+                  if(model.value.fixedTimeAvailablePointsFromDivisionMax) {
+                    int maxPoints = 0;
+                    if(stageScore!.stage!.type == Scoring.fixedTime) {
+                      for(var score in baseScores) {
+                        if(score.stageScores[stage] != null && score.stageScores[stage]!.score.rawPoints > maxPoints) {
+                          maxPoints = score.stageScores[stage]!.score.rawPoints;
+                        }
+                      }
+                    }
+
+                    return Expanded(flex: 3, child: Text("${stageScore.score.getTotalPoints(scoreDQ: scoreDQ, countPenalties: model.value.availablePointsCountPenalties)} "
+                        "(${((stageScore.score.getPercentTotalPoints(scoreDQ: scoreDQ, countPenalties: model.value.availablePointsCountPenalties, maxPoints: maxPoints)).asPercentage(decimals: 1))}%)"));
+                  }
+                  else {
+                    return Expanded(flex: 3, child: Text("${stageScore?.score.getTotalPoints(scoreDQ: scoreDQ)} (${((stageScore?.score.getPercentTotalPoints(scoreDQ: scoreDQ) ?? 0).asPercentage(decimals: 1))}%)"));
+                  }
+                },
+              ),
               Expanded(flex: 2, child: Text(stageScore?.score.time.toStringAsFixed(2) ?? "0.00")),
               Expanded(flex: 2, child: Text(stageScore?.score.getHitFactor(scoreDQ: scoreDQ).toStringAsFixed(4) ?? "0.0000")),
               Expanded(flex: 2, child: Text("${stageScore?.percent.asPercentage() ?? "0.00"}%")),
