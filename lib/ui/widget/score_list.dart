@@ -123,10 +123,26 @@ class ScoreList extends StatelessWidget {
                 Expanded(flex: 1, child: Text("Row")),
                 Expanded(flex: 1, child: Text("Place")),
                 Expanded(flex: 3, child: Text("Name")),
-                if(ratings != null) Expanded(flex: 1, child: Tooltip(
-                  message: "This shooter's rating prior to this match.",
-                  child: Text("Rating"),
-                )),
+                if(ratings != null) Consumer<ScoreDisplaySettingsModel>(
+                    builder: (context, model, _) {
+                      var message;
+                      switch(model.value.ratingMode) {
+                        case RatingDisplayMode.preMatch:
+                          message = "The shooter's rating prior to this match.";
+                          break;
+                        case RatingDisplayMode.postMatch:
+                          message = "The shooter's rating after this match.";
+                          break;
+                        case RatingDisplayMode.change:
+                          message = "The shooter's change in rating at this match.";
+                          break;
+                      }
+                      return Expanded(flex: 1, child: Tooltip(
+                        message: message,
+                        child: Text("Rating"),
+                      ));
+                    }
+                ),
                 Expanded(flex: 1, child: Text("Class")),
                 Expanded(flex: 3, child: Text("Division")),
                 Expanded(flex: 1, child: Text("PF")),
@@ -175,7 +191,26 @@ class ScoreList extends StatelessWidget {
               Expanded(flex: 1, child: Text("${baseScores.indexOf(score) + 1}")),
               Expanded(flex: 1, child: Text("${score.total.place}")),
               Expanded(flex: 3, child: Text(score.shooter.getName())),
-              if(ratings != null) Expanded(flex: 1, child: Text(ratings!.lookup(score.shooter)?.ratingForEvent(match!, null, beforeMatch: true).round().toString() ?? "n/a")),
+              if(ratings != null) Consumer<ScoreDisplaySettingsModel>(
+                builder: (context, model, _) {
+                  String text = "n/a";
+                  switch(model.value.ratingMode) {
+                    case RatingDisplayMode.preMatch:
+                      var rating = ratings!.lookup(score.shooter)?.ratingForEvent(match!, null, beforeMatch: true).round();
+                      if(rating != null) text = rating.toString();
+                      break;
+                    case RatingDisplayMode.postMatch:
+                      var rating = ratings!.lookup(score.shooter)?.ratingForEvent(match!, null, beforeMatch: false).round();
+                      if(rating != null) text = rating.toString();
+                      break;
+                    case RatingDisplayMode.change:
+                      var rating = ratings!.lookup(score.shooter)?.changeForEvent(match!, null);
+                      if(rating != null) text = rating.toStringAsFixed(1);
+                      break;
+                  }
+                  return Expanded(flex: 1, child: Text(text));
+                }
+              ),
               Expanded(flex: 1, child: Text(score.shooter.classification.displayString())),
               Expanded(flex: 3, child: Text(score.shooter.division?.displayString() ?? "NO DIVISION")),
               Expanded(flex: 1, child: Text(score.shooter.powerFactor.shortString())),
@@ -198,11 +233,11 @@ class ScoreList extends StatelessWidget {
                       }
                     }
                     return Expanded(flex: 3, child: Text("${score.total.score.getTotalPoints(scoreDQ: scoreDQ, countPenalties: model.value.availablePointsCountPenalties)} "
-                        "(${score.percentTotalPointsWithSettings(scoreDQ: true, countPenalties: true, stageMaxPoints: stageMax).asPercentage()}%)"));
+                        "(${score.percentTotalPointsWithSettings(scoreDQ: true, countPenalties: model.value.availablePointsCountPenalties, stageMaxPoints: stageMax).asPercentage()}%)"));
                   }
                   else {
                     return Expanded(flex: 3, child: Text("${score.total.score.getTotalPoints(scoreDQ: scoreDQ, countPenalties: model.value.availablePointsCountPenalties)} "
-                        "(${score.percentTotalPoints.asPercentage()}%)"));
+                        "(${score.percentTotalPointsWithSettings(scoreDQ: true, countPenalties: model.value.availablePointsCountPenalties).asPercentage()}%)"));
                   }
                 },
               ),
@@ -234,10 +269,26 @@ class ScoreList extends StatelessWidget {
                 Expanded(flex: 1, child: Text("Row")),
                 Expanded(flex: 1, child: Text("Place")),
                 Expanded(flex: 3, child: Text("Name")),
-                if(ratings != null) Expanded(flex: 1, child: Tooltip(
-                  message: "This shooter's rating prior to this match.",
-                  child: Text("Rating"),
-                )),
+                if(ratings != null) Consumer<ScoreDisplaySettingsModel>(
+                  builder: (context, model, _) {
+                    var message;
+                    switch(model.value.ratingMode) {
+                      case RatingDisplayMode.preMatch:
+                        message = "The shooter's rating prior to this match.";
+                        break;
+                      case RatingDisplayMode.postMatch:
+                        message = "The shooter's rating after this match.";
+                        break;
+                      case RatingDisplayMode.change:
+                        message = "The shooter's change in rating on this stage.";
+                        break;
+                    }
+                    return Expanded(flex: 1, child: Tooltip(
+                      message: message,
+                      child: Text("Rating"),
+                    ));
+                  }
+                ),
                 Expanded(flex: 1, child: Text("Class")),
                 Expanded(flex: 3, child: Text("Division")),
                 Expanded(flex: 1, child: Text("PF")),
@@ -257,7 +308,6 @@ class ScoreList extends StatelessWidget {
     );
   }
   Widget _buildStageScoreRow(BuildContext context, int i, Stage stage) {
-
     var matchScore = filteredScores[i];
     var stageScore = filteredScores[i].stageScores[stage];
 
@@ -288,7 +338,26 @@ class ScoreList extends StatelessWidget {
               Expanded(flex: 1, child: Text("${baseScores.indexOf(matchScore) + 1}")),
               Expanded(flex: 1, child: Text("${stageScore?.place}")),
               Expanded(flex: 3, child: Text(matchScore.shooter.getName())),
-              if(ratings != null) Expanded(flex: 1, child: Text(ratings!.lookup(matchScore.shooter)?.ratingForEvent(match!, null, beforeMatch: true).round().toString() ?? "n/a")),
+              if(ratings != null) Consumer<ScoreDisplaySettingsModel>(
+                  builder: (context, model, _) {
+                    String text = "n/a";
+                    switch(model.value.ratingMode) {
+                      case RatingDisplayMode.preMatch:
+                        var rating = ratings!.lookup(matchScore.shooter)?.ratingForEvent(match!, null, beforeMatch: true).round();
+                        if(rating != null) text = rating.toString();
+                        break;
+                      case RatingDisplayMode.postMatch:
+                        var rating = ratings!.lookup(matchScore.shooter)?.ratingForEvent(match!, null, beforeMatch: false).round();
+                        if(rating != null) text = rating.toString();
+                        break;
+                      case RatingDisplayMode.change:
+                        var rating = ratings!.lookup(matchScore.shooter)?.changeForEvent(match!, stage);
+                        if(rating != null) text = rating.toStringAsFixed(1);
+                        break;
+                    }
+                    return Expanded(flex: 1, child: Text(text));
+                  }
+              ),
               Expanded(flex: 1, child: Text(matchScore.shooter.classification.displayString())),
               Expanded(flex: 3, child: Text(matchScore.shooter.division?.displayString() ?? "NO DIVISION")),
               Expanded(flex: 1, child: Text(matchScore.shooter.powerFactor.shortString())),
@@ -303,12 +372,16 @@ class ScoreList extends StatelessWidget {
                         }
                       }
                     }
+                    else {
+                      maxPoints = stage.maxPoints;
+                    }
 
                     return Expanded(flex: 3, child: Text("${stageScore.score.getTotalPoints(scoreDQ: scoreDQ, countPenalties: model.value.availablePointsCountPenalties)} "
                         "(${((stageScore.score.getPercentTotalPoints(scoreDQ: scoreDQ, countPenalties: model.value.availablePointsCountPenalties, maxPoints: maxPoints)).asPercentage(decimals: 1))}%)"));
                   }
                   else {
-                    return Expanded(flex: 3, child: Text("${stageScore?.score.getTotalPoints(scoreDQ: scoreDQ)} (${((stageScore?.score.getPercentTotalPoints(scoreDQ: scoreDQ) ?? 0).asPercentage(decimals: 1))}%)"));
+                    return Expanded(flex: 3, child: Text("${stageScore?.score.getTotalPoints(scoreDQ: scoreDQ)} "
+                        "(${((stageScore?.score.getPercentTotalPoints(scoreDQ: scoreDQ, countPenalties: model.value.availablePointsCountPenalties) ?? 0).asPercentage(decimals: 1))}%)"));
                   }
                 },
               ),

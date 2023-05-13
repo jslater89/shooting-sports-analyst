@@ -13,6 +13,7 @@ import 'package:uspsa_result_viewer/data/search_query_parser.dart';
 import 'package:uspsa_result_viewer/data/sort_mode.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/about_dialog.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/score_list_settings_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/filter_controls.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/match_breakdown.dart';
@@ -68,11 +69,11 @@ class _ResultPageState extends State<ResultPage> {
   SortMode _sortMode = SortMode.score;
   String _lastQuery = "";
 
-  ScoreDisplaySettings _settings = ScoreDisplaySettings(
+  ScoreDisplaySettingsModel _settings = ScoreDisplaySettingsModel(ScoreDisplaySettings(
     ratingMode: RatingDisplayMode.preMatch,
     availablePointsCountPenalties: true,
     fixedTimeAvailablePointsFromDivisionMax: true,
-  );
+  ));
 
   int get _matchMaxPoints => _filteredStages.map((stage) => stage.maxPoints).sum;
 
@@ -407,6 +408,25 @@ class _ResultPageState extends State<ResultPage> {
             )
         )
       );
+      actions.add(
+        Tooltip(
+          message: "Display settings.",
+          child: IconButton(
+            icon: Icon(Icons.settings),
+            onPressed: () async {
+              var newSettings = await showDialog<ScoreDisplaySettings>(context: context, builder: (context) {
+                return ScoreListSettingsDialog(
+                  initialSettings: _settings.value, showRatingsSettings: widget.ratings != null
+                );
+              });
+
+              if(newSettings != null) {
+                _settings.value = newSettings;
+              }
+            },
+          ),
+        )
+      );
     }
     actions.add(
         IconButton(
@@ -472,8 +492,8 @@ class _ResultPageState extends State<ResultPage> {
           onTap: () {
             _appFocus!.requestFocus();
           },
-          child: ChangeNotifierProvider<ScoreDisplaySettingsModel>(
-            create: (_) => ScoreDisplaySettingsModel(_settings),
+          child: ChangeNotifierProvider<ScoreDisplaySettingsModel>.value(
+            value: _settings,
             child: Scaffold(
               appBar: AppBar(
                 title: Text(_currentMatch?.name ?? "Match Results Viewer"),
@@ -517,10 +537,26 @@ class ScoreDisplaySettings {
   bool fixedTimeAvailablePointsFromDivisionMax;
 
   ScoreDisplaySettings({required this.ratingMode, required this.availablePointsCountPenalties, required this.fixedTimeAvailablePointsFromDivisionMax});
+  ScoreDisplaySettings.copy(ScoreDisplaySettings other) :
+      this.ratingMode = other.ratingMode,
+      this.availablePointsCountPenalties = other.availablePointsCountPenalties,
+      this.fixedTimeAvailablePointsFromDivisionMax = other.fixedTimeAvailablePointsFromDivisionMax;
 }
 
 enum RatingDisplayMode {
   preMatch,
   postMatch,
-  change,
+  change;
+
+  String get uiLabel {
+    switch(this) {
+
+      case RatingDisplayMode.preMatch:
+        return "Pre-match";
+      case RatingDisplayMode.postMatch:
+        return "Post-match";
+      case RatingDisplayMode.change:
+        return "Change";
+    }
+  }
 }
