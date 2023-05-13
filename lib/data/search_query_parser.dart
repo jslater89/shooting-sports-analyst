@@ -163,7 +163,9 @@ Division? _matchDivision(String query) {
   else if(query.startsWith("pi")) return Division.pcc;
   else if(query.startsWith("op")) return Division.open;
   else if(query.startsWith(RegExp("l.*1"))) return Division.limited10;
-  else if(query.startsWith("li")) return Division.limited;
+  else if(query.startsWith("li") && !query.contains("o")) return Division.limited;
+  else if(query.startsWith("li") && query.contains("o")) return Division.limitedOptics;
+  else if(query.startsWith("lo")) return Division.limitedOptics;
   else if(query.startsWith("ca")) return Division.carryOptics;
   else if(query.startsWith("co")) return Division.carryOptics;
   else if(query.startsWith("si")) return Division.singleStack;

@@ -242,6 +242,14 @@ class _FilterDialogState extends State<FilterDialog> {
         },
       ),
       CheckboxListTile(
+        title: Text("Limited Optics"),
+        controlAffinity: ListTileControlAffinity.leading,
+        value: _filters.divisions[Division.limitedOptics],
+        onChanged: (bool? value) {
+          _updateFilter(_filters.divisions, Division.limitedOptics, value);
+        },
+      ),
+      CheckboxListTile(
         title: Text("Production"),
         controlAffinity: ListTileControlAffinity.leading,
         value: _filters.divisions[Division.production],
