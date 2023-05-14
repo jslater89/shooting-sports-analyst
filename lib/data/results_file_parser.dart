@@ -286,7 +286,7 @@ int _readScoreLines(String matchName, List<String> stageScoreLines, Map<int, Sho
 
       // Work around a PractiScore web results bug: if a shooter has neither points
       // nor time, we can assume it's someone who didn't complete the stage at all.
-      if(!stageFinished) {
+      if(!stageFinished && shooter.powerFactor != PowerFactor.subminor) {
         shooter.stageScores[stage] = Score(shooter: shooter, stage: stage);
         // print("Shooter ${shooter.getName()} did not finish ${stage.name}");
         continue;

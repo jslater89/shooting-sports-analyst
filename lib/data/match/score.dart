@@ -89,12 +89,20 @@ class Score {
   int get rawPoints {
     if(stage?.type == Scoring.chrono) return 0;
 
-    int aValue = 5;
-    int bValue = shooter.powerFactor == PowerFactor.major ? 4 : 3;
-    int cValue = bValue;
-    int dValue = shooter.powerFactor == PowerFactor.major ? 2 : 1;
+    var alphaValue = 5;
+    var charlieValue = 4;
+    var deltaValue = 2;
+    if(shooter.powerFactor == PowerFactor.minor) {
+      charlieValue = 3;
+      deltaValue = 1;
+    }
+    else if(shooter.powerFactor == PowerFactor.subminor) {
+      alphaValue = 0;
+      charlieValue = 0;
+      deltaValue = 0;
+    }
 
-    return a * aValue + b * bValue + c * cValue + d * dValue;
+    return a * alphaValue + b * charlieValue + c * charlieValue + d * deltaValue;
   }
 
   int getTotalPoints({bool scoreDQ = true, bool countPenalties = true}) {

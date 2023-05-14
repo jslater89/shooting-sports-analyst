@@ -267,6 +267,7 @@ extension CDisplayString on Classification? {
 enum PowerFactor {
   major,
   minor,
+  subminor,
   unknown,
 }
 
@@ -276,6 +277,7 @@ extension PowerFactorFrom on PowerFactor {
     switch(s) {
       case "major": return PowerFactor.major;
       case "minor": return PowerFactor.minor;
+      case "subminor": return PowerFactor.subminor;
       default: return PowerFactor.unknown;
     }
   }
@@ -286,6 +288,7 @@ extension PDisplayString on PowerFactor?{
     switch(this) {
       case PowerFactor.major: return "Major";
       case PowerFactor.minor: return "Minor";
+      case PowerFactor.subminor: return "Subminor";
       default: return "?";
     }
   }
@@ -294,6 +297,7 @@ extension PDisplayString on PowerFactor?{
     switch(this) {
       case PowerFactor.major: return "Maj";
       case PowerFactor.minor: return "min";
+      case PowerFactor.subminor: return "sub";
       default: return "?";
     }
   }

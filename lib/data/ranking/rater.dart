@@ -1344,6 +1344,10 @@ class Rater {
   }
 
   bool _dnf(RelativeMatchScore score) {
+    if(score.shooter.powerFactor == PowerFactor.subminor || score.shooter.powerFactor == PowerFactor.unknown) {
+      return true;
+    }
+
     for(var stageScore in score.stageScores.values) {
       if(stageScore.stage!.type != Scoring.chrono && stageScore.score.time <= 0.01 && stageScore.score.hits == 0) {
         return true;
