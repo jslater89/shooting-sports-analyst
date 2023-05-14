@@ -41,7 +41,7 @@ class _ScoreListSettingsDialogState extends State<ScoreListSettingsDialog> {
               },
             ),
             CheckboxListTile(
-              title: Text("Fixed time stages available points fix"),
+              title: Text("Improved fixed time available points"),
               subtitle: Text("Fixed time stages use highest achieved points as 100%"),
               value: settings.fixedTimeAvailablePointsFromDivisionMax,
               onChanged: (v) {

@@ -34,7 +34,7 @@ class ShooterComparisonCard extends StatelessWidget {
                 )
               ],
             ),
-            Text("${matchScore.total.place}/${matchScore.total.percent.asPercentage()}%"),
+            Text("${matchScore.total.place} - ${matchScore.total.percent.asPercentage()}%"),
             for(var stageScore in matchScore.stageScores.values)
               ...stageInfo(context, stageScore),
           ],
@@ -49,7 +49,7 @@ class ShooterComparisonCard extends StatelessWidget {
     return [
       Divider(),
       Text("Stage ${stage.internalId} - ${stage.name}", style: Theme.of(context).textTheme.titleMedium, overflow: TextOverflow.ellipsis),
-      Text("${stageScore.place}/${stageScore.percent.asPercentage()}% - ${stageScore.score.getHitFactor().toStringAsFixed(4)}HF"),
+      Text("${stageScore.place} - ${stageScore.percent.asPercentage()}% - ${stageScore.score.getHitFactor().toStringAsFixed(4)}HF"),
       Text("${stageScore.score.a}A ${stageScore.score.c}C ${stageScore.score.d}D ${stageScore.score.m}M ${stageScore.score.ns}NS ${stageScore.score.penaltyCount}P"),
     ];
   }
