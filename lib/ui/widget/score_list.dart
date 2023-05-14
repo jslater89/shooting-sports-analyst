@@ -178,10 +178,10 @@ class ScoreList extends StatelessWidget {
             }
             if(action.launchComparison) {
               Navigator.of(context).push(MaterialPageRoute(
-                  builder: (context) => CompareShooterResultsPage(
-                    scores: baseScores,
-                    initialShooters: [score.shooter],
-                  )
+                builder: (context) => CompareShooterResultsPage(
+                  scores: baseScores,
+                  initialShooters: [score.shooter],
+                )
               ));
             }
           }
@@ -334,18 +334,39 @@ class ScoreList extends StatelessWidget {
     return GestureDetector(
       onTap: () async {
         if(whatIfMode) {
-          var scoreEdit = await (showDialog<ScoreEdit>(context: context, barrierDismissible: false, builder: (context) {
+          var action = await (showDialog<ShooterDialogAction>(context: context, barrierDismissible: false, builder: (context) {
             return EditableShooterCard(stageScore: stageScore, scoreDQ: scoreDQ,);
-          })) ?? null;
+          }));
 
-          if(scoreEdit != null && scoreEdit.rescore) {
-            onScoreEdited(matchScore.shooter, stage, scoreEdit.wholeMatch);
+          if(action != null) {
+            if (action.scoreEdit.rescore) {
+              onScoreEdited(matchScore.shooter, stage, action.scoreEdit.wholeMatch);
+            }
+            if (action.launchComparison) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => CompareShooterResultsPage(
+                    scores: baseScores,
+                    initialShooters: [matchScore.shooter],
+                  )
+                )
+              );
+            }
           }
         }
         else {
-          showDialog(context: context, builder: (context) {
+          var action = await showDialog<ShooterDialogAction>(context: context, builder: (context) {
             return ShooterResultCard(stageScore: stageScore, scoreDQ: scoreDQ,);
           });
+
+          if(action != null && action.launchComparison) {
+            Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) => CompareShooterResultsPage(
+                  scores: baseScores,
+                  initialShooters: [matchScore.shooter],
+                )
+            ));
+          }
         }
       },
       child: ScoreRow(
