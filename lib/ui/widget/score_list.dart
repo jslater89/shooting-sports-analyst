@@ -6,6 +6,7 @@ import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
+import 'package:uspsa_result_viewer/route/compare_shooter_results.dart';
 import 'package:uspsa_result_viewer/ui/result_page.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/editable_shooter_card.dart';
 import 'package:uspsa_result_viewer/ui/widget/score_row.dart';
@@ -166,19 +167,38 @@ class ScoreList extends StatelessWidget {
     return GestureDetector(
       onTap: () async {
         if(whatIfMode) {
-          var scoreEdit = await (showDialog<ScoreEdit>(context: context, barrierDismissible: false, builder: (context) {
+          var action = await (showDialog<ShooterDialogAction>(context: context, barrierDismissible: false, builder: (context) {
             return EditableShooterCard(matchScore: score, scoreDQ: scoreDQ);
-          })) ?? null;
+          }));
 
-          if(scoreEdit != null && scoreEdit.rescore) {
-            // Any edits from here are always going to be whole-match changes
-            onScoreEdited(score.shooter, null, true);
+          if(action != null) {
+            if(action.scoreEdit.rescore) {
+              // Any edits from here are always going to be whole-match changes
+              onScoreEdited(score.shooter, null, true);
+            }
+            if(action.launchComparison) {
+              Navigator.of(context).push(MaterialPageRoute(
+                  builder: (context) => CompareShooterResultsPage(
+                    scores: baseScores,
+                    initialShooters: [score.shooter],
+                  )
+              ));
+            }
           }
         }
         else {
-          showDialog(context: context, builder: (context) {
+          var action = await showDialog<ShooterDialogAction>(context: context, builder: (context) {
             return ShooterResultCard(matchScore: score, scoreDQ: scoreDQ,);
           });
+
+          if(action != null && action.launchComparison) {
+            Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) => CompareShooterResultsPage(
+                  scores: baseScores,
+                  initialShooters: [score.shooter],
+                )
+            ));
+          }
         }
       },
       child: ScoreRow(
@@ -417,4 +437,14 @@ extension LookupShooterRating on Map<RaterGroup, Rater> {
 
     return null;
   }
+}
+
+class ShooterDialogAction {
+  bool launchComparison;
+  ScoreEdit scoreEdit;
+
+  ShooterDialogAction({
+    this.launchComparison = false,
+    this.scoreEdit = const ScoreEdit.empty(),
+  });
 }

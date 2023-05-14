@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/ui/widget/captioned_text.dart';
+import 'package:uspsa_result_viewer/ui/widget/score_list.dart';
 
 class ShooterResultCard extends StatelessWidget {
   final RelativeMatchScore? matchScore;
@@ -132,12 +133,23 @@ class ShooterResultCard extends StatelessWidget {
           onTap: () {
             HtmlOr.openLink("https://uspsa.org/classification/${shooter.originalMemberNumber}");
           },
-          child: Text(
-            "${shooter.getName()} - ${shooter.division?.displayString() ?? "NO DIVISION"} ${shooter.classification.displayString()}",
-            style: Theme.of(context).textTheme.headline6!.copyWith(
-              color: Theme.of(context).primaryColor,
-              decoration: TextDecoration.underline,
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "${shooter.getName()} - ${shooter.division?.displayString() ?? "NO DIVISION"} ${shooter.classification.displayString()}",
+                style: Theme.of(context).textTheme.headline6!.copyWith(
+                  color: Theme.of(context).primaryColor,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+              IconButton(
+                icon: Icon(Icons.compare_arrows),
+                onPressed: () {
+                  Navigator.of(context).pop(ShooterDialogAction(launchComparison: true));
+                },
+              ),
+            ],
           ),
         ),
       );

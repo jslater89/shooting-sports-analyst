@@ -5,6 +5,7 @@ import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/ui/widget/captioned_text.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/shooter_card.dart';
+import 'package:uspsa_result_viewer/ui/widget/score_list.dart';
 
 /// EditableShooterCard should _not_ be barrier-dismissable.
 class EditableShooterCard extends StatefulWidget {
@@ -391,7 +392,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
           child: TextButton(
             child: Text("RESCORE"),
             onPressed: () {
-              Navigator.of(context).pop(ScoreEdit(wholeMatch: _wholeMatchChange, rescore: true));
+              Navigator.of(context).pop(ShooterDialogAction(scoreEdit: ScoreEdit(wholeMatch: _wholeMatchChange, rescore: true)));
             },
           ),
         )
@@ -416,7 +417,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
         TextButton(
           child: Text("CLOSE"),
           onPressed: () {
-            Navigator.of(context).pop(ScoreEdit(wholeMatch: false, rescore: false));
+            Navigator.of(context).pop(ShooterDialogAction());
           },
         )
       ];
@@ -486,12 +487,23 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
           onTap: () {
             HtmlOr.openLink("https://uspsa.org/classification/${shooter.originalMemberNumber}");
           },
-          child: Text(
-            "${shooter.getName()} - ${shooter.division?.displayString() ?? "NO DIVISION"} ${shooter.classification.displayString()}",
-            style: Theme.of(context).textTheme.headline6!.copyWith(
-              color: Theme.of(context).primaryColor,
-              decoration: TextDecoration.underline,
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "${shooter.getName()} - ${shooter.division?.displayString() ?? "NO DIVISION"} ${shooter.classification.displayString()}",
+                style: Theme.of(context).textTheme.headline6!.copyWith(
+                  color: Theme.of(context).primaryColor,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+              IconButton(
+                icon: Icon(Icons.compare_arrows),
+                onPressed: () {
+                  Navigator.of(context).pop(ShooterDialogAction(launchComparison: true));
+                },
+              ),
+            ],
           ),
         ),
       ));
@@ -558,8 +570,9 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
 }
 
 class ScoreEdit {
-  bool wholeMatch;
-  bool rescore;
+  final bool wholeMatch;
+  final bool rescore;
 
   ScoreEdit({required this.wholeMatch, required this.rescore});
+  const ScoreEdit.empty() : wholeMatch = false, rescore = false;
 }
