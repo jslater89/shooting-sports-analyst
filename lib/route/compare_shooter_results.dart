@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/add_comparison_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/shooter_comparison_card.dart';
 
 class CompareShooterResultsPage extends StatefulWidget {
@@ -30,16 +31,29 @@ class _CompareShooterResultsPageState extends State<CompareShooterResultsPage> {
         title: Text("Shooter Comparison"),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: _shooterCards(),
+      body: SizedBox(
+        width: double.infinity,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.vertical,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: _shooterCards(),
+            ),
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
         child: Icon(Icons.add),
-        onPressed: () {
-
+        onPressed: () async {
+          var score = await showDialog<RelativeMatchScore>(context: context, builder: (context) =>
+              AddComparisonDialog(widget.scores)
+          );
+          if(score != null) {
+            setState(() {
+              ofInterest[score.shooter] = score;
+            });
+          }
         },
       ),
     );
@@ -50,7 +64,15 @@ class _CompareShooterResultsPageState extends State<CompareShooterResultsPage> {
       width: 350,
       child: ShooterComparisonCard(
         shooter: s,
-        matchScore: ofInterest[s]!),
+        matchScore: ofInterest[s]!,
+        onShooterRemoved: removeShooter
+      ),
     )).toList();
+  }
+
+  void removeShooter(Shooter s) {
+    setState(() {
+      ofInterest.remove(s);
+    });
   }
 }
