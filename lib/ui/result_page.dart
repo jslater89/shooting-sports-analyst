@@ -12,6 +12,7 @@ import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/search_query_parser.dart';
 import 'package:uspsa_result_viewer/data/sort_mode.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
+import 'package:uspsa_result_viewer/route/compare_shooter_results.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/about_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/score_list_settings_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/filter_controls.dart';
@@ -406,6 +407,22 @@ class _ResultPageState extends State<ResultPage> {
                 });
               },
             )
+        )
+      );
+      actions.add(
+        Tooltip(
+          message: "Compare shooter results.",
+          child: IconButton(
+            icon: Icon(Icons.compare_arrows),
+            onPressed: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) => CompareShooterResultsPage(
+                  scores: _baseScores,
+                  initialShooters: [_filteredShooters.first],
+                )
+              ));
+            },
+          ),
         )
       );
       actions.add(
