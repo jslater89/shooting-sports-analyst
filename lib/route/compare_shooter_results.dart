@@ -37,8 +37,12 @@ class _CompareShooterResultsPageState extends State<CompareShooterResultsPage> {
           scrollDirection: Axis.vertical,
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            child: Row(
-              children: _shooterCards(),
+            child: Column(
+              children: [
+                Row(
+                  children: _shooterCards(),
+                ),
+              ],
             ),
           ),
         ),
