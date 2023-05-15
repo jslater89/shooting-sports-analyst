@@ -97,7 +97,7 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
             onTap: () => setState(() {
               histogram = !histogram;
             }),
-            child: Text(histogram ? "Histogram" : "Quartiles", style: Theme.of(context).textTheme.bodyText1)
+            child: Text(histogram ? "Histogram" : "Quartiles", style: Theme.of(context).textTheme.bodyLarge!.copyWith(color: Theme.of(context).colorScheme.tertiary)),
           )
         ),
       ),
