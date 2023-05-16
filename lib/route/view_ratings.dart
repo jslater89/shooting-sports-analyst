@@ -723,6 +723,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       url = url.replaceFirst("/printhtml", "");
     }
 
+    // TODO: pass in cached info if exists
+
     var registrationResult = await getRegistrations(url, divisions, options);
     if(registrationResult == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -754,6 +756,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       );
       return;
     }
+
+    // TODO: write registration info to cache
 
     int seed = _history.matches.last.date?.millisecondsSinceEpoch ?? 1054124681;
     var predictions = rater.ratingSystem.predict(shooters, seed: seed);

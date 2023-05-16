@@ -126,6 +126,9 @@ class EloShooterRating extends ShooterRating {
     return decayingErrorWithWindow(window: window, fullEffect: fullEffect, offset: offset, decayAfterFull: decayAfterFull) * (errorScale);
   }
 
+  // TODO: an error path that uses sqrt(avg-rating-change^2)
+  // It returns something in the same neighborhood as this method, and is also
+  // always denominated in Elo units
   double get standardError => normalizedDecayingErrorWithWindow(
     window: (ShooterRating.baseTrendWindow * 1.5).round(),
     fullEffect: ShooterRating.baseTrendWindow,

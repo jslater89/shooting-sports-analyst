@@ -39,8 +39,9 @@ class MatchCache {
   /// loading the match cache.
   Map<String, MatchCacheIndexEntry> _index = {};
   late SharedPreferences _prefs;
-  /// Box contains the on-disk packing of
+  /// Box contains the full match files. Items are loaded from _box to _cache on demand.
   late Box<String> _box;
+  /// IndexBox contains the match index, and is loaded on start.
   late Box<MatchCacheIndexEntry> _indexBox;
   static const _cachePrefix = "cache/";
   static const _cacheSeparator = "XxX";
