@@ -65,7 +65,7 @@ RegistrationResult _parseRegistrations(String registrationHtml, List<Division> d
       var classification = ClassificationFrom.string(match.namedGroup("class")!);
       var foundShooter = _findShooter(shooterName, classification, knownShooters);
 
-      if(foundShooter != null) {
+      if(foundShooter != null && !ratings.contains(foundShooter)) {
         ratings.add(foundShooter);
       }
       else {
@@ -116,7 +116,8 @@ ShooterRating? _findShooter(String shooterName, Classification classification, L
     var firstName = _processRegistrationName(shooterName.split(" ").first);
 
     if((lastName.endsWith(processedShooterName[1]) || lastName.startsWith(processedShooterName[1]))
-          && (firstName.startsWith(processedShooterName[0]) || processedShooterName[0].startsWith(firstName))) {
+          && (firstName.startsWith(processedShooterName[0]) || processedShooterName[0].startsWith(firstName))
+          && rating.lastClassification == classification) {
       return true;
     }
     return false;
