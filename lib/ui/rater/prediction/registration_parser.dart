@@ -5,10 +5,12 @@ import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
 import 'package:http/http.dart' as http;
 
 class RegistrationResult {
-  final List<ShooterRating> registrations;
+  final String name;
+  final Map<Registration, ShooterRating> registrations;
   final List<Registration> unmatchedShooters;
 
   RegistrationResult(
+    this.name,
     this.registrations,
     this.unmatchedShooters,
   );
@@ -19,11 +21,22 @@ class Registration {
   final Division division;
   final Classification classification;
 
-  Registration({
+  const Registration({
     required this.name,
     required this.division,
     required this.classification
   });
+
+  @override
+  bool operator ==(Object other) {
+    return (other is Registration)
+        && other.name == this.name
+        && other.division == this.division
+        && other.classification == this.classification;
+  }
+
+  @override
+  int get hashCode => name.hashCode + division.hashCode + classification.hashCode;
 }
 
 Future<RegistrationResult?> getRegistrations(String url, List<Division> divisions, List<ShooterRating> knownShooters) async {
@@ -48,13 +61,22 @@ Future<RegistrationResult?> getRegistrations(String url, List<Division> division
 }
 
 RegistrationResult _parseRegistrations(String registrationHtml, List<Division> divisions, List<ShooterRating> knownShooters) {
-  var ratings = <ShooterRating>[];
+  var ratings = <Registration, ShooterRating>{};
   var unmatched = <Registration>[];
+
+  var matchName = "unnamed match";
 
   // Match a line
   var shooterRegex = RegExp(r'<span.*title="(?<name>.*)\s+\((?<division>[\w\s]+)\s+\/\s+(?<class>\w+)\)');
+  var matchRegex = RegExp(r'<meta\s+property="og:title"\s+content="(?<matchname>.*)"\s*/>');
   var unescape = HtmlUnescape();
   for(var line in registrationHtml.split("\n")) {
+    var nameMatch = matchRegex.firstMatch(line);
+    if(nameMatch != null) {
+      matchName = nameMatch.namedGroup("matchname")!;
+      print("Match name: $matchName");
+    }
+
     var match = shooterRegex.firstMatch(line);
     if(match != null) {
       var shooterName = unescape.convert(match.namedGroup("name")!);
@@ -65,8 +87,8 @@ RegistrationResult _parseRegistrations(String registrationHtml, List<Division> d
       var classification = ClassificationFrom.string(match.namedGroup("class")!);
       var foundShooter = _findShooter(shooterName, classification, knownShooters);
 
-      if(foundShooter != null && !ratings.contains(foundShooter)) {
-        ratings.add(foundShooter);
+      if(foundShooter != null && !ratings.containsValue(foundShooter)) {
+        ratings[Registration(name: shooterName, division: d, classification: classification)] = foundShooter;
       }
       else {
         print("Missing shooter for: $shooterName");
@@ -77,7 +99,7 @@ RegistrationResult _parseRegistrations(String registrationHtml, List<Division> d
     }
   }
 
-  return RegistrationResult(ratings, unmatched);
+  return RegistrationResult(matchName, ratings, unmatched);
 }
 
 String _processRegistrationName(String name) {
