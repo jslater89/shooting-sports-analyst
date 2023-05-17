@@ -126,8 +126,10 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
         if (responseString.startsWith(r"$")) {
           var result = await processScoreFile(responseString);
           if(result.isOk()) {
+            var match = result.unwrap();
+            match.practiscoreId = widget.matchId ?? "n/a";
             setState(() {
-              _match = result.unwrap();
+              _match = match;
             });
           }
           else {

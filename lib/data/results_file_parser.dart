@@ -66,6 +66,7 @@ Future<Result<PracticalMatch, MatchGetError>> processScoreFile(String fileConten
 
 PracticalMatch _processResultLines({required List<String> infoLines, required List<String> competitorLines, required List<String> stageLines, required List<String> stageScoreLines}) {
   PracticalMatch match = PracticalMatch();
+  match.practiscoreId = "unset";
   _readInfoLines(match, infoLines);
 
   Map<int, Shooter> shootersByFileId = _readCompetitorLines(match, competitorLines);
