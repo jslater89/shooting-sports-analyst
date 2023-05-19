@@ -121,7 +121,7 @@ class _EnterUrlsDialogState extends State<EnterUrlsDialog> {
     var res = await widget.cache.getMatch(url);
     if(res.isOk()) {
       var match = res.unwrap();
-      setState(() {
+      if(mounted) setState(() {
         displayNames[url] = match.name ?? "$url (missing name)";
       });
     }
@@ -131,7 +131,7 @@ class _EnterUrlsDialogState extends State<EnterUrlsDialog> {
         var matchId = url
             .split("/")
             .last;
-        setState(() {
+        if(mounted) setState(() {
           displayNames[url] = "URL invalid: ${err.message.toLowerCase()} (id: $matchId)";
         });
       }

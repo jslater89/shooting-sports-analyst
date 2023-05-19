@@ -1,5 +1,4 @@
 
-// TODO: multi-objective predator-prey
 /*
 It seems like the right choice, on reading about it a little. We do actually have several
 functions we're evaluating on, even if they aren't yet explicit:

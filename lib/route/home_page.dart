@@ -198,6 +198,10 @@ class _HomePageState extends State<HomePage> {
             _operationInProgress = true;
           });
           var matchId = await getMatchId(context);
+          if(matchId != null) {
+            // get the full UUID-styled ID
+            matchId = await processMatchUrl(matchId);
+          }
           setState(() {
             _operationInProgress = false;
           });

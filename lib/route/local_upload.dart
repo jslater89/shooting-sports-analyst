@@ -38,8 +38,10 @@ class _UploadedResultPageState extends State<UploadedResultPage> {
 
       var result = await processScoreFile(_resultString!);
       if(result.isOk()) {
+        var match = result.unwrap();
+        match.practiscoreId = "n/a";
         setState(() {
-          _match = result.unwrap();
+          _match = match;
         });
       }
       else {

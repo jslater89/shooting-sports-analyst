@@ -699,7 +699,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         hintText: "https://practiscore.com/match-name/squadding",
         descriptionText: "Enter a link to the match registration or squadding page.",
         validator: (url) {
-          if(url.endsWith("/register") || url.endsWith("/squadding") || url.endsWith("/printhtml")) {
+          if(url.endsWith("/register") || url.endsWith("/squadding") || url.endsWith("/printhtml") || (url.endsWith("/") && !url.contains("squadding"))) {
             return null;
           }
           else {
@@ -723,6 +723,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       url = url.replaceFirst("/printhtml", "");
     }
 
+    // TODO: pass in cached info if exists
+
     var registrationResult = await getRegistrations(url, divisions, options);
     if(registrationResult == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -731,13 +733,13 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       return;
     }
 
-    shooters.addAll(registrationResult.registrations);
+    shooters.addAll(registrationResult.registrations.values);
 
     if(registrationResult.unmatchedShooters.isNotEmpty) {
       var newRegistrations = await showDialog<List<ShooterRating>>(context: context, builder: (context) {
         return AssociateRegistrationsDialog(
             registrations: registrationResult,
-            possibleMappings: options.where((element) => !registrationResult.registrations.contains(element)).toList());
+            possibleMappings: options.where((element) => !registrationResult.registrations.values.contains(element)).toList());
       }, barrierDismissible: false);
 
       if(newRegistrations != null) {
@@ -754,6 +756,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       );
       return;
     }
+
+    // TODO: write registration info to cache
 
     int seed = _history.matches.last.date?.millisecondsSinceEpoch ?? 1054124681;
     var predictions = rater.ratingSystem.predict(shooters, seed: seed);

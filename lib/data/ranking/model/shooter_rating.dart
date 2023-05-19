@@ -45,9 +45,6 @@ abstract class ShooterRating extends Shooter {
   /// If the shooter was not rated prior to the match and none of the
   /// above cases apply, returns the shooter's current rating.
   double ratingForEvent(PracticalMatch match, Stage? stage, {bool beforeMatch = false}) {
-    // TODO: an option to return the rating immediately before the requested match
-    // even if the shooter shot it
-
     RatingEvent? candidateEvent;
     for(var e in ratingEvents.reversed) {
       if(e.match.practiscoreId == match.practiscoreId && (candidateEvent == null || beforeMatch)) {
