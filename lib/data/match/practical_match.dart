@@ -148,7 +148,7 @@ class PracticalMatch {
       if(innerShooters[0].stageScores[stage] == null) {
         // we've clearly hit some awful condition here, so let's
         // just bail out
-        print("Winner of ${stage.name}: ${innerShooters[0].firstName} ${innerShooters[0].lastName} with ${innerShooters[0].stageScores[stage]!.getHitFactor(scoreDQ: scoreDQ)}");
+        print("Winner of ${stage.name}: ${innerShooters[0].firstName} ${innerShooters[0].lastName}");
         continue;
       }
       double highHitFactor = innerShooters[0].stageScores[stage]!.getHitFactor(scoreDQ: scoreDQ);
