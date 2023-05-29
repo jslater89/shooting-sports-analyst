@@ -139,12 +139,14 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
         if(widget.multiple) TextButton(
           child: Text("CANCEL"),
           onPressed: () {
+            cache!.save(forceResave: addedMatches);
             Navigator.of(context).pop(null);
           },
         ),
         if(widget.multiple) TextButton(
           child: Text("CONFIRM"),
           onPressed: () {
+            cache!.save(forceResave: addedMatches);
             Navigator.of(context).pop(selectedMatches.toList());
           },
         )
