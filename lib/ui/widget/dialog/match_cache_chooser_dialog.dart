@@ -27,6 +27,23 @@ class MatchCacheChooserDialog extends StatefulWidget {
 
   @override
   State<MatchCacheChooserDialog> createState() => _MatchCacheChooserDialogState();
+
+  static Future<List<MatchCacheIndexEntry>?> show({
+    required BuildContext context,
+    List<PracticalMatch>? matches,
+    bool showStats = false,
+    String? helpText,
+    bool multiple = false,
+    bool showIds = false,
+  }) {
+    return showDialog(context: context, builder: (context) => MatchCacheChooserDialog(
+      showIds: showIds,
+      showStats: showStats,
+      matches: matches,
+      helpText: helpText,
+      multiple: multiple,
+    ), barrierDismissible: false);
+  }
 }
 
 class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
