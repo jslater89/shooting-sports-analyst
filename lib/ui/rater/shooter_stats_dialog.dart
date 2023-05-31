@@ -34,16 +34,74 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   final ScrollController _controller = ScrollController();
 
   RatingEvent? _highlighted;
+  List<Widget>? _eventLines;
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+
+  }
+
+  List<Widget> _buildEventLines() {
+    List<RatingEvent> events = widget.rating.ratingEvents;
+    _eventLines = events.reversed
+      .map((e) => Tooltip(
+      message: e.info.keys.map((line) => sprintf(line, e.info[line])).join("\n"),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: () {
+                  _launchScoreView(e);
+                },
+                child: _StatefulContainer(
+                  key: GlobalObjectKey(e.hashCode),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        flex: 10,
+                        child: Text("${e.eventName}",
+                            style: Theme.of(context).textTheme.bodyText2!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).errorColor : null)),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Align(
+                            alignment: Alignment.centerRight,
+                            child: Text("${e.ratingChange.toStringAsFixed(2)}",
+                                style:
+                                Theme.of(context).textTheme.bodyText2!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).errorColor : null))),
+                      )
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Divider(
+              height: 2,
+              thickness: 1,
+            )
+          ],
+        ),
+      ),
+    )).toList();
+    return _eventLines!;
+  }
 
   @override
   Widget build(BuildContext context) {
-    List<RatingEvent> events = widget.rating.ratingEvents;
     // if(rating.ratingEvents.length < 30) {
     //   events = rating.ratingEvents;
     // }
     // else {
     //   events = rating.ratingEvents.sublist(rating.ratingEvents.length - 30);
     // }
+    var eventLines = _eventLines ?? _buildEventLines();
 
     return AlertDialog(
       title: Row(
@@ -92,53 +150,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                       controller: _controller,
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
-                        children: [
-                          ...events.reversed.map((e) =>
-                              Tooltip(
-                                message: e.info.keys.map((line) => sprintf(line, e.info[line])).join("\n"),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      MouseRegion(
-                                        cursor: SystemMouseCursors.click,
-                                        child: GestureDetector(
-                                          onTap: () {
-                                            _launchScoreView(e);
-                                          },
-                                          child: Container(
-                                            key: GlobalObjectKey(e.hashCode),
-                                            color: e == _highlighted ? Colors.black12 : null,
-                                            child: Row(
-                                              mainAxisAlignment: MainAxisAlignment.end,
-                                              children: [
-                                                Expanded(
-                                                  flex: 10,
-                                                  child: Text("${e.eventName}", style: Theme.of(context).textTheme.bodyText2!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).errorColor : null)),
-                                                ),
-                                                Expanded(
-                                                  flex: 2,
-                                                  child: Align(
-                                                      alignment: Alignment.centerRight,
-                                                      child: Text("${e.ratingChange.toStringAsFixed(2)}", style: Theme.of(context).textTheme.bodyText2!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).errorColor : null))
-                                                  ),
-                                                )
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      Divider(
-                                        height: 2,
-                                        thickness: 1,
-                                      )
-                                    ],
-                                  ),
-                                ),
-                              )
-                          ).toList()
-                        ],
+                        children: eventLines,
                       ),
                     ),
                   )
@@ -300,12 +312,25 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   }
 
   void _highlight(_AccumulatedRatingEvent e) {
+    var oldState = GlobalObjectKey(_highlighted.hashCode).currentState;
+    if(oldState != null) {
+      oldState as _StatefulContainerState;
+      oldState.highlighted = false;
+    }
+
     setState(() {
       _highlighted = e.baseEvent;
     });
 
-    var ctx = GlobalObjectKey(e.baseEvent.hashCode).currentContext;
+    var key = GlobalObjectKey(e.baseEvent.hashCode);
+    var ctx = key.currentContext;
     if(ctx != null) Scrollable.ensureVisible(ctx);
+
+    var state = key.currentState;
+    if(state != null) {
+      state as _StatefulContainerState;
+      state.highlighted = true;
+    }
   }
 
   List<Widget> _buildShooterStats(BuildContext context) {
@@ -383,6 +408,34 @@ class _EloTooltipRenderer extends charts.CircleSymbolRenderer {
         element.TextElement("$ratingText", style: textStyle),
         (bounds.left + leftOffset).round(),
         (bounds.top - 40).round()
+    );
+  }
+}
+
+class _StatefulContainer extends StatefulWidget {
+  const _StatefulContainer({Key? key, required this.child}) : super(key: key);
+
+  final Widget child;
+
+  @override
+  State<_StatefulContainer> createState() => _StatefulContainerState();
+}
+
+class _StatefulContainerState extends State<_StatefulContainer> {
+  bool _highlighted = false;
+
+  bool get highlighted => _highlighted;
+  set highlighted(bool value) {
+    setState(() {
+      _highlighted = value;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: highlighted ? Colors.black12 : null,
+      child: widget.child,
     );
   }
 }
