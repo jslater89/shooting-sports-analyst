@@ -17,13 +17,12 @@ fi
 mv "$PROJ_ROOT/uspsa-result-viewer-ci.build-windows.zip" .
 unzip "uspsa-result-viewer-ci.build-windows.zip"
 rm "uspsa-result-viewer-ci.build-windows.zip"
+mv uspsa-result-viewer/* .
+rmdir uspsa-result-viewer
 
 # Work around observed bug with directory permissions
 find . -type d -exec chmod ug+x {} \;
 
-mkdir data
-cp $PROJ_ROOT/data/L2s-Since-2019.json data/
-cp $PROJ_ROOT/data/Nationals-and-Area-Matches.json data/
 echo $VERSION > version.txt
 
 cd $PROJ_ROOT || exit
