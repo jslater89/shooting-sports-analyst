@@ -27,6 +27,7 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
   static const _ordinalFlex = 2;
   static const _muFlex = 2;
   static const _sigmaFlex = 2;
+  static const _connectednessFlex = 2;
   static const _eventsFlex = 2;
 
   final OpenskillSettings settings;

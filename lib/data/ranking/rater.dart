@@ -776,7 +776,9 @@ class Rater {
     if(byStage) {
       for(Stage s in match.stages) {
 
-        var (filteredShooters, filteredScores) = _filterScores(shooters, scores, s);
+        var res = _filterScores(shooters, scores, s);
+        var filteredShooters = res.a;
+        var filteredScores = res.b;
 
         var weightMod = 1.0 + max(-0.20, min(0.10, (s.maxPoints - 120) /  400));
 
@@ -843,7 +845,9 @@ class Rater {
       }
     }
     else { // by match
-      var (filteredShooters, filteredScores) = _filterScores(shooters, scores, null);
+      var res = _filterScores(shooters, scores, null);
+      var filteredShooters = res.a;
+      var filteredScores = res.b;
 
       Map<ShooterRating, RelativeScore> matchScoreMap = {};
 
@@ -979,7 +983,7 @@ class Rater {
     return true;
   }
 
-  (List<Shooter>, List<RelativeMatchScore>) _filterScores(List<Shooter> shooters, List<RelativeMatchScore> scores, Stage? stage) {
+  _Tuple<List<Shooter>, List<RelativeMatchScore>> _filterScores(List<Shooter> shooters, List<RelativeMatchScore> scores, Stage? stage) {
     List<Shooter> filteredShooters = []..addAll(shooters);
     List<RelativeMatchScore> filteredScores = []..addAll(scores);
     for(var s in scores) {
@@ -1006,7 +1010,7 @@ class Rater {
       }
     }
 
-    return (filteredShooters, filteredScores);
+    return _Tuple(filteredShooters, filteredScores);
   }
 
   void _processRoundRobin({
@@ -1533,6 +1537,13 @@ class RaterStatistics {
     required this.histogramsByClass,
     required this.ratingsByClass,
   });
+}
+
+class _Tuple<T, U> {
+  T a;
+  U b;
+
+  _Tuple(this.a, this.b);
 }
 
 enum _MemNumType {
