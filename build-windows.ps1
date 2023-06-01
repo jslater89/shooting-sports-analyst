@@ -1,10 +1,10 @@
 ﻿$Version = $args[0]
 
-Get-ChildItem Env:
-
-If($args.count -lt 1) {
-	echo "Requires version arg"
-	exit
+If(-not $Env:AppVeyor) {
+    If($args.count -lt 1) {
+	    echo "Requires version arg"
+	    exit
+    }
 }
 
 fvm flutter build windows
@@ -20,9 +20,9 @@ If(Test-Path uspsa-result-viewer) {
 cp -r -Force .\Release\* uspsa-result-viewer
 
 If($Env:AppVeyor) {
-    cp -Force "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\redist\x64\Microsoft.VC140.CRT\msvcp140.dll" uspsa-result-viewer
-    cp -Force "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\redist\x64\Microsoft.VC140.CRT\vcruntime140.dll" uspsa-result-viewer
-    cp -Force "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\redist\x64\Microsoft.VC140.CRT\vcruntime140_1.dll" uspsa-result-viewer
+    cp -Force "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\redist\x64\Microsoft.VC140.CRT\msvcp140.dll" uspsa-result-viewer
+    cp -Force "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\redist\x64\Microsoft.VC140.CRT\vcruntime140.dll" uspsa-result-viewer
+    cp -Force "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\redist\x64\Microsoft.VC140.CRT\vcruntime140_1.dll" uspsa-result-viewer
 }
 
 cp $Root\data\L2s-Since-2019.json uspsa-result-viewer
@@ -34,4 +34,9 @@ if(Test-Path uspsa-result-viewer.zip) {
 
 Compress-Archive -Path .\uspsa-result-viewer -DestinationPath uspsa-result-viewer.zip -Force
 cd $Root
-cp -Force .\build\windows\runner\uspsa-result-viewer.zip uspsa-result-viewer-$version-windows.zip
+If($Env:AppVeyor) {
+    .\build\windows\runner\uspsa-result-viewer.zip uspsa-result-viewer-$Env:APPVEYOR_BUILD_NUMBER-windows.zip
+}
+Else {
+    cp -Force .\build\windows\runner\uspsa-result-viewer.zip uspsa-result-viewer-$version-windows.zip
+}
