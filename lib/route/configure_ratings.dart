@@ -155,7 +155,19 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       updateUrls();
     }
     else {
-      debugPrint("Autosaved project is null");
+      // This should only happen if we've never launched before, so...
+      print("Autosaved project is null");
+
+      _ratingSystem = MultiplayerPercentEloRater();
+      _settingsController = _ratingSystem.newSettingsController();
+      setState(() {
+        _settingsWidget = null;
+      });
+      setState(() {
+        _settingsWidget = _ratingSystem.newSettingsWidget(_settingsController);
+      });
+      _settingsController.currentSettings = _ratingSystem.settings;
+      _restoreDefaults();
     }
   }
 
