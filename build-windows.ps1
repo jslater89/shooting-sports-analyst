@@ -42,7 +42,7 @@ if(Test-Path uspsa-result-viewer.zip) {
 Compress-Archive -Path .\uspsa-result-viewer -DestinationPath uspsa-result-viewer.zip -Force
 cd $Root
 If($Env:AppVeyor) {
-    .\build\windows\runner\uspsa-result-viewer.zip uspsa-result-viewer-$Env:APPVEYOR_BUILD_NUMBER-windows.zip
+    cp -Force .\build\windows\runner\uspsa-result-viewer.zip uspsa-result-viewer-$Env:APPVEYOR_BUILD_NUMBER-windows.zip
 }
 Else {
     cp -Force .\build\windows\runner\uspsa-result-viewer.zip uspsa-result-viewer-$version-windows.zip
