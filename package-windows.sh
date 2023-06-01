@@ -9,12 +9,22 @@ PROJ_ROOT=$(pwd)
 rm -rf windows-distribution
 mkdir windows-distribution
 cd windows-distribution || exit
-if [ ! -f "$PROJ_ROOT/uspsa-result-viewer-ci.build-windows.zip" ]; then
+
+FOUND=''
+for f in "$PROJ_ROOT"/uspsa-result-viewer-ci.*-windows.zip
+do
+  FOUND=$f
+  break
+done
+
+if [ ! -f "$FOUND" ]; then
     echo "Download an AppVeyor build to the repository root before packaging."
     exit
+else
+    echo "$FOUND"
 fi
 
-mv "$PROJ_ROOT/uspsa-result-viewer-ci.*-windows.zip" ci-build.zip
+mv "$PROJ_ROOT"/uspsa-result-viewer-ci.*-windows.zip ci-build.zip
 unzip ci-build.zip
 rm ci-build.zip
 mv uspsa-result-viewer/* .
