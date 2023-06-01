@@ -27,5 +27,5 @@ echo "$VERSION" > version.txt
 
 cd "$PROJ_ROOT" || exit
 mv windows-distribution uspsa-analyst-windows
-zip -r "uspsa-analyst-$VERSION-windows.zip uspsa-analyst-windows"
+zip -r "uspsa-analyst-$VERSION-windows.zip" uspsa-analyst-windows
 rm -rf uspsa-analyst-windows
