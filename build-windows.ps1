@@ -1,5 +1,7 @@
 ﻿$Version = $args[0]
 
+Get-ChildItem Env:
+
 If($args.count -lt 1) {
 	echo "Requires version arg"
 	exit
@@ -17,7 +19,7 @@ If(Test-Path uspsa-result-viewer) {
 
 cp -r -Force .\Release\* uspsa-result-viewer
 
-If($Env.AppVeyor) {
+If($Env:AppVeyor) {
     cp -Force "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\redist\x64\Microsoft.VC140.CRT\msvcp140.dll" uspsa-result-viewer
     cp -Force "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\redist\x64\Microsoft.VC140.CRT\vcruntime140.dll" uspsa-result-viewer
     cp -Force "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\redist\x64\Microsoft.VC140.CRT\vcruntime140_1.dll" uspsa-result-viewer
