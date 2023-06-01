@@ -14,9 +14,9 @@ if [ ! -f "$PROJ_ROOT/uspsa-result-viewer-ci.build-windows.zip" ]; then
     exit
 fi
 
-mv "$PROJ_ROOT/uspsa-result-viewer-ci.build-windows.zip" .
-unzip "uspsa-result-viewer-ci.build-windows.zip"
-rm "uspsa-result-viewer-ci.build-windows.zip"
+mv "$PROJ_ROOT/uspsa-result-viewer-ci.*-windows.zip" ci-build.zip
+unzip ci-build.zip
+rm ci-build.zip
 mv uspsa-result-viewer/* .
 rmdir uspsa-result-viewer
 

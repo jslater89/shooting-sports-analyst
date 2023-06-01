@@ -14,10 +14,13 @@ cd .\build\windows\runner
 
 If(Test-Path uspsa-result-viewer) {
     rm -r -Force uspsa-result-viewer
-    mkdir uspsa-result-viewer
 }
 
-cp -r -Force .\Release\* uspsa-result-viewer
+mkdir uspsa-result-viewer
+
+cp -Force .\Release\*.exe uspsa-result-viewer
+cp -Force .\Release\*.dll uspsa-result-viewer
+cp -r -Force .\Release\data uspsa-result-viewer\
 
 If($Env:AppVeyor) {
     $vsPath = "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\VC\Redist\MSVC\14.34.31931\x64\Microsoft.VC143.CRT"
@@ -42,7 +45,7 @@ if(Test-Path uspsa-result-viewer.zip) {
 Compress-Archive -Path .\uspsa-result-viewer -DestinationPath uspsa-result-viewer.zip -Force
 cd $Root
 If($Env:AppVeyor) {
-    cp -Force .\build\windows\runner\uspsa-result-viewer.zip uspsa-result-viewer-$Env:APPVEYOR_BUILD_NUMBER-windows.zip
+    cp -Force .\build\windows\runner\uspsa-result-viewer.zip uspsa-result-viewer-ci.$Env:APPVEYOR_BUILD_NUMBER-windows.zip
 }
 Else {
     cp -Force .\build\windows\runner\uspsa-result-viewer.zip uspsa-result-viewer-$version-windows.zip
