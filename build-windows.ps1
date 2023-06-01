@@ -16,6 +16,13 @@ If(Test-Path uspsa-result-viewer) {
 }
 
 cp -r -Force .\Release\* uspsa-result-viewer
+
+If($Env.AppVeyor) {
+    cp -Force "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\redist\x64\Microsoft.VC140.CRT\msvcp140.dll" uspsa-result-viewer
+    cp -Force "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\redist\x64\Microsoft.VC140.CRT\vcruntime140.dll" uspsa-result-viewer
+    cp -Force "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\redist\x64\Microsoft.VC140.CRT\vcruntime140_1.dll" uspsa-result-viewer
+}
+
 cp $Root\data\L2s-Since-2019.json uspsa-result-viewer
 cp $Root\data\Nationals-and-Area-Matches.json uspsa-result-viewer
 
