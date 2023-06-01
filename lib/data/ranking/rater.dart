@@ -2,9 +2,9 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
-import 'package:uspsa_result_viewer/data/db/object/rating/rating_event.dart';
-import 'package:uspsa_result_viewer/data/db/object/rating/rating_project.dart';
-import 'package:uspsa_result_viewer/data/db/object/rating/shooter_rating.dart';
+// import 'package:uspsa_result_viewer/data/db/object/rating/rating_event.dart';
+// import 'package:uspsa_result_viewer/data/db/object/rating/rating_project.dart';
+// import 'package:uspsa_result_viewer/data/db/object/rating/shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/member_number_correction.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
@@ -158,34 +158,34 @@ class Rater {
     return result;
   }
 
-  Future<void> deserializeFrom(List<DbMemberNumberMapping> mappings, List<DbShooterRating> ratings, Map<DbShooterRating, List<DbRatingEvent>> eventsByRating) async {
-    // Mappings contains only the interesting ones, i.e. number != mapping
-    // The rest get added later.
-
-    // Track the reverse mappings for now, so that we can tell the rating
-    // deserializer a mapped shooter's first number.
-    // TODO: triple mappings will break this; needs to be a list!
-    var reverseMappings = <String, String>{};
-    for(var m in mappings) {
-      _memberNumberMappings[m.number] = m.mapping;
-      reverseMappings[m.mapping] = m.number;
-    }
-
-    for(var r in ratings) {
-      var numbers = [r.memberNumber];
-
-      // If we have a reverse mapping (i.e., new member number to old),
-      // add that to the list
-      if(reverseMappings.containsKey(r.memberNumber)) {
-        numbers.add(reverseMappings[r.memberNumber]!);
-      }
-
-      ShooterRating rating = await r.deserialize(eventsByRating[r]!, numbers);
-      _memberNumbersEncountered.add(rating.memberNumber);
-      _memberNumbersEncountered.add(processMemberNumber(rating.originalMemberNumber));
-      knownShooters[rating.memberNumber] = rating;
-    }
-  }
+  // Future<void> deserializeFrom(List<DbMemberNumberMapping> mappings, List<DbShooterRating> ratings, Map<DbShooterRating, List<DbRatingEvent>> eventsByRating) async {
+  //   // Mappings contains only the interesting ones, i.e. number != mapping
+  //   // The rest get added later.
+  //
+  //   // Track the reverse mappings for now, so that we can tell the rating
+  //   // deserializer a mapped shooter's first number.
+  //   // TODO: triple mappings will break this; needs to be a list!
+  //   var reverseMappings = <String, String>{};
+  //   for(var m in mappings) {
+  //     _memberNumberMappings[m.number] = m.mapping;
+  //     reverseMappings[m.mapping] = m.number;
+  //   }
+  //
+  //   for(var r in ratings) {
+  //     var numbers = [r.memberNumber];
+  //
+  //     // If we have a reverse mapping (i.e., new member number to old),
+  //     // add that to the list
+  //     if(reverseMappings.containsKey(r.memberNumber)) {
+  //       numbers.add(reverseMappings[r.memberNumber]!);
+  //     }
+  //
+  //     ShooterRating rating = await r.deserialize(eventsByRating[r]!, numbers);
+  //     _memberNumbersEncountered.add(rating.memberNumber);
+  //     _memberNumbersEncountered.add(processMemberNumber(rating.originalMemberNumber));
+  //     knownShooters[rating.memberNumber] = rating;
+  //   }
+  // }
 
   Future<RatingResult> calculateInitialRatings() async {
     late DateTime start;

@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
-import 'package:uspsa_result_viewer/data/db/object/rating/elo/db_elo_rating.dart';
+// import 'package:uspsa_result_viewer/data/db/object/rating/elo/db_elo_rating.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rating_change.dart';
@@ -156,10 +156,10 @@ class EloShooterRating extends ShooterRating {
   EloShooterRating(Shooter shooter, this.rating, {DateTime? date}) :
       super(shooter, date: date);
 
-  EloShooterRating.fromDb(DbEloRating rating) :
-      rating = rating.rating,
-      variance = rating.variance,
-      super.fromVitals(rating);
+  // EloShooterRating.fromDb(DbEloRating rating) :
+  //     rating = rating.rating,
+  //     variance = rating.variance,
+  //     super.fromVitals(rating);
 
   void updateFromEvents(List<RatingEvent> events) {
     for(var e in events) {

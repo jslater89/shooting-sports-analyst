@@ -1,8 +1,8 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
-import 'package:uspsa_result_viewer/data/db/object/match/shooter.dart';
-import 'package:uspsa_result_viewer/data/db/object/rating/shooter_rating.dart';
+// import 'package:uspsa_result_viewer/data/db/object/match/shooter.dart';
+// import 'package:uspsa_result_viewer/data/db/object/rating/shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/average_rating.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/connected_shooter.dart';
@@ -275,12 +275,12 @@ abstract class ShooterRating extends Shooter {
     super.copyVitalsFrom(shooter);
   }
 
-  ShooterRating.fromVitals(DbShooterRating rating) :
-      this.lastClassification = rating.lastClassification,
-      this.firstSeen = throw UnimplementedError(),
-      this.lastSeen = rating.lastSeen {
-    super.copyDbVitalsFrom(rating);
-  }
+  // ShooterRating.fromVitals(DbShooterRating rating) :
+  //     this.lastClassification = rating.lastClassification,
+  //     this.firstSeen = throw UnimplementedError(),
+  //     this.lastSeen = rating.lastSeen {
+  //   super.copyDbVitalsFrom(rating);
+  // }
 
   ShooterRating.copy(ShooterRating other) :
       this.lastClassification = other.lastClassification,

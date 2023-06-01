@@ -1,7 +1,5 @@
-import 'package:floor/floor.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
 
-@Entity(tableName: "connectedShooters")
 class ConnectedShooter {
   static final dateComparisonClosure = (ConnectedShooter a, ConnectedShooter b) => a.lastSeen.compareTo(b.lastSeen);
 
