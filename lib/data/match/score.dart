@@ -2,6 +2,10 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/ranking/rater.dart';
+import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
+import 'package:uspsa_result_viewer/ui/result_page.dart';
+import 'package:uspsa_result_viewer/ui/widget/score_list.dart';
 
 class Score {
   Shooter shooter;
@@ -248,6 +252,20 @@ extension Sorting on List<RelativeMatchScore> {
   void sortBySurname() {
     this.sort((a, b) {
       return a.shooter.lastName.compareTo(b.shooter.lastName);
+    });
+  }
+
+  void sortByRating({required Map<RaterGroup, Rater> ratings, required RatingDisplayMode displayMode, required PracticalMatch match}) {
+    this.sort((a, b) {
+      var aRating = ratings.lookupRating(shooter: a.shooter, mode: displayMode, match: match) ?? -1000;
+      var bRating = ratings.lookupRating(shooter: b.shooter, mode: displayMode, match: match) ?? -1000;
+      return bRating.compareTo(aRating);
+    });
+  }
+
+  void sortByClassification() {
+    this.sort((a, b) {
+      return (a.shooter.classification ?? Classification.U).index.compareTo((b.shooter.classification ?? Classification.U).index);
     });
   }
 }

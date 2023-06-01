@@ -27,8 +27,8 @@ class ResultPage extends StatefulWidget {
   final Stage? initialStage;
   final FilterSet? initialFilters;
 
-  /// A map of processed member IDs to shooter ratings
-  /// for the shooters in [canonicalMatch].
+  /// A map of RaterGroups to Raters, possibly containing
+  /// ratings for shooters in [canonicalMatch].
   final Map<RaterGroup, Rater>? ratings;
 
   const ResultPage({
@@ -213,6 +213,19 @@ class _ResultPageState extends State<ResultPage> {
       case SortMode.lastName:
         _baseScores.sortBySurname();
         break;
+      case SortMode.rating:
+        if(widget.ratings != null) {
+          _baseScores.sortByRating(ratings: widget.ratings!, displayMode: _settings.value.ratingMode, match: _currentMatch!);
+        }
+        else {
+          // We shouldn't hit this, because we hide rating sort if there aren't any ratings,
+          // but just in case...
+          return _baseScores.sortByScore(stage: _stage);
+        }
+        break;
+      case SortMode.classification:
+        _baseScores.sortByClassification();
+        break;
     }
 
     setState(() {
@@ -276,6 +289,7 @@ class _ResultPageState extends State<ResultPage> {
       sortMode: _sortMode,
       returnFocus: _appFocus,
       searchError: _invalidSearch,
+      hasRatings: widget.ratings != null,
       onFiltersChanged: _applyFilters,
       onSortModeChanged: _applySortMode,
       onStageChanged: _applyStage,

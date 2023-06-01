@@ -27,6 +27,7 @@ class FilterControls extends StatefulWidget {
   final Function(List<Stage>) onStageSetChanged;
 
   final bool searchError;
+  final bool hasRatings;
   //final Function onAdvancedQueryChanged;
 
   const FilterControls(
@@ -44,6 +45,7 @@ class FilterControls extends StatefulWidget {
       required this.onStageSetChanged,
       required this.onFiltersChanged,
       required this.onSearchChanged,
+      required this.hasRatings,
     }) : super(key: key);
 
   @override
@@ -87,6 +89,14 @@ class _FilterControlsState extends State<FilterControls> {
       DropdownMenuItem<SortMode>(
         child: Text(SortMode.lastName.displayString()),
         value: SortMode.lastName,
+      ),
+      if(widget.hasRatings) DropdownMenuItem<SortMode>(
+        child: Text(SortMode.rating.displayString()),
+        value: SortMode.rating,
+      ),
+      DropdownMenuItem<SortMode>(
+        child: Text(SortMode.classification.displayString()),
+        value: SortMode.classification,
       ),
     ];
   }

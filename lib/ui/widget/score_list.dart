@@ -458,6 +458,20 @@ extension LookupShooterRating on Map<RaterGroup, Rater> {
 
     return null;
   }
+
+  double? lookupRating({required Shooter shooter, RatingDisplayMode mode = RatingDisplayMode.preMatch, required PracticalMatch match}) {
+    switch(mode) {
+      case RatingDisplayMode.preMatch:
+        var rating = this.lookup(shooter)?.ratingForEvent(match, null, beforeMatch: true);
+        return rating;
+      case RatingDisplayMode.postMatch:
+        var rating = this.lookup(shooter)?.ratingForEvent(match, null, beforeMatch: false);
+        return rating;
+      case RatingDisplayMode.change:
+        var rating = this.lookup(shooter)?.changeForEvent(match, null);
+        return rating;
+    }
+  }
 }
 
 class ShooterDialogAction {

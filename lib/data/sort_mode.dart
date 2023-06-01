@@ -5,6 +5,8 @@ enum SortMode {
   alphas,
   availablePoints,
   lastName,
+  rating,
+  classification,
 }
 
 
@@ -21,6 +23,10 @@ extension SortModeDisplayString on SortMode {
         return "Available Points";
       case SortMode.lastName:
         return "Last Name";
+      case SortMode.rating:
+        return "Rating";
+      case SortMode.classification:
+        return "Classification";
     }
   }
 }
