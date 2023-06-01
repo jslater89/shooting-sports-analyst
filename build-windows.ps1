@@ -20,16 +20,16 @@ If(Test-Path uspsa-result-viewer) {
 cp -r -Force .\Release\* uspsa-result-viewer
 
 If($Env:AppVeyor) {
-    $vsPath = "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\VC\Redist\MSVC\14.36.32532\x64\Microsoft.VC143.CRT"
+    $vsPath = "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\VC\Redist\MSVC\14.34.31931\x64\Microsoft.VC143.CRT"
     cp -Force "$vsPath\msvcp140.dll" uspsa-result-viewer
     cp -Force "$vsPath\vcruntime140.dll" uspsa-result-viewer
     cp -Force "$vsPath\vcruntime140_1.dll" uspsa-result-viewer
 
-    Get-ChildItem "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community"
-    Get-ChildItem "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\VC"
-    Get-ChildItem "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\VC\Redist"
-    Get-ChildItem "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\Redist"
-    Get-ChildItem -Recurse "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\VC\Redist\MSVC"
+    # Get-ChildItem "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community"
+    # Get-ChildItem "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\VC"
+    # Get-ChildItem "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\VC\Redist"
+    # Get-ChildItem "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\Redist"
+    # Get-ChildItem -Recurse "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\VC\Redist\MSVC"
 }
 
 cp $Root\data\L2s-Since-2019.json uspsa-result-viewer
