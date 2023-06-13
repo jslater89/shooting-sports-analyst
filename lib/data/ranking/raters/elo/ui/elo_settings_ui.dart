@@ -517,6 +517,21 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
             }
           }
         ),
+        CheckboxListTile(
+            title: Tooltip(
+                child: Text("Ignore error-aware on streaks?"),
+                message: "Disable error-aware K reductions when a shooter is on a long run in one direction."
+            ),
+            value: settings.streakAwareK,
+            enabled: settings.errorAwareK,
+            onChanged: (value) {
+              if(value != null) {
+                setState(() {
+                  settings.streakAwareK = value;
+                });
+              }
+            }
+        ),
         Row(
           mainAxisSize: MainAxisSize.max,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -656,6 +671,20 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
               ),
             ),
           ]
+        ),
+        CheckboxListTile(
+            title: Tooltip(
+                child: Text("Direction-aware K?"),
+                message: "Increase K when a shooter is on a long run in one direction."
+            ),
+            value: settings.directionAwareK,
+            onChanged: (value) {
+              if(value != null) {
+                setState(() {
+                  settings.directionAwareK = value;
+                });
+              }
+            }
         ),
       ],
     );

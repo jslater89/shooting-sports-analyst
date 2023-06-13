@@ -61,7 +61,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     var loadingFuture = MatchCache().ensureUrlsLoaded(matchUrls, (a, b) async {
       await Future.delayed(Duration(milliseconds: 1));
     });
-    await showDialog(context: context, builder: (context) => LoadingDialog(waitOn: loadingFuture));
+    await showDialog(context: context, builder: (context) => LoadingDialog(title: "Loading required matches...", waitOn: loadingFuture));
 
     // Deduplicate
     Map<PracticalMatch, bool> knownMatches = {};

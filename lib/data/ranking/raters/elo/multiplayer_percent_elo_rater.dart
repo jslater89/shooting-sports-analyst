@@ -54,6 +54,11 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   @override
   bool get byStage => settings.byStage;
   bool get errorAwareK => settings.errorAwareK;
+  /// TODO: setting for streak limit
+  bool get directionAwareK => settings.directionAwareK;
+  bool get streakAwareK => settings.streakAwareK;
+  /// TODO: make this a setting
+  bool get directionAwareKReducesOppositeMovement => false;
 
   MultiplayerPercentEloRater({
     EloSettings? settings,
@@ -133,25 +138,64 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     // If we're less confident, we adjust more to find the correct rating faster.
     var error = aRating.standardError;
 
+    // Also adjust K based on the shooter's direction. Disable error-aware K if we're
+    // on long mostly-positive/negative runs; adjust K in the same cases.
+    //
+    // This applies in both directions, for both positive and negative streaks, but in
+    // other comments I describe this in terms of positive streaks only, for the sake of
+    // my own sanity.
+    var direction = aRating.shortDirection * 0.75 + aRating.direction * 0.25;
+    var absDirection = direction.abs();
+
+    // If, over your last 30 events, you're 21-9 or better, errorAwareK is turned off and
+    // directionAwareK begins to adjust your K too.
+    var streakLimit = 0.4;
+
     var errMultiplier = 1.0;
     if(errorAwareK) {
-      var errThreshold = settings.errorAwareMaxThreshold;
-      final maxMultiplier = settings.errorAwareUpperMultiplier;
-      final minMultiplier = settings.errorAwareLowerMultiplier;
-      var minThreshold = settings.errorAwareMinThreshold;
-      var zeroValue = settings.errorAwareZeroValue;
-      if (error >= errThreshold) {
-        errMultiplier = 1 + min(1.0, ((error - errThreshold) / (settings.scale - errThreshold))) * maxMultiplier;
+        var errThreshold = settings.errorAwareMaxThreshold;
+        final maxMultiplier = settings.errorAwareUpperMultiplier;
+        final minMultiplier = settings.errorAwareLowerMultiplier;
+        var minThreshold = settings.errorAwareMinThreshold;
+        var zeroValue = settings.errorAwareZeroValue;
+        if (error >= errThreshold) {
+          errMultiplier = 1 + min(1.0, ((error - errThreshold) / (settings.scale - errThreshold))) * maxMultiplier;
+        }
+        else if (error < minThreshold && error >= zeroValue) {
+          errMultiplier = 1 - ((minThreshold - error - zeroValue) / (minThreshold - zeroValue)) * minMultiplier;
+        }
+        else if (error < zeroValue) {
+          errMultiplier = 1 - minMultiplier;
+        }
+
+        // If streak aware is on, don't reduce K for shooters on long runs.
+        if(errMultiplier < 1.0 && (!streakAwareK || absDirection <= 0.4)) errMultiplier = 1.0;
+    }
+
+    var directionMultiplier = 1.0;
+    if(directionAwareK && absDirection >= streakLimit) {
+      if(direction.sign != (actualScore.score - params.expectedScore).sign) {
+        if(directionAwareKReducesOppositeMovement) {
+          // If this rating change goes opposite a streak, reduce K based on streak
+          // length.
+          directionMultiplier = 1.0 - 0.25 * ((absDirection - streakLimit) / (1.0 - streakLimit));
+        }
       }
-      else if (error < minThreshold && error >= zeroValue) {
-        errMultiplier = 1 - ((minThreshold - error - zeroValue) / (minThreshold - zeroValue)) * minMultiplier;
-      }
-      else if (error < zeroValue) {
-        errMultiplier = 1 - minMultiplier;
+      else {
+        // If this rating change is in the same direction as our streak, increase K.
+        // (1.0x -> 1.5x) lerped over absDirection (streakLimit -> 1.0)
+        directionMultiplier = 1.0 + 0.5 * ((absDirection - streakLimit) / (1.0 - streakLimit));
       }
     }
 
-    var effectiveK = K * placementMultiplier * matchStrengthMultiplier * zeroMultiplier * connectednessMultiplier * eventWeightMultiplier * errMultiplier;
+    var effectiveK = K
+        * placementMultiplier
+        * matchStrengthMultiplier
+        * zeroMultiplier
+        * connectednessMultiplier
+        * eventWeightMultiplier
+        * errMultiplier
+        * directionMultiplier;
 
     var changeFromPercent = effectiveK * (params.usedScores - 1) * (actualScore.percentComponent * percentWeight - (params.expectedScore * percentWeight));
     var changeFromPlace = effectiveK * (params.usedScores - 1) * (actualScore.placeComponent * placeWeight - (params.expectedScore * placeWeight));
@@ -247,10 +291,21 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     if(Timings.enabled) start = DateTime.now();
     var hf = aScore.score.getHitFactor(scoreDQ: aScore.score.stage != null);
     Map<String, List<dynamic>> info = {
-      "Actual/expected percent: %00.2f/%00.2f on %00.2fHF": [actualScore.percentComponent * params.totalPercent * 100, params.expectedScore * params.totalPercent * 100, hf],
-      "Actual/expected place: %00.1f/%00.1f": [actualScore.placeBlend, params.usedScores - (params.expectedScore * params.divisor)],
-      "Rating ± Change: %00.0f + %00.2f (%00.2f from pct, %00.2f from place)": [aRating.rating, change, changeFromPercent, changeFromPlace],
-      "eff. K, multipliers: %00.2f, SoS %00.3f, IP %00.3f, Zero %00.3f, Conn %00.3f, EW %00.3f, Err %00.3f": [effectiveK, matchStrengthMultiplier, placementMultiplier, zeroMultiplier, connectednessMultiplier, eventWeightMultiplier, errMultiplier],
+      "Actual/expected percent: %00.2f/%00.2f on %00.2fHF": [
+        actualScore.percentComponent * params.totalPercent * 100, params.expectedScore * params.totalPercent * 100, hf
+      ],
+      "Actual/expected place: %00.1f/%00.1f": [
+        actualScore.placeBlend, params.usedScores - (params.expectedScore * params.divisor)
+      ],
+      "Rating ± Change: %00.0f + %00.2f (%00.2f from pct, %00.2f from place)": [
+        aRating.rating, change, changeFromPercent, changeFromPlace
+      ],
+      "eff. K, multipliers: %00.2f, SoS %00.3f, IP %00.3f, Zero %00.3f": [
+        effectiveK, matchStrengthMultiplier, placementMultiplier, zeroMultiplier
+      ],
+      "Conn %00.3f, EW %00.3f, Err %00.3f, Dir %00.3f": [
+        connectednessMultiplier, eventWeightMultiplier, errMultiplier, directionMultiplier
+      ],
       if(doBackRating) "Back rating/error/steps/size: %00.0f/%00.1f/%d/%00.2f": [backRatingRaw, backRatingErr, steps, stepSize],
     };
     if(Timings.enabled) timings.printInfo += (DateTime.now().difference(start).inMicroseconds).toDouble();

@@ -14,6 +14,8 @@ const _errorAwareMinThresholdKey = "errMinThresh";
 const _errorAwareZeroValueKey = "errZero";
 const _errorAwareLowerMultiplierKey = "errLow";
 const _errorAwareUpperMultiplierKey = "errUp";
+const _streakAwareKKey = "streakK";
+const _directionAwareKKey = "directionK";
 
 class EloSettings extends RaterSettings {
   static const defaultK = 40.0;
@@ -42,13 +44,17 @@ class EloSettings extends RaterSettings {
   double matchBlend;
   bool byStage;
 
+  /// Whether to adjust K based on shooter rating error.
   bool errorAwareK;
+  //
+  // /// The value at which K will receive the maximum error-aware multiplier.
+  // double errorAwareMaxValue;
 
   /// If error is greater than this value, K will be increased.
   double errorAwareMaxThreshold;
   /// Controls K when error is greater than [errorAwareMaxThreshold].
   ///
-  /// K will be multiplied by 1 + (ratio between actual error - maxThreshold and scale - maxThreshold) * [errorAwareUpperMultiplier];
+  /// K will be multiplied by 1 + (ratio between actual error - maxThreshold and [errorAwareMaxValue] - maxThreshold) * [errorAwareUpperMultiplier];
   /// that is, when error is equal to scale, K will be multiplied by 1 + (this).
   double errorAwareUpperMultiplier;
 
@@ -64,6 +70,13 @@ class EloSettings extends RaterSettings {
 
   double get stageBlend => 1 - matchBlend;
 
+  /// If true, error-aware K will not apply to shooters on streaks (strong directional trend)
+  /// TODO: real streak detection, maybe no more than 1-2 opposite events in (window)?
+  bool streakAwareK;
+
+  /// If true, K will be increased for shooters on strong directional trends.
+  bool directionAwareK;
+
   EloSettings({
     this.K = defaultK,
     this.percentWeight = defaultPercentWeight,
@@ -71,12 +84,14 @@ class EloSettings extends RaterSettings {
     this.scale = defaultScale,
     this.matchBlend = defaultMatchBlend,
     this.errorAwareK = true,
+    this.streakAwareK = false,
     this.byStage = true,
     this.errorAwareZeroValue = defaultErrorAwareZeroValue,
     this.errorAwareLowerMultiplier = defaultErrorAwareLowerMultiplier,
     this.errorAwareMinThreshold = defaultErrorAwareMinThreshold,
     this.errorAwareMaxThreshold = defaultErrorAwareMaxThreshold,
     this.errorAwareUpperMultiplier = defaultErrorAwareUpperMultiplier,
+    this.directionAwareK = false,
   });
 
   void restoreDefaults() {
@@ -86,12 +101,14 @@ class EloSettings extends RaterSettings {
     this.scale = defaultScale;
     this.matchBlend = defaultMatchBlend;
     this.errorAwareK = true;
+    this.streakAwareK = false;
     this.byStage = true;
     this.errorAwareZeroValue = defaultErrorAwareZeroValue;
     this.errorAwareLowerMultiplier = defaultErrorAwareLowerMultiplier;
     this.errorAwareMinThreshold = defaultErrorAwareMinThreshold;
     this.errorAwareMaxThreshold = defaultErrorAwareMaxThreshold;
     this.errorAwareUpperMultiplier = defaultErrorAwareUpperMultiplier;
+    this.directionAwareK = false;
   }
 
   @override
@@ -108,6 +125,8 @@ class EloSettings extends RaterSettings {
     json[_errorAwareMinThresholdKey] = errorAwareMinThreshold;
     json[_errorAwareUpperMultiplierKey] = errorAwareUpperMultiplier;
     json[_errorAwareZeroValueKey] = errorAwareZeroValue;
+    json[_streakAwareKKey] = streakAwareK;
+    json[_directionAwareKKey] = directionAwareK;
   }
 
   @override
@@ -129,6 +148,8 @@ class EloSettings extends RaterSettings {
     errorAwareMaxThreshold = (json[_errorAwareMaxThresholdKey] ?? defaultErrorAwareMaxThreshold) as double;
     errorAwareLowerMultiplier = (json[_errorAwareLowerMultiplierKey] ?? defaultErrorAwareLowerMultiplier) as double;
     errorAwareUpperMultiplier = (json[_errorAwareUpperMultiplierKey] ?? defaultErrorAwareUpperMultiplier) as double;
+    streakAwareK = (json[_streakAwareKKey] ?? false) as bool;
+    directionAwareK = (json[_directionAwareKKey] ?? false) as bool;
   }
 
   @override
