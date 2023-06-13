@@ -1292,6 +1292,9 @@ class Rater {
     // Filter out extremely short times that are probably DNFs or partial scores entered for DQs
     if(score.stage!.type != Scoring.fixedTime && score.score.time <= 0.5) return false;
 
+    // The Jalise Williams rule: filter out subminor/unknown PFs
+    if(score.score.shooter.powerFactor!.index > PowerFactor.minor.index) return false;
+
     return true;
   }
 
