@@ -169,7 +169,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
         }
 
         // If streak aware is on, don't reduce K for shooters on long runs.
-        if(errMultiplier < 1.0 && (!streakAwareK || absDirection <= 0.4)) errMultiplier = 1.0;
+        if(errMultiplier < 1.0 && (streakAwareK && absDirection >= 0.4)) errMultiplier = 1.0;
     }
 
     var directionMultiplier = 1.0;
@@ -333,7 +333,16 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
     // our own score
     int usedScores = 1;
-    var totalPercent = (aScore.percent * stageBlend) + (aMatchScore.percent * matchBlend);
+    var totalPercent;
+
+    if(byStage && aScore.score.shooter.dq) {
+      // Give DQed shooters a break by not blending in the match score
+      totalPercent = aScore.percent;
+    }
+    else {
+      totalPercent = (aScore.percent * stageBlend) + (aMatchScore.percent * matchBlend);
+    }
+
     int zeroes = aScore.relativePoints < 0.1 ? 1 : 0;
 
     for(var bRating in scores.keys) {
@@ -357,8 +366,17 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
         throw StateError("NaN");
       }
 
+      var opponentPercent;
+      if(byStage && opponentScore.score.shooter.dq) {
+        // Give DQed shooters a break by not blending in the match score
+        opponentPercent = opponentScore.percent;
+      }
+      else {
+        opponentPercent = (opponentScore.percent * stageBlend) + (opponentMatchScore.percent * matchBlend);
+      }
+
       expectedScore += probability;
-      totalPercent += (opponentScore.percent * stageBlend) + (opponentMatchScore.percent * matchBlend);
+      totalPercent += opponentPercent;
       usedScores++;
     }
 
@@ -378,7 +396,15 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     required RelativeScore matchScore,
     required _ScoreParameters params,
   }) {
-    var actualPercent = (score.percent * stageBlend) + (matchScore.percent * matchBlend);
+    var actualPercent;
+    if(byStage && score.score.shooter.dq) {
+      // Give DQed shooters a break by not blending in the match score
+      actualPercent = score.percent;
+    }
+    else {
+      actualPercent = (score.percent * stageBlend) + (matchScore.percent * matchBlend);
+    }
+
     if(score.percent == 1.0 && params.highOpponentScore > 0.1) {
       actualPercent = score.relativePoints / params.highOpponentScore;
       params.totalPercent += (actualPercent - 1.0);
@@ -386,8 +412,15 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
     var percentComponent = params.totalPercent == 0 ? 0.0 : (actualPercent / params.totalPercent);
 
-    var placeBlend = ((score.place * stageBlend) + (matchScore.place * matchBlend)).toDouble();
-    var placeComponent = (params.usedScores - placeBlend) /  params.divisor;
+    var placeBlend;
+    if(byStage && score.score.shooter.dq) {
+      // Give DQed shooters a break by not blending in the match score
+      placeBlend = score.place.toDouble();
+    }
+    else {
+      placeBlend = ((score.place * stageBlend) + (matchScore.place * matchBlend)).toDouble();
+    }
+    var placeComponent = (params.usedScores - placeBlend) / params.divisor;
 
     return _ActualScore(
       placeComponent: placeComponent,

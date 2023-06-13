@@ -689,7 +689,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   }
 
   Future<void> _startPredictionView(Rater rater, RaterGroup tab) async {
-    var options = rater.knownShooters.values.toSet().toList();
+    var options = _ratings.toSet().toList(); //rater.knownShooters.values.toSet().toList();
     options.sort((a, b) => b.rating.compareTo(a.rating));
     List<ShooterRating>? shooters = [];
     var divisions = tab.divisions;
