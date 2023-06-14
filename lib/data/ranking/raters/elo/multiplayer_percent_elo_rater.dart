@@ -168,7 +168,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
         }
 
         // If streak aware is on, don't reduce K for shooters on long runs.
-        if(errMultiplier < 1.0 && (streakAwareK && absDirection >= 0.4)) errMultiplier = 1.0;
+        if(errMultiplier < 1.0 && (streakAwareK && absDirection >= streakLimit)) errMultiplier = 1.0;
     }
 
     var directionMultiplier = 1.0;
