@@ -153,20 +153,54 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
         child: cache != null ? _matchSelectBody() : _loadingIndicatorBody()
       ),
       actions: [
-        if(widget.multiple) TextButton(
-          child: Text("CANCEL"),
-          onPressed: () {
-            cache!.save(forceResave: addedMatches);
-            Navigator.of(context).pop(null);
-          },
+        if(widget.multiple) Row(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                TextButton(
+                  child: Text("SELECT NONE"),
+                  onPressed: () {
+                    setState(() {
+                      selectedMatches.clear();
+                    });
+                  },
+                ),
+                TextButton(
+                  child: Text("SELECT ALL"),
+                  onPressed: () {
+                    setState(() {
+                      selectedMatches.addAll(searchedMatches);
+                    });
+                  },
+                ),
+              ],
+            ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if(widget.multiple) TextButton(
+                  child: Text("CANCEL"),
+                  onPressed: () {
+                    cache!.save(forceResave: addedMatches);
+                    Navigator.of(context).pop(null);
+                  },
+                ),
+                if(widget.multiple) TextButton(
+                  child: Text("CONFIRM"),
+                  onPressed: () {
+                    cache!.save(forceResave: addedMatches);
+                    Navigator.of(context).pop(selectedMatches.toList());
+                  },
+                )
+              ],
+            )
+          ],
         ),
-        if(widget.multiple) TextButton(
-          child: Text("CONFIRM"),
-          onPressed: () {
-            cache!.save(forceResave: addedMatches);
-            Navigator.of(context).pop(selectedMatches.toList());
-          },
-        )
       ],
     );
   }
