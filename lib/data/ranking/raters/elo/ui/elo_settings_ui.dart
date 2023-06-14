@@ -848,11 +848,11 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
               message: "Dramatically reduce K when middle-and-upper-echelon shooters obviously\n"
                   "bomb a stage."
           ),
-          value: settings.directionAwareK,
+          value: settings.bombProtection,
           onChanged: (value) {
             if(value != null) {
               setState(() {
-                settings.directionAwareK = value;
+                settings.bombProtection = value;
               });
             }
           }
