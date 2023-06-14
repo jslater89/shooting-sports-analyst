@@ -9,6 +9,7 @@ const _pctWeightKey = "pctWt";
 const _scaleKey = "scale";
 const _matchBlendKey = "matchBlend";
 const _errorAwareKKey = "errK";
+const _errorAwareMaxValueKey = "errMaxVal";
 const _errorAwareMaxThresholdKey = "errMaxThresh";
 const _errorAwareMinThresholdKey = "errMinThresh";
 const _errorAwareZeroValueKey = "errZero";
@@ -16,6 +17,10 @@ const _errorAwareLowerMultiplierKey = "errLow";
 const _errorAwareUpperMultiplierKey = "errUp";
 const _streakAwareKKey = "streakK";
 const _directionAwareKKey = "directionK";
+const _offStreakMultiplierKey = "offStreakMult";
+const _onStreakMultiplierKey = "onStreakMult";
+const _streakLimitKey = "streakLim";
+const _bombProtectionKey = "bombProtection";
 
 class EloSettings extends RaterSettings {
   static const defaultK = 40.0;
@@ -29,6 +34,9 @@ class EloSettings extends RaterSettings {
   static const defaultErrorAwareZeroValue = 0.0;
   static const defaultErrorAwareUpperMultiplier = 3.0;
   static const defaultErrorAwareLowerMultiplier = 0.2;
+  static const defaultDirectionAwareOffStreakMultiplier = 0.0;
+  static const defaultDirectionAwareOnStreakMultiplier = 0.5;
+  static const defaultStreakLimit = 0.4;
 
   double K;
   /// The base of the exponent in the Elo win probability format.
@@ -46,10 +54,9 @@ class EloSettings extends RaterSettings {
 
   /// Whether to adjust K based on shooter rating error.
   bool errorAwareK;
-  //
-  // /// The value at which K will receive the maximum error-aware multiplier.
-  // double errorAwareMaxValue;
 
+  /// [errorAwareUpperMultiplier] will be fully applied at or above this error.
+  double errorAwareMaxValue;
   /// If error is greater than this value, K will be increased.
   double errorAwareMaxThreshold;
   /// Controls K when error is greater than [errorAwareMaxThreshold].
@@ -71,11 +78,34 @@ class EloSettings extends RaterSettings {
   double get stageBlend => 1 - matchBlend;
 
   /// If true, error-aware K will not apply to shooters on streaks (strong directional trend)
-  /// TODO: real streak detection, maybe no more than 1-2 opposite events in (window)?
   bool streakAwareK;
+
+  /// [streakAwareK] and [directionAwareK] will only be applied when the absolute value of a shooter's
+  /// direction exceeds this property.
+  double streakLimit;
 
   /// If true, K will be increased for shooters on strong directional trends.
   bool directionAwareK;
+
+  /// The maximum multiplier to K from [directionAwareK] at 1.0 |direction|,
+  /// when moving in the direction of the current streak.
+  ///
+  /// Stored as an amount to add to 1.0 (e.g., 1.5x multiplier is 0.5).
+  double directionAwareOnStreakMultiplier;
+
+  /// The maximum multiplier to K from [directionAwareK], when moving opposite
+  /// the current streak.
+  ///
+  /// Stored as an amount to subtract from 1.0 (e.g., 0.75x multiplier is 0.25).
+  double directionAwareOffStreakMultiplier;
+
+  /// An Obvious Rules Patch™ for the issue where it's easy for middle-to-upper-echelon
+  /// shooters to lose a bunch of Elo bombing one or two stages, after which they have
+  /// to slowly gain it back.
+  ///
+  /// Dramatically reduces K for obvious bombs (rating changes by < -0.4K assuming no other
+  /// modifiers), fading in from when a shooter's expected percentage is 75% to 100%.
+  bool bombProtection;
 
   EloSettings({
     this.K = defaultK,
@@ -91,7 +121,12 @@ class EloSettings extends RaterSettings {
     this.errorAwareMinThreshold = defaultErrorAwareMinThreshold,
     this.errorAwareMaxThreshold = defaultErrorAwareMaxThreshold,
     this.errorAwareUpperMultiplier = defaultErrorAwareUpperMultiplier,
+    this.errorAwareMaxValue = defaultScale,
     this.directionAwareK = false,
+    this.directionAwareOnStreakMultiplier = defaultDirectionAwareOnStreakMultiplier,
+    this.directionAwareOffStreakMultiplier = defaultDirectionAwareOffStreakMultiplier,
+    this.streakLimit = defaultStreakLimit,
+    this.bombProtection = false,
   });
 
   void restoreDefaults() {
@@ -108,7 +143,12 @@ class EloSettings extends RaterSettings {
     this.errorAwareMinThreshold = defaultErrorAwareMinThreshold;
     this.errorAwareMaxThreshold = defaultErrorAwareMaxThreshold;
     this.errorAwareUpperMultiplier = defaultErrorAwareUpperMultiplier;
+    this.errorAwareMaxValue = defaultScale;
     this.directionAwareK = false;
+    this.directionAwareOnStreakMultiplier = defaultDirectionAwareOnStreakMultiplier;
+    this.directionAwareOffStreakMultiplier = defaultDirectionAwareOffStreakMultiplier;
+    this.streakLimit = defaultStreakLimit;
+    this.bombProtection = false;
   }
 
   @override
@@ -120,6 +160,7 @@ class EloSettings extends RaterSettings {
     json[_scaleKey] = scale;
     json[_matchBlendKey] = matchBlend;
     json[_errorAwareKKey] = errorAwareK;
+    json[_errorAwareMaxValueKey] = errorAwareMaxValue;
     json[_errorAwareLowerMultiplierKey] = errorAwareLowerMultiplier;
     json[_errorAwareMaxThresholdKey] = errorAwareMaxThreshold;
     json[_errorAwareMinThresholdKey] = errorAwareMinThreshold;
@@ -127,6 +168,10 @@ class EloSettings extends RaterSettings {
     json[_errorAwareZeroValueKey] = errorAwareZeroValue;
     json[_streakAwareKKey] = streakAwareK;
     json[_directionAwareKKey] = directionAwareK;
+    json[_offStreakMultiplierKey] = directionAwareOffStreakMultiplier;
+    json[_onStreakMultiplierKey] = directionAwareOnStreakMultiplier;
+    json[_streakLimitKey] = streakLimit;
+    json[_bombProtectionKey] = bombProtection;
   }
 
   @override
@@ -143,6 +188,7 @@ class EloSettings extends RaterSettings {
     matchBlend = (json[_matchBlendKey] ?? defaultMatchBlend) as double;
     byStage = (json[RatingProject.byStageKey] ?? true) as bool;
     errorAwareK = (json[_errorAwareKKey] ?? true) as bool;
+    errorAwareMaxValue = (json[_errorAwareMaxValueKey] ?? defaultScale) as double;
     errorAwareZeroValue = (json[_errorAwareZeroValueKey] ?? defaultErrorAwareZeroValue) as double;
     errorAwareMinThreshold = (json[_errorAwareMinThresholdKey] ?? defaultErrorAwareMinThreshold) as double;
     errorAwareMaxThreshold = (json[_errorAwareMaxThresholdKey] ?? defaultErrorAwareMaxThreshold) as double;
@@ -150,6 +196,10 @@ class EloSettings extends RaterSettings {
     errorAwareUpperMultiplier = (json[_errorAwareUpperMultiplierKey] ?? defaultErrorAwareUpperMultiplier) as double;
     streakAwareK = (json[_streakAwareKKey] ?? false) as bool;
     directionAwareK = (json[_directionAwareKKey] ?? false) as bool;
+    directionAwareOffStreakMultiplier = (json[_offStreakMultiplierKey] ?? defaultDirectionAwareOffStreakMultiplier) as double;
+    directionAwareOnStreakMultiplier = (json[_onStreakMultiplierKey] ?? defaultDirectionAwareOnStreakMultiplier) as double;
+    streakLimit = (json[_streakLimitKey] ?? defaultStreakLimit) as double;
+    bombProtection = (json[_bombProtectionKey] ?? false) as bool;
   }
 
   @override

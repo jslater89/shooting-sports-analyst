@@ -48,17 +48,20 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   /// player is [probabilityBase] times more likely to win.
   double get scale => settings.scale;
 
-  get matchBlend => settings.matchBlend;
-  get stageBlend => settings.stageBlend;
+  double get matchBlend => settings.matchBlend;
+  double get stageBlend => settings.stageBlend;
 
   @override
   bool get byStage => settings.byStage;
   bool get errorAwareK => settings.errorAwareK;
-  /// TODO: setting for streak limit
   bool get directionAwareK => settings.directionAwareK;
   bool get streakAwareK => settings.streakAwareK;
-  /// TODO: make this a setting
-  bool get directionAwareKReducesOppositeMovement => false;
+
+  double get streakLimit => settings.streakLimit;
+  double get onStreakMultiplier => settings.directionAwareOnStreakMultiplier;
+  double get offStreakMultiplier => settings.directionAwareOffStreakMultiplier;
+
+  bool get bombProtection => settings.bombProtection;
 
   MultiplayerPercentEloRater({
     EloSettings? settings,
@@ -147,10 +150,6 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     var direction = aRating.shortDirection * 0.75 + aRating.direction * 0.25;
     var absDirection = direction.abs();
 
-    // If, over your last 30 events, you're 21-9 or better, errorAwareK is turned off and
-    // directionAwareK begins to adjust your K too.
-    var streakLimit = 0.4;
-
     var errMultiplier = 1.0;
     if(errorAwareK) {
         var errThreshold = settings.errorAwareMaxThreshold;
@@ -175,16 +174,35 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     var directionMultiplier = 1.0;
     if(directionAwareK && absDirection >= streakLimit) {
       if(direction.sign != (actualScore.score - params.expectedScore).sign) {
-        if(directionAwareKReducesOppositeMovement) {
-          // If this rating change goes opposite a streak, reduce K based on streak
-          // length.
-          directionMultiplier = 1.0 - 0.25 * ((absDirection - streakLimit) / (1.0 - streakLimit));
-        }
+        // If this rating change goes opposite a streak, reduce K based on streak
+        // length.
+        directionMultiplier = 1.0
+            - offStreakMultiplier * ((absDirection - streakLimit) / (1.0 - streakLimit));
       }
       else {
         // If this rating change is in the same direction as our streak, increase K.
         // (1.0x -> 1.5x) lerped over absDirection (streakLimit -> 1.0)
-        directionMultiplier = 1.0 + 0.5 * ((absDirection - streakLimit) / (1.0 - streakLimit));
+        directionMultiplier = 1.0
+            + onStreakMultiplier * ((absDirection - streakLimit) / (1.0 - streakLimit));
+      }
+    }
+
+    var expectedPercent = params.expectedScore * params.totalPercent * 100.0;
+    var bombProtectionMultiplier = 1.0;
+
+    if(bombProtection) {
+      var baseChange = (actualScore.score - params.expectedScore) * K * (params.usedScores - 1);
+      var lowerLimit = -K * 0.40;
+      var upperLimit = -K * 0.60;
+      if (expectedPercent > 75 && baseChange < lowerLimit) {
+        // Bomb protection gives you at most 75% reduction if your expected percent is 100% or more,
+        // and at least 10% if your expected percent is 75%.
+        var multiplierBase = 0.1 + min(0.65, 0.65 * (expectedPercent - 75) / 25);
+
+        var numerator = baseChange.abs() - lowerLimit.abs();
+        var denominator = upperLimit.abs() - lowerLimit.abs();
+        var ratio = numerator / denominator;
+        bombProtectionMultiplier -= multiplierBase * min(1, max(0, ratio));
       }
     }
 
@@ -195,7 +213,8 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
         * connectednessMultiplier
         * eventWeightMultiplier
         * errMultiplier
-        * directionMultiplier;
+        * directionMultiplier
+        * bombProtectionMultiplier;
 
     var changeFromPercent = effectiveK * (params.usedScores - 1) * (actualScore.percentComponent * percentWeight - (params.expectedScore * percentWeight));
     var changeFromPlace = effectiveK * (params.usedScores - 1) * (actualScore.placeComponent * placeWeight - (params.expectedScore * placeWeight));
@@ -292,7 +311,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     var hf = aScore.score.getHitFactor(scoreDQ: aScore.score.stage != null);
     Map<String, List<dynamic>> info = {
       "Actual/expected percent: %00.2f/%00.2f on %00.2fHF": [
-        actualScore.percentComponent * params.totalPercent * 100, params.expectedScore * params.totalPercent * 100, hf
+        actualScore.percentComponent * params.totalPercent * 100, expectedPercent, hf
       ],
       "Actual/expected place: %00.1f/%00.1f": [
         actualScore.placeBlend, params.usedScores - (params.expectedScore * params.divisor)
@@ -303,8 +322,8 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       "eff. K, multipliers: %00.2f, SoS %00.3f, IP %00.3f, Zero %00.3f": [
         effectiveK, matchStrengthMultiplier, placementMultiplier, zeroMultiplier
       ],
-      "Conn %00.3f, EW %00.3f, Err %00.3f, Dir %00.3f": [
-        connectednessMultiplier, eventWeightMultiplier, errMultiplier, directionMultiplier
+      "Conn %00.3f, EW %00.3f, Err %00.3f, Dir %00.3f, Bomb %00.3f": [ // , Bomb %00.3f
+        connectednessMultiplier, eventWeightMultiplier, errMultiplier, directionMultiplier, bombProtectionMultiplier
       ],
       if(doBackRating) "Back rating/error/steps/size: %00.0f/%00.1f/%d/%00.2f": [backRatingRaw, backRatingErr, steps, stepSize],
     };

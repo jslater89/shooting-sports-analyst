@@ -65,15 +65,17 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
   TextEditingController _matchBlendController = TextEditingController(text: "${EloSettings.defaultMatchBlend}");
 
   TextEditingController _errorAwareZeroController = TextEditingController(text: "${EloSettings.defaultErrorAwareZeroValue}");
+  TextEditingController _errorAwareMaxController = TextEditingController(text: "${EloSettings.defaultScale}");
   TextEditingController _errorAwareMinThresholdController = TextEditingController(text: "${EloSettings.defaultErrorAwareMinThreshold}");
   TextEditingController _errorAwareMaxThresholdController = TextEditingController(text: "${EloSettings.defaultErrorAwareMaxThreshold}");
   TextEditingController _errorAwareLowerMultController = TextEditingController(text: "${EloSettings.defaultErrorAwareLowerMultiplier}");
   TextEditingController _errorAwareUpperMultController = TextEditingController(text: "${EloSettings.defaultErrorAwareUpperMultiplier}");
 
-  @override
-  void initState() {
-    super.initState();
-    settings = widget.controller._currentSettings;
+  TextEditingController _offStreakMultiplierController = TextEditingController(text: "${EloSettings.defaultDirectionAwareOffStreakMultiplier}");
+  TextEditingController _onStreakMultiplierController = TextEditingController(text: "${EloSettings.defaultDirectionAwareOnStreakMultiplier}");
+  TextEditingController _streakLimitController = TextEditingController(text: "${EloSettings.defaultStreakLimit}");
+
+  void _fillTextFields() {
     _kController.text = "${settings.K.toStringAsFixed(1)}";
     _scaleController.text = "${settings.scale.round()}";
     _baseController.text = "${settings.probabilityBase.toStringAsFixed(1)}";
@@ -81,10 +83,21 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
     _placeWeightController.text = "${settings.placeWeight}";
     _matchBlendController.text = "${settings.matchBlend}";
     _errorAwareZeroController.text = "${settings.errorAwareZeroValue.toStringAsFixed(0)}";
+    _errorAwareMaxController.text = "${settings.errorAwareMaxValue.toStringAsFixed(0)}";
     _errorAwareMinThresholdController.text = "${settings.errorAwareMinThreshold.toStringAsFixed(0)}";
     _errorAwareMaxThresholdController.text = "${settings.errorAwareMaxThreshold.toStringAsFixed(0)}";
     _errorAwareLowerMultController.text = "${(1 - settings.errorAwareLowerMultiplier).toStringAsFixed(2)}";
     _errorAwareUpperMultController.text = "${(settings.errorAwareUpperMultiplier + 1).toStringAsFixed(2)}";
+    _offStreakMultiplierController.text = "${(1 - settings.directionAwareOffStreakMultiplier).toStringAsFixed(2)}";
+    _onStreakMultiplierController.text = "${(settings.directionAwareOnStreakMultiplier + 1).toStringAsFixed(2)}";
+    _streakLimitController.text = "${settings.streakLimit.toStringAsFixed(2)}";
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    settings = widget.controller._currentSettings;
+    _fillTextFields();
 
     widget.controller.addListener(() {
       setState(() {
@@ -92,35 +105,10 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
           _validateText();
           widget.controller._shouldValidate = false;
         }
-        else if(widget.controller._restoreDefaults) {
+        else { // restoring defaults or update from outside
           settings = widget.controller._currentSettings;
-          _kController.text = "${settings.K.toStringAsFixed(1)}";
-          _baseController.text = "${settings.probabilityBase.toStringAsFixed(1)}";
-          _scaleController.text = "${settings.scale.round()}";
-          _pctWeightController.text = "${settings.percentWeight}";
-          _placeWeightController.text = "${settings.placeWeight}";
-          _matchBlendController.text = "${settings.matchBlend}";
-          _errorAwareZeroController.text = "${settings.errorAwareZeroValue.toStringAsFixed(0)}";
-          _errorAwareMinThresholdController.text = "${settings.errorAwareMinThreshold.toStringAsFixed(0)}";
-          _errorAwareMaxThresholdController.text = "${settings.errorAwareMaxThreshold.toStringAsFixed(0)}";
-          _errorAwareLowerMultController.text = "${(1 - settings.errorAwareLowerMultiplier).toStringAsFixed(2)}";
-          _errorAwareUpperMultController.text = "${(settings.errorAwareUpperMultiplier + 1).toStringAsFixed(2)}";
+          _fillTextFields();
           widget.controller._restoreDefaults = false;
-          _validateText();
-        }
-        else {
-          settings = widget.controller._currentSettings;
-          _kController.text = "${settings.K.toStringAsFixed(1)}";
-          _baseController.text = "${settings.probabilityBase.toStringAsFixed(1)}";
-          _scaleController.text = "${settings.scale.round()}";
-          _pctWeightController.text = "${settings.percentWeight}";
-          _placeWeightController.text = "${settings.placeWeight}";
-          _matchBlendController.text = "${settings.matchBlend}";
-          _errorAwareZeroController.text = "${settings.errorAwareZeroValue.toStringAsFixed(0)}";
-          _errorAwareMinThresholdController.text = "${settings.errorAwareMinThreshold.toStringAsFixed(0)}";
-          _errorAwareMaxThresholdController.text = "${settings.errorAwareMaxThreshold.toStringAsFixed(0)}";
-          _errorAwareLowerMultController.text = "${settings.errorAwareLowerMultiplier.toStringAsFixed(2)}";
-          _errorAwareUpperMultController.text = "${settings.errorAwareUpperMultiplier.toStringAsFixed(2)}";
           _validateText();
         }
       });
@@ -192,6 +180,12 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
       }
     });
 
+    _errorAwareMaxController.addListener(() {
+      if(double.tryParse(_errorAwareMaxController.text) != null) {
+        if(!widget.controller._restoreDefaults) _validateText();
+      }
+    });
+
     _errorAwareMinThresholdController.addListener(() {
       if(double.tryParse(_errorAwareMinThresholdController.text) != null) {
         if(!widget.controller._restoreDefaults) _validateText();
@@ -215,6 +209,24 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
         if(!widget.controller._restoreDefaults) _validateText();
       }
     });
+
+    _offStreakMultiplierController.addListener(() {
+      if(double.tryParse(_offStreakMultiplierController.text) != null) {
+        if(!widget.controller._restoreDefaults) _validateText();
+      }
+    });
+
+    _onStreakMultiplierController.addListener(() {
+      if(double.tryParse(_onStreakMultiplierController.text) != null) {
+        if(!widget.controller._restoreDefaults) _validateText();
+      }
+    });
+
+    _streakLimitController.addListener(() {
+      if(double.tryParse(_streakLimitController.text) != null) {
+        if(!widget.controller._restoreDefaults) _validateText();
+      }
+    });
   }
 
   void _validateText() {
@@ -223,11 +235,15 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
     double? pctWeight = double.tryParse(_pctWeightController.text);
     double? matchBlend = double.tryParse(_matchBlendController.text);
     double? base = double.tryParse(_baseController.text);
-    double? errorAwareZero = double.tryParse(_errorAwareZeroController.text);
-    double? errorAwareMin = double.tryParse(_errorAwareMinThresholdController.text);
-    double? errorAwareMax = double.tryParse(_errorAwareMaxThresholdController.text);
+    double? errorAwareZeroValue = double.tryParse(_errorAwareZeroController.text);
+    double? errorAwareMaxValue = double.tryParse(_errorAwareMaxController.text);
+    double? errorAwareMinThreshold = double.tryParse(_errorAwareMinThresholdController.text);
+    double? errorAwareMaxThreshold = double.tryParse(_errorAwareMaxThresholdController.text);
     double? errorAwareUpper = double.tryParse(_errorAwareUpperMultController.text);
     double? errorAwareLower = double.tryParse(_errorAwareLowerMultController.text);
+    double? onStreakMultiplier = double.tryParse(_onStreakMultiplierController.text);
+    double? offStreakMultiplier = double.tryParse(_offStreakMultiplierController.text);
+    double? streakLimit = double.tryParse(_streakLimitController.text);
 
     if(K == null) {
       widget.controller.lastError = "K factor incorrectly formatted";
@@ -254,18 +270,23 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
       return;
     }
 
-    if(errorAwareZero == null || errorAwareZero < 0) {
+    if(errorAwareZeroValue == null || errorAwareZeroValue < 0) {
       widget.controller.lastError = "Error aware zero incorrectly formatted or out of range (> 0)";
       return;
     }
 
-    if(errorAwareMin == null || errorAwareMin < errorAwareZero) {
+    if(errorAwareMinThreshold == null || errorAwareMinThreshold < errorAwareZeroValue) {
       widget.controller.lastError = "Error aware minimum threshold incorrectly formatted or out of range (> error aware zero)";
       return;
     }
 
-    if(errorAwareMax == null || errorAwareMax < errorAwareMin) {
+    if(errorAwareMaxThreshold == null || errorAwareMaxThreshold < errorAwareMinThreshold) {
       widget.controller.lastError = "Error aware maximum threshold incorrectly formatted or out of range (> minimum threshold)";
+      return;
+    }
+
+    if(errorAwareMaxValue == null || errorAwareMaxValue < errorAwareMaxThreshold) {
+      widget.controller.lastError = "Error aware maximum value incorrectly formatted or out of range (> maximum threshold)";
       return;
     }
 
@@ -279,14 +300,31 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
       return;
     }
 
+    if(streakLimit == null || streakLimit < -1.0 || streakLimit > 1.0) {
+      widget.controller.lastError = "Streak limit incorrectly formatted or out of range (-1 to 1)";
+      return;
+    }
+
+    if(offStreakMultiplier == null || offStreakMultiplier > 1) {
+      widget.controller.lastError = "Off-streak multiplier incorrectly formatted or out of range (< 1)";
+      return;
+    }
+
+    if(onStreakMultiplier == null || onStreakMultiplier < 1) {
+      widget.controller.lastError = "On-streak multiplier incorrectly formatted or out of range (> 1)";
+      return;
+    }
+
     settings.K = K;
     settings.scale = scale;
     settings.probabilityBase = base;
     settings.percentWeight = pctWeight;
     settings.matchBlend = matchBlend;
-    settings.errorAwareZeroValue = errorAwareZero;
-    settings.errorAwareMinThreshold = errorAwareMin;
-    settings.errorAwareMaxThreshold = errorAwareMax;
+    settings.errorAwareZeroValue = errorAwareZeroValue;
+    settings.errorAwareMaxValue = errorAwareMaxValue;
+    settings.errorAwareMinThreshold = errorAwareMinThreshold;
+    settings.errorAwareMaxThreshold = errorAwareMaxThreshold;
+    settings.streakLimit = streakLimit;
 
     // Convert from raw multipliers to the forms we expect in the
     // algorithm:
@@ -294,6 +332,8 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
     // upper mult is 1 + (errorAwareUpper)
     settings.errorAwareLowerMultiplier = 1 - errorAwareLower;
     settings.errorAwareUpperMultiplier = errorAwareUpper - 1;
+    settings.directionAwareOffStreakMultiplier = 1 - offStreakMultiplier;
+    settings.directionAwareOnStreakMultiplier = onStreakMultiplier - 1;
 
     widget.controller.lastError = null;
   }
@@ -517,21 +557,6 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
             }
           }
         ),
-        CheckboxListTile(
-            title: Tooltip(
-                child: Text("Ignore error-aware on streaks?"),
-                message: "Disable error-aware K reductions when a shooter is on a long run in one direction."
-            ),
-            value: settings.streakAwareK,
-            enabled: settings.errorAwareK,
-            onChanged: (value) {
-              if(value != null) {
-                setState(() {
-                  settings.streakAwareK = value;
-                });
-              }
-            }
-        ),
         Row(
           mainAxisSize: MainAxisSize.max,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -621,6 +646,34 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Tooltip(
+              message: "Controls the rating error where the upper multiplier will be fully applied.",
+              child: Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Text("Maximum value", style: Theme.of(context).textTheme.subtitle1!),
+              ),
+            ),
+            SizedBox(
+              width: 100,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 20),
+                child: TextFormField(
+                  enabled: settings.errorAwareK,
+                  controller: _errorAwareMaxController,
+                  textAlign: TextAlign.end,
+                  keyboardType: TextInputType.numberWithOptions(),
+                  inputFormatters: [
+                    FilteringTextInputFormatter(RegExp(r"[0-9]*"), allow: true),
+                  ],
+                ),
+              ),
+            ),
+          ]
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Tooltip(
               message: "Controls the amount of K reduction when rating error is below the minimum threshold.",
               child: Padding(
                 padding: const EdgeInsets.only(left: 16),
@@ -637,7 +690,7 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
                   textAlign: TextAlign.end,
                   keyboardType: TextInputType.numberWithOptions(),
                   inputFormatters: [
-                    FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
+                    FilteringTextInputFormatter(RegExp(r"[0-9.]*"), allow: true),
                   ],
                 ),
               ),
@@ -665,7 +718,7 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
                   textAlign: TextAlign.end,
                   keyboardType: TextInputType.numberWithOptions(),
                   inputFormatters: [
-                    FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
+                    FilteringTextInputFormatter(RegExp(r"[0-9.]*"), allow: true),
                   ],
                 ),
               ),
@@ -673,18 +726,136 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
           ]
         ),
         CheckboxListTile(
-            title: Tooltip(
-                child: Text("Direction-aware K?"),
-                message: "Increase K when a shooter is on a long run in one direction."
-            ),
-            value: settings.directionAwareK,
-            onChanged: (value) {
-              if(value != null) {
-                setState(() {
-                  settings.directionAwareK = value;
-                });
-              }
+          title: Tooltip(
+              child: Text("Ignore error-aware on streaks?"),
+              message: "Disable error-aware K reductions when a shooter is on a long run in one direction."
+          ),
+          value: settings.streakAwareK,
+          enabled: settings.errorAwareK,
+          onChanged: (value) {
+            if(value != null) {
+              setState(() {
+                settings.streakAwareK = value;
+              });
             }
+          }
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Tooltip(
+              message:
+                "Shooters with absolute direction greater than this value will not receive error-aware K reductions, and\n"
+                    "will qualify for direction-aware K multipliers. Enter between -1.0 for -100 direction and 1.0 for +100 direction.",
+              child: Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Text("Streak limit", style: Theme.of(context).textTheme.subtitle1!),
+              ),
+            ),
+            SizedBox(
+              width: 100,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 20),
+                child: TextFormField(
+                  enabled: settings.directionAwareK || settings.streakAwareK,
+                  controller: _streakLimitController,
+                  textAlign: TextAlign.end,
+                  keyboardType: TextInputType.numberWithOptions(),
+                  inputFormatters: [
+                    FilteringTextInputFormatter(RegExp(r"[0-9.]*"), allow: true),
+                  ],
+                ),
+              ),
+            ),
+          ]
+        ),
+        CheckboxListTile(
+          title: Tooltip(
+              child: Text("Direction-aware K?"),
+              message: "Increase K when a shooter is on a long run in one direction (a 'streak'). A streak can be\n"
+                  "either positive or negative."
+          ),
+          value: settings.directionAwareK,
+          onChanged: (value) {
+            if(value != null) {
+              setState(() {
+                settings.directionAwareK = value;
+              });
+            }
+          }
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Tooltip(
+              message:
+                "For rating events that go opposite the current streak, reduce K by this multiplier.",
+              child: Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Text("Off-streak multiplier", style: Theme.of(context).textTheme.subtitle1!),
+              ),
+            ),
+            SizedBox(
+              width: 100,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 20),
+                child: TextFormField(
+                  enabled: settings.directionAwareK,
+                  controller: _offStreakMultiplierController,
+                  textAlign: TextAlign.end,
+                  keyboardType: TextInputType.numberWithOptions(),
+                  inputFormatters: [
+                    FilteringTextInputFormatter(RegExp(r"[0-9.]*"), allow: true),
+                  ],
+                ),
+              ),
+            ),
+          ]
+        ),
+        Row(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Tooltip(
+                message: "For rating events that go with the current streak, increase K by this multiplier.",
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: Text("On-streak multiplier", style: Theme.of(context).textTheme.subtitle1!),
+                ),
+              ),
+              SizedBox(
+                width: 100,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 20),
+                  child: TextFormField(
+                    enabled: settings.directionAwareK,
+                    controller: _onStreakMultiplierController,
+                    textAlign: TextAlign.end,
+                    keyboardType: TextInputType.numberWithOptions(),
+                    inputFormatters: [
+                      FilteringTextInputFormatter(RegExp(r"[0-9.]*"), allow: true),
+                    ],
+                  ),
+                ),
+              ),
+            ]
+        ),
+        CheckboxListTile(
+          title: Tooltip(
+              child: Text("Bomb protection?"),
+              message: "Dramatically reduce K when middle-and-upper-echelon shooters obviously\n"
+                  "bomb a stage."
+          ),
+          value: settings.directionAwareK,
+          onChanged: (value) {
+            if(value != null) {
+              setState(() {
+                settings.directionAwareK = value;
+              });
+            }
+          }
         ),
       ],
     );
