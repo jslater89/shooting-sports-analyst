@@ -148,9 +148,15 @@ class PredictionOutcome {
   double error;
   Map<ShooterPrediction, SimpleMatchResult> actualResults;
 
+  /// True if the [RatingSystem] changed the prediction inputs
+  /// to generate more complete data about its accuracy, in
+  /// particular if not all shooters registered.
+  bool mutatedInputs;
+
   PredictionOutcome({
     required this.error,
     required this.actualResults,
+    required this.mutatedInputs,
   });
 }
 

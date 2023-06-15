@@ -13,6 +13,9 @@ See if rating percentage correlates with match finish percentage?
 
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 
+/// A prediction for a shooter's finish.
+///
+/// Users of this class are responsible for filling in [lowPlace] and [highPlace].
 class ShooterPrediction {
   final ShooterRating shooter;
 
@@ -21,7 +24,13 @@ class ShooterPrediction {
   final double twoSigma;
   final double ciOffset;
 
-  ShooterPrediction({required this.shooter, required this.mean, required double sigma, this.ciOffset = 0.5}) :
+  late int lowPlace;
+  late int highPlace;
+  late int medianPlace;
+
+  ShooterPrediction({
+    required this.shooter, required this.mean, required double sigma, this.ciOffset = 0.5,
+  }) :
       this.oneSigma = sigma,
       this.twoSigma = sigma * 2;
 
@@ -33,4 +42,17 @@ class ShooterPrediction {
   String toString() {
     return "${shooter.getName(suffixes: false)}: ${mean.toStringAsPrecision(4)} ± ${twoSigma.toStringAsPrecision(4)}";
   }
+}
+
+extension PredictionMaths on ShooterPrediction {
+  double get center => mean;
+  double get upperBox => mean + oneSigma + shift;
+  double get lowerBox => mean - oneSigma + shift;
+  double get upperWhisker => mean + twoSigma + shift;
+  double get lowerWhisker => mean - twoSigma + shift;
+
+  double get lowPrediction => mean - oneSigma + shift;
+  double get halfLowPrediction => mean - oneSigma / 2 + shift / 2;
+  double get halfHighPrediction => mean + (oneSigma + shift) / 2;
+  double get highPrediction => mean + (oneSigma + shift);
 }

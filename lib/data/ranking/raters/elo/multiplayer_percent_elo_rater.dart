@@ -13,6 +13,7 @@ import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rating_change.da
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/ui/elo_settings_ui.dart';
 import 'package:uspsa_result_viewer/data/ranking/timings.dart';
+import 'package:uspsa_result_viewer/ui/rater/prediction/prediction_view.dart';
 import 'package:uspsa_result_viewer/ui/rater/rater_view.dart';
 import 'package:uspsa_result_viewer/ui/widget/score_row.dart';
 
@@ -741,6 +742,25 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       ));
     }
 
+    for(var prediction in predictions) {
+      int topPlace = 1;
+      int bottomPlace = 1;
+      int medianPlace = 1;
+
+      for(var other in predictions) {
+        if(prediction == other) continue;
+
+        // See tooltips in prediction_view.dart for some further explanation of these.
+        if(prediction.highPrediction < other.halfLowPrediction) topPlace += 1;
+        if(prediction.halfLowPrediction < other.halfHighPrediction) bottomPlace += 1;
+        if(prediction.center < other.halfLowPrediction) medianPlace += 1;
+      }
+
+      prediction.highPlace = topPlace;
+      prediction.lowPlace = bottomPlace;
+      prediction.medianPlace = medianPlace;
+    }
+
     return predictions;
   }
 
@@ -756,18 +776,14 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     Map<ShooterPrediction, SimpleMatchResult> actualOutcomes = {};
     double errorSum = 0;
     List<double> errors = [];
+    bool repredicted = false;
 
-    // TODO: fix this, see other TODO
-    // late List<ShooterPrediction> newPredictions;
-    // // We have to re-predict if we don't have the same number of shooters and
-    // // predictions, because probabilities depend on N.
-    // if(shooters.length != predictions.length) {
-    //   // TODO: edit the original predictions with the new values, for drawing on the chart?
-    //   predictions = predict(shooters);
-    //   print("Re-predicted: mismatch in shooter/prediction count");
-    // }
-    // newPredictions = predict(shooters);
-    //
+    // We have to re-predict if we don't have the same number of shooters and
+    // predictions, because probabilities depend on N.
+    if(shooters.length != predictions.length) {
+      predictions = predict(shooters);
+      repredicted = true;
+    }
 
     for (var prediction in predictions) {
       shootersToPredictions[prediction.shooter] = prediction;
@@ -775,6 +791,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
     int correct95 = 0;
     int correct68 = 0;
+    int correctPlace = 0;
     for(var shooter in shooters) {
       var prediction = shootersToPredictions[shooter];
       if(prediction == null) {
@@ -797,16 +814,20 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       if(eloScore.score >= prediction.mean - prediction.oneSigma + prediction.shift && eloScore.score <= prediction.mean + prediction.oneSigma + prediction.shift) {
         correct68 += 1;
       }
+      if(matchScore.place <= prediction.lowPlace && matchScore.place >= prediction.highPlace) {
+        correctPlace += 1;
+      }
     }
 
     if(chatty) {
       print("Actual outcomes for ${actualOutcomes.length} shooters yielded an error sum of ${errors.sum} and an average error of ${errors.average.toStringAsPrecision(3)}");
       print("Std. dev: ${(sqrt(errorSum) / predictions.length).toStringAsPrecision(3)} of ${predictions.map((e) => e.mean).average}");
-      print("Score correct: $correct68/$correct95/${actualOutcomes.length} (${(correct68 / actualOutcomes.length * 100).toStringAsFixed(1)}%/${(correct95 / actualOutcomes.length * 100).toStringAsFixed(1)}%)");
+      print("Score correct: $correct68/$correct95/${actualOutcomes.length} (${(correct68 / actualOutcomes.length).asPercentage(decimals: 1)}%/${(correct95 / actualOutcomes.length * 100).toStringAsFixed(1)}%)");
+      print("Place correct: $correctPlace/${actualOutcomes.length} (${(correctPlace / actualOutcomes.length).asPercentage(decimals: 1)}%)");
     }
 
     return PredictionOutcome(
-      error: (sqrt(errorSum) / predictions.length), actualResults: actualOutcomes
+      error: (sqrt(errorSum) / predictions.length), actualResults: actualOutcomes, mutatedInputs: repredicted,
     );
   }
 }
