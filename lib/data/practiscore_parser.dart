@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 import 'package:uspsa_result_viewer/route/practiscore_url.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/url_entry_dialog.dart';
 import 'package:uspsa_result_viewer/util.dart';
 
 
@@ -136,36 +137,10 @@ Future<String?> getMatchUrl(BuildContext context) {
   return showDialog<String>(
     context: context,
     builder: (context) {
-      var controller = TextEditingController();
-      return AlertDialog(
-        title: Text("Enter PractiScore match URL"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              "Copy the URL to the match's PractiScore results page and paste it in the field below.",
-              softWrap: true,
-            ),
-            TextField(
-              controller: controller,
-              decoration: InputDecoration(
-                hintText: "https://practiscore.com/results/new/...",
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-              child: Text("CANCEL"),
-              onPressed: () {
-                Navigator.of(context).pop();
-              }),
-          TextButton(
-              child: Text("OK"),
-              onPressed: () {
-                Navigator.of(context).pop(controller.text);
-              }),
-        ],
+      return UrlEntryDialog(
+        hintText: "https://practiscore.com/results/new/...",
+        title: "Enter PractiScore match URL",
+        descriptionText: "Copy the URL to the match's PractiScore results page and paste it in the field below.",
       );
     }
   );
