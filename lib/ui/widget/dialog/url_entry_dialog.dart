@@ -32,6 +32,15 @@ class _UrlEntryDialogState extends State<UrlEntryDialog> {
                 errorText: errorText,
               ),
               controller: _urlController,
+              onFieldSubmitted: (text) {
+                var url = _urlController.text;
+                var error = widget.validator?.call(url);
+
+                setState(() {
+                  errorText = error;
+                });
+                if(error == null) Navigator.of(context).pop(url);
+              },
             ),
           ],
         ),
