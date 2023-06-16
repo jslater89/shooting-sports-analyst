@@ -21,6 +21,12 @@ const _offStreakMultiplierKey = "offStreakMult";
 const _onStreakMultiplierKey = "onStreakMult";
 const _streakLimitKey = "streakLim";
 const _bombProtectionKey = "bombProtection";
+const _bpMaxKKey = "bpMaxK";
+const _bpMinKKey = "bpMinK";
+const _bpMaxPercentKey = "bpMaxPc";
+const _bpMinPercentKey = "bpMinPc";
+const _bpUpperThreshKey = "bpUpperThresh";
+const _bpLowerThreshKey = "bpLowerThresh";
 
 class EloSettings extends RaterSettings {
   static const defaultK = 40.0;
@@ -37,6 +43,12 @@ class EloSettings extends RaterSettings {
   static const defaultDirectionAwareOffStreakMultiplier = 0.0;
   static const defaultDirectionAwareOnStreakMultiplier = 0.5;
   static const defaultStreakLimit = 0.4;
+  static const defaultBombProtectionLowerThreshold = 0.4;
+  static const defaultBombProtectionUpperThreshold = 0.6;
+  static const defaultBombProtectionMinimumPercent = 75.0;
+  static const defaultBombProtectionMaximumPercent = 100.0;
+  static const defaultBombProtectionMinKReduction = 0.1;
+  static const defaultBombProtectionMaxKReduction = 0.75;
 
   double K;
   /// The base of the exponent in the Elo win probability format.
@@ -107,6 +119,26 @@ class EloSettings extends RaterSettings {
   /// modifiers), fading in from when a shooter's expected percentage is 75% to 100%.
   bool bombProtection;
 
+  /// If rating change is greater than this value times base K, bomb protection will
+  /// begin to fade in.
+  double bombProtectionLowerThreshold;
+  /// If rating change is greater than this value times K, bomb protection will be fully
+  /// active.
+  double bombProtectionUpperThreshold;
+  /// If a shooter's expected percentage is greater than this value, bomb protection will
+  /// begin to fade in.
+  double bombProtectionMinimumExpectedPercent;
+  /// If a shooter's expected percentage is greater than this value, bomb protection will be
+  /// fully active.
+  double bombProtectionMaximumExpectedPercent;
+  /// The minimum K reduction percentage for bomb protection, when the shooter is at
+  /// [bombProtectionMinimumExpectedPercent].
+  double bombProtectionMinimumKReduction;
+  /// The maximum K reduction percentage for bomb protection, when the shooter is at or above
+  /// [bombProtectionMaximumExpectedPercent].
+  double bombProtectionMaximumKReduction;
+
+
   EloSettings({
     this.K = defaultK,
     this.percentWeight = defaultPercentWeight,
@@ -127,6 +159,12 @@ class EloSettings extends RaterSettings {
     this.directionAwareOffStreakMultiplier = defaultDirectionAwareOffStreakMultiplier,
     this.streakLimit = defaultStreakLimit,
     this.bombProtection = false,
+    this.bombProtectionMaximumKReduction = defaultBombProtectionMaxKReduction,
+    this.bombProtectionMinimumKReduction = defaultBombProtectionMinKReduction,
+    this.bombProtectionMaximumExpectedPercent = defaultBombProtectionMaximumPercent,
+    this.bombProtectionMinimumExpectedPercent = defaultBombProtectionMinimumPercent,
+    this.bombProtectionUpperThreshold = defaultBombProtectionUpperThreshold,
+    this.bombProtectionLowerThreshold = defaultBombProtectionLowerThreshold,
   });
 
   void restoreDefaults() {
@@ -149,6 +187,12 @@ class EloSettings extends RaterSettings {
     this.directionAwareOffStreakMultiplier = defaultDirectionAwareOffStreakMultiplier;
     this.streakLimit = defaultStreakLimit;
     this.bombProtection = false;
+    this.bombProtectionMaximumKReduction = defaultBombProtectionMaxKReduction;
+    this.bombProtectionMinimumKReduction = defaultBombProtectionMinKReduction;
+    this.bombProtectionMaximumExpectedPercent = defaultBombProtectionMaximumPercent;
+    this.bombProtectionMinimumExpectedPercent = defaultBombProtectionMinimumPercent;
+    this.bombProtectionUpperThreshold = defaultBombProtectionUpperThreshold;
+    this.bombProtectionLowerThreshold = defaultBombProtectionLowerThreshold;
   }
 
   @override
@@ -172,6 +216,12 @@ class EloSettings extends RaterSettings {
     json[_onStreakMultiplierKey] = directionAwareOnStreakMultiplier;
     json[_streakLimitKey] = streakLimit;
     json[_bombProtectionKey] = bombProtection;
+    json[_bpMaxKKey] = bombProtectionMaximumKReduction;
+    json[_bpMinKKey] = bombProtectionMinimumKReduction;
+    json[_bpMaxPercentKey] = bombProtectionMaximumExpectedPercent;
+    json[_bpMinPercentKey] = bombProtectionMinimumExpectedPercent;
+    json[_bpUpperThreshKey] = bombProtectionUpperThreshold;
+    json[_bpLowerThreshKey] = bombProtectionLowerThreshold;
   }
 
   @override
@@ -200,6 +250,12 @@ class EloSettings extends RaterSettings {
     directionAwareOnStreakMultiplier = (json[_onStreakMultiplierKey] ?? defaultDirectionAwareOnStreakMultiplier) as double;
     streakLimit = (json[_streakLimitKey] ?? defaultStreakLimit) as double;
     bombProtection = (json[_bombProtectionKey] ?? false) as bool;
+    bombProtectionMaximumKReduction = (json[_bpMaxKKey] ?? defaultBombProtectionMaxKReduction) as double;
+    bombProtectionMinimumKReduction = (json[_bpMinKKey] ?? defaultBombProtectionMinKReduction) as double;
+    bombProtectionMaximumExpectedPercent = (json[_bpMaxPercentKey] ?? defaultBombProtectionMaximumPercent) as double;
+    bombProtectionMinimumExpectedPercent = (json[_bpMinPercentKey] ?? defaultBombProtectionMinimumPercent) as double;
+    bombProtectionUpperThreshold = (json[_bpUpperThreshKey] ?? defaultBombProtectionUpperThreshold) as double;
+    bombProtectionLowerThreshold = (json[_bpLowerThreshKey] ?? defaultBombProtectionLowerThreshold) as double;
   }
 
   @override

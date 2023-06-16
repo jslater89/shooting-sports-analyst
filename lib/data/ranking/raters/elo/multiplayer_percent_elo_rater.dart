@@ -193,12 +193,16 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
     if(bombProtection) {
       var baseChange = (actualScore.score - params.expectedScore) * K * (params.usedScores - 1);
-      var lowerLimit = -K * 0.40;
-      var upperLimit = -K * 0.60;
-      if (expectedPercent > 75 && baseChange < lowerLimit) {
+      var lowerLimit = -K * settings.bombProtectionLowerThreshold;
+      var upperLimit = -K * settings.bombProtectionUpperThreshold;
+      var lowerPercent = settings.bombProtectionMinimumExpectedPercent;
+      var difference = settings.bombProtectionMaximumExpectedPercent - lowerPercent;
+      var minMult = settings.bombProtectionMinimumKReduction;
+      var lerpedMult = settings.bombProtectionMaximumKReduction - minMult;
+      if (expectedPercent > lowerPercent && baseChange < lowerLimit) {
         // Bomb protection gives you at most 75% reduction if your expected percent is 100% or more,
-        // and at least 10% if your expected percent is 75%.
-        var multiplierBase = 0.1 + min(0.65, 0.65 * (expectedPercent - 75) / 25);
+        // and at least 10% if your expected percent is 75% (assuming default settings).
+        var multiplierBase = minMult + min(lerpedMult, lerpedMult * (expectedPercent - lowerPercent) / difference);
 
         var numerator = baseChange.abs() - lowerLimit.abs();
         var denominator = upperLimit.abs() - lowerLimit.abs();

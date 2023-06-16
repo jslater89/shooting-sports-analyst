@@ -57,23 +57,31 @@ class EloSettingsWidget extends RaterSettingsWidget<EloSettings, EloSettingsCont
 class _EloSettingsWidgetState extends State<EloSettingsWidget> {
   late EloSettings settings;
 
-  TextEditingController _kController = TextEditingController(text: "${EloSettings.defaultK}");
-  TextEditingController _scaleController = TextEditingController(text: "${EloSettings.defaultScale}");
-  TextEditingController _baseController = TextEditingController(text: "${EloSettings.defaultProbabilityBase}");
-  TextEditingController _pctWeightController = TextEditingController(text: "${EloSettings.defaultPercentWeight}");
-  TextEditingController _placeWeightController = TextEditingController(text: "${EloSettings.defaultPlaceWeight}");
-  TextEditingController _matchBlendController = TextEditingController(text: "${EloSettings.defaultMatchBlend}");
+  var _kController = TextEditingController(text: "${EloSettings.defaultK}");
+  var _scaleController = TextEditingController(text: "${EloSettings.defaultScale}");
+  var _baseController = TextEditingController(text: "${EloSettings.defaultProbabilityBase}");
+  var _pctWeightController = TextEditingController(text: "${EloSettings.defaultPercentWeight}");
+  var _placeWeightController = TextEditingController(text: "${EloSettings.defaultPlaceWeight}");
+  var _matchBlendController = TextEditingController(text: "${EloSettings.defaultMatchBlend}");
 
-  TextEditingController _errorAwareZeroController = TextEditingController(text: "${EloSettings.defaultErrorAwareZeroValue}");
-  TextEditingController _errorAwareMaxController = TextEditingController(text: "${EloSettings.defaultScale}");
-  TextEditingController _errorAwareMinThresholdController = TextEditingController(text: "${EloSettings.defaultErrorAwareMinThreshold}");
-  TextEditingController _errorAwareMaxThresholdController = TextEditingController(text: "${EloSettings.defaultErrorAwareMaxThreshold}");
-  TextEditingController _errorAwareLowerMultController = TextEditingController(text: "${EloSettings.defaultErrorAwareLowerMultiplier}");
-  TextEditingController _errorAwareUpperMultController = TextEditingController(text: "${EloSettings.defaultErrorAwareUpperMultiplier}");
+  var _errorAwareZeroController = TextEditingController(text: "${EloSettings.defaultErrorAwareZeroValue}");
+  var _errorAwareMaxController = TextEditingController(text: "${EloSettings.defaultScale}");
+  var _errorAwareMinThresholdController = TextEditingController(text: "${EloSettings.defaultErrorAwareMinThreshold}");
+  var _errorAwareMaxThresholdController = TextEditingController(text: "${EloSettings.defaultErrorAwareMaxThreshold}");
+  var _errorAwareLowerMultController = TextEditingController(text: "${EloSettings.defaultErrorAwareLowerMultiplier}");
+  var _errorAwareUpperMultController = TextEditingController(text: "${EloSettings.defaultErrorAwareUpperMultiplier}");
 
-  TextEditingController _offStreakMultiplierController = TextEditingController(text: "${EloSettings.defaultDirectionAwareOffStreakMultiplier}");
-  TextEditingController _onStreakMultiplierController = TextEditingController(text: "${EloSettings.defaultDirectionAwareOnStreakMultiplier}");
-  TextEditingController _streakLimitController = TextEditingController(text: "${EloSettings.defaultStreakLimit}");
+  var _offStreakMultiplierController = TextEditingController(text: "${EloSettings.defaultDirectionAwareOffStreakMultiplier}");
+  var _onStreakMultiplierController = TextEditingController(text: "${EloSettings.defaultDirectionAwareOnStreakMultiplier}");
+  var _streakLimitController = TextEditingController(text: "${EloSettings.defaultStreakLimit}");
+
+  var _bombProtectionMaxKController = TextEditingController(text: "${EloSettings.defaultBombProtectionMaxKReduction}");
+  var _bombProtectionMinKController = TextEditingController(text: "${EloSettings.defaultBombProtectionMinKReduction}");
+  var _bombProtectionMaxPercentController = TextEditingController(text: "${EloSettings.defaultBombProtectionMaximumPercent}");
+  var _bombProtectionMinPercentController = TextEditingController(text: "${EloSettings.defaultBombProtectionMinimumPercent}");
+  var _bombProtectionLowerThreshholdController = TextEditingController(text: "${EloSettings.defaultBombProtectionLowerThreshold}");
+  var _bombProtectionUpperThresholdController = TextEditingController(text: "${EloSettings.defaultBombProtectionUpperThreshold}");
+
 
   void _fillTextFields() {
     _kController.text = "${settings.K.toStringAsFixed(1)}";
@@ -91,6 +99,12 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
     _offStreakMultiplierController.text = "${(1 - settings.directionAwareOffStreakMultiplier).toStringAsFixed(2)}";
     _onStreakMultiplierController.text = "${(settings.directionAwareOnStreakMultiplier + 1).toStringAsFixed(2)}";
     _streakLimitController.text = "${settings.streakLimit.toStringAsFixed(2)}";
+    _bombProtectionMaxKController.text = "${settings.bombProtectionMaximumKReduction.toStringAsFixed(2)}";
+    _bombProtectionMinKController.text = "${settings.bombProtectionMinimumKReduction.toStringAsFixed(2)}";
+    _bombProtectionMaxPercentController.text = "${settings.bombProtectionMaximumExpectedPercent.roundToDouble()}";
+    _bombProtectionMinPercentController.text = "${settings.bombProtectionMinimumExpectedPercent.roundToDouble()}";
+    _bombProtectionLowerThreshholdController.text = "${settings.bombProtectionLowerThreshold}";
+    _bombProtectionUpperThresholdController.text = "${settings.bombProtectionUpperThreshold}";
   }
 
   @override
@@ -227,6 +241,21 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
         if(!widget.controller._restoreDefaults) _validateText();
       }
     });
+
+    _addTryParseDoubleListener(_bombProtectionMaxKController);
+    _addTryParseDoubleListener(_bombProtectionMinKController);
+    _addTryParseDoubleListener(_bombProtectionMaxPercentController);
+    _addTryParseDoubleListener(_bombProtectionMinPercentController);
+    _addTryParseDoubleListener(_bombProtectionLowerThreshholdController);
+    _addTryParseDoubleListener(_bombProtectionUpperThresholdController);
+  }
+
+  void _addTryParseDoubleListener(TextEditingController controller) {
+    controller.addListener(() {
+      if(double.tryParse(controller.text) != null) {
+        if(!widget.controller._restoreDefaults) _validateText();
+      }
+    });
   }
 
   void _validateText() {
@@ -244,6 +273,12 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
     double? onStreakMultiplier = double.tryParse(_onStreakMultiplierController.text);
     double? offStreakMultiplier = double.tryParse(_offStreakMultiplierController.text);
     double? streakLimit = double.tryParse(_streakLimitController.text);
+    double? bombProtMaxK = double.tryParse(_bombProtectionMaxKController.text);
+    double? bombProtMinK = double.tryParse(_bombProtectionMinKController.text);
+    double? bombProtMaxPc = double.tryParse(_bombProtectionMaxPercentController.text);
+    double? bombProtMinPc = double.tryParse(_bombProtectionMinPercentController.text);
+    double? bombProtLowerThresh = double.tryParse(_bombProtectionLowerThreshholdController.text);
+    double? bombProtUpperThresh = double.tryParse(_bombProtectionUpperThresholdController.text);
 
     if(K == null) {
       widget.controller.lastError = "K factor incorrectly formatted";
@@ -315,6 +350,36 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
       return;
     }
 
+    if(bombProtMinK == null || bombProtMinK >= 1 || bombProtMinK < 0) {
+      widget.controller.lastError = "Bomb protection minimum K reduction incorrectly formatted or out of range (0-1)";
+      return;
+    }
+
+    if(bombProtMaxK == null || bombProtMaxK >= 1 || bombProtMaxK < bombProtMinK) {
+      widget.controller.lastError = "Bomb protection maximum K reduction incorrectly formatted or out of range (0-1)";
+      return;
+    }
+
+    if(bombProtMinPc == null || bombProtMinPc < 0) {
+      widget.controller.lastError = "Bomb protection minimum expected percent incorrectly formatted or out of range (> 0)";
+      return;
+    }
+
+    if(bombProtMaxPc == null || bombProtMaxPc < bombProtMinPc) {
+      widget.controller.lastError = "Bomb protection maximum expected percent incorrectly formatted or out of range (> 0)";
+      return;
+    }
+
+    if(bombProtLowerThresh == null || bombProtLowerThresh < 0 || bombProtLowerThresh > 1) {
+      widget.controller.lastError = "Bomb protection lower threshold incorrectly formatted or out of range (0-1)";
+      return;
+    }
+
+    if(bombProtUpperThresh == null || bombProtUpperThresh < bombProtLowerThresh || bombProtUpperThresh > 1) {
+      widget.controller.lastError = "Bomb protection upper threshold incorrectly formatted or out of range (0-1)";
+      return;
+    }
+
     settings.K = K;
     settings.scale = scale;
     settings.probabilityBase = base;
@@ -325,6 +390,12 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
     settings.errorAwareMinThreshold = errorAwareMinThreshold;
     settings.errorAwareMaxThreshold = errorAwareMaxThreshold;
     settings.streakLimit = streakLimit;
+    settings.bombProtectionMaximumKReduction = bombProtMaxK;
+    settings.bombProtectionMinimumKReduction = bombProtMinK;
+    settings.bombProtectionMaximumExpectedPercent = bombProtMaxPc;
+    settings.bombProtectionMinimumExpectedPercent = bombProtMinPc;
+    settings.bombProtectionLowerThreshold = bombProtLowerThresh;
+    settings.bombProtectionUpperThreshold = bombProtUpperThresh;
 
     // Convert from raw multipliers to the forms we expect in the
     // algorithm:
@@ -358,6 +429,7 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
             }
           }
         ),
+        Divider(endIndent: 20),
         Row(
           mainAxisSize: MainAxisSize.max,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -634,7 +706,7 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
                   textAlign: TextAlign.end,
                   keyboardType: TextInputType.numberWithOptions(),
                   inputFormatters: [
-                    FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
+                    FilteringTextInputFormatter(RegExp(r"[0-9.]*"), allow: true),
                   ],
                 ),
               ),
@@ -725,6 +797,7 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
             ),
           ]
         ),
+        Divider(endIndent: 20),
         CheckboxListTile(
           title: Tooltip(
               child: Text("Ignore error-aware on streaks?"),
@@ -842,6 +915,7 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
               ),
             ]
         ),
+        Divider(endIndent: 20),
         CheckboxListTile(
           title: Tooltip(
               child: Text("Bomb protection?"),
@@ -856,6 +930,178 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
               });
             }
           }
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Tooltip(
+              message: "Controls the minimum percentage by which K will be reduced when bomb protection activates..",
+              child: Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Text("Bomb minimum K reduction", style: Theme.of(context).textTheme.subtitle1!),
+              ),
+            ),
+            SizedBox(
+              width: 100,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 20),
+                child: TextFormField(
+                  enabled: settings.bombProtection,
+                  controller: _bombProtectionMinKController,
+                  textAlign: TextAlign.end,
+                  keyboardType: TextInputType.numberWithOptions(),
+                  inputFormatters: [
+                    FilteringTextInputFormatter(RegExp(r"[0-9.]*"), allow: true),
+                  ],
+                ),
+              ),
+            ),
+          ]
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Tooltip(
+              message: "Controls the maximum percentage by which K will be reduced when bomb protection activates.",
+              child: Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Text("Bomb maximum K reduction", style: Theme.of(context).textTheme.subtitle1!),
+              ),
+            ),
+            SizedBox(
+              width: 100,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 20),
+                child: TextFormField(
+                  enabled: settings.bombProtection,
+                  controller: _bombProtectionMaxKController,
+                  textAlign: TextAlign.end,
+                  keyboardType: TextInputType.numberWithOptions(),
+                  inputFormatters: [
+                    FilteringTextInputFormatter(RegExp(r"[0-9.]*"), allow: true),
+                  ],
+                ),
+              ),
+            ),
+          ]
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Tooltip(
+              message: "When the shooter's rating change without any K multipliers is greater than K times this, bomb protection\n"
+                  "will begin to apply.",
+              child: Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Text("Bomb threshold", style: Theme.of(context).textTheme.subtitle1!),
+              ),
+            ),
+            SizedBox(
+              width: 100,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 20),
+                child: TextFormField(
+                  enabled: settings.bombProtection,
+                  controller: _bombProtectionLowerThreshholdController,
+                  textAlign: TextAlign.end,
+                  keyboardType: TextInputType.numberWithOptions(),
+                  inputFormatters: [
+                    FilteringTextInputFormatter(RegExp(r"[0-9.]*"), allow: true),
+                  ],
+                ),
+              ),
+            ),
+          ]
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Tooltip(
+              message: "When the shooter's rating change without any K multipliers is greater than K times this, bomb protection\n"
+                  "will fully apply.",
+              child: Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Text("Bomb maximum", style: Theme.of(context).textTheme.subtitle1!),
+              ),
+            ),
+            SizedBox(
+              width: 100,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 20),
+                child: TextFormField(
+                  enabled: settings.bombProtection,
+                  controller: _bombProtectionUpperThresholdController,
+                  textAlign: TextAlign.end,
+                  keyboardType: TextInputType.numberWithOptions(),
+                  inputFormatters: [
+                    FilteringTextInputFormatter(RegExp(r"[0-9.]*"), allow: true),
+                  ],
+                ),
+              ),
+            ),
+          ]
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Tooltip(
+              message: "Controls the minimum expected percentage a shooter must have on a stage for bomb protection to begin to\n"
+                  "apply.",
+              child: Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Text("Bomb minimum percentage", style: Theme.of(context).textTheme.subtitle1!),
+              ),
+            ),
+            SizedBox(
+              width: 100,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 20),
+                child: TextFormField(
+                  enabled: settings.bombProtection,
+                  controller: _bombProtectionMinPercentController,
+                  textAlign: TextAlign.end,
+                  keyboardType: TextInputType.numberWithOptions(),
+                  inputFormatters: [
+                    FilteringTextInputFormatter(RegExp(r"[0-9.]*"), allow: true),
+                  ],
+                ),
+              ),
+            ),
+          ]
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Tooltip(
+              message: "Controls the minimum expected percentage a shooter must have on a stage for bomb protection to fully\n"
+                  "apply.",
+              child: Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Text("Bomb full percentage", style: Theme.of(context).textTheme.subtitle1!),
+              ),
+            ),
+            SizedBox(
+              width: 100,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 20),
+                child: TextFormField(
+                  enabled: settings.bombProtection,
+                  controller: _bombProtectionMaxPercentController,
+                  textAlign: TextAlign.end,
+                  keyboardType: TextInputType.numberWithOptions(),
+                  inputFormatters: [
+                    FilteringTextInputFormatter(RegExp(r"[0-9.]*"), allow: true),
+                  ],
+                ),
+              ),
+            ),
+          ]
         ),
       ],
     );
