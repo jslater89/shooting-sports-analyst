@@ -24,7 +24,8 @@ class PredictionView extends StatefulWidget {
   @override
   State<PredictionView> createState() => _PredictionViewState();
 
-  static const int _padding = 4;
+  static const int _padding = 2;
+  static const int _rowFlex = 2;
   static const int _nameFlex = 12;
   static const int _classFlex = 4;
   static const int _ratingFlex = 4;
@@ -39,12 +40,15 @@ class PredictionView extends StatefulWidget {
 class _PredictionViewState extends State<PredictionView> {
   Map<ShooterPrediction, SimpleMatchResult> outcomes = {};
   List<ShooterPrediction> sortedPredictions = [];
+  List<ShooterPrediction> searchedPredictions = [];
+  String search = "";
 
   @override
   void initState() {
     super.initState();
 
     sortedPredictions = widget.predictions.sorted((a, b) => b.ordinal.compareTo(a.ordinal));
+    searchedPredictions = sortedPredictions;
   }
 
   @override
@@ -142,9 +146,9 @@ class _PredictionViewState extends State<PredictionView> {
               ),
               Expanded(
                 child: ListView.builder(
-                    itemCount: sortedPredictions.length,
+                    itemCount: searchedPredictions.length,
                     itemBuilder: (context, i) {
-                      return _buildPredictionsRow(sortedPredictions[i], minValue, maxValue, highPrediction, i);
+                      return _buildPredictionsRow(searchedPredictions[i], minValue, maxValue, highPrediction, i);
                     },
                 ),
               )
@@ -217,6 +221,10 @@ class _PredictionViewState extends State<PredictionView> {
       print("Predictions changed");
       setState(() {
         sortedPredictions = outcome.actualResults.keys.sorted((a, b) => b.ordinal.compareTo(a.ordinal));
+        searchedPredictions = search.isEmpty ? sortedPredictions : sortedPredictions.where((p) =>
+            p.shooter.getName(suffixes: false).toLowerCase().startsWith(search.toLowerCase())
+            || p.shooter.lastName.toLowerCase().startsWith(search.toLowerCase())
+        ).toList();
       });
     }
 
@@ -245,66 +253,98 @@ class _PredictionViewState extends State<PredictionView> {
   }
 
   Widget _buildPredictionsHeader() {
-    return Row(
-      mainAxisSize: MainAxisSize.max,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Expanded(
-          flex: PredictionView._padding,
-          child: Container(),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 250,
+              child: TextField(
+                decoration: InputDecoration(
+                  hintText: "Search"
+                ),
+                onChanged: (search) {
+                  setState(() {
+                    searchedPredictions = search.isEmpty ? sortedPredictions : sortedPredictions.where((p) =>
+                    p.shooter.getName(suffixes: false).toLowerCase().startsWith(search.toLowerCase())
+                        || p.shooter.lastName.toLowerCase().startsWith(search.toLowerCase())
+                    ).toList();
+                  });
+                },
+              ),
+            ),
+          ],
         ),
-        Expanded(
-          flex: PredictionView._nameFlex,
-          child: Text("Name"),
+        SizedBox(height: 15),
+        Row(
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            Expanded(
+              flex: PredictionView._padding,
+              child: Container(),
+            ),
+            Expanded(
+              flex: PredictionView._rowFlex,
+              child: Text("Row"),
+            ),
+            Expanded(
+              flex: PredictionView._nameFlex,
+              child: Text("Name"),
+            ),
+            Expanded(
+              flex: PredictionView._classFlex,
+              child: Text("Class", textAlign: TextAlign.end),
+            ),
+            Expanded(
+              flex: PredictionView._ratingFlex,
+              child: Text("Rating", textAlign: TextAlign.end),
+            ),
+            Expanded(
+                flex: PredictionView._95ciFlex,
+                child: Tooltip(
+                    message: "An estimated lower bound for a shooter's place finish, if he has a moderately bad day and everyone else has a moderately good one.",
+                    child: Text("Low Place", textAlign: TextAlign.end)
+                )
+            ),
+            Expanded(
+                flex: PredictionView._95ciFlex,
+                child: Tooltip(
+                    message: "An estimated middle of the range for a shooter's place finish, if he performs slightly above average and everyone else performs at"
+                        "\nan average level.",
+                    child: Text("Med. Place", textAlign: TextAlign.end)
+                )
+            ),
+            Expanded(
+              flex: PredictionView._95ciFlex,
+              child: Tooltip(
+                  message: "An estimated upper bound for a shooter's place finish, if he has a good day and everyone else has a moderately bad one.",
+                child: Text("High Place", textAlign: TextAlign.end)
+              )
+            ),
+            if(outcomes.isNotEmpty) Expanded(
+                flex: PredictionView._95ciFlex,
+                child: Tooltip(
+                  message: "The shooter's actual finish.",
+                  child: Text("Actual Place", textAlign: TextAlign.end)
+                )
+            ),
+            SizedBox(width: PredictionView._whiskerPlotPadding),
+            Expanded(
+              flex: PredictionView._whiskerPlotFlex,
+              child: Tooltip(
+                message: "Boxes show a prediction with about 65% confidence. Whiskers show a prediction with about 95% confidence.\n"
+                    "Predicted performances are relative to one another. The percentage in each prediction's tooltip is an\n"
+                    "approximate value, for reference only.",
+                child: Text("Performance Prediction", textAlign: TextAlign.center),
+              ),
+            ),
+            SizedBox(width: PredictionView._whiskerPlotPadding),
+          ]
         ),
-        Expanded(
-          flex: PredictionView._classFlex,
-          child: Text("Class", textAlign: TextAlign.end),
-        ),
-        Expanded(
-          flex: PredictionView._ratingFlex,
-          child: Text("Rating", textAlign: TextAlign.end),
-        ),
-        Expanded(
-            flex: PredictionView._95ciFlex,
-            child: Tooltip(
-                message: "An estimated lower bound for a shooter's place finish, if he has a moderately bad day and everyone else has a moderately good one.",
-                child: Text("Low Place", textAlign: TextAlign.end)
-            )
-        ),
-        Expanded(
-            flex: PredictionView._95ciFlex,
-            child: Tooltip(
-                message: "An estimated middle of the range for a shooter's place finish, if he performs slightly above average and everyone else performs at"
-                    "\nan average level.",
-                child: Text("Med. Place", textAlign: TextAlign.end)
-            )
-        ),
-        Expanded(
-          flex: PredictionView._95ciFlex,
-          child: Tooltip(
-              message: "An estimated upper bound for a shooter's place finish, if he has a good day and everyone else has a moderately bad one.",
-            child: Text("High Place", textAlign: TextAlign.end)
-          )
-        ),
-        if(outcomes.isNotEmpty) Expanded(
-            flex: PredictionView._95ciFlex,
-            child: Tooltip(
-              message: "The shooter's actual finish.",
-              child: Text("Actual Place", textAlign: TextAlign.end)
-            )
-        ),
-        SizedBox(width: PredictionView._whiskerPlotPadding),
-        Expanded(
-          flex: PredictionView._whiskerPlotFlex,
-          child: Tooltip(
-            message: "Boxes show a prediction with about 65% confidence. Whiskers show a prediction with about 95% confidence.\n"
-                "Predicted performances are relative to one another. The percentage in each prediction's tooltip is an\n"
-                "approximate value, for reference only.",
-            child: Text("Performance Prediction", textAlign: TextAlign.center),
-          ),
-        ),
-        SizedBox(width: PredictionView._whiskerPlotPadding),
-      ]
+      ],
     );
   }
 
@@ -332,6 +372,7 @@ class _PredictionViewState extends State<PredictionView> {
     }
 
     return ConstrainedBox(
+      key: Key(pred.shooter.memberNumber),
       constraints: BoxConstraints(
         minHeight: PredictionView._rowHeight,
       ),
@@ -342,6 +383,10 @@ class _PredictionViewState extends State<PredictionView> {
             Expanded(
               flex: PredictionView._padding,
               child: Container(),
+            ),
+            Expanded(
+              flex: PredictionView._rowFlex,
+              child: Text("${index + 1}"),
             ),
             Expanded(
               flex: PredictionView._nameFlex,
