@@ -158,8 +158,20 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
 
   @override
   String ratingsToCsv(List<ShooterRating> ratings) {
-    // TODO: implement ratingsToCsv
-    throw UnimplementedError();
+    var contents = "Name,Member #,Class,Points,Matches,Points/Match\n";
+
+    for(var s in ratings) {
+      s as PointsRating;
+      contents += "${s.getName(suffixes: false)},";
+      contents += "${s.originalMemberNumber},";
+      contents += "${s.classification.displayString()},";
+      contents += "${model.displayRating(s.rating)},";
+      contents += "${s.length},";
+      contents += "${(s.rating / s.length).toStringAsFixed(1)},";
+      contents += "\n";
+    }
+
+    return contents;
   }
 
   @override
@@ -196,6 +208,8 @@ abstract class PointsModel {
 
   Map<ShooterRating, RatingChange> apply(Map<ShooterRating, RelativeScore> scores);
   double get participationBonus => settings.participationBonus;
+
+  String displayRating(double rating);
 
   static PointsModel fromSettings(PointsSettings settings) {
     switch(settings.mode) {

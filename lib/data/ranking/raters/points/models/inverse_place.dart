@@ -33,4 +33,9 @@ class InversePlace extends PointsModel {
 
     return changes;
   }
+
+  @override
+  String displayRating(double rating) {
+    return rating.round().toString();
+  }
 }

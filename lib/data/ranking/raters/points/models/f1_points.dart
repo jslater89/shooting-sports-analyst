@@ -30,6 +30,11 @@ class F1Points extends PointsModel {
 
     return changes;
   }
+
+  @override
+  String displayRating(double rating) {
+    return rating.round().toString();
+  }
 }
 
 const _points = [

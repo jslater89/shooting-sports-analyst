@@ -25,9 +25,13 @@ class DecayingPoints extends PointsModel {
       changes[rating] = RatingChange(change: {
         RatingSystem.ratingKey: change,
       });
-
     }
 
     return changes;
+  }
+
+  @override
+  String displayRating(double rating) {
+    return rating.toStringAsFixed(1);
   }
 }

@@ -251,6 +251,7 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
               child: Padding(
                 padding: EdgeInsets.only(right: 20),
                 child: TextFormField(
+                  enabled: settings.mode == PointsMode.decayingPoints,
                   controller: _decayStartController,
                   textAlign: TextAlign.end,
                   keyboardType: TextInputType.numberWithOptions(signed: false, decimal: true),
@@ -279,6 +280,7 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
               child: Padding(
                 padding: EdgeInsets.only(right: 20),
                 child: TextFormField(
+                  enabled: settings.mode == PointsMode.decayingPoints,
                   controller: _decayFactorController,
                   textAlign: TextAlign.end,
                   keyboardType: TextInputType.numberWithOptions(signed: false, decimal: true),

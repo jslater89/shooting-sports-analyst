@@ -20,4 +20,9 @@ class PercentFinish extends PointsModel {
 
     return changes;
   }
+
+  @override
+  String displayRating(double rating) {
+    return rating.toStringAsFixed(2);
+  }
 }
