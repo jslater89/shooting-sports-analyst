@@ -16,6 +16,7 @@ import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/ui/rater/enter_practiscore_source_dialog.dart';
+import 'package:uspsa_result_viewer/ui/rater/match_list_filter_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/member_number_correction_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/member_number_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/member_number_map_dialog.dart';
@@ -43,13 +44,44 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
   bool matchCacheReady = false;
   List<String> matchUrls = [];
-  Map<String, String> urlDisplayNames = {};
+  MatchListFilters filters = MatchListFilters();
+  List<String>? filteredMatchUrls;
+  Map<String, PracticalMatch> knownMatches = {};
   String? _lastProjectName;
 
   late RaterSettingsController _settingsController;
   RaterSettingsWidget? _settingsWidget;
   late RatingSystem _ratingSystem;
   _ConfigurableRater? _currentRater = _ConfigurableRater.multiplayerElo;
+
+
+  bool _keepHistory = false;
+  bool _combineLocap = true;
+  bool _combineOpenPCC = false;
+  LimLoCoCombination _limLoCoMode = LimLoCoCombination.none;
+  bool _checkDataEntryErrors = true;
+
+  ScrollController _settingsScroll = ScrollController();
+  ScrollController _matchScroll = ScrollController();
+
+  List<String> _memNumWhitelist = [];
+  Map<String, String> _memNumMappings = {};
+  Map<String, String> _shooterAliases = defaultShooterAliases;
+  Map<String, String> _memNumMappingBlacklist = {};
+  MemberNumberCorrectionContainer _memNumCorrections = MemberNumberCorrectionContainer();
+  List<String> _hiddenShooters = [];
+  String _validationError = "";
+
+  @override
+  void initState() {
+    super.initState();
+
+    matchCacheReady = MatchCache.readyNow;
+
+    if(!matchCacheReady) _warmUpMatchCache();
+
+    _loadAutosave();
+  }
 
 
   /// Checks the match cache for URL names, and starts downloading any
@@ -64,7 +96,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     await showDialog(context: context, builder: (context) => LoadingDialog(title: "Loading required matches...", waitOn: loadingFuture));
 
     // Deduplicate
-    Map<PracticalMatch, bool> knownMatches = {};
+    Map<PracticalMatch, bool> duplicatedMatches = {};
     Map<String, bool> urlsToRemove = {};
 
     List<String> unknownUrls = [];
@@ -75,12 +107,12 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
       if (result.isOk()) {
         var match = result.unwrap();
-        if (knownMatches[match] ?? false) {
+        if (duplicatedMatches[match] ?? false) {
           urlsToRemove[url] = true;
         }
         else {
-          knownMatches[match] = true;
-          if(match.name != null) urlDisplayNames[url] = match.name!;
+          duplicatedMatches[match] = true;
+          if(match.name != null) knownMatches[url] = match;
         }
       }
       else {
@@ -105,7 +137,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         var match = result.unwrap();
         print("Fetched ${match.name} from ${url.split("/").last}");
         setState(() {
-          urlDisplayNames[url] = match.name ?? url;
+          knownMatches[url] = match;
         });
       }
       else if(result.isErr()) {
@@ -118,18 +150,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     // Put this here, so anything we download gets saved if we exit rather
     // than advancing.
     if(matches.isNotEmpty) {
-      cache.save();
+      cache.save(forceResave: matches.map((e) => e.practiscoreId).toList());
     }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    matchCacheReady = MatchCache.readyNow;
-
-    if(!matchCacheReady) _warmUpMatchCache();
-
-    _loadAutosave();
   }
 
   Future<void> _warmUpMatchCache() async {
@@ -172,7 +194,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   }
 
   void _loadProject(RatingProject project) {
-    urlDisplayNames = {};
+    knownMatches = {};
     setState(() {
       matchUrls = []..addAll(project.matchUrls);
       _keepHistory = project.settings.preserveHistory;
@@ -236,23 +258,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       ),
     );
   }
-
-  bool _keepHistory = false;
-  bool _combineLocap = true;
-  bool _combineOpenPCC = false;
-  LimLoCoCombination _limLoCoMode = LimLoCoCombination.none;
-  bool _checkDataEntryErrors = true;
-
-  ScrollController _settingsScroll = ScrollController();
-  ScrollController _matchScroll = ScrollController();
-
-  List<String> _memNumWhitelist = [];
-  Map<String, String> _memNumMappings = {};
-  Map<String, String> _shooterAliases = defaultShooterAliases;
-  Map<String, String> _memNumMappingBlacklist = {};
-  MemberNumberCorrectionContainer _memNumCorrections = MemberNumberCorrectionContainer();
-  List<String> _hiddenShooters = [];
-  String _validationError = "";
 
   RatingHistorySettings? _makeAndValidateSettings() {
     var error = _settingsController.validate();
@@ -331,14 +336,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
                   if(settings == null) return;
 
-                  if(matchUrls.isEmpty) {
-                    setState(() {
-                      _validationError = "No match URLs entered";
-                    });
-                    return;
-                  }
-
-                  if(matchUrls.isEmpty) {
+                  if(matchUrls.isEmpty || filteredMatchUrls != null && filteredMatchUrls!.isEmpty) {
                     setState(() {
                       _validationError = "No match URLs entered";
                     });
@@ -348,7 +346,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                   var project = await _saveProject(RatingProjectManager.autosaveName);
                   // project?.settings.groups = [RaterGroup.combined];
 
-                  if(project != null) widget.onSettingsReady(project);
+                  if(project != null) {
+                    widget.onSettingsReady(project);
+                  }
                 },
               ),
               SizedBox(width: 20),
@@ -532,7 +532,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                         children: [
                           Row(
                             children: [
-                              Text("Matches (${matchUrls.length})", style: Theme.of(context).textTheme.labelLarge),
+                              Text("Matches (${filteredMatchUrls?.length ?? matchUrls.length})", style: Theme.of(context).textTheme.labelLarge),
                               Tooltip(
                                 message: "Add a match from a PractiScore results page link.",
                                 child: IconButton(
@@ -550,6 +550,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                         matchUrls.insert(0, url);
                                       }
                                     }
+
+                                    _filterMatches();
 
                                     setState(() {
                                       // matchUrls
@@ -631,7 +633,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                     if(delete ?? false) {
                                       setState(() {
                                         matchUrls.clear();
-                                        urlDisplayNames.clear();
+                                        filteredMatchUrls?.clear();
+                                        knownMatches.clear();
                                       });
                                     }
                                   }
@@ -657,6 +660,27 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                     }
                                 ),
                               ),
+                              Tooltip(
+                                message: "Filter matches, calculating ratings for a subset of the matches in this project.",
+                                child: IconButton(
+                                  icon: Icon(Icons.filter_list),
+                                  color: Theme.of(context).primaryColor,
+                                  onPressed: () async {
+                                    var newFilters = await MatchListFilterDialog.show(context, filters);
+
+                                    if(newFilters != null) {
+                                      filters = newFilters;
+                                      _filterMatches();
+                                    }
+                                    else {
+                                      filters = MatchListFilters();
+                                      setState(() {
+                                        filteredMatchUrls = null;
+                                      });
+                                    }
+                                  },
+                                )
+                              )
                             ],
                           ),
                           SizedBox(height: 10),
@@ -672,7 +696,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     // show newest additions at the top
-                                    for(var url in matchUrls)
+                                    for(var url in filteredMatchUrls ?? matchUrls)
                                       Row(
                                         mainAxisSize: MainAxisSize.max,
                                         children: [
@@ -698,9 +722,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                                   }
                                                 },
                                                 child: Text(
-                                                  urlDisplayNames[url] != null && urlDisplayNames[url]!.isNotEmpty ?
-                                                    urlDisplayNames[url]! :
-                                                    urlDisplayNames[url] != null ? "$url (missing name)" : url,
+                                                  knownMatches[url] != null && knownMatches[url]!.name!.isNotEmpty ?
+                                                    knownMatches[url]!.name! :
+                                                    knownMatches[url] != null ? "$url (missing name)" : url,
                                                   overflow: TextOverflow.fade
                                                 ),
                                               ),
@@ -714,7 +738,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                               onPressed: () {
                                                 MatchCache().deleteMatchByUrl(url);
                                                 setState(() {
-                                                  urlDisplayNames[url] = url;
+                                                  knownMatches.remove(url);
                                                 });
 
                                                 updateUrls();
@@ -727,7 +751,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                             onPressed: () {
                                               setState(() {
                                                 matchUrls.remove(url);
-                                                urlDisplayNames.remove(url);
+                                                knownMatches.remove(url);
                                               });
                                             },
                                           )
@@ -773,6 +797,28 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     });
 
     updateUrls();
+  }
+
+  void _filterMatches() {
+    filteredMatchUrls = [];
+    filteredMatchUrls!.addAll(matchUrls.where((element) {
+      var match = knownMatches[element];
+      if(match == null) return false;
+
+      if(!filters.levels.contains(match.level)) return false;
+
+      if(filters.after != null && match.date!.isBefore(filters.after!)) return false;
+
+      if(filters.before != null && match.date!.isAfter(filters.before!)) return false;
+
+      return true;
+    }));
+
+    print("Filtered ${matchUrls.length} urls to ${filteredMatchUrls!.length}");
+
+    setState(() {
+      filteredMatchUrls = filteredMatchUrls;
+    });
   }
 
   Future<void> confirmChangeRater (_ConfigurableRater v) async {
@@ -831,9 +877,10 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     String mapName = isAutosave || _lastProjectName == null ? RatingProjectManager.autosaveName : _lastProjectName!;
 
     var project = RatingProject(
-        name: _lastProjectName ?? name,
-        settings: settings,
-        matchUrls: []..addAll(matchUrls)
+      name: _lastProjectName ?? name,
+      settings: settings,
+      matchUrls: []..addAll(matchUrls),
+      filteredUrls: (filteredMatchUrls?.isNotEmpty ?? false) ? filteredMatchUrls! : null,
     );
 
     await RatingProjectManager().saveProject(project, mapName: mapName);
@@ -897,7 +944,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                 _lastProjectName = controller.text.trim().isNotEmpty ? controller.text.trim() : "New Project";
 
                 matchUrls.clear();
-                urlDisplayNames.clear();
+                filteredMatchUrls?.clear();
+                knownMatches.clear();
               });
               _restoreDefaults();
             }

@@ -196,11 +196,19 @@ class RatingProject {
   RatingHistorySettings settings;
   List<String> matchUrls;
 
+  /// These URLs will be used to calculate ratings, and should be a subset of [matchUrls].
+  ///
+  /// This property isn't saved with the project; it's contained totally to the ratings
+  /// configuration screen and the subsequent ratings view.
+  List<String> get filteredUrls => _filteredUrls ?? matchUrls;
+  List<String>? _filteredUrls;
+
   RatingProject({
     required this.name,
     required this.settings,
     required this.matchUrls,
-  });
+    List<String>? filteredUrls,
+  }) : this._filteredUrls = filteredUrls;
 
   RatingProject copy() {
     return RatingProject.fromJson(jsonDecode(this.toJson()));
