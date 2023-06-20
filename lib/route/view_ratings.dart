@@ -499,7 +499,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                   Tooltip(
                     message: "Other filters.",
                     child: IconButton(
-                      icon: Icon(Icons.filter_alt),
+                      icon: Icon(Icons.filter_list),
                       onPressed: () async {
                         var filters = await showDialog(context: context, builder: (context) =>
                           RatingFilterDialog(filters: _filters),
