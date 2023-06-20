@@ -44,7 +44,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
   bool matchCacheReady = false;
   List<String> matchUrls = [];
-  MatchListFilters filters = MatchListFilters();
+  MatchListFilters? filters = MatchListFilters();
   List<String>? filteredMatchUrls;
   Map<String, PracticalMatch> knownMatches = {};
   String? _lastProjectName;
@@ -152,6 +152,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     if(matches.isNotEmpty) {
       cache.save(forceResave: matches.map((e) => e.practiscoreId).toList());
     }
+
+    if(filters != null) _filterMatches();
   }
 
   Future<void> _warmUpMatchCache() async {
@@ -551,8 +553,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                       }
                                     }
 
-                                    _filterMatches();
-
                                     setState(() {
                                       // matchUrls
                                     });
@@ -666,14 +666,13 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                   icon: Icon(Icons.filter_list),
                                   color: Theme.of(context).primaryColor,
                                   onPressed: () async {
-                                    var newFilters = await MatchListFilterDialog.show(context, filters);
+                                    var newFilters = await MatchListFilterDialog.show(context, filters ?? MatchListFilters());
 
+                                    filters = newFilters;
                                     if(newFilters != null) {
-                                      filters = newFilters;
                                       _filterMatches();
                                     }
                                     else {
-                                      filters = MatchListFilters();
                                       setState(() {
                                         filteredMatchUrls = null;
                                       });
@@ -751,6 +750,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                             onPressed: () {
                                               setState(() {
                                                 matchUrls.remove(url);
+                                                filteredMatchUrls?.remove(url);
                                                 knownMatches.remove(url);
                                               });
                                             },
@@ -800,21 +800,39 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   }
 
   void _filterMatches() {
+    if(filters == null) return;
+
     filteredMatchUrls = [];
+    var filteredByLevel = 0;
+    var filteredByBefore = 0;
+    var filteredByAfter = 0;
     filteredMatchUrls!.addAll(matchUrls.where((element) {
       var match = knownMatches[element];
-      if(match == null) return false;
+      // Add any un-fetched URLs. We'll filter them because this will get
+      // re-called
+      if(match == null) return true;
 
-      if(!filters.levels.contains(match.level)) return false;
+      // 'Always include' is the least surprising thing to do with null match
+      // levels, surprisingly
+      if(match.level != null && !filters!.levels.contains(match.level)) {
+        filteredByLevel += 1;
+        return false;
+      }
 
-      if(filters.after != null && match.date!.isBefore(filters.after!)) return false;
+      if(filters!.after != null && match.date!.isBefore(filters!.after!)) {
+        filteredByAfter += 1;
+        return false;
+      }
 
-      if(filters.before != null && match.date!.isAfter(filters.before!)) return false;
+      if(filters!.before != null && match.date!.isAfter(filters!.before!)) {
+        filteredByBefore += 1;
+        return false;
+      }
 
       return true;
     }));
 
-    print("Filtered ${matchUrls.length} urls to ${filteredMatchUrls!.length}");
+    print("Filtered ${matchUrls.length} urls to ${filteredMatchUrls!.length} Level: $filteredByLevel Before: $filteredByBefore After: $filteredByAfter");
 
     setState(() {
       filteredMatchUrls = filteredMatchUrls;
