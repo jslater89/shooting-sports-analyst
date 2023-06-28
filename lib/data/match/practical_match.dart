@@ -23,6 +23,8 @@ class PracticalMatch {
   int? maxPoints;
   int stageScoreCount = 0;
 
+  bool get inProgress => false; //name?.toLowerCase().contains("2023 sig sauer carry optics nationals") ?? false;
+
   PracticalMatch copy() {
     var newMatch = PracticalMatch()
       ..practiscoreId = practiscoreId

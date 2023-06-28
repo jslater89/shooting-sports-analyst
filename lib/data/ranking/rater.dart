@@ -1060,6 +1060,7 @@ class Rater {
         _encounteredMemberNumber(memNumB);
 
         var update = ratingSystem.updateShooterRatings(
+          match: match,
           shooters: [aRating, bRating],
           scores: {
             aRating: aStageScore,
@@ -1085,6 +1086,7 @@ class Rater {
         _encounteredMemberNumber(memNumB);
 
         var update = ratingSystem.updateShooterRatings(
+          match: match,
           shooters: [aRating, bRating],
           scores: {
             aRating: aScore.total,
@@ -1152,6 +1154,7 @@ class Rater {
 
       if(Timings.enabled) start = DateTime.now();
       var update = ratingSystem.updateShooterRatings(
+        match: match,
         shooters: [rating],
         scores: stageScores,
         matchScores: matchScores,
@@ -1171,6 +1174,7 @@ class Rater {
       _encounteredMemberNumber(memNum);
 
       var update = ratingSystem.updateShooterRatings(
+        match: match,
         shooters: [rating],
         scores: matchScores,
         matchScores: matchScores,
@@ -1222,6 +1226,7 @@ class Rater {
       }
 
       var update = ratingSystem.updateShooterRatings(
+        match: match,
         shooters: scoreMap.keys.toList(),
         scores: scoreMap,
         matchScores: matchScoreMap,
@@ -1258,6 +1263,7 @@ class Rater {
       }
 
       var update = ratingSystem.updateShooterRatings(
+        match: match,
         shooters: scoreMap.keys.toList(),
         scores: scoreMap,
         matchScores: matchScoreMap,

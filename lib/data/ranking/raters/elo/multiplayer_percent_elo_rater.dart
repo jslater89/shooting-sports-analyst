@@ -80,6 +80,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
   @override
   Map<ShooterRating, RatingChange> updateShooterRatings({
+    required PracticalMatch match,
     required List<ShooterRating> shooters,
     required Map<ShooterRating, RelativeScore> scores,
     required Map<ShooterRating, RelativeScore> matchScores,
@@ -108,7 +109,14 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
     late DateTime start;
     if(Timings.enabled) start = DateTime.now();
-    var params = _calculateScoreParams(aRating: aRating, aScore: aScore, aMatchScore: aMatchScore, scores: scores, matchScores: matchScores);
+    var params = _calculateScoreParams(
+        match: match,
+        aRating: aRating,
+        aScore: aScore,
+        aMatchScore: aMatchScore,
+        scores: scores,
+        matchScores: matchScores
+    );
     if(Timings.enabled) timings.calcExpectedScore += (DateTime.now().difference(start).inMicroseconds).toDouble();
 
     if(params.usedScores == 1) {
@@ -124,7 +132,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
     if(Timings.enabled) start = DateTime.now();
 
-    var actualScore = _calculateActualScore(score: aScore, matchScore: aMatchScore, params: params);
+    var actualScore = _calculateActualScore(match: match, score: aScore, matchScore: aMatchScore, params: params);
 
     // The first N matches you shoot get bonuses for initial placement.
     var placementMultiplier = aRating.ratingEvents.length < RatingSystem.initialPlacementMultipliers.length ?
@@ -191,7 +199,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     var expectedPercent = params.expectedScore * params.totalPercent * 100.0;
     var bombProtectionMultiplier = 1.0;
 
-    if(bombProtection) {
+    if(bombProtection && !match.inProgress) {
       var baseChange = (actualScore.score - params.expectedScore) * K * (params.usedScores - 1);
       var lowerLimit = -K * settings.bombProtectionLowerThreshold;
       var upperLimit = -K * settings.bombProtectionUpperThreshold;
@@ -253,11 +261,13 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       var initialRating = EloShooterRating.copy(backRating);
       initialRating.rating += stepSize * difference.sign;
       var backParams = _calculateScoreParams(
-          aRating: initialRating,
-          aScore: aScore,
-          aMatchScore: aMatchScore,
-          scores: scores,
-          matchScores: matchScores);
+        match: match,
+        aRating: initialRating,
+        aScore: aScore,
+        aMatchScore: aMatchScore,
+        scores: scores,
+        matchScores: matchScores
+      );
 
       var oldDifference = difference;
       difference = actualScore.score - backParams.expectedScore;
@@ -269,11 +279,13 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
         backRating.rating += stepSize * difference.sign;
 
         var backParams = _calculateScoreParams(
-            aRating: backRating,
-            aScore: aScore,
-            aMatchScore: aMatchScore,
-            scores: scores,
-            matchScores: matchScores);
+          match: match,
+          aRating: backRating,
+          aScore: aScore,
+          aMatchScore: aMatchScore,
+          scores: scores,
+          matchScores: matchScores
+        );
 
         var oldDifference = difference;
         difference = actualScore.score - backParams.expectedScore;
@@ -346,12 +358,15 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   }
 
   _ScoreParameters _calculateScoreParams({
+    PracticalMatch? match,
     required ShooterRating aRating,
     required RelativeScore aScore,
     required RelativeScore aMatchScore,
     required Map<ShooterRating, RelativeScore> scores,
     required Map<ShooterRating, RelativeScore> matchScores,
   }) {
+    bool matchInProgress = match?.inProgress ?? false;
+
     double expectedScore = 0;
     var highOpponentScore = 0.0;
 
@@ -359,7 +374,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     int usedScores = 1;
     var totalPercent;
 
-    if(byStage && aScore.score.shooter.dq) {
+    if(matchInProgress || (byStage && aScore.score.shooter.dq)) {
       // Give DQed shooters a break by not blending in the match score
       totalPercent = aScore.percent;
     }
@@ -391,7 +406,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       }
 
       var opponentPercent;
-      if(byStage && opponentScore.score.shooter.dq) {
+      if(matchInProgress || byStage && opponentScore.score.shooter.dq) {
         // Give DQed shooters a break by not blending in the match score
         opponentPercent = opponentScore.percent;
       }
@@ -416,12 +431,15 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   }
   
   _ActualScore _calculateActualScore({
+    PracticalMatch? match,
     required RelativeScore score,
     required RelativeScore matchScore,
     required _ScoreParameters params,
   }) {
+    bool matchInProgress = match?.inProgress ?? false;
+
     var actualPercent;
-    if(byStage && score.score.shooter.dq) {
+    if(matchInProgress || byStage && score.score.shooter.dq) {
       // Give DQed shooters a break by not blending in the match score
       actualPercent = score.percent;
     }
@@ -437,7 +455,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     var percentComponent = params.totalPercent == 0 ? 0.0 : (actualPercent / params.totalPercent);
 
     var placeBlend;
-    if(byStage && score.score.shooter.dq) {
+    if(matchInProgress || byStage && score.score.shooter.dq) {
       // Give DQed shooters a break by not blending in the match score
       placeBlend = score.place.toDouble();
     }

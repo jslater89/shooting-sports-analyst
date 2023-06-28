@@ -34,6 +34,7 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
   /// If [mode] is [RatingMode.wholeEvent], [shooters] and [scores] both contain
   /// entries for all shooters in the rating event.
   Map<ShooterRating, RatingChange> updateShooterRatings({
+    required PracticalMatch match,
     required List<ShooterRating> shooters,
     required Map<ShooterRating, RelativeScore> scores,
     required Map<ShooterRating, RelativeScore> matchScores,
