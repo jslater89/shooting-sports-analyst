@@ -103,20 +103,20 @@ RegistrationResult _parseRegistrations(String registrationHtml, List<Division> d
 }
 
 String _processRegistrationName(String name) {
-  return name.toLowerCase().split(RegExp(r"\s+")).join();
+  return name.toLowerCase().split(RegExp(r"\s+")).join().replaceAll(RegExp(r"[^a-z]"), "");
 }
 
 List<String> _processShooterName(Shooter shooter) {
   return [
-    shooter.firstName.toLowerCase().replaceAll(" ", ""),
-    shooter.lastName.toLowerCase().replaceAll(" ", "")
+    shooter.firstName.toLowerCase().replaceAll(" ", "").replaceAll(RegExp(r"[^a-z]"), ""),
+    shooter.lastName.toLowerCase().replaceAll(" ", "").replaceAll(RegExp(r"[^a-z]"), "")
   ];
 }
 
 ShooterRating? _findShooter(String shooterName, Classification classification, List<ShooterRating> knownShooters) {
   var processedName = _processRegistrationName(shooterName);
   var firstGuess = knownShooters.firstWhereOrNull((rating) {
-    return _processShooterName(rating).join() == processedName;
+    return _processShooterName(rating).join().replaceAll(RegExp(r"[^a-z]"), "") == processedName;
   });
 
   if(firstGuess != null) {
