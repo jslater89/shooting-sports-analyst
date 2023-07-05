@@ -127,20 +127,14 @@ _LiteralReplacement _replaceQuotedStrings(String query) {
   RegExp literalRegex = RegExp(r'"[^"]*"');
   Map<String, String> literals = {};
 
-  int literalCount = literalRegex.allMatches(query).length;
-
-  int literalLength = 1;
-  if(literalCount > 10) {
-    literalLength = 2;
-  }
-  else if(literalCount > 100) {
-    literalLength = 3;
-  }
+  int literalLength = 3;
+  int literalCount = 0;
   literalRegex.allMatches(query).forEachIndexed((i, element) {
     String literalComponent = "$i".padLeft(literalLength, "0");
 
     var token = "literal$literalComponent";
     literals[token] = element.input.substring(element.start, element.end);
+    literalCount += 1;
   });
 
   for(int i = 0; i < literalCount; i++) {
