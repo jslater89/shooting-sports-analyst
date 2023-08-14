@@ -8,6 +8,7 @@ import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
+import 'package:uspsa_result_viewer/data/search_query_parser.dart';
 import 'package:uspsa_result_viewer/ui/rater/rating_filter_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/shooter_stats_dialog.dart';
 
@@ -103,11 +104,22 @@ class _RaterViewState extends State<RaterView> {
     }
 
     if(widget.search != null && widget.search!.isNotEmpty) {
-      sortedRatings = sortedRatings.where((r) =>
-          r.getName(suffixes: false).toLowerCase().contains(widget.search!.toLowerCase())
-          || r.memberNumber.toLowerCase().endsWith(widget.search!.toLowerCase())
-          || r.originalMemberNumber.toLowerCase().endsWith(widget.search!.toLowerCase())
-      ).toList();
+      if(widget.search!.startsWith('?')) {
+        var queryElements = parseQuery(widget.search!.toLowerCase());
+
+        if(queryElements != null) {
+          sortedRatings = sortedRatings.where((r) =>
+            queryElements.map((q) => q.matchesShooterRating(r)).reduce((a, b) => a && b)
+          ).toList();
+        }
+      }
+      else {
+        sortedRatings = sortedRatings.where((r) =>
+        r.getName(suffixes: false).toLowerCase().contains(widget.search!.toLowerCase())
+            || r.memberNumber.toLowerCase().endsWith(widget.search!.toLowerCase())
+            || r.originalMemberNumber.toLowerCase().endsWith(widget.search!.toLowerCase())
+        ).toList();
+      }
     }
 
     if(widget.hiddenShooters.isNotEmpty) {

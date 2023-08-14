@@ -2,6 +2,7 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
 
 // This file parses search queries of the form
 // ?revolver and b or production and c or singlestack and major or "jay slater".
@@ -34,6 +35,15 @@ class SearchQueryElement {
     return true;
   }
 
+  bool matchesShooterRating(ShooterRating? s) {
+    if(classification != null && s!.lastClassification != classification) return false;
+    if(division != null && s!.division != division) return false;
+    if(powerFactor != null && s!.powerFactor != powerFactor) return false;
+    if(name != null && !s!.getName().toLowerCase().startsWith(name!) && !s.lastName.toLowerCase().startsWith(name!)) return false;
+
+    return true;
+  }
+
   @override
   String toString() {
     return "$classification $division $powerFactor '$name'";
@@ -48,7 +58,7 @@ List<SearchQueryElement>? parseQuery(String query) {
   // Split the string including replaced literals
   List<String> groups = replacements.modifiedString.split("or");
 
-  // After splitting by 'or', replace the literal0,1,... placeholders
+  // After splitting by 'or', replace the literal000,001,... placeholders
   // with their original values.
   for(int i = 0; i < groups.length; i++) {
     groups[i] = _replaceLiterals(groups[i], replacements: replacements);
@@ -77,7 +87,7 @@ SearchQueryElement? _parseGroup(String group) {
   // Split the string including replaced literals
   List<String> items = replacements.modifiedString.split("and");
 
-  // After splitting by 'or', replace the literal0,1,... placeholders
+  // After splitting by 'or', replace the literal000,001,... placeholders
   // with their original values.
   for(int i = 0; i < items.length; i++) {
     items[i] = _replaceLiterals(items[i], replacements: replacements);
@@ -121,7 +131,7 @@ SearchQueryElement? _parseGroup(String group) {
 }
 
 _LiteralReplacement _replaceQuotedStrings(String query) {
-  // Replace quoted strings with 'literal0', 'literal1', etc.
+  // Replace quoted strings with 'literal000', 'literal001', etc.
   // so that names including the string 'or' don't screw up the
   // splitter/query parser
   RegExp literalRegex = RegExp(r'"[^"]*"');

@@ -12,6 +12,7 @@ import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_error.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
+import 'package:uspsa_result_viewer/data/search_query_parser.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/ui/rater/member_number_correction_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/member_number_dialog.dart';
@@ -79,6 +80,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   /// Maps URLs to matches
   Map<String, PracticalMatch?> _matchUrls = {};
   late TextEditingController _searchController;
+  String? searchError;
   late TextEditingController _minRatingsController;
   late TextEditingController _maxDaysController;
   int _minRatings = 0;
@@ -105,6 +107,23 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     activeTabs = widget.settings.groups;
 
     _searchController = TextEditingController();
+    _searchController.addListener(() {
+      var t = _searchController.text;
+      if(t.startsWith('?')) {
+        var q = parseQuery(t);
+        if(q == null && searchError == null) {
+          setState(() {
+            searchError = "Invalid query";
+          });
+        }
+        else if(q != null && searchError != null) {
+          setState(() {
+            searchError = null;
+          });
+        }
+      }
+    });
+
     _minRatingsController = TextEditingController();
     _minRatingsController.addListener(() {
       var text = _minRatingsController.text;
@@ -439,7 +458,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                       },
                       decoration: InputDecoration(
                         helperText: "Search",
-                        suffixIcon: _searchTerm.length > 0 ?
+                        errorText: searchError,
+                        suffixIcon: _searchTerm.length > 0 && _searchTerm == _searchController.text ?
                             GestureDetector(
                               child: Icon(Icons.cancel),
                               onTap: () {
