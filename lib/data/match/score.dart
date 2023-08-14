@@ -120,6 +120,26 @@ class Score {
     }
   }
 
+  operator+(Score other) {
+    var s = copy(shooter, null);
+    
+    s.a += other.a;
+    s.b += other.b;
+    s.c += other.c;
+    s.d += other.d;
+    s.m += other.m;
+    s.ns += other.ns;
+    s.npm += other.npm;
+    s.time += other.time;
+    s.procedural += other.procedural;
+    s.extraHit += other.extraHit;
+    s.extraShot += other.extraShot;
+    s.lateShot += other.lateShot;
+    s.otherPenalty += other.otherPenalty;
+    
+    return s;
+  }
+
   @override
   String toString() {
     return "${shooter.memberNumber} ${stage?.name ?? "Match"} ${getHitFactor(scoreDQ: false)}";

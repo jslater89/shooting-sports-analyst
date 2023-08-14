@@ -18,7 +18,7 @@ import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/ui/result_page.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
 
-/// ShooterRatingChangeDialog displays per-stage changes for a shooter.
+/// This displays per-stage changes for a shooter.
 class ShooterStatsDialog extends StatefulWidget {
   const ShooterStatsDialog({Key? key, required this.rating, required this.match, this.ratings}) : super(key: key);
 
@@ -333,9 +333,29 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     }
   }
 
+  Score? totalScore;
+  int totalDqs = 0;
+
+  void calculateTotalScore() {
+    var total = Score(shooter: widget.rating);
+
+    for(var event in widget.rating.ratingEvents) {
+      var score = event.score.score;
+      total += score;
+      if(score.shooter.dq) totalDqs += 1;
+    }
+
+    totalScore = total;
+  }
+
   List<Widget> _buildShooterStats(BuildContext context) {
     var average = widget.rating.averageRating();
     var lifetimeAverage = widget.rating.averageRating(window: widget.rating.ratingEvents.length);
+
+    if(totalScore == null) {
+      calculateTotalScore();
+    }
+
     return [
       Row(
         children: [
@@ -364,6 +384,20 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
           Expanded(flex: 4, child: Text("Min-max rating (past 30 events)", style: Theme.of(context).textTheme.bodyText2)),
           Expanded(flex: 2, child: Text("${average.minRating.round()}-${average.maxRating.round()}", style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)),
           Divider(height: 2, thickness: 1)
+        ],
+      ),
+      Divider(height: 2, thickness: 1),
+      Row(
+        children: [
+          Expanded(flex: 4, child: Text("Total hits", style: Theme.of(context).textTheme.bodyText2)),
+          Expanded(flex: 4, child: Text("${totalScore!.a}A ${totalScore!.c}C ${totalScore!.d}D ${totalScore!.m}M ${totalScore!.ns}NS ${totalScore!.penaltyCount}P", style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)),
+        ],
+      ),
+      Divider(height: 2, thickness: 1),
+      Row(
+        children: [
+          Expanded(flex: 4, child: Text("Total time", style: Theme.of(context).textTheme.bodyText2)),
+          Expanded(flex: 4, child: Text("${totalScore!.time.toStringAsFixed(2)} s", style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)),
         ],
       ),
       Divider(height: 2, thickness: 1),
