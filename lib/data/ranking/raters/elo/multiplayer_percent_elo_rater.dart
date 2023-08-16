@@ -92,7 +92,10 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       throw StateError("Incorrect number of shooters passed to MultiplayerElo");
     }
 
-    if(scores.length <= 1) {
+    if(scores.length == 0) {
+      return {};
+    }
+    else if(scores.length == 1) {
       return {
         shooters[0]: RatingChange(change: {
           RatingSystem.ratingKey: 0,

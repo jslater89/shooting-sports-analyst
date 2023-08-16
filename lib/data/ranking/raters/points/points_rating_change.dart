@@ -19,7 +19,12 @@ class PointsRatingEvent extends RatingEvent {
 
   @override
   void apply(RatingChange change) {
-    ratingChange += change.change[RatingSystem.ratingKey]!;
+    if(change.change.isEmpty) {
+      ratingChange = double.nan;
+    }
+    else {
+      ratingChange += change.change[RatingSystem.ratingKey]!;
+    }
   }
 
   @override

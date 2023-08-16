@@ -152,6 +152,10 @@ class EloShooterRating extends ShooterRating {
   }
 
   List<RatingEvent> ratingEvents = [];
+  List<RatingEvent> emptyRatingEvents = [];
+
+  // TODO: combine this in more intelligent fashion, preserving order where possible
+  List<RatingEvent> get combinedRatingEvents => []..addAll(ratingEvents)..addAll(emptyRatingEvents);
 
   EloShooterRating(Shooter shooter, this.rating, {DateTime? date}) :
       super(shooter, date: date);
@@ -164,8 +168,13 @@ class EloShooterRating extends ShooterRating {
   void updateFromEvents(List<RatingEvent> events) {
     for(var e in events) {
       e as EloRatingEvent;
-      ratingEvents.add(e);
-      rating += e.ratingChange;
+      if(e.baseK == 0) {
+        emptyRatingEvents.add(e);
+      }
+      else {
+        ratingEvents.add(e);
+        rating += e.ratingChange;
+      }
     }
   }
 

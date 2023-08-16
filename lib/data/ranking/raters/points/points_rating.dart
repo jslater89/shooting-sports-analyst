@@ -17,6 +17,7 @@ class PointsRating extends ShooterRating {
 
   double _rating = 0.0;
 
+  /// All events, in order of arrival
   List<PointsRatingEvent> temporalEvents = [];
 
   @override
@@ -28,11 +29,26 @@ class PointsRating extends ShooterRating {
 
   @override
   void updateFromEvents(List<RatingEvent> events) {
-    this.events.addAll(List.castFrom(events));
-    this.temporalEvents.addAll(List.castFrom(events));
+
+    for(var event in events) {
+      if(event.ratingChange.isNaN) {
+        this.emptyRatingEvents.add(event);
+      }
+      else {
+        this.events.add(event as PointsRatingEvent);
+        this.temporalEvents.add(event);
+      }
+    }
 
     _rating = usedEvents().map((e) => e.ratingChange).sum;
-    _lastSeen = this.events.sorted((a, b) => b.match.date!.compareTo(a.match.date!)).first.match.date!;
+
+    if(this.events.isNotEmpty) {
+      _lastSeen = this.events
+          .sorted((a, b) => b.match.date!.compareTo(a.match.date!))
+          .first
+          .match
+          .date!;
+    }
   }
 
   DateTime _lastSeen = DateTime(0);
@@ -87,4 +103,10 @@ class PointsRating extends ShooterRating {
   final int Function(PointsRatingEvent a, PointsRatingEvent b) _ratingComparator = (a, b) {
     return b.ratingChange.compareTo(a.ratingChange);
   };
+
+  @override
+  List<RatingEvent> get combinedRatingEvents => []..addAll(ratingEvents)..addAll(emptyRatingEvents);
+
+  @override
+  List<RatingEvent> emptyRatingEvents = [];
 }

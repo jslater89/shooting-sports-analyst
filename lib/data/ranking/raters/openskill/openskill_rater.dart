@@ -166,6 +166,20 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
   }) {
     Map<OpenskillRating, RatingChange> changes = {};
 
+    if(shooters.isEmpty) {
+      return changes;
+    }
+    if(shooters.length == 1) {
+      return {
+        (shooters[0] as OpenskillRating): RatingChange(
+          change: {
+            OpenskillRater.muKey: 0,
+            OpenskillRater.sigmaKey: 0,
+          }
+        )
+      };
+    }
+
     List<OpenskillRating> provisionalTeams = shooters.map((e) => e as OpenskillRating).toList();
     provisionalTeams.retainWhere((element) {
       if(scores[element]!.score.hits == 0 && scores[element]!.score.time <= 0.5) {

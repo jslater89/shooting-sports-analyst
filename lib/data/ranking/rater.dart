@@ -1023,8 +1023,6 @@ class Rater {
     Shooter a = shooters[startIndex];
     var score = scores.firstWhere((element) => element.shooter == a);
 
-    if(scores.length < 2) return;
-
     // Check for pubstomp
     var pubstompMod = 1.0;
     if(score.total.percent >= 1.0) {
@@ -1121,8 +1119,6 @@ class Rater {
     required double connectednessMod,
     required double weightMod
   }) {
-    if(scores.length < 2) return;
-
     String memNum = shooter.memberNumber;
 
     ShooterRating rating = knownShooter(memNum);

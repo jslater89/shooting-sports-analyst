@@ -12,6 +12,11 @@ class DecayingPoints extends PointsModel {
 
   @override
   Map<ShooterRating, RatingChange> apply(Map<ShooterRating, RelativeScore> scores) {
+    if(scores.isEmpty) return {};
+    else if(scores.length == 1) {
+      return { scores.keys.first: RatingChange(change: {}) };
+    }
+
     var sortedEntries = scores.entries.sorted((e1, e2) => e2.value.percent.compareTo(e1.value.percent));
     Map<ShooterRating, RatingChange> changes = {};
     for(int i = 0; i < sortedEntries.length; i++) {

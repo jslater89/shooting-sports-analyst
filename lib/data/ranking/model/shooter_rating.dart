@@ -28,7 +28,19 @@ abstract class ShooterRating extends Shooter {
 
   double get rating;
 
+  /// All of the meaningful rating events in this shooter's history.
+  ///
+  /// A meaningful rating event is an event where the shooter competed against
+  /// at least one other person.
   List<RatingEvent> get ratingEvents;
+
+  /// All of the empty rating events in this shooter's history, where the
+  /// shooter competed against nobody else.
+  List<RatingEvent> get emptyRatingEvents;
+
+  /// All of the rating events in this shooter's history, combining
+  /// [emptyRatingEvents] and [ratingEvents]. No order is guaranteed.
+  List<RatingEvent> get combinedRatingEvents;
 
   /// Returns the shooter's rating after accounting for the given event.
   ///

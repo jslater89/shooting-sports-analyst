@@ -26,11 +26,17 @@ class OpenskillRating extends ShooterRating {
 
   @override
   void updateFromEvents(List<RatingEvent> events) {
-    ratingEvents.addAll(events);
     for(var event in events) {
       event as OpenskillRatingEvent;
-      mu += event.muChange;
-      sigma += event.sigmaChange;
+
+      if(event.muChange == 0 && event.sigmaChange == 0) {
+        emptyRatingEvents.add(event);
+      }
+      else {
+        mu += event.muChange;
+        sigma += event.sigmaChange;
+        ratingEvents.add(event);
+      }
     }
   }
 
@@ -50,4 +56,10 @@ class OpenskillRating extends ShooterRating {
   String toString() {
     return "${getName(suffixes: false)} ${rating.round()} ($hashCode)";
   }
+
+  @override
+  List<RatingEvent> get combinedRatingEvents => []..addAll(ratingEvents)..addAll(emptyRatingEvents);
+
+  @override
+  List<RatingEvent> emptyRatingEvents = [];
 }

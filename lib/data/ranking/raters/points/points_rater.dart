@@ -101,7 +101,7 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
   }
 
   @override
-  encodeToJson(Map<String, dynamic> json) {
+  void encodeToJson(Map<String, dynamic> json) {
     json[RatingProject.algorithmKey] = RatingProject.pointsValue;
     settings.encodeToJson(json);
   }
