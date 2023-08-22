@@ -380,9 +380,9 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         var stageClassScores = event.match.getScores(stages: [stage], shooters: event.match.shooters.where(
               (element) => element.division == widget.rating.division && event.score.score.shooter.classification == element.classification).toList()
         );
-        var stageClassScore = stageClassScores.firstWhere((element) => widget.rating.equalsShooter(element.shooter));
+        var stageClassScore = stageClassScores.firstWhereOrNull((element) => widget.rating.equalsShooter(element.shooter));
 
-        if(event.score.score.shooter.classification != Classification.U) {
+        if(stageClassScore != null && event.score.score.shooter.classification != Classification.U) {
           classStageFinishes.add(stageClassScore.total.place);
           if (stageClassScore.total.place == 1) {
             classStageWins += 1;
@@ -424,7 +424,15 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       var classification = classesByMatch[match]!;
       var scores = match.getScores(shooters: match.shooters.where((element) => element.division == widget.rating.division).toList());
       competitorCounts.add(scores.length);
-      var score = scores.firstWhere((element) => widget.rating.equalsShooter(element.shooter));
+      var score = scores.firstWhereOrNull((element) => widget.rating.equalsShooter(element.shooter));
+
+      // TODO: this happens in combined divisions
+      // If I compete in Production first, widget.rating.division is production, even if I later compete in revolver,
+      // so we don't find my scores. Do a division-by-match map above, when going through rating events.
+      if(score == null) {
+        throw StateError("Shooter in match doesn't have a score");
+      }
+
       matchFinishes.add(score.total.place);
       if (score.total.place == 1) matchWins += 1;
 
@@ -523,7 +531,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         ],
       ),
       Divider(height: 2, thickness: 1),
-      Row(
+      if(classMatchFinishes.length > 0) Row(
         children: [
           Expanded(flex: 4, child: Text("Match wins/class wins", style: Theme.of(context).textTheme.bodyText2)),
           Expanded(flex: 2, child: Text(
@@ -536,7 +544,8 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         children: [
           Expanded(flex: 4, child: Text("Avg. match finish/class finish", style: Theme.of(context).textTheme.bodyText2)),
           Expanded(flex: 2, child: Text(
-              "${matchFinishes.average.toStringAsFixed(1)}/${classMatchFinishes.average.toStringAsFixed(1)}",
+              "${matchFinishes.isNotEmpty ? matchFinishes.average.toStringAsFixed(1) : "-"}/"
+              "${classMatchFinishes.isNotEmpty ? classMatchFinishes.average.toStringAsFixed(1) : "-"}",
               style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)),
         ],
       ),
@@ -563,7 +572,8 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         children: [
           Expanded(flex: 4, child: Text("Avg. stage finish/class stage finish", style: Theme.of(context).textTheme.bodyText2)),
           Expanded(flex: 2, child: Text(
-              "${stageFinishes.average.toStringAsFixed(1)}/${classStageFinishes.average.toStringAsFixed(1)}",
+              "${stageFinishes.isNotEmpty ? stageFinishes.average.toStringAsFixed(1) : "-"}/"
+                  "${classStageFinishes.isNotEmpty ? classStageFinishes.average.toStringAsFixed(1) : "-"}",
               style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)),
         ],
       ),
