@@ -6,7 +6,9 @@ class RatingChange {
   // Arguments used as inputs to sprintf
   final Map<String, List<dynamic>> info;
 
-  RatingChange({required this.change, this.info = const {}});
+  final Map<String, dynamic> extraData;
+
+  RatingChange({required this.change, this.info = const {}, this.extraData = const {}});
 
   @override
   String toString() {
@@ -21,12 +23,13 @@ abstract class RatingEvent {
   Stage? stage;
   RelativeScore score;
   Map<String, List<dynamic>> info;
+  Map<String, dynamic> extraData;
 
   double get ratingChange;
   double get oldRating;
   double get newRating => oldRating + ratingChange;
 
-  RatingEvent({required this.match, this.stage, required this.score, this.info = const {}});
+  RatingEvent({required this.match, this.stage, required this.score, this.info = const {}, this.extraData = const {}});
 
   void apply(RatingChange change);
 
@@ -34,5 +37,6 @@ abstract class RatingEvent {
         this.match = other.match,
         this.stage = other.stage,
         this.score = other.score,
-        this.info = {}..addAll(other.info);
+        this.info = {}..addAll(other.info),
+        this.extraData = {}..addAll(other.extraData);
 }

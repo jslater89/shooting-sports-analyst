@@ -118,6 +118,7 @@ class _RaterViewState extends State<RaterView> {
         r.getName(suffixes: false).toLowerCase().contains(widget.search!.toLowerCase())
             || r.memberNumber.toLowerCase().endsWith(widget.search!.toLowerCase())
             || r.originalMemberNumber.toLowerCase().endsWith(widget.search!.toLowerCase())
+            || r.alternateMemberNumbers.any((n) => n.toLowerCase().endsWith(widget.search!.toLowerCase()))
         ).toList();
       }
     }

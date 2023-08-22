@@ -26,6 +26,10 @@ class Shooter {
     _memberNumber = m;
   }
 
+  bool equalsShooter(Shooter other) {
+    return memberNumber == other.memberNumber;
+  }
+
   bool reentry = false;
   bool dq = false;
 

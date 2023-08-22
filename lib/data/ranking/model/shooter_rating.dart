@@ -7,6 +7,7 @@ import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/average_rating.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/connected_shooter.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_change.dart';
+import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/sorted_list.dart';
 
 abstract class ShooterRating extends Shooter {
@@ -285,6 +286,27 @@ abstract class ShooterRating extends Shooter {
       this.firstSeen = date ?? DateTime.now(),
       this.lastSeen = date ?? DateTime.now() {
     super.copyVitalsFrom(shooter);
+  }
+
+  @override
+  bool equalsShooter(Shooter other) {
+    if(super.equalsShooter(other)) return true;
+
+    for(var number in alternateMemberNumbers) {
+      var processed = Rater.processMemberNumber(number);
+
+      if(other is ShooterRating) {
+        for(var otherNumber in alternateMemberNumbers) {
+          var otherProcessed = Rater.processMemberNumber(otherNumber);
+          if(processed == otherProcessed) return true;
+        }
+      }
+      else {
+        if (processed == other.memberNumber) return true;
+      }
+    }
+
+    return false;
   }
 
   // ShooterRating.fromVitals(DbShooterRating rating) :

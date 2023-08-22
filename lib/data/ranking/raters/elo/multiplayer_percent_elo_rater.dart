@@ -21,6 +21,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   static const errorKey = "error";
   static const baseKKey = "baseK";
   static const effectiveKKey = "effectiveK";
+  static const matchScoreKey = "matchScore";
 
   static const doBackRating = false;
   static const backRatingErrorKey = "backRatingError";
@@ -355,8 +356,12 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
         errorKey: (params.expectedScore - actualScore.score) * params.usedScores,
         baseKKey: K * (params.usedScores - 1),
         effectiveKKey: effectiveK * (params.usedScores),
-        backRatingErrorKey: backRatingErr
-      }, info: info),
+        backRatingErrorKey: backRatingErr,
+      },
+      extraData: {
+        matchScoreKey: aMatchScore,
+      },
+      info: info),
     };
   }
 

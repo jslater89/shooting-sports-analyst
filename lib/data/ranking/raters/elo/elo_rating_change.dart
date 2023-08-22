@@ -13,6 +13,10 @@ class EloRatingEvent extends RatingEvent {
   double error;
   double backRatingError;
 
+  RelativeScore get matchScore {
+    return extraData[MultiplayerPercentEloRater.matchScoreKey]! as RelativeScore;
+  }
+
   EloRatingEvent({
     required this.oldRating,
     required PracticalMatch match,
@@ -42,5 +46,6 @@ class EloRatingEvent extends RatingEvent {
     baseK = change.change[MultiplayerPercentEloRater.baseKKey]!;
     effectiveK = change.change[MultiplayerPercentEloRater.effectiveKKey]!;
     if(MultiplayerPercentEloRater.doBackRating) backRatingError = change.change[MultiplayerPercentEloRater.backRatingErrorKey]!;
+    extraData = change.extraData;
   }
 }

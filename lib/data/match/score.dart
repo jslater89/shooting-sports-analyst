@@ -19,6 +19,8 @@ class Score {
   /// Number of times a target was hit
   int get hits => a + b + c + d + ns;
 
+  int get shots => hits + m;
+
   Score({
     required this.shooter,
     this.stage
