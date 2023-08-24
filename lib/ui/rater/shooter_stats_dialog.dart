@@ -348,6 +348,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   Set<PracticalMatch> dqs = {};
   Set<PracticalMatch> matches = {};
   Map<PracticalMatch, Classification> classesByMatch = {};
+  Map<PracticalMatch, Division> divisionsByMatch = {};
   Set<PracticalMatch> matchesWithRatingChanges = {};
   Map<MatchLevel, int> matchesByLevel = {};
   int majorEntries = 0;
@@ -378,7 +379,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         stageFinishes.add(event.score.place);
 
         var stageClassScores = event.match.getScores(stages: [stage], shooters: event.match.shooters.where(
-              (element) => element.division == widget.rating.division && event.score.score.shooter.classification == element.classification).toList()
+              (element) => event.score.score.shooter.division == element.division && event.score.score.shooter.classification == element.classification).toList()
         );
         var stageClassScore = stageClassScores.firstWhereOrNull((element) => widget.rating.equalsShooter(element.shooter));
 
@@ -404,6 +405,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       }
       matches.add(event.match);
       classesByMatch[event.match] = event.score.score.shooter.classification ?? Classification.unknown;
+      divisionsByMatch[event.match] = event.score.score.shooter.division ?? Division.unknown;
 
       switch(score.shooter.powerFactor) {
         case PowerFactor.major:
@@ -422,7 +424,8 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
 
     for(var match in matches) {
       var classification = classesByMatch[match]!;
-      var scores = match.getScores(shooters: match.shooters.where((element) => element.division == widget.rating.division).toList());
+      var division = divisionsByMatch[match]!;
+      var scores = match.getScores(shooters: match.shooters.where((element) => element.division == division).toList());
       competitorCounts.add(scores.length);
       var score = scores.firstWhereOrNull((element) => widget.rating.equalsShooter(element.shooter));
 
@@ -438,7 +441,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
 
       if (classification != Classification.unknown) {
         var scores = match.getScores(
-            shooters: match.shooters.where((element) => element.division == widget.rating.division && element.classification == classification).toList());
+            shooters: match.shooters.where((element) => element.division == division && element.classification == classification).toList());
         var score = scores.firstWhere((element) => widget.rating.equalsShooter(element.shooter));
 
         if(classification != Classification.U) {
