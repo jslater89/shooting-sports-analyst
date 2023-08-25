@@ -147,7 +147,7 @@ class _RaterViewState extends State<RaterView> {
                     ratings[group] = widget.history.latestRaterFor(group);
                   }
                   showDialog(context: context, builder: (context) {
-                    return ShooterStatsDialog(rating: asList[i], match: widget.currentMatch, ratings: ratings);
+                    return ShooterStatsDialog(rating: asList[i], match: widget.currentMatch, ratings: ratings, showDivisions: widget.rater.group.divisions.length > 1);
                   });
                 },
                 child: widget.rater.ratingSystem.buildRatingRow(

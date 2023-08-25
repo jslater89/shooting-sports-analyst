@@ -20,8 +20,9 @@ import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
 
 /// This displays per-stage changes for a shooter.
 class ShooterStatsDialog extends StatefulWidget {
-  const ShooterStatsDialog({Key? key, required this.rating, required this.match, this.ratings}) : super(key: key);
+  const ShooterStatsDialog({Key? key, required this.rating, required this.match, this.ratings, this.showDivisions = false}) : super(key: key);
 
+  final bool showDivisions;
   final ShooterRating rating;
   final PracticalMatch match;
   final Map<RaterGroup, Rater>? ratings;
@@ -67,7 +68,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                     children: [
                       Expanded(
                         flex: 10,
-                        child: Text("${e.eventName}",
+                        child: Text("${e.eventName}${widget.showDivisions ? " (${e.score.score.shooter.division?.abbreviation() ?? " UNK"})" : ""}",
                             style: Theme.of(context).textTheme.bodyText2!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).errorColor : null)),
                       ),
                       Expanded(
@@ -180,6 +181,19 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   late NumberFormat _separatedNumberFormat = NumberFormat("#,###");
   late NumberFormat _separatedDecimalFormat = NumberFormat("#,###.00");
   late List<_AccumulatedRatingEvent> _ratings;
+  Map<Division, charts.Color> _divisionColors = {};
+  int _colorIndex = 0;
+  List<charts.Color> _colorOptions = [
+    charts.MaterialPalette.blue.shadeDefault,
+    charts.MaterialPalette.indigo.shadeDefault,
+    charts.MaterialPalette.cyan.shadeDefault,
+    charts.MaterialPalette.green.shadeDefault,
+    charts.MaterialPalette.lime.shadeDefault,
+    charts.MaterialPalette.yellow.shadeDefault,
+    charts.MaterialPalette.deepOrange.shadeDefault,
+    charts.MaterialPalette.red.shadeDefault,
+    charts.MaterialPalette.purple.shadeDefault,
+  ];
 
   Widget _buildChart(ShooterRating rating) {
     double accumulator = 0;
@@ -212,7 +226,20 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       
       _series = charts.Series<_AccumulatedRatingEvent, int>(
         id: 'Results',
-        colorFn: (_, __) => charts.MaterialPalette.blue.shadeDefault,
+        colorFn: (e, __) {
+          if(!widget.showDivisions) return charts.MaterialPalette.blue.shadeDefault;
+          
+          var division = e.baseEvent.score.score.shooter.division ?? Division.unknown;
+          if(_divisionColors.containsKey(division)) {
+            return _divisionColors[division]!;
+          }
+          else {
+            var color = _colorOptions[_colorIndex];
+            _colorIndex += 1;
+            _divisionColors[division] = color;
+            return color;
+          }
+        },
         measureFn: (_AccumulatedRatingEvent e, _) => e.baseEvent.newRating,
         domainFn: (_, int? index) => index!,
         measureLowerBoundFn: (e, i) {
@@ -306,9 +333,10 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   }
 
   void _launchScoreView(RatingEvent e) {
+    var division = e.score.score.shooter.division ?? widget.rating.division!;
     var filters = FilterSet(empty: true)
       ..mode = FilterMode.or
-      ..divisions = FilterSet.divisionListToMap([widget.rating.division!]);
+      ..divisions = FilterSet.divisionListToMap([division]);
     Navigator.of(context).push(MaterialPageRoute(builder: (context) {
       return ResultPage(
         canonicalMatch: e.match,

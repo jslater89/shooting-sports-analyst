@@ -59,10 +59,9 @@ class Rater {
 
   RatingSystem ratingSystem;
 
-  FilterSet _filters;
+  RaterGroup group;
 
-  /// Do not mutate this property.
-  FilterSet? get filters => _filters;
+  FilterSet get filters => group.filters;
 
   bool byStage;
   List<String> memberNumberWhitelist;
@@ -80,7 +79,7 @@ class Rater {
   Rater({
     required List<PracticalMatch> matches,
     required this.ratingSystem,
-    required FilterSet filters,
+    required this.group,
     this.byStage = false,
     this.progressCallback,
     this.progressCallbackInterval = RatingHistory.progressCallbackInterval,
@@ -93,7 +92,6 @@ class Rater {
     this.recognizedDivisions = const {},
     this.memberNumberWhitelist = const []})
       : this._matches = matches,
-        this._filters = filters,
         this._memberNumberMappingBlacklist = memberNumberMappingBlacklist,
         this._userMemberNumberMappings = userMemberNumberMappings,
         this._dataCorrections = dataCorrections
@@ -122,7 +120,7 @@ class Rater {
         this._userMemberNumberMappings = {}..addAll(other._userMemberNumberMappings),
         this._dataCorrections = other._dataCorrections,
         this._shooterAliases = {}..addAll(other._shooterAliases),
-        this._filters = other._filters,
+        this.group = other.group,
         this.verbose = other.verbose,
         this.checkDataEntryErrors = other.checkDataEntryErrors,
         this.memberNumberWhitelist = other.memberNumberWhitelist,
@@ -210,7 +208,7 @@ class Rater {
     for(PracticalMatch m in _matches) {
       var onlyDivisions = recognizedDivisions[m.practiscoreId];
       if(onlyDivisions != null) {
-        var divisionsOfInterest = _filters.divisions.entries.where((e) => e.value).map((e) => e.key).toList();
+        var divisionsOfInterest = filters.divisions.entries.where((e) => e.value).map((e) => e.key).toList();
 
         // Process this iff onlyDivisions contains at least one division of interest
         // e.g. this rater/dOI is prod, oD is open/limited; oD contains 0 of dOI, so
@@ -279,7 +277,7 @@ class Rater {
     var stageRoundsMode = mode(stageRoundCounts);
     var matchRoundsMode = mode(matchRoundCounts);
 
-    debugPrint("Initial ratings complete for ${knownShooters.length} shooters in ${_matches.length} matches in ${_filters.activeDivisions.toList()}");
+    debugPrint("Initial ratings complete for ${knownShooters.length} shooters in ${_matches.length} matches in ${filters.activeDivisions.toList()}");
     debugPrint("Match length in stages (min/max/average/median/mode): ${matchLengths.min}/${matchLengths.max}/${matchLengths.average.toStringAsFixed(1)}/${matchLengths[matchLengths.length ~/ 2]}/$matchLengthMode");
     debugPrint("Match length in rounds (average/median/mode): ${matchRoundCounts.min}/${matchRoundCounts.max}/${matchRoundCounts.average.toStringAsFixed(1)}/${matchRoundCounts[matchRoundCounts.length ~/ 2]}/$matchRoundsMode");
     debugPrint("Stage length in rounds (average/median/mode): ${stageRoundCounts.min}/${stageRoundCounts.max}/${stageRoundCounts.average.toStringAsFixed(1)}/${stageRoundCounts[stageRoundCounts.length ~/ 2]}/$stageRoundsMode");
@@ -300,7 +298,7 @@ class Rater {
 
     _removeUnseenShooters();
 
-    debugPrint("Ratings update complete for $changed shooters (${knownShooters.length} total) in ${_matches.length} matches in ${_filters.activeDivisions.toList()}");
+    debugPrint("Ratings update complete for $changed shooters (${knownShooters.length} total) in ${_matches.length} matches in ${filters.activeDivisions.toList()}");
     return RatingResult.ok();
   }
 
@@ -683,8 +681,8 @@ class Rater {
   List<Shooter> _getShooters(PracticalMatch match, {bool verify = false}) {
     var shooters = <Shooter>[];
     shooters = match.filterShooters(
-      filterMode: _filters.mode,
-      divisions: _filters.activeDivisions.toList(),
+      filterMode: filters.mode,
+      divisions: filters.activeDivisions.toList(),
       powerFactors: [],
       classes: [],
       allowReentries: false,
@@ -1471,7 +1469,7 @@ class Rater {
 
   @override
   String toString() {
-    return "Rater for ${_matches.last.name} with ${_filters.divisions}";
+    return "Rater for ${_matches.last.name} with ${filters.divisions}";
   }
 
   static Map<String, String> _processMemNumCache = {};

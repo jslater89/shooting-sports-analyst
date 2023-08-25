@@ -237,7 +237,7 @@ class RatingHistory {
       ratingSystem: _settings.algorithm,
       byStage: _settings.byStage,
       checkDataEntryErrors: _settings.checkDataEntryErrors && !_settings.transientDataEntryErrorSkip,
-      filters: group.filters,
+      group: group,
       progressCallback: progressCallback,
       progressCallbackInterval: progressCallbackInterval,
       shooterAliases: _settings.shooterAliases,

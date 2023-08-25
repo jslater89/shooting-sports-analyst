@@ -198,6 +198,32 @@ enum Division {
         return "Unknown Division";
     }
   }
+
+  String abbreviation() {
+    switch(this) {
+
+      case Division.pcc:
+        return "PCC";
+      case Division.open:
+        return "OPEN";
+      case Division.limited:
+        return "LIM";
+      case Division.carryOptics:
+        return "CO";
+      case Division.limited10:
+        return "L10";
+      case Division.production:
+        return "PROD";
+      case Division.singleStack:
+        return "SS";
+      case Division.revolver:
+        return "REV";
+      case Division.limitedOptics:
+        return "LO";
+      case Division.unknown:
+        return "UNK";
+    }
+  }
 }
 
 extension DivisionFrom on Division {
