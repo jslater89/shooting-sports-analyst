@@ -270,6 +270,27 @@ enum RaterGroup {
   limLoCo,
   combined;
 
+  static get defaultGroups => [
+    open,
+    limited,
+    pcc,
+    carryOptics,
+    limitedOptics,
+    locap,
+  ];
+
+  static get divisionGroups => [
+    open,
+    limited,
+    pcc,
+    carryOptics,
+    limitedOptics,
+    singleStack,
+    production,
+    limited10,
+    revolver,
+  ];
+
   FilterSet get filters {
     return FilterSet(
       empty: true,

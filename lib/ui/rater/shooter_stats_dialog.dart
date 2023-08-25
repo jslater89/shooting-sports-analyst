@@ -429,9 +429,6 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       competitorCounts.add(scores.length);
       var score = scores.firstWhereOrNull((element) => widget.rating.equalsShooter(element.shooter));
 
-      // TODO: this happens in combined divisions
-      // If I compete in Production first, widget.rating.division is production, even if I later compete in revolver,
-      // so we don't find my scores. Do a division-by-match map above, when going through rating events.
       if(score == null) {
         throw StateError("Shooter in match doesn't have a score");
       }

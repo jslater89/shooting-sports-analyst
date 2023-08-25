@@ -182,6 +182,7 @@ const _hiddenShootersKey = "hiddenShooters";
 const _memberNumberCorrectionsKey = "memNumCorrections";
 const _recognizedDivisionsKey = "recDivs";
 const _checkDataEntryKey = "checkDataEntry";
+const _groupsKey = "groups";
 
 // Values for the multiplayer percent elo rater.
 
@@ -218,19 +219,31 @@ class RatingProject {
     var combineOpenPCC = (encodedProject[_combineOpenPCCKey] ?? false) as bool;
     var combineLocap = (encodedProject[_combineLocapKey] ?? true) as bool;
 
-    LimLoCoCombination limLoCoMode;
-    if(encodedProject.containsKey(_combineLimitedCOKey)) {
-      // old project
-      var combineLimitedCO = (encodedProject[_combineLimitedCOKey] ?? false) as bool;
-      if(combineLimitedCO) {
-        limLoCoMode = LimLoCoCombination.limCo;
+    List<RaterGroup> groups;
+    if(!encodedProject.containsKey(_groupsKey)) {
+      LimLoCoCombination limLoCoMode;
+      if(encodedProject.containsKey(_combineLimitedCOKey)) {
+        // old project
+        var combineLimitedCO = (encodedProject[_combineLimitedCOKey] ?? false) as bool;
+        if(combineLimitedCO) {
+          limLoCoMode = LimLoCoCombination.limCo;
+        }
+        else {
+          limLoCoMode = LimLoCoCombination.none;
+        }
       }
       else {
-        limLoCoMode = LimLoCoCombination.none;
+        limLoCoMode = LimLoCoCombination.values.byName(encodedProject[_limitedLoCoCombineModeKey] ?? LimLoCoCombination.none.name);
       }
+
+      groups = RatingHistorySettings.groupsForSettings(
+        combineOpenPCC: combineOpenPCC,
+        limLoCo: limLoCoMode,
+        combineLocap: combineLocap,
+      );
     }
     else {
-      limLoCoMode = LimLoCoCombination.values.byName(encodedProject[_limitedLoCoCombineModeKey] ?? LimLoCoCombination.none.name);
+      groups = []..addAll(((encodedProject[_groupsKey] ?? []) as List<dynamic>).map((s) => RaterGroup.values.byName(s)));
     }
 
     var algorithmName = (encodedProject[algorithmKey] ?? multiplayerEloValue) as String;
@@ -246,12 +259,7 @@ class RatingProject {
       algorithm: algorithm,
       checkDataEntryErrors: (encodedProject[_checkDataEntryKey] ?? true) as bool,
       preserveHistory: encodedProject[_keepHistoryKey] as bool,
-      groups: RatingHistorySettings.groupsForSettings(
-        combineOpenPCC: combineOpenPCC,
-        limLoCo: limLoCoMode,
-        combineLocap: combineLocap,
-      ),
-      // groups: [RaterGroup.combined],
+      groups: groups,
       memberNumberWhitelist: ((encodedProject[_whitelistKey] ?? []) as List<dynamic>).map((item) => item as String).toList(),
       shooterAliases: ((encodedProject[_aliasesKey] ?? defaultShooterAliases) as Map<String, dynamic>).map<String, String>((k, v) =>
         MapEntry(k, v as String)
@@ -290,9 +298,6 @@ class RatingProject {
     Map<String, dynamic> map = {};
     map[_nameKey] = name;
     map[_checkDataEntryKey] = settings.checkDataEntryErrors;
-    map[_combineLocapKey] = settings.groups.contains(RaterGroup.locap);
-    map[_combineOpenPCCKey] = settings.groups.contains(RaterGroup.openPcc);
-    map[_limitedLoCoCombineModeKey] = LimLoCoCombination.fromGroups(settings.groups).name;
     map[_keepHistoryKey] = settings.preserveHistory;
     map[_urlsKey] = matchUrls;
     map[_whitelistKey] = settings.memberNumberWhitelist;
@@ -304,6 +309,7 @@ class RatingProject {
     map[_recognizedDivisionsKey] = <String, dynamic>{}..addEntries(settings.recognizedDivisions.entries.map((e) =>
         MapEntry(e.key, e.value.map((e) => e.name).toList())
     ));
+    map[_groupsKey] = settings.groups.map((e) => e.name).toList();
 
     /// Alg-specific settings
     settings.algorithm.encodeToJson(map);

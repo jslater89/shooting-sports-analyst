@@ -28,6 +28,7 @@ import 'package:uspsa_result_viewer/ui/rater/select_project_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/shooter_aliases_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/loading_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/match_cache_chooser_dialog.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/rater_groups_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/match_cache_loading_indicator.dart';
 
 class ConfigureRatingsPage extends StatefulWidget {
@@ -56,9 +57,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
 
   bool _keepHistory = false;
-  bool _combineLocap = true;
-  bool _combineOpenPCC = false;
-  LimLoCoCombination _limLoCoMode = LimLoCoCombination.none;
+  
+  List<RaterGroup> _groups = [];
   bool _checkDataEntryErrors = true;
 
   ScrollController _settingsScroll = ScrollController();
@@ -201,9 +201,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       matchUrls = []..addAll(project.matchUrls);
       _keepHistory = project.settings.preserveHistory;
       _checkDataEntryErrors = project.settings.checkDataEntryErrors;
-      _combineLocap = project.settings.groups.contains(RaterGroup.locap);
-      _limLoCoMode = LimLoCoCombination.fromGroups(project.settings.groups);
-      _combineOpenPCC = project.settings.groups.contains(RaterGroup.openPcc);
+      _groups = []..addAll(project.settings.groups);
       _shooterAliases = project.settings.shooterAliases;
       _memNumMappings = project.settings.userMemberNumberMappings;
       _memNumMappingBlacklist = project.settings.memberNumberMappingBlacklist;
@@ -286,17 +284,11 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     }
     // var ratingSystem = OpenskillRater(byStage: _byStage);
 
-    var groups = RatingHistorySettings.groupsForSettings(
-      combineLocap: _combineLocap,
-      limLoCo: _limLoCoMode,
-      combineOpenPCC: _combineOpenPCC,
-    );
-
     return RatingHistorySettings(
       algorithm: _ratingSystem,
       checkDataEntryErrors: _checkDataEntryErrors,
       transientDataEntryErrorSkip: false,
-      groups: groups,
+      groups: _groups,
       preserveHistory: _keepHistory,
       memberNumberWhitelist: _memNumWhitelist,
       userMemberNumberMappings: _memNumMappings,
@@ -346,7 +338,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                   }
 
                   var project = await _saveProject(RatingProjectManager.autosaveName);
-                  // project?.settings.groups = [RaterGroup.combined];
 
                   if(project != null) {
                     widget.onSettingsReady(project);
@@ -403,20 +394,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 }
                               }
                             ),
-                            CheckboxListTile(
-                                title: Tooltip(
-                                  child: Text("Combine Open/PCC?"),
-                                  message: "Combine ratings for Open and PCC if checked.",
-                                ),
-                                value: _combineOpenPCC,
-                                onChanged: (value) {
-                                  if(value != null) {
-                                    setState(() {
-                                      _combineOpenPCC = value;
-                                    });
-                                  }
-                                }
-                            ),
                             Row(
                               mainAxisSize: MainAxisSize.max,
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -424,44 +401,28 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 Padding(
                                   padding: const EdgeInsets.only(left: 16),
                                   child: Tooltip(
-                                    child: Text("Combine Limited/LO/CO?", style: Theme.of(context).textTheme.subtitle1!),
-                                    message: "How to combine ratings for Limited, Limited Optics, and Carry Optics.",
+                                    child: Text("Rater groups to use", style: Theme.of(context).textTheme.subtitle1!),
+                                    message: "What divisions/groups to rate. Currently:\n${_groups.map((g) => g.uiLabel).join("\n")}",
                                   ),
                                 ),
                                 Padding(
-                                  padding: const EdgeInsets.only(right: 20),
-                                  child: DropdownButton<LimLoCoCombination>(
-                                    value: _limLoCoMode,
-                                    onChanged: (v) {
-                                      setState(() {
-                                        if(v != null) {
-                                          _limLoCoMode = v;
-                                        }
+                                  padding: const EdgeInsets.only(right: 12.0),
+                                  child: IconButton(
+                                    icon: Icon(Icons.edit),
+                                    onPressed: () async {
+                                      var groups = await showDialog(context: context, builder: (context) {
+                                        return RaterGroupsDialog(groups: _groups);
                                       });
+
+                                      if(groups != null) {
+                                        setState(() {
+                                          _groups = groups;
+                                        });
+                                      }
                                     },
-                                    items: LimLoCoCombination.values.map((r) =>
-                                        DropdownMenuItem<LimLoCoCombination>(
-                                          child: Text(r.uiLabel),
-                                          value: r,
-                                        )
-                                    ).toList(),
                                   ),
-                                ),
+                                )
                               ],
-                            ),
-                            CheckboxListTile(
-                              title: Tooltip(
-                                child: Text("Combine locap?"),
-                                message: "Combine ratings for Single Stack, Revolver, Production, and Limited 10 if checked.",
-                              ),
-                              value: _combineLocap,
-                              onChanged: (value) {
-                                if(value != null) {
-                                  setState(() {
-                                    _combineLocap = value;
-                                  });
-                                }
-                              }
                             ),
                             CheckboxListTile(
                               title: Tooltip(
@@ -917,9 +878,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     _settingsController.restoreDefaults();
     setState(() {
       _keepHistory = false;
-      _combineLocap = true;
-      _combineOpenPCC = false;
-      _limLoCoMode = LimLoCoCombination.none;
+      _groups = RaterGroup.defaultGroups;
       _validationError = "";
       _shooterAliases = defaultShooterAliases;
       _memNumWhitelist = [];
