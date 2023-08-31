@@ -100,11 +100,19 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
   var _loadingScrollController = ScrollController();
 
+  Duration durationSinceLastYear() {
+    var now = DateTime.now();
+    var lastYear = DateTime(now.year - 1, 1, 1);
+    return now.difference(lastYear);
+  }
+
   @override
   void initState() {
     super.initState();
 
     activeTabs = widget.settings.groups;
+
+    _maxDays = durationSinceLastYear().inDays;
 
     _searchController = TextEditingController();
     _searchController.addListener(() {
@@ -151,7 +159,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       }
       else {
         setState(() {
-          _maxDays = 365;
+          _maxDays = durationSinceLastYear().inDays;
         });
       }
     });
@@ -499,14 +507,15 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                     ),
                   ),
                   Tooltip(
-                    message: "Filter shooters last seen more than this many days ago.",
+                    message: "Filter shooters last seen more than this many days ago. The default is\n"
+                        "days since January 1 of the previous year.",
                     child: SizedBox(
                       width: 80,
                       child: TextField(
                         controller: _maxDaysController,
                         autofocus: false,
                         decoration: InputDecoration(
-                          hintText: "365",
+                          hintText: "${durationSinceLastYear().inDays}",
                           helperText: "Max. Age",
                         ),
                         keyboardType: TextInputType.number,
