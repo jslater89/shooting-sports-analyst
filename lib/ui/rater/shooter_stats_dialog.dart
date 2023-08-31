@@ -181,7 +181,17 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   late NumberFormat _separatedNumberFormat = NumberFormat("#,###");
   late NumberFormat _separatedDecimalFormat = NumberFormat("#,###.00");
   late List<_AccumulatedRatingEvent> _ratings;
-  Map<Division, charts.Color> _divisionColors = {};
+  Map<Division, charts.Color> _divisionColors = {
+    Division.open: charts.MaterialPalette.red.shadeDefault,
+    Division.pcc: charts.MaterialPalette.deepOrange.shadeDefault,
+    Division.limited: charts.MaterialPalette.gray.shadeDefault,
+    Division.carryOptics: charts.MaterialPalette.green.shadeDefault,
+    Division.limitedOptics: charts.MaterialPalette.teal.shadeDefault,
+    Division.production: charts.MaterialPalette.cyan.shadeDefault,
+    Division.singleStack: charts.MaterialPalette.blue.shadeDefault,
+    Division.revolver: charts.MaterialPalette.indigo.shadeDefault,
+    Division.limited10: charts.MaterialPalette.purple.shadeDefault,
+  };
   int _colorIndex = 0;
   List<charts.Color> _colorOptions = [
     charts.MaterialPalette.blue.shadeDefault,
@@ -236,6 +246,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
           else {
             var color = _colorOptions[_colorIndex];
             _colorIndex += 1;
+            _colorIndex %= _colorOptions.length;
             _divisionColors[division] = color;
             return color;
           }
