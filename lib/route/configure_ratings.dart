@@ -57,7 +57,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
 
   bool _keepHistory = false;
-  
+
   List<RaterGroup> _groups = [];
   bool _checkDataEntryErrors = true;
 

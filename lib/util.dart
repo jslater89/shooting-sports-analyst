@@ -43,3 +43,11 @@ List<int> mode(List<int> data) {
 
   return freq.entries.where((e) => e.value == maxFreq).map((e) => e.key).toList();
 }
+
+extension IncrementHistogram<T> on Map<T, int> {
+  void increment(T key) {
+    var value = this[key] ?? 0;
+    value += 1;
+    this[key] = value;
+  }
+}

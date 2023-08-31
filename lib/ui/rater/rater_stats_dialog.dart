@@ -24,6 +24,23 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
   bool histogram = true;
 
   @override
+  void initState() {
+    super.initState();
+
+    var sortedYears = widget.statistics.yearOfEntryHistogram.keys.sorted((a, b) => a.compareTo(b));
+    print("For rater group ${widget.group.uiLabel}:");
+    int first = sortedYears.first;
+    for(var y in sortedYears) {
+      if(y == first) {
+        print("\t$y or before:\t${widget.statistics.yearOfEntryHistogram[y]!} shooters");
+      }
+      else {
+        print("\t$y:\t\t\t${widget.statistics.yearOfEntryHistogram[y]!} shooters");
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text("${widget.group.uiLabel} Statistics"),

@@ -1411,13 +1411,22 @@ class Rater {
     var allHistoryLengths = ratings.map((r) => r.ratingEvents.length);
 
     var histogram = <int, int>{};
-    for(var rating in allRatings) {
-      // Buckets 100 wide
-      var bucket = (0 + (rating / bucketSize).floor());
+    var yearOfEntryHistogram = <int, int>{};
 
-      var value = histogram[bucket] ?? 0;
-      value += 1;
-      histogram[bucket] = value;
+    for(var rating in ratings) {
+      // Buckets 100 wide
+      var bucket = (0 + (rating.rating / bucketSize).floor());
+
+      var value = histogram.increment(bucket);
+
+      var events = <RatingEvent>[];
+      if(rating.emptyRatingEvents.isNotEmpty) events.add(rating.emptyRatingEvents.first);
+      if(rating.ratingEvents.isNotEmpty) events.add(rating.ratingEvents.first);
+
+      if(events.isEmpty) continue;
+
+      var firstEvent = events.sorted((a, b) => a.match.date!.compareTo(b.match.date!)).first;
+      yearOfEntryHistogram.increment(firstEvent.match.date!.year);
     }
 
     var averagesByClass = <Classification, double>{};
@@ -1444,9 +1453,7 @@ class Rater {
         // Buckets 100 wide
         var bucket = (0 + (rating / bucketSize).floor());
 
-        var value = histogramsByClass[classification]![bucket] ?? 0;
-        value += 1;
-        histogramsByClass[classification]![bucket] = value;
+        histogramsByClass[classification]!.increment(bucket);
       }
     }
 
@@ -1464,6 +1471,7 @@ class Rater {
       histogramsByClass: histogramsByClass,
       histogramBucketSize: bucketSize,
       ratingsByClass: ratingsByClass,
+      yearOfEntryHistogram: yearOfEntryHistogram,
     );
   }
 
@@ -1521,6 +1529,8 @@ class RaterStatistics {
   Map<Classification, Map<int, int>> histogramsByClass;
   Map<Classification, List<double>> ratingsByClass;
 
+  Map<int, int> yearOfEntryHistogram;
+
   RaterStatistics({
     required this.shooters,
     required this.averageRating,
@@ -1535,6 +1545,7 @@ class RaterStatistics {
     required this.histogram,
     required this.histogramsByClass,
     required this.ratingsByClass,
+    required this.yearOfEntryHistogram,
   });
 }
 
