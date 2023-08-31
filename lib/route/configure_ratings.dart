@@ -198,6 +198,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   void _loadProject(RatingProject project) {
     knownMatches = {};
     setState(() {
+      filteredMatchUrls = null;
+      filters = null;
       matchUrls = []..addAll(project.matchUrls);
       _keepHistory = project.settings.preserveHistory;
       _checkDataEntryErrors = project.settings.checkDataEntryErrors;
@@ -544,6 +546,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                     }
 
                                     setState(() {
+                                      filteredMatchUrls = null;
+                                      filters = null;
                                       // matchUrls
                                     });
 
