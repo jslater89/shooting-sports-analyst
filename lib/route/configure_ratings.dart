@@ -398,28 +398,31 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                               mainAxisSize: MainAxisSize.max,
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 16),
-                                  child: Tooltip(
-                                    child: Text("Rater groups to use", style: Theme.of(context).textTheme.subtitle1!),
-                                    message: "What divisions/groups to rate. Currently:\n${_groups.map((g) => g.uiLabel).join("\n")}",
+                                Tooltip(
+                                  message: "What divisions/groups to rate. Currently:\n${_groups.map((g) => g.uiLabel).join("\n")}",
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(left: 16),
+                                    child: Text("Active rater groups", style: Theme.of(context).textTheme.subtitle1!),
                                   ),
                                 ),
                                 Padding(
                                   padding: const EdgeInsets.only(right: 12.0),
-                                  child: IconButton(
-                                    icon: Icon(Icons.edit),
-                                    onPressed: () async {
-                                      var groups = await showDialog(context: context, builder: (context) {
-                                        return RaterGroupsDialog(groups: _groups);
-                                      });
-
-                                      if(groups != null) {
-                                        setState(() {
-                                          _groups = groups;
+                                  child: Tooltip(
+                                    message: "What divisions/groups to rate. Currently:\n${_groups.map((g) => g.uiLabel).join("\n")}",
+                                    child: IconButton(
+                                      icon: Icon(Icons.edit),
+                                      onPressed: () async {
+                                        var groups = await showDialog(context: context, builder: (context) {
+                                          return RaterGroupsDialog(groups: _groups);
                                         });
-                                      }
-                                    },
+
+                                        if(groups != null) {
+                                          setState(() {
+                                            _groups = groups;
+                                          });
+                                        }
+                                      },
+                                    ),
                                   ),
                                 )
                               ],

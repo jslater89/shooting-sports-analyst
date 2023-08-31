@@ -254,14 +254,14 @@ class RatingHistory {
 
 enum RaterGroup {
   open,
-  limited,
   pcc,
+  limited,
   carryOptics,
   limitedOptics,
   singleStack,
   production,
-  limited10,
   revolver,
+  limited10,
   locap,
   openPcc,
   limitedCO,
