@@ -21,13 +21,19 @@ class RaterStatsDialog extends StatefulWidget {
 }
 
 class _RaterStatsDialogState extends State<RaterStatsDialog> {
+  /// Show histogram or quartiles.
   bool histogram = true;
+
+  /// Show class statistics or date of entry.
+  bool classStats = true;
+
+  List<int> sortedYears = [];
 
   @override
   void initState() {
     super.initState();
 
-    var sortedYears = widget.statistics.yearOfEntryHistogram.keys.sorted((a, b) => a.compareTo(b));
+    sortedYears = widget.statistics.yearOfEntryHistogram.keys.sorted((a, b) => a.compareTo(b));
     print("For rater group ${widget.group.uiLabel}:");
     int first = sortedYears.first;
     for(var y in sortedYears) {
@@ -60,52 +66,67 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
     return [
       Row(
         children: [
-          Expanded(flex: 4, child: Text("Total shooters", style: Theme.of(context).textTheme.bodyText2)),
-          Expanded(flex: 2, child: Text("${widget.statistics.shooters}", style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)),
+          Expanded(flex: 4, child: Text("Total shooters", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(flex: 2, child: Text("${widget.statistics.shooters}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       Divider(height: 2, thickness: 1),
       Row(
         children: [
-          Expanded(flex: 4, child: Text("Average rating", style: Theme.of(context).textTheme.bodyText2)),
-          Expanded(flex: 2, child: Text("${widget.statistics.averageRating.round()}", style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)),
+          Expanded(flex: 4, child: Text("Average rating", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(flex: 2, child: Text("${widget.statistics.averageRating.round()}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       Divider(height: 2, thickness: 1),
       Row(
         children: [
-          Expanded(flex: 4, child: Text("Min-max ratings", style: Theme.of(context).textTheme.bodyText2)),
-          Expanded(flex: 2, child: Text("${widget.statistics.minRating.round()}-${widget.statistics.maxRating.round()}", style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)),
+          Expanded(flex: 4, child: Text("Min-max ratings", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(flex: 2, child: Text("${widget.statistics.minRating.round()}-${widget.statistics.maxRating.round()}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       Divider(height: 2, thickness: 1),
       Row(
         children: [
-          Expanded(flex: 4, child: Text("Average history length", style: Theme.of(context).textTheme.bodyText2)),
-          Expanded(flex: 2, child: Text("${widget.statistics.averageHistory.toStringAsFixed(1)}", style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)),
+          Expanded(flex: 4, child: Text("Average history length", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(flex: 2, child: Text("${widget.statistics.averageHistory.toStringAsFixed(1)}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       Divider(height: 2, thickness: 1),
       Padding(
         padding: const EdgeInsets.only(top: 16.0, bottom: 8),
-        child: Text("Class statistics", style: Theme.of(context).textTheme.bodyText1),
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            onTap: () => setState(() {
+              classStats = !classStats;
+            }),
+            child: Text(classStats ? "Class statistics" : "Date of first match", style: Theme.of(context).textTheme.bodyLarge!.copyWith(color: Theme.of(context).colorScheme.tertiary)),
+          )
+        ),
       ),
-      classKeyRow(context),
-      Divider(height: 2, thickness: 1.5),
-      rowForClass(context, Classification.GM),
-      Divider(height: 2, thickness: 1),
-      rowForClass(context, Classification.M),
-      Divider(height: 2, thickness: 1),
-      rowForClass(context, Classification.A),
-      Divider(height: 2, thickness: 1),
-      rowForClass(context, Classification.B),
-      Divider(height: 2, thickness: 1),
-      rowForClass(context, Classification.C),
-      Divider(height: 2, thickness: 1),
-      rowForClass(context, Classification.D),
-      Divider(height: 2, thickness: 1),
-      rowForClass(context, Classification.U),
-      Divider(height: 2, thickness: 1),
+      if(classStats) ...[
+        classKeyRow(context),
+        Divider(height: 2, thickness: 1.5),
+        rowForClass(context, Classification.GM),
+        Divider(height: 2, thickness: 1),
+        rowForClass(context, Classification.M),
+        Divider(height: 2, thickness: 1),
+        rowForClass(context, Classification.A),
+        Divider(height: 2, thickness: 1),
+        rowForClass(context, Classification.B),
+        Divider(height: 2, thickness: 1),
+        rowForClass(context, Classification.C),
+        Divider(height: 2, thickness: 1),
+        rowForClass(context, Classification.D),
+        Divider(height: 2, thickness: 1),
+        rowForClass(context, Classification.U),
+        Divider(height: 2, thickness: 1),
+      ],
+      if(!classStats) ...[
+        entryDateKeyRow(context),
+        Divider(height: 2, thickness: 1.5),
+        ...entryDateRows(context),
+      ],
       Padding(
         padding: const EdgeInsets.only(top: 16.0, bottom: 8),
         child: MouseRegion(
@@ -126,12 +147,48 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
     ];
   }
 
+  Widget entryDateKeyRow(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(flex: 1, child: Container()),
+        Expanded(flex: 2, child: Text("Year", style: Theme.of(context).textTheme.bodyLarge)),
+        Expanded(flex: 2, child: Text("Shooters", style: Theme.of(context).textTheme.bodyLarge, textAlign: TextAlign.right)),
+        Expanded(flex: 1, child: Container()),
+      ],
+    );
+  }
+
+  List<Widget> entryDateRows(BuildContext context) {
+    List<Widget> rows = [];
+    for(var y in sortedYears) {
+      String year = "$y";
+      if(y == sortedYears.first) {
+        year += " or before";
+      }
+
+      String shooterCount = "${widget.statistics.yearOfEntryHistogram[y]!}";
+
+      rows.add(Row(
+        children: [
+          Expanded(flex: 1, child: Container()),
+          Expanded(flex: 2, child: Text(year, style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(flex: 2, child: Text(shooterCount, style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
+          Expanded(flex: 1, child: Container()),
+        ],
+      ));
+
+      rows.add(Divider(height: 2, thickness: 1));
+    }
+
+    return rows;
+  }
+
   Widget classKeyRow(BuildContext context) {
     return Row(
       children: [
-        Expanded(flex: 2, child: Text("Class", style: Theme.of(context).textTheme.bodyText1)),
-        Expanded(flex: 2, child: Text("Shooters", style: Theme.of(context).textTheme.bodyText1, textAlign: TextAlign.right)),
-        Expanded(flex: 2, child: Text("Min-Max (Avg)", style: Theme.of(context).textTheme.bodyText1, textAlign: TextAlign.right)),
+        Expanded(flex: 2, child: Text("Class", style: Theme.of(context).textTheme.bodyLarge)),
+        Expanded(flex: 2, child: Text("Shooters", style: Theme.of(context).textTheme.bodyLarge, textAlign: TextAlign.right)),
+        Expanded(flex: 2, child: Text("Min-Max (Avg)", style: Theme.of(context).textTheme.bodyLarge, textAlign: TextAlign.right)),
       ],
     );
   }
@@ -139,17 +196,17 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
   Widget rowForClass(BuildContext context, Classification clas) {
     return Row(
       children: [
-        Expanded(flex: 2, child: Text(clas.name, style: Theme.of(context).textTheme.bodyText2)),
+        Expanded(flex: 2, child: Text(clas.name, style: Theme.of(context).textTheme.bodyMedium)),
         Expanded(
           flex: 2,
           child: Text("${widget.statistics.countByClass[clas]}",
-              style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)
+              style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)
         ),
         Expanded(
             flex: 2,
             child: Text("${widget.statistics.minByClass[clas]!.round()}-${widget.statistics.maxByClass[clas]!.round()} "
                 "(${widget.statistics.averageByClass[clas]!.round()})",
-                style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)
+                style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)
         ),
       ],
     );
