@@ -25,7 +25,9 @@ class ShooterComparisonCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.max,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(shooter.getName(suffixes: false), style: Theme.of(context).textTheme.headlineSmall, overflow: TextOverflow.ellipsis),
+                Text(shooter.getName(suffixes: false),
+                    style: Theme.of(context).textTheme.headlineSmall,
+                    overflow: TextOverflow.ellipsis),
                 IconButton(
                   icon: Icon(Icons.remove),
                   onPressed: () {
@@ -46,11 +48,21 @@ class ShooterComparisonCard extends StatelessWidget {
   List<Widget> stageInfo(BuildContext context, RelativeScore stageScore) {
     var stage = stageScore.stage!;
     if(stage.type == Scoring.chrono) return [];
+
+    var color = stageScore.score.isDnf ? Colors.grey : Colors.black;
+    var headlineTheme = Theme.of(context).textTheme.titleMedium?.copyWith(color: color);
+    var textTheme = Theme.of(context).textTheme.bodyMedium?.copyWith(color: color);
+
     return [
       Divider(),
-      Text("Stage ${stage.internalId} - ${stage.name}", style: Theme.of(context).textTheme.titleMedium, overflow: TextOverflow.ellipsis),
-      Text("${stageScore.place} - ${stageScore.percent.asPercentage()}% - ${stageScore.score.getHitFactor().toStringAsFixed(4)}HF"),
-      Text("${stageScore.score.a}A ${stageScore.score.c}C ${stageScore.score.d}D ${stageScore.score.m}M ${stageScore.score.ns}NS ${stageScore.score.penaltyCount}P"),
+      Text("Stage ${stage.internalId} - ${stage.name}",
+        style: headlineTheme, overflow: TextOverflow.ellipsis),
+      Text("${stageScore.place} - ${stageScore.percent.asPercentage()}% - ${stageScore.score.getHitFactor().toStringAsFixed(4)}HF",
+        style: textTheme,
+      ),
+      Text("${stageScore.score.a}A ${stageScore.score.c}C ${stageScore.score.d}D ${stageScore.score.m}M ${stageScore.score.ns}NS ${stageScore.score.penaltyCount}P",
+        style: textTheme,
+      ),
     ];
   }
 }

@@ -25,7 +25,7 @@ class _ScoreListSettingsDialogState extends State<ScoreListSettingsDialog> {
     return AlertDialog(
       title: Text("Display Settings"),
       content: SizedBox(
-        width: 400,
+        width: 500,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -68,7 +68,24 @@ class _ScoreListSettingsDialogState extends State<ScoreListSettingsDialog> {
                   }
                 },
               ),
-            )
+            ),
+            ListTile(
+              title: Text("Match prediction mode"),
+              trailing: DropdownButton<MatchPredictionMode>(
+                value: settings.predictionMode,
+                items: MatchPredictionMode.dropdownValues(widget.showRatingsSettings).map((v) => DropdownMenuItem<MatchPredictionMode>(
+                  child: Text(v.uiLabel),
+                  value: v,
+                )).toList(),
+                onChanged: (v) {
+                  if(v != null) {
+                    setState(() {
+                      settings.predictionMode = v;
+                    });
+                  }
+                },
+              ),
+            ),
           ],
         ),
       ),

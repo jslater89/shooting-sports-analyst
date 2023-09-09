@@ -144,6 +144,29 @@ abstract class ShooterRating extends Shooter {
     return AverageRating(firstRating: runningRating, minRating: lowestPoint, maxRating: highestPoint, averageOfIntermediates: intermediateRatings.sum / intermediateRatings.length, window: window);
   }
 
+  List<RatingEvent> eventsWithWindow({int window = baseTrendWindow, int offset = 0}) {
+    if((window + offset) >= ratingEvents.length) {
+      if(offset < (ratingEvents.length)) return ratingEvents.sublist(0, ratingEvents.length - offset);
+      else return ratingEvents;
+    }
+    else {
+      return ratingEvents.sublist(ratingEvents.length - (window + offset), ratingEvents.length - offset);
+    }
+  }
+
+  double averagePercentFinishes({int window = baseTrendWindow, int offset = 0}) {
+    double percentFinishes = 0.0;
+
+    var events = eventsWithWindow(window: window, offset: offset);
+    if(events.isEmpty) return 0;
+
+    for(var e in events) {
+      percentFinishes += e.score.percent;
+    }
+
+    return percentFinishes / events.length;
+  }
+
   /// The shooters off of whom this shooter's connectedness is based.
   SortedList<ConnectedShooter> connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure);
   double _connectedness = ShooterRating.baseConnectedness;

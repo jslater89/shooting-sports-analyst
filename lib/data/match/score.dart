@@ -92,6 +92,14 @@ class Score {
     return total;
   }
 
+  bool get isDnf {
+    if(stage?.type == Scoring.chrono) return true;
+    if(stage?.type == Scoring.fixedTime && rawPoints == 0) return true;
+    if((stage?.type == Scoring.virginia || stage?.type == Scoring.comstock) && rawPoints == 0 && time == 0) return true;
+
+    return false;
+  }
+
   int get rawPoints {
     if(stage?.type == Scoring.chrono) return 0;
 

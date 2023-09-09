@@ -1,4 +1,15 @@
+import 'dart:math';
+
+import 'package:flutter/foundation.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/ranking/model/rating_system.dart';
+import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
+import 'package:uspsa_result_viewer/data/ranking/prediction/match_prediction.dart';
+import 'package:uspsa_result_viewer/data/ranking/rater.dart';
+import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
+import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
+import 'package:uspsa_result_viewer/ui/result_page.dart';
+import 'package:uspsa_result_viewer/ui/widget/score_list.dart';
 
 enum MatchLevel {
   I,
@@ -23,7 +34,7 @@ class PracticalMatch {
   int? maxPoints;
   int stageScoreCount = 0;
 
-  bool get inProgress => false; //name?.toLowerCase().contains("2023 sig sauer carry optics nationals") ?? false;
+  bool get inProgress => /*false;*/ name?.toLowerCase().contains("2023 Vortex Optics Open & PCC Nationals Presented by Federal".toLowerCase()) ?? false;
 
   PracticalMatch copy() {
     var newMatch = PracticalMatch()
@@ -86,7 +97,17 @@ class PracticalMatch {
 
   /// Returns one relative score for each shooter provided, representing performance
   /// in a hypothetical match made up of the given shooters and stages.
-  List<RelativeMatchScore> getScores({List<Shooter>? shooters, List<Stage>? stages, bool scoreDQ = true}) {
+  List<RelativeMatchScore> getScores({
+    List<Shooter>? shooters,
+    List<Stage>? stages,
+    bool scoreDQ = true,
+    MatchPredictionMode predictionMode = MatchPredictionMode.none,
+    Map<RaterGroup, Rater>? ratings,
+  }) {
+    if(ratings == null && !MatchPredictionMode.dropdownValues(false).contains(predictionMode)) {
+      throw ArgumentError("must provide ratings when asking for a ratings-aware prediction mode");
+    }
+
     List<Shooter> innerShooters = shooters != null ? shooters : this.shooters;
     List<Stage> innerStages = stages != null ? stages : this.stages;
 
@@ -134,6 +155,7 @@ class PracticalMatch {
       //print("${shooter.firstName} ${shooter.lastName} shot ${totalScores[shooter].percentTotalPoints} total points");
     }
 
+
     // First, for each stage, sort by HF. Then, calculate stage percentages.
     for(Stage stage in innerStages) {
       // Sort high to low
@@ -174,6 +196,99 @@ class PracticalMatch {
           ..percent = percent
           ..relativePoints = relativePoints
           ..place = place++;
+      }
+    }
+
+    if(predictionMode != MatchPredictionMode.none) {
+      var locatedRatings = <ShooterRating>[];
+      Map<ShooterRating, ShooterPrediction> predictions = {};
+      ShooterPrediction? highPrediction;
+      if(predictionMode.eloAware) {
+        RatingSystem? r = null;
+        for(var shooter in innerShooters) {
+          var rating = ratings!.lookup(shooter);
+          if(r == null) {
+            r = ratings.lookupRater(shooter)?.ratingSystem;
+            if(r == null) {
+              break;
+            }
+          }
+          if(rating != null) {
+            locatedRatings.add(rating);
+          }
+        }
+
+        if(r != null && r.supportsPrediction) {
+          var preds = r.predict(locatedRatings);
+          preds.sort((a, b) => b.mean.compareTo(a.mean));
+          highPrediction = preds.first;
+          for(var pred in preds) {
+            predictions[pred.shooter] = pred;
+          }
+        }
+      }
+
+      for(var shooter in innerShooters) {
+        // Do match predictions for shooters who have completed at least one stage.
+        if(matchScores[shooter]!.total.score.rawPoints != 0 || predictionMode == MatchPredictionMode.eloAwareFull) {
+          double averageStagePercentage = 0.0;
+          int stagesCompleted = 0;
+
+          if(predictionMode == MatchPredictionMode.averageStageFinish
+              || predictionMode == MatchPredictionMode.averageHistoricalFinish
+              || predictionMode.eloAware
+          ) {
+            for(Stage stage in innerStages) {
+              if(stage.type == Scoring.chrono) continue;
+
+              var stageScore = shooter.stageScores[stage];
+              if(stageScore != null && !stageScore.isDnf) {
+                averageStagePercentage += matchScores[shooter]!.stageScores[stage]!.percent;
+                stagesCompleted += 1;
+              }
+            }
+            if(stagesCompleted > 0) {
+              averageStagePercentage = averageStagePercentage / stagesCompleted;
+            }
+          }
+
+          if(stagesCompleted >= innerStages.length) continue;
+
+          for (Stage stage in innerStages) {
+            if(stage.type == Scoring.chrono) continue;
+
+            if (shooter.stageScores[stage] == null || shooter.stageScores[stage]!.isDnf) {
+              if (predictionMode == MatchPredictionMode.highAvailable) {
+                matchScores[shooter]!.total.relativePoints += stage.maxPoints;
+              }
+              else if (predictionMode == MatchPredictionMode.averageStageFinish) {
+                matchScores[shooter]!.total.relativePoints += stage.maxPoints * averageStagePercentage;
+              }
+              else if (predictionMode == MatchPredictionMode.averageHistoricalFinish) {
+                var rating = ratings!.lookup(shooter);
+                if(rating != null) {
+                  matchScores[shooter]!.total.relativePoints += stage.maxPoints * rating.averagePercentFinishes(offset: stagesCompleted);
+                }
+                else {
+                  // Use average stage percentage if we don't have a match history for this shooter
+                  matchScores[shooter]!.total.relativePoints += stage.maxPoints * averageStagePercentage;
+                }
+              }
+              else if (predictionMode.eloAware) {
+                var rating = ratings!.lookup(shooter);
+                var prediction = predictions[rating];
+                if(prediction != null && highPrediction != null) {
+                  var percent = 0.3 + ((prediction.mean + prediction.shift / 2) / (highPrediction.halfHighPrediction + highPrediction.shift / 2) * 0.7);
+                  matchScores[shooter]!.total.relativePoints += stage.maxPoints * percent;
+                }
+                else {
+                  // Use average stage percentage
+                  matchScores[shooter]!.total.relativePoints += stage.maxPoints * averageStagePercentage;
+                }
+              }
+            }
+          }
+        }
       }
     }
 

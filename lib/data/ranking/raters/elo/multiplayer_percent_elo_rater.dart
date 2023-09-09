@@ -203,7 +203,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     var expectedPercent = params.expectedScore * params.totalPercent * 100.0;
     var bombProtectionMultiplier = 1.0;
 
-    if(bombProtection && !match.inProgress) {
+    if(bombProtection) {
       var baseChange = (actualScore.score - params.expectedScore) * K * (params.usedScores - 1);
       var lowerLimit = -K * settings.bombProtectionLowerThreshold;
       var upperLimit = -K * settings.bombProtectionUpperThreshold;

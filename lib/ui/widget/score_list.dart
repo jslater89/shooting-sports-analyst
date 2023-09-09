@@ -145,10 +145,12 @@ class ScoreList extends StatelessWidget {
                     }
                 ),
                 Expanded(flex: 1, child: Text("Class")),
-                Expanded(flex: 3, child: Text("Division")),
+                Expanded(flex: 2, child: Text("Division")),
                 Expanded(flex: 1, child: Text("PF")),
                 Expanded(flex: 2, child: Text("Match %")),
                 Expanded(flex: 2, child: Text("Match Pts.")),
+                if(match?.inProgress ?? false) Expanded(flex: 1, child: Text("Through", textAlign: TextAlign.end)),
+                if(match?.inProgress ?? false) SizedBox(width: 15),
                 Expanded(flex: 2, child: Text("Time")),
                 Expanded(flex: 3, child: Tooltip(
                     message: "The number of points out of the maximum possible for this stage.",
@@ -164,6 +166,11 @@ class ScoreList extends StatelessWidget {
 
   Widget _buildMatchScoreRow({required BuildContext context, required int index}) {
     var score = filteredScores[index];
+    var stagesComplete = 0;
+    if(match?.inProgress ?? false) {
+      stagesComplete = score.stageScores.values.where((element) => !element.score.isDnf).length;
+    }
+
     return GestureDetector(
       onTap: () async {
         if(whatIfMode) {
@@ -232,10 +239,12 @@ class ScoreList extends StatelessWidget {
                 }
               ),
               Expanded(flex: 1, child: Text(score.shooter.classification.displayString())),
-              Expanded(flex: 3, child: Text(score.shooter.division?.displayString() ?? "NO DIVISION")),
+              Expanded(flex: 2, child: Text(score.shooter.division?.displayString() ?? "NO DIVISION")),
               Expanded(flex: 1, child: Text(score.shooter.powerFactor.shortString())),
               Expanded(flex: 2, child: Text("${score.total.percent.asPercentage()}%")),
               Expanded(flex: 2, child: Text(score.total.relativePoints.toStringAsFixed(2))),
+              if(match?.inProgress ?? false) Expanded(flex: 1, child: Text("$stagesComplete", textAlign: TextAlign.end)),
+              if(match?.inProgress ?? false) SizedBox(width: 15),
               Expanded(flex: 2, child: Text(score.total.score.time.toStringAsFixed(2))),
               Consumer<ScoreDisplaySettingsModel>(
                 builder: (context, model, _) {
@@ -471,6 +480,16 @@ extension LookupShooterRating on Map<RaterGroup, Rater> {
         var rating = this.lookup(shooter)?.changeForEvent(match, null);
         return rating;
     }
+  }
+
+  Rater? lookupRater(Shooter shooter) {
+    for(var group in this.keys) {
+      if(group.divisions.contains(shooter.division)) {
+        return this[group]!;
+      }
+    }
+
+    return null;
   }
 }
 

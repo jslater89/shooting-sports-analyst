@@ -74,6 +74,7 @@ class _ResultPageState extends State<ResultPage> {
     ratingMode: RatingDisplayMode.preMatch,
     availablePointsCountPenalties: true,
     fixedTimeAvailablePointsFromDivisionMax: true,
+    predictionMode: MatchPredictionMode.none,
   ));
 
   int get _matchMaxPoints => _filteredStages.map((stage) => stage.maxPoints).sum;
@@ -166,7 +167,13 @@ class _ResultPageState extends State<ResultPage> {
     }
 
     setState(() {
-      _baseScores = _currentMatch!.getScores(shooters: filteredShooters, scoreDQ: _filters.scoreDQs, stages: _filteredStages);
+      _baseScores = _currentMatch!.getScores(
+        shooters: filteredShooters,
+        scoreDQ: _filters.scoreDQs,
+        stages: _filteredStages,
+        predictionMode: _settings.value.predictionMode,
+        ratings: widget.ratings,
+      );
       _searchedScores = []..addAll(_baseScores);
     });
 
@@ -275,6 +282,24 @@ class _ResultPageState extends State<ResultPage> {
     if(element.shooter.getName().toLowerCase().startsWith(_searchTerm.toLowerCase())) return true;
     if(element.shooter.lastName.toLowerCase().startsWith(_searchTerm.toLowerCase())) return true;
     return false;
+  }
+
+  void _updateHypotheticalScores() {
+    var scores = _currentMatch!.getScores(
+      shooters: _filteredShooters,
+      scoreDQ: _filters.scoreDQs,
+      stages: _filteredStages,
+      predictionMode: _settings.value.predictionMode,
+      ratings: widget.ratings,
+    );
+
+    setState(() {
+      _whatIfMode = true;
+      _baseScores = scores;
+      _searchedScores = []..addAll(scores);
+    });
+
+    _applySortMode(_sortMode);
   }
 
   @override
@@ -452,7 +477,11 @@ class _ResultPageState extends State<ResultPage> {
               });
 
               if(newSettings != null) {
+                var oldPredictionMode = _settings.value.predictionMode;
                 _settings.value = newSettings;
+                if(_settings.value.predictionMode != oldPredictionMode) {
+                  _updateHypotheticalScores();
+                }
               }
             },
           ),
@@ -564,14 +593,21 @@ class ScoreDisplaySettingsModel extends ValueNotifier<ScoreDisplaySettings> {
 
 class ScoreDisplaySettings {
   RatingDisplayMode ratingMode;
+  MatchPredictionMode predictionMode;
   bool availablePointsCountPenalties;
   bool fixedTimeAvailablePointsFromDivisionMax;
 
-  ScoreDisplaySettings({required this.ratingMode, required this.availablePointsCountPenalties, required this.fixedTimeAvailablePointsFromDivisionMax});
+  ScoreDisplaySettings({
+    required this.ratingMode,
+    required this.availablePointsCountPenalties,
+    required this.fixedTimeAvailablePointsFromDivisionMax,
+    required this.predictionMode,
+  });
   ScoreDisplaySettings.copy(ScoreDisplaySettings other) :
       this.ratingMode = other.ratingMode,
       this.availablePointsCountPenalties = other.availablePointsCountPenalties,
-      this.fixedTimeAvailablePointsFromDivisionMax = other.fixedTimeAvailablePointsFromDivisionMax;
+      this.fixedTimeAvailablePointsFromDivisionMax = other.fixedTimeAvailablePointsFromDivisionMax,
+      this.predictionMode = other.predictionMode;
 }
 
 enum RatingDisplayMode {
@@ -590,4 +626,33 @@ enum RatingDisplayMode {
         return "Change";
     }
   }
+}
+
+enum MatchPredictionMode {
+  none,
+  highAvailable,
+  averageStageFinish,
+  averageHistoricalFinish,
+  eloAwarePartial,
+  eloAwareFull;
+
+  static List<MatchPredictionMode> dropdownValues(bool includeElo) {
+    if(includeElo) return values;
+    else return [none, highAvailable, averageStageFinish];
+  }
+
+  bool get eloAware => switch(this) {
+    eloAwarePartial => true,
+    eloAwareFull => true,
+    _ => false,
+  };
+
+  String get uiLabel => switch(this) {
+    none => "None",
+    highAvailable => "High available",
+    averageStageFinish => "Average stage finish",
+    averageHistoricalFinish => "Average finish in ratings",
+    eloAwarePartial => "Elo-aware (seen only)",
+    eloAwareFull => "Elo-aware (all entrants)",
+  };
 }
