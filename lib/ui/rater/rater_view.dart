@@ -109,7 +109,7 @@ class _RaterViewState extends State<RaterView> {
 
         if(queryElements != null) {
           sortedRatings = sortedRatings.where((r) =>
-            queryElements.map((q) => q.matchesShooterRating(r)).reduce((a, b) => a && b)
+            queryElements.map((q) => q.matchesShooterRating(r)).reduce((a, b) => a || b)
           ).toList();
         }
       }

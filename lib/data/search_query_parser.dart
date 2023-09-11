@@ -20,6 +20,10 @@ class _LiteralReplacement {
   _LiteralReplacement({required this.modifiedString, required this.replacements});
 }
 
+/// A group of query elements linked by AND.
+///
+/// A query with ORs is represented as a list of [SearchQueryElement]s. A shooter matches
+/// the query if any query element in the list matches the shooter.
 class SearchQueryElement {
   Classification? classification;
   Division? division;
