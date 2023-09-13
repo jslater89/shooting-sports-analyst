@@ -314,11 +314,21 @@ class MatchCache {
       if(idxEntry != null) {
         futures[idxEntry] = _loadMatch(idxEntry.path);
       }
-
-      // TODO
-      i += 1;
-      if(i % 5 == 0) await progressCallback?.call(i, matchUrls.length);
     }
+
+    var stream = Stream.fromFutures(futures.values);
+
+    var listener = (dynamic _) async {
+      i += 1;
+      if(i % 5 == 0) {
+        await progressCallback?.call(i, matchUrls.length);
+      }
+    };
+
+    stream.listen(
+      listener,
+      onError: listener,
+    );
 
     await Future.wait(futures.values);
   }

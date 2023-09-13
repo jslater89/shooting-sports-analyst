@@ -85,7 +85,10 @@ void main() async {
   configureApp();
 
   WidgetsFlutterBinding.ensureInitialized();
-  await workerManager.init();
+
+  var processorCount = 4;
+  print("Worker manager spawning with $processorCount workers");
+  await workerManager.init(isolatesCount: processorCount);
 
   if(!HtmlOr.isWeb) {
     var path = await getApplicationSupportDirectory();

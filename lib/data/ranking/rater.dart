@@ -1,3 +1,4 @@
+import 'dart:isolate';
 import 'dart:math';
 
 import 'package:collection/collection.dart';
@@ -65,7 +66,8 @@ class Rater {
 
   bool byStage;
   List<String> memberNumberWhitelist;
-  Future<void> Function(int, int, String? eventName)? progressCallback;
+  Future<void> Function(ProgressUpdate)? progressCallback;
+  SendPort? progressSendPort;
   final int progressCallbackInterval;
   bool verbose;
   bool checkDataEntryErrors;
@@ -83,6 +85,7 @@ class Rater {
     this.byStage = false,
     this.progressCallback,
     this.progressCallbackInterval = RatingHistory.progressCallbackInterval,
+    this.progressSendPort,
     this.checkDataEntryErrors = true,
     Map<String, String>? shooterAliases,
     Map<String, String> userMemberNumberMappings = const {},
@@ -125,6 +128,7 @@ class Rater {
         this.checkDataEntryErrors = other.checkDataEntryErrors,
         this.memberNumberWhitelist = other.memberNumberWhitelist,
         this.progressCallbackInterval = other.progressCallbackInterval,
+        this.progressSendPort = other.progressSendPort,
         this.ratingSystem = other.ratingSystem {
     for(var entry in _memberNumberMappings.entries) {
       if (entry.key == entry.value) {
@@ -234,7 +238,16 @@ class Rater {
       if(Timings.enabled) timings.matchCount += 1;
 
       currentSteps += 1;
-      if(currentSteps % progressCallbackInterval == 0) await progressCallback?.call(currentSteps, totalSteps, m.name);
+      if(currentSteps % progressCallbackInterval == 0) {
+        if(progressCallback != null) {
+          await progressCallback!.call((currentSteps, totalSteps, m.name));
+        }
+
+        if(progressSendPort != null) {
+          // If we're running in a different isolate, we don't need to await.
+          progressSendPort!.send((currentSteps, totalSteps, m.name));
+        }
+      }
     }
 
     if(Timings.enabled) start = DateTime.now();

@@ -83,6 +83,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     _loadAutosave();
   }
 
+  bool _dialogShowing = false;
 
   /// Checks the match cache for URL names, and starts downloading any
   /// matches that aren't in the cache.
@@ -93,7 +94,11 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     var loadingFuture = MatchCache().ensureUrlsLoaded(matchUrls, (a, b) async {
       await Future.delayed(Duration(milliseconds: 1));
     });
-    await showDialog(context: context, builder: (context) => LoadingDialog(title: "Loading required matches...", waitOn: loadingFuture));
+    if(!_dialogShowing) {
+      _dialogShowing = true;
+      await showDialog(context: context, builder: (context) => LoadingDialog(title: "Loading required matches...", waitOn: loadingFuture));
+      _dialogShowing = false;
+    }
 
     // Deduplicate
     Map<PracticalMatch, bool> duplicatedMatches = {};

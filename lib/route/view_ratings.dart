@@ -1061,8 +1061,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         _loadingEventName = eventName;
       });
 
-      // print("Rating history progress: $_currentProgress/$_totalProgress $eventName");
-      await Future.delayed(Duration(milliseconds: 1));
+      // Delay for a frame or two
+      await Future.delayed(Duration(milliseconds: 50));
     });
 
     var result = await _processMatches();
@@ -1162,7 +1162,9 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   Future<bool> _processMatches() async {
     var urls = widget.matchUrls;
 
+    DateTime start = DateTime.now();
     var result = await _history.processInitialMatches();
+    print("Duration: ${DateTime.now().difference(start).inMilliseconds / 1000} sec");
     if(result.isErr()) {
       _presentError(result.unwrapErr());
       return false;

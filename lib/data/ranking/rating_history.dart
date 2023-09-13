@@ -1,3 +1,6 @@
+import 'dart:isolate';
+
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/member_number_correction.dart';
@@ -37,7 +40,7 @@ class RatingHistory {
   RatingHistorySettings get settings => _settings;
 
   // Prime, so we skip around the list better
-  static const int progressCallbackInterval = 7;
+  static const int progressCallbackInterval = 53;
 
   List<RaterGroup> get groups => []..addAll(_settings.groups);
 
@@ -209,21 +212,35 @@ class RatingHistory {
       _lastMatch = _matches.last;
       _ratersByDivision[_lastMatch!] ??= {};
 
+      int totalProgress = _matches.length * groups.length;
       Map<RaterGroup, Future<_RaterEither>> futures = {};
+      Map<RaterGroup, ReceivePort> progressPorts = {};
+      Map<RaterGroup, int> currentProgress = {};
       for (var group in _settings.groups) {
-        var r = _raterForGroup(_matches, group); /*, (_1, _2, eventName) async {
-          stepsFinished += 1;
-          await progressCallback?.call(stepsFinished, totalSteps, "${group.uiLabel} - $eventName");
-        });*/
+        var progressPort = ReceivePort("${group.name}-progress");
+        progressPort.listen((message) async {
+          if(message is ProgressUpdate) {
+            currentProgress[group] = message.$1;
+            await progressCallback?.call(currentProgress.values.sum, totalProgress, "Parallel processing - parallel processing");
+          }
+          else {
+            throw ArgumentError("progress port received a non-progress message");
+          }
+        });
+
+        var r = _raterForGroup(_matches, group, progressSendPort: progressPort.sendPort);
 
         // Returns right if err, left if not.
         var ratingTask = _processRaterTask(r);
         futures[group] = ratingTask.future;
+        progressPorts[group] = progressPort;
 
         if(Timings.enabled) print("Timings for $group: ${r.timings}");
       }
 
       await Future.wait(futures.values);
+      progressPorts.values.forEach((element) => element.close());
+
       for(var group in _settings.groups) {
         var ratingEither = await futures[group]!;
         if(ratingEither.isRight) {
@@ -260,8 +277,8 @@ class RatingHistory {
       else return Either.left(r);
     });
   }
-  
-  Rater _raterForGroup(List<PracticalMatch> matches, RaterGroup group, [Future<void> Function(int, int, String?)? progressCallback]) {
+
+  Rater _raterForGroup(List<PracticalMatch> matches, RaterGroup group, {Future<void> Function(ProgressUpdate)? progressCallback, SendPort? progressSendPort}) {
     var divisionMap = <Division, bool>{};
     group.divisions.forEach((element) => divisionMap[element] = true);
     Timings().reset();
@@ -273,6 +290,7 @@ class RatingHistory {
       group: group,
       progressCallback: progressCallback,
       progressCallbackInterval: progressCallbackInterval,
+      progressSendPort: progressSendPort,
       shooterAliases: _settings.shooterAliases,
       memberNumberMappingBlacklist: _settings.memberNumberMappingBlacklist,
       userMemberNumberMappings: _settings.userMemberNumberMappings,
@@ -286,6 +304,8 @@ class RatingHistory {
 }
 
 typedef _RaterEither = Either<Rater, RatingResult>;
+
+typedef ProgressUpdate = (int current, int total, String? eventName);
 
 enum RaterGroup {
   open,
