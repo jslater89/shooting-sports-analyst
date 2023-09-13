@@ -66,6 +66,41 @@ class MatchCache {
       await _instance!._loadIndex();
     }
 
+    // Begin research code for SS major vs. minor
+    //
+    // await _instance!._load();
+    // int ssMajorWins = 0;
+    // int ssMajorEntries = 0;
+    // int ssMinorWins = 0;
+    // int ssMinorEntries = 0;
+    // for(var m in _instance!.allMatches()) {
+    //   if(m.level == MatchLevel.I) continue;
+    //
+    //   var scores = m.getScores(shooters: m.filterShooters(filterMode: FilterMode.or, divisions: [Division.singleStack]));
+    //   if(scores.isNotEmpty) {
+    //     var winner = scores.first;
+    //       if (winner.shooter.powerFactor == PowerFactor.major)
+    //         ssMajorWins += 1;
+    //       else
+    //         ssMinorWins += 1;
+    //
+    //       for(var s in scores) {
+    //         if(s.shooter.powerFactor == PowerFactor.major)
+    //           ssMajorEntries += 1;
+    //         else
+    //           ssMinorEntries += 1;
+    //       }
+    //   }
+    // }
+    //
+    // print("SS major wins: ${(ssMajorWins / (ssMajorWins + ssMinorWins)).asPercentage(decimals: 1)}%");
+    // print("SS minor wins: ${(ssMinorWins / (ssMajorWins + ssMinorWins)).asPercentage(decimals: 1)}%");
+    //
+    // print("SS major entries: ${(ssMajorEntries / (ssMajorEntries + ssMinorEntries)).asPercentage(decimals: 1)}%");
+    // print("SS minor entries: ${(ssMinorEntries / (ssMajorEntries + ssMinorEntries)).asPercentage(decimals: 1)}%");
+    //
+    // End research code
+
     _ready.complete(true);
   }
 
