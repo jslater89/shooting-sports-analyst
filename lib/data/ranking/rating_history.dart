@@ -5,12 +5,15 @@ import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.dart';
+import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_error.dart';
 import 'package:uspsa_result_viewer/data/ranking/timings.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart' as defaultAliases;
 import 'package:uspsa_result_viewer/ui/widget/dialog/member_number_collision_dialog.dart';
+import 'package:uspsa_result_viewer/util.dart';
+import 'package:worker_manager/worker_manager.dart';
 
 /// RatingHistory turns a sequence of [PracticalMatch]es into a series of
 /// [Rater]s.
@@ -206,15 +209,30 @@ class RatingHistory {
       _lastMatch = _matches.last;
       _ratersByDivision[_lastMatch!] ??= {};
 
+      Map<RaterGroup, Future<_RaterEither>> futures = {};
       for (var group in _settings.groups) {
-        var r = _raterForGroup(_matches, group, (_1, _2, eventName) async {
+        var r = _raterForGroup(_matches, group); /*, (_1, _2, eventName) async {
           stepsFinished += 1;
           await progressCallback?.call(stepsFinished, totalSteps, "${group.uiLabel} - $eventName");
-        });
-        var result = await r.calculateInitialRatings();
-        if(result.isErr()) return result;
-        _ratersByDivision[_lastMatch]![group] = r;
+        });*/
+
+        // Returns right if err, left if not.
+        var ratingTask = _processRaterTask(r);
+        futures[group] = ratingTask.future;
+
         if(Timings.enabled) print("Timings for $group: ${r.timings}");
+      }
+
+      await Future.wait(futures.values);
+      for(var group in _settings.groups) {
+        var ratingEither = await futures[group]!;
+        if(ratingEither.isRight) {
+          return ratingEither.right;
+        }
+        else {
+          var r = ratingEither.left;
+          _ratersByDivision[_lastMatch]![group] = r;
+        }
       }
     }
 
@@ -226,6 +244,21 @@ class RatingHistory {
     }
     print("Total of ${countUniqueShooters()} shooters, ${_matches.length} matches, and $stageCount stages");
     return RatingResult.ok();
+  }
+
+  /// Run this task in a static context so the closure doesn't capture unneeded
+  /// state.
+  static Cancelable<Either<Rater, RatingResult>> _processRaterTask(Rater r) {
+    return workerManager.execute<Either<Rater, RatingResult>>(() async {
+      if(r.ratingSystem is MultiplayerPercentEloRater) {
+        EloShooterRating.errorScale = (r.ratingSystem as MultiplayerPercentEloRater).scale;
+      }
+
+      var result = await r.calculateInitialRatings();
+
+      if(result.isErr()) return Either.right(result);
+      else return Either.left(r);
+    });
   }
   
   Rater _raterForGroup(List<PracticalMatch> matches, RaterGroup group, [Future<void> Function(int, int, String?)? progressCallback]) {
@@ -251,6 +284,8 @@ class RatingHistory {
     return r;
   }
 }
+
+typedef _RaterEither = Either<Rater, RatingResult>;
 
 enum RaterGroup {
   open,

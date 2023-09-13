@@ -23,6 +23,7 @@ import 'package:uspsa_result_viewer/route/local_upload.dart';
 import 'package:uspsa_result_viewer/route/home_page.dart';
 import 'package:uspsa_result_viewer/route/practiscore_url.dart';
 import 'package:uspsa_result_viewer/route/ratings.dart';
+import 'package:worker_manager/worker_manager.dart';
 import 'configure_nonweb.dart' if (dart.library.html) 'configure_web.dart';
 import 'package:fluro/fluro.dart' as fluro;
 
@@ -84,6 +85,7 @@ void main() async {
   configureApp();
 
   WidgetsFlutterBinding.ensureInitialized();
+  await workerManager.init();
 
   if(!HtmlOr.isWeb) {
     var path = await getApplicationSupportDirectory();

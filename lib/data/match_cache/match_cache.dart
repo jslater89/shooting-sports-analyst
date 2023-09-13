@@ -8,6 +8,7 @@ import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 import 'package:uspsa_result_viewer/util.dart';
+import 'package:worker_manager/worker_manager.dart';
 
 part 'match_cache.g.dart';
 
@@ -143,6 +144,16 @@ class MatchCache {
     print("[MatchCache] Loaded $matches cached matches, with $stages stages, $shooters shooters, and $stageScores stage scores");
   }
 
+  /// Lift the score file task into a static context, so we don't send an entire
+  /// match cache as state.
+  static Cancelable<PracticalMatch> _processScoreFileTask(String reportContents) {
+    return workerManager.execute(() async {
+      return (await processScoreFile(reportContents)).unwrap();
+      },
+      priority: WorkPriority.immediately
+    );
+  }
+
   /// Loads a match from the local cache. Does not download.
   Future<PracticalMatch?> _loadMatch(String path) async {
     List<String> ids = path.replaceFirst(_cachePrefix, "").split(_cacheSeparator);
@@ -161,7 +172,8 @@ class MatchCache {
 
     if(reportContents != null) {
       // Anything that makes it to the cache is known good
-      var match = (await processScoreFile(reportContents)).unwrap();
+      var matchTask = _processScoreFileTask(reportContents);
+      var match = await matchTask.future;
       var entry = _MatchCacheEntry(match: match, ids: ids);
       String? shortId;
       late String longId;
@@ -259,15 +271,19 @@ class MatchCache {
   /// are fully loaded to memory.
   Future<void> ensureUrlsLoaded(List<String> matchUrls, [Future<void> Function(int, int)? progressCallback]) async {
     int i = 0;
+    Map<MatchCacheIndexEntry, Future<PracticalMatch?>> futures = {};
     for(var url in matchUrls) {
       var idxEntry = getIndexImmediate(url);
       if(idxEntry != null) {
-        await _loadMatch(idxEntry.path);
+        futures[idxEntry] = _loadMatch(idxEntry.path);
       }
 
+      // TODO
       i += 1;
       if(i % 5 == 0) await progressCallback?.call(i, matchUrls.length);
     }
+
+    await Future.wait(futures.values);
   }
 
   /// Ensure that the matches represented by the given index entries

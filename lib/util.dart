@@ -1,5 +1,19 @@
 import 'package:flutter/foundation.dart';
 
+class Either<T, R> {
+  final T? _left;
+  final R? _right;
+
+  Either.left(this._left) : this._right = null;
+  Either.right(this._right) : this._left = null;
+
+  bool get isLeft => _left != null;
+  bool get isRight => !isLeft;
+
+  T get left => _left!;
+  R get right => _right!;
+}
+
 abstract class Error {
   String get message;
 }
