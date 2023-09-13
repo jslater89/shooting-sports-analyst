@@ -8,7 +8,6 @@ import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rating_change.da
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 
 class EloShooterRating extends ShooterRating {
-  //
   static late double errorScale;
 
   double rating;
