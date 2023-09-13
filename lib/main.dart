@@ -91,7 +91,7 @@ void main() async {
 
     // Start warming up the match cache immediately, since we're almost always going to want it
     matchCacheProgressCallback = (_1, _2) async {
-      await Future.delayed(Duration(milliseconds: 1));
+      await Future.delayed(Duration(microseconds: 1));
     };
     MatchCache();
   }

@@ -112,6 +112,8 @@ class MatchCache {
     print("[MatchCache] Loaded ${_index.length} index entries from ${paths.length} paths");
   }
 
+
+
   Future<void> _load() async {
     print("[MatchCache] Loading full cache");
     _cache.clear();

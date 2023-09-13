@@ -78,12 +78,12 @@ class PracticalMatch {
     for(Shooter s in shooters) {
       if(filterMode == FilterMode.or) {
         if (divisions.contains(s.division) || powerFactors.contains(s.powerFactor) || classes.contains(s.classification)) {
-          if(allowReentries! || !s.reentry) filteredShooters.add(s);
+          if(allowReentries || !s.reentry) filteredShooters.add(s);
         }
       }
       else {
         if (divisions.contains(s.division) && powerFactors.contains(s.powerFactor) && classes.contains(s.classification)) {
-          if(allowReentries! || !s.reentry) filteredShooters.add(s);
+          if(allowReentries || !s.reentry) filteredShooters.add(s);
         }
       }
     }
