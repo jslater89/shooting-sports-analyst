@@ -33,7 +33,9 @@ class OpenskillTest {
     };
 
     var rater = OpenskillRater(settings: OpenskillSettings());
-    var changes = rater.updateShooterRatings(match: PracticalMatch(), shooters: ratings, scores: scores, matchScores: scores);
+    var changes = rater.updateShooterRatings(match: PracticalMatch(), shooters: ratings, scores: scores, matchScores: scores.map(
+        (k, v) => MapEntry(k, RelativeMatchScore(shooter: v.score.shooter)..total = v)
+    ));
 
     print(changes);
     print("expected: mu +/-2.635, sigma -0.2284");

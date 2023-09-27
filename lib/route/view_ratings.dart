@@ -1162,7 +1162,9 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   Future<bool> _processMatches() async {
     var urls = widget.matchUrls;
 
+    DateTime start = DateTime.now();
     var result = await _history.processInitialMatches();
+    print("Processing ratings took ${DateTime.now().difference(start).inMilliseconds / 1000} sec");
     if(result.isErr()) {
       _presentError(result.unwrapErr());
       return false;

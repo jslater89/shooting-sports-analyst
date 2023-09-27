@@ -191,7 +191,7 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
     required PracticalMatch match,
     required List<ShooterRating> shooters,
     required Map<ShooterRating, RelativeScore> scores,
-    required Map<ShooterRating, RelativeScore> matchScores,
+    required Map<ShooterRating, RelativeMatchScore> matchScores,
     double matchStrengthMultiplier = 1.0,
     double connectednessMultiplier = 1.0,
     double eventWeightMultiplier = 1.0

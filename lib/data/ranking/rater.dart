@@ -779,14 +779,14 @@ class Rater {
         var weightMod = 1.0 + max(-0.20, min(0.10, (s.maxPoints - 120) /  400));
 
         Map<ShooterRating, RelativeScore> stageScoreMap = {};
-        Map<ShooterRating, RelativeScore> matchScoreMap = {};
+        Map<ShooterRating, RelativeMatchScore> matchScoreMap = {};
 
         for(var score in filteredScores) {
           String num = score.shooter.memberNumber;
-          var otherScore = score.stageScores[s]!;
+          var stageScore = score.stageScores[s]!;
           var rating = knownShooter(num);
-          stageScoreMap[rating] = otherScore;
-          matchScoreMap[rating] = score.total;
+          stageScoreMap[rating] = stageScore;
+          matchScoreMap[rating] = score;
         }
 
         if(ratingSystem.mode == RatingMode.wholeEvent) {
@@ -843,11 +843,11 @@ class Rater {
     else { // by match
       var (filteredShooters, filteredScores) = _filterScores(shooters, scores, null);
 
-      Map<ShooterRating, RelativeScore> matchScoreMap = {};
+      Map<ShooterRating, RelativeMatchScore> matchScoreMap = {};
 
       for(var score in filteredScores) {
         String num = score.shooter.memberNumber;
-        matchScoreMap[knownShooter(num)] = score.total;
+        matchScoreMap[knownShooter(num)] = score;
       }
 
       if(ratingSystem.mode == RatingMode.wholeEvent) {
@@ -882,7 +882,7 @@ class Rater {
                 stage: null,
                 shooter: filteredShooters[i],
                 scores: filteredScores,
-                stageScores: matchScoreMap,
+                stageScores: matchScoreMap.map((k, v) => MapEntry(k, v.total)),
                 matchScores: matchScoreMap,
                 changes: changes,
                 matchStrength: strengthMod,
@@ -1063,8 +1063,8 @@ class Rater {
             bRating: bStageScore,
           },
           matchScores: {
-            aRating: aScore.total,
-            bRating: bScore.total,
+            aRating: aScore,
+            bRating: bScore,
           },
           matchStrengthMultiplier: matchStrength,
           connectednessMultiplier: connectednessMod,
@@ -1089,8 +1089,8 @@ class Rater {
             bRating: bScore.total,
           },
           matchScores: {
-            aRating: aScore.total,
-            bRating: bScore.total,
+            aRating: aScore,
+            bRating: bScore,
           },
           matchStrengthMultiplier: matchStrength,
           connectednessMultiplier: connectednessMod,
@@ -1112,7 +1112,7 @@ class Rater {
     required List<RelativeMatchScore> scores,
     required Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes,
     required Map<ShooterRating, RelativeScore> stageScores,
-    required Map<ShooterRating, RelativeScore> matchScores,
+    required Map<ShooterRating, RelativeMatchScore> matchScores,
     required double matchStrength,
     required double connectednessMod,
     required double weightMod
@@ -1170,7 +1170,7 @@ class Rater {
       var update = ratingSystem.updateShooterRatings(
         match: match,
         shooters: [rating],
-        scores: matchScores,
+        scores: matchScores.map((k, v) => MapEntry(k, v.total)),
         matchScores: matchScores,
         matchStrengthMultiplier: matchStrength,
         connectednessMultiplier: connectednessMod,
@@ -1208,14 +1208,14 @@ class Rater {
 
     if(stage != null) {
       var scoreMap = <ShooterRating, RelativeScore>{};
-      var matchScoreMap = <ShooterRating, RelativeScore>{};
+      var matchScoreMap = <ShooterRating, RelativeMatchScore>{};
       for(var s in scores) {
         String num = s.shooter.memberNumber;
 
         var otherScore = s.stageScores[stage]!;
         _encounteredMemberNumber(num);
         scoreMap[knownShooter(num)] = otherScore;
-        matchScoreMap[knownShooter(num)] = s.total;
+        matchScoreMap[knownShooter(num)] = s;
         changes[knownShooter(num)] ??= {};
       }
 
@@ -1246,12 +1246,12 @@ class Rater {
     }
     else {
       var scoreMap = <ShooterRating, RelativeScore>{};
-      var matchScoreMap = <ShooterRating, RelativeScore>{};
+      var matchScoreMap = <ShooterRating, RelativeMatchScore>{};
       for(var s in scores) {
         String num = s.shooter.memberNumber;
 
         scoreMap[knownShooter(num)] ??= s.total;
-        matchScoreMap[knownShooter(num)] ??= s.total;
+        matchScoreMap[knownShooter(num)] ??= s;
         changes[knownShooter(num)] ??= {};
         _encounteredMemberNumber(num);
       }

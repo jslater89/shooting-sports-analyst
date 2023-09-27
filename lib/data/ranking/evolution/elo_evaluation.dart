@@ -108,15 +108,15 @@ class EloEvaluator extends Prey<EloEvaluator> {
       var predictions = rater.ratingSystem.predict(registrations.values.toList());
       var scoreOutput = m.getScores(shooters: registrations.keys.toList());
 
-      var scores = <ShooterRating, RelativeScore>{};
+      var scores = <ShooterRating, RelativeMatchScore>{};
       for(var s in scoreOutput) {
         var rating = registrations[s.shooter];
-        if(rating != null) scores[rating] = s.total;
+        if(rating != null) scores[rating] = s;
       }
 
       var evaluations = rater.ratingSystem.validate(
         shooters: registrations.values.toList(),
-        scores: scores,
+        scores: scores.map((k, v) => MapEntry(k, v.total)),
         matchScores: scores,
         predictions: predictions,
         chatty: false,

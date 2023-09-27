@@ -31,6 +31,32 @@ class RelativeMatchScore {
     return max;
   }
 
+  /// It's safe/correct to cache DNFs, because (a) they're only used in ratings,
+  /// and (b) we never edit scores belonging to ratings.
+  bool? _isDnf;
+
+  /// If a shooter has two or more DNF stages, they're assumed to have DNFed
+  /// the match.
+  bool get isDnf {
+    if(_isDnf != null) return _isDnf!;
+
+    int dnfs = 0;
+
+    for(var entry in stageScores.entries) {
+      if(entry.key.type != Scoring.chrono && entry.value.score.isDnf) {
+        dnfs += 1;
+      }
+
+      if(dnfs >= 2) {
+        _isDnf = true;
+        return true;
+      }
+    }
+
+    _isDnf = false;
+    return false;
+  }
+
   Map<Stage, RelativeScore> stageScores = {};
 }
 

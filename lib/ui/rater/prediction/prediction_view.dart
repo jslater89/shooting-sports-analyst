@@ -187,7 +187,7 @@ class _PredictionViewState extends State<PredictionView> {
       scoreDQ: false,
     );
 
-    var matchScores = <ShooterRating, RelativeScore>{};
+    var matchScores = <ShooterRating, RelativeMatchScore>{};
     List<ShooterRating> knownShooters = [];
 
     // We can only do validation for shooters with ratings and scores.
@@ -199,7 +199,7 @@ class _PredictionViewState extends State<PredictionView> {
         var score = scores.firstWhereOrNull((element) => element.shooter == shooter);
         // var prediction = sortedPredictions.firstWhereOrNull((element) => element.shooter == rating);
         if(score != null) {
-          matchScores[rating] = score.total;
+          matchScores[rating] = score;
           knownShooters.add(rating);
         }
       }
@@ -212,7 +212,7 @@ class _PredictionViewState extends State<PredictionView> {
 
     var outcome = widget.rater.ratingSystem.validate(
         shooters: knownShooters,
-        scores: matchScores,
+        scores: matchScores.map((k, v) => MapEntry(k, v.total)),
         matchScores: matchScores,
         predictions: sortedPredictions
     );

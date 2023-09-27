@@ -37,7 +37,7 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
     required PracticalMatch match,
     required List<ShooterRating> shooters,
     required Map<ShooterRating, RelativeScore> scores,
-    required Map<ShooterRating, RelativeScore> matchScores,
+    required Map<ShooterRating, RelativeMatchScore> matchScores,
     double matchStrengthMultiplier = 1.0,
     double connectednessMultiplier = 1.0,
     double eventWeightMultiplier = 1.0
@@ -111,7 +111,7 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
   PredictionOutcome validate({
     required List<ShooterRating> shooters,
     required Map<ShooterRating, RelativeScore> scores,
-    required Map<ShooterRating, RelativeScore> matchScores,
+    required Map<ShooterRating, RelativeMatchScore> matchScores,
     required List<ShooterPrediction> predictions,
     bool chatty = true,
   }) {

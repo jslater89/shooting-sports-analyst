@@ -84,7 +84,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     required PracticalMatch match,
     required List<ShooterRating> shooters,
     required Map<ShooterRating, RelativeScore> scores,
-    required Map<ShooterRating, RelativeScore> matchScores,
+    required Map<ShooterRating, RelativeMatchScore> matchScores,
     double matchStrengthMultiplier = 1.0,
     double connectednessMultiplier = 1.0,
     double eventWeightMultiplier = 1.0
@@ -136,7 +136,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
     if(Timings.enabled) start = DateTime.now();
 
-    var actualScore = _calculateActualScore(match: match, score: aScore, matchScore: aMatchScore, params: params);
+    var actualScore = _calculateActualScore(match: match, score: aScore, matchScore: aMatchScore.total, params: params, isDnf: aMatchScore.isDnf);
 
     // The first N matches you shoot get bonuses for initial placement.
     var placementMultiplier = aRating.ratingEvents.length < RatingSystem.initialPlacementMultipliers.length ?
@@ -369,9 +369,9 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     PracticalMatch? match,
     required ShooterRating aRating,
     required RelativeScore aScore,
-    required RelativeScore aMatchScore,
+    required RelativeMatchScore aMatchScore,
     required Map<ShooterRating, RelativeScore> scores,
-    required Map<ShooterRating, RelativeScore> matchScores,
+    required Map<ShooterRating, RelativeMatchScore> matchScores,
   }) {
     bool matchInProgress = match?.inProgress ?? false;
 
@@ -382,12 +382,12 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     int usedScores = 1;
     var totalPercent;
 
-    if(matchInProgress || (byStage && aScore.score.shooter.dq)) {
+    if(_disableMatchBlend(matchInProgress, aScore.score.shooter.dq, aMatchScore.isDnf)) {
       // Give DQed shooters a break by not blending in the match score
       totalPercent = aScore.percent;
     }
     else {
-      totalPercent = (aScore.percent * stageBlend) + (aMatchScore.percent * matchBlend);
+      totalPercent = (aScore.percent * stageBlend) + (aMatchScore.total.percent * matchBlend);
     }
 
     int zeroes = aScore.relativePoints < 0.1 ? 1 : 0;
@@ -414,12 +414,12 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       }
 
       var opponentPercent;
-      if(matchInProgress || byStage && opponentScore.score.shooter.dq) {
+      if(_disableMatchBlend(matchInProgress, opponentScore.score.shooter.dq, opponentMatchScore.isDnf)) {
         // Give DQed shooters a break by not blending in the match score
         opponentPercent = opponentScore.percent;
       }
       else {
-        opponentPercent = (opponentScore.percent * stageBlend) + (opponentMatchScore.percent * matchBlend);
+        opponentPercent = (opponentScore.percent * stageBlend) + (opponentMatchScore.total.percent * matchBlend);
       }
 
       expectedScore += probability;
@@ -437,17 +437,22 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       zeroes: zeroes,
     );
   }
+
+  bool _disableMatchBlend(bool matchInProgress, bool isDq, bool matchDnf) {
+    return matchInProgress || (byStage && isDq) || (byStage && matchDnf);
+  }
   
   _ActualScore _calculateActualScore({
     PracticalMatch? match,
     required RelativeScore score,
     required RelativeScore matchScore,
     required _ScoreParameters params,
+    bool isDnf = false,
   }) {
     bool matchInProgress = match?.inProgress ?? false;
 
     var actualPercent;
-    if(matchInProgress || byStage && score.score.shooter.dq) {
+    if(_disableMatchBlend(matchInProgress, score.score.shooter.dq, isDnf)) {
       // Give DQed shooters a break by not blending in the match score
       actualPercent = score.percent;
     }
@@ -463,7 +468,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     var percentComponent = params.totalPercent == 0 ? 0.0 : (actualPercent / params.totalPercent);
 
     var placeBlend;
-    if(matchInProgress || byStage && score.score.shooter.dq) {
+    if(_disableMatchBlend(matchInProgress, score.score.shooter.dq, isDnf)) {
       // Give DQed shooters a break by not blending in the match score
       placeBlend = score.place.toDouble();
     }
@@ -798,7 +803,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   PredictionOutcome validate({
     required List<ShooterRating> shooters,
     required Map<ShooterRating, RelativeScore> scores,
-    required Map<ShooterRating, RelativeScore> matchScores,
+    required Map<ShooterRating, RelativeMatchScore> matchScores,
     required List<ShooterPrediction> predictions,
     bool chatty = true,
   }) {
@@ -832,11 +837,11 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       var score = scores[shooter]!;
       var matchScore = matchScores[shooter]!;
       var params = _calculateScoreParams(aRating: shooter, aScore: score, aMatchScore: matchScore, scores: scores, matchScores: matchScores);
-      var eloScore = _calculateActualScore(score: score, matchScore: matchScore, params: params);
+      var eloScore = _calculateActualScore(score: score, matchScore: matchScore.total, params: params, isDnf: matchScore.isDnf);
 
       errors.add(eloScore.score - prediction.mean);
       errorSum += pow(eloScore.score - prediction.mean, 2);
-      actualOutcomes[prediction] = SimpleMatchResult(raterScore: eloScore.score, percent: matchScore.percent, place: matchScore.place);
+      actualOutcomes[prediction] = SimpleMatchResult(raterScore: eloScore.score, percent: matchScore.total.percent, place: matchScore.total.place);
 
       if(eloScore.score >= prediction.mean - prediction.twoSigma + prediction.shift && eloScore.score <= prediction.mean + prediction.twoSigma + prediction.shift) {
         correct95 += 1;
@@ -844,7 +849,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       if(eloScore.score >= prediction.mean - prediction.oneSigma + prediction.shift && eloScore.score <= prediction.mean + prediction.oneSigma + prediction.shift) {
         correct68 += 1;
       }
-      if(matchScore.place <= prediction.lowPlace && matchScore.place >= prediction.highPlace) {
+      if(matchScore.total.place <= prediction.lowPlace && matchScore.total.place >= prediction.highPlace) {
         correctPlace += 1;
       }
     }
