@@ -1,3 +1,3 @@
 class VersionInfo {
-  static const String version = "6.5.2";
+  static const String version = "6.5.3";
 }
