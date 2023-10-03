@@ -37,13 +37,17 @@ class Sport {
 }
 
 enum SportScoring {
+  /// A sport scored like USPSA: points divided by time is a hit factor for stage score,
+  /// match score is a percentage of stage points based on stage finish.
   hitFactor,
+  /// A sport scored like IDPA or multigun: score is raw time, plus penalties.
   timePlus,
+  /// A sport scored like sporting clays or bullseye: score is determined entirely by hits on target.
   points,
 }
 
 class PowerFactor {
-  String name;
+  final String name;
 
   /// A map of names to scoring events.
   ///
@@ -67,21 +71,29 @@ class PowerFactor {
 /// A ScoringEvent is the minimal unit of score change in a shooting sports
 /// discipline, based on a hit on target.
 class ScoringEvent {
-  String name;
+  final String name;
 
-  int pointChange;
-  double timeChange;
+  final int pointChange;
+  final double timeChange;
 
-  ScoringEvent(this.name, {this.pointChange = 0, this.timeChange = 0});
+  /// bonus indicates that this hit is a bonus/tiebreaker score with no other scoring implications:
+  ///
+  /// An ICORE stage with a time bonus for a X-ring hits is _not_ a bonus like this, because it scores
+  /// differently than an A. A Bianchi X hit _is_ a bonus: it scores 10 points, but also increments
+  /// your X count.
+  final bool bonus;
+  final String bonusLabel;
+
+  const ScoringEvent(this.name, {this.pointChange = 0, this.timeChange = 0, this.bonus = false, this.bonusLabel = "X"});
 }
 
 class SportDivision {
-  String name;
-  String shortName;
+  final String name;
+  final String shortName;
 
-  List<String> alternateNames;
+  final List<String> alternateNames;
 
-  SportDivision({
+  const SportDivision({
     required this.name,
     required this.shortName,
     this.alternateNames = const [],
@@ -89,12 +101,12 @@ class SportDivision {
 }
 
 class SportClassification {
-  String name;
-  String shortName;
+  final String name;
+  final String shortName;
 
-  List<String> alternateNames;
+  final List<String> alternateNames;
 
-  SportClassification({
+  const SportClassification({
     required this.name,
     required this.shortName,
     this.alternateNames = const [],

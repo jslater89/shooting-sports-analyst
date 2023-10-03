@@ -1,12 +1,12 @@
 import 'package:uspsa_result_viewer/data/sport/sport.dart';
 
-final _uspsaPenalties = [
+final _pcslPenalties = [
   const ScoringEvent("Procedural", pointChange: -10),
   const ScoringEvent("Overtime shot", pointChange: -5),
 ];
 
 final uspsaSport = Sport(
-  "USPSA",
+  "PCSL",
   scoring: SportScoring.hitFactor,
   hasStages: true,
   classifications: [
@@ -30,25 +30,16 @@ final uspsaSport = Sport(
     const SportDivision(name: "Limited 10", shortName: "L10", alternateNames: ["LIM10"]),
   ],
   powerFactors: [
-    PowerFactor("Major",
+    PowerFactor("",
       targetEvents: [
-        const ScoringEvent("A", pointChange: 5),
-        const ScoringEvent("C", pointChange: 4),
-        const ScoringEvent("D", pointChange: 2),
-        const ScoringEvent("M", pointChange: -10),
-        const ScoringEvent("NS", pointChange: -10),
-      ],
-      penaltyEvents: _uspsaPenalties,
-    ),
-    PowerFactor("Minor",
-      targetEvents: [
+        const ScoringEvent("K", pointChange: 10),
         const ScoringEvent("A", pointChange: 5),
         const ScoringEvent("C", pointChange: 3),
         const ScoringEvent("D", pointChange: 1),
         const ScoringEvent("M", pointChange: -10),
         const ScoringEvent("NS", pointChange: -10),
       ],
-      penaltyEvents: _uspsaPenalties,
+      penaltyEvents: _pcslPenalties,
     ),
   ]
 );
