@@ -1213,6 +1213,8 @@ extension _Utilities on RaterGroup {
         return "LIM/LO";
       case RaterGroup.limLoCo:
         return "LIM/LO/CO";
+      case RaterGroup.opticHandguns:
+        return "OPEN/LO/CO";
       case RaterGroup.combined:
         return "COMBINED";
     }
