@@ -298,6 +298,23 @@ abstract class ShooterRating extends Shooter {
     return change;
   }
 
+  List<MatchHistoryEntry> careerHistory() {
+    List<MatchHistoryEntry> history = [];
+
+    PracticalMatch? lastMatch;
+    for(var e in ratingEvents) {
+      if(e.match != lastMatch) {
+        history.add(MatchHistoryEntry(
+          match: e.match, shooter: this, divisionEntered: e.score.score.shooter.division!,
+          ratingChange: changeForEvent(e.match, null) ?? 0,
+        ));
+        lastMatch = e.match;
+      }
+    }
+
+    return history;
+  }
+
   void copyVitalsFrom(covariant ShooterRating other) {
     this.firstName = other.firstName;
     this.lastName = other.lastName;
@@ -348,5 +365,35 @@ abstract class ShooterRating extends Shooter {
       this.connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure)..addAll(other.connectedShooters.map((e) => ConnectedShooter.copy(e)))
   {
     super.copyVitalsFrom(other);
+  }
+}
+
+class MatchHistoryEntry {
+  PracticalMatch match;
+  DateTime get date => match.date!;
+  Division divisionEntered;
+  double ratingChange;
+  late int place;
+  late int competitors;
+  late double finishRatio;
+  String get percentFinish => finishRatio.asPercentage();
+
+  MatchHistoryEntry({
+    required this.match,
+    required ShooterRating shooter,
+    required this.divisionEntered,
+    required this.ratingChange,
+  }) {
+    var scores = match.getScores(shooters: match.filterShooters(filterMode: FilterMode.and, divisions: [divisionEntered], allowReentries: false));
+    var score = scores.firstWhereOrNull((element) => shooter.equalsShooter(element.shooter));
+
+    this.place = score!.total.place;
+    this.finishRatio = score.total.percent;
+    this.competitors = scores.length;
+  }
+
+  @override
+  String toString() {
+    return "${match.name ?? "(unnamed match)"} (${divisionEntered.abbreviation()}): $place/$competitors ($percentFinish%)";
   }
 }

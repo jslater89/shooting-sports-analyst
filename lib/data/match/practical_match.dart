@@ -65,6 +65,9 @@ class PracticalMatch {
   }
 
   /// Filters shooters by division, power factor, and classification.
+  ///
+  /// By default, uses [FilterMode.and], and allows all values. To filter
+  /// by e.g. division alone, set [divisions] to the desired division(s).
   List<Shooter> filterShooters({
     FilterMode? filterMode,
     bool allowReentries = true,

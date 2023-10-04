@@ -37,13 +37,8 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
 
   RatingEvent? _highlighted;
   List<Widget>? _eventLines;
-
-  @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-
-  }
+  List<Widget>? _historyLines;
+  bool showingEvents = true;
 
   List<Widget> _buildEventLines() {
     List<RatingEvent> events = widget.rating.ratingEvents;
@@ -69,7 +64,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                       Expanded(
                         flex: 10,
                         child: Text("${e.eventName}${widget.showDivisions ? " (${e.score.score.shooter.division?.abbreviation() ?? " UNK"})" : ""}",
-                            style: Theme.of(context).textTheme.bodyText2!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).errorColor : null)),
+                            style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).colorScheme.error : null)),
                       ),
                       Expanded(
                         flex: 2,
@@ -77,7 +72,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                             alignment: Alignment.centerRight,
                             child: Text("${e.ratingChange.toStringAsFixed(2)}",
                                 style:
-                                Theme.of(context).textTheme.bodyText2!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).errorColor : null))),
+                                Theme.of(context).textTheme.bodyMedium!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).colorScheme.error : null))),
                       )
                     ],
                   ),
@@ -95,6 +90,50 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     return _eventLines!;
   }
 
+  List<Widget> _buildHistoryLines() {
+    var history = widget.rating.careerHistory();
+
+    List<Widget> widgets = [];
+    widgets.add(Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+      child: Row(
+        children: [
+          Expanded(flex: 4, child: Text("Match", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(flex: 1, child: Text("Place", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
+          Expanded(flex: 1, child: Text("Shooters", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
+          Expanded(flex: 1, child: Text("Percent", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
+          Expanded(flex: 1, child: Text("Rating change", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end))
+        ],
+      ),
+    ));
+    widgets.add(Divider(
+      height: 2,
+      thickness: 1,
+    ));
+
+    for(var entry in history.reversed) {
+      widgets.add(Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12.0),
+        child: Row(
+          children: [
+            Expanded(flex: 4, child: Text(entry.match.name ?? "(unnamed match)", style: Theme.of(context).textTheme.bodyMedium)),
+            Expanded(flex: 1, child: Text("${entry.place}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
+            Expanded(flex: 1, child: Text("${entry.competitors}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
+            Expanded(flex: 1, child: Text(entry.percentFinish, style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
+            Expanded(flex: 1, child: Text("${entry.ratingChange.toStringAsFixed(1)}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end))
+          ],
+        ),
+      ));
+      widgets.add(Divider(
+        height: 2,
+        thickness: 1,
+      ));
+    }
+
+    _historyLines = widgets;
+    return _historyLines!;
+  }
+
   @override
   Widget build(BuildContext context) {
     // if(rating.ratingEvents.length < 30) {
@@ -104,6 +143,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     //   events = rating.ratingEvents.sublist(rating.ratingEvents.length - 30);
     // }
     var eventLines = _eventLines ?? _buildEventLines();
+    var historyLines = _historyLines ?? _buildHistoryLines();
 
     return AlertDialog(
       title: Row(
@@ -150,17 +190,39 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                     ),
                   ),
                 ),
+                SizedBox(width: 10),
                 Expanded(
                   flex: 5,
                   child: Scrollbar(
                     controller: _rightController,
                     thumbVisibility: true,
-                    child: SingleChildScrollView(
-                      controller: _rightController,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: eventLines,
-                      ),
+                    child: Column(
+                      children: [
+                        MouseRegion(
+                            cursor: SystemMouseCursors.click,
+                            child: GestureDetector(
+                              child: Text(showingEvents ? "Event history" : "Match history",
+                                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).colorScheme.tertiary)),
+                              onTap: () {
+                                setState(() {
+                                  showingEvents = !showingEvents;
+                                });
+                              },
+                            )
+                        ),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            controller: _rightController,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if(showingEvents) ...eventLines,
+                                if(!showingEvents) ...historyLines,
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   )
                 ),
