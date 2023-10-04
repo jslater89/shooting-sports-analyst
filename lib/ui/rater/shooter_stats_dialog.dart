@@ -569,128 +569,128 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     return [
       Row(
         children: [
-          Expanded(flex: 4, child: Text("Current rating", style: Theme.of(context).textTheme.bodyText2)),
-          Expanded(flex: 2, child: Text("${widget.rating.rating.round()}", style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)),
+          Expanded(flex: 4, child: Text("Current rating", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(flex: 2, child: Text("${widget.rating.rating.round()}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       Divider(height: 2, thickness: 1),
       Row(
         children: [
-          Expanded(flex: 4, child: Text("Peak rating", style: Theme.of(context).textTheme.bodyText2)),
-          Expanded(flex: 2, child: Text("${lifetimeAverage.maxRating.round()}", style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)),
+          Expanded(flex: 4, child: Text("Peak rating", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(flex: 2, child: Text("${lifetimeAverage.maxRating.round()}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       Divider(height: 2, thickness: 1),
       Row(
         children: [
-          Expanded(flex: 4, child: Text("Average rating (past 30 events)", style: Theme.of(context).textTheme.bodyText2)),
-          Expanded(flex: 2, child: Text("${average.averageOfIntermediates.round()}", style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)),
+          Expanded(flex: 4, child: Text("Average rating (past 30 events)", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(flex: 2, child: Text("${average.averageOfIntermediates.round()}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       Divider(height: 2, thickness: 1),
       Row(
         children: [
-          Expanded(flex: 4, child: Text("Min-max rating (past 30 events)", style: Theme.of(context).textTheme.bodyText2)),
-          Expanded(flex: 2, child: Text("${average.minRating.round()}-${average.maxRating.round()}", style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)),
+          Expanded(flex: 4, child: Text("Min-max rating (past 30 events)", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(flex: 2, child: Text("${average.minRating.round()}-${average.maxRating.round()}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       Divider(height: 2, thickness: 1),
       if(byStage) Row(
         children: [
-          Expanded(flex: 4, child: Text("Total stages/matches", style: Theme.of(context).textTheme.bodyText2)),
-          Expanded(flex: 2, child: Text("${widget.rating.combinedRatingEvents.length}/${matches.length}", style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)),
+          Expanded(flex: 4, child: Text("Total stages/matches", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(flex: 2, child: Text("${widget.rating.combinedRatingEvents.length}/${matches.length}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       if(byStage) Divider(height: 2, thickness: 1),
       if(byStage && widget.rating.ratingEvents.length != widget.rating.combinedRatingEvents.length) Row(
         children: [
-          Expanded(flex: 4, child: Text("Stages/matches with rating changes", style: Theme.of(context).textTheme.bodyText2)),
-          Expanded(flex: 2, child: Text("${widget.rating.ratingEvents.length}/${matchesWithRatingChanges.length}", style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)),
+          Expanded(flex: 4, child: Text("Stages/matches with rating changes", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(flex: 2, child: Text("${widget.rating.ratingEvents.length}/${matchesWithRatingChanges.length}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       if(byStage && widget.rating.ratingEvents.length != widget.rating.combinedRatingEvents.length) Divider(height: 2, thickness: 1),
       if(!byStage) Row(
         children: [
-          Expanded(flex: 4, child: Text("Total matches", style: Theme.of(context).textTheme.bodyText2)),
-          Expanded(flex: 2, child: Text("${matches.length}", style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)),
+          Expanded(flex: 4, child: Text("Total matches", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(flex: 2, child: Text("${matches.length}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       if(!byStage) Divider(height: 2, thickness: 1),
       if(!byStage && widget.rating.ratingEvents.length != widget.rating.combinedRatingEvents.length) Row(
         children: [
-          Expanded(flex: 4, child: Text("Matches with rating changes", style: Theme.of(context).textTheme.bodyText2)),
-          Expanded(flex: 2, child: Text("${matchesWithRatingChanges.length}", style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)),
+          Expanded(flex: 4, child: Text("Matches with rating changes", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(flex: 2, child: Text("${matchesWithRatingChanges.length}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       if(!byStage && widget.rating.ratingEvents.length != widget.rating.combinedRatingEvents.length) Divider(height: 2, thickness: 1),
       Row(
         children: [
-          Expanded(flex: 4, child: Text("Matches of level I/II/III", style: Theme.of(context).textTheme.bodyText2)),
+          Expanded(flex: 4, child: Text("Matches of level I/II/III", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 2, child: Text(
               "${matchesByLevel[MatchLevel.I] ?? 0}/${matchesByLevel[MatchLevel.II] ?? 0}/${matchesByLevel[MatchLevel.III] ?? 0}",
-              style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)),
+              style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       Divider(height: 2, thickness: 1),
       if(classMatchFinishes.length > 0) Row(
         children: [
-          Expanded(flex: 4, child: Text("Match wins/class wins", style: Theme.of(context).textTheme.bodyText2)),
+          Expanded(flex: 4, child: Text("Match wins/class wins", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 2, child: Text(
               "${matchWins}/${classMatchWins}",
-              style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)),
+              style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       Divider(height: 2, thickness: 1),
       Row(
         children: [
-          Expanded(flex: 4, child: Text("Avg. match finish/class finish", style: Theme.of(context).textTheme.bodyText2)),
+          Expanded(flex: 4, child: Text("Avg. match finish/class finish", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 2, child: Text(
               "${matchFinishes.isNotEmpty ? matchFinishes.average.toStringAsFixed(1) : "-"}/"
               "${classMatchFinishes.isNotEmpty ? classMatchFinishes.average.toStringAsFixed(1) : "-"}",
-              style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)),
+              style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       Divider(height: 2, thickness: 1),
       Row(
         children: [
-          Expanded(flex: 4, child: Text("Avg. no. competitors", style: Theme.of(context).textTheme.bodyText2)),
+          Expanded(flex: 4, child: Text("Avg. no. competitors", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 2, child: Text(
               "${competitorCounts.average.toStringAsFixed(1)}",
-              style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)),
+              style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       Divider(height: 2, thickness: 1),
       if(byStage) Row(
         children: [
-          Expanded(flex: 4, child: Text("Stage wins/class stage wins", style: Theme.of(context).textTheme.bodyText2)),
+          Expanded(flex: 4, child: Text("Stage wins/class stage wins", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 2, child: Text(
               "${stageWins}/${classStageWins}",
-              style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)),
+              style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       if(byStage) Divider(height: 2, thickness: 1),
       if(byStage) Row(
         children: [
-          Expanded(flex: 4, child: Text("Avg. stage finish/class stage finish", style: Theme.of(context).textTheme.bodyText2)),
+          Expanded(flex: 4, child: Text("Avg. stage finish/class stage finish", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 2, child: Text(
               "${stageFinishes.isNotEmpty ? stageFinishes.average.toStringAsFixed(1) : "-"}/"
                   "${classStageFinishes.isNotEmpty ? classStageFinishes.average.toStringAsFixed(1) : "-"}",
-              style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)),
+              style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       if(byStage) Divider(height: 2, thickness: 1),
       if(powerFactorsPresent > 1 || widget.rating.division == Division.singleStack) Row(
         children: [
-          Expanded(flex: 4, child: Text("Major/minor/other PF", style: Theme.of(context).textTheme.bodyText2)),
+          Expanded(flex: 4, child: Text("Major/minor/other PF", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 2, child: Text(
               "${(majorEntries / totalEntries).asPercentage(decimals: 0)}%/${(minorEntries / totalEntries).asPercentage(decimals: 0)}%/${(otherEntries / totalEntries).asPercentage(decimals: 0)}%"
-              , style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)),
+              , style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       if(powerFactorsPresent > 1 || widget.rating.division == Division.singleStack) Divider(height: 2, thickness: 1),
       Row(
         children: [
-          Expanded(flex: 4, child: Text("Total hits", style: Theme.of(context).textTheme.bodyText2)),
+          Expanded(flex: 4, child: Text("Total hits", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 4, child: Text(
               "${_separatedNumberFormat.format(totalScore!.a)}A "
                   "${_separatedNumberFormat.format(totalScore!.c)}C "
@@ -698,38 +698,38 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                   "${_separatedNumberFormat.format(totalScore!.m)}M "
                   "${_separatedNumberFormat.format(totalScore!.ns)}NS "
                   "${_separatedNumberFormat.format(totalScore!.penaltyCount)}P",
-              style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)),
+              style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       Divider(height: 2, thickness: 1),
       Row(
         children: [
-          Expanded(flex: 2, child: Text("Hit percentages", style: Theme.of(context).textTheme.bodyText2)),
+          Expanded(flex: 2, child: Text("Hit percentages", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 4, child: Text(
               "${(totalScore!.a / totalScore!.shots).asPercentage(decimals: 1)}% A, "
                   "${(totalScore!.c / totalScore!.shots).asPercentage(decimals: 1)}% C, "
                   "${(totalScore!.d / totalScore!.shots).asPercentage(decimals: 1)}% D, "
                   "${(totalScore!.m / totalScore!.shots).asPercentage(decimals: 1)}% M, "
                   "${(totalScore!.ns / totalScore!.shots).asPercentage(decimals: 1)}% NS ",
-              style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)),
+              style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       Divider(height: 2, thickness: 1),
       Row(
         children: [
-          Expanded(flex: 4, child: Text("Total time/points/hit factor", style: Theme.of(context).textTheme.bodyText2)),
+          Expanded(flex: 4, child: Text("Total time/points/hit factor", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 4, child: Text(
               "${_separatedDecimalFormat.format(totalScore!.time)} s/${_separatedNumberFormat.format(totalPoints)} pts/${(totalPoints / totalScore!.time).toStringAsFixed(4)} HF",
-              style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)),
+              style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       Divider(height: 2, thickness: 1),
       Row(
         children: [
-          Expanded(flex: 4, child: Text("DQs", style: Theme.of(context).textTheme.bodyText2)),
+          Expanded(flex: 4, child: Text("DQs", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 4, child: Text(
               "${dqs.length}",
-              style: Theme.of(context).textTheme.bodyText2, textAlign: TextAlign.right)),
+              style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       Divider(height: 2, thickness: 1),
