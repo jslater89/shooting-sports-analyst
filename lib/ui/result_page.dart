@@ -15,6 +15,7 @@ import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/route/compare_shooter_results.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/about_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/score_list_settings_dialog.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/score_stats_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/filter_controls.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/match_breakdown.dart';
@@ -446,6 +447,17 @@ class _ResultPageState extends State<ResultPage> {
                 });
               },
             )
+        )
+      );
+      actions.add(
+        Tooltip(
+          message: "Display statistics about the currently-filtered scores.",
+          child: IconButton(
+            icon: Icon(Icons.show_chart),
+            onPressed: () {
+              showDialog(context: context, builder: (context) => ScoreStatsDialog(scores: []..addAll(_baseScores), stage: _stage));
+            },
+          )
         )
       );
       actions.add(

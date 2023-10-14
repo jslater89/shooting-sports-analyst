@@ -34,7 +34,7 @@ class PracticalMatch {
   int? maxPoints;
   int stageScoreCount = 0;
 
-  bool get inProgress => false; //name?.toLowerCase().contains("2023 Vortex Optics Open & PCC Nationals Presented by Federal".toLowerCase()) ?? false;
+  bool get inProgress => false;
 
   PracticalMatch copy() {
     var newMatch = PracticalMatch()

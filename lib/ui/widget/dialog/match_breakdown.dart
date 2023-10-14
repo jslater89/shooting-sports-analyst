@@ -125,7 +125,10 @@ class MatchBreakdown extends StatelessWidget {
     rows.add(
       TableRow(
         children: columns,
-      )
+        decoration: BoxDecoration(
+          color: i++ % 2 == 0 ? Colors.white : Colors.grey[200],
+        )
+      ),
     );
 
     return Table(
