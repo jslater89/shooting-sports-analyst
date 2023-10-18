@@ -1,3 +1,4 @@
+import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
 import 'package:uspsa_result_viewer/data/sport/sport.dart';
 
 final _idpaPenalties = [
@@ -6,27 +7,28 @@ final _idpaPenalties = [
   const ScoringEvent("FTDR", timeChange: 30),
 ];
 
-final _idpaSport = Sport(
+final idpaSport = Sport(
     "IDPA",
-    scoring: SportScoring.timePlus,
+    matchScoring: CumulativeScoring(),
+    stageScoring: StageScoring.timePlus,
     hasStages: true,
     classifications: [
-      const SportClassification(name: "Distinguished Master", shortName: "DM"),
-      const SportClassification(name: "Master", shortName: "MA"),
-      const SportClassification(name: "Expert", shortName: "EX"),
-      const SportClassification(name: "Sharpshooter", shortName: "SS"),
-      const SportClassification(name: "Novice", shortName: "NV"),
-      const SportClassification(name: "Unclassified", shortName: "UN"),
+      const Classification(index: 0, name: "Distinguished Master", shortName: "DM"),
+      const Classification(index: 1, name: "Master", shortName: "MA"),
+      const Classification(index: 2, name: "Expert", shortName: "EX"),
+      const Classification(index: 3, name: "Sharpshooter", shortName: "SS"),
+      const Classification(index: 4, name: "Novice", shortName: "NV"),
+      const Classification(index: 5, name: "Unclassified", shortName: "UN"),
     ],
     divisions: [
-      const SportDivision(name: "Stock Service Pistol", shortName: "SSP"),
-      const SportDivision(name: "Pistol Caliber Carbine", shortName: "PCC"),
-      const SportDivision(name: "Enhanced Service Pistol", shortName: "ESP"),
-      const SportDivision(name: "Custom Defensive Pistol", shortName: "LO"),
-      const SportDivision(name: "Carry Optics", shortName: "CO"),
-      const SportDivision(name: "Compact Carry Pistol", shortName: "CCP"),
-      const SportDivision(name: "Backup Gun", shortName: "BUG"),
-      const SportDivision(name: "Revolver", shortName: "REV", alternateNames: ["REVO"]),
+      const Division(name: "Stock Service Pistol", shortName: "SSP"),
+      const Division(name: "Pistol Caliber Carbine", shortName: "PCC"),
+      const Division(name: "Enhanced Service Pistol", shortName: "ESP"),
+      const Division(name: "Custom Defensive Pistol", shortName: "LO"),
+      const Division(name: "Carry Optics", shortName: "CO"),
+      const Division(name: "Compact Carry Pistol", shortName: "CCP"),
+      const Division(name: "Backup Gun", shortName: "BUG"),
+      const Division(name: "Revolver", shortName: "REV", alternateNames: ["REVO"]),
     ],
     powerFactors: [
       PowerFactor("",

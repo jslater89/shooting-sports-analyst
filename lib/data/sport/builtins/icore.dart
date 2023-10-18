@@ -1,23 +1,25 @@
+import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
 import 'package:uspsa_result_viewer/data/sport/sport.dart';
 
 final icoreSport = Sport(
     "ICORE",
-    scoring: SportScoring.timePlus,
+    matchScoring: CumulativeScoring(),
+    stageScoring: StageScoring.timePlus,
     hasStages: true,
     classifications: [
-      const SportClassification(name: "Grandmaster", shortName: "GM"),
-      const SportClassification(name: "Master", shortName: "M"),
-      const SportClassification(name: "A", shortName: "A"),
-      const SportClassification(name: "B", shortName: "B"),
-      const SportClassification(name: "C", shortName: "C"),
-      const SportClassification(name: "D", shortName: "D"),
-      const SportClassification(name: "Unclassified", shortName: "U"),
+      const Classification(index: 0, name: "Grandmaster", shortName: "GM"),
+      const Classification(index: 1, name: "Master", shortName: "M"),
+      const Classification(index: 2, name: "A", shortName: "A"),
+      const Classification(index: 3, name: "B", shortName: "B"),
+      const Classification(index: 4, name: "C", shortName: "C"),
+      const Classification(index: 5, name: "D", shortName: "D"),
+      const Classification(index: 6, name: "Unclassified", shortName: "U"),
     ],
     divisions: [
-      const SportDivision(name: "Open", shortName: "OPEN"),
-      const SportDivision(name: "Limited", shortName: "LIM"),
-      const SportDivision(name: "Limited 6", shortName: "LIM6"),
-      const SportDivision(name: "Classic", shortName: "CLS"),
+      const Division(name: "Open", shortName: "OPEN"),
+      const Division(name: "Limited", shortName: "LIM"),
+      const Division(name: "Limited 6", shortName: "LIM6"),
+      const Division(name: "Classic", shortName: "CLS"),
     ],
     powerFactors: [
       PowerFactor("Standard",

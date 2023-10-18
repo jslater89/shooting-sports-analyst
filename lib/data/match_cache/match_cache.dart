@@ -13,7 +13,6 @@ part 'match_cache.g.dart';
 
 Future<void> Function(int, int)? matchCacheProgressCallback;
 
-// TODO: migration2: back with the SQLite database
 class MatchCache {
   static MatchCache? _instance;
   factory MatchCache() {
