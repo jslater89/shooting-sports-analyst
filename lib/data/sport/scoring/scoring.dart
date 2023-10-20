@@ -45,10 +45,9 @@ final class RelativeStageFinishScoring extends MatchScoring {
 
     // First, fill in the stageScores map with relative placements on each stage.
     for(var stage in stages) {
-      Map<MatchEntry, RawScore> scores = LinkedHashMap();
+      Map<MatchEntry, RawScore> scores = {};
 
       StageScoring scoring = stage.scoring;
-      bool oneScore = false;
       RawScore? bestScore = null;
 
       // Find the high score on the stage.
@@ -150,7 +149,109 @@ final class CumulativeScoring extends MatchScoring {
   CumulativeScoring({this.highScoreWins = true});
 
   Map<MatchEntry, RelativeMatchScore> calculateMatchScores({required List<MatchEntry> shooters, required List<MatchStage> stages}) {
-    throw UnimplementedError();
+    if(shooters.length == 0 || stages.length == 0) return {};
+
+    Map<MatchEntry, RelativeMatchScore> matchScores = {};
+    Map<MatchEntry, Map<MatchStage, RelativeStageScore>> stageScores = {};
+
+    for(var stage in stages) {
+      Map<MatchEntry, RawScore> scores = {};
+
+      StageScoring scoring = stage.scoring;
+      RawScore? bestScore = null;
+
+      // Find the high score on the stage.
+      for(var shooter in shooters) {
+        var stageScore = shooter.scores[stage];
+
+        if(stageScore == null) {
+          stageScore = RawScore(scoring: scoring, scoringEvents: {});
+          shooter.scores[stage] = stageScore;
+        }
+
+        scores[shooter] = stageScore;
+
+        // In time plus scoring, a zero final time on a stage is a stage/match DNF.
+        if(scoring is TimePlusScoring && stageScore.dnf) continue;
+
+        if(bestScore == null || scoring.firstScoreBetter(stageScore, bestScore)) {
+          bestScore = stageScore;
+        }
+      }
+
+      if(bestScore == null) {
+        // Nobody completed this stage, so move on to the next one
+        continue;
+      }
+
+      // Sort the shooters by raw score on this stage, so we can assign places in one step.
+      var sortedShooters = scores.keys.sorted((a, b) => scoring.compareScores(scores[b]!, scores[a]!));
+
+      // Based on the high score, calculate ratios.
+      for(int i = 0; i < sortedShooters.length; i++) {
+        var shooter = sortedShooters[i];
+        var score = scores[shooter]!;
+        var ratio = scoring.ratio(score, bestScore);
+        var points = scoring.interpret(score);
+        var relativeStageScore = RelativeStageScore(
+          score: score,
+          place: i + 1,
+          ratio: ratio,
+          points: points.toDouble(),
+        );
+        stageScores[shooter] ??= {};
+        stageScores[shooter]![stage] = relativeStageScore;
+      }
+    }
+
+    // Next, build match point totals for each shooter, summing the points available
+    // per stage.
+    Map<MatchEntry, double> stageScoreTotals = {};
+    double bestTotalScore = highScoreWins ? 0 : double.maxFinite;
+    for(var s in shooters) {
+      var shooterStageScores = stageScores[s];
+
+      if(shooterStageScores == null) {
+        throw StateError("shooter has no stage scores");
+      }
+
+      var totalScore = shooterStageScores.values.map((e) => e.points!).sum;
+      stageScoreTotals[s] = totalScore;
+      if(lowScoreWins) {
+        if(totalScore < bestTotalScore) {
+          bestTotalScore = totalScore;
+        }
+      }
+      else {
+        if (totalScore > bestTotalScore) {
+          bestTotalScore = totalScore;
+        }
+      }
+    }
+
+    // Sort the shooters by stage score totals.
+    late List<MatchEntry> sortedShooters;
+    if(lowScoreWins) {
+      sortedShooters = shooters.sorted((a, b) => stageScoreTotals[a]!.compareTo(stageScoreTotals[b]!));
+    }
+    else {
+      sortedShooters = shooters.sorted((a, b) => stageScoreTotals[b]!.compareTo(stageScoreTotals[a]!));
+    }
+
+    for(int i = 0; i < sortedShooters.length; i++) {
+      var shooter = sortedShooters[i];
+      var shooterStageScores = stageScores[shooter]!;
+      var totalScore = stageScoreTotals[shooter]!;
+
+      matchScores[shooter] = RelativeMatchScore(
+        stageScores: shooterStageScores,
+        place: i + 1,
+        ratio: lowScoreWins ? bestTotalScore / totalScore : totalScore / bestTotalScore,
+        points: totalScore,
+      );
+    }
+
+    return matchScores;
   }
 }
 
