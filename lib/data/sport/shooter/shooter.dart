@@ -33,31 +33,48 @@ class Shooter {
 
   bool female = false;
 
-  Division? division;
-  Classification? latestClassification;
-
   Shooter({
     required this.firstName,
     required this.lastName,
-  });
+    String? memberNumber,
+    this.female = false,
+  }) {
+    if(memberNumber != null) {
+      this.memberNumber = memberNumber;
+    }
+  }
 }
 
-/// A match entry for a given shooter.
-///
-/// Used as the key in match/stage score maps.
+/// A shooter embodied as a match entry.
 class MatchEntry extends Shooter {
+  int entryId;
+
   bool reentry;
   bool dq;
   PowerFactor powerFactor;
+
+  /// The division this shooter entered. This will only be null when the
+  /// sport doesn't have divisions.
+  Division? division;
+
+  /// The classification this shooter held at the time of the match entry.
+  ///
+  /// This will only be null when the sport doesn't have classifications.
+  Classification? classification;
 
   Map<MatchStage, RawScore> scores;
 
   MatchEntry({
     required super.firstName,
     required super.lastName,
+    super.memberNumber,
     this.reentry = false,
     this.dq = false,
+    required this.entryId,
     required this.powerFactor,
     required this.scores,
+    this.division,
+    this.classification,
+    super.female,
   });
 }

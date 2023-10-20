@@ -10,7 +10,7 @@ final _idpaPenalties = [
 final idpaSport = Sport(
     "IDPA",
     matchScoring: CumulativeScoring(),
-    stageScoring: StageScoring.timePlus,
+    defaultStageScoring: const TimePlusScoring(),
     hasStages: true,
     classifications: [
       const Classification(index: 0, name: "Distinguished Master", shortName: "DM"),

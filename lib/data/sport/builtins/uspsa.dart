@@ -6,11 +6,16 @@ final _uspsaPenalties = [
   const ScoringEvent("Overtime shot", pointChange: -5),
 ];
 
-final sport = Sport(
+final uspsaSport = Sport(
   "USPSA",
-  matchScoring: RelativeStageFinishScoring(),
-  stageScoring: StageScoring.hitFactor,
+  matchScoring: RelativeStageFinishScoring(pointsAreUSPSAFixedTime: true),
+  defaultStageScoring: const HitFactorScoring(),
   hasStages: true,
+  eventLevels: [
+    const MatchLevel(name: "Local", shortName: "I", level: EventLevel.local),
+    const MatchLevel(name: "Regional/State", shortName: "II", level: EventLevel.regional),
+    const MatchLevel(name: "Area/National", shortName: "III", level: EventLevel.national),
+  ],
   classifications: [
     const Classification(index: 0, name: "Grandmaster", shortName: "GM"),
     const Classification(index: 1, name: "Master", shortName: "M"),
@@ -33,22 +38,38 @@ final sport = Sport(
   ],
   powerFactors: [
     PowerFactor("Major",
+      shortName: "Maj",
       targetEvents: [
         const ScoringEvent("A", pointChange: 5),
         const ScoringEvent("C", pointChange: 4),
         const ScoringEvent("D", pointChange: 2),
         const ScoringEvent("M", pointChange: -10),
         const ScoringEvent("NS", pointChange: -10),
+        const ScoringEvent("NPM", pointChange: 0),
       ],
       penaltyEvents: _uspsaPenalties,
     ),
     PowerFactor("Minor",
+      shortName: "min",
       targetEvents: [
         const ScoringEvent("A", pointChange: 5),
         const ScoringEvent("C", pointChange: 3),
         const ScoringEvent("D", pointChange: 1),
         const ScoringEvent("M", pointChange: -10),
         const ScoringEvent("NS", pointChange: -10),
+        const ScoringEvent("NPM", pointChange: 0),
+      ],
+      penaltyEvents: _uspsaPenalties,
+    ),
+    PowerFactor("Subminor",
+      shortName: "sub",
+      targetEvents: [
+        const ScoringEvent("A", pointChange: 0),
+        const ScoringEvent("C", pointChange: 0),
+        const ScoringEvent("D", pointChange: 0),
+        const ScoringEvent("M", pointChange: 0),
+        const ScoringEvent("NS", pointChange: 0),
+        const ScoringEvent("NPM", pointChange: 0),
       ],
       penaltyEvents: _uspsaPenalties,
     ),

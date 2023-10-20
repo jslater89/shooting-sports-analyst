@@ -18,6 +18,8 @@ import 'package:uspsa_result_viewer/data/ranking/evolution/elo_tuner.dart';
 import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
+import 'package:uspsa_result_viewer/data/source/practiscore_report.dart';
+import 'package:uspsa_result_viewer/data/sport/builtins/uspsa.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/route/local_upload.dart';
 import 'package:uspsa_result_viewer/route/home_page.dart';
@@ -84,6 +86,12 @@ void main() async {
   configureApp();
 
   WidgetsFlutterBinding.ensureInitialized();
+
+  var parser = PractiscoreHitFactorReportParser(uspsaSport);
+  var match = parser.parseWebReport(File("report.txt").readAsStringSync());
+  var matchScores = match.unwrap().getScores();
+
+  print("Read match!");
 
   if(!HtmlOr.isWeb) {
     var path = await getApplicationSupportDirectory();

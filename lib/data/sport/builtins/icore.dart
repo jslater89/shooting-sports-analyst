@@ -4,7 +4,7 @@ import 'package:uspsa_result_viewer/data/sport/sport.dart';
 final icoreSport = Sport(
     "ICORE",
     matchScoring: CumulativeScoring(),
-    stageScoring: StageScoring.timePlus,
+    defaultStageScoring: const TimePlusScoring(),
     hasStages: true,
     classifications: [
       const Classification(index: 0, name: "Grandmaster", shortName: "GM"),

@@ -9,7 +9,7 @@ final _pcslPenalties = [
 final pcslSport = Sport(
   "PCSL",
   matchScoring: RelativeStageFinishScoring(),
-  stageScoring: StageScoring.hitFactor,
+  defaultStageScoring: const HitFactorScoring(),
   hasStages: true,
   classifications: [
     const Classification(index: 0, name: "Grandmaster", shortName: "GM"),
