@@ -78,6 +78,10 @@ void main() {
 
     var scores = match.getScores();
 
+    assert(scores[entry1]!.place == 1);
+    assert(scores[entry1]!.points == 34.0);
+    assert(scores[entry2]!.place == 2);
+    assert(scores[entry2]!.points == 36.0);
     print("Success!");
   });
 }

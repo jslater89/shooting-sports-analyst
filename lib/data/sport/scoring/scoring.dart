@@ -61,8 +61,8 @@ final class RelativeStageFinishScoring extends MatchScoring {
 
         scores[shooter] = stageScore;
         
-        // In time plus scoring, a zero final time on a stage is a stage/match DNF.
-        if(scoring is TimePlusScoring && stageScore.dnf) continue;
+        // A DNF/zero score doesn't count.
+        if(stageScore.dnf) continue;
         
         if(bestScore == null || scoring.firstScoreBetter(stageScore, bestScore)) {
           bestScore = stageScore;
@@ -85,11 +85,18 @@ final class RelativeStageFinishScoring extends MatchScoring {
         var shooter = sortedShooters[i];
         var score = scores[shooter]!;
         var ratio = scoring.ratio(score, bestScore);
+        late double points;
+        if(scoring is PointsScoring && pointsAreUSPSAFixedTime) {
+          points = score.points.toDouble();
+        }
+        else {
+          points = stageValue * ratio;
+        }
         var relativeStageScore = RelativeStageScore(
           score: score,
           place: i + 1,
           ratio: ratio,
-          points: stageValue * ratio,
+          points: points,
         );
         stageScores[shooter] ??= {};
         stageScores[shooter]![stage] = relativeStageScore;
@@ -114,7 +121,7 @@ final class RelativeStageFinishScoring extends MatchScoring {
       }
     }
 
-    // Sort the shooters by stage score totals.
+    // Sort the shooters by stage score totals and create relative match scores.
     var sortedShooters = shooters.sorted((a, b) => stageScoreTotals[b]!.compareTo(stageScoreTotals[a]!));
     for(int i = 0; i < sortedShooters.length; i++) {
       var shooter = sortedShooters[i];
