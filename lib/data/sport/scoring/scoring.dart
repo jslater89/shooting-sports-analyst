@@ -4,13 +4,19 @@ import 'package:collection/collection.dart';
 import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 import 'package:uspsa_result_viewer/data/sport/shooter/shooter.dart';
 import 'package:uspsa_result_viewer/data/sport/sport.dart';
+import 'package:uspsa_result_viewer/ui/result_page.dart';
 import 'package:uspsa_result_viewer/util.dart';
 
 /// Match scoring is how a list of absolute scores are converted to relative
 /// scores, and then to overall match scores.
 sealed class MatchScoring {
   /// Calculate match scores, given a list of shooters, and optionally a list of stages to limit to.
-  Map<MatchEntry, RelativeMatchScore> calculateMatchScores({required List<MatchEntry> shooters, required List<MatchStage> stages});
+  Map<MatchEntry, RelativeMatchScore> calculateMatchScores({
+    required List<MatchEntry> shooters,
+    required List<MatchStage> stages,
+    bool scoreDQ = true,
+    MatchPredictionMode predictionMode = MatchPredictionMode.none,
+  });
 }
 
 /// In relative stage finish scoring, finish percentage on a stage scores
@@ -37,7 +43,10 @@ final class RelativeStageFinishScoring extends MatchScoring {
   RelativeStageFinishScoring({this.fixedStageValue, this.pointsAreUSPSAFixedTime = false});
 
   @override
-  Map<MatchEntry, RelativeMatchScore> calculateMatchScores({required List<MatchEntry> shooters, required List<MatchStage> stages}) {
+  Map<MatchEntry, RelativeMatchScore> calculateMatchScores({
+    required List<MatchEntry> shooters, required List<MatchStage> stages,
+    bool scoreDQ = true, MatchPredictionMode predictionMode = MatchPredictionMode.none,
+  }) {
     if(shooters.length == 0 || stages.length == 0) return {};
 
     Map<MatchEntry, RelativeMatchScore> matchScores = {};
@@ -155,7 +164,10 @@ final class CumulativeScoring extends MatchScoring {
 
   CumulativeScoring({this.highScoreWins = true});
 
-  Map<MatchEntry, RelativeMatchScore> calculateMatchScores({required List<MatchEntry> shooters, required List<MatchStage> stages}) {
+  Map<MatchEntry, RelativeMatchScore> calculateMatchScores({
+    required List<MatchEntry> shooters, required List<MatchStage> stages,
+    bool scoreDQ = true, MatchPredictionMode predictionMode = MatchPredictionMode.none,
+  }) {
     if(shooters.length == 0 || stages.length == 0) return {};
 
     Map<MatchEntry, RelativeMatchScore> matchScores = {};

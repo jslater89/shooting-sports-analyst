@@ -1,6 +1,7 @@
 import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
 import 'package:uspsa_result_viewer/data/sport/shooter/shooter.dart';
 import 'package:uspsa_result_viewer/data/sport/sport.dart';
+import 'package:uspsa_result_viewer/ui/result_page.dart';
 
 /// A match in some shooting event.
 class ShootingMatch {
@@ -30,7 +31,12 @@ class ShootingMatch {
     required this.shooters,
   });
 
-  Map<MatchEntry, RelativeMatchScore> getScores({List<MatchEntry>? shooters, List<MatchStage>? stages}) {
+  Map<MatchEntry, RelativeMatchScore> getScores({
+    List<MatchEntry>? shooters,
+    List<MatchStage>? stages,
+    bool scoreDQ = true,
+    MatchPredictionMode predictionMode = MatchPredictionMode.none,
+  }) {
     var innerShooters = shooters ?? this.shooters;
     var innerStages = stages ?? this.stages;
 
@@ -68,8 +74,8 @@ class MatchStage {
   MatchStage({
     required this.stageId,
     required this.name,
-    required this.minRounds,
     required this.scoring,
+    this.minRounds = 0,
     this.maxPoints = 0,
     this.classifier = false,
     this.classifierNumber = "",
