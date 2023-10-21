@@ -78,10 +78,10 @@ void main() {
 
     var scores = match.getScores();
 
-    assert(scores[entry1]!.place == 1);
-    assert(scores[entry1]!.points == 34.0);
-    assert(scores[entry2]!.place == 2);
-    assert(scores[entry2]!.points == 36.0);
+    expect(scores[entry1]!.place, 1);
+    expect(scores[entry1]!.points, 34.0);
+    expect(scores[entry2]!.place, 2);
+    expect(scores[entry2]!.points, 36.0);
     print("Success!");
   });
 
@@ -170,19 +170,32 @@ void main() {
     // 1.0 on stage3. entry1 should have the win on stage 2 despite
     // being DQed/DNFed.
     var scores = match.getScores(scoreDQ: true);
-    assert(scores[entry1]!.place == 2);
-    assert(scores[entry1]!.stageScores[stage3]!.points == 0.0);
-    assert(scores[entry1]!.stageScores[stage3]!.ratio == 0.0);
-    assert(scores[entry1]!.stageScores[stage2]!.ratio == 1.0);
-    assert(scores[entry2]!.place == 1);
-    assert(scores[entry2]!.ratio == 1.0);
-    assert(scores[entry2]!.stageScores[stage3]!.ratio == 1.0);
+    expect(scores[entry1]!.place, 2);
+    expect(scores[entry1]!.stageScores[stage3]!.points, 0.0);
+    expect(scores[entry1]!.stageScores[stage3]!.ratio, 0.0);
+    expect(scores[entry1]!.stageScores[stage2]!.ratio, 1.0);
+    expect(scores[entry2]!.place, 1);
+    expect(scores[entry2]!.ratio, 1.0);
+    expect(scores[entry2]!.stageScores[stage3]!.ratio, 1.0);
 
+    // On the match comprising stage 1 and 2 only,
     scores = match.getScores(scoreDQ: true, stages: [stage1, stage2]);
-    assert(scores[entry1]!.place == 1);
-    assert(scores[entry1]!.points == 34.0);
-    assert(scores[entry2]!.place == 2);
-    assert(scores[entry2]!.points == 36.0);
+    expect(scores[entry1]!.place, 1);
+    expect(scores[entry1]!.points, 34.0);
+    expect(scores[entry2]!.place, 2);
+    expect(scores[entry2]!.points, 36.0);
+
+    // In non-DQ mode,
+    scores = match.getScores(scoreDQ: false);
+    expect(scores[entry1]!.place, 2);
+    expect(scores[entry1]!.ratio, 0.0);
+    expect(scores[entry1]!.stageScores[stage3]!.points, 0.0);
+    expect(scores[entry1]!.stageScores[stage3]!.ratio, 0.0);
+    expect(scores[entry1]!.stageScores[stage2]!.ratio, 0.0);
+    expect(scores[entry1]!.stageScores[stage1]!.ratio, 0.0);
+    expect(scores[entry2]!.place, 1);
+    expect(scores[entry2]!.ratio, 1.0);
+    expect(scores[entry2]!.stageScores[stage3]!.ratio, 1.0);
 
     print("Success!");
   });

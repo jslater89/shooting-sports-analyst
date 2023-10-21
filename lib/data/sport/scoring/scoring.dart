@@ -70,7 +70,7 @@ final class RelativeStageFinishScoring extends MatchScoring {
 
         scores[shooter] = stageScore;
         
-        // A DNF/zero score doesn't count.
+        // A DNF/zero score doesn't count for best.
         if(stageScore.dnf) continue;
         
         if(bestScore == null || scoring.firstScoreBetter(stageScore, bestScore)) {
@@ -95,15 +95,18 @@ final class RelativeStageFinishScoring extends MatchScoring {
         var score = scores[shooter]!;
         var ratio = scoring.ratio(score, bestScore);
         late double points;
-        if(scoring is PointsScoring && pointsAreUSPSAFixedTime) {
-          points = score.points.toDouble();
-        }
-        else if(shooter.dq && !scoreDQ) {
+
+        if(shooter.dq && !scoreDQ) {
           points = 0;
+          ratio = 0;
+        }
+        else if(scoring is PointsScoring && pointsAreUSPSAFixedTime) {
+          points = score.points.toDouble();
         }
         else {
           points = stageValue * ratio;
         }
+
         var relativeStageScore = RelativeStageScore(
           score: score,
           place: i + 1,
