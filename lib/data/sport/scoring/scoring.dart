@@ -98,6 +98,9 @@ final class RelativeStageFinishScoring extends MatchScoring {
         if(scoring is PointsScoring && pointsAreUSPSAFixedTime) {
           points = score.points.toDouble();
         }
+        else if(shooter.dq && !scoreDQ) {
+          points = 0;
+        }
         else {
           points = stageValue * ratio;
         }
@@ -173,7 +176,12 @@ final class CumulativeScoring extends MatchScoring {
     Map<MatchEntry, RelativeMatchScore> matchScores = {};
     Map<MatchEntry, Map<MatchStage, RelativeStageScore>> stageScores = {};
 
+    // hasDNF indicates when a shooter should be sorted to the bottom of the scores, either
+    // because of a DQ or a lowScoreWins stage DNF.
+    Set<MatchEntry> matchDNF = {};
+
     for(var stage in stages) {
+      Set<MatchEntry> stageDNF = {};
       Map<MatchEntry, RawScore> scores = {};
 
       StageScoring scoring = stage.scoring;
@@ -190,8 +198,25 @@ final class CumulativeScoring extends MatchScoring {
 
         scores[shooter] = stageScore;
 
-        // In time plus scoring, a zero final time on a stage is a stage/match DNF.
-        if(scoring is TimePlusScoring && stageScore.dnf) continue;
+        // Score DQ/DNF logic is complicated for cumulative matches.
+        // If a lowScoreWins shooter DNFs a stage, they cannot have a
+        // match score—they'd have a 0 where everyone else has an N, so
+        // they would finish ahead of people they 'lost to' by DNFing.
+        // If a highScoreWins shooter DNFs a stage, that's fine. They get
+        // a 0, and finish behind anyone who got points.
+        // If a shooter in either cumulative mode DQs, and scoreDQ is off,
+        // they get added to the DNF lists and sort to the end of all stages
+        // and the match score. If scoreDQ is on (and a lowScoreWins shooter
+        // did not DNF this stage), they count for this stage.
+        // A lowScoreWins shooter will be added to the match DNF list if they
+        // DNF any stage for any reason, or if they DQ and scoreDQ is off. A
+        // highScoreWins shooter will only be added to the match DNF list if
+        // score DQ is off.
+        if((stageScore.dnf && lowScoreWins) || (!scoreDQ && shooter.dq)) {
+          stageDNF.add(shooter);
+          matchDNF.add(shooter);
+          continue;
+        }
 
         if(bestScore == null || scoring.firstScoreBetter(stageScore, bestScore)) {
           bestScore = stageScore;
@@ -204,13 +229,27 @@ final class CumulativeScoring extends MatchScoring {
       }
 
       // Sort the shooters by raw score on this stage, so we can assign places in one step.
-      var sortedShooters = scores.keys.sorted((a, b) => scoring.compareScores(scores[b]!, scores[a]!));
+      var sortedShooters = scores.keys.sorted((a, b) {
+        // If both are DNF/DQ, sort equally.
+        if(stageDNF.contains(a) && stageDNF.contains(b)) return a.lastName.compareTo(b.lastName);
+        // If A is DNF and B is not DNF, A sorts after B, and vice versa.
+        else if(stageDNF.contains(a) && !stageDNF.contains(b)) return 1;
+        else if(!stageDNF.contains(a) && stageDNF.contains(b)) return -1;
+        // If neither A nor B is DNF, sort by descending order of finish.
+        return scoring.compareScores(scores[b]!, scores[a]!);
+      });
 
       // Based on the high score, calculate ratios.
+      // In the event that a shooter is DNF on this stage, their points will be 0, and they'll be
+      // sorted to the end because of the sort in sortedShooters.
       for(int i = 0; i < sortedShooters.length; i++) {
         var shooter = sortedShooters[i];
         var score = scores[shooter]!;
+
+        // Ratio is 0.0 for lowScoreWins stageDNF shooters. Points is 0 because of DNF.
         var ratio = scoring.ratio(score, bestScore);
+        if(lowScoreWins && stageDNF.contains(shooter)) ratio = 0.0;
+
         var points = scoring.interpret(score);
         var relativeStageScore = RelativeStageScore(
           score: score,
@@ -237,7 +276,8 @@ final class CumulativeScoring extends MatchScoring {
       var totalScore = shooterStageScores.values.map((e) => e.points!).sum;
       stageScoreTotals[s] = totalScore;
       if(lowScoreWins) {
-        if(totalScore < bestTotalScore) {
+        // Match DNFs can't be the best total score.
+        if(totalScore < bestTotalScore && !matchDNF.contains(s)) {
           bestTotalScore = totalScore;
         }
       }
@@ -249,12 +289,29 @@ final class CumulativeScoring extends MatchScoring {
     }
 
     // Sort the shooters by stage score totals.
+    // People on the match DNF list get sorted to the end of the list.
     late List<MatchEntry> sortedShooters;
     if(lowScoreWins) {
-      sortedShooters = shooters.sorted((a, b) => stageScoreTotals[a]!.compareTo(stageScoreTotals[b]!));
+      sortedShooters = shooters.sorted((a, b) {
+        // If both are DNF/DQ, sort equally.
+        if(matchDNF.contains(a) && matchDNF.contains(b)) return a.lastName.compareTo(b.lastName);
+        // If A is DNF and B is not DNF, A sorts after B, and vice versa.
+        else if(matchDNF.contains(a) && !matchDNF.contains(b)) return 1;
+        else if(!matchDNF.contains(a) && matchDNF.contains(b)) return -1;
+
+        return stageScoreTotals[a]!.compareTo(stageScoreTotals[b]!);
+      });
     }
     else {
-      sortedShooters = shooters.sorted((a, b) => stageScoreTotals[b]!.compareTo(stageScoreTotals[a]!));
+      sortedShooters = shooters.sorted((a, b) {
+        // If both are DNF/DQ, sort equally.
+        if(matchDNF.contains(a) && matchDNF.contains(b)) return a.lastName.compareTo(b.lastName);
+        // If A is DNF and B is not DNF, A sorts after B, and vice versa.
+        else if(matchDNF.contains(a) && !matchDNF.contains(b)) return 1;
+        else if(!matchDNF.contains(a) && matchDNF.contains(b)) return -1;
+
+        return stageScoreTotals[b]!.compareTo(stageScoreTotals[a]!);
+      });
     }
 
     for(int i = 0; i < sortedShooters.length; i++) {
@@ -262,10 +319,27 @@ final class CumulativeScoring extends MatchScoring {
       var shooterStageScores = stageScores[shooter]!;
       var totalScore = stageScoreTotals[shooter]!;
 
+      // In lowScoreWins mode, if someone is on the match DNF list, we can't
+      // give them a valid score, so their total score becomes 0, as does their
+      // ratio.
+      if(lowScoreWins && matchDNF.contains(shooter)) {
+        totalScore = 0.0;
+      }
+
+      var ratio = 0.0;
+      if(lowScoreWins) {
+        if(totalScore != 0.0) {
+          ratio = bestTotalScore / totalScore;
+        }
+      }
+      else {
+        ratio = totalScore / bestTotalScore;
+      }
+
       matchScores[shooter] = RelativeMatchScore(
         stageScores: shooterStageScores,
         place: i + 1,
-        ratio: lowScoreWins ? bestTotalScore / totalScore : totalScore / bestTotalScore,
+        ratio: ratio,
         points: totalScore,
       );
     }
@@ -428,18 +502,19 @@ class RawScore {
       (this.scoring is HitFactorScoring && scoringEvents.length == 0 && rawTime == 0.0)
       || (this.scoring is TimePlusScoring && rawTime == 0.0)
       || (this.scoring is PointsScoring && points == 0);
-  
+
+  /// The hit factor represented by this score.
+  ///
+  /// Returns 0 (DNF) when raw time is zero, unless [scoring] is
+  /// [PointsScoring], in which case this is treated like a USPSA
+  /// fixed time stage, and the raw point total is returned as a
+  /// 'hit factor'.
   double get hitFactor {
-    if(rawTime == 0.0 && scoringEvents.isEmpty) {
+    if(rawTime == 0.0) {
+      if(rawTime == 0.0 && scoring is PointsScoring && points > 0) {
+        return points.toDouble();
+      }
       // DNF
-      return 0;
-    }
-    else if(rawTime == 0.0 && scoring is PointsScoring && points > 0) {
-      // Fixed time, conceivably
-      return points.toDouble();
-    }
-    else if(rawTime == 0.0) {
-      // Probably DNF
       return 0;
     }
     else {
