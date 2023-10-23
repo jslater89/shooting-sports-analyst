@@ -1,4 +1,6 @@
 import 'package:isar/isar.dart';
+import 'package:uspsa_result_viewer/data/match/practical_match.dart' as oldschema;
+import 'package:uspsa_result_viewer/data/sport/match/translator.dart';
 import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
 import 'package:uspsa_result_viewer/data/sport/shooter/shooter.dart';
 import 'package:uspsa_result_viewer/data/sport/sport.dart';
@@ -40,6 +42,10 @@ class ShootingMatch {
     required this.stages,
     required this.shooters,
   });
+
+  factory ShootingMatch.fromOldMatch(oldschema.PracticalMatch match) {
+    return MatchTranslator.shootingMatchFrom(match);
+  }
 
   Map<MatchEntry, RelativeMatchScore> getScores({
     List<MatchEntry>? shooters,
