@@ -12,9 +12,9 @@ final uspsaSport = Sport(
   defaultStageScoring: const HitFactorScoring(),
   hasStages: true,
   eventLevels: [
-    const MatchLevel(name: "Local", shortName: "I", level: EventLevel.local),
-    const MatchLevel(name: "Regional/State", shortName: "II", level: EventLevel.regional),
-    const MatchLevel(name: "Area/National", shortName: "III", level: EventLevel.national),
+    const MatchLevel(name: "Level I", shortName: "I", alternateNames: ["Local"], eventLevel: EventLevel.local),
+    const MatchLevel(name: "Level II", shortName: "II", alternateNames: ["Regional/State"], eventLevel: EventLevel.regional),
+    const MatchLevel(name: "Level III", shortName: "III", alternateNames: ["Area/National"], eventLevel: EventLevel.national),
   ],
   classifications: [
     const Classification(index: 0, name: "Grandmaster", shortName: "GM"),

@@ -59,6 +59,7 @@ dev_dependencies:
     sdk: flutter
   flutter_launcher_icons: ^0.13.0
   build_runner: ^2.2.0
+  isar_generator: ^3.0.5
   hive_generator: ^2.0.0
 
 flutter_icons:

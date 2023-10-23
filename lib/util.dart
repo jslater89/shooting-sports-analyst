@@ -1,7 +1,13 @@
-import 'package:flutter/foundation.dart';
 
 abstract class Error {
   String get message;
+  const Error();
+}
+
+class StringError extends Error {
+  final String message;
+
+  const StringError(this.message);
 }
 
 // My Rust is showing

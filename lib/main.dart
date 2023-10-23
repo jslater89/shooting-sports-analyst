@@ -9,6 +9,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:uspsa_result_viewer/data/database/match_database.dart';
 // import 'package:uspsa_result_viewer/data/db/object/match/match.dart';
 // import 'package:uspsa_result_viewer/data/db/object/rating/rating_project.dart';
 // import 'package:uspsa_result_viewer/data/db/project/project_db.dart';
@@ -91,7 +92,14 @@ void main() async {
   var match = parser.parseWebReport(File("report.txt").readAsStringSync());
   var matchScores = match.unwrap().getScores();
 
+  await MatchDatabase().ready;
+
   print("Read match!");
+
+  var dbMatch = await MatchDatabase().save(match.unwrap());
+  print("DB id: ${dbMatch.id}");
+  var inflatedMatch = dbMatch.hydrate();
+  print("Inflated DB id: ${dbMatch.id}");
 
   if(!HtmlOr.isWeb) {
     var path = await getApplicationSupportDirectory();

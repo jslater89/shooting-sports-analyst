@@ -136,6 +136,7 @@ extension LookupNameInList<T extends NameLookupEntity> on Iterable<T> {
 
 extension LookupNameInMap<T extends NameLookupEntity> on Map<String, T> {
   T? lookupByName(String name) {
+    name = name.trim();
     var byKey = this[name];
     if(byKey != null) return byKey;
 
@@ -169,7 +170,7 @@ enum EventLevel {
 class MatchLevel implements NameLookupEntity {
   final String name;
   final String shortName;
-  final EventLevel level;
+  final EventLevel eventLevel;
 
   final List<String> alternateNames;
 
@@ -177,6 +178,6 @@ class MatchLevel implements NameLookupEntity {
     required this.name,
     required this.shortName,
     this.alternateNames = const [],
-    this.level = EventLevel.local,
+    this.eventLevel = EventLevel.local,
   });
 }

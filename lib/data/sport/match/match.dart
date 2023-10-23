@@ -1,3 +1,4 @@
+import 'package:isar/isar.dart';
 import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
 import 'package:uspsa_result_viewer/data/sport/shooter/shooter.dart';
 import 'package:uspsa_result_viewer/data/sport/sport.dart';
@@ -5,6 +6,13 @@ import 'package:uspsa_result_viewer/ui/result_page.dart';
 
 /// A match in some shooting event.
 class ShootingMatch {
+  /// The identifier corresponding to this match in the local database.
+  int? databaseId;
+
+  /// The identifier or identifiers corresponding to this match in the
+  /// source it came from.
+  List<String> sourceIds;
+
   String eventName;
   String rawDate;
   DateTime date;
@@ -22,6 +30,8 @@ class ShootingMatch {
   List<MatchEntry> shooters;
 
   ShootingMatch({
+    this.databaseId,
+    this.sourceIds = const [],
     required this.eventName,
     required this.rawDate,
     required this.date,
