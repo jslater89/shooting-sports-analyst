@@ -364,6 +364,8 @@ sealed class StageScoring {
   /// The opposite of [highScoreBest].
   bool get lowScoreBest => !highScoreBest;
 
+  String get dbString => this.runtimeType.toString();
+
   /// Returns >0 if a is better than b, 0 if they are equal, and <0 is b is better than a.
   int compareScores(RawScore a, RawScore b) {
     var aInt = interpret(a);
@@ -399,6 +401,17 @@ sealed class StageScoring {
   }
 
   const StageScoring();
+
+  static StageScoring fromDbString(String string) {
+    if(string.startsWith(const HitFactorScoring().dbString)) return const HitFactorScoring();
+    else if(string.startsWith(const TimePlusScoring().dbString)) return const TimePlusScoring();
+    else if(string.startsWith(const PointsScoring(highScoreBest: true).dbString)) {
+      var highScoreBest = string.split("|")[1];
+      if(highScoreBest == "true") return const PointsScoring(highScoreBest: true);
+      else return const PointsScoring(highScoreBest: false);
+    }
+    else return const IgnoredScoring();
+  }
 }
 
 class HitFactorScoring extends StageScoring {
@@ -418,6 +431,8 @@ class TimePlusScoring extends StageScoring {
 class PointsScoring extends StageScoring {
   num interpret(RawScore score) => score.points;
   final bool highScoreBest;
+
+  String get dbString => "${this.runtimeType.toString()}|$highScoreBest";
 
   const PointsScoring({this.highScoreBest = true});
 }
