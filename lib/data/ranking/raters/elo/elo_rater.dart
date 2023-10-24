@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 // TODO: there may still be something to this system
 // ... but OpenSkill is more tempting to figure out.
 
