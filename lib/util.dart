@@ -63,3 +63,30 @@ extension IncrementHistogram<T> on Map<T, int> {
     this[key] = value;
   }
 }
+
+/// FNV-1a 64bit hash algorithm optimized for Dart Strings
+extension StableStringHash on String {
+  int get stableHash {
+    var hash = 0xcbf29ce484222325;
+
+    var i = 0;
+    while (i < length) {
+      final codeUnit = codeUnitAt(i++);
+      hash ^= codeUnit >> 8;
+      hash *= 0x100000001b3;
+      hash ^= codeUnit & 0xFF;
+      hash *= 0x100000001b3;
+    }
+
+    return hash;
+  }
+}
+
+extension StableIntHash on int {
+  int get stableHash {
+    var x = ((this >> 16) ^ this) * 0x45d9f3b;
+    x = ((x >> 16) ^ x) * 0x45d9f3b;
+    x = (x >> 16) ^ x;
+    return x;
+  }
+}

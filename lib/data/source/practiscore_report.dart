@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:intl/intl.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 import 'package:uspsa_result_viewer/data/sport/match/match.dart';
@@ -21,7 +23,7 @@ class PractiscoreHitFactorReportParser {
 
   PractiscoreHitFactorReportParser(this.sport, {this.verboseParse = false});
 
-  Result<ShootingMatch, Error> parseWebReport(String fileContents) {
+  Result<ShootingMatch, Error> parseWebReport(String fileContents, {List<String>? sourceIds}) {
     String reportFile = fileContents.replaceAll("\r\n", "\n");
     List<String> lines = reportFile.split("\n");
 
@@ -56,7 +58,13 @@ class PractiscoreHitFactorReportParser {
         sport: sport,
         stages: stagesByFileId.values.toList(),
         shooters: shootersByFileId.values.toList(),
+        sourceIds: sourceIds ?? [],
       );
+
+      if(sourceIds == null) {
+        var syntheticId = m.eventName.stableHash ^ m.date.millisecondsSinceEpoch.stableHash;
+        m.sourceIds.add(syntheticId.toRadixString(36));
+      }
       return Result.ok(m);
     } catch(e) {
       return Result.err(MatchGetError.formatError);

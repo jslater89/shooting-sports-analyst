@@ -31,6 +31,9 @@ class MatchDatabase {
   MatchDatabase._();
 
   Future<DbShootingMatch> save(ShootingMatch match) async {
+    if(match.sourceIds.isEmpty) {
+      throw ArgumentError("Match must have at least one source ID to be saved in the database");
+    }
     var dbMatch = DbShootingMatch.from(match);
     dbMatch = await matchDb.writeTxn<DbShootingMatch>(() async {
       await matchDb.dbShootingMatchs.put(dbMatch);

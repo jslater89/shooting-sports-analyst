@@ -21,6 +21,7 @@ import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.d
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/source/practiscore_report.dart';
 import 'package:uspsa_result_viewer/data/sport/builtins/uspsa.dart';
+import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/route/local_upload.dart';
 import 'package:uspsa_result_viewer/route/home_page.dart';
@@ -89,17 +90,25 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   var parser = PractiscoreHitFactorReportParser(uspsaSport);
-  var match = parser.parseWebReport(File("report.txt").readAsStringSync());
-  var matchScores = match.unwrap().getScores();
+  var localContents = File("data/test/local-report.txt").readAsStringSync();
+  var majorContents = File("data/test/area6-report.txt").readAsStringSync();
+  var local = parser.parseWebReport(localContents).unwrap();
+  var localScores = local.getScores();
+
+  var oldMajor = (await processScoreFile(majorContents)).unwrap();
+  var newMajor = parser.parseWebReport(majorContents).unwrap();
+  var translatedMajor = ShootingMatch.fromOldMatch(oldMajor);
 
   await MatchDatabase().ready;
 
   print("Read match!");
 
-  var dbMatch = await MatchDatabase().save(match.unwrap());
-  print("DB id: ${dbMatch.id}");
-  var inflatedMatch = dbMatch.hydrate();
-  print("Inflated DB id: ${dbMatch.id}");
+  var dbLocal = await MatchDatabase().save(local);
+  var dbMajor = await MatchDatabase().save(newMajor);
+  print("DB id: ${dbLocal.id} ${dbMajor.id}");
+  var inflatedLocal = dbLocal.hydrate();
+  var inflatedMajor = dbMajor.hydrate();
+  print("Inflated DB id: ${dbLocal.id}");
 
   if(!HtmlOr.isWeb) {
     var path = await getApplicationSupportDirectory();
