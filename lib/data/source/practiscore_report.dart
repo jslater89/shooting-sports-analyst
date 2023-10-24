@@ -8,6 +8,7 @@ import 'dart:convert';
 
 import 'package:intl/intl.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
+import 'package:uspsa_result_viewer/data/source/source.dart';
 import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
 import 'package:uspsa_result_viewer/data/sport/shooter/shooter.dart';
@@ -23,7 +24,7 @@ import 'package:uspsa_result_viewer/util.dart';
 ///
 /// If the sport has event levels, they must match the PractiScore I/II/III
 /// format in one of the name fields.
-class PractiscoreHitFactorReportParser {
+class PractiscoreHitFactorReportParser extends MatchSource {
   Sport sport;
   bool verboseParse;
 
@@ -341,6 +342,46 @@ class PractiscoreHitFactorReportParser {
     if(verboseParse) print("Processed $i stage scores");
     return i;
   }
+
+  @override
+  bool get canSearch => false;
+
+  @override
+  Future<Result<List<MatchSearchResult<InternalMatchType>>, MatchSourceError>> findMatches(String search) {
+    return Future.value(Result.err(MatchSourceError.unsupportedOperation));
+  }
+
+  @override
+  Future<Result<ShootingMatch, MatchSourceError>> getHitFactorMatch(String id) async {
+    // TODO: implement getHitFactorMatch
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromSearch(MatchSearchResult<InternalMatchType> result) {
+    return Future.value(Result.err(MatchSourceError.unsupportedOperation));
+  }
+
+  @override
+  Future<Result<ShootingMatch, MatchSourceError>> getPointsMatch(String id) {
+    return Future.value(Result.err(MatchSourceError.unsupportedMatchType));
+  }
+
+  @override
+  Future<Result<ShootingMatch, MatchSourceError>> getTimePlusPenaltiesMatch(String id) {
+    return Future.value(Result.err(MatchSourceError.unsupportedMatchType));
+  }
+
+  @override
+  Future<Result<ShootingMatch, MatchSourceError>> getTimePlusPointsDownMatch(String id) {
+    return Future.value(Result.err(MatchSourceError.unsupportedMatchType));
+  }
+
+  @override
+  bool get isImplemented => true;
+
+  @override
+  String get name => "PractiScore Web Report Parser (${sport.name})";
 }
 
 class _MatchInfo {

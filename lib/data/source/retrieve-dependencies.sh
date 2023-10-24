@@ -1,4 +1,4 @@
 #!/bin/bash
 
 rm -rf psv2
-# git checkout ...
+git clone git@github.com:jslater89/psv2_match_source psv2
