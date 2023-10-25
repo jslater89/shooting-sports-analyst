@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:uspsa_result_viewer/data/sport/sport.dart';
 import 'package:uspsa_result_viewer/util.dart';
 import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 
@@ -34,6 +35,8 @@ abstract class MatchSource {
   String get name;
   bool get isImplemented;
   bool get canSearch;
+  List<SportType> get supportedSports;
+  
   /// findMatches may return a MatchSearchResult<T> if needed. See
   /// [InternalMatchType].
   Future<Result<List<MatchSearchResult>, MatchSourceError>> findMatches(String search);

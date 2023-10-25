@@ -14,6 +14,7 @@ final _ipscPenalties = [
 
 final ipscSport = Sport(
   "IPSC",
+  type: SportType.ipsc,
   matchScoring: RelativeStageFinishScoring(pointsAreUSPSAFixedTime: true),
   defaultStageScoring: const HitFactorScoring(),
   hasStages: true,

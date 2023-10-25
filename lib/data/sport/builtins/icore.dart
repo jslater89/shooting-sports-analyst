@@ -9,6 +9,7 @@ import 'package:uspsa_result_viewer/data/sport/sport.dart';
 
 final icoreSport = Sport(
     "ICORE",
+    type: SportType.icore,
     matchScoring: CumulativeScoring(),
     defaultStageScoring: const TimePlusScoring(),
     hasStages: true,

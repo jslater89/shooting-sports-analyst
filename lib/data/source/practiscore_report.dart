@@ -9,6 +9,8 @@ import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 import 'package:uspsa_result_viewer/data/source/source.dart';
+import 'package:uspsa_result_viewer/data/sport/builtins/ipsc.dart';
+import 'package:uspsa_result_viewer/data/sport/builtins/uspsa.dart';
 import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
 import 'package:uspsa_result_viewer/data/sport/shooter/shooter.dart';
@@ -382,6 +384,13 @@ class PractiscoreHitFactorReportParser extends MatchSource {
 
   @override
   String get name => "PractiScore Web Report Parser (${sport.name})";
+
+  @override
+  List<SportType> get supportedSports => [
+    if(sport == uspsaSport) SportType.uspsa,
+    if(sport == ipscSport) SportType.ipsc,
+    if(sport != ipscSport && sport != uspsaSport) SportType.userDefinedHitFactor,
+  ];
 }
 
 class _MatchInfo {

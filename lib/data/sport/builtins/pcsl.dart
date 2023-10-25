@@ -14,6 +14,7 @@ final _pcslPenalties = [
 
 final pcslSport = Sport(
   "PCSL",
+  type: SportType.userDefinedHitFactor,
   matchScoring: RelativeStageFinishScoring(),
   defaultStageScoring: const HitFactorScoring(),
   hasStages: true,

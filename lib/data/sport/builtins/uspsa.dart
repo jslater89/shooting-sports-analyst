@@ -14,6 +14,7 @@ final _uspsaPenalties = [
 
 final uspsaSport = Sport(
   "USPSA",
+  type: SportType.uspsa,
   matchScoring: RelativeStageFinishScoring(pointsAreUSPSAFixedTime: true),
   defaultStageScoring: const HitFactorScoring(),
   hasStages: true,

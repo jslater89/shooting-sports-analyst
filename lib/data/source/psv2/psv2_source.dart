@@ -4,8 +4,13 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+/*
+This is the PSv2 stub.
+ */
+
 import 'package:uspsa_result_viewer/data/source/source.dart';
 import 'package:uspsa_result_viewer/data/sport/match/match.dart';
+import 'package:uspsa_result_viewer/data/sport/sport.dart';
 import 'package:uspsa_result_viewer/util.dart';
 
 class PSv2MatchSource extends MatchSource {
@@ -48,4 +53,6 @@ class PSv2MatchSource extends MatchSource {
   @override
   String get name => "PSv2 Source Stub";
 
+  @override
+  List<SportType> get supportedSports => [];
 }

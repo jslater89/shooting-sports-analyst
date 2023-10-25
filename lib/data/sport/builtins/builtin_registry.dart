@@ -6,6 +6,7 @@
 
 import 'package:uspsa_result_viewer/data/sport/builtins/icore.dart';
 import 'package:uspsa_result_viewer/data/sport/builtins/idpa.dart';
+import 'package:uspsa_result_viewer/data/sport/builtins/ipsc.dart';
 import 'package:uspsa_result_viewer/data/sport/builtins/pcsl.dart';
 import 'package:uspsa_result_viewer/data/sport/builtins/sporting_clays.dart';
 import 'package:uspsa_result_viewer/data/sport/builtins/uhrc.dart';
@@ -22,6 +23,7 @@ class BuiltinSportRegistry {
       claysSport,
       uhrcSport,
       uspsaSport,
+      ipscSport,
     ]);
     return _instance!;
   }

@@ -9,6 +9,7 @@ import 'package:uspsa_result_viewer/data/sport/sport.dart';
 
 final claysSport = Sport(
     "Sporting Clays",
+    type: SportType.userDefinedPoints,
     matchScoring: CumulativeScoring(),
     defaultStageScoring: const PointsScoring(),
     hasStages: false,

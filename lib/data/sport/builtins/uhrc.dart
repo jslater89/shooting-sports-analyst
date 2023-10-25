@@ -9,6 +9,7 @@ import 'package:uspsa_result_viewer/data/sport/sport.dart';
 
 final uhrcSport = Sport(
     "UHRC",
+    type: SportType.userDefinedHitFactor,
     matchScoring: CumulativeScoring(),
     defaultStageScoring: const HitFactorScoring(),
     hasStages: true,

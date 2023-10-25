@@ -12,6 +12,8 @@ class Sport {
   /// The name of the sport, e.g. "PCSL"
   final String name;
 
+  final SportType type;
+
   /// How scores from various stages are totaled to produce a final match score.
   ///
   /// Sports without stages (see [hasStages]) should set this to [CumulativeScoring],
@@ -54,6 +56,7 @@ class Sport {
   Sport(this.name, {
     required this.matchScoring,
     required this.defaultStageScoring,
+    required this.type,
     this.hasStages = true,
     List<Classification> classifications = const [],
     List<Division> divisions = const [],
@@ -186,4 +189,38 @@ class MatchLevel implements NameLookupEntity {
     this.alternateNames = const [],
     this.eventLevel = EventLevel.local,
   });
+}
+
+/// Sports a match source can provide.
+///
+/// The first group of values in the definition are hardcoded/built-in sports.
+/// They're included because certain official scoring sources may not provide
+/// data for other sports: if I ever get leave to write an official uspsa.org
+/// match source, it will support USPSA only, not USPSA and other generic hit
+/// factor matches.
+/// 
+/// The second group ('userDefined') is for non-hardcoded but still predefined
+/// sports. If [I write a sport editor and] a user defines a sport with it, it
+/// gets one of these types, and match sources declaring those types can parse
+/// it to a ShootingMatch.
+///
+/// The final group ('dynamic') is for match sources whose fetch process also
+/// fetches a sport definition, and that furthermore support generating an ad
+/// hoc sport for displaying/filtering those scores.
+enum SportType {
+  uspsa,
+  ipsc,
+  idpa,
+  icore,
+  pcsl,
+
+  userDefinedPoints,
+  userDefinedHitFactor,
+  userDefinedTimePlusPenalties,
+  userDefinedTimePlusPointsDown,
+
+  dynamicPoints,
+  dynamicHitFactor,
+  dynamicTimePlusPenalties,
+  dynamicTimePlusPointsDown,
 }
