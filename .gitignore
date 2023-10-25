@@ -54,3 +54,4 @@ ratings*.csv
 *zip
 data/l2s.sqlite
 *.isar*
+coverage/
