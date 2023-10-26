@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'package:fluttericon/rpg_awesome_icons.dart';
 import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 
 import 'package:flutter/material.dart';
@@ -122,7 +123,7 @@ class _HomePageState extends State<HomePage> {
           );
           if(entry != null) {
             var match = await MatchCache().getByIndex(entry);
-            Navigator.of(context).push(MaterialPageRoute(builder: (context) => ResultPage(canonicalMatch: match)));
+            Navigator.of(context).push(MaterialPageRoute(builder: (context) => ResultPage(canonicalMatch: ShootingMatch.fromOldMatch(match))));
           }
         },
         child: Column(

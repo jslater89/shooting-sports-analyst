@@ -14,6 +14,7 @@ import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.d
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_error.dart';
 import 'package:uspsa_result_viewer/data/ranking/timings.dart';
+import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart' as defaultAliases;
 import 'package:uspsa_result_viewer/ui/widget/dialog/member_number_collision_dialog.dart';

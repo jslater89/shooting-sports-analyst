@@ -11,6 +11,7 @@ import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_error.dart';
+import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 import 'package:uspsa_result_viewer/ui/rater/shooter_stats_dialog.dart';
 import 'package:uspsa_result_viewer/ui/result_page.dart';
 
@@ -180,7 +181,7 @@ class _MemberNumberCollisionDialogState extends State<MemberNumberCollisionDialo
                 onTap: () {
                   Navigator.of(context).push(MaterialPageRoute(builder: (context) {
                     return ResultPage(
-                      canonicalMatch: match,
+                      canonicalMatch: ShootingMatch.fromOldMatch(match),
                       allowWhatIf: false,
                     );
                   }));

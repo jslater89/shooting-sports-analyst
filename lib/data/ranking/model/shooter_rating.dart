@@ -15,6 +15,7 @@ import 'package:uspsa_result_viewer/data/ranking/model/connected_shooter.dart';
 import 'package:uspsa_result_viewer/data/ranking/model/rating_change.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/sorted_list.dart';
+import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 
 abstract class ShooterRating extends Shooter {
   /// The number of events over which trend/variance are calculated.

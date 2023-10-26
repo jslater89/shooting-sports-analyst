@@ -6,7 +6,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
 
 class AddComparisonDialog extends StatefulWidget {
   AddComparisonDialog(this.scores, {Key? key}) : super(key: key);

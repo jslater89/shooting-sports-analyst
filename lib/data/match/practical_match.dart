@@ -14,6 +14,7 @@ import 'package:uspsa_result_viewer/data/ranking/prediction/match_prediction.dar
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
+import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 import 'package:uspsa_result_viewer/ui/result_page.dart';
 import 'package:uspsa_result_viewer/ui/widget/score_list.dart';
 

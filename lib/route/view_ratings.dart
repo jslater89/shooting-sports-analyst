@@ -19,6 +19,7 @@ import 'package:uspsa_result_viewer/data/ranking/rating_error.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 import 'package:uspsa_result_viewer/data/search_query_parser.dart';
+import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/ui/rater/member_number_correction_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/member_number_dialog.dart';
@@ -692,7 +693,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
           var match = await MatchCache().getByIndex(indexEntry);
           Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-            return ResultPage(canonicalMatch: match, allowWhatIf: false, ratings: ratings);
+            return ResultPage(canonicalMatch: ShootingMatch.fromOldMatch(match), allowWhatIf: false, ratings: ratings);
           }));
         }
         break;

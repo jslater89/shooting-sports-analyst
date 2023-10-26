@@ -10,7 +10,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sprintf/sprintf.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/model.dart' as old;
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:charts_flutter/flutter.dart' as charts;
@@ -20,9 +20,8 @@ import 'package:charts_flutter/src/text_style.dart' as style;
 import 'package:charts_flutter/src/text_element.dart' as element;
 import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
+import 'package:uspsa_result_viewer/data/sport/sport.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
-import 'package:uspsa_result_viewer/ui/result_page.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
 
 /// This displays per-stage changes for a shooter.
 class ShooterStatsDialog extends StatefulWidget {
@@ -30,7 +29,7 @@ class ShooterStatsDialog extends StatefulWidget {
 
   final bool showDivisions;
   final ShooterRating rating;
-  final PracticalMatch match;
+  final old.PracticalMatch match;
   final Map<RaterGroup, Rater>? ratings;
 
   @override
@@ -249,17 +248,8 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   late NumberFormat _separatedNumberFormat = NumberFormat("#,###");
   late NumberFormat _separatedDecimalFormat = NumberFormat("#,###.00");
   late List<_AccumulatedRatingEvent> _ratings;
-  Map<Division, charts.Color> _divisionColors = {
-    Division.open: charts.MaterialPalette.red.shadeDefault,
-    Division.pcc: charts.MaterialPalette.deepOrange.shadeDefault,
-    Division.limited: charts.MaterialPalette.gray.shadeDefault,
-    Division.carryOptics: charts.MaterialPalette.green.shadeDefault,
-    Division.limitedOptics: charts.MaterialPalette.teal.shadeDefault,
-    Division.production: charts.MaterialPalette.cyan.shadeDefault,
-    Division.singleStack: charts.MaterialPalette.blue.shadeDefault,
-    Division.revolver: charts.MaterialPalette.indigo.shadeDefault,
-    Division.limited10: charts.MaterialPalette.purple.shadeDefault,
-  };
+  // TODO: go back to Division as key once rater is updated
+  Map<String, charts.Color> _divisionColors = {};
   int _colorIndex = 0;
   List<charts.Color> _colorOptions = [
     charts.MaterialPalette.blue.shadeDefault,
@@ -307,7 +297,11 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         colorFn: (e, __) {
           if(!widget.showDivisions) return charts.MaterialPalette.blue.shadeDefault;
           
-          var division = e.baseEvent.score.score.shooter.division ?? Division.unknown;
+          var division = e.baseEvent.score.score.shooter.division?.displayString();
+          if(division == null) {
+            return _colorOptions.first;
+          }
+
           if(_divisionColors.containsKey(division)) {
             return _divisionColors[division]!;
           }
@@ -411,20 +405,22 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     );
   }
 
+  // TODO: restore once rater is updated
   void _launchScoreView(RatingEvent e) {
     var division = e.score.score.shooter.division ?? widget.rating.division!;
-    var filters = FilterSet(empty: true)
-      ..mode = FilterMode.or
-      ..divisions = FilterSet.divisionListToMap([division]);
-    Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-      return ResultPage(
-        canonicalMatch: e.match,
-        initialStage: e.stage,
-        initialFilters: filters,
-        allowWhatIf: false,
-        ratings: widget.ratings,
-      );
-    }));
+    // var filters = old.FilterSet(empty: true)
+    //   ..mode = FilterMode.or;
+    // filters.divisions = filters.divisionListToMap([division]);
+    // Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+    //   var newMatch = ShootingMatch.fromOldMatch(e.match);
+    //   return ResultPage(
+    //     canonicalMatch: newMatch,
+    //     initialStage: newMatch.lookupStageByName(e.stage?.name),
+    //     initialFilters: filters,
+    //     allowWhatIf: false,
+    //     ratings: widget.ratings,
+    //   );
+    // }));
   }
 
   void _highlight(_AccumulatedRatingEvent e) {
@@ -454,14 +450,14 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
 
     return widget.rating.ratingEvents.last.stage != null;
   }
-  Score? totalScore;
+  old.Score? totalScore;
   int totalPoints = 0;
-  Set<PracticalMatch> dqs = {};
-  Set<PracticalMatch> matches = {};
-  Map<PracticalMatch, Classification> classesByMatch = {};
-  Map<PracticalMatch, Division> divisionsByMatch = {};
-  Set<PracticalMatch> matchesWithRatingChanges = {};
-  Map<MatchLevel, int> matchesByLevel = {};
+  Set<old.PracticalMatch> dqs = {};
+  Set<old.PracticalMatch> matches = {};
+  Map<old.PracticalMatch, old.Classification> classesByMatch = {};
+  Map<old.PracticalMatch, old.Division> divisionsByMatch = {};
+  Set<old.PracticalMatch> matchesWithRatingChanges = {};
+  Map<old.MatchLevel, int> matchesByLevel = {};
   int majorEntries = 0;
   int minorEntries = 0;
   int otherEntries = 0;
@@ -477,7 +473,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   List<int> competitorCounts = [];
 
   void calculateTotalScore() {
-    var total = Score(shooter: widget.rating);
+    var total = old.Score(shooter: widget.rating);
 
     for(var event in widget.rating.combinedRatingEvents) {
       var score = event.score.score;
@@ -494,7 +490,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         );
         var stageClassScore = stageClassScores.firstWhereOrNull((element) => widget.rating.equalsShooter(element.shooter));
 
-        if(stageClassScore != null && event.score.score.shooter.classification != Classification.U) {
+        if(stageClassScore != null && event.score.score.shooter.classification != old.Classification.U) {
           classStageFinishes.add(stageClassScore.total.place);
           if (stageClassScore.total.place == 1) {
             classStageWins += 1;
@@ -511,18 +507,18 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         matchesWithRatingChanges.add(event.match);
       }
       if(!matches.contains(event.match)) {
-        matchesByLevel[event.match.level ?? MatchLevel.I] ??= 0;
-        matchesByLevel[event.match.level ?? MatchLevel.I] = matchesByLevel[event.match.level ?? MatchLevel.I]! + 1;
+        matchesByLevel[event.match.level ?? old.MatchLevel.I] ??= 0;
+        matchesByLevel[event.match.level ?? old.MatchLevel.I] = matchesByLevel[event.match.level ?? old.MatchLevel.I]! + 1;
       }
       matches.add(event.match);
-      classesByMatch[event.match] = event.score.score.shooter.classification ?? Classification.unknown;
-      divisionsByMatch[event.match] = event.score.score.shooter.division ?? Division.unknown;
+      classesByMatch[event.match] = event.score.score.shooter.classification ?? old.Classification.unknown;
+      divisionsByMatch[event.match] = event.score.score.shooter.division ?? old.Division.unknown;
 
       switch(score.shooter.powerFactor) {
-        case PowerFactor.major:
+        case old.PowerFactor.major:
           majorEntries += 1;
           break;
-        case PowerFactor.minor:
+        case old.PowerFactor.minor:
           minorEntries += 1;
           break;
         default:
@@ -547,12 +543,12 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       matchFinishes.add(score.total.place);
       if (score.total.place == 1) matchWins += 1;
 
-      if (classification != Classification.unknown) {
+      if (classification != old.Classification.unknown) {
         var scores = match.getScores(
             shooters: match.shooters.where((element) => element.division == division && element.classification == classification).toList());
         var score = scores.firstWhere((element) => widget.rating.equalsShooter(element.shooter));
 
-        if(classification != Classification.U) {
+        if(classification != old.Classification.U) {
           classMatchFinishes.add(score.total.place);
           if (score.total.place == 1) {
             classMatchWins += 1;
@@ -641,7 +637,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         children: [
           Expanded(flex: 4, child: Text("Matches of level I/II/III", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 2, child: Text(
-              "${matchesByLevel[MatchLevel.I] ?? 0}/${matchesByLevel[MatchLevel.II] ?? 0}/${matchesByLevel[MatchLevel.III] ?? 0}",
+              "${matchesByLevel[old.MatchLevel.I] ?? 0}/${matchesByLevel[old.MatchLevel.II] ?? 0}/${matchesByLevel[old.MatchLevel.III] ?? 0}",
               style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
@@ -693,7 +689,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         ],
       ),
       if(byStage) Divider(height: 2, thickness: 1),
-      if(powerFactorsPresent > 1 || widget.rating.division == Division.singleStack) Row(
+      if(powerFactorsPresent > 1 || widget.rating.division == old.Division.singleStack) Row(
         children: [
           Expanded(flex: 4, child: Text("Major/minor/other PF", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 2, child: Text(
@@ -701,7 +697,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
               , style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
-      if(powerFactorsPresent > 1 || widget.rating.division == Division.singleStack) Divider(height: 2, thickness: 1),
+      if(powerFactorsPresent > 1 || widget.rating.division == old.Division.singleStack) Divider(height: 2, thickness: 1),
       Row(
         children: [
           Expanded(flex: 4, child: Text("Total hits", style: Theme.of(context).textTheme.bodyMedium)),

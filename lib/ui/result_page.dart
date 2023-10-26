@@ -11,12 +11,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/search_query_parser.dart';
 import 'package:uspsa_result_viewer/data/sort_mode.dart';
+import 'package:uspsa_result_viewer/data/sport/match/match.dart';
+import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
+import 'package:uspsa_result_viewer/data/sport/shooter/shooter.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/route/compare_shooter_results.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/about_dialog.dart';
@@ -28,10 +29,10 @@ import 'package:uspsa_result_viewer/ui/widget/dialog/match_breakdown.dart';
 import 'package:uspsa_result_viewer/ui/widget/score_list.dart';
 
 class ResultPage extends StatefulWidget {
-  final PracticalMatch? canonicalMatch;
+  final ShootingMatch? canonicalMatch;
   final String appChromeLabel;
   final bool allowWhatIf;
-  final Stage? initialStage;
+  final MatchStage? initialStage;
   final FilterSet? initialFilters;
 
   /// A map of RaterGroups to Raters, possibly containing
@@ -62,18 +63,18 @@ class _ResultPageState extends State<ResultPage> {
   ScrollController _horizontalScrollController = ScrollController();
 
   late BuildContext _innerContext;
-  PracticalMatch? _currentMatch;
+  ShootingMatch? _currentMatch;
 
   bool _operationInProgress = false;
 
   FilterSet _filters = FilterSet();
   List<RelativeMatchScore> _baseScores = [];
+  List<RelativeMatchScore> _searchedScores = [];
   String _searchTerm = "";
   bool _invalidSearch = false;
-  List<RelativeMatchScore> _searchedScores = [];
   StageMenuItem _currentStageMenuItem = StageMenuItem.match();
-  List<Stage> _filteredStages = [];
-  Stage? _stage;
+  List<MatchStage> _filteredStages = [];
+  MatchStage? _stage;
   SortMode _sortMode = SortMode.score;
   String _lastQuery = "";
 
@@ -86,11 +87,11 @@ class _ResultPageState extends State<ResultPage> {
 
   int get _matchMaxPoints => _filteredStages.map((stage) => stage.maxPoints).sum;
 
-  List<Shooter> get _filteredShooters => _baseScores.map((score) => score.shooter).toList();
+  List<MatchEntry> get _filteredShooters => _baseScores.map((score) => score.shooter).toList();
 
   /// If true, in what-if mode. If false, not in what-if mode.
   bool _whatIfMode = false;
-  Map<Stage, List<Shooter>> _editedShooters = {};
+  Map<MatchStage, List<Shooter>> _editedShooters = {};
   List<Shooter> get _allEditedShooters {
     Set<Shooter> shooterSet = {};
     for(var list in _editedShooters.values) {
@@ -107,7 +108,7 @@ class _ResultPageState extends State<ResultPage> {
     if(kIsWeb) {
       SystemChrome.setApplicationSwitcherDescription(
           ApplicationSwitcherDescription(
-            label: "Results: ${widget.canonicalMatch!.name}",
+            label: "Results: ${widget.canonicalMatch!.eventName}",
             primaryColor: 0x3f51b5, // Colors.indigo
           )
       );
@@ -119,7 +120,7 @@ class _ResultPageState extends State<ResultPage> {
 
     var scores = _currentMatch!.getScores(scoreDQ: _filters.scoreDQs, stages: _filteredStages);
 
-    _baseScores = scores;
+    _baseScores = scores.values.toList();
     _searchedScores = []..addAll(_baseScores);
 
     if(widget.initialStage != null) {
@@ -147,8 +148,8 @@ class _ResultPageState extends State<ResultPage> {
     c.jumpTo(newPosition);
   }
 
-  List<Shooter> _filterShooters() {
-    List<Shooter> filteredShooters = _currentMatch!.filterShooters(
+  List<MatchEntry> _filterShooters() {
+    List<MatchEntry> filteredShooters = _currentMatch!.filterShooters(
       filterMode: _filters.mode,
       allowReentries: _filters.reentries,
       divisions: _filters.divisions.keys.where((element) => _filters.divisions[element]!).toList(),
@@ -162,7 +163,7 @@ class _ResultPageState extends State<ResultPage> {
   void _applyFilters(FilterSet filters) {
     _filters = filters;
 
-    List<Shooter> filteredShooters = _filterShooters();
+    List<MatchEntry> filteredShooters = _filterShooters();
 
     if(filteredShooters.length == 0) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Filters match 0 shooters!")));
@@ -180,7 +181,7 @@ class _ResultPageState extends State<ResultPage> {
         stages: _filteredStages,
         predictionMode: _settings.value.predictionMode,
         ratings: widget.ratings,
-      );
+      ).values.toList();
       _searchedScores = []..addAll(_baseScores);
     });
 
@@ -201,7 +202,7 @@ class _ResultPageState extends State<ResultPage> {
     }
   }
 
-  void _selectStages(List<Stage> stages) {
+  void _selectStages(List<MatchStage> stages) {
     setState(() {
       _applyStage(_stage != null && stages.contains(_stage) ? StageMenuItem(_stage!) : StageMenuItem.match());
       _filteredStages = stages;
@@ -260,7 +261,8 @@ class _ResultPageState extends State<ResultPage> {
           _searchedScores = _searchedScores..retainWhere((element) {
             bool retain = false;
             for(var query in queryElements) {
-              if(query.matchesShooter(element.shooter)) return true;
+              // TODO: new model query elements
+              // if(query.matchesShooter(element.shooter)) return true;
             }
 
             return retain;
@@ -302,8 +304,8 @@ class _ResultPageState extends State<ResultPage> {
 
     setState(() {
       _whatIfMode = true;
-      _baseScores = scores;
-      _searchedScores = []..addAll(scores);
+      _baseScores = scores.values.toList();
+      _searchedScores = []..addAll(scores.values);
     });
 
     _applySortMode(_sortMode);
@@ -360,8 +362,8 @@ class _ResultPageState extends State<ResultPage> {
 
         setState(() {
           _whatIfMode = true;
-          _baseScores = scores;
-          _searchedScores = []..addAll(scores);
+          _baseScores = scores.values.toList();
+          _searchedScores = []..addAll(scores.values);
         });
 
         _applySortMode(_sortMode);
@@ -388,11 +390,11 @@ class _ResultPageState extends State<ResultPage> {
                   icon: Icon(Icons.undo),
                   onPressed: () async {
                     _currentMatch = widget.canonicalMatch!.copy();
-                    List<Shooter> filteredShooters = _filterShooters();
+                    List<MatchEntry> filteredShooters = _filterShooters();
                     var scores = _currentMatch!.getScores(shooters: filteredShooters);
 
                     //debugPrint("Match: $_currentMatch Stage: $_stage Shooters: $_filteredShooters Scores: $scores");
-                    debugPrint("${_filteredShooters[0].stageScores}");
+                    debugPrint("${_filteredShooters[0].scores}");
 
                     // Not sure if vestigial or the sign of a bug
                     // var filteredStages = []..addAll(_filteredStages);
@@ -401,8 +403,8 @@ class _ResultPageState extends State<ResultPage> {
                       _editedShooters = {};
                       _currentMatch = _currentMatch;
                       _stage = _stage == null ? null : _currentMatch!.lookupStage(_stage!);
-                      _baseScores = scores;
-                      _searchedScores = []..addAll(scores);
+                      _baseScores = scores.values.toList();
+                      _searchedScores = []..addAll(scores.values);
                       _whatIfMode = false;
                     });
 
@@ -574,7 +576,7 @@ class _ResultPageState extends State<ResultPage> {
             value: _settings,
             child: Scaffold(
               appBar: AppBar(
-                title: Text(_currentMatch?.name ?? "Match Results Viewer"),
+                title: Text(_currentMatch?.eventName ?? "Match Results Viewer"),
                 centerTitle: true,
                 actions: actions,
                 bottom: _operationInProgress ? PreferredSize(

@@ -12,6 +12,9 @@ import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
+import 'package:uspsa_result_viewer/data/source/practiscore_report.dart';
+import 'package:uspsa_result_viewer/data/sport/builtins/uspsa.dart';
+import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/ui/empty_scaffold.dart';
 import 'package:uspsa_result_viewer/ui/result_page.dart';
@@ -30,7 +33,7 @@ class PractiscoreResultPage extends StatefulWidget {
 }
 
 class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
-  PracticalMatch? _match;
+  ShootingMatch? _match;
   bool _operationInProgress = false;
 
   @override
@@ -48,10 +51,10 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
       if(response.statusCode < 400) {
         var responseString = response.body;
         if (responseString.startsWith("\$")) {
-          var result = await processScoreFile(responseString);
+          var processor = PractiscoreHitFactorReportParser(uspsaSport);
+          var result = processor.parseWebReport(responseString, sourceIds: widget.matchId != null ? [widget.matchId!] : null);
           if(result.isOk()) {
             var match = result.unwrap();
-            match.practiscoreId = widget.matchId ?? "n/a";
             setState(() {
               _match = match;
             });
@@ -84,10 +87,10 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
       if(response.statusCode < 400) {
         responseString = response.body;
         if (responseString.startsWith(r"$")) {
-          var result = await processScoreFile(responseString);
+          var processor = PractiscoreHitFactorReportParser(uspsaSport);
+          var result = processor.parseWebReport(responseString, sourceIds: widget.matchId != null ? [widget.matchId!] : null);
           if(result.isOk()) {
             var match = result.unwrap();
-            match.practiscoreId = widget.matchId ?? "n/a";
             setState(() {
               _match = match;
             });
@@ -130,10 +133,10 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
       if(response.statusCode < 400) {
         var responseString = response.body;
         if (responseString.startsWith(r"$")) {
-          var result = await processScoreFile(responseString);
+          var processor = PractiscoreHitFactorReportParser(uspsaSport);
+          var result = processor.parseWebReport(responseString, sourceIds: widget.matchId != null ? [widget.matchId!] : null);
           if(result.isOk()) {
             var match = result.unwrap();
-            match.practiscoreId = widget.matchId ?? "n/a";
             setState(() {
               _match = match;
             });

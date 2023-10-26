@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/sort_mode.dart';
+import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/stage_select_dialog.dart';
 
@@ -15,11 +16,11 @@ class FilterControls extends StatefulWidget {
 
   /// All stages in the current match. Used to populate the stage
   /// filter dialog in what-if mode.
-  final List<Stage> allStages;
+  final List<MatchStage> allStages;
 
   /// The stages currently scored. Used to populate the stage
   /// select dropdown.
-  final List<Stage> filteredStages;
+  final List<MatchStage> filteredStages;
 
   final StageMenuItem currentStage;
   final FilterSet filters;
@@ -30,7 +31,7 @@ class FilterControls extends StatefulWidget {
   final Function(StageMenuItem) onStageChanged;
   final Function(FilterSet) onFiltersChanged;
   final Function(String) onSearchChanged;
-  final Function(List<Stage>) onStageSetChanged;
+  final Function(List<MatchStage>) onStageSetChanged;
 
   final bool searchError;
   final bool hasRatings;
@@ -115,7 +116,7 @@ class _FilterControlsState extends State<FilterControls> {
       )
     ];
 
-    for(Stage s in widget.filteredStages) {
+    for(MatchStage s in widget.filteredStages) {
       stageMenuItems.add(
           DropdownMenuItem<StageMenuItem>(
               child: Text(s.name),
@@ -217,11 +218,11 @@ class _FilterControlsState extends State<FilterControls> {
                         items: _buildStageMenuItems(),
                         onChanged: (StageMenuItem? item) async {
                           if(item == StageMenuItem.filter()) {
-                            var stages = await showDialog<List<Stage>>(
+                            var stages = await showDialog<List<MatchStage>>(
                               context: context,
                               builder: (context) {
-                                var initialState = <Stage, bool>{};
-                                for(Stage s in widget.allStages) {
+                                var initialState = <MatchStage, bool>{};
+                                for(MatchStage s in widget.allStages) {
                                   initialState[s] = widget.filteredStages.contains(s);
                                 }
                                 return StageSelectDialog(initialState: initialState);
@@ -294,12 +295,12 @@ enum StageMenuItemType {
   match,
 }
 class StageMenuItem {
-  StageMenuItem(Stage stage) : this.stage = stage, this.type = StageMenuItemType.stage;
+  StageMenuItem(MatchStage stage) : this.stage = stage, this.type = StageMenuItemType.stage;
   StageMenuItem.filter() : this.type = StageMenuItemType.filter;
   StageMenuItem.match() : this.type = StageMenuItemType.match;
 
   StageMenuItemType type;
-  Stage? stage;
+  MatchStage? stage;
 
   @override
   bool operator ==(Object other) {

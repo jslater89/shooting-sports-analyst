@@ -114,6 +114,7 @@ final class RelativeStageFinishScoring extends MatchScoring {
         }
 
         var relativeStageScore = RelativeStageScore(
+          shooter: shooter,
           score: score,
           place: i + 1,
           ratio: ratio,
@@ -150,6 +151,7 @@ final class RelativeStageFinishScoring extends MatchScoring {
       var totalScore = stageScoreTotals[shooter]!;
 
       matchScores[shooter] = RelativeMatchScore(
+        shooter: shooter,
         stageScores: shooterStageScores,
         place: i + 1,
         ratio: totalScore / bestTotalScore,
@@ -261,6 +263,7 @@ final class CumulativeScoring extends MatchScoring {
 
         var points = scoring.interpret(score);
         var relativeStageScore = RelativeStageScore(
+          shooter: shooter,
           score: score,
           place: i + 1,
           ratio: ratio,
@@ -346,6 +349,7 @@ final class CumulativeScoring extends MatchScoring {
       }
 
       matchScores[shooter] = RelativeMatchScore(
+        shooter: shooter,
         stageScores: shooterStageScores,
         place: i + 1,
         ratio: ratio,
@@ -468,12 +472,18 @@ abstract class RelativeScore {
   });
 }
 
+// note to self: it's massively more convenient to have a backlink to shooter on relative
+// scores. Since we don't save them to the DB, it's fine. If we ever do, we can probably
+// ignore it.
+
 /// A relative match score is an overall score for an entire match.
 class RelativeMatchScore extends RelativeScore {
+  MatchEntry shooter;
   Map<MatchStage, RelativeStageScore> stageScores;
   RawScore total;
 
   RelativeMatchScore({
+    required this.shooter,
     required this.stageScores,
     required super.place,
     required super.ratio,
@@ -482,8 +492,10 @@ class RelativeMatchScore extends RelativeScore {
 }
 
 class RelativeStageScore extends RelativeScore {
+  MatchEntry shooter;
   RawScore score;
   RelativeStageScore({
+    required this.shooter,
     required this.score,
     required super.place,
     required super.ratio,
@@ -623,5 +635,21 @@ extension ScoreListUtilities on Iterable<RawScore> {
     }
 
     return RawScore(scoring: scoring, scoringEvents: scoringEvents, penaltyEvents: penaltyEvents, rawTime: rawTime);
+  }
+}
+
+extension MatchScoresToCSV on List<RelativeMatchScore> {
+  String toCSV() {
+    String csv = "Member#,Name,MatchPoints,Percentage\n";
+    var sorted = this.sorted((a, b) => a.place.compareTo(b.place));
+
+    for(var score in sorted) {
+      csv += "${score.shooter.memberNumber},";
+      csv += "${score.shooter.getName(suffixes: false)},";
+      csv += "${score.total.points.toStringAsFixed(2)},";
+      csv += "${score.ratio.asPercentage()}\n";
+    }
+
+    return csv;
   }
 }

@@ -8,28 +8,31 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
+import 'package:uspsa_result_viewer/data/sport/match/match.dart';
+import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
+import 'package:uspsa_result_viewer/data/sport/shooter/shooter.dart';
 import 'package:uspsa_result_viewer/route/compare_shooter_results.dart';
 import 'package:uspsa_result_viewer/ui/result_page.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/editable_shooter_card.dart';
 import 'package:uspsa_result_viewer/ui/widget/score_row.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/shooter_card.dart';
+import 'package:uspsa_result_viewer/util.dart';
 
 class ScoreList extends StatelessWidget {
-  final PracticalMatch? match;
+  final ShootingMatch? match;
   final int? maxPoints;
-  final Stage? stage;
+  final MatchStage? stage;
   final List<RelativeMatchScore> baseScores;
   final List<RelativeMatchScore> filteredScores;
   final bool scoreDQ;
   final double minWidth;
   final ScrollController? horizontalScrollController;
   final ScrollController? verticalScrollController;
-  final Function(Shooter, Stage?, bool wholeMatch) onScoreEdited;
-  final List<Shooter> editedShooters;
+  final Function(MatchEntry, MatchStage?, bool wholeMatch) onScoreEdited;
+  final List<MatchEntry> editedShooters;
   final bool whatIfMode;
   final Map<RaterGroup, Rater>? ratings;
 
@@ -174,14 +177,14 @@ class ScoreList extends StatelessWidget {
     var score = filteredScores[index];
     var stagesComplete = 0;
     if(match?.inProgress ?? false) {
-      stagesComplete = score.stageScores.values.where((element) => !element.score.isDnf).length;
+      stagesComplete = score.stageScores.values.where((element) => !element.score.dnf).length;
     }
 
     return GestureDetector(
       onTap: () async {
         if(whatIfMode) {
           var action = await (showDialog<ShooterDialogAction>(context: context, barrierDismissible: false, builder: (context) {
-            return EditableShooterCard(matchScore: score, scoreDQ: scoreDQ);
+            return EditableShooterCard(sport: match!.sport, matchScore: score, scoreDQ: scoreDQ);
           }));
 
           if(action != null) {
@@ -222,52 +225,54 @@ class ScoreList extends StatelessWidget {
           child: Row(
             children: [
               Expanded(flex: 1, child: Text("${baseScores.indexOf(score) + 1}")),
-              Expanded(flex: 1, child: Text("${score.total.place}")),
+              Expanded(flex: 1, child: Text("${score.place}")),
               Expanded(flex: 3, child: Text(score.shooter.getName())),
               if(ratings != null) Consumer<ScoreDisplaySettingsModel>(
                 builder: (context, model, _) {
                   String text = "n/a";
-                  switch(model.value.ratingMode) {
-                    case RatingDisplayMode.preMatch:
-                      var rating = ratings!.lookup(score.shooter)?.ratingForEvent(match!, null, beforeMatch: true).round();
-                      if(rating != null) text = rating.toString();
-                      break;
-                    case RatingDisplayMode.postMatch:
-                      var rating = ratings!.lookup(score.shooter)?.ratingForEvent(match!, null, beforeMatch: false).round();
-                      if(rating != null) text = rating.toString();
-                      break;
-                    case RatingDisplayMode.change:
-                      var rating = ratings!.lookup(score.shooter)?.changeForEvent(match!, null);
-                      if(rating != null) text = rating.toStringAsFixed(1);
-                      break;
-                  }
+                  // TODO: restore when ratings are converted
+                  // switch(model.value.ratingMode) {
+                  //   case RatingDisplayMode.preMatch:
+                  //     var rating = ratings!.lookup(score.shooter)?.ratingForEvent(match!, null, beforeMatch: true).round();
+                  //     if(rating != null) text = rating.toString();
+                  //     break;
+                  //   case RatingDisplayMode.postMatch:
+                  //     var rating = ratings!.lookup(score.shooter)?.ratingForEvent(match!, null, beforeMatch: false).round();
+                  //     if(rating != null) text = rating.toString();
+                  //     break;
+                  //   case RatingDisplayMode.change:
+                  //     var rating = ratings!.lookup(score.shooter)?.changeForEvent(match!, null);
+                  //     if(rating != null) text = rating.toStringAsFixed(1);
+                  //     break;
+                  // }
                   return Expanded(flex: 1, child: Text(text));
                 }
               ),
-              Expanded(flex: 1, child: Text(score.shooter.classification.displayString())),
-              Expanded(flex: 2, child: Text(score.shooter.division?.displayString() ?? "NO DIVISION")),
-              Expanded(flex: 1, child: Text(score.shooter.powerFactor.shortString())),
-              Expanded(flex: 2, child: Text("${score.total.percent.asPercentage()}%")),
-              Expanded(flex: 2, child: Text(score.total.relativePoints.toStringAsFixed(2))),
+              Expanded(flex: 1, child: Text(score.shooter.classification?.shortName ?? "UNK")),
+              Expanded(flex: 2, child: Text(score.shooter.division?.shortName ?? "NO DIVISION")),
+              Expanded(flex: 1, child: Text(score.shooter.powerFactor.shortName)),
+              Expanded(flex: 2, child: Text("${score.ratio.asPercentage()}%")),
+              Expanded(flex: 2, child: Text(score.points!.toStringAsFixed(2))),
               if(match?.inProgress ?? false) Expanded(flex: 1, child: Text("$stagesComplete", textAlign: TextAlign.end)),
               if(match?.inProgress ?? false) SizedBox(width: 15),
               Expanded(flex: 2, child: Text(score.total.score.time.toStringAsFixed(2))),
               Consumer<ScoreDisplaySettingsModel>(
                 builder: (context, model, _) {
                   if(model.value.fixedTimeAvailablePointsFromDivisionMax) {
-                    Map<Stage, int> stageMax = {};
+                    Map<MatchStage, int> stageMax = {};
                     for(var s in score.stageScores.keys) {
-                      if(s.type == Scoring.fixedTime) {
+                      // TODO: 'and this is a USPSA-style fixed time stage' via match.sport.matchScoring
+                      if(s.scoring is PointsScoring) {
                         var bestPoints = 0;
                         for(var score in baseScores) {
-                          if(score.stageScores[s] != null && score.stageScores[s]!.score.rawPoints > bestPoints) {
-                            bestPoints = score.stageScores[s]!.score.rawPoints;
+                          if(score.stageScores[s] != null && score.stageScores[s]!.score.points > bestPoints) {
+                            bestPoints = score.stageScores[s]!.score.points;
                           }
                         }
                         stageMax[s] = bestPoints;
                       }
                     }
-                    return Expanded(flex: 3, child: Text("${score.total.score.getTotalPoints(scoreDQ: scoreDQ, countPenalties: model.value.availablePointsCountPenalties)} "
+                    return Expanded(flex: 3, child: Text("${score.total.getTotalPoints(scoreDQ: scoreDQ, countPenalties: model.value.availablePointsCountPenalties)} "
                         "(${score.percentTotalPointsWithSettings(scoreDQ: true, countPenalties: model.value.availablePointsCountPenalties, stageMaxPoints: stageMax).asPercentage()}%)"));
                   }
                   else {
@@ -342,7 +347,7 @@ class ScoreList extends StatelessWidget {
       ),
     );
   }
-  Widget _buildStageScoreRow(BuildContext context, int i, Stage stage) {
+  Widget _buildStageScoreRow(BuildContext context, int i, MatchStage stage) {
     var matchScore = filteredScores[i];
     var stageScore = filteredScores[i].stageScores[stage];
 
@@ -397,31 +402,33 @@ class ScoreList extends StatelessWidget {
               if(ratings != null) Consumer<ScoreDisplaySettingsModel>(
                   builder: (context, model, _) {
                     String text = "n/a";
-                    switch(model.value.ratingMode) {
-                      case RatingDisplayMode.preMatch:
-                        var rating = ratings!.lookup(matchScore.shooter)?.ratingForEvent(match!, null, beforeMatch: true).round();
-                        if(rating != null) text = rating.toString();
-                        break;
-                      case RatingDisplayMode.postMatch:
-                        var rating = ratings!.lookup(matchScore.shooter)?.ratingForEvent(match!, null, beforeMatch: false).round();
-                        if(rating != null) text = rating.toString();
-                        break;
-                      case RatingDisplayMode.change:
-                        var rating = ratings!.lookup(matchScore.shooter)?.changeForEvent(match!, stage);
-                        if(rating != null) text = rating.toStringAsFixed(1);
-                        break;
-                    }
+                    // TODO: restore when ratings are converted
+                    // switch(model.value.ratingMode) {
+                    //   case RatingDisplayMode.preMatch:
+                    //     var rating = ratings!.lookup(matchScore.shooter)?.ratingForEvent(match!, null, beforeMatch: true).round();
+                    //     if(rating != null) text = rating.toString();
+                    //     break;
+                    //   case RatingDisplayMode.postMatch:
+                    //     var rating = ratings!.lookup(matchScore.shooter)?.ratingForEvent(match!, null, beforeMatch: false).round();
+                    //     if(rating != null) text = rating.toString();
+                    //     break;
+                    //   case RatingDisplayMode.change:
+                    //     var rating = ratings!.lookup(matchScore.shooter)?.changeForEvent(match!, stage);
+                    //     if(rating != null) text = rating.toStringAsFixed(1);
+                    //     break;
+                    // }
                     return Expanded(flex: 1, child: Text(text));
                   }
               ),
-              Expanded(flex: 1, child: Text(matchScore.shooter.classification.displayString())),
-              Expanded(flex: 3, child: Text(matchScore.shooter.division?.displayString() ?? "NO DIVISION")),
-              Expanded(flex: 1, child: Text(matchScore.shooter.powerFactor.shortString())),
+              Expanded(flex: 1, child: Text(matchScore.shooter.classification?.shortName ?? "UNK")),
+              Expanded(flex: 3, child: Text(matchScore.shooter.division?.shortName ?? "NO DIVISION")),
+              Expanded(flex: 1, child: Text(matchScore.shooter.powerFactor.shortName)),
               Consumer<ScoreDisplaySettingsModel>(
                 builder: (context, model, _) {
                   if(model.value.fixedTimeAvailablePointsFromDivisionMax) {
                     int maxPoints = 0;
-                    if(stageScore!.stage!.type == Scoring.fixedTime) {
+                    // TODO: 'and this is a USPSA-style fixed time stage' via match.sport.matchScoring
+                    if(stageScore!.stage is PointsScoring) {
                       for(var score in baseScores) {
                         if(score.stageScores[stage] != null && score.stageScores[stage]!.score.rawPoints > maxPoints) {
                           maxPoints = score.stageScores[stage]!.score.rawPoints;
@@ -441,10 +448,10 @@ class ScoreList extends StatelessWidget {
                   }
                 },
               ),
-              Expanded(flex: 2, child: Text(stageScore?.score.time.toStringAsFixed(2) ?? "0.00")),
+              Expanded(flex: 2, child: Text(stageScore?.score.finalTime.toStringAsFixed(2) ?? "0.00")),
               Expanded(flex: 2, child: Text(stageScore?.score.getHitFactor(scoreDQ: scoreDQ).toStringAsFixed(4) ?? "0.0000")),
-              Expanded(flex: 2, child: Text("${stageScore?.percent.asPercentage() ?? "0.00"}%")),
-              Expanded(flex: 2, child: Text(stageScore?.relativePoints.toStringAsFixed(2) ?? "0.00")),
+              Expanded(flex: 2, child: Text("${stageScore?.ratio.asPercentage() ?? "0.00"}%")),
+              Expanded(flex: 2, child: Text(stageScore?.points?.toStringAsFixed(2) ?? "0.00")),
               Expanded(flex: 4, child: Text("${stageScore?.score.a}A ${stageScore?.score.c}C ${stageScore?.score.d}D ${stageScore?.score.m}M ${stageScore?.score.ns}NS ${stageScore?.score.penaltyCount}P")),
             ],
           ),
@@ -465,35 +472,39 @@ class ScoreList extends StatelessWidget {
 
 extension LookupShooterRating on Map<RaterGroup, Rater> {
   ShooterRating? lookup(Shooter s) {
-    for(var group in this.keys) {
-      if(group.divisions.contains(s.division)) {
-        return this[group]!.ratingFor(s);
-      }
-    }
+    // TODO: fix when raters are converted
+    // for(var group in this.keys) {
+    //   if(group.divisions.contains(s.division)) {
+    //     return this[group]!.ratingFor(s);
+    //   }
+    // }
 
     return null;
   }
 
-  double? lookupRating({required Shooter shooter, RatingDisplayMode mode = RatingDisplayMode.preMatch, required PracticalMatch match}) {
-    switch(mode) {
-      case RatingDisplayMode.preMatch:
-        var rating = this.lookup(shooter)?.ratingForEvent(match, null, beforeMatch: true);
-        return rating;
-      case RatingDisplayMode.postMatch:
-        var rating = this.lookup(shooter)?.ratingForEvent(match, null, beforeMatch: false);
-        return rating;
-      case RatingDisplayMode.change:
-        var rating = this.lookup(shooter)?.changeForEvent(match, null);
-        return rating;
-    }
+  double? lookupRating({required Shooter shooter, RatingDisplayMode mode = RatingDisplayMode.preMatch, required ShootingMatch match}) {
+    // TODO: fix when ratings are converted
+    // switch(mode) {
+    //   case RatingDisplayMode.preMatch:
+    //     var rating = this.lookup(shooter)?.ratingForEvent(match, null, beforeMatch: true);
+    //     return rating;
+    //   case RatingDisplayMode.postMatch:
+    //     var rating = this.lookup(shooter)?.ratingForEvent(match, null, beforeMatch: false);
+    //     return rating;
+    //   case RatingDisplayMode.change:
+    //     var rating = this.lookup(shooter)?.changeForEvent(match, null);
+    //     return rating;
+    // }
+    return null;
   }
 
   Rater? lookupRater(Shooter shooter) {
-    for(var group in this.keys) {
-      if(group.divisions.contains(shooter.division)) {
-        return this[group]!;
-      }
-    }
+    // TODO: fix when ratings are converted
+    // for(var group in this.keys) {
+    //   if(group.divisions.contains(shooter.division)) {
+    //     return this[group]!;
+    //   }
+    // }
 
     return null;
   }

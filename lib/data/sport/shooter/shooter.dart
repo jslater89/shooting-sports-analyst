@@ -105,4 +105,14 @@ class MatchEntry extends Shooter {
 
     return e;
   }
+
+  String getName({bool suffixes = true}) {
+    if(!suffixes) return [firstName, lastName].join(" ");
+
+    var components = [firstName, lastName];
+    if(dq) components.add("(DQ)");
+    if(reentry) components.add("(R)");
+    if(female) components.add("(F)");
+    return components.join(" ");
+  }
 }

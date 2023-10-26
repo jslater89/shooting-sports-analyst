@@ -6,9 +6,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 
 class StageSelectDialog extends StatefulWidget {
-  final Map<Stage, bool?> initialState;
+  final Map<MatchStage, bool?> initialState;
 
   const StageSelectDialog({Key? key, required this.initialState}) : super(key: key);
 
@@ -17,7 +18,7 @@ class StageSelectDialog extends StatefulWidget {
 }
 
 class _StageSelectDialogState extends State<StageSelectDialog> {
-  late Map<Stage, bool?> state;
+  late Map<MatchStage, bool?> state;
 
   @override
   void initState() {
@@ -25,7 +26,7 @@ class _StageSelectDialogState extends State<StageSelectDialog> {
     super.initState();
   }
 
-  void _toggle(Stage s, bool? value) {
+  void _toggle(MatchStage s, bool? value) {
     setState(() {
       state[s] = value;
     });
@@ -39,7 +40,7 @@ class _StageSelectDialogState extends State<StageSelectDialog> {
       SizedBox(height: 10),
     ]..addAll(
       state.keys.map(
-        (Stage s) => CheckboxListTile(value: state[s], onChanged: (v) => _toggle(s, v), title: Text(s.name),)
+        (MatchStage s) => CheckboxListTile(value: state[s], onChanged: (v) => _toggle(s, v), title: Text(s.name),)
       )
     );
 

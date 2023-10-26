@@ -5,7 +5,8 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
+import 'package:uspsa_result_viewer/data/sport/shooter/shooter.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/add_comparison_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/shooter_comparison_card.dart';
 
@@ -13,7 +14,7 @@ class CompareShooterResultsPage extends StatefulWidget {
   CompareShooterResultsPage({Key? key, required this.scores, this.initialShooters = const []}) : super(key: key);
 
   final List<RelativeMatchScore> scores;
-  final List<Shooter> initialShooters;
+  final List<MatchEntry> initialShooters;
 
   @override
   State<CompareShooterResultsPage> createState() => _CompareShooterResultsPageState();

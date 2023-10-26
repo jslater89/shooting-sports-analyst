@@ -180,7 +180,7 @@ class _PredictionViewState extends State<PredictionView> {
 
     var match = result.unwrap();
 
-    var filters = widget.rater.filters!;
+    var filters = widget.rater.filters;
     var shooters = match.filterShooters(
       filterMode: filters.mode,
       divisions: filters.activeDivisions.toList(),

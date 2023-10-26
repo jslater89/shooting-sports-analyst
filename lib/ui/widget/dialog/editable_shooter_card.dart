@@ -7,19 +7,23 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
+import 'package:uspsa_result_viewer/data/sport/shooter/shooter.dart';
+import 'package:uspsa_result_viewer/data/sport/sport.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/ui/widget/captioned_text.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/shooter_card.dart';
 import 'package:uspsa_result_viewer/ui/widget/score_list.dart';
+import 'package:uspsa_result_viewer/util.dart';
 
 /// EditableShooterCard should _not_ be barrier-dismissable.
 class EditableShooterCard extends StatefulWidget {
+  final Sport sport;
   final RelativeMatchScore? matchScore;
-  final RelativeScore? stageScore;
+  final RelativeStageScore? stageScore;
   final bool scoreDQ;
 
-  const EditableShooterCard({Key? key, this.matchScore, this.stageScore, this.scoreDQ = true}) : super(key: key);
+  const EditableShooterCard({required this.sport, Key? key, this.matchScore, this.stageScore, this.scoreDQ = true}) : super(key: key);
 
   @override
   _EditableShooterCardState createState() => _EditableShooterCardState();
@@ -43,7 +47,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
   void initState() {
     super.initState();
 
-    _timeController.text = _score!.time.toStringAsFixed(2);
+    _timeController.text = _score!.finalTime.toStringAsFixed(2);
     _aController.text = "${_score!.a}";
     _cController.text = "${_score!.c}";
     _dController.text = "${_score!.d}";
@@ -52,9 +56,9 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
     _procController.text = "${_score!.procedural}";
   }
 
-  Score? get _score {
+  RawScore? get _score {
     if(widget.stageScore != null) return widget.stageScore!.score;
-    else return widget.matchScore!.total.score;
+    else return widget.matchScore!.total;
   }
 
   @override
@@ -75,7 +79,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
   }
 
   Widget _buildMatchCard(BuildContext context) {
-    Shooter shooter = widget.matchScore!.shooter;
+    MatchEntry shooter = widget.matchScore!.shooter;
     return Dialog(
       child: Padding(
         padding: const EdgeInsets.all(8.0),
@@ -93,12 +97,12 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
               children: [
                 CaptionedText(
                     captionText: "Match Score",
-                    text: "${widget.matchScore!.total.relativePoints.toStringAsFixed(2)} (${widget.matchScore!.total.percent.asPercentage()}%)"
+                    text: "${widget.matchScore!.points!.toStringAsFixed(2)} (${widget.matchScore!.ratio.asPercentage()}%)"
                 ),
                 SizedBox(width: 12),
                 CaptionedText(
                   captionText: "Time",
-                  text: "${widget.matchScore!.total.score.time.toStringAsFixed(2)}s",
+                  text: "${widget.matchScore!.total.finalTime.toStringAsFixed(2)}s",
                 )
               ],
             ),

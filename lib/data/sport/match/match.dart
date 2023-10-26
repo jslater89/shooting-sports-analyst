@@ -4,8 +4,11 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
 import 'package:uspsa_result_viewer/data/match/practical_match.dart' as oldschema;
+import 'package:uspsa_result_viewer/data/ranking/rater.dart';
+import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/sport/match/translator.dart';
 import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
 import 'package:uspsa_result_viewer/data/sport/shooter/shooter.dart';
@@ -41,6 +44,9 @@ class ShootingMatch {
   /// Shooters in this match.
   List<MatchEntry> shooters;
 
+  bool get inProgress => false;
+  int get maxPoints => stages.map((s) => s.maxPoints).sum;
+
   ShootingMatch({
     this.databaseId,
     this.sourceIds = const [],
@@ -62,6 +68,7 @@ class ShootingMatch {
     List<MatchStage>? stages,
     bool scoreDQ = true,
     MatchPredictionMode predictionMode = MatchPredictionMode.none,
+    Map<RaterGroup, Rater>? ratings,
   }) {
     var innerShooters = shooters ?? this.shooters;
     var innerStages = stages ?? this.stages;
@@ -79,8 +86,14 @@ class ShootingMatch {
   /// (This looks useless, but is used for finding the stage represented
   /// by a dropdown in an editable/copied match.)
   MatchStage? lookupStage(MatchStage stage) {
+    return lookupStageByName(stage.name);
+  }
+
+  MatchStage? lookupStageByName(String? stage) {
+    if(stage == null) return null;
+
     for(MatchStage s in stages) {
-      if(stage.name == s.name) return s;
+      if(stage == s.name) return s;
     }
 
     return null;

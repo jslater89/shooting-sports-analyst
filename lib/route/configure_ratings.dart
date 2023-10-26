@@ -20,6 +20,7 @@ import 'package:uspsa_result_viewer/data/ranking/raters/points/points_settings.d
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
+import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/ui/rater/enter_practiscore_source_dialog.dart';
 import 'package:uspsa_result_viewer/ui/rater/match_list_filter_dialog.dart';
@@ -687,7 +688,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                                   var match = await cache.getMatchImmediate(url);
                                                   if(match != null && (match.name?.isNotEmpty ?? false)) {
                                                     Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-                                                      return ResultPage(canonicalMatch: match, allowWhatIf: false);
+                                                      return ResultPage(canonicalMatch: ShootingMatch.fromOldMatch(match), allowWhatIf: false);
                                                     }));
                                                   }
                                                   else {

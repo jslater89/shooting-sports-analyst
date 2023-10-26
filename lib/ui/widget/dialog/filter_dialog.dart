@@ -5,9 +5,11 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/sport/match/match.dart';
+import 'package:uspsa_result_viewer/data/sport/sport.dart';
 
 class FilterSet {
+  Sport sport;
   FilterMode mode = FilterMode.and;
   bool reentries = true;
   bool scoreDQs = true;
@@ -17,29 +19,29 @@ class FilterSet {
   late Map<Classification, bool> classifications;
   late Map<PowerFactor, bool> powerFactors;
 
-  FilterSet({bool empty = false}) {
+  FilterSet(this.sport, {bool empty = false}) {
     divisions = {};
     classifications = {};
     powerFactors = {};
 
-    for (Division d in Division.values) {
+    for (Division d in sport.divisions.values) {
       divisions[d] = !empty;
     }
 
-    for (Classification c in Classification.values) {
+    for (Classification c in sport.classifications.values) {
       classifications[c] = !empty;
     }
 
-    for (PowerFactor f in PowerFactor.values) {
+    for (PowerFactor f in sport.powerFactors.values) {
       powerFactors[f] = !empty;
     }
   }
 
   Iterable<Division> get activeDivisions => divisions.keys.where((div) => divisions[div] ?? false);
 
-  static Map<Division, bool> divisionListToMap(List<Division> divisions) {
+  Map<Division, bool> divisionListToMap(List<Division> divisions) {
     Map<Division, bool> map = {};
-    for(var d in Division.values) {
+    for(var d in sport.divisions.values) {
       map[d] = divisions.contains(d);
     }
 

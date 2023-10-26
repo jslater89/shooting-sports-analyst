@@ -7,6 +7,9 @@
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
+import 'package:uspsa_result_viewer/data/source/practiscore_report.dart';
+import 'package:uspsa_result_viewer/data/sport/builtins/uspsa.dart';
+import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 import 'package:uspsa_result_viewer/ui/empty_scaffold.dart';
 import 'package:uspsa_result_viewer/ui/result_page.dart';
 
@@ -18,7 +21,7 @@ class UploadedResultPage extends StatefulWidget {
 }
 
 class _UploadedResultPageState extends State<UploadedResultPage> {
-  PracticalMatch? _match;
+  ShootingMatch? _match;
   String? _resultString;
   bool _operationInProgress = false;
 
@@ -42,10 +45,10 @@ class _UploadedResultPageState extends State<UploadedResultPage> {
 
       }
 
-      var result = await processScoreFile(_resultString!);
+      var processor = PractiscoreHitFactorReportParser(uspsaSport);
+      var result = await processor.parseWebReport(_resultString!);
       if(result.isOk()) {
         var match = result.unwrap();
-        match.practiscoreId = "n/a";
         setState(() {
           _match = match;
         });

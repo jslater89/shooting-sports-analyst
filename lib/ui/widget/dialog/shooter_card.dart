@@ -6,6 +6,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/ui/widget/captioned_text.dart';
 import 'package:uspsa_result_viewer/ui/widget/score_list.dart';
@@ -168,7 +169,7 @@ class ShooterResultCard extends StatelessWidget {
 }
 
 class MatchScoreBody extends StatelessWidget {
-  final RelativeScore? result;
+  final RawScore? result;
 
   const MatchScoreBody({Key? key, this.result}) : super(key: key);
 
@@ -183,27 +184,27 @@ class MatchScoreBody extends StatelessWidget {
           children: [
             CaptionedText(
               captionText: "A",
-              text: "${result!.score.a}",
+              text: "${result!.a}",
             ),
             SizedBox(width: 12),
             CaptionedText(
               captionText: "C",
-              text: "${result!.score.c + result!.score.b}",
+              text: "${result!.c + result!.b}",
             ),
             SizedBox(width: 12),
             CaptionedText(
               captionText: "D",
-              text: "${result!.score.d}",
+              text: "${result!.d}",
             ),
             SizedBox(width: 12),
             CaptionedText(
               captionText: "M",
-              text: "${result!.score.m}",
+              text: "${result!.m}",
             ),
             SizedBox(width: 12),
             CaptionedText(
               captionText: "NS",
-              text: "${result!.score.ns}",
+              text: "${result!.ns}",
             )
           ],
         ),
@@ -214,29 +215,14 @@ class MatchScoreBody extends StatelessWidget {
           children: [
             CaptionedText(
               captionText: "Procedural",
-              text: "${result!.score.procedural}",
+              text: "${result!.procedural}",
             ),
             SizedBox(width: 12),
             CaptionedText(
               captionText: "Late Shot",
-              text: "${result!.score.lateShot}",
+              text: "${result!.lateShot}",
             ),
-            SizedBox(width: 12),
-            CaptionedText(
-              captionText: "Extra Shot",
-              text: "${result!.score.extraShot}",
-            ),
-            SizedBox(width: 12),
-            CaptionedText(
-              captionText: "Extra Hit",
-              text: "${result!.score.extraHit}",
-            ),
-            SizedBox(width: 12),
-            CaptionedText(
-              captionText: "Other",
-              text: "${result!.score.otherPenalty}",
-            )
-          ],
+          ]
         ),
       ],
     );
