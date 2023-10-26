@@ -12,6 +12,10 @@ import 'package:uspsa_result_viewer/data/sport/shooter/shooter.dart';
 import 'package:uspsa_result_viewer/data/sport/sport.dart';
 import 'package:uspsa_result_viewer/ui/result_page.dart';
 
+enum FilterMode {
+  or, and,
+}
+
 /// A match in some shooting event.
 class ShootingMatch {
   /// The identifier corresponding to this match in the local database.
@@ -69,6 +73,83 @@ class ShootingMatch {
       predictionMode: predictionMode
     );
   }
+
+  /// Look up a stage by name.
+  ///
+  /// (This looks useless, but is used for finding the stage represented
+  /// by a dropdown in an editable/copied match.)
+  MatchStage? lookupStage(MatchStage stage) {
+    for(MatchStage s in stages) {
+      if(stage.name == s.name) return s;
+    }
+
+    return null;
+  }
+
+  /// Filters shooters by division, power factor, and classification.
+  ///
+  /// By default, uses [FilterMode.and], and allows all values. To filter
+  /// by e.g. division alone, set [divisions] to the desired division(s).
+  List<MatchEntry> filterShooters({
+    FilterMode? filterMode,
+    bool allowReentries = true,
+    List<Division>? divisions,
+    List<PowerFactor>? powerFactors,
+    List<Classification>? classes,
+    bool ladyOnly = false,
+  }) {
+    List<MatchEntry> filteredShooters = [];
+
+    if(divisions == null) divisions = sport.divisions.values.toList();
+    if(powerFactors == null) powerFactors = sport.powerFactors.values.toList();
+    if(classes == null) classes = sport.classifications.values.toList();
+
+    for(MatchEntry s in shooters) {
+      if(filterMode == FilterMode.or) {
+        if ((!sport.hasDivisions || divisions.contains(s.division)) || powerFactors.contains(s.powerFactor) || (!sport.hasClassifications || classes.contains(s.classification))) {
+          if(allowReentries || !s.reentry) filteredShooters.add(s);
+        }
+      }
+      else {
+        if ((!sport.hasDivisions || divisions.contains(s.division)) && powerFactors.contains(s.powerFactor) && (!sport.hasClassifications || classes.contains(s.classification))) {
+          if(allowReentries || !s.reentry) filteredShooters.add(s);
+        }
+      }
+    }
+
+    if(ladyOnly) {
+      filteredShooters.retainWhere((s) => s.female);
+    }
+
+    return filteredShooters;
+  }
+
+  @override
+  String toString() {
+    return eventName;
+  }
+
+  static int Function(ShootingMatch a, ShootingMatch b) dateComparator = (a, b) {
+    // Sort remaining matches by date descending, then by name ascending
+    var dateSort = b.date.compareTo(a.date);
+    if (dateSort != 0) return dateSort;
+
+    return a.eventName.compareTo(b.eventName);
+  };
+
+  ShootingMatch copy() {
+    return ShootingMatch(
+      eventName: eventName,
+      sport: sport,
+      rawDate: rawDate,
+      date: date,
+      sourceIds: []..addAll(sourceIds),
+      level: level,
+      databaseId: databaseId,
+      shooters: []..addAll(shooters.map((s) => s.copy())),
+      stages: []..addAll(stages.map((s) => s.copy())),
+    );
+  }
 }
 
 class MatchStage {
@@ -107,4 +188,16 @@ class MatchStage {
     this.classifier = false,
     this.classifierNumber = "",
   });
+
+  MatchStage copy() {
+    return MatchStage(
+      stageId: stageId,
+      name: name,
+      scoring: scoring,
+      minRounds: minRounds,
+      maxPoints: maxPoints,
+      classifier: classifier,
+      classifierNumber: classifierNumber,
+    );
+  }
 }

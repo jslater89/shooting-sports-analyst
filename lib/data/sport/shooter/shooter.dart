@@ -83,4 +83,26 @@ class MatchEntry extends Shooter {
     this.classification,
     super.female,
   });
+
+  MatchEntry copy() {
+    var e = MatchEntry(
+      firstName: firstName,
+      lastName: lastName,
+      memberNumber: memberNumber,
+      reentry: reentry,
+      dq: dq,
+      entryId: entryId,
+      powerFactor: powerFactor,
+      scores: scores,
+      division: division,
+      classification: classification,
+      female: female,
+    );
+
+    e.knownMemberNumbers = {}..addAll(knownMemberNumbers);
+    e._memberNumber = _memberNumber;
+    e.originalMemberNumber = originalMemberNumber;
+
+    return e;
+  }
 }
