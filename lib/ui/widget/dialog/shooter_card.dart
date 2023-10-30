@@ -5,15 +5,16 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
+import 'package:uspsa_result_viewer/data/sport/shooter/shooter.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/ui/widget/captioned_text.dart';
 import 'package:uspsa_result_viewer/ui/widget/score_list.dart';
+import 'package:uspsa_result_viewer/util.dart';
 
 class ShooterResultCard extends StatelessWidget {
   final RelativeMatchScore? matchScore;
-  final RelativeScore? stageScore;
+  final RelativeStageScore? stageScore;
   final bool scoreDQ;
 
   const ShooterResultCard({Key? key, this.matchScore, this.stageScore, this.scoreDQ = true}) : super(key: key);
@@ -47,12 +48,12 @@ class ShooterResultCard extends StatelessWidget {
               children: [
                 CaptionedText(
                   captionText: "Match Score",
-                  text: "${matchScore!.total.relativePoints.toStringAsFixed(2)} (${matchScore!.total.percent.asPercentage()}%)"
+                  text: "${matchScore!.points.toStringAsFixed(2)} (${matchScore!.ratio.asPercentage()}%)"
                 ),
                 SizedBox(width: 12),
                 CaptionedText(
                   captionText: "Time",
-                  text: "${matchScore!.total.score.time.toStringAsFixed(2)}s",
+                  text: "${matchScore!.total.finalTime.toStringAsFixed(2)}s",
                 )
               ],
             ),
@@ -65,7 +66,7 @@ class ShooterResultCard extends StatelessWidget {
   }
 
   Widget _buildStageCard(BuildContext context) {
-    Shooter shooter = stageScore!.score.shooter;
+    MatchEntry shooter = stageScore!.shooter;
     List<Widget> timeHolder = [];
     var stringTimes = stageScore!.score.stringTimes;
 
@@ -105,18 +106,18 @@ class ShooterResultCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 CaptionedText(
-                    captionText: "Hit Factor",
-                    text: "${stageScore!.score.getHitFactor(scoreDQ: scoreDQ).toStringAsFixed(4)}",
+                    captionText: stageScore!.score.displayLabel,
+                    text: stageScore!.score.displayString,
                 ),
                 SizedBox(width: 12),
                 CaptionedText(
                   captionText: "Time",
-                  text: "${stageScore!.score.time.toStringAsFixed(2)}s",
+                  text: "${stageScore!.score.finalTime.toStringAsFixed(2)}s",
                 ),
                 SizedBox(width: 12),
                 CaptionedText(
                   captionText: "Stage Score",
-                  text: "${stageScore!.relativePoints.toStringAsFixed(2)} (${stageScore!.percent.asPercentage()}%)"
+                  text: "${stageScore!.points.toStringAsFixed(2)} (${stageScore!.ratio.asPercentage()}%)"
                 )
               ],
             ),
@@ -124,7 +125,7 @@ class ShooterResultCard extends StatelessWidget {
             ]..addAll(
               timeHolder
             )..add(
-              MatchScoreBody(result: stageScore)
+              MatchScoreBody(result: stageScore!.score),
             ),
         ),
       ),

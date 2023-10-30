@@ -382,18 +382,33 @@ sealed class StageScoring {
 
   String get dbString => this.runtimeType.toString();
 
+  /// A label to use in the UI adjacent to a score value.
+  String displayLabel(RawScore score) {
+    switch(this) {
+      case HitFactorScoring():
+        return "Hit Factor";
+      case TimePlusScoring():
+        return "Time";
+      case PointsScoring():
+        return "Points";
+      case IgnoredScoring():
+        return "-";
+    }
+  }
+
+  /// A displayable string interpreting this score.
   String displayString(RawScore score) {
     switch(this) {
       case HitFactorScoring():
-        return "${interpret(score).toStringAsFixed(4)}";
+        return "${interpret(score).toStringAsFixed(4)}HF";
       case TimePlusScoring():
-        return "${interpret(score).toStringAsFixed(2)}";
+        return "${interpret(score).toStringAsFixed(2)}s";
       case PointsScoring(allowDecimal: var allowDecimal):
         if(allowDecimal) {
-          return "${interpret(score).toStringAsFixed(2)}";
+          return "${interpret(score).toStringAsFixed(2)}pt";
         }
         else {
-          return "${interpret(score).round()}";
+          return "${interpret(score).round()}pt";
         }
       case IgnoredScoring():
         return "-";
@@ -659,6 +674,7 @@ class RawScore {
   }
 
   String get displayString => scoring.displayString(this);
+  String get displayLabel => scoring.displayLabel(this);
 }
 
 /// A ScoringEvent is the minimal unit of score change in a shooting sports

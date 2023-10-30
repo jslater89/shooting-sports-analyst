@@ -49,6 +49,16 @@ class Shooter {
       this.memberNumber = memberNumber;
     }
   }
+
+  String get name => getName(suffixes: false);
+
+  String getName({bool suffixes = true}) {
+    if(!suffixes) return [firstName, lastName].join(" ");
+
+    var components = [firstName, lastName];
+    if(female) components.add("(F)");
+    return components.join(" ");
+  }
 }
 
 /// A shooter embodied as a match entry.

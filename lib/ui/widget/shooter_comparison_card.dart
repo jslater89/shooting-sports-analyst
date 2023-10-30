@@ -65,7 +65,7 @@ class ShooterComparisonCard extends StatelessWidget {
       Divider(),
       Text("Stage ${stage.stageId} - ${stage.name}",
         style: headlineTheme, overflow: TextOverflow.ellipsis),
-      Text("${stageScore.place} - ${stageScore.ratio.asPercentage()}% - ${stageScore.score.getHitFactor().toStringAsFixed(4)}HF",
+      Text("${stageScore.place} - ${stageScore.ratio.asPercentage()}% - ${stageScore.score.displayString}",
         style: textTheme,
       ),
       // Text("${stageScore.score.a}A ${stageScore.score.c}C ${stageScore.score.d}D ${stageScore.score.m}M ${stageScore.score.ns}NS ${stageScore.score.penaltyCount}P",
