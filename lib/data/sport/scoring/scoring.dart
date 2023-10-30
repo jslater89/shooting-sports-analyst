@@ -5,8 +5,12 @@
  */
 
 import 'dart:collection';
+import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:uspsa_result_viewer/data/match/practical_match.dart';
+import 'package:uspsa_result_viewer/data/ranking/rater.dart';
+import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 import 'package:uspsa_result_viewer/data/sport/shooter/shooter.dart';
 import 'package:uspsa_result_viewer/data/sport/sport.dart';
@@ -115,6 +119,7 @@ final class RelativeStageFinishScoring extends MatchScoring {
 
         var relativeStageScore = RelativeStageScore(
           shooter: shooter,
+          stage: stage,
           score: score,
           place: i + 1,
           ratio: ratio,
@@ -264,6 +269,7 @@ final class CumulativeScoring extends MatchScoring {
         var points = scoring.interpret(score);
         var relativeStageScore = RelativeStageScore(
           shooter: shooter,
+          stage: stage,
           score: score,
           place: i + 1,
           ratio: ratio,
@@ -376,6 +382,24 @@ sealed class StageScoring {
 
   String get dbString => this.runtimeType.toString();
 
+  String displayString(RawScore score) {
+    switch(this) {
+      case HitFactorScoring():
+        return "${interpret(score).toStringAsFixed(4)}";
+      case TimePlusScoring():
+        return "${interpret(score).toStringAsFixed(2)}";
+      case PointsScoring(allowDecimal: var allowDecimal):
+        if(allowDecimal) {
+          return "${interpret(score).toStringAsFixed(2)}";
+        }
+        else {
+          return "${interpret(score).round()}";
+        }
+      case IgnoredScoring():
+        return "-";
+    }
+  }
+
   /// Returns >0 if a is better than b, 0 if they are equal, and <0 is b is better than a.
   int compareScores(RawScore a, RawScore b) {
     var aInt = interpret(a);
@@ -414,11 +438,29 @@ sealed class StageScoring {
 
   static StageScoring fromDbString(String string) {
     if(string.startsWith(const HitFactorScoring().dbString)) return const HitFactorScoring();
-    else if(string.startsWith(const TimePlusScoring().dbString)) return const TimePlusScoring();
+    else if(string.startsWith(const TimePlusScoring().dbString)) return TimePlusScoring();
     else if(string.startsWith(const PointsScoring(highScoreBest: true).dbString)) {
-      var highScoreBest = string.split("|")[1];
-      if(highScoreBest == "true") return const PointsScoring(highScoreBest: true);
-      else return const PointsScoring(highScoreBest: false);
+      var options = string.split("|");
+      var highScoreBest = options[1] == "true";
+
+      var allowDecimal = false;
+      if(options.length >= 3) {
+        allowDecimal = options[2] == "true";
+      }
+
+      // If this gets any more gnarly, skip
+      if(highScoreBest && allowDecimal) {
+        return const PointsScoring(highScoreBest: true, allowDecimal: true);
+      }
+      else if(highScoreBest && !allowDecimal) {
+        return const PointsScoring(highScoreBest: true, allowDecimal: false);
+      }
+      else if(!highScoreBest && allowDecimal) {
+        return const PointsScoring(highScoreBest: false, allowDecimal: true);
+      }
+      else {
+        return const PointsScoring(highScoreBest: false, allowDecimal: false);
+      }
     }
     else return const IgnoredScoring();
   }
@@ -441,10 +483,22 @@ class TimePlusScoring extends StageScoring {
 class PointsScoring extends StageScoring {
   num interpret(RawScore score) => score.points;
   final bool highScoreBest;
+  final bool allowDecimal;
 
-  String get dbString => "${this.runtimeType.toString()}|$highScoreBest";
+  String get dbString => "${this.runtimeType.toString()}|$highScoreBest|$allowDecimal";
 
-  const PointsScoring({this.highScoreBest = true});
+  const PointsScoring({this.highScoreBest = true, this.allowDecimal = false});
+
+  @override
+  bool operator ==(Object other) {
+    if(other is PointsScoring) {
+      return highScoreBest == other.highScoreBest && allowDecimal == other.allowDecimal;
+    }
+    return false;
+  }
+
+  @override
+  int get hashCode => Object.hash(highScoreBest, allowDecimal);
 }
 
 class IgnoredScoring extends StageScoring {
@@ -460,21 +514,25 @@ abstract class RelativeScore {
   double ratio;
   double get percentage => ratio * 100;
 
-  /// points holds any intermediate or calculated values we need:
-  /// in relative finish scoring, for instance, the number of stage points
-  /// earned in this score.
-  double? points;
+  /// points holds the final score for this relative score, whether
+  /// calculated simply repeated from an attached [RawScore].
+  ///
+  /// In a [RelativeStageFinishScoring] match, it's the number of stage
+  /// points or the total number of match points. In a [CumulativeScoring]
+  /// match, it's the final points or time per stage/match.
+  double points;
 
   RelativeScore({
     required this.place,
     required this.ratio,
-    this.points,
+    required this.points,
   });
 }
 
 // note to self: it's massively more convenient to have a backlink to shooter on relative
 // scores. Since we don't save them to the DB, it's fine. If we ever do, we can probably
-// ignore it.
+// ignore it. See also RelativeStageScore.
+// Or maybe we can use Isar links.
 
 /// A relative match score is an overall score for an entire match.
 class RelativeMatchScore extends RelativeScore {
@@ -487,20 +545,48 @@ class RelativeMatchScore extends RelativeScore {
     required this.stageScores,
     required super.place,
     required super.ratio,
-    super.points,
+    required super.points,
   }) : total = stageScores.values.map((e) => e.score).sum;
+
+  late double percentTotalPoints;
+  double percentTotalPointsWithSettings({bool scoreDQ = true, bool countPenalties = true, Map<Stage, int> stageMaxPoints = const {}}) {
+    if(scoreDQ && countPenalties && stageMaxPoints.isEmpty) {
+      return percentTotalPoints;
+    }
+
+    var max = maxPoints(stageMaxPoints: stageMaxPoints);
+    var actualPoints = stageScores.values.map((e) => !scoreDQ && shooter.dq ? 0 : e.score.getTotalPoints(countPenalties: countPenalties)).sum.toDouble();
+
+    return actualPoints / max;
+  }
+
+  int maxPoints({Map<Stage, int> stageMaxPoints = const{}}) {
+    int max = 0;
+    for(var stage in stageScores.keys) {
+      max += stageMaxPoints[stage] ?? stageScores[stage]!.stage!.maxPoints;
+    }
+    return max;
+  }
 }
 
 class RelativeStageScore extends RelativeScore {
   MatchEntry shooter;
+  MatchStage stage;
   RawScore score;
   RelativeStageScore({
     required this.shooter,
+    required this.stage,
     required this.score,
     required super.place,
     required super.ratio,
-    super.points,
+    required super.points,
   });
+
+  double getPercentTotalPoints({bool scoreDQ = true, bool countPenalties = true, int? maxPoints}) {
+    maxPoints ??= stage.maxPoints;
+    if(maxPoints == 0) return 0.0;
+    return !scoreDQ && shooter.dq ? 0.0 : score.getTotalPoints(countPenalties: countPenalties).toDouble() / maxPoints.toDouble();
+  }
 }
 
 /// A raw score is what we store in the DB, and is what we can determine entirely from the shooter's
@@ -525,6 +611,20 @@ class RawScore {
   
   int get points => _scoreMaps.points;
   double get finalTime => rawTime + _scoreMaps.timeAdjustment;
+
+  int getTotalPoints({bool countPenalties = true, bool allowNegative = false}) {
+    if(countPenalties) {
+      if(allowNegative) {
+        return points;
+      }
+      else {
+        return max(0, points);
+      }
+    }
+    else {
+      return scoringEvents.points;
+    }
+  }
 
   RawScore({
     required this.scoring,
@@ -557,6 +657,8 @@ class RawScore {
       return points / rawTime;
     }
   }
+
+  String get displayString => scoring.displayString(this);
 }
 
 /// A ScoringEvent is the minimal unit of score change in a shooting sports
@@ -651,5 +753,150 @@ extension MatchScoresToCSV on List<RelativeMatchScore> {
     }
 
     return csv;
+  }
+}
+
+extension Sorting on List<RelativeMatchScore> {
+  void sortByScore({MatchStage? stage}) {
+    if(stage != null) {
+      this.sort((a, b) {
+        if(a.stageScores.containsKey(stage) && b.stageScores.containsKey(stage)) {
+          return b.stageScores[stage]!.points.compareTo(a.stageScores[stage]!.points);
+        }
+        else {
+          return 0;
+        }
+      });
+    }
+    else {
+      this.sort((a, b) {
+        return b.total.points.compareTo(a.total.points);
+      });
+    }
+  }
+
+  void sortByTime({MatchStage? stage, required bool scoreDQs}) {
+    if (stage != null) {
+      this.sort((a, b) {
+        if(!scoreDQs) {
+          if (a.shooter.dq && !b.shooter.dq) {
+            return 1;
+          }
+          if (b.shooter.dq && !a.shooter.dq) {
+            return -1;
+          }
+        }
+
+        if (a.stageScores.containsKey(stage) && b.stageScores.containsKey(stage)) {
+          if(a.stageScores[stage]!.score.finalTime == 0 && b.stageScores[stage]!.score.finalTime == 0) return 0;
+          else if(a.stageScores[stage]!.score.finalTime > 0 && b.stageScores[stage]!.score.finalTime == 0) return -1;
+          else if(a.stageScores[stage]!.score.finalTime == 0 && b.stageScores[stage]!.score.finalTime > 0) return 1;
+
+          return a.stageScores[stage]!.score.finalTime.compareTo(b.stageScores[stage]!.score.finalTime);
+        }
+        else {
+          return 0;
+        }
+      });
+    }
+    else {
+      this.sort((a, b) {
+        if (!scoreDQs) {
+          if (a.shooter.dq && !b.shooter.dq) {
+            return 1;
+          }
+          if (b.shooter.dq && !a.shooter.dq) {
+            return -1;
+          }
+        }
+
+        if(a.total.finalTime == 0 && b.total.finalTime == 0) return 0;
+        else if(a.total.finalTime > 0 && b.total.finalTime == 0) return -1;
+        else if(a.total.finalTime == 0 && b.total.finalTime > 0) return 1;
+
+        return a.total.finalTime.compareTo(b.total.finalTime);
+      });
+    }
+  }
+
+  void sortByAlphas({MatchStage? stage}) {
+    if (stage != null) {
+      this.sort((a, b) {
+        if (a.stageScores.containsKey(stage) && b.stageScores.containsKey(stage)) {
+          var aAlpha = a.shooter.powerFactor.targetEvents.lookupByName("A");
+          var bAlpha = b.shooter.powerFactor.targetEvents.lookupByName("A");
+
+          if(aAlpha == null || bAlpha == null) return 0;
+
+          var aAlphaCount = a.stageScores[stage]!.score.scoringEvents[aAlpha]!;
+          var bAlphaCount = b.stageScores[stage]!.score.scoringEvents[bAlpha]!;
+          return bAlphaCount.compareTo(aAlphaCount);
+        }
+        else {
+          return 0;
+        }
+      });
+    }
+    else {
+      this.sort((a, b) {
+        var aAlpha = a.shooter.powerFactor.targetEvents.lookupByName("A");
+        var bAlpha = b.shooter.powerFactor.targetEvents.lookupByName("A");
+
+        if(aAlpha == null || bAlpha == null) return 0;
+
+        var aAlphaCount = a.total.scoringEvents[aAlpha]!;
+        var bAlphaCount = b.total.scoringEvents[bAlpha]!;
+        return bAlphaCount.compareTo(aAlphaCount);
+      });
+    }
+  }
+
+  void sortByAvailablePoints({MatchStage? stage, bool scoreDQ = true}) {
+    // Available points is meaningless if max points is 0.
+    if(this.length > 0) {
+      if(this.first.stageScores.values.map((e) => e.stage.maxPoints).sum == 0) {
+        sortByScore(stage: stage);
+        return;
+      }
+    }
+
+    if (stage != null) {
+      this.sort((a, b) {
+        if (a.stageScores.containsKey(stage) && b.stageScores.containsKey(stage)) {
+          return b.stageScores[stage]!.getPercentTotalPoints(scoreDQ: scoreDQ).compareTo(a.stageScores[stage]!.getPercentTotalPoints(scoreDQ: scoreDQ));
+        }
+        else {
+          return 0;
+        }
+      });
+    }
+    else {
+      this.sort((a, b) {
+        return b.percentTotalPoints.compareTo(a.percentTotalPoints);
+      });
+    }
+  }
+
+  void sortBySurname() {
+    this.sort((a, b) {
+      return a.shooter.lastName.compareTo(b.shooter.lastName);
+    });
+  }
+
+  void sortByRating({required Map<RaterGroup, Rater> ratings, required RatingDisplayMode displayMode, required PracticalMatch match}) {
+    this.sort((a, b) {
+      return a.shooter.lastName.compareTo(b.shooter.lastName);
+
+      // TODO: restore when ratings use the new feature
+      // var aRating = ratings.lookupRating(shooter: a.shooter, mode: displayMode, match: match) ?? -1000;
+      // var bRating = ratings.lookupRating(shooter: b.shooter, mode: displayMode, match: match) ?? -1000;
+      // return bRating.compareTo(aRating);
+    });
+  }
+
+  void sortByClassification() {
+    this.sort((a, b) {
+      return (a.shooter.classification?.index ?? 100000).compareTo(b.shooter.classification?.index ?? 100000);
+    });
   }
 }

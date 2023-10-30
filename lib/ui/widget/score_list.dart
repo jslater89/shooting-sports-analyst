@@ -20,6 +20,7 @@ import 'package:uspsa_result_viewer/ui/widget/dialog/editable_shooter_card.dart'
 import 'package:uspsa_result_viewer/ui/widget/score_row.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/shooter_card.dart';
 import 'package:uspsa_result_viewer/util.dart';
+import 'package:uspsa_result_viewer/data/model.dart' as old;
 
 class ScoreList extends StatelessWidget {
   final ShootingMatch? match;
@@ -252,10 +253,10 @@ class ScoreList extends StatelessWidget {
               Expanded(flex: 2, child: Text(score.shooter.division?.shortName ?? "NO DIVISION")),
               Expanded(flex: 1, child: Text(score.shooter.powerFactor.shortName)),
               Expanded(flex: 2, child: Text("${score.ratio.asPercentage()}%")),
-              Expanded(flex: 2, child: Text(score.points!.toStringAsFixed(2))),
+              Expanded(flex: 2, child: Text(score.points.toStringAsFixed(2))),
               if(match?.inProgress ?? false) Expanded(flex: 1, child: Text("$stagesComplete", textAlign: TextAlign.end)),
               if(match?.inProgress ?? false) SizedBox(width: 15),
-              Expanded(flex: 2, child: Text(score.total.score.time.toStringAsFixed(2))),
+              Expanded(flex: 2, child: Text(score.total.finalTime.toStringAsFixed(2))),
               Consumer<ScoreDisplaySettingsModel>(
                 builder: (context, model, _) {
                   if(model.value.fixedTimeAvailablePointsFromDivisionMax) {
@@ -355,7 +356,7 @@ class ScoreList extends StatelessWidget {
       onTap: () async {
         if(whatIfMode) {
           var action = await (showDialog<ShooterDialogAction>(context: context, barrierDismissible: false, builder: (context) {
-            return EditableShooterCard(stageScore: stageScore, scoreDQ: scoreDQ,);
+            return EditableShooterCard(sport: match!.sport, stageScore: stageScore, scoreDQ: scoreDQ,);
           }));
 
           if(action != null) {
@@ -428,7 +429,7 @@ class ScoreList extends StatelessWidget {
                   if(model.value.fixedTimeAvailablePointsFromDivisionMax) {
                     int maxPoints = 0;
                     // TODO: 'and this is a USPSA-style fixed time stage' via match.sport.matchScoring
-                    if(stageScore!.stage is PointsScoring) {
+                    if(stageScore!.score.scoring is PointsScoring) {
                       for(var score in baseScores) {
                         if(score.stageScores[stage] != null && score.stageScores[stage]!.score.rawPoints > maxPoints) {
                           maxPoints = score.stageScores[stage]!.score.rawPoints;
@@ -451,7 +452,7 @@ class ScoreList extends StatelessWidget {
               Expanded(flex: 2, child: Text(stageScore?.score.finalTime.toStringAsFixed(2) ?? "0.00")),
               Expanded(flex: 2, child: Text(stageScore?.score.getHitFactor(scoreDQ: scoreDQ).toStringAsFixed(4) ?? "0.0000")),
               Expanded(flex: 2, child: Text("${stageScore?.ratio.asPercentage() ?? "0.00"}%")),
-              Expanded(flex: 2, child: Text(stageScore?.points?.toStringAsFixed(2) ?? "0.00")),
+              Expanded(flex: 2, child: Text(stageScore?.points.toStringAsFixed(2) ?? "0.00")),
               Expanded(flex: 4, child: Text("${stageScore?.score.a}A ${stageScore?.score.c}C ${stageScore?.score.d}D ${stageScore?.score.m}M ${stageScore?.score.ns}NS ${stageScore?.score.penaltyCount}P")),
             ],
           ),
@@ -471,7 +472,7 @@ class ScoreList extends StatelessWidget {
 }
 
 extension LookupShooterRating on Map<RaterGroup, Rater> {
-  ShooterRating? lookup(Shooter s) {
+  ShooterRating? lookup(old.Shooter s) {
     // TODO: fix when raters are converted
     // for(var group in this.keys) {
     //   if(group.divisions.contains(s.division)) {
@@ -498,7 +499,7 @@ extension LookupShooterRating on Map<RaterGroup, Rater> {
     return null;
   }
 
-  Rater? lookupRater(Shooter shooter) {
+  Rater? lookupRater(old.Shooter shooter) {
     // TODO: fix when ratings are converted
     // for(var group in this.keys) {
     //   if(group.divisions.contains(shooter.division)) {

@@ -169,7 +169,7 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
     }
 
     return ResultPage(
-      canonicalMatch: _match,
+      canonicalMatch: _match!,
     );
   }
 }

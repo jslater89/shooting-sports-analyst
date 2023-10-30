@@ -5,12 +5,14 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/sport/shooter/shooter.dart';
+import 'package:uspsa_result_viewer/data/sport/sport.dart';
 
 class MatchBreakdown extends StatelessWidget {
-  final List<Shooter> shooters;
+  final List<MatchEntry> shooters;
+  final Sport sport;
 
-  const MatchBreakdown({Key? key, required this.shooters}) : super(key: key);
+  const MatchBreakdown({Key? key, required this.sport, required this.shooters}) : super(key: key);
 
   /// To the left: a table of division/class numbers.
   @override
@@ -18,8 +20,8 @@ class MatchBreakdown extends StatelessWidget {
     // totals go in null, null
     Map<_DivisionClass, int> shooterCounts = {};
 
-    for(Division d in Division.values) {
-      for(Classification c in Classification.values) {
+    for(Division d in sport.divisions.values) {
+      for(Classification c in sport.classifications.values) {
         shooterCounts[_DivisionClass(d, c)] = 0;
 
         // Yes, I know it repeats a bunch of times
@@ -31,7 +33,7 @@ class MatchBreakdown extends StatelessWidget {
 
     shooterCounts[_DivisionClass(null, null)] = 0;
     
-    for(Shooter s in shooters) {
+    for(MatchEntry s in shooters) {
       shooterCounts[_DivisionClass(s.division, s.classification)] = shooterCounts[_DivisionClass(s.division, s.classification)]! + 1;
       shooterCounts[_DivisionClass(s.division, null)] = shooterCounts[_DivisionClass(s.division, null)]! + 1;
       shooterCounts[_DivisionClass(null, s.classification)] = shooterCounts[_DivisionClass(null, s.classification)]! + 1;
@@ -57,7 +59,7 @@ class MatchBreakdown extends StatelessWidget {
   Widget _buildTable(Map<_DivisionClass, int> shooterCounts) {
     var rows = <TableRow>[];
 
-    var divisions = <Division>[]..addAll(Division.values)..remove(Division.unknown);
+    var divisions = <Division>[]..addAll(sport.divisions.values);
 
     var columns = <Widget>[
       Align(alignment: Alignment.centerRight, child: Text("")),
@@ -82,8 +84,8 @@ class MatchBreakdown extends StatelessWidget {
     for(Division d in divisions) {
       var columns = <Widget>[];
 
-      columns.add(Text(d.displayString()));
-      for(Classification c in Classification.values) {
+      columns.add(Text(d.shortName));
+      for(Classification c in sport.classifications.values) {
         columns.add(
           Align(
             child: Text("${shooterCounts[_DivisionClass(d, c)]}"),
@@ -113,7 +115,7 @@ class MatchBreakdown extends StatelessWidget {
 
     columns = <Widget>[];
     columns.add(Text("Total"));
-    for(Classification c in Classification.values) {
+    for(Classification c in sport.classifications.values) {
       columns.add(
         Align(
           child: Text("${shooterCounts[_DivisionClass(null, c)]}"),
@@ -147,15 +149,17 @@ class MatchBreakdown extends StatelessWidget {
     );
   }
 
-  Widget _buildPowerFactor(List<Shooter> shooters) {
-    int major = shooters.where((element) => element.powerFactor == PowerFactor.major).length;
-    int minor = shooters.where((element) => element.powerFactor == PowerFactor.minor).length;
+  Widget _buildPowerFactor(List<MatchEntry> shooters) {
+    Map<PowerFactor, int> pfs = {};
+    for(var pf in sport.powerFactors.values) {
+      pfs[pf] = shooters.where((e) => e.powerFactor == pf).length;
+    }
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text("Major: $major"),
-        Text("Minor: $minor"),
+        for(var entry in pfs.entries)
+          Text("${entry.key.name}: ${entry.value}"),
       ],
     );
   }

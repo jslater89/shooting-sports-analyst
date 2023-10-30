@@ -5,7 +5,9 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
+import 'package:uspsa_result_viewer/data/sport/shooter/shooter.dart';
+import 'package:uspsa_result_viewer/util.dart';
 
 class ShooterComparisonCard extends StatelessWidget {
   const ShooterComparisonCard({
@@ -42,7 +44,7 @@ class ShooterComparisonCard extends StatelessWidget {
                 )
               ],
             ),
-            Text("${matchScore.total.place} - ${matchScore.total.percent.asPercentage()}%"),
+            Text("${matchScore.place} - ${matchScore.ratio.asPercentage()}%"),
             for(var stageScore in matchScore.stageScores.values)
               ...stageInfo(context, stageScore),
           ],
@@ -51,24 +53,24 @@ class ShooterComparisonCard extends StatelessWidget {
     );
   }
 
-  List<Widget> stageInfo(BuildContext context, RelativeScore stageScore) {
-    var stage = stageScore.stage!;
-    if(stage.type == Scoring.chrono) return [];
+  List<Widget> stageInfo(BuildContext context, RelativeStageScore stageScore) {
+    var stage = stageScore.stage;
+    if(stage.scoring is IgnoredScoring) return [];
 
-    var color = stageScore.score.isDnf ? Colors.grey : Colors.black;
+    var color = stageScore.score.dnf ? Colors.grey : Colors.black;
     var headlineTheme = Theme.of(context).textTheme.titleMedium?.copyWith(color: color);
     var textTheme = Theme.of(context).textTheme.bodyMedium?.copyWith(color: color);
 
     return [
       Divider(),
-      Text("Stage ${stage.internalId} - ${stage.name}",
+      Text("Stage ${stage.stageId} - ${stage.name}",
         style: headlineTheme, overflow: TextOverflow.ellipsis),
-      Text("${stageScore.place} - ${stageScore.percent.asPercentage()}% - ${stageScore.score.getHitFactor().toStringAsFixed(4)}HF",
+      Text("${stageScore.place} - ${stageScore.ratio.asPercentage()}% - ${stageScore.score.getHitFactor().toStringAsFixed(4)}HF",
         style: textTheme,
       ),
-      Text("${stageScore.score.a}A ${stageScore.score.c}C ${stageScore.score.d}D ${stageScore.score.m}M ${stageScore.score.ns}NS ${stageScore.score.penaltyCount}P",
-        style: textTheme,
-      ),
+      // Text("${stageScore.score.a}A ${stageScore.score.c}C ${stageScore.score.d}D ${stageScore.score.m}M ${stageScore.score.ns}NS ${stageScore.score.penaltyCount}P",
+      //   style: textTheme,
+      // ),
     ];
   }
 }

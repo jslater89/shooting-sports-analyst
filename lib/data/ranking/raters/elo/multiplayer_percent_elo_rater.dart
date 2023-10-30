@@ -22,6 +22,7 @@ import 'package:uspsa_result_viewer/data/ranking/timings.dart';
 import 'package:uspsa_result_viewer/ui/rater/prediction/prediction_view.dart';
 import 'package:uspsa_result_viewer/ui/rater/rater_view.dart';
 import 'package:uspsa_result_viewer/ui/widget/score_row.dart';
+import 'package:uspsa_result_viewer/util.dart';
 
 class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSettings, EloSettingsController> {
   static const errorKey = "error";

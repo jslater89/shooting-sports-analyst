@@ -25,6 +25,46 @@ enum MatchLevel {
   IV,
 }
 
+class OldFilterSet {
+  FilterMode mode = FilterMode.and;
+  bool reentries = true;
+  bool scoreDQs = true;
+  bool femaleOnly = false;
+
+  late Map<Division, bool> divisions;
+  late Map<Classification, bool> classifications;
+  late Map<PowerFactor, bool> powerFactors;
+
+  OldFilterSet({bool empty = false}) {
+    divisions = {};
+    classifications = {};
+    powerFactors = {};
+
+    for (Division d in Division.values) {
+      divisions[d] = !empty;
+    }
+
+    for (Classification c in Classification.values) {
+      classifications[c] = !empty;
+    }
+
+    for (PowerFactor f in PowerFactor.values) {
+      powerFactors[f] = !empty;
+    }
+  }
+
+  Iterable<Division> get activeDivisions => divisions.keys.where((div) => divisions[div] ?? false);
+
+  Map<Division, bool> divisionListToMap(List<Division> divisions) {
+    Map<Division, bool> map = {};
+    for(var d in Division.values) {
+      map[d] = divisions.contains(d);
+    }
+
+    return map;
+  }
+}
+
 class PracticalMatch {
   String? name;
   String? rawDate;

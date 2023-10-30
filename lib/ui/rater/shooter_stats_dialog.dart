@@ -22,6 +22,7 @@ import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.d
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/sport/sport.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
+import 'package:uspsa_result_viewer/util.dart';
 
 /// This displays per-stage changes for a shooter.
 class ShooterStatsDialog extends StatefulWidget {

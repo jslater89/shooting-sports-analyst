@@ -67,7 +67,7 @@ class Rater {
 
   RaterGroup group;
 
-  FilterSet get filters => group.filters;
+  OldFilterSet get filters => group.filters;
 
   bool byStage;
   List<String> memberNumberWhitelist;

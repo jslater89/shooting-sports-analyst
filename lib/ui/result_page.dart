@@ -18,6 +18,7 @@ import 'package:uspsa_result_viewer/data/sort_mode.dart';
 import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
 import 'package:uspsa_result_viewer/data/sport/shooter/shooter.dart';
+import 'package:uspsa_result_viewer/data/sport/sport.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/route/compare_shooter_results.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/about_dialog.dart';
@@ -29,7 +30,7 @@ import 'package:uspsa_result_viewer/ui/widget/dialog/match_breakdown.dart';
 import 'package:uspsa_result_viewer/ui/widget/score_list.dart';
 
 class ResultPage extends StatefulWidget {
-  final ShootingMatch? canonicalMatch;
+  final ShootingMatch canonicalMatch;
   final String appChromeLabel;
   final bool allowWhatIf;
   final MatchStage? initialStage;
@@ -66,8 +67,8 @@ class _ResultPageState extends State<ResultPage> {
   ShootingMatch? _currentMatch;
 
   bool _operationInProgress = false;
-
-  FilterSet _filters = FilterSet();
+  Sport get sport => widget.canonicalMatch.sport;
+  late FilterSet _filters;
   List<RelativeMatchScore> _baseScores = [];
   List<RelativeMatchScore> _searchedScores = [];
   String _searchTerm = "";
@@ -91,9 +92,9 @@ class _ResultPageState extends State<ResultPage> {
 
   /// If true, in what-if mode. If false, not in what-if mode.
   bool _whatIfMode = false;
-  Map<MatchStage, List<Shooter>> _editedShooters = {};
-  List<Shooter> get _allEditedShooters {
-    Set<Shooter> shooterSet = {};
+  Map<MatchStage, List<MatchEntry>> _editedShooters = {};
+  List<MatchEntry> get _allEditedShooters {
+    Set<MatchEntry> shooterSet = {};
     for(var list in _editedShooters.values) {
       shooterSet.addAll(list);
     }
@@ -104,6 +105,8 @@ class _ResultPageState extends State<ResultPage> {
   @override
   void initState() {
     super.initState();
+
+    _filters = FilterSet(widget.canonicalMatch.sport);
 
     if(kIsWeb) {
       SystemChrome.setApplicationSwitcherDescription(
@@ -230,12 +233,15 @@ class _ResultPageState extends State<ResultPage> {
         break;
       case SortMode.rating:
         if(widget.ratings != null) {
-          _baseScores.sortByRating(ratings: widget.ratings!, displayMode: _settings.value.ratingMode, match: _currentMatch!);
+          //_baseScores.sortByRating(ratings: widget.ratings!, displayMode: _settings.value.ratingMode, match: _currentMatch!);
+
+          // TODO: restore when we can rate new matches
+          _baseScores.sortByScore(stage: _stage);
         }
         else {
           // We shouldn't hit this, because we hide rating sort if there aren't any ratings,
           // but just in case...
-          return _baseScores.sortByScore(stage: _stage);
+          _baseScores.sortByScore(stage: _stage);
         }
         break;
       case SortMode.classification:
@@ -451,7 +457,7 @@ class _ResultPageState extends State<ResultPage> {
               icon: Icon(Icons.table_chart),
               onPressed: () {
                 showDialog(context: context, builder: (context) {
-                  return MatchBreakdown(shooters: _currentMatch!.shooters);
+                  return MatchBreakdown(sport: sport, shooters: _currentMatch!.shooters);
                 });
               },
             )

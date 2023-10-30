@@ -10,6 +10,7 @@ import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 import 'package:uspsa_result_viewer/data/source/practiscore_report.dart';
 import 'package:uspsa_result_viewer/data/sport/builtins/uspsa.dart';
 import 'package:uspsa_result_viewer/data/sport/match/match.dart';
+import 'package:uspsa_result_viewer/data/sport/match/translator.dart';
 import 'package:uspsa_result_viewer/ui/empty_scaffold.dart';
 import 'package:uspsa_result_viewer/ui/result_page.dart';
 
@@ -82,7 +83,7 @@ class _UploadedResultPageState extends State<UploadedResultPage> {
     }
 
     return ResultPage(
-      canonicalMatch: _match,
+      canonicalMatch: _match!,
     );
   }
 }

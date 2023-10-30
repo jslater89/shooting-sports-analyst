@@ -338,9 +338,3 @@ extension PDisplayString on PowerFactor?{
     }
   }
 }
-
-extension AsPercentage on double {
-  String asPercentage({int decimals = 2}) {
-    return (this * 100).toStringAsFixed(decimals);
-  }
-}

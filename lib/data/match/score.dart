@@ -295,13 +295,13 @@ extension Sorting on List<RelativeMatchScore> {
     });
   }
 
-  void sortByRating({required Map<RaterGroup, Rater> ratings, required RatingDisplayMode displayMode, required PracticalMatch match}) {
-    this.sort((a, b) {
-      var aRating = ratings.lookupRating(shooter: a.shooter, mode: displayMode, match: match) ?? -1000;
-      var bRating = ratings.lookupRating(shooter: b.shooter, mode: displayMode, match: match) ?? -1000;
-      return bRating.compareTo(aRating);
-    });
-  }
+  // void sortByRating({required Map<RaterGroup, Rater> ratings, required RatingDisplayMode displayMode, required PracticalMatch match}) {
+  //   this.sort((a, b) {
+  //     var aRating = ratings.lookupRating(shooter: a.shooter, mode: displayMode, match: match) ?? -1000;
+  //     var bRating = ratings.lookupRating(shooter: b.shooter, mode: displayMode, match: match) ?? -1000;
+  //     return bRating.compareTo(aRating);
+  //   });
+  // }
 
   void sortByClassification() {
     this.sort((a, b) {
