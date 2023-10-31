@@ -14,6 +14,7 @@ import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
 import 'package:uspsa_result_viewer/data/sport/shooter/shooter.dart';
+import 'package:uspsa_result_viewer/data/sport/sport.dart';
 import 'package:uspsa_result_viewer/route/compare_shooter_results.dart';
 import 'package:uspsa_result_viewer/ui/result_page.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/editable_shooter_card.dart';
@@ -174,6 +175,17 @@ class ScoreList extends StatelessWidget {
     );
   }
 
+  String _buildRawScoreRow(PowerFactor pf, RawScore score) {
+    List<String> elements = [];
+    for(var e in pf.targetEvents.values) {
+      elements.add("${e.name}${score.scoringEvents[e]}");
+    }
+    for(var e in pf.penaltyEvents.values) {
+      elements.add("${e.name}${score.penaltyEvents[e]}");
+    }
+    return elements.join(" ");
+  }
+
   Widget _buildMatchScoreRow({required BuildContext context, required int index}) {
     var score = filteredScores[index];
     var stagesComplete = 0;
@@ -273,16 +285,16 @@ class ScoreList extends StatelessWidget {
                         stageMax[s] = bestPoints;
                       }
                     }
-                    return Expanded(flex: 3, child: Text("${score.total.getTotalPoints(scoreDQ: scoreDQ, countPenalties: model.value.availablePointsCountPenalties)} "
+                    return Expanded(flex: 3, child: Text("${!scoreDQ && score.shooter.dq ? 0 : score.total.getTotalPoints(countPenalties: model.value.availablePointsCountPenalties)} "
                         "(${score.percentTotalPointsWithSettings(scoreDQ: true, countPenalties: model.value.availablePointsCountPenalties, stageMaxPoints: stageMax).asPercentage()}%)"));
                   }
                   else {
-                    return Expanded(flex: 3, child: Text("${score.total.score.getTotalPoints(scoreDQ: scoreDQ, countPenalties: model.value.availablePointsCountPenalties)} "
+                    return Expanded(flex: 3, child: Text("${!scoreDQ && score.shooter.dq ? 0 : score.total.getTotalPoints(countPenalties: model.value.availablePointsCountPenalties)} "
                         "(${score.percentTotalPointsWithSettings(scoreDQ: true, countPenalties: model.value.availablePointsCountPenalties).asPercentage()}%)"));
                   }
                 },
               ),
-              Expanded(flex: 5, child: Text("${score.total.score.a}A ${score.total.score.c}C ${score.total.score.d}D ${score.total.score.m}M ${score.total.score.ns}NS ${score.total.score.penaltyCount}P")),
+              Expanded(flex: 5, child: Text(_buildRawScoreRow(score.shooter.powerFactor, score.total))),
             ],
           ),
         ),
@@ -426,13 +438,19 @@ class ScoreList extends StatelessWidget {
               Expanded(flex: 1, child: Text(matchScore.shooter.powerFactor.shortName)),
               Consumer<ScoreDisplaySettingsModel>(
                 builder: (context, model, _) {
-                  if(model.value.fixedTimeAvailablePointsFromDivisionMax) {
+                  var matchScoring = match!.sport.matchScoring;
+                  bool hasFixedTime = false;
+                  if(matchScoring is RelativeStageFinishScoring) {
+                    if(matchScoring.pointsAreUSPSAFixedTime) hasFixedTime = true;
+                  }
+
+                  if(model.value.fixedTimeAvailablePointsFromDivisionMax && hasFixedTime) {
                     int maxPoints = 0;
-                    // TODO: 'and this is a USPSA-style fixed time stage' via match.sport.matchScoring
+
                     if(stageScore!.score.scoring is PointsScoring) {
                       for(var score in baseScores) {
-                        if(score.stageScores[stage] != null && score.stageScores[stage]!.score.rawPoints > maxPoints) {
-                          maxPoints = score.stageScores[stage]!.score.rawPoints;
+                        if(score.stageScores[stage] != null && score.stageScores[stage]!.score.points > maxPoints) {
+                          maxPoints = score.stageScores[stage]!.score.points;
                         }
                       }
                     }
@@ -440,20 +458,20 @@ class ScoreList extends StatelessWidget {
                       maxPoints = stage.maxPoints;
                     }
 
-                    return Expanded(flex: 3, child: Text("${stageScore.score.getTotalPoints(scoreDQ: scoreDQ, countPenalties: model.value.availablePointsCountPenalties)} "
-                        "(${((stageScore.score.getPercentTotalPoints(scoreDQ: scoreDQ, countPenalties: model.value.availablePointsCountPenalties, maxPoints: maxPoints)).asPercentage(decimals: 1))}%)"));
+                    return Expanded(flex: 3, child: Text("${!scoreDQ && stageScore.shooter.dq ? 0 : stageScore.score.getTotalPoints(countPenalties: model.value.availablePointsCountPenalties)} "
+                        "(${((stageScore.getPercentTotalPoints(scoreDQ: scoreDQ, countPenalties: model.value.availablePointsCountPenalties, maxPoints: maxPoints)).asPercentage(decimals: 1))}%)"));
                   }
                   else {
-                    return Expanded(flex: 3, child: Text("${stageScore?.score.getTotalPoints(scoreDQ: scoreDQ)} "
-                        "(${((stageScore?.score.getPercentTotalPoints(scoreDQ: scoreDQ, countPenalties: model.value.availablePointsCountPenalties) ?? 0).asPercentage(decimals: 1))}%)"));
+                    return Expanded(flex: 3, child: Text("${!scoreDQ && (stageScore?.shooter.dq ?? false)? 0 : stageScore?.score.getTotalPoints()} "
+                        "(${((stageScore?.getPercentTotalPoints(scoreDQ: scoreDQ, countPenalties: model.value.availablePointsCountPenalties) ?? 0).asPercentage(decimals: 1))}%)"));
                   }
                 },
               ),
               Expanded(flex: 2, child: Text(stageScore?.score.finalTime.toStringAsFixed(2) ?? "0.00")),
-              Expanded(flex: 2, child: Text(stageScore?.score.getHitFactor(scoreDQ: scoreDQ).toStringAsFixed(4) ?? "0.0000")),
+              Expanded(flex: 2, child: Text(stageScore?.score.displayString ?? "-")),
               Expanded(flex: 2, child: Text("${stageScore?.ratio.asPercentage() ?? "0.00"}%")),
               Expanded(flex: 2, child: Text(stageScore?.points.toStringAsFixed(2) ?? "0.00")),
-              Expanded(flex: 4, child: Text("${stageScore?.score.a}A ${stageScore?.score.c}C ${stageScore?.score.d}D ${stageScore?.score.m}M ${stageScore?.score.ns}NS ${stageScore?.score.penaltyCount}P")),
+              Expanded(flex: 4, child: Text(stageScore != null ? _buildRawScoreRow(stageScore.shooter.powerFactor, stageScore.score) : "")),
             ],
           ),
         ),

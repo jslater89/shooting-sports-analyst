@@ -7,6 +7,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
 import 'package:uspsa_result_viewer/data/sport/shooter/shooter.dart';
 import 'package:uspsa_result_viewer/data/sport/sport.dart';
@@ -107,7 +108,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
               ],
             ),
             SizedBox(height: 10),
-            MatchScoreBody(result: widget.matchScore!.total),
+            MatchScoreBody(result: widget.matchScore!.total, powerFactor: widget.matchScore!.shooter.powerFactor),
             SizedBox(height: 10),
             Row(
               mainAxisSize: MainAxisSize.min,
@@ -119,7 +120,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
     );
   }
 
-  Widget _buildMatchDropdowns(BuildContext context, Shooter shooter) {
+  Widget _buildMatchDropdowns(BuildContext context, MatchEntry shooter) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -130,12 +131,13 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
     );
   }
 
-  Widget _buildDivisionDropdown(BuildContext context, Shooter shooter) {
+  Widget _buildDivisionDropdown(BuildContext context, MatchEntry shooter) {
+    // TODO: if sport has divisions
     return DropdownButton<Division>(
       value: shooter.division,
-      items: Division.values.map((division) {
+      items: widget.sport.divisions.values.map((division) {
         return DropdownMenuItem<Division>(
-          child: Text(division.displayString()),
+          child: Text(division.name),
           value: division,
         );
       }).toList(),
@@ -150,7 +152,8 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
     );
   }
 
-  Widget _buildPowerFactorDropdown(BuildContext context, Shooter shooter) {
+  Widget _buildPowerFactorDropdown(BuildContext context, MatchEntry shooter) {
+    // TODO: if sport has power factors
     return DropdownButton<PowerFactor>(
       value: shooter.powerFactor,
       items: PowerFactor.values.map((powerFactor) {
@@ -171,7 +174,10 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
   }
 
   Widget _buildStageCard(BuildContext context) {
-    Shooter shooter = widget.stageScore!.score.shooter;
+    MatchEntry shooter = widget.stageScore!.shooter;
+    MatchStage stage = widget.stageScore!.stage;
+    RawScore score = widget.stageScore!.score;
+
     List<Widget> timeHolder = [];
     var stringTimes = widget.stageScore!.score.stringTimes;
 
@@ -211,8 +217,8 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 CaptionedText(
-                  captionText: "Hit Factor",
-                  text: "${_score!.getHitFactor(scoreDQ: widget.scoreDQ).toStringAsFixed(4)}",
+                  captionText: score.displayLabel,
+                  text: score.displayString,
                 ),
                 SizedBox(width: 12),
                 SizedBox(
@@ -243,7 +249,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
                 Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text("Round count: ${_score!.stage!.minRounds}"),
+                    Text("Round count: ${stage.minRounds}"),
                     SizedBox(height: 5),
                     Row(
                       mainAxisSize: MainAxisSize.min,

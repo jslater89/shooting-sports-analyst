@@ -564,7 +564,7 @@ class RelativeMatchScore extends RelativeScore {
   }) : total = stageScores.values.map((e) => e.score).sum;
 
   late double percentTotalPoints;
-  double percentTotalPointsWithSettings({bool scoreDQ = true, bool countPenalties = true, Map<Stage, int> stageMaxPoints = const {}}) {
+  double percentTotalPointsWithSettings({bool scoreDQ = true, bool countPenalties = true, Map<MatchStage, int> stageMaxPoints = const {}}) {
     if(scoreDQ && countPenalties && stageMaxPoints.isEmpty) {
       return percentTotalPoints;
     }
@@ -575,7 +575,7 @@ class RelativeMatchScore extends RelativeScore {
     return actualPoints / max;
   }
 
-  int maxPoints({Map<Stage, int> stageMaxPoints = const{}}) {
+  int maxPoints({Map<MatchStage, int> stageMaxPoints = const{}}) {
     int max = 0;
     for(var stage in stageScores.keys) {
       max += stageMaxPoints[stage] ?? stageScores[stage]!.stage!.maxPoints;
@@ -625,6 +625,7 @@ class RawScore {
   List<Map<ScoringEvent, int>> get _scoreMaps => [scoringEvents, penaltyEvents];
   
   int get points => _scoreMaps.points;
+  int get penaltyCount => penaltyEvents.values.sum;
   double get finalTime => rawTime + _scoreMaps.timeAdjustment;
 
   int getTotalPoints({bool countPenalties = true, bool allowNegative = false}) {
