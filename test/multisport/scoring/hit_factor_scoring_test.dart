@@ -25,7 +25,7 @@ void main() {
           stage1: RawScore(
             rawTime: 20,
             scoring: const HitFactorScoring(),
-            scoringEvents: {
+            targetEvents: {
               majorPf.targetEvents.lookupByName("A")!: 8,
               majorPf.targetEvents.lookupByName("C")!: 2,
             }
@@ -33,7 +33,7 @@ void main() {
           stage2: RawScore(
               rawTime: 10,
               scoring: const HitFactorScoring(),
-              scoringEvents: {
+              targetEvents: {
                 majorPf.targetEvents.lookupByName("A")!: 3,
                 majorPf.targetEvents.lookupByName("C")!: 2,
               }
@@ -50,7 +50,7 @@ void main() {
         stage1: RawScore(
             rawTime: 20,
             scoring: const HitFactorScoring(),
-            scoringEvents: {
+            targetEvents: {
               minorPf.targetEvents.lookupByName("A")!: 7,
               minorPf.targetEvents.lookupByName("C")!: 3,
             }
@@ -58,7 +58,7 @@ void main() {
         stage2: RawScore(
             rawTime: 10,
             scoring: const HitFactorScoring(),
-            scoringEvents: {
+            targetEvents: {
               minorPf.targetEvents.lookupByName("A")!: 5,
             }
         )
@@ -98,7 +98,7 @@ void main() {
         stage1: RawScore(
             rawTime: 20,
             scoring: const HitFactorScoring(),
-            scoringEvents: {
+            targetEvents: {
               majorPf.targetEvents.lookupByName("A")!: 8,
               majorPf.targetEvents.lookupByName("C")!: 2,
             }
@@ -106,7 +106,7 @@ void main() {
         stage2: RawScore(
             rawTime: 0,
             scoring: const PointsScoring(),
-            scoringEvents: {
+            targetEvents: {
               majorPf.targetEvents.lookupByName("A")!: 2,
               majorPf.targetEvents.lookupByName("C")!: 3,
             }
@@ -123,7 +123,7 @@ void main() {
         stage1: RawScore(
             rawTime: 20,
             scoring: const HitFactorScoring(),
-            scoringEvents: {
+            targetEvents: {
               minorPf.targetEvents.lookupByName("A")!: 7,
               minorPf.targetEvents.lookupByName("C")!: 3,
             }
@@ -131,7 +131,7 @@ void main() {
         stage2: RawScore(
             rawTime: 0,
             scoring: const PointsScoring(),
-            scoringEvents: {
+            targetEvents: {
               minorPf.targetEvents.lookupByName("A")!: 4,
               minorPf.targetEvents.lookupByName("C")!: 1,
             }
@@ -177,7 +177,7 @@ void main() {
         stage1: RawScore(
             rawTime: 20,
             scoring: const HitFactorScoring(),
-            scoringEvents: {
+            targetEvents: {
               majorPf.targetEvents.lookupByName("A")!: 8,
               majorPf.targetEvents.lookupByName("C")!: 2,
             }
@@ -185,7 +185,7 @@ void main() {
         stage2: RawScore(
             rawTime: 10,
             scoring: const HitFactorScoring(),
-            scoringEvents: {
+            targetEvents: {
               majorPf.targetEvents.lookupByName("A")!: 3,
               majorPf.targetEvents.lookupByName("C")!: 2,
             }
@@ -202,7 +202,7 @@ void main() {
         stage1: RawScore(
             rawTime: 20,
             scoring: const HitFactorScoring(),
-            scoringEvents: {
+            targetEvents: {
               minorPf.targetEvents.lookupByName("A")!: 7,
               minorPf.targetEvents.lookupByName("C")!: 3,
             }
@@ -210,7 +210,7 @@ void main() {
         stage2: RawScore(
             rawTime: 10,
             scoring: const HitFactorScoring(),
-            scoringEvents: {
+            targetEvents: {
               minorPf.targetEvents.lookupByName("A")!: 5,
             }
         )

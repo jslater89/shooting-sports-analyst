@@ -32,12 +32,9 @@ class EditableShooterCard extends StatefulWidget {
 
 class _EditableShooterCardState extends State<EditableShooterCard> {
   TextEditingController _timeController = TextEditingController();
-  TextEditingController _aController = TextEditingController();
-  TextEditingController _cController = TextEditingController();
-  TextEditingController _dController = TextEditingController();
-  TextEditingController _mController = TextEditingController();
-  TextEditingController _nsController = TextEditingController();
-  TextEditingController _procController = TextEditingController();
+
+  Map<ScoringEvent, TextEditingController> _targetControllers = {};
+  Map<ScoringEvent, TextEditingController> _penaltyControllers = {};
 
   bool _edited = false;
   bool _wholeMatchChange = false;
@@ -48,16 +45,27 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
   void initState() {
     super.initState();
 
-    _timeController.text = _score!.finalTime.toStringAsFixed(2);
-    _aController.text = "${_score!.a}";
-    _cController.text = "${_score!.c}";
-    _dController.text = "${_score!.d}";
-    _mController.text = "${_score!.m}";
-    _nsController.text = "${_score!.ns}";
-    _procController.text = "${_score!.procedural}";
+    _timeController.text = _score.finalTime.toStringAsFixed(2);
+    var pf = _shooter.powerFactor;
+    for(var event in pf.targetEvents.values) {
+      _targetControllers[event] = TextEditingController(text: "${_score.targetEvents[event] ?? 0}");
+    }
+    for(var event in pf.penaltyEvents.values) {
+      _penaltyControllers[event] = TextEditingController(text: "${_score.penaltyEvents[event] ?? 0}");
+    }
   }
 
-  RawScore? get _score {
+  RelativeScore get _relativeScore {
+    if(widget.stageScore != null) return widget.stageScore!;
+    else return widget.matchScore!;
+  }
+
+  MatchEntry get _shooter {
+    if(widget.stageScore != null) return widget.stageScore!.shooter;
+    else return widget.matchScore!.shooter;
+  }
+
+  RawScore get _score {
     if(widget.stageScore != null) return widget.stageScore!.score;
     else return widget.matchScore!.total;
   }
@@ -156,9 +164,9 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
     // TODO: if sport has power factors
     return DropdownButton<PowerFactor>(
       value: shooter.powerFactor,
-      items: PowerFactor.values.map((powerFactor) {
+      items: widget.sport.powerFactors.values.map((powerFactor) {
         return DropdownMenuItem<PowerFactor>(
-          child: Text(powerFactor.displayString()),
+          child: Text(powerFactor.displayName),
           value: powerFactor,
         );
       }).toList(),
@@ -202,6 +210,45 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
         SizedBox(height: 10),
       ];
     }
+
+    var scoringWidgets = <Widget>[];
+    for(var event in _targetControllers.keys) {
+      scoringWidgets.add(SizedBox(
+        width: 50,
+        child: TextField(
+          controller: _targetControllers[event]!,
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r"[0-9]+")),
+          ],
+          decoration: InputDecoration(
+              labelText: event.shortDisplayName,
+              floatingLabelBehavior: FloatingLabelBehavior.always
+          ),
+        ),
+      ));
+      scoringWidgets.add(SizedBox(width: 12));
+    }
+    if(scoringWidgets.isNotEmpty) scoringWidgets.removeLast();
+
+    var penaltyWidgets = <Widget>[];
+    for(var event in _penaltyControllers.keys) {
+      penaltyWidgets.add(SizedBox(
+        width: 50,
+        child: TextField(
+          controller: _penaltyControllers[event]!,
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r"[0-9]+")),
+          ],
+          decoration: InputDecoration(
+              labelText: event.shortDisplayName,
+              floatingLabelBehavior: FloatingLabelBehavior.always
+          ),
+        ),
+      ));
+      penaltyWidgets.add(SizedBox(width: 12));
+    }
+    if(penaltyWidgets.isNotEmpty) penaltyWidgets.removeLast();
+
     return Dialog(
       child: Padding(
         padding: const EdgeInsets.all(8.0),
@@ -255,75 +302,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
                       mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        SizedBox(
-                          width: 50,
-                          child: TextField(
-                            controller: _aController,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.allow(RegExp(r"[0-9]+")),
-                            ],
-                            decoration: InputDecoration(
-                                labelText: "A",
-                                floatingLabelBehavior: FloatingLabelBehavior.always
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 12),
-                        SizedBox(
-                          width: 50,
-                          child: TextField(
-                            controller: _cController,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.allow(RegExp(r"[0-9]+")),
-                            ],
-                            decoration: InputDecoration(
-                                labelText: "C",
-                                floatingLabelBehavior: FloatingLabelBehavior.always
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 12),
-                        SizedBox(
-                          width: 50,
-                          child: TextField(
-                            controller: _dController,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.allow(RegExp(r"[0-9]+")),
-                            ],
-                            decoration: InputDecoration(
-                                labelText: "D",
-                                floatingLabelBehavior: FloatingLabelBehavior.always
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 12),
-                        SizedBox(
-                          width: 50,
-                          child: TextField(
-                            controller: _mController,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.allow(RegExp(r"[0-9]+")),
-                            ],
-                            decoration: InputDecoration(
-                                labelText: "M",
-                                floatingLabelBehavior: FloatingLabelBehavior.always
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 12),
-                        SizedBox(
-                          width: 50,
-                          child: TextField(
-                            controller: _nsController,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.allow(RegExp(r"[0-9]+")),
-                            ],
-                            decoration: InputDecoration(
-                                labelText: "NS",
-                                floatingLabelBehavior: FloatingLabelBehavior.always
-                            ),
-                          ),
-                        ),
+                        ...scoringWidgets
                       ],
                     ),
                     SizedBox(height: 10),
@@ -331,39 +310,26 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
                       mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        SizedBox(
-                          width: 65,
-                          child: TextField(
-                            controller: _procController,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.allow(RegExp(r"[0-9]+")),
-                            ],
-                            decoration: InputDecoration(
-                                labelText: "Procedural",
-                                floatingLabelBehavior: FloatingLabelBehavior.always
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 12),
-                        CaptionedText(
-                          captionText: "Late Shot",
-                          text: "${_score!.lateShot}",
-                        ),
-                        SizedBox(width: 12),
-                        CaptionedText(
-                          captionText: "Extra Shot",
-                          text: "${_score!.extraShot}",
-                        ),
-                        SizedBox(width: 12),
-                        CaptionedText(
-                          captionText: "Extra Hit",
-                          text: "${_score!.extraHit}",
-                        ),
-                        SizedBox(width: 12),
-                        CaptionedText(
-                          captionText: "Other",
-                          text: "${_score!.otherPenalty}",
-                        )
+                        ...penaltyWidgets
+                        // CaptionedText(
+                        //   captionText: "Late Shot",
+                        //   text: "${_score!.lateShot}",
+                        // ),
+                        // SizedBox(width: 12),
+                        // CaptionedText(
+                        //   captionText: "Extra Shot",
+                        //   text: "${_score!.extraShot}",
+                        // ),
+                        // SizedBox(width: 12),
+                        // CaptionedText(
+                        //   captionText: "Extra Hit",
+                        //   text: "${_score!.extraHit}",
+                        // ),
+                        // SizedBox(width: 12),
+                        // CaptionedText(
+                        //   captionText: "Other",
+                        //   text: "${_score!.otherPenalty}",
+                        // )
                       ],
                     ),
                   ],
@@ -383,7 +349,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
 
   String _getPercentScoreText() {
     if(_edited) return "n/a (rescore)";
-    else return "${widget.stageScore!.relativePoints.toStringAsFixed(2)} (${widget.stageScore!.percent.asPercentage()}%)";
+    else return "${widget.stageScore!.points.toStringAsFixed(2)} (${widget.stageScore!.ratio.asPercentage()}%)";
   }
 
   List<Widget> _buildButtons() {
@@ -440,40 +406,45 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
     }
   }
 
-  void _updateFromUI(Score score) {
+  void _updateFromUI(RawScore score) {
     String timeText = _timeController.text.isEmpty ? "1.0" : _timeController.text;
     if(timeText.endsWith(".")) timeText += "0";
 
-    String aText = _aController.text.isEmpty ? "0" : _aController.text;
-    String cText = _cController.text.isEmpty ? "0" : _cController.text;
-    String dText = _dController.text.isEmpty ? "0" : _dController.text;
-    String mText = _mController.text.isEmpty ? "0" : _mController.text;
-    String nsText = _nsController.text.isEmpty ? "0" : _nsController.text;
-    String procText = _procController.text.isEmpty ? "0" : _procController.text;
+    score.rawTime = double.parse(timeText);
 
-    score.time = double.parse(timeText);
-    score.a = int.parse(aText);
-    score.c = int.parse(cText);
-    score.d = int.parse(dText);
-    score.m = int.parse(mText);
-    score.ns = int.parse(nsText);
-    score.procedural = int.parse(procText);
+    for(var event in _targetControllers.keys) {
+      var text = _targetControllers[event]!.text;
+      if(text.isEmpty) text = "0";
+      score.targetEvents[event] = int.parse(text);
+    }
+
+    for(var event in _penaltyControllers.keys) {
+      var text = _penaltyControllers[event]!.text;
+      if(text.isEmpty) text = "0";
+      score.penaltyEvents[event] = int.parse(text);
+    }
   }
 
   bool _validateScore() {
-    Score s = _score!.copy(_score!.shooter, _score!.stage);
+    RawScore s = _score.copy();
     _updateFromUI(s);
 
-    var sum = s.a + s.c + s.d + s.m;
-    if(sum > _score!.stage!.minRounds) {
+    var sum = 0;
+    for(var event in s.targetEvents.keys) {
+      if(event.pointChange > 0) {
+        sum += s.targetEvents[event]!;
+      }
+    }
+    var minRounds = widget.stageScore!.stage.minRounds;
+    if(sum > minRounds) {
       setState(() {
-        _scoreError = "Too many scoring hits! $sum vs. ${s.stage!.minRounds}.";
+        _scoreError = "Too many scoring hits! $sum vs. $minRounds.";
       });
       return false;
     }
-    else if(sum < _score!.stage!.minRounds) {
+    else if(sum < minRounds) {
       setState(() {
-        _scoreError = "Too few hits, assuming ${s.stage!.minRounds - sum} NPM";
+        _scoreError = "Too few hits, assuming ${minRounds - sum} NPM";
       });
     }
     else {
@@ -486,7 +457,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
   }
 
   void _updateScore() {
-    _updateFromUI(_score!);
+    _updateFromUI(_score);
 
     setState(() {
       widget.stageScore!.score = widget.stageScore!.score;
@@ -494,7 +465,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
     });
   }
 
-  Widget _buildShooterLink(BuildContext context, Shooter shooter) {
+  Widget _buildShooterLink(BuildContext context, MatchEntry shooter) {
     var children = <Widget>[];
     if(shooter.originalMemberNumber != "") {
       children.add(MouseRegion(
@@ -507,7 +478,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                "${shooter.getName()} - ${shooter.division?.displayString() ?? "NO DIVISION"} ${shooter.classification.displayString()}",
+                "${shooter.getName()} - ${shooter.division?.displayName ?? "NO DIVISION"} ${shooter.classification?.displayName}",
                 style: Theme.of(context).textTheme.headline6!.copyWith(
                   color: Theme.of(context).primaryColor,
                   decoration: TextDecoration.underline,
@@ -526,7 +497,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
     }
     else {
       children.add(Text(
-        "${shooter.getName()} - ${shooter.division?.displayString() ?? "NO DIVISION"} ${shooter.classification.displayString()}",
+        "${shooter.getName()} - ${shooter.division?.displayName ?? "NO DIVISION"} ${shooter.classification?.displayName ?? "NO CLASSIFICATION"}",
         style: Theme.of(context).textTheme.headline6,
       ));
     }

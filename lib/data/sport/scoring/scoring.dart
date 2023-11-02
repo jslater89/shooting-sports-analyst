@@ -74,7 +74,7 @@ final class RelativeStageFinishScoring extends MatchScoring {
         var stageScore = shooter.scores[stage];
 
         if(stageScore == null) {
-          stageScore = RawScore(scoring: scoring, scoringEvents: {});
+          stageScore = RawScore(scoring: scoring, targetEvents: {});
           shooter.scores[stage] = stageScore;
         }
 
@@ -208,7 +208,7 @@ final class CumulativeScoring extends MatchScoring {
         var stageScore = shooter.scores[stage];
 
         if(stageScore == null) {
-          stageScore = RawScore(scoring: scoring, scoringEvents: {});
+          stageScore = RawScore(scoring: scoring, targetEvents: {});
           shooter.scores[stage] = stageScore;
         }
 
@@ -561,7 +561,11 @@ class RelativeMatchScore extends RelativeScore {
     required super.place,
     required super.ratio,
     required super.points,
-  }) : total = stageScores.values.map((e) => e.score).sum;
+  }) : total = stageScores.values.map((e) => e.score).sum {
+    var max = maxPoints();
+    var actualPoints = stageScores.values.map((e) => e.score.getTotalPoints(countPenalties: true)).sum.toDouble();
+    percentTotalPoints = actualPoints / max;
+  }
 
   late double percentTotalPoints;
   double percentTotalPointsWithSettings({bool scoreDQ = true, bool countPenalties = true, Map<MatchStage, int> stageMaxPoints = const {}}) {
@@ -615,14 +619,24 @@ class RawScore {
 
   /// Scoring events for this score: that is, events caused by a hit or
   /// lack of hit on a target.
-  Map<ScoringEvent, int> scoringEvents;
+  Map<ScoringEvent, int> targetEvents;
 
   /// Penalty events for this score: that is, events caused by a competitor's
   /// actions or failures to act outside of hits or misses on targets.
   Map<ScoringEvent, int> penaltyEvents;
   List<double> stringTimes;
   
-  List<Map<ScoringEvent, int>> get _scoreMaps => [scoringEvents, penaltyEvents];
+  List<Map<ScoringEvent, int>> get _scoreMaps => [targetEvents, penaltyEvents];
+
+  int countForEvent(ScoringEvent event) {
+    var fromTarget = targetEvents[event];
+    if(fromTarget != null) return fromTarget;
+
+    var fromPenalty = penaltyEvents[event];
+    if(fromPenalty != null) return fromPenalty;
+
+    return 0;
+  }
   
   int get points => _scoreMaps.points;
   int get penaltyCount => penaltyEvents.values.sum;
@@ -638,20 +652,20 @@ class RawScore {
       }
     }
     else {
-      return scoringEvents.points;
+      return targetEvents.points;
     }
   }
 
   RawScore({
     required this.scoring,
     this.rawTime = 0.0,
-    required this.scoringEvents,
+    required this.targetEvents,
     this.penaltyEvents = const {},
     this.stringTimes = const [],
   });
 
   bool get dnf =>
-      (this.scoring is HitFactorScoring && scoringEvents.length == 0 && rawTime == 0.0)
+      (this.scoring is HitFactorScoring && targetEvents.length == 0 && rawTime == 0.0)
       || (this.scoring is TimePlusScoring && rawTime == 0.0)
       || (this.scoring is PointsScoring && points == 0);
 
@@ -676,6 +690,16 @@ class RawScore {
 
   String get displayString => scoring.displayString(this);
   String get displayLabel => scoring.displayLabel(this);
+
+  RawScore copy() {
+    return RawScore(
+      scoring: scoring,
+      stringTimes: []..addAll(stringTimes),
+      rawTime: rawTime,
+      targetEvents: {}..addAll(targetEvents),
+      penaltyEvents: {}..addAll(penaltyEvents),
+    );
+  }
 }
 
 /// A ScoringEvent is the minimal unit of score change in a shooting sports
@@ -684,9 +708,12 @@ class ScoringEvent implements NameLookupEntity {
   final String name;
 
   /// Unused, for NameLookupEntity
-  String get shortName => "";
+  final String shortName;
   /// Unused, for NameLookupEntity
   List<String> get alternateNames => [];
+
+  String get displayName => name;
+  String get shortDisplayName => shortName.isNotEmpty ? shortName : name;
 
   final int pointChange;
   final double timeChange;
@@ -699,7 +726,7 @@ class ScoringEvent implements NameLookupEntity {
   final bool bonus;
   final String bonusLabel;
 
-  const ScoringEvent(this.name, {this.pointChange = 0, this.timeChange = 0, this.bonus = false, this.bonusLabel = "X"});
+  const ScoringEvent(this.name, {this.shortName = "", this.pointChange = 0, this.timeChange = 0, this.bonus = false, this.bonusLabel = "X"});
 }
 
 extension ScoreUtilities on Map<ScoringEvent, int> {
@@ -740,9 +767,9 @@ extension ScoreListUtilities on Iterable<RawScore> {
 
     for(var s in this) {
       scoring = s.scoring;
-      for(var e in s.scoringEvents.keys) {
+      for(var e in s.targetEvents.keys) {
         scoringEvents[e] ??= 0;
-        scoringEvents.addTo(e, s.scoringEvents[e]!);
+        scoringEvents.addTo(e, s.targetEvents[e]!);
       }
 
       for(var e in s.penaltyEvents.keys) {
@@ -753,7 +780,7 @@ extension ScoreListUtilities on Iterable<RawScore> {
       rawTime += s.rawTime;
     }
 
-    return RawScore(scoring: scoring, scoringEvents: scoringEvents, penaltyEvents: penaltyEvents, rawTime: rawTime);
+    return RawScore(scoring: scoring, targetEvents: scoringEvents, penaltyEvents: penaltyEvents, rawTime: rawTime);
   }
 }
 
@@ -845,8 +872,8 @@ extension Sorting on List<RelativeMatchScore> {
 
           if(aAlpha == null || bAlpha == null) return 0;
 
-          var aAlphaCount = a.stageScores[stage]!.score.scoringEvents[aAlpha]!;
-          var bAlphaCount = b.stageScores[stage]!.score.scoringEvents[bAlpha]!;
+          var aAlphaCount = a.stageScores[stage]!.score.targetEvents[aAlpha]!;
+          var bAlphaCount = b.stageScores[stage]!.score.targetEvents[bAlpha]!;
           return bAlphaCount.compareTo(aAlphaCount);
         }
         else {
@@ -861,8 +888,8 @@ extension Sorting on List<RelativeMatchScore> {
 
         if(aAlpha == null || bAlpha == null) return 0;
 
-        var aAlphaCount = a.total.scoringEvents[aAlpha]!;
-        var bAlphaCount = b.total.scoringEvents[bAlpha]!;
+        var aAlphaCount = a.total.targetEvents[aAlpha]!;
+        var bAlphaCount = b.total.targetEvents[bAlpha]!;
         return bAlphaCount.compareTo(aAlphaCount);
       });
     }

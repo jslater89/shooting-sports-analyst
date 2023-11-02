@@ -5,6 +5,7 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:uspsa_result_viewer/data/sport/builtins/uspsa.dart';
 import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 import 'package:uspsa_result_viewer/data/sport/sport.dart';
 
@@ -166,22 +167,15 @@ class _FilterDialogState extends State<FilterDialog> {
   List<Widget> _powerFactorTiles(BuildContext context) {
     return [
       Text("Power Factors", style: Theme.of(context).textTheme.subtitle1!.apply(decoration: TextDecoration.underline)),
-      CheckboxListTile(
-        title: Text("Major"),
-        controlAffinity: ListTileControlAffinity.leading,
-        value: _filters.powerFactors[PowerFactor.major],
-        onChanged: (bool? value) {
-          _updateFilter(_filters.powerFactors, PowerFactor.major, value);
-        },
-      ),
-      CheckboxListTile(
-        title: Text("Minor"),
-        controlAffinity: ListTileControlAffinity.leading,
-        value: _filters.powerFactors[PowerFactor.minor],
-        onChanged: (bool? value) {
-          _updateFilter(_filters.powerFactors, PowerFactor.minor, value);
-        },
-      )
+      for(var pf in _filters.sport.powerFactors.values)
+        CheckboxListTile(
+          title: Text(pf.displayName),
+          controlAffinity: ListTileControlAffinity.leading,
+          value: _filters.powerFactors[pf],
+          onChanged: (bool? value) {
+            _updateFilter(_filters.powerFactors, pf, value);
+          },
+        ),
     ];
   }
 
@@ -209,140 +203,30 @@ class _FilterDialogState extends State<FilterDialog> {
   List<Widget> _divisionTiles(BuildContext context) {
     return [
       Text("Divisions", style: Theme.of(context).textTheme.subtitle1!.apply(decoration: TextDecoration.underline)),
-      CheckboxListTile(
-        title: Text("PCC"),
-        controlAffinity: ListTileControlAffinity.leading,
-        value: _filters.divisions[Division.pcc],
-        onChanged: (bool? value) {
-          _updateFilter(_filters.divisions, Division.pcc, value);
-        },
-      ),
-      CheckboxListTile(
-        title: Text("Open"),
-        controlAffinity: ListTileControlAffinity.leading,
-        value: _filters.divisions[Division.open],
-        onChanged: (bool? value) {
-          _updateFilter(_filters.divisions, Division.open, value);
-        },
-      ),
-      CheckboxListTile(
-        title: Text("Limited"),
-        controlAffinity: ListTileControlAffinity.leading,
-        value: _filters.divisions[Division.limited],
-        onChanged: (bool? value) {
-          _updateFilter(_filters.divisions, Division.limited, value);
-        },
-      ),
-      CheckboxListTile(
-        title: Text("Limited 10"),
-        controlAffinity: ListTileControlAffinity.leading,
-        value: _filters.divisions[Division.limited10],
-        onChanged: (bool? value) {
-          _updateFilter(_filters.divisions, Division.limited10, value);
-        },
-      ),
-      CheckboxListTile(
-        title: Text("Carry Optics"),
-        controlAffinity: ListTileControlAffinity.leading,
-        value: _filters.divisions[Division.carryOptics],
-        onChanged: (bool? value) {
-          _updateFilter(_filters.divisions, Division.carryOptics, value);
-        },
-      ),
-      CheckboxListTile(
-        title: Text("Limited Optics"),
-        controlAffinity: ListTileControlAffinity.leading,
-        value: _filters.divisions[Division.limitedOptics],
-        onChanged: (bool? value) {
-          _updateFilter(_filters.divisions, Division.limitedOptics, value);
-        },
-      ),
-      CheckboxListTile(
-        title: Text("Production"),
-        controlAffinity: ListTileControlAffinity.leading,
-        value: _filters.divisions[Division.production],
-        onChanged: (bool? value) {
-          _updateFilter(_filters.divisions, Division.production, value);
-        },
-      ),
-      CheckboxListTile(
-        title: Text("Single Stack"),
-        controlAffinity: ListTileControlAffinity.leading,
-        value: _filters.divisions[Division.singleStack],
-        onChanged: (bool? value) {
-          _updateFilter(_filters.divisions, Division.singleStack, value);
-        },
-      ),
-      CheckboxListTile(
-        title: Text("Revolver"),
-        controlAffinity: ListTileControlAffinity.leading,
-        value: _filters.divisions[Division.revolver],
-        onChanged: (bool? value) {
-          _updateFilter(_filters.divisions, Division.revolver, value);
-        },
-      ),
+      for(var division in _filters.sport.divisions.values)
+        CheckboxListTile(
+          title: Text(division.displayName),
+          controlAffinity: ListTileControlAffinity.leading,
+          value: _filters.divisions[division],
+          onChanged: (bool? value) {
+            _updateFilter(_filters.divisions, division, value);
+          },
+        ),
     ];
   }
 
   List<Widget> _classTiles(BuildContext context) {
     return [
       Text("Classes", style: Theme.of(context).textTheme.subtitle1!.apply(decoration: TextDecoration.underline)),
-      CheckboxListTile(
-        title: Text("GM"),
-        controlAffinity: ListTileControlAffinity.leading,
-        value: _filters.classifications[Classification.GM],
-        onChanged: (bool? value) {
-          _updateFilter(_filters.classifications, Classification.GM, value);
-        },
-      ),
-      CheckboxListTile(
-        title: Text("M"),
-        controlAffinity: ListTileControlAffinity.leading,
-        value: _filters.classifications[Classification.M],
-        onChanged: (bool? value) {
-          _updateFilter(_filters.classifications, Classification.M, value);
-        },
-      ),
-      CheckboxListTile(
-        title: Text("A"),
-        controlAffinity: ListTileControlAffinity.leading,
-        value: _filters.classifications[Classification.A],
-        onChanged: (bool? value) {
-          _updateFilter(_filters.classifications, Classification.A, value);
-        },
-      ),
-      CheckboxListTile(
-        title: Text("B"),
-        controlAffinity: ListTileControlAffinity.leading,
-        value: _filters.classifications[Classification.B],
-        onChanged: (bool? value) {
-          _updateFilter(_filters.classifications, Classification.B, value);
-        },
-      ),
-      CheckboxListTile(
-        title: Text("C"),
-        controlAffinity: ListTileControlAffinity.leading,
-        value: _filters.classifications[Classification.C],
-        onChanged: (bool? value) {
-          _updateFilter(_filters.classifications, Classification.C, value);
-        },
-      ),
-      CheckboxListTile(
-        title: Text("D"),
-        controlAffinity: ListTileControlAffinity.leading,
-        value: _filters.classifications[Classification.D],
-        onChanged: (bool? value) {
-          _updateFilter(_filters.classifications, Classification.D, value);
-        },
-      ),
-      CheckboxListTile(
-        title: Text("U"),
-        controlAffinity: ListTileControlAffinity.leading,
-        value: _filters.classifications[Classification.U],
-        onChanged: (bool? value) {
-          _updateFilter(_filters.classifications, Classification.U, value);
-        },
-      )
+      for(var classification in _filters.sport.classifications.values)
+        CheckboxListTile(
+          title: Text(classification.shortDisplayName),
+          controlAffinity: ListTileControlAffinity.leading,
+          value: _filters.classifications[classification],
+          onChanged: (bool? value) {
+            _updateFilter(_filters.classifications, classification, value);
+          },
+        ),
     ];
   }
 
@@ -397,11 +281,11 @@ class _FilterDialogState extends State<FilterDialog> {
     return [
       TextButton(
         child: Text("HANDGUNS"),
-        onPressed: () {
-          var filters = FilterSet();
+        onPressed: _filters.sport != uspsaSport ? null : () {
+          var filters = FilterSet(_filters.sport);
           filters.reentries =_filters.reentries;
           filters.scoreDQs = _filters.scoreDQs;
-          filters.divisions[Division.pcc] = false;
+          filters.divisions[uspsaSport.divisions.lookupByName("PCC")!] = false;
 
           setState(() {
             _filters = filters;
@@ -410,15 +294,15 @@ class _FilterDialogState extends State<FilterDialog> {
       ),
       TextButton(
         child: Text("HICAP"),
-        onPressed: () {
-          var filters = FilterSet();
+        onPressed: _filters.sport != uspsaSport ? null : () {
+          var filters = FilterSet(_filters.sport);
           filters.reentries =_filters.reentries;
           filters.scoreDQs = _filters.scoreDQs;
-          filters.divisions[Division.pcc] = false;
-          filters.divisions[Division.limited10] = false;
-          filters.divisions[Division.production] = false;
-          filters.divisions[Division.singleStack] = false;
-          filters.divisions[Division.revolver] = false;
+          filters.divisions[uspsaSport.divisions.lookupByName("PCC")!] = false;
+          filters.divisions[uspsaSport.divisions.lookupByName("L10")!] = false;
+          filters.divisions[uspsaSport.divisions.lookupByName("PROD")!] = false;
+          filters.divisions[uspsaSport.divisions.lookupByName("SS")!] = false;
+          filters.divisions[uspsaSport.divisions.lookupByName("REVO")!] = false;
 
           setState(() {
             _filters = filters;
@@ -427,14 +311,15 @@ class _FilterDialogState extends State<FilterDialog> {
       ),
       TextButton(
           child: Text("LOCAP"),
-          onPressed: () {
-            var filters = FilterSet();
+          onPressed: _filters.sport != uspsaSport ? null : () {
+            var filters = FilterSet(_filters.sport);
             filters.reentries =_filters.reentries;
             filters.scoreDQs = _filters.scoreDQs;
-            filters.divisions[Division.pcc] = false;
-            filters.divisions[Division.open] = false;
-            filters.divisions[Division.limited] = false;
-            filters.divisions[Division.carryOptics] = false;
+            filters.divisions[uspsaSport.divisions.lookupByName("PCC")!] = false;
+            filters.divisions[uspsaSport.divisions.lookupByName("OPEN")!] = false;
+            filters.divisions[uspsaSport.divisions.lookupByName("LIM")!] = false;
+            filters.divisions[uspsaSport.divisions.lookupByName("LO")!] = false;
+            filters.divisions[uspsaSport.divisions.lookupByName("CO")!] = false;
 
             setState(() {
               _filters = filters;
@@ -449,7 +334,7 @@ class _FilterDialogState extends State<FilterDialog> {
           FilterMode mode = FilterMode.and;
           bool? scoreDQs = _filters.scoreDQs;
           setState(() {
-            _filters = FilterSet();
+            _filters = FilterSet(_filters.sport);
             _filters.reentries = secondGun;
             _filters.mode = mode;
             _filters.scoreDQs = scoreDQs;
@@ -463,7 +348,7 @@ class _FilterDialogState extends State<FilterDialog> {
           FilterMode mode = FilterMode.or;
           bool? scoreDQs = _filters.scoreDQs;
           setState(() {
-            _filters = FilterSet(empty: true);
+            _filters = FilterSet(_filters.sport, empty: true);
             _filters.reentries = secondGun;
             _filters.mode = mode;
             _filters.scoreDQs = scoreDQs;

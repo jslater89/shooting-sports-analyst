@@ -255,7 +255,7 @@ class DbRawScore {
     scoringType = score.scoring.dbString,
     rawTime = score.rawTime,
     stringTimes = []..addAll(score.stringTimes),
-    scoringEvents = score.scoringEvents.keys.map((event) => DbScoringEvent(name: event.name, count: score.scoringEvents[event]!)).toList(),
+    scoringEvents = score.targetEvents.keys.map((event) => DbScoringEvent(name: event.name, count: score.targetEvents[event]!)).toList(),
     penaltyEvents = score.penaltyEvents.keys.map((event) => DbScoringEvent(name: event.name, count: score.penaltyEvents[event]!)).toList();
 
   Result<RawScore, Error> hydrate(PowerFactor pf) {
@@ -270,7 +270,7 @@ class DbRawScore {
       scoring: StageScoring.fromDbString(scoringType),
       rawTime: rawTime,
       stringTimes: []..addAll(stringTimes),
-      scoringEvents: Map.fromEntries(scoringEvents.map((event) => MapEntry(pf.targetEvents.lookupByName(event.name)!, event.count))),
+      targetEvents: Map.fromEntries(scoringEvents.map((event) => MapEntry(pf.targetEvents.lookupByName(event.name)!, event.count))),
       penaltyEvents: Map.fromEntries(penaltyEvents.map((event) => MapEntry(pf.penaltyEvents.lookupByName(event.name)!, event.count))),
     ));
   }

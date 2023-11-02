@@ -6,6 +6,7 @@
 
 import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
@@ -175,13 +176,23 @@ class ScoreList extends StatelessWidget {
     );
   }
 
-  String _buildRawScoreRow(PowerFactor pf, RawScore score) {
+  String _buildRawScoreRow(PowerFactor pf, RawScore score, {bool combinePenalties = true}) {
     List<String> elements = [];
     for(var e in pf.targetEvents.values) {
-      elements.add("${e.name}${score.scoringEvents[e]}");
+      elements.add("${score.targetEvents[e] ?? 0}${e.shortDisplayName}");
     }
-    for(var e in pf.penaltyEvents.values) {
-      elements.add("${e.name}${score.penaltyEvents[e]}");
+
+    if(combinePenalties) {
+      var penaltyLabel = "P";
+      if(pf.penaltyEvents.isNotEmpty) {
+        penaltyLabel = pf.penaltyEvents.values.first.shortDisplayName;
+      }
+      elements.add("${score.penaltyEvents.values.sum}$penaltyLabel");
+    }
+    else {
+      for (var e in pf.penaltyEvents.values) {
+        elements.add("${score.penaltyEvents[e] ?? 0}${e.shortDisplayName}");
+      }
     }
     return elements.join(" ");
   }

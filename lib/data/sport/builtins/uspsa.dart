@@ -8,8 +8,8 @@ import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
 import 'package:uspsa_result_viewer/data/sport/sport.dart';
 
 final _uspsaPenalties = [
-  const ScoringEvent("Procedural", pointChange: -10),
-  const ScoringEvent("Overtime shot", pointChange: -5),
+  const ScoringEvent("Procedural", shortName: "P", pointChange: -10),
+  const ScoringEvent("Overtime shot", shortName: "OS", pointChange: -5),
 ];
 
 final uspsaSport = Sport(
@@ -24,7 +24,7 @@ final uspsaSport = Sport(
     const MatchLevel(name: "Level III", shortName: "III", alternateNames: ["Area/National"], eventLevel: EventLevel.national),
   ],
   classifications: [
-    const Classification(index: 0, name: "Grandmaster", shortName: "GM"),
+    const Classification(index: 0, name: "Grandmaster", shortName: "GM", alternateNames: ["G"]),
     const Classification(index: 1, name: "Master", shortName: "M"),
     const Classification(index: 2, name: "A", shortName: "A"),
     const Classification(index: 3, name: "B", shortName: "B"),

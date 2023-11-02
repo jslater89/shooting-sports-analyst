@@ -322,7 +322,7 @@ class PractiscoreHitFactorReportParser extends MatchSource {
           scoring: stage.scoring,
           rawTime: double.parse(timeField),
           stringTimes: stringTimes..retainWhere((element) => element > 0),
-          scoringEvents: scoringEvents,
+          targetEvents: scoringEvents,
           penaltyEvents: penaltyEvents,
         );
 

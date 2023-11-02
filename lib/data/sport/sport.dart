@@ -86,6 +86,9 @@ class PowerFactor implements NameLookupEntity {
 
   final List<String> alternateNames;
 
+  String get displayName => name;
+  String get shortDisplayName => shortName.isNotEmpty ? shortName : name;
+
   PowerFactor(this.name, {
     this.shortName = "",
     required List<ScoringEvent> targetEvents,
@@ -107,6 +110,9 @@ class Division implements NameLookupEntity {
   /// parsing match results.
   final List<String> alternateNames;
 
+  String get displayName => name;
+  String get shortDisplayName => shortName.isNotEmpty ? shortName : name;
+
   const Division({
     required this.name,
     required this.shortName,
@@ -115,9 +121,13 @@ class Division implements NameLookupEntity {
 }
 
 abstract class NameLookupEntity {
+  /// The long name
   String get name;
   String get shortName;
   List<String> get alternateNames;
+
+  String get displayName => name;
+  String get shortDisplayName => shortName.isNotEmpty ? shortName : name;
 }
 
 extension LookupNameInList<T extends NameLookupEntity> on Iterable<T> {
@@ -158,6 +168,9 @@ class Classification implements NameLookupEntity {
   final String name;
   final String shortName;
 
+  String get displayName => name;
+  String get shortDisplayName => shortName.isNotEmpty ? shortName : name;
+
   final List<String> alternateNames;
 
   const Classification({
@@ -180,6 +193,9 @@ class MatchLevel implements NameLookupEntity {
   final String name;
   final String shortName;
   final EventLevel eventLevel;
+
+  String get displayName => name;
+  String get shortDisplayName => shortName.isNotEmpty ? shortName : name;
 
   final List<String> alternateNames;
 

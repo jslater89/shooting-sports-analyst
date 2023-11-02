@@ -151,6 +151,7 @@ class ShootingMatch {
   };
 
   ShootingMatch copy() {
+    var stageCopies = <MatchStage>[]..addAll(stages.map((s) => s.copy()));
     return ShootingMatch(
       eventName: eventName,
       sport: sport,
@@ -159,8 +160,8 @@ class ShootingMatch {
       sourceIds: []..addAll(sourceIds),
       level: level,
       databaseId: databaseId,
-      shooters: []..addAll(shooters.map((s) => s.copy())),
-      stages: []..addAll(stages.map((s) => s.copy())),
+      shooters: []..addAll(shooters.map((s) => s.copy(stageCopies))),
+      stages: []..addAll(stageCopies),
     );
   }
 }

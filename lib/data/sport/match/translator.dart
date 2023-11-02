@@ -15,9 +15,9 @@ import 'package:uspsa_result_viewer/data/sport/sport.dart';
 
 extension MatchTranslator on ShootingMatch {
   static ShootingMatch shootingMatchFrom(old.PracticalMatch match) {
-    List<MatchStage> stages = [];
+    List<MatchStage> newStages = [];
     for(var oldStage in match.stages) {
-      stages.add(MatchStage(
+      newStages.add(MatchStage(
         stageId: oldStage.internalId,
         name: oldStage.name,
         scoring: _stageScoringFrom(oldStage.type),
@@ -28,7 +28,7 @@ extension MatchTranslator on ShootingMatch {
       ));
     }
 
-    List<MatchEntry> shooters = [];
+    List<MatchEntry> newShooters = [];
     for(var shooter in match.shooters) {
       var stageScores = <MatchStage, RawScore>{};
       var powerFactor = uspsaSport.powerFactors.lookupByName(shooter.powerFactor.displayString())!;
@@ -37,12 +37,12 @@ extension MatchTranslator on ShootingMatch {
         var oldStage = entry.key;
         var oldScore = entry.value;
 
-        var newStage = stages.firstWhere((element) => element.stageId == oldStage.internalId);
+        var newStage = newStages.firstWhere((element) => element.stageId == oldStage.internalId);
         var newScore = RawScore(
           scoring: newStage.scoring,
           rawTime: oldScore.time,
 
-          scoringEvents: {
+          targetEvents: {
             if(oldScore.a > 0) powerFactor.targetEvents.lookupByName("A")!: oldScore.a,
             if(oldScore.c > 0) powerFactor.targetEvents.lookupByName("C")!: oldScore.c,
             if(oldScore.d > 0) powerFactor.targetEvents.lookupByName("D")!: oldScore.d,
@@ -72,7 +72,7 @@ extension MatchTranslator on ShootingMatch {
         scores: stageScores,
       );
 
-      shooters.add(newShooter);
+      newShooters.add(newShooter);
     }
 
     var newMatch = ShootingMatch(
@@ -80,8 +80,8 @@ extension MatchTranslator on ShootingMatch {
       eventName: match.name ?? "(unnamed match)",
       rawDate: match.rawDate ?? "",
       date: match.date ?? DateTime(0),
-      stages: stages,
-      shooters: shooters,
+      stages: newStages,
+      shooters: newShooters,
       level: uspsaSport.eventLevels.lookupByName((match.level ?? old.MatchLevel.I).name)!,
       sourceIds: [
         match.practiscoreId,

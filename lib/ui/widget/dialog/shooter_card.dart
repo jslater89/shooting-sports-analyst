@@ -183,7 +183,7 @@ class MatchScoreBody extends StatelessWidget {
     for(var e in powerFactor.targetEvents.values) {
       scoreText.add(CaptionedText(
         captionText: e.name,
-        text: "${result.scoringEvents[e] ?? 0}",
+        text: "${result.targetEvents[e] ?? 0}",
       ));
       scoreText.add(SizedBox(width: 12));
     }
@@ -193,7 +193,7 @@ class MatchScoreBody extends StatelessWidget {
     for(var e in powerFactor.penaltyEvents.values) {
       penaltyText.add(CaptionedText(
         captionText: e.name,
-        text: "${result.scoringEvents[e] ?? 0}",
+        text: "${result.targetEvents[e] ?? 0}",
       ));
       penaltyText.add(SizedBox(width: 12));
     }

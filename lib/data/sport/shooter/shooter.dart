@@ -94,7 +94,15 @@ class MatchEntry extends Shooter {
     super.female,
   });
 
-  MatchEntry copy() {
+  MatchEntry copy(List<MatchStage> stageCopies) {
+    Map<MatchStage, RawScore> scoreCopies = {};
+    for(var entry in scores.entries) {
+      var oldStage = entry.key;
+      var score = entry.value;
+      var newStage = stageCopies.firstWhere((element) => element.stageId == oldStage.stageId);
+      scoreCopies[newStage] = score.copy();
+    }
+
     var e = MatchEntry(
       firstName: firstName,
       lastName: lastName,
@@ -103,7 +111,7 @@ class MatchEntry extends Shooter {
       dq: dq,
       entryId: entryId,
       powerFactor: powerFactor,
-      scores: scores,
+      scores: scoreCopies,
       division: division,
       classification: classification,
       female: female,

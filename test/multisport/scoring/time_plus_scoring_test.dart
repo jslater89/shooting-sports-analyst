@@ -24,7 +24,7 @@ void main() {
         stage1: RawScore(
             rawTime: 20,
             scoring: const TimePlusScoring(),
-            scoringEvents: {
+            targetEvents: {
               pf.targetEvents.lookupByName("-0")!: 8,
               pf.targetEvents.lookupByName("-1")!: 1,
               pf.targetEvents.lookupByName("-3")!: 1,
@@ -33,7 +33,7 @@ void main() {
         stage2: RawScore(
             rawTime: 10,
             scoring: const TimePlusScoring(),
-            scoringEvents: {
+            targetEvents: {
               pf.targetEvents.lookupByName("-0")!: 5,
             }
         )
@@ -49,7 +49,7 @@ void main() {
         stage1: RawScore(
             rawTime: 20,
             scoring: const TimePlusScoring(),
-            scoringEvents: {
+            targetEvents: {
               pf.targetEvents.lookupByName("-0")!: 7,
               pf.targetEvents.lookupByName("-1")!: 3,
             }
@@ -57,7 +57,7 @@ void main() {
         stage2: RawScore(
           rawTime: 10,
           scoring: const TimePlusScoring(),
-          scoringEvents: {
+          targetEvents: {
             pf.targetEvents.lookupByName("-0")!: 5,
           },
           penaltyEvents: {
@@ -106,7 +106,7 @@ void main() {
         stage1: RawScore(
             rawTime: 20,
             scoring: const TimePlusScoring(),
-            scoringEvents: {
+            targetEvents: {
               pf.targetEvents.lookupByName("-0")!: 8,
               pf.targetEvents.lookupByName("-1")!: 1,
               pf.targetEvents.lookupByName("-3")!: 1,
@@ -115,7 +115,7 @@ void main() {
         stage2: RawScore(
             rawTime: 10,
             scoring: const TimePlusScoring(),
-            scoringEvents: {
+            targetEvents: {
               pf.targetEvents.lookupByName("-0")!: 5,
             }
         ),
@@ -131,7 +131,7 @@ void main() {
         stage1: RawScore(
             rawTime: 20,
             scoring: const TimePlusScoring(),
-            scoringEvents: {
+            targetEvents: {
               pf.targetEvents.lookupByName("-0")!: 7,
               pf.targetEvents.lookupByName("-1")!: 3,
             }
@@ -139,7 +139,7 @@ void main() {
         stage2: RawScore(
             rawTime: 10,
             scoring: const TimePlusScoring(),
-            scoringEvents: {
+            targetEvents: {
               pf.targetEvents.lookupByName("-0")!: 5,
             },
             penaltyEvents: {
@@ -149,7 +149,7 @@ void main() {
         stage3: RawScore(
             rawTime: 14,
             scoring: const TimePlusScoring(),
-            scoringEvents: {
+            targetEvents: {
               pf.targetEvents.lookupByName("-0")!: 13,
               pf.targetEvents.lookupByName("-1")!: 2,
             },
