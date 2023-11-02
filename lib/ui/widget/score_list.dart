@@ -176,9 +176,10 @@ class ScoreList extends StatelessWidget {
     );
   }
 
-  String _buildRawScoreRow(PowerFactor pf, RawScore score, {bool combinePenalties = true}) {
+  String _buildRawScoreText(PowerFactor pf, RawScore score, {bool combinePenalties = true}) {
     List<String> elements = [];
     for(var e in pf.targetEvents.values) {
+      if(!e.displayInOverview) continue;
       elements.add("${score.targetEvents[e] ?? 0}${e.shortDisplayName}");
     }
 
@@ -191,6 +192,7 @@ class ScoreList extends StatelessWidget {
     }
     else {
       for (var e in pf.penaltyEvents.values) {
+        if(!e.displayInOverview) continue;
         elements.add("${score.penaltyEvents[e] ?? 0}${e.shortDisplayName}");
       }
     }
@@ -273,7 +275,7 @@ class ScoreList extends StatelessWidget {
                 }
               ),
               Expanded(flex: 1, child: Text(score.shooter.classification?.shortName ?? "UNK")),
-              Expanded(flex: 2, child: Text(score.shooter.division?.shortName ?? "NO DIVISION")),
+              Expanded(flex: 2, child: Text(score.shooter.division?.displayName ?? "NO DIVISION")),
               Expanded(flex: 1, child: Text(score.shooter.powerFactor.shortName)),
               Expanded(flex: 2, child: Text("${score.ratio.asPercentage()}%")),
               Expanded(flex: 2, child: Text(score.points.toStringAsFixed(2))),
@@ -305,7 +307,7 @@ class ScoreList extends StatelessWidget {
                   }
                 },
               ),
-              Expanded(flex: 5, child: Text(_buildRawScoreRow(score.shooter.powerFactor, score.total))),
+              Expanded(flex: 5, child: Text(_buildRawScoreText(score.shooter.powerFactor, score.total))),
             ],
           ),
         ),
@@ -445,7 +447,7 @@ class ScoreList extends StatelessWidget {
                   }
               ),
               Expanded(flex: 1, child: Text(matchScore.shooter.classification?.shortName ?? "UNK")),
-              Expanded(flex: 3, child: Text(matchScore.shooter.division?.shortName ?? "NO DIVISION")),
+              Expanded(flex: 3, child: Text(matchScore.shooter.division?.displayName ?? "NO DIVISION")),
               Expanded(flex: 1, child: Text(matchScore.shooter.powerFactor.shortName)),
               Consumer<ScoreDisplaySettingsModel>(
                 builder: (context, model, _) {
@@ -482,7 +484,7 @@ class ScoreList extends StatelessWidget {
               Expanded(flex: 2, child: Text(stageScore?.score.displayString ?? "-")),
               Expanded(flex: 2, child: Text("${stageScore?.ratio.asPercentage() ?? "0.00"}%")),
               Expanded(flex: 2, child: Text(stageScore?.points.toStringAsFixed(2) ?? "0.00")),
-              Expanded(flex: 4, child: Text(stageScore != null ? _buildRawScoreRow(stageScore.shooter.powerFactor, stageScore.score) : "")),
+              Expanded(flex: 4, child: Text(stageScore != null ? _buildRawScoreText(stageScore.shooter.powerFactor, stageScore.score) : "")),
             ],
           ),
         ),

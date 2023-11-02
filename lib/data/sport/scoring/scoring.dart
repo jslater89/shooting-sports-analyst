@@ -707,7 +707,6 @@ class RawScore {
 class ScoringEvent implements NameLookupEntity {
   final String name;
 
-  /// Unused, for NameLookupEntity
   final String shortName;
   /// Unused, for NameLookupEntity
   List<String> get alternateNames => [];
@@ -717,6 +716,7 @@ class ScoringEvent implements NameLookupEntity {
 
   final int pointChange;
   final double timeChange;
+  final bool displayInOverview;
 
   /// bonus indicates that this hit is a bonus/tiebreaker score with no other scoring implications:
   ///
@@ -726,7 +726,7 @@ class ScoringEvent implements NameLookupEntity {
   final bool bonus;
   final String bonusLabel;
 
-  const ScoringEvent(this.name, {this.shortName = "", this.pointChange = 0, this.timeChange = 0, this.bonus = false, this.bonusLabel = "X"});
+  const ScoringEvent(this.name, {this.displayInOverview = true, this.shortName = "", this.pointChange = 0, this.timeChange = 0, this.bonus = false, this.bonusLabel = "X"});
 }
 
 extension ScoreUtilities on Map<ScoringEvent, int> {

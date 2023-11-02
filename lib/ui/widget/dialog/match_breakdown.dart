@@ -63,16 +63,17 @@ class MatchBreakdown extends StatelessWidget {
 
     var columns = <Widget>[
       Align(alignment: Alignment.centerRight, child: Text("")),
-      Align(alignment: Alignment.centerRight, child: Text("GM")),
-      Align(alignment: Alignment.centerRight, child: Text("M")),
-      Align(alignment: Alignment.centerRight, child: Text("A")),
-      Align(alignment: Alignment.centerRight, child: Text("B")),
-      Align(alignment: Alignment.centerRight, child: Text("C")),
-      Align(alignment: Alignment.centerRight, child: Text("D")),
-      Align(alignment: Alignment.centerRight, child: Text("U")),
-      Align(alignment: Alignment.centerRight, child: Text("?")),
-      Align(alignment: Alignment.centerRight, child: Text("Total")),
     ];
+    for(Classification c in sport.classifications.values) {
+      columns.add(
+          Align(
+            child: Text("${c.shortDisplayName}"),
+            alignment: Alignment.centerRight,
+          )
+      );
+    }
+    columns.add(Align(alignment: Alignment.centerRight, child: Text("Total")));
+
     //debugPrint("$columns");
     rows.add(
       TableRow(

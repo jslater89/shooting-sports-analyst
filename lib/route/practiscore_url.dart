@@ -13,6 +13,7 @@ import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 import 'package:uspsa_result_viewer/data/source/practiscore_report.dart';
+import 'package:uspsa_result_viewer/data/sport/builtins/ipsc.dart';
 import 'package:uspsa_result_viewer/data/sport/builtins/uspsa.dart';
 import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
@@ -51,7 +52,7 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
       if(response.statusCode < 400) {
         var responseString = response.body;
         if (responseString.startsWith("\$")) {
-          var processor = PractiscoreHitFactorReportParser(uspsaSport);
+          var processor = PractiscoreHitFactorReportParser(ipscSport);
           var result = processor.parseWebReport(responseString, sourceIds: widget.matchId != null ? [widget.matchId!] : null);
           if(result.isOk()) {
             var match = result.unwrap();
@@ -87,7 +88,7 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
       if(response.statusCode < 400) {
         responseString = response.body;
         if (responseString.startsWith(r"$")) {
-          var processor = PractiscoreHitFactorReportParser(uspsaSport);
+          var processor = PractiscoreHitFactorReportParser(ipscSport);
           var result = processor.parseWebReport(responseString, sourceIds: widget.matchId != null ? [widget.matchId!] : null);
           if(result.isOk()) {
             var match = result.unwrap();
@@ -133,7 +134,7 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
       if(response.statusCode < 400) {
         var responseString = response.body;
         if (responseString.startsWith(r"$")) {
-          var processor = PractiscoreHitFactorReportParser(uspsaSport);
+          var processor = PractiscoreHitFactorReportParser(ipscSport);
           var result = processor.parseWebReport(responseString, sourceIds: widget.matchId != null ? [widget.matchId!] : null);
           if(result.isOk()) {
             var match = result.unwrap();

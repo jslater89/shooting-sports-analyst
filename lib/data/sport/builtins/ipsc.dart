@@ -8,8 +8,8 @@ import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
 import 'package:uspsa_result_viewer/data/sport/sport.dart';
 
 final _ipscPenalties = [
-  const ScoringEvent("Procedural", pointChange: -10),
-  const ScoringEvent("Overtime shot", pointChange: -5),
+  const ScoringEvent("Procedural", shortName: "P", pointChange: -10),
+  const ScoringEvent("Overtime shot", shortName: "P", pointChange: -5),
 ];
 
 final ipscSport = Sport(
@@ -52,7 +52,7 @@ final ipscSport = Sport(
         const ScoringEvent("D", pointChange: 2),
         const ScoringEvent("M", pointChange: -10),
         const ScoringEvent("NS", pointChange: -10),
-        const ScoringEvent("NPM", pointChange: 0),
+        const ScoringEvent("NPM", pointChange: 0, displayInOverview: false),
       ],
       penaltyEvents: _ipscPenalties,
     ),
@@ -64,7 +64,7 @@ final ipscSport = Sport(
         const ScoringEvent("D", pointChange: 1),
         const ScoringEvent("M", pointChange: -10),
         const ScoringEvent("NS", pointChange: -10),
-        const ScoringEvent("NPM", pointChange: 0),
+        const ScoringEvent("NPM", pointChange: 0, displayInOverview: false),
       ],
       penaltyEvents: _ipscPenalties,
     ),
@@ -76,7 +76,7 @@ final ipscSport = Sport(
         const ScoringEvent("D", pointChange: 0),
         const ScoringEvent("M", pointChange: 0),
         const ScoringEvent("NS", pointChange: 0),
-        const ScoringEvent("NPM", pointChange: 0),
+        const ScoringEvent("NPM", pointChange: 0, displayInOverview: false),
       ],
       penaltyEvents: _ipscPenalties,
     ),
