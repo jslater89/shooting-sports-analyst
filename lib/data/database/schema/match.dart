@@ -237,8 +237,8 @@ class DbRawScore {
   String scoringType;
   int stageId;
   double rawTime;
-  List<DbScoringEvent> scoringEvents;
-  List<DbScoringEvent> penaltyEvents;
+  List<DbScoringEventCount> scoringEvents;
+  List<DbScoringEventCount> penaltyEvents;
   List<double> stringTimes;
 
   DbRawScore({
@@ -255,8 +255,8 @@ class DbRawScore {
     scoringType = score.scoring.dbString,
     rawTime = score.rawTime,
     stringTimes = []..addAll(score.stringTimes),
-    scoringEvents = score.targetEvents.keys.map((event) => DbScoringEvent(name: event.name, count: score.targetEvents[event]!)).toList(),
-    penaltyEvents = score.penaltyEvents.keys.map((event) => DbScoringEvent(name: event.name, count: score.penaltyEvents[event]!)).toList();
+    scoringEvents = score.targetEvents.keys.map((event) => DbScoringEventCount(name: event.name, count: score.targetEvents[event]!)).toList(),
+    penaltyEvents = score.penaltyEvents.keys.map((event) => DbScoringEventCount(name: event.name, count: score.penaltyEvents[event]!)).toList();
 
   Result<RawScore, Error> hydrate(PowerFactor pf) {
     for(var event in scoringEvents) {
@@ -277,11 +277,11 @@ class DbRawScore {
 }
 
 @embedded
-class DbScoringEvent {
+class DbScoringEventCount {
   String name;
   int count;
 
-  DbScoringEvent({
+  DbScoringEventCount({
     this.name = "(invalid)",
     this.count = -1,
   });

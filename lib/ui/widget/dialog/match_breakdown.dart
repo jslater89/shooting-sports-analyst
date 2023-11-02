@@ -176,8 +176,8 @@ class _DivisionClass {
   @override
   bool operator ==(Object other) {
     if(!(other is _DivisionClass)) return false;
-    _DivisionClass o = this;
-    return this.division == o.division && this.classification == o.classification;
+    // _DivisionClass o = this;
+    return this.division == other.division && this.classification == other.classification;
   }
 
   @override
