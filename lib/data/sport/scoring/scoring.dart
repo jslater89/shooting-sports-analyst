@@ -141,7 +141,7 @@ final class RelativeStageFinishScoring extends MatchScoring {
         throw StateError("shooter has no stage scores");
       }
 
-      var totalScore = shooterStageScores.values.map((e) => e.points!).sum;
+      var totalScore = shooterStageScores.values.map((e) => e.points).sum;
       stageScoreTotals[s] = totalScore;
       if(totalScore > bestTotalScore) {
         bestTotalScore = totalScore;
@@ -441,11 +441,19 @@ sealed class StageScoring {
   /// If score is 95 and comparedTo is 100, this will return
   /// 0.95 for a highScoreBest scoring.
   double ratio(RawScore score, RawScore comparedTo) {
+    var result = 0.0;
     if(highScoreBest) {
-      return interpret(score) / interpret(comparedTo);
+      result = interpret(score) / interpret(comparedTo);
     }
     else {
-      return interpret(comparedTo) / interpret(score);
+      result = interpret(comparedTo) / interpret(score);
+    }
+
+    if(result.isNaN) {
+      return 0.0;
+    }
+    else {
+      return result;
     }
   }
 
@@ -814,7 +822,7 @@ extension Sorting on List<RelativeMatchScore> {
     }
     else {
       this.sort((a, b) {
-        return b.total.points.compareTo(a.total.points);
+        return b.points.compareTo(a.points);
       });
     }
   }

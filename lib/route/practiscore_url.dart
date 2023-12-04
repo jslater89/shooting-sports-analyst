@@ -52,7 +52,7 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
       if(response.statusCode < 400) {
         var responseString = response.body;
         if (responseString.startsWith("\$")) {
-          var processor = PractiscoreHitFactorReportParser(uspsaSport);
+          var processor = PractiscoreHitFactorReportParser(ipscSport);
           var result = processor.parseWebReport(responseString, sourceIds: widget.matchId != null ? [widget.matchId!] : null);
           if(result.isOk()) {
             var match = result.unwrap();
@@ -88,7 +88,7 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
       if(response.statusCode < 400) {
         responseString = response.body;
         if (responseString.startsWith(r"$")) {
-          var processor = PractiscoreHitFactorReportParser(uspsaSport);
+          var processor = PractiscoreHitFactorReportParser(ipscSport);
           var result = processor.parseWebReport(responseString, sourceIds: widget.matchId != null ? [widget.matchId!] : null);
           if(result.isOk()) {
             var match = result.unwrap();
@@ -134,7 +134,7 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
       if(response.statusCode < 400) {
         var responseString = response.body;
         if (responseString.startsWith(r"$")) {
-          var processor = PractiscoreHitFactorReportParser(uspsaSport);
+          var processor = PractiscoreHitFactorReportParser(ipscSport);
           var result = processor.parseWebReport(responseString, sourceIds: widget.matchId != null ? [widget.matchId!] : null);
           if(result.isOk()) {
             var match = result.unwrap();

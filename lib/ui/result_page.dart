@@ -215,45 +215,49 @@ class _ResultPageState extends State<ResultPage> {
   }
 
   void _applySortMode(SortMode s) {
-    switch(s) {
-      case SortMode.score:
-        _baseScores.sortByScore(stage: _stage);
-        break;
-      case SortMode.time:
-        _baseScores.sortByTime(stage: _stage, scoreDQs: _filters.scoreDQs);
-        break;
-      case SortMode.alphas:
-        _baseScores.sortByAlphas(stage: _stage);
-        break;
-      case SortMode.availablePoints:
-        _baseScores.sortByAvailablePoints(stage: _stage);
-        break;
-      case SortMode.lastName:
-        _baseScores.sortBySurname();
-        break;
-      case SortMode.rating:
-        if(widget.ratings != null) {
-          //_baseScores.sortByRating(ratings: widget.ratings!, displayMode: _settings.value.ratingMode, match: _currentMatch!);
-
-          // TODO: restore when we can rate new matches
-          _baseScores.sortByScore(stage: _stage);
-        }
-        else {
-          // We shouldn't hit this, because we hide rating sort if there aren't any ratings,
-          // but just in case...
-          _baseScores.sortByScore(stage: _stage);
-        }
-        break;
-      case SortMode.classification:
-        _baseScores.sortByClassification();
-        break;
-    }
+    _applySortModeTo(s, _baseScores);
 
     setState(() {
       _sortMode = s;
       _baseScores = _baseScores;
       _searchedScores = []..addAll(_baseScores)..retainWhere(_applySearch);
     });
+  }
+
+  void _applySortModeTo(SortMode s, List<RelativeMatchScore> scores) {
+    switch(s) {
+      case SortMode.score:
+        scores.sortByScore(stage: _stage);
+        break;
+      case SortMode.time:
+        scores.sortByTime(stage: _stage, scoreDQs: _filters.scoreDQs);
+        break;
+      case SortMode.alphas:
+        scores.sortByAlphas(stage: _stage);
+        break;
+      case SortMode.availablePoints:
+        scores.sortByAvailablePoints(stage: _stage);
+        break;
+      case SortMode.lastName:
+        scores.sortBySurname();
+        break;
+      case SortMode.rating:
+        if(widget.ratings != null) {
+          //_baseScores.sortByRating(ratings: widget.ratings!, displayMode: _settings.value.ratingMode, match: _currentMatch!);
+
+          // TODO: restore when we can rate new matches
+          scores.sortByScore(stage: _stage);
+        }
+        else {
+          // We shouldn't hit this, because we hide rating sort if there aren't any ratings,
+          // but just in case...
+          scores.sortByScore(stage: _stage);
+        }
+        break;
+      case SortMode.classification:
+        scores.sortByClassification();
+        break;
+    }
   }
 
   void _applySearchTerm(String query) {
