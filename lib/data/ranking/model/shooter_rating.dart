@@ -141,7 +141,8 @@ abstract class ShooterRating extends Shooter {
       runningRating = intermediateRating;
     }
 
-    return AverageRating(firstRating: runningRating, minRating: lowestPoint, maxRating: highestPoint, averageOfIntermediates: intermediateRatings.sum / intermediateRatings.length, window: window);
+    var intermediateAverage = intermediateRatings.isEmpty ? 0.0 : intermediateRatings.average;
+    return AverageRating(firstRating: runningRating, minRating: lowestPoint, maxRating: highestPoint, averageOfIntermediates: intermediateAverage, window: window);
   }
 
   List<RatingEvent> eventsWithWindow({int window = baseTrendWindow, int offset = 0}) {

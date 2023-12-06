@@ -12,7 +12,11 @@ class PercentFinish extends PointsModel {
   Map<ShooterRating, RatingChange> apply(Map<ShooterRating, RelativeScore> scores) {
     if(scores.isEmpty) return {};
     else if(scores.length == 1) {
-      return { scores.keys.first: RatingChange(change: {}) };
+      return {
+        scores.keys.first: RatingChange(change: {
+          RatingSystem.ratingKey: 0,
+        })
+      };
     }
 
     Map<ShooterRating, RatingChange> changes = {};

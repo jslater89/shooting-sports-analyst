@@ -14,7 +14,11 @@ class InversePlace extends PointsModel {
   Map<ShooterRating, RatingChange> apply(Map<ShooterRating, RelativeScore> scores) {
     if(scores.isEmpty) return {};
     else if(scores.length == 1) {
-      return { scores.keys.first: RatingChange(change: {}) };
+      return {
+        scores.keys.first: RatingChange(change: {
+          RatingSystem.ratingKey: 0,
+        })
+      };
     }
 
     var sortedEntries = scores.entries.sorted((e1, e2) => e2.value.percent.compareTo(e1.value.percent));

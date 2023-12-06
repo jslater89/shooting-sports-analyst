@@ -443,7 +443,11 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     }
   }
 
-  bool get byStage => widget.rating.ratingEvents.last.stage != null;
+  bool get byStage {
+    if(widget.rating.ratingEvents.isEmpty) return true;
+
+    return widget.rating.ratingEvents.last.stage != null;
+  }
   Score? totalScore;
   int totalPoints = 0;
   Set<PracticalMatch> dqs = {};
@@ -554,6 +558,10 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   }
 
   List<Widget> _buildShooterStats(BuildContext context) {
+    if(widget.rating.ratingEvents.isEmpty) {
+      return [Text("No data available", style: Theme.of(context).textTheme.bodyMedium)];
+    }
+
     var average = widget.rating.averageRating();
     var lifetimeAverage = widget.rating.averageRating(window: widget.rating.ratingEvents.length);
 
