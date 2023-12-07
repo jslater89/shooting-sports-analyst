@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/match/practical_match.dart';
 import 'package:uspsa_result_viewer/data/match/relative_scores.dart';
@@ -50,7 +52,13 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
         Expanded(flex: _classFlex, child: Text("Class")),
         Expanded(flex: _nameFlex, child: Text("Name")),
         Expanded(flex: _ratingFlex, child: Text("Points", textAlign: TextAlign.end)),
-        Expanded(flex: _stagesFlex, child: Text("Matches", textAlign: TextAlign.end)),
+        Expanded(
+          flex: _stagesFlex,
+          child: Tooltip(
+            message: "At most ${settings.matchesToCount} matches will count for points.",
+            child: Text("Matches/${settings.matchesToCount}", textAlign: TextAlign.end),
+          ),
+        ),
         Expanded(flex: _ppmFlex, child: Text("Points/Match", textAlign: TextAlign.end)),
         Expanded(flex: _trailPaddingFlex, child: Text("")),
       ],
@@ -69,7 +77,7 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
       ratingText = rating.rating.toStringAsFixed(1);
     }
 
-    var ppmText = (rating.rating / rating.length).toStringAsFixed(1);
+    var ppmText = (rating.rating / min(rating.length, settings.matchesToCount)).toStringAsFixed(1);
 
     return ScoreRow(
       color: (place - 1) % 2 == 1 ? Colors.grey[200] : Colors.white,
