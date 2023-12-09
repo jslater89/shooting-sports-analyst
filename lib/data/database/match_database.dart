@@ -42,7 +42,14 @@ class MatchDatabase {
     }
     var dbMatch = DbShootingMatch.from(match);
     dbMatch = await matchDb.writeTxn<DbShootingMatch>(() async {
-      await matchDb.dbShootingMatchs.put(dbMatch);
+      var oldMatch = await matchDb.dbShootingMatchs.getByIndex("sourceIds", dbMatch.sourceIds);
+      if(oldMatch != null) {
+        dbMatch.id = oldMatch.id;
+        await matchDb.dbShootingMatchs.put(dbMatch);
+      }
+      else {
+        dbMatch.id = await matchDb.dbShootingMatchs.put(dbMatch);
+      }
       return dbMatch;
     });
     return dbMatch;

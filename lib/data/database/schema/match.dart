@@ -28,7 +28,7 @@ class DbShootingMatch {
   String rawDate;
   DateTime date;
   String? matchLevelName;
-  @Index(unique: true, replace: true, type: IndexType.value)
+  @Index(name: "sourceIds", unique: true, replace: true, type: IndexType.value)
   List<String> sourceIds;
 
   @enumerated
