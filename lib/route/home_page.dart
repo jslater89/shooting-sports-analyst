@@ -17,6 +17,7 @@ import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
 import 'package:uspsa_result_viewer/main.dart';
 import 'package:uspsa_result_viewer/route/elo_tuner_page.dart';
+import 'package:uspsa_result_viewer/route/match_database_manager.dart';
 import 'package:uspsa_result_viewer/ui/empty_scaffold.dart';
 import 'package:uspsa_result_viewer/ui/result_page.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/match_cache_chooser_dialog.dart';
@@ -117,20 +118,13 @@ class _HomePageState extends State<HomePage> {
     var children = [
       GestureDetector(
         onTap: () async {
-          MatchCacheIndexEntry? entry = await showDialog<MatchCacheIndexEntry>(
-            context: context, builder: (context) => MatchCacheChooserDialog(showStats: true, showIds: true),
-            barrierDismissible: false,
-          );
-          if(entry != null) {
-            var match = await MatchCache().getByIndex(entry);
-            Navigator.of(context).push(MaterialPageRoute(builder: (context) => ResultPage(canonicalMatch: ShootingMatch.fromOldMatch(match))));
-          }
+          Navigator.of(context).push(MaterialPageRoute(builder: (context) => MatchDatabaseManagerPage()));
         },
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.dataset, size: 230, color: Colors.grey,),
-            Text("View and manage matches in the match cache", style: Theme
+            Text("View and manage matches in the match database", style: Theme
                 .of(context)
                 .textTheme
                 .subtitle1!

@@ -36,6 +36,54 @@ class MatchDatabase {
 
   MatchDatabase._();
 
+  /// The standard query: index on name if present or date if not.
+  Future<List<DbShootingMatch>> query({String? name, DateTime? after, DateTime? before}) {
+    // TODO: dynamic query, because the query builder syntax is too picky
+    Query<DbShootingMatch> finalQuery;
+    if(name != null) {
+      var whereQuery = matchDb.dbShootingMatchs.where()
+          .eventNamePartsElementStartsWith(name);
+
+      if(before != null && after != null) {
+        finalQuery = whereQuery.filter()
+            .dateBetween(after, before)
+            .sortByDateDesc()
+            .build();
+      }
+      else if(before != null) {
+        finalQuery = whereQuery.filter()
+            .dateLessThan(before)
+            .sortByDateDesc()
+            .build();
+      }
+      else if(after != null) {
+        finalQuery = whereQuery.filter()
+            .dateGreaterThan(after)
+            .sortByDateDesc()
+            .build();
+      }
+      else {
+        finalQuery = whereQuery.build();
+      }
+    }
+    else if(after != null || before != null) {
+      if(before != null && after != null) {
+        finalQuery = matchDb.dbShootingMatchs.where(sort: Sort.desc).dateBetween(after, before).build();
+      }
+      else if(before != null) {
+        finalQuery = matchDb.dbShootingMatchs.where(sort: Sort.desc).dateLessThan(before).build();
+      }
+      else { // (after != null)
+        finalQuery = matchDb.dbShootingMatchs.where(sort: Sort.desc).dateGreaterThan(after!).build();
+      }
+    }
+    else {
+      finalQuery = matchDb.dbShootingMatchs.where(sort: Sort.desc).anyDate().build();
+    }
+
+    return finalQuery.findAll();
+  }
+
   Future<DbShootingMatch> save(ShootingMatch match) async {
     if(match.sourceIds.isEmpty) {
       throw ArgumentError("Match must have at least one source ID to be saved in the database");

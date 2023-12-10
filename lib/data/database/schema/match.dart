@@ -25,7 +25,13 @@ typedef ExternalId = int;
 class DbShootingMatch {
   Id id = Isar.autoIncrement;
   String eventName;
+
+  @Index(name: "eventNameParts", type: IndexType.value, caseSensitive: false)
+  List<String> get eventNameParts => Isar.splitWords(eventName);
+
   String rawDate;
+
+  @Index()
   DateTime date;
   String? matchLevelName;
   @Index(name: "sourceIds", unique: true, replace: true, type: IndexType.value)
