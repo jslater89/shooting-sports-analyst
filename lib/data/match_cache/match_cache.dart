@@ -135,7 +135,7 @@ class MatchCache {
       if(path.startsWith(_cachePrefix)) {
         var indexEntry = _indexBox.get(path);
         if(indexEntry != null) {
-          print("[MatchCache] Loaded ${indexEntry.matchName} from ${indexEntry.ids}");
+          // print("[MatchCache] Loaded ${indexEntry.matchName} from ${indexEntry.ids}");
           for (var id in indexEntry.ids) {
             if(id.contains("?")) {
               id = _removeQuery(id);
@@ -314,13 +314,13 @@ class MatchCache {
 
   /// Ensure that the matches represented by the given index entries
   /// are fully loaded.
-  Future<void> ensureLoaded(List<MatchCacheIndexEntry> entries, [Future<void> Function(int, int)? progressCallback]) async {
+  Future<void> ensureLoaded(List<MatchCacheIndexEntry> entries, [ProgressCallback? progressCallback]) async {
     int i = 0;
     for(var entry in entries) {
       await _loadMatch(entry.path);
 
       i += 1;
-      if(i % 5 == 0) await matchCacheProgressCallback?.call(i, entries.length);
+      if(i % 20 == 0) await matchCacheProgressCallback?.call(i, entries.length);
     }
   }
 
@@ -481,6 +481,13 @@ class MatchCache {
 
   Future<PracticalMatch> getByIndex(MatchCacheIndexEntry index) async {
     return (await _loadIndexed(index.ids.first))!;
+  }
+
+  void unload(PracticalMatch match) {
+    _cache.remove(match.practiscoreId);
+    if(match.practiscoreIdShort != null) {
+      _cache.remove(match.practiscoreIdShort!);
+    }
   }
 
   Future<PracticalMatch?> _loadIndexed(String id) async {

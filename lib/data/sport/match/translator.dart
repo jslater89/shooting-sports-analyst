@@ -6,7 +6,7 @@
 
 import 'package:uspsa_result_viewer/data/match/practical_match.dart' as old;
 import 'package:uspsa_result_viewer/data/match/score.dart';
-import 'package:uspsa_result_viewer/data/match/shooter.dart';
+import 'package:uspsa_result_viewer/data/match/shooter.dart' as oldS;
 import 'package:uspsa_result_viewer/data/sport/builtins/uspsa.dart';
 import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
@@ -31,7 +31,13 @@ extension MatchTranslator on ShootingMatch {
     List<MatchEntry> newShooters = [];
     for(var shooter in match.shooters) {
       var stageScores = <MatchStage, RawScore>{};
-      var powerFactor = uspsaSport.powerFactors.lookupByName(shooter.powerFactor.displayString())!;
+      PowerFactor powerFactor;
+      try {
+        powerFactor = uspsaSport.powerFactors.lookupByName(shooter.powerFactor.displayString()) ?? uspsaSport.powerFactors.lookupByName("subminor")!;
+      } catch(e) {
+        print("Bad power factor: ${shooter.powerFactor.displayString()}");
+        rethrow;
+      }
 
       for (var entry in shooter.stageScores.entries) {
         var oldStage = entry.key;

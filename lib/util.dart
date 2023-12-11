@@ -4,6 +4,9 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:intl/intl.dart';
+
+final DateFormat programmerYmdFormat = DateFormat("yyyy-MM-dd");
 
 abstract class Error {
   String get message;
@@ -102,3 +105,9 @@ extension AsPercentage on double {
     return (this * 100).toStringAsFixed(decimals);
   }
 }
+
+/// A callback used by long-running synchronous processes to allow UI updates
+/// and progress display. If UI updates are desired, ProgressCallback should
+/// await Future.delayed (or some other async task) to allow the task queue
+/// to cycle.
+typedef ProgressCallback = Future<void> Function(int progress, int total);

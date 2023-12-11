@@ -8,7 +8,10 @@ import 'dart:async';
 
 import 'package:isar/isar.dart';
 import 'package:uspsa_result_viewer/data/database/schema/match.dart';
+import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/sport/match/match.dart';
+import 'package:uspsa_result_viewer/data/sport/match/translator.dart';
+import 'package:uspsa_result_viewer/util.dart';
 
 class MatchDatabase {
   static Future<void> get readyStatic => _readyCompleter.future;
@@ -90,16 +93,48 @@ class MatchDatabase {
     }
     var dbMatch = DbShootingMatch.from(match);
     dbMatch = await matchDb.writeTxn<DbShootingMatch>(() async {
-      var oldMatch = await matchDb.dbShootingMatchs.getByIndex("sourceIds", dbMatch.sourceIds);
-      if(oldMatch != null) {
-        dbMatch.id = oldMatch.id;
-        await matchDb.dbShootingMatchs.put(dbMatch);
+      try {
+        var oldMatch = await getByAnySourceId(dbMatch.sourceIds);
+        if (oldMatch != null) {
+          dbMatch.id = oldMatch.id;
+          await matchDb.dbShootingMatchs.put(dbMatch);
+        }
+        else {
+          dbMatch.id = await matchDb.dbShootingMatchs.put(dbMatch);
+        }
+        return dbMatch;
+      } catch(e) {
+        print("Failed to save match: $e");
+        print("${dbMatch.sourceIds}");
+        rethrow;
       }
-      else {
-        dbMatch.id = await matchDb.dbShootingMatchs.put(dbMatch);
-      }
-      return dbMatch;
     });
     return dbMatch;
+  }
+
+  Future<DbShootingMatch?> getByAnySourceId(List<String> ids) async {
+    for(var id in ids) {
+      var match = await matchDb.dbShootingMatchs.getByIndex("sourceIds", [id]);
+      if(match != null) return match;
+    }
+
+    return null;
+  }
+
+  Future<void> migrateFromCache(ProgressCallback callback) async {
+    var cache = MatchCache();
+
+    int i = 0;
+    int matchCount = cache.allIndexEntries().length;
+    for(var ie in cache.allIndexEntries()) {
+      var oldMatch = await cache.getByIndex(ie);
+      var newMatch = MatchTranslator.shootingMatchFrom(oldMatch);
+      save(newMatch);
+      i += 1;
+      if(i % 20 == 0) {
+        print("[MatchDatabase] Migration: saved $i of $matchCount to database");
+      }
+    }
+
   }
 }

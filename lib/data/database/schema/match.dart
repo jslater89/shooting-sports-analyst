@@ -34,6 +34,7 @@ class DbShootingMatch {
   @Index()
   DateTime date;
   String? matchLevelName;
+
   @Index(name: "sourceIds", unique: true, replace: true, type: IndexType.value)
   List<String> sourceIds;
 

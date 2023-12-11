@@ -10,11 +10,13 @@ class ScoreRow extends StatefulWidget {
   final Widget? child;
   final bool? edited;
   final Color? color;
+  final int? index;
   final Color? textColor;
   final Color? hoverColor;
   final Color? hoverTextColor;
+  final bool bold;
 
-  const ScoreRow({Key? key, this.child, this.color, this.textColor, this.hoverColor, this.hoverTextColor, this.edited}) : super(key: key);
+  const ScoreRow({Key? key, this.bold = true, this.index, this.child, this.color, this.textColor, this.hoverColor, this.hoverTextColor, this.edited}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() {
@@ -27,7 +29,14 @@ class _ScoreRowState extends State<ScoreRow> {
 
   @override
   Widget build(BuildContext context) {
-    Color background = widget.color ?? Theme.of(context).colorScheme.background;
+    Color background;
+    if(widget.index != null && widget.color == null) {
+      background = ((widget.index!) % 2 == 1) ? Colors.grey[200]! : Colors.white;
+    }
+    else {
+      background = widget.color ?? Colors.white;
+    }
+
     Color hoverColor = widget.hoverColor ?? Theme.of(context).colorScheme.primary;
     Color? textColor = widget.textColor ?? Theme.of(context).textTheme.bodyText1!.color;
     Color hoverTextColor = widget.hoverTextColor ?? Theme.of(context).colorScheme.onPrimary;
@@ -50,16 +59,21 @@ class _ScoreRowState extends State<ScoreRow> {
             child: Builder(
               builder: (context) {
                 return DefaultTextStyle(
-                  style: Theme.of(context).textTheme.bodyText1!,
+                  style: widget.bold ?
+                      Theme.of(context).textTheme.bodyLarge! :
+                      Theme.of(context).textTheme.bodyMedium!,
                   child: widget.child!,
                 );
               }
             ),
             data: baseTheme.copyWith(
               textTheme: baseTheme.textTheme.copyWith(
-                bodyText1: baseTheme.textTheme.bodyText1!.copyWith(
+                bodyLarge: baseTheme.textTheme.bodyLarge!.copyWith(
                   color: _hover ? hoverTextColor : textColor,
-                )
+                ),
+                bodyMedium: baseTheme.textTheme.bodyMedium!.copyWith(
+                  color: _hover ? hoverTextColor : textColor,
+                ),
               )
             ),
           )
