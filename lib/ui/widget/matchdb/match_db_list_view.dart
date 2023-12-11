@@ -26,18 +26,38 @@ class _MatchDatabaseListViewState extends State<MatchDatabaseListView> {
   static const _levelFlex = 1;
   static const _sportFlex = 1;
 
+  late ScrollController _listController;
+  @override
+  void initState() {
+    super.initState();
+    _listController = ScrollController();
+    _listController.addListener(() {
+      if(!mounted) return;
+
+      var position = _listController.position;
+      if(position.hasContentDimensions && position.atEdge && position.pixels != 0) {
+        Provider.of<MatchDatabaseListModel>(context, listen: false).loadMore();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _listController.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<MatchDatabaseListModel>(
       builder: (context, listModel, child) {
-        if(listModel.loading) {
-          return Center(child: Text("Loading..."));
-        }
         return Column(
           children: [
-            _header(),
+            _searchHeader(),
+            _tableHeader(),
             Expanded(
               child: ListView.builder(
+                controller: _listController,
                 itemBuilder: (context, i) {
                   var match = listModel.searchedMatches[i];
                   return GestureDetector(
@@ -84,7 +104,23 @@ class _MatchDatabaseListViewState extends State<MatchDatabaseListView> {
     );
   }
 
-  Widget _header() {
+  Widget _searchHeader() {
+    return SizedBox(
+      width: 600,
+      child: TextField(
+        textInputAction: TextInputAction.search,
+        onSubmitted: (search) {
+          if(!mounted) return;
+
+          var searchModel = Provider.of<MatchDatabaseSearchModel>(context, listen: false);
+          searchModel.name = search;
+          searchModel.changed();
+        },
+      ),
+    );
+  }
+
+  Widget _tableHeader() {
     return Container(
       decoration: BoxDecoration(
         border: Border(
@@ -117,12 +153,28 @@ class MatchDatabaseSearchModel extends ChangeNotifier {
   String? name;
   DateTime? before;
   DateTime? after;
+
+  void changed() {
+    notifyListeners();
+  }
+
+  void reset() {
+    name = null;
+    before = null;
+    after = null;
+    notifyListeners();
+  }
 }
 
 class MatchDatabaseListModel extends ChangeNotifier {
   MatchDatabaseListModel() : matchDb = MatchDatabase();
 
   List<DbShootingMatch> searchedMatches = [];
+
+  MatchDatabaseSearchModel? _currentSearch;
+  bool _hasMore = true;
+  int _page = 0;
+
   bool _loading = false;
   bool get loading => _loading;
   set loading(bool v) {
@@ -133,8 +185,11 @@ class MatchDatabaseListModel extends ChangeNotifier {
   MatchDatabase matchDb;
 
   Future<void> search(MatchDatabaseSearchModel? search) async {
-    _loading = true;
-    notifyListeners();
+    if(loading) return;
+
+    _currentSearch = search;
+    _page = 0;
+    loading = true;
 
     var newMatches = await matchDb.query(
       name: search?.name,
@@ -142,9 +197,32 @@ class MatchDatabaseListModel extends ChangeNotifier {
       after: search?.after,
     );
 
-    _loading = false;
     searchedMatches = newMatches;
-    notifyListeners();
+    loading = false;
   }
 
+  Future<void> loadMore() async {
+    if(!_hasMore || loading) return;
+
+    loading = true;
+
+    _page += 1;
+    var newMatches = await matchDb.query(
+      name: _currentSearch?.name,
+      before: _currentSearch?.before,
+      after: _currentSearch?.after,
+      page: _page,
+    );
+
+    if(newMatches.isEmpty) {
+      print("match list at page $_page has no more");
+      _hasMore = false;
+    }
+    else {
+      print("match list at page $_page has ${newMatches.length} more (${searchedMatches.length + newMatches.length})");
+      searchedMatches.addAll(newMatches);
+    }
+
+    loading = false;
+  }
 }

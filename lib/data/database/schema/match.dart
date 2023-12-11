@@ -7,6 +7,7 @@
 
 import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
+import 'package:uspsa_result_viewer/data/database/match_database.dart';
 import 'package:uspsa_result_viewer/data/sport/builtins/builtin_registry.dart';
 import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
@@ -26,16 +27,16 @@ class DbShootingMatch {
   Id id = Isar.autoIncrement;
   String eventName;
 
-  @Index(name: "eventNameParts", type: IndexType.value, caseSensitive: false)
+  @Index(name: MatchDatabase.eventNameIndex, type: IndexType.value, caseSensitive: false)
   List<String> get eventNameParts => Isar.splitWords(eventName);
 
   String rawDate;
 
-  @Index()
+  @Index(name: MatchDatabase.dateIndex)
   DateTime date;
   String? matchLevelName;
 
-  @Index(name: "sourceIds", unique: true, replace: true, type: IndexType.value)
+  @Index(name: MatchDatabase.sourceIdsIndex, unique: true, replace: true, type: IndexType.value)
   List<String> sourceIds;
 
   @enumerated

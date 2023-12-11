@@ -6,7 +6,9 @@
 
 import 'dart:async';
 
+import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
+import 'package:uspsa_result_viewer/data/database/match_query_element.dart';
 import 'package:uspsa_result_viewer/data/database/schema/match.dart';
 import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/sport/match/match.dart';
@@ -14,6 +16,10 @@ import 'package:uspsa_result_viewer/data/sport/match/translator.dart';
 import 'package:uspsa_result_viewer/util.dart';
 
 class MatchDatabase {
+  static const eventNameIndex = "eventNameParts";
+  static const sourceIdsIndex = "sourceIds";
+  static const dateIndex = "date";
+
   static Future<void> get readyStatic => _readyCompleter.future;
   static Completer<void> _readyCompleter = Completer();
 
@@ -40,49 +46,16 @@ class MatchDatabase {
   MatchDatabase._();
 
   /// The standard query: index on name if present or date if not.
-  Future<List<DbShootingMatch>> query({String? name, DateTime? after, DateTime? before}) {
-    // TODO: dynamic query, because the query builder syntax is too picky
-    Query<DbShootingMatch> finalQuery;
-    if(name != null) {
-      var whereQuery = matchDb.dbShootingMatchs.where()
-          .eventNamePartsElementStartsWith(name);
-
-      if(before != null && after != null) {
-        finalQuery = whereQuery.filter()
-            .dateBetween(after, before)
-            .sortByDateDesc()
-            .build();
-      }
-      else if(before != null) {
-        finalQuery = whereQuery.filter()
-            .dateLessThan(before)
-            .sortByDateDesc()
-            .build();
-      }
-      else if(after != null) {
-        finalQuery = whereQuery.filter()
-            .dateGreaterThan(after)
-            .sortByDateDesc()
-            .build();
-      }
-      else {
-        finalQuery = whereQuery.build();
-      }
-    }
-    else if(after != null || before != null) {
-      if(before != null && after != null) {
-        finalQuery = matchDb.dbShootingMatchs.where(sort: Sort.desc).dateBetween(after, before).build();
-      }
-      else if(before != null) {
-        finalQuery = matchDb.dbShootingMatchs.where(sort: Sort.desc).dateLessThan(before).build();
-      }
-      else { // (after != null)
-        finalQuery = matchDb.dbShootingMatchs.where(sort: Sort.desc).dateGreaterThan(after!).build();
-      }
-    }
-    else {
-      finalQuery = matchDb.dbShootingMatchs.where(sort: Sort.desc).anyDate().build();
-    }
+  Future<List<DbShootingMatch>> query({String? name, DateTime? after, DateTime? before, int page = 0}) {
+    Query<DbShootingMatch> finalQuery = _buildQuery(
+      [
+        if(name != null)
+          NamePartsQuery(name),
+        DateQuery(after: after, before: before),
+      ],
+      limit: 100,
+      offset: page * 100,
+    );
 
     return finalQuery.findAll();
   }
@@ -135,6 +108,79 @@ class MatchDatabase {
         print("[MatchDatabase] Migration: saved $i of $matchCount to database");
       }
     }
+  }
 
+  Query<DbShootingMatch> _buildQuery(List<MatchQueryElement> elements, {int? limit, int? offset}) {
+    NamePartsQuery? nameQuery;
+    DateQuery? dateQuery;
+    LevelNameQuery? levelNameQuery;
+
+    for(var e in elements) {
+      switch(e) {
+        case NamePartsQuery():
+          nameQuery = e;
+        case DateQuery():
+          dateQuery = e;
+        case LevelNameQuery():
+          levelNameQuery = e;
+      }
+    }
+
+    // Defaults
+    MatchQueryElement? whereElement;
+    Iterable<MatchQueryElement> filterElements = elements;
+
+    if(nameQuery?.canWhere ?? false) {
+      nameQuery!;
+
+      // If we have a name query, prefer it if the query is longer than N characters,
+      // otherwise use the date query if we have it.
+      if(nameQuery.name.length >= 4 || dateQuery == null) {
+        (whereElement, filterElements) = _buildElementLists(elements, nameQuery);
+      }
+      else if(dateQuery != null) {
+        (whereElement, filterElements) = _buildElementLists(elements, dateQuery);
+      }
+    }
+    else if(dateQuery != null) {
+      // If we have no name query but we do have a date query, use it.
+      (whereElement, filterElements) = _buildElementLists(elements, dateQuery);
+    }
+
+    Query<DbShootingMatch> query = matchDb.dbShootingMatchs.buildQuery(
+      whereClauses: whereElement?.whereClauses ?? [],
+      filter: filterElements.isEmpty ? null : FilterGroup.and([
+        for(var f in filterElements)
+          if(f.filterCondition != null)
+            f.filterCondition!,
+      ]),
+      // TODO: decide by what we pass in
+      // it's probably almost always going to be better to 'where' whatever we want to
+      // sort by, and filter the rest? Unless the filter is specific enough to narrow it
+      // down a lot, and that might
+
+      // Sort by date desc, using where-sort if we're using the date index
+      // or plain-old-sorting if not.
+      sortBy: whereElement == dateQuery ? [] : [
+        SortProperty(
+          property: 'date',
+          sort: Sort.desc,
+        ),
+      ],
+      whereSort: whereElement == dateQuery ? Sort.desc : Sort.asc,
+      limit: limit,
+      offset: offset,
+    );
+
+    return query;
+  }
+
+  (MatchQueryElement?, Iterable<MatchQueryElement>) _buildElementLists(Iterable<MatchQueryElement> elements, MatchQueryElement? where) {
+    if(where == null) {
+      return (null, elements);
+    }
+    else {
+      return (where, elements.where((element) => element != where));
+    }
   }
 }
