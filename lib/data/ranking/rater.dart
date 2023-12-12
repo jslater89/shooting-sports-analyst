@@ -496,7 +496,7 @@ class Rater {
         }
 
         if(automaticMappingFailed) {
-          if(verbose) print("Ignoring $name with numbers $list: multiple numbers of type ${failedType?.name}");
+          if(verbose) print("Automapping failed for $name with numbers $list: multiple numbers of type ${failedType?.name}");
           if(checkDataEntryErrors && failedType != null && numbers[failedType]!.length == 2) {
             var n1 = numbers[failedType]![0];
             var n2 = numbers[failedType]![1];
@@ -522,7 +522,7 @@ class Rater {
             if(_memberNumberMappingBlacklist[n1] == n2 || _memberNumberMappingBlacklist[n2] == n1) {
               continue;
             }
-            else if (strdiff.ratio(n1, n2) > 65) {
+            else if (strdiff.ratio(n1, n2) > 65 || n1.length > 6 || n2.length > 6) {
               var s1 = knownShooters[n1];
               var s2 = knownShooters[n2];
               if(s1 != null && s2 != null) {
