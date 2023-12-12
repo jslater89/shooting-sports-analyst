@@ -8,6 +8,8 @@ import 'package:isar/isar.dart';
 import 'package:uspsa_result_viewer/data/database/match_database.dart';
 
 sealed class MatchQueryElement {
+  String get index;
+  String get property;
   List<WhereClause>? get whereClauses;
   FilterOperation? get filterCondition;
 }
@@ -15,7 +17,10 @@ sealed class MatchQueryElement {
 class NamePartsQuery extends MatchQueryElement {
   String name;
 
-  bool get canWhere => name.split(" ").length == 1;
+  String get index => MatchDatabase.eventNameIndex;
+  String get property => canWhere ? "eventNameParts" : "eventName";
+
+  bool get canWhere => name.split(" ").length <= 1;
 
   List<WhereClause>? get whereClauses {
     if (!canWhere) return null;
@@ -25,7 +30,7 @@ class NamePartsQuery extends MatchQueryElement {
 
   WhereClause _clauseForString(String name) {
     return IndexWhereClause.between(
-      indexName: MatchDatabase.eventNameIndex,
+      indexName: index,
       lower: [name],
       upper: ['$name\u{FFFFF}'],
     );
@@ -36,14 +41,14 @@ class NamePartsQuery extends MatchQueryElement {
 
     if (parts.length > 1) {
       return FilterCondition.contains(
-        property: 'eventName',
+        property: property,
         value: name,
         caseSensitive: false,
       );
     }
     else {
       return FilterCondition.startsWith(
-        property: 'eventNameParts',
+        property: property,
         value: name,
         caseSensitive: false,
       );
@@ -54,6 +59,9 @@ class NamePartsQuery extends MatchQueryElement {
 }
 
 class DateQuery extends MatchQueryElement {
+  String get index => MatchDatabase.dateIndex;
+  String get property => "date";
+
   DateTime? before;
   DateTime? after;
 
@@ -63,26 +71,26 @@ class DateQuery extends MatchQueryElement {
   List<WhereClause>? get whereClauses {
     if(after != null && before != null) {
       return [IndexWhereClause.between(
-        indexName: MatchDatabase.dateIndex,
+        indexName: index,
         lower: [after!],
         upper: [before!],
       )];
     }
     else if (after != null) {
       return [IndexWhereClause.greaterThan(
-          indexName: MatchDatabase.dateIndex,
+          indexName: index,
           lower: [after!]
       )];
     }
     else if (before != null) {
       return [IndexWhereClause.lessThan(
-          indexName: MatchDatabase.dateIndex,
+          indexName: index,
           upper: [before!]
       )];
     }
     else {
       return [IndexWhereClause.any(
-        indexName: MatchDatabase.dateIndex,
+        indexName: index,
       )];
     }
   }
@@ -90,7 +98,7 @@ class DateQuery extends MatchQueryElement {
   FilterCondition? get filterCondition {
     if(after != null && before != null) {
       return FilterCondition.between(
-        property: 'date',
+        property: property,
         includeLower: true,
         includeUpper: true,
         lower: after,
@@ -99,14 +107,14 @@ class DateQuery extends MatchQueryElement {
     }
     else if(after != null) {
       return FilterCondition.greaterThan(
-        property: 'date',
+        property: property,
         include: true,
         value: after,
       );
     }
     else if(before != null) {
       return FilterCondition.lessThan(
-        property: 'date',
+        property: property,
         include: true,
         value: before,
       );
@@ -118,15 +126,31 @@ class DateQuery extends MatchQueryElement {
 }
 
 class LevelNameQuery extends MatchQueryElement {
+  String get index => "";
+  String get property => "matchLevelName";
+
   String name;
 
   LevelNameQuery(this.name);
 
   @override
   FilterCondition? get filterCondition {
-    return FilterCondition.equalTo(property: 'matchLevelName', value: name);
+    return FilterCondition.equalTo(property: property, value: name);
   }
 
   @override
   List<WhereClause>? get whereClauses => null;
+}
+
+sealed class MatchSortField {
+  final bool desc;
+  const MatchSortField({required this.desc});
+}
+
+class NameSort extends MatchSortField {
+  const NameSort({super.desc = false});
+}
+
+class DateSort extends MatchSortField {
+  const DateSort({super.desc = true});
 }

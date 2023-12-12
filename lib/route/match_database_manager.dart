@@ -7,9 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uspsa_result_viewer/data/database/match_database.dart';
-import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
-import 'package:uspsa_result_viewer/data/sport/match/translator.dart';
-import 'package:uspsa_result_viewer/ui/widget/matchdb/match_db_list_view.dart';
+import 'package:uspsa_result_viewer/ui/matchdb/match_db_list_view.dart';
 
 class MatchDatabaseManagerPage extends StatefulWidget {
   const MatchDatabaseManagerPage({super.key});

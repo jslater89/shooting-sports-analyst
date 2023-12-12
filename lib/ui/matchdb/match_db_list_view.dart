@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uspsa_result_viewer/data/database/match_database.dart';
 import 'package:uspsa_result_viewer/data/database/schema/match.dart';
+import 'package:uspsa_result_viewer/ui/matchdb/widget/match_db_list_view_search.dart';
 import 'package:uspsa_result_viewer/ui/result_page.dart';
 import 'package:uspsa_result_viewer/ui/widget/score_row.dart';
 import 'package:uspsa_result_viewer/util.dart';
@@ -53,7 +54,7 @@ class _MatchDatabaseListViewState extends State<MatchDatabaseListView> {
       builder: (context, listModel, child) {
         return Column(
           children: [
-            _searchHeader(),
+            MatchDbListViewSearch(),
             _tableHeader(),
             Expanded(
               child: ListView.builder(
@@ -101,22 +102,6 @@ class _MatchDatabaseListViewState extends State<MatchDatabaseListView> {
           ],
         );
       },
-    );
-  }
-
-  Widget _searchHeader() {
-    return SizedBox(
-      width: 600,
-      child: TextField(
-        textInputAction: TextInputAction.search,
-        onSubmitted: (search) {
-          if(!mounted) return;
-
-          var searchModel = Provider.of<MatchDatabaseSearchModel>(context, listen: false);
-          searchModel.name = search;
-          searchModel.changed();
-        },
-      ),
     );
   }
 

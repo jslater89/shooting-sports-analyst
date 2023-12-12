@@ -46,7 +46,7 @@ class MatchDatabase {
   MatchDatabase._();
 
   /// The standard query: index on name if present or date if not.
-  Future<List<DbShootingMatch>> query({String? name, DateTime? after, DateTime? before, int page = 0}) {
+  Future<List<DbShootingMatch>> query({String? name, DateTime? after, DateTime? before, int page = 0, MatchSortField sort = const DateSort()}) {
     Query<DbShootingMatch> finalQuery = _buildQuery(
       [
         if(name != null)
@@ -110,7 +110,7 @@ class MatchDatabase {
     }
   }
 
-  Query<DbShootingMatch> _buildQuery(List<MatchQueryElement> elements, {int? limit, int? offset}) {
+  Query<DbShootingMatch> _buildQuery(List<MatchQueryElement> elements, {int? limit, int? offset, MatchSortField sort = const DateSort()}) {
     NamePartsQuery? nameQuery;
     DateQuery? dateQuery;
     LevelNameQuery? levelNameQuery;
@@ -126,26 +126,32 @@ class MatchDatabase {
       }
     }
 
-    // Defaults
+    // Defaults. Prefer strongly to 'where' by our sort. Since we do limit/offset
+    // for paging, unless an alternate 'where' is highly selective, leaning on the
+    // index for sort is probably preferable.
     MatchQueryElement? whereElement;
+    if(dateQuery == null && (sort is DateSort)) {
+      dateQuery = DateQuery(before: null, after: null);
+      whereElement = dateQuery;
+    }
+    else if(nameQuery == null && (sort is NameSort)) {
+      nameQuery = NamePartsQuery("");
+      whereElement = nameQuery;
+    }
     Iterable<MatchQueryElement> filterElements = elements;
 
     if(nameQuery?.canWhere ?? false) {
       nameQuery!;
 
-      // If we have a name query, prefer it if the query is longer than N characters,
-      // otherwise use the date query if we have it.
-      if(nameQuery.name.length >= 4 || dateQuery == null) {
+      // If we have a one-word name query of sufficient length, prefer to 'where'
+      // on it, since high selectivity will probably outweigh the fast sort on
+      // by the other index.
+      if(nameQuery.name.length >= 3 || (sort is NameSort)) {
         (whereElement, filterElements) = _buildElementLists(elements, nameQuery);
       }
-      else if(dateQuery != null) {
-        (whereElement, filterElements) = _buildElementLists(elements, dateQuery);
-      }
     }
-    else if(dateQuery != null) {
-      // If we have no name query but we do have a date query, use it.
-      (whereElement, filterElements) = _buildElementLists(elements, dateQuery);
-    }
+
+    var (sortProperties, whereSort) = _buildSortFields(whereElement, sort);
 
     Query<DbShootingMatch> query = matchDb.dbShootingMatchs.buildQuery(
       whereClauses: whereElement?.whereClauses ?? [],
@@ -154,25 +160,33 @@ class MatchDatabase {
           if(f.filterCondition != null)
             f.filterCondition!,
       ]),
-      // TODO: decide by what we pass in
-      // it's probably almost always going to be better to 'where' whatever we want to
-      // sort by, and filter the rest? Unless the filter is specific enough to narrow it
-      // down a lot, and that might
-
-      // Sort by date desc, using where-sort if we're using the date index
-      // or plain-old-sorting if not.
-      sortBy: whereElement == dateQuery ? [] : [
-        SortProperty(
-          property: 'date',
-          sort: Sort.desc,
-        ),
-      ],
-      whereSort: whereElement == dateQuery ? Sort.desc : Sort.asc,
+      sortBy: sortProperties,
+      whereSort: whereSort,
       limit: limit,
       offset: offset,
     );
 
     return query;
+  }
+
+  (List<SortProperty>, Sort) _buildSortFields(MatchQueryElement? whereElement, MatchSortField sort) {
+    var direction = sort.desc ? Sort.desc : Sort.asc;
+    switch(sort) {
+      case NameSort():
+        if(whereElement is NamePartsQuery) {
+          return ([], direction);
+        }
+        else {
+          return ([SortProperty(property: NamePartsQuery("").property, sort: direction)], direction);
+        }
+      case DateSort():
+        if(whereElement is DateQuery) {
+          return ([], direction);
+        }
+        else {
+          return ([SortProperty(property: DateQuery().property, sort: direction)], direction);
+        }
+    }
   }
 
   (MatchQueryElement?, Iterable<MatchQueryElement>) _buildElementLists(Iterable<MatchQueryElement> elements, MatchQueryElement? where) {
