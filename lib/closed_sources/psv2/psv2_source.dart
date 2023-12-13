@@ -55,4 +55,7 @@ class PSv2MatchSource extends MatchSource {
 
   @override
   List<SportType> get supportedSports => [];
+
+  @override
+  String get code => "psv2";
 }

@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
+import 'package:uspsa_result_viewer/data/source/registered_sources.dart';
+import 'package:uspsa_result_viewer/data/source/source.dart';
 import 'package:uspsa_result_viewer/route/practiscore_url.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/url_entry_dialog.dart';
 import 'package:uspsa_result_viewer/util.dart';
@@ -137,6 +139,35 @@ Future<String?> getMatchId(BuildContext context, {String? presetUrl}) async {
   var matchId = processMatchUrl(matchUrl, context: context);
 
   return matchId;
+}
+
+Future<(MatchSource, String?)?> getMatchIdWithSource(BuildContext context) async {
+  (MatchSource, String?)? response;
+  response = await getMatchUrlWithSource(context);
+
+  if (response == null || response.$2 == null) {
+    return null;
+  }
+
+  var (matchSource, matchUrl) = response;
+
+  var matchId = await processMatchUrl(matchUrl!, context: context);
+
+  return (matchSource, matchId);
+}
+
+Future<(MatchSource, String?)?> getMatchUrlWithSource(BuildContext context) {
+  return showDialog<(MatchSource, String?)>(
+      context: context,
+      builder: (context) {
+        return UrlEntryDialog(
+          hintText: "https://practiscore.com/results/new/...",
+          title: "Enter PractiScore match URL",
+          descriptionText: "Copy the URL to the match's PractiScore results page and paste it in the field below.",
+          sources: MatchSourceRegistry().practiscoreUrlSources,
+        );
+      }
+  );
 }
 
 Future<String?> getMatchUrl(BuildContext context) {

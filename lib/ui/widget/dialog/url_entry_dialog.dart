@@ -5,13 +5,21 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:uspsa_result_viewer/data/source/registered_sources.dart';
+import 'package:uspsa_result_viewer/data/source/source.dart';
 
 class UrlEntryDialog extends StatefulWidget {
-  const UrlEntryDialog({Key? key, required this.hintText, this.title, this.descriptionText, this.validator}) : super(key: key);
+  const UrlEntryDialog({Key? key, this.hintText, this.sources, this.title, this.descriptionText, this.validator}) : super(key: key);
 
+  /// The title for the URL entry dialog.
   final String? title;
+  /// The description text to show in the URL dialog, above the entry dialog.
   final String? descriptionText;
-  final String hintText;
+  /// The hint text to show in the URL dialog.
+  final String? hintText;
+  /// If present, show a dropdown list of match sources below the URL entry
+  /// dialog, and return a tuple of (MatchSource, String?) instead of a string.
+  final List<MatchSource>? sources;
   final String? Function(String)? validator;
 
   @override
@@ -22,6 +30,15 @@ class _UrlEntryDialogState extends State<UrlEntryDialog> {
   final TextEditingController _urlController = TextEditingController();
 
   String? errorText;
+  MatchSource? source;
+
+  @override
+  void initState() {
+    super.initState();
+    if(widget.sources != null) {
+      source = widget.sources!.first;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +51,7 @@ class _UrlEntryDialogState extends State<UrlEntryDialog> {
             Text(widget.descriptionText ?? "Enter a link to a match."),
             TextFormField(
               decoration: InputDecoration(
-                hintText: widget.hintText,
+                hintText: widget.hintText ?? "https://practiscore.com/results/new/...",
                 errorText: errorText,
               ),
               controller: _urlController,
@@ -45,9 +62,24 @@ class _UrlEntryDialogState extends State<UrlEntryDialog> {
                 setState(() {
                   errorText = error;
                 });
-                if(error == null) Navigator.of(context).pop(url);
+                if(error == null) submit(url);
               },
             ),
+            if(widget.sources != null)
+              DropdownButton<MatchSource>(
+                items: widget.sources!.map((e) =>
+                    DropdownMenuItem<MatchSource>(
+                      child: Text(e.name),
+                      value: e,
+                    )
+                ).toList(),
+                value: source!,
+                onChanged: (v) {
+                  setState(() {
+                    source = v;
+                  });
+                },
+              )
           ],
         ),
       ),
@@ -65,10 +97,19 @@ class _UrlEntryDialogState extends State<UrlEntryDialog> {
               setState(() {
                 errorText = error;
               });
-              if(error == null) Navigator.of(context).pop(url);
+              if(error == null) submit(url);
             }
         )
       ],
     );
+  }
+
+  void submit(String url) {
+    if(widget.sources == null) {
+      Navigator.of(context).pop(url);
+    }
+    else {
+      Navigator.of(context).pop((source, url));
+    }
   }
 }

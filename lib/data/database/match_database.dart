@@ -60,13 +60,13 @@ class MatchDatabase {
     return finalQuery.findAll();
   }
 
-  Future<DbShootingMatch> save(ShootingMatch match) async {
+  Future<Result<DbShootingMatch, Error>> save(ShootingMatch match) async {
     if(match.sourceIds.isEmpty) {
       throw ArgumentError("Match must have at least one source ID to be saved in the database");
     }
     var dbMatch = DbShootingMatch.from(match);
-    dbMatch = await matchDb.writeTxn<DbShootingMatch>(() async {
-      try {
+    try {
+      dbMatch = await matchDb.writeTxn<DbShootingMatch>(() async {
         var oldMatch = await getByAnySourceId(dbMatch.sourceIds);
         if (oldMatch != null) {
           dbMatch.id = oldMatch.id;
@@ -76,13 +76,15 @@ class MatchDatabase {
           dbMatch.id = await matchDb.dbShootingMatchs.put(dbMatch);
         }
         return dbMatch;
-      } catch(e) {
-        print("Failed to save match: $e");
-        print("${dbMatch.sourceIds}");
-        rethrow;
-      }
-    });
-    return dbMatch;
+      });
+    }
+    catch(e) {
+      print("Failed to save match: $e");
+      print("${dbMatch.sourceIds}");
+      return Result.err(StringError("$e"));
+    }
+
+    return Result.ok(dbMatch);
   }
 
   Future<DbShootingMatch?> getByAnySourceId(List<String> ids) async {

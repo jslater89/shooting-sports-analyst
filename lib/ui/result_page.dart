@@ -11,6 +11,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:uspsa_result_viewer/data/database/match_database.dart';
 import 'package:uspsa_result_viewer/data/ranking/rater.dart';
 import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
 import 'package:uspsa_result_viewer/data/search_query_parser.dart';
@@ -454,6 +455,29 @@ class _ResultPageState extends State<ResultPage> {
               )
           )
       );
+      if(!kIsWeb) {
+        actions.add(
+          Tooltip(
+            message: "Save match to database.",
+            child: IconButton(
+              icon: Icon(Icons.save),
+              onPressed: () async {
+                var result = await MatchDatabase().save(widget.canonicalMatch);
+                if(result.isErr()) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text("Error saving match: $e")
+                  ));
+                }
+                else {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text("Saved match to database"),
+                  ));
+                }
+              },
+            )
+          )
+        );
+      }
       actions.add(
         Tooltip(
             message: "Display a match breakdown.",

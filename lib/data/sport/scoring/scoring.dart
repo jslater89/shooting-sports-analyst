@@ -734,6 +734,8 @@ class ScoringEvent implements NameLookupEntity {
   final bool bonus;
   final String bonusLabel;
 
+  bool get fallback => false;
+
   const ScoringEvent(this.name, {this.displayInOverview = true, this.shortName = "", this.pointChange = 0, this.timeChange = 0, this.bonus = false, this.bonusLabel = "X"});
 }
 

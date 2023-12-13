@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'package:fluttericon/rpg_awesome_icons.dart';
 import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/source/source.dart';
 import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 
@@ -52,13 +53,13 @@ class _HomePageState extends State<HomePage> {
   void _launchPresetPractiscore({String? url}) async {
     var matchId = await getMatchId(context, presetUrl: url);
     if(matchId != null) {
-      HtmlOr.navigateTo(context, "/web/$matchId");
+      HtmlOr.navigateTo(context, "/web/report-uspsa/$matchId");
     }
   }
 
   void _launchNonPractiscoreFile({required String url}) async {
     var urlBytes = Base64Codec.urlSafe().encode(url.codeUnits);
-    HtmlOr.navigateTo(context, "/webfile/$urlBytes");
+    HtmlOr.navigateTo(context, "/webfile/report-uspsa/$urlBytes");
   }
 
   @override
@@ -198,18 +199,24 @@ class _HomePageState extends State<HomePage> {
           setState(() {
             _operationInProgress = true;
           });
-          var matchId = await getMatchId(context);
-          if(matchId != null) {
-            // get the full UUID-styled ID
-            matchId = await processMatchUrl(matchId);
+          MatchSource source;
+          String? matchId;
+          var response = await getMatchIdWithSource(context);
+          if(response == null) {
+            return;
           }
+
+          (source, matchId) = response;
+
+          if(matchId == null) {
+            return;
+          }
+
           setState(() {
             _operationInProgress = false;
           });
 
-          if(matchId != null) {
-            await Navigator.of(context).pushNamed('/web/$matchId');
-          }
+          await Navigator.of(context).pushNamed('/web/${source.code}/$matchId');
         },
         child: Column(
           mainAxisSize: MainAxisSize.min,

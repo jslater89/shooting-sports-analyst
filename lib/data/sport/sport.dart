@@ -50,7 +50,9 @@ class Sport {
 
   bool get hasPowerFactors => powerFactors.length > 1; // All sports have one default PF
   bool get hasDivisions => divisions.length > 0;
+  bool get hasDivisionFallback => divisions.values.any((element) => element.fallback);
   bool get hasClassifications => classifications.length > 0;
+  bool get hasClassificationFallback => classifications.values.any((element) => element.fallback);
   bool get hasEventLevels => eventLevels.length > 0;
 
   Sport(this.name, {
@@ -89,11 +91,14 @@ class PowerFactor implements NameLookupEntity {
   String get displayName => name;
   String get shortDisplayName => shortName.isNotEmpty ? shortName : name;
 
+  final bool fallback;
+
   PowerFactor(this.name, {
     this.shortName = "",
     required List<ScoringEvent> targetEvents,
     List<ScoringEvent> penaltyEvents = const [],
     this.alternateNames = const [],
+    this.fallback = false,
   }) :
     targetEvents = Map.fromEntries(targetEvents.map((e) => MapEntry(e.name, e))),
     penaltyEvents = Map.fromEntries(penaltyEvents.map((e) => MapEntry(e.name, e)))
@@ -113,10 +118,13 @@ class Division implements NameLookupEntity {
   String get displayName => name;
   String get shortDisplayName => shortName.isNotEmpty ? shortName : name;
 
+  final bool fallback;
+
   const Division({
     required this.name,
     required this.shortName,
     this.alternateNames = const [],
+    this.fallback = false,
   });
 }
 
@@ -128,12 +136,14 @@ abstract class NameLookupEntity {
 
   String get displayName => name;
   String get shortDisplayName => shortName.isNotEmpty ? shortName : name;
+
+  bool get fallback => false;
 }
 
 extension LookupNameInList<T extends NameLookupEntity> on Iterable<T> {
   T? lookupByName(String name) {
     name = name.toLowerCase();
-    return this.firstWhereOrNull((entity) {
+    T? found = this.firstWhereOrNull((entity) {
       // Put short name first, because it's more likely to show up in
       // encodings
       if(entity.shortName.toLowerCase() == name) {
@@ -150,6 +160,13 @@ extension LookupNameInList<T extends NameLookupEntity> on Iterable<T> {
 
       return false;
     });
+
+    if(found != null) {
+      return found;
+    }
+    else {
+      return this.firstWhereOrNull((entity) => entity.fallback);
+    }
   }
 }
 
@@ -173,11 +190,14 @@ class Classification implements NameLookupEntity {
 
   final List<String> alternateNames;
 
+  final bool fallback;
+
   const Classification({
     required this.index,
     required this.name,
     required this.shortName,
     this.alternateNames = const [],
+    this.fallback = false,
   });
 }
 
@@ -199,11 +219,14 @@ class MatchLevel implements NameLookupEntity {
 
   final List<String> alternateNames;
 
+  final bool fallback;
+
   const MatchLevel({
     required this.name,
     required this.shortName,
     this.alternateNames = const [],
     this.eventLevel = EventLevel.local,
+    this.fallback = false,
   });
 }
 

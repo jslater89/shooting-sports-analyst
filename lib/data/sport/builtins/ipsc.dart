@@ -33,10 +33,10 @@ final ipscSport = Sport(
     const Classification(index: 4, name: "C", shortName: "C"),
     const Classification(index: 5, name: "D", shortName: "D"),
     const Classification(index: 6, name: "Expired", shortName: "X"),
-    const Classification(index: 7, name: "Unclassified", shortName: "U", alternateNames: [""]),
+    const Classification(index: 7, name: "Unclassified", shortName: "U", alternateNames: [""], fallback: true),
   ],
   divisions: [
-    const Division(name: "Open", shortName: "OPEN"),
+    const Division(name: "Open", shortName: "OPEN", fallback: true),
     const Division(name: "PCC", shortName: "PCC"),
     const Division(name: "Standard", shortName: "STD", alternateNames: ["STA"]),
     const Division(name: "Production Optics", shortName: "PO"),

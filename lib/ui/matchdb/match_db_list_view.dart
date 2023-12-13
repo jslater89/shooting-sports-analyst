@@ -174,6 +174,7 @@ class MatchDatabaseListModel extends ChangeNotifier {
 
     _currentSearch = search;
     _page = 0;
+    _hasMore = true;
     loading = true;
 
     var newMatches = await matchDb.query(

@@ -196,17 +196,17 @@ class DbMatchEntry {
   Result<MatchEntry, Error> hydrate(Sport sport, Map<int, MatchStage> stagesById) {
     Division? division = null;
     if(sport.hasDivisions) {
-      if(divisionName == null) return Result.err(StringError("bad division: $firstName $lastName $divisionName"));
+      if(divisionName == null && !sport.hasDivisionFallback) return Result.err(StringError("bad division: $firstName $lastName $divisionName"));
 
-      division = sport.divisions.lookupByName(divisionName!);
+      division = sport.divisions.lookupByName(divisionName ?? "no division");
       if(division == null) return Result.err(StringError("bad division: $firstName $lastName $divisionName"));
     }
 
     Classification? classification = null;
     if(sport.hasClassifications) {
-      if(classificationName == null) return Result.err(StringError("bad classification: $firstName $lastName $classificationName"));
+      if(classificationName == null && !sport.hasClassificationFallback) return Result.err(StringError("bad classification: $firstName $lastName $classificationName"));
 
-      classification = sport.classifications.lookupByName(classificationName!);
+      classification = sport.classifications.lookupByName(classificationName ?? "no classification");
       if(division == null) return Result.err(StringError("bad classification: $firstName $lastName $classificationName"));
     }
 

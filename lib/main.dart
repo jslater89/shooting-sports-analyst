@@ -78,43 +78,24 @@ void main() async {
       return RatingsContainerPage();
     }
   ));
-  globals.router.define('/web/:matchId', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
+  globals.router.define('/web/:sourceId/:matchId', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
     handlerFunc: (context, params) {
-      return PractiscoreResultPage(matchId: params['matchId']![0],);
+      return PractiscoreResultPage(matchId: params['matchId']![0], sourceId: params['sourceId']![0]);
     }
   ));
 
   // resultUrl is base64-encoded
-  globals.router.define('/webfile/:resultUrl', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
+  globals.router.define('/webfile/:sourceId/:resultUrl', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
       handlerFunc: (context, params) {
         var urlString = String.fromCharCodes(Base64Codec.urlSafe().decode(params['resultUrl']![0]));
-        return PractiscoreResultPage(resultUrl: urlString,);
+        return PractiscoreResultPage(resultUrl: urlString, sourceId: params['sourceId']![0]);
       }
   ));
   configureApp();
 
   WidgetsFlutterBinding.ensureInitialized();
 
-  var parser = PractiscoreHitFactorReportParser(uspsaSport);
-  var localContents = File("data/test/local-report.txt").readAsStringSync();
-  var majorContents = File("data/test/area6-report.txt").readAsStringSync();
-  var local = parser.parseWebReport(localContents).unwrap();
-  var localScores = local.getScores();
-
-  var oldMajor = (await processScoreFile(majorContents)).unwrap();
-  var newMajor = parser.parseWebReport(majorContents).unwrap();
-  var translatedMajor = ShootingMatch.fromOldMatch(oldMajor);
-
   await MatchDatabase().ready;
-
-  print("Read match!");
-
-  var dbLocal = await MatchDatabase().save(local);
-  var dbMajor = await MatchDatabase().save(newMajor);
-  print("DB id: ${dbLocal.id} ${dbMajor.id}");
-  var inflatedLocal = dbLocal.hydrate();
-  var inflatedMajor = dbMajor.hydrate();
-  print("Inflated DB id: ${dbLocal.id}");
 
   if(!HtmlOr.isWeb) {
     var path = await getApplicationSupportDirectory();

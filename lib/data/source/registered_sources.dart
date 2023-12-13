@@ -4,8 +4,9 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:collection/collection.dart';
+import 'package:uspsa_result_viewer/closed_sources/psv2/psv2_source.dart';
 import 'package:uspsa_result_viewer/data/source/practiscore_report.dart';
-import 'package:uspsa_result_viewer/data/source/psv2/psv2_source.dart';
 import 'package:uspsa_result_viewer/data/source/source.dart';
 import 'package:uspsa_result_viewer/data/sport/builtins/ipsc.dart';
 import 'package:uspsa_result_viewer/data/sport/builtins/uspsa.dart';
@@ -19,10 +20,19 @@ class MatchSourceRegistry {
 
   MatchSourceRegistry._();
 
+  MatchSource getByCode(String code, MatchSource fallback) {
+    return sources.firstWhereOrNull((e) => e.code == code) ?? fallback;
+  }
+
   List<MatchSource> _sources = [
     PSv2MatchSource(),
     PractiscoreHitFactorReportParser(uspsaSport),
     PractiscoreHitFactorReportParser(ipscSport),
   ];
   List<MatchSource> get sources => _sources.where((element) => element.isImplemented).toList(growable: false);
+
+  List<MatchSource> practiscoreUrlSources = [
+    PractiscoreHitFactorReportParser(uspsaSport),
+    PractiscoreHitFactorReportParser(ipscSport),
+  ];
 }

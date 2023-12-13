@@ -18,6 +18,8 @@ enum MatchSourceError implements Error {
   /// An ID provided to a get-match-of-type method does not correspond
   /// to the correct kind of match.
   incorrectMatchType,
+  /// No match was found with the given ID.
+  notFound,
   /// This source was unable to parse the data retrieved from the given
   /// ID.
   formatError;
@@ -26,13 +28,17 @@ enum MatchSourceError implements Error {
     networkError => "Network error",
     unsupportedOperation => "Source does not support operation",
     unsupportedMatchType => "Source does not support match type",
+    notFound => "No match found with the provided ID",
     incorrectMatchType => "Provided match ID is invalid for requested match type",
     formatError => "Error parsing match data",
   };
 }
 
 abstract class MatchSource {
+  /// A name suitable for display.
   String get name;
+  /// A URL-encodable code for internal identification.
+  String get code;
   bool get isImplemented;
   bool get canSearch;
   List<SportType> get supportedSports;

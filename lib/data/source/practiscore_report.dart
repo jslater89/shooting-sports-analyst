@@ -7,6 +7,7 @@
 import 'dart:convert';
 
 import 'package:intl/intl.dart';
+import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 import 'package:uspsa_result_viewer/data/source/source.dart';
 import 'package:uspsa_result_viewer/data/sport/builtins/ipsc.dart';
@@ -15,7 +16,9 @@ import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
 import 'package:uspsa_result_viewer/data/sport/shooter/shooter.dart';
 import 'package:uspsa_result_viewer/data/sport/sport.dart';
+import 'package:uspsa_result_viewer/route/practiscore_url.dart';
 import 'package:uspsa_result_viewer/util.dart';
+import 'package:http/http.dart' as http;
 
 /// This will parse a PractiScore hit factor report.txt file.
 ///
@@ -32,7 +35,7 @@ class PractiscoreHitFactorReportParser extends MatchSource {
 
   PractiscoreHitFactorReportParser(this.sport, {this.verboseParse = false});
 
-  Result<ShootingMatch, Error> parseWebReport(String fileContents, {List<String>? sourceIds}) {
+  Result<ShootingMatch, MatchSourceError> parseWebReport(String fileContents, {List<String>? sourceIds}) {
     String reportFile = fileContents.replaceAll("\r\n", "\n");
     List<String> lines = reportFile.split("\n");
 
@@ -76,7 +79,7 @@ class PractiscoreHitFactorReportParser extends MatchSource {
       }
       return Result.ok(m);
     } catch(e) {
-      return Result.err(MatchGetError.formatError);
+      return Result.err(MatchSourceError.formatError);
     }
   }
 
@@ -345,6 +348,63 @@ class PractiscoreHitFactorReportParser extends MatchSource {
     return i;
   }
 
+  Future<Result<String, MatchSourceError>> getPractiscoreReportFile(String matchId) async {
+    var proxyUrl = getProxyUrl();
+    var reportUrl = "${proxyUrl}https://practiscore.com/reports/web/$matchId";
+    if(verboseParse) print("Report download URL: $reportUrl");
+
+    var responseString = "";
+    try {
+      var response = await http.get(Uri.parse(reportUrl));
+      if(response.statusCode < 400) {
+        responseString = response.body;
+        if (responseString.startsWith(r"$")) {
+          return Result.ok(responseString);
+        }
+      }
+      else if(response.statusCode == 404) {
+        print("No match record at $reportUrl");
+        return Result.err(MatchSourceError.notFound);
+      }
+
+      if(verboseParse) print("response: ${response.body.split("\n").first}");
+    }
+    catch(err, stackTrace) {
+      print("download error: $err ${err.runtimeType}");
+      print("$stackTrace");
+
+      if (err is http.ClientException) {
+        http.ClientException ce = err;
+        print("${ce.uri} ${ce.message}");
+      }
+      return Result.err(MatchSourceError.networkError);
+    }
+
+    try {
+      var token = getClubNameToken(responseString);
+      if(verboseParse) print("Token: $token");
+      var body = {
+        '_token': token,
+        'ClubName': 'None',
+        'ClubCode': 'None',
+        'matchId': matchId,
+      };
+      var response = await http.post(Uri.parse(reportUrl), body: body);
+      if(response.statusCode < 400) {
+        var responseString = response.body;
+        if (responseString.startsWith(r"$")) {
+          return Result.ok(responseString);
+        }
+      }
+
+      if(verboseParse) print("Didn't work: ${response.statusCode} ${response.body}");
+    }
+    catch(err) {
+      print("download error pt. 2: $err ${err.runtimeType}");
+    }
+    return Result.err(MatchSourceError.networkError);
+  }
+
   @override
   bool get canSearch => false;
 
@@ -355,8 +415,11 @@ class PractiscoreHitFactorReportParser extends MatchSource {
 
   @override
   Future<Result<ShootingMatch, MatchSourceError>> getHitFactorMatch(String id) async {
-    // TODO: implement getHitFactorMatch
-    throw UnimplementedError();
+    var fileContentsResult = await getPractiscoreReportFile(id);
+    if(fileContentsResult.isErr()) {
+      return Result.err(fileContentsResult.unwrapErr());
+    }
+    return Future.value(parseWebReport(fileContentsResult.unwrap(), sourceIds: [id]));
   }
 
   @override
@@ -389,8 +452,19 @@ class PractiscoreHitFactorReportParser extends MatchSource {
   List<SportType> get supportedSports => [
     if(sport == uspsaSport) SportType.uspsa,
     if(sport == ipscSport) SportType.ipsc,
-    if(sport != ipscSport && sport != uspsaSport) SportType.userDefinedHitFactor,
   ];
+
+  String get code {
+    if(sport == uspsaSport) {
+      return "report-uspsa";
+    }
+    else if(sport == ipscSport) {
+      return "report-ipsc";
+    }
+    else {
+      throw UnimplementedError();
+    }
+  }
 }
 
 class _MatchInfo {

@@ -30,10 +30,10 @@ final uspsaSport = Sport(
     const Classification(index: 3, name: "B", shortName: "B"),
     const Classification(index: 4, name: "C", shortName: "C"),
     const Classification(index: 5, name: "D", shortName: "D"),
-    const Classification(index: 6, name: "Unclassified", shortName: "U"),
+    const Classification(index: 6, name: "Unclassified", shortName: "U", fallback: true),
   ],
   divisions: [
-    const Division(name: "Open", shortName: "OPEN"),
+    const Division(name: "Open", shortName: "OPEN", fallback: true),
     const Division(name: "PCC", shortName: "PCC"),
     const Division(name: "Limited", shortName: "LIM", alternateNames: ["LTD"]),
     const Division(name: "Limited Optics", shortName: "LO"),
