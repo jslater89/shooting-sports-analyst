@@ -13,6 +13,9 @@ import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 import 'package:uspsa_result_viewer/data/sport/sport.dart';
 import 'package:uspsa_result_viewer/util.dart';
 
+/*
+This is a stub file. The full PSv2 source is implemented elsewhere.
+ */
 class PSv2MatchSource extends MatchSource {
   @override
   bool get canSearch => false;

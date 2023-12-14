@@ -11,6 +11,7 @@ import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
 import 'package:uspsa_result_viewer/data/source/source.dart';
 import 'package:uspsa_result_viewer/data/sport/builtins/ipsc.dart';
+import 'package:uspsa_result_viewer/data/sport/builtins/pcsl.dart';
 import 'package:uspsa_result_viewer/data/sport/builtins/uspsa.dart';
 import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
@@ -340,8 +341,9 @@ class PractiscoreHitFactorReportParser extends MatchSource {
         shooter.scores[stage] = s;
 
         i++;
-      } catch (err) {
+      } catch (err, stackTrace) {
         print("Error parsing score: $line $err");
+        print("Stack: $stackTrace");
       }
     }
     if(verboseParse) print("Processed $i stage scores");
@@ -452,6 +454,7 @@ class PractiscoreHitFactorReportParser extends MatchSource {
   List<SportType> get supportedSports => [
     if(sport == uspsaSport) SportType.uspsa,
     if(sport == ipscSport) SportType.ipsc,
+    if(sport == pcslSport) SportType.pcsl,
   ];
 
   String get code {
@@ -460,6 +463,9 @@ class PractiscoreHitFactorReportParser extends MatchSource {
     }
     else if(sport == ipscSport) {
       return "report-ipsc";
+    }
+    else if(sport == pcslSport) {
+      return "report-pcsl";
     }
     else {
       throw UnimplementedError();

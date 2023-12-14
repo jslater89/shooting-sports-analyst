@@ -8,35 +8,28 @@ import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
 import 'package:uspsa_result_viewer/data/sport/sport.dart';
 
 final _pcslPenalties = [
-  const ScoringEvent("Procedural", pointChange: -10),
-  const ScoringEvent("Overtime shot", pointChange: -5),
+  const ScoringEvent("Procedural", shortName: "P", pointChange: -10),
+  const ScoringEvent("Overtime shot", shortName: "OS", pointChange: -5),
 ];
 
 final pcslSport = Sport(
   "PCSL",
-  type: SportType.userDefinedHitFactor,
+  type: SportType.pcsl,
   matchScoring: RelativeStageFinishScoring(),
   defaultStageScoring: const HitFactorScoring(),
   hasStages: true,
   classifications: [
-    const Classification(index: 0, name: "Grandmaster", shortName: "GM"),
-    const Classification(index: 1, name: "Master", shortName: "M"),
-    const Classification(index: 2, name: "A", shortName: "A"),
-    const Classification(index: 3, name: "B", shortName: "B"),
-    const Classification(index: 4, name: "C", shortName: "C"),
-    const Classification(index: 5, name: "D", shortName: "D"),
-    const Classification(index: 6, name: "Unclassified", shortName: "U"),
+    const Classification(index: 0, name: "Standard Competitor", shortName: "STD", fallback: true),
+    const Classification(index: 1, name: "Coachable Shooter", shortName: "CS"),
   ],
   divisions: [
-    const Division(name: "Open", shortName: "OPEN"),
-    const Division(name: "Pistol Caliber Carbine", shortName: "PCC"),
-    const Division(name: "Limited", shortName: "LIM"),
-    const Division(name: "Limited Optics", shortName: "LO"),
-    const Division(name: "Carry Optics", shortName: "CO"),
-    const Division(name: "Production", shortName: "PROD"),
-    const Division(name: "Single Stack", shortName: "SS"),
-    const Division(name: "Revolver", shortName: "REV", alternateNames: ["REVO"]),
-    const Division(name: "Limited 10", shortName: "L10", alternateNames: ["LIM10"]),
+    const Division(name: "2-Gun Practical", shortName: "2GP", alternateNames: ["Practical"]),
+    const Division(name: "2-Gun Competition", shortName: "2GC"),
+    const Division(name: "Competition", shortName: "COMP", alternateNames: ["Competition (COMP)", "1-Gun Competition"], fallback: true),
+    const Division(name: "Practical Optics", shortName: "PO", alternateNames: ["Practical Optics (PO)", "1-Gun Practical Optics"]),
+    const Division(name: "Practical Irons", shortName: "PI", alternateNames: ["Practical Irons (PI)", "1-Gun Practical Irons"]),
+    const Division(name: "Actual Carry Pistol", shortName: "ACP", alternateNames: ["Actual Carry Pistol (ACP)", "1-Gun Actual Carry Pistol"]),
+    const Division(name: "PCC", shortName: "PCC", alternateNames: ["Pistol Caliber Carbine (PCC)", "Pistol Caliber Carbine (PCC)", "1-Gun PCC", "1-Gun Pistol Caliber Carbine"]),
   ],
   powerFactors: [
     PowerFactor("",
@@ -47,6 +40,7 @@ final pcslSport = Sport(
         const ScoringEvent("D", pointChange: 1),
         const ScoringEvent("M", pointChange: -10),
         const ScoringEvent("NS", pointChange: -10),
+        const ScoringEvent("NPM", pointChange: 0),
       ],
       penaltyEvents: _pcslPenalties,
     ),
