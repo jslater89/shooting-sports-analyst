@@ -145,9 +145,13 @@ enum Division {
       case "open": return Division.open;
 
       case "ltd":
+      case "standard":
+      case "std":
       case "limited": return Division.limited;
 
       case "co":
+      case "po":
+      case "production optics":
       case "carry optics": return Division.carryOptics;
 
       case "lo":
@@ -161,6 +165,7 @@ enum Division {
       case "production": return Division.production;
 
       case "ss":
+      case "classic":
       case "single stack": return Division.singleStack;
 
       case "rev":
