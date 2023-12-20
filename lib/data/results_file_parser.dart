@@ -11,7 +11,7 @@ import 'package:uspsa_result_viewer/util.dart';
 
 const verboseParse = false;
 
-enum MatchGetError implements Error {
+enum MatchGetError implements ResultErr {
   notHitFactor,
   network,
   noMatch,

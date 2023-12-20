@@ -71,7 +71,7 @@ class DbShootingMatch {
     shooters = []..addAll(match.shooters.map((s) => DbMatchEntry.from(s))),
     stages = []..addAll(match.stages.map((s) => DbMatchStage.from(s)));
 
-  Result<ShootingMatch, Error> hydrate() {
+  Result<ShootingMatch, ResultErr> hydrate() {
     var sport = BuiltinSportRegistry().lookup(sportName);
     if(sport == null) {
       return Result.err(StringError("sport not found"));
@@ -84,7 +84,7 @@ class DbShootingMatch {
 
     List<MatchStage> hydratedStages = stages.map((s) => s.hydrate()).toList();
     Map<int, MatchStage> stagesById = Map.fromEntries(hydratedStages.map((e) => MapEntry(e.stageId, e)));
-    List<Result<MatchEntry, Error>> hydratedShooters = shooters.map((s) => s.hydrate(sport, stagesById)).toList();
+    List<Result<MatchEntry, ResultErr>> hydratedShooters = shooters.map((s) => s.hydrate(sport, stagesById)).toList();
     var firstError = hydratedShooters.firstWhereOrNull((e) => e.isErr());
     if(firstError != null) return Result.err(firstError.unwrapErr());
 
@@ -193,7 +193,7 @@ class DbMatchEntry {
       return DbRawScore.from(stage.stageId, entry.scores[stage]!);
     }).toList();
 
-  Result<MatchEntry, Error> hydrate(Sport sport, Map<int, MatchStage> stagesById) {
+  Result<MatchEntry, ResultErr> hydrate(Sport sport, Map<int, MatchStage> stagesById) {
     Division? division = null;
     if(sport.hasDivisions) {
       if(divisionName == null && !sport.hasDivisionFallback) return Result.err(StringError("bad division: $firstName $lastName $divisionName"));
@@ -217,7 +217,7 @@ class DbMatchEntry {
       pf = foundPf;
     }
 
-    Map<MatchStage, Result<RawScore, Error>> hydratedScores = Map.fromEntries(scores.map((dbScore) => MapEntry(stagesById[dbScore.stageId]!, dbScore.hydrate(pf))));
+    Map<MatchStage, Result<RawScore, ResultErr>> hydratedScores = Map.fromEntries(scores.map((dbScore) => MapEntry(stagesById[dbScore.stageId]!, dbScore.hydrate(pf))));
     var firstError = hydratedScores.values.firstWhereOrNull((element) => element.isErr());
     if(firstError != null) return Result.err(firstError.unwrapErr());
 
@@ -266,7 +266,7 @@ class DbRawScore {
     scoringEvents = score.targetEvents.keys.map((event) => DbScoringEventCount(name: event.name, count: score.targetEvents[event]!)).toList(),
     penaltyEvents = score.penaltyEvents.keys.map((event) => DbScoringEventCount(name: event.name, count: score.penaltyEvents[event]!)).toList();
 
-  Result<RawScore, Error> hydrate(PowerFactor pf) {
+  Result<RawScore, ResultErr> hydrate(PowerFactor pf) {
     for(var event in scoringEvents) {
       if(pf.targetEvents.lookupByName(event.name) == null) return Result.err(StringError("invalid scoring event ${event.name}"));
     }

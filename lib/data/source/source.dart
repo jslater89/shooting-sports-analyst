@@ -4,36 +4,14 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:uspsa_result_viewer/data/source/match_source_error.dart';
 import 'package:uspsa_result_viewer/data/sport/sport.dart';
-import 'package:uspsa_result_viewer/util.dart';
 import 'package:uspsa_result_viewer/data/sport/match/match.dart';
+import 'package:uspsa_result_viewer/util.dart';
 
-enum MatchSourceError implements Error {
-  /// A network error occurred when fetching the match.
-  networkError,
-  /// This source cannot provide a match of the requested type.
-  unsupportedMatchType,
-  /// This source does not support the given operation.
-  unsupportedOperation,
-  /// An ID provided to a get-match-of-type method does not correspond
-  /// to the correct kind of match.
-  incorrectMatchType,
-  /// No match was found with the given ID.
-  notFound,
-  /// This source was unable to parse the data retrieved from the given
-  /// ID.
-  formatError;
-
-  String get message => switch(this) {
-    networkError => "Network error",
-    unsupportedOperation => "Source does not support operation",
-    unsupportedMatchType => "Source does not support match type",
-    notFound => "No match found with the provided ID",
-    incorrectMatchType => "Provided match ID is invalid for requested match type",
-    formatError => "Error parsing match data",
-  };
-}
-
+/// A MatchSource represents some way to retrieve match data from a remote source,
+/// like a database or website. Matches are keyed by a unique ID—for PractiScore, for
+/// instance, the key is the long-style UUID.
 abstract class MatchSource {
   /// A name suitable for display.
   String get name;
@@ -46,6 +24,9 @@ abstract class MatchSource {
   /// findMatches may return a MatchSearchResult<T> if needed. See
   /// [InternalMatchType].
   Future<Result<List<MatchSearchResult>, MatchSourceError>> findMatches(String search);
+
+  /// Given a search result, get the match it corresponds to.
+  ///
   /// getMatchFrom will always provide one of the MatchSearchResults
   /// returned from [findMatches], so you can assume that the generic
   /// type argument to [MatchSearchResult] will be the same as the one
@@ -53,6 +34,13 @@ abstract class MatchSource {
   ///
   /// See also [InternalMatchType].
   Future<Result<ShootingMatch, MatchSourceError>> getMatchFromSearch(MatchSearchResult result);
+
+  /// Get a match identified by the given ID.
+  ///
+  /// A caller providing [typeHint] expects a match of the provided type. In the event that
+  /// the ID maps to a match, but the type is wrong, the match source should return
+  /// [MatchSourceError.typeMismatch].
+  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromId(String id, {SportType? typeHint});
 
   Future<Result<ShootingMatch, MatchSourceError>> getHitFactorMatch(String id);
   Future<Result<ShootingMatch, MatchSourceError>> getTimePlusPointsDownMatch(String id);
@@ -73,6 +61,7 @@ interface class InternalMatchType {}
 /// requires additional information from a search result to parse it correctly.
 class MatchSearchResult<T extends InternalMatchType> {
   String matchName;
+  String matchSubtype;
   String matchId;
   DateTime? matchDate;
   T? matchType;
@@ -80,6 +69,7 @@ class MatchSearchResult<T extends InternalMatchType> {
   MatchSearchResult({
     required this.matchName,
     required this.matchId,
+    required this.matchSubtype,
     this.matchDate,
     this.matchType,
   });

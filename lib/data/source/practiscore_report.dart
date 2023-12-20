@@ -9,6 +9,7 @@ import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
+import 'package:uspsa_result_viewer/data/source/match_source_error.dart';
 import 'package:uspsa_result_viewer/data/source/source.dart';
 import 'package:uspsa_result_viewer/data/sport/builtins/ipsc.dart';
 import 'package:uspsa_result_viewer/data/sport/builtins/pcsl.dart';
@@ -80,7 +81,7 @@ class PractiscoreHitFactorReportParser extends MatchSource {
       }
       return Result.ok(m);
     } catch(e) {
-      return Result.err(MatchSourceError.formatError);
+      return Result.err(FormatError(StringError("$e")));
     }
   }
 
@@ -470,6 +471,12 @@ class PractiscoreHitFactorReportParser extends MatchSource {
     else {
       throw UnimplementedError();
     }
+  }
+
+  @override
+  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromId(String id, {SportType? typeHint}) {
+    // TODO: implement getMatchFromId
+    throw UnimplementedError();
   }
 }
 

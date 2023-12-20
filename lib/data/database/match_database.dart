@@ -60,7 +60,7 @@ class MatchDatabase {
     return finalQuery.findAll();
   }
 
-  Future<Result<DbShootingMatch, Error>> save(ShootingMatch match) async {
+  Future<Result<DbShootingMatch, ResultErr>> save(ShootingMatch match) async {
     if(match.sourceIds.isEmpty) {
       throw ArgumentError("Match must have at least one source ID to be saved in the database");
     }

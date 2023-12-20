@@ -8,19 +8,31 @@ import 'package:intl/intl.dart';
 
 final DateFormat programmerYmdFormat = DateFormat("yyyy-MM-dd");
 
-abstract class Error {
+abstract class ResultErr {
   String get message;
-  const Error();
+  const ResultErr();
 }
 
-class StringError extends Error {
+class NativeError extends ResultErr {
+  String get message => "$e";
+  Error e;
+  NativeError(this.e);
+}
+
+class NativeException extends ResultErr {
+  String get message => "$e";
+  Exception e;
+  NativeException(this.e);
+}
+
+class StringError extends ResultErr {
   final String message;
 
   const StringError(this.message);
 }
 
 // My Rust is showing
-class Result<T, E extends Error> {
+class Result<T, E extends ResultErr> {
   final T? _result;
   final E? _error;
 

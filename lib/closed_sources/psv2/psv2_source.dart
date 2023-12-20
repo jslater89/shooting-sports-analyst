@@ -8,6 +8,7 @@
 This is the PSv2 stub.
  */
 
+import 'package:uspsa_result_viewer/data/source/match_source_error.dart';
 import 'package:uspsa_result_viewer/data/source/source.dart';
 import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 import 'package:uspsa_result_viewer/data/sport/sport.dart';
@@ -61,4 +62,10 @@ class PSv2MatchSource extends MatchSource {
 
   @override
   String get code => "psv2";
+
+  @override
+  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromId(String id, {SportType? typeHint}) {
+    // TODO: implement getMatchFromId
+    throw UnimplementedError();
+  }
 }

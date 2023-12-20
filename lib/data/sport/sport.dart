@@ -239,7 +239,7 @@ class MatchLevel implements NameLookupEntity {
 /// factor matches.
 /// 
 /// The second group ('userDefined') is for non-hardcoded but still predefined
-/// sports. If [I write a sport editor and] a user defines a sport with it, it
+/// sports. If (I write a sport editor and) a user defines a sport with it, it
 /// gets one of these types, and match sources declaring those types can parse
 /// it to a ShootingMatch.
 ///

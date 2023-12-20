@@ -9,7 +9,7 @@ import 'package:uspsa_result_viewer/util.dart';
 
 import 'model/shooter_rating.dart';
 
-abstract class RatingError extends Error {
+abstract class RatingError extends ResultErr {
   @override
   String get message;
 }
