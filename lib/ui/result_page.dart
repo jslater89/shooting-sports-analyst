@@ -491,17 +491,17 @@ class _ResultPageState extends State<ResultPage> {
             )
         )
       );
-      actions.add(
-        Tooltip(
-          message: "Display statistics about the currently-filtered scores.",
-          child: IconButton(
-            icon: Icon(Icons.show_chart),
-            onPressed: () {
-              showDialog(context: context, builder: (context) => ScoreStatsDialog(scores: []..addAll(_baseScores), stage: _stage));
-            },
-          )
-        )
-      );
+      // actions.add(
+      //   Tooltip(
+      //     message: "Display statistics about the currently-filtered scores.",
+      //     child: IconButton(
+      //       icon: Icon(Icons.show_chart),
+      //       onPressed: () {
+      //         showDialog(context: context, builder: (context) => ScoreStatsDialog(scores: []..addAll(_baseScores), stage: _stage));
+      //       },
+      //     )
+      //   )
+      // );
       actions.add(
         Tooltip(
           message: "Compare shooter results.",
