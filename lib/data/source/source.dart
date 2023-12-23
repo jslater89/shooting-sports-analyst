@@ -33,19 +33,22 @@ abstract class MatchSource {
   /// you provided.
   ///
   /// See also [InternalMatchType].
-  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromSearch(MatchSearchResult result);
+  ///
+  /// A caller providing [typeHint] expects a match of the provided type. In the event that
+  /// the ID maps to a match, but the type is wrong, the match source should return
+  /// [MatchSourceError.typeMismatch].
+  ///
+  /// A caller providing [sport] requires a match belonging to the provided sport.
+  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromSearch(MatchSearchResult result, {SportType? typeHint, Sport? sport});
 
   /// Get a match identified by the given ID.
   ///
   /// A caller providing [typeHint] expects a match of the provided type. In the event that
   /// the ID maps to a match, but the type is wrong, the match source should return
   /// [MatchSourceError.typeMismatch].
-  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromId(String id, {SportType? typeHint});
-
-  Future<Result<ShootingMatch, MatchSourceError>> getHitFactorMatch(String id);
-  Future<Result<ShootingMatch, MatchSourceError>> getTimePlusPointsDownMatch(String id);
-  Future<Result<ShootingMatch, MatchSourceError>> getTimePlusPenaltiesMatch(String id);
-  Future<Result<ShootingMatch, MatchSourceError>> getPointsMatch(String id);
+  ///
+  /// A caller providing [sport] requires a match belonging to the provided sport.
+  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromId(String id, {SportType? typeHint, Sport? sport});
 }
 
 /// A parent class for implementation-specific search result information.

@@ -54,6 +54,7 @@ class Result<T, E extends ResultErr> {
 
   Result.ok(T result) : this._result = result, this._error = null;
   Result.err(E error) : this._error = error, this._result = null;
+  Result.errFrom(Result<Object?, E> other) : this._error = other.unwrapErr(), this._result = null;
 }
 
 List<int> mode(List<int> data) {

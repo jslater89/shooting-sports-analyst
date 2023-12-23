@@ -713,11 +713,10 @@ class RawScore {
 /// A ScoringEvent is the minimal unit of score change in a shooting sports
 /// discipline, based on a hit on target.
 class ScoringEvent implements NameLookupEntity {
+  String get longName => name;
   final String name;
-
   final String shortName;
-  /// Unused, for NameLookupEntity
-  List<String> get alternateNames => [];
+  final List<String> alternateNames;
 
   String get displayName => name;
   String get shortDisplayName => shortName.isNotEmpty ? shortName : name;
@@ -736,7 +735,12 @@ class ScoringEvent implements NameLookupEntity {
 
   bool get fallback => false;
 
-  const ScoringEvent(this.name, {this.displayInOverview = true, this.shortName = "", this.pointChange = 0, this.timeChange = 0, this.bonus = false, this.bonusLabel = "X"});
+  const ScoringEvent(this.name, {this.displayInOverview = true, this.shortName = "", this.pointChange = 0, this.timeChange = 0, this.bonus = false, this.bonusLabel = "X", this.alternateNames = const []});
+
+  @override
+  String toString() {
+    return name;
+  }
 }
 
 extension ScoreUtilities on Map<ScoringEvent, int> {

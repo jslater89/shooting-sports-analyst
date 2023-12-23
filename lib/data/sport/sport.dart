@@ -45,6 +45,20 @@ class Sport {
   ///
   /// Power factors should be const.
   final Map<String, PowerFactor> powerFactors;
+
+  PowerFactor get defaultPowerFactor {
+    if(powerFactors.length == 1) {
+      return powerFactors.values.first;
+    }
+    else {
+      var pf = powerFactors.values.firstWhereOrNull((element) => element.fallback);
+      if(pf != null) {
+        return pf;
+      }
+    }
+
+    throw StateError("sport missing default power factor");
+  }
   
   final Map<String, MatchLevel> eventLevels;
 
@@ -73,6 +87,7 @@ class Sport {
 }
 
 class PowerFactor implements NameLookupEntity {
+  String get longName => name;
   final String name;
   final String shortName;
 
@@ -106,6 +121,8 @@ class PowerFactor implements NameLookupEntity {
 }
 
 class Division implements NameLookupEntity {
+  String get longName => _longName ?? name;
+  final String? _longName;
   /// Name is the long display name for a division.
   final String name;
   /// Short name is the abbreviated display name for a division.
@@ -125,13 +142,23 @@ class Division implements NameLookupEntity {
     required this.shortName,
     this.alternateNames = const [],
     this.fallback = false,
-  });
+    String? longName
+  }) : _longName = longName;
 }
 
 abstract class NameLookupEntity {
-  /// The long name
+  /// A long name, to be used in contexts where space doesn't matter
+  /// and clarity is maximally important, such as the match score filter
+  /// dialog.
+  String get longName;
+  /// A medium-length name, to be used in context where a balance between
+  /// space and clarity is important, such as the division column of the
+  /// match score page.
   String get name;
+  /// A short name, to be used where space is maximally important, like
+  /// the division tabs in the rater view.
   String get shortName;
+  /// Additional names that match this
   List<String> get alternateNames;
 
   String get displayName => name;
@@ -154,6 +181,10 @@ extension LookupNameInList<T extends NameLookupEntity> on Iterable<T> {
         return true;
       }
 
+      if(entity.longName.toLowerCase() == name) {
+        return true;
+      }
+
       if(entity.alternateNames.any((alternateName) => alternateName.toLowerCase() == name)) {
         return true;
       }
@@ -168,6 +199,10 @@ extension LookupNameInList<T extends NameLookupEntity> on Iterable<T> {
       return this.firstWhereOrNull((entity) => entity.fallback);
     }
   }
+
+  bool containsAll(List<String> values) {
+    return !values.any((v) => lookupByName(v) == null);
+  }
 }
 
 extension LookupNameInMap<T extends NameLookupEntity> on Map<String, T> {
@@ -178,10 +213,15 @@ extension LookupNameInMap<T extends NameLookupEntity> on Map<String, T> {
 
     return this.values.lookupByName(name);
   }
+
+  bool containsAll(List<String> values) {
+    return !values.any((v) => lookupByName(v) == null);
+  }
 }
 
 class Classification implements NameLookupEntity {
   final int index;
+  String get longName => name;
   final String name;
   final String shortName;
 
@@ -210,6 +250,7 @@ enum EventLevel {
 }
 
 class MatchLevel implements NameLookupEntity {
+  String get longName => name;
   final String name;
   final String shortName;
   final EventLevel eventLevel;

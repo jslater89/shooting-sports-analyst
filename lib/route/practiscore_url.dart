@@ -17,6 +17,7 @@ import 'package:uspsa_result_viewer/data/source/registered_sources.dart';
 import 'package:uspsa_result_viewer/data/sport/builtins/ipsc.dart';
 import 'package:uspsa_result_viewer/data/sport/builtins/uspsa.dart';
 import 'package:uspsa_result_viewer/data/sport/match/match.dart';
+import 'package:uspsa_result_viewer/data/sport/sport.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
 import 'package:uspsa_result_viewer/ui/empty_scaffold.dart';
 import 'package:uspsa_result_viewer/ui/result_page.dart';
@@ -57,7 +58,7 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
         var responseString = response.body;
         if (responseString.startsWith("\$")) {
           // TODO: this is broken
-          var result = await matchSource.getHitFactorMatch(responseString);
+          var result = await matchSource.getMatchFromId(responseString, typeHint: SportType.uspsa);
           if(result.isOk()) {
             var match = result.unwrap();
             setState(() {
@@ -88,7 +89,7 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
 
     var matchSource = MatchSourceRegistry().getByCode(widget.sourceId, PractiscoreHitFactorReportParser(uspsaSport));
 
-    var result = await matchSource.getHitFactorMatch(widget.matchId!);
+    var result = await matchSource.getMatchFromId(widget.matchId!, typeHint: SportType.uspsa);
     if(result.isOk()) {
       var match = result.unwrap();
       setState(() {

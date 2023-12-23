@@ -80,6 +80,8 @@ class MatchEntry extends Shooter {
 
   Map<MatchStage, RawScore> scores;
 
+  int? squad;
+
   MatchEntry({
     required super.firstName,
     required super.lastName,
@@ -89,6 +91,7 @@ class MatchEntry extends Shooter {
     required this.entryId,
     required this.powerFactor,
     required this.scores,
+    this.squad,
     this.division,
     this.classification,
     super.female,
@@ -132,5 +135,10 @@ class MatchEntry extends Shooter {
     if(reentry) components.add("(R)");
     if(female) components.add("(F)");
     return components.join(" ");
+  }
+
+  @override
+  String toString() {
+    return "${getName(suffixes: false)} ($memberNumber)";
   }
 }

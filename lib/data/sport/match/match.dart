@@ -175,7 +175,6 @@ class MatchStage {
   /// the minimum number of rounds required to complete the stage:
   /// every shot will either be a hit, a miss, or a no-penalty miss.
   ///
-  ///
   /// If it cannot be determined, or this is not a valid concept in the
   /// sport, use '0'. IDPA or ICORE parsed from Practiscore HTML, for example,
   /// would use '0', because we don't have stage information beyond raw time,
@@ -213,5 +212,10 @@ class MatchStage {
       classifier: classifier,
       classifierNumber: classifierNumber,
     );
+  }
+
+  @override
+  String toString() {
+    return "$name ($stageId)";
   }
 }

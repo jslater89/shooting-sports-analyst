@@ -417,32 +417,8 @@ class PractiscoreHitFactorReportParser extends MatchSource {
   }
 
   @override
-  Future<Result<ShootingMatch, MatchSourceError>> getHitFactorMatch(String id) async {
-    var fileContentsResult = await getPractiscoreReportFile(id);
-    if(fileContentsResult.isErr()) {
-      return Result.err(fileContentsResult.unwrapErr());
-    }
-    return Future.value(parseWebReport(fileContentsResult.unwrap(), sourceIds: [id]));
-  }
-
-  @override
-  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromSearch(MatchSearchResult<InternalMatchType> result) {
+  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromSearch(MatchSearchResult<InternalMatchType> result, {SportType? typeHint, Sport? sport}) {
     return Future.value(Result.err(MatchSourceError.unsupportedOperation));
-  }
-
-  @override
-  Future<Result<ShootingMatch, MatchSourceError>> getPointsMatch(String id) {
-    return Future.value(Result.err(MatchSourceError.unsupportedMatchType));
-  }
-
-  @override
-  Future<Result<ShootingMatch, MatchSourceError>> getTimePlusPenaltiesMatch(String id) {
-    return Future.value(Result.err(MatchSourceError.unsupportedMatchType));
-  }
-
-  @override
-  Future<Result<ShootingMatch, MatchSourceError>> getTimePlusPointsDownMatch(String id) {
-    return Future.value(Result.err(MatchSourceError.unsupportedMatchType));
   }
 
   @override
@@ -474,9 +450,12 @@ class PractiscoreHitFactorReportParser extends MatchSource {
   }
 
   @override
-  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromId(String id, {SportType? typeHint}) {
-    // TODO: implement getMatchFromId
-    throw UnimplementedError();
+  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromId(String id, {SportType? typeHint, Sport? sport}) async {
+    var fileContentsResult = await getPractiscoreReportFile(id);
+    if(fileContentsResult.isErr()) {
+      return Result.err(fileContentsResult.unwrapErr());
+    }
+    return Future.value(parseWebReport(fileContentsResult.unwrap(), sourceIds: [id]));
   }
 }
 

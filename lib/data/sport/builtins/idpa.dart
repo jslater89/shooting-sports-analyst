@@ -8,7 +8,8 @@ import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
 import 'package:uspsa_result_viewer/data/sport/sport.dart';
 
 final _idpaPenalties = [
-  const ScoringEvent("PE", timeChange: 3),
+  const ScoringEvent("Non-Threat", timeChange: 5, alternateNames: ["Hits on Non-Threat"]),
+  const ScoringEvent("PE", timeChange: 3, alternateNames: ["Procedural Error", "Finger PE"]),
   const ScoringEvent("Flagrant", timeChange: 10),
   const ScoringEvent("FTDR", timeChange: 30),
 ];
@@ -28,14 +29,15 @@ final idpaSport = Sport(
       const Classification(index: 5, name: "Unclassified", shortName: "UN"),
     ],
     divisions: [
-      const Division(name: "Stock Service Pistol", shortName: "SSP"),
-      const Division(name: "Pistol Caliber Carbine", shortName: "PCC"),
-      const Division(name: "Enhanced Service Pistol", shortName: "ESP"),
-      const Division(name: "Custom Defensive Pistol", shortName: "LO"),
-      const Division(name: "Carry Optics", shortName: "CO"),
-      const Division(name: "Compact Carry Pistol", shortName: "CCP"),
-      const Division(name: "Backup Gun", shortName: "BUG"),
-      const Division(name: "Revolver", shortName: "REV", alternateNames: ["REVO"]),
+      const Division(name: "SSP", longName: "Stock Service Pistol", shortName: "SSP"),
+      const Division(name: "PCC", longName: "Pistol Caliber Carbine", shortName: "PCC"),
+      const Division(name: "ESP", longName: "Enhanced Service Pistol", shortName: "ESP"),
+      const Division(name: "CDP", longName: "Custom Defensive Pistol", shortName: "CDP"),
+      const Division(name: "CO", longName: "Carry Optics", shortName: "CO"),
+      const Division(name: "CCP", longName: "Compact Carry Pistol", shortName: "CCP"),
+      const Division(name: "BUG", longName: "Backup Gun", shortName: "BUG"),
+      const Division(name: "REV", longName: "Revolver", shortName: "REV", alternateNames: ["REVO"]),
+      const Division(name: "NFC", longName: "Not For Competition", shortName: "NFC", fallback: true),
     ],
     powerFactors: [
       PowerFactor("",
@@ -44,7 +46,6 @@ final idpaSport = Sport(
           const ScoringEvent("-1", timeChange: 1),
           const ScoringEvent("-3", timeChange: 3),
           const ScoringEvent("Miss", timeChange: 5),
-          const ScoringEvent("Non-threat", timeChange: 5),
         ],
         penaltyEvents: _idpaPenalties,
       ),
