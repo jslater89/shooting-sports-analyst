@@ -5,6 +5,7 @@
  */
 
 import 'package:collection/collection.dart';
+import 'package:uspsa_result_viewer/data/sport/display_settings.dart';
 import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
 
 /// A Sport is a shooting sports discipline.
@@ -40,8 +41,10 @@ class Sport {
   /// Sports with no divisions can leave this empty. Divisions should be const.
   final Map<String, Division> divisions;
 
-  /// The power factors in the sport. For sports without distinct scoring by
-  /// power factor, provide an 'all' power factor containing the scoring information.
+  /// The power factors in the sport. All sports must provide at least one
+  /// power factor. If the sport scores all competitors the same regardless
+  /// of power, provide an 'all' power factor containing the scoring. If the
+  /// sport has meaningfully distinct power factors, provide multiples.
   ///
   /// Power factors should be const.
   final Map<String, PowerFactor> powerFactors;
@@ -57,7 +60,7 @@ class Sport {
       }
     }
 
-    throw StateError("sport missing default power factor");
+    throw StateError("sport with power factors is missing default power factor");
   }
   
   final Map<String, MatchLevel> eventLevels;
@@ -69,6 +72,8 @@ class Sport {
   bool get hasClassificationFallback => classifications.values.any((element) => element.fallback);
   bool get hasEventLevels => eventLevels.length > 0;
 
+  late final SportDisplaySettings displaySettings;
+
   Sport(this.name, {
     required this.matchScoring,
     required this.defaultStageScoring,
@@ -78,12 +83,22 @@ class Sport {
     List<Division> divisions = const [],
     List<MatchLevel> eventLevels = const [],
     required List<PowerFactor> powerFactors,
+    SportDisplaySettings? displaySettings,
+    /// The power factor to use when generating default display settings.
+    /// No effect if [displaySettings] is provided.
+    PowerFactor? displaySettingsPowerFactor,
   }) :
         classifications = Map.fromEntries(classifications.map((e) => MapEntry(e.name, e))),
         divisions = Map.fromEntries(divisions.map((e) => MapEntry(e.name, e))),
         powerFactors = Map.fromEntries(powerFactors.map((e) => MapEntry(e.name, e))),
-        eventLevels = Map.fromEntries(eventLevels.map((e) => MapEntry(e.name, e)))
-  ;
+        eventLevels = Map.fromEntries(eventLevels.map((e) => MapEntry(e.name, e))) {
+    if(displaySettings != null) {
+      this.displaySettings = displaySettings;
+    }
+    else {
+      this.displaySettings = SportDisplaySettings.defaultForSport(this, powerFactor: displaySettingsPowerFactor);
+    }
+  }
 }
 
 class PowerFactor implements NameLookupEntity {
@@ -302,5 +317,43 @@ enum SportType {
   dynamicPoints,
   dynamicHitFactor,
   dynamicTimePlusPenalties,
-  dynamicTimePlusPointsDown,
+  dynamicTimePlusPointsDown;
+
+  /// Does this sport display results like a USPSA match, or like an IDPA match?
+  ///
+  /// USPSA-style display has 1-3-letter abbreviations for every scoring event, and displays
+  /// all of the hits and penalties for a given score in a short string, e.g.
+  /// 123A 23C 3D
+  ///
+  /// IDPA-style display condenses scoring events into one column (e.g., 'points down'), and shows
+  /// several penalties of different values separately ('PE', 'Non-Threat', 'FTDR').
+  ///
+  /// This is advisory/informational: sports may define their own [ScoreDisplaySettings] to control
+  /// score column layout more precisely, but the value here will define how the default is generated.
+  bool get uspsaStyleDisplay =>
+      this == uspsa ||
+      this == ipsc ||
+      this == icore ||
+      this == pcsl ||
+      this == userDefinedHitFactor ||
+      this == dynamicHitFactor;
+
+  bool get isHitFactor =>
+    this == uspsa ||
+    this == ipsc ||
+    this == pcsl ||
+    this == userDefinedHitFactor ||
+    this == dynamicHitFactor;
+
+  bool get isPoints =>
+      this == userDefinedPoints ||
+      this == dynamicPoints;
+
+  bool get isTimePlus =>
+      this == idpa ||
+      this == icore ||
+      this == userDefinedTimePlusPenalties ||
+      this == userDefinedTimePlusPointsDown ||
+      this == dynamicTimePlusPenalties ||
+      this == dynamicTimePlusPointsDown;
 }

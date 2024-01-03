@@ -4,13 +4,27 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:uspsa_result_viewer/data/sport/display_settings.dart';
 import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
 import 'package:uspsa_result_viewer/data/sport/sport.dart';
 
-final _uspsaPenalties = [
+const _uspsaPenalties = [
   const ScoringEvent("Procedural", shortName: "P", pointChange: -10),
   const ScoringEvent("Overtime shot", shortName: "OS", pointChange: -5),
 ];
+
+final _minorPowerFactor = PowerFactor("Minor",
+  shortName: "min",
+  targetEvents: [
+    const ScoringEvent("A", pointChange: 5),
+    const ScoringEvent("C", pointChange: 3),
+    const ScoringEvent("D", pointChange: 1),
+    const ScoringEvent("M", pointChange: -10),
+    const ScoringEvent("NS", pointChange: -10),
+    const ScoringEvent("NPM", pointChange: 0, displayInOverview: false),
+  ],
+  penaltyEvents: _uspsaPenalties,
+);
 
 final uspsaSport = Sport(
   "USPSA",
@@ -18,6 +32,7 @@ final uspsaSport = Sport(
   matchScoring: RelativeStageFinishScoring(pointsAreUSPSAFixedTime: true),
   defaultStageScoring: const HitFactorScoring(),
   hasStages: true,
+  displaySettingsPowerFactor: _minorPowerFactor,
   eventLevels: [
     const MatchLevel(name: "Level I", shortName: "I", alternateNames: ["Local"], eventLevel: EventLevel.local),
     const MatchLevel(name: "Level II", shortName: "II", alternateNames: ["Regional/State"], eventLevel: EventLevel.regional),
@@ -56,18 +71,7 @@ final uspsaSport = Sport(
       ],
       penaltyEvents: _uspsaPenalties,
     ),
-    PowerFactor("Minor",
-      shortName: "min",
-      targetEvents: [
-        const ScoringEvent("A", pointChange: 5),
-        const ScoringEvent("C", pointChange: 3),
-        const ScoringEvent("D", pointChange: 1),
-        const ScoringEvent("M", pointChange: -10),
-        const ScoringEvent("NS", pointChange: -10),
-        const ScoringEvent("NPM", pointChange: 0, displayInOverview: false),
-      ],
-      penaltyEvents: _uspsaPenalties,
-    ),
+    _minorPowerFactor,
     PowerFactor("Subminor",
       shortName: "sub",
       targetEvents: [
@@ -78,6 +82,7 @@ final uspsaSport = Sport(
         const ScoringEvent("NS", pointChange: 0),
         const ScoringEvent("NPM", pointChange: 0, displayInOverview: false),
       ],
+      fallback: true,
       penaltyEvents: _uspsaPenalties,
     ),
   ]

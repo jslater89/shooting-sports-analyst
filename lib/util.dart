@@ -86,6 +86,14 @@ extension IncrementHistogram<T> on Map<T, int> {
   }
 }
 
+extension ListMap<K, V> on Map<K, List<V>> {
+  void addToList(K key, V value) {
+    this[key] ??= [];
+    var list = this[key]!;
+    list.add(value);
+  }
+}
+
 /// FNV-1a 64bit hash algorithm optimized for Dart Strings
 extension StableStringHash on String {
   int get stableHash {

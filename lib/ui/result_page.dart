@@ -112,7 +112,7 @@ class _ResultPageState extends State<ResultPage> {
     if(kIsWeb) {
       SystemChrome.setApplicationSwitcherDescription(
           ApplicationSwitcherDescription(
-            label: "Results: ${widget.canonicalMatch!.eventName}",
+            label: "Results: ${widget.canonicalMatch.eventName}",
             primaryColor: 0x3f51b5, // Colors.indigo
           )
       );

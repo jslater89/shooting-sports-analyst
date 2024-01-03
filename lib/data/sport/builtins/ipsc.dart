@@ -12,12 +12,26 @@ final _ipscPenalties = [
   const ScoringEvent("Overtime shot", shortName: "P", pointChange: -5),
 ];
 
+final _minorPowerFactor = PowerFactor("Minor",
+  shortName: "min",
+  targetEvents: [
+    const ScoringEvent("A", pointChange: 5),
+    const ScoringEvent("C", pointChange: 3),
+    const ScoringEvent("D", pointChange: 1),
+    const ScoringEvent("M", pointChange: -10),
+    const ScoringEvent("NS", pointChange: -10),
+    const ScoringEvent("NPM", pointChange: 0, displayInOverview: false),
+  ],
+  penaltyEvents: _ipscPenalties,
+);
+
 final ipscSport = Sport(
   "IPSC",
   type: SportType.ipsc,
   matchScoring: RelativeStageFinishScoring(pointsAreUSPSAFixedTime: true),
   defaultStageScoring: const HitFactorScoring(),
   hasStages: true,
+  displaySettingsPowerFactor: _minorPowerFactor,
   eventLevels: [
     const MatchLevel(name: "Level I", shortName: "I", alternateNames: ["Local"], eventLevel: EventLevel.local),
     const MatchLevel(name: "Level II", shortName: "II", alternateNames: ["Regional"], eventLevel: EventLevel.regional),
@@ -57,18 +71,7 @@ final ipscSport = Sport(
       ],
       penaltyEvents: _ipscPenalties,
     ),
-    PowerFactor("Minor",
-      shortName: "min",
-      targetEvents: [
-        const ScoringEvent("A", pointChange: 5),
-        const ScoringEvent("C", pointChange: 3),
-        const ScoringEvent("D", pointChange: 1),
-        const ScoringEvent("M", pointChange: -10),
-        const ScoringEvent("NS", pointChange: -10),
-        const ScoringEvent("NPM", pointChange: 0, displayInOverview: false),
-      ],
-      penaltyEvents: _ipscPenalties,
-    ),
+    _minorPowerFactor,
     PowerFactor("Subminor",
       shortName: "sub",
       targetEvents: [
@@ -79,6 +82,7 @@ final ipscSport = Sport(
         const ScoringEvent("NS", pointChange: 0),
         const ScoringEvent("NPM", pointChange: 0, displayInOverview: false),
       ],
+      fallback: true,
       penaltyEvents: _ipscPenalties,
     ),
   ]

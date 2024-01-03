@@ -38,6 +38,7 @@ final icoreSport = Sport(
           const ScoringEvent("M", timeChange: 5),
           const ScoringEvent("NS", timeChange: 5),
         ],
+        fallback: true,
       ),
       PowerFactor("Heavy Metal",
         targetEvents: [

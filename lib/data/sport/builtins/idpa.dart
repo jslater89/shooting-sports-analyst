@@ -25,8 +25,9 @@ final idpaSport = Sport(
       const Classification(index: 1, name: "Master", shortName: "MA"),
       const Classification(index: 2, name: "Expert", shortName: "EX"),
       const Classification(index: 3, name: "Sharpshooter", shortName: "SS"),
-      const Classification(index: 4, name: "Novice", shortName: "NV"),
-      const Classification(index: 5, name: "Unclassified", shortName: "UN"),
+      const Classification(index: 4, name: "Marksman", shortName: "MM"),
+      const Classification(index: 5, name: "Novice", shortName: "NV"),
+      const Classification(index: 6, name: "Unclassified", shortName: "UN", fallback: true),
     ],
     divisions: [
       const Division(name: "SSP", longName: "Stock Service Pistol", shortName: "SSP"),
