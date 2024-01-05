@@ -6,17 +6,22 @@
 
 
 enum SortMode {
+  // Things that every sport supports, or for which we can
+  // determine support for automatically
   score,
   time,
-  alphas,
-  availablePoints,
   lastName,
   rating,
   classification,
-}
 
+  // Things sports need to declare they support
+  alphas,
+  availablePoints,
+  rawTime,
+  /// IDPA accuracy sorting sorts by IDPA 'most accurate':
+  /// sort by non-threats ASC then points down ASC
+  idpaAccuracy;
 
-extension SortModeDisplayString on SortMode {
   String displayString() {
     switch(this) {
       case SortMode.score:
@@ -33,6 +38,10 @@ extension SortModeDisplayString on SortMode {
         return "Rating";
       case SortMode.classification:
         return "Classification";
+      case SortMode.rawTime:
+        return "Raw Time";
+      case SortMode.idpaAccuracy:
+        return "Accuracy";
     }
   }
 }

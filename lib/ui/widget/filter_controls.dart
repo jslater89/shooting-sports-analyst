@@ -105,6 +105,14 @@ class _FilterControlsState extends State<FilterControls> {
         child: Text(SortMode.classification.displayString()),
         value: SortMode.classification,
       ),
+      DropdownMenuItem<SortMode>(
+        child: Text(SortMode.rawTime.displayString()),
+        value: SortMode.rawTime,
+      ),
+      DropdownMenuItem<SortMode>(
+        child: Text(SortMode.idpaAccuracy.displayString()),
+        value: SortMode.idpaAccuracy,
+      ),
     ];
   }
 

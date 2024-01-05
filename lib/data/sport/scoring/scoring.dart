@@ -883,6 +883,92 @@ extension Sorting on List<RelativeMatchScore> {
     }
   }
 
+  void sortByRawTime({MatchStage? stage, required bool scoreDQs}) {
+    if (stage != null) {
+      this.sort((a, b) {
+        if(!scoreDQs) {
+          if (a.shooter.dq && !b.shooter.dq) {
+            return 1;
+          }
+          if (b.shooter.dq && !a.shooter.dq) {
+            return -1;
+          }
+        }
+
+        if (a.stageScores.containsKey(stage) && b.stageScores.containsKey(stage)) {
+          if(a.stageScores[stage]!.score.rawTime == 0 && b.stageScores[stage]!.score.rawTime == 0) return 0;
+          else if(a.stageScores[stage]!.score.rawTime > 0 && b.stageScores[stage]!.score.rawTime == 0) return -1;
+          else if(a.stageScores[stage]!.score.rawTime == 0 && b.stageScores[stage]!.score.rawTime > 0) return 1;
+
+          return a.stageScores[stage]!.score.rawTime.compareTo(b.stageScores[stage]!.score.rawTime);
+        }
+        else {
+          return 0;
+        }
+      });
+    }
+    else {
+      this.sort((a, b) {
+        if (!scoreDQs) {
+          if (a.shooter.dq && !b.shooter.dq) {
+            return 1;
+          }
+          if (b.shooter.dq && !a.shooter.dq) {
+            return -1;
+          }
+        }
+
+        if(a.total.rawTime == 0 && b.total.rawTime == 0) return 0;
+        else if(a.total.rawTime > 0 && b.total.rawTime == 0) return -1;
+        else if(a.total.rawTime == 0 && b.total.rawTime > 0) return 1;
+
+        return a.total.rawTime.compareTo(b.total.rawTime);
+      });
+    }
+  }
+
+  void sortByIdpaAccuracy({MatchStage? stage}) {
+    this.sort((a, b) {
+      if (a.total.dnf && !b.total.dnf) {
+        return 1;
+      }
+      if (b.total.dnf && !a.total.dnf) {
+        return -1;
+      }
+
+      var aPointDown = a.shooter.powerFactor.targetEvents.lookupByName("-1");
+      var bPointDown = b.shooter.powerFactor.targetEvents.lookupByName("-1");
+      var aNonThreat = a.shooter.powerFactor.penaltyEvents.lookupByName("Non-Threat");
+      var bNonThreat = b.shooter.powerFactor.penaltyEvents.lookupByName("Non-Threat");
+
+      if(aPointDown == null || bPointDown == null || aNonThreat == null || bNonThreat == null) {
+        return 0;
+      }
+
+      RawScore? aScore, bScore;
+      if(stage != null) {
+        aScore = a.stageScores[stage]?.score;
+        bScore = b.stageScores[stage]?.score;
+      }
+      else {
+        aScore = a.total;
+        bScore = b.total;
+      }
+
+      if(aScore == null && bScore == null) return 0;
+      else if(aScore != null && bScore == null) return -1;
+      else if(aScore == null && bScore != null) return 1;
+
+      var aDown = aScore!.targetEvents[aPointDown] ?? 0;
+      var bDown = bScore!.targetEvents[bPointDown] ?? 0;
+      var aNT = aScore.penaltyEvents[aNonThreat] ?? 0;
+      var bNT = bScore.penaltyEvents[bNonThreat] ?? 0;
+
+      if(aNT == bNT) return aDown.compareTo(bDown);
+      else return aNT.compareTo(bNT);
+    });
+  }
+
   void sortByAlphas({MatchStage? stage}) {
     if (stage != null) {
       this.sort((a, b) {

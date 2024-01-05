@@ -258,6 +258,14 @@ class _ResultPageState extends State<ResultPage> {
       case SortMode.classification:
         scores.sortByClassification();
         break;
+      case SortMode.rawTime:
+        scores.sortByRawTime(scoreDQs: _filters.scoreDQs, stage: _stage);
+        break;
+      case SortMode.idpaAccuracy:
+        scores.sortByIdpaAccuracy(stage: _stage);
+        break;
+      default:
+        print("Unknown sort type $s");
     }
   }
 
