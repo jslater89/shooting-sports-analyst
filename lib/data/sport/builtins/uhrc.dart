@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:uspsa_result_viewer/data/sport/builtins/sorts.dart';
 import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
 import 'package:uspsa_result_viewer/data/sport/sport.dart';
 
@@ -13,6 +14,7 @@ final uhrcSport = Sport(
     matchScoring: CumulativeScoring(),
     defaultStageScoring: const HitFactorScoring(),
     hasStages: true,
+    resultSortModes: hitFactorSorts,
     powerFactors: [
       PowerFactor("",
           targetEvents: [

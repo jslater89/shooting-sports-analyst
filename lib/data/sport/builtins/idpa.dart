@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:uspsa_result_viewer/data/sort_mode.dart';
 import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
 import 'package:uspsa_result_viewer/data/sport/sport.dart';
 
@@ -20,6 +21,13 @@ final idpaSport = Sport(
     matchScoring: CumulativeScoring(highScoreWins: false),
     defaultStageScoring: const TimePlusScoring(),
     hasStages: true,
+    resultSortModes: [
+      SortMode.time,
+      SortMode.rawTime,
+      SortMode.idpaAccuracy,
+      SortMode.lastName,
+      SortMode.classification,
+    ],
     classifications: [
       const Classification(index: 0, name: "Distinguished Master", shortName: "DM"),
       const Classification(index: 1, name: "Master", shortName: "MA"),

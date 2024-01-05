@@ -8,10 +8,13 @@ import 'package:flutter/material.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
 import 'package:uspsa_result_viewer/data/sort_mode.dart';
 import 'package:uspsa_result_viewer/data/sport/match/match.dart';
+import 'package:uspsa_result_viewer/data/sport/sport.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
 import 'package:uspsa_result_viewer/ui/widget/stage_select_dialog.dart';
 
 class FilterControls extends StatefulWidget {
+  final Sport sport;
+
   final SortMode sortMode;
 
   /// All stages in the current match. Used to populate the stage
@@ -40,6 +43,7 @@ class FilterControls extends StatefulWidget {
   const FilterControls(
     {
       Key? key,
+      required this.sport,
       required this.sortMode,
       required this.currentStage,
       required this.allStages,
@@ -77,41 +81,14 @@ class _FilterControlsState extends State<FilterControls> {
 
   List<DropdownMenuItem<SortMode>> _buildSortItems() {
     return [
-      DropdownMenuItem<SortMode>(
-        child: Text(SortMode.score.displayString()),
-        value: SortMode.score,
-      ),
-      DropdownMenuItem<SortMode>(
-        child: Text(SortMode.time.displayString()),
-        value: SortMode.time,
-      ),
-      DropdownMenuItem<SortMode>(
-        child: Text(SortMode.alphas.displayString()),
-        value: SortMode.alphas,
-      ),
-      DropdownMenuItem<SortMode>(
-        child: Text(SortMode.availablePoints.displayString()),
-        value: SortMode.availablePoints,
-      ),
-      DropdownMenuItem<SortMode>(
-        child: Text(SortMode.lastName.displayString()),
-        value: SortMode.lastName,
-      ),
+      for(var mode in widget.sport.resultSortModes)
+        DropdownMenuItem<SortMode>(
+          child: Text(mode.displayString()),
+          value: mode,
+        ),
       if(widget.hasRatings) DropdownMenuItem<SortMode>(
         child: Text(SortMode.rating.displayString()),
         value: SortMode.rating,
-      ),
-      DropdownMenuItem<SortMode>(
-        child: Text(SortMode.classification.displayString()),
-        value: SortMode.classification,
-      ),
-      DropdownMenuItem<SortMode>(
-        child: Text(SortMode.rawTime.displayString()),
-        value: SortMode.rawTime,
-      ),
-      DropdownMenuItem<SortMode>(
-        child: Text(SortMode.idpaAccuracy.displayString()),
-        value: SortMode.idpaAccuracy,
       ),
     ];
   }
@@ -196,7 +173,7 @@ class _FilterControlsState extends State<FilterControls> {
                     ),
                   ),
                   SizedBox(width: 10),
-                  Column(
+                  if(widget.sport.resultSortModes.isNotEmpty) Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text("Sort by...", style: Theme.of(context).textTheme.caption),
@@ -213,7 +190,7 @@ class _FilterControlsState extends State<FilterControls> {
                       ),
                     ],
                   ),
-                  SizedBox(width: 10),
+                  if(widget.sport.resultSortModes.isNotEmpty) SizedBox(width: 10),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

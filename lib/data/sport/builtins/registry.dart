@@ -17,13 +17,11 @@ class SportRegistry {
   static SportRegistry? _instance;
   factory SportRegistry() {
     _instance ??= SportRegistry._([
-      icoreSport,
-      idpaSport,
-      pcslSport,
-      claysSport,
-      uhrcSport,
       uspsaSport,
       ipscSport,
+      pcslSport,
+      idpaSport,
+      icoreSport,
     ]);
     return _instance!;
   }

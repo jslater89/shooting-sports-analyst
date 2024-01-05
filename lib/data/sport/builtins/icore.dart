@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:uspsa_result_viewer/data/sort_mode.dart';
 import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
 import 'package:uspsa_result_viewer/data/sport/sport.dart';
 
@@ -13,6 +14,13 @@ final icoreSport = Sport(
     matchScoring: CumulativeScoring(),
     defaultStageScoring: const TimePlusScoring(),
     hasStages: true,
+    resultSortModes: [
+      SortMode.time,
+      SortMode.rawTime,
+      SortMode.alphas,
+      SortMode.lastName,
+      SortMode.classification,
+    ],
     classifications: [
       const Classification(index: 0, name: "Grandmaster", shortName: "GM"),
       const Classification(index: 1, name: "Master", shortName: "M"),

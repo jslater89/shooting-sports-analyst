@@ -77,7 +77,7 @@ class _ResultPageState extends State<ResultPage> {
   StageMenuItem _currentStageMenuItem = StageMenuItem.match();
   List<MatchStage> _filteredStages = [];
   MatchStage? _stage;
-  SortMode _sortMode = SortMode.score;
+  late SortMode _sortMode;
   String _lastQuery = "";
 
   ScoreDisplaySettingsModel _settings = ScoreDisplaySettingsModel(ScoreDisplaySettings(
@@ -108,6 +108,7 @@ class _ResultPageState extends State<ResultPage> {
     super.initState();
 
     _filters = FilterSet(widget.canonicalMatch.sport);
+    _sortMode = sport.resultSortModes.first;
 
     if(kIsWeb) {
       SystemChrome.setApplicationSwitcherDescription(
@@ -335,6 +336,7 @@ class _ResultPageState extends State<ResultPage> {
     var size = MediaQuery.of(context).size;
 
     Widget sortWidget = FilterControls(
+      sport: sport,
       filters: _filters,
       allStages: _currentMatch!.stages,
       filteredStages: _filteredStages,

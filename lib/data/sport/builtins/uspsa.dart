@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:uspsa_result_viewer/data/sport/builtins/sorts.dart';
 import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
 import 'package:uspsa_result_viewer/data/sport/sport.dart';
 
@@ -32,6 +33,7 @@ final uspsaSport = Sport(
   defaultStageScoring: const HitFactorScoring(),
   hasStages: true,
   displaySettingsPowerFactor: _minorPowerFactor,
+  resultSortModes: hitFactorSorts,
   eventLevels: [
     const MatchLevel(name: "Level I", shortName: "I", alternateNames: ["Local"], eventLevel: EventLevel.local),
     const MatchLevel(name: "Level II", shortName: "II", alternateNames: ["Regional/State"], eventLevel: EventLevel.regional),

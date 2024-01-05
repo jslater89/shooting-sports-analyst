@@ -5,6 +5,7 @@
  */
 
 import 'package:collection/collection.dart';
+import 'package:uspsa_result_viewer/data/sort_mode.dart';
 import 'package:uspsa_result_viewer/data/sport/display_settings.dart';
 import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
 
@@ -49,6 +50,8 @@ class Sport {
   /// Power factors should be const.
   final Map<String, PowerFactor> powerFactors;
 
+  final List<SortMode> resultSortModes;
+
   PowerFactor get defaultPowerFactor {
     if(powerFactors.length == 1) {
       return powerFactors.values.first;
@@ -79,6 +82,12 @@ class Sport {
     required this.defaultStageScoring,
     required this.type,
     this.hasStages = true,
+    this.resultSortModes = const [
+      SortMode.score,
+      SortMode.time,
+      SortMode.lastName,
+      SortMode.classification,
+    ],
     List<Classification> classifications = const [],
     List<Division> divisions = const [],
     List<MatchLevel> eventLevels = const [],

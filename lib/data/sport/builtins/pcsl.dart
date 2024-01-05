@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:uspsa_result_viewer/data/sport/builtins/sorts.dart';
 import 'package:uspsa_result_viewer/data/sport/display_settings.dart';
 import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
 import 'package:uspsa_result_viewer/data/sport/sport.dart';
@@ -56,6 +57,7 @@ final pcslSport = Sport(
   defaultStageScoring: const HitFactorScoring(),
   hasStages: true,
   displaySettings: _pcslDisplaySettings,
+  resultSortModes: hitFactorSorts,
   classifications: [
     const Classification(index: 0, name: "Standard Competitor", shortName: "STD", fallback: true),
     const Classification(index: 1, name: "Coachable Shooter", shortName: "CS"),
