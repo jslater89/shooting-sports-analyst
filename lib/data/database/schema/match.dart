@@ -8,7 +8,7 @@
 import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
 import 'package:uspsa_result_viewer/data/database/match_database.dart';
-import 'package:uspsa_result_viewer/data/sport/builtins/builtin_registry.dart';
+import 'package:uspsa_result_viewer/data/sport/builtins/registry.dart';
 import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
 import 'package:uspsa_result_viewer/data/sport/shooter/shooter.dart';
@@ -72,7 +72,7 @@ class DbShootingMatch {
     stages = []..addAll(match.stages.map((s) => DbMatchStage.from(s)));
 
   Result<ShootingMatch, ResultErr> hydrate() {
-    var sport = BuiltinSportRegistry().lookup(sportName);
+    var sport = SportRegistry().lookup(sportName);
     if(sport == null) {
       return Result.err(StringError("sport not found"));
     }

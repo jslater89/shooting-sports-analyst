@@ -13,10 +13,10 @@ import 'package:uspsa_result_viewer/data/sport/builtins/uhrc.dart';
 import 'package:uspsa_result_viewer/data/sport/builtins/uspsa.dart';
 import 'package:uspsa_result_viewer/data/sport/sport.dart';
 
-class BuiltinSportRegistry {
-  static BuiltinSportRegistry? _instance;
-  factory BuiltinSportRegistry() {
-    _instance ??= BuiltinSportRegistry._([
+class SportRegistry {
+  static SportRegistry? _instance;
+  factory SportRegistry() {
+    _instance ??= SportRegistry._([
       icoreSport,
       idpaSport,
       pcslSport,
@@ -28,10 +28,17 @@ class BuiltinSportRegistry {
     return _instance!;
   }
 
-  Map<String, Sport> _sportsByName;
+  late Map<String, Sport> _sportsByName;
 
-  BuiltinSportRegistry._(List<Sport> sports) :
-    _sportsByName = Map.fromEntries(sports.map((e) => MapEntry(e.name, e)));
+  SportRegistry._(List<Sport> sports) {
+    _sportsByName = {};
+    for(var s in sports) {
+      if(_sportsByName.containsKey(s.name)) {
+        throw ArgumentError("cannot add multiple sports with the same name");
+      }
+      _sportsByName[s.name] = s;
+    }
+  }
 
   Sport? lookup(String name) {
     return _sportsByName[name];
