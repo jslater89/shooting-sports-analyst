@@ -64,9 +64,12 @@ final class RelativeStageFinishScoring extends MatchScoring {
 
     // First, fill in the stageScores map with relative placements on each stage.
     for(var stage in stages) {
+      StageScoring scoring = stage.scoring;
+
+      if(scoring is IgnoredScoring) continue;
+
       Map<MatchEntry, RawScore> scores = {};
 
-      StageScoring scoring = stage.scoring;
       RawScore? bestScore = null;
 
       // Find the high score on the stage.
@@ -197,10 +200,13 @@ final class CumulativeScoring extends MatchScoring {
     Set<MatchEntry> matchDNF = {};
 
     for(var stage in stages) {
+      StageScoring scoring = stage.scoring;
+
+      if(scoring is IgnoredScoring) continue;
+
       Set<MatchEntry> stageDNF = {};
       Map<MatchEntry, RawScore> scores = {};
 
-      StageScoring scoring = stage.scoring;
       RawScore? bestScore = null;
 
       // Find the high score on the stage.

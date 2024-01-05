@@ -53,7 +53,7 @@ final ipscSport = Sport(
     const Division(name: "Open", shortName: "OPEN", fallback: true),
     const Division(name: "PCC", shortName: "PCC"),
     const Division(name: "Standard", shortName: "STD", alternateNames: ["STA"]),
-    const Division(name: "Production Optics", shortName: "PO"),
+    const Division(name: "Prod. Optics", longName: "Production Optics", shortName: "PO"),
     const Division(name: "Production", shortName: "PROD"),
     const Division(name: "Classic", shortName: "CLS", alternateNames: ["CLS"]),
     const Division(name: "Revolver", shortName: "REV", alternateNames: ["REVO"]),

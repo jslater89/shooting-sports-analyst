@@ -159,7 +159,7 @@ class ScoreList extends StatelessWidget {
                       ));
                     }
                 ),
-                if(sport.hasClassifications) Expanded(flex: 1, child: Text("Class")),
+                if(sport.hasClassifications && sport.displaySettings.showClassification) Expanded(flex: 1, child: Text("Class")),
                 if(sport.hasDivisions) Expanded(flex: 2, child: Text("Division")),
                 if(sport.hasPowerFactors) Expanded(flex: 1, child: Text("PF")),
                 Expanded(flex: 2, child: Text("Match %")),
@@ -189,7 +189,15 @@ class ScoreList extends StatelessWidget {
         flex = 5;
       }
 
-      scoreHeaders.add(Expanded(flex: flex, child: Text(column.headerLabel)));
+      Widget innerWidget = Text(column.headerLabel);
+      if(column.headerTooltip != null) {
+        innerWidget = Tooltip(
+          message: column.headerTooltip,
+          child: innerWidget,
+        );
+      }
+
+      scoreHeaders.add(Expanded(flex: flex, child: innerWidget));
     }
 
     return scoreHeaders;
@@ -288,7 +296,7 @@ class ScoreList extends StatelessWidget {
                   return Expanded(flex: 1, child: Text(text));
                 }
               ),
-              if(sport.hasClassifications) Expanded(flex: 1, child: Text(score.shooter.classification?.shortName ?? "UNK")),
+              if(sport.hasClassifications && sport.displaySettings.showClassification) Expanded(flex: 1, child: Text(score.shooter.classification?.shortName ?? "UNK")),
               if(sport.hasDivisions) Expanded(flex: 2, child: Text(score.shooter.division?.displayName ?? "NO DIVISION")),
               if(sport.hasPowerFactors) Expanded(flex: 1, child: Text(score.shooter.powerFactor.shortName)),
               Expanded(flex: 2, child: Text("${score.ratio.asPercentage()}%")),
@@ -370,17 +378,19 @@ class ScoreList extends StatelessWidget {
                     ));
                   }
                 ),
-                Expanded(flex: 1, child: Text("Class")),
-                Expanded(flex: 3, child: Text("Division")),
-                Expanded(flex: 1, child: Text("PF")),
-                Expanded(flex: 3, child: Tooltip(
+                if(sport.hasClassifications && sport.displaySettings.showClassification) Expanded(flex: 1, child: Text("Class")),
+                if(sport.hasDivisions) Expanded(flex: 2, child: Text("Division")),
+                if(sport.hasPowerFactors) Expanded(flex: 1, child: Text("PF")),
+                if(sport.type.isHitFactor) Expanded(flex: 3, child: Tooltip(
                     message: "The number of points out of the maximum possible for this stage.",
                     child: Text("Points/${stage!.maxPoints}"))
                 ),
-                Expanded(flex: 2, child: Text("Time")),
-                Expanded(flex: 2, child: Text("Hit Factor")),
+                if(sport.type.isTimePlus) Expanded(flex: 2, child: Text("Final Time")),
+                if(sport.type.isTimePlus) Expanded(flex: 2, child: Text("Raw Time"))
+                else Expanded(flex: 2, child: Text("Time")),
+                if(sport.type.isHitFactor) Expanded(flex: 2, child: Text("Hit Factor")),
                 Expanded(flex: 2, child: Text("Stage %")),
-                Expanded(flex: 2, child: Text("Match Pts.")),
+                if(sport.matchScoring is RelativeStageFinishScoring) Expanded(flex: 2, child: Text("Match Pts.")),
                 ..._buildScoreColumnHeaders(),
               ],
             ),
@@ -461,10 +471,10 @@ class ScoreList extends StatelessWidget {
                     return Expanded(flex: 1, child: Text(text));
                   }
               ),
-              Expanded(flex: 1, child: Text(matchScore.shooter.classification?.shortName ?? "UNK")),
-              Expanded(flex: 3, child: Text(matchScore.shooter.division?.displayName ?? "NO DIVISION")),
-              Expanded(flex: 1, child: Text(matchScore.shooter.powerFactor.shortName)),
-              Consumer<ScoreDisplaySettingsModel>(
+              if(sport.hasClassifications && sport.displaySettings.showClassification) Expanded(flex: 1, child: Text(matchScore.shooter.classification?.shortName ?? "?")),
+              if(sport.hasDivisions) Expanded(flex: 2, child: Text(matchScore.shooter.division?.displayName ?? "NO DIVISION")),
+              if(sport.hasPowerFactors) Expanded(flex: 1, child: Text(matchScore.shooter.powerFactor.shortName)),
+              if(sport.type.isHitFactor) Consumer<ScoreDisplaySettingsModel>(
                 builder: (context, model, _) {
                   var matchScoring = match!.sport.matchScoring;
                   bool hasFixedTime = false;
@@ -496,9 +506,10 @@ class ScoreList extends StatelessWidget {
                 },
               ),
               Expanded(flex: 2, child: Text(stageScore?.score.finalTime.toStringAsFixed(2) ?? "0.00")),
-              Expanded(flex: 2, child: Text(stageScore?.score.displayString ?? "-")),
+              if(sport.type.isTimePlus) Expanded(flex: 2, child: Text(stageScore?.score.rawTime.toStringAsFixed(2) ?? "0.00")),
+              if(sport.type.isHitFactor) Expanded(flex: 2, child: Text(stageScore?.score.displayString ?? "-")),
               Expanded(flex: 2, child: Text("${stageScore?.ratio.asPercentage() ?? "0.00"}%")),
-              Expanded(flex: 2, child: Text(stageScore?.points.toStringAsFixed(2) ?? "0.00")),
+              if(sport.matchScoring is RelativeStageFinishScoring) Expanded(flex: 2, child: Text(stageScore?.points.toStringAsFixed(2) ?? "0.00")),
               ..._buildScoreColumns(stageScore?.score),
             ],
           ),

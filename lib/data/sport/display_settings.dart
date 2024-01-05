@@ -9,10 +9,15 @@ import 'package:uspsa_result_viewer/data/sport/sport.dart';
 import 'package:uspsa_result_viewer/util.dart';
 
 class SportDisplaySettings {
+  bool showClassification;
+
   /// The columns to display
   List<ColumnGroup> scoreColumns;
 
-  SportDisplaySettings({required this.scoreColumns});
+  SportDisplaySettings({
+    required this.scoreColumns,
+    this.showClassification = true
+  });
 
   factory SportDisplaySettings.defaultForSport(Sport sport, {PowerFactor? powerFactor}) {
     if(powerFactor == null) powerFactor = sport.defaultPowerFactor;
@@ -99,7 +104,7 @@ class SportDisplaySettings {
 
         groups.add(ColumnGroup(
           eventGroups: [eventGroup],
-          headerLabel: "Accuracy",
+          headerLabel: "Points Down",
           labelAsSuffix: true,
           mode: ColumnMode.totalTime,
         ));
@@ -140,6 +145,7 @@ enum ColumnMode {
 /// 9s   15s          28s
 class ColumnGroup {
   String headerLabel;
+  String? headerTooltip;
 
   ColumnMode mode;
 
@@ -152,7 +158,7 @@ class ColumnGroup {
   /// The scoring event groups to display in this column.
   List<ScoringEventGroup> eventGroups;
 
-  ColumnGroup({required this.headerLabel, required this.eventGroups, this.mode = ColumnMode.count, this.labelAsSuffix = true});
+  ColumnGroup({required this.headerLabel, required this.eventGroups, this.mode = ColumnMode.count, this.labelAsSuffix = true, this.headerTooltip});
 
   String format(RawScore score) {
     var strings = eventGroups.map((e) => e.format(score, mode, labelAsSuffix)).toList();
