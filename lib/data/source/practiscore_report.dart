@@ -6,6 +6,7 @@
 
 import 'dart:convert';
 
+import 'package:flutter/src/widgets/framework.dart';
 import 'package:intl/intl.dart';
 import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
 import 'package:uspsa_result_viewer/data/results_file_parser.dart';
@@ -456,6 +457,12 @@ class PractiscoreHitFactorReportParser extends MatchSource {
       return Result.err(fileContentsResult.unwrapErr());
     }
     return Future.value(parseWebReport(fileContentsResult.unwrap(), sourceIds: [id]));
+  }
+
+  @override
+  Widget getDownloadMatchUI(Function(ShootingMatch) onMatchSelected) {
+    // TODO: implement getDownloadMatchUI
+    throw UnimplementedError();
   }
 }
 

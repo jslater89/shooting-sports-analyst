@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:flutter/widgets.dart';
 import 'package:uspsa_result_viewer/data/source/match_source_error.dart';
 import 'package:uspsa_result_viewer/data/sport/sport.dart';
 import 'package:uspsa_result_viewer/data/sport/match/match.dart';
@@ -49,6 +50,14 @@ abstract class MatchSource {
   ///
   /// A caller providing [sport] requires a match belonging to the provided sport.
   Future<Result<ShootingMatch, MatchSourceError>> getMatchFromId(String id, {SportType? typeHint, Sport? sport});
+
+  /// Return the UI to be displayed in the 'get match' dialog.
+  ///
+  /// The returned UI should fit an 800px by 500px box (or allow scrolling, if taller
+  /// than 500px). The enclosing UI will provide 'cancel' or 'back' functionality.
+  ///
+  /// Call [onMatchSelected] with a match if one is selected and downloaded.
+  Widget getDownloadMatchUI(Function(ShootingMatch) onMatchSelected);
 }
 
 /// A parent class for implementation-specific search result information.

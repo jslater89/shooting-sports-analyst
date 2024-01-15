@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'package:fluttericon/rpg_awesome_icons.dart';
 import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
 import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:uspsa_result_viewer/data/source/registered_sources.dart';
 import 'package:uspsa_result_viewer/data/source/source.dart';
 import 'package:uspsa_result_viewer/data/sport/match/match.dart';
 import 'package:uspsa_result_viewer/html_or/html_or.dart';
@@ -22,6 +23,7 @@ import 'package:uspsa_result_viewer/route/match_database_manager.dart';
 import 'package:uspsa_result_viewer/ui/empty_scaffold.dart';
 import 'package:uspsa_result_viewer/ui/result_page.dart';
 import 'package:uspsa_result_viewer/ui/widget/dialog/match_cache_chooser_dialog.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/match_source_chooser_dialog.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -200,23 +202,19 @@ class _HomePageState extends State<HomePage> {
             _operationInProgress = true;
           });
           MatchSource source;
-          String? matchId;
-          var response = await getMatchIdWithSource(context);
+          ShootingMatch match;
+
+          var response = await showDialog(context: context, builder: (context) => MatchSourceChooserDialog(sources: MatchSourceRegistry().sources));
           if(response == null) {
+            setState(() {
+              _operationInProgress = false;
+            });
             return;
           }
 
-          (source, matchId) = response;
+          (source, match) = response;
 
-          if(matchId == null) {
-            return;
-          }
-
-          setState(() {
-            _operationInProgress = false;
-          });
-
-          await Navigator.of(context).pushNamed('/web/${source.code}/$matchId');
+          await Navigator.of(context).pushNamed('/web/${source.code}/${match.sourceIds.first}');
         },
         child: Column(
           mainAxisSize: MainAxisSize.min,
