@@ -198,22 +198,17 @@ class _HomePageState extends State<HomePage> {
       ),
       GestureDetector(
         onTap: () async {
-          setState(() {
-            _operationInProgress = true;
-          });
           MatchSource source;
           ShootingMatch match;
 
           var response = await showDialog(context: context, builder: (context) => MatchSourceChooserDialog(sources: MatchSourceRegistry().sources));
           if(response == null) {
-            setState(() {
-              _operationInProgress = false;
-            });
             return;
           }
 
           (source, match) = response;
 
+          print("Displaying match ${match.sourceIds} with ${source.code}");
           await Navigator.of(context).pushNamed('/web/${source.code}/${match.sourceIds.first}');
         },
         child: Column(

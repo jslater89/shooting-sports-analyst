@@ -57,7 +57,7 @@ abstract class MatchSource {
   /// than 500px). The enclosing UI will provide 'cancel' or 'back' functionality.
   ///
   /// Call [onMatchSelected] with a match if one is selected and downloaded.
-  Widget getDownloadMatchUI(Function(ShootingMatch) onMatchSelected);
+  Widget getDownloadMatchUI(void Function(ShootingMatch) onMatchSelected);
 }
 
 /// A parent class for implementation-specific search result information.

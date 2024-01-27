@@ -64,6 +64,10 @@ final class RelativeStageFinishScoring extends MatchScoring {
 
     // First, fill in the stageScores map with relative placements on each stage.
     for(var stage in stages) {
+      if(stage.maxPoints == 0 && fixedStageValue == null) {
+        throw ArgumentError("relative stage finish scoring requires stage max points or fixed stage value");
+      }
+
       StageScoring scoring = stage.scoring;
 
       if(scoring is IgnoredScoring) continue;
@@ -82,10 +86,10 @@ final class RelativeStageFinishScoring extends MatchScoring {
         }
 
         scores[shooter] = stageScore;
-        
+
         // A DNF/zero score doesn't count for best.
         if(stageScore.dnf) continue;
-        
+
         if(bestScore == null || scoring.firstScoreBetter(stageScore, bestScore)) {
           bestScore = stageScore;
         }
@@ -789,12 +793,12 @@ extension ScoreListUtilities on Iterable<RawScore> {
       scoring = s.scoring;
       for(var e in s.targetEvents.keys) {
         scoringEvents[e] ??= 0;
-        scoringEvents.addTo(e, s.targetEvents[e]!);
+        scoringEvents.incrementBy(e, s.targetEvents[e]!);
       }
 
       for(var e in s.penaltyEvents.keys) {
         penaltyEvents[e] ??= 0;
-        penaltyEvents.addTo(e, s.penaltyEvents[e]!);
+        penaltyEvents.incrementBy(e, s.penaltyEvents[e]!);
       }
 
       rawTime += s.rawTime;
