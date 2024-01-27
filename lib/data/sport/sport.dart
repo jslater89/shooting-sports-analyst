@@ -192,7 +192,7 @@ abstract class NameLookupEntity {
 }
 
 extension LookupNameInList<T extends NameLookupEntity> on Iterable<T> {
-  T? lookupByName(String name) {
+  T? lookupByName(String name, {bool fallback = true}) {
     name = name.toLowerCase();
     T? found = this.firstWhereOrNull((entity) {
       // Put short name first, because it's more likely to show up in
@@ -219,8 +219,11 @@ extension LookupNameInList<T extends NameLookupEntity> on Iterable<T> {
     if(found != null) {
       return found;
     }
-    else {
+    else if(fallback) {
       return this.firstWhereOrNull((entity) => entity.fallback);
+    }
+    else {
+      return null;
     }
   }
 
@@ -230,12 +233,12 @@ extension LookupNameInList<T extends NameLookupEntity> on Iterable<T> {
 }
 
 extension LookupNameInMap<T extends NameLookupEntity> on Map<String, T> {
-  T? lookupByName(String name) {
+  T? lookupByName(String name, {bool fallback = true}) {
     name = name.trim();
     var byKey = this[name];
     if(byKey != null) return byKey;
 
-    return this.values.lookupByName(name);
+    return this.values.lookupByName(name, fallback: fallback);
   }
 
   bool containsAll(List<String> values) {

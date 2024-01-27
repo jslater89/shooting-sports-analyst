@@ -64,13 +64,12 @@ final class RelativeStageFinishScoring extends MatchScoring {
 
     // First, fill in the stageScores map with relative placements on each stage.
     for(var stage in stages) {
+      StageScoring scoring = stage.scoring;
+      if(scoring is IgnoredScoring) continue;
+
       if(stage.maxPoints == 0 && fixedStageValue == null) {
         throw ArgumentError("relative stage finish scoring requires stage max points or fixed stage value");
       }
-
-      StageScoring scoring = stage.scoring;
-
-      if(scoring is IgnoredScoring) continue;
 
       Map<MatchEntry, RawScore> scores = {};
 
@@ -110,7 +109,7 @@ final class RelativeStageFinishScoring extends MatchScoring {
       for(int i = 0; i < sortedShooters.length; i++) {
         var shooter = sortedShooters[i];
         var score = scores[shooter]!;
-        var ratio = scoring.ratio(score, bestScore);
+        var ratio = max(0.0, scoring.ratio(score, bestScore));
         late double points;
 
         if(shooter.dq && !scoreDQ) {
@@ -121,7 +120,7 @@ final class RelativeStageFinishScoring extends MatchScoring {
           points = score.points.toDouble();
         }
         else {
-          points = stageValue * ratio;
+          points = max(0.0, stageValue * ratio);
         }
 
         var relativeStageScore = RelativeStageScore(
@@ -702,7 +701,7 @@ class RawScore {
       return 0;
     }
     else {
-      return points / rawTime;
+      return getTotalPoints() / rawTime;
     }
   }
 

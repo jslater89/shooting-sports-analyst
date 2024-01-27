@@ -35,9 +35,10 @@ class UnsupportedOperation extends MatchSourceError {
 
 class TypeMismatch extends MatchSourceError {
   String get message => "Match was of unexpected type";
-  SportType? useInstead;
+  SportType attemptedWith;
+  SportType? detectedType;
 
-  TypeMismatch({this.useInstead});
+  TypeMismatch({required this.attemptedWith, this.detectedType});
 }
 
 class NotFound extends MatchSourceError {
