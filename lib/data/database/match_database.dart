@@ -104,10 +104,11 @@ class MatchDatabase {
     for(var ie in cache.allIndexEntries()) {
       var oldMatch = await cache.getByIndex(ie);
       var newMatch = MatchTranslator.shootingMatchFrom(oldMatch);
-      save(newMatch);
+      await save(newMatch);
       i += 1;
-      if(i % 20 == 0) {
+      if(i % 10 == 0) {
         print("[MatchDatabase] Migration: saved $i of $matchCount to database");
+        await callback.call(i, matchCount);
       }
     }
   }

@@ -114,6 +114,7 @@ class _MatchDatabaseListViewState extends State<MatchDatabaseListView> {
       ),
       child: ScoreRow(
         bold: false,
+        hoverEnabled: false,
         child: Padding(
           padding: EdgeInsets.all(2),
           child: Row(

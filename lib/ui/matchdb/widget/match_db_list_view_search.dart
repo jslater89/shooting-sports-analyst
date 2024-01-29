@@ -40,142 +40,148 @@ class _MatchDbListViewSearchState extends State<MatchDbListViewSearch> {
     var searchModel = Provider.of<MatchDatabaseSearchModel>(context);
 
     return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 5,
-            child: TextField(
-              decoration: InputDecoration(
-                floatingLabelBehavior: FloatingLabelBehavior.always,
-                label: Text("Search"),
-                suffixIcon: IconButton(
-                  icon: searchModel.name != null ? Icon(Icons.search_off) : Icon(Icons.search),
-                  onPressed: () {
-                    if(searchModel.name != null) {
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        elevation: 3.0,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Expanded(
+                flex: 5,
+                child: TextField(
+                  decoration: InputDecoration(
+                    floatingLabelBehavior: FloatingLabelBehavior.always,
+                    label: Text("Search"),
+                    suffixIcon: IconButton(
+                      icon: searchModel.name != null ? Icon(Icons.search_off) : Icon(Icons.search),
+                      onPressed: () {
+                        if(searchModel.name != null) {
+                          searchModel.name = null;
+                          _searchController.clear();
+                        }
+                        else {
+                          var search = _searchController.text;
+
+                          if (search.isEmpty) {
+                            searchModel.name = null;
+                          }
+                          else {
+                            searchModel.name = search;
+                          }
+                        }
+
+                        searchModel.changed();
+                      },
+                    )
+                  ),
+                  textInputAction: TextInputAction.search,
+                  controller: _searchController,
+                  onSubmitted: (search) {
+                    if(!mounted) return;
+
+                    if(search.isEmpty) {
                       searchModel.name = null;
-                      _searchController.clear();
                     }
                     else {
-                      var search = _searchController.text;
-
-                      if (search.isEmpty) {
-                        searchModel.name = null;
-                      }
-                      else {
-                        searchModel.name = search;
-                      }
+                      searchModel.name = search;
                     }
 
                     searchModel.changed();
                   },
-                )
+                ),
               ),
-              textInputAction: TextInputAction.search,
-              controller: _searchController,
-              onSubmitted: (search) {
-                if(!mounted) return;
+              SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  decoration: InputDecoration(
+                    label: Text("After"),
+                    floatingLabelBehavior: FloatingLabelBehavior.always,
+                    suffixIcon: IconButton(
+                      color: Theme.of(context).primaryColor,
+                      icon: Icon(Icons.calendar_month),
+                      onPressed: () async {
+                        var date = await showDatePicker(
+                            context: context,
+                            initialDate: searchModel.after ?? DateTime.now(),
+                            firstDate: DateTime(1976, 5, 24),
+                            lastDate: DateTime.now()
+                        );
 
-                if(search.isEmpty) {
-                  searchModel.name = null;
-                }
-                else {
-                  searchModel.name = search;
-                }
-
-                searchModel.changed();
-              },
-            ),
-          ),
-          SizedBox(width: 8),
-          Expanded(
-            child: TextField(
-              decoration: InputDecoration(
-                label: Text("After"),
-                floatingLabelBehavior: FloatingLabelBehavior.always,
-                suffixIcon: IconButton(
-                  color: Theme.of(context).primaryColor,
-                  icon: Icon(Icons.calendar_month),
-                  onPressed: () async {
-                    var date = await showDatePicker(
-                        context: context,
-                        initialDate: searchModel.after ?? DateTime.now(),
-                        firstDate: DateTime(1976, 5, 24),
-                        lastDate: DateTime.now()
-                    );
-
-                    searchModel.after = date;
-                    _updateDates();
-                  },
-                )
-              ),
-              onSubmitted: (text) {
-                if(text.isEmpty) {
-                  if(searchModel.after != null) {
-                    searchModel.after = null;
-                    _updateDates();
-                  }
-                }
-                else {
-                  try {
-                    var date = programmerYmdFormat.parseLoose(text);
-                    if (searchModel.after != date) {
-                      searchModel.after = date;
-                      _updateDates();
+                        searchModel.after = date;
+                        _updateDates();
+                      },
+                    )
+                  ),
+                  onSubmitted: (text) {
+                    if(text.isEmpty) {
+                      if(searchModel.after != null) {
+                        searchModel.after = null;
+                        _updateDates();
+                      }
                     }
-                  } on FormatException catch (e) {
-                    print("Format error: $e");
-                  }
-                }
-              },
-              controller: _afterController,
-            ),
-          ),
-          SizedBox(width: 8),
-          Expanded(
-            child: TextField(
-              decoration: InputDecoration(
-                label: Text("Before"),
-                floatingLabelBehavior: FloatingLabelBehavior.always,
-                suffixIcon: IconButton(
-                  color: Theme.of(context).primaryColor,
-                  icon: Icon(Icons.calendar_month),
-                  onPressed: () async {
-                    var date = await showDatePicker(
-                        context: context,
-                        initialDate: searchModel.before ?? DateTime.now(),
-                        firstDate: DateTime(1976, 5, 24),
-                        lastDate: DateTime.now()
-                    );
-
-                    searchModel.before = date;
-                    _updateDates();
-                  },
-                )
-              ),
-              controller: _beforeController,
-              onSubmitted: (text) {
-                if(text.isEmpty) {
-                  if(searchModel.before != null) {
-                    searchModel.before = null;
-                    _updateDates();
-                  }
-                }
-                else {
-                  try {
-                    var date = programmerYmdFormat.parseLoose(text);
-                    if (searchModel.before != date) {
-                      searchModel.before = date;
-                      _updateDates();
+                    else {
+                      try {
+                        var date = programmerYmdFormat.parseLoose(text);
+                        if (searchModel.after != date) {
+                          searchModel.after = date;
+                          _updateDates();
+                        }
+                      } on FormatException catch (e) {
+                        print("Format error: $e");
+                      }
                     }
-                  } on FormatException catch (e) {
-                    print("Format error: $e");
-                  }
-                }
-              },
-            ),
-          )
-        ],
+                  },
+                  controller: _afterController,
+                ),
+              ),
+              SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  decoration: InputDecoration(
+                    label: Text("Before"),
+                    floatingLabelBehavior: FloatingLabelBehavior.always,
+                    suffixIcon: IconButton(
+                      color: Theme.of(context).primaryColor,
+                      icon: Icon(Icons.calendar_month),
+                      onPressed: () async {
+                        var date = await showDatePicker(
+                            context: context,
+                            initialDate: searchModel.before ?? DateTime.now(),
+                            firstDate: DateTime(1976, 5, 24),
+                            lastDate: DateTime.now()
+                        );
+
+                        searchModel.before = date;
+                        _updateDates();
+                      },
+                    )
+                  ),
+                  controller: _beforeController,
+                  onSubmitted: (text) {
+                    if(text.isEmpty) {
+                      if(searchModel.before != null) {
+                        searchModel.before = null;
+                        _updateDates();
+                      }
+                    }
+                    else {
+                      try {
+                        var date = programmerYmdFormat.parseLoose(text);
+                        if (searchModel.before != date) {
+                          searchModel.before = date;
+                          _updateDates();
+                        }
+                      } on FormatException catch (e) {
+                        print("Format error: $e");
+                      }
+                    }
+                  },
+                ),
+              )
+            ],
+          ),
+        ),
       ),
     );
   }

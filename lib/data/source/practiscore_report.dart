@@ -6,6 +6,7 @@
 
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:flutter/src/widgets/framework.dart';
 import 'package:intl/intl.dart';
 import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
@@ -461,8 +462,47 @@ class PractiscoreHitFactorReportParser extends MatchSource {
 
   @override
   Widget getDownloadMatchUI(Function(ShootingMatch) onMatchSelected) {
-    // TODO: implement getDownloadMatchUI
-    throw UnimplementedError();
+    return Builder(builder: (context) {
+      var onSubmitted = (String value) async {
+        var matchId = await processMatchUrl(value);
+        if(matchId != null) {
+          var matchResult = await getMatchFromId(matchId, sport: sport);
+          if(matchResult.isErr()) {
+            ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text("Unable to download match: ${matchResult.unwrapErr().message}"))
+            );
+          }
+          else {
+            onMatchSelected(matchResult.unwrap());
+          }
+        }
+        else {
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("Invalid match URL"))
+          );
+        }
+      };
+      var controller = TextEditingController();
+      return Column(
+        children: [
+          Text("Enter a link to a match and press Enter."),
+          TextField(
+            controller: controller,
+            decoration: InputDecoration(
+              hintText: "https://practiscore.com/results/new/...",
+                suffixIcon: IconButton(
+                  color: Theme.of(context).buttonTheme.colorScheme?.primary,
+                  icon: Icon(Icons.search),
+                  onPressed: () {
+                    onSubmitted(controller.text);
+                  },
+                )
+            ),
+            onSubmitted: onSubmitted,
+          ),
+        ],
+      );
+    });
   }
 }
 

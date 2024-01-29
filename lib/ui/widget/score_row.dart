@@ -13,10 +13,11 @@ class ScoreRow extends StatefulWidget {
   final int? index;
   final Color? textColor;
   final Color? hoverColor;
+  final bool hoverEnabled;
   final Color? hoverTextColor;
   final bool bold;
 
-  const ScoreRow({Key? key, this.bold = true, this.index, this.child, this.color, this.textColor, this.hoverColor, this.hoverTextColor, this.edited}) : super(key: key);
+  const ScoreRow({Key? key, this.bold = true, this.index, this.child, this.color, this.textColor, this.hoverColor, this.hoverEnabled = true, this.hoverTextColor, this.edited}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() {
@@ -54,7 +55,7 @@ class _ScoreRowState extends State<ScoreRow> {
         _hover = false;
       }),
       child: Container(
-          color: _hover ? hoverColor : background,
+          color: _hover && widget.hoverEnabled ? hoverColor : background,
           child: Theme(
             child: Builder(
               builder: (context) {
@@ -69,10 +70,10 @@ class _ScoreRowState extends State<ScoreRow> {
             data: baseTheme.copyWith(
               textTheme: baseTheme.textTheme.copyWith(
                 bodyLarge: baseTheme.textTheme.bodyLarge!.copyWith(
-                  color: _hover ? hoverTextColor : textColor,
+                  color: _hover && widget.hoverEnabled ? hoverTextColor : textColor,
                 ),
                 bodyMedium: baseTheme.textTheme.bodyMedium!.copyWith(
-                  color: _hover ? hoverTextColor : textColor,
+                  color: _hover && widget.hoverEnabled ? hoverTextColor : textColor,
                 ),
               )
             ),

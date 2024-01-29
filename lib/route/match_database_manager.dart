@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uspsa_result_viewer/data/database/match_database.dart';
 import 'package:uspsa_result_viewer/ui/matchdb/match_db_list_view.dart';
+import 'package:uspsa_result_viewer/ui/widget/dialog/loading_dialog.dart';
 
 class MatchDatabaseManagerPage extends StatefulWidget {
   const MatchDatabaseManagerPage({super.key});
@@ -49,9 +50,17 @@ class _MatchDatabaseManagerPageState extends State<MatchDatabaseManagerPage> {
                   listModel.loading = true;
 
                   var db = MatchDatabase();
-                  db.migrateFromCache((progress, total) async {
-                    print("Did a thing");
+                  var loadingModel = ProgressModel();
+                  var future = db.migrateFromCache((progress, total) async {
+                    loadingModel.total = total;
+                    loadingModel.current = progress;
+                    await Future.delayed(Duration.zero);
                   });
+                  await LoadingDialog.show(
+                    context: context,
+                    waitOn: future,
+                    progressProvider: loadingModel,
+                  );
                   listModel.search(null);
                 },
               )
