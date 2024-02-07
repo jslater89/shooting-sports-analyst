@@ -8,9 +8,9 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
-import 'package:uspsa_result_viewer/ui/rater/prediction/registration_parser.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/ui/rater/prediction/registration_parser.dart';
 
 class AssociateRegistrationsDialog extends StatefulWidget {
   const AssociateRegistrationsDialog({Key? key, required this.registrations, required this.possibleMappings}) : super(key: key);

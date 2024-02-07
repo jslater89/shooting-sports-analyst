@@ -6,14 +6,14 @@
 
 import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
-import 'package:uspsa_result_viewer/data/match/practical_match.dart' as oldschema;
-import 'package:uspsa_result_viewer/data/ranking/rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
-import 'package:uspsa_result_viewer/data/sport/match/translator.dart';
-import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
-import 'package:uspsa_result_viewer/data/sport/shooter/shooter.dart';
-import 'package:uspsa_result_viewer/data/sport/sport.dart';
-import 'package:uspsa_result_viewer/ui/result_page.dart';
+import 'package:shooting_sports_analyst/data/match/practical_match.dart' as oldschema;
+import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/data/sport/match/translator.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/ui/result_page.dart';
 
 enum FilterMode {
   or, and,

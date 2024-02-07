@@ -6,7 +6,7 @@
 
 import 'dart:math';
 
-import 'package:uspsa_result_viewer/data/ranking/evolution/elo_evaluation.dart';
+import 'package:shooting_sports_analyst/data/ranking/evolution/elo_evaluation.dart';
 
 abstract class GridEntity<P> {
   Location? _location;

@@ -6,10 +6,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'package:uspsa_result_viewer/data/ranking/member_number_correction.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/confirm_dialog.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/member_number_collision_dialog.dart';
+import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/member_number_collision_dialog.dart';
 
 class MemberNumberCorrectionListDialog extends StatefulWidget {
   const MemberNumberCorrectionListDialog({

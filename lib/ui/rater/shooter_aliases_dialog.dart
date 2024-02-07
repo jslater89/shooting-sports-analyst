@@ -5,7 +5,7 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/confirm_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 
 class ShooterAliasesDialog extends StatefulWidget {
   const ShooterAliasesDialog(this.initialAliases, {Key? key}) : super(key: key);

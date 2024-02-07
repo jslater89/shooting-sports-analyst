@@ -10,19 +10,19 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sprintf/sprintf.dart';
-import 'package:uspsa_result_viewer/data/model.dart' as old;
-import 'package:uspsa_result_viewer/data/ranking/rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
+import 'package:shooting_sports_analyst/data/model.dart' as old;
+import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:charts_flutter/flutter.dart' as charts;
 // ignore: implementation_imports
 import 'package:charts_flutter/src/text_style.dart' as style;
 // ignore: implementation_imports
 import 'package:charts_flutter/src/text_element.dart' as element;
-import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
-import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
-import 'package:uspsa_result_viewer/data/sport/sport.dart';
-import 'package:uspsa_result_viewer/html_or/html_or.dart';
-import 'package:uspsa_result_viewer/util.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 /// This displays per-stage changes for a shooter.
 class ShooterStatsDialog extends StatefulWidget {

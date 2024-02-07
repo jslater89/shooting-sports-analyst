@@ -8,7 +8,7 @@
 
 import 'dart:math';
 
-import 'package:uspsa_result_viewer/data/ranking/evolution/elo_tuner.dart';
+import 'package:shooting_sports_analyst/data/ranking/evolution/elo_tuner.dart';
 
 var _r = Random();
 

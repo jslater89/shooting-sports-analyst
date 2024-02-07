@@ -24,15 +24,15 @@ I may think of others, but this is a pretty good set to start with.
 import 'dart:math';
 
 import 'package:collection/collection.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/ranking/evolution/predator_prey.dart';
-import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/ranking/evolution/predator_prey.dart';
+import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 
 class EloEvaluator extends Prey<EloEvaluator> {
   int generation;

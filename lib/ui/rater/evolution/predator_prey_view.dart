@@ -5,7 +5,7 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/ranking/evolution/predator_prey.dart';
+import 'package:shooting_sports_analyst/data/ranking/evolution/predator_prey.dart';
 
 class PredatorPreyView<P extends Prey> extends StatelessWidget {
   const PredatorPreyView({Key? key, required this.grid, required this.nonDominated, this.highlight}) : super(key: key);

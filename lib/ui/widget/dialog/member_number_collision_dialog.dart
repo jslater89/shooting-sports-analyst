@@ -7,13 +7,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/rating_error.dart';
-import 'package:uspsa_result_viewer/data/sport/match/match.dart';
-import 'package:uspsa_result_viewer/ui/rater/shooter_stats_dialog.dart';
-import 'package:uspsa_result_viewer/ui/result_page.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/ui/rater/shooter_stats_dialog.dart';
+import 'package:shooting_sports_analyst/ui/result_page.dart';
 
 class MemberNumberCollisionDialog extends StatefulWidget {
   const MemberNumberCollisionDialog({Key? key, required this.data}) : super(key: key);

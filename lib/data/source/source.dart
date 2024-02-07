@@ -5,10 +5,10 @@
  */
 
 import 'package:flutter/widgets.dart';
-import 'package:uspsa_result_viewer/data/source/match_source_error.dart';
-import 'package:uspsa_result_viewer/data/sport/sport.dart';
-import 'package:uspsa_result_viewer/data/sport/match/match.dart';
-import 'package:uspsa_result_viewer/util.dart';
+import 'package:shooting_sports_analyst/data/source/match_source_error.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 /// A MatchSource represents some way to retrieve match data from a remote source,
 /// like a database or website. Matches are keyed by a unique ID—for PractiScore, for

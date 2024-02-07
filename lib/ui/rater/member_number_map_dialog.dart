@@ -6,8 +6,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/confirm_dialog.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 
 class MemberNumberMapDialog extends StatefulWidget {
   const MemberNumberMapDialog({

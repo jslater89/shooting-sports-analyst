@@ -8,11 +8,11 @@ import 'package:charts_flutter/flutter.dart' as charts;
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_charts/flutter_charts.dart';
-import 'package:uspsa_result_viewer/data/ranking/evolution/elo_evaluation.dart';
-import 'package:uspsa_result_viewer/data/ranking/evolution/elo_tuner.dart';
+import 'package:shooting_sports_analyst/data/ranking/evolution/elo_evaluation.dart';
+import 'package:shooting_sports_analyst/data/ranking/evolution/elo_tuner.dart';
 import 'dart:ui' as ui show Color;
 
-import 'package:uspsa_result_viewer/ui/rater/evolution/pareto_front_chart.dart';
+import 'package:shooting_sports_analyst/ui/rater/evolution/pareto_front_chart.dart';
 
 class SolutionSpaceCharts extends StatefulWidget {
   const SolutionSpaceCharts({Key? key, required this.tuner, this.highlight}) : super(key: key);

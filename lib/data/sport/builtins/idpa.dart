@@ -4,9 +4,9 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:uspsa_result_viewer/data/sort_mode.dart';
-import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
-import 'package:uspsa_result_viewer/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/data/sort_mode.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 
 final _idpaPenalties = [
   const ScoringEvent("Non-Threat", timeChange: 5, alternateNames: ["Hits on Non-Threat"]),

@@ -4,10 +4,10 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/rating_change.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/rating_system.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 
 class EloRatingEvent extends RatingEvent {
   double ratingChange;

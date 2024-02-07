@@ -6,8 +6,8 @@
 
 import 'package:collection/collection.dart';
 import 'package:html_unescape/html_unescape_small.dart';
-import 'package:uspsa_result_viewer/data/match/shooter.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/match/shooter.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:http/http.dart' as http;
 
 class RegistrationResult {

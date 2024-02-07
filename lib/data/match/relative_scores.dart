@@ -7,7 +7,7 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
 
 class RelativeMatchScore {
   RelativeMatchScore({required this.shooter});

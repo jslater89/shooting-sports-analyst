@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:uspsa_result_viewer/data/ranking/model/rating_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
 
 const _betaKey = "osBeta";
 const _tauKey = "osTau";

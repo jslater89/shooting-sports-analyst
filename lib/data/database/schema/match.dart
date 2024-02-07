@@ -7,13 +7,13 @@
 
 import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
-import 'package:uspsa_result_viewer/data/database/match_database.dart';
-import 'package:uspsa_result_viewer/data/sport/builtins/registry.dart';
-import 'package:uspsa_result_viewer/data/sport/match/match.dart';
-import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
-import 'package:uspsa_result_viewer/data/sport/shooter/shooter.dart';
-import 'package:uspsa_result_viewer/data/sport/sport.dart';
-import 'package:uspsa_result_viewer/util.dart';
+import 'package:shooting_sports_analyst/data/database/match_database.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 part 'match.g.dart';
 

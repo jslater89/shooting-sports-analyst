@@ -5,7 +5,7 @@
  */
 
 import 'package:isar/isar.dart';
-import 'package:uspsa_result_viewer/data/database/match_database.dart';
+import 'package:shooting_sports_analyst/data/database/match_database.dart';
 
 sealed class MatchQueryElement {
   String get index;

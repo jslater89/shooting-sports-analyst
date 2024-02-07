@@ -6,9 +6,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:uspsa_result_viewer/data/database/match_database.dart';
-import 'package:uspsa_result_viewer/ui/matchdb/match_db_list_view.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/loading_dialog.dart';
+import 'package:shooting_sports_analyst/data/database/match_database.dart';
+import 'package:shooting_sports_analyst/ui/matchdb/match_db_list_view.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/loading_dialog.dart';
 
 class MatchDatabaseManagerPage extends StatefulWidget {
   const MatchDatabaseManagerPage({super.key});

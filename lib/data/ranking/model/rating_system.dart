@@ -5,16 +5,16 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/match/practical_match.dart';
-import 'package:uspsa_result_viewer/data/match/relative_scores.dart';
-import 'package:uspsa_result_viewer/data/match/shooter.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/rating_change.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/rating_mode.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/rating_settings.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
-import 'package:uspsa_result_viewer/data/ranking/prediction/match_prediction.dart';
-import 'package:uspsa_result_viewer/ui/rater/rater_view.dart';
-import 'package:uspsa_result_viewer/ui/widget/score_row.dart';
+import 'package:shooting_sports_analyst/data/match/practical_match.dart';
+import 'package:shooting_sports_analyst/data/match/relative_scores.dart';
+import 'package:shooting_sports_analyst/data/match/shooter.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_mode.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
+import 'package:shooting_sports_analyst/ui/rater/rater_view.dart';
+import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 
 abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C extends RaterSettingsController<S>> {
   /// Use in rating changes

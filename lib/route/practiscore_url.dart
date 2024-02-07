@@ -9,18 +9,18 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
-import 'package:uspsa_result_viewer/data/results_file_parser.dart';
-import 'package:uspsa_result_viewer/data/source/practiscore_report.dart';
-import 'package:uspsa_result_viewer/data/source/registered_sources.dart';
-import 'package:uspsa_result_viewer/data/sport/builtins/ipsc.dart';
-import 'package:uspsa_result_viewer/data/sport/builtins/uspsa.dart';
-import 'package:uspsa_result_viewer/data/sport/match/match.dart';
-import 'package:uspsa_result_viewer/data/sport/sport.dart';
-import 'package:uspsa_result_viewer/html_or/html_or.dart';
-import 'package:uspsa_result_viewer/ui/empty_scaffold.dart';
-import 'package:uspsa_result_viewer/ui/result_page.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/practiscore_parser.dart';
+import 'package:shooting_sports_analyst/data/results_file_parser.dart';
+import 'package:shooting_sports_analyst/data/source/practiscore_report.dart';
+import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/ipsc.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/ui/empty_scaffold.dart';
+import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:http/http.dart' as http;
 
 class PractiscoreResultPage extends StatefulWidget {

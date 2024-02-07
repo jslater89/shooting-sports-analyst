@@ -7,8 +7,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:uspsa_result_viewer/ui/matchdb/match_db_list_view.dart';
-import 'package:uspsa_result_viewer/util.dart';
+import 'package:shooting_sports_analyst/ui/matchdb/match_db_list_view.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 class MatchDbListViewSearch extends StatefulWidget {
   const MatchDbListViewSearch({super.key});

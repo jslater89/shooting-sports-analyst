@@ -12,21 +12,21 @@ fvm flutter build windows
 $Root = Get-Location
 cd .\build\windows\runner
 
-If(Test-Path uspsa-result-viewer) {
-    rm -r -Force uspsa-result-viewer
+If(Test-Path shooting-sports-analyst) {
+    rm -r -Force shooting-sports-analyst
 }
 
-mkdir uspsa-result-viewer
+mkdir shooting-sports-analyst
 
-cp -Force .\Release\*.exe uspsa-result-viewer
-cp -Force .\Release\*.dll uspsa-result-viewer
-cp -r -Force .\Release\data uspsa-result-viewer\
+cp -Force .\Release\*.exe shooting-sports-analyst
+cp -Force .\Release\*.dll shooting-sports-analyst
+cp -r -Force .\Release\data shooting-sports-analyst\
 
 If($Env:AppVeyor) {
     $vsPath = "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\VC\Redist\MSVC\14.34.31931\x64\Microsoft.VC143.CRT"
-    cp -Force "$vsPath\msvcp140.dll" uspsa-result-viewer
-    cp -Force "$vsPath\vcruntime140.dll" uspsa-result-viewer
-    cp -Force "$vsPath\vcruntime140_1.dll" uspsa-result-viewer
+    cp -Force "$vsPath\msvcp140.dll" shooting-sports-analyst
+    cp -Force "$vsPath\vcruntime140.dll" shooting-sports-analyst
+    cp -Force "$vsPath\vcruntime140_1.dll" shooting-sports-analyst
 
     # Get-ChildItem "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community"
     # Get-ChildItem "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\VC"
@@ -35,18 +35,18 @@ If($Env:AppVeyor) {
     # Get-ChildItem -Recurse "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\VC\Redist\MSVC"
 }
 
-cp $Root\data\L2s-Since-2019.json uspsa-result-viewer
-cp $Root\data\Nationals-and-Area-Matches.json uspsa-result-viewer
+cp $Root\data\L2s-Since-2019.json shooting-sports-analyst
+cp $Root\data\Nationals-and-Area-Matches.json shooting-sports-analyst
 
-if(Test-Path uspsa-result-viewer.zip) {
-    rm uspsa-result-viewer.zip
+if(Test-Path shooting-sports-analyst.zip) {
+    rm shooting-sports-analyst.zip
 }
 
-Compress-Archive -Path .\uspsa-result-viewer -DestinationPath uspsa-result-viewer.zip -Force
+Compress-Archive -Path .\shooting-sports-analyst -DestinationPath shooting-sports-analyst.zip -Force
 cd $Root
 If($Env:AppVeyor) {
-    cp -Force .\build\windows\runner\uspsa-result-viewer.zip uspsa-result-viewer-ci.$Env:APPVEYOR_BUILD_NUMBER-windows.zip
+    cp -Force .\build\windows\runner\shooting-sports-analyst.zip shooting-sports-analyst-ci.$Env:APPVEYOR_BUILD_NUMBER-windows.zip
 }
 Else {
-    cp -Force .\build\windows\runner\uspsa-result-viewer.zip uspsa-result-viewer-$version-windows.zip
+    cp -Force .\build\windows\runner\shooting-sports-analyst.zip shooting-sports-analyst-$version-windows.zip
 }

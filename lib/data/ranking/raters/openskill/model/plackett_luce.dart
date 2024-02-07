@@ -6,10 +6,10 @@
 
 import 'dart:math';
 
-import 'package:uspsa_result_viewer/data/ranking/model/rating_change.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/openskill/model/model_utils.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/openskill/openskill_rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/openskill/openskill_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/openskill/model/model_utils.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rating.dart';
 
 class PlackettLuce {
   void update(OpenskillRater rater, List<OpenskillScore> teams, Map<OpenskillRating, RatingChange> changes) {

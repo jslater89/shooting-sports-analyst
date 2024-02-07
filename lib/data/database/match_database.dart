@@ -8,12 +8,12 @@ import 'dart:async';
 
 import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
-import 'package:uspsa_result_viewer/data/database/match_query_element.dart';
-import 'package:uspsa_result_viewer/data/database/schema/match.dart';
-import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
-import 'package:uspsa_result_viewer/data/sport/match/match.dart';
-import 'package:uspsa_result_viewer/data/sport/match/translator.dart';
-import 'package:uspsa_result_viewer/util.dart';
+import 'package:shooting_sports_analyst/data/database/match_query_element.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match.dart';
+import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/match/translator.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 class MatchDatabase {
   static const eventNameIndex = "eventNameParts";

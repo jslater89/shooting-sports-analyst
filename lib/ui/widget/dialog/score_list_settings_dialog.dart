@@ -5,7 +5,7 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/ui/result_page.dart';
+import 'package:shooting_sports_analyst/ui/result_page.dart';
 
 class ScoreListSettingsDialog extends StatefulWidget {
   const ScoreListSettingsDialog({Key? key, required this.initialSettings, required this.showRatingsSettings}) : super(key: key);

@@ -5,9 +5,9 @@
  */
 
 import 'package:flutter/foundation.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:intl/intl.dart';
-import 'package:uspsa_result_viewer/util.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 const verboseParse = false;
 

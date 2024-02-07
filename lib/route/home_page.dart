@@ -8,22 +8,22 @@ import 'dart:convert';
 // ignore: avoid_web_libraries_in_flutter
 import 'package:flutter/foundation.dart';
 import 'package:fluttericon/rpg_awesome_icons.dart';
-import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/source/registered_sources.dart';
-import 'package:uspsa_result_viewer/data/source/source.dart';
-import 'package:uspsa_result_viewer/data/sport/match/match.dart';
-import 'package:uspsa_result_viewer/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
+import 'package:shooting_sports_analyst/data/source/source.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/html_or/html_or.dart';
 
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
-import 'package:uspsa_result_viewer/main.dart';
-import 'package:uspsa_result_viewer/route/elo_tuner_page.dart';
-import 'package:uspsa_result_viewer/route/match_database_manager.dart';
-import 'package:uspsa_result_viewer/ui/empty_scaffold.dart';
-import 'package:uspsa_result_viewer/ui/result_page.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/match_cache_chooser_dialog.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/match_source_chooser_dialog.dart';
+import 'package:shooting_sports_analyst/data/practiscore_parser.dart';
+import 'package:shooting_sports_analyst/main.dart';
+import 'package:shooting_sports_analyst/route/elo_tuner_page.dart';
+import 'package:shooting_sports_analyst/route/match_database_manager.dart';
+import 'package:shooting_sports_analyst/ui/empty_scaffold.dart';
+import 'package:shooting_sports_analyst/ui/result_page.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/match_cache_chooser_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/match_source_chooser_dialog.dart';
 
 class HomePage extends StatefulWidget {
   @override

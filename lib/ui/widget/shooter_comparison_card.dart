@@ -5,9 +5,9 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
-import 'package:uspsa_result_viewer/data/sport/shooter/shooter.dart';
-import 'package:uspsa_result_viewer/util.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 class ShooterComparisonCard extends StatelessWidget {
   const ShooterComparisonCard({

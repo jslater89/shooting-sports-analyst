@@ -5,10 +5,10 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
-import 'package:uspsa_result_viewer/data/sport/shooter/shooter.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/add_comparison_dialog.dart';
-import 'package:uspsa_result_viewer/ui/widget/shooter_comparison_card.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/add_comparison_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/shooter_comparison_card.dart';
 
 class CompareShooterResultsPage extends StatefulWidget {
   CompareShooterResultsPage({Key? key, required this.scores, this.initialShooters = const []}) : super(key: key);

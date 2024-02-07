@@ -5,9 +5,9 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/source/registered_sources.dart';
-import 'package:uspsa_result_viewer/data/source/source.dart';
-import 'package:uspsa_result_viewer/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
+import 'package:shooting_sports_analyst/data/source/source.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 
 class MatchSourceChooserDialog extends StatefulWidget {
   const MatchSourceChooserDialog({Key? key, this.hintText, required this.sources, this.title, this.descriptionText, this.validator}) : super(key: key);

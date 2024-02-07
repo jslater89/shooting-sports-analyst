@@ -5,9 +5,9 @@
  */
 
 
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/openskill/openskill_rating_change.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rating_change.dart';
 
 class OpenskillRating extends ShooterRating {
   @override

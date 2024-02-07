@@ -1,6 +1,6 @@
 {
-  "name": "uspsa_results_viewer",
-  "short_name": "uspsa_results_viewer",
+  "name": "Shooting Sports Analyst",
+  "short_name": "SSA",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#ffffff",

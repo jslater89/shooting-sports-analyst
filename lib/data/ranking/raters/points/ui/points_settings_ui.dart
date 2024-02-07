@@ -7,8 +7,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/rating_settings.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/points/points_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/points/points_settings.dart';
 
 class PointsSettingsController extends RaterSettingsController<PointsSettings> with ChangeNotifier {
   PointsSettings _currentSettings;

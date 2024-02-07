@@ -7,9 +7,9 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/ranking/evolution/elo_evaluation.dart';
-import 'package:uspsa_result_viewer/data/ranking/evolution/elo_tuner.dart';
-import 'package:uspsa_result_viewer/data/ranking/evolution/predator_prey.dart';
+import 'package:shooting_sports_analyst/data/ranking/evolution/elo_evaluation.dart';
+import 'package:shooting_sports_analyst/data/ranking/evolution/elo_tuner.dart';
+import 'package:shooting_sports_analyst/data/ranking/evolution/predator_prey.dart';
 
 class ParetoFrontChart extends StatelessWidget {
   const ParetoFrontChart({Key? key, required this.tuner, required this.fX, required this.fY, this.highlight}) : super(key: key);

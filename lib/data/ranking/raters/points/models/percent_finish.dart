@@ -6,10 +6,10 @@
 
 
 import 'package:collection/collection.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/points/points_rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/points/points_settings.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/points/points_settings.dart';
 
 class PercentFinish extends PointsModel {
   PercentFinish(PointsSettings settings) : super(settings);

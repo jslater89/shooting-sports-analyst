@@ -5,7 +5,7 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 
 class RaterGroupsDialog extends StatefulWidget {
   const RaterGroupsDialog({Key? key, required this.groups}) : super(key: key);

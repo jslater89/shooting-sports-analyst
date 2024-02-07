@@ -6,8 +6,8 @@
 
 import 'dart:convert';
 
-import 'package:uspsa_result_viewer/data/ranking/model/rating_settings.dart';
-import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
 
 const _kKey = "k";
 const _probBaseKey = "probBase";

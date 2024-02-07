@@ -8,20 +8,20 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
-// import 'package:uspsa_result_viewer/data/db/object/rating/rating_event.dart';
-// import 'package:uspsa_result_viewer/data/db/object/rating/rating_project.dart';
-// import 'package:uspsa_result_viewer/data/db/object/rating/shooter_rating.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/ranking/member_number_correction.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/openskill/model/model_utils.dart';
-import 'package:uspsa_result_viewer/data/ranking/rating_error.dart';
-import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
-import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
-import 'package:uspsa_result_viewer/data/ranking/timings.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
+// import 'package:shooting_sports_analyst/data/db/object/rating/rating_event.dart';
+// import 'package:shooting_sports_analyst/data/db/object/rating/rating_project.dart';
+// import 'package:shooting_sports_analyst/data/db/object/rating/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/openskill/model/model_utils.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/data/ranking/shooter_aliases.dart';
+import 'package:shooting_sports_analyst/data/ranking/timings.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:fuzzywuzzy/fuzzywuzzy.dart' as strdiff;
-import 'package:uspsa_result_viewer/util.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 class Rater {
   List<PracticalMatch> _matches;

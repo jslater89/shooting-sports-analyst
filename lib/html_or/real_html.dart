@@ -10,7 +10,7 @@ import 'dart:html';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:uspsa_result_viewer/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/html_or/html_or.dart';
 
 Controller _controller = Controller();
 Controller get controller => _controller;

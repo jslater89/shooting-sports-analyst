@@ -5,7 +5,7 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/util.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 import 'model/shooter_rating.dart';
 

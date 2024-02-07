@@ -4,14 +4,14 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:uspsa_result_viewer/data/match/practical_match.dart' as old;
-import 'package:uspsa_result_viewer/data/match/score.dart';
-import 'package:uspsa_result_viewer/data/match/shooter.dart' as oldS;
-import 'package:uspsa_result_viewer/data/sport/builtins/uspsa.dart';
-import 'package:uspsa_result_viewer/data/sport/match/match.dart';
-import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
-import 'package:uspsa_result_viewer/data/sport/shooter/shooter.dart';
-import 'package:uspsa_result_viewer/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/data/match/practical_match.dart' as old;
+import 'package:shooting_sports_analyst/data/match/score.dart';
+import 'package:shooting_sports_analyst/data/match/shooter.dart' as oldS;
+import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 
 extension MatchTranslator on ShootingMatch {
   static ShootingMatch shootingMatchFrom(old.PracticalMatch match) {

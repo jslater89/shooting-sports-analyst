@@ -7,11 +7,11 @@
 // No longer needed
 
 // import 'package:flutter/foundation.dart';
-// import 'package:uspsa_result_viewer/data/model.dart';
-// import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
-// import 'package:uspsa_result_viewer/data/ranking/rater.dart';
-// import 'package:uspsa_result_viewer/data/ranking/raters/multiplayer_percent_elo_rater.dart';
-// import 'package:uspsa_result_viewer/ui/filter_dialog.dart';
+// import 'package:shooting_sports_analyst/data/model.dart';
+// import 'package:shooting_sports_analyst/data/practiscore_parser.dart';
+// import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+// import 'package:shooting_sports_analyst/data/ranking/raters/multiplayer_percent_elo_rater.dart';
+// import 'package:shooting_sports_analyst/ui/filter_dialog.dart';
 //
 // var classicNationalsUrls = [
 //   "https://practiscore.com/results/new/117062",

@@ -5,8 +5,8 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/confirm_dialog.dart';
+import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 
 class EnterUrlsDialog extends StatefulWidget {
   const EnterUrlsDialog({

@@ -10,31 +10,31 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttericon/rpg_awesome_icons.dart';
-import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
-import 'package:uspsa_result_viewer/data/ranking/rating_error.dart';
-import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
-import 'package:uspsa_result_viewer/data/results_file_parser.dart';
-import 'package:uspsa_result_viewer/data/search_query_parser.dart';
-import 'package:uspsa_result_viewer/data/sport/match/match.dart';
-import 'package:uspsa_result_viewer/html_or/html_or.dart';
-import 'package:uspsa_result_viewer/ui/rater/member_number_correction_dialog.dart';
-import 'package:uspsa_result_viewer/ui/rater/member_number_dialog.dart';
-import 'package:uspsa_result_viewer/ui/rater/prediction/prediction_view.dart';
-import 'package:uspsa_result_viewer/ui/rater/prediction/registration_parser.dart';
-import 'package:uspsa_result_viewer/ui/rater/rater_stats_dialog.dart';
-import 'package:uspsa_result_viewer/ui/rater/rater_view.dart';
-import 'package:uspsa_result_viewer/ui/rater/rating_filter_dialog.dart';
-import 'package:uspsa_result_viewer/ui/result_page.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/associate_registrations.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/match_cache_chooser_dialog.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/member_number_collision_dialog.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/url_entry_dialog.dart';
-import 'package:uspsa_result_viewer/util.dart';
+import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/data/results_file_parser.dart';
+import 'package:shooting_sports_analyst/data/search_query_parser.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/ui/rater/member_number_correction_dialog.dart';
+import 'package:shooting_sports_analyst/ui/rater/member_number_dialog.dart';
+import 'package:shooting_sports_analyst/ui/rater/prediction/prediction_view.dart';
+import 'package:shooting_sports_analyst/ui/rater/prediction/registration_parser.dart';
+import 'package:shooting_sports_analyst/ui/rater/rater_stats_dialog.dart';
+import 'package:shooting_sports_analyst/ui/rater/rater_view.dart';
+import 'package:shooting_sports_analyst/ui/rater/rating_filter_dialog.dart';
+import 'package:shooting_sports_analyst/ui/result_page.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/associate_registrations.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/match_cache_chooser_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/member_number_collision_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/url_entry_dialog.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 class RatingsViewPage extends StatefulWidget {
   const RatingsViewPage({
@@ -891,7 +891,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       message =
           "The manual member number mapping below was entered in reverse: the source "
               "rating (on the left) contains no history, while the target rating "
-              "(on the right) contains history. USPSA Analyst can fix this automatically, "
+              "(on the right) contains history. Analyst can fix this automatically, "
               "or delete the user mapping.";
     }
     else {

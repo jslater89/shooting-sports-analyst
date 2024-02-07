@@ -7,8 +7,8 @@
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 
 // This file parses search queries of the form
 // ?revolver and b or production and c or singlestack and major or "jay slater".

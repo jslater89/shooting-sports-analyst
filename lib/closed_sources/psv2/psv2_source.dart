@@ -9,11 +9,11 @@ This is the PSv2 stub.
  */
 
 import 'package:flutter/src/widgets/framework.dart';
-import 'package:uspsa_result_viewer/data/source/match_source_error.dart';
-import 'package:uspsa_result_viewer/data/source/source.dart';
-import 'package:uspsa_result_viewer/data/sport/match/match.dart';
-import 'package:uspsa_result_viewer/data/sport/sport.dart';
-import 'package:uspsa_result_viewer/util.dart';
+import 'package:shooting_sports_analyst/data/source/match_source_error.dart';
+import 'package:shooting_sports_analyst/data/source/source.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 /*
 This is a stub file. The full PSv2 source is implemented elsewhere.

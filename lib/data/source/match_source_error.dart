@@ -1,5 +1,5 @@
-import 'package:uspsa_result_viewer/data/sport/sport.dart';
-import 'package:uspsa_result_viewer/util.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public

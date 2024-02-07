@@ -6,11 +6,11 @@
 
 
 import 'package:collection/collection.dart';
-import 'package:uspsa_result_viewer/data/ranking/evolution/elo_evaluation.dart';
-import 'package:uspsa_result_viewer/data/ranking/evolution/genome.dart';
-import 'package:uspsa_result_viewer/data/ranking/evolution/predator_prey.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.dart';
-import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/data/ranking/evolution/elo_evaluation.dart';
+import 'package:shooting_sports_analyst/data/ranking/evolution/genome.dart';
+import 'package:shooting_sports_analyst/data/ranking/evolution/predator_prey.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 import 'dart:math' as math;
 
 var _r = math.Random();

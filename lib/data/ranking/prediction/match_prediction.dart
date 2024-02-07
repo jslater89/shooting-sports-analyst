@@ -17,7 +17,7 @@ See if rating percentage correlates with match finish percentage?
 2. As above, but with probabilities.
  */
 
-import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 
 /// A prediction for a shooter's finish.
 ///

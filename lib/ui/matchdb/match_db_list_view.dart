@@ -6,12 +6,12 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:uspsa_result_viewer/data/database/match_database.dart';
-import 'package:uspsa_result_viewer/data/database/schema/match.dart';
-import 'package:uspsa_result_viewer/ui/matchdb/widget/match_db_list_view_search.dart';
-import 'package:uspsa_result_viewer/ui/result_page.dart';
-import 'package:uspsa_result_viewer/ui/widget/score_row.dart';
-import 'package:uspsa_result_viewer/util.dart';
+import 'package:shooting_sports_analyst/data/database/match_database.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match.dart';
+import 'package:shooting_sports_analyst/ui/matchdb/widget/match_db_list_view_search.dart';
+import 'package:shooting_sports_analyst/ui/result_page.dart';
+import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 class MatchDatabaseListView extends StatefulWidget {
   const MatchDatabaseListView({super.key});

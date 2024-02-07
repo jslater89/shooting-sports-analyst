@@ -5,13 +5,13 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
-import 'package:uspsa_result_viewer/data/sport/shooter/shooter.dart';
-import 'package:uspsa_result_viewer/data/sport/sport.dart';
-import 'package:uspsa_result_viewer/html_or/html_or.dart';
-import 'package:uspsa_result_viewer/ui/widget/captioned_text.dart';
-import 'package:uspsa_result_viewer/ui/widget/score_list.dart';
-import 'package:uspsa_result_viewer/util.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/ui/widget/captioned_text.dart';
+import 'package:shooting_sports_analyst/ui/widget/score_list.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 class ShooterResultCard extends StatelessWidget {
   final RelativeMatchScore? matchScore;

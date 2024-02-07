@@ -8,8 +8,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/rating_settings.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settings.dart';
 
 class EloSettingsController extends RaterSettingsController<EloSettings> with ChangeNotifier {
   EloSettings _currentSettings;

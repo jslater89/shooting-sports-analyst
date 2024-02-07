@@ -9,10 +9,10 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_charts/flutter_charts.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
-import 'package:uspsa_result_viewer/ui/widget/box_and_whisker.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/ui/widget/box_and_whisker.dart';
 
 class RaterStatsDialog extends StatefulWidget {
   const RaterStatsDialog(this.group, this.statistics, {Key? key}) : super(key: key);

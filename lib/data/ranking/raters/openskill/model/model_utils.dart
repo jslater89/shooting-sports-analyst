@@ -7,7 +7,7 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/openskill/openskill_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rater.dart';
 
 class ModelUtils {
   static void fillRankings(List<OpenskillScore> teams) {

@@ -7,13 +7,13 @@
 import 'package:collection/collection.dart' show IterableExtension;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/results_file_parser.dart';
-import 'package:uspsa_result_viewer/data/source/registered_sources.dart';
-import 'package:uspsa_result_viewer/data/source/source.dart';
-import 'package:uspsa_result_viewer/route/practiscore_url.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/url_entry_dialog.dart';
-import 'package:uspsa_result_viewer/util.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/results_file_parser.dart';
+import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
+import 'package:shooting_sports_analyst/data/source/source.dart';
+import 'package:shooting_sports_analyst/route/practiscore_url.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/url_entry_dialog.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 
 String getClubNameToken(String source) {

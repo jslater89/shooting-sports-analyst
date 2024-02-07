@@ -5,12 +5,12 @@
  */
 
 import 'package:collection/collection.dart';
-import 'package:uspsa_result_viewer/closed_sources/psv2/psv2_source.dart';
-import 'package:uspsa_result_viewer/data/source/practiscore_report.dart';
-import 'package:uspsa_result_viewer/data/source/source.dart';
-import 'package:uspsa_result_viewer/data/sport/builtins/ipsc.dart';
-import 'package:uspsa_result_viewer/data/sport/builtins/pcsl.dart';
-import 'package:uspsa_result_viewer/data/sport/builtins/uspsa.dart';
+import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
+import 'package:shooting_sports_analyst/data/source/practiscore_report.dart';
+import 'package:shooting_sports_analyst/data/source/source.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/ipsc.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/pcsl.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 
 class MatchSourceRegistry {
   static MatchSourceRegistry? _instance;

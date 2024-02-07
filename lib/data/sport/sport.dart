@@ -5,9 +5,9 @@
  */
 
 import 'package:collection/collection.dart';
-import 'package:uspsa_result_viewer/data/sort_mode.dart';
-import 'package:uspsa_result_viewer/data/sport/display_settings.dart';
-import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sort_mode.dart';
+import 'package:shooting_sports_analyst/data/sport/display_settings.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 
 /// A Sport is a shooting sports discipline.
 class Sport {

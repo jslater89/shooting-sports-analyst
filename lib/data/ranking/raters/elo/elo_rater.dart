@@ -10,8 +10,8 @@
 // import 'dart:math';
 //
 // import 'package:flutter/foundation.dart';
-// import 'package:uspsa_result_viewer/data/model.dart';
-// import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
+// import 'package:shooting_sports_analyst/data/model.dart';
+// import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 //
 // class EloRater implements RatingSystem {
 //   @override

@@ -4,10 +4,10 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:uspsa_result_viewer/data/sport/builtins/sorts.dart';
-import 'package:uspsa_result_viewer/data/sport/display_settings.dart';
-import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
-import 'package:uspsa_result_viewer/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/sorts.dart';
+import 'package:shooting_sports_analyst/data/sport/display_settings.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 
 const _pcslProcedural = ScoringEvent("Procedural", shortName: "P", pointChange: -10);
 const _pcslOvertimeShot = ScoringEvent("Overtime Shot", shortName: "OS", pointChange: -5);

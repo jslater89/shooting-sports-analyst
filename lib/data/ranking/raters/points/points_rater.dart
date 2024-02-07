@@ -7,24 +7,24 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/match/practical_match.dart';
-import 'package:uspsa_result_viewer/data/match/relative_scores.dart';
-import 'package:uspsa_result_viewer/data/match/shooter.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/rating_change.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/rating_mode.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/rating_system.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
-import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/points/models/decaying_points.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/points/models/f1_points.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/points/models/inverse_place.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/points/models/percent_finish.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/points/points_rating.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/points/points_rating_change.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/points/points_settings.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/points/ui/points_settings_ui.dart';
-import 'package:uspsa_result_viewer/ui/rater/rater_view.dart';
-import 'package:uspsa_result_viewer/ui/widget/score_row.dart';
+import 'package:shooting_sports_analyst/data/match/practical_match.dart';
+import 'package:shooting_sports_analyst/data/match/relative_scores.dart';
+import 'package:shooting_sports_analyst/data/match/shooter.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_mode.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/points/models/decaying_points.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/points/models/f1_points.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/points/models/inverse_place.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/points/models/percent_finish.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rating_change.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/points/points_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/points/ui/points_settings_ui.dart';
+import 'package:shooting_sports_analyst/ui/rater/rater_view.dart';
+import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 
 class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSettingsController> {
   PointsRater(this.settings) : model = PointsModel.fromSettings(settings);

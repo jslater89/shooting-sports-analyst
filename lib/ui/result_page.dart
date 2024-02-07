@@ -11,24 +11,24 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:uspsa_result_viewer/data/database/match_database.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
-import 'package:uspsa_result_viewer/data/search_query_parser.dart';
-import 'package:uspsa_result_viewer/data/sort_mode.dart';
-import 'package:uspsa_result_viewer/data/sport/match/match.dart';
-import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
-import 'package:uspsa_result_viewer/data/sport/shooter/shooter.dart';
-import 'package:uspsa_result_viewer/data/sport/sport.dart';
-import 'package:uspsa_result_viewer/html_or/html_or.dart';
-import 'package:uspsa_result_viewer/route/compare_shooter_results.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/about_dialog.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/score_list_settings_dialog.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/score_stats_dialog.dart';
-import 'package:uspsa_result_viewer/ui/widget/filter_controls.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/match_breakdown.dart';
-import 'package:uspsa_result_viewer/ui/widget/score_list.dart';
+import 'package:shooting_sports_analyst/data/database/match_database.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/data/search_query_parser.dart';
+import 'package:shooting_sports_analyst/data/sort_mode.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/route/compare_shooter_results.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/about_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/score_list_settings_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/score_stats_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/filter_controls.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/match_breakdown.dart';
+import 'package:shooting_sports_analyst/ui/widget/score_list.dart';
 
 class ResultPage extends StatefulWidget {
   final ShootingMatch canonicalMatch;
@@ -44,7 +44,7 @@ class ResultPage extends StatefulWidget {
   const ResultPage({
     Key? key,
     required this.canonicalMatch,
-    this.appChromeLabel = "USPSA Analyst",
+    this.appChromeLabel = "Shooting Sports Analyst",
     this.allowWhatIf = true,
     this.initialFilters,
     this.initialStage,
@@ -606,7 +606,7 @@ class _ResultPageState extends State<ResultPage> {
         onWillPop: () async {
           if(kIsWeb) {
             SystemChrome.setApplicationSwitcherDescription(ApplicationSwitcherDescription(
-              label: "USPSA Analyst",
+              label: "Shooting Sports Analyst",
               primaryColor: 0x3f51b5, // Colors.indigo
             ));
           }

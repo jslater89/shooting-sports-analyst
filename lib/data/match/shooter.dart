@@ -5,9 +5,9 @@
  */
 
 import 'package:flutter/foundation.dart';
-// import 'package:uspsa_result_viewer/data/db/object/match/shooter.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/results_file_parser.dart';
+// import 'package:shooting_sports_analyst/data/db/object/match/shooter.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/results_file_parser.dart';
 
 class Shooter {
   String firstName = "";

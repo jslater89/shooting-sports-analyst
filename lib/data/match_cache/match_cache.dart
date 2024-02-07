@@ -10,10 +10,10 @@ import 'dart:io';
 import 'package:collection/collection.dart';
 import 'package:hive/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
-import 'package:uspsa_result_viewer/data/results_file_parser.dart';
-import 'package:uspsa_result_viewer/util.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/practiscore_parser.dart';
+import 'package:shooting_sports_analyst/data/results_file_parser.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 part 'match_cache.g.dart';
 

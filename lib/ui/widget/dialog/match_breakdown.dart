@@ -5,8 +5,8 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/sport/shooter/shooter.dart';
-import 'package:uspsa_result_viewer/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 
 class MatchBreakdown extends StatelessWidget {
   final List<MatchEntry> shooters;

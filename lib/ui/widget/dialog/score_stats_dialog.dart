@@ -5,9 +5,9 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/sport/match/match.dart';
-import 'package:uspsa_result_viewer/data/sport/scoring/scoring.dart';
-import 'package:uspsa_result_viewer/util.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 class ScoreStatsDialog extends StatefulWidget {
   const ScoreStatsDialog({super.key, required this.scores, this.stage});

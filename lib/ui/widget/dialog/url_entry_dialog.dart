@@ -5,8 +5,8 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/source/registered_sources.dart';
-import 'package:uspsa_result_viewer/data/source/source.dart';
+import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
+import 'package:shooting_sports_analyst/data/source/source.dart';
 
 class UrlEntryDialog extends StatefulWidget {
   const UrlEntryDialog({Key? key, this.hintText, this.sources, this.title, this.descriptionText, this.validator}) : super(key: key);

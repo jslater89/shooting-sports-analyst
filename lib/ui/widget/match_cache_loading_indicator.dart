@@ -5,7 +5,7 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
+import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
 
 class MatchCacheLoadingIndicator extends StatefulWidget {
   const MatchCacheLoadingIndicator({Key? key}) : super(key: key);

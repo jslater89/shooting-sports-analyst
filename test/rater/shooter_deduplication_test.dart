@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/rating_error.dart';
-import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 
 void main() async {
 

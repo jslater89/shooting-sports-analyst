@@ -7,8 +7,8 @@
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/html_or/html_or.dart';
-import 'package:uspsa_result_viewer/version.dart';
+import 'package:shooting_sports_analyst/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/version.dart';
 
 void showAbout(BuildContext context, Size screenSize) {
   showDialog(
@@ -38,7 +38,7 @@ void showAbout(BuildContext context, Size screenSize) {
                         ),
                         TextSpan(
                             style: Theme.of(context).textTheme.bodyText1,
-                            text: " for more information.\n\nUSPSA Analyst v${VersionInfo.version}\n© Jay Slater ${DateTime.now().year}\nGPL 3.0+"
+                            text: " for more information.\n\Shooting Sports Analyst v${VersionInfo.version}\n© Jay Slater ${DateTime.now().year}\nGPL 3.0+"
                         )
                       ]
                   )

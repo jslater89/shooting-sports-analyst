@@ -7,11 +7,11 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
-// import 'package:uspsa_result_viewer/data/db/object/rating/elo/db_elo_rating.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rating_change.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
+// import 'package:shooting_sports_analyst/data/db/object/rating/elo/db_elo_rating.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rating_change.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 
 class EloShooterRating extends ShooterRating {
   static late double errorScale;

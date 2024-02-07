@@ -7,16 +7,16 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
-// import 'package:uspsa_result_viewer/data/db/object/match/shooter.dart';
-// import 'package:uspsa_result_viewer/data/db/object/rating/shooter_rating.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/average_rating.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/connected_shooter.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/rating_change.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater.dart';
-import 'package:uspsa_result_viewer/data/sorted_list.dart';
-import 'package:uspsa_result_viewer/data/sport/match/match.dart';
-import 'package:uspsa_result_viewer/util.dart';
+// import 'package:shooting_sports_analyst/data/db/object/match/shooter.dart';
+// import 'package:shooting_sports_analyst/data/db/object/rating/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/average_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/connected_shooter.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/sorted_list.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 abstract class ShooterRating extends Shooter {
   /// The number of events over which trend/variance are calculated.

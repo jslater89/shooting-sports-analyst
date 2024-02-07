@@ -7,16 +7,16 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
-import 'package:uspsa_result_viewer/data/ranking/prediction/match_prediction.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
-import 'package:uspsa_result_viewer/html_or/html_or.dart';
-import 'package:uspsa_result_viewer/ui/widget/box_and_whisker.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/confirm_dialog.dart';
-import 'package:uspsa_result_viewer/ui/widget/score_row.dart';
+import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/practiscore_parser.dart';
+import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
+import 'package:shooting_sports_analyst/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/ui/widget/box_and_whisker.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 
 class PredictionView extends StatefulWidget {
   const PredictionView({Key? key, required this.rater, required this.predictions}) : super(key: key);

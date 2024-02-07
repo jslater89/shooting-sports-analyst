@@ -5,7 +5,7 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/about_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/about_dialog.dart';
 
 class EmptyScaffold extends StatelessWidget {
   final Widget? child;
@@ -25,7 +25,7 @@ class EmptyScaffold extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-      title: Text(title ?? "USPSA Analyst"),
+      title: Text(title ?? "Shooting Sports Analyst"),
         centerTitle: true,
         actions: [
           ...actions,

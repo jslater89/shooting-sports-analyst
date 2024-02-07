@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:uspsa_result_viewer/data/sort_mode.dart';
+import 'package:shooting_sports_analyst/data/sort_mode.dart';
 
 const hitFactorSorts = [
   SortMode.score,

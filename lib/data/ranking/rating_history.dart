@@ -5,20 +5,20 @@
  */
 
 import 'package:flutter/foundation.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/ranking/member_number_correction.dart';
-import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/rating_error.dart';
-import 'package:uspsa_result_viewer/data/ranking/timings.dart';
-import 'package:uspsa_result_viewer/data/sport/builtins/uspsa.dart';
-import 'package:uspsa_result_viewer/data/sport/match/match.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
-import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart' as defaultAliases;
-import 'package:uspsa_result_viewer/ui/widget/dialog/member_number_collision_dialog.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
+import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
+import 'package:shooting_sports_analyst/data/ranking/timings.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
+import 'package:shooting_sports_analyst/data/ranking/shooter_aliases.dart' as defaultAliases;
+import 'package:shooting_sports_analyst/ui/widget/dialog/member_number_collision_dialog.dart';
 
 /// RatingHistory turns a sequence of [PracticalMatch]es into a series of
 /// [Rater]s.

@@ -12,15 +12,15 @@ import 'package:flutter/widgets.dart';
 import 'package:hive/hive.dart';
 import 'package:sanitize_filename/sanitize_filename.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:uspsa_result_viewer/data/match/shooter.dart';
-import 'package:uspsa_result_viewer/data/ranking/member_number_correction.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/openskill/openskill_rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/points/points_rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
-import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
-import 'package:uspsa_result_viewer/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/data/match/shooter.dart';
+import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/data/ranking/shooter_aliases.dart';
+import 'package:shooting_sports_analyst/html_or/html_or.dart';
 
 class RatingProjectManager {
   static const projectPrefix = "project/";
