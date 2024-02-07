@@ -1222,6 +1222,8 @@ extension _Utilities on RaterGroup {
         return "LIM/LO/CO";
       case RaterGroup.opticHandguns:
         return "OPEN/LO/CO";
+      case RaterGroup.ironsHandguns:
+        return "IRONS";
       case RaterGroup.combined:
         return "COMBINED";
     }

@@ -277,6 +277,7 @@ enum RaterGroup {
   limOpsCO,
   limLoCo,
   opticHandguns,
+  ironsHandguns,
   combined;
 
   static get defaultGroups => [
@@ -350,6 +351,8 @@ enum RaterGroup {
         return [Division.limited, Division.limitedOptics];
       case RaterGroup.opticHandguns:
         return [Division.open, Division.carryOptics, Division.limitedOptics];
+      case RaterGroup.ironsHandguns:
+        return [Division.limited, Division.production, Division.singleStack, Division.revolver, Division.limited10];
       case RaterGroup.combined:
         return Division.values;
     }
@@ -389,6 +392,8 @@ enum RaterGroup {
         return "Limited/LO";
       case RaterGroup.opticHandguns:
         return "Optic Handguns";
+      case RaterGroup.ironsHandguns:
+        return "Irons Handguns";
       case RaterGroup.combined:
         return "Combined";
     }

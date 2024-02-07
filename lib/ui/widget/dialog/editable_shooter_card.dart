@@ -45,7 +45,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
   void initState() {
     super.initState();
 
-    _timeController.text = _score.finalTime.toStringAsFixed(2);
+    _timeController.text = _score.rawTime.toStringAsFixed(2);
     var pf = _shooter.powerFactor;
     for(var event in pf.targetEvents.values) {
       _targetControllers[event] = TextEditingController(text: "${_score.targetEvents[event] ?? 0}");

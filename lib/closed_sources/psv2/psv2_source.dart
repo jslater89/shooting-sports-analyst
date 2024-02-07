@@ -8,6 +8,7 @@
 This is the PSv2 stub.
  */
 
+import 'package:flutter/src/widgets/framework.dart';
 import 'package:uspsa_result_viewer/data/source/match_source_error.dart';
 import 'package:uspsa_result_viewer/data/source/source.dart';
 import 'package:uspsa_result_viewer/data/sport/match/match.dart';
@@ -35,7 +36,7 @@ class PSv2MatchSource extends MatchSource {
   }
 
   @override
-  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromSearch(MatchSearchResult<InternalMatchType> result) {
+  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromSearch(MatchSearchResult<InternalMatchType> result, {Sport? sport, SportType? typeHint}) {
     throw UnimplementedError();
   }
 
@@ -64,8 +65,14 @@ class PSv2MatchSource extends MatchSource {
   String get code => "psv2";
 
   @override
-  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromId(String id, {SportType? typeHint}) {
+  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromId(String id, {Sport? sport, SportType? typeHint}) {
     // TODO: implement getMatchFromId
+    throw UnimplementedError();
+  }
+
+  @override
+  Widget getDownloadMatchUI(void Function(ShootingMatch p1) onMatchSelected) {
+    // TODO: implement getDownloadMatchUI
     throw UnimplementedError();
   }
 }
