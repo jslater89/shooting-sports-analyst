@@ -32,13 +32,13 @@ void showAbout(BuildContext context, Size screenSize) {
                             text: "https://github.com/jslater89/uspsa-result-viewer",
                             style: Theme.of(context).textTheme.bodyText1!.apply(color: Theme.of(context).colorScheme.primary),
                             recognizer: TapGestureRecognizer()..onTap = () async {
-                              String url = "https://github.com/jslater89/uspsa-result-viewer";
+                              String url = "https://github.com/jslater89/shooting-sports-analyst";
                               HtmlOr.openLink(url);
                             }
                         ),
                         TextSpan(
                             style: Theme.of(context).textTheme.bodyText1,
-                            text: " for more information.\n\Shooting Sports Analyst v${VersionInfo.version}\n© Jay Slater ${DateTime.now().year}\nGPL 3.0+"
+                            text: " for more information.\n\Shooting Sports Analyst v${VersionInfo.version}\nMostly licensed under MPL 2.0"
                         )
                       ]
                   )

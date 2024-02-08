@@ -50,3 +50,16 @@ For result viewer issues, or Elo rater UI issues, open a pull request.
 For Elo rater algorithm issues, please open an issue and attach an exported rater project that
 demonstrates the issue first, and be prepared to discuss and/or justify any proposed changes to the
 math.
+
+## Licensing
+Shooting Sports Analyst, as of version 7.0.0 and the Great Renaming, is mainly licensed under the
+Mozilla Public License v2.0. Certain files in released versions may not be permissively licensed
+or open-source, and are noted as such. Under the MPL, you may write additional code to link
+Shooting Sports Analyst to your proprietary systems. (The MatchSource API in this project is
+intended for just such a use.) You are not required to share code in new files. Any modifications
+to existing MPL-licensed Shooting Sports Analyst files must be made available in the usual open-
+source way.
+
+The above does not constitute legal advice.
+
+Versions of Shooting Sports Analyst/USPSA Analyst prior to 7.0.0 remain GPL-licensed.
