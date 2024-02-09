@@ -29,7 +29,7 @@ void showAbout(BuildContext context, Size screenSize) {
                                 "Visit the repository at "
                         ),
                         TextSpan(
-                            text: "https://github.com/jslater89/uspsa-result-viewer",
+                            text: "https://github.com/jslater89/shooting-sports-analyst",
                             style: Theme.of(context).textTheme.bodyText1!.apply(color: Theme.of(context).colorScheme.primary),
                             recognizer: TapGestureRecognizer()..onTap = () async {
                               String url = "https://github.com/jslater89/shooting-sports-analyst";
