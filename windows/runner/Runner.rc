@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "GeneriCo Limited" "\0"
-            VALUE "FileDescription", "uspsa_result_viewer" "\0"
+            VALUE "CompanyName", "Shooting Sports Analyst LLC" "\0"
+            VALUE "FileDescription", "Shooting Sports Analyst" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "uspsa_result_viewer" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2022 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "uspsa_result_viewer.exe" "\0"
-            VALUE "ProductName", "uspsa_result_viewer" "\0"
+            VALUE "InternalName", "shooting_sports_analyst" "\0"
+            VALUE "LegalCopyright", "© contributors. MPL v2.0." "\0"
+            VALUE "OriginalFilename", "shooting_sports_analyst.exe" "\0"
+            VALUE "ProductName", "shooting_sports_analyst" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
