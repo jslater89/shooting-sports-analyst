@@ -232,7 +232,7 @@ class _ResultPageState extends State<ResultPage> {
         scores.sortByScore(stage: _stage);
         break;
       case SortMode.time:
-        scores.sortByTime(stage: _stage, scoreDQs: _filters.scoreDQs);
+        scores.sortByTime(stage: _stage, scoreDQs: _filters.scoreDQs, scoring: sport.matchScoring);
         break;
       case SortMode.alphas:
         scores.sortByAlphas(stage: _stage);
@@ -260,7 +260,7 @@ class _ResultPageState extends State<ResultPage> {
         scores.sortByClassification();
         break;
       case SortMode.rawTime:
-        scores.sortByRawTime(scoreDQs: _filters.scoreDQs, stage: _stage);
+        scores.sortByRawTime(scoreDQs: _filters.scoreDQs, stage: _stage, scoring: sport.matchScoring);
         break;
       case SortMode.idpaAccuracy:
         scores.sortByIdpaAccuracy(stage: _stage);

@@ -842,7 +842,7 @@ extension Sorting on List<RelativeMatchScore> {
     }
   }
 
-  void sortByTime({MatchStage? stage, required bool scoreDQs}) {
+  void sortByTime({MatchStage? stage, required bool scoreDQs, required MatchScoring scoring}) {
     if (stage != null) {
       this.sort((a, b) {
         if(!scoreDQs) {
@@ -872,8 +872,28 @@ extension Sorting on List<RelativeMatchScore> {
           if (a.shooter.dq && !b.shooter.dq) {
             return 1;
           }
-          if (b.shooter.dq && !a.shooter.dq) {
+          else if (b.shooter.dq && !a.shooter.dq) {
             return -1;
+          }
+          else if(a.shooter.dq && b.shooter.dq) {
+            return a.shooter.lastName.compareTo(b.shooter.lastName);
+          }
+        }
+
+        if(scoring is CumulativeScoring) {
+          if(scoring.lowScoreWins) {
+            var aDnf = a.stageScores.values.any((s) => s.score.dnf);
+            var bDnf = b.stageScores.values.any((s) => s.score.dnf);
+
+            if(aDnf && !bDnf) {
+              return 1;
+            }
+            else if(bDnf && !aDnf) {
+              return -1;
+            }
+            else if(aDnf && bDnf) {
+              return a.shooter.lastName.compareTo(b.shooter.lastName);
+            }
           }
         }
 
@@ -886,7 +906,7 @@ extension Sorting on List<RelativeMatchScore> {
     }
   }
 
-  void sortByRawTime({MatchStage? stage, required bool scoreDQs}) {
+  void sortByRawTime({MatchStage? stage, required bool scoreDQs, required MatchScoring scoring}) {
     if (stage != null) {
       this.sort((a, b) {
         if(!scoreDQs) {
@@ -918,6 +938,23 @@ extension Sorting on List<RelativeMatchScore> {
           }
           if (b.shooter.dq && !a.shooter.dq) {
             return -1;
+          }
+        }
+
+        if(scoring is CumulativeScoring) {
+          if(scoring.lowScoreWins) {
+            var aDnf = a.stageScores.values.any((s) => s.score.dnf);
+            var bDnf = b.stageScores.values.any((s) => s.score.dnf);
+
+            if(aDnf && !bDnf) {
+              return 1;
+            }
+            else if(bDnf && !aDnf) {
+              return -1;
+            }
+            else if(aDnf && bDnf) {
+              return a.shooter.lastName.compareTo(b.shooter.lastName);
+            }
           }
         }
 
