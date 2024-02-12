@@ -39,14 +39,14 @@ final idpaSport = Sport(
     ],
     divisions: [
       const Division(name: "SSP", longName: "Stock Service Pistol", shortName: "SSP"),
-      const Division(name: "PCC", longName: "Pistol Caliber Carbine", shortName: "PCC"),
+      const Division(name: "PCC", longName: "Pistol Caliber Carbine", shortName: "PCC", alternateNames: ["PCC10"]),
       const Division(name: "ESP", longName: "Enhanced Service Pistol", shortName: "ESP"),
       const Division(name: "CDP", longName: "Custom Defensive Pistol", shortName: "CDP"),
       const Division(name: "CO", longName: "Carry Optics", shortName: "CO"),
       const Division(name: "CCP", longName: "Compact Carry Pistol", shortName: "CCP"),
       const Division(name: "BUG", longName: "Backup Gun", shortName: "BUG"),
       const Division(name: "REV", longName: "Revolver", shortName: "REV", alternateNames: ["REVO"]),
-      const Division(name: "NFC", longName: "Not For Competition", shortName: "NFC", fallback: true),
+      const Division(name: "NFC", longName: "Not For Competition", shortName: "NFC", alternateNames: ["SPD"], fallback: true),
     ],
     powerFactors: [
       PowerFactor("",

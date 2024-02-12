@@ -967,13 +967,30 @@ extension Sorting on List<RelativeMatchScore> {
     }
   }
 
-  void sortByIdpaAccuracy({MatchStage? stage}) {
+  void sortByIdpaAccuracy({MatchStage? stage, required MatchScoring scoring}) {
     this.sort((a, b) {
       if (a.total.dnf && !b.total.dnf) {
         return 1;
       }
       if (b.total.dnf && !a.total.dnf) {
         return -1;
+      }
+
+      if(scoring is CumulativeScoring) {
+        if(scoring.lowScoreWins) {
+          var aDnf = a.stageScores.values.any((s) => s.score.dnf);
+          var bDnf = b.stageScores.values.any((s) => s.score.dnf);
+
+          if(aDnf && !bDnf) {
+            return 1;
+          }
+          else if(bDnf && !aDnf) {
+            return -1;
+          }
+          else if(aDnf && bDnf) {
+            return a.shooter.lastName.compareTo(b.shooter.lastName);
+          }
+        }
       }
 
       var aPointDown = a.shooter.powerFactor.targetEvents.lookupByName("-1");

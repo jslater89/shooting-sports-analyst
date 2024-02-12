@@ -263,7 +263,7 @@ class _ResultPageState extends State<ResultPage> {
         scores.sortByRawTime(scoreDQs: _filters.scoreDQs, stage: _stage, scoring: sport.matchScoring);
         break;
       case SortMode.idpaAccuracy:
-        scores.sortByIdpaAccuracy(stage: _stage);
+        scores.sortByIdpaAccuracy(stage: _stage, scoring: sport.matchScoring);
         break;
       default:
         print("Unknown sort type $s");

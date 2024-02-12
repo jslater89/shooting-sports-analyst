@@ -25,7 +25,8 @@ class NetworkError extends MatchSourceError {
 
 class UnsupportedMatchType extends MatchSourceError {
   String get message => "Source does not support match type";
-  const UnsupportedMatchType();
+  final String? reason;
+  const UnsupportedMatchType([this.reason]);
 }
 
 class UnsupportedOperation extends MatchSourceError {
