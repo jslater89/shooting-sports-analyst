@@ -216,7 +216,7 @@ class _HomePageState extends State<HomePage> {
           children: [
             SizedBox(height: column ? 0 : 50),
             Icon(Icons.cloud_download, size: 230, color: Colors.grey,),
-            Text("Click to download a report.txt file from Practiscore", style: Theme
+            Text("Click to download matches from Internet sources", style: Theme
                 .of(context)
                 .textTheme
                 .subtitle1!

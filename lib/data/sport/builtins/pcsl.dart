@@ -68,7 +68,7 @@ final pcslSport = Sport(
     const Division(name: "Competition", shortName: "COMP", alternateNames: ["Competition (COMP)", "1-Gun Competition"], fallback: true),
     const Division(name: "Practical Optics", shortName: "PO", alternateNames: ["Practical Optics (PO)", "1-Gun Practical Optics"]),
     const Division(name: "Practical Irons", shortName: "PI", alternateNames: ["Practical Irons (PI)", "1-Gun Practical Irons"]),
-    const Division(name: "Actual Carry Pistol", shortName: "ACP", alternateNames: ["Actual Carry Pistol (ACP)", "1-Gun Actual Carry Pistol"]),
+    const Division(name: "Actual Carry Pistol", shortName: "ACP", alternateNames: ["Actual Carry Pistol (ACP)", "1-Gun Actual Carry Pistol", "1-Gun ACP (Actual Carry Pistol)"]),
     const Division(name: "PCC", shortName: "PCC", alternateNames: ["Pistol Caliber Carbine (PCC)", "Pistol Caliber Carbine (PCC)", "1-Gun PCC", "1-Gun Pistol Caliber Carbine"]),
   ],
   powerFactors: [
