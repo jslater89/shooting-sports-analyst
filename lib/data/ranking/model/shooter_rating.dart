@@ -370,7 +370,7 @@ abstract class ShooterRating extends Shooter {
       this._connectedness = other._connectedness,
       this.lastSeen = other.lastSeen,
       this.firstSeen = other.firstSeen,
-      this.alternateMemberNumbers = other.alternateMemberNumbers,
+      this.alternateMemberNumbers = []..addAll(other.alternateMemberNumbers),
       this.connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure)..addAll(other.connectedShooters.map((e) => ConnectedShooter.copy(e)))
   {
     super.copyVitalsFrom(other);

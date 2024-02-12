@@ -455,7 +455,11 @@ class Rater {
         for(var n in list) {
           var type = _MemNumType.classify(n);
           numbers[type] ??= [];
-          numbers[type]!.add(n);
+
+          // The Joey Sauerland rule
+          if(!numbers[type]!.contains(n)) {
+            numbers[type]!.add(n);
+          }
         }
 
         var bestNumberOptions = _MemNumType.targetNumber(numbers);
