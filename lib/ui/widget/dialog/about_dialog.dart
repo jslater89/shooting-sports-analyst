@@ -38,7 +38,10 @@ void showAbout(BuildContext context, Size screenSize) {
                         ),
                         TextSpan(
                             style: Theme.of(context).textTheme.bodyText1,
-                            text: " for more information.\n\Shooting Sports Analyst v${VersionInfo.version}\nMostly licensed under MPL 2.0"
+                            text: " for more information.\nShooting Sports Analyst v${VersionInfo.version}\nMPL 2.0, except where noted\n\n"
+                                "USPSA, IDPA, PCSL, PractiScore, and other trade names or trademarks are used solely for descriptive or "
+                                "nominative purposes, and their use does not imply endorsement by their respective rights-holders, or affiliation "
+                                "between them and Shooting Sports Analyst."
                         )
                       ]
                   )
