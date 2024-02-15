@@ -1,4 +1,6 @@
 # Shooting Sports Analyst
+[![Support me on Patreon](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fshieldsio-patreon.vercel.app%2Fapi%3Fusername%3Dshootingsportsanalyst%26type%3Dpatrons&style=flat)](https://patreon.com/shootingsportsanalyst)
+
 ![A line and bar chart on top of a silhouette target.](https://github.com/jslater89/uspsa-result-viewer/blob/develop/assets/icon.png?raw=true)
 
 Shooting Sports Analyst is a desktop application for viewing, analyzing, and predicting shooting
