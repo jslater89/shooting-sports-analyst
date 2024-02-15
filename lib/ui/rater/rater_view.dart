@@ -86,6 +86,7 @@ class _RaterViewState extends State<RaterView> {
 
   int _ratingWindow = 12;
   List<Widget> _buildRatingRows() {
+    // TODO: turn this into a Provider and a model, since we need it both in the parent and here
     var hiddenShooters = [];
     for(int i = 0; i < widget.hiddenShooters.length; i++) {
       hiddenShooters.add(Rater.processMemberNumber(widget.hiddenShooters[i]));
@@ -212,7 +213,7 @@ extension RatingSortModeNames on RatingSortMode {
   }
 }
 
-extension _SortFunctions on RatingSortMode {
+extension SortFunctions on RatingSortMode {
   Comparator<ShooterRating> comparator() {
     switch(this) {
       case RatingSortMode.rating:

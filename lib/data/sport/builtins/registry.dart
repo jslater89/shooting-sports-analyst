@@ -21,7 +21,7 @@ class SportRegistry {
       ipscSport,
       pcslSport,
       idpaSport,
-      icoreSport,
+      // icoreSport,
     ]);
     return _instance!;
   }
@@ -41,4 +41,6 @@ class SportRegistry {
   Sport? lookup(String name) {
     return _sportsByName[name];
   }
+
+  List<Sport> get availableSports => _sportsByName.values.toList(growable: false);
 }

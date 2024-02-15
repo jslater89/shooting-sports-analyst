@@ -57,4 +57,8 @@ class Controller extends ControlInterface {
   void saveFile(String defaultName, String fileContents) {
     launch("data:application/octet-stream;base64,${base64Encode(utf8.encode(fileContents))}");
   }
+
+  void saveBuffer(String defaultName, List<int> buffer) {
+    launch("data:application/octet-stream;base64,${base64Encode(buffer)}");
+  }
 }

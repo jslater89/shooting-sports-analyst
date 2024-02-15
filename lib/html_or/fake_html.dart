@@ -67,4 +67,14 @@ class Controller extends ControlInterface {
       await file.writeAsString(fileContents);
     }
   }
+
+  void saveBuffer(String defaultName, List<int> buffer) async {
+    print("Last directory? $lastDirectoryPath");
+    var path = await FilePicker.platform.saveFile(fileName: defaultName, initialDirectory: lastDirectoryPath ?? Directory.current.absolute.path + Platform.pathSeparator);
+    if(path != null) {
+      var file = File(path);
+      lastDirectoryPath = file.parent.absolute.path;
+      await file.writeAsBytes(buffer);
+    }
+  }
 }

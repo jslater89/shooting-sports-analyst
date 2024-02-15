@@ -7,6 +7,8 @@
 
 import 'dart:math';
 
+import 'package:archive/archive.dart';
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttericon/rpg_awesome_icons.dart';
@@ -657,10 +659,50 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
       case _MenuEntry.csvExport:
         if(_selectedMatch != null) {
-          var tab = activeTabs[_tabController.index];
-          var rater = _history.raterFor(_selectedMatch!, tab);
-          var csv = rater.toCSV(ratings: _ratings);
-          HtmlOr.saveFile("ratings-${tab.label}.csv", csv);
+          var archive = Archive();
+          for(var tab in activeTabs) {
+            var rater = _history.raterFor(_selectedMatch!, tab);
+            var sortedRatings = rater.uniqueShooters.where((e) => e.ratingEvents.length >= _minRatings);
+
+            Duration? maxAge;
+            if(_maxDays > 0) {
+              maxAge = Duration(days: _maxDays);
+            }
+
+            var hiddenShooters = [];
+            for(var s in _history.settings.hiddenShooters) {
+              hiddenShooters.add(Rater.processMemberNumber(s));
+            }
+
+            if(maxAge != null) {
+              var cutoff = _selectedMatch?.date ?? DateTime.now();
+              cutoff = cutoff.subtract(maxAge);
+              sortedRatings = sortedRatings.where((r) => r.lastSeen.isAfter(cutoff));
+            }
+
+            if(_filters.ladyOnly) {
+              sortedRatings = sortedRatings.where((r) => r.female);
+            }
+
+            if(hiddenShooters.isNotEmpty) {
+              sortedRatings = sortedRatings.where((r) => !hiddenShooters.contains(r.memberNumber));
+            }
+
+            var comparator = rater.ratingSystem.comparatorFor(_sortMode) ?? _sortMode.comparator();
+            var asList = sortedRatings.sorted(comparator);
+
+            var csv = rater.toCSV(ratings: asList);
+            print("tab: $tab first: ${csv.split("\n")[1]}");
+            archive.addFile(ArchiveFile.string("${tab.label.safeFilename()}.csv", csv));
+          }
+          var zip = ZipEncoder().encode(archive); 
+
+          if(zip != null) {
+            HtmlOr.saveBuffer("ratings-${_history.project.name.safeFilename()}.zip", zip);
+          }
+          else {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to encode archive")));
+          }
         }
         break;
 
