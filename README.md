@@ -1,7 +1,9 @@
-# USPSA Analyst
+# Shooting Sports Analyst
+[![Support me on Patreon](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Fshieldsio-patreon.vercel.app%2Fapi%3Fusername%3Dshootingsportsanalyst%26type%3Dpatrons&style=flat)](https://patreon.com/shootingsportsanalyst)
+
 ![A line and bar chart on top of a USPSA target.](https://github.com/jslater89/uspsa-result-viewer/blob/develop/assets/icon.png?raw=true)
 
-USPSA Analyst is a desktop application for viewing, analyzing, and predicting USPSA match results.
+Shooting Sports Analyst is a desktop application for viewing, analyzing, and predicting practical shooting match results.
 
 The result viewer can be used online at [github.io](https://jslater89.github.io/uspsa-result-viewer).
 
@@ -55,8 +57,8 @@ unzipped release to install a GNOME application entry for that version.
 ### MacOS
 An unsigned MacOS release is available, if I seem like the trustworthy sort to you. Download the
 release zip file, unzip it, right-click on the unzipped folder and select "New Terminal at Folder",
-and enter `./install.sh`. This will copy USPSA Analyst to your Applications folder, and prompt you
-for your password or Touch ID to grant permission to run USPSA Analyst.
+and enter `./install.sh`. This will copy Shooting Sports Analyst to your Applications folder, and prompt you
+for your password or Touch ID to grant permission to run Shooting Sports Analyst.
 
 After installing, Analyst should be available in Launchpad and Spotlight.
 
