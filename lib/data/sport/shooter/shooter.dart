@@ -37,6 +37,7 @@ class Shooter {
     return number.toUpperCase().replaceAll(RegExp(r"[^A-Z0-9]"), "");
   }
 
+  AgeCategory? ageCategory;
   bool female = false;
 
   Shooter({
@@ -44,6 +45,7 @@ class Shooter {
     required this.lastName,
     String? memberNumber,
     this.female = false,
+    this.ageCategory,
   }) {
     if(memberNumber != null) {
       this.memberNumber = memberNumber;
@@ -86,6 +88,7 @@ class MatchEntry extends Shooter {
     required super.firstName,
     required super.lastName,
     super.memberNumber,
+    super.ageCategory,
     this.reentry = false,
     this.dq = false,
     required this.entryId,
@@ -118,6 +121,7 @@ class MatchEntry extends Shooter {
       division: division,
       classification: classification,
       female: female,
+      ageCategory: ageCategory,
     );
 
     e.knownMemberNumbers = {}..addAll(knownMemberNumbers);

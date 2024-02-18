@@ -19,11 +19,13 @@ class FilterSet {
   late Map<Division, bool> divisions;
   late Map<Classification, bool> classifications;
   late Map<PowerFactor, bool> powerFactors;
+  late Map<AgeCategory, bool> ageCategories;
 
   FilterSet(this.sport, {bool empty = false}) {
     divisions = {};
     classifications = {};
     powerFactors = {};
+    ageCategories = {};
 
     for (Division d in sport.divisions.values) {
       divisions[d] = !empty;
@@ -35,6 +37,10 @@ class FilterSet {
 
     for (PowerFactor f in sport.powerFactors.values) {
       powerFactors[f] = !empty;
+    }
+
+    for (AgeCategory c in sport.ageCategories.values) {
+      ageCategories[c] = false;
     }
   }
 
@@ -102,8 +108,8 @@ class _FilterDialogState extends State<FilterDialog> {
                     mainAxisAlignment: MainAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      ..._powerFactorTiles(context),
-                      Divider(),
+                      if(_filters.sport.hasPowerFactors) ..._powerFactorTiles(context),
+                      if(_filters.sport.hasPowerFactors) Divider(),
                       ..._otherTiles(context),
                     ],
                   ),
@@ -196,7 +202,20 @@ class _FilterDialogState extends State<FilterDialog> {
             }
           },
         ),
-      )
+      ),
+      for(var cat in _filters.sport.ageCategories.values)
+        CheckboxListTile(
+          title: Text(cat.name),
+          controlAffinity: ListTileControlAffinity.leading,
+          value: _filters.ageCategories[cat],
+          onChanged: (bool? value) {
+            if(value != null) {
+              setState(() {
+                _filters.ageCategories[cat] = value;
+              });
+            }
+          },
+        ),
     ];
   }
 

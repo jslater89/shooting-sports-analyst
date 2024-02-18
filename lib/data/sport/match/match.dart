@@ -110,6 +110,7 @@ class ShootingMatch {
     List<PowerFactor>? powerFactors,
     List<Classification>? classes,
     bool ladyOnly = false,
+    List<AgeCategory>? ageCategories,
   }) {
     List<MatchEntry> filteredShooters = [];
 
@@ -132,6 +133,10 @@ class ShootingMatch {
 
     if(ladyOnly) {
       filteredShooters.retainWhere((s) => s.female);
+    }
+
+    if(ageCategories != null && ageCategories.isNotEmpty) {
+      filteredShooters.retainWhere((s) => ageCategories.contains(s.ageCategory));
     }
 
     return filteredShooters;

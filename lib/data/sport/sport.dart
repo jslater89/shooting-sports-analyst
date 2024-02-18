@@ -8,6 +8,7 @@ import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/sort_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/display_settings.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 
 /// A Sport is a shooting sports discipline.
 class Sport {
@@ -50,6 +51,12 @@ class Sport {
   /// Power factors should be const.
   final Map<String, PowerFactor> powerFactors;
 
+  /// The age categories in this sport.
+  ///
+  /// Leave this empty if the sport does not recognize age categories.
+  final Map<String, AgeCategory> ageCategories;
+
+  /// Sort modes that are meaningful for this sport.
   final List<SortMode> resultSortModes;
 
   PowerFactor get defaultPowerFactor {
@@ -91,6 +98,7 @@ class Sport {
     List<Classification> classifications = const [],
     List<Division> divisions = const [],
     List<MatchLevel> eventLevels = const [],
+    List<AgeCategory> ageCategories = const [],
     required List<PowerFactor> powerFactors,
     SportDisplaySettings? displaySettings,
     /// The power factor to use when generating default display settings.
@@ -100,7 +108,8 @@ class Sport {
         classifications = Map.fromEntries(classifications.map((e) => MapEntry(e.name, e))),
         divisions = Map.fromEntries(divisions.map((e) => MapEntry(e.name, e))),
         powerFactors = Map.fromEntries(powerFactors.map((e) => MapEntry(e.name, e))),
-        eventLevels = Map.fromEntries(eventLevels.map((e) => MapEntry(e.name, e))) {
+        eventLevels = Map.fromEntries(eventLevels.map((e) => MapEntry(e.name, e))),
+        ageCategories = Map.fromEntries(ageCategories.map((e) => MapEntry(e.name, e))) {
     if(displaySettings != null) {
       this.displaySettings = displaySettings;
     }
@@ -182,13 +191,15 @@ abstract class NameLookupEntity {
   /// A short name, to be used where space is maximally important, like
   /// the division tabs in the rater view.
   String get shortName;
-  /// Additional names that match this
+  /// Additional names that match this entity.
   List<String> get alternateNames;
 
   String get displayName => name;
   String get shortDisplayName => shortName.isNotEmpty ? shortName : name;
 
   bool get fallback => false;
+
+  const NameLookupEntity();
 }
 
 extension LookupNameInList<T extends NameLookupEntity> on Iterable<T> {
@@ -368,4 +379,22 @@ enum SportType {
       this == userDefinedTimePlusPointsDown ||
       this == dynamicTimePlusPenalties ||
       this == dynamicTimePlusPointsDown;
+}
+
+class AgeCategory extends NameLookupEntity {
+  final String name;
+  final List<String> alternateNames;
+
+  @override
+  bool get fallback => false;
+
+  @override
+  String get longName => name;
+
+  @override
+  String get shortName => name;
+
+  const AgeCategory({
+    required this.name, this.alternateNames = const [],
+  });
 }

@@ -6,6 +6,7 @@
 
 import 'package:shooting_sports_analyst/data/sport/builtins/sorts.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 
 const _uspsaPenalties = [
@@ -58,6 +59,12 @@ final uspsaSport = Sport(
     const Division(name: "Single Stack", shortName: "SS"),
     const Division(name: "Revolver", shortName: "REV", alternateNames: ["REVO"]),
     const Division(name: "Limited 10", shortName: "L10", alternateNames: ["LIM10", "LTD10"]),
+  ],
+  ageCategories: [
+    const AgeCategory(name: "Junior"),
+    const AgeCategory(name: "Senior"),
+    const AgeCategory(name: "Super Senior"),
+    const AgeCategory(name: "Distinguished Senior")
   ],
   powerFactors: [
     PowerFactor("Major",

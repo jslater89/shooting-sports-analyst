@@ -161,6 +161,7 @@ class _ResultPageState extends State<ResultPage> {
       classes: _filters.classifications.keys.where((element) => _filters.classifications[element]!).toList(),
       powerFactors: _filters.powerFactors.keys.where((element) => _filters.powerFactors[element]!).toList(),
       ladyOnly: _filters.femaleOnly,
+      ageCategories: _filters.ageCategories.keys.where((element) => _filters.ageCategories[element]!).toList(),
     );
     return filteredShooters;
   }
