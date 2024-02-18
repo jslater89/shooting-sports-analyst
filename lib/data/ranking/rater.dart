@@ -733,6 +733,10 @@ class Rater {
         rating.firstName = shooter.firstName;
         rating.lastName = shooter.lastName;
 
+        // Update age categories
+        rating.categories.clear();
+        rating.categories.addAll(shooter.categories);
+
         // Update the shooter's member number: the CSV exports are more useful if it's the most
         // recent one. // TODO: this would be handy, but it changes the math somehow (not removing unseen?)
         // rating.shooter.memberNumber = shooter.memberNumber;

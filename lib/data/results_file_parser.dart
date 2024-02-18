@@ -148,6 +148,7 @@ Map<int, Shooter> _readCompetitorLines(PracticalMatch match, List<String> compet
   for(String line in competitorLines) {
     try {
       List<String> splitLine = line.split(",");
+      var age = ShooterCategory.fromString(splitLine[_AGE]);
       Shooter s = Shooter()
         // PS shooter number, for deduplication in matches
         ..internalId = i
@@ -161,6 +162,10 @@ Map<int, Shooter> _readCompetitorLines(PracticalMatch match, List<String> compet
         ..powerFactor = PowerFactorFrom.string(splitLine[_POWER_FACTOR])
         ..female = splitLine[_LADY].toLowerCase() == "yes"
         ..dq = splitLine[_DQ_PISTOL].toLowerCase() == "yes" || splitLine[_DQ_RIFLE].toLowerCase() == "yes" || splitLine[_DQ_SHOTGUN].toLowerCase() == "yes";
+
+      if(age != null) {
+        s.categories = [age];
+      }
 
       shootersById[i++] = s;
       match.shooters.add(s);

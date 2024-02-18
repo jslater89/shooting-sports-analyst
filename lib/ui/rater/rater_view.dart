@@ -110,6 +110,11 @@ class _RaterViewState extends State<RaterView> {
       sortedRatings = sortedRatings.where((r) => r.female);
     }
 
+    if(widget.filters.categories.isNotEmpty) {
+      sortedRatings = sortedRatings.where((r) =>
+          r.categories.any((c) => widget.filters.activeCategories.contains(c)));
+    }
+
     if(widget.search != null && widget.search!.isNotEmpty) {
       if(widget.search!.startsWith('?')) {
         var queryElements = parseQuery(widget.search!.toLowerCase());

@@ -44,6 +44,7 @@ class Shooter {
   Division? division;
   Classification? classification;
   PowerFactor? powerFactor;
+  List<ShooterCategory> categories = [];
 
   Map<Stage, Score> stageScores = {};
 
@@ -58,20 +59,8 @@ class Shooter {
   }
 
   Shooter copy(PracticalMatch parent) {
-    var newShooter = Shooter()
-      ..firstName = firstName
-      ..lastName = lastName
-      ..internalId = internalId
-      ..originalMemberNumber = originalMemberNumber
-      ..memberNumber = memberNumber
-      ..reentry = reentry
-      ..dq = dq
-      ..division = division
-      ..classification = classification
-      ..powerFactor = powerFactor
-      ..female = female
-      ..stageScores = {};
-
+    var newShooter = copyWithoutScores();
+    
     stageScores.forEach((stage, score) {
       newShooter.stageScores[parent.lookupStage(stage)!] = score.copy(newShooter, stage);
     });
@@ -92,6 +81,7 @@ class Shooter {
       ..classification = classification
       ..powerFactor = powerFactor
       ..female = female
+      ..categories = ([]..addAll(categories))
       ..stageScores = {};
 
     return newShooter;
@@ -109,6 +99,7 @@ class Shooter {
     classification = other.classification;
     powerFactor = other.powerFactor;
     female = other.female;
+    categories = []..addAll(other.categories);
   }
 
   // void copyDbVitalsFrom(DbShooterVitals other) {
@@ -253,6 +244,32 @@ enum Classification {
   D,
   U,
   unknown,
+}
+
+enum ShooterCategory {
+  junior,
+  senior,
+  superSenior,
+  distinguishedSenior;
+  
+  static ShooterCategory? fromString(String s) {
+    return switch(s.toLowerCase()) {
+      "junior" => junior,
+      "senior" => senior,
+      "super senior" => superSenior,
+      "distinguished senior" => distinguishedSenior,
+      String() => null,
+    };
+  }
+  
+  String displayString() {
+    return switch(this) {
+      junior => "Junior",
+      senior => "Senior",
+      superSenior => "Super Senior",
+      distinguishedSenior => "Distinguished Senior",
+    };
+  }
 }
 
 extension ClassificationFrom on Classification {
