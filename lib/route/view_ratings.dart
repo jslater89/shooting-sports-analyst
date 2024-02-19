@@ -684,6 +684,11 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
               sortedRatings = sortedRatings.where((r) => r.female);
             }
 
+            if(_filters.activeCategories.isNotEmpty) {
+              sortedRatings = sortedRatings.where((r) =>
+                  r.categories.any((c) => _filters.activeCategories.contains(c)));
+            }
+
             if(hiddenShooters.isNotEmpty) {
               sortedRatings = sortedRatings.where((r) => !hiddenShooters.contains(r.memberNumber));
             }

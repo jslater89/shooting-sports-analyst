@@ -110,7 +110,7 @@ class _RaterViewState extends State<RaterView> {
       sortedRatings = sortedRatings.where((r) => r.female);
     }
 
-    if(widget.filters.categories.isNotEmpty) {
+    if(widget.filters.activeCategories.isNotEmpty) {
       sortedRatings = sortedRatings.where((r) =>
           r.categories.any((c) => widget.filters.activeCategories.contains(c)));
     }
