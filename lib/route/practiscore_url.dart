@@ -19,9 +19,12 @@ import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/empty_scaffold.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:http/http.dart' as http;
+
+var _log = SSALogger("UrlResultPage");
 
 class PractiscoreResultPage extends StatefulWidget {
   final String? matchId;
@@ -70,14 +73,14 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
           }
         }
         else {
-          debugPrint("Bad file contents");
+          _log.w("Bad file contents");
         }
       }
 
-      debugPrint("response: $response");
+      _log.v("response: $response");
     }
-    catch(err) {
-
+    catch(err, st) {
+      _log.e("Error downloading match file", error: err, stackTrace: st);
     }
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to download result file from ${widget.resultUrl}.")));
   }
@@ -85,7 +88,7 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
   Future<void> _getPractiscoreMatch() async {
     var proxyUrl = getProxyUrl();
     var reportUrl = "${proxyUrl}https://practiscore.com/reports/web/${widget.matchId}";
-    debugPrint("Report download URL: $reportUrl");
+    _log.d("Report download URL: $reportUrl");
 
     var matchSource = MatchSourceRegistry().getByCode(widget.sourceId, PractiscoreHitFactorReportParser(uspsaSport));
 

@@ -12,7 +12,10 @@ import 'package:flutter_charts/flutter_charts.dart';
 import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/box_and_whisker.dart';
+
+var _log = SSALogger("RaterStatsDialog");
 
 class RaterStatsDialog extends StatefulWidget {
   const RaterStatsDialog(this.group, this.statistics, {Key? key}) : super(key: key);
@@ -40,14 +43,14 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
     super.initState();
 
     sortedYears = widget.statistics.yearOfEntryHistogram.keys.sorted((a, b) => a.compareTo(b));
-    print("For rater group ${widget.group.uiLabel}:");
+    _log.i("For rater group ${widget.group.uiLabel}:");
     int first = sortedYears.first;
     for(var y in sortedYears) {
       if(y == first) {
-        print("\t$y or before:\t${widget.statistics.yearOfEntryHistogram[y]!} shooters");
+        _log.i("\t$y or before:\t${widget.statistics.yearOfEntryHistogram[y]!} shooters");
       }
       else {
-        print("\t$y:\t\t\t${widget.statistics.yearOfEntryHistogram[y]!} shooters");
+        _log.i("\t$y:\t\t\t${widget.statistics.yearOfEntryHistogram[y]!} shooters");
       }
     }
   }

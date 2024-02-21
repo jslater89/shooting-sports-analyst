@@ -15,8 +15,11 @@ import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_list.dart';
+
+var _log = SSALogger("OldMatch");
 
 enum MatchLevel {
   I,
@@ -164,7 +167,7 @@ class PracticalMatch {
     if(innerShooters.length == 0 || innerStages.length == 0) return [];
 
     int matchMaxPoints = innerStages.map<int>((e) => e.maxPoints).reduce((a, b) => a + b);
-    // print("Max points for match: $matchMaxPoints");
+    // _log.v("Max points for match: $matchMaxPoints");
 
     // Create a total score for each shooter, precalculating what we can and
     // prepopulating what we can't.
@@ -202,7 +205,7 @@ class PracticalMatch {
       }
 
       matchScores[shooter]!.percentTotalPoints = shooterTotalPoints.toDouble() / matchMaxPoints.toDouble();
-      //print("${shooter.firstName} ${shooter.lastName} shot ${totalScores[shooter].percentTotalPoints} total points");
+      //_log.v("${shooter.firstName} ${shooter.lastName} shot ${totalScores[shooter].percentTotalPoints} total points");
     }
 
 
@@ -222,11 +225,11 @@ class PracticalMatch {
       if(innerShooters[0].stageScores[stage] == null) {
         // we've clearly hit some awful condition here, so let's
         // just bail out
-        print("Winner of ${stage.name}: ${innerShooters[0].firstName} ${innerShooters[0].lastName}");
+        _log.e("Winner of ${stage.name}: ${innerShooters[0].firstName} ${innerShooters[0].lastName} has null score");
         continue;
       }
       double highHitFactor = innerShooters[0].stageScores[stage]!.getHitFactor(scoreDQ: scoreDQ);
-      //print("Winner of ${stage.name}: ${shooters[0].firstName} ${shooters[0].lastName} with ${shooters[0].stageScores[stage].hitFactor}");
+      //_log.v("Winner of ${stage.name}: ${shooters[0].firstName} ${shooters[0].lastName} with ${shooters[0].stageScores[stage].hitFactor}");
 
       int place = 1;
       for(Shooter shooter in innerShooters) {

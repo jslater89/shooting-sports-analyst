@@ -22,6 +22,7 @@ import 'package:shooting_sports_analyst/data/ranking/shooter_aliases.dart';
 import 'package:shooting_sports_analyst/data/results_file_parser.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/rater/enter_practiscore_source_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/match_list_filter_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_correction_dialog.dart';
@@ -37,6 +38,8 @@ import 'package:shooting_sports_analyst/ui/widget/dialog/loading_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_cache_chooser_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/rater_groups_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/match_cache_loading_indicator.dart';
+
+var _log = SSALogger("ConfigureRatingsPage");
 
 class ConfigureRatingsPage extends StatefulWidget {
   const ConfigureRatingsPage({Key? key, required this.onSettingsReady}) : super(key: key);
@@ -138,17 +141,17 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       });
     }
 
-    print("Getting ${unknownUrls.length} unknown URLs");
+    _log.i("Getting ${unknownUrls.length} unknown URLs");
     var matches = await cache.batchGet(unknownUrls, callback: (url, result) {
       if(result.isOk() && mounted) {
         var match = result.unwrap();
-        print("Fetched ${match.name} from ${url.split("/").last}");
+        _log.v("Fetched ${match.name} from ${url.split("/").last}");
         setState(() {
           knownMatches[url] = match;
         });
       }
       else if(result.isErr()) {
-        print("Error getting match: ${result.unwrapErr()}");
+        _log.w("Error getting match: ${result.unwrapErr()}");
       }
     });
 
@@ -187,7 +190,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     }
     else {
       // This should only happen if we've never launched before, so...
-      print("Autosaved project is null");
+      _log.i("Autosaved project is null, assuming first start");
 
       _ratingSystem = MultiplayerPercentEloRater();
       _settingsController = _ratingSystem.newSettingsController();
@@ -237,7 +240,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       _lastProjectName = project.name;
       _settingsWidget = _settingsWidget;
     });
-    debugPrint("Loaded ${project.name}");
+    _log.i("Loaded ${project.name}");
   }
 
   @override
@@ -572,7 +575,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                       return MatchCacheChooserDialog(multiple: true);
                                     }, barrierDismissible: false);
 
-                                    print("Entries from cache: $indexEntries");
+                                    _log.v("Entries from cache: $indexEntries");
 
                                     if(indexEntries == null) return;
 
@@ -680,7 +683,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                               child: GestureDetector(
                                                 onTap: () async {
                                                   if(!MatchCache.readyNow) {
-                                                    print("Match cache not ready");
+                                                    _log.d("Match cache not ready");
                                                     return;
                                                   }
                                                   var cache = MatchCache();
@@ -807,7 +810,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       return true;
     }));
 
-    print("Filtered ${matchUrls.length} urls to ${filteredMatchUrls!.length} Level: $filteredByLevel Before: $filteredByBefore After: $filteredByAfter");
+    _log.d("Filtered ${matchUrls.length} urls to ${filteredMatchUrls!.length} Level: $filteredByLevel Before: $filteredByBefore After: $filteredByAfter");
 
     setState(() {
       filteredMatchUrls = filteredMatchUrls;
@@ -877,7 +880,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     );
 
     await RatingProjectManager().saveProject(project, mapName: mapName);
-    debugPrint("Saved ${project.name} to $mapName" + (isAutosave ? " (autosave)" : ""));
+    _log.i("Saved ${project.name} to $mapName" + (isAutosave ? " (autosave)" : ""));
 
     if(mounted) {
       setState(() {
@@ -1044,7 +1047,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
             }
           }
 
-          print("Imported ${imported.name}");
+          _log.i("Imported ${imported.name}");
 
           _loadProject(imported);
           updateUrls();

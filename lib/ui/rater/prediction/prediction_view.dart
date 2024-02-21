@@ -14,9 +14,12 @@ import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/box_and_whisker.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
+
+var _log = SSALogger("PredictionView");
 
 class PredictionView extends StatefulWidget {
   const PredictionView({Key? key, required this.rater, required this.predictions}) : super(key: key);
@@ -210,11 +213,11 @@ class _PredictionViewState extends State<PredictionView> {
         }
       }
       else {
-        print("No rating for ${shooter.getName(suffixes: false)}");
+        _log.d("No rating for ${shooter.getName(suffixes: false)}");
       }
     }
 
-    print("Registrants: ${shooters.length} Predictions: ${shooters.length} Matched: ${knownShooters.length}");
+    _log.i("Registrants: ${shooters.length} Predictions: ${shooters.length} Matched: ${knownShooters.length}");
 
     var outcome = widget.rater.ratingSystem.validate(
         shooters: knownShooters,
@@ -224,7 +227,7 @@ class _PredictionViewState extends State<PredictionView> {
     );
 
     if(outcome.mutatedInputs) {
-      print("Predictions changed");
+      _log.i("Predictions changed");
       setState(() {
         sortedPredictions = outcome.actualResults.keys.sorted((a, b) => b.ordinal.compareTo(a.ordinal));
         searchedPredictions = search.isEmpty ? sortedPredictions : sortedPredictions.where((p) =>
@@ -251,7 +254,7 @@ class _PredictionViewState extends State<PredictionView> {
         if(outcomePercent >= boxLowPercent && outcomePercent <= boxHighPercent) correct68 += 1;
       }
     }
-    print("Pct. correct: $correct68/$correct95/$total (${(correct68 / total * 100).toStringAsFixed(1)}%/${(correct95 / total * 100).toStringAsFixed(1)}%)");
+    _log.i("Pct. correct: $correct68/$correct95/$total (${(correct68 / total * 100).toStringAsFixed(1)}%/${(correct95 / total * 100).toStringAsFixed(1)}%)");
 
     setState(() {
       outcomes = outcome.actualResults;

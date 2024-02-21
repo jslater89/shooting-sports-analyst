@@ -61,6 +61,11 @@ final ipscSport = Sport(
     const Division(name: "Classic", shortName: "CLS", alternateNames: ["CLS"]),
     const Division(name: "Revolver", shortName: "REV", alternateNames: ["REVO"]),
   ],
+  ageCategories: [
+    const AgeCategory(name: "Junior"),
+    const AgeCategory(name: "Senior"),
+    const AgeCategory(name: "Super Senior"),
+  ],
   powerFactors: [
     PowerFactor("Major",
       shortName: "Maj",

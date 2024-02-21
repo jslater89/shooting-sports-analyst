@@ -10,7 +10,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/rater/prediction/registration_parser.dart';
+
+var _log = SSALogger("AssocRegistrationsDialog");
 
 class AssociateRegistrationsDialog extends StatefulWidget {
   const AssociateRegistrationsDialog({Key? key, required this.registrations, required this.possibleMappings}) : super(key: key);
@@ -79,7 +82,7 @@ class _AssociateRegistrationsDialogState extends State<AssociateRegistrationsDia
                                     );
                                   },
                                   onSuggestionSelected: (rating) {
-                                    debugPrint("Selected $rating");
+                                    _log.d("Selected $rating");
                                     setState(() {
                                       enabled = false;
                                       selectedMappings[unmatched] = rating;

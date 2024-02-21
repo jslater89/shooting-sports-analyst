@@ -7,8 +7,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/matchdb/match_db_list_view.dart';
 import 'package:shooting_sports_analyst/util.dart';
+
+var _log = SSALogger("MatchDbListSearch");
 
 class MatchDbListViewSearch extends StatefulWidget {
   const MatchDbListViewSearch({super.key});
@@ -128,7 +131,7 @@ class _MatchDbListViewSearchState extends State<MatchDbListViewSearch> {
                           _updateDates();
                         }
                       } on FormatException catch (e) {
-                        print("Format error: $e");
+                        _log.w("Format error", error: e);
                       }
                     }
                   },
@@ -173,7 +176,7 @@ class _MatchDbListViewSearchState extends State<MatchDbListViewSearch> {
                           _updateDates();
                         }
                       } on FormatException catch (e) {
-                        print("Format error: $e");
+                        _log.w("Format error", error: e);
                       }
                     }
                   },

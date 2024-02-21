@@ -198,22 +198,13 @@ abstract class ShooterRating extends Shooter {
 
       change = change * scale;
 
-      // if(Rater.processMemberNumber(shooter.memberNumber) == "122755") {
-      //   debugPrint("${connection.shooter.shooter.getName(suffixes: false)} contributed $change to ${shooter.getName(suffixes: false)}");
-      // }
-
       c += change;
     }
-
-    // if(Rater.processMemberNumber(shooter.memberNumber) == "122755") {
-    //   debugPrint("${shooter.getName(suffixes: false)} changed to $c");
-    // }
 
     _connectedness = c;
   }
 
   void updateConnections(DateTime now, List<ShooterRating> encountered) {
-    // if(Rater.processMemberNumber(this.shooter.memberNumber) == "122755")  print("Shooter $this has ${connectedShooters.length} connections, encountered ${encountered.length} shooters");
     int added = 0;
     int updated = 0;
 
@@ -235,14 +226,11 @@ abstract class ShooterRating extends Shooter {
     for(var shooter in encountered) {
       var currentConnection = connMap[shooter];
       if(currentConnection != null) {
-        // if(Rater.processMemberNumber(this.shooter.memberNumber) == "122755")  print("Updated connection to $shooter");
         currentConnection.connectedness = shooter.connectedness;
         currentConnection.lastSeen = now;
         updated++;
       }
       else if(shooter != this) {
-        // if(Rater.processMemberNumber(this.shooter.memberNumber) == "122755")  print("Added connection to $shooter");
-
         // No need to add this connection if our list is full and it's worst than our current worst connection.
         if(lowValueConnections.length >= maxConnections) {
           var worstConnection = lowValueConnections.first;
@@ -259,10 +247,9 @@ abstract class ShooterRating extends Shooter {
         added++;
       }
       else {
-        // if(Rater.processMemberNumber(this.shooter.memberNumber) == "122755") print("Ignoring self");
+        // ignoring self
       }
     }
-    // if(Rater.processMemberNumber(this.shooter.memberNumber) == "122755") print("Now has ${connectedShooters.length} connections, added $added, updated $updated of ${encountered.length - 1}");
 
     if(connectedShooters.length > maxConnections) {
       int nToRemove = connectedShooters.length - maxConnections;
@@ -275,8 +262,6 @@ abstract class ShooterRating extends Shooter {
         connectedShooters.remove(connection);
         i++;
       }
-
-      // if(Rater.processMemberNumber(this.shooter.memberNumber) == "122755") print("${nToRemove} were above the connection limit\n");
     }
   }
 

@@ -19,10 +19,13 @@ import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rating_chang
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/ui/elo_settings_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/timings.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/rater/prediction/prediction_view.dart';
 import 'package:shooting_sports_analyst/ui/rater/rater_view.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 import 'package:shooting_sports_analyst/util.dart';
+
+var _log = SSALogger("MultiplayerPctEloRater");
 
 class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSettings, EloSettingsController> {
   static const errorKey = "error";
@@ -247,12 +250,12 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     if(Timings.enabled) timings.updateRatings += (DateTime.now().difference(start).inMicroseconds).toDouble();
 
     if(change.isNaN || change.isInfinite) {
-      debugPrint("### ${aRating.getName()} stats: ${actualScore.actualPercent} of ${params.usedScores} shooters for ${aScore.stage?.name}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}, placement $placementMultiplier, zero $zeroMultiplier (${params.zeroes})");
-      debugPrint("AS/ES: ${actualScore.score.toStringAsFixed(6)}/${params.expectedScore.toStringAsFixed(6)}");
-      debugPrint("Actual/expected percent: ${(actualScore.percentComponent * params.totalPercent * 100).toStringAsFixed(2)}/${(params.expectedScore * params.totalPercent * 100).toStringAsFixed(2)}");
-      debugPrint("Actual/expected place: ${actualScore.placeBlend}/${(params.usedScores - (params.expectedScore * params.divisor)).toStringAsFixed(4)}");
-      debugPrint("Rating±Change: ${aRating.rating.round()} + ${change.toStringAsFixed(2)} (${changeFromPercent.toStringAsFixed(2)} from pct, ${changeFromPlace.toStringAsFixed(2)} from place)");
-      debugPrint("###");
+      _log.w("### ${aRating.getName()} stats: ${actualScore.actualPercent} of ${params.usedScores} shooters for ${aScore.stage?.name}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}, placement $placementMultiplier, zero $zeroMultiplier (${params.zeroes})");
+      _log.w("AS/ES: ${actualScore.score.toStringAsFixed(6)}/${params.expectedScore.toStringAsFixed(6)}");
+      _log.w("Actual/expected percent: ${(actualScore.percentComponent * params.totalPercent * 100).toStringAsFixed(2)}/${(params.expectedScore * params.totalPercent * 100).toStringAsFixed(2)}");
+      _log.w("Actual/expected place: ${actualScore.placeBlend}/${(params.usedScores - (params.expectedScore * params.divisor)).toStringAsFixed(4)}");
+      _log.w("Rating±Change: ${aRating.rating.round()} + ${change.toStringAsFixed(2)} (${changeFromPercent.toStringAsFixed(2)} from pct, ${changeFromPlace.toStringAsFixed(2)} from place)");
+      _log.w("###");
       throw StateError("NaN/Infinite/really big");
     }
 
@@ -310,7 +313,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
         if (scoreChangePerRating.isNaN || scoreChangePerRating.isInfinite || stepSize.isNaN || stepSize.isInfinite || backRating.rating.isNaN ||
             backRating.rating.isInfinite) {
-          debugPrint("pause");
+          _log.w("pause");
           throw StateError("NaN");
         }
 
@@ -416,7 +419,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
       var probability = _probability(bRating.rating, aRating.rating);
       if (probability.isNaN) {
-        debugPrint("NaN for ${bRating.rating} vs ${aRating.rating}");
+        _log.e("NaN for ${bRating.rating} vs ${aRating.rating}");
         throw StateError("NaN");
       }
 
@@ -837,7 +840,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     for(var shooter in shooters) {
       var prediction = shootersToPredictions[shooter];
       if(prediction == null) {
-        print("Null prediction for $shooter");
+        _log.w("Null prediction for $shooter");
         continue;
       }
 
@@ -862,10 +865,10 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     }
 
     if(chatty) {
-      print("Actual outcomes for ${actualOutcomes.length} shooters yielded an error sum of ${errors.sum} and an average error of ${errors.average.toStringAsPrecision(3)}");
-      print("Std. dev: ${(sqrt(errorSum) / predictions.length).toStringAsPrecision(3)} of ${predictions.map((e) => e.mean).average}");
-      print("Score correct: $correct68/$correct95/${actualOutcomes.length} (${(correct68 / actualOutcomes.length).asPercentage(decimals: 1)}%/${(correct95 / actualOutcomes.length * 100).toStringAsFixed(1)}%)");
-      print("Place correct: $correctPlace/${actualOutcomes.length} (${(correctPlace / actualOutcomes.length).asPercentage(decimals: 1)}%)");
+      _log.d("Actual outcomes for ${actualOutcomes.length} shooters yielded an error sum of ${errors.sum} and an average error of ${errors.average.toStringAsPrecision(3)}");
+      _log.d("Std. dev: ${(sqrt(errorSum) / predictions.length).toStringAsPrecision(3)} of ${predictions.map((e) => e.mean).average}");
+      _log.d("Score correct: $correct68/$correct95/${actualOutcomes.length} (${(correct68 / actualOutcomes.length).asPercentage(decimals: 1)}%/${(correct95 / actualOutcomes.length * 100).toStringAsFixed(1)}%)");
+      _log.d("Place correct: $correctPlace/${actualOutcomes.length} (${(correctPlace / actualOutcomes.length).asPercentage(decimals: 1)}%)");
     }
 
     return PredictionOutcome(

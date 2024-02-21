@@ -13,6 +13,10 @@ import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settin
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 import 'dart:math' as math;
 
+import 'package:shooting_sports_analyst/logger.dart';
+
+var _log = SSALogger("EloTuner");
+
 var _r = math.Random();
 
 class EloTuner {
@@ -71,7 +75,7 @@ class EloTuner {
     currentPopulation = [];
     currentPopulation.addAll(initialPopulation);
 
-    print("Tuning with ${initialPopulation.length} genomes and ${trainingData.length} test sets");
+    _log.d("Tuning with ${initialPopulation.length} genomes and ${trainingData.length} test sets");
     
     for(var p in currentPopulation) {
       Location? placed;
@@ -115,7 +119,7 @@ class EloTuner {
 
         if(_dominates(b, a)) {
           dominated = true;
-          // print("${b.hashCode} dominates ${a.hashCode}");
+          // _log.d("${b.hashCode} dominates ${a.hashCode}");
           break;
         }
       }
@@ -147,11 +151,11 @@ class EloTuner {
       _updateNonDominated();
     }
 
-    print("After $currentGeneration generations, ${nonDominated.length} non-dominated solutions exist.");
+    _log.d("After $currentGeneration generations, ${nonDominated.length} non-dominated solutions exist.");
   }
 
   Future<void> runGeneration(Future<void> Function(EvaluationProgressUpdate) callback) async {
-    print("Starting generation $currentGeneration with ${currentPopulation.length} members");
+    _log.d("Starting generation $currentGeneration with ${currentPopulation.length} members");
     
     int genomeIndex = 0;
     var totalDuration = 0;
@@ -205,7 +209,7 @@ class EloTuner {
             currentOperation: "Moving prey",
           ));
           sw.stop();
-          print("Evaluation took ${sw.elapsedMilliseconds / 1000}s");
+          _log.d("Evaluation took ${sw.elapsedMilliseconds / 1000}s");
         }
 
         if(currentGeneration == 0) {
@@ -235,7 +239,7 @@ class EloTuner {
     ));
     // do predator steps
     int predatorSteps = grid.predatorSteps;
-    print("$predatorSteps predator actions");
+    _log.d("$predatorSteps predator actions");
 
     int preyEaten = 0;
     // get predators once, rather than at every loop iteration
@@ -245,13 +249,13 @@ class EloTuner {
       for (int i = 0; i < predatorSteps; i++) {
         var adjacentPrey = grid.preyNeighbors(pred.location!);
         var target = pred.worstPrey(adjacentPrey);
-        print("Predator ${pred.hashCode} at ${pred.location} has ${adjacentPrey.length} neighboring prey");
+        _log.d("Predator ${pred.hashCode} at ${pred.location} has ${adjacentPrey.length} neighboring prey");
 
         if (target == null) {
           grid.move(pred);
         }
         else {
-          print("Predator eats ${target.hashCode} at ${target.location}!");
+          _log.d("Predator eats ${target.hashCode} at ${target.location}!");
           grid.replaceEntity(target.location!, pred);
           currentPopulation.remove(target);
           preyEaten += 1;
@@ -263,7 +267,7 @@ class EloTuner {
       }
     }
 
-    print("${predators.length} predators ate $preyEaten prey, for a current population of ${currentPopulation.length}");
+    _log.d("${predators.length} predators ate $preyEaten prey, for a current population of ${currentPopulation.length}");
 
     await callback(EvaluationProgressUpdate(
       currentGeneration: currentGeneration,
@@ -285,11 +289,11 @@ class EloTuner {
         toPlace.add(child);
       }
       else {
-        print("${p1.hashCode} has ${neighbors.length} neighboring prey");
+        _log.d("${p1.hashCode} has ${neighbors.length} neighboring prey");
       }
     }
 
-    print("${toPlace.length} new children");
+    _log.d("${toPlace.length} new children");
 
     for(var child in toPlace) {
       var location = grid.placeEntity(child);
@@ -298,7 +302,7 @@ class EloTuner {
       }
     }
 
-    print("After breeding, ${currentPopulation.length} prey");
+    _log.d("After breeding, ${currentPopulation.length} prey");
   }
 
   EloSettings _pickFrom(List<EloEvaluator> evaluators, weightThresholds, [EloSettings? exclude]) {
@@ -306,7 +310,7 @@ class EloTuner {
     for(int i = 0; i < evaluators.length; i++) {
       // The first time the roll is below the weight threshold, that's the one we want
       if(roll < weightThresholds[i] && evaluators[i].settings != exclude) {
-        print("Chose the ${i}th best for breeding");
+        _log.d("Chose the ${i}th best for breeding");
         return evaluators[i].settings;
       }
     }

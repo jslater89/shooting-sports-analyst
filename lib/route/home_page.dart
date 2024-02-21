@@ -17,6 +17,7 @@ import 'package:shooting_sports_analyst/html_or/html_or.dart';
 
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/practiscore_parser.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/main.dart';
 import 'package:shooting_sports_analyst/route/elo_tuner_page.dart';
 import 'package:shooting_sports_analyst/route/match_database_manager.dart';
@@ -24,6 +25,8 @@ import 'package:shooting_sports_analyst/ui/empty_scaffold.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_cache_chooser_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_source_chooser_dialog.dart';
+
+var _log = SSALogger("HomePage");
 
 class HomePage extends StatefulWidget {
   @override
@@ -179,7 +182,7 @@ class _HomePageState extends State<HomePage> {
               await Navigator.of(context).pushNamed('/local', arguments: contents);
             }
             else {
-              debugPrint("Null file contents");
+              _log.d("Null file contents");
             }
           });
         },
@@ -208,7 +211,7 @@ class _HomePageState extends State<HomePage> {
 
           (source, match) = response;
 
-          print("Displaying match ${match.sourceIds} with ${source.code}");
+          _log.i("Displaying match ${match.sourceIds} with ${source.code}");
           await Navigator.of(context).pushNamed('/web/${source.code}/${match.sourceIds.first}');
         },
         child: Column(

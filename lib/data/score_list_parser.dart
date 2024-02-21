@@ -7,6 +7,10 @@
 
 import 'dart:convert';
 
+import 'package:shooting_sports_analyst/logger.dart';
+
+var _log = SSALogger("ScoreListParser");
+
 final _profileMatchesRegex = RegExp(r"var matches = (?<matchListJson>\[\{.*\}\])");
 final _resultsNewRegex = RegExp(r'\/results\/new\/(?<matchId>[a-zA-Z\-0-9]+)[' + "'" + r'\"]');
 final _matchIdRegex = RegExp(r'matchid=[' + "'" + r'\"](?<matchId>[a-zA-Z\-0-9]+)[' + "'" + r'\"]');
@@ -34,12 +38,12 @@ List<String> getMatchResultLinksFromHtml(String html) {
       }).toList();
     }
   }
-  catch(e) {
-    print("Error parsing results HTML: $e");
+  catch(e, st) {
+    _log.e("Error parsing results HTML", error: e, stackTrace: st);
     return [];
   }
 
-  print("No URLs found");
+  _log.i("No URLs found");
   return [];
 }
 
@@ -60,8 +64,8 @@ List<String> _parseSelectProfileMatches(String matchListJson) {
 
     return uris;
   }
-  catch(e) {
-    print("Error parsing JSON: $e");
+  catch(e, st) {
+    _log.e("Error parsing JSON", error: e, stackTrace: st);
     return [];
   }
 }

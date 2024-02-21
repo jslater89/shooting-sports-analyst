@@ -8,6 +8,9 @@ import 'package:flutter/foundation.dart';
 // import 'package:shooting_sports_analyst/data/db/object/match/shooter.dart';
 import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/results_file_parser.dart';
+import 'package:shooting_sports_analyst/logger.dart';
+
+var _log = SSALogger("OldShooter");
 
 class Shooter {
   String firstName = "";
@@ -169,7 +172,7 @@ enum Division {
       case "revo":
       case "revolver": return Division.revolver;
       default: {
-        if(verboseParse) debugPrint("Unknown division: $s");
+        if(verboseParse) _log.w("Unknown division: $s");
         return Division.unknown;
       }
     }
@@ -291,7 +294,7 @@ extension ClassificationFrom on Classification {
       case "u": return Classification.U;
       case "x": return Classification.U;
       default:
-        if(verboseParse) debugPrint("Unknown classification: $s");
+        if(verboseParse) _log.w("Unknown classification: $s");
         return Classification.U;
     }
   }

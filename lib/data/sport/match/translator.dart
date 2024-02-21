@@ -12,6 +12,9 @@ import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/logger.dart';
+
+var _log = SSALogger("MatchTranslator");
 
 extension MatchTranslator on ShootingMatch {
   static ShootingMatch shootingMatchFrom(old.PracticalMatch match) {
@@ -35,7 +38,7 @@ extension MatchTranslator on ShootingMatch {
       try {
         powerFactor = uspsaSport.powerFactors.lookupByName(shooter.powerFactor.displayString()) ?? uspsaSport.powerFactors.lookupByName("subminor")!;
       } catch(e) {
-        print("Bad power factor: ${shooter.powerFactor.displayString()}");
+        _log.e("Bad power factor: ${shooter.powerFactor.displayString()}");
         rethrow;
       }
 

@@ -23,6 +23,7 @@ import 'package:shooting_sports_analyst/data/results_file_parser.dart';
 import 'package:shooting_sports_analyst/data/search_query_parser.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_correction_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/prediction/prediction_view.dart';
@@ -37,6 +38,8 @@ import 'package:shooting_sports_analyst/ui/widget/dialog/match_cache_chooser_dia
 import 'package:shooting_sports_analyst/ui/widget/dialog/member_number_collision_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/url_entry_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
+
+var _log = SSALogger("RatingsViewPage");
 
 class RatingsViewPage extends StatefulWidget {
   const RatingsViewPage({
@@ -355,7 +358,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
     var match = _selectedMatch;
     if(match == null) {
-      debugPrint("No match selected!");
+      _log.w("No match selected!");
       return Container();
     }
 
@@ -697,7 +700,6 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
             var asList = sortedRatings.sorted(comparator);
 
             var csv = rater.toCSV(ratings: asList);
-            print("tab: $tab first: ${csv.split("\n")[1]}");
             archive.addFile(ArchiveFile.string("${tab.label.safeFilename()}.csv", csv));
           }
           var zip = ZipEncoder().encode(archive); 
@@ -1218,13 +1220,13 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
     DateTime start = DateTime.now();
     var result = await _history.processInitialMatches();
-    print("Processing ratings took ${DateTime.now().difference(start).inMilliseconds / 1000} sec");
+    _log.i("Processing ratings took ${DateTime.now().difference(start).inMilliseconds / 1000} sec");
     if(result.isErr()) {
       _presentError(result.unwrapErr());
       return false;
     }
 
-    debugPrint("History ready with ${_history.matches.length} matches after ${urls.length} URLs and ${failedMatches.length} failures");
+    _log.i("History ready with ${_history.matches.length} matches after ${urls.length} URLs and ${failedMatches.length} failures");
     setState(() {
       _selectedMatch = _history.matches.last;
       _loadingState = _LoadingState.done;

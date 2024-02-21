@@ -13,7 +13,10 @@ import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/match/translator.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
+
+var _log = SSALogger("MatchDb");
 
 class MatchDatabase {
   static const eventNameIndex = "eventNameParts";
@@ -78,9 +81,9 @@ class MatchDatabase {
         return dbMatch;
       });
     }
-    catch(e) {
-      print("Failed to save match: $e");
-      print("${dbMatch.sourceIds}");
+    catch(e, stackTrace) {
+      _log.e("Failed to save match", error: e, stackTrace: stackTrace);
+      _log.i("Failed source IDs: ${dbMatch.sourceIds}");
       return Result.err(StringError("$e"));
     }
 
@@ -97,6 +100,7 @@ class MatchDatabase {
   }
 
   Future<void> migrateFromCache(ProgressCallback callback) async {
+    _log.d("Migrating from match cache");
     var cache = MatchCache();
 
     int i = 0;
@@ -107,10 +111,11 @@ class MatchDatabase {
       await save(newMatch);
       i += 1;
       if(i % 10 == 0) {
-        print("[MatchDatabase] Migration: saved $i of $matchCount to database");
+        _log.v("Migration: saved $i of $matchCount to database");
         await callback.call(i, matchCount);
       }
     }
+    _log.i("Match cache migration complete with $matchCount cache entries processed");
   }
 
   Query<DbShootingMatch> _buildQuery(List<MatchQueryElement> elements, {int? limit, int? offset, MatchSortField sort = const DateSort()}) {

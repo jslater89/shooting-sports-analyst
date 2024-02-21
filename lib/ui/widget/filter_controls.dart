@@ -9,8 +9,11 @@ import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/sort_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/stage_select_dialog.dart';
+
+var _log = SSALogger("FilterControls");
 
 class FilterControls extends StatefulWidget {
   final Sport sport;
@@ -215,7 +218,7 @@ class _FilterControlsState extends State<FilterControls> {
                             );
 
                             if(stages != null) {
-                              debugPrint("Filtered stages: $stages");
+                              _log.d("Filtered stages: $stages");
                               widget.onStageSetChanged(stages);
                             }
                           }

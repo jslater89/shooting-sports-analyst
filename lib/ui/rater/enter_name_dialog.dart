@@ -92,18 +92,15 @@ class _EnterNameDialogState extends State<EnterNameDialog> {
 
             if(confirm && confirmed) {
               Navigator.of(context).pop(nameController.text);
-              debugPrint("Saving");
             }
             else if(confirm && !confirmed) {
               confirmed = true;
               setState(() {
                 _errorText = "Tap again to confirm.";
               });
-              debugPrint("Confirm requested");
             }
             else {
               Navigator.of(context).pop(nameController.text);
-              debugPrint("Confirm not needed");
             }
           },
         )

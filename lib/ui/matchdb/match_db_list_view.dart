@@ -8,10 +8,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/match_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/matchdb/widget/match_db_list_view_search.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 import 'package:shooting_sports_analyst/util.dart';
+
+var _log = SSALogger("MatchDbListView");
 
 class MatchDatabaseListView extends StatefulWidget {
   const MatchDatabaseListView({super.key});
@@ -68,7 +71,7 @@ class _MatchDatabaseListViewState extends State<MatchDatabaseListView> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text("Unable to load match from database"))
                         );
-                        print("match db error: ${fullMatchResult.unwrapErr().message}");
+                        _log.w("match db error: ${fullMatchResult.unwrapErr().message}");
                         return;
                       }
                       Navigator.of(context).push(MaterialPageRoute(builder: (context) =>
@@ -202,11 +205,11 @@ class MatchDatabaseListModel extends ChangeNotifier {
     );
 
     if(newMatches.isEmpty) {
-      print("match list at page $_page has no more");
+      _log.v("match list at page $_page has no more");
       _hasMore = false;
     }
     else {
-      print("match list at page $_page has ${newMatches.length} more (${searchedMatches.length + newMatches.length})");
+      _log.v("match list at page $_page has ${newMatches.length} more (${searchedMatches.length + newMatches.length})");
       searchedMatches.addAll(newMatches);
     }
 

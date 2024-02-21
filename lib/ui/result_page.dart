@@ -21,6 +21,7 @@ import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/route/compare_shooter_results.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/about_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/score_list_settings_dialog.dart';
@@ -29,6 +30,8 @@ import 'package:shooting_sports_analyst/ui/widget/filter_controls.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_breakdown.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_list.dart';
+
+SSALogger _log = SSALogger("ResultPage");
 
 class ResultPage extends StatefulWidget {
   final ShootingMatch canonicalMatch;
@@ -267,7 +270,7 @@ class _ResultPageState extends State<ResultPage> {
         scores.sortByIdpaAccuracy(stage: _stage, scoring: sport.matchScoring);
         break;
       default:
-        print("Unknown sort type $s");
+        _log.e("Unknown sort type $s");
     }
   }
 
@@ -397,7 +400,7 @@ class _ResultPageState extends State<ResultPage> {
     final primaryColor = Theme.of(context).primaryColor;
     final backgroundColor = Theme.of(context).backgroundColor;
 
-    if(_operationInProgress) debugPrint("Operation in progress");
+    if(_operationInProgress) _log.v("Operation in progress");
 
     var animation = (_operationInProgress) ?
     AlwaysStoppedAnimation<Color>(backgroundColor) : AlwaysStoppedAnimation<Color>(primaryColor);

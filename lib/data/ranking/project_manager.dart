@@ -21,6 +21,9 @@ import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rater.
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 import 'package:shooting_sports_analyst/data/ranking/shooter_aliases.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/logger.dart';
+
+var _log = SSALogger("RatingProjectMgr");
 
 class RatingProjectManager {
   static const projectPrefix = "project/";
@@ -71,37 +74,37 @@ class RatingProjectManager {
           var mapName = key.replaceFirst(projectPrefix, "");
           if(mapName != project.name) {
             _projects[mapName] = project;
-            debugPrint("Inflating $key (${project.name}) to $mapName");
+            _log.v("Inflating $key (${project.name}) to $mapName");
           }
           else {
             _projects[project.name] = project;
-            debugPrint("Inflating $key to ${project.name}");
+            _log.v("Inflating $key to ${project.name}");
           }
         }
-        catch(e) {
-          debugPrint("Error decoding project $key: $e");
-          debugPrint(_box.get(key));
+        catch(e, st) {
+          _log.e("Error decoding project $key", error: e, stackTrace: st);
+          _log.i("Content: ${_box.get(key)}");
         }
       }
     }
   }
 
   Future<void> _migrate() async {
-    print("Migrating ProjectManager to HiveDB");
+    _log.i("Migrating ProjectManager to HiveDB");
     for(var key in _prefs.getKeys()) {
       if (key.startsWith(projectPrefix)) {
         var string = _prefs.getString(key);
         if (string != null) {
           _box.put(key, string);
-          print("Moved $key to Hive");
+          _log.v("Moved $key to Hive");
         }
         _prefs.remove(key);
-        print("Deleted $key from shared prefs");
+        _log.v("Deleted $key from shared prefs");
       }
     }
 
     _box.put(_migrated, "true");
-    print("Migration complete");
+    _log.i("Migration complete");
   }
 
   Future<void> exportToFile(RatingProject project) async {
@@ -117,8 +120,8 @@ class RatingProjectManager {
         var project =  RatingProject.fromJson(encodedProject);
         project.name = "${project.name}";
         return project;
-      } catch(e) {
-        print("Error loading file: $e");
+      } catch(e, st) {
+        _log.e("Error loading file", error: e, stackTrace: st);
       }
     }
 
@@ -149,7 +152,7 @@ class RatingProjectManager {
     if(mapName != null && mapName != project.name) {
       projectNames.add(mapName);
     }
-    debugPrint("Saved project ${project.name} to: $projectNames");
+    _log.d("Saved project ${project.name} to: $projectNames");
   }
 
   Future<void> deleteProject(String name) async {
@@ -164,10 +167,10 @@ class RatingProjectManager {
   RatingProject? loadProject(String name) {
     var project = _projects[name];
     if(project != null) {
-      print("Returning ${project.name} from $name");
+      _log.d("Returning ${project.name} from $name");
     }
     else {
-      print("No project for $name");
+      _log.w("No project for $name");
     }
     return project;
   }

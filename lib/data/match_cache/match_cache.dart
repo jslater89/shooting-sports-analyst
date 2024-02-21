@@ -13,11 +13,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/practiscore_parser.dart';
 import 'package:shooting_sports_analyst/data/results_file_parser.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 part 'match_cache.g.dart';
 
 Future<void> Function(int, int)? matchCacheProgressCallback;
+
+var _log = SSALogger("MatchCache");
 
 class MatchCache {
   static MatchCache? _instance;
@@ -98,11 +101,11 @@ class MatchCache {
     //   }
     // }
     //
-    // print("SS major wins: ${(ssMajorWins / (ssMajorWins + ssMinorWins)).asPercentage(decimals: 1)}%");
-    // print("SS minor wins: ${(ssMinorWins / (ssMajorWins + ssMinorWins)).asPercentage(decimals: 1)}%");
+    // _log.v("SS major wins: ${(ssMajorWins / (ssMajorWins + ssMinorWins)).asPercentage(decimals: 1)}%");
+    // _log.v("SS minor wins: ${(ssMinorWins / (ssMajorWins + ssMinorWins)).asPercentage(decimals: 1)}%");
     //
-    // print("SS major entries: ${(ssMajorEntries / (ssMajorEntries + ssMinorEntries)).asPercentage(decimals: 1)}%");
-    // print("SS minor entries: ${(ssMinorEntries / (ssMajorEntries + ssMinorEntries)).asPercentage(decimals: 1)}%");
+    // _log.v("SS major entries: ${(ssMajorEntries / (ssMajorEntries + ssMinorEntries)).asPercentage(decimals: 1)}%");
+    // _log.v("SS minor entries: ${(ssMinorEntries / (ssMajorEntries + ssMinorEntries)).asPercentage(decimals: 1)}%");
     //
     // End research code
 
@@ -114,7 +117,7 @@ class MatchCache {
   }
 
   Future<void> _firstTimeIndex() async {
-    print("[MatchCache] Generating first-time index");
+    _log.i("Generating first-time index");
     for(var entry in _cache.values) {
       var idxEntry = MatchCacheIndexEntry.fromMatchEntry(entry);
       for(var id in idxEntry.ids) {
@@ -122,11 +125,11 @@ class MatchCache {
       }
       _indexBox.put(idxEntry.path, idxEntry);
     }
-    print("[MatchCache] Generated ${_index.length} index entries from ${_cache.values.length} matches");
+    _log.i("Generated ${_index.length} index entries from ${_cache.values.length} matches");
   }
 
   Future<void> _loadIndex() async {
-    print("[MatchCache] Loading index");
+    _log.d("Loading index");
     _index.clear();
 
     int i = 0;
@@ -135,7 +138,7 @@ class MatchCache {
       if(path.startsWith(_cachePrefix)) {
         var indexEntry = _indexBox.get(path);
         if(indexEntry != null) {
-          // print("[MatchCache] Loaded ${indexEntry.matchName} from ${indexEntry.ids}");
+          // _log.v("Loaded ${indexEntry.matchName} from ${indexEntry.ids}");
           for (var id in indexEntry.ids) {
             if(id.contains("?")) {
               id = _removeQuery(id);
@@ -149,13 +152,13 @@ class MatchCache {
       if(i % 5 == 0) await matchCacheProgressCallback?.call(i, paths.length);
     }
 
-    print("[MatchCache] Loaded ${_index.length} index entries from ${paths.length} paths");
+    _log.i("Loaded ${_index.length} index entries from ${paths.length} paths");
   }
 
 
 
   Future<void> _load() async {
-    print("[MatchCache] Loading full cache");
+    _log.d("Loading full cache");
     _cache.clear();
 
     var paths = _box.keys;
@@ -182,7 +185,7 @@ class MatchCache {
       }
     }
 
-    print("[MatchCache] Loaded $matches cached matches, with $stages stages, $shooters shooters, and $stageScores stage scores");
+    _log.i("Loaded $matches cached matches, with $stages stages, $shooters shooters, and $stageScores stage scores");
   }
 
   /// Loads a match from the local cache. Does not download.
@@ -223,7 +226,7 @@ class MatchCache {
         // If it's a UUID-only entry, only replace an entry in the cache if we haven't
         // already loaded a corresponding two-ID entry.
         if(ids.length == 1 && _cache.containsKey(id)) {
-          if(verboseParse) print("[MatchCache] Skipping one-ID entry for $id: already loaded as two-ID entry");
+          _log.v("Skipping one-ID entry for $id: already loaded as two-ID entry");
           continue;
         }
 
@@ -233,11 +236,11 @@ class MatchCache {
       match.practiscoreId = longId;
       match.practiscoreIdShort = shortId;
 
-      if(verboseParse) print("[MatchCache] Loaded ${entry.match.name} from $path to $ids");
+      _log.v("Loaded ${entry.match.name} from $path to $ids");
       return match;
     }
     else {
-      print("[MatchCache] Failed to load $path!");
+      _log.w("Failed to load $path!");
       return null;
     }
   }
@@ -361,7 +364,7 @@ class MatchCache {
       if(!idsChanged && _box.containsKey(path) && entry.ids.where((e) => forceResave.contains(e)).isEmpty) {
         currentProgress += 1;
         await progressCallback?.call(currentProgress, totalProgress);
-        // print("[MatchCache] Not resaving ${entry.match.name}");
+        // _log.v("Not resaving ${entry.match.name}");
         continue; // No need to resave
       }
 
@@ -376,7 +379,7 @@ class MatchCache {
       _indexBox.put(path, MatchCacheIndexEntry.fromMatchEntry(entry));
       _cachedSize = null;
       alreadySaved.add(entry);
-      print("[MatchCache] Saved ${entry.match.name} to $path");
+      _log.d("Saved ${entry.match.name} to $path");
 
       currentProgress += 1;
       if(currentProgress % 5 == 0) await matchCacheProgressCallback?.call(currentProgress, totalProgress);
@@ -410,13 +413,13 @@ class MatchCache {
   Future<bool> _deleteEntry(_MatchCacheEntry? entry) async {
     if(entry != null) {
       for(var id in entry.ids) {
-        print("[MatchCache] Deleted $id");
+        _log.v("Deleted $id");
         _cache.remove(id);
         _index.remove(id);
       }
       await _box.delete(entry.generatePath());
       await _indexBox.delete(entry.generatePath());
-      print("[MatchCache] Deleted cache and index entries from ${entry.generatePath()}");
+      _log.d("[MatchCache] Deleted cache and index entries from ${entry.generatePath()}");
       _cachedSize = null;
       return true;
     }
@@ -441,7 +444,7 @@ class MatchCache {
       _index[id] = index;
     }
 
-    print("[MatchCache] Inserted cache and index entry for ${ids}");
+    _log.v("[MatchCache] Inserted cache and index entry for ${ids}");
   }
 
   String? getUrl(PracticalMatch match) {
@@ -512,7 +515,7 @@ class MatchCache {
       _index[id] = indexEntry;
     }
 
-    print("[MatchCache] Inserted cache entry at ${entry.ids} ");
+    _log.v("Inserted cache entry at ${entry.ids} ");
   }
 
   Future<Result<PracticalMatch, MatchGetError>> getMatch(String matchUrl, {bool forceUpdate = false, bool localOnly = false, bool checkCanonId = true}) async {
@@ -520,7 +523,7 @@ class MatchCache {
     if(id.contains("?")) id = _removeQuery(id);
 
     if(!forceUpdate && _index.containsKey(id)) {
-      // print("[MatchCache] Using local cache for $id");
+      // _log.v("Using local cache for $id");
       var match = await _loadIndexed(id);
       return Result.ok(match!);
     }
@@ -561,7 +564,7 @@ class MatchCache {
       }
     }
     else {
-      print("[MatchCache] canon ID is null");
+      _log.w("canon ID is null");
       return Result.err(MatchGetError.notHitFactor);
     }
   }
@@ -612,21 +615,21 @@ class MatchCache {
   }
 
   Future<void> _migrate() async {
-    print("[MatchCache] Migrating MatchCache to HiveDB");
+    _log.i("Migrating MatchCache to HiveDB");
     for(var key in _prefs.getKeys()) {
       if (key.startsWith(_cachePrefix)) {
         var string = _prefs.getString(key);
         if (string != null) {
           _box.put(key, string);
-          print("[MatchCache] Moved $key to Hive");
+          _log.v("Moved $key to Hive");
         }
         _prefs.remove(key);
-        print("[MatchCache] Deleted $key from shared prefs");
+        _log.v("Deleted $key from shared prefs");
       }
     }
 
     _box.put(_migrated, "true");
-    print("[MatchCache] Migration complete");
+    _log.i("Migration complete");
   }
 }
 

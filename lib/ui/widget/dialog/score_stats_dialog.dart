@@ -7,7 +7,10 @@
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
+
+var _log = SSALogger("ScoreStatsDialog");
 
 class ScoreStatsDialog extends StatefulWidget {
   const ScoreStatsDialog({super.key, required this.scores, this.stage});
@@ -27,7 +30,7 @@ class _ScoreStatsDialogState extends State<ScoreStatsDialog> {
   void initState() {
     super.initState();
 
-    debugPrint("Calculating score stats for ${widget.scores.length} scores on stage ${widget.stage}");
+    _log.i("Calculating score stats for ${widget.scores.length} scores on stage ${widget.stage}");
 
     late List<RelativeScore> scores;
     if(widget.stage != null) {

@@ -17,6 +17,7 @@ import 'package:shooting_sports_analyst/data/ranking/evolution/genome.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/rater/evolution/predator_prey_view.dart';
 import 'package:shooting_sports_analyst/ui/rater/evolution/solution_space_chart.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
@@ -24,6 +25,8 @@ import 'package:shooting_sports_analyst/ui/widget/match_cache_loading_indicator.
 import 'package:shooting_sports_analyst/data/ranking/evolution/l2s_data.dart' as l2s;
 import 'package:shooting_sports_analyst/data/ranking/evolution/wpa_data.dart' as wpa;
 import 'package:shooting_sports_analyst/data/ranking/evolution/east_data.dart' as east;
+
+var _log = SSALogger("EloTunerPage");
 
 class EloTunerPage extends StatefulWidget {
   const EloTunerPage({Key? key}) : super(key: key);
@@ -76,34 +79,34 @@ class _EloTunerPageState extends State<EloTunerPage> {
 
     for(var url in l2s.calibration) {
       l2Calibration.add((await cache.getMatch(url)).unwrap());
-      print("Got $url");
+      _log.v("Got $url");
     }
     for(var url in l2s.test) {
       l2Test.add((await cache.getMatch(url)).unwrap());
-      print("Got $url");
+      _log.v("Got $url");
     }
     for(var url in wpa.calibration) {
       wpaCalibration.add((await cache.getMatch(url)).unwrap());
-      print("Got $url");
+      _log.v("Got $url");
     }
     for(var url in wpa.test) {
       wpaTest.add((await cache.getMatch(url)).unwrap());
-      print("Got $url");
+      _log.v("Got $url");
     }
     for(var url in east.calibration) {
       eastCalibration.add((await cache.getMatch(url)).unwrap());
-      print("Got $url");
+      _log.v("Got $url");
     }
     for(var url in east.test) {
       eastTest.add((await cache.getMatch(url)).unwrap());
-      print("Got $url");
+      _log.v("Got $url");
     }
 
     cache.save();
 
-    print("WPA: ${wpaCalibration.length} calibration matches, ${wpaTest.length} eval matches");
-    print("L2s: ${l2Calibration.length} calibration matches, ${l2Test.length} eval matches");
-    print("East: ${eastCalibration.length} calibration matches, ${eastTest.length} eval matches");
+    _log.d("WPA: ${wpaCalibration.length} calibration matches, ${wpaTest.length} eval matches");
+    _log.d("L2s: ${l2Calibration.length} calibration matches, ${l2Test.length} eval matches");
+    _log.d("East: ${eastCalibration.length} calibration matches, ${eastTest.length} eval matches");
 
       tuner = EloTuner([
         EloEvaluationData(

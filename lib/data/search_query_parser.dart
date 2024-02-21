@@ -9,6 +9,9 @@ import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/logger.dart';
+
+var _log = SSALogger("SearchQueryParser");
 
 // This file parses search queries of the form
 // ?revolver and b or production and c or singlestack and major or "jay slater".
@@ -80,7 +83,7 @@ List<SearchQueryElement>? parseQuery(String query) {
     group = group.trim();
     SearchQueryElement? element = _parseGroup(group);
     if(element == null) {
-      debugPrint("Bad element: $group");
+      _log.d("Bad element: $group");
       return null;
     }
     else {
@@ -88,7 +91,7 @@ List<SearchQueryElement>? parseQuery(String query) {
     }
   }
 
-  //debugPrint("Elements: $elements");
+  //_log.v("Elements: $elements");
   return elements;
 }
 
@@ -132,7 +135,7 @@ SearchQueryElement? _parseGroup(String group) {
       element.classification = ClassificationFrom.string(item);
     }
     else {
-      debugPrint("Bad item: $item");
+      _log.d("Bad item: $item");
       return null;
     }
   }

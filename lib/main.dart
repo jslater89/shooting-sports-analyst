@@ -29,6 +29,7 @@ import 'package:shooting_sports_analyst/data/source/practiscore_report.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/route/local_upload.dart';
 import 'package:shooting_sports_analyst/route/home_page.dart';
 import 'package:shooting_sports_analyst/route/practiscore_url.dart';
@@ -38,6 +39,8 @@ import 'package:fluro/fluro.dart' as fluro;
 
 import 'data/ranking/evolution/genome.dart';
 import 'data/results_file_parser.dart';
+
+var _log = SSALogger("main");
 
 class GlobalData {
   String? _resultsFileUrl;
@@ -50,7 +53,7 @@ class GlobalData {
 
   GlobalData() {
     var params = HtmlOr.getQueryParams();
-    debugPrint("iframe params? $params");
+    _log.v("iframe params? $params");
     _resultsFileUrl = params['resultsFile'];
     _practiscoreUrl = params['practiscoreUrl'];
     _practiscoreId = params['practiscoreId'];
@@ -62,9 +65,11 @@ GlobalData globals = GlobalData();
 void main() async {
   // dumpRatings();
 
+  _log.i("=== App start ===");
+
   globals.router.define('/', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
     handlerFunc: (context, params) {
-      debugPrint("$params");
+      _log.d("/ route params: $params");
       return HomePage();
     }
   ));
@@ -96,6 +101,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await MatchDatabase().ready;
+  _log.i("Database ready");
 
   if(!HtmlOr.isWeb) {
     var path = await getApplicationSupportDirectory();
@@ -107,6 +113,8 @@ void main() async {
     };
     MatchCache();
   }
+
+  _log.i("Hive cache ready");
 
   runApp(MyApp());
 }

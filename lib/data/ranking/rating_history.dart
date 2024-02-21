@@ -16,9 +16,12 @@ import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
 import 'package:shooting_sports_analyst/data/ranking/timings.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:shooting_sports_analyst/data/ranking/shooter_aliases.dart' as defaultAliases;
 import 'package:shooting_sports_analyst/ui/widget/dialog/member_number_collision_dialog.dart';
+
+var _log = SSALogger("RatingHistory");
 
 /// RatingHistory turns a sequence of [PracticalMatch]es into a series of
 /// [Rater]s.
@@ -141,7 +144,7 @@ class RatingHistory {
   PracticalMatch? _lastMatch;
   
   Future<RatingResult> _processInitialMatches() async {
-    if(verbose) debugPrint("Loading matches");
+    if(verbose) _log.v("Loading matches");
 
     int stepsFinished = 0;
 
@@ -162,12 +165,12 @@ class RatingHistory {
     if(_settings.preserveHistory) {
       int totalSteps = ((_settings.groups.length * _matches.length) / progressCallbackInterval).round();
 
-      if(verbose) print("Total steps, history preserved: $totalSteps on ${_matches.length} matches and ${_settings.groups.length} groups");
+      if(verbose) _log.v("Total steps, history preserved: $totalSteps on ${_matches.length} matches and ${_settings.groups.length} groups");
 
       for (PracticalMatch match in _matches) {
         var m = match;
         currentMatches.add(m);
-        debugPrint("Considering match ${m.name}");
+        _log.d("Considering match ${m.name}");
         var innerMatches = <PracticalMatch>[]..addAll(currentMatches);
         _ratersByDivision[m] ??= {};
         for (var group in _settings.groups) {
@@ -182,7 +185,7 @@ class RatingHistory {
             var result = await r.calculateInitialRatings();
             if(result.isErr()) return result;
 
-            if(Timings.enabled) print("Timings for $group: ${r.timings}");
+            if(Timings.enabled) _log.i("Timings for $group: ${r.timings}");
 
             stepsFinished += 1;
             if(stepsFinished % progressCallbackInterval == 0) {
@@ -209,7 +212,7 @@ class RatingHistory {
     else {
       int totalSteps = ((_settings.groups.length * _matches.length) / progressCallbackInterval).round();
 
-      if(verbose) debugPrint("Total steps, history discarded: $totalSteps");
+      if(verbose) _log.v("Total steps, history discarded: $totalSteps");
 
       _lastMatch = _matches.last;
       _ratersByDivision[_lastMatch!] ??= {};
@@ -222,7 +225,7 @@ class RatingHistory {
         var result = await r.calculateInitialRatings();
         if(result.isErr()) return result;
         _ratersByDivision[_lastMatch]![group] = r;
-        if(Timings.enabled) print("Timings for $group: ${r.timings}");
+        if(Timings.enabled) _log.i("Timings for $group: ${r.timings}");
       }
     }
 
@@ -232,7 +235,7 @@ class RatingHistory {
       stageCount += m.stages.length;
       // scoreCount += m.getScores().length;
     }
-    print("Total of ${countUniqueShooters()} shooters, ${_matches.length} matches, and $stageCount stages");
+    _log.i("Total of ${countUniqueShooters()} shooters, ${_matches.length} matches, and $stageCount stages");
     return RatingResult.ok();
   }
   

@@ -30,7 +30,6 @@ class _StageSelectDialogState extends State<StageSelectDialog> {
     setState(() {
       state[s] = value;
     });
-    //debugPrint("Filtered stages: $state");
   }
 
   @override

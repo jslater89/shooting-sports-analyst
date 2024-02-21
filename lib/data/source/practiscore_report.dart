@@ -20,9 +20,12 @@ import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/route/practiscore_url.dart';
 import 'package:shooting_sports_analyst/util.dart';
 import 'package:http/http.dart' as http;
+
+var _log = SSALogger("ReportFileMatchSource");
 
 /// This will parse a PractiScore hit factor report.txt file.
 ///
@@ -95,24 +98,24 @@ class PractiscoreHitFactorReportParser extends MatchSource {
     var info = _MatchInfo();
     for(String line in infoLines) {
       if(line.startsWith(_MATCH_NAME)) {
-        // print("Found match name");
+        // _log.vv("Found match name");
         info.name = line.replaceFirst(_MATCH_NAME, "");
       }
       else if(line.startsWith(_MATCH_DATE)) {
-        // print("Found match date");
+        // _log.vv("Found match date");
         info.rawDate = line.replaceFirst(_MATCH_DATE, "");
         try {
           info.date = _df.parse(info.rawDate);
         }
-        catch(e) {
-          print("Unable to parse date ${info.rawDate} $e");
+        catch(e, st) {
+          _log.w("Unable to parse date ${info.rawDate}", error: e, stackTrace: st);
         }
       }
       else if(line.startsWith(_MATCH_LEVEL) && sport.hasEventLevels) {
         var level = line.replaceFirst(_MATCH_LEVEL, "");
         info.level = sport.eventLevels.lookupByName(level);
 
-        // print("${match.name} has $level => ${match.level}");
+        // _log.vv("${match.name} has $level => ${match.level}");
       }
     }
 
@@ -145,8 +148,8 @@ class PractiscoreHitFactorReportParser extends MatchSource {
         );
 
         stagesById[i++] = s;
-      } catch(err) {
-        print("Error parsing stage: $line $err");
+      } catch(e, st) {
+        _log.w("Error parsing stage: $line", error: e, stackTrace: st);
       }
     }
 
@@ -219,12 +222,12 @@ class PractiscoreHitFactorReportParser extends MatchSource {
         );
 
         shootersById[i++] = s;
-      } catch(err) {
-        print("Error parsing shooter: $line $err");
+      } catch(e, st) {
+        _log.w("Error parsing shooter: $line", error: e, stackTrace: st);
       }
     }
 
-    // print("Read ${shootersById.length} shooters");
+    // _log.d("Read ${shootersById.length} shooters");
 
     return shootersById;
   }
@@ -283,7 +286,7 @@ class PractiscoreHitFactorReportParser extends MatchSource {
           correctedTime = true;
         }
 
-        if (verboseParse && correctedTime) print("Corrected time $originalTimeField to $timeField");
+        if (verboseParse && correctedTime) _log.d("Corrected time $originalTimeField to $timeField");
 
         var powerFactor = shooter.powerFactor;
         Map<ScoringEvent, int> scoringEvents = {};
@@ -344,19 +347,18 @@ class PractiscoreHitFactorReportParser extends MatchSource {
         shooter.scores[stage] = s;
 
         i++;
-      } catch (err, stackTrace) {
-        print("Error parsing score: $line $err");
-        print("Stack: $stackTrace");
+      } catch (e, st) {
+        _log.e("Error parsing score", error: e, stackTrace: st);
       }
     }
-    if(verboseParse) print("Processed $i stage scores");
+    if(verboseParse) _log.i("Processed $i stage scores");
     return i;
   }
 
   Future<Result<String, MatchSourceError>> getPractiscoreReportFile(String matchId) async {
     var proxyUrl = getProxyUrl();
     var reportUrl = "${proxyUrl}https://practiscore.com/reports/web/$matchId";
-    if(verboseParse) print("Report download URL: $reportUrl");
+    if(verboseParse) _log.d("Report download URL: $reportUrl");
 
     var responseString = "";
     try {
@@ -368,26 +370,24 @@ class PractiscoreHitFactorReportParser extends MatchSource {
         }
       }
       else if(response.statusCode == 404) {
-        print("No match record at $reportUrl");
+        _log.e("No match record at $reportUrl");
         return Result.err(MatchSourceError.notFound);
       }
 
-      if(verboseParse) print("response: ${response.body.split("\n").first}");
+      if(verboseParse) _log.v("response: ${response.body.split("\n").first}");
     }
     catch(err, stackTrace) {
-      print("download error: $err ${err.runtimeType}");
-      print("$stackTrace");
-
+      _log.e("download error: ${err.runtimeType}", error: err, stackTrace: stackTrace);
       if (err is http.ClientException) {
         http.ClientException ce = err;
-        print("${ce.uri} ${ce.message}");
+        _log.e("HTTP client exception ${ce.uri} ${ce.message}");
       }
       return Result.err(MatchSourceError.networkError);
     }
 
     try {
       var token = getClubNameToken(responseString);
-      if(verboseParse) print("Token: $token");
+      if(verboseParse) _log.v("Token: $token");
       var body = {
         '_token': token,
         'ClubName': 'None',
@@ -402,10 +402,10 @@ class PractiscoreHitFactorReportParser extends MatchSource {
         }
       }
 
-      if(verboseParse) print("Didn't work: ${response.statusCode} ${response.body}");
+      if(verboseParse) _log.e("Didn't work: ${response.statusCode} ${response.body}");
     }
-    catch(err) {
-      print("download error pt. 2: $err ${err.runtimeType}");
+    catch(e, st) {
+      _log.e("download error pt. 2: ${e.runtimeType}", error: e, stackTrace: st);
     }
     return Result.err(MatchSourceError.networkError);
   }

@@ -6,6 +6,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/score_list_parser.dart';
+import 'package:shooting_sports_analyst/logger.dart';
+
+var _log = SSALogger("EnterPractiscoreSourceDialog");
 
 class EnterPractiscoreSourceDialog extends StatefulWidget {
   const EnterPractiscoreSourceDialog({Key? key}) : super(key: key);
@@ -108,11 +111,11 @@ class _EnterPractiscoreSourceDialogState extends State<EnterPractiscoreSourceDia
     List<String> goodUrls = [];
     for(var url in urls) {
       if(url.trim().isEmpty || !url.startsWith("http")) {
-        debugPrint("Skipping non-URL $url");
+        _log.d("Skipping non-URL $url");
         continue;
       }
       else if(url.contains("practiscore.com/results/new")) goodUrls.add(url);
-      else debugPrint("Bad URL: $url");
+      else _log.d("Bad URL: $url");
     }
     return goodUrls;
   }

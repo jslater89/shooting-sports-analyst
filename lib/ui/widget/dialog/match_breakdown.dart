@@ -74,7 +74,6 @@ class MatchBreakdown extends StatelessWidget {
     }
     columns.add(Align(alignment: Alignment.centerRight, child: Text("Total")));
 
-    //debugPrint("$columns");
     rows.add(
       TableRow(
         children: columns,
@@ -102,8 +101,6 @@ class MatchBreakdown extends StatelessWidget {
         )
       );
 
-      //debugPrint("$columns");
-
       rows.add(
         TableRow(
           children: columns,
@@ -130,7 +127,6 @@ class MatchBreakdown extends StatelessWidget {
         alignment: Alignment.centerRight,
       )
     );
-    //debugPrint("$columns");
     rows.add(
       TableRow(
         children: columns,

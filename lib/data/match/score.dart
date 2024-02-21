@@ -10,8 +10,11 @@ import 'package:flutter/foundation.dart';
 import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_list.dart';
+
+var _log = SSALogger("OldScore");
 
 class Score {
   Shooter shooter;
@@ -183,7 +186,7 @@ extension ScoringFrom on Scoring {
       case "fixed": return Scoring.fixedTime;
       case "chrono": return Scoring.chrono;
       default: {
-        debugPrint("Unknown scoring: $s");
+        _log.w("Unknown scoring: $s");
         return Scoring.unknown;
       }
     }
