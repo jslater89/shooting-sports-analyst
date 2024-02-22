@@ -550,6 +550,7 @@ class Rater {
             }
           }
           else {
+            _log.i("More than 2 member numbers");
             continue;
           }
         }
@@ -640,7 +641,7 @@ class Rater {
           ));
         }
 
-        if(verbose) _log.i("Shooter $name has >=2 member numbers, mapping: ${numbers.values.flattened.toList()} to $bestNumber");
+        if(verbose) _log.v("Shooter $name has >=2 member numbers, mapping: ${numbers.values.flattened.toList()} to $bestNumber");
 
         var target = knownShooters[bestNumber]!;
 

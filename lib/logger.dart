@@ -4,10 +4,14 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
+import 'package:mutex/mutex.dart';
+import 'package:shooting_sports_analyst/config.dart';
+import 'package:stack_trace/stack_trace.dart';
 
 const _RELEASE_FILTER_LEVEL = Level.debug;
 
@@ -46,11 +50,20 @@ extension _LevelComparison on Level {
   }
 }
 
-class _SSALogOutput extends LogOutput {
-  final bool console;
-  final bool file;
+class _SSAFileOutput {
+  static _SSAFileOutput? _instance;
+  factory _SSAFileOutput() {
+    _instance ??= _SSAFileOutput._();
+    return _instance!;
+  }
+
+  _SSAFileOutput._() {
+    launchFuture = _launchCompleter.future;
+    _setupFiles();
+  }
 
   late Future<bool> launchFuture;
+  Completer<bool> _launchCompleter = Completer();
 
   static const _LOG_DIR = "./logs/";
   static const _FILENAME = "./logs/analyst.log";
@@ -61,18 +74,16 @@ class _SSALogOutput extends LogOutput {
   static const _MAX_FILE_SIZE = 1024 * 1024 * 5;
   static const _MIN_FILE_DELAY = 60;
 
-  static DateTime _lastFileRotateCheck = DateTime.now();
-
+  DateTime _lastFileRotateCheck = DateTime.now();
+  List<String> _buffer = [];
   List<File> _outputFiles = [];
+  Mutex _fileLock = Mutex();
 
-  _SSALogOutput({this.console = true, this.file = false}) {
-    if(file) launchFuture = _setupFiles();
-    else launchFuture = Future.value(true);
-  }
-
-  Future<bool> _setupFiles() async {
+  /// This will be called once when the file output instance
+  /// is created, so it doesn't need locking.
+  Future<void> _setupFiles() async {
     if(_outputFiles.isNotEmpty) {
-      return true;
+      return;
     }
 
     var dir = Directory(_LOG_DIR);
@@ -83,7 +94,12 @@ class _SSALogOutput extends LogOutput {
 
     _reloadFilesArray();
 
-    return true;
+    // At app start, rotate files, so we start
+    // a new log file per app run.
+    _rotateFiles();
+
+    _launchCompleter.complete(true);
+    return;
   }
 
   void _reloadFilesArray() {
@@ -94,31 +110,24 @@ class _SSALogOutput extends LogOutput {
 
     _outputFiles = files;
   }
-  
-  List<String> _buffer = [];
 
-  @override
-  void output(OutputEvent event) async {
-    await launchFuture;
-
-    if(this.console) event.lines.forEach((element) { print(element); });
-    if(this.file) _doFileOutput(event.lines.join("\n"));
-  }
-
-  bool _pumping = false;
-  void _pumpOutput() async {
-    if(!_pumping) {
-      _pumping = true;
+  /// Write to logs.
+  Future<void> _pumpOutput() async {
+    if(!_fileLock.isLocked) {
+      await _fileLock.acquire();
 
       var f = _outputFiles.first;
+      var fo = f.openSync(mode: FileMode.append);
 
       while(_buffer.isNotEmpty) {
         var output = _buffer.removeAt(0);
         String suffix = "";
         if(!output.endsWith("\n")) suffix = "\n";
 
-        await f.writeAsString(output + suffix, mode: FileMode.append);
+        await fo.writeString(output + suffix);
       }
+
+      fo.closeSync();
 
       if(DateTime.now().difference(_lastFileRotateCheck).inSeconds > _MIN_FILE_DELAY) {
         var stat = await f.stat();
@@ -127,22 +136,28 @@ class _SSALogOutput extends LogOutput {
         }
       }
 
-      _pumping = false;
+      _fileLock.release();
     }
   }
 
-  Future<void> _doFileOutput(String output) async {
+  Future<void> write(String output) async {
     _buffer.add(output);
 
     _pumpOutput();
   }
 
-  void _rotateFiles() async {
-    _outputFiles.last.deleteSync();
+  void _rotateFiles() {
+    // Delete the oldest file
+    if(_outputFiles.last.existsSync()) {
+      _outputFiles.last.deleteSync();
+    }
 
-    for(int i = 0; i < _FILE_LIMIT - 1; i++) {
+    // Working from old to new, rename each file to the filename one older.
+    for(int i = _FILE_LIMIT - 2; i >= 0; i--) {
       var f = _fileForIndex(i);
-      f.rename(_filenameForIndex(i + 1));
+      if(f.existsSync()) {
+        f.renameSync(_filenameForIndex(i + 1));
+      }
     }
 
     _reloadFilesArray();
@@ -159,37 +174,68 @@ class _SSALogOutput extends LogOutput {
     else f = File(_filenameForIndex(i));
     return f;
   }
+
+}
+
+class _SSALogOutput extends LogOutput {
+  final bool console;
+  final bool file;
+
+  _SSAFileOutput fileOutput = _SSAFileOutput();
+
+  late Future<bool> launchFuture;
+
+  _SSALogOutput({this.console = true, this.file = false}) {
+    if(file) launchFuture = fileOutput.launchFuture;
+    else launchFuture = Future.value(true);
+  }
+
+  @override
+  void output(OutputEvent event) async {
+    await launchFuture;
+
+    if(this.console) event.lines.forEach((element) { print(element); });
+    if(this.file) fileOutput.write(event.lines.join("\n"));
+  }
 }
 
 class SSALogger extends LogPrinter {
-  static late _SSALogOutput _output;
-  static Level _minLevel = kDebugMode ? Level.trace : Level.info;
-  Logger? _logger;
+  static const _callsiteLevel = kDebugMode ? Level.debug : Level.warning;
+
+  late _SSALogOutput _output;
+  late Level _minLevel;
+  late Logger _logger;
 
   final String tag;
   SSALogger(this.tag) {
-    if(_logger == null) {
-      _output = _SSALogOutput(console: true, file: true);
-      _logger = new Logger(
-        printer: this,
-        filter: _SSALogFilter(),
-        output: _output,
-      );
-    }
+    _init(true);
   }
   SSALogger.consoleOnly(this.tag) {
-    if(_logger == null) {
-      _output = _SSALogOutput(console: true, file: false);
-      _logger = new Logger(
-        printer: this,
-        filter: _SSALogFilter(),
-        output: _output,
-      );
-    }
+    _init(false);
   }
 
-  Future<bool> ready() {
-    return _output.launchFuture;
+  Future<void> get ready => _readyCompleter.future;
+  Completer<void> _readyCompleter = Completer();
+
+  Future<void> _init(bool file) async {
+    // This needs to be able to load independently of other
+    // components,
+    _minLevel = Level.trace;
+
+    ConfigLoader().addListener(() {
+      _minLevel = ConfigLoader().config.logLevel;
+    });
+
+    _output = _SSALogOutput(console: true, file: true);
+    _logger = new Logger(
+      printer: this,
+      filter: _SSALogFilter(),
+      output: _output,
+    );
+  }
+
+  Future<void> canLog() async {
+    await Future.wait([ready, _output.launchFuture]);
   }
 
   /// Logs in Verbose mode, and never logs in release mode no matter
@@ -210,7 +256,16 @@ class SSALogger extends LogPrinter {
       return [];
     }
 
-    String info = "[${_translateLevel(event.level)}] $tag ${DateTime.now().toString()} ::: ";
+    String callsite = "";
+    if(event.level >= _callsiteLevel) {
+      var stacktrace = Trace.current();
+      if(stacktrace.frames.length >= 5) {
+        var frame = stacktrace.frames[4];
+        callsite = "<${frame.library.replaceFirst("package:shooting_sports_analyst/", "")} ${frame.line ?? "?"}:${frame.column ?? "?"}> ";
+      }
+    }
+
+    String info = "[${_translateLevel(event.level)}] $tag ${DateTime.now().toString()} ::: $callsite";
     List<String> lines = ["$info ${event.message}"];
 
     if(event.error != null) {
