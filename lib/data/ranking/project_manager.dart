@@ -202,6 +202,7 @@ class RatingProject {
   static const openskillValue = "openskill";
   static const pointsValue = "points";
 
+  Sport sport;
   String name;
   RatingHistorySettings settings;
   List<String> matchUrls;
@@ -214,6 +215,7 @@ class RatingProject {
   List<String>? _filteredUrls;
 
   RatingProject({
+    required this.sport,
     required this.name,
     required this.settings,
     required this.matchUrls,

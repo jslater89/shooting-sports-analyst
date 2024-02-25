@@ -20,6 +20,7 @@ class Shooter {
   String originalMemberNumber = "";
 
   /// All member numbers this shooter has been known by.
+  @ignore
   Set<String> knownMemberNumbers = {};
 
   /// The shooter's most recent processed member number.

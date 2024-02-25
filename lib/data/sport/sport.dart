@@ -5,6 +5,7 @@
  */
 
 import 'package:collection/collection.dart';
+import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/sort_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/display_settings.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';

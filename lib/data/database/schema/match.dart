@@ -7,7 +7,7 @@
 
 import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
-import 'package:shooting_sports_analyst/data/database/match_database.dart';
+import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
@@ -16,8 +16,6 @@ import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 part 'match.g.dart';
-
-// Thinking: store various sport properties like PowerFactor etc. as
 
 /// An Isar DB ID for parent/child entities in different collections.
 typedef ExternalId = int;
@@ -61,7 +59,7 @@ class DbShootingMatch {
 
   DbShootingMatch.from(ShootingMatch match) :
     id = match.databaseId ?? Isar.autoIncrement,
-    eventName = match.eventName,
+    eventName = match.name,
     rawDate = match.rawDate,
     date = match.date,
     matchLevelName = match.level?.name,
@@ -90,7 +88,7 @@ class DbShootingMatch {
 
     return Result.ok(ShootingMatch(
       databaseId: this.id,
-      eventName: this.eventName,
+      name: this.eventName,
       rawDate: this.rawDate,
       date: this.date,
       stages: hydratedStages,
@@ -144,6 +142,7 @@ class DbMatchStage {
   }
 }
 
+// TODO: add age categories here
 @embedded
 class DbMatchEntry {
   int entryId;
@@ -158,6 +157,7 @@ class DbMatchEntry {
   String powerFactorName;
   String? divisionName;
   String? classificationName;
+  String? ageCategoryName;
   List<DbRawScore> scores;
 
   DbMatchEntry({

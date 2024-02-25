@@ -15,7 +15,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:shooting_sports_analyst/data/database/match_database.dart';
+import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
 // import 'package:shooting_sports_analyst/data/db/object/match/match.dart';
 // import 'package:shooting_sports_analyst/data/db/object/rating/rating_project.dart';
 // import 'package:shooting_sports_analyst/data/db/project/project_db.dart';

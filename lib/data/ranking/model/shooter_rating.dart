@@ -9,16 +9,17 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 // import 'package:shooting_sports_analyst/data/db/object/match/shooter.dart';
 // import 'package:shooting_sports_analyst/data/db/object/rating/shooter_rating.dart';
-import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/average_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/connected_shooter.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/sorted_list.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
-abstract class ShooterRating extends Shooter {
+abstract class ShooterRating extends MatchEntry {
   /// The number of events over which trend/variance are calculated.
   static const baseTrendWindow = 30;
 
@@ -65,10 +66,10 @@ abstract class ShooterRating extends Shooter {
   ///
   /// If the shooter was not rated prior to the match and none of the
   /// above cases apply, returns the shooter's current rating.
-  double ratingForEvent(PracticalMatch match, Stage? stage, {bool beforeMatch = false}) {
+  double ratingForEvent(ShootingMatch match, MatchStage? stage, {bool beforeMatch = false}) {
     RatingEvent? candidateEvent;
     for(var e in ratingEvents.reversed) {
-      if(e.match.practiscoreId == match.practiscoreId && (candidateEvent == null || beforeMatch)) {
+      if(e.match.practiscoreId == match.sourceIds.first && (candidateEvent == null || beforeMatch)) {
         if(stage == null) {
           // Because we're going backward, this will get the last change from the
           // match.
@@ -109,13 +110,13 @@ abstract class ShooterRating extends Shooter {
   ///
   /// If the shooter's rating did not change at the given event,
   /// returns null.
-  double? changeForEvent(PracticalMatch match, Stage? stage) {
+  double? changeForEvent(ShootingMatch match, MatchStage? stage) {
     List<RatingEvent> events = [];
     for(var e in ratingEvents.reversed) {
-      if(stage == null && e.match.practiscoreId == match.practiscoreId) {
+      if(stage == null && e.match.practiscoreId == match.sourceIds.first) {
         events.add(e);
       }
-      else if(stage != null && e.match.practiscoreId == match.practiscoreId && e.stage?.name == stage.name) {
+      else if(stage != null && e.match.practiscoreId == match.sourceIds.first && e.stage?.name == stage.name) {
         events.add(e);
       }
     }
@@ -285,7 +286,7 @@ abstract class ShooterRating extends Shooter {
     return matchChange(lastMatch);
   }
 
-  double matchChange(PracticalMatch match) {
+  double matchChange(ShootingMatch match) {
     double change = ratingEvents.where((e) => e.match == match)
         .map((e) => e.ratingChange)
         .reduce((a, b) => a + b);
@@ -295,7 +296,7 @@ abstract class ShooterRating extends Shooter {
   List<MatchHistoryEntry> careerHistory() {
     List<MatchHistoryEntry> history = [];
 
-    PracticalMatch? lastMatch;
+    ShootingMatch? lastMatch;
     for(var e in ratingEvents) {
       if(e.match != lastMatch) {
         history.add(MatchHistoryEntry(
@@ -315,7 +316,7 @@ abstract class ShooterRating extends Shooter {
     this.alternateMemberNumbers = other.alternateMemberNumbers;
   }
 
-  ShooterRating(Shooter shooter, {DateTime? date}) :
+  ShooterRating(MatchEntry shooter, {DateTime? date}) :
       this.lastClassification = shooter.classification ?? Classification.U,
       this.firstSeen = date ?? DateTime.now(),
       this.lastSeen = date ?? DateTime.now() {
@@ -323,7 +324,7 @@ abstract class ShooterRating extends Shooter {
   }
 
   @override
-  bool equalsShooter(Shooter other) {
+  bool equalsShooter(MatchEntry other) {
     if(super.equalsShooter(other)) return true;
 
     for(var number in alternateMemberNumbers) {
@@ -363,7 +364,7 @@ abstract class ShooterRating extends Shooter {
 }
 
 class MatchHistoryEntry {
-  PracticalMatch match;
+  ShootingMatch match;
   DateTime get date => match.date!;
   Division divisionEntered;
   double ratingChange;
@@ -379,15 +380,15 @@ class MatchHistoryEntry {
     required this.ratingChange,
   }) {
     var scores = match.getScores(shooters: match.filterShooters(filterMode: FilterMode.and, divisions: [divisionEntered], allowReentries: false));
-    var score = scores.firstWhereOrNull((element) => shooter.equalsShooter(element.shooter));
+    var score = scores.values.firstWhereOrNull((element) => shooter.equalsShooter(element.shooter));
 
-    this.place = score!.total.place;
-    this.finishRatio = score.total.percent;
+    this.place = score!.place;
+    this.finishRatio = score.ratio;
     this.competitors = scores.length;
   }
 
   @override
   String toString() {
-    return "${match.name ?? "(unnamed match)"} (${divisionEntered.abbreviation()}): $place/$competitors ($percentFinish%)";
+    return "${match.name} (${divisionEntered.abbreviation()}): $place/$competitors ($percentFinish%)";
   }
 }

@@ -6,15 +6,15 @@
 
 import 'dart:async';
 
-import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
-import 'package:shooting_sports_analyst/data/database/match_query_element.dart';
-import 'package:shooting_sports_analyst/data/database/schema/match.dart';
+import 'package:shooting_sports_analyst/data/database/match/match_query_element.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/match/translator.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
+
+import '../schema/match.dart';
 
 var _log = SSALogger("MatchDb");
 
@@ -42,7 +42,7 @@ class MatchDatabase {
   Future<void> _init() async {
     matchDb = await Isar.open([
       DbShootingMatchSchema,
-    ], directory: ".");
+    ], directory: "db", name: "database");
     _readyCompleter.complete();
   }
 

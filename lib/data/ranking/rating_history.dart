@@ -27,8 +27,8 @@ var _log = SSALogger("RatingHistory");
 /// [Rater]s.
 class RatingHistory {
   /// The [PracticalMatch]es this rating history contains
-  List<PracticalMatch> _matches;
-  List<PracticalMatch> get matches {
+  List<ShootingMatch> _matches;
+  List<ShootingMatch> get matches {
     if(_settings.preserveHistory) {
       return []..addAll(_matches);
     }
@@ -37,7 +37,7 @@ class RatingHistory {
     }
   }
 
-  List<PracticalMatch> get allMatches {
+  List<ShootingMatch> get allMatches {
       return []..addAll(_matches);
   }
 

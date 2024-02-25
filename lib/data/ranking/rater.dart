@@ -7,18 +7,19 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
-import 'package:flutter/foundation.dart';
 // import 'package:shooting_sports_analyst/data/db/object/rating/rating_event.dart';
 // import 'package:shooting_sports_analyst/data/db/object/rating/rating_project.dart';
 // import 'package:shooting_sports_analyst/data/db/object/rating/shooter_rating.dart';
-import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
-import 'package:shooting_sports_analyst/data/ranking/raters/openskill/model/model_utils.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 import 'package:shooting_sports_analyst/data/ranking/shooter_aliases.dart';
 import 'package:shooting_sports_analyst/data/ranking/timings.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:fuzzywuzzy/fuzzywuzzy.dart' as strdiff;
@@ -27,7 +28,7 @@ import 'package:shooting_sports_analyst/util.dart';
 var _log = SSALogger("Rater");
 
 class Rater {
-  List<PracticalMatch> _matches;
+  List<ShootingMatch> _matches;
 
   /// Maps processed member numbers to shooter ratings.
   ///
@@ -70,7 +71,7 @@ class Rater {
 
   RaterGroup group;
 
-  OldFilterSet get filters => group.filters;
+  FilterSet get filters => group.filters;
 
   bool byStage;
   List<String> memberNumberWhitelist;
@@ -86,7 +87,7 @@ class Rater {
   Map<String, List<Division>> recognizedDivisions = {};
 
   Rater({
-    required List<PracticalMatch> matches,
+    required List<ShootingMatch> matches,
     required this.ratingSystem,
     required this.group,
     this.byStage = false,
@@ -109,13 +110,7 @@ class Rater {
     else this._shooterAliases = defaultShooterAliases; 
 
     _matches.sort((a, b) {
-      if(a.date == null && b.date == null) {
-        return 0;
-      }
-      if(a.date == null) return -1;
-      if(b.date == null) return 1;
-
-      return a.date!.compareTo(b.date!);
+      return a.date.compareTo(b.date);
     });
   }
 
@@ -149,10 +144,10 @@ class Rater {
   /// mapping when we operate with as much data as possible.
   ///
   /// Used by keep-history mode. (Or maybe not.)
-  RatingResult addAndDeduplicateShooters(List<PracticalMatch> matches) {
+  RatingResult addAndDeduplicateShooters(List<ShootingMatch> matches) {
     DateTime start = DateTime.now();
     if(Timings.enabled) start = DateTime.now();
-    for(PracticalMatch m in matches) {
+    for(ShootingMatch m in matches) {
       _addShootersFromMatch(m, encounter: true);
     }
     if(Timings.enabled) timings.addShootersMillis = (DateTime.now().difference(start).inMicroseconds).toDouble();
@@ -198,7 +193,7 @@ class Rater {
     late DateTime start;
 
     if(Timings.enabled) start = DateTime.now();
-    for(PracticalMatch m in _matches) {
+    for(ShootingMatch m in _matches) {
       _addShootersFromMatch(m);
     }
     if(Timings.enabled) timings.addShootersMillis = (DateTime.now().difference(start).inMicroseconds).toDouble();
@@ -214,8 +209,8 @@ class Rater {
     int totalSteps = _matches.length;
     int currentSteps = 0;
 
-    for(PracticalMatch m in _matches) {
-      var onlyDivisions = recognizedDivisions[m.practiscoreId];
+    for(ShootingMatch m in _matches) {
+      var onlyDivisions = recognizedDivisions[m.sourceIds.first];
       if(onlyDivisions != null) {
         var divisionsOfInterest = filters.divisions.entries.where((e) => e.value).map((e) => e.key).toList();
 
@@ -259,7 +254,7 @@ class Rater {
       var totalRounds = 0;
       var stages = 0;
       for(var s in m.stages) {
-        if(s.type == Scoring.chrono) continue;
+        if(s.scoring is IgnoredScoring) continue;
 
         stages += 1;
         totalRounds += s.minRounds;
@@ -295,7 +290,7 @@ class Rater {
     return RatingResult.ok();
   }
 
-  RatingResult addMatch(PracticalMatch match) {
+  RatingResult addMatch(ShootingMatch match) {
     _cachedStats = null;
     _matches.add(match);
 
@@ -315,11 +310,11 @@ class Rater {
   ///
   /// Use [encounter] if you want shooters to be added regardless of whether they appear
   /// in scores. (i.e., shooters who DQ on the first stage, or are no-shows but still included in the data)
-  int _addShootersFromMatch(PracticalMatch match, {bool encounter = false}) {
+  int _addShootersFromMatch(ShootingMatch match, {bool encounter = false}) {
     int added = 0;
     int updated = 0;
     var shooters = _getShooters(match);
-    for(Shooter s in shooters) {
+    for(MatchEntry s in shooters) {
       var processed = processMemberNumber(s.memberNumber);
       var corrections = _dataCorrections.getByInvalidNumber(processed);
       for(var correction in corrections) {
@@ -368,7 +363,7 @@ class Rater {
     return maybeKnownShooter(processed);
   }
 
-  String _processName(Shooter shooter) {
+  String _processName(MatchEntry shooter) {
     String name = "${shooter.firstName.toLowerCase().replaceAll(RegExp(r"\s+"), "")}"
         + "${shooter.lastName.toLowerCase().replaceAll(RegExp(r"\s+"), "")}";
     name = name.replaceAll(RegExp(r"[^a-zA-Z0-9]"), "");
@@ -696,8 +691,8 @@ class Rater {
     }
   }
 
-  List<Shooter> _getShooters(PracticalMatch match, {bool verify = false}) {
-    var shooters = <Shooter>[];
+  List<MatchEntry> _getShooters(ShootingMatch match, {bool verify = false}) {
+    var shooters = <MatchEntry>[];
     shooters = match.filterShooters(
       filterMode: filters.mode,
       divisions: filters.activeDivisions.toList(),
@@ -717,7 +712,7 @@ class Rater {
     return shooters;
   }
 
-  void _rankMatch(PracticalMatch match) {
+  void _rankMatch(ShootingMatch match) {
     late DateTime start;
     if(Timings.enabled) start = DateTime.now();
     var shooters = _getShooters(match, verify: true);
@@ -794,7 +789,7 @@ class Rater {
     if(Timings.enabled) start = DateTime.now();
     // Process ratings for each shooter.
     if(byStage) {
-      for(Stage s in match.stages) {
+      for(MatchStage s in match.stages) {
 
         var (filteredShooters, filteredScores) = _filterScores(shooters, scores, s);
 
@@ -999,7 +994,7 @@ class Rater {
     return true;
   }
 
-  (List<Shooter>, List<RelativeMatchScore>) _filterScores(List<Shooter> shooters, List<RelativeMatchScore> scores, Stage? stage) {
+  (List<Shooter>, List<RelativeMatchScore>) _filterScores(List<MatchEntry> shooters, List<RelativeMatchScore> scores, MatchStage? stage) {
     List<Shooter> filteredShooters = []..addAll(shooters);
     List<RelativeMatchScore> filteredScores = []..addAll(scores);
     for(var s in scores) {
@@ -1030,9 +1025,9 @@ class Rater {
   }
 
   void _processRoundRobin({
-    required PracticalMatch match,
-    Stage? stage,
-    required List<Shooter> shooters,
+    required ShootingMatch match,
+    MatchStage? stage,
+    required List<MatchEntry> shooters,
     required List<RelativeMatchScore> scores,
     required int startIndex,
     required Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes,
@@ -1045,7 +1040,7 @@ class Rater {
 
     // Check for pubstomp
     var pubstompMod = 1.0;
-    if(score.total.percent >= 1.0) {
+    if(score.ratio >= 1.0) {
       if(_pubstomp(scores)) {
         pubstompMod = 0.33;
       }
@@ -1128,9 +1123,9 @@ class Rater {
   }
 
   void _processOneshot({
-    required PracticalMatch match,
-    Stage? stage,
-    required Shooter shooter,
+    required ShootingMatch match,
+    MatchStage? stage,
+    required MatchEntry shooter,
     required List<RelativeMatchScore> scores,
     required Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes,
     required Map<ShooterRating, RelativeScore> stageScores,
@@ -1306,7 +1301,7 @@ class Rater {
 
   bool _isValid(RelativeScore score) {
     // Filter out badly marked classifier reshoots
-    if(score.score.hits == 0 && score.score.time <= 0.1) return false;
+    if(score.hits == 0 && score.score.time <= 0.1) return false;
 
     // The George Williams Rule
     if(score.stage != null && score.stage!.type != Scoring.fixedTime && score.score.getHitFactor() > 30) return false;
@@ -1323,7 +1318,7 @@ class Rater {
   bool _pubstomp(List<RelativeMatchScore> scores) {
     if(scores.length < 2) return false;
 
-    var sorted = scores.sorted((a, b) => b.total.percent.compareTo(a.total.percent));
+    var sorted = scores.sorted((a, b) => b.ratio.compareTo(a.ratio));
 
     var first = sorted[0];
     var second = sorted[1];

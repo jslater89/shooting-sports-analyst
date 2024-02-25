@@ -28,7 +28,7 @@ class ShootingMatch {
   /// source it came from.
   List<String> sourceIds;
 
-  String eventName;
+  String name;
   String rawDate;
   DateTime date;
   MatchLevel? level;
@@ -50,7 +50,7 @@ class ShootingMatch {
   ShootingMatch({
     this.databaseId,
     this.sourceIds = const [],
-    required this.eventName,
+    required this.name,
     required this.rawDate,
     required this.date,
     this.level,
@@ -144,7 +144,7 @@ class ShootingMatch {
 
   @override
   String toString() {
-    return eventName;
+    return name;
   }
 
   static int Function(ShootingMatch a, ShootingMatch b) dateComparator = (a, b) {
@@ -152,13 +152,13 @@ class ShootingMatch {
     var dateSort = b.date.compareTo(a.date);
     if (dateSort != 0) return dateSort;
 
-    return a.eventName.compareTo(b.eventName);
+    return a.name.compareTo(b.name);
   };
 
   ShootingMatch copy() {
     var stageCopies = <MatchStage>[]..addAll(stages.map((s) => s.copy()));
     return ShootingMatch(
-      eventName: eventName,
+      name: name,
       sport: sport,
       rawDate: rawDate,
       date: date,

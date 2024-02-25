@@ -11,7 +11,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:shooting_sports_analyst/data/database/match_database.dart';
+import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 import 'package:shooting_sports_analyst/data/search_query_parser.dart';
@@ -116,7 +116,7 @@ class _ResultPageState extends State<ResultPage> {
     if(kIsWeb) {
       SystemChrome.setApplicationSwitcherDescription(
           ApplicationSwitcherDescription(
-            label: "Results: ${widget.canonicalMatch.eventName}",
+            label: "Results: ${widget.canonicalMatch.name}",
             primaryColor: 0x3f51b5, // Colors.indigo
           )
       );
@@ -624,7 +624,7 @@ class _ResultPageState extends State<ResultPage> {
             value: _settings,
             child: Scaffold(
               appBar: AppBar(
-                title: Text(_currentMatch?.eventName ?? "Match Results Viewer"),
+                title: Text(_currentMatch?.name ?? "Match Results Viewer"),
                 centerTitle: true,
                 actions: actions,
                 bottom: _operationInProgress ? PreferredSize(
