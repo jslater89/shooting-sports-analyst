@@ -9,6 +9,9 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/ui/result_page.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:sprintf/sprintf.dart';
 import 'package:shooting_sports_analyst/data/model.dart' as old;
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
@@ -408,20 +411,20 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
 
   // TODO: restore once rater is updated
   void _launchScoreView(RatingEvent e) {
-    var division = e.score.score.shooter.division ?? widget.rating.division!;
-    // var filters = old.FilterSet(empty: true)
-    //   ..mode = FilterMode.or;
-    // filters.divisions = filters.divisionListToMap([division]);
-    // Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-    //   var newMatch = ShootingMatch.fromOldMatch(e.match);
-    //   return ResultPage(
-    //     canonicalMatch: newMatch,
-    //     initialStage: newMatch.lookupStageByName(e.stage?.name),
-    //     initialFilters: filters,
-    //     allowWhatIf: false,
-    //     ratings: widget.ratings,
-    //   );
-    // }));
+    var newMatch = ShootingMatch.fromOldMatch(e.match);
+    var division = newMatch.sport.divisions.lookupByName(e.score.score.shooter.division?.displayString() ?? "Open")!;
+    var filters = FilterSet(newMatch.sport, empty: true)
+      ..mode = FilterMode.or;
+    filters.divisions = filters.divisionListToMap([division]);
+    Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+      return ResultPage(
+        canonicalMatch: newMatch,
+        initialStage: newMatch.lookupStageByName(e.stage?.name),
+        initialFilters: filters,
+        allowWhatIf: false,
+        ratings: widget.ratings,
+      );
+    }));
   }
 
   void _highlight(_AccumulatedRatingEvent e) {

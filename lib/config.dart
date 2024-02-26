@@ -5,6 +5,7 @@
  */
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:json_annotation/json_annotation.dart';
@@ -37,6 +38,10 @@ class ConfigLoader with ChangeNotifier {
   }
   
   Future<void> reload() async {
+    File f = File("./config.toml");
+    if(!f.existsSync()) {
+      f.createSync();
+    }
     try {
       var doc = await TomlDocument.load("./config.toml");
       var deserialized = SerializedConfig.fromToml(doc.toMap());

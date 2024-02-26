@@ -605,12 +605,12 @@ class Rater {
         }
 
         if(!unmapped) {
-          if(verbose) _log.d("Nothing to do for $name and $list; all mapped to $bestNumber already");
+          if(verbose) _log.v("Nothing to do for $name and $list; all mapped to $bestNumber already");
           continue;
         }
 
         if(crossMapped) {
-          if(verbose) _log.d("$name with $list has cross mappings");
+          if(verbose) _log.v("$name with $list has cross mappings");
           continue;
         }
 
