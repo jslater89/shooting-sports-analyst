@@ -86,7 +86,7 @@ extension MatchTranslator on ShootingMatch {
 
     var newMatch = ShootingMatch(
       sport: uspsaSport,
-      eventName: match.name ?? "(unnamed match)",
+      name: match.name ?? "(unnamed match)",
       rawDate: match.rawDate ?? "",
       date: match.date ?? DateTime(0),
       stages: newStages,

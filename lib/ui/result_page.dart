@@ -116,7 +116,7 @@ class _ResultPageState extends State<ResultPage> {
     if(kIsWeb) {
       SystemChrome.setApplicationSwitcherDescription(
           ApplicationSwitcherDescription(
-            label: "Results: ${widget.canonicalMatch.eventName}",
+            label: "Results: ${widget.canonicalMatch.name}",
             primaryColor: 0x3f51b5, // Colors.indigo
           )
       );
@@ -624,7 +624,7 @@ class _ResultPageState extends State<ResultPage> {
             value: _settings,
             child: Scaffold(
               appBar: AppBar(
-                title: Text(_currentMatch?.eventName ?? "Match Results Viewer"),
+                title: Text(_currentMatch?.name ?? "Match Results Viewer"),
                 centerTitle: true,
                 actions: actions,
                 bottom: _operationInProgress ? PreferredSize(

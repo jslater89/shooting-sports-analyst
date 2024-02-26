@@ -70,7 +70,7 @@ class PractiscoreHitFactorReportParser extends MatchSource {
       var info = _readInfoLines(infoLines);
 
       ShootingMatch m = ShootingMatch(
-        eventName: info.name,
+        name: info.name,
         date: info.date,
         rawDate: info.rawDate,
         level: info.level,
@@ -81,7 +81,7 @@ class PractiscoreHitFactorReportParser extends MatchSource {
       );
 
       if(sourceIds == null) {
-        var syntheticId = m.eventName.stableHash ^ m.date.millisecondsSinceEpoch.stableHash;
+        var syntheticId = m.name.stableHash ^ m.date.millisecondsSinceEpoch.stableHash;
         m.sourceIds.add(syntheticId.toRadixString(36));
       }
       return Result.ok(m);

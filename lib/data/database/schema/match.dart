@@ -61,7 +61,7 @@ class DbShootingMatch {
 
   DbShootingMatch.from(ShootingMatch match) :
     id = match.databaseId ?? Isar.autoIncrement,
-    eventName = match.eventName,
+    eventName = match.name,
     rawDate = match.rawDate,
     date = match.date,
     matchLevelName = match.level?.name,
@@ -90,7 +90,7 @@ class DbShootingMatch {
 
     return Result.ok(ShootingMatch(
       databaseId: this.id,
-      eventName: this.eventName,
+      name: this.eventName,
       rawDate: this.rawDate,
       date: this.date,
       stages: hydratedStages,

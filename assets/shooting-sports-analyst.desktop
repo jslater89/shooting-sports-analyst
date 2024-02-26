@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=${ANALYST_VERSION}
+Type=Application
+Name=${ANALYST_NAME}
+Comment=A tool to analyze and evaluate USPSA match results.
+Exec=${ANALYST_PATH}
+Path=${CWD}
+Icon=shooting-sports-analyst
+Terminal=false
+StartupNotify=false
+Categories=Utility;

@@ -66,7 +66,7 @@ void main() {
     );
 
     var match = ShootingMatch(
-      eventName: "Test match",
+      name: "Test match",
       date: DateTime.now(),
       rawDate: "",
       sport: uspsaSport,
@@ -140,7 +140,7 @@ void main() {
     );
 
     var match = ShootingMatch(
-      eventName: "Test match",
+      name: "Test match",
       date: DateTime.now(),
       rawDate: "",
       sport: uspsaSport,
@@ -218,7 +218,7 @@ void main() {
     );
 
     var match = ShootingMatch(
-      eventName: "Test match",
+      name: "Test match",
       date: DateTime.now(),
       rawDate: "",
       sport: uspsaSport,
