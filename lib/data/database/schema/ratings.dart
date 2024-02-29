@@ -26,7 +26,6 @@ class DbRatingProject with DbSportEntity {
 
   String sportName;
 
-  @Backlink(to: 'project')
   final groups = IsarLinks<DbRatingGroup>();
 
   DbRatingProject({
@@ -35,34 +34,27 @@ class DbRatingProject with DbSportEntity {
 }
 
 @collection
-class DbRatingGroup {
+class DbRatingGroup with DbSportEntity {
   Id id = Isar.autoIncrement;
 
-  final project = IsarLink<DbRatingProject>();
-  @Backlink(to: 'group')
-  final ratings = IsarLinks<DbShooterRating>();
+  String sportName;
+  String name;
+
+  List<String> divisionNames;
+  List<Division> get divisions =>
+      divisionNames.map((name) => sport.divisions.lookupByName(name))
+      .where((result) => result != null)
+      .cast<Division>()
+      .toList();
+
+  DbRatingGroup({
+    required this.sportName,
+    required this.name,
+    this.divisionNames = const [],
+  });
 }
 
 @collection
-class DbShooterRating extends Shooter with DbSportEntity {
-  DbShooterRating({
-    required this.sportName,
-    required super.firstName,
-    required super.lastName,
-  });
-
-  String sportName;
-
-  /// Internal, for DB serialization only.
-  List<String> get knownMemberNumberList => knownMemberNumbers.toList();
-  /// Internal, for DB serialization only.
-  set knownMemberNumberList(List<String> v) {
-    knownMemberNumbers.clear();
-    knownMemberNumbers.addAll(v);
-  }
-
-  final group = IsarLink<DbRatingGroup>();
-}
 
 @collection
 class DbRatingEvent {

@@ -8,8 +8,6 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
-import 'package:normal/normal.dart';
-import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/gumbel.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
@@ -19,8 +17,10 @@ import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rating_chang
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/ui/elo_settings_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/timings.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/model.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/logger.dart';
-import 'package:shooting_sports_analyst/ui/rater/prediction/prediction_view.dart';
 import 'package:shooting_sports_analyst/ui/rater/rater_view.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -91,7 +91,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
   @override
   Map<ShooterRating, RatingChange> updateShooterRatings({
-    required PracticalMatch match,
+    required ShootingMatch match,
     required List<ShooterRating> shooters,
     required Map<ShooterRating, RelativeScore> scores,
     required Map<ShooterRating, RelativeMatchScore> matchScores,
@@ -146,7 +146,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
     if(Timings.enabled) start = DateTime.now();
 
-    var actualScore = _calculateActualScore(match: match, score: aScore, matchScore: aMatchScore.total, params: params, isDnf: aMatchScore.isDnf);
+    var actualScore = _calculateActualScore(match: match, score: aScore, matchScore: aMatchScore, params: params, isDnf: aMatchScore.isDnf);
 
     // The first N matches you shoot get bonuses for initial placement.
     var placementMultiplier = aRating.ratingEvents.length < RatingSystem.initialPlacementMultipliers.length ?
@@ -250,7 +250,11 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     if(Timings.enabled) timings.updateRatings += (DateTime.now().difference(start).inMicroseconds).toDouble();
 
     if(change.isNaN || change.isInfinite) {
-      _log.w("### ${aRating.getName()} stats: ${actualScore.actualPercent} of ${params.usedScores} shooters for ${aScore.stage?.name}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}, placement $placementMultiplier, zero $zeroMultiplier (${params.zeroes})");
+      MatchStage? stage;
+      if(aScore is RelativeStageScore) {
+        stage = aScore.stage;
+      }
+      _log.w("### ${aRating.getName()} stats: ${actualScore.actualPercent} of ${params.usedScores} shooters for ${stage?.name}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}, placement $placementMultiplier, zero $zeroMultiplier (${params.zeroes})");
       _log.w("AS/ES: ${actualScore.score.toStringAsFixed(6)}/${params.expectedScore.toStringAsFixed(6)}");
       _log.w("Actual/expected percent: ${(actualScore.percentComponent * params.totalPercent * 100).toStringAsFixed(2)}/${(params.expectedScore * params.totalPercent * 100).toStringAsFixed(2)}");
       _log.w("Actual/expected place: ${actualScore.placeBlend}/${(params.usedScores - (params.expectedScore * params.divisor)).toStringAsFixed(4)}");
@@ -339,7 +343,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     }
 
     if(Timings.enabled) start = DateTime.now();
-    var hf = aScore.score.getHitFactor(scoreDQ: aScore.score.stage != null);
+    var hf = aScore.score.getHitFactor(scoreDQ: aScore is RelativeStageScore);
     Map<String, List<dynamic>> info = {
       "Actual/expected percent: %00.2f/%00.2f on %00.2fHF": [
         actualScore.percentComponent * params.totalPercent * 100, expectedPercent, hf
@@ -376,7 +380,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   }
 
   _ScoreParameters _calculateScoreParams({
-    PracticalMatch? match,
+    ShootingMatch? match,
     required ShooterRating aRating,
     required RelativeScore aScore,
     required RelativeMatchScore aMatchScore,
@@ -392,15 +396,15 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     int usedScores = 1;
     var totalPercent;
 
-    if(_disableMatchBlend(matchInProgress, aScore.score.shooter.dq, aMatchScore.isDnf)) {
+    if(_disableMatchBlend(matchInProgress, aScore.shooter.dq, aMatchScore.isDnf)) {
       // Give DQed shooters a break by not blending in the match score
-      totalPercent = aScore.percent;
+      totalPercent = aScore.ratio;
     }
     else {
-      totalPercent = (aScore.percent * stageBlend) + (aMatchScore.total.percent * matchBlend);
+      totalPercent = (aScore.ratio * stageBlend) + (aMatchScore.ratio * matchBlend);
     }
 
-    int zeroes = aScore.relativePoints < 0.1 ? 1 : 0;
+    int zeroes = aScore.points < 0.1 ? 1 : 0;
 
     for(var bRating in scores.keys) {
       var opponentScore = scores[bRating]!;
@@ -409,11 +413,11 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       // No credit against ourselves
       if(opponentScore == aScore) continue;
 
-      if (opponentScore.relativePoints > highOpponentScore) {
-        highOpponentScore = opponentScore.relativePoints;
+      if (opponentScore.points > highOpponentScore) {
+        highOpponentScore = opponentScore.points;
       }
 
-      if(opponentScore.relativePoints < 0.1) {
+      if(opponentScore.points < 0.1) {
         zeroes += 1;
       }
 
@@ -424,12 +428,12 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       }
 
       var opponentPercent;
-      if(_disableMatchBlend(matchInProgress, opponentScore.score.shooter.dq, opponentMatchScore.isDnf)) {
+      if(_disableMatchBlend(matchInProgress, opponentScore.shooter.dq, opponentMatchScore.isDnf)) {
         // Give DQed shooters a break by not blending in the match score
-        opponentPercent = opponentScore.percent;
+        opponentPercent = opponentScore.ratio;
       }
       else {
-        opponentPercent = (opponentScore.percent * stageBlend) + (opponentMatchScore.total.percent * matchBlend);
+        opponentPercent = (opponentScore.ratio * stageBlend) + (opponentMatchScore.ratio * matchBlend);
       }
 
       expectedScore += probability;
@@ -453,7 +457,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   }
   
   _ActualScore _calculateActualScore({
-    PracticalMatch? match,
+    ShootingMatch? match,
     required RelativeScore score,
     required RelativeScore matchScore,
     required _ScoreParameters params,
@@ -462,23 +466,23 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     bool matchInProgress = match?.inProgress ?? false;
 
     var actualPercent;
-    if(_disableMatchBlend(matchInProgress, score.score.shooter.dq, isDnf)) {
+    if(_disableMatchBlend(matchInProgress, score.shooter.dq, isDnf)) {
       // Give DQed shooters a break by not blending in the match score
-      actualPercent = score.percent;
+      actualPercent = score.ratio;
     }
     else {
-      actualPercent = (score.percent * stageBlend) + (matchScore.percent * matchBlend);
+      actualPercent = (score.ratio * stageBlend) + (matchScore.ratio * matchBlend);
     }
 
-    if(score.percent == 1.0 && params.highOpponentScore > 0.1) {
-      actualPercent = score.relativePoints / params.highOpponentScore;
+    if(score.ratio == 1.0 && params.highOpponentScore > 0.1) {
+      actualPercent = score.points / params.highOpponentScore;
       params.totalPercent += (actualPercent - 1.0);
     }
 
     var percentComponent = params.totalPercent == 0 ? 0.0 : (actualPercent / params.totalPercent);
 
     var placeBlend;
-    if(_disableMatchBlend(matchInProgress, score.score.shooter.dq, isDnf)) {
+    if(_disableMatchBlend(matchInProgress, score.shooter.dq, isDnf)) {
       // Give DQed shooters a break by not blending in the match score
       placeBlend = score.place.toDouble();
     }
@@ -594,7 +598,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
               Expanded(flex: _leadPaddingFlex, child: Text("")),
               Expanded(flex: _placeFlex, child: Text("$place")),
               Expanded(flex: _memNumFlex, child: Text(rating.originalMemberNumber)),
-              Expanded(flex: _classFlex, child: Text(rating.lastClassification.displayString())),
+              Expanded(flex: _classFlex, child: Text(rating.lastClassification?.shortDisplayName ?? "?")),
               Expanded(flex: _nameFlex, child: Text(rating.getName(suffixes: false))),
               Expanded(flex: _ratingFlex, child: Text("${rating.rating.round()}", textAlign: TextAlign.end)),
               Expanded(flex: _errorFlex, child: Text("${error.toStringAsFixed(1)}", textAlign: TextAlign.end)),
@@ -616,8 +620,8 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   }
 
   @override
-  ShooterRating newShooterRating(Shooter shooter, {DateTime? date}) {
-    return EloShooterRating(shooter, initialClassRatings[shooter.classification] ?? 800.0, date: date);
+  ShooterRating newShooterRating(MatchEntry shooter, {required Sport sport, DateTime? date}) {
+    return EloShooterRating(shooter, sport.initialEloRatings[shooter.classification] ?? 800.0, sport: sport, date: date);
   }
 
   @override
@@ -630,7 +634,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
       var error = s.standardError;
 
-      PracticalMatch? match;
+      ShootingMatch? match;
       double lastMatchChange = 0;
       for(var event in s.ratingEvents.reversed) {
         if(match == null) {
@@ -643,7 +647,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       }
 
       csv += "${s.originalMemberNumber},";
-      csv += "${s.lastClassification.name},";
+      csv += "${s.lastClassification?.name ?? "?"},";
       csv += "${s.getName(suffixes: false)},";
       csv += "${s.rating.round()},${lastMatchChange.round()},"
           "${error.toStringAsFixed(2)},"
@@ -654,17 +658,6 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     return csv;
   }
 
-  static const initialClassRatings = {
-    Classification.GM: 1300.0,
-    Classification.M: 1200.0,
-    Classification.A: 1100.0,
-    Classification.B: 1000.0,
-    Classification.C: 900.0,
-    Classification.D: 800.0,
-    Classification.U: 900.0,
-    Classification.unknown: 800.0,
-  };
-
   @override
   void encodeToJson(Map<String, dynamic> json) {
     json[RatingProject.algorithmKey] = RatingProject.multiplayerEloValue;
@@ -673,8 +666,8 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
   @override
   RatingEvent newEvent({
-    required PracticalMatch match,
-    Stage? stage,
+    required ShootingMatch match,
+    MatchStage? stage,
     required ShooterRating rating, required RelativeScore score, Map<String, List<dynamic>> info = const {}
   }) {
     return EloRatingEvent(oldRating: rating.rating, match: match, stage: stage, score: score, ratingChange: 0, info: info, baseK: 0, effectiveK: 0, backRatingError: 0);
@@ -847,11 +840,11 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       var score = scores[shooter]!;
       var matchScore = matchScores[shooter]!;
       var params = _calculateScoreParams(aRating: shooter, aScore: score, aMatchScore: matchScore, scores: scores, matchScores: matchScores);
-      var eloScore = _calculateActualScore(score: score, matchScore: matchScore.total, params: params, isDnf: matchScore.isDnf);
+      var eloScore = _calculateActualScore(score: score, matchScore: matchScore, params: params, isDnf: matchScore.isDnf);
 
       errors.add(eloScore.score - prediction.mean);
       errorSum += pow(eloScore.score - prediction.mean, 2);
-      actualOutcomes[prediction] = SimpleMatchResult(raterScore: eloScore.score, percent: matchScore.total.percent, place: matchScore.total.place);
+      actualOutcomes[prediction] = SimpleMatchResult(raterScore: eloScore.score, percent: matchScore.ratio, place: matchScore.place);
 
       if(eloScore.score >= prediction.mean - prediction.twoSigma + prediction.shift && eloScore.score <= prediction.mean + prediction.twoSigma + prediction.shift) {
         correct95 += 1;
@@ -859,7 +852,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       if(eloScore.score >= prediction.mean - prediction.oneSigma + prediction.shift && eloScore.score <= prediction.mean + prediction.oneSigma + prediction.shift) {
         correct68 += 1;
       }
-      if(matchScore.total.place <= prediction.lowPlace && matchScore.total.place >= prediction.highPlace) {
+      if(matchScore.place <= prediction.lowPlace && matchScore.place >= prediction.highPlace) {
         correctPlace += 1;
       }
     }

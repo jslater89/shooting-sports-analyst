@@ -17,7 +17,7 @@ sealed class MatchQueryElement {
 class NamePartsQuery extends MatchQueryElement {
   String name;
 
-  String get index => MatchDatabase.eventNameIndex;
+  String get index => AnalystDatabase.eventNameIndex;
   String get property => canWhere ? "eventNameParts" : "eventName";
 
   bool get canWhere => name.split(" ").length <= 1;
@@ -59,7 +59,7 @@ class NamePartsQuery extends MatchQueryElement {
 }
 
 class DateQuery extends MatchQueryElement {
-  String get index => MatchDatabase.dateIndex;
+  String get index => AnalystDatabase.dateIndex;
   String get property => "date";
 
   DateTime? before;

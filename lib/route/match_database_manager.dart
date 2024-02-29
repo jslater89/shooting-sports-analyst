@@ -49,7 +49,7 @@ class _MatchDatabaseManagerPageState extends State<MatchDatabaseManagerPage> {
                 onPressed: () async {
                   listModel.loading = true;
 
-                  var db = MatchDatabase();
+                  var db = AnalystDatabase();
                   var loadingModel = ProgressModel();
                   var future = db.migrateFromCache((progress, total) async {
                     loadingModel.total = total;

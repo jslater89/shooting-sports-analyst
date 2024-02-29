@@ -476,7 +476,7 @@ class _ResultPageState extends State<ResultPage> {
             child: IconButton(
               icon: Icon(Icons.save),
               onPressed: () async {
-                var result = await MatchDatabase().save(widget.canonicalMatch);
+                var result = await AnalystDatabase().save(widget.canonicalMatch);
                 if(result.isErr()) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                     content: Text("Error saving match: $e")

@@ -224,3 +224,7 @@ class MatchStage {
     return "$name ($stageId)";
   }
 }
+
+extension SourceIdsMatch on List<String> {
+  bool containsAny(List<String> other) => this.any(other.contains);
+}

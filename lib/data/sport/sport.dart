@@ -6,6 +6,7 @@
 
 import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
+import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/sort_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/display_settings.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
@@ -60,6 +61,14 @@ class Sport {
   /// Sort modes that are meaningful for this sport.
   final List<SortMode> resultSortModes;
 
+  /// The deduplication logic used for this sport. Leave null if deduplication
+  /// is unnecessary, or specify an instance of ManualDeduplicator to use the
+  /// user mappings and mapping blacklist in rater settings.
+  final ShooterDeduplicator? shooterDeduplicator;
+
+  /// Initial ratings for the Elo rating engine.
+  Map<Classification, double> initialEloRatings;
+
   PowerFactor get defaultPowerFactor {
     if(powerFactors.length == 1) {
       return powerFactors.values.first;
@@ -82,6 +91,7 @@ class Sport {
   bool get hasClassifications => classifications.length > 0;
   bool get hasClassificationFallback => classifications.values.any((element) => element.fallback);
   bool get hasEventLevels => eventLevels.length > 0;
+  bool get hasAgeCategories => ageCategories.length > 0;
 
   late final SportDisplaySettings displaySettings;
 
@@ -105,6 +115,8 @@ class Sport {
     /// The power factor to use when generating default display settings.
     /// No effect if [displaySettings] is provided.
     PowerFactor? displaySettingsPowerFactor,
+    this.shooterDeduplicator,
+    this.initialEloRatings = const {},
   }) :
         classifications = Map.fromEntries(classifications.map((e) => MapEntry(e.name, e))),
         divisions = Map.fromEntries(divisions.map((e) => MapEntry(e.name, e))),
@@ -232,7 +244,7 @@ extension LookupNameInList<T extends NameLookupEntity> on Iterable<T> {
       return found;
     }
     else if(fallback) {
-      return this.firstWhereOrNull((entity) => entity.fallback);
+      return this.fallback();
     }
     else {
       return null;
@@ -241,6 +253,10 @@ extension LookupNameInList<T extends NameLookupEntity> on Iterable<T> {
 
   bool containsAll(List<String> values) {
     return !values.any((v) => lookupByName(v) == null);
+  }
+
+  T? fallback() {
+    return this.firstWhereOrNull((entity) => entity.fallback);
   }
 }
 
@@ -255,6 +271,10 @@ extension LookupNameInMap<T extends NameLookupEntity> on Map<String, T> {
 
   bool containsAll(List<String> values) {
     return !values.any((v) => lookupByName(v) == null);
+  }
+
+  T? fallback() {
+    return this.values.fallback();
   }
 }
 

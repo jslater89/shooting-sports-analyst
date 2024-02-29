@@ -7,6 +7,7 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 // import 'package:shooting_sports_analyst/data/db/object/match/shooter.dart';
 // import 'package:shooting_sports_analyst/data/db/object/rating/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/average_rating.dart';
@@ -17,9 +18,14 @@ import 'package:shooting_sports_analyst/data/sorted_list.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
-abstract class ShooterRating extends MatchEntry {
+var _log = SSALogger("ShooterRating");
+
+abstract class ShooterRating extends Shooter with DbSportEntity {
+  String sportName;
+
   /// The number of events over which trend/variance are calculated.
   static const baseTrendWindow = 30;
 
@@ -32,7 +38,8 @@ abstract class ShooterRating extends MatchEntry {
   static const baseConnectedness = 100.0;
   static const maxConnections = 40;
 
-  Classification lastClassification;
+  Division? division;
+  Classification? lastClassification;
   DateTime firstSeen;
   DateTime lastSeen;
 
@@ -44,7 +51,7 @@ abstract class ShooterRating extends MatchEntry {
   /// at least one other person.
   List<RatingEvent> get ratingEvents;
 
-  /// All of the empty rating events in this shooter's history, where the
+  /// All of the empty rating events in this shooter's history where the
   /// shooter competed against nobody else.
   List<RatingEvent> get emptyRatingEvents;
 
@@ -69,7 +76,7 @@ abstract class ShooterRating extends MatchEntry {
   double ratingForEvent(ShootingMatch match, MatchStage? stage, {bool beforeMatch = false}) {
     RatingEvent? candidateEvent;
     for(var e in ratingEvents.reversed) {
-      if(e.match.practiscoreId == match.sourceIds.first && (candidateEvent == null || beforeMatch)) {
+      if(e.match.sourceIds.containsAny(match.sourceIds) && (candidateEvent == null || beforeMatch)) {
         if(stage == null) {
           // Because we're going backward, this will get the last change from the
           // match.
@@ -113,10 +120,10 @@ abstract class ShooterRating extends MatchEntry {
   double? changeForEvent(ShootingMatch match, MatchStage? stage) {
     List<RatingEvent> events = [];
     for(var e in ratingEvents.reversed) {
-      if(stage == null && e.match.practiscoreId == match.sourceIds.first) {
+      if(stage == null && e.match.sourceIds.containsAny(match.sourceIds)) {
         events.add(e);
       }
-      else if(stage != null && e.match.practiscoreId == match.sourceIds.first && e.stage?.name == stage.name) {
+      else if(stage != null && e.match.sourceIds.containsAny(match.sourceIds) && e.stage?.name == stage.name) {
         events.add(e);
       }
     }
@@ -171,7 +178,7 @@ abstract class ShooterRating extends MatchEntry {
     if(events.isEmpty) return 0;
 
     for(var e in events) {
-      percentFinishes += e.score.percent;
+      percentFinishes += e.score.ratio;
     }
 
     return percentFinishes / events.length;
@@ -299,8 +306,13 @@ abstract class ShooterRating extends MatchEntry {
     ShootingMatch? lastMatch;
     for(var e in ratingEvents) {
       if(e.match != lastMatch) {
+        var division = e.match.shooters.firstWhereOrNull((element) => this.equalsShooter(element))?.division;
+        if(division == null) {
+          _log.w("Unable to match division for $this at ${e.match}");
+          continue;
+        }
         history.add(MatchHistoryEntry(
-          match: e.match, shooter: this, divisionEntered: e.score.score.shooter.division!,
+          match: e.match, shooter: this, divisionEntered: division,
           ratingChange: changeForEvent(e.match, null) ?? 0,
         ));
         lastMatch = e.match;
@@ -316,15 +328,17 @@ abstract class ShooterRating extends MatchEntry {
     this.alternateMemberNumbers = other.alternateMemberNumbers;
   }
 
-  ShooterRating(MatchEntry shooter, {DateTime? date}) :
-      this.lastClassification = shooter.classification ?? Classification.U,
+  ShooterRating(MatchEntry shooter, {required Sport sport, DateTime? date}) :
+      this.sportName = sport.name,
+      this.lastClassification = shooter.classification ?? sport.classifications.fallback(),
       this.firstSeen = date ?? DateTime.now(),
-      this.lastSeen = date ?? DateTime.now() {
+      this.lastSeen = date ?? DateTime.now(),
+      super(firstName: shooter.firstName, lastName: shooter.lastName) {
     super.copyVitalsFrom(shooter);
   }
 
   @override
-  bool equalsShooter(MatchEntry other) {
+  bool equalsShooter(Shooter other) {
     if(super.equalsShooter(other)) return true;
 
     for(var number in alternateMemberNumbers) {
@@ -352,12 +366,14 @@ abstract class ShooterRating extends MatchEntry {
   // }
 
   ShooterRating.copy(ShooterRating other) :
+      this.sportName = other.sportName,
       this.lastClassification = other.lastClassification,
       this._connectedness = other._connectedness,
       this.lastSeen = other.lastSeen,
       this.firstSeen = other.firstSeen,
       this.alternateMemberNumbers = []..addAll(other.alternateMemberNumbers),
-      this.connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure)..addAll(other.connectedShooters.map((e) => ConnectedShooter.copy(e)))
+      this.connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure)..addAll(other.connectedShooters.map((e) => ConnectedShooter.copy(e))),
+      super(firstName: other.firstName, lastName: other.lastName)
   {
     super.copyVitalsFrom(other);
   }
@@ -389,6 +405,6 @@ class MatchHistoryEntry {
 
   @override
   String toString() {
-    return "${match.name} (${divisionEntered.abbreviation()}): $place/$competitors ($percentFinish%)";
+    return "${match.name} (${divisionEntered.shortDisplayName}): $place/$competitors ($percentFinish%)";
   }
 }

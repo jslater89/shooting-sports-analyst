@@ -20,7 +20,6 @@ class Shooter {
   String originalMemberNumber = "";
 
   /// All member numbers this shooter has been known by.
-  @ignore
   Set<String> knownMemberNumbers = {};
 
   /// The shooter's most recent processed member number.
@@ -51,6 +50,20 @@ class Shooter {
     if(memberNumber != null) {
       this.memberNumber = memberNumber;
     }
+  }
+
+  void copyVitalsFrom(Shooter other) {
+    this.firstName = other.firstName;
+    this.lastName = other.lastName;
+    this._memberNumber = other._memberNumber;
+    this.originalMemberNumber = other.originalMemberNumber;
+    this.knownMemberNumbers = {}..addAll(other.knownMemberNumbers);
+    this.ageCategory = other.ageCategory;
+    this.female = other.female;
+  }
+
+  bool equalsShooter(Shooter other) {
+    return memberNumber == other.memberNumber;
   }
 
   String get name => getName(suffixes: false);

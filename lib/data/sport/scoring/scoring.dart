@@ -542,12 +542,19 @@ class IgnoredScoring extends StageScoring {
 
 /// A relative score is a raw score placed against other scores.
 abstract class RelativeScore {
+  /// The shooter to whom this score belongs.
+  MatchEntry shooter;
+
+  /// The ordinal place represented by this score: 1 for 1st, 2 for 2nd, etc.
   int place;
+  /// The ratio of this score to the winning score: 1.0 for the winner, 0.9 for a 90% finish,
+  /// 0.8 for an 80% finish, etc.
   double ratio;
+  /// A convenience getter for [ratio] * 100.
   double get percentage => ratio * 100;
 
   /// points holds the final score for this relative score, whether
-  /// calculated simply repeated from an attached [RawScore].
+  /// calculated or simply repeated from an attached [RawScore].
   ///
   /// In a [RelativeStageFinishScoring] match, it's the number of stage
   /// points or the total number of match points. In a [CumulativeScoring]
@@ -555,25 +562,20 @@ abstract class RelativeScore {
   double points;
 
   RelativeScore({
+    required this.shooter,
     required this.place,
     required this.ratio,
     required this.points,
   });
 }
 
-// note to self: it's massively more convenient to have a backlink to shooter on relative
-// scores. Since we don't save them to the DB, it's fine. If we ever do, we can probably
-// ignore it. See also RelativeStageScore.
-// Or maybe we can use Isar links.
-
 /// A relative match score is an overall score for an entire match.
 class RelativeMatchScore extends RelativeScore {
-  MatchEntry shooter;
   Map<MatchStage, RelativeStageScore> stageScores;
   RawScore total;
 
   RelativeMatchScore({
-    required this.shooter,
+    required super.shooter,
     required this.stageScores,
     required super.place,
     required super.ratio,
@@ -606,11 +608,10 @@ class RelativeMatchScore extends RelativeScore {
 }
 
 class RelativeStageScore extends RelativeScore {
-  MatchEntry shooter;
   MatchStage stage;
   RawScore score;
   RelativeStageScore({
-    required this.shooter,
+    required super.shooter,
     required this.stage,
     required this.score,
     required super.place,

@@ -25,16 +25,16 @@ class DbShootingMatch {
   Id id = Isar.autoIncrement;
   String eventName;
 
-  @Index(name: MatchDatabase.eventNameIndex, type: IndexType.value, caseSensitive: false)
+  @Index(name: AnalystDatabase.eventNameIndex, type: IndexType.value, caseSensitive: false)
   List<String> get eventNameParts => Isar.splitWords(eventName);
 
   String rawDate;
 
-  @Index(name: MatchDatabase.dateIndex)
+  @Index(name: AnalystDatabase.dateIndex)
   DateTime date;
   String? matchLevelName;
 
-  @Index(name: MatchDatabase.sourceIdsIndex, unique: true, replace: true, type: IndexType.value)
+  @Index(name: AnalystDatabase.sourceIdsIndex, unique: true, replace: true, type: IndexType.value)
   List<String> sourceIds;
 
   @enumerated

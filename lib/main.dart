@@ -100,7 +100,7 @@ void main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
 
-  await MatchDatabase().ready;
+  await AnalystDatabase().ready;
   _log.i("Database ready");
 
   if(!HtmlOr.isWeb) {

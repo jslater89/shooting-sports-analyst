@@ -4,8 +4,6 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:flutter/foundation.dart';
-import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
@@ -16,8 +14,8 @@ import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
 import 'package:shooting_sports_analyst/data/ranking/timings.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:shooting_sports_analyst/data/ranking/shooter_aliases.dart' as defaultAliases;
 import 'package:shooting_sports_analyst/ui/widget/dialog/member_number_collision_dialog.dart';
 
@@ -26,6 +24,8 @@ var _log = SSALogger("RatingHistory");
 /// RatingHistory turns a sequence of [PracticalMatch]es into a series of
 /// [Rater]s.
 class RatingHistory {
+  Sport sport;
+
   /// The [PracticalMatch]es this rating history contains
   List<ShootingMatch> _matches;
   List<ShootingMatch> get matches {
@@ -54,11 +54,11 @@ class RatingHistory {
 
   /// Maps matches to a map of [Rater]s, which hold the incremental ratings
   /// after that match has been processed.
-  Map<PracticalMatch, Map<RaterGroup, Rater>> _ratersByDivision = {};
+  Map<ShootingMatch, Map<RaterGroup, Rater>> _ratersByDivision = {};
 
   Future<void> Function(int currentSteps, int totalSteps, String? eventName)? progressCallback;
 
-  RatingHistory({RatingProject? project, required List<PracticalMatch> matches, this.progressCallback, this.verbose = true}) : this._matches = matches {
+  RatingHistory({RatingProject? project, required List<ShootingMatch> matches, this.progressCallback, this.verbose = true}) : this._matches = matches {
     project ??= RatingProject(name: "Unnamed Project", settings: RatingHistorySettings(
       algorithm: MultiplayerPercentEloRater(settings: EloSettings(
         byStage: true,
@@ -66,6 +66,7 @@ class RatingHistory {
     ), matchUrls: matches.map((m) => m.practiscoreId).toList());
 
     this.project = project;
+    this.sport = this.project.sport;
     _settings = project.settings;
   }
 
@@ -244,6 +245,7 @@ class RatingHistory {
     group.divisions.forEach((element) => divisionMap[element] = true);
     Timings().reset();
     var r = Rater(
+      sport: sport,
       matches: matches,
       ratingSystem: _settings.algorithm,
       byStage: _settings.byStage,
@@ -471,7 +473,7 @@ class RatingHistorySettings {
     this.memberNumberMappingBlacklist = const {},
     this.hiddenShooters = const [],
     this.recognizedDivisions = const {
-      "433b1840-0e57-4397-8dae-1107bfe468a7": [Division.production, Division.pcc],
+      "433b1840-0e57-4397-8dae-1107bfe468a7": [uspsaProduction, uspsaPcc],
     },
     MemberNumberCorrectionContainer? memberNumberCorrections
   }) {

@@ -12,6 +12,7 @@ import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 
 class EloShooterRating extends ShooterRating {
   static late double errorScale;
@@ -162,7 +163,7 @@ class EloShooterRating extends ShooterRating {
   // TODO: combine this in more intelligent fashion, preserving order where possible
   List<RatingEvent> get combinedRatingEvents => []..addAll(ratingEvents)..addAll(emptyRatingEvents);
 
-  EloShooterRating(Shooter shooter, this.rating, {DateTime? date}) :
+  EloShooterRating(MatchEntry shooter, this.rating, {required super.sport, DateTime? date}) :
       super(shooter, date: date);
 
   // EloShooterRating.fromDb(DbEloRating rating) :

@@ -7,12 +7,12 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart';
 import 'package:hive/hive.dart';
+import 'package:isar/isar.dart';
 import 'package:sanitize_filename/sanitize_filename.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:shooting_sports_analyst/data/match/shooter.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
@@ -20,6 +20,8 @@ import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 import 'package:shooting_sports_analyst/data/ranking/shooter_aliases.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 
@@ -176,6 +178,7 @@ class RatingProjectManager {
   }
 }
 
+const _sportKey = "sport";
 const _nameKey = "name";
 const _combineLocapKey = "combineLocap";
 const _combineLimitedCOKey = "combineLimCO";
@@ -195,38 +198,33 @@ const _groupsKey = "groups";
 
 // Values for the multiplayer percent elo rater.
 
-class RatingProject {
+class RatingProject with DbSportEntity {
+  Id id = Isar.autoIncrement;
+
   static const byStageKey = "byStage";
   static const algorithmKey = "algo";
   static const multiplayerEloValue = "multiElo";
   static const openskillValue = "openskill";
   static const pointsValue = "points";
 
-  Sport sport;
+  String sportName;
   String name;
   RatingHistorySettings settings;
-  List<String> matchUrls;
-
-  /// These URLs will be used to calculate ratings, and should be a subset of [matchUrls].
-  ///
-  /// This property isn't saved with the project; it's contained totally to the ratings
-  /// configuration screen and the subsequent ratings view.
-  List<String> get filteredUrls => _filteredUrls ?? matchUrls;
-  List<String>? _filteredUrls;
+  final matches = IsarLinks<DbShootingMatch>;
 
   RatingProject({
-    required this.sport,
+    required this.sportName,
     required this.name,
     required this.settings,
-    required this.matchUrls,
-    List<String>? filteredUrls,
-  }) : this._filteredUrls = filteredUrls;
+  });
 
   RatingProject copy() {
     return RatingProject.fromJson(jsonDecode(this.toJson()));
   }
 
   factory RatingProject.fromJson(Map<String, dynamic> encodedProject) {
+    var sportName = (encodedProject[_sportKey] ?? "uspsa") as String;
+    var sport = SportRegistry().lookup(sportName)!;
     var combineOpenPCC = (encodedProject[_combineOpenPCCKey] ?? false) as bool;
     var combineLocap = (encodedProject[_combineLocapKey] ?? true) as bool;
 
@@ -263,7 +261,7 @@ class RatingProject {
     var recognizedDivisions = <String, List<Division>>{};
     var recDivJson = (encodedProject[_recognizedDivisionsKey] ?? <String, dynamic>{}) as Map<String, dynamic>;
     for(var key in recDivJson.keys) {
-      recognizedDivisions[key] = []..addAll(((recDivJson[key] ?? []) as List<dynamic>).map((s) => Division.fromString(s as String)));
+      recognizedDivisions[key] = []..addAll(((recDivJson[key] ?? []) as List<dynamic>).map((s) => sport.divisions.lookupByName(s as String)!));
     }
 
     var settings = RatingHistorySettings(
@@ -288,7 +286,7 @@ class RatingProject {
     var matchUrls = (encodedProject[_urlsKey] as List<dynamic>).map((item) => item as String).toList();
     var name = encodedProject[_nameKey] as String;
 
-    var rp = RatingProject(name: name, settings: settings, matchUrls: matchUrls);
+    var rp = RatingProject(sportName: sportName, name: name, settings: settings);
     return rp;
   }
 
@@ -310,7 +308,6 @@ class RatingProject {
     map[_nameKey] = name;
     map[_checkDataEntryKey] = settings.checkDataEntryErrors;
     map[_keepHistoryKey] = settings.preserveHistory;
-    map[_urlsKey] = matchUrls;
     map[_whitelistKey] = settings.memberNumberWhitelist;
     map[_aliasesKey] = settings.shooterAliases;
     map[_memberNumberMappingsKey] = settings.userMemberNumberMappings;

@@ -5,14 +5,15 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:shooting_sports_analyst/data/match/practical_match.dart';
-import 'package:shooting_sports_analyst/data/match/relative_scores.dart';
-import 'package:shooting_sports_analyst/data/match/shooter.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_mode.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/ui/rater/rater_view.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 
@@ -40,7 +41,7 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
   /// If [mode] is [RatingMode.wholeEvent], [shooters] and [scores] both contain
   /// entries for all shooters in the rating event.
   Map<ShooterRating, RatingChange> updateShooterRatings({
-    required PracticalMatch match,
+    required ShootingMatch match,
     required List<ShooterRating> shooters,
     required Map<ShooterRating, RelativeScore> scores,
     required Map<ShooterRating, RelativeMatchScore> matchScores,
@@ -55,11 +56,11 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
   ShooterRating copyShooterRating(T rating);
 
   /// Create a new shooter rating for the given information.
-  ShooterRating newShooterRating(Shooter shooter, {DateTime? date});
+  ShooterRating newShooterRating(MatchEntry shooter, {required Sport sport, DateTime? date});
 
   RatingEvent newEvent({
-    required PracticalMatch match,
-    Stage? stage,
+    required ShootingMatch match,
+    MatchStage? stage,
     required ShooterRating rating, required RelativeScore score, Map<String, List<dynamic>> info = const {}
   });
 

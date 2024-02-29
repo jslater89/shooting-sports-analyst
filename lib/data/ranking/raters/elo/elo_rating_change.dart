@@ -4,10 +4,11 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 
 class EloRatingEvent extends RatingEvent {
   double ratingChange;
@@ -25,8 +26,8 @@ class EloRatingEvent extends RatingEvent {
 
   EloRatingEvent({
     required this.oldRating,
-    required PracticalMatch match,
-    Stage? stage,
+    required ShootingMatch match,
+    MatchStage? stage,
     required RelativeScore score,
     Map<String, List<dynamic>> info = const {},
     required this.ratingChange,
