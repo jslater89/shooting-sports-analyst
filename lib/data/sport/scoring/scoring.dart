@@ -605,6 +605,8 @@ class RelativeMatchScore extends RelativeScore {
     }
     return max;
   }
+
+  bool get isDnf => stageScores.values.any((s) => s.isDnf);
 }
 
 class RelativeStageScore extends RelativeScore {
@@ -624,6 +626,8 @@ class RelativeStageScore extends RelativeScore {
     if(maxPoints == 0) return 0.0;
     return !scoreDQ && shooter.dq ? 0.0 : score.getTotalPoints(countPenalties: countPenalties).toDouble() / maxPoints.toDouble();
   }
+
+  bool get isDnf => score.dnf;
 }
 
 /// A raw score is what we store in the DB, and is what we can determine entirely from the shooter's

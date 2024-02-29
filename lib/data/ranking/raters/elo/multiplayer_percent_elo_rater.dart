@@ -343,10 +343,17 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     }
 
     if(Timings.enabled) start = DateTime.now();
-    var hf = aScore.score.getHitFactor(scoreDQ: aScore is RelativeStageScore);
+    late RawScore rawScore;
+    if(aScore is RelativeMatchScore) {
+      rawScore = aScore.total;
+    }
+    else {
+      aScore as RelativeStageScore;
+      rawScore = aScore.score;
+    }
     Map<String, List<dynamic>> info = {
-      "Actual/expected percent: %00.2f/%00.2f on %00.2fHF": [
-        actualScore.percentComponent * params.totalPercent * 100, expectedPercent, hf
+      "Actual/expected percent: %00.2f/%00.2f on %s": [
+        actualScore.percentComponent * params.totalPercent * 100, expectedPercent, rawScore.displayString,
       ],
       "Actual/expected place: %00.1f/%00.1f": [
         actualScore.placeBlend, params.usedScores - (params.expectedScore * params.divisor)
