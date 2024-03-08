@@ -24,7 +24,6 @@ I may think of others, but this is a pretty good set to start with.
 import 'dart:math';
 
 import 'package:collection/collection.dart';
-import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/evolution/predator_prey.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
@@ -33,6 +32,8 @@ import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settin
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/data/sport/model.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 
 class EloEvaluator extends Prey<EloEvaluator> {
   int generation;
@@ -103,7 +104,7 @@ class EloEvaluator extends Prey<EloEvaluator> {
     for(var m in data.evaluationData) {
       await callback?.call(lastProgress++, data.evaluationData.length);
       int ordinalErrors = 0;
-      Map<Shooter, ShooterRating> registrations = {};
+      Map<MatchEntry, ShooterRating> registrations = {};
       for(var shooter in m.shooters) {
         var rating = rater.knownShooters[Rater.processMemberNumber(shooter.memberNumber)];
         if(rating != null) registrations[shooter] = rating;
@@ -115,14 +116,14 @@ class EloEvaluator extends Prey<EloEvaluator> {
       var scoreOutput = m.getScores(shooters: registrations.keys.toList());
 
       var scores = <ShooterRating, RelativeMatchScore>{};
-      for(var s in scoreOutput) {
+      for(var s in scoreOutput.values) {
         var rating = registrations[s.shooter];
         if(rating != null) scores[rating] = s;
       }
 
       var evaluations = rater.ratingSystem.validate(
         shooters: registrations.values.toList(),
-        scores: scores.map((k, v) => MapEntry(k, v.total)),
+        scores: scores.map((k, v) => MapEntry(k, v)),
         matchScores: scores,
         predictions: predictions,
         chatty: false,
@@ -178,8 +179,8 @@ typedef EloEvalFunction = double Function(EloEvaluator);
 
 class EloEvaluationData {
   final String name;
-  final List<PracticalMatch> trainingData;
-  final List<PracticalMatch> evaluationData;
+  final List<ShootingMatch> trainingData;
+  final List<ShootingMatch> evaluationData;
   final RaterGroup group;
   final double expectedMaxRating;
 

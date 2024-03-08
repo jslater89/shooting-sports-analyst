@@ -118,6 +118,7 @@ class Rater {
   }
 
   Rater.copy(Rater other) :
+        this.sport = other.sport,
         this.knownShooters = {},
         this._matches = other._matches.map((m) => m.copy()).toList(),
         this.byStage = other.byStage,
@@ -331,7 +332,7 @@ class Rater {
         s.memberNumber = processed;
         var rating = maybeKnownShooter(s.memberNumber);
         if(rating == null) {
-          knownShooters[s.memberNumber] = ratingSystem.newShooterRating(s, date: match.date);
+          knownShooters[s.memberNumber] = ratingSystem.newShooterRating(s, sport: sport, date: match.date);
           added += 1;
           if(encounter) _encounteredMemberNumber(s.memberNumber);
         }
@@ -427,10 +428,13 @@ class Rater {
     for(var shooter in shooters) {
       matchStrength += _strengthForClass(shooter.classification);
 
+      // Update
       var rating = maybeKnownShooter(shooter.memberNumber);
       if(rating != null) {
-        if(shooter.classification != null && shooter.classification!.index < rating.lastClassification.index) {
-          rating.lastClassification = shooter.classification!;
+        if(shooter.classification != null) {
+          if(rating.lastClassification == null || shooter.classification!.index < rating.lastClassification!.index) {
+            rating.lastClassification = shooter.classification!;
+          }
         }
 
         // Update the shooter's name: the most recent one is probably the most interesting/useful
@@ -438,8 +442,7 @@ class Rater {
         rating.lastName = shooter.lastName;
 
         // Update age categories
-        rating.categories.clear();
-        rating.categories.addAll(shooter.categories);
+        rating.ageCategory = shooter.ageCategory;
 
         // Update the shooter's member number: the CSV exports are more useful if it's the most
         // recent one. // TODO: this would be handy, but it changes the math somehow (not removing unseen?)
@@ -492,7 +495,7 @@ class Rater {
     if(byStage) {
       for(MatchStage s in match.stages) {
 
-        var (filteredShooters, filteredScores) = _filterScores(shooters, scores, s);
+        var (filteredShooters, filteredScores) = _filterScores(shooters, scores.values.toList(), s);
 
         var weightMod = 1.0 + max(-0.20, min(0.10, (s.maxPoints - 120) /  400));
 
@@ -559,7 +562,7 @@ class Rater {
       }
     }
     else { // by match
-      var (filteredShooters, filteredScores) = _filterScores(shooters, scores, null);
+      var (filteredShooters, filteredScores) = _filterScores(shooters, scores.values.toList(), null);
 
       Map<ShooterRating, RelativeMatchScore> matchScoreMap = {};
 
@@ -600,7 +603,7 @@ class Rater {
                 stage: null,
                 shooter: filteredShooters[i],
                 scores: filteredScores,
-                stageScores: matchScoreMap.map((k, v) => MapEntry(k, v.total)),
+                stageScores: matchScoreMap,
                 matchScores: matchScoreMap,
                 changes: changes,
                 matchStrength: strengthMod,
@@ -652,7 +655,7 @@ class Rater {
   }
 
   Map<Shooter, bool> _verifyCache = {};
-  bool _verifyShooter(Shooter s) {
+  bool _verifyShooter(MatchEntry s) {
     if(_verifyCache.containsKey(s)) return _verifyCache[s]!;
 
     if(!byStage && s.dq) {
@@ -695,8 +698,8 @@ class Rater {
     return true;
   }
 
-  (List<Shooter>, List<RelativeMatchScore>) _filterScores(List<MatchEntry> shooters, List<RelativeMatchScore> scores, MatchStage? stage) {
-    List<Shooter> filteredShooters = []..addAll(shooters);
+  (List<MatchEntry>, List<RelativeMatchScore>) _filterScores(List<MatchEntry> shooters, List<RelativeMatchScore> scores, MatchStage? stage) {
+    List<MatchEntry> filteredShooters = []..addAll(shooters);
     List<RelativeMatchScore> filteredScores = []..addAll(scores);
     for(var s in scores) {
       if(stage != null) {
@@ -803,8 +806,8 @@ class Rater {
           match: match,
           shooters: [aRating, bRating],
           scores: {
-            aRating: aScore.total,
-            bRating: bScore.total,
+            aRating: aScore,
+            bRating: bScore,
           },
           matchScores: {
             aRating: aScore,
@@ -814,8 +817,8 @@ class Rater {
           connectednessMultiplier: connectednessMod,
         );
 
-        changes[aRating]![aScore.total] ??= ratingSystem.newEvent(rating: aRating, match: match, score: aScore.total);
-        changes[bRating]![bScore.total] ??= ratingSystem.newEvent(rating: bRating, match: match, score: bScore.total);
+        changes[aRating]![aScore] ??= ratingSystem.newEvent(rating: aRating, match: match, score: aScore);
+        changes[bRating]![bScore] ??= ratingSystem.newEvent(rating: bRating, match: match, score: bScore);
 
         changes[aRating]![aScore.total]!.apply(update[aRating]!);
         changes[bRating]![bScore.total]!.apply(update[bRating]!);
@@ -846,7 +849,7 @@ class Rater {
     if(Timings.enabled) start = DateTime.now();
     // Check for pubstomp
     var pubstompMod = 1.0;
-    if(score.total.percent >= 1.0) {
+    if(score.ratio >= 1.0) {
       if(_pubstomp(scores)) {
         pubstompMod = 0.33;
       }
@@ -855,10 +858,11 @@ class Rater {
     if(Timings.enabled) timings.pubstompMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
 
     if(stage != null) {
-      RelativeScore stageScore = score.stageScores[stage]!;
+      RelativeStageScore stageScore = score.stageScores[stage]!;
 
       // If the shooter has already had a rating change for this stage, don't recalc.
       for(var existingScore in changes[rating]!.keys) {
+        existingScore as RelativeStageScore;
         if(existingScore.stage == stage) return;
       }
 
@@ -888,7 +892,7 @@ class Rater {
       var update = ratingSystem.updateShooterRatings(
         match: match,
         shooters: [rating],
-        scores: matchScores.map((k, v) => MapEntry(k, v.total)),
+        scores: matchScores,
         matchScores: matchScores,
         matchStrengthMultiplier: matchStrength,
         connectednessMultiplier: connectednessMod,
@@ -896,10 +900,10 @@ class Rater {
 
       // You only get one rating change per match.
       if(changes[rating]!.isEmpty) {
-        changes[rating]![score.total] = ratingSystem.newEvent(
+        changes[rating]![score] = ratingSystem.newEvent(
           rating: rating,
           match: match,
-          score: score.total,
+          score: score,
           info: update[rating]!.info,
         );
 
@@ -909,8 +913,8 @@ class Rater {
   }
 
   void _processWholeEvent({
-    required PracticalMatch match,
-    Stage? stage,
+    required ShootingMatch match,
+    MatchStage? stage,
     required List<RelativeMatchScore> scores,
     required Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes,
     required double matchStrength,
@@ -968,7 +972,7 @@ class Rater {
       for(var s in scores) {
         String num = s.shooter.memberNumber;
 
-        scoreMap[knownShooter(num)] ??= s.total;
+        scoreMap[knownShooter(num)] ??= s;
         matchScoreMap[knownShooter(num)] ??= s;
         changes[knownShooter(num)] ??= {};
         _encounteredMemberNumber(num);
@@ -1000,15 +1004,17 @@ class Rater {
     }
   }
 
-  bool _isValid(RelativeScore score) {
+  bool _isValid(RelativeStageScore score) {
     // Filter out badly marked classifier reshoots
-    if(score.hits == 0 && score.score.time <= 0.1) return false;
+    if(score.score.targetEventCount == 0 && score.score.rawTime <= 0.1) return false;
 
     // The George Williams Rule
-    if(score.stage != null && score.stage!.type != Scoring.fixedTime && score.score.getHitFactor() > 30) return false;
+    if(sport.defaultStageScoring is HitFactorScoring) {
+      if(score.score.hitFactor > 30) return false;
+    }
 
     // Filter out extremely short times that are probably DNFs or partial scores entered for DQs
-    if(score.stage!.type != Scoring.fixedTime && score.score.time <= 0.5) return false;
+    if(score.score.rawTime <= 0.5) return false;
 
     // The Jalise Williams rule: filter out subminor/unknown PFs
     if(score.score.shooter.powerFactor!.index > PowerFactor.minor.index) return false;
@@ -1023,9 +1029,6 @@ class Rater {
 
     var first = sorted[0];
     var second = sorted[1];
-
-    var firstScore = first.total;
-    var secondScore = second.total;
 
     var firstClass = first.shooter.classification ?? Classification.U;
     var secondClass = second.shooter.classification ?? Classification.U;
@@ -1048,8 +1051,8 @@ class Rater {
     // 1. The winner wins by more than 25%.
     // 2. The winner is M shooting against no better than B or GM shooting against no better than A.
     // 3. The winner's rating is at least 200 higher than the next shooter's.
-    if(firstScore.percent >= 1.0
-        && (firstScore.relativePoints / secondScore.relativePoints > 1.20)
+    if(first.ratio >= 1.0
+        && (first.points / second.points > 1.20)
         && firstClass.index <= Classification.M.index
         && secondClass.index - firstClass.index >= 2
         && firstRating.rating - secondRating.rating > 200) {
@@ -1154,7 +1157,7 @@ class Rater {
     Map<Classification, Map<int, int>> histogramsByClass = {};
     Map<Classification, List<double>> ratingsByClass = {};
 
-    for(var classification in Classification.values) {
+    for(var classification in sport.classifications.values) {
       if(classification == Classification.unknown) continue;
 
       var shootersInClass = ratings.where((r) => r.lastClassification == classification);

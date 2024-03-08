@@ -41,6 +41,7 @@ class DbRatingGroup with DbSportEntity {
   String name;
 
   List<String> divisionNames;
+  @ignore
   List<Division> get divisions =>
       divisionNames.map((name) => sport.divisions.lookupByName(name))
       .where((result) => result != null)
@@ -58,5 +59,5 @@ class DbRatingGroup with DbSportEntity {
 
 @collection
 class DbRatingEvent {
-
+  Id id = Isar.autoIncrement;
 }

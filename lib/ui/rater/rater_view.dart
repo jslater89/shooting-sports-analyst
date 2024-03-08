@@ -112,7 +112,7 @@ class _RaterViewState extends State<RaterView> {
 
     if(widget.filters.activeCategories.isNotEmpty) {
       sortedRatings = sortedRatings.where((r) =>
-          r.categories.any((c) => widget.filters.activeCategories.contains(c)));
+          r.ageCategory != null && widget.filters.activeCategories.contains(r.ageCategory));
     }
 
     if(widget.search != null && widget.search!.isNotEmpty) {

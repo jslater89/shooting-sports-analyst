@@ -650,6 +650,11 @@ class RawScore {
   
   List<Map<ScoringEvent, int>> get _scoreMaps => [targetEvents, penaltyEvents];
 
+  int get scoringEventCount => targetEventCount + penaltyEventCount;
+
+  int get targetEventCount => targetEvents.values.sum;
+  int get penaltyEventCount => penaltyEvents.values.sum;
+
   int countForEvent(ScoringEvent event) {
     var fromTarget = targetEvents[event];
     if(fromTarget != null) return fromTarget;

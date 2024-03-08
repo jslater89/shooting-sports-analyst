@@ -26,7 +26,7 @@ var _log = SSALogger("RatingHistory");
 class RatingHistory {
   Sport sport;
 
-  /// The [PracticalMatch]es this rating history contains
+  /// The [ShootingMatch]es this rating history contains
   List<ShootingMatch> _matches;
   List<ShootingMatch> get matches {
     if(_settings.preserveHistory) {
@@ -142,7 +142,7 @@ class RatingHistory {
   }
 
   /// Used to key the matches map for online match-adding
-  PracticalMatch? _lastMatch;
+  ShootingMatch? _lastMatch;
   
   Future<RatingResult> _processInitialMatches() async {
     if(verbose) _log.v("Loading matches");
@@ -150,16 +150,10 @@ class RatingHistory {
     int stepsFinished = 0;
 
     _matches.sort((a, b) {
-      if(a.date == null && b.date == null) {
-        return 0;
-      }
-      if(a.date == null) return -1;
-      if(b.date == null) return 1;
-
-      return a.date!.compareTo(b.date!);
+      return a.date.compareTo(b.date);
     });
 
-    var currentMatches = <PracticalMatch>[];
+    var currentMatches = <ShootingMatch>[];
 
     await progressCallback?.call(0, 1, null);
 
@@ -168,11 +162,11 @@ class RatingHistory {
 
       if(verbose) _log.v("Total steps, history preserved: $totalSteps on ${_matches.length} matches and ${_settings.groups.length} groups");
 
-      for (PracticalMatch match in _matches) {
+      for (ShootingMatch match in _matches) {
         var m = match;
         currentMatches.add(m);
         _log.d("Considering match ${m.name}");
-        var innerMatches = <PracticalMatch>[]..addAll(currentMatches);
+        var innerMatches = <ShootingMatch>[]..addAll(currentMatches);
         _ratersByDivision[m] ??= {};
         for (var group in _settings.groups) {
           var divisionMap = <Division, bool>{};
