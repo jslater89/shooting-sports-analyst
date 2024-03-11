@@ -181,7 +181,7 @@ class MatchDatabaseListModel extends ChangeNotifier {
     _hasMore = true;
     loading = true;
 
-    var newMatches = await matchDb.query(
+    var newMatches = await matchDb.queryMatches(
       name: search?.name,
       before: search?.before,
       after: search?.after,
@@ -197,7 +197,7 @@ class MatchDatabaseListModel extends ChangeNotifier {
     loading = true;
 
     _page += 1;
-    var newMatches = await matchDb.query(
+    var newMatches = await matchDb.queryMatches(
       name: _currentSearch?.name,
       before: _currentSearch?.before,
       after: _currentSearch?.after,

@@ -49,7 +49,7 @@ class RatingsViewPage extends StatefulWidget {
 
   final RatingProject project;
   
-  RatingHistorySettings get settings => project.settings;
+  RatingProjectSettings get settings => project.settings;
   List<String> get matchUrls => project.filteredUrls;
 
   @override

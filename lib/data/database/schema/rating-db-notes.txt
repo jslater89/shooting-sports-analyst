@@ -1,0 +1,50 @@
+The goal is to use the database as the main source for ratings, with limited need for things like
+'hydrate' from DbShootingMatch et al.
+
+In general structure, RatingProject is the main container. It will embed RatingProjectSettings,
+for general settings, and RatingProjectSettings will embed a JSON document for project-specific
+settings, which it will inflate, and the rating system can deserialize.
+
+RatingGroups will be top-level items, and contain a list of division names with the DbSportEntity
+mixin to allow easy getter-ing.
+
+ShooterRatings will be children/hasOne of RatingProject and RatingGroup, but I _think_ they might
+want to be manually referenced by ID rather than IsarLinks? No, no need; they can be additionally
+filtered with an Isar query. DbShooterRating will have a bunch of typed but undifferentiated fields:
+double doubleData1, doubleData2, etc.
+
+ShooterRating/RatingEvent subclasses will turn into more like wrap classes, maybe?
+EloShooterRating.wrap(DbRatingEvent event) provides convenience methods on a raw object loaded from
+the DB. EloRatingEvent.get baseK => wrappedRating.doubleData1, e.g.
+
+The existing Rater class probably gets folded into RatingProject and RatingHistory, or maybe
+becomes a lightweight utility class. RatingHistory also becomes a utility class that doesn't hold
+data itself, but rather works on RatingProject. (Or maybe its functionality moves to RatingProject.)
+The UI interacts directly with RatingProject, through a RatingDataSource interface. (This will
+eventually let us write a web RatingDataSource.)
+
+So, we have:
+
+RatingProject {
+    @embedded RatingProjectSettings
+    IsarLinks<DbRatingGroup> // the groups in this project
+    IsarLinks<DbShooterRating> // the shooter ratings in this project
+
+    // also member number mappings, data corrections, shooter aliases, known
+    // member numbers, etc.
+}
+
+RatingProjectSettings {
+    int intSetting
+    String stringSetting
+
+    String algorithmName;
+    String algorithmSettings; // json-encoded
+}
+
+DbRatingGroup with DbSportEntity {
+    Sport get sport;
+
+    List<String> divisionNames
+    List<Division> get divisions; //cache ?
+}

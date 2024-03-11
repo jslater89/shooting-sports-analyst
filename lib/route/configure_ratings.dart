@@ -271,7 +271,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     );
   }
 
-  RatingHistorySettings? _makeAndValidateSettings() {
+  RatingProjectSettings? _makeAndValidateSettings() {
     var error = _settingsController.validate();
     if(error != null) {
       setState(() {
@@ -296,7 +296,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     }
     // var ratingSystem = OpenskillRater(byStage: _byStage);
 
-    return RatingHistorySettings(
+    return RatingProjectSettings(
       algorithm: _ratingSystem,
       checkDataEntryErrors: _checkDataEntryErrors,
       transientDataEntryErrorSkip: false,

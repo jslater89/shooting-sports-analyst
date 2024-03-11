@@ -51,7 +51,7 @@ class _MatchDatabaseManagerPageState extends State<MatchDatabaseManagerPage> {
 
                   var db = AnalystDatabase();
                   var loadingModel = ProgressModel();
-                  var future = db.migrateFromCache((progress, total) async {
+                  var future = db.migrateFromMatchCache((progress, total) async {
                     loadingModel.total = total;
                     loadingModel.current = progress;
                     await Future.delayed(Duration.zero);

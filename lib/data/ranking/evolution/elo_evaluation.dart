@@ -75,7 +75,7 @@ class EloEvaluator extends Prey<EloEvaluator> {
       project: RatingProject(
         sportName: "USPSA",
           name: "Evolutionary test",
-          settings: RatingHistorySettings(
+          settings: RatingProjectSettings(
             algorithm: MultiplayerPercentEloRater(settings: settings),
             groups: [data.group],
           )

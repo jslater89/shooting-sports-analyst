@@ -8,6 +8,7 @@ import 'dart:async';
 
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_query_element.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/match/translator.dart';
@@ -37,20 +38,21 @@ class AnalystDatabase {
     return _instance!;
   }
 
-  late Isar matchDb;
+  late Isar isar;
 
   Future<void> _init() async {
-    matchDb = await Isar.open([
+    isar = await Isar.open([
       DbShootingMatchSchema,
+      DbRatingProjectSchema,
     ], directory: "db", name: "database");
     _readyCompleter.complete();
   }
 
   AnalystDatabase._();
 
-  /// The standard query: index on name if present or date if not.
-  Future<List<DbShootingMatch>> query({String? name, DateTime? after, DateTime? before, int page = 0, MatchSortField sort = const DateSort()}) {
-    Query<DbShootingMatch> finalQuery = _buildQuery(
+  /// The standard match query: index on name if present or date if not.
+  Future<List<DbShootingMatch>> queryMatches({String? name, DateTime? after, DateTime? before, int page = 0, MatchSortField sort = const DateSort()}) {
+    Query<DbShootingMatch> finalQuery = _buildMatchQuery(
       [
         if(name != null)
           NamePartsQuery(name),
@@ -63,20 +65,20 @@ class AnalystDatabase {
     return finalQuery.findAll();
   }
 
-  Future<Result<DbShootingMatch, ResultErr>> save(ShootingMatch match) async {
+  Future<Result<DbShootingMatch, ResultErr>> saveMatch(ShootingMatch match) async {
     if(match.sourceIds.isEmpty) {
       throw ArgumentError("Match must have at least one source ID to be saved in the database");
     }
     var dbMatch = DbShootingMatch.from(match);
     try {
-      dbMatch = await matchDb.writeTxn<DbShootingMatch>(() async {
-        var oldMatch = await getByAnySourceId(dbMatch.sourceIds);
+      dbMatch = await isar.writeTxn<DbShootingMatch>(() async {
+        var oldMatch = await getMatchByAnySourceId(dbMatch.sourceIds);
         if (oldMatch != null) {
           dbMatch.id = oldMatch.id;
-          await matchDb.dbShootingMatchs.put(dbMatch);
+          await isar.dbShootingMatchs.put(dbMatch);
         }
         else {
-          dbMatch.id = await matchDb.dbShootingMatchs.put(dbMatch);
+          dbMatch.id = await isar.dbShootingMatchs.put(dbMatch);
         }
         return dbMatch;
       });
@@ -90,16 +92,16 @@ class AnalystDatabase {
     return Result.ok(dbMatch);
   }
 
-  Future<DbShootingMatch?> getByAnySourceId(List<String> ids) async {
+  Future<DbShootingMatch?> getMatchByAnySourceId(List<String> ids) async {
     for(var id in ids) {
-      var match = await matchDb.dbShootingMatchs.getByIndex("sourceIds", [id]);
+      var match = await isar.dbShootingMatchs.getByIndex("sourceIds", [id]);
       if(match != null) return match;
     }
 
     return null;
   }
 
-  Future<void> migrateFromCache(ProgressCallback callback) async {
+  Future<void> migrateFromMatchCache(ProgressCallback callback) async {
     _log.d("Migrating from match cache");
     var cache = MatchCache();
 
@@ -108,7 +110,7 @@ class AnalystDatabase {
     for(var ie in cache.allIndexEntries()) {
       var oldMatch = await cache.getByIndex(ie);
       var newMatch = MatchTranslator.shootingMatchFrom(oldMatch);
-      await save(newMatch);
+      await saveMatch(newMatch);
       i += 1;
       if(i % 10 == 0) {
         _log.v("Migration: saved $i of $matchCount to database");
@@ -118,7 +120,7 @@ class AnalystDatabase {
     _log.i("Match cache migration complete with $matchCount cache entries processed");
   }
 
-  Query<DbShootingMatch> _buildQuery(List<MatchQueryElement> elements, {int? limit, int? offset, MatchSortField sort = const DateSort()}) {
+  Query<DbShootingMatch> _buildMatchQuery(List<MatchQueryElement> elements, {int? limit, int? offset, MatchSortField sort = const DateSort()}) {
     NamePartsQuery? nameQuery;
     DateQuery? dateQuery;
     LevelNameQuery? levelNameQuery;
@@ -159,9 +161,9 @@ class AnalystDatabase {
       }
     }
 
-    var (sortProperties, whereSort) = _buildSortFields(whereElement, sort);
+    var (sortProperties, whereSort) = _buildMatchSortFields(whereElement, sort);
 
-    Query<DbShootingMatch> query = matchDb.dbShootingMatchs.buildQuery(
+    Query<DbShootingMatch> query = isar.dbShootingMatchs.buildQuery(
       whereClauses: whereElement?.whereClauses ?? [],
       filter: filterElements.isEmpty ? null : FilterGroup.and([
         for(var f in filterElements)
@@ -177,7 +179,7 @@ class AnalystDatabase {
     return query;
   }
 
-  (List<SortProperty>, Sort) _buildSortFields(MatchQueryElement? whereElement, MatchSortField sort) {
+  (List<SortProperty>, Sort) _buildMatchSortFields(MatchQueryElement? whereElement, MatchSortField sort) {
     var direction = sort.desc ? Sort.desc : Sort.asc;
     switch(sort) {
       case NameSort():

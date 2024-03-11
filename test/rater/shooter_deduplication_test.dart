@@ -55,7 +55,7 @@ void main() async {
     test("mapped shooter deduplication", () async {
       var matches = mappedDeduplicationTestData();
 
-      RatingHistorySettings settings = RatingHistorySettings(algorithm: MultiplayerPercentEloRater());
+      RatingProjectSettings settings = RatingProjectSettings(algorithm: MultiplayerPercentEloRater());
       settings.userMemberNumberMappings = {"12345": "L1234"};
       var project = RatingProject(name: "Test", settings: settings, matchUrls: []);
 
@@ -77,7 +77,7 @@ void main() async {
   group("blacklist testing", () {
     test("blacklisted mappings", () async {
       var matches = deduplicationTestData();
-      RatingHistorySettings settings = RatingHistorySettings(algorithm: MultiplayerPercentEloRater());
+      RatingProjectSettings settings = RatingProjectSettings(algorithm: MultiplayerPercentEloRater());
       settings.memberNumberMappingBlacklist = {"12345": "L1234"};
       var project = RatingProject(name: "Test", settings: settings, matchUrls: []);
       var history = RatingHistory(project: project, matches: matches);
@@ -99,7 +99,7 @@ void main() async {
 
     test("user mappings and blacklist", () async {
       var matches = deduplicationTestData();
-      RatingHistorySettings settings = RatingHistorySettings(algorithm: MultiplayerPercentEloRater());
+      RatingProjectSettings settings = RatingProjectSettings(algorithm: MultiplayerPercentEloRater());
       settings.memberNumberMappingBlacklist = {"12345": "L1234"};
       settings.userMemberNumberMappings = {"12345": "54321"};
       var project = RatingProject(name: "Test", settings: settings, matchUrls: []);
