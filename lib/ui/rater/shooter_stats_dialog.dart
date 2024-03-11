@@ -99,6 +99,27 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     return _eventLines!;
   }
 
+  Future<void> exportCSV() async{
+    String header = "Date,Match,StageNum,StageName,StageRounds,RatingBefore,RatingChange,RatingAfter\n";
+    String content = "";
+
+    for(var event in widget.rating.ratingEvents) {
+      content +=
+          "${(event.match.date ?? DateTime(0,0,0)).toString()}"
+          "${event.match.name ?? "(unnamed match)"}," +
+          "${event.stage?.internalId ?? ""}," +
+          "${event.stage?.name ?? ""}," +
+          "${event.stage?.minRounds ?? ""}," +
+          "${event.oldRating}," +
+          "${event.ratingChange}," +
+          "${event.newRating}\n";
+    }
+
+    var csv = header + content;
+
+    await HtmlOr.saveFile("${widget.rating.getName(suffixes: false)}-rating-export.csv".safeFilename(replacement: "-"), csv);
+  }
+
   List<Widget> _buildHistoryLines() {
     var history = widget.rating.careerHistory();
 
@@ -167,10 +188,23 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
               },
             ),
           ),
-          IconButton(
-            icon: Icon(Icons.close),
-            onPressed: Navigator.of(context).pop,
-          )
+          Row(
+            children: [
+              Tooltip(
+                message: "Export event-by-event ratings for this shooter",
+                child: IconButton(
+                  icon: Icon(Icons.download),
+                  onPressed: () {
+                    exportCSV();
+                  },
+                ),
+              ),
+              IconButton(
+                icon: Icon(Icons.close),
+                onPressed: Navigator.of(context).pop,
+              ),
+            ],
+          ),
         ],
       ),
       content: Column(

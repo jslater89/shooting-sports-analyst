@@ -173,6 +173,7 @@ class DbMatchEntry {
     this.powerFactorName = "(invalid)",
     this.divisionName,
     this.classificationName,
+    this.ageCategoryName,
     this.scores = const [],
   });
 
@@ -210,6 +211,13 @@ class DbMatchEntry {
       if(division == null) return Result.err(StringError("bad classification: $firstName $lastName $classificationName"));
     }
 
+    AgeCategory? category;
+    if(sport.hasAgeCategories) {
+      if(ageCategoryName != null) {
+        category = sport.ageCategories.lookupByName(ageCategoryName!);
+      }
+    }
+
     PowerFactor pf = sport.powerFactors.values.first;
     if(sport.hasPowerFactors) {
       var foundPf = sport.powerFactors.lookupByName(powerFactorName);
@@ -232,6 +240,7 @@ class DbMatchEntry {
       powerFactor: pf,
       division: division,
       classification: classification,
+      ageCategory: category,
       scores: hydratedScores.map((stage, result) => MapEntry(stage, result.unwrap())),
     )
         ..originalMemberNumber = originalMemberNumber
