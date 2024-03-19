@@ -58,12 +58,20 @@ class RatingHistory {
 
   Future<void> Function(int currentSteps, int totalSteps, String? eventName)? progressCallback;
 
-  RatingHistory({RatingProject? project, required List<ShootingMatch> matches, this.progressCallback, this.verbose = true}) : this._matches = matches {
-    project ??= RatingProject(name: "Unnamed Project", settings: RatingProjectSettings(
+  RatingHistory({
+    required this.sport,
+    RatingProject? project,
+    required List<ShootingMatch> matches,
+    this.progressCallback,
+    this.verbose = true
+  }) : this._matches = matches {
+    project ??= RatingProject(
+      sportName: sport.name,
+      name: "Unnamed Project", settings: RatingProjectSettings(
       algorithm: MultiplayerPercentEloRater(settings: EloSettings(
         byStage: true,
       )),
-    ), matchUrls: matches.map((m) => m.practiscoreId).toList());
+    ));
 
     this.project = project;
     this.sport = this.project.sport;
@@ -89,7 +97,7 @@ class RatingHistory {
   }
   
   // Returns false if the match already exists
-  Future<bool> addMatch(PracticalMatch match) async {
+  Future<bool> addMatch(ShootingMatch match) async {
     if(matches.contains(match)) return false;
 
     var oldMatch = _lastMatch;
@@ -121,7 +129,7 @@ class RatingHistory {
     return raters[group]!;
   }
 
-  Rater raterFor(PracticalMatch match, RaterGroup group) {
+  Rater raterFor(ShootingMatch match, RaterGroup group) {
     if(!_settings.groups.contains(group)) throw ArgumentError("Invalid group");
     if(!_matches.contains(match)) throw ArgumentError("Invalid match");
 
@@ -234,7 +242,7 @@ class RatingHistory {
     return RatingResult.ok();
   }
   
-  Rater _raterForGroup(List<PracticalMatch> matches, RaterGroup group, [Future<void> Function(int, int, String?)? progressCallback]) {
+  Rater _raterForGroup(List<ShootingMatch> matches, RaterGroup group, [Future<void> Function(int, int, String?)? progressCallback]) {
     var divisionMap = <Division, bool>{};
     group.divisions.forEach((element) => divisionMap[element] = true);
     Timings().reset();

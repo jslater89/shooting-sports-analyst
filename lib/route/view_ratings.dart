@@ -106,7 +106,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   late List<RaterGroup> activeTabs;
 
   RatingSortMode _sortMode = RatingSortMode.rating;
-  PracticalMatch? _selectedMatch;
+  ShootingMatch? _selectedMatch;
   MatchCache _matchCache = MatchCache();
   late TabController _tabController;
 
@@ -188,7 +188,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   }
 
   Future<void> _init() async {
-    _getMatchResultFiles(widget.matchUrls);
+    _loadMatches(widget.matchUrls);
   }
 
   String _searchTerm = "";
@@ -425,13 +425,13 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                 spacing: 20.0,
                 runSpacing: 10.0,
                 children: [
-                  DropdownButton<PracticalMatch>(
+                  DropdownButton<ShootingMatch>(
                     underline: Container(
                       height: 1,
                       color: Colors.black,
                     ),
                     items: _history.matches.reversed.map((m) {
-                      return DropdownMenuItem<PracticalMatch>(
+                      return DropdownMenuItem<ShootingMatch>(
                         child: Text(m.name ?? "<unnamed match>"),
                         value: m,
                       );
@@ -999,7 +999,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   }
 
   var failedMatches = <String, MatchGetError>{};
-  Future<bool> _getMatchResultFiles(List<String> urls) async {
+  Future<bool> _loadMatches(List<String> urls) async {
     setState(() {
       _loadingState = _LoadingState.readingCache;
     });

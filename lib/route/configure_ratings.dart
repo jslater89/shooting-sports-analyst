@@ -5,6 +5,7 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/match/practical_match.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
 import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
@@ -44,7 +45,7 @@ var _log = SSALogger("ConfigureRatingsPage");
 class ConfigureRatingsPage extends StatefulWidget {
   const ConfigureRatingsPage({Key? key, required this.onSettingsReady}) : super(key: key);
 
-  final void Function(RatingProject) onSettingsReady;
+  final void Function(DbRatingProject) onSettingsReady;
 
   @override
   State<ConfigureRatingsPage> createState() => _ConfigureRatingsPageState();
@@ -205,12 +206,11 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     }
   }
 
-  void _loadProject(RatingProject project) {
+  void _loadProject(DbRatingProject project) {
     knownMatches = {};
     setState(() {
       filteredMatchUrls = null;
       filters = null;
-      matchUrls = []..addAll(project.matchUrls);
       _keepHistory = project.settings.preserveHistory;
       _checkDataEntryErrors = project.settings.checkDataEntryErrors;
       _groups = []..addAll(project.settings.groups);
@@ -862,7 +862,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     throw UnsupportedError("Algorithm not yet supported");
   }
 
-  Future<RatingProject?> _saveProject(String name) async {
+  Future<DbRatingProject?> _saveProject(String name) async {
     var settings = _makeAndValidateSettings();
     if(settings == null || name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("You must provide valid settings (including match URLs) to save.")));
@@ -872,11 +872,10 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     bool isAutosave = name == RatingProjectManager.autosaveName;
     String mapName = isAutosave || _lastProjectName == null ? RatingProjectManager.autosaveName : _lastProjectName!;
 
-    var project = RatingProject(
+    var project = DbRatingProject(
+      sportName: "USPSA",
       name: _lastProjectName ?? name,
       settings: settings,
-      matchUrls: []..addAll(matchUrls),
-      filteredUrls: (filteredMatchUrls?.isNotEmpty ?? false) ? filteredMatchUrls! : null,
     );
 
     await RatingProjectManager().saveProject(project, mapName: mapName);
@@ -1063,10 +1062,11 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
           return;
         }
 
-        var project = RatingProject(
-            name: "${_lastProjectName ?? "Unnamed Project"}",
-            settings: settings,
-            matchUrls: []..addAll(matchUrls)
+        var project = DbRatingProject(
+          sportName: "USPSA", // todo
+          name: "${_lastProjectName ?? "Unnamed Project"}",
+          settings: settings,
+          matchUrls: []..addAll(matchUrls)
         );
         await RatingProjectManager().exportToFile(project);
         break;

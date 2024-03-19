@@ -92,7 +92,6 @@ class Sport {
   bool get hasAgeCategories => ageCategories.length > 0;
   bool get hasClassificationFallback => classifications.values.any((element) => element.fallback);
   bool get hasEventLevels => eventLevels.length > 0;
-  bool get hasAgeCategories => ageCategories.length > 0;
 
   late final SportDisplaySettings displaySettings;
 

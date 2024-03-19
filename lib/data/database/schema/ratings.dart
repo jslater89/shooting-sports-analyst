@@ -33,22 +33,26 @@ class DbRatingProject with DbSportEntity {
 
   // Settings
   @Index()
-  String projectName;
+  String name;
   String encodedSettings;
 
-  final matches = IsarLinks<DbShootingMatch>;
+  final matches = IsarLinks<DbShootingMatch>();
+  
+  @ignore
+  List<DbShootingMatch> transientFilteredMatches = [];
 
   @ignore
   Map<String, dynamic> get jsonDecodedSettings => jsonDecode(encodedSettings);
 
   @ignore
   RatingProjectSettings? _settings;
+  @ignore
   RatingProjectSettings get settings {
     if(_settings == null) {
       var jsonSettings = jsonDecodedSettings;
       var algorithmName = (jsonSettings[RatingProject.algorithmKey] ?? RatingProject.multiplayerEloValue) as String;
       var algorithm = RatingProject.algorithmForName(algorithmName, jsonSettings);
-      _settings = RatingProjectSettings.decodeFromJson(algorithm, jsonSettings);
+      _settings = RatingProjectSettings.decodeFromJson(sport, algorithm, jsonSettings);
     }
 
     return _settings!;
@@ -59,7 +63,6 @@ class DbRatingProject with DbSportEntity {
     value.encodeToJson(map);
     encodedSettings = jsonEncode(map);
   }
-
 
   final groups = IsarLinks<DbRatingGroup>();
 
@@ -76,11 +79,16 @@ class DbRatingProject with DbSportEntity {
   }
 
   DbRatingProject({
-    required this.projectName,
+    required this.name,
     required this.sportName,
     this.encodedSettings = "{}",
     this.transientDataEntryErrorSkip = false,
-  });
+    RatingProjectSettings? settings,
+  }) {
+    if(settings != null) {
+      this.settings = settings;
+    }
+  }
 }
 
 @collection

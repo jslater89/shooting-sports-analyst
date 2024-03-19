@@ -10,6 +10,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:sprintf/sprintf.dart';
@@ -33,7 +34,7 @@ class ShooterStatsDialog extends StatefulWidget {
 
   final bool showDivisions;
   final ShooterRating rating;
-  final old.PracticalMatch match;
+  final ShootingMatch match;
   final Map<RaterGroup, Rater>? ratings;
 
   @override
@@ -72,7 +73,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                     children: [
                       Expanded(
                         flex: 10,
-                        child: Text("${e.eventName}${widget.showDivisions ? " (${e.score.score.shooter.division?.abbreviation() ?? " UNK"})" : ""}",
+                        child: Text("${e.eventName}${widget.showDivisions ? " (${e.score.shooter.division?.shortDisplayName ?? " UNK"})" : ""}",
                             style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).colorScheme.error : null)),
                       ),
                       Expanded(
@@ -107,7 +108,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       content +=
           "${(event.match.date ?? DateTime(0,0,0)).toString()}"
           "${event.match.name ?? "(unnamed match)"}," +
-          "${event.stage?.internalId ?? ""}," +
+          "${event.stage?.stageId ?? ""}," +
           "${event.stage?.name ?? ""}," +
           "${event.stage?.minRounds ?? ""}," +
           "${event.oldRating}," +
@@ -182,7 +183,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
           MouseRegion(
             cursor: SystemMouseCursors.click,
             child: GestureDetector(
-              child: Text("Ratings for ${widget.rating.getName(suffixes: false)} ${widget.rating.originalMemberNumber} (${widget.rating.lastClassification.name})"),
+              child: Text("Ratings for ${widget.rating.getName(suffixes: false)} ${widget.rating.originalMemberNumber} (${widget.rating.lastClassification?.displayName})"),
               onTap: () {
                 HtmlOr.openLink("https://uspsa.org/classification/${widget.rating.originalMemberNumber}");
               },
@@ -335,7 +336,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         colorFn: (e, __) {
           if(!widget.showDivisions) return charts.MaterialPalette.blue.shadeDefault;
           
-          var division = e.baseEvent.score.score.shooter.division?.displayString();
+          var division = e.baseEvent.score.shooter.division?.displayName;
           if(division == null) {
             return _colorOptions.first;
           }
@@ -445,8 +446,8 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
 
   // TODO: restore once rater is updated
   void _launchScoreView(RatingEvent e) {
-    var newMatch = ShootingMatch.fromOldMatch(e.match);
-    var division = newMatch.sport.divisions.lookupByName(e.score.score.shooter.division?.displayString() ?? "Open")!;
+    var newMatch = e.match;
+    var division = newMatch.sport.divisions.lookupByName(e.score.shooter.division?.displayName ?? "Open")!;
     var filters = FilterSet(newMatch.sport, empty: true)
       ..mode = FilterMode.or;
     filters.divisions = filters.divisionListToMap([division]);
@@ -490,12 +491,12 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   }
   old.Score? totalScore;
   int totalPoints = 0;
-  Set<old.PracticalMatch> dqs = {};
-  Set<old.PracticalMatch> matches = {};
-  Map<old.PracticalMatch, old.Classification> classesByMatch = {};
-  Map<old.PracticalMatch, old.Division> divisionsByMatch = {};
-  Set<old.PracticalMatch> matchesWithRatingChanges = {};
-  Map<old.MatchLevel, int> matchesByLevel = {};
+  Set<ShootingMatch> dqs = {};
+  Set<ShootingMatch> matches = {};
+  Map<ShootingMatch, Classification> classesByMatch = {};
+  Map<ShootingMatch, Division> divisionsByMatch = {};
+  Set<ShootingMatch> matchesWithRatingChanges = {};
+  Map<MatchLevel, int> matchesByLevel = {};
   int majorEntries = 0;
   int minorEntries = 0;
   int otherEntries = 0;
@@ -511,12 +512,15 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   List<int> competitorCounts = [];
 
   void calculateTotalScore() {
-    var total = old.Score(shooter: widget.rating);
+    // scoring isn't important; we'll add to targetEvents/penaltyEvents later
+    var total = RawScore(scoring: const HitFactorScoring(), targetEvents: {}, penaltyEvents: {});
 
     for(var event in widget.rating.combinedRatingEvents) {
-      var score = event.score.score;
+      var score = event.score;
 
+      var eventScore;
       if(byStage) {
+        eventScore = event.scoreForStage.score;
         var stage = event.stage!;
         if(event.score.place == 1) {
           stageWins += 1;
@@ -524,16 +528,19 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         stageFinishes.add(event.score.place);
 
         var stageClassScores = event.match.getScores(stages: [stage], shooters: event.match.shooters.where(
-              (element) => event.score.score.shooter.division == element.division && event.score.score.shooter.classification == element.classification).toList()
+              (element) => event.score.shooter.division == element.division && event.score.shooter.classification == element.classification).toList()
         );
-        var stageClassScore = stageClassScores.firstWhereOrNull((element) => widget.rating.equalsShooter(element.shooter));
+        var stageClassScore = stageClassScores.values.firstWhereOrNull((element) => widget.rating.equalsShooter(element.shooter));
 
-        if(stageClassScore != null && event.score.score.shooter.classification != old.Classification.U) {
-          classStageFinishes.add(stageClassScore.total.place);
-          if (stageClassScore.total.place == 1) {
+        if(stageClassScore != null && event.score.shooter.classification != old.Classification.U) {
+          classStageFinishes.add(stageClassScore.place);
+          if (stageClassScore.place == 1) {
             classStageWins += 1;
           }
         }
+      }
+      else {
+        eventScore = event.scoreForMatch.total;
       }
 
       total += score;

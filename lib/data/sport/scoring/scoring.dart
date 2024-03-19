@@ -727,6 +727,33 @@ class RawScore {
       penaltyEvents: {}..addAll(penaltyEvents),
     );
   }
+
+  operator +(RawScore other) {
+    Map<ScoringEvent, int> targetEvents = {};
+    Map<ScoringEvent, int> penaltyEvents = {};
+    for(var entry in this.targetEvents.entries) {
+      targetEvents.incrementBy(entry.key, entry.value);
+    }
+    for(var entry in this.penaltyEvents.entries) {
+      penaltyEvents.incrementBy(entry.key, entry.value);
+    }
+    for(var entry in other.targetEvents.entries) {
+      targetEvents.incrementBy(entry.key, entry.value);
+    }
+    for(var entry in other.penaltyEvents.entries) {
+      penaltyEvents.incrementBy(entry.key, entry.value);
+    }
+
+    var s = RawScore(
+      scoring: this.scoring,
+      rawTime: this.rawTime + other.rawTime,
+      stringTimes: []..addAll(this.stringTimes)..addAll(other.stringTimes),
+      targetEvents: targetEvents,
+      penaltyEvents: penaltyEvents,
+    );
+
+    return s;
+  }
 }
 
 /// A ScoringEvent is the minimal unit of score change in a shooting sports

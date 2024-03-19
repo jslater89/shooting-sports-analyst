@@ -15,6 +15,7 @@ import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_shooter_rati
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 import 'package:shooting_sports_analyst/data/search_query_parser.dart';
+import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/ui/rater/rating_filter_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/shooter_stats_dialog.dart';
 
@@ -37,7 +38,7 @@ class RaterView extends StatefulWidget {
   final int minRatings;
   final RatingHistory history;
   final Rater rater;
-  final PracticalMatch currentMatch;
+  final ShootingMatch currentMatch;
   final RatingSortMode sortMode;
 
   /// A list of shooters to hide from the results. Entries are member numbers.

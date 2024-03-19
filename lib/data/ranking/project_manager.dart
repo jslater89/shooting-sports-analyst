@@ -481,7 +481,7 @@ class RatingProjectSettings {
     algorithm.encodeToJson(map);
   }
 
-  factory RatingProjectSettings.decodeFromJson(RatingSystem algorithm, Map<String, dynamic> encodedProject) {
+  factory RatingProjectSettings.decodeFromJson(Sport sport, RatingSystem algorithm, Map<String, dynamic> encodedProject) {
     Map<String, List<Division>> recognizedDivisions = {};
     var recDivJson = (encodedProject[_recognizedDivisionsKey] ?? <String, dynamic>{}) as Map<String, dynamic>;
     for(var key in recDivJson.keys) {
@@ -495,13 +495,13 @@ class RatingProjectSettings {
       groups: [], // stored in DB
       memberNumberWhitelist: ((encodedProject[_whitelistKey] ?? []) as List<dynamic>).map((item) => item as String).toList(),
       shooterAliases: ((encodedProject[_aliasesKey] ?? defaultShooterAliases) as Map<String, dynamic>).map<String, String>((k, v) =>
-      MapEntry(k, v as String)
+        MapEntry(k, v as String)
       ),
       userMemberNumberMappings: ((encodedProject[_memberNumberMappingsKey] ?? <String, dynamic>{}) as Map<String, dynamic>).map<String, String>((k, v) =>
-      MapEntry(k, v as String)
+        MapEntry(k, v as String)
       ),
       memberNumberMappingBlacklist: ((encodedProject[_memberNumberMappingBlacklistKey] ?? <String, dynamic>{}) as Map<String, dynamic>).map<String, String>((k, v) =>
-      MapEntry(k, v as String)
+        MapEntry(k, v as String)
       ),
       hiddenShooters: ((encodedProject[_hiddenShootersKey] ?? []) as List<dynamic>).map((item) => item as String).toList(),
       memberNumberCorrections: MemberNumberCorrectionContainer.fromJson((encodedProject[_memberNumberCorrectionsKey] ?? []) as List<dynamic>),
