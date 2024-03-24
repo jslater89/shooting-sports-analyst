@@ -285,7 +285,6 @@ class RatingProject with DbSportEntity {
       memberNumberCorrections: MemberNumberCorrectionContainer.fromJson((encodedProject[_memberNumberCorrectionsKey] ?? []) as List<dynamic>),
       recognizedDivisions: recognizedDivisions,
     );
-    var matchUrls = (encodedProject[_urlsKey] as List<dynamic>).map((item) => item as String).toList();
     var name = encodedProject[_nameKey] as String;
 
     var rp = RatingProject(sportName: sportName, name: name, settings: settings);

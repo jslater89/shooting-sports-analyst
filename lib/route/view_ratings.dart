@@ -14,6 +14,7 @@ import 'package:flutter/services.dart';
 import 'package:fluttericon/rpg_awesome_icons.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
 import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
@@ -44,13 +45,12 @@ var _log = SSALogger("RatingsViewPage");
 class RatingsViewPage extends StatefulWidget {
   const RatingsViewPage({
     Key? key, 
-    required this.project,
+    required this.dataSource,
   }) : super(key: key);
 
-  final RatingProject project;
+  final RatingDataSource dataSource;
   
-  RatingProjectSettings get settings => project.settings;
-  List<String> get matchUrls => project.filteredUrls;
+  RatingProjectSettings get settings => dataSource.settings;
 
   @override
   State<RatingsViewPage> createState() => _RatingsViewPageState();
@@ -689,7 +689,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
             if(_filters.activeCategories.isNotEmpty) {
               sortedRatings = sortedRatings.where((r) =>
-                  r.categories.any((c) => _filters.activeCategories.contains(c)));
+                  _filters.activeCategories.contains(r.ageCategory));
             }
 
             if(hiddenShooters.isNotEmpty) {
@@ -729,46 +729,49 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
 
       case _MenuEntry.viewResults:
-        var indexEntry = await showDialog<MatchCacheIndexEntry>(
-            context: context,
-            builder: (context) => MatchCacheChooserDialog(matches: _history.allMatches)
-        );
-
-        if(indexEntry != null) {
-          var ratings = <RaterGroup, Rater>{};
-          for(var group in _history.groups) {
-            ratings[group] = _history.latestRaterFor(group);
-          }
-
-          var match = await MatchCache().getByIndex(indexEntry);
-          Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-            return ResultPage(canonicalMatch: ShootingMatch.fromOldMatch(match), allowWhatIf: false, ratings: ratings);
-          }));
-        }
+        // TODO: figure out how best to choose from DB when this loads again
+        // var indexEntry = await showDialog<MatchCacheIndexEntry>(
+        //     context: context,
+        //     builder: (context) => MatchCacheChooserDialog(matches: _history.allMatches)
+        // );
+        //
+        // if(indexEntry != null) {
+        //   var ratings = <RaterGroup, Rater>{};
+        //   for(var group in _history.groups) {
+        //     ratings[group] = _history.latestRaterFor(group);
+        //   }
+        //
+        //   var match = await MatchCache().getByIndex(indexEntry);
+        //   Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+        //     return ResultPage(canonicalMatch: ShootingMatch.fromOldMatch(match), allowWhatIf: false, ratings: ratings);
+        //   }));
+        // }
         break;
 
 
       case _MenuEntry.addMatch:
-        var entry = await showDialog<MatchCacheIndexEntry>(
-            context: context,
-            builder: (context) => MatchCacheChooserDialog(
-              helpText:
-              "Add a match to the rating list from the cache. Use the plus button to download a new one.\n\n"
-                  "You must save the project from the rating screen for the match to be included in future "
-                  "rating runs. In future rating runs, matches will be sorted by date even if not added in "
-                  "date order here.",
-            )
-        );
+        // TODO: same as above
 
-        if(entry != null) {
-          var match = await MatchCache().getByIndex(entry);
-          _history.addMatch(match);
-
-          setState(() {
-            _selectedMatch = _history.matches.last;
-            _historyChanged = true;
-          });
-        }
+        // var entry = await showDialog<MatchCacheIndexEntry>(
+        //     context: context,
+        //     builder: (context) => MatchCacheChooserDialog(
+        //       helpText:
+        //       "Add a match to the rating list from the cache. Use the plus button to download a new one.\n\n"
+        //           "You must save the project from the rating screen for the match to be included in future "
+        //           "rating runs. In future rating runs, matches will be sorted by date even if not added in "
+        //           "date order here.",
+        //     )
+        // );
+        //
+        // if(entry != null) {
+        //   var match = await MatchCache().getByIndex(entry);
+        //   _history.addMatch(match);
+        //
+        //   setState(() {
+        //     _selectedMatch = _history.matches.last;
+        //     _historyChanged = true;
+        //   });
+        // }
         break;
     }
   }
@@ -810,7 +813,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
     // TODO: pass in cached info if exists
 
-    var registrationResult = await getRegistrations(url, divisions, options);
+    var registrationResult = await getRegistrations(rater.sport, url, divisions, options);
     if(registrationResult == null) {
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Unable to retrieve registrations"))
@@ -998,94 +1001,11 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     await pm.saveProject(_history.project, mapName: RatingProjectManager.autosaveName);
   }
 
-  var failedMatches = <String, MatchGetError>{};
   Future<bool> _loadMatches(List<String> urls) async {
     setState(() {
       _loadingState = _LoadingState.readingCache;
     });
     await _matchCache.ready;
-
-    setState(() {
-      _loadingState = _LoadingState.downloadingMatches;
-      _totalProgress = urls.length;
-    });
-
-    var localUrls = []..addAll(urls);
-
-    var urlsByFuture = <Future<Result<PracticalMatch, MatchGetError>>, String>{};
-    while(localUrls.isNotEmpty) {
-
-      var futures = <Future<Result<PracticalMatch, MatchGetError>>>[];
-      var urlsThisStep = [];
-      if(localUrls.length < 10) {
-        urlsThisStep = []..addAll(localUrls);
-        localUrls.clear();
-
-      }
-      else {
-        urlsThisStep = localUrls.sublist(0, 10);
-        localUrls.removeWhere((element) => urlsThisStep.contains(element));
-      }
-
-      for(var url in urlsThisStep) {
-        setState(() {
-          _matchUrls[url] = null;
-        });
-        var f = _matchCache.getMatch(url);
-        urlsByFuture[f] = url;
-        futures.add(f);
-      }
-
-      await Future.wait(futures);
-
-      for(var future in futures) {
-        var result = await future;
-        var url = urlsByFuture[future]!;
-        if(result.isOk()) {
-          _matchUrls[url] = result.unwrap();
-        }
-        else {
-          _matchUrls.remove(url);
-          failedMatches[url] = result.unwrapErr();
-        }
-      }
-
-      if(mounted) {
-        setState(() {
-          _currentProgress = _matchUrls.values.where((v) => v != null).length;
-        });
-      }
-      else {
-        return false;
-      }
-    }
-
-    // // (catch any we missed, if any?)
-    // for(var future in urlsByFuture.keys) {
-    //   var match = await future;
-    //   var url = urlsByFuture[future]!;
-    //   if(_matchUrls[url] == null) continue;
-    //
-    //   debugPrint("Missed match: $url");
-    //   if(match != null) {
-    //     _matchUrls[url] = match;
-    //   }
-    //   else {
-    //     _matchUrls.remove(url);
-    //     failures += 1;
-    //   }
-    // }
-
-    var actualMatches = <PracticalMatch>[
-      for(var m in _matchUrls.values)
-        if(m != null) m
-    ];
-
-    setState(() {
-      _loadingState = _LoadingState.updatingCache;
-      _totalProgress = 1;
-      _currentProgress = 0;
-    });
 
     await Future.delayed(Duration(milliseconds: 100));
 
@@ -1109,115 +1029,28 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
     await Future.delayed(Duration(milliseconds: 1));
 
-    // Copy the project so we can edit it in the rater view without breaking
-    _history = RatingHistory(project: widget.project.copy(), matches: actualMatches, progressCallback: (currentSteps, totalSteps, eventName) async {
-      setState(() {
-        _currentProgress = currentSteps;
-        _totalProgress = totalSteps;
-        _loadingEventName = eventName;
-      });
+    _history = RatingHistory(
+      project: widget.dataSource,
+      matches: actualMatches,
+      progressCallback: (currentSteps, totalSteps, eventName) async {
+        setState(() {
+          _currentProgress = currentSteps;
+          _totalProgress = totalSteps;
+          _loadingEventName = eventName;
+        });
 
-      // print("Rating history progress: $_currentProgress/$_totalProgress $eventName");
-      await Future.delayed(Duration(milliseconds: 1));
-    });
+        // print("Rating history progress: $_currentProgress/$_totalProgress $eventName");
+        await Future.delayed(Duration(milliseconds: 1));
+      },
+      sport: _history.sport,
+    );
 
     var result = await _processMatches();
-
-    if(failedMatches.isNotEmpty) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Failed to download ${failedMatches.length} matches"),
-          duration: Duration(seconds: 10),
-          action: SnackBarAction(
-            label: "VIEW",
-            onPressed: () async {
-              await showDialog(context: context, builder: (context) {
-                return StatefulBuilder(
-                    builder: (context, setState) {
-                      return AlertDialog(
-                        title: Text("Failed matches"),
-                        scrollable: true,
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            TextButton(
-                              child: Text("REMOVE ALL"),
-                              onPressed: () {
-                                _history.project.matchUrls.removeWhere((element) => failedMatches.keys.contains(element));
-                                setState(() {
-                                  failedMatches.clear();
-                                  _historyChanged = true;
-                                });
-
-                                Navigator.of(context).pop();
-                              },
-                            ),
-                            for(var key in failedMatches.keys) Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                MouseRegion(
-                                  cursor: SystemMouseCursors.click,
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      HtmlOr.openLink(key);
-                                    },
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(4.0),
-                                      child: Text(key,
-                                        overflow: TextOverflow.fade,
-                                        softWrap: false,
-                                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                                          decoration: TextDecoration.underline,
-                                          color: Colors.blueAccent,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(width: 5),
-                                Padding(
-                                  padding: const EdgeInsets.all(4.0),
-                                  child: Text(failedMatches[key]?.message ?? ""),
-                                ),
-                                IconButton(
-                                  icon: Icon(Icons.remove),
-                                  onPressed: () {
-                                    _history.project.matchUrls.remove(key);
-                                    setState(() {
-                                      _historyChanged = true;
-                                      failedMatches.remove(key);
-                                    });
-
-                                    if(failedMatches.isEmpty) Navigator.of(context).pop();
-                                  },
-                                ),
-                              ],
-                            )
-                          ],
-                        ),
-                        actions: [
-                          TextButton(
-                            child: Text("CLOSE"),
-                            onPressed: Navigator.of(context).pop,
-                          )
-                        ],
-                      );
-                    }
-                );
-              });
-
-              setState(() {
-                // catch any changes made by the dialog
-              });
-            },
-          ),
-        ));
 
     return result;
   }
 
   Future<bool> _processMatches() async {
-    var urls = widget.matchUrls;
-
     DateTime start = DateTime.now();
     var result = await _history.processInitialMatches();
     _log.i("Processing ratings took ${DateTime.now().difference(start).inMilliseconds / 1000} sec");
@@ -1226,7 +1059,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       return false;
     }
 
-    _log.i("History ready with ${_history.matches.length} matches after ${urls.length} URLs and ${failedMatches.length} failures");
+    _log.i("History ready with ${_history.matches.length} matches.");
     setState(() {
       _selectedMatch = _history.matches.last;
       _loadingState = _LoadingState.done;

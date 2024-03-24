@@ -6,9 +6,10 @@
 
 import 'package:collection/collection.dart';
 import 'package:html_unescape/html_unescape_small.dart';
-import 'package:shooting_sports_analyst/data/match/shooter.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:http/http.dart' as http;
+import 'package:shooting_sports_analyst/data/sport/model.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 
 var _log = SSALogger("RegistrationParser");
@@ -48,7 +49,7 @@ class Registration {
   int get hashCode => name.hashCode + division.hashCode + classification.hashCode;
 }
 
-Future<RegistrationResult?> getRegistrations(String url, List<Division> divisions, List<ShooterRating> knownShooters) async {
+Future<RegistrationResult?> getRegistrations(Sport sport, String url, List<Division> divisions, List<ShooterRating> knownShooters) async {
   if(!url.endsWith("squadding")) {
     _log.i("Wrong URL");
     return null;
@@ -58,7 +59,7 @@ Future<RegistrationResult?> getRegistrations(String url, List<Division> division
     var response = await http.get(Uri.parse(url));
     if(response.statusCode < 400) {
       var responseHtml = response.body;
-      return _parseRegistrations(responseHtml, divisions, knownShooters);
+      return _parseRegistrations(sport, responseHtml, divisions, knownShooters);
     }
     else {
       _log.e("Failed to get registration URL: $response");
@@ -69,7 +70,7 @@ Future<RegistrationResult?> getRegistrations(String url, List<Division> division
   return null;
 }
 
-RegistrationResult _parseRegistrations(String registrationHtml, List<Division> divisions, List<ShooterRating> knownShooters) {
+RegistrationResult _parseRegistrations(Sport sport, String registrationHtml, List<Division> divisions, List<ShooterRating> knownShooters) {
   var ratings = <Registration, ShooterRating>{};
   var unmatched = <Registration>[];
 
@@ -89,11 +90,15 @@ RegistrationResult _parseRegistrations(String registrationHtml, List<Division> d
     var match = shooterRegex.firstMatch(line);
     if(match != null) {
       var shooterName = unescape.convert(match.namedGroup("name")!);
-      var d = DivisionFrom.string(match.namedGroup("division")!);
+      var d = sport.divisions.lookupByName(match.namedGroup("division")!);
 
-      if(!divisions.contains(d)) continue;
+      if(d == null || !divisions.contains(d)) continue;
 
-      var classification = ClassificationFrom.string(match.namedGroup("class")!);
+      var classification = sport.classifications.lookupByName(match.namedGroup("class")!);
+
+      // TODO
+      if(classification == null) continue;
+
       var foundShooter = _findShooter(shooterName, classification, knownShooters);
 
       if(foundShooter != null && !ratings.containsValue(foundShooter)) {

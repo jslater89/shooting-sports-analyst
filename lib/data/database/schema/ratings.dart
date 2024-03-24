@@ -95,8 +95,13 @@ class DbRatingProject with DbSportEntity {
 class DbRatingGroup with DbSportEntity {
   Id id = Isar.autoIncrement;
 
+  @Index(composite: [CompositeIndex("name")], unique: true)
   String sportName;
   String name;
+  String? displayName;
+
+  @ignore
+  String get uiLabel => displayName ?? name;
 
   List<String> divisionNames;
   @ignore
@@ -117,6 +122,7 @@ class DbRatingGroup with DbSportEntity {
 class DbShooterRating {
   Id id = Isar.autoIncrement;
 
+  @Index(composite: [CompositeIndex("group")], unique: true)
   @Backlink(to: "ratings")
   final project = IsarLink<DbRatingProject>();
   final group = IsarLink<DbRatingGroup>();

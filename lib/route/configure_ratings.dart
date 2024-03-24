@@ -1066,7 +1066,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
           sportName: "USPSA", // todo
           name: "${_lastProjectName ?? "Unnamed Project"}",
           settings: settings,
-          matchUrls: []..addAll(matchUrls)
         );
         await RatingProjectManager().exportToFile(project);
         break;

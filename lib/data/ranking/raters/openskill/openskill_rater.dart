@@ -75,7 +75,7 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
             Expanded(flex: _paddingFlex - _placeFlex, child: Text("")),
             Expanded(flex: _placeFlex, child: Text("$place")),
             Expanded(flex: _memberNumFlex, child: Text(rating.memberNumber)),
-            Expanded(flex: _classFlex, child: Text(rating.lastClassification.displayString())),
+            Expanded(flex: _classFlex, child: Text(rating.lastClassification?.shortDisplayName ?? "none")),
             Expanded(flex: _nameFlex, child: Text(rating.getName(suffixes: false))),
             Expanded(flex: _ordinalFlex, child: Text(rating.ordinal.toStringAsFixed(1), textAlign: TextAlign.end)),
             Expanded(flex: _muFlex, child: Text(rating.mu.toStringAsFixed(1), textAlign: TextAlign.end)),

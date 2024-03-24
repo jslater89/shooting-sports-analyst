@@ -5,6 +5,8 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 import 'package:shooting_sports_analyst/route/configure_ratings.dart';
@@ -18,7 +20,7 @@ class RatingsContainerPage extends StatefulWidget {
 }
 
 class _RatingsContainerPageState extends State<RatingsContainerPage> {
-  RatingProject? project;
+  DbRatingProject? project;
 
   bool get configured => project != null;
 
@@ -26,7 +28,7 @@ class _RatingsContainerPageState extends State<RatingsContainerPage> {
   Widget build(BuildContext context) {
     if(!configured) {
       return ConfigureRatingsPage(
-        onSettingsReady: (RatingProject project) async {
+        onSettingsReady: (DbRatingProject project) async {
           setState(() {
             this.project = project;
           });
@@ -35,7 +37,7 @@ class _RatingsContainerPageState extends State<RatingsContainerPage> {
     }
     else {
       return RatingsViewPage(
-        project: this.project!,
+        dataSource: this.project,
       );
     }
   }

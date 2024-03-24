@@ -24,6 +24,7 @@ I may think of others, but this is a pretty good set to start with.
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/evolution/predator_prey.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
@@ -32,6 +33,7 @@ import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settin
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 
@@ -70,9 +72,10 @@ class EloEvaluator extends Prey<EloEvaluator> {
   Future<double> evaluate(EloEvaluationData data, [Future<void> Function(int, int)? callback]) async {
     int lastProgress = 0;
     var h = RatingHistory(
+      sport: uspsaSport,
       verbose: false,
       matches: [],
-      project: RatingProject(
+      project: DbRatingProject(
         sportName: "USPSA",
           name: "Evolutionary test",
           settings: RatingProjectSettings(

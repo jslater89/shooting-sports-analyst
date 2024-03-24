@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
@@ -49,7 +50,7 @@ class RatingHistory {
 
   List<RaterGroup> get groups => []..addAll(_settings.groups);
 
-  late RatingProject project;
+  late DbRatingProject project;
   bool verbose;
 
   /// Maps matches to a map of [Rater]s, which hold the incremental ratings
@@ -60,12 +61,12 @@ class RatingHistory {
 
   RatingHistory({
     required this.sport,
-    RatingProject? project,
+    DbRatingProject? project,
     required List<ShootingMatch> matches,
     this.progressCallback,
     this.verbose = true
   }) : this._matches = matches {
-    project ??= RatingProject(
+    project ??= DbRatingProject(
       sportName: sport.name,
       name: "Unnamed Project", settings: RatingProjectSettings(
       algorithm: MultiplayerPercentEloRater(settings: EloSettings(

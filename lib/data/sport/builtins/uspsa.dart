@@ -5,6 +5,8 @@
  */
 
 import 'package:shooting_sports_analyst/data/ranking/deduplication/uspsa_deduplicator.dart';
+import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/sorts.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
@@ -101,6 +103,7 @@ final uspsaSport = Sport(
     _minorPowerFactor,
     PowerFactor("Subminor",
       shortName: "sub",
+      doesNotScore: true,
       targetEvents: [
         const ScoringEvent("A", pointChange: 0),
         const ScoringEvent("C", pointChange: 0),
@@ -121,5 +124,59 @@ final uspsaSport = Sport(
     uspsaC: 900,
     uspsaD: 800,
     uspsaU: 900,
-  }
+  },
+  ratingStrengthProvider: UspsaRatingStrengthProvider(),
+  pubstompProvider: UspsaPubstompProvider(),
 );
+
+class UspsaRatingStrengthProvider implements RatingStrengthProvider {
+  @override
+  double get centerStrength => 4;
+
+  @override
+  double strengthForClass(Classification? c) {
+    return switch(c) {
+      uspsaGM => 10,
+      uspsaM => 6,
+      uspsaA => 4,
+      uspsaB => 3,
+      uspsaC => 2,
+      uspsaD => 1,
+      uspsaU => 2,
+      _ => 2.5,
+    };
+  }
+}
+
+class UspsaPubstompProvider implements PubstompProvider {
+  @override
+  bool isPubstomp({
+    required RelativeMatchScore firstScore,
+    required RelativeMatchScore secondScore,
+    Classification? firstClass,
+    Classification? secondClass,
+    required ShooterRating firstRating,
+    required ShooterRating secondRating
+  }) {
+    if(firstClass == null) return false;
+    if(secondClass == null) secondClass = uspsaU;
+
+    // It's only a pubstomp if:
+    // 1. The winner wins by more than 25%.
+    // 2. The winner is M shooting against no better than B or GM shooting against no better than A.
+    // 3. The winner's rating is at least 200 higher than the next shooter's.
+    // TODO: it's probably possible to make this generic/rule-based.
+
+    if(firstScore.ratio >= 1.0
+        && (firstScore.points / secondScore.points > 1.20)
+        && firstClass.index <= uspsaM.index
+        && secondClass.index - firstClass.index >= 2
+        && firstRating.rating - secondRating.rating > 200) {
+      // _log.d("Pubstomp multiplier for $firstRating over $secondRating");
+      return true;
+
+    }
+    return false;
+  }
+
+}

@@ -7,6 +7,7 @@
 import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
+import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
 import 'package:shooting_sports_analyst/data/sort_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/display_settings.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
@@ -95,6 +96,9 @@ class Sport {
 
   late final SportDisplaySettings displaySettings;
 
+  final RatingStrengthProvider? ratingStrengthProvider;
+  final PubstompProvider? pubstompProvider;
+
   Sport(this.name, {
     required this.matchScoring,
     required this.defaultStageScoring,
@@ -117,6 +121,8 @@ class Sport {
     PowerFactor? displaySettingsPowerFactor,
     this.shooterDeduplicator,
     this.initialEloRatings = const {},
+    this.ratingStrengthProvider,
+    this.pubstompProvider,
   }) :
         classifications = Map.fromEntries(classifications.map((e) => MapEntry(e.name, e))),
         divisions = Map.fromEntries(divisions.map((e) => MapEntry(e.name, e))),
@@ -154,12 +160,19 @@ class PowerFactor implements NameLookupEntity {
 
   final bool fallback;
 
+  /// If true, this power factor does not score, like subminor in USPSA.
+  ///
+  /// Rating engines will treat match results with a doesNotScore power factor as a
+  /// DNF, and ignore them for rating purposes.
+  final bool doesNotScore;
+
   PowerFactor(this.name, {
     this.shortName = "",
     required List<ScoringEvent> targetEvents,
     List<ScoringEvent> penaltyEvents = const [],
     this.alternateNames = const [],
     this.fallback = false,
+    this.doesNotScore = false,
   }) :
     targetEvents = Map.fromEntries(targetEvents.map((e) => MapEntry(e.name, e))),
     penaltyEvents = Map.fromEntries(penaltyEvents.map((e) => MapEntry(e.name, e)))

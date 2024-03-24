@@ -450,7 +450,7 @@ class Rater {
       }
     }
     matchStrength = matchStrength / shooters.length;
-    double strengthMod =  (1.0 + max(-0.75, min(0.5, ((matchStrength) - _strengthForClass(Classification.A)) * 0.2))) * (match.level?.strengthBonus ?? 1.0);
+    double strengthMod =  (1.0 + max(-0.75, min(0.5, ((matchStrength) - _centerStrength) * 0.2))) * (match.level?.strengthBonus ?? 1.0);
     if(Timings.enabled) timings.matchStrengthMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
 
     if(Timings.enabled) start = DateTime.now();
@@ -1017,7 +1017,7 @@ class Rater {
     if(score.score.rawTime <= 0.5) return false;
 
     // The Jalise Williams rule: filter out subminor/unknown PFs
-    if(score.score.shooter.powerFactor!.index > PowerFactor.minor.index) return false;
+    if(score.shooter.powerFactor.doesNotScore) return false;
 
     return true;
   }
@@ -1030,8 +1030,8 @@ class Rater {
     var first = sorted[0];
     var second = sorted[1];
 
-    var firstClass = first.shooter.classification ?? Classification.U;
-    var secondClass = second.shooter.classification ?? Classification.U;
+    var firstClass = first.shooter.classification;
+    var secondClass = second.shooter.classification;
 
     var firstRating = maybeKnownShooter(first.shooter.memberNumber);
     var secondRating = maybeKnownShooter(second.shooter.memberNumber);
@@ -1042,34 +1042,23 @@ class Rater {
       return false;
     }
 
-    // if(processMemberNumber(first.shooter.memberNumber) == "68934" || processMemberNumber(first.shooter.memberNumber) == "5172") {
-    //   _log.d("${firstScore.percent.toStringAsFixed(2)} ${(firstScore.relativePoints/secondScore.relativePoints).toStringAsFixed(3)}");
-    //   _log.d("${firstRating.rating.round()} > ${secondRating.rating.round()}");
-    // }
-
-    // It's only a pubstomp if:
-    // 1. The winner wins by more than 25%.
-    // 2. The winner is M shooting against no better than B or GM shooting against no better than A.
-    // 3. The winner's rating is at least 200 higher than the next shooter's.
-    if(first.ratio >= 1.0
-        && (first.points / second.points > 1.20)
-        && firstClass.index <= Classification.M.index
-        && secondClass.index - firstClass.index >= 2
-        && firstRating.rating - secondRating.rating > 200) {
-      // _log.d("Pubstomp multiplier for $firstRating over $secondRating");
-      return true;
-
-    }
-    return false;
+    return sport.pubstompProvider?.isPubstomp(
+      firstScore: first,
+      secondScore: second,
+      firstRating: firstRating,
+      secondRating: secondRating,
+      firstClass: firstClass,
+      secondClass: secondClass,
+    ) ?? false;
   }
 
   bool _dnf(RelativeMatchScore score) {
-    if(score.shooter.powerFactor == PowerFactor.subminor || score.shooter.powerFactor == PowerFactor.unknown) {
+    if(score.shooter.powerFactor.doesNotScore) {
       return true;
     }
 
     for(var stageScore in score.stageScores.values) {
-      if(stageScore.stage!.type != Scoring.chrono && stageScore.score.time <= 0.01 && stageScore.score.hits == 0) {
+      if(!(stageScore.stage.scoring is IgnoredScoring) && stageScore.score.rawTime <= 0.01 && stageScore.score.targetEventCount == 0) {
         return true;
       }
     }
@@ -1090,25 +1079,10 @@ class Rater {
     }
   }
 
+  double get _centerStrength => sport.ratingStrengthProvider?.centerStrength ?? 1.0;
+
   double _strengthForClass(Classification? c) {
-    switch(c) {
-      case Classification.GM:
-        return 10;
-      case Classification.M:
-        return 6;
-      case Classification.A:
-        return 4;
-      case Classification.B:
-        return 3;
-      case Classification.C:
-        return 2;
-      case Classification.D:
-        return 1;
-      case Classification.U:
-        return _strengthForClass(Classification.C);
-      default:
-        return 2.5;
-    }
+    return sport.ratingStrengthProvider?.strengthForClass(c) ?? 1.0;
   }
 
   RaterStatistics? _cachedStats;
@@ -1158,8 +1132,6 @@ class Rater {
     Map<Classification, List<double>> ratingsByClass = {};
 
     for(var classification in sport.classifications.values) {
-      if(classification == Classification.unknown) continue;
-
       var shootersInClass = ratings.where((r) => r.lastClassification == classification);
       var ratingsInClass = shootersInClass.map((r) => r.rating);
 
@@ -1219,15 +1191,17 @@ class Rater {
 
 extension _StrengthBonus on MatchLevel {
   double get strengthBonus {
-    switch(this) {
-      case MatchLevel.I:
+    switch(this.eventLevel) {
+      case EventLevel.local:
         return 1.0;
-      case MatchLevel.II:
+      case EventLevel.regional:
         return 1.15;
-      case MatchLevel.III:
+      case EventLevel.area:
         return 1.3;
-      case MatchLevel.IV:
+      case EventLevel.national:
         return 1.45;
+      case EventLevel.international:
+        return 1.6;
     }
   }
 }
