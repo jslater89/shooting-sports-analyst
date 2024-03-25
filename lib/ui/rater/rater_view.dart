@@ -8,6 +8,7 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
@@ -155,7 +156,7 @@ class _RaterViewState extends State<RaterView> {
               return GestureDetector(
                 key: Key(asList[i].memberNumber),
                 onTap: () {
-                  var ratings = <RaterGroup, Rater>{};
+                  var ratings = <DbRatingGroup, Rater>{};
                   for(var group in widget.history.groups) {
                     ratings[group] = widget.history.latestRaterFor(group);
                   }

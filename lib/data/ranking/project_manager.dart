@@ -213,11 +213,23 @@ class RatingProject with DbSportEntity {
   String name;
   RatingProjectSettings settings;
   final matches = IsarLinks<DbShootingMatch>;
+  final customGroups = IsarLinks<DbRatingGroup>;
+  final List<String> builtinGroupNames;
+  List<DbRatingGroup> get builtinRatingGroups {
+    var provider = sport.builtinRatingGroupsProvider;
+    if(provider == null) {
+      _log.w("Attempted to get builtin rating groups for $sportName which doesn't provide them");
+      return [];
+    }
+
+    return provider.builtinRatingGroups.where((e) => builtinGroupNames.contains(e.name)).toList();
+  }
 
   RatingProject({
     required this.sportName,
     required this.name,
     required this.settings,
+    this.builtinGroupNames = const [],
   });
 
   RatingProject copy() {
@@ -227,35 +239,6 @@ class RatingProject with DbSportEntity {
   factory RatingProject.fromJson(Map<String, dynamic> encodedProject) {
     var sportName = (encodedProject[_sportKey] ?? "uspsa") as String;
     var sport = SportRegistry().lookup(sportName)!;
-    var combineOpenPCC = (encodedProject[_combineOpenPCCKey] ?? false) as bool;
-    var combineLocap = (encodedProject[_combineLocapKey] ?? true) as bool;
-
-    List<RaterGroup> groups;
-    if(!encodedProject.containsKey(_groupsKey)) {
-      LimLoCoCombination limLoCoMode;
-      if(encodedProject.containsKey(_combineLimitedCOKey)) {
-        // old project
-        var combineLimitedCO = (encodedProject[_combineLimitedCOKey] ?? false) as bool;
-        if(combineLimitedCO) {
-          limLoCoMode = LimLoCoCombination.limCo;
-        }
-        else {
-          limLoCoMode = LimLoCoCombination.none;
-        }
-      }
-      else {
-        limLoCoMode = LimLoCoCombination.values.byName(encodedProject[_limitedLoCoCombineModeKey] ?? LimLoCoCombination.none.name);
-      }
-
-      groups = RatingProjectSettings.groupsForSettings(
-        combineOpenPCC: combineOpenPCC,
-        limLoCo: limLoCoMode,
-        combineLocap: combineLocap,
-      );
-    }
-    else {
-      groups = []..addAll(((encodedProject[_groupsKey] ?? []) as List<dynamic>).map((s) => RaterGroup.values.byName(s)));
-    }
 
     var algorithmName = (encodedProject[algorithmKey] ?? multiplayerEloValue) as String;
     var algorithm = algorithmForName(algorithmName, encodedProject);
@@ -270,7 +253,6 @@ class RatingProject with DbSportEntity {
       algorithm: algorithm,
       checkDataEntryErrors: (encodedProject[_checkDataEntryKey] ?? true) as bool,
       preserveHistory: encodedProject[_keepHistoryKey] as bool,
-      groups: groups,
       memberNumberWhitelist: ((encodedProject[_whitelistKey] ?? []) as List<dynamic>).map((item) => item as String).toList(),
       shooterAliases: ((encodedProject[_aliasesKey] ?? defaultShooterAliases) as Map<String, dynamic>).map<String, String>((k, v) =>
         MapEntry(k, v as String)
@@ -314,78 +296,6 @@ class RatingProject with DbSportEntity {
   }
 }
 
-enum LimLoCoCombination {
-  none,
-  limCo,
-  limLo,
-  loCo,
-  all;
-
-  List<RaterGroup> groups() {
-    switch(this) {
-      case LimLoCoCombination.none:
-        return [
-          RaterGroup.limited,
-          RaterGroup.carryOptics,
-          RaterGroup.limitedOptics,
-        ];
-      case LimLoCoCombination.limCo:
-        return [
-          RaterGroup.limitedCO,
-          RaterGroup.limitedOptics,
-        ];
-      case LimLoCoCombination.limLo:
-        return [
-          RaterGroup.limitedLO,
-          RaterGroup.carryOptics,
-        ];
-      case LimLoCoCombination.loCo:
-        return [
-          RaterGroup.limOpsCO,
-          RaterGroup.limited,
-        ];
-      case LimLoCoCombination.all:
-        return [
-          RaterGroup.limLoCo,
-        ];
-    }
-  }
-
-  static LimLoCoCombination fromGroups(List<RaterGroup> groups) {
-    if(groups.contains(RaterGroup.limLoCo)) {
-      return LimLoCoCombination.all;
-    }
-    else if(groups.contains(RaterGroup.limOpsCO)) {
-      return LimLoCoCombination.loCo;
-    }
-    else if(groups.contains(RaterGroup.limitedLO)) {
-      return LimLoCoCombination.limLo;
-    }
-    else if(groups.contains(RaterGroup.limitedCO)) {
-      return LimLoCoCombination.limCo;
-    }
-    else {
-      return none;
-    }
-  }
-
-  String get uiLabel {
-    switch(this) {
-
-      case LimLoCoCombination.none:
-        return "All separate";
-      case LimLoCoCombination.limCo:
-        return "Combine LIM/CO";
-      case LimLoCoCombination.limLo:
-        return "Combine LIM/LO";
-      case LimLoCoCombination.loCo:
-        return "Combine LO/CO";
-      case LimLoCoCombination.all:
-        return "Combine all";
-    }
-  }
-}
-
 class RatingProjectSettings {
   // All of the below are serialized
   bool get byStage => algorithm.byStage;
@@ -395,7 +305,6 @@ class RatingProjectSettings {
   bool transientDataEntryErrorSkip;
 
   bool checkDataEntryErrors;
-  List<RaterGroup> groups;
   List<String> memberNumberWhitelist;
   late MemberNumberCorrectionContainer memberNumberCorrections;
 
@@ -446,7 +355,6 @@ class RatingProjectSettings {
     this.preserveHistory = false,
     this.checkDataEntryErrors = true,
     this.transientDataEntryErrorSkip = false,
-    this.groups = const [RaterGroup.open, RaterGroup.limited, RaterGroup.pcc, RaterGroup.carryOptics, RaterGroup.locap],
     required this.algorithm,
     this.memberNumberWhitelist = const [],
     this.shooterAliases = defaultShooterAliases,
@@ -474,7 +382,6 @@ class RatingProjectSettings {
     map[_recognizedDivisionsKey] = <String, dynamic>{}..addEntries(recognizedDivisions.entries.map((e) =>
         MapEntry(e.key, e.value.map((e) => e.name).toList())
     ));
-    map[_groupsKey] = groups.map((e) => e.name).toList();
 
     /// Alg-specific settings
     algorithm.encodeToJson(map);
@@ -491,7 +398,6 @@ class RatingProjectSettings {
       algorithm: algorithm,
       checkDataEntryErrors: (encodedProject[_checkDataEntryKey] ?? true) as bool,
       preserveHistory: encodedProject[_keepHistoryKey] as bool,
-      groups: [], // stored in DB
       memberNumberWhitelist: ((encodedProject[_whitelistKey] ?? []) as List<dynamic>).map((item) => item as String).toList(),
       shooterAliases: ((encodedProject[_aliasesKey] ?? defaultShooterAliases) as Map<String, dynamic>).map<String, String>((k, v) =>
         MapEntry(k, v as String)
@@ -529,19 +435,5 @@ class RatingProjectSettings {
         transientDataEntryErrorSkip = true;
         break;
     }
-  }
-
-  static List<RaterGroup> groupsForSettings({bool combineOpenPCC = false, LimLoCoCombination limLoCo = LimLoCoCombination.none, bool combineLocap = true}) {
-    var groups = <RaterGroup>[];
-
-    if(combineOpenPCC) groups.add(RaterGroup.openPcc);
-    else groups.addAll([RaterGroup.open, RaterGroup.pcc]);
-
-    groups.addAll(limLoCo.groups());
-
-    if(combineLocap) groups.add(RaterGroup.locap);
-    else groups.addAll([RaterGroup.production, RaterGroup.singleStack, RaterGroup.revolver, RaterGroup.limited10]);
-
-    return groups;
   }
 }

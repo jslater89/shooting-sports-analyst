@@ -7,6 +7,7 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 // import 'package:shooting_sports_analyst/data/db/object/rating/rating_event.dart';
 // import 'package:shooting_sports_analyst/data/db/object/rating/rating_project.dart';
@@ -71,7 +72,7 @@ class Rater {
 
   RatingSystem ratingSystem;
 
-  RaterGroup group;
+  DbRatingGroup group;
 
   FilterSet get filters => group.filters;
 

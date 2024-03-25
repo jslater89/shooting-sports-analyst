@@ -48,14 +48,14 @@ class RatingHistory {
   // Prime, so we skip around the list better
   static const int progressCallbackInterval = 7;
 
-  List<RaterGroup> get groups => []..addAll(_settings.groups);
+  List<DbRatingGroup> get groups => []..addAll(project.groups);
 
   late DbRatingProject project;
   bool verbose;
 
   /// Maps matches to a map of [Rater]s, which hold the incremental ratings
   /// after that match has been processed.
-  Map<ShootingMatch, Map<RaterGroup, Rater>> _ratersByDivision = {};
+  Map<ShootingMatch, Map<DbRatingGroup, Rater>> _ratersByDivision = {};
 
   Future<void> Function(int currentSteps, int totalSteps, String? eventName)? progressCallback;
 
@@ -93,7 +93,7 @@ class RatingHistory {
     return _processInitialMatches();
   }
 
-  void loadRatings(Map<RaterGroup, Rater> ratings) {
+  void loadRatings(Map<DbRatingGroup, Rater> ratings) {
     _ratersByDivision[_matches.last] = ratings;
   }
   
@@ -105,7 +105,7 @@ class RatingHistory {
     _matches.add(match);
     project.matchUrls.add("https://practiscore.com/results/new/${match.practiscoreId}");
 
-    for(var group in _settings.groups) {
+    for(var group in project.groups) {
       var raters = _ratersByDivision[oldMatch]!;
       var rater = raters[group]!;
 
@@ -123,15 +123,15 @@ class RatingHistory {
     return true;
   }
 
-  Rater latestRaterFor(RaterGroup group) {
-    if(!_settings.groups.contains(group)) throw ArgumentError("Invalid group");
+  Rater latestRaterFor(DbRatingGroup group) {
+    if(!project.groups.contains(group)) throw ArgumentError("Invalid group");
     var raters = _ratersByDivision[matches.last]!;
 
     return raters[group]!;
   }
 
-  Rater raterFor(ShootingMatch match, RaterGroup group) {
-    if(!_settings.groups.contains(group)) throw ArgumentError("Invalid group");
+  Rater raterFor(ShootingMatch match, DbRatingGroup group) {
+    if(!project.groups.contains(group)) throw ArgumentError("Invalid group");
     if(!_matches.contains(match)) throw ArgumentError("Invalid match");
 
     var raters = _ratersByDivision[match]!;
@@ -140,7 +140,7 @@ class RatingHistory {
 
   int countUniqueShooters() {
     Set<String> memberNumbers = <String>{};
-    for(var group in _settings.groups) {
+    for(var group in project.groups) {
       var rater = _ratersByDivision[_matches.last]![group]!;
       for(var num in rater.knownShooters.keys) {
         memberNumbers.add(num);
@@ -167,9 +167,9 @@ class RatingHistory {
     await progressCallback?.call(0, 1, null);
 
     if(_settings.preserveHistory) {
-      int totalSteps = ((_settings.groups.length * _matches.length) / progressCallbackInterval).round();
+      int totalSteps = ((project.groups.length * _matches.length) / progressCallbackInterval).round();
 
-      if(verbose) _log.v("Total steps, history preserved: $totalSteps on ${_matches.length} matches and ${_settings.groups.length} groups");
+      if(verbose) _log.v("Total steps, history preserved: $totalSteps on ${_matches.length} matches and ${project.groups.length} groups");
 
       for (ShootingMatch match in _matches) {
         var m = match;
@@ -177,7 +177,7 @@ class RatingHistory {
         _log.d("Considering match ${m.name}");
         var innerMatches = <ShootingMatch>[]..addAll(currentMatches);
         _ratersByDivision[m] ??= {};
-        for (var group in _settings.groups) {
+        for (var group in project.groups) {
           var divisionMap = <Division, bool>{};
           group.divisions.forEach((element) => divisionMap[element] = true);
 
@@ -214,14 +214,14 @@ class RatingHistory {
       }
     }
     else {
-      int totalSteps = ((_settings.groups.length * _matches.length) / progressCallbackInterval).round();
+      int totalSteps = ((project.groups.length * _matches.length) / progressCallbackInterval).round();
 
       if(verbose) _log.v("Total steps, history discarded: $totalSteps");
 
       _lastMatch = _matches.last;
       _ratersByDivision[_lastMatch!] ??= {};
 
-      for (var group in _settings.groups) {
+      for (var group in project.groups) {
         var r = _raterForGroup(_matches, group, (_1, _2, eventName) async {
           stepsFinished += 1;
           await progressCallback?.call(stepsFinished, totalSteps, "${group.uiLabel} - $eventName");
@@ -243,7 +243,7 @@ class RatingHistory {
     return RatingResult.ok();
   }
   
-  Rater _raterForGroup(List<ShootingMatch> matches, RaterGroup group, [Future<void> Function(int, int, String?)? progressCallback]) {
+  Rater _raterForGroup(List<ShootingMatch> matches, DbRatingGroup group, [Future<void> Function(int, int, String?)? progressCallback]) {
     var divisionMap = <Division, bool>{};
     group.divisions.forEach((element) => divisionMap[element] = true);
     Timings().reset();
@@ -265,145 +265,5 @@ class RatingHistory {
     );
 
     return r;
-  }
-}
-
-enum RaterGroup {
-  open,
-  pcc,
-  limited,
-  carryOptics,
-  limitedOptics,
-  singleStack,
-  production,
-  revolver,
-  limited10,
-  locap,
-  openPcc,
-  limitedCO,
-  limitedLO,
-  limOpsCO,
-  limLoCo,
-  opticHandguns,
-  ironsHandguns,
-  combined;
-
-  static get defaultGroups => [
-    open,
-    limited,
-    pcc,
-    carryOptics,
-    limitedOptics,
-    locap,
-  ];
-
-  static get divisionGroups => [
-    open,
-    limited,
-    pcc,
-    carryOptics,
-    limitedOptics,
-    singleStack,
-    production,
-    limited10,
-    revolver,
-  ];
-
-  OldFilterSet get filters {
-    return OldFilterSet(
-      empty: true,
-    )
-      ..mode = FilterMode.or
-      ..divisions = divisionMap
-      ..reentries = false
-      ..scoreDQs = false;
-  }
-
-  Map<Division, bool> get divisionMap {
-    var divisionMap = <Division, bool>{};
-    divisions.forEach((element) => divisionMap[element] = true);
-    return divisionMap;
-  }
-
-  List<Division> get divisions {
-    switch(this) {
-      case RaterGroup.open:
-        return [Division.open];
-      case RaterGroup.limited:
-        return [Division.limited];
-      case RaterGroup.pcc:
-        return [Division.pcc];
-      case RaterGroup.carryOptics:
-        return [Division.carryOptics];
-      case RaterGroup.locap:
-        return [Division.singleStack, Division.limited10, Division.production, Division.revolver];
-      case RaterGroup.singleStack:
-        return [Division.singleStack];
-      case RaterGroup.production:
-        return [Division.production];
-      case RaterGroup.limited10:
-        return [Division.limited10];
-      case RaterGroup.revolver:
-        return [Division.revolver];
-      case RaterGroup.openPcc:
-        return [Division.open, Division.pcc];
-      case RaterGroup.limitedCO:
-        return [Division.limited, Division.carryOptics];
-      case RaterGroup.limitedOptics:
-        return [Division.limitedOptics];
-      case RaterGroup.limOpsCO:
-        return [Division.limitedOptics, Division.carryOptics];
-      case RaterGroup.limLoCo:
-        return [Division.limited, Division.carryOptics, Division.limitedOptics];
-      case RaterGroup.limitedLO:
-        return [Division.limited, Division.limitedOptics];
-      case RaterGroup.opticHandguns:
-        return [Division.open, Division.carryOptics, Division.limitedOptics];
-      case RaterGroup.ironsHandguns:
-        return [Division.limited, Division.production, Division.singleStack, Division.revolver, Division.limited10];
-      case RaterGroup.combined:
-        return Division.values;
-    }
-  }
-
-  String get uiLabel {
-    switch(this) {
-      case RaterGroup.open:
-        return "Open";
-      case RaterGroup.limited:
-        return "Limited";
-      case RaterGroup.pcc:
-        return "PCC";
-      case RaterGroup.carryOptics:
-        return "Carry Optics";
-      case RaterGroup.singleStack:
-        return "Single Stack";
-      case RaterGroup.production:
-        return "Production";
-      case RaterGroup.limited10:
-        return "Limited 10";
-      case RaterGroup.revolver:
-        return "Revolver";
-      case RaterGroup.locap:
-        return "Locap";
-      case RaterGroup.openPcc:
-        return "Open/PCC";
-      case RaterGroup.limitedCO:
-        return "Limited/CO";
-      case RaterGroup.limitedOptics:
-        return "Limited Optics";
-      case RaterGroup.limOpsCO:
-        return "LO/CO";
-      case RaterGroup.limLoCo:
-        return "LO/CO/Limited";
-      case RaterGroup.limitedLO:
-        return "Limited/LO";
-      case RaterGroup.opticHandguns:
-        return "Optic Handguns";
-      case RaterGroup.ironsHandguns:
-        return "Irons Handguns";
-      case RaterGroup.combined:
-        return "Combined";
-    }
   }
 }

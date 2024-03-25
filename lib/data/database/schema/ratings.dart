@@ -13,10 +13,13 @@ import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 
 part 'ratings.g.dart';
 
 // DbRatingProject hasMany DbRatingGroups hasMany DbShooterRatings hasMany DbRatingEvents.
+
+var _log = SSALogger("DbRatingSchema");
 
 mixin DbSportEntity {
   String get sportName;
@@ -64,7 +67,25 @@ class DbRatingProject with DbSportEntity {
     encodedSettings = jsonEncode(map);
   }
 
-  final groups = IsarLinks<DbRatingGroup>();
+  final customGroups = IsarLinks<DbRatingGroup>();
+  final List<String> builtinGroupNames;
+  List<DbRatingGroup> get builtinRatingGroups {
+    var provider = sport.builtinRatingGroupsProvider;
+    if(provider == null) {
+      _log.w("Attempted to get builtin rating groups for $sportName which doesn't provide them");
+      return [];
+    }
+
+    return provider.builtinRatingGroups.where((e) => builtinGroupNames.contains(e.name)).toList();
+  }
+
+  @ignore
+  List<DbRatingGroup> get groups {
+    var list = builtinRatingGroups;
+    customGroups.loadSync();
+    list.addAll(customGroups);
+    return list;
+  }
 
   /// For the next full recalculation only, skip checking data entry
   /// errors.
@@ -83,6 +104,7 @@ class DbRatingProject with DbSportEntity {
     required this.sportName,
     this.encodedSettings = "{}",
     this.transientDataEntryErrorSkip = false,
+    this.builtinGroupNames = const [],
     RatingProjectSettings? settings,
   }) {
     if(settings != null) {
@@ -97,7 +119,12 @@ class DbRatingGroup with DbSportEntity {
 
   @Index(composite: [CompositeIndex("name")], unique: true)
   String sportName;
+
+  /// The long/descriptive name for this group.
   String name;
+
+  /// The compact name for this group, suited to UI tabs or
+  /// button rows.
   String? displayName;
 
   @ignore
@@ -114,6 +141,7 @@ class DbRatingGroup with DbSportEntity {
   DbRatingGroup({
     required this.sportName,
     required this.name,
+    this.displayName,
     this.divisionNames = const [],
   });
 }

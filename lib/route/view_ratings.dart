@@ -1069,49 +1069,6 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   }
 }
 
-extension _Utilities on RaterGroup {
-  String get label {
-    switch(this) {
-      case RaterGroup.open:
-        return "OPEN";
-      case RaterGroup.limited:
-        return "LIM";
-      case RaterGroup.pcc:
-        return "PCC";
-      case RaterGroup.carryOptics:
-        return "CO";
-      case RaterGroup.locap:
-        return "LOCAP";
-      case RaterGroup.singleStack:
-        return "SS";
-      case RaterGroup.production:
-        return "PROD";
-      case RaterGroup.limited10:
-        return "L10";
-      case RaterGroup.revolver:
-        return "REVO";
-      case RaterGroup.openPcc:
-        return "OPEN/PCC";
-      case RaterGroup.limitedCO:
-        return "LIM/CO";
-      case RaterGroup.limitedOptics:
-        return "LO";
-      case RaterGroup.limOpsCO:
-        return "LO/CO";
-      case RaterGroup.limitedLO:
-        return "LIM/LO";
-      case RaterGroup.limLoCo:
-        return "LIM/LO/CO";
-      case RaterGroup.opticHandguns:
-        return "OPEN/LO/CO";
-      case RaterGroup.ironsHandguns:
-        return "IRONS";
-      case RaterGroup.combined:
-        return "COMBINED";
-    }
-  }
-}
-
 enum _MenuEntry {
   csvExport,
   dataErrors,

@@ -6,6 +6,7 @@
 
 import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
 import 'package:shooting_sports_analyst/data/sort_mode.dart';
@@ -98,6 +99,7 @@ class Sport {
 
   final RatingStrengthProvider? ratingStrengthProvider;
   final PubstompProvider? pubstompProvider;
+  final RatingGroupsProvider? builtinRatingGroupsProvider;
 
   Sport(this.name, {
     required this.matchScoring,
@@ -123,6 +125,7 @@ class Sport {
     this.initialEloRatings = const {},
     this.ratingStrengthProvider,
     this.pubstompProvider,
+    this.builtinRatingGroupsProvider,
   }) :
         classifications = Map.fromEntries(classifications.map((e) => MapEntry(e.name, e))),
         divisions = Map.fromEntries(divisions.map((e) => MapEntry(e.name, e))),

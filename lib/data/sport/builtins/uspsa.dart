@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/uspsa_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
@@ -47,8 +48,10 @@ final _minorPowerFactor = PowerFactor("Minor",
   penaltyEvents: _uspsaPenalties,
 );
 
+final String _uspsaName = "USPSA";
+
 final uspsaSport = Sport(
-  "USPSA",
+  _uspsaName,
   type: SportType.uspsa,
   matchScoring: RelativeStageFinishScoring(pointsAreUSPSAFixedTime: true),
   defaultStageScoring: const HitFactorScoring(),
@@ -125,11 +128,12 @@ final uspsaSport = Sport(
     uspsaD: 800,
     uspsaU: 900,
   },
-  ratingStrengthProvider: UspsaRatingStrengthProvider(),
-  pubstompProvider: UspsaPubstompProvider(),
+  ratingStrengthProvider: _UspsaRatingStrengthProvider(),
+  pubstompProvider: _UspsaPubstompProvider(),
+  builtinRatingGroupsProvider: _UspsaRatingGroupsProvider(),
 );
 
-class UspsaRatingStrengthProvider implements RatingStrengthProvider {
+class _UspsaRatingStrengthProvider implements RatingStrengthProvider {
   @override
   double get centerStrength => 4;
 
@@ -148,7 +152,7 @@ class UspsaRatingStrengthProvider implements RatingStrengthProvider {
   }
 }
 
-class UspsaPubstompProvider implements PubstompProvider {
+class _UspsaPubstompProvider implements PubstompProvider {
   @override
   bool isPubstomp({
     required RelativeMatchScore firstScore,
@@ -178,5 +182,178 @@ class UspsaPubstompProvider implements PubstompProvider {
     }
     return false;
   }
-
 }
+
+class _UspsaRatingGroupsProvider implements RatingGroupsProvider {
+  @override
+  List<DbRatingGroup> get builtinRatingGroups => _builtinRaterGroups;
+
+  @override
+  List<DbRatingGroup> get defaultRatingGroups => divisionRatingGroups;
+
+  @override
+  List<DbRatingGroup> get divisionRatingGroups => _builtinRaterGroups.where((g) => g.divisionNames.length == 1).toList();
+}
+
+final _builtinRaterGroups = <DbRatingGroup>[
+  DbRatingGroup(
+      sportName: _uspsaName,
+      name: "Open",
+      divisionNames: [
+        uspsaOpen.name,
+      ]
+  ),
+  DbRatingGroup(
+    sportName: _uspsaName,
+    name: "Limited",
+    displayName: "LIM",
+    divisionNames: [
+      uspsaLimited.name,
+    ],
+  ),
+  DbRatingGroup(
+    sportName: _uspsaName,
+    name: "PCC",
+    divisionNames: [
+      uspsaPcc.name,
+    ],
+  ),
+  DbRatingGroup(
+    sportName: _uspsaName,
+    name: "Carry Optics",
+    displayName: "CO",
+    divisionNames: [
+      uspsaCarryOptics.name,
+    ],
+  ),
+  DbRatingGroup(
+    sportName: _uspsaName,
+    name: "Locap",
+    divisionNames: [
+      uspsaSingleStack.name,
+      uspsaLimited10.name,
+      uspsaProduction.name,
+      uspsaRevolver.name,
+    ],
+  ),
+  DbRatingGroup(
+    sportName: _uspsaName,
+    name: "Single Stack",
+    displayName: "SS",
+    divisionNames: [
+      uspsaSingleStack.name,
+    ],
+  ),
+  DbRatingGroup(
+    sportName: _uspsaName,
+    name: "Production",
+    displayName: "PROD",
+    divisionNames: [
+      uspsaProduction.name,
+    ],
+  ),
+  DbRatingGroup(
+    sportName: _uspsaName,
+    name: "Limited 10",
+    displayName: "L10",
+    divisionNames: [
+      uspsaLimited10.name,
+    ],
+  ),
+  DbRatingGroup(
+    sportName: _uspsaName,
+    name: "Revolver",
+    displayName: "REVO",
+    divisionNames: [
+      uspsaRevolver.name,
+    ],
+  ),
+  DbRatingGroup(
+    sportName: _uspsaName,
+    name: "Open/PCC",
+    divisionNames: [
+      uspsaOpen.name,
+      uspsaPcc.name,
+    ],
+  ),
+  DbRatingGroup(
+    sportName: _uspsaName,
+    name: "Limited/Carry Optics",
+    displayName: "LIM/CO",
+    divisionNames: [
+      uspsaLimited.name,
+      uspsaCarryOptics.name,
+    ],
+  ),
+  DbRatingGroup(
+    sportName: _uspsaName,
+    name: "Limited Optics",
+    displayName: "LO",
+    divisionNames: [
+      uspsaLimitedOptics.name,
+    ],
+  ),
+  DbRatingGroup(
+    sportName: _uspsaName,
+    name: "LO/CO",
+    divisionNames: [
+      uspsaLimitedOptics.name,
+      uspsaCarryOptics.name,
+    ],
+  ),
+  DbRatingGroup(
+    sportName: _uspsaName,
+    name: "Limited/LO/CO",
+    displayName: "Lim/LO/CO",
+    divisionNames: [
+      uspsaLimited.name,
+      uspsaLimitedOptics.name,
+      uspsaCarryOptics.name,
+    ],
+  ),
+  DbRatingGroup(
+    sportName: _uspsaName,
+    name: "Limited/LO",
+    divisionNames: [
+      uspsaLimited.name,
+      uspsaLimitedOptics.name,
+    ],
+  ),
+  DbRatingGroup(
+    sportName: _uspsaName,
+    name: "Optic Handguns",
+    displayName: "Optics",
+    divisionNames: [
+      uspsaOpen.name,
+      uspsaCarryOptics.name,
+      uspsaLimitedOptics.name,
+    ],
+  ),
+  DbRatingGroup(
+    sportName: _uspsaName,
+    name: "Irons Handguns",
+    displayName: "Irons",
+    divisionNames: [
+      uspsaLimited.name,
+      uspsaProduction.name,
+      uspsaSingleStack.name,
+      uspsaRevolver.name,
+      uspsaLimited10.name,
+    ],
+  ),
+  DbRatingGroup(
+    sportName: _uspsaName,
+    name: "Combined",
+    divisionNames: [
+      uspsaOpen.name,
+      uspsaLimited.name,
+      uspsaPcc.name,
+      uspsaCarryOptics.name,
+      uspsaLimitedOptics.name,
+      uspsaProduction.name,
+      uspsaSingleStack.name,
+      uspsaRevolver.name,
+      uspsaLimited10.name,
+    ],
+  ),
+];

@@ -80,7 +80,6 @@ class EloEvaluator extends Prey<EloEvaluator> {
           name: "Evolutionary test",
           settings: RatingProjectSettings(
             algorithm: MultiplayerPercentEloRater(settings: settings),
-            groups: [data.group],
           )
       ),
       progressCallback: (current, total, name) async {
@@ -184,7 +183,7 @@ class EloEvaluationData {
   final String name;
   final List<ShootingMatch> trainingData;
   final List<ShootingMatch> evaluationData;
-  final RaterGroup group;
+  final DbRatingGroup group;
   final double expectedMaxRating;
 
   EloEvaluationData({required this.name, required this.trainingData, required this.evaluationData, required this.group, required this.expectedMaxRating});

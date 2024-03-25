@@ -7,6 +7,7 @@
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
@@ -155,7 +156,7 @@ class PracticalMatch {
     List<Stage>? stages,
     bool scoreDQ = true,
     MatchPredictionMode predictionMode = MatchPredictionMode.none,
-    Map<RaterGroup, Rater>? ratings,
+    Map<DbRatingGroup, Rater>? ratings,
   }) {
     if(ratings == null && !MatchPredictionMode.dropdownValues(false).contains(predictionMode)) {
       throw ArgumentError("must provide ratings when asking for a ratings-aware prediction mode");

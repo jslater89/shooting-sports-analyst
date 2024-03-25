@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
@@ -34,4 +35,17 @@ abstract interface class PubstompProvider {
     required ShooterRating firstRating,
     required ShooterRating secondRating,
   });
+}
+
+/// A [Sport] that can provide default rating groups for a rating history
+/// should provide an implementation of this interface.
+///
+/// These rating groups will _not_ be persisted to the database, and can
+/// safely break indexing rules. (e.g., a rating group that appears in
+/// two or more lists can be a separate instance in each case, with the
+/// same name/data.)
+abstract interface class RatingGroupsProvider {
+  List<DbRatingGroup> get builtinRatingGroups;
+  List<DbRatingGroup> get divisionRatingGroups;
+  List<DbRatingGroup> get defaultRatingGroups;
 }

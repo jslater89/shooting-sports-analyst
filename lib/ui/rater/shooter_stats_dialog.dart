@@ -9,6 +9,7 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
@@ -35,7 +36,7 @@ class ShooterStatsDialog extends StatefulWidget {
   final bool showDivisions;
   final ShooterRating rating;
   final ShootingMatch match;
-  final Map<RaterGroup, Rater>? ratings;
+  final Map<DbRatingGroup, Rater>? ratings;
 
   @override
   State<ShooterStatsDialog> createState() => _ShooterStatsDialogState();
@@ -490,7 +491,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     return widget.rating.ratingEvents.last.stage != null;
   }
   old.Score? totalScore;
-  int totalPoints = 0;
+  double totalPoints = 0;
   Set<ShootingMatch> dqs = {};
   Set<ShootingMatch> matches = {};
   Map<ShootingMatch, Classification> classesByMatch = {};
@@ -543,8 +544,14 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         eventScore = event.scoreForMatch.total;
       }
 
-      total += score;
-      totalPoints += score.getTotalPoints();
+      if(score is RelativeMatchScore) {
+        total += score.total;
+      }
+      else if(score is RelativeStageScore) {
+        total += score.score;
+      }
+
+      totalPoints += score.points;
       if(score.shooter.dq) {
         dqs.add(event.match);
       }
@@ -556,8 +563,12 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         matchesByLevel[event.match.level ?? old.MatchLevel.I] = matchesByLevel[event.match.level ?? old.MatchLevel.I]! + 1;
       }
       matches.add(event.match);
-      classesByMatch[event.match] = event.score.score.shooter.classification ?? old.Classification.unknown;
-      divisionsByMatch[event.match] = event.score.score.shooter.division ?? old.Division.unknown;
+      if(event.score.shooter.classification != null) {
+        classesByMatch[event.match] = event.score.shooter.classification!;
+      }
+      if(event.score.shooter.division != null) {
+        divisionsByMatch[event.match] = event.score.shooter.division!;
+      }
 
       switch(score.shooter.powerFactor) {
         case old.PowerFactor.major:
@@ -579,23 +590,23 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       var division = divisionsByMatch[match]!;
       var scores = match.getScores(shooters: match.shooters.where((element) => element.division == division).toList());
       competitorCounts.add(scores.length);
-      var score = scores.firstWhereOrNull((element) => widget.rating.equalsShooter(element.shooter));
+      var score = scores.entries.firstWhereOrNull((element) => widget.rating.equalsShooter(element.key))?.value;
 
       if(score == null) {
         throw StateError("Shooter in match doesn't have a score");
       }
 
-      matchFinishes.add(score.total.place);
-      if (score.total.place == 1) matchWins += 1;
+      matchFinishes.add(score.place);
+      if (score.place == 1) matchWins += 1;
 
       if (classification != old.Classification.unknown) {
         var scores = match.getScores(
             shooters: match.shooters.where((element) => element.division == division && element.classification == classification).toList());
-        var score = scores.firstWhere((element) => widget.rating.equalsShooter(element.shooter));
+        var score = scores.entries.firstWhereOrNull((element) => widget.rating.equalsShooter(element.key))!.value;
 
         if(classification != old.Classification.U) {
-          classMatchFinishes.add(score.total.place);
-          if (score.total.place == 1) {
+          classMatchFinishes.add(score.place);
+          if (score.place == 1) {
             classMatchWins += 1;
           }
         }
