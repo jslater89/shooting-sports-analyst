@@ -5,6 +5,10 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
+import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/match/practical_match.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
@@ -22,8 +26,10 @@ import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 import 'package:shooting_sports_analyst/data/ranking/shooter_aliases.dart';
 import 'package:shooting_sports_analyst/data/results_file_parser.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/preference_names.dart';
 import 'package:shooting_sports_analyst/ui/rater/enter_practiscore_source_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/match_list_filter_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_correction_dialog.dart';
@@ -54,6 +60,8 @@ class ConfigureRatingsPage extends StatefulWidget {
 class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   final bool _operationInProgress = false;
 
+  Sport? sport;
+
   bool matchCacheReady = false;
   List<String> matchUrls = [];
   MatchListFilters? filters = MatchListFilters();
@@ -69,7 +77,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
   bool _keepHistory = false;
 
-  List<RaterGroup> _groups = [];
+  List<DbRatingGroup> _groups = [];
   bool _checkDataEntryErrors = true;
 
   ScrollController _settingsScroll = ScrollController();
@@ -87,6 +95,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   void initState() {
     super.initState();
 
+    prefs = Provider.of<SharedPreferences>(context, listen: false);
     matchCacheReady = MatchCache.readyNow;
 
     if(!matchCacheReady) _warmUpMatchCache();
@@ -94,6 +103,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     _loadAutosave();
   }
 
+  late SharedPreferences prefs;
 
   /// Checks the match cache for URL names, and starts downloading any
   /// matches that aren't in the cache.
@@ -178,16 +188,14 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   }
 
   Future<void> _loadAutosave() async {
-    // Allow time for the 'loading' screen to display
-    if(!RatingProjectManager.readyNow) {
-      await Future.delayed(Duration(milliseconds: 1));
-    }
+    var lastProjectId = prefs.getInt(Preferences.lastProjectId);
 
-    await RatingProjectManager().ready;
-    var autosave = RatingProjectManager().loadProject(RatingProjectManager.autosaveName);
-    if(autosave != null) {
-      _loadProject(autosave);
-      updateUrls();
+    if(lastProjectId != null) {
+      var project = await AnalystDatabase().getRatingProjectById(lastProjectId);
+      if(project != null) {
+        _loadProject(project);
+        return;
+      }
     }
     else {
       // This should only happen if we've never launched before, so...
@@ -213,7 +221,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       filters = null;
       _keepHistory = project.settings.preserveHistory;
       _checkDataEntryErrors = project.settings.checkDataEntryErrors;
-      _groups = []..addAll(project.settings.groups);
       _shooterAliases = project.settings.shooterAliases;
       _memNumMappings = project.settings.userMemberNumberMappings;
       _memNumMappingBlacklist = project.settings.memberNumberMappingBlacklist;
@@ -300,7 +307,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       algorithm: _ratingSystem,
       checkDataEntryErrors: _checkDataEntryErrors,
       transientDataEntryErrorSkip: false,
-      groups: _groups,
       preserveHistory: _keepHistory,
       memberNumberWhitelist: _memNumWhitelist,
       userMemberNumberMappings: _memNumMappings,
@@ -425,7 +431,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                       icon: Icon(Icons.edit),
                                       onPressed: () async {
                                         var groups = await showDialog(context: context, builder: (context) {
-                                          return RaterGroupsDialog(groups: _groups);
+                                          return RaterGroupsDialog(groups: _groups, groupProvider: sport?.builtinRatingGroupsProvider);
                                         });
 
                                         if(groups != null) {
@@ -878,8 +884,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       settings: settings,
     );
 
-    await RatingProjectManager().saveProject(project, mapName: mapName);
-    _log.i("Saved ${project.name} to $mapName" + (isAutosave ? " (autosave)" : ""));
+    await AnalystDatabase().saveRatingProject(project);
+    prefs.setInt(Preferences.lastProjectId, project.id);
+    _log.i("Saved ${project.name} to ${project.id}");
 
     if(mounted) {
       setState(() {
@@ -892,9 +899,14 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
   void _restoreDefaults() {
     _settingsController.restoreDefaults();
+    List<DbRatingGroup> groups = [];
+    var provider = sport!.builtinRatingGroupsProvider;
+    if(provider != null) {
+      groups = provider.defaultRatingGroups;
+    }
     setState(() {
       _keepHistory = false;
-      _groups = RaterGroup.defaultGroups;
+      _groups = groups;
       _validationError = "";
       _shooterAliases = defaultShooterAliases;
       _memNumWhitelist = [];
@@ -969,23 +981,15 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         child: IconButton(
           icon: Icon(Icons.folder_open),
           onPressed: () async {
-            await RatingProjectManager().ready;
-            var names = RatingProjectManager().savedProjects().toList();
-
-            var projectName = await showDialog<String>(context: context, builder: (context) {
-              return SelectProjectDialog(
-                projectNames: names,
-              );
+            var project = await showDialog<DbRatingProject>(context: context, builder: (context) {
+              return SelectProjectDialog();
             });
 
-            if(projectName != null) {
-              var project = RatingProjectManager().loadProject(projectName);
-              if (project != null) {
-                _loadProject(project);
-                setState(() {
-                  _lastProjectName = project.name;
-                });
-              }
+            if (project != null) {
+              _loadProject(project);
+              setState(() {
+                _lastProjectName = project.name;
+              });
             }
           },
         ),
@@ -1030,44 +1034,44 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     switch(item) {
 
       case _MenuEntry.import:
-        var imported = await RatingProjectManager().importFromFile();
-
-        if(imported != null) {
-          if(RatingProjectManager().projectExists(imported.name)) {
-            var confirm = await showDialog<bool>(context: context, builder: (context) {
-              return ConfirmDialog(
-                content: Text("A project with that name already exists. Overwrite?"),
-                positiveButtonLabel: "OVERWRITE",
-              );
-            }, barrierDismissible: false);
-
-            if(confirm == null || !confirm) {
-              return;
-            }
-          }
-
-          _log.i("Imported ${imported.name}");
-
-          _loadProject(imported);
-          updateUrls();
-        }
-        else {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unable to load file")));
-        }
+        // var imported = await RatingProjectManager().importFromFile();
+        //
+        // if(imported != null) {
+        //   if(RatingProjectManager().projectExists(imported.name)) {
+        //     var confirm = await showDialog<bool>(context: context, builder: (context) {
+        //       return ConfirmDialog(
+        //         content: Text("A project with that name already exists. Overwrite?"),
+        //         positiveButtonLabel: "OVERWRITE",
+        //       );
+        //     }, barrierDismissible: false);
+        //
+        //     if(confirm == null || !confirm) {
+        //       return;
+        //     }
+        //   }
+        //
+        //   _log.i("Imported ${imported.name}");
+        //
+        //   _loadProject(imported);
+        //   updateUrls();
+        // }
+        // else {
+        //   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unable to load file")));
+        // }
         break;
       case _MenuEntry.export:
-        var settings = _makeAndValidateSettings();
-        if(settings == null) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("You must provide valid settings (including match URLs) to export.")));
-          return;
-        }
-
-        var project = DbRatingProject(
-          sportName: "USPSA", // todo
-          name: "${_lastProjectName ?? "Unnamed Project"}",
-          settings: settings,
-        );
-        await RatingProjectManager().exportToFile(project);
+        // var settings = _makeAndValidateSettings();
+        // if(settings == null) {
+        //   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("You must provide valid settings (including match URLs) to export.")));
+        //   return;
+        // }
+        //
+        // var project = DbRatingProject(
+        //   sportName: "USPSA", // todo
+        //   name: "${_lastProjectName ?? "Unnamed Project"}",
+        //   settings: settings,
+        // );
+        // await RatingProjectManager().exportToFile(project);
         break;
 
 

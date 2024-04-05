@@ -5,9 +5,9 @@
  */
 
 
-import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rating_change.dart';
+import 'package:shooting_sports_analyst/data/sport/model.dart';
 
 class OpenskillRating extends ShooterRating {
   @override
@@ -21,7 +21,7 @@ class OpenskillRating extends ShooterRating {
   @override
   List<RatingEvent> ratingEvents = [];
 
-  OpenskillRating(Shooter shooter, this.mu, this.sigma, {DateTime? date}) :
+  OpenskillRating(MatchEntry shooter, this.mu, this.sigma, {required super.sport, DateTime? date}) :
       super(shooter, date: date);
 
   OpenskillRating.copy(OpenskillRating other) :

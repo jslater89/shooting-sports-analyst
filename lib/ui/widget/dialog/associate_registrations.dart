@@ -60,7 +60,7 @@ class _AssociateRegistrationsDialogState extends State<AssociateRegistrationsDia
                       builder: (context, setState) {
                         return Row(
                           children: [
-                            Expanded(child: Text("${unmatched.name} (${unmatched.division.displayString()} ${unmatched.classification.displayString()})")),
+                            Expanded(child: Text("${unmatched.name} (${unmatched.division.displayName} ${unmatched.classification.displayName})")),
                             Expanded(
                               child: SizedBox(
                                 width: 250,
@@ -78,7 +78,7 @@ class _AssociateRegistrationsDialogState extends State<AssociateRegistrationsDia
                                   itemBuilder: (context, rating) {
                                     return Padding(
                                       padding: const EdgeInsets.all(8.0),
-                                      child: Text("${rating.getName(suffixes: false)} (${rating.division?.displayString() ?? "NO DIVISION"} ${rating.classification.displayString()})"),
+                                      child: Text("${rating.getName(suffixes: false)} (${rating.division?.displayName ?? "NO DIVISION"} ${rating.lastClassification?.displayName ?? "(none)"})"),
                                     );
                                   },
                                   onSuggestionSelected: (rating) {
@@ -88,7 +88,7 @@ class _AssociateRegistrationsDialogState extends State<AssociateRegistrationsDia
                                       selectedMappings[unmatched] = rating;
                                       remainingOptions.remove(rating);
                                     });
-                                    controller.text = "${rating.getName(suffixes: false)} (${rating.division?.displayString() ?? "NO DIVISION"} ${rating.classification.displayString()})";
+                                    controller.text = "${rating.getName(suffixes: false)} (${rating.division?.displayName ?? "NO DIVISION"} ${rating.lastClassification?.displayName})";
                                   },
                                   textFieldConfiguration: TextFieldConfiguration(
                                     controller: controller,

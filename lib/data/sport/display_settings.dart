@@ -9,14 +9,22 @@ import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 class SportDisplaySettings {
+  /// Whether to display classification in overviews etc.
   bool showClassification;
 
   /// The columns to display
   List<ColumnGroup> scoreColumns;
 
+  /// Whether scoring events default to suffix display, like USPSA.
+  ///
+  /// If true: "12A"
+  /// If false: "-1: 4"
+  bool eventNamesAsSuffix;
+
   SportDisplaySettings({
     required this.scoreColumns,
-    this.showClassification = true
+    this.showClassification = true,
+    this.eventNamesAsSuffix = true,
   });
 
   factory SportDisplaySettings.defaultForSport(Sport sport, {PowerFactor? powerFactor}) {

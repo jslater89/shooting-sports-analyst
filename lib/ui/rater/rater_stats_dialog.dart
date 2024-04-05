@@ -9,6 +9,7 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_charts/flutter_charts.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
@@ -20,7 +21,7 @@ var _log = SSALogger("RaterStatsDialog");
 class RaterStatsDialog extends StatefulWidget {
   const RaterStatsDialog(this.group, this.statistics, {Key? key}) : super(key: key);
 
-  final RaterGroup group;
+  final DbRatingGroup group;
   final RaterStatistics statistics;
 
   static const _width = 500.0;

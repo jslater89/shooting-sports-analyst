@@ -8,7 +8,6 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_mode.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
@@ -19,6 +18,7 @@ import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/ui/openskill_settings_ui.dart';
+import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 
 class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, OpenskillSettingsController> {
@@ -114,7 +114,7 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
 
   @override
   RatingEvent newEvent({
-    required PracticalMatch match, Stage? stage,
+    required ShootingMatch match, MatchStage? stage,
     required ShooterRating rating, required RelativeScore score, Map<String, List<dynamic>> info = const {}
   }) {
     rating as OpenskillRating;
@@ -122,11 +122,12 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
   }
 
   @override
-  OpenskillRating newShooterRating(Shooter shooter, {DateTime? date}) {
+  OpenskillRating newShooterRating(MatchEntry shooter, {DateTime? date, required Sport sport}) {
     return OpenskillRating(
       shooter,
-      initialClassRatings[shooter.classification]?.elementAt(_muIndex) ?? OpenskillSettings.defaultMu,
-      initialClassRatings[shooter.classification]?.elementAt(_sigmaIndex) ?? OpenskillSettings.defaultSigma,
+      sport.initialOpenskillRatings[shooter.classification]?.elementAt(_muIndex) ?? OpenskillSettings.defaultMu,
+      sport.initialOpenskillRatings[shooter.classification]?.elementAt(_sigmaIndex) ?? OpenskillSettings.defaultSigma,
+      sport: sport,
     );
   }
 
@@ -149,20 +150,10 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
   // TODO
   static const _muIndex = 0;
   static const _sigmaIndex = 1;
-  static const initialClassRatings = {
-    Classification.GM: [OpenskillSettings.defaultMu + 25, OpenskillSettings.defaultSigma],
-    Classification.M: [OpenskillSettings.defaultMu + 20, OpenskillSettings.defaultSigma],
-    Classification.A: [OpenskillSettings.defaultMu + 15, OpenskillSettings.defaultSigma],
-    Classification.B: [OpenskillSettings.defaultMu + 10, OpenskillSettings.defaultSigma],
-    Classification.C: [OpenskillSettings.defaultMu + 5, OpenskillSettings.defaultSigma],
-    Classification.D: [OpenskillSettings.defaultMu, OpenskillSettings.defaultSigma],
-    Classification.U: [OpenskillSettings.defaultMu + 5, OpenskillSettings.defaultSigma],
-    Classification.unknown: [OpenskillSettings.defaultMu, OpenskillSettings.defaultSigma],
-  };
 
   @override
   Map<ShooterRating, RatingChange> updateShooterRatings({
-    required PracticalMatch match,
+    required ShootingMatch match,
     required List<ShooterRating> shooters,
     required Map<ShooterRating, RelativeScore> scores,
     required Map<ShooterRating, RelativeMatchScore> matchScores,
@@ -187,8 +178,21 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
     }
 
     List<OpenskillRating> provisionalTeams = shooters.map((e) => e as OpenskillRating).toList();
+
     provisionalTeams.retainWhere((element) {
-      if(scores[element]!.score.hits == 0 && scores[element]!.score.time <= 0.5) {
+      var score = scores[element]!;
+      RawScore rawScore;
+      if(score is RelativeMatchScore) {
+        rawScore = score.total;
+      }
+      else if(score is RelativeStageScore) {
+        rawScore = score.score;
+      }
+      else {
+        throw StateError("impossible");
+      }
+
+      if(rawScore.targetEventCount == 0 && rawScore.rawTime <= 0.5) {
           return false;
       }
 
@@ -223,7 +227,7 @@ class OpenskillScore {
   RelativeScore actualScore;
 
   int rank = -1;
-  double get score => -actualScore.relativePoints;
+  double get score => -actualScore.points;
 
   late double sumQ;
   late int a;

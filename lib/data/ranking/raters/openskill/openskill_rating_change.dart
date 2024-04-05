@@ -4,9 +4,10 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rater.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 
 class OpenskillRatingEvent extends RatingEvent {
   double muChange;
@@ -21,8 +22,8 @@ class OpenskillRatingEvent extends RatingEvent {
     required this.initialMu,
     required this.muChange,
     required this.sigmaChange,
-    required PracticalMatch match,
-    Stage? stage,
+    required ShootingMatch match,
+    MatchStage? stage,
     required RelativeScore score,
     Map<String, List<dynamic>> info = const {}
   }) : super(

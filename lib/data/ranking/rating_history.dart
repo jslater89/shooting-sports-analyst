@@ -4,6 +4,8 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
@@ -97,13 +99,21 @@ class RatingHistory {
     _ratersByDivision[_matches.last] = ratings;
   }
   
-  // Returns false if the match already exists
+  // Returns false if the match already exists in the project,
+  // or doesn't exist in the DB.
   Future<bool> addMatch(ShootingMatch match) async {
+    var dbMatch = await AnalystDatabase().getMatchByAnySourceId(match.sourceIds);
+    if(dbMatch == null) return false;
+
     if(matches.contains(match)) return false;
 
     var oldMatch = _lastMatch;
     _matches.add(match);
-    project.matchUrls.add("https://practiscore.com/results/new/${match.practiscoreId}");
+    if(!project.matches.isLoaded) {
+      await project.matches.load();
+    }
+    project.matches.add(dbMatch);
+    await project.matches.save();
 
     for(var group in project.groups) {
       var raters = _ratersByDivision[oldMatch]!;

@@ -5,25 +5,34 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
+import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 
 class SelectProjectDialog extends StatefulWidget {
-  const SelectProjectDialog({Key? key, required this.projectNames}) : super(key: key);
-
-  final List<String> projectNames;
+  const SelectProjectDialog({Key? key}) : super(key: key);
 
   @override
   State<SelectProjectDialog> createState() => _SelectProjectDialogState();
 }
 
 class _SelectProjectDialogState extends State<SelectProjectDialog> {
-  List<String> _localNames = [];
+  List<DbRatingProject> projects = [];
   @override
   void initState() {
     super.initState();
-    _localNames = widget.projectNames;
+    _getProjects();
   }
+
+  Future<void> _getProjects() async {
+    var p = await AnalystDatabase().getAllRatingProjects();
+    setState(() {
+      projects = p;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -33,30 +42,30 @@ class _SelectProjectDialogState extends State<SelectProjectDialog> {
         child: ListView.builder(
           shrinkWrap: true,
           itemBuilder: (context, i) {
-            var name = _localNames[i];
+            var project = projects[i];
             return ListTile(
-              title: Text(name),
+              title: Text(project.name),
               trailing: IconButton(
                 icon: Icon(Icons.delete),
                 onPressed: () async {
                   var delete = await showDialog<bool>(context: context, builder: (context) {
-                    return ConfirmDialog(content: Text("Delete $name?"));
+                    return ConfirmDialog(content: Text("Delete ${project.name}?"));
                   });
 
                   if(delete ?? false) {
-                    RatingProjectManager().deleteProject(name);
+                    AnalystDatabase().deleteRatingProject(project);
                     setState(() {
-                      _localNames.remove(name);
+                      projects.remove(project);
                     });
                   }
                 },
               ),
               onTap: () {
-                Navigator.of(context).pop(name);
+                Navigator.of(context).pop(project);
               },
             );
           },
-          itemCount: _localNames.length,
+          itemCount: projects.length,
         ),
       ),
     );

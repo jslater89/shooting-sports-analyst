@@ -8,6 +8,7 @@ import 'dart:collection';
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/match/practical_match.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
@@ -1127,7 +1128,7 @@ extension Sorting on List<RelativeMatchScore> {
     });
   }
 
-  void sortByRating({required Map<RaterGroup, Rater> ratings, required RatingDisplayMode displayMode, required PracticalMatch match}) {
+  void sortByRating({required Map<DbRatingGroup, Rater> ratings, required RatingDisplayMode displayMode, required PracticalMatch match}) {
     this.sort((a, b) {
       return a.shooter.lastName.compareTo(b.shooter.lastName);
 

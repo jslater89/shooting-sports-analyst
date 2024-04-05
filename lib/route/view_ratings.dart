@@ -12,6 +12,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttericon/rpg_awesome_icons.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
 import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
@@ -49,8 +50,6 @@ class RatingsViewPage extends StatefulWidget {
   }) : super(key: key);
 
   final RatingDataSource dataSource;
-  
-  RatingProjectSettings get settings => dataSource.settings;
 
   @override
   State<RatingsViewPage> createState() => _RatingsViewPageState();
@@ -103,7 +102,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   bool _historyChanged = false;
   _LoadingState _loadingState = _LoadingState.notStarted;
 
-  late List<RaterGroup> activeTabs;
+  late List<DbRatingGroup> activeTabs;
 
   RatingSortMode _sortMode = RatingSortMode.rating;
   ShootingMatch? _selectedMatch;

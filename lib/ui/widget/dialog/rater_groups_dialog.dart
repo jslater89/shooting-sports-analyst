@@ -5,12 +5,15 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 
 class RaterGroupsDialog extends StatefulWidget {
-  const RaterGroupsDialog({Key? key, required this.groups}) : super(key: key);
+  const RaterGroupsDialog({Key? key, required this.groups, this.groupProvider}) : super(key: key);
 
-  final List<RaterGroup> groups;
+  final RatingGroupsProvider? groupProvider;
+  final List<DbRatingGroup> groups;
 
   @override
   State<RaterGroupsDialog> createState() => _RaterGroupsDialogState();
@@ -18,7 +21,9 @@ class RaterGroupsDialog extends StatefulWidget {
 
 class _RaterGroupsDialogState extends State<RaterGroupsDialog> {
 
-  Map<RaterGroup, bool> checked = {};
+  Map<DbRatingGroup, bool> checked = {};
+
+  RatingGroupsProvider? get provider => widget.groupProvider;
 
   @override
   void initState() {

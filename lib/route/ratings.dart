@@ -37,7 +37,7 @@ class _RatingsContainerPageState extends State<RatingsContainerPage> {
     }
     else {
       return RatingsViewPage(
-        dataSource: this.project,
+        dataSource: this.project!,
       );
     }
   }

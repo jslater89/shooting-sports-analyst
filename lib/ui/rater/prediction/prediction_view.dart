@@ -121,7 +121,7 @@ class _PredictionViewState extends State<PredictionView> {
 
                     contents += "${pred.shooter.getName(suffixes: false)},";
                     contents += "${pred.shooter.originalMemberNumber},";
-                    contents += "${pred.shooter.lastClassification.name},";
+                    contents += "${pred.shooter.lastClassification?.name ?? "(none)"},";
                     contents += "$low,$midLow,$mean,$midHigh,$high,$lowPlace,$midPlace,$highPlace";
 
                     if(outcome != null) {
@@ -403,7 +403,7 @@ class _PredictionViewState extends State<PredictionView> {
             ),
             Expanded(
               flex: PredictionView._classFlex,
-              child: Text(pred.shooter.lastClassification.name, textAlign: TextAlign.end),
+              child: Text(pred.shooter.lastClassification?.name ?? "(none)", textAlign: TextAlign.end),
             ),
             Expanded(
               flex: PredictionView._ratingFlex,

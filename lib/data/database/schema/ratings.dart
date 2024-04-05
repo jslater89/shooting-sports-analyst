@@ -8,6 +8,7 @@ import 'dart:convert';
 
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
+import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
@@ -29,9 +30,10 @@ mixin DbSportEntity {
 }
 
 @collection
-class DbRatingProject with DbSportEntity {
+class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRatingDataSource {
   Id id = Isar.autoIncrement;
 
+  @Index()
   String sportName;
 
   // Settings
@@ -39,10 +41,45 @@ class DbRatingProject with DbSportEntity {
   String name;
   String encodedSettings;
 
+  /// All of the matches this project includes.
+  ///
+  /// See also [filteredMatches] and [lastUsedMatches].
   final matches = IsarLinks<DbShootingMatch>();
-  
-  @ignore
-  List<DbShootingMatch> transientFilteredMatches = [];
+
+  /// A subset of the matches from this project, which will actually be used to calculate
+  /// the ratings.
+  ///
+  /// This allows e.g. the configure-ratings screen filters to generate ratings for a subset
+  /// of the overall list of matches in a project.
+  final filteredMatches = IsarLinks<DbShootingMatch>();
+
+  /// The IsarLinks of matches to use for calculating ratings for this project. If
+  /// [filteredMatches] is not empty, it will be used. If it is empty, [matches] will
+  /// be used instead.
+  ///
+  /// If [loadLinks] is true, the returned IsarLinks will be loaded.
+  Future<IsarLinks<DbShootingMatch>> matchesToUse({bool loadLinks = true}) async {
+    var filteredCount = await filteredMatches.count();
+
+    if(filteredCount == 0) {
+      if(loadLinks && !matches.isLoaded) {
+        await matches.load();
+      }
+      return matches;
+    }
+    else {
+      if(loadLinks && !filteredMatches.isLoaded) {
+        await filteredMatches.load();
+      }
+
+      return filteredMatches;
+    }
+  }
+
+  /// The set of matches last used to calculate ratings for this match.
+  ///
+  /// When this differs from [filteredMatches] or
+  final lastUsedMatches = IsarLinks<DbShootingMatch>();
 
   @ignore
   Map<String, dynamic> get jsonDecodedSettings => jsonDecode(encodedSettings);
@@ -68,7 +105,9 @@ class DbRatingProject with DbSportEntity {
   }
 
   final customGroups = IsarLinks<DbRatingGroup>();
-  final List<String> builtinGroupNames;
+  List<String> builtinGroupNames;
+
+  @ignore
   List<DbRatingGroup> get builtinRatingGroups {
     var provider = sport.builtinRatingGroupsProvider;
     if(provider == null) {
@@ -110,6 +149,29 @@ class DbRatingProject with DbSportEntity {
     if(settings != null) {
       this.settings = settings;
     }
+  }
+
+  @override
+  Future<List<int>> getMatchDatabaseIds() async {
+    if(!matches.isLoaded) {
+      await matches.load();
+    }
+
+    return matches.map((m) => m.id).toList();
+  }
+
+  @override
+  Future<RatingProjectSettings> getSettings() {
+    return Future.value(settings);
+  }
+
+  @override
+  Future<List<String>> matchSourceIds() async {
+    if(!matches.isLoaded) {
+      await matches.load();
+    }
+
+    return matches.map((m) => m.sourceIds.first).toList();
   }
 }
 

@@ -34,6 +34,10 @@ class DbShootingMatch {
   DateTime date;
   String? matchLevelName;
 
+  /// A list of IDs this match is known by at its source.
+  ///
+  /// The [MatchDatabase] utility class will not allow matches without a source ID to be saved to
+  /// the underlying database.
   @Index(name: AnalystDatabase.sourceIdsIndex, unique: true, replace: true, type: IndexType.value)
   List<String> sourceIds;
 

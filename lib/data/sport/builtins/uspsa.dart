@@ -8,6 +8,7 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/uspsa_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_settings.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/sorts.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
@@ -127,6 +128,15 @@ final uspsaSport = Sport(
     uspsaC: 900,
     uspsaD: 800,
     uspsaU: 900,
+  },
+  initialOpenskillRatings: {
+    uspsaGM: [OpenskillSettings.defaultMu + 25, OpenskillSettings.defaultSigma],
+    uspsaM: [OpenskillSettings.defaultMu + 20, OpenskillSettings.defaultSigma],
+    uspsaA: [OpenskillSettings.defaultMu + 15, OpenskillSettings.defaultSigma],
+    uspsaB: [OpenskillSettings.defaultMu + 10, OpenskillSettings.defaultSigma],
+    uspsaC: [OpenskillSettings.defaultMu + 5, OpenskillSettings.defaultSigma],
+    uspsaD: [OpenskillSettings.defaultMu, OpenskillSettings.defaultSigma],
+    uspsaU: [OpenskillSettings.defaultMu + 5, OpenskillSettings.defaultSigma],
   },
   ratingStrengthProvider: _UspsaRatingStrengthProvider(),
   pubstompProvider: _UspsaPubstompProvider(),

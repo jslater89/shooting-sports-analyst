@@ -9,9 +9,9 @@ import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
 /// A RatingDataSource is a view into a rating project sufficient for the UI
 /// to display it and interact with it.
 abstract interface class RatingDataSource {
-  RatingProjectSettings get settings;
-  List<int> get matchDatabaseIds;
-  List<String> get matchSourceIds;
+  Future<RatingProjectSettings> getSettings();
+  Future<List<int>> getMatchDatabaseIds();
+  Future<List<String>> matchSourceIds();
 }
 
 /// An EditableRatingDataSource is a view into a rating project sufficient to

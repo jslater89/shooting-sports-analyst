@@ -15,6 +15,8 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
 // import 'package:shooting_sports_analyst/data/db/object/match/match.dart';
 // import 'package:shooting_sports_analyst/data/db/object/rating/rating_project.dart';
@@ -119,18 +121,52 @@ void main() async {
   runApp(MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+    _getPrefs();
+  }
+
+  Future<void> _getPrefs() async {
+    _prefs = await SharedPreferences.getInstance();
+  }
+
+  SharedPreferences? _prefs;
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Match Results Viewer',
-      theme: ThemeData(
-        primarySwatch: Colors.indigo,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      initialRoute: '/',
-      onGenerateRoute: globals.router.generator,
-    );
+    if(_prefs == null) {
+      return MaterialApp(
+        title: 'Shooting Sports Analyst',
+        theme: ThemeData(
+          primarySwatch: Colors.indigo,
+          visualDensity: VisualDensity.adaptivePlatformDensity,
+        ),
+        home: Container(),
+      );
+    }
+    else {
+      return Provider.value(
+        value: _prefs!,
+        builder: (context, _) {
+
+        },
+        child: MaterialApp(
+          title: 'Shooting Sports Analyst',
+          theme: ThemeData(
+            primarySwatch: Colors.indigo,
+            visualDensity: VisualDensity.adaptivePlatformDensity,
+          ),
+          initialRoute: '/',
+          onGenerateRoute: globals.router.generator,
+        ),
+      );
+    }
   }
 }

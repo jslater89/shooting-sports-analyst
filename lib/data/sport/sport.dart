@@ -71,6 +71,9 @@ class Sport {
   /// Initial ratings for the Elo rating engine.
   Map<Classification, double> initialEloRatings;
 
+  /// Initial rating for the OpenSkill rating engine.
+  Map<Classification, List<double>> initialOpenskillRatings;
+
   PowerFactor get defaultPowerFactor {
     if(powerFactors.length == 1) {
       return powerFactors.values.first;
@@ -123,6 +126,7 @@ class Sport {
     PowerFactor? displaySettingsPowerFactor,
     this.shooterDeduplicator,
     this.initialEloRatings = const {},
+    this.initialOpenskillRatings = const {},
     this.ratingStrengthProvider,
     this.pubstompProvider,
     this.builtinRatingGroupsProvider,

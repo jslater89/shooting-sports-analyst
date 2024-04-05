@@ -29,6 +29,10 @@ import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
+final NumberFormat _separatedNumberFormat = NumberFormat("#,###");
+final NumberFormat _nf = NumberFormat("####");
+final NumberFormat _separatedDecimalFormat = NumberFormat("#,###.00");
+
 /// This displays per-stage changes for a shooter.
 class ShooterStatsDialog extends StatefulWidget {
   const ShooterStatsDialog({Key? key, required this.rating, required this.match, this.ratings, this.showDivisions = false}) : super(key: key);
@@ -50,6 +54,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   List<Widget>? _eventLines;
   List<Widget>? _historyLines;
   bool showingEvents = true;
+  Sport get sport => widget.match.sport;
 
   List<Widget> _buildEventLines() {
     List<RatingEvent> events = widget.rating.ratingEvents;
@@ -284,9 +289,6 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   // Doesn't do recreating well
   charts.Series<_AccumulatedRatingEvent, int>? _series;
   charts.LineChart? _chart;
-  late NumberFormat _nf = NumberFormat("####");
-  late NumberFormat _separatedNumberFormat = NumberFormat("#,###");
-  late NumberFormat _separatedDecimalFormat = NumberFormat("#,###.00");
   late List<_AccumulatedRatingEvent> _ratings;
   // TODO: go back to Division as key once rater is updated
   Map<String, charts.Color> _divisionColors = {};
@@ -490,7 +492,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
 
     return widget.rating.ratingEvents.last.stage != null;
   }
-  old.Score? totalScore;
+  RawScore? totalScore;
   double totalPoints = 0;
   Set<ShootingMatch> dqs = {};
   Set<ShootingMatch> matches = {};
@@ -558,9 +560,9 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       if(widget.rating.ratingEvents.contains(event)) {
         matchesWithRatingChanges.add(event.match);
       }
-      if(!matches.contains(event.match)) {
-        matchesByLevel[event.match.level ?? old.MatchLevel.I] ??= 0;
-        matchesByLevel[event.match.level ?? old.MatchLevel.I] = matchesByLevel[event.match.level ?? old.MatchLevel.I]! + 1;
+      if(!matches.contains(event.match) && event.match.level != null) {
+        matchesByLevel[event.match.level!] ??= 0;
+        matchesByLevel[event.match.level!] = matchesByLevel[event.match.level ?? old.MatchLevel.I]! + 1;
       }
       matches.add(event.match);
       if(event.score.shooter.classification != null) {
@@ -757,13 +759,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       Row(
         children: [
           Expanded(flex: 4, child: Text("Total hits", style: Theme.of(context).textTheme.bodyMedium)),
-          Expanded(flex: 4, child: Text(
-              "${_separatedNumberFormat.format(totalScore!.a)}A "
-                  "${_separatedNumberFormat.format(totalScore!.c)}C "
-                  "${_separatedNumberFormat.format(totalScore!.d)}D "
-                  "${_separatedNumberFormat.format(totalScore!.m)}M "
-                  "${_separatedNumberFormat.format(totalScore!.ns)}NS "
-                  "${_separatedNumberFormat.format(totalScore!.penaltyCount)}P",
+          Expanded(flex: 4, child: Text(totalScore?.scoringEventText(sport) ?? "",
               style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
@@ -771,12 +767,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       Row(
         children: [
           Expanded(flex: 2, child: Text("Hit percentages", style: Theme.of(context).textTheme.bodyMedium)),
-          Expanded(flex: 4, child: Text(
-              "${(totalScore!.a / totalScore!.shots).asPercentage(decimals: 1)}% A, "
-                  "${(totalScore!.c / totalScore!.shots).asPercentage(decimals: 1)}% C, "
-                  "${(totalScore!.d / totalScore!.shots).asPercentage(decimals: 1)}% D, "
-                  "${(totalScore!.m / totalScore!.shots).asPercentage(decimals: 1)}% M, "
-                  "${(totalScore!.ns / totalScore!.shots).asPercentage(decimals: 1)}% NS ",
+          Expanded(flex: 4, child: Text(totalScore?.hitPercentages(sport) ?? "",
               style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
@@ -785,7 +776,8 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         children: [
           Expanded(flex: 4, child: Text("Total time/points/hit factor", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 4, child: Text(
-              "${_separatedDecimalFormat.format(totalScore!.time)} s/${_separatedNumberFormat.format(totalPoints)} pts/${(totalPoints / totalScore!.time).toStringAsFixed(4)} HF",
+            // TODO: display hit factor, final time, or points based on scoring
+              "${_separatedDecimalFormat.format(totalScore!.finalTime)} s/${_separatedNumberFormat.format(totalPoints)} pts/${(totalPoints / totalScore!.finalTime).toStringAsFixed(4)} HF",
               style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
@@ -869,5 +861,46 @@ class _StatefulContainerState extends State<_StatefulContainer> {
       color: highlighted ? Colors.black12 : null,
       child: widget.child,
     );
+  }
+}
+
+extension _HitPercentagesText on RawScore {
+  String hitPercentages(Sport sport) {
+    var message = StringBuffer();
+    var totalCount = this.targetEventCount;
+    for(var entry in this.targetEvents.entries) {
+      var event = entry.key;
+      var count = entry.value;
+
+      if(event.displayInOverview) {
+        message.write("${(count / totalCount).asPercentage(decimals: 1)} ${event.shortDisplayName}, ");
+      }
+    }
+
+    var string = message.toString();
+    if(string.endsWith(", ")) {
+      string = string.substring(0, string.length - 3);
+    }
+
+    return string;
+  }
+
+  String scoringEventText(Sport sport) {
+    var message = StringBuffer();
+    for(var entry in this.targetEvents.entries) {
+      var event = entry.key;
+      var count = entry.value;
+
+      if(event.displayInOverview) {
+        if(sport.displaySettings.eventNamesAsSuffix) {
+          message.write("$count${event.shortDisplayName} ");
+        }
+        else {
+          message.write("${event.shortDisplayName}: $count ");
+        }
+      }
+    }
+
+    return message.toString();
   }
 }

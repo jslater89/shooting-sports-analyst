@@ -227,8 +227,8 @@ extension SortFunctions on RatingSortMode {
         return (a, b) => b.rating.compareTo(a.rating);
       case RatingSortMode.classification:
         return (a, b) {
-          if(a.lastClassification != b.lastClassification) {
-            return a.lastClassification.index.compareTo(b.lastClassification.index);
+          if(a.lastClassification != null && b.lastClassification != null && a.lastClassification != b.lastClassification) {
+            return a.lastClassification!.index.compareTo(b.lastClassification!.index);
           }
           else {
             return b.rating.compareTo(a.rating);

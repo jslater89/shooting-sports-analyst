@@ -6,6 +6,7 @@
 
 import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/match/practical_match.dart' as oldschema;
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
@@ -68,7 +69,7 @@ class ShootingMatch {
     List<MatchStage>? stages,
     bool scoreDQ = true,
     MatchPredictionMode predictionMode = MatchPredictionMode.none,
-    Map<RaterGroup, Rater>? ratings,
+    Map<DbRatingGroup, Rater>? ratings,
   }) {
     var innerShooters = shooters ?? this.shooters;
     var innerStages = stages ?? this.stages;
