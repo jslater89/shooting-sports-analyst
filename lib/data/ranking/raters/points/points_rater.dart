@@ -7,9 +7,6 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:shooting_sports_analyst/data/match/practical_match.dart';
-import 'package:shooting_sports_analyst/data/match/relative_scores.dart';
-import 'package:shooting_sports_analyst/data/match/shooter.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_mode.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
@@ -23,6 +20,10 @@ import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rating
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/ui/points_settings_ui.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/ui/rater/rater_view.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 
@@ -94,7 +95,7 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
             Expanded(flex: _leadPaddingFlex, child: Text("")),
             Expanded(flex: _placeFlex, child: Text("$place")),
             Expanded(flex: _memNumFlex, child: Text(rating.originalMemberNumber)),
-            Expanded(flex: _classFlex, child: Text(rating.lastClassification.displayString())),
+            Expanded(flex: _classFlex, child: Text(rating.lastClassification?.displayName ?? "(none)")),
             Expanded(flex: _nameFlex, child: Text(rating.getName(suffixes: false))),
             Expanded(flex: _ratingFlex, child: Text("$ratingText", textAlign: TextAlign.end)),
             Expanded(flex: _stagesFlex, child: Text("${rating.length}", textAlign: TextAlign.end)),
@@ -146,8 +147,8 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
 
   @override
   RatingEvent newEvent({
-    required PracticalMatch match,
-    Stage? stage,
+    required ShootingMatch match,
+    MatchStage? stage,
     required ShooterRating rating,
     required RelativeScore score,
     Map<String, List<dynamic>> info = const {}
@@ -166,8 +167,8 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
   }
 
   @override
-  PointsRating newShooterRating(Shooter shooter, {DateTime? date}) {
-    return PointsRating(shooter, settings, date: date, participationBonus: model.participationBonus);
+  PointsRating newShooterRating(MatchEntry shooter, {DateTime? date, required Sport sport}) {
+    return PointsRating(sport, shooter, settings, date: date, participationBonus: model.participationBonus);
   }
 
   @override
@@ -178,7 +179,7 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
       s as PointsRating;
       contents += "${s.getName(suffixes: false)},";
       contents += "${s.originalMemberNumber},";
-      contents += "${s.classification.displayString()},";
+      contents += "${s.lastClassification?.displayName ?? "(none)"},";
       contents += "${model.displayRating(s.rating)},";
       contents += "${s.length},";
       contents += "${(s.rating / s.length).toStringAsFixed(1)},";
@@ -202,7 +203,7 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
 
   @override
   Map<ShooterRating, RatingChange> updateShooterRatings({
-    required PracticalMatch match,
+    required ShootingMatch match,
     required List<ShooterRating> shooters,
     required Map<ShooterRating, RelativeScore> scores,
     required Map<ShooterRating, RelativeMatchScore> matchScores,

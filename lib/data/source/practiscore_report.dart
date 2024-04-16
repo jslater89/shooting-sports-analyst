@@ -69,6 +69,12 @@ class PractiscoreHitFactorReportParser extends MatchSource {
       _readScoreLines(stageScoreLines, stagesByFileId, shootersByFileId);
       var info = _readInfoLines(infoLines);
 
+      if(sourceIds == null) {
+        var syntheticId = info.name.stableHash ^ info.date.millisecondsSinceEpoch.stableHash;
+        sourceIds = [syntheticId.toRadixString(36)];
+      }
+      sourceIds = sourceIds.map((id) => "$code:$id").toList();
+
       ShootingMatch m = ShootingMatch(
         name: info.name,
         date: info.date,
@@ -77,13 +83,9 @@ class PractiscoreHitFactorReportParser extends MatchSource {
         sport: sport,
         stages: stagesByFileId.values.toList(),
         shooters: shootersByFileId.values.toList(),
-        sourceIds: sourceIds ?? [],
+        sourceIds: sourceIds,
+        sourceCode: code,
       );
-
-      if(sourceIds == null) {
-        var syntheticId = m.name.stableHash ^ m.date.millisecondsSinceEpoch.stableHash;
-        m.sourceIds.add(syntheticId.toRadixString(36));
-      }
       return Result.ok(m);
     } catch(e) {
       return Result.err(FormatError(StringError("$e")));

@@ -4,16 +4,15 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:shooting_sports_analyst/data/match/practical_match.dart';
-import 'package:shooting_sports_analyst/data/match/relative_scores.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
+import 'package:shooting_sports_analyst/data/sport/model.dart';
 
 class PointsRatingEvent extends RatingEvent {
   PointsRatingEvent({
     required this.oldRating,
     required this.ratingChange,
-    required PracticalMatch match,
+    required ShootingMatch match,
     required RelativeScore score,
     Map<String, List<dynamic>> info = const {}
   }) : super(match: match, score: score, info: info);

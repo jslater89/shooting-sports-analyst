@@ -5,11 +5,10 @@
  */
 
 
-import 'package:collection/collection.dart';
-import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_settings.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 
 class PercentFinish extends PointsModel {
   PercentFinish(PointsSettings settings) : super(settings);
@@ -29,7 +28,7 @@ class PercentFinish extends PointsModel {
 
     for(var entry in scores.entries) {
       changes[entry.key] = RatingChange(change: {
-        RatingSystem.ratingKey: entry.value.percent * 100,
+        RatingSystem.ratingKey: entry.value.percentage,
       });
     }
 

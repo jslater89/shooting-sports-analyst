@@ -66,8 +66,8 @@ class AnalystDatabase {
   }
 
   Future<Result<DbShootingMatch, ResultErr>> saveMatch(ShootingMatch match) async {
-    if(match.sourceIds.isEmpty) {
-      throw ArgumentError("Match must have at least one source ID to be saved in the database");
+    if(match.sourceIds.isEmpty || match.sourceCode.isEmpty) {
+      throw ArgumentError("Match must have at least one source ID and a source code to be saved in the database");
     }
     var dbMatch = DbShootingMatch.from(match);
     try {

@@ -6,10 +6,10 @@
 
 
 import 'package:collection/collection.dart';
-import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_settings.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 
 class InversePlace extends PointsModel {
   InversePlace(PointsSettings settings) : super(settings);
@@ -27,7 +27,7 @@ class InversePlace extends PointsModel {
       };
     }
 
-    var sortedEntries = scores.entries.sorted((e1, e2) => e2.value.percent.compareTo(e1.value.percent));
+    var sortedEntries = scores.entries.sorted((e1, e2) => e2.value.ratio.compareTo(e1.value.ratio));
 
     count = sortedEntries.length;
 

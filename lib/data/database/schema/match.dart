@@ -38,8 +38,14 @@ class DbShootingMatch {
   ///
   /// The [MatchDatabase] utility class will not allow matches without a source ID to be saved to
   /// the underlying database.
+  ///
+  /// See the note on [ShootingMatch.sourceIds] regarding collisions between matches from multiple
+  /// sources.
   @Index(name: AnalystDatabase.sourceIdsIndex, unique: true, replace: true, type: IndexType.value)
   List<String> sourceIds;
+
+  /// The code of the match source for which sourceIds is valid.
+  String sourceCode;
 
   @enumerated
   EventLevel matchEventLevel;
@@ -57,6 +63,7 @@ class DbShootingMatch {
     required this.matchEventLevel,
     required this.sportName,
     required this.sourceIds,
+    required this.sourceCode,
     required this.stages,
     required this.shooters,
   });
@@ -66,6 +73,7 @@ class DbShootingMatch {
     eventName = match.name,
     rawDate = match.rawDate,
     date = match.date,
+    sourceCode = match.sourceCode,
     matchLevelName = match.level?.name,
     matchEventLevel = match.level?.eventLevel ?? EventLevel.local,
     sourceIds = []..addAll(match.sourceIds),

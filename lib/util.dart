@@ -57,6 +57,28 @@ class Result<T, E extends ResultErr> {
   Result.errFrom(Result<Object?, E> other) : this._error = other.unwrapErr(), this._result = null;
 }
 
+extension AsyncResult<T, E extends ResultErr, Q extends Result<T, E>> on Future<Q> {
+  Future<bool> isOk() async {
+    var res = await this;
+    return res.isOk();
+  }
+
+  Future<bool> isErr() async {
+    var res = await this;
+    return res.isErr();
+  }
+
+  Future<T> unwrap() async {
+    var res = await this;
+    return res.unwrap();
+  }
+
+  Future<E> unwrapErr() async {
+    var res = await this;
+    return res.unwrapErr();
+  }
+}
+
 List<int> mode(List<int> data) {
   var freq = <int, int>{};
   var maxFreq = 0;

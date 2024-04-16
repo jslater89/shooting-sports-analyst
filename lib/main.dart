@@ -135,6 +135,9 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _getPrefs() async {
     _prefs = await SharedPreferences.getInstance();
+    setState(() {
+
+    });
   }
 
   SharedPreferences? _prefs;
@@ -154,9 +157,6 @@ class _MyAppState extends State<MyApp> {
     else {
       return Provider.value(
         value: _prefs!,
-        builder: (context, _) {
-
-        },
         child: MaterialApp(
           title: 'Shooting Sports Analyst',
           theme: ThemeData(

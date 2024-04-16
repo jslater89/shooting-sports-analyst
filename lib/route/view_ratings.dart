@@ -55,34 +55,6 @@ class RatingsViewPage extends StatefulWidget {
   State<RatingsViewPage> createState() => _RatingsViewPageState();
 }
 
-enum _LoadingState {
-  notStarted,
-  readingCache,
-  downloadingMatches,
-  processingScores,
-  updatingCache,
-  done,
-}
-
-extension _LoadingStateLabel on _LoadingState {
-  String get label {
-    switch(this) {
-      case _LoadingState.notStarted:
-        return "not started";
-      case _LoadingState.readingCache:
-        return "loading match cache";
-      case _LoadingState.downloadingMatches:
-        return "downloading matches";
-      case _LoadingState.processingScores:
-        return "processing scores";
-      case _LoadingState.done:
-        return "finished";
-      case _LoadingState.updatingCache:
-        return "updating cache";
-    }
-  }
-}
-
 // Tabs for rating categories
 // A slider to allow
 class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderStateMixin {
@@ -100,7 +72,6 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   
   late RatingHistory _history;
   bool _historyChanged = false;
-  _LoadingState _loadingState = _LoadingState.notStarted;
 
   late List<DbRatingGroup> activeTabs;
 
@@ -120,8 +91,6 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   @override
   void initState() {
     super.initState();
-
-    activeTabs = widget.settings.groups;
 
     _maxDays = durationSinceLastYear().inDays;
 
@@ -187,6 +156,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   }
 
   Future<void> _init() async {
+    activeTabs = await widget.dataSource.getGroups().unwrap();
     _loadMatches(widget.matchUrls);
   }
 
@@ -1001,9 +971,6 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   }
 
   Future<bool> _loadMatches(List<String> urls) async {
-    setState(() {
-      _loadingState = _LoadingState.readingCache;
-    });
     await _matchCache.ready;
 
     await Future.delayed(Duration(milliseconds: 100));

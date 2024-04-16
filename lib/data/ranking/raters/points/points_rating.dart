@@ -7,12 +7,13 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
-import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_settings.dart';
 import 'package:shooting_sports_analyst/data/sorted_list.dart';
+import 'package:shooting_sports_analyst/data/sport/model.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 
 class PointsRating extends ShooterRating {
   final PointsSettings settings;
@@ -66,10 +67,13 @@ class PointsRating extends ShooterRating {
     if(d.isAfter(_lastSeen)) _lastSeen = d;
   }
 
-  late Classification _lastClass;
-  Classification get lastClassification => _lastClass;
-  set lastClassification(Classification c) {
-    if(c.index < _lastClass.index) {
+  Classification? _lastClass;
+  Classification? get lastClassification => _lastClass;
+  set lastClassification(Classification? c) {
+    if(c == null) return;
+    if(_lastClass == null) _lastClass = c;
+
+    if(c.index < _lastClass!.index) {
       _lastClass = c;
     }
   }
@@ -87,13 +91,14 @@ class PointsRating extends ShooterRating {
   void updateTrends(List<RatingEvent> changes) {}
 
   PointsRating(
-    Shooter shooter,
+    Sport sport,
+    MatchEntry shooter,
     this.settings,
-    {required this.participationBonus, DateTime? date}) : super(shooter, date: date)
+    {required this.participationBonus, DateTime? date}) : super(shooter, date: date, sport: sport)
   {
     this.events = SortedList(comparator: _ratingComparator);
     if(date?.isAfter(_lastSeen) ?? false) _lastSeen = date!;
-    _lastClass = shooter.classification ?? Classification.unknown;
+    _lastClass = shooter.classification;
   }
 
   PointsRating.copy(PointsRating other) :

@@ -78,7 +78,8 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
 
   /// The set of matches last used to calculate ratings for this match.
   ///
-  /// When this differs from [filteredMatches] or
+  /// When this differs from [matchesToUse], match addition or recalculation
+  /// is required.
   final lastUsedMatches = IsarLinks<DbShootingMatch>();
 
   @ignore
@@ -131,6 +132,18 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   @ignore
   bool transientDataEntryErrorSkip;
 
+  /// Delete all shooter ratings and rating events belonging to this project.
+  Future<void> resetRatings() async {
+    await ratings.load();
+    var eventCount = 0;
+    ratings.forEach((r) {
+      // TODO: r.resetEvents
+    });
+
+    var count = await ratings.filter().deleteAll();
+    _log.i("Cleared $count ratings and $eventCount events");
+  }
+
   // Ratings
   final ratings = IsarLinks<DbShooterRating>();
 
@@ -152,26 +165,31 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   }
 
   @override
-  Future<List<int>> getMatchDatabaseIds() async {
+  Future<DataSourceResult<List<int>>> getMatchDatabaseIds() async {
     if(!matches.isLoaded) {
       await matches.load();
     }
 
-    return matches.map((m) => m.id).toList();
+    return DataSourceResult.ok(matches.map((m) => m.id).toList());
   }
 
   @override
-  Future<RatingProjectSettings> getSettings() {
-    return Future.value(settings);
+  Future<DataSourceResult<RatingProjectSettings>> getSettings() {
+    return Future.value(DataSourceResult.ok(settings));
   }
 
   @override
-  Future<List<String>> matchSourceIds() async {
+  Future<DataSourceResult<List<String>>> matchSourceIds() async {
     if(!matches.isLoaded) {
       await matches.load();
     }
 
-    return matches.map((m) => m.sourceIds.first).toList();
+    return DataSourceResult.ok(matches.map((m) => m.sourceIds.first).toList());
+  }
+
+  @override
+  Future<DataSourceResult<List<DbRatingGroup>>> getGroups() {
+    return Future.value(DataSourceResult.ok(groups));
   }
 }
 

@@ -27,7 +27,18 @@ class ShootingMatch {
 
   /// The identifier or identifiers corresponding to this match in the
   /// source it came from.
+  ///
+  /// If match IDs are likely to overlap with IDs from other sources, and those IDs
+  /// do not point to the same match (if, e.g., two sources identify matches with
+  /// an incrementing integer ID), source IDs should be prefixed with sourceCode
+  /// to prevent database collisions.
+  ///
+  /// This is not necessary if a match source identifies matches by collision-resistant
+  /// IDs like UUID.
   List<String> sourceIds;
+
+  /// The name of the source this match came from.
+  String sourceCode;
 
   String name;
   String rawDate;
@@ -51,6 +62,7 @@ class ShootingMatch {
   ShootingMatch({
     this.databaseId,
     this.sourceIds = const [],
+    this.sourceCode = "",
     required this.name,
     required this.rawDate,
     required this.date,

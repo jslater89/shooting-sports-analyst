@@ -17,7 +17,13 @@ abstract class MatchSource {
   /// A name suitable for display.
   String get name;
   /// A URL-encodable code for internal identification.
+  ///
+  /// If match IDs are likely to overlap with IDs from other sources, and those IDs
+  /// do not point to the same match (if, e.g., two sources identify matches with
+  /// an incrementing integer ID), match IDs should be prefixed with code (by convention)
+  /// so that they do not overlap in the database.
   String get code;
+
   bool get isImplemented;
   bool get canSearch;
   List<SportType> get supportedSports;
