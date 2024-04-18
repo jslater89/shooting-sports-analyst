@@ -322,12 +322,18 @@ class Rater {
     for(MatchEntry s in shooters) {
       var processed = processMemberNumber(s.memberNumber);
       var corrections = _dataCorrections.getByInvalidNumber(processed);
+      var name = ShooterDeduplicator.processName(s);
       for(var correction in corrections) {
-          var name = ShooterDeduplicator.processName(s);
           if (correction.name == name) {
             processed = correction.correctedNumber;
             break;
           }
+      }
+      if(processed.isEmpty) {
+        var emptyCorrection = _dataCorrections.getEmptyCorrectionByName(name);
+        if(emptyCorrection != null) {
+          processed = emptyCorrection.correctedNumber;
+        }
       }
       if(processed.isNotEmpty && !s.reentry) {
         s.memberNumber = processed;
@@ -659,6 +665,7 @@ class Rater {
   bool _verifyShooter(MatchEntry s) {
     if(_verifyCache.containsKey(s)) return _verifyCache[s]!;
 
+    var finalMemberNumber = s.memberNumber;
     if(!byStage && s.dq) {
       _verifyCache[s] = false;
       return false;
@@ -668,13 +675,19 @@ class Rater {
       return false;
     }
     if(s.memberNumber.isEmpty) {
+      var processedName = ShooterDeduplicator.processName(s);
+      var emptyCorrection = _dataCorrections.getEmptyCorrectionByName(processedName);
+      if(emptyCorrection != null) {
+        finalMemberNumber = processMemberNumber(emptyCorrection.correctedNumber);
+      }
+
       _verifyCache[s] = false;
       return false;
     }
 
     // This is already processed, because _verifyShooter is only called from _getShooters
     // after member numbers have been processed.
-    String memNum = s.memberNumber;
+    String memNum = finalMemberNumber;
 
     if(maybeKnownShooter(memNum) == null) {
       _verifyCache[s] = false;

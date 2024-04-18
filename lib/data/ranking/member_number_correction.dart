@@ -44,19 +44,30 @@ class MemberNumberCorrectionContainer {
 
   void add(MemberNumberCorrection correction) {
     _byName[correction.name] ??= [];
-    _byInvalidNumber[correction.invalidNumber] ??= [];
     _byName[correction.name]!.add(correction);
-    _byInvalidNumber[correction.invalidNumber]!.add(correction);
+
+    if(correction.invalidNumber.isNotEmpty) {
+      _byInvalidNumber[correction.invalidNumber] ??= [];
+      _byInvalidNumber[correction.invalidNumber]!.add(correction);
+    }
   }
 
   void remove(MemberNumberCorrection correction) {
     _byName[correction.name]?.remove(correction);
-    _byInvalidNumber[correction.invalidNumber]?.remove(correction);
+
+    if(correction.invalidNumber.isNotEmpty) {
+      _byInvalidNumber[correction.invalidNumber]?.remove(correction);
+    }
   }
 
   /// Name should be processed.
   List<MemberNumberCorrection> getByName(String name) {
     return _byName[name] ?? [];
+  }
+
+  MemberNumberCorrection? getEmptyCorrectionByName(String name) {
+    var list = _byName[name] ?? [];
+    return list.firstWhereOrNull((e) => e.invalidNumber.isEmpty);
   }
 
   /// Number should be processed.
