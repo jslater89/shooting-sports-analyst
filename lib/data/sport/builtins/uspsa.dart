@@ -18,7 +18,7 @@ final _minorPowerFactor = PowerFactor("Minor",
   shortName: "min",
   targetEvents: [
     const ScoringEvent("A", pointChange: 5),
-    const ScoringEvent("C", pointChange: 3),
+    const ScoringEvent("C", pointChange: 3, alternateNames: ["B"]),
     const ScoringEvent("D", pointChange: 1),
     const ScoringEvent("M", pointChange: -10),
     const ScoringEvent("NS", pointChange: -10),
@@ -71,7 +71,7 @@ final uspsaSport = Sport(
       shortName: "Maj",
       targetEvents: [
         const ScoringEvent("A", pointChange: 5),
-        const ScoringEvent("C", pointChange: 4),
+        const ScoringEvent("C", pointChange: 4, alternateNames: ["B"]),
         const ScoringEvent("D", pointChange: 2),
         const ScoringEvent("M", pointChange: -10),
         const ScoringEvent("NS", pointChange: -10),
@@ -84,7 +84,7 @@ final uspsaSport = Sport(
       shortName: "sub",
       targetEvents: [
         const ScoringEvent("A", pointChange: 0),
-        const ScoringEvent("C", pointChange: 0),
+        const ScoringEvent("C", pointChange: 0, alternateNames: ["B"]),
         const ScoringEvent("D", pointChange: 0),
         const ScoringEvent("M", pointChange: 0),
         const ScoringEvent("NS", pointChange: 0),
