@@ -40,10 +40,9 @@ abstract interface class PubstompProvider {
 /// A [Sport] that can provide default rating groups for a rating history
 /// should provide an implementation of this interface.
 ///
-/// These rating groups will _not_ be persisted to the database, and can
-/// safely break indexing rules. (e.g., a rating group that appears in
-/// two or more lists can be a separate instance in each case, with the
-/// same name/data.)
+/// These rating groups WILL be persisted to the database. Use a constant
+/// string ID for each group in the UUID property, of the form
+/// `'sportname-groupname'`.
 abstract interface class RatingGroupsProvider {
   List<DbRatingGroup> get builtinRatingGroups;
   List<DbRatingGroup> get divisionRatingGroups;

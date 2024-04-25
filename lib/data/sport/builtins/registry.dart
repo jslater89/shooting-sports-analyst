@@ -38,6 +38,17 @@ class SportRegistry {
     }
   }
 
+  Future<void> addDefaultRatingGroups() async {
+    for(var sport in _sportsByName.values) {
+      var p = sport.builtinRatingGroupsProvider;
+      if(p != null) {
+        for(var group in p.defaultRatingGroups) {
+
+        }
+      }
+    }
+  }
+
   Sport? lookup(String name) {
     return _sportsByName[name];
   }

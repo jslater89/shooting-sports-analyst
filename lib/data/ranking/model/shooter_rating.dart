@@ -7,6 +7,7 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 // import 'package:shooting_sports_analyst/data/db/object/match/shooter.dart';
 // import 'package:shooting_sports_analyst/data/db/object/rating/shooter_rating.dart';
@@ -25,7 +26,19 @@ var _log = SSALogger("ShooterRating");
 
 abstract class ShooterRating extends Shooter with DbSportEntity {
   String sportName;
+  
+  /// The DB rating object backing this rating. If its ID property
+  /// is [Isar.autoIncrement], it is assumed that the rating has not
+  /// yet been persisted to the database. The database code will update
+  /// the backing object when saving it.
+  ///
+  /// When creating a new shooter rating, you should create a
+  /// DbShooterRating to store its data.
+  DbShooterRating get wrappedRating;
 
+  /// Whether this rating has been persisted.
+  bool get isPersisted => wrappedRating.id != Isar.autoIncrement;
+  
   /// The number of events over which trend/variance are calculated.
   static const baseTrendWindow = 30;
 
@@ -135,6 +148,7 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
   /// Alternate member numbers this shooter is known by.
   List<String> alternateMemberNumbers = [];
 
+  @ignore
   int get length => ratingEvents.length;
 
   void updateFromEvents(List<RatingEvent> events);
@@ -184,6 +198,7 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
     return percentFinishes / events.length;
   }
 
+  @ignore
   /// The shooters off of whom this shooter's connectedness is based.
   SortedList<ConnectedShooter> connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure);
   double _connectedness = ShooterRating.baseConnectedness;
@@ -334,6 +349,15 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
       this.firstSeen = date ?? DateTime.now(),
       this.lastSeen = date ?? DateTime.now(),
       super(firstName: shooter.firstName, lastName: shooter.lastName) {
+    super.copyVitalsFrom(shooter);
+  }
+
+  ShooterRating.fromRating(ShooterRating shooter, {required Sport sport, DateTime? date}) :
+        this.sportName = sport.name,
+        this.lastClassification = shooter.lastClassification,
+        this.firstSeen = shooter.firstSeen,
+        this.lastSeen = date ?? DateTime.now(),
+        super(firstName: shooter.firstName, lastName: shooter.lastName) {
     super.copyVitalsFrom(shooter);
   }
 

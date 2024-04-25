@@ -9,12 +9,19 @@ import 'dart:convert';
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
+import 'package:shooting_sports_analyst/util.dart';
+import 'package:uuid/v1.dart';
+import 'package:uuid/v4.dart';
 
 part 'ratings.g.dart';
 
@@ -105,26 +112,14 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
     encodedSettings = jsonEncode(map);
   }
 
-  final customGroups = IsarLinks<DbRatingGroup>();
-  List<String> builtinGroupNames;
-
-  @ignore
-  List<DbRatingGroup> get builtinRatingGroups {
-    var provider = sport.builtinRatingGroupsProvider;
-    if(provider == null) {
-      _log.w("Attempted to get builtin rating groups for $sportName which doesn't provide them");
-      return [];
-    }
-
-    return provider.builtinRatingGroups.where((e) => builtinGroupNames.contains(e.name)).toList();
-  }
+  final dbGroups = IsarLinks<DbRatingGroup>();
 
   @ignore
   List<DbRatingGroup> get groups {
-    var list = builtinRatingGroups;
-    customGroups.loadSync();
-    list.addAll(customGroups);
-    return list;
+    if(!dbGroups.isLoaded) {
+      dbGroups.loadSync();
+    }
+    return []..addAll(dbGroups);
   }
 
   /// For the next full recalculation only, skip checking data entry
@@ -148,7 +143,7 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   final ratings = IsarLinks<DbShooterRating>();
 
   Future<List<DbShooterRating>> ratingsForGroup(DbRatingGroup group) async {
-    return ratings.filter().group((q) => q.idEqualTo(group.id)).findAll();
+    return ratings.filter().group((q) => q.uuidEqualTo(group.uuid)).findAll();
   }
 
   DbRatingProject({
@@ -156,7 +151,6 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
     required this.sportName,
     this.encodedSettings = "{}",
     this.transientDataEntryErrorSkip = false,
-    this.builtinGroupNames = const [],
     RatingProjectSettings? settings,
   }) {
     if(settings != null) {
@@ -195,7 +189,10 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
 
 @collection
 class DbRatingGroup with DbSportEntity {
-  Id id = Isar.autoIncrement;
+  Id get id => uuid.stableHash;
+
+  @Index(unique: true)
+  String uuid;
 
   @Index(composite: [CompositeIndex("name")], unique: true)
   String sportName;
@@ -211,6 +208,7 @@ class DbRatingGroup with DbSportEntity {
   String get uiLabel => displayName ?? name;
 
   List<String> divisionNames;
+
   @ignore
   List<Division> get divisions =>
       divisionNames.map((name) => sport.divisions.lookupByName(name))
@@ -218,22 +216,81 @@ class DbRatingGroup with DbSportEntity {
       .cast<Division>()
       .toList();
 
+  @ignore
+  FilterSet get filters {
+    var f = FilterSet(
+      sport,
+      empty: true,
+    );
+
+    f.mode = FilterMode.or;
+    f.reentries = false;
+    f.scoreDQs = false;
+
+    f.divisions = FilterSet.divisionListToMap(divisions);
+
+    return f;
+  }
+
+  /// Default constructor for Isar.
   DbRatingGroup({
+    required this.uuid,
     required this.sportName,
     required this.name,
     this.displayName,
     this.divisionNames = const [],
   });
+
+  /// Constructor that will create a new UUID if a string ID is not provided.
+  DbRatingGroup.create({
+    String? uuid,
+    required this.sportName,
+    required this.name,
+    this.displayName,
+    this.divisionNames = const [],
+  }) : this.uuid = uuid ?? UuidV4().generate() ;
 }
 
+/// DbSportRating is the database embodiment of shooter ratings. It should almost always
+/// be wrapped by one of the subclasses of ShooterRating, which will wrap the various generic
+/// data variables on this class.
 @collection
-class DbShooterRating {
+class DbShooterRating with DbSportEntity {
+  String sportName;
+
   Id id = Isar.autoIncrement;
+
+  // TODO: space-separated name getters for 'Echavez Racaza' index
+
+  String firstName;
+  String lastName;
+
+  // TODO: borrow the dup logic from [Shooter], maybe?
+
+  @Index()
+  String memberNumber;
+  String originalMemberNumber;
+  @Index(type: IndexType.hashElements)
+  List<String> knownMemberNumbers;
+
+  String? ageCategory;
+  bool female;
 
   @Index(composite: [CompositeIndex("group")], unique: true)
   @Backlink(to: "ratings")
   final project = IsarLink<DbRatingProject>();
   final group = IsarLink<DbRatingGroup>();
+  
+  DbShooterRating({
+    required this.sportName,
+    required this.firstName,
+    required this.lastName,
+    required this.memberNumber,
+    required this.originalMemberNumber,
+    this.knownMemberNumbers = const [],
+    required this.female,
+  });
+
 }
 
 @collection

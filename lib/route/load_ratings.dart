@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/project_loader.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 
 /// LoadRatingsPage accepts a configured DbRatingProject from ConfigureRatingsPage,

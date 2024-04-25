@@ -7,6 +7,7 @@
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 
 extension RatingProjectDatabase on AnalystDatabase {
   Future<DbRatingProject?> getRatingProjectById(int id) async {
@@ -16,7 +17,7 @@ extension RatingProjectDatabase on AnalystDatabase {
   Future<DbRatingProject> saveRatingProject(DbRatingProject project) async {
     await isar.writeTxn(() async {
       await isar.dbRatingProjects.put(project);
-      project.customGroups.save();
+      project.dbGroups.save();
       project.ratings.save();
       project.matches.save();
       project.filteredMatches.save();
@@ -44,5 +45,25 @@ extension RatingProjectDatabase on AnalystDatabase {
   Future<bool> deleteShooterRating(DbShooterRating rating) async {
     // TODO: clear all linked rating events
     return isar.dbShooterRatings.delete(rating.id);
+  }
+
+  Future<DbShooterRating?> maybeKnownShooter({
+    required DbRatingProject project,
+    required DbRatingGroup group,
+    required String processedMemberNumber
+  }) {
+    return isar.dbShooterRatings.where().knownMemberNumbersEqualTo([processedMemberNumber])
+        .filter()
+        .project((q) => q.idEqualTo(project.id))
+        .group((q) => q.uuidEqualTo(group.uuid))
+        .findFirst();
+  }
+
+  Future<DbShooterRating?> addShooterRating({
+    required ShooterRating rating,
+    required DbRatingProject project,
+    required DbRatingGroup group,
+  }) {
+    var dbRating = rating.backingDbRating();
   }
 }

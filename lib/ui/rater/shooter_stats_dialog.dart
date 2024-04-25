@@ -453,7 +453,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     var division = newMatch.sport.divisions.lookupByName(e.score.shooter.division?.displayName ?? "Open")!;
     var filters = FilterSet(newMatch.sport, empty: true)
       ..mode = FilterMode.or;
-    filters.divisions = filters.divisionListToMap([division]);
+    filters.divisions = FilterSet.divisionListToMap([division]);
     Navigator.of(context).push(MaterialPageRoute(builder: (context) {
       return ResultPage(
         canonicalMatch: newMatch,

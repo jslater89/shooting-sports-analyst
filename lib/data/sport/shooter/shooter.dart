@@ -16,16 +16,17 @@ class Shooter {
 
   String _memberNumber = "";
 
-  /// The first member number this shooter appeared with.
+  /// The first member number this shooter appeared with, normalized to capitalized
+  /// letter and number format.
   String originalMemberNumber = "";
 
-  /// All member numbers this shooter has been known by.
+  /// All member numbers this shooter has been known by, normalized as [originalMemberNumber].
   Set<String> knownMemberNumbers = {};
 
-  /// The shooter's most recent processed member number.
+  /// The shooter's most recent member number, normalized as [originalMemberNumber].
   String get memberNumber => _memberNumber;
   set memberNumber(String m) {
-    var processedNumber = _processNumber(m);
+    var processedNumber = processNumber(m);
     if(originalMemberNumber.isEmpty) {
       originalMemberNumber = processedNumber;
     }
@@ -33,7 +34,7 @@ class Shooter {
     _memberNumber = processedNumber;
   }
 
-  String _processNumber(String number) {
+  static String processNumber(String number) {
     return number.toUpperCase().replaceAll(RegExp(r"[^A-Z0-9]"), "");
   }
 

@@ -46,7 +46,7 @@ class FilterSet {
 
   Iterable<Division> get activeDivisions => divisions.keys.where((div) => divisions[div] ?? false);
 
-  Map<Division, bool> divisionListToMap(List<Division> divisions) {
+  static Map<Division, bool> divisionListToMap(List<Division> divisions) {
     Map<Division, bool> map = {};
     for(var d in sport.divisions.values) {
       map[d] = divisions.contains(d);
