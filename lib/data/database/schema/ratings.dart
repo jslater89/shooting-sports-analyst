@@ -255,10 +255,13 @@ class DbRatingGroup with DbSportEntity {
 /// be wrapped by one of the subclasses of ShooterRating, which will wrap the various generic
 /// data variables on this class.
 @collection
-class DbShooterRating with DbSportEntity {
+class DbShooterRating extends Shooter with DbSportEntity {
   String sportName;
 
   Id id = Isar.autoIncrement;
+
+  @ignore
+  bool get isPersisted => id != Isar.autoIncrement;
 
   // TODO: space-separated name getters for 'Echavez Racaza' index
 
@@ -271,9 +274,9 @@ class DbShooterRating with DbSportEntity {
   String memberNumber;
   String originalMemberNumber;
   @Index(type: IndexType.hashElements)
-  List<String> knownMemberNumbers;
+  List<String> dbKnownMemberNumbers;
 
-  String? ageCategory;
+  String? ageCategoryName;
   bool female;
 
   @Index(composite: [CompositeIndex("group")], unique: true)
@@ -287,9 +290,9 @@ class DbShooterRating with DbSportEntity {
     required this.lastName,
     required this.memberNumber,
     required this.originalMemberNumber,
-    this.knownMemberNumbers = const [],
+    this.dbKnownMemberNumbers = const [],
     required this.female,
-  });
+  }) : super(firstName: firstName, lastName: lastName);
 
 }
 

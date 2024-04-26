@@ -5,6 +5,7 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 import 'model/shooter_rating.dart';
@@ -22,13 +23,13 @@ class ShooterMappingError extends RatingError {
   /// The ratings that caused this error. Will always contain two entries.
   ///
   /// The first entry is the desired source, the second is the desired target.
-  List<ShooterRating> culprits;
+  List<DbShooterRating> culprits;
 
   /// A map of the [culprits] to a list of ratings of interest in solving this issue.
   ///
   /// Accomplices will contain, primarily, other shooters with identical names to the
   /// shooter in question, which may help reveal data entry errors.
-  Map<ShooterRating, List<ShooterRating>> accomplices;
+  Map<DbShooterRating, List<DbShooterRating>> accomplices;
 
   bool dataEntry;
 }

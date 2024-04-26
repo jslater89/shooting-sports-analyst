@@ -12,7 +12,9 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
+import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -48,9 +50,12 @@ class RatingProjectLoader {
   final DbRatingProject project;
   final RatingProjectLoaderCallback callback;
   final db = AnalystDatabase();
-  RatingSystem get ratingSystem => project.settings.algorithm;
+  RatingProjectSettings get settings => project.settings;
+  RatingSystem get ratingSystem => settings.algorithm;
+  Sport get sport => project.sport;
 
-  MemberNumberCorrectionContainer get _dataCorrections => project.settings.memberNumberCorrections;
+  MemberNumberCorrectionContainer get _dataCorrections => settings.memberNumberCorrections;
+  List<String> get memberNumberWhitelist => settings.memberNumberWhitelist;
 
   RatingProjectLoader(this.project, this.callback);
 
@@ -122,7 +127,7 @@ class RatingProjectLoader {
 
       // 3.1.3. Update database with rating changes
 
-      // 3.2. Remove unseen shooters
+      // 3.2. Remove shooters with no scores
 
       // 3.2.1. Update database with unseen shooter removal
     }
@@ -135,7 +140,7 @@ class RatingProjectLoader {
   ///
   /// Use [encounter] if you want shooters to be added regardless of whether they appear
   /// in scores. (i.e., shooters who DQ on the first stage, or are no-shows but still included in the data)
-  Future<int> _addShootersFromMatch(DbRatingGroup group, ShootingMatch match, {bool encounter = false}) async {
+  Future<int> _addShootersFromMatch(DbRatingGroup group, ShootingMatch match) async {
     int added = 0;
     int updated = 0;
     var shooters = _getShooters(group, match);
@@ -164,19 +169,19 @@ class RatingProjectLoader {
         );
         if(rating == null) {
           var newRating = ratingSystem.newShooterRating(s, sport: project.sport, date: match.date);
-          await db.addShooterRating(
+          await db.newShooterRatingFromWrapped(
             rating: newRating,
             group: group,
             project: project,
           );
           added += 1;
-          if(encounter) _encounteredMemberNumber(s.memberNumber);
         }
         else {
           // Update names for existing shooters on add, to eliminate the Mel Rodero -> Mel Rodero II problem in the L2+ set
           rating.firstName = s.firstName;
           rating.lastName = s.lastName;
           updated += 1;
+          db.upsertDbShooterRating(rating);
         }
       }
     }
@@ -200,18 +205,18 @@ class RatingProjectLoader {
     }
 
     if(verify) {
-      shooters.retainWhere((element) => _verifyShooter(element));
+      shooters.retainWhereAsync((element) async => await _verifyShooter(group, element));
     }
 
     return shooters;
   }
 
   Map<Shooter, bool> _verifyCache = {};
-  bool _verifyShooter(MatchEntry s) {
+  Future<bool> _verifyShooter(DbRatingGroup g, MatchEntry s) async {
     if(_verifyCache.containsKey(s)) return _verifyCache[s]!;
 
     var finalMemberNumber = s.memberNumber;
-    if(!byStage && s.dq) {
+    if(!project.settings.byStage && s.dq) {
       _verifyCache[s] = false;
       return false;
     }
@@ -223,7 +228,7 @@ class RatingProjectLoader {
       var processedName = ShooterDeduplicator.processName(s);
       var emptyCorrection = _dataCorrections.getEmptyCorrectionByName(processedName);
       if(emptyCorrection != null) {
-        finalMemberNumber = processMemberNumber(emptyCorrection.correctedNumber);
+        finalMemberNumber = Rater.processMemberNumber(emptyCorrection.correctedNumber);
       }
 
       _verifyCache[s] = false;
@@ -234,7 +239,8 @@ class RatingProjectLoader {
     // after member numbers have been processed.
     String memNum = finalMemberNumber;
 
-    if(maybeKnownShooter(memNum) == null) {
+    var rating = await db.maybeKnownShooter(project: project, group: g, processedMemberNumber: finalMemberNumber);
+    if(rating == null) {
       _verifyCache[s] = false;
       return false;
     }
@@ -255,6 +261,21 @@ class RatingProjectLoader {
 
     _verifyCache[s] = true;
     return true;
+  }
+
+  RatingResult _deduplicateShooters() {
+    if(sport.shooterDeduplicator != null) {
+      return sport.shooterDeduplicator!.deduplicateShooters(
+        knownShooters: knownShooters,
+        shooterAliases: settings.shooterAliases,
+        currentMappings: settings.memberNumberMappings,
+        userMappings: settings.userMemberNumberMappings,
+        mappingBlacklist: settings.memberNumberMappingBlacklist,
+      );
+    }
+    else {
+      return RatingResult.ok();
+    }
   }
 }
 
@@ -288,5 +309,17 @@ enum LoadingState {
       case LoadingState.done:
         return "finished";
     }
+  }
+}
+
+extension AsyncRetainWhere<T> on List<T> {
+  Future<void> retainWhereAsync(Future<bool> Function(T) test) async {
+    List<T> toRemove = [];
+    for(var i in this) {
+      if(await test(i)) {
+        toRemove.add(i);
+      }
+    }
+    this.removeWhere((element) => toRemove.contains(element));
   }
 }

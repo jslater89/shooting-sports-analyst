@@ -36,8 +36,8 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
   /// DbShooterRating to store its data.
   DbShooterRating get wrappedRating;
 
-  /// Whether this rating has been persisted.
-  bool get isPersisted => wrappedRating.id != Isar.autoIncrement;
+  /// Whether the data contained by [wrappedRating] has been persisted.
+  bool get isPersisted => wrappedRating.isPersisted;
   
   /// The number of events over which trend/variance are calculated.
   static const baseTrendWindow = 30;

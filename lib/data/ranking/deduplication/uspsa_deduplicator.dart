@@ -1,4 +1,5 @@
 import 'package:collection/collection.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
@@ -12,7 +13,7 @@ class USPSADeduplicator extends ShooterDeduplicator {
 
   @override
   RatingResult deduplicateShooters({
-    required Map<String, ShooterRating> knownShooters,
+    required Map<String, DbShooterRating> knownShooters,
     required Map<String, String> shooterAliases,
     required Map<String, String> mappingBlacklist,
     required Map<String, String> userMappings,
@@ -22,7 +23,7 @@ class USPSADeduplicator extends ShooterDeduplicator {
   }) {
     Map<String, List<String>> namesToNumbers = {};
     Map<String, String> detectedUserMappings = {};
-    Map<String, List<ShooterRating>> ratingsByName = {};
+    Map<String, List<DbShooterRating>> ratingsByName = {};
 
     for(var num in knownShooters.keys) {
       var userMapping = userMappings[num];
@@ -261,7 +262,7 @@ class USPSADeduplicator extends ShooterDeduplicator {
         }
 
         // If, after all other checks, we still have two shooters with history...
-        List<ShooterRating> withHistory = [];
+        List<DbShooterRating> withHistory = [];
         for(var n in numbers.values) {
           var rating = knownShooters[n];
           if(rating != null && rating.length > 0) withHistory.add(rating);
@@ -269,7 +270,7 @@ class USPSADeduplicator extends ShooterDeduplicator {
 
         if(withHistory.length > 1) {
           if(verbose) _log.w("Ignoring $name with numbers $list: ${withHistory.length} ratings have history: $withHistory");
-          Map<ShooterRating, List<ShooterRating>> accomplices = {};
+          Map<DbShooterRating, List<DbShooterRating>> accomplices = {};
 
           for(var culprit in withHistory) {
             accomplices[culprit] = []..addAll(ratingsByName[ShooterDeduplicator.processName(culprit)]!);
@@ -316,8 +317,8 @@ class USPSADeduplicator extends ShooterDeduplicator {
   void _mapRatings({
     required Map<String, ShooterRating> knownShooters,
     required Map<String, String> currentMappings,
-    required ShooterRating target,
-    required ShooterRating source,
+    required DbShooterRating target,
+    required DbShooterRating source,
   }) {
     target.copyRatingFrom(source);
     knownShooters.remove(source.memberNumber);

@@ -59,11 +59,31 @@ extension RatingProjectDatabase on AnalystDatabase {
         .findFirst();
   }
 
-  Future<DbShooterRating?> addShooterRating({
-    required ShooterRating rating,
+  Future<DbShooterRating> newShooterRatingFromWrapped({
     required DbRatingProject project,
     required DbRatingGroup group,
+    required ShooterRating rating,
   }) {
-    var dbRating = rating.backingDbRating();
+    var dbRating = rating.wrappedRating;
+    if(!dbRating.isPersisted) {
+      dbRating.project.value = project;
+      dbRating.group.value = group;
+    }
+    
+    return upsertDbShooterRating(dbRating, linksChanged: dbRating.isPersisted);
+  }
+
+  /// Upsert a DbShooterRating.
+  /// 
+  /// If [linksChanged] is false, the links will not be saved in the write transaction.
+  Future<DbShooterRating> upsertDbShooterRating(DbShooterRating rating, {bool linksChanged = true}) {
+    return isar.writeTxn(() async {
+      await isar.dbShooterRatings.put(rating);
+      if(linksChanged) {
+        await rating.project.save();
+        await rating.group.save();
+      }
+      return rating;
+    });
   }
 }
