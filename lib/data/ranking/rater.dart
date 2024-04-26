@@ -1419,7 +1419,7 @@ class Rater {
       case Classification.D:
         return 1;
       case Classification.U:
-        return _strengthForClass(Classification.C);
+        return _strengthForClass(Classification.A);
       default:
         return 2.5;
     }
