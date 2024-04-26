@@ -52,7 +52,7 @@ extension RatingProjectDatabase on AnalystDatabase {
     required DbRatingGroup group,
     required String processedMemberNumber
   }) {
-    return isar.dbShooterRatings.where().knownMemberNumbersEqualTo([processedMemberNumber])
+    return isar.dbShooterRatings.where().dbKnownMemberNumbersElementEqualTo(processedMemberNumber)
         .filter()
         .project((q) => q.idEqualTo(project.id))
         .group((q) => q.uuidEqualTo(group.uuid))

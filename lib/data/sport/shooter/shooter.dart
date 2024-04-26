@@ -16,13 +16,16 @@ class Shooter {
 
   String _memberNumber = "";
 
+  @Index()
   /// The first member number this shooter appeared with, normalized to capitalized
   /// letter and number format.
   String originalMemberNumber = "";
 
+  @ignore
   /// All member numbers this shooter has been known by, normalized as [originalMemberNumber].
   Set<String> knownMemberNumbers = {};
 
+  @Index()
   /// The shooter's most recent member number, normalized as [originalMemberNumber].
   String get memberNumber => _memberNumber;
   set memberNumber(String m) {
@@ -38,17 +41,18 @@ class Shooter {
     return number.toUpperCase().replaceAll(RegExp(r"[^A-Z0-9]"), "");
   }
 
+  @ignore
   AgeCategory? ageCategory;
   bool female = false;
 
   Shooter({
     required this.firstName,
     required this.lastName,
-    String? memberNumber,
+    String memberNumber = "",
     this.female = false,
     this.ageCategory,
   }) {
-    if(memberNumber != null) {
+    if(memberNumber.isNotEmpty) {
       this.memberNumber = memberNumber;
     }
   }

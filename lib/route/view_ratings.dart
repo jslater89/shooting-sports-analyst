@@ -341,7 +341,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
             controller: _tabController,
             tabs: activeTabs.map((t) {
               return Tab(
-                text: t.label,
+                text: t.displayName,
               );
             }).toList(),
           ),

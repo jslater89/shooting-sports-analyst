@@ -263,36 +263,41 @@ class DbShooterRating extends Shooter with DbSportEntity {
   @ignore
   bool get isPersisted => id != Isar.autoIncrement;
 
-  // TODO: space-separated name getters for 'Echavez Racaza' index
-
-  String firstName;
-  String lastName;
-
-  // TODO: borrow the dup logic from [Shooter], maybe?
+  @Index(type: IndexType.hashElements)
+  List<String> get dbKnownMemberNumbers => List<String>.from(knownMemberNumbers);
 
   @Index()
-  String memberNumber;
-  String originalMemberNumber;
-  @Index(type: IndexType.hashElements)
-  List<String> dbKnownMemberNumbers;
+  List<String> get firstNameParts => firstName.split(RegExp(r'\w+'));
+  @Index()
+  List<String> get lastNameParts => lastName.split(RegExp(r'\w+'));
 
   String? ageCategoryName;
-  bool female;
 
   @Index(composite: [CompositeIndex("group")], unique: true)
   @Backlink(to: "ratings")
   final project = IsarLink<DbRatingProject>();
   final group = IsarLink<DbRatingGroup>();
+  final events = IsarLinks<DbRatingEvent>();
+
+  int get length => events.countSync();
+
+  double rating;
+  double error;
+
+  /// Use to store algorithm-specific double data.
+  List<double> doubleData = [];
+  /// Use to store algorithm-specific integer data.
+  List<int> intData = [];
   
   DbShooterRating({
     required this.sportName,
-    required this.firstName,
-    required this.lastName,
-    required this.memberNumber,
-    required this.originalMemberNumber,
-    this.dbKnownMemberNumbers = const [],
-    required this.female,
-  }) : super(firstName: firstName, lastName: lastName);
+    required super.firstName,
+    required super.lastName,
+    required super.memberNumber,
+    required super.female,
+    required this.rating,
+    required this.error,
+  });
 
 }
 
