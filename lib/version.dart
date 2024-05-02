@@ -5,5 +5,5 @@
  */
 
 class VersionInfo {
-  static const String version = "7.0.0-alpha4";
+  static const String version = "7.0.0-alpha5";
 }
