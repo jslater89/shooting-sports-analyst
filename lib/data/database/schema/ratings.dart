@@ -271,6 +271,14 @@ class DbShooterRating extends Shooter with DbSportEntity {
   @Index()
   List<String> get lastNameParts => lastName.split(RegExp(r'\w+'));
 
+  @Index()
+  String get deduplicatorName {
+    var processedFirstName = firstName.toLowerCase().replaceAll(RegExp(r"\s+"), "");
+    var processedLastName = lastName.toLowerCase().replaceAll(RegExp(r"\s+"), "");
+
+    return "$processedFirstName$processedLastName";
+  }
+
   String? ageCategoryName;
 
   @Index(composite: [CompositeIndex("group")], unique: true)
@@ -283,6 +291,7 @@ class DbShooterRating extends Shooter with DbSportEntity {
 
   double rating;
   double error;
+  double connectedness;
 
   /// Use to store algorithm-specific double data.
   List<double> doubleData = [];
@@ -297,6 +306,7 @@ class DbShooterRating extends Shooter with DbSportEntity {
     required super.female,
     required this.rating,
     required this.error,
+    required this.connectedness,
   });
 
 }

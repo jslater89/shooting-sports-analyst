@@ -47,6 +47,8 @@ extension RatingProjectDatabase on AnalystDatabase {
     return isar.dbShooterRatings.delete(rating.id);
   }
 
+  // TODO: cache loaded shooters?
+  // Let's do it the dumb way first, and go from there.
   Future<DbShooterRating?> maybeKnownShooter({
     required DbRatingProject project,
     required DbRatingGroup group,
@@ -85,5 +87,18 @@ extension RatingProjectDatabase on AnalystDatabase {
       }
       return rating;
     });
+  }
+
+  Future<int> countShooterRatings(DbRatingProject project, DbRatingGroup group) async {
+    return await project.ratings.filter()
+        .group((q) => q.idEqualTo(group.id))
+        .count();
+  }
+
+  Future<List<double>> getConnectedness(DbRatingProject project, DbRatingGroup group) {
+    return project.ratings.filter()
+        .group((q) => q.idEqualTo(group.id))
+        .connectednessProperty()
+        .findAll();
   }
 }

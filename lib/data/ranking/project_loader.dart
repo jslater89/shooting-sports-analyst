@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
@@ -16,8 +17,11 @@ import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
+
+var _log = SSALogger("ProjectLoader");
 
 sealed class RatingProjectLoadError implements ResultErr {
   String get message;
@@ -116,22 +120,95 @@ class RatingProjectLoader {
       }
 
       // 2. Deduplicate shooters.
+      // TODO
+      // The only way around having to load every shooter for deduplication is to
+      // store some of what we currently calculate in deduplicateShooters ahead of
+      // time, when we do _addShootersFromMatch. I think we mostly need a list of numbers
+      // per recorded name, although maybe the other way around would be good to have too?
 
-      // 3. For each group...
+      // At this point we have an accurate count of shooters so far, which we'll need for various maths.
+      var shooterCount = await AnalystDatabase().countShooterRatings(project, group);
 
-      // 3.1. For each match...
+      for (var match in matches) {
+        // 3.1.1. Check recognized divisions
+        var onlyDivisions = settings.recognizedDivisions[match.sourceIds.first];
+        if(onlyDivisions != null) {
+          var divisionsOfInterest = group.filters.divisions.entries.where((e) => e.value).map((e) => e.key).toList();
 
-      // 3.1.1. Check recognized divisions
+          // Process this iff onlyDivisions contains at least one division of interest
+          // e.g. this rater/dOI is prod, oD is open/limited; oD contains 0 of dOI, so
+          // skip.
+          //
+          // e.g. this rater/dOI is lim/CO, oD is open/limited; oD contains 1 of dOI,
+          // so don't skip.
+          bool skip = true;
+          for(var d in divisionsOfInterest) {
+            if(onlyDivisions.contains(d)) {
+              skip = false;
+              break;
+            }
+          }
+          if(skip) {
+            continue;
+          }
+        }
 
-      // 3.1.2. Rank match through code in Rater
+        // 3.1.2. Rank match through code in Rater
+        // TODO: copy _rankMatch.
+        // Calculate global connectedness with the connectedness property query.
+        // Calculate match connectedness by maybeKnownShooter lookups of everyone.
+        // (Keep those around and pass them forward, maybe?)
 
-      // 3.1.3. Update database with rating changes
+        // 3.1.3. Update database with rating changes
+      }
 
-      // 3.2. Remove shooters with no scores
+      // 3.2. DB-delete any shooters we added who recorded no scores in any matches in
+      // this group.
 
-      // 3.2.1. Update database with unseen shooter removal
+      var count = await db.countShooterRatings(project, group);
+      _log.i("Initial ratings complete for $count shooters in ${matches.length} in ${group.filters.divisions.keys}");
     }
     // 3.3. Calculate match stats
+    List<int> matchLengths = [];
+    List<int> matchRoundCounts = [];
+    List<int> stageRoundCounts = [];
+    List<double> dqsPer100 = [];
+
+    for(var m in matches) {
+      var totalRounds = 0;
+      var stages = 0;
+      for(var s in m.stages) {
+        if(s.scoring is IgnoredScoring) continue;
+
+        stages += 1;
+        totalRounds += s.minRounds;
+        stageRoundCounts.add(s.minRounds);
+
+        if(s.minRounds <= 4) _log.d("${m.name} ${s.name} ${s.minRounds}rds");
+      }
+      matchLengths.add(stages);
+      matchRoundCounts.add(totalRounds);
+
+      int dqs = 0;
+      for(var s in m.shooters) {
+        if(s.dq) dqs += 1;
+      }
+      dqsPer100.add(dqs * (100 / m.shooters.length));
+    }
+
+    matchLengths.sort();
+    matchRoundCounts.sort();
+    stageRoundCounts.sort();
+    dqsPer100.sort();
+
+    var matchLengthMode = mode(matchLengths);
+    var stageRoundsMode = mode(stageRoundCounts);
+    var matchRoundsMode = mode(matchRoundCounts);
+
+    _log.i("Match length in stages (min/max/average/median/mode): ${matchLengths.min}/${matchLengths.max}/${matchLengths.average.toStringAsFixed(1)}/${matchLengths[matchLengths.length ~/ 2]}/$matchLengthMode");
+    _log.i("Match length in rounds (average/median/mode): ${matchRoundCounts.min}/${matchRoundCounts.max}/${matchRoundCounts.average.toStringAsFixed(1)}/${matchRoundCounts[matchRoundCounts.length ~/ 2]}/$matchRoundsMode");
+    _log.i("Stage length in rounds (average/median/mode): ${stageRoundCounts.min}/${stageRoundCounts.max}/${stageRoundCounts.average.toStringAsFixed(1)}/${stageRoundCounts[stageRoundCounts.length ~/ 2]}/$stageRoundsMode");
+    _log.i("DQs per 100 shooters (average/median): ${dqsPer100.min.toStringAsFixed(3)}/${dqsPer100.max.toStringAsFixed(3)}/${dqsPer100.average.toStringAsFixed(3)}/${dqsPer100[dqsPer100.length ~/ 2].toStringAsFixed(3)}");
 
     return Result.ok(null);
   }

@@ -428,7 +428,6 @@ class Rater {
     var scores = match.getScores(shooters: shooters, scoreDQ: byStage);
     if(Timings.enabled) timings.getShootersAndScoresMillis += (DateTime.now().difference(start).inMicroseconds);
 
-
     if(Timings.enabled) start = DateTime.now();
     // Based on strength of competition, vary rating gain between 25% and 150%.
     var matchStrength = 0.0;
