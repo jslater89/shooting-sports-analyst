@@ -18,7 +18,7 @@ import 'package:shooting_sports_analyst/util.dart';
 
 var _log = SSALogger("MatchDb");
 
-class MatchDatabase {
+class AnalystDatabase {
   static const eventNameIndex = "eventNameParts";
   static const sourceIdsIndex = "sourceIds";
   static const dateIndex = "date";
@@ -28,10 +28,10 @@ class MatchDatabase {
 
   Future<void> get ready => readyStatic;
 
-  static MatchDatabase? _instance;
-  factory MatchDatabase() {
+  static AnalystDatabase? _instance;
+  factory AnalystDatabase() {
     if(_instance == null) {
-      _instance = MatchDatabase._();
+      _instance = AnalystDatabase._();
       _instance!._init();
     }
     return _instance!;
@@ -46,7 +46,7 @@ class MatchDatabase {
     _readyCompleter.complete();
   }
 
-  MatchDatabase._();
+  AnalystDatabase._();
 
   /// The standard query: index on name if present or date if not.
   Future<List<DbShootingMatch>> query({String? name, DateTime? after, DateTime? before, int page = 0, MatchSortField sort = const DateSort()}) {

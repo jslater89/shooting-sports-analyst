@@ -156,7 +156,7 @@ class MatchDatabaseSearchModel extends ChangeNotifier {
 }
 
 class MatchDatabaseListModel extends ChangeNotifier {
-  MatchDatabaseListModel() : matchDb = MatchDatabase();
+  MatchDatabaseListModel() : matchDb = AnalystDatabase();
 
   List<DbShootingMatch> searchedMatches = [];
 
@@ -171,7 +171,7 @@ class MatchDatabaseListModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  MatchDatabase matchDb;
+  AnalystDatabase matchDb;
 
   Future<void> search(MatchDatabaseSearchModel? search) async {
     if(loading) return;

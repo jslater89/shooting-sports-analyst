@@ -27,17 +27,31 @@ class DbShootingMatch {
   Id id = Isar.autoIncrement;
   String eventName;
 
-  @Index(name: MatchDatabase.eventNameIndex, type: IndexType.value, caseSensitive: false)
+  @Index(name: AnalystDatabase.eventNameIndex, type: IndexType.value, caseSensitive: false)
   List<String> get eventNameParts => Isar.splitWords(eventName);
 
   String rawDate;
 
-  @Index(name: MatchDatabase.dateIndex)
+  @Index(name: AnalystDatabase.dateIndex)
   DateTime date;
   String? matchLevelName;
 
-  @Index(name: MatchDatabase.sourceIdsIndex, unique: true, replace: true, type: IndexType.value)
+  /// A list of IDs this match is known by at its source.
+  ///
+  /// The [MatchDatabase] utility class will not allow matches without a source ID to be saved to
+  /// the underlying database.
+  ///
+  /// See the note on [ShootingMatch.sourceIds] regarding collisions between matches from multiple
+  /// The [MatchDatabase] utility class will not allow matches without a source ID to be saved to
+  /// the underlying database.
+  ///
+  /// See the note on [ShootingMatch.sourceIds] regarding collisions between matches from multiple
+  /// sources.
+  @Index(name: AnalystDatabase.sourceIdsIndex, unique: true, replace: true, type: IndexType.value)
   List<String> sourceIds;
+
+  /// The code of the match source for which sourceIds is valid.
+  String sourceCode;
 
   @enumerated
   EventLevel matchEventLevel;
@@ -55,6 +69,7 @@ class DbShootingMatch {
     required this.matchEventLevel,
     required this.sportName,
     required this.sourceIds,
+    required this.sourceCode,
     required this.stages,
     required this.shooters,
   });
@@ -67,6 +82,7 @@ class DbShootingMatch {
     matchLevelName = match.level?.name,
     matchEventLevel = match.level?.eventLevel ?? EventLevel.local,
     sourceIds = []..addAll(match.sourceIds),
+    sourceCode = match.sourceCode,
     sportName = match.sport.name,
     shooters = []..addAll(match.shooters.map((s) => DbMatchEntry.from(s))),
     stages = []..addAll(match.stages.map((s) => DbMatchStage.from(s)));
