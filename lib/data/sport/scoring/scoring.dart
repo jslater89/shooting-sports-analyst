@@ -1051,8 +1051,8 @@ extension Sorting on List<RelativeMatchScore> {
 
         if(aAlpha == null || bAlpha == null) return 0;
 
-        var aAlphaCount = a.total.targetEvents[aAlpha]!;
-        var bAlphaCount = b.total.targetEvents[bAlpha]!;
+        var aAlphaCount = a.total.targetEvents[aAlpha] ?? 0;
+        var bAlphaCount = b.total.targetEvents[bAlpha] ?? 0;
         return bAlphaCount.compareTo(aAlphaCount);
       });
     }
