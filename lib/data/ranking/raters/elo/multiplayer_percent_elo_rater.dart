@@ -627,7 +627,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   }
 
   @override
-  ShooterRating newShooterRating(MatchEntry shooter, {required Sport sport, DateTime? date}) {
+  ShooterRating newShooterRating(MatchEntry shooter, {required Sport sport, required DateTime date}) {
     return EloShooterRating(shooter, sport.initialEloRatings[shooter.classification] ?? 800.0, sport: sport, date: date);
   }
 

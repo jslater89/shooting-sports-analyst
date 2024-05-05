@@ -669,7 +669,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
             var asList = sortedRatings.sorted(comparator);
 
             var csv = rater.toCSV(ratings: asList);
-            archive.addFile(ArchiveFile.string("${tab.label.safeFilename()}.csv", csv));
+            archive.addFile(ArchiveFile.string("${tab.name.safeFilename()}.csv", csv));
           }
           var zip = ZipEncoder().encode(archive); 
 

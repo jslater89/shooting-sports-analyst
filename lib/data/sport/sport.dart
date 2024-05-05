@@ -281,7 +281,12 @@ extension LookupNameInList<T extends NameLookupEntity> on Iterable<T> {
 }
 
 extension LookupNameInMap<T extends NameLookupEntity> on Map<String, T> {
-  T? lookupByName(String name, {bool fallback = true}) {
+  T? lookupByName(String? name, {bool fallback = true}) {
+    if(name == null) {
+      if(fallback) return this.fallback();
+      else return null;
+    }
+
     name = name.trim();
     var byKey = this[name];
     if(byKey != null) return byKey;

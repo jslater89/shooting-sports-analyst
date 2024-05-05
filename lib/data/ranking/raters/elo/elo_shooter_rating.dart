@@ -7,6 +7,7 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 // import 'package:shooting_sports_analyst/data/db/object/rating/elo/db_elo_rating.dart';
 import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
@@ -14,26 +15,25 @@ import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rating_chang
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 
+enum _DoubleKeys {
+  variance,
+}
+
 class EloShooterRating extends ShooterRating {
   static late double errorScale;
 
   double rating;
-  double variance = 0;
+  double get variance => wrappedRating.doubleData[_DoubleKeys.variance.index];
+  set variance(double v) => wrappedRating.doubleData[_DoubleKeys.variance.index] = v;
 
   double get direction => directionWithWindow(ShooterRating.baseTrendWindow);
   double get shortDirection => directionWithWindow(ShooterRating.baseTrendWindow ~/ 2);
   double get longDirection => directionWithWindow(ShooterRating.baseTrendWindow * 2);
 
   double directionWithWindow(int window) {
-    if(ratingEvents.isEmpty) return 0;
+    if(wrappedRating.length == 0) return 0;
 
-    late List<RatingEvent> events;
-    if(window >= ratingEvents.length) {
-      events = ratingEvents;
-    }
-    else {
-      events = ratingEvents.sublist(ratingEvents.length - window, ratingEvents.length);
-    }
+    var events = wrappedRating.getEventsInWindowSync(window: window);
 
     int total = events.length;
     int positive = events.where((element) => element.ratingChange >= 0).length;
@@ -163,8 +163,25 @@ class EloShooterRating extends ShooterRating {
   // TODO: combine this in more intelligent fashion, preserving order where possible
   List<RatingEvent> get combinedRatingEvents => []..addAll(ratingEvents)..addAll(emptyRatingEvents);
 
-  EloShooterRating(MatchEntry shooter, this.rating, {required super.sport, DateTime? date}) :
-      super(shooter, date: date);
+  EloShooterRating(MatchEntry shooter, this.rating, {required super.sport, required DateTime date}) :
+      super(shooter,
+        date: date,
+        intDataElements: 0,
+        doubleDataElements: _DoubleKeys.values.length,
+      ) {
+    this.wrappedRating = DbShooterRating(
+        sportName: sportName,
+        firstName: firstName,
+        lastName: lastName,
+        memberNumber: memberNumber,
+        female: female,
+        rating: rating,
+        error: 0.0,
+        connectedness: connectedness,
+        firstSeen: firstSeen,
+        lastSeen: lastSeen,
+    );
+  }
 
   // EloShooterRating.fromDb(DbEloRating rating) :
   //     rating = rating.rating,
@@ -213,9 +230,10 @@ class EloShooterRating extends ShooterRating {
 
   EloShooterRating.copy(EloShooterRating other) :
         this.rating = other.rating,
-        this.variance = other.variance,
         this.ratingEvents = other.ratingEvents.map((e) => EloRatingEvent.copy(e as EloRatingEvent)).toList(),
-        super.copy(other);
+        super.copy(other) {
+    this.variance = other.variance;
+  }
 
   @override
   String toString() {

@@ -21,8 +21,8 @@ class OpenskillRating extends ShooterRating {
   @override
   List<RatingEvent> ratingEvents = [];
 
-  OpenskillRating(MatchEntry shooter, this.mu, this.sigma, {required super.sport, DateTime? date}) :
-      super(shooter, date: date);
+  OpenskillRating(MatchEntry shooter, this.mu, this.sigma, {required super.sport, required DateTime date}) :
+      super(shooter, date: date, doubleDataElements: 2, intDataElements: 0);
 
   OpenskillRating.copy(OpenskillRating other) :
       this.mu = other.mu,

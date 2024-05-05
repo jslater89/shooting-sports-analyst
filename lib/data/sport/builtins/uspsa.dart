@@ -36,6 +36,16 @@ const uspsaC = Classification(index: 4, name: "C", shortName: "C");
 const uspsaD = Classification(index: 5, name: "D", shortName: "D");
 const uspsaU = Classification(index: 6, name: "Unclassified", shortName: "U", fallback: true);
 
+const _level1 = MatchLevel(name: "Level I", shortName: "I", alternateNames: ["Local"], eventLevel: EventLevel.local);
+const _level2 = MatchLevel(name: "Level II", shortName: "II", alternateNames: ["Regional/State"], eventLevel: EventLevel.regional);
+const _level3 = MatchLevel(name: "Level III", shortName: "III", alternateNames: ["Area/National"], eventLevel: EventLevel.national);
+
+const _matchLevels = [
+  _level1,
+  _level2,
+  _level3,
+];
+
 final _minorPowerFactor = PowerFactor("Minor",
   shortName: "min",
   targetEvents: [
@@ -60,11 +70,7 @@ final uspsaSport = Sport(
   displaySettingsPowerFactor: _minorPowerFactor,
   resultSortModes: hitFactorSorts,
   shooterDeduplicator: const USPSADeduplicator(),
-  eventLevels: [
-    const MatchLevel(name: "Level I", shortName: "I", alternateNames: ["Local"], eventLevel: EventLevel.local),
-    const MatchLevel(name: "Level II", shortName: "II", alternateNames: ["Regional/State"], eventLevel: EventLevel.regional),
-    const MatchLevel(name: "Level III", shortName: "III", alternateNames: ["Area/National"], eventLevel: EventLevel.national),
-  ],
+  eventLevels: _matchLevels,
   classifications: [
     uspsaGM,
     uspsaM,
@@ -159,6 +165,14 @@ class _UspsaRatingStrengthProvider implements RatingStrengthProvider {
       uspsaU => 2,
       _ => 2.5,
     };
+  }
+
+  @override
+  double strengthBonusForMatchLevel(MatchLevel? level) {
+    if(level == _level1) return 1.0;
+    else if(level == _level2) return 1.15;
+    else if(level == _level3) return 1.3;
+    else return 1.0;
   }
 }
 

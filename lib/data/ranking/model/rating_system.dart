@@ -56,7 +56,7 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
   ShooterRating copyShooterRating(T rating);
 
   /// Create a new shooter rating for the given information.
-  ShooterRating newShooterRating(MatchEntry shooter, {required Sport sport, DateTime? date});
+  ShooterRating newShooterRating(MatchEntry shooter, {required Sport sport, required DateTime date});
 
   RatingEvent newEvent({
     required ShootingMatch match,

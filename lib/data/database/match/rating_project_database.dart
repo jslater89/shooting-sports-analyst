@@ -7,7 +7,11 @@
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/logger.dart';
+
+var _log = SSALogger("RatingProjectDatabase");
 
 extension RatingProjectDatabase on AnalystDatabase {
   Future<DbRatingProject?> getRatingProjectById(int id) async {
@@ -44,6 +48,8 @@ extension RatingProjectDatabase on AnalystDatabase {
 
   Future<bool> deleteShooterRating(DbShooterRating rating) async {
     // TODO: clear all linked rating events
+    var deleted = await rating.events.filter().deleteAll();
+    _log.v("Deleted $deleted events while deleting rating");
     return isar.dbShooterRatings.delete(rating.id);
   }
 
@@ -100,5 +106,47 @@ extension RatingProjectDatabase on AnalystDatabase {
         .group((q) => q.idEqualTo(group.id))
         .connectednessProperty()
         .findAll();
+  }
+
+  Future<List<DbRatingEvent>> getRatingEventsFor(DbShooterRating rating, {
+    int limit = 0,
+    DateTime? after,
+    DateTime? before,
+  }) async {
+    var query = _buildShooterEventQuery(rating, limit: limit, after: after, before: before);
+    return query.findAll();
+  }
+
+  List<DbRatingEvent> getRatingEventsForSync(DbShooterRating rating, {
+    int limit = 0,
+    DateTime? after,
+    DateTime? before,
+  }) {
+    var query = _buildShooterEventQuery(rating, limit: limit, after: after, before: before);
+    return query.findAllSync();
+  }
+
+  Query<DbRatingEvent> _buildShooterEventQuery(DbShooterRating rating, {
+    int limit = 0,
+    int offset = 0,
+    DateTime? after,
+    DateTime? before,
+  }) {
+    var builder = rating.events.filter()
+        .sortByDateAndStageNumberDesc();
+    Query<DbRatingEvent> query;
+    if(limit > 0) {
+      if(offset > 0) {
+        query = builder.offset(offset).limit(limit).build();
+      }
+      else {
+        query = builder.limit(limit).build();
+      }
+    }
+    else {
+      query = builder.build();
+    }
+
+    return query;
   }
 }

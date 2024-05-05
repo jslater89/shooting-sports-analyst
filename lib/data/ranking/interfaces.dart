@@ -16,10 +16,13 @@ import 'package:shooting_sports_analyst/data/sport/sport.dart';
 /// See uspsaSport for more. The math is tuned more or less to its values
 /// (for now), so use something similar for other sports.
 abstract interface class RatingStrengthProvider {
-  /// Return the strength for a given class.
+  /// Returns the strength for a given class.
   double strengthForClass(Classification? c);
-  /// Return the center strength for this sport.
+  /// Returns the center strength for this sport.
   double get centerStrength;
+
+  /// Returns a percentage multiplier for a given match level.
+  double strengthBonusForMatchLevel(MatchLevel? level);
 }
 
 /// A [Sport] that can provide pubstomp information for [Rater]'s

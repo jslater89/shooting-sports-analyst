@@ -122,12 +122,13 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
   }
 
   @override
-  OpenskillRating newShooterRating(MatchEntry shooter, {DateTime? date, required Sport sport}) {
+  OpenskillRating newShooterRating(MatchEntry shooter, {required DateTime date, required Sport sport}) {
     return OpenskillRating(
       shooter,
       sport.initialOpenskillRatings[shooter.classification]?.elementAt(_muIndex) ?? OpenskillSettings.defaultMu,
       sport.initialOpenskillRatings[shooter.classification]?.elementAt(_sigmaIndex) ?? OpenskillSettings.defaultSigma,
       sport: sport,
+      date: date,
     );
   }
 

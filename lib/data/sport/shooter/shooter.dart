@@ -29,7 +29,9 @@ class Shooter {
   /// The shooter's most recent member number, normalized as [originalMemberNumber].
   String get memberNumber => _memberNumber;
   set memberNumber(String m) {
-    var processedNumber = processNumber(m);
+    var processedNumber = normalizeNumber(m);
+    if(processedNumber.isEmpty) return;
+
     if(originalMemberNumber.isEmpty) {
       originalMemberNumber = processedNumber;
     }
@@ -37,7 +39,7 @@ class Shooter {
     _memberNumber = processedNumber;
   }
 
-  static String processNumber(String number) {
+  static String normalizeNumber(String number) {
     return number.toUpperCase().replaceAll(RegExp(r"[^A-Z0-9]"), "");
   }
 

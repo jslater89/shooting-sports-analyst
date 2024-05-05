@@ -24,8 +24,16 @@ import 'package:shooting_sports_analyst/util.dart';
 
 var _log = SSALogger("ShooterRating");
 
+/// ShooterRatings are convenience wrappers around [DbShooterRating], which
+///
 abstract class ShooterRating extends Shooter with DbSportEntity {
   String sportName;
+
+  String get firstName => wrappedRating.firstName;
+  set firstName(String n) => wrappedRating.firstName = n;
+
+  String get lastName => wrappedRating.lastName;
+  set lastName(String n) => wrappedRating.lastName = n;
   
   /// The DB rating object backing this rating. If its ID property
   /// is [Isar.autoIncrement], it is assumed that the rating has not
@@ -34,7 +42,7 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
   ///
   /// When creating a new shooter rating, you should create a
   /// DbShooterRating to store its data.
-  DbShooterRating get wrappedRating;
+  DbShooterRating wrappedRating;
 
   /// Whether the data contained by [wrappedRating] has been persisted.
   bool get isPersisted => wrappedRating.isPersisted;
@@ -51,12 +59,20 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
   static const baseConnectedness = 100.0;
   static const maxConnections = 40;
 
-  Division? division;
-  Classification? lastClassification;
-  DateTime firstSeen;
-  DateTime lastSeen;
+  Division? get division => wrappedRating.division;
+  set division(Division? d) => wrappedRating.division = d;
 
-  double get rating;
+  Classification? get lastClassification => wrappedRating.lastClassification;
+  set lastClassification(Classification? c) => wrappedRating.lastClassification = c;
+
+  DateTime get firstSeen => wrappedRating.firstSeen;
+  set firstSeen(DateTime d) => wrappedRating.firstSeen = d;
+
+  DateTime get lastSeen => wrappedRating.lastSeen;
+  set lastSeen(DateTime d) => wrappedRating.lastSeen = d;
+
+  double get rating => wrappedRating.rating;
+  set rating(double v) => wrappedRating.rating = v;
 
   /// All of the meaningful rating events in this shooter's history.
   ///
@@ -343,21 +359,32 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
     this.alternateMemberNumbers = other.alternateMemberNumbers;
   }
 
-  ShooterRating(MatchEntry shooter, {required Sport sport, DateTime? date}) :
+  ShooterRating(MatchEntry shooter, {
+    required Sport sport,
+    required DateTime date,
+    required int doubleDataElements,
+    required int intDataElements
+  }) :
+      this.wrappedRating = DbShooterRating.empty(
+        sport: sport,
+        intDataLength: intDataElements,
+        doubleDataLength: doubleDataElements,
+      ),
       this.sportName = sport.name,
-      this.lastClassification = shooter.classification ?? sport.classifications.fallback(),
-      this.firstSeen = date ?? DateTime.now(),
-      this.lastSeen = date ?? DateTime.now(),
       super(firstName: shooter.firstName, lastName: shooter.lastName) {
+    this.lastClassification = shooter.classification ?? sport.classifications.fallback();
+    this.firstSeen = date ?? DateTime.now();
+    this.lastSeen = date ?? DateTime.now();
     super.copyVitalsFrom(shooter);
   }
 
   ShooterRating.fromRating(ShooterRating shooter, {required Sport sport, DateTime? date}) :
+        this.wrappedRating = DbShooterRating.empty(sport: sport),
         this.sportName = sport.name,
-        this.lastClassification = shooter.lastClassification,
-        this.firstSeen = shooter.firstSeen,
-        this.lastSeen = date ?? DateTime.now(),
         super(firstName: shooter.firstName, lastName: shooter.lastName) {
+    this.lastClassification = shooter.lastClassification;
+    this.firstSeen = shooter.firstSeen;
+    this.lastSeen = date ?? DateTime.now();
     super.copyVitalsFrom(shooter);
   }
 
@@ -390,15 +417,17 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
   // }
 
   ShooterRating.copy(ShooterRating other) :
+      this.wrappedRating = DbShooterRating.empty(sport: other.sport),
       this.sportName = other.sportName,
-      this.lastClassification = other.lastClassification,
       this._connectedness = other._connectedness,
-      this.lastSeen = other.lastSeen,
-      this.firstSeen = other.firstSeen,
+
       this.alternateMemberNumbers = []..addAll(other.alternateMemberNumbers),
       this.connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure)..addAll(other.connectedShooters.map((e) => ConnectedShooter.copy(e))),
       super(firstName: other.firstName, lastName: other.lastName)
   {
+    this.lastClassification = other.lastClassification;
+    this.lastSeen = other.lastSeen;
+    this.firstSeen = other.firstSeen;
     super.copyVitalsFrom(other);
   }
 }

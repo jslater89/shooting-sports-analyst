@@ -8,20 +8,18 @@ import 'dart:convert';
 
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
-import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
-import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
-import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
-import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
-import 'package:uuid/v1.dart';
 import 'package:uuid/v4.dart';
+
+export 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart' show DbShooterRating;
 
 part 'ratings.g.dart';
 
@@ -30,10 +28,14 @@ part 'ratings.g.dart';
 var _log = SSALogger("DbRatingSchema");
 
 mixin DbSportEntity {
+  /// Do not set sportName directly. Instead, use [sport].
   String get sportName;
+  /// Do not set sportName directly. Instead, use [sport].
+  set sportName(String value);
 
   @ignore
   Sport get sport => SportRegistry().lookup(sportName)!;
+  set sport(Sport s) => sportName = s.name;
 }
 
 @collection
@@ -251,67 +253,71 @@ class DbRatingGroup with DbSportEntity {
   }) : this.uuid = uuid ?? UuidV4().generate() ;
 }
 
-/// DbSportRating is the database embodiment of shooter ratings. It should almost always
-/// be wrapped by one of the subclasses of ShooterRating, which will wrap the various generic
-/// data variables on this class.
-@collection
-class DbShooterRating extends Shooter with DbSportEntity {
-  String sportName;
-
-  Id id = Isar.autoIncrement;
-
-  @ignore
-  bool get isPersisted => id != Isar.autoIncrement;
-
-  @Index(type: IndexType.hashElements)
-  List<String> get dbKnownMemberNumbers => List<String>.from(knownMemberNumbers);
-
-  @Index()
-  List<String> get firstNameParts => firstName.split(RegExp(r'\w+'));
-  @Index()
-  List<String> get lastNameParts => lastName.split(RegExp(r'\w+'));
-
-  @Index()
-  String get deduplicatorName {
-    var processedFirstName = firstName.toLowerCase().replaceAll(RegExp(r"\s+"), "");
-    var processedLastName = lastName.toLowerCase().replaceAll(RegExp(r"\s+"), "");
-
-    return "$processedFirstName$processedLastName";
-  }
-
-  String? ageCategoryName;
-
-  @Index(composite: [CompositeIndex("group")], unique: true)
-  @Backlink(to: "ratings")
-  final project = IsarLink<DbRatingProject>();
-  final group = IsarLink<DbRatingGroup>();
-  final events = IsarLinks<DbRatingEvent>();
-
-  int get length => events.countSync();
-
-  double rating;
-  double error;
-  double connectedness;
-
-  /// Use to store algorithm-specific double data.
-  List<double> doubleData = [];
-  /// Use to store algorithm-specific integer data.
-  List<int> intData = [];
-  
-  DbShooterRating({
-    required this.sportName,
-    required super.firstName,
-    required super.lastName,
-    required super.memberNumber,
-    required super.female,
-    required this.rating,
-    required this.error,
-    required this.connectedness,
-  });
-
-}
-
 @collection
 class DbRatingEvent {
   Id id = Isar.autoIncrement;
+
+  @Backlink(to: 'events')
+  final owner = IsarLink<DbShooterRating>();
+  final match = IsarLink<DbShootingMatch>();
+  int entryId;
+  int stageNumber;
+
+  DateTime date;
+  double ratingChange;
+  double oldRating;
+  @ignore
+  double get newRating => oldRating + ratingChange;
+
+  /// A synthetic incrementing value used to sort rating events by date and stage
+  /// number.
+  @Index()
+  int get dateAndStageNumber => (date.millisecondsSinceEpoch ~/ 1000) + stageNumber;
+
+  // TODO figure out how to store these
+  @ignore
+  Map<String, List<dynamic>> info;
+  @ignore
+  Map<String, dynamic> extraData;
+  
+  DbRelativeScore score;
+  DbRelativeScore matchScore;
+
+  DbRatingEvent({
+    required this.ratingChange,
+    required this.oldRating,
+    this.info = const {},
+    this.extraData = const {},
+    required this.score,
+    required this.matchScore,
+    required this.date,
+    required this.stageNumber,
+    required this.entryId,
+  });
+}
+
+@embedded
+class DbRelativeScore {
+  /// The ordinal place represented by this score: 1 for 1st, 2 for 2nd, etc.
+  int place;
+  /// The ratio of this score to the winning score: 1.0 for the winner, 0.9 for a 90% finish,
+  /// 0.8 for an 80% finish, etc.
+  double ratio;
+  @ignore
+  /// A convenience getter for [ratio] * 100.
+  double get percentage => ratio * 100;
+
+  /// points holds the final score for this relative score, whether
+  /// calculated or simply repeated from an attached [RawScore].
+  ///
+  /// In a [RelativeStageFinishScoring] match, it's the number of stage
+  /// points or the total number of match points. In a [CumulativeScoring]
+  /// match, it's the final points or time per stage/match.
+  double points;
+
+  DbRelativeScore({
+    this.place = 0,
+    this.ratio = 0,
+    this.points = 0,
+  });
 }

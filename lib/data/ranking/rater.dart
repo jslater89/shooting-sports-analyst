@@ -501,7 +501,7 @@ class Rater {
     if(byStage) {
       for(MatchStage s in match.stages) {
 
-        var (filteredShooters, filteredScores) = _filterScores(shooters, scores.values.toList(), s);
+        var (filteredShooters, filteredScores) = filterScores(shooters, scores.values.toList(), s);
 
         var weightMod = 1.0 + max(-0.20, min(0.10, (s.maxPoints - 120) /  400));
 
@@ -568,7 +568,7 @@ class Rater {
       }
     }
     else { // by match
-      var (filteredShooters, filteredScores) = _filterScores(shooters, scores.values.toList(), null);
+      var (filteredShooters, filteredScores) = filterScores(shooters, scores.values.toList(), null);
 
       Map<ShooterRating, RelativeMatchScore> matchScoreMap = {};
 
@@ -711,7 +711,7 @@ class Rater {
     return true;
   }
 
-  (List<MatchEntry>, List<RelativeMatchScore>) _filterScores(List<MatchEntry> shooters, List<RelativeMatchScore> scores, MatchStage? stage) {
+  (List<MatchEntry>, List<RelativeMatchScore>) filterScores(List<MatchEntry> shooters, List<RelativeMatchScore> scores, MatchStage? stage) {
     List<MatchEntry> filteredShooters = []..addAll(shooters);
     List<RelativeMatchScore> filteredScores = []..addAll(scores);
     for(var s in scores) {

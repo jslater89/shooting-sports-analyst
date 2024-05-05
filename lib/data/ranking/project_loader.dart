@@ -4,6 +4,8 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:math';
+
 import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
@@ -12,10 +14,13 @@ import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_mode.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
+import 'package:shooting_sports_analyst/data/ranking/timings.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
@@ -58,20 +63,24 @@ class RatingProjectLoader {
   RatingSystem get ratingSystem => settings.algorithm;
   Sport get sport => project.sport;
 
+  Timings timings = Timings();
+
   MemberNumberCorrectionContainer get _dataCorrections => settings.memberNumberCorrections;
   List<String> get memberNumberWhitelist => settings.memberNumberWhitelist;
 
   RatingProjectLoader(this.project, this.callback);
 
   Future<Result<void, RatingProjectLoadError>> calculateRatings({bool fullRecalc = false}) async {
+    timings.reset();
+
     callback(progress: -1, total: -1, state: LoadingState.readingMatches);
     var matchesLink = await project.matchesToUse();
 
     // We want to add matches in ascending order, from oldest to newest.
     var matchesToAdd = await matchesLink.filter().sortByDate().findAll();
 
-    // We're interested in the most recent match, so sort by date descending for
-    // convenience.
+    // We're interested in the most recent match in addition to the full list,
+    // so sort by descending date for convenience.
     var lastUsed = await project.lastUsedMatches.filter().sortByDateDesc().findAll();
     bool canAppend = false;
 
@@ -80,6 +89,11 @@ class RatingProjectLoader {
       var mostRecentMatch = lastUsed.first;
       canAppend = !fullRecalc && missingMatches.every((m) => m.date.isAfter(mostRecentMatch.date));
       if(canAppend) matchesToAdd = missingMatches;
+    }
+
+    // nothing to do
+    if(matchesToAdd.isEmpty) {
+      return Result.ok(null);
     }
 
     if(!canAppend) {
@@ -102,7 +116,6 @@ class RatingProjectLoader {
         var match = matchRes.unwrap();
         hydratedMatches.add(match);
       }
-
     }
 
     return Result.ok(null);
@@ -340,19 +353,309 @@ class RatingProjectLoader {
     return true;
   }
 
-  RatingResult _deduplicateShooters() {
-    if(sport.shooterDeduplicator != null) {
-      return sport.shooterDeduplicator!.deduplicateShooters(
-        knownShooters: knownShooters,
-        shooterAliases: settings.shooterAliases,
-        currentMappings: settings.memberNumberMappings,
-        userMappings: settings.userMemberNumberMappings,
-        mappingBlacklist: settings.memberNumberMappingBlacklist,
+  double get _centerStrength => sport.ratingStrengthProvider?.centerStrength ?? 1.0;
+  Future<void> _rankMatch(DbRatingGroup group, ShootingMatch match) async {
+    late DateTime start;
+    if(Timings.enabled) start = DateTime.now();
+    var shooters = _getShooters(group, match, verify: true);
+    var scores = match.getScores(shooters: shooters, scoreDQ: settings.byStage);
+    if(Timings.enabled) timings.getShootersAndScoresMillis += (DateTime.now().difference(start).inMicroseconds);
+
+    if(Timings.enabled) start = DateTime.now();
+    // Based on strength of competition, vary rating gain between 25% and 150%.
+    var matchStrength = 0.0;
+    for(var shooter in shooters) {
+      matchStrength += sport.ratingStrengthProvider?.strengthForClass(shooter.classification) ?? 1.0;
+
+      // Update
+      var rating = await AnalystDatabase().maybeKnownShooter(project: project, group: group, processedMemberNumber: shooter.memberNumber);
+      if(rating != null) {
+        if(shooter.classification != null) {
+          if(rating.lastClassification == null || shooter.classification!.index < rating.lastClassification!.index) {
+            rating.lastClassification = shooter.classification!;
+          }
+        }
+
+        // Update the shooter's name: the most recent one is probably the most interesting/useful
+        rating.firstName = shooter.firstName;
+        rating.lastName = shooter.lastName;
+
+        // Update age categories
+        rating.ageCategory = shooter.ageCategory;
+
+        // Update the shooter's member number: the CSV exports are more useful if it's the most
+        // recent one. // TODO: this would be handy, but it changes the math somehow (not removing unseen?)
+        // TODO: DB column for
+        // rating.shooter.memberNumber = shooter.memberNumber;
+      }
+    }
+    matchStrength = matchStrength / shooters.length;
+    double levelStrengthBonus = sport.ratingStrengthProvider?.strengthBonusForMatchLevel(match.level) ?? 1.0;
+    double strengthMod =  (1.0 + max(-0.75, min(0.5, ((matchStrength) - _centerStrength) * 0.2))) * (levelStrengthBonus);
+    if(Timings.enabled) timings.matchStrengthMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
+
+    if(Timings.enabled) start = DateTime.now();
+    // Based on connectedness, vary rating gain between 80% and 120%
+    var totalConnectedness = 0.0;
+    var totalShooters = 0.0;
+    var connectedness = await AnalystDatabase().getConnectedness(project, group);
+
+    totalConnectedness = connectedness.sum;
+    totalShooters = connectedness.length.toDouble();
+
+    var globalAverageConnectedness = totalShooters < 1 ? 105.0 : totalConnectedness / totalShooters;
+    var globalMedianConnectedness = totalShooters < 1 ? 105.0 : connectedness[connectedness.length ~/ 2];
+    var connectednessDenominator = max(105.0, globalMedianConnectedness);
+
+    totalConnectedness = 0.0;
+    totalShooters = 0;
+    Map<String, DbShooterRating> ratingsAtMatch = {};
+    for(var shooter in shooters) {
+      var rating = await AnalystDatabase().maybeKnownShooter(
+        project: project,
+        group: group,
+        processedMemberNumber: shooter.memberNumber,
       );
+
+      if(rating != null) {
+        totalConnectedness += rating.connectedness;
+        totalShooters += 1;
+        ratingsAtMatch[shooter.memberNumber] = rating;
+      }
     }
-    else {
-      return RatingResult.ok();
+    var localAverageConnectedness = totalConnectedness / (totalShooters > 0 ? totalShooters : 1.0);
+    var connectednessMod = /*1.0;*/ 1.0 + max(-0.2, min(0.2, (((localAverageConnectedness / connectednessDenominator) - 1.0) * 2))); // * 1: how much to adjust the percentages by
+    if(Timings.enabled) timings.connectednessModMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
+
+    // _log.d("Connectedness for ${match.name}: ${localAverageConnectedness.toStringAsFixed(2)}/${connectednessDenominator.toStringAsFixed(2)} => ${connectednessMod.toStringAsFixed(3)}");
+
+    Map<DbShooterRating, Map<RelativeScore, DbRatingEvent>> changes = {};
+    Set<DbShooterRating> shootersAtMatch = Set();
+
+    if(Timings.enabled) start = DateTime.now();
+    // Process ratings for each shooter.
+    if(settings.byStage) {
+      for(MatchStage s in match.stages) {
+
+        var (filteredShooters, filteredScores) = _filterScores(shooters, scores.values.toList(), s);
+
+        var weightMod = 1.0 + max(-0.20, min(0.10, (s.maxPoints - 120) /  400));
+
+        Map<DbShooterRating, RelativeScore> stageScoreMap = {};
+        Map<DbShooterRating, RelativeMatchScore> matchScoreMap = {};
+
+        for(var score in filteredScores) {
+          String num = score.shooter.memberNumber;
+          var stageScore = score.stageScores[s]!;
+          var rating = ratingsAtMatch[num]!;
+          stageScoreMap[rating] = stageScore;
+          matchScoreMap[rating] = score;
+        }
+
+        if(ratingSystem.mode == RatingMode.wholeEvent) {
+          _processWholeEvent(
+              match: match,
+              stage: s,
+              scores: filteredScores,
+              changes: changes,
+              matchStrength: strengthMod,
+              connectednessMod: connectednessMod,
+              weightMod: weightMod
+          );
+        }
+        else {
+          for(int i = 0; i < filteredShooters.length; i++) {
+            if(ratingSystem.mode == RatingMode.roundRobin) {
+              _processRoundRobin(
+                match: match,
+                stage: s,
+                shooters: filteredShooters,
+                scores: filteredScores,
+                startIndex: i,
+                changes: changes,
+                matchStrength: strengthMod,
+                connectednessMod: connectednessMod,
+                weightMod: weightMod,
+              );
+            }
+            else {
+              _processOneshot(
+                  match: match,
+                  stage: s,
+                  shooter: filteredShooters[i],
+                  scores: filteredScores,
+                  stageScores: stageScoreMap,
+                  matchScores: matchScoreMap,
+                  changes: changes,
+                  matchStrength: strengthMod,
+                  connectednessMod: connectednessMod,
+                  weightMod: weightMod
+              );
+            }
+          }
+        }
+
+        for(var r in changes.keys) {
+          r.updateFromEvents(changes[r]!.values.toList());
+          r.updateTrends(changes[r]!.values.toList());
+          shootersAtMatch.add(r);
+        }
+        changes.clear();
+      }
     }
+    else { // by match
+      var (filteredShooters, filteredScores) = _filterScores(shooters, scores.values.toList(), null);
+
+      Map<DbShooterRating, RelativeMatchScore> matchScoreMap = {};
+
+      for(var score in filteredScores) {
+        String num = score.shooter.memberNumber;
+        matchScoreMap[ratingsAtMatch[num]!] = score;
+      }
+
+      if(ratingSystem.mode == RatingMode.wholeEvent) {
+        _processWholeEvent(
+            match: match,
+            stage: null,
+            scores: filteredScores,
+            changes: changes,
+            matchStrength: strengthMod,
+            connectednessMod: connectednessMod,
+            weightMod: 1.0
+        );
+      }
+      else {
+        for(int i = 0; i < filteredShooters.length; i++) {
+          if(ratingSystem.mode == RatingMode.roundRobin) {
+            _processRoundRobin(
+              match: match,
+              stage: null,
+              shooters: filteredShooters,
+              scores: filteredScores,
+              startIndex: i,
+              changes: changes,
+              matchStrength: strengthMod,
+              connectednessMod: connectednessMod,
+              weightMod: 1.0,
+            );
+          }
+          else {
+            _processOneshot(
+                match: match,
+                stage: null,
+                shooter: filteredShooters[i],
+                scores: filteredScores,
+                stageScores: matchScoreMap,
+                matchScores: matchScoreMap,
+                changes: changes,
+                matchStrength: strengthMod,
+                connectednessMod: connectednessMod,
+                weightMod: 1.0
+            );
+          }
+        }
+      }
+
+      for(var r in changes.keys) {
+        r.updateFromEvents(changes[r]!.values.toList());
+        r.updateTrends(changes[r]!.values.toList());
+        shootersAtMatch.add(r);
+      }
+      changes.clear();
+    }
+    if(Timings.enabled) timings.rateShootersMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
+
+    if(Timings.enabled) start = DateTime.now();
+    if(shooters.length > 1) {
+      var averageBefore = 0.0;
+      var averageAfter = 0.0;
+
+      // We need only consider at most the best [ShooterRating.maxConnections] connections. If a shooter's list is
+      // empty, we'll fill their list with these shooters. If a shooter's list is not empty, we can end up with at
+      // most maxConnections new entries in the list, by definition.
+      var encounteredList = shootersAtMatch
+          .sorted((a, b) => b.connectedness.compareTo(a.connectedness))
+          .sublist(0, min(ShooterRating.maxConnections, shootersAtMatch.length));
+
+      // _log.d("Updating connectedness at ${match.name} for ${shootersAtMatch.length} of ${knownShooters.length} shooters");
+      for (var rating in shootersAtMatch) {
+        averageBefore += rating.connectedness;
+        rating.updateConnections(match.date!, encounteredList);
+        rating.lastSeen = match.date;
+      }
+
+      for (var rating in shootersAtMatch) {
+        rating.updateConnectedness();
+        averageAfter += rating.connectedness;
+      }
+
+      averageBefore /= encounteredList.length;
+      averageAfter /= encounteredList.length;
+      // _log.d("Averages: ${averageBefore.toStringAsFixed(1)} -> ${averageAfter.toStringAsFixed(1)} vs. ${expectedConnectedness.toStringAsFixed(1)}");
+    }
+    if(Timings.enabled) timings.updateConnectednessMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
+  }
+
+  (List<MatchEntry>, List<RelativeMatchScore>) _filterScores(List<MatchEntry> shooters, List<RelativeMatchScore> scores, MatchStage? stage) {
+    List<MatchEntry> filteredShooters = []..addAll(shooters);
+    List<RelativeMatchScore> filteredScores = []..addAll(scores);
+    for(var s in scores) {
+      if(stage != null) {
+        var stageScore = s.stageScores[stage];
+
+        if(stageScore == null) {
+          filteredScores.remove(s);
+          filteredShooters.remove(s.shooter);
+          _log.w("null stage score for ${s.shooter}");
+          continue;
+        }
+
+        if(!_isValid(stageScore)) {
+          filteredScores.remove(s);
+          filteredShooters.remove(s.shooter);
+        }
+      }
+      else {
+        if(_dnf(s)) {
+          filteredScores.remove(s);
+          filteredShooters.remove(s.shooter);
+        }
+      }
+    }
+
+    return (filteredShooters, filteredScores);
+  }
+
+  bool _isValid(RelativeStageScore score) {
+    // Filter out badly marked classifier reshoots
+    if(score.score.targetEventCount == 0 && score.score.rawTime <= 0.1) return false;
+
+    // The George Williams Rule
+    if(sport.defaultStageScoring is HitFactorScoring) {
+      if(score.score.hitFactor > 30) return false;
+    }
+
+    // Filter out extremely short times that are probably DNFs or partial scores entered for DQs
+    if(score.score.rawTime <= 0.5) return false;
+
+    // The Jalise Williams rule: filter out subminor/unknown PFs
+    if(score.shooter.powerFactor.doesNotScore) return false;
+
+    return true;
+  }
+
+  bool _dnf(RelativeMatchScore score) {
+    if(score.shooter.powerFactor.doesNotScore) {
+      return true;
+    }
+
+    for(var stageScore in score.stageScores.values) {
+      if(!(stageScore.stage.scoring is IgnoredScoring) && stageScore.score.rawTime <= 0.01 && stageScore.score.targetEventCount == 0) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }
 
