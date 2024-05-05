@@ -73,10 +73,10 @@ class DbShootingMatch {
     eventName = match.name,
     rawDate = match.rawDate,
     date = match.date,
-    sourceCode = match.sourceCode,
     matchLevelName = match.level?.name,
     matchEventLevel = match.level?.eventLevel ?? EventLevel.local,
     sourceIds = []..addAll(match.sourceIds),
+    sourceCode = match.sourceCode,
     sportName = match.sport.name,
     shooters = []..addAll(match.shooters.map((s) => DbMatchEntry.from(s))),
     stages = []..addAll(match.stages.map((s) => DbMatchStage.from(s)));

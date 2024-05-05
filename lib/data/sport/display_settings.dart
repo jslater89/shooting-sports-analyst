@@ -60,7 +60,7 @@ class SportDisplaySettings {
           ));
         }
         else {
-          negativeGroups.add(ScoringEventGroup.single(eventsByValue.first, displayIfNoEvents: true));
+          negativeGroups.add(ScoringEventGroup.single(eventsByValue.first, displayIfNoEvents: false));
         }
       }
 
