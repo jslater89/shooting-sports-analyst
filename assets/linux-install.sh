@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-CWD=`pwd`
+export CWD=`pwd`
 
 export ANALYST_VERSION="0.0.0"
 export ANALYST_NAME="Shooting Sports Analyst"
