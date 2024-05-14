@@ -255,7 +255,7 @@ class RatingProjectLoader {
         var rating = await db.maybeKnownShooter(
           project: project,
           group: group,
-          processedMemberNumber: s.memberNumber,
+          memberNumber: s.memberNumber,
         );
         if(rating == null) {
           var newRating = ratingSystem.newShooterRating(s, sport: project.sport, date: match.date);
@@ -329,7 +329,7 @@ class RatingProjectLoader {
     // after member numbers have been processed.
     String memNum = finalMemberNumber;
 
-    var rating = await db.maybeKnownShooter(project: project, group: g, processedMemberNumber: finalMemberNumber);
+    var rating = await db.maybeKnownShooter(project: project, group: g, memberNumber: finalMemberNumber);
     if(rating == null) {
       _verifyCache[s] = false;
       return false;
@@ -368,7 +368,7 @@ class RatingProjectLoader {
       matchStrength += sport.ratingStrengthProvider?.strengthForClass(shooter.classification) ?? 1.0;
 
       // Update
-      var rating = await AnalystDatabase().maybeKnownShooter(project: project, group: group, processedMemberNumber: shooter.memberNumber);
+      var rating = await AnalystDatabase().maybeKnownShooter(project: project, group: group, memberNumber: shooter.memberNumber);
       if(rating != null) {
         if(shooter.classification != null) {
           if(rating.lastClassification == null || shooter.classification!.index < rating.lastClassification!.index) {
@@ -414,7 +414,7 @@ class RatingProjectLoader {
       var rating = await AnalystDatabase().maybeKnownShooter(
         project: project,
         group: group,
-        processedMemberNumber: shooter.memberNumber,
+        memberNumber: shooter.memberNumber,
       );
 
       if(rating != null) {
@@ -453,8 +453,9 @@ class RatingProjectLoader {
         }
 
         if(ratingSystem.mode == RatingMode.wholeEvent) {
-          _processWholeEvent(
+          await _processWholeEvent(
               match: match,
+              group: group,
               stage: s,
               scores: filteredScores,
               changes: changes,
@@ -514,8 +515,9 @@ class RatingProjectLoader {
       }
 
       if(ratingSystem.mode == RatingMode.wholeEvent) {
-        _processWholeEvent(
+        await _processWholeEvent(
             match: match,
+            group: group,
             stage: null,
             scores: filteredScores,
             changes: changes,
@@ -656,6 +658,153 @@ class RatingProjectLoader {
     }
 
     return false;
+  }
+
+  Future<void> _processWholeEvent({
+    required DbRatingGroup group,
+    required ShootingMatch match,
+    MatchStage? stage,
+    required List<RelativeMatchScore> scores,
+    required Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes,
+    required double matchStrength,
+    required double connectednessMod,
+    required double weightMod
+  }) async {
+    // Check for pubstomp
+    var pubstompMod = 1.0;
+    if(_pubstomp(scores)) {
+      pubstompMod = 0.33;
+    }
+    matchStrength *= pubstompMod;
+
+    // A cache of wrapped shooter ratings, so we don't have to hit the DB every time.
+    Map<String, ShooterRating> wrappedRatings = {};
+
+    if(stage != null) {
+      var scoreMap = <ShooterRating, RelativeScore>{};
+      var matchScoreMap = <ShooterRating, RelativeMatchScore>{};
+      for(var s in scores) {
+        String num = s.shooter.memberNumber;
+
+        var otherScore = s.stageScores[stage]!;
+        _encounteredMemberNumber(num);
+
+        ShooterRating rating = wrappedRatings[num] ?? ratingSystem.wrapDbRating(
+            (await db.maybeKnownShooter(project: project, group: group, memberNumber: num))!
+        );
+
+        scoreMap[rating] = otherScore;
+        matchScoreMap[rating] = s;
+        changes[rating] ??= {};
+        wrappedRatings[num] = rating;
+      }
+
+      var update = ratingSystem.updateShooterRatings(
+        match: match,
+        shooters: scoreMap.keys.toList(),
+        scores: scoreMap,
+        matchScores: matchScoreMap,
+        matchStrengthMultiplier: matchStrength,
+        connectednessMultiplier: connectednessMod,
+        eventWeightMultiplier: weightMod,
+      );
+
+      for(var rating in scoreMap.keys) {
+        var stageScore = scoreMap[rating];
+
+        if(stageScore == null) {
+          _log.w("Null stage score for $rating on ${stage.name}");
+          continue;
+        }
+
+        if (!changes[rating]!.containsKey(stageScore)) {
+          changes[rating]![stageScore] = ratingSystem.newEvent(rating: rating, match: match, stage: stage, score: stageScore);
+          changes[rating]![stageScore]!.apply(update[rating]!);
+          changes[rating]![stageScore]!.info = update[rating]!.info;
+        }
+      }
+    }
+    else {
+      var scoreMap = <ShooterRating, RelativeScore>{};
+      var matchScoreMap = <ShooterRating, RelativeMatchScore>{};
+      for(var s in scores) {
+        String num = s.shooter.memberNumber;
+        _encounteredMemberNumber(num);
+
+        ShooterRating rating = wrappedRatings[num] ?? ratingSystem.wrapDbRating(
+            (await db.maybeKnownShooter(project: project, group: group, memberNumber: num))!
+        );
+
+        scoreMap[rating] = s;
+        matchScoreMap[rating] = s;
+        changes[rating] ??= {};
+        wrappedRatings[num] = rating;
+      }
+
+      var update = ratingSystem.updateShooterRatings(
+        match: match,
+        shooters: scoreMap.keys.toList(),
+        scores: scoreMap,
+        matchScores: matchScoreMap,
+        matchStrengthMultiplier: matchStrength,
+        connectednessMultiplier: connectednessMod,
+      );
+
+      for(var rating in scoreMap.keys) {
+        var score = scoreMap[rating]!;
+        // You only get one rating change per match.
+        if (changes[rating]!.isEmpty) {
+          changes[rating]![score] ??= ratingSystem.newEvent(
+            rating: rating,
+            match: match,
+            score: score,
+            info: update[rating]!.info,
+          );
+
+          changes[rating]![score]!.apply(update[rating]!);
+        }
+      }
+    }
+  }
+
+  bool _pubstomp(List<RelativeMatchScore> scores) {
+    if(scores.length < 2) return false;
+
+    var sorted = scores.sorted((a, b) => b.ratio.compareTo(a.ratio));
+
+    var first = sorted[0];
+    var second = sorted[1];
+
+    var firstClass = first.shooter.classification;
+    var secondClass = second.shooter.classification;
+
+    var firstRating = maybeKnownShooter(first.shooter.memberNumber);
+    var secondRating = maybeKnownShooter(second.shooter.memberNumber);
+
+    // People entered with empty or invalid member numbers
+    if(firstRating == null || secondRating == null) {
+      // _log.d("Unexpected null in pubstomp detection");
+      return false;
+    }
+
+    return sport.pubstompProvider?.isPubstomp(
+      firstScore: first,
+      secondScore: second,
+      firstRating: firstRating,
+      secondRating: secondRating,
+      firstClass: firstClass,
+      secondClass: secondClass,
+    ) ?? false;
+  }
+
+  void _encounteredMemberNumber(String num) {
+    // TODO: decide how to track this, or if we need to given DB stuff
+
+    // _memberNumbersEncountered.add(num);
+    // var mappedNum = _memberNumberMappings[num];
+    // if(mappedNum != null && mappedNum != num) {
+    //   _memberNumbersEncountered.add(num);
+    // }
   }
 }
 

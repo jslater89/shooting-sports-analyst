@@ -55,12 +55,14 @@ extension RatingProjectDatabase on AnalystDatabase {
 
   // TODO: cache loaded shooters?
   // Let's do it the dumb way first, and go from there.
+  /// Retrieves a possible shooter rating from the database, or null if
+  /// a rating is not found. [memberNumber] is assumed to be processed.
   Future<DbShooterRating?> maybeKnownShooter({
     required DbRatingProject project,
     required DbRatingGroup group,
-    required String processedMemberNumber
+    required String memberNumber
   }) {
-    return isar.dbShooterRatings.where().dbKnownMemberNumbersElementEqualTo(processedMemberNumber)
+    return isar.dbShooterRatings.where().dbKnownMemberNumbersElementEqualTo(memberNumber)
         .filter()
         .project((q) => q.idEqualTo(project.id))
         .group((q) => q.uuidEqualTo(group.uuid))

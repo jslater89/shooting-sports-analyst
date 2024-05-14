@@ -5,6 +5,7 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_mode.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
@@ -57,6 +58,8 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
 
   /// Create a new shooter rating for the given information.
   ShooterRating newShooterRating(MatchEntry shooter, {required Sport sport, required DateTime date});
+
+  T wrapDbRating(DbShooterRating rating);
 
   RatingEvent newEvent({
     required ShootingMatch match,
