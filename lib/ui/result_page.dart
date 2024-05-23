@@ -26,7 +26,6 @@ import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/route/compare_shooter_results.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/about_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/score_list_settings_dialog.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/score_stats_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/filter_controls.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_breakdown.dart';
@@ -278,7 +277,7 @@ class _ResultPageState extends State<ResultPage> {
   void _applySearchTerm(String query) {
     _lastQuery = query;
     if(query.startsWith("?")) {
-      var queryElements = parseQuery(query);
+      var queryElements = parseQuery(sport, query);
       if(queryElements != null) {
         setState(() {
           _invalidSearch = false;
@@ -286,8 +285,7 @@ class _ResultPageState extends State<ResultPage> {
           _searchedScores = _searchedScores..retainWhere((element) {
             bool retain = false;
             for(var query in queryElements) {
-              // TODO: new model query elements
-              // if(query.matchesShooter(element.shooter)) return true;
+              if(query.matchesShooter(element.shooter)) return true;
             }
 
             return retain;
