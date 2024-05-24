@@ -150,8 +150,12 @@ class PowerFactor implements NameLookupEntity {
     this.fallback = false,
   }) :
     targetEvents = Map.fromEntries(targetEvents.map((e) => MapEntry(e.name, e))),
-    penaltyEvents = Map.fromEntries(penaltyEvents.map((e) => MapEntry(e.name, e)))
-  ;
+    penaltyEvents = Map.fromEntries(penaltyEvents.map((e) => MapEntry(e.name, e)));
+
+  @override
+  String toString() {
+    return displayName;
+  }
 }
 
 class Division implements NameLookupEntity {
@@ -178,6 +182,11 @@ class Division implements NameLookupEntity {
     this.fallback = false,
     String? longName
   }) : _longName = longName;
+
+  @override
+  String toString() {
+    return displayName;
+  }
 }
 
 abstract class NameLookupEntity {
@@ -278,6 +287,11 @@ class Classification implements NameLookupEntity {
     this.alternateNames = const [],
     this.fallback = false,
   });
+
+  @override
+  String toString() {
+    return displayName;
+  }
 }
 
 enum EventLevel {

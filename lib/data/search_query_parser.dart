@@ -300,10 +300,41 @@ class SportPrefixMatcher {
   }
 }
 
+class PrefixMatch<T extends NameLookupEntity> {
+  T underlyingValue;
+
+  String prefix;
+  String underlyingName;
+
+  bool get isExactMatch => prefix == underlyingName;
+
+  PrefixMatch({
+    required this.underlyingValue,
+    required this.prefix,
+    required this.underlyingName,
+  });
+
+  @override
+  bool operator ==(Object other) {
+    if(other is PrefixMatch) {
+      return underlyingValue == other.underlyingValue;
+    }
+    return false;
+  }
+
+  @override
+  int get hashCode => underlyingValue.hashCode;
+
+  @override
+  String toString() {
+    return "$prefix->$underlyingName->$underlyingValue";
+  }
+}
+
 class ShortestPrefixMatcher<T extends NameLookupEntity> {
   /// Maps every prefix that occurs in the set of value names
   /// to one or more objects of type T.
-  Map<String, Set<T>> _byPrefix = {};
+  Map<String, Set<PrefixMatch<T>>> _byPrefix = {};
 
   ShortestPrefixMatcher(List<T> values) {
     for(var v in values) {
@@ -333,7 +364,11 @@ class ShortestPrefixMatcher<T extends NameLookupEntity> {
         for(int i = 1; i <= name.length; i++) {
           var prefix = name.substring(0, i);
           _byPrefix[prefix] ??= {};
-          _byPrefix[prefix]!.add(v);
+          _byPrefix[prefix]!.add(PrefixMatch(
+            underlyingValue: v,
+            underlyingName: name,
+            prefix: prefix,
+          ));
         }
       }
     }
@@ -341,7 +376,17 @@ class ShortestPrefixMatcher<T extends NameLookupEntity> {
 
   T? lookup(String prefix) {
     var values = _byPrefix[prefix];
-    if(values != null && values.length == 1) return values.first;
+    if(values != null) {
+      for(var v in values) {
+        if(v.isExactMatch) {
+          return v.underlyingValue;
+        }
+      }
+
+      if(values.length == 1) {
+        return values.single.underlyingValue;
+      }
+    }
     return null;
   }
 }
