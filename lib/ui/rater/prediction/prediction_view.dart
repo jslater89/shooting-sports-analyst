@@ -102,11 +102,11 @@ class _PredictionViewState extends State<PredictionView> {
               ),
             // endif kDebugMode
             Tooltip(
-              message: "Download predictions as CSV",
+              message: "Export predictions as CSV",
               child: IconButton(
                 icon: Icon(Icons.save_alt),
                 onPressed: () async {
-                  String contents = "Name,Member Number,Class,5%,35%,Mean,65%,95%,Low Place,Mid Place,High Place,Actual Percent,Actual Place\n";
+                  String contents = "Name,Member Number,Class,Rating,5%,35%,Mean,65%,95%,Low Place,Mid Place,High Place,Actual Percent,Actual Place\n";
 
                   for(var pred in sortedPredictions) {
                     double midLow = (PredictionView._percentFloor + pred.lowerBox / highPrediction * PredictionView._percentMult) * 100;
@@ -119,16 +119,19 @@ class _PredictionViewState extends State<PredictionView> {
                     int highPlace = pred.highPlace;
                     var outcome = outcomes[pred];
 
-                    contents += "${pred.shooter.getName(suffixes: false)},";
-                    contents += "${pred.shooter.originalMemberNumber},";
-                    contents += "${pred.shooter.lastClassification.name},";
-                    contents += "$low,$midLow,$mean,$midHigh,$high,$lowPlace,$midPlace,$highPlace";
+                    String line = "";
+                    line += "${pred.shooter.getName(suffixes: false)},";
+                    line += "${pred.shooter.originalMemberNumber},";
+                    line += "${pred.shooter.lastClassification.name},";
+                    line += "${pred.shooter.rating.round()},";
+                    line += "$low,$midLow,$mean,$midHigh,$high,$lowPlace,$midPlace,$highPlace";
 
                     if(outcome != null) {
-                      contents += ",${outcome.percent * 100},${outcome.place}";
+                      line += ",${outcome.percent * 100},${outcome.place}";
                     }
 
-                    contents += "\n";
+                    // _log.vv(line);
+                    contents += "$line\n";
                   }
 
                   HtmlOr.saveFile("predictions.csv", contents);
