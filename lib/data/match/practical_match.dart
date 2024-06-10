@@ -85,7 +85,7 @@ class PracticalMatch {
   int? maxPoints;
   int stageScoreCount = 0;
 
-  bool get inProgress => false;
+  bool get inProgress => false; //practiscoreId == "02aa1e15-5464-4a01-9b28-95d5e14cfade";
 
   PracticalMatch copy() {
     var newMatch = PracticalMatch()

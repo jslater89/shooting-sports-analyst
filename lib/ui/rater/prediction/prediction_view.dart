@@ -102,11 +102,11 @@ class _PredictionViewState extends State<PredictionView> {
               ),
             // endif kDebugMode
             Tooltip(
-              message: "Download predictions as CSV",
+              message: "Export predictions as CSV",
               child: IconButton(
                 icon: Icon(Icons.save_alt),
                 onPressed: () async {
-                  String contents = "Name,Member Number,Class,5%,35%,Mean,65%,95%,Low Place,Mid Place,High Place,Actual Percent,Actual Place\n";
+                  String contents = "Name,Member Number,Class,Rating,5%,35%,Mean,65%,95%,Low Place,Mid Place,High Place,Actual Percent,Actual Place\n";
 
                   for(var pred in sortedPredictions) {
                     double midLow = (PredictionView._percentFloor + pred.lowerBox / highPrediction * PredictionView._percentMult) * 100;
@@ -119,16 +119,19 @@ class _PredictionViewState extends State<PredictionView> {
                     int highPlace = pred.highPlace;
                     var outcome = outcomes[pred];
 
-                    contents += "${pred.shooter.getName(suffixes: false)},";
-                    contents += "${pred.shooter.originalMemberNumber},";
-                    contents += "${pred.shooter.lastClassification?.name ?? "(none)"},";
-                    contents += "$low,$midLow,$mean,$midHigh,$high,$lowPlace,$midPlace,$highPlace";
+                    String line = "";
+                    line += "${pred.shooter.getName(suffixes: false)},";
+                    line += "${pred.shooter.originalMemberNumber},";
+                    line += "${pred.shooter.lastClassification?.name ?? "none"},";
+                    line += "${pred.shooter.rating.round()},";
+                    line += "$low,$midLow,$mean,$midHigh,$high,$lowPlace,$midPlace,$highPlace";
 
                     if(outcome != null) {
-                      contents += ",${outcome.percent * 100},${outcome.place}";
+                      line += ",${outcome.percent * 100},${outcome.place}";
                     }
 
-                    contents += "\n";
+                    // _log.vv(line);
+                    contents += "$line\n";
                   }
 
                   HtmlOr.saveFile("predictions.csv", contents);
@@ -184,13 +187,14 @@ class _PredictionViewState extends State<PredictionView> {
     var match = result.unwrap();
 
     var filters = widget.rater.filters;
-    var shooters = match.filterShooters(
-      filterMode: filters.mode,
-      divisions: filters.activeDivisions.toList(),
-      powerFactors: [],
-      classes: [],
-      allowReentries: false,
-    );
+    var shooters = <Shooter>[];
+    // var shooters = match.filterShooters(
+    //   filterMode: filters.mode,
+    //   divisions: filters.activeDivisions.toList(),
+    //   powerFactors: [],
+    //   classes: [],
+    //   allowReentries: false,
+    // );
     var scores = match.getScores(
       shooters: shooters,
       scoreDQ: false,
@@ -203,7 +207,8 @@ class _PredictionViewState extends State<PredictionView> {
     // Give raters the whole list of shooters, and let them figure out
     // what to do with registration lists that don't match
     for(var shooter in shooters) {
-      var rating = widget.rater.ratingFor(shooter);
+      var rating = null;
+      // var rating = widget.rater.ratingFor(shooter);
       if(rating != null) {
         var score = scores.firstWhereOrNull((element) => element.shooter == shooter);
         // var prediction = sortedPredictions.firstWhereOrNull((element) => element.shooter == rating);
@@ -219,46 +224,46 @@ class _PredictionViewState extends State<PredictionView> {
 
     _log.i("Registrants: ${shooters.length} Predictions: ${shooters.length} Matched: ${knownShooters.length}");
 
-    var outcome = widget.rater.ratingSystem.validate(
-        shooters: knownShooters,
-        scores: matchScores.map((k, v) => MapEntry(k, v.total)),
-        matchScores: matchScores,
-        predictions: sortedPredictions
-    );
-
-    if(outcome.mutatedInputs) {
-      _log.i("Predictions changed");
-      setState(() {
-        sortedPredictions = outcome.actualResults.keys.sorted((a, b) => b.ordinal.compareTo(a.ordinal));
-        searchedPredictions = search.isEmpty ? sortedPredictions : sortedPredictions.where((p) =>
-            p.shooter.getName(suffixes: false).toLowerCase().startsWith(search.toLowerCase())
-            || p.shooter.lastName.toLowerCase().startsWith(search.toLowerCase())
-        ).toList();
-      });
-    }
-
-    int correct68 = 0;
-    int correct95 = 0;
-    int total = 0;
-    for(var pred in outcome.actualResults.keys) {
-      double boxLowPercent = (PredictionView._percentFloor + pred.lowerBox / highPrediction * PredictionView._percentMult) * 100;
-      double whiskerLowPercent = (PredictionView._percentFloor + pred.lowerWhisker / highPrediction * PredictionView._percentMult) * 100;
-      double whiskerHighPercent = (PredictionView._percentFloor + pred.upperWhisker / highPrediction * PredictionView._percentMult) * 100;
-      double boxHighPercent = (PredictionView._percentFloor + pred.upperBox / highPrediction * PredictionView._percentMult) * 100;
-      double? outcomePercent;
-
-      if(outcome.actualResults[pred] != null) {
-        total += 1;
-        outcomePercent = outcome.actualResults[pred]!.percent * 100;
-        if(outcomePercent >= whiskerLowPercent && outcomePercent <= whiskerHighPercent) correct95 += 1;
-        if(outcomePercent >= boxLowPercent && outcomePercent <= boxHighPercent) correct68 += 1;
-      }
-    }
-    _log.i("Pct. correct: $correct68/$correct95/$total (${(correct68 / total * 100).toStringAsFixed(1)}%/${(correct95 / total * 100).toStringAsFixed(1)}%)");
-
-    setState(() {
-      outcomes = outcome.actualResults;
-    });
+    // var outcome = widget.rater.ratingSystem.validate(
+    //     shooters: knownShooters,
+    //     scores: matchScores.map((k, v) => MapEntry(k, v.total)),
+    //     matchScores: matchScores,
+    //     predictions: sortedPredictions
+    // );
+    //
+    // if(outcome.mutatedInputs) {
+    //   _log.i("Predictions changed");
+    //   setState(() {
+    //     sortedPredictions = outcome.actualResults.keys.sorted((a, b) => b.ordinal.compareTo(a.ordinal));
+    //     searchedPredictions = search.isEmpty ? sortedPredictions : sortedPredictions.where((p) =>
+    //         p.shooter.getName(suffixes: false).toLowerCase().startsWith(search.toLowerCase())
+    //         || p.shooter.lastName.toLowerCase().startsWith(search.toLowerCase())
+    //     ).toList();
+    //   });
+    // }
+    //
+    // int correct68 = 0;
+    // int correct95 = 0;
+    // int total = 0;
+    // for(var pred in outcome.actualResults.keys) {
+    //   double boxLowPercent = (PredictionView._percentFloor + pred.lowerBox / highPrediction * PredictionView._percentMult) * 100;
+    //   double whiskerLowPercent = (PredictionView._percentFloor + pred.lowerWhisker / highPrediction * PredictionView._percentMult) * 100;
+    //   double whiskerHighPercent = (PredictionView._percentFloor + pred.upperWhisker / highPrediction * PredictionView._percentMult) * 100;
+    //   double boxHighPercent = (PredictionView._percentFloor + pred.upperBox / highPrediction * PredictionView._percentMult) * 100;
+    //   double? outcomePercent;
+    //
+    //   if(outcome.actualResults[pred] != null) {
+    //     total += 1;
+    //     outcomePercent = outcome.actualResults[pred]!.percent * 100;
+    //     if(outcomePercent >= whiskerLowPercent && outcomePercent <= whiskerHighPercent) correct95 += 1;
+    //     if(outcomePercent >= boxLowPercent && outcomePercent <= boxHighPercent) correct68 += 1;
+    //   }
+    // }
+    // _log.i("Pct. correct: $correct68/$correct95/$total (${(correct68 / total * 100).toStringAsFixed(1)}%/${(correct95 / total * 100).toStringAsFixed(1)}%)");
+    //
+    // setState(() {
+    //   outcomes = outcome.actualResults;
+    // });
   }
 
   Widget _buildPredictionsHeader() {
