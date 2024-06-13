@@ -278,21 +278,21 @@ class ScoreList extends StatelessWidget {
               if(ratings != null) Consumer<ScoreDisplaySettingsModel>(
                 builder: (context, model, _) {
                   String text = "n/a";
-                  // TODO: restore when ratings are converted
-                  // switch(model.value.ratingMode) {
-                  //   case RatingDisplayMode.preMatch:
-                  //     var rating = ratings!.lookup(score.shooter)?.ratingForEvent(match!, null, beforeMatch: true).round();
-                  //     if(rating != null) text = rating.toString();
-                  //     break;
-                  //   case RatingDisplayMode.postMatch:
-                  //     var rating = ratings!.lookup(score.shooter)?.ratingForEvent(match!, null, beforeMatch: false).round();
-                  //     if(rating != null) text = rating.toString();
-                  //     break;
-                  //   case RatingDisplayMode.change:
-                  //     var rating = ratings!.lookup(score.shooter)?.changeForEvent(match!, null);
-                  //     if(rating != null) text = rating.toStringAsFixed(1);
-                  //     break;
-                  // }
+                  // TODO: fix when ratings are converted
+                  switch(model.value.ratingMode) {
+                    case RatingDisplayMode.preMatch:
+                      var rating = ratings!.lookupNew(match!, score.shooter)?.ratingForEvent(match!, null, beforeMatch: true).round();
+                      if(rating != null) text = rating.toString();
+                      break;
+                    case RatingDisplayMode.postMatch:
+                      var rating = ratings!.lookupNew(match!, score.shooter)?.ratingForEvent(match!, null, beforeMatch: false).round();
+                      if(rating != null) text = rating.toString();
+                      break;
+                    case RatingDisplayMode.change:
+                      var rating = ratings!.lookupNew(match!, score.shooter)?.changeForNewEvent(match!, null);
+                      if(rating != null) text = rating.toStringAsFixed(1);
+                      break;
+                  }
                   return Expanded(flex: 1, child: Text(text));
                 }
               ),
@@ -454,20 +454,20 @@ class ScoreList extends StatelessWidget {
                   builder: (context, model, _) {
                     String text = "n/a";
                     // TODO: restore when ratings are converted
-                    // switch(model.value.ratingMode) {
-                    //   case RatingDisplayMode.preMatch:
-                    //     var rating = ratings!.lookup(matchScore.shooter)?.ratingForEvent(match!, null, beforeMatch: true).round();
-                    //     if(rating != null) text = rating.toString();
-                    //     break;
-                    //   case RatingDisplayMode.postMatch:
-                    //     var rating = ratings!.lookup(matchScore.shooter)?.ratingForEvent(match!, null, beforeMatch: false).round();
-                    //     if(rating != null) text = rating.toString();
-                    //     break;
-                    //   case RatingDisplayMode.change:
-                    //     var rating = ratings!.lookup(matchScore.shooter)?.changeForEvent(match!, stage);
-                    //     if(rating != null) text = rating.toStringAsFixed(1);
-                    //     break;
-                    // }
+                    switch(model.value.ratingMode) {
+                      case RatingDisplayMode.preMatch:
+                        var rating = ratings!.lookupNew(match!, matchScore.shooter)?.ratingForEvent(match!, null, beforeMatch: true).round();
+                        if(rating != null) text = rating.toString();
+                        break;
+                      case RatingDisplayMode.postMatch:
+                        var rating = ratings!.lookupNew(match!, matchScore.shooter)?.ratingForEvent(match!, null, beforeMatch: false).round();
+                        if(rating != null) text = rating.toString();
+                        break;
+                      case RatingDisplayMode.change:
+                        var rating = ratings!.lookupNew(match!, matchScore.shooter)?.changeForNewEvent(match!, stage);
+                        if(rating != null) text = rating.toStringAsFixed(1);
+                        break;
+                    }
                     return Expanded(flex: 1, child: Text(text));
                   }
               ),
@@ -531,11 +531,30 @@ class ScoreList extends StatelessWidget {
 extension LookupShooterRating on Map<RaterGroup, Rater> {
   ShooterRating? lookup(old.Shooter s) {
     // TODO: fix when raters are converted
-    // for(var group in this.keys) {
-    //   if(group.divisions.contains(s.division)) {
-    //     return this[group]!.ratingFor(s);
-    //   }
-    // }
+    for(var group in this.keys) {
+      if(group.divisions.contains(s.division)) {
+        return this[group]!.ratingFor(s);
+      }
+    }
+
+    return null;
+  }
+
+  ShooterRating? lookupNew(ShootingMatch match, MatchEntry s) {
+    RaterGroup? group = null;
+    outer:for(var g in this.keys) {
+      for(var division in g.divisions) {
+        var matchingDivision = match.sport.divisions.lookupByName(division.name, fallback: false);
+        if(matchingDivision == s.division) {
+          group = g;
+          break outer;
+        }
+      }
+    }
+
+    if(group != null) {
+      return this[group]!.ratingForNew(s);
+    }
 
     return null;
   }

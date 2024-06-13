@@ -19,6 +19,7 @@ import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 import 'package:shooting_sports_analyst/data/ranking/shooter_aliases.dart';
 import 'package:shooting_sports_analyst/data/ranking/timings.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart' as newShooter;
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:fuzzywuzzy/fuzzywuzzy.dart' as strdiff;
@@ -370,6 +371,11 @@ class Rater {
   }
 
   ShooterRating? ratingFor(Shooter s) {
+    var processed = processMemberNumber(s.memberNumber);
+    return maybeKnownShooter(processed);
+  }
+
+  ShooterRating? ratingForNew(newShooter.MatchEntry s) {
     var processed = processMemberNumber(s.memberNumber);
     return maybeKnownShooter(processed);
   }

@@ -17,6 +17,7 @@ import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 import 'package:shooting_sports_analyst/data/search_query_parser.dart';
 import 'package:shooting_sports_analyst/data/sort_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/match/stage_stats_calculator.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
@@ -25,6 +26,7 @@ import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/route/compare_shooter_results.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/about_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/score_list_settings_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/stage_stats_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/filter_controls.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_breakdown.dart';
@@ -68,6 +70,7 @@ class _ResultPageState extends State<ResultPage> {
 
   late BuildContext _innerContext;
   ShootingMatch? _currentMatch;
+  late MatchStatsCalculator _matchStats;
 
   bool _operationInProgress = false;
   Sport get sport => widget.canonicalMatch.sport;
@@ -123,6 +126,8 @@ class _ResultPageState extends State<ResultPage> {
 
     _appFocus = FocusNode();
     _currentMatch = widget.canonicalMatch!.copy();
+    _matchStats = MatchStatsCalculator(_currentMatch!);
+    _log.v(_matchStats);
     _filteredStages = []..addAll(_currentMatch!.stages);
 
     var scores = _currentMatch!.getScores(scoreDQ: _filters.scoreDQs, stages: _filteredStages);
@@ -514,6 +519,19 @@ class _ResultPageState extends State<ResultPage> {
       //     )
       //   )
       // );
+      if(_stage != null) actions.add(
+        Tooltip(
+          message: "View stage hit statistics",
+          child: IconButton(
+            icon: Icon(Icons.bar_chart),
+            onPressed: () {
+              var stats = MatchStatsCalculator(_currentMatch!);
+              var stageStats = stats.stageStats[_stage!]!;
+              StageStatsDialog.show(context, stageStats);
+            }
+          )
+        )
+      );
       actions.add(
         Tooltip(
           message: "Compare shooter results.",
@@ -551,7 +569,7 @@ class _ResultPageState extends State<ResultPage> {
               }
             },
           ),
-        )
+        ),
       );
     }
     actions.add(

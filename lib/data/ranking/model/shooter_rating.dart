@@ -65,10 +65,10 @@ abstract class ShooterRating extends Shooter {
   ///
   /// If the shooter was not rated prior to the match and none of the
   /// above cases apply, returns the shooter's current rating.
-  double ratingForEvent(PracticalMatch match, Stage? stage, {bool beforeMatch = false}) {
+  double ratingForEvent(ShootingMatch match, Stage? stage, {bool beforeMatch = false}) {
     RatingEvent? candidateEvent;
     for(var e in ratingEvents.reversed) {
-      if(e.match.practiscoreId == match.practiscoreId && (candidateEvent == null || beforeMatch)) {
+      if(e.match.practiscoreId == match.sourceIds.first && (candidateEvent == null || beforeMatch)) {
         if(stage == null) {
           // Because we're going backward, this will get the last change from the
           // match.
@@ -116,6 +116,21 @@ abstract class ShooterRating extends Shooter {
         events.add(e);
       }
       else if(stage != null && e.match.practiscoreId == match.practiscoreId && e.stage?.name == stage.name) {
+        events.add(e);
+      }
+    }
+
+    if(events.isEmpty) return null;
+    else return events.map((e) => e.ratingChange).sum;
+  }
+
+  double? changeForNewEvent(ShootingMatch match, MatchStage? stage) {
+    List<RatingEvent> events = [];
+    for(var e in ratingEvents.reversed) {
+      if(stage == null && e.match.practiscoreId == match.sourceIds.first) {
+        events.add(e);
+      }
+      else if(stage != null && e.match.practiscoreId == match.sourceIds.first && e.stage?.name == stage.name) {
         events.add(e);
       }
     }
