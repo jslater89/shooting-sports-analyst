@@ -374,6 +374,14 @@ class Rater {
     return maybeKnownShooter(processed);
   }
 
+  String _processName(Shooter shooter) {
+    String name = "${shooter.firstName.toLowerCase().replaceAll(RegExp(r"\s+"), "")}"
+        + "${shooter.lastName.toLowerCase().replaceAll(RegExp(r"\s+"), "")}";
+    name = name.replaceAll(RegExp(r"[^a-zA-Z0-9]"), "");
+
+    return name;
+  }
+
   RatingResult _deduplicateShooters() {
     if(sport.shooterDeduplicator != null) {
       return sport.shooterDeduplicator!.deduplicateShooters(

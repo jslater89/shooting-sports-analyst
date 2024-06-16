@@ -161,6 +161,21 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
     else return events.map((e) => e.ratingChange).sum;
   }
 
+  double? changeForNewEvent(ShootingMatch match, MatchStage? stage) {
+    List<RatingEvent> events = [];
+    for(var e in ratingEvents.reversed) {
+      if(stage == null && e.match.sourceIds.first == match.sourceIds.first) {
+        events.add(e);
+      }
+      else if(stage != null && e.match.sourceIds.first == match.sourceIds.first && e.stage?.name == stage.name) {
+        events.add(e);
+      }
+    }
+
+    if(events.isEmpty) return null;
+    else return events.map((e) => e.ratingChange).sum;
+  }
+
   /// Alternate member numbers this shooter is known by.
   List<String> alternateMemberNumbers = [];
 

@@ -21,12 +21,12 @@ const _uspsaPenalties = [
 const uspsaOpen = Division(name: "Open", shortName: "OPEN", fallback: true);
 const uspsaPcc = Division(name: "PCC", shortName: "PCC");
 const uspsaLimited = Division(name: "Limited", shortName: "LIM", alternateNames: ["LTD"]);
-const uspsaLimitedOptics = Division(name: "Limited Optics", shortName: "LO");
-const uspsaCarryOptics = Division(name: "Carry Optics", shortName: "CO");
+const uspsaLimitedOptics = Division(name: "Limited Optics", shortName: "LO", alternateNames: ["limitedoptics"]);
+const uspsaCarryOptics = Division(name: "Carry Optics", shortName: "CO", alternateNames: ["carryoptics"]);
 const uspsaProduction = Division(name: "Production", shortName: "PROD");
-const uspsaSingleStack = Division(name: "Single Stack", shortName: "SS");
+const uspsaSingleStack = Division(name: "Single Stack", shortName: "SS", alternateNames: ["singlestack"]);
 const uspsaRevolver = Division(name: "Revolver", shortName: "REV", alternateNames: ["REVO"]);
-const uspsaLimited10 = Division(name: "Limited 10", shortName: "L10", alternateNames: ["LIM10", "LTD10"]);
+const uspsaLimited10 = Division(name: "Limited 10", shortName: "L10", alternateNames: ["LIM10", "LTD10", "limited10"]);
 
 const uspsaGM = Classification(index: 0, name: "Grandmaster", shortName: "GM", alternateNames: ["G"]);
 const uspsaM = Classification(index: 1, name: "Master", shortName: "M");
