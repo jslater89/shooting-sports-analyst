@@ -48,9 +48,7 @@ class ShooterPrediction {
   String toString() {
     return "${shooter.getName(suffixes: false)}: ${mean.toStringAsPrecision(4)} ± ${twoSigma.toStringAsPrecision(4)}";
   }
-}
 
-extension PredictionMaths on ShooterPrediction {
   double get center => mean;
   double get upperBox => mean + oneSigma + shift;
   double get lowerBox => mean - oneSigma + shift;
