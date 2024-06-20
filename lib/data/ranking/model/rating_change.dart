@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 
@@ -26,12 +27,17 @@ class RatingChange {
 abstract class RatingEvent {
   String get eventName => "${match.name}" + (stage == null ? "" : " - ${stage!.name}");
 
+  Map<String, List<dynamic>> get info => wrappedEvent.info;
+  Map<String, dynamic> get extraData => wrappedEvent.extraData;
+
+  DbRatingEvent wrappedEvent;
+
+  // The following properties ([match] through [scoreForMatch]) are used for calculating
+  // shooter stats in individual dialogs, and can be slow.
+
   ShootingMatch match;
   MatchStage? stage;
   RelativeScore score;
-  Map<String, List<dynamic>> info;
-  Map<String, dynamic> extraData;
-
   RelativeStageScore get scoreForStage {
     if(stage != null) return score as RelativeStageScore;
     else throw StateError("attempted to get stage score for match event");
@@ -42,11 +48,13 @@ abstract class RatingEvent {
     else throw StateError("attempted to get match score for stage event");
   }
 
-  double get ratingChange;
-  double get oldRating;
+  // End individual dialog/slow-okay stats
+
+  double get ratingChange => wrappedEvent.ratingChange;
+  double get oldRating => wrappedEvent.oldRating;
   double get newRating => oldRating + ratingChange;
 
-  RatingEvent({required this.match, this.stage, required this.score, this.info = const {}, this.extraData = const {}});
+  RatingEvent({required this.match, this.stage, required this.score, required this.wrappedEvent});
 
   void apply(RatingChange change);
 
@@ -54,6 +62,5 @@ abstract class RatingEvent {
         this.match = other.match,
         this.stage = other.stage,
         this.score = other.score,
-        this.info = {}..addAll(other.info),
-        this.extraData = {}..addAll(other.extraData);
+        this.wrappedEvent = other.wrappedEvent.copy();
 }

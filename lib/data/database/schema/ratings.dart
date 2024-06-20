@@ -260,7 +260,23 @@ class DbRatingEvent {
   @Backlink(to: 'events')
   final owner = IsarLink<DbShooterRating>();
   final match = IsarLink<DbShootingMatch>();
+
+  /// Set the match for this event, updating both the [match] link
+  /// and [matchId].
+  Future<void> setMatch(DbShootingMatch m) {
+    matchId = m.sourceIds.first;
+    match.value = m;
+    return match.save();
+  }
+
+  /// A match identifier for the match. See [setMatch].
+  String matchId;
+
+  /// The shooter's entry number in this match.
   int entryId;
+
+  /// The stage number of this score, or -1 if this is a rating event
+  /// for a full match.
   int stageNumber;
 
   DateTime date;
@@ -274,11 +290,15 @@ class DbRatingEvent {
   @Index()
   int get dateAndStageNumber => (date.millisecondsSinceEpoch ~/ 1000) + stageNumber;
 
-  // TODO figure out how to store these
   @ignore
   Map<String, List<dynamic>> info;
+  String get infoAsJson => jsonEncode(info);
+  set infoAsJson(String v) => info = jsonDecode(v);
+
   @ignore
   Map<String, dynamic> extraData;
+  String get extraDataAsJson => jsonEncode(extraData);
+  set extraDataAsJson(String v) => extraData = jsonDecode(v);
   
   DbRelativeScore score;
   DbRelativeScore matchScore;
@@ -293,7 +313,12 @@ class DbRatingEvent {
     required this.date,
     required this.stageNumber,
     required this.entryId,
+    required this.matchId,
   });
+
+  DbRatingEvent copy() {
+
+  }
 }
 
 @embedded

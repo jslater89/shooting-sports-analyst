@@ -429,7 +429,7 @@ class RatingProjectLoader {
 
     // _log.d("Connectedness for ${match.name}: ${localAverageConnectedness.toStringAsFixed(2)}/${connectednessDenominator.toStringAsFixed(2)} => ${connectednessMod.toStringAsFixed(3)}");
 
-    Map<DbShooterRating, Map<RelativeScore, DbRatingEvent>> changes = {};
+    Map<DbShooterRating, Map<RelativeScore, RatingEvent>> changes = {};
     Set<DbShooterRating> shootersAtMatch = Set();
 
     if(Timings.enabled) start = DateTime.now();
@@ -665,7 +665,7 @@ class RatingProjectLoader {
     required ShootingMatch match,
     MatchStage? stage,
     required List<RelativeMatchScore> scores,
-    required Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes,
+    required Map<DbShooterRating, Map<RelativeScore, RatingEvent>> changes,
     required double matchStrength,
     required double connectednessMod,
     required double weightMod
@@ -695,7 +695,7 @@ class RatingProjectLoader {
 
         scoreMap[rating] = otherScore;
         matchScoreMap[rating] = s;
-        changes[rating] ??= {};
+        changes[rating.wrappedRating] ??= {};
         wrappedRatings[num] = rating;
       }
 
