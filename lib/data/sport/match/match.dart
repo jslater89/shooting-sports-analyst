@@ -86,10 +86,12 @@ class ShootingMatch {
     var innerStages = stages ?? this.stages;
 
     return sport.matchScoring.calculateMatchScores(
+      match: this,
       shooters: innerShooters,
       stages: innerStages,
       scoreDQ: scoreDQ,
-      predictionMode: predictionMode
+      predictionMode: predictionMode,
+      ratings: ratings,
     );
   }
 

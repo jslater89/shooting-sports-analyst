@@ -86,6 +86,14 @@ extension IncrementHistogram<T> on Map<T, int> {
   }
 }
 
+extension IncrementDoubleMap<T> on Map<T, double> {
+  void incrementBy(T key, double amount) {
+    var value = this[key] ?? 0;
+    value += amount;
+    this[key] = value;
+  }
+}
+
 extension ListMap<K, V> on Map<K, List<V>> {
   void addToList(K key, V value) {
     this[key] ??= [];

@@ -541,19 +541,12 @@ extension LookupShooterRating on Map<RaterGroup, Rater> {
   }
 
   ShooterRating? lookupNew(ShootingMatch match, MatchEntry s) {
-    RaterGroup? group = null;
-    outer:for(var g in this.keys) {
-      for(var division in g.divisions) {
-        var matchingDivision = match.sport.divisions.lookupByName(division.name, fallback: false);
-        if(matchingDivision == s.division) {
-          group = g;
-          break outer;
-        }
-      }
-    }
+    Rater? group = lookupRater(match, s);
 
     if(group != null) {
-      return this[group]!.ratingForNew(s);
+      // might not be present in the case of rating sets that
+      // don't cover the whole sport
+      return group.ratingForNew(s);
     }
 
     return null;
@@ -575,7 +568,7 @@ extension LookupShooterRating on Map<RaterGroup, Rater> {
     return null;
   }
 
-  Rater? lookupRater(old.Shooter shooter) {
+  Rater? lookupOldRater(old.Shooter shooter) {
     // TODO: fix when ratings are converted
     // for(var group in this.keys) {
     //   if(group.divisions.contains(shooter.division)) {
@@ -584,6 +577,21 @@ extension LookupShooterRating on Map<RaterGroup, Rater> {
     // }
 
     return null;
+  }
+
+  Rater? lookupRater(ShootingMatch match, MatchEntry s) {
+    RaterGroup? group = null;
+    outer:for(var g in this.keys) {
+      for(var division in g.divisions) {
+        var matchingDivision = match.sport.divisions.lookupByName(division.name, fallback: false);
+        if(matchingDivision == s.division) {
+          group = g;
+          break outer;
+        }
+      }
+    }
+
+    return this[group];
   }
 }
 
