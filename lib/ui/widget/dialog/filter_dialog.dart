@@ -20,8 +20,10 @@ class FilterSet {
   late Map<Classification, bool> classifications;
   late Map<PowerFactor, bool> powerFactors;
   late Map<AgeCategory, bool> ageCategories;
+  List<int> squads = [];
+  List<int> knownSquads;
 
-  FilterSet(this.sport, {bool empty = false}) {
+  FilterSet(this.sport, {bool empty = false, this.knownSquads = const []}) {
     divisions = {};
     classifications = {};
     powerFactors = {};
@@ -41,6 +43,10 @@ class FilterSet {
 
     for (AgeCategory c in sport.ageCategories.values) {
       ageCategories[c] = false;
+    }
+
+    if(!empty) {
+      squads = knownSquads;
     }
   }
 
@@ -296,8 +302,21 @@ class _FilterDialogState extends State<FilterDialog> {
   }
 
   List<Widget> _actions(BuildContext context) {
-    var spacing = MediaQuery.of(context).size.width > 775 ? 60.0 : 0.0;
+    var spacing = MediaQuery.of(context).size.width > 775 ? 55.0 : 0.0;
     return [
+      if(_filters.knownSquads.isNotEmpty) TextButton(
+        child: Text("SQUADS (${_filters.squads.length})"),
+        onPressed: () async {
+          var squads = await SquadSelectDialog.show(context, knownSquads: _filters.knownSquads, selectedSquads: _filters.squads);
+
+          if(squads != null) {
+            setState(() {
+              _filters.squads = squads;
+            });
+          }
+        },
+      ),
+      if(_filters.knownSquads.isNotEmpty) SizedBox(width: spacing),
       TextButton(
         child: Text("HANDGUNS"),
         onPressed: _filters.sport != uspsaSport ? null : () {
@@ -388,5 +407,93 @@ class _FilterDialogState extends State<FilterDialog> {
         },
       )
     ];
+  }
+}
+
+class SquadSelectDialog extends StatefulWidget {
+  const SquadSelectDialog({super.key, required this.knownSquads, this.selectedSquads = const []});
+
+  final List<int> knownSquads;
+  final List<int> selectedSquads;
+
+  @override
+  State<SquadSelectDialog> createState() => _SquadSelectDialogState();
+
+  static Future<List<int>?> show(BuildContext context, {required List<int> knownSquads, List<int> selectedSquads = const []}) {
+    return showDialog(context: context, builder: (context) => SquadSelectDialog(knownSquads: knownSquads, selectedSquads: selectedSquads));
+  }
+}
+
+class _SquadSelectDialogState extends State<SquadSelectDialog> {
+  Map<int, bool> selected = {};
+
+  @override
+  void initState() {
+    super.initState();
+
+    for(var s in widget.knownSquads) {
+      selected[s] = widget.selectedSquads.contains(s);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    List<Widget> children = [
+      Text("Select squads to include in scoring."),
+      SizedBox(height: 10),
+    ]..addAll(
+        selected.keys.map(
+            (int s) => CheckboxListTile(value: selected[s], onChanged: (v) => _toggle(s, v), title: Text("$s"))
+        )
+    );
+
+
+    return AlertDialog(
+      title: Text("Select Squads"),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: children,
+        ),
+      ),
+      actions: [
+        TextButton(
+          child: Text("ALL"),
+          onPressed: () {
+            setState(() {
+              selected.keys.forEach((squad) => selected[squad] = true);
+            });
+
+          },
+        ),
+        TextButton(
+          child: Text("NONE"),
+          onPressed: () {
+            setState(() {
+              selected.keys.forEach((squad) => selected[squad] = false);
+            });
+          },
+        ),
+        SizedBox(width: 50),
+        TextButton(
+          child: Text("CANCEL"),
+          onPressed: () {
+            Navigator.of(context).pop(null);
+          },
+        ),
+        TextButton(
+          child: Text("APPLY"),
+          onPressed: () {
+            Navigator.of(context).pop(selected.keys.toList()..retainWhere((squad) => selected[squad]!));
+          },
+        )
+      ],
+    );
+  }
+
+  void _toggle(int s, bool? value) {
+    setState(() {
+      selected[s] = value ?? false;
+    });
   }
 }

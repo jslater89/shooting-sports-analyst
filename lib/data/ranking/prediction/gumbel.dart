@@ -17,4 +17,8 @@ class Gumbel {
 
     return samples;
   }
+
+  List<double> samples;
+
+  Gumbel(this.samples);
 }

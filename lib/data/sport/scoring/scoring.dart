@@ -197,6 +197,9 @@ final class RelativeStageFinishScoring extends MatchScoring {
 
       for(var shooter in shooters) {
         // Do match predictions for shooters who have completed at least one stage.
+        if(shooter.firstName == "Matthew" && shooter.lastName == "Hemple") {
+          print("break");
+        }
         if((stageScores[shooter]?.length ?? 0) > 0 || predictionMode == MatchPredictionMode.eloAwareFull) {
           double averageStagePercentage = 0.0;
           int stagesCompleted = 0;
@@ -245,6 +248,7 @@ final class RelativeStageFinishScoring extends MatchScoring {
                 var rating = ratings!.lookupNew(match, shooter);
                 var prediction = predictions[rating];
                 if(prediction != null && highPrediction != null) {
+                  // TODO: distribute this according to a Gumbel or normal cumulative distribution function
                   var percent = 0.3 + ((prediction.mean + prediction.shift / 2) / (highPrediction.halfHighPrediction + highPrediction.shift / 2) * 0.7);
                   stageScoreTotals.incrementBy(shooter, stage.maxPoints * percent);
                 }

@@ -26,6 +26,10 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
   /// Given some number of shooters (see [RatingMode]), update their ratings
   /// and return a map of the changes.
   ///
+  /// [isMatchOngoing] tells the rating engine that a match is in progress for
+  /// ratings purposes: match blend will be disabled and certain DNFs will be
+  /// ignored.
+  ///
   /// [shooter] is the shooter or shooters whose ratings should change. [scores]
   /// is a list of scores for the rating event in question. [matchScores] is a list
   /// of match totals, which is identical to [scores] if byStage is true.
@@ -41,6 +45,7 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
   /// entries for all shooters in the rating event.
   Map<ShooterRating, RatingChange> updateShooterRatings({
     required PracticalMatch match,
+    bool isMatchOngoing = false,
     required List<ShooterRating> shooters,
     required Map<ShooterRating, RelativeScore> scores,
     required Map<ShooterRating, RelativeMatchScore> matchScores,

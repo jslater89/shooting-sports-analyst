@@ -69,7 +69,7 @@ class _ResultPageState extends State<ResultPage> {
   ScrollController _horizontalScrollController = ScrollController();
 
   late BuildContext _innerContext;
-  ShootingMatch? _currentMatch;
+  late ShootingMatch _currentMatch;
   late MatchStatsCalculator _matchStats;
 
   bool _operationInProgress = false;
@@ -112,7 +112,15 @@ class _ResultPageState extends State<ResultPage> {
   void initState() {
     super.initState();
 
-    _filters = FilterSet(widget.canonicalMatch.sport);
+    Set<int> squads = {};
+    for(var s in widget.canonicalMatch.shooters) {
+      if(s.squad != null) {
+        squads.add(s.squad!);
+      }
+    }
+
+    var squadList = squads.toList()..sort();
+    _filters = FilterSet(widget.canonicalMatch.sport, knownSquads: squadList);
     _sortMode = sport.resultSortModes.first;
 
     if(kIsWeb) {
@@ -125,21 +133,22 @@ class _ResultPageState extends State<ResultPage> {
     }
 
     _appFocus = FocusNode();
-    _currentMatch = widget.canonicalMatch!.copy();
-    _matchStats = MatchStatsCalculator(_currentMatch!);
+    _currentMatch = widget.canonicalMatch.copy();
+    _matchStats = MatchStatsCalculator(_currentMatch);
     _log.v(_matchStats);
-    _filteredStages = []..addAll(_currentMatch!.stages);
+    _filteredStages = []..addAll(_currentMatch.stages);
 
-    var scores = _currentMatch!.getScores(scoreDQ: _filters.scoreDQs, stages: _filteredStages);
+    var scores = _currentMatch.getScores(scoreDQ: _filters.scoreDQs, stages: _filteredStages);
 
     _baseScores = scores.values.toList();
     _searchedScores = []..addAll(_baseScores);
 
     if(widget.initialStage != null) {
-      var stageCopy = _currentMatch!.lookupStage(widget.initialStage!);
+      var stageCopy = _currentMatch.lookupStage(widget.initialStage!);
       if(stageCopy != null) _applyStage(StageMenuItem(stageCopy));
     }
     if(widget.initialFilters != null) {
+      widget.initialFilters!.knownSquads = squadList;
       _applyFilters(widget.initialFilters!);
     }
   }
@@ -161,13 +170,14 @@ class _ResultPageState extends State<ResultPage> {
   }
 
   List<MatchEntry> _filterShooters() {
-    List<MatchEntry> filteredShooters = _currentMatch!.filterShooters(
+    List<MatchEntry> filteredShooters = _currentMatch.filterShooters(
       filterMode: _filters.mode,
       allowReentries: _filters.reentries,
       divisions: _filters.divisions.keys.where((element) => _filters.divisions[element]!).toList(),
       classes: _filters.classifications.keys.where((element) => _filters.classifications[element]!).toList(),
       powerFactors: _filters.powerFactors.keys.where((element) => _filters.powerFactors[element]!).toList(),
       ladyOnly: _filters.femaleOnly,
+      squads: _filters.squads,
       ageCategories: _filters.ageCategories.keys.where((element) => _filters.ageCategories[element]!).toList(),
     );
     return filteredShooters;
@@ -188,7 +198,7 @@ class _ResultPageState extends State<ResultPage> {
     }
 
     setState(() {
-      _baseScores = _currentMatch!.getScores(
+      _baseScores = _currentMatch.getScores(
         shooters: filteredShooters,
         scoreDQ: _filters.scoreDQs,
         stages: _filteredStages,
@@ -345,7 +355,7 @@ class _ResultPageState extends State<ResultPage> {
     Widget sortWidget = FilterControls(
       sport: sport,
       filters: _filters,
-      allStages: _currentMatch!.stages,
+      allStages: _currentMatch.stages,
       filteredStages: _filteredStages,
       currentStage: _currentStageMenuItem,
       sortMode: _sortMode,

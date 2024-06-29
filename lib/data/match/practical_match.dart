@@ -84,6 +84,7 @@ class PracticalMatch {
   int? maxPoints;
   int stageScoreCount = 0;
 
+  /// Whether a match is in progress for ratings purposes.
   bool get inProgress => practiscoreId == "12d1cd35-3556-44db-af09-5153f975c447";
 
   PracticalMatch copy() {

@@ -5,6 +5,7 @@
  */
 
 import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/match/practical_match.dart' as oldschema;
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
@@ -55,7 +56,8 @@ class ShootingMatch {
   /// Shooters in this match.
   List<MatchEntry> shooters;
 
-  bool get inProgress => false;
+  /// Whether a match is in progress for score display purposes.
+  bool get inProgress => DateTime.now().isBefore(date.add(Duration(days: 7)));
   int get maxPoints => stages.map((s) => s.maxPoints).sum;
 
   ShootingMatch({
@@ -123,6 +125,7 @@ class ShootingMatch {
     List<Division>? divisions,
     List<PowerFactor>? powerFactors,
     List<Classification>? classes,
+    List<int>? squads,
     bool ladyOnly = false,
     List<AgeCategory>? ageCategories,
   }) {
@@ -134,7 +137,11 @@ class ShootingMatch {
 
     for(MatchEntry s in shooters) {
       if(filterMode == FilterMode.or) {
-        if ((!sport.hasDivisions || divisions.contains(s.division)) || powerFactors.contains(s.powerFactor) || (!sport.hasClassifications || classes.contains(s.classification))) {
+        if (
+            (!sport.hasDivisions || divisions.contains(s.division))
+                || powerFactors.contains(s.powerFactor)
+                || (!sport.hasClassifications || classes.contains(s.classification))
+        ) {
           if(allowReentries || !s.reentry) filteredShooters.add(s);
         }
       }
@@ -151,6 +158,10 @@ class ShootingMatch {
 
     if(ageCategories != null && ageCategories.isNotEmpty) {
       filteredShooters.retainWhere((s) => ageCategories.contains(s.ageCategory));
+    }
+
+    if(squads != null && squads.isNotEmpty) {
+      filteredShooters.retainWhere((s) => squads.contains(s.squad));
     }
 
     return filteredShooters;

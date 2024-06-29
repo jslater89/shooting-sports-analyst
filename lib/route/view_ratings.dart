@@ -1081,6 +1081,16 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         if(m != null) m
     ];
 
+    var ongoingMatches = <PracticalMatch>[
+      for(var u in widget.project.ongoingMatchUrls)
+        if(_matchUrls[u] != null) _matchUrls[u]!
+    ];
+
+    _log.d("The following matches are ongoing:");
+    for(var m in ongoingMatches) {
+      _log.d("\t${m.name}");
+    }
+
     setState(() {
       _loadingState = _LoadingState.updatingCache;
       _totalProgress = 1;
@@ -1110,16 +1120,21 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     await Future.delayed(Duration(milliseconds: 1));
 
     // Copy the project so we can edit it in the rater view without breaking
-    _history = RatingHistory(project: widget.project.copy(), matches: actualMatches, progressCallback: (currentSteps, totalSteps, eventName) async {
-      setState(() {
-        _currentProgress = currentSteps;
-        _totalProgress = totalSteps;
-        _loadingEventName = eventName;
-      });
+    _history = RatingHistory(
+      project: widget.project.copy(),
+      matches: actualMatches,
+      ongoingMatches: ongoingMatches,
+      progressCallback: (currentSteps, totalSteps, eventName) async {
+        setState(() {
+          _currentProgress = currentSteps;
+          _totalProgress = totalSteps;
+          _loadingEventName = eventName;
+        });
 
-      // print("Rating history progress: $_currentProgress/$_totalProgress $eventName");
-      await Future.delayed(Duration(milliseconds: 1));
-    });
+        // print("Rating history progress: $_currentProgress/$_totalProgress $eventName");
+        await Future.delayed(Duration(milliseconds: 1));
+      }
+    );
 
     var result = await _processMatches();
 

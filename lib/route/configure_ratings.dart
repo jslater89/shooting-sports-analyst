@@ -55,6 +55,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
   bool matchCacheReady = false;
   List<String> matchUrls = [];
+  Map<String, bool> ongoingMatchUrls = {};
   MatchListFilters? filters = MatchListFilters();
   List<String>? filteredMatchUrls;
   Map<String, PracticalMatch> knownMatches = {};
@@ -211,6 +212,10 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       filteredMatchUrls = null;
       filters = null;
       matchUrls = []..addAll(project.matchUrls);
+      ongoingMatchUrls = {};
+      for(var m in project.ongoingMatchUrls) {
+        ongoingMatchUrls[m] = true;
+      }
       _keepHistory = project.settings.preserveHistory;
       _checkDataEntryErrors = project.settings.checkDataEntryErrors;
       _groups = []..addAll(project.settings.groups);
@@ -708,6 +713,32 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                             )
                                           ),
                                           Tooltip(
+                                            message: (ongoingMatchUrls[url] ?? false) ?
+                                                "This match is in progress. Click to toggle." :
+                                                "This match is completed. Click to toggle.",
+                                            child: IconButton(
+                                              icon: Icon(
+                                                (ongoingMatchUrls[url] ?? false) ?
+                                                  Icons.calendar_today :
+                                                  Icons.event_available
+                                              ),
+                                              color: (ongoingMatchUrls[url] ?? false) ?
+                                                  Theme.of(context).primaryColor :
+                                                  Colors.grey[350],
+                                              onPressed: () {
+                                                if(ongoingMatchUrls[url] ?? false) {
+                                                  setState(() {
+                                                    ongoingMatchUrls.remove(url);
+                                                  });
+                                                } else {
+                                                  setState(() {
+                                                    ongoingMatchUrls[url] = true;
+                                                  });
+                                                }
+                                              },
+                                            )
+                                          ),
+                                          Tooltip(
                                             message: "Remove this match from the cache, redownloading it.",
                                             child: IconButton(
                                               icon: Icon(Icons.refresh),
@@ -876,6 +907,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       name: _lastProjectName ?? name,
       settings: settings,
       matchUrls: []..addAll(matchUrls),
+      ongoingMatchUrls: []..addAll(ongoingMatchUrls.keys), // URLs are removed instead of set to false
       filteredUrls: (filteredMatchUrls?.isNotEmpty ?? false) ? filteredMatchUrls! : null,
     );
 
@@ -1064,9 +1096,10 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         }
 
         var project = RatingProject(
-            name: "${_lastProjectName ?? "Unnamed Project"}",
-            settings: settings,
-            matchUrls: []..addAll(matchUrls)
+          name: "${_lastProjectName ?? "Unnamed Project"}",
+          settings: settings,
+          matchUrls: []..addAll(matchUrls),
+          ongoingMatchUrls: []..addAll(ongoingMatchUrls.keys), // URLs are removed instead of set to false
         );
         await RatingProjectManager().exportToFile(project);
         break;

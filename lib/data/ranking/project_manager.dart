@@ -183,6 +183,7 @@ const _limitedLoCoCombineModeKey = "combineLimLoCo";
 const _combineOpenPCCKey = "combineOpPCC";
 const _keepHistoryKey = "keepHistory";
 const _urlsKey = "urls";
+const _ongoingUrlsKey = "ongoingUrls";
 const _whitelistKey = "memNumWhitelist";
 const _aliasesKey = "aliases";
 const _memberNumberMappingsKey = "numMappings";
@@ -205,6 +206,7 @@ class RatingProject {
   String name;
   RatingHistorySettings settings;
   List<String> matchUrls;
+  List<String> ongoingMatchUrls;
 
   /// These URLs will be used to calculate ratings, and should be a subset of [matchUrls].
   ///
@@ -217,6 +219,7 @@ class RatingProject {
     required this.name,
     required this.settings,
     required this.matchUrls,
+    required this.ongoingMatchUrls,
     List<String>? filteredUrls,
   }) : this._filteredUrls = filteredUrls;
 
@@ -284,9 +287,10 @@ class RatingProject {
       recognizedDivisions: recognizedDivisions,
     );
     var matchUrls = (encodedProject[_urlsKey] as List<dynamic>).map((item) => item as String).toList();
+    var ongoingUrls = ((encodedProject[_ongoingUrlsKey] ?? []) as List<dynamic>).map((item) => item as String).toList();
     var name = encodedProject[_nameKey] as String;
 
-    var rp = RatingProject(name: name, settings: settings, matchUrls: matchUrls);
+    var rp = RatingProject(name: name, settings: settings, matchUrls: matchUrls, ongoingMatchUrls: ongoingUrls);
     return rp;
   }
 
@@ -309,6 +313,7 @@ class RatingProject {
     map[_checkDataEntryKey] = settings.checkDataEntryErrors;
     map[_keepHistoryKey] = settings.preserveHistory;
     map[_urlsKey] = matchUrls;
+    map[_ongoingUrlsKey] = ongoingMatchUrls;
     map[_whitelistKey] = settings.memberNumberWhitelist;
     map[_aliasesKey] = settings.shooterAliases;
     map[_memberNumberMappingsKey] = settings.userMemberNumberMappings;

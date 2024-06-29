@@ -12,7 +12,7 @@ void main() async {
     test("simple shooter deduplication", () async {
       var matches = deduplicationTestData();
 
-      var history = RatingHistory(matches: matches, progressCallback: (a, b, c) async {});
+      var history = RatingHistory(matches: matches, ongoingMatches: [], progressCallback: (a, b, c) async {});
       await history.processInitialMatches();
 
       var rater = history.raterFor(history.matches.last, RaterGroup.open);
@@ -29,7 +29,7 @@ void main() async {
     test("copied deduplication", () async {
       var matches = deduplicationTestData();
 
-      var history = RatingHistory(matches: matches, progressCallback: (a, b, c) async {});
+      var history = RatingHistory(matches: matches, ongoingMatches: [], progressCallback: (a, b, c) async {});
       await history.processInitialMatches();
 
       var rater = history.raterFor(history.matches.last, RaterGroup.open);
@@ -41,7 +41,7 @@ void main() async {
     test("post-initial mapping", () async {
       var matches = deduplicationTestData();
 
-      var history = RatingHistory(matches: matches, progressCallback: (a, b, c) async {});
+      var history = RatingHistory(matches: matches, ongoingMatches: [], progressCallback: (a, b, c) async {});
       await history.processInitialMatches();
 
       await history.addMatch(rdMemberNumberTestData());
@@ -57,9 +57,9 @@ void main() async {
 
       RatingHistorySettings settings = RatingHistorySettings(algorithm: MultiplayerPercentEloRater());
       settings.userMemberNumberMappings = {"12345": "L1234"};
-      var project = RatingProject(name: "Test", settings: settings, matchUrls: []);
+      var project = RatingProject(name: "Test", settings: settings, matchUrls: [], ongoingMatchUrls: []);
 
-      var history = RatingHistory(matches: matches, project: project, progressCallback: (a, b, c) async {});
+      var history = RatingHistory(matches: matches, ongoingMatches: [], project: project, progressCallback: (a, b, c) async {});
       await history.processInitialMatches();
 
       var rater = history.raterFor(history.matches.last, RaterGroup.open);
@@ -79,8 +79,8 @@ void main() async {
       var matches = deduplicationTestData();
       RatingHistorySettings settings = RatingHistorySettings(algorithm: MultiplayerPercentEloRater());
       settings.memberNumberMappingBlacklist = {"12345": "L1234"};
-      var project = RatingProject(name: "Test", settings: settings, matchUrls: []);
-      var history = RatingHistory(project: project, matches: matches);
+      var project = RatingProject(name: "Test", settings: settings, matchUrls: [], ongoingMatchUrls: []);
+      var history = RatingHistory(project: project, matches: matches, ongoingMatches: []);
       await history.processInitialMatches();
       var rater = history.raterFor(history.matches.last, RaterGroup.open);
 
@@ -102,8 +102,8 @@ void main() async {
       RatingHistorySettings settings = RatingHistorySettings(algorithm: MultiplayerPercentEloRater());
       settings.memberNumberMappingBlacklist = {"12345": "L1234"};
       settings.userMemberNumberMappings = {"12345": "54321"};
-      var project = RatingProject(name: "Test", settings: settings, matchUrls: []);
-      var history = RatingHistory(project: project, matches: matches);
+      var project = RatingProject(name: "Test", settings: settings, matchUrls: [], ongoingMatchUrls: []);
+      var history = RatingHistory(project: project, matches: matches, ongoingMatches: []);
       var result = await history.processInitialMatches();
 
       if(result.isErr()) {

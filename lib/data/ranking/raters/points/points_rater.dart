@@ -203,6 +203,7 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
   @override
   Map<ShooterRating, RatingChange> updateShooterRatings({
     required PracticalMatch match,
+    bool isMatchOngoing = false,
     required List<ShooterRating> shooters,
     required Map<ShooterRating, RelativeScore> scores,
     required Map<ShooterRating, RelativeMatchScore> matchScores,

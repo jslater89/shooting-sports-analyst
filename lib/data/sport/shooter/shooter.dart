@@ -122,6 +122,7 @@ class MatchEntry extends Shooter {
       classification: classification,
       female: female,
       ageCategory: ageCategory,
+      squad: squad,
     );
 
     e.knownMemberNumbers = {}..addAll(knownMemberNumbers);

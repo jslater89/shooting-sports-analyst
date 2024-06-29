@@ -71,9 +71,11 @@ class EloEvaluator extends Prey<EloEvaluator> {
     var h = RatingHistory(
       verbose: false,
       matches: data.trainingData,
+      ongoingMatches: [],
       project: RatingProject(
           name: "Evolutionary test",
           matchUrls: data.trainingData.map((e) => e.practiscoreId).toList(),
+          ongoingMatchUrls: [],
           settings: RatingHistorySettings(
             algorithm: MultiplayerPercentEloRater(settings: settings),
             groups: [data.group],

@@ -36,6 +36,7 @@ class RatingHistory {
       return [_matches.last];
     }
   }
+  List<PracticalMatch> ongoingMatches;
 
   List<PracticalMatch> get allMatches {
       return []..addAll(_matches);
@@ -58,12 +59,23 @@ class RatingHistory {
 
   Future<void> Function(int currentSteps, int totalSteps, String? eventName)? progressCallback;
 
-  RatingHistory({RatingProject? project, required List<PracticalMatch> matches, this.progressCallback, this.verbose = true}) : this._matches = matches {
-    project ??= RatingProject(name: "Unnamed Project", settings: RatingHistorySettings(
-      algorithm: MultiplayerPercentEloRater(settings: EloSettings(
-        byStage: true,
-      )),
-    ), matchUrls: matches.map((m) => m.practiscoreId).toList());
+  RatingHistory({
+    RatingProject? project,
+    required List<PracticalMatch> matches,
+    this.progressCallback,
+    this.verbose = true,
+    required this.ongoingMatches,
+  }) : this._matches = matches {
+    project ??= RatingProject(
+      name: "Unnamed Project",
+      settings: RatingHistorySettings(
+        algorithm: MultiplayerPercentEloRater(settings: EloSettings(
+          byStage: true,
+        )),
+      ),
+      matchUrls: matches.map((m) => m.practiscoreId).toList(),
+      ongoingMatchUrls: ongoingMatches.map((m) => m.practiscoreId).toList()
+    );
 
     this.project = project;
     _settings = project.settings;
@@ -245,6 +257,7 @@ class RatingHistory {
     Timings().reset();
     var r = Rater(
       matches: matches,
+      ongoingMatches: ongoingMatches,
       ratingSystem: _settings.algorithm,
       byStage: _settings.byStage,
       checkDataEntryErrors: _settings.checkDataEntryErrors && !_settings.transientDataEntryErrorSkip,
