@@ -10,12 +10,16 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/match/practical_match.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
+import 'package:shooting_sports_analyst/ui/widget/score_list.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 /// Match scoring is how a list of absolute scores are converted to relative
@@ -23,10 +27,12 @@ import 'package:shooting_sports_analyst/util.dart';
 sealed class MatchScoring {
   /// Calculate match scores, given a list of shooters, and optionally a list of stages to limit to.
   Map<MatchEntry, RelativeMatchScore> calculateMatchScores({
+    required ShootingMatch match,
     required List<MatchEntry> shooters,
     required List<MatchStage> stages,
     bool scoreDQ = true,
     MatchPredictionMode predictionMode = MatchPredictionMode.none,
+    Map<DbRatingGroup, Rater>? ratings,
   });
 }
 
@@ -55,8 +61,12 @@ final class RelativeStageFinishScoring extends MatchScoring {
 
   @override
   Map<MatchEntry, RelativeMatchScore> calculateMatchScores({
-    required List<MatchEntry> shooters, required List<MatchStage> stages,
-    bool scoreDQ = true, MatchPredictionMode predictionMode = MatchPredictionMode.none,
+    required ShootingMatch match,
+    required List<MatchEntry> shooters, 
+    required List<MatchStage> stages,
+    bool scoreDQ = true, 
+    MatchPredictionMode predictionMode = MatchPredictionMode.none,
+    Map<DbRatingGroup, Rater>? ratings,
   }) {
     if(shooters.length == 0 || stages.length == 0) return {};
 
@@ -154,6 +164,109 @@ final class RelativeStageFinishScoring extends MatchScoring {
         bestTotalScore = totalScore;
       }
     }
+    
+    // Do predictions
+    if(predictionMode != MatchPredictionMode.none) {
+      // If we're doing Elo aware predictions, fetch some data.
+      var locatedRatings = <ShooterRating>[];
+      Map<ShooterRating, ShooterPrediction> predictions = {};
+      ShooterPrediction? highPrediction;
+      if(predictionMode.eloAware) {
+        RatingSystem? r = null;
+        for(var shooter in shooters) {
+          var rating = ratings!.lookupNew(match, shooter);
+          if(r == null) {
+            r = ratings.lookupRater(match, shooter)?.ratingSystem;
+            if(r == null) {
+              break;
+            }
+          }
+          if(rating != null) {
+            locatedRatings.add(rating);
+          }
+        }
+
+        if(r != null && r.supportsPrediction) {
+          var preds = r.predict(locatedRatings);
+          preds.sort((a, b) => b.mean.compareTo(a.mean));
+          highPrediction = preds.first;
+          for(var pred in preds) {
+            predictions[pred.shooter] = pred;
+          }
+        }
+      }
+
+      for(var shooter in shooters) {
+        // Do match predictions for shooters who have completed at least one stage.
+        if(shooter.firstName == "Matthew" && shooter.lastName == "Hemple") {
+          print("break");
+        }
+        if((stageScores[shooter]?.length ?? 0) > 0 || predictionMode == MatchPredictionMode.eloAwareFull) {
+          double averageStagePercentage = 0.0;
+          int stagesCompleted = 0;
+
+          if(predictionMode == MatchPredictionMode.averageStageFinish
+              || predictionMode == MatchPredictionMode.averageHistoricalFinish
+              || predictionMode.eloAware
+          ) {
+            for(MatchStage stage in stages) {
+              if(stage.scoring is IgnoredScoring) continue;
+
+              var stageScore = stageScores[shooter]?[stage];
+              if(stageScore != null && !stageScore.score.dnf) {
+                averageStagePercentage += stageScore.ratio;
+                stagesCompleted += 1;
+              }
+            }
+            if(stagesCompleted > 0) {
+              averageStagePercentage = averageStagePercentage / stagesCompleted;
+            }
+          }
+
+          if(stagesCompleted >= stages.length) continue;
+
+          for (MatchStage stage in stages) {
+            if(stage.scoring is IgnoredScoring) continue;
+
+            if (shooter.scores[stage] == null || shooter.scores[stage]!.dnf) {
+              if (predictionMode == MatchPredictionMode.highAvailable) {
+                stageScoreTotals.incrementBy(shooter, stage.maxPoints.toDouble());
+              }
+              else if (predictionMode == MatchPredictionMode.averageStageFinish) {
+                stageScoreTotals.incrementBy(shooter, stage.maxPoints * averageStagePercentage);
+              }
+              else if (predictionMode == MatchPredictionMode.averageHistoricalFinish) {
+                var rating = ratings!.lookupNew(match, shooter);
+                if(rating != null) {
+                  stageScoreTotals.incrementBy(shooter, stage.maxPoints * rating.averagePercentFinishes(offset: stagesCompleted));
+                }
+                else {
+                  // Use average stage percentage if we don't have a match history for this shooter
+                  stageScoreTotals.incrementBy(shooter, stage.maxPoints * averageStagePercentage);
+                }
+              }
+              else if (predictionMode.eloAware) {
+                var rating = ratings!.lookupNew(match, shooter);
+                var prediction = predictions[rating];
+                if(prediction != null && highPrediction != null) {
+                  // TODO: distribute this according to a Gumbel or normal cumulative distribution function
+                  var percent = 0.3 + ((prediction.mean + prediction.shift / 2) / (highPrediction.halfHighPrediction + highPrediction.shift / 2) * 0.7);
+                  stageScoreTotals.incrementBy(shooter, stage.maxPoints * percent);
+                }
+                else {
+                  // Use average stage percentage
+                  stageScoreTotals.incrementBy(shooter, stage.maxPoints * averageStagePercentage);
+                }
+              }
+            }
+          }
+        }
+
+        if(stageScoreTotals[shooter]! > bestTotalScore) {
+          bestTotalScore = stageScoreTotals[shooter]!;
+        }
+      }
+    }
 
     // Sort the shooters by stage score totals and create relative match scores.
     var sortedShooters = shooters.sorted((a, b) => stageScoreTotals[b]!.compareTo(stageScoreTotals[a]!));
@@ -191,8 +304,12 @@ final class CumulativeScoring extends MatchScoring {
   CumulativeScoring({this.highScoreWins = true});
 
   Map<MatchEntry, RelativeMatchScore> calculateMatchScores({
-    required List<MatchEntry> shooters, required List<MatchStage> stages,
-    bool scoreDQ = true, MatchPredictionMode predictionMode = MatchPredictionMode.none,
+    required ShootingMatch match,
+    required List<MatchEntry> shooters,
+    required List<MatchStage> stages,
+    bool scoreDQ = true,
+    MatchPredictionMode predictionMode = MatchPredictionMode.none,
+    Map<DbRatingGroup, Rater>? ratings,
   }) {
     if(shooters.length == 0 || stages.length == 0) return {};
 
@@ -608,6 +725,16 @@ class RelativeMatchScore extends RelativeScore {
   }
 
   bool get isDnf => stageScores.values.any((s) => s.isDnf);
+
+  bool get hasResults {
+    for(var s in stageScores.values) {
+      if(!s.score.dnf) {
+        return true;
+      }
+    }
+
+    return false;
+  }
 }
 
 class RelativeStageScore extends RelativeScore {

@@ -25,7 +25,7 @@ class StageStats {
 
   String toStringWithoutStageName([String indent = "\t"]) {
     var buf = StringBuffer();
-    for(var e in eventsPer32.keys.toList().reversed) {
+    for(var e in eventsPer32.keys.toList()) {
       if(eventsPer32[e] == 0) continue;
 
       buf.write("$indent$e: ${eventsPer32[e]!.toStringAsFixed(2)}\n");
@@ -36,7 +36,7 @@ class StageStats {
 
   List<Widget> hitsToRows() {
     return [
-      for(var e in eventsPer32.keys.toList().reversed)
+      for(var e in eventsPer32.keys.toList())
         Row(mainAxisSize: MainAxisSize.max, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           Text(e),
           Text(eventsPer32[e]!.toStringAsFixed(2)),

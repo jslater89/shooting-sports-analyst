@@ -32,6 +32,7 @@ class Rater {
   Sport sport;
 
   List<ShootingMatch> _matches;
+  List<ShootingMatch> _ongoingMatches;
 
   /// Maps processed member numbers to shooter ratings.
   ///
@@ -91,6 +92,7 @@ class Rater {
 
   Rater({
     required List<ShootingMatch> matches,
+    required List<ShootingMatch> ongoingMatches,
     required this.ratingSystem,
     required this.group,
     required this.sport,
@@ -106,6 +108,7 @@ class Rater {
     this.recognizedDivisions = const {},
     this.memberNumberWhitelist = const []})
       : this._matches = matches,
+        this._ongoingMatches = ongoingMatches,
         this._memberNumberMappingBlacklist = memberNumberMappingBlacklist,
         this._userMemberNumberMappings = userMemberNumberMappings,
         this._dataCorrections = dataCorrections
@@ -122,6 +125,7 @@ class Rater {
         this.sport = other.sport,
         this.knownShooters = {},
         this._matches = other._matches.map((m) => m.copy()).toList(),
+        this._ongoingMatches = [], // updated in constructor body
         this.byStage = other.byStage,
         this._memberNumbersEncountered = Set()..addAll(other._memberNumbersEncountered),
         this._memberNumberMappings = {}..addAll(other._memberNumberMappings),
@@ -135,6 +139,7 @@ class Rater {
         this.memberNumberWhitelist = other.memberNumberWhitelist,
         this.progressCallbackInterval = other.progressCallbackInterval,
         this.ratingSystem = other.ratingSystem {
+    this._ongoingMatches = _matches.where((match) => other._ongoingMatches.any((otherMatch) => match.databaseId == otherMatch.databaseId)).toList();
     for(var entry in _memberNumberMappings.entries) {
       if (entry.key == entry.value) {
         // If, per the member number mappings, this is the canonical mapping, copy it immediately.
@@ -799,6 +804,7 @@ class Rater {
 
         var update = ratingSystem.updateShooterRatings(
           match: match,
+          isMatchOngoing: _ongoingMatches.contains(match),
           shooters: [aRating, bRating],
           scores: {
             aRating: aStageScore,

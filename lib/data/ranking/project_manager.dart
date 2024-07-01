@@ -188,6 +188,7 @@ const _limitedLoCoCombineModeKey = "combineLimLoCo";
 const _combineOpenPCCKey = "combineOpPCC";
 const _keepHistoryKey = "keepHistory";
 const _urlsKey = "urls";
+const _ongoingUrlsKey = "ongoingUrls";
 const _whitelistKey = "memNumWhitelist";
 const _aliasesKey = "aliases";
 const _memberNumberMappingsKey = "numMappings";
@@ -213,6 +214,7 @@ class RatingProject with DbSportEntity {
   String name;
   RatingProjectSettings settings;
   final matches = IsarLinks<DbShootingMatch>;
+  final matchesInProgress = IsarLinks<DbShootingMatch>;
   final customGroups = IsarLinks<DbRatingGroup>;
   final List<String> builtinGroupNames;
   List<DbRatingGroup> get builtinRatingGroups {
@@ -221,7 +223,6 @@ class RatingProject with DbSportEntity {
       _log.w("Attempted to get builtin rating groups for $sportName which doesn't provide them");
       return [];
     }
-
     return provider.builtinRatingGroups.where((e) => builtinGroupNames.contains(e.name)).toList();
   }
 
@@ -268,8 +269,8 @@ class RatingProject with DbSportEntity {
       recognizedDivisions: recognizedDivisions,
     );
     var name = encodedProject[_nameKey] as String;
-
     var rp = RatingProject(sportName: sportName, name: name, settings: settings);
+
     return rp;
   }
 

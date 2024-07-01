@@ -32,6 +32,7 @@ class RatingHistory {
       return [_matches.last];
     }
   }
+  List<ShootingMatch> ongoingMatches;
 
   List<ShootingMatch> get allMatches {
       return []..addAll(_matches);
@@ -58,6 +59,7 @@ class RatingHistory {
     required this.sport,
     DbRatingProject? project,
     required List<ShootingMatch> matches,
+    required this.ongoingMatches,
     this.progressCallback,
     this.verbose = true
   }) : this._matches = matches {
@@ -253,6 +255,7 @@ class RatingHistory {
     var r = Rater(
       sport: sport,
       matches: matches,
+      ongoingMatches: ongoingMatches,
       ratingSystem: _settings.algorithm,
       byStage: _settings.byStage,
       checkDataEntryErrors: _settings.checkDataEntryErrors && !_settings.transientDataEntryErrorSkip,

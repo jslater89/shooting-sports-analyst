@@ -64,6 +64,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
   bool matchCacheReady = false;
   List<String> matchUrls = [];
+  Map<String, bool> ongoingMatchUrls = {};
   MatchListFilters? filters = MatchListFilters();
   List<String>? filteredMatchUrls;
   Map<String, PracticalMatch> knownMatches = {};
@@ -711,6 +712,32 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                                   overflow: TextOverflow.fade
                                                 ),
                                               ),
+                                            )
+                                          ),
+                                          Tooltip(
+                                            message: (ongoingMatchUrls[url] ?? false) ?
+                                                "This match is in progress. Click to toggle." :
+                                                "This match is completed. Click to toggle.",
+                                            child: IconButton(
+                                              icon: Icon(
+                                                (ongoingMatchUrls[url] ?? false) ?
+                                                  Icons.calendar_today :
+                                                  Icons.event_available
+                                              ),
+                                              color: (ongoingMatchUrls[url] ?? false) ?
+                                                  Theme.of(context).primaryColor :
+                                                  Colors.grey[350],
+                                              onPressed: () {
+                                                if(ongoingMatchUrls[url] ?? false) {
+                                                  setState(() {
+                                                    ongoingMatchUrls.remove(url);
+                                                  });
+                                                } else {
+                                                  setState(() {
+                                                    ongoingMatchUrls[url] = true;
+                                                  });
+                                                }
+                                              },
                                             )
                                           ),
                                           Tooltip(

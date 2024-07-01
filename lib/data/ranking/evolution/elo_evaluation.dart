@@ -75,6 +75,7 @@ class EloEvaluator extends Prey<EloEvaluator> {
       sport: uspsaSport,
       verbose: false,
       matches: [],
+      ongoingMatches: [],
       project: DbRatingProject(
         sportName: "USPSA",
           name: "Evolutionary test",

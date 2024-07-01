@@ -166,6 +166,7 @@ class DbMatchEntry {
   bool female;
   bool reentry;
   bool dq;
+  int? squad;
   String powerFactorName;
   String? divisionName;
   String? classificationName;
@@ -186,6 +187,7 @@ class DbMatchEntry {
     this.divisionName,
     this.classificationName,
     this.ageCategoryName,
+    this.squad,
     this.scores = const [],
   });
 
@@ -198,6 +200,7 @@ class DbMatchEntry {
     knownMemberNumbers = entry.knownMemberNumbers.toList(),
     female = entry.female,
     dq = entry.dq,
+    squad = entry.squad,
     reentry = entry.reentry,
     powerFactorName = entry.powerFactor.name,
     divisionName = entry.division?.name,
@@ -248,6 +251,7 @@ class DbMatchEntry {
       memberNumber: memberNumber,
       female: female,
       dq: dq,
+      squad: squad,
       reentry: reentry,
       powerFactor: pf,
       division: division,

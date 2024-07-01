@@ -155,6 +155,7 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
   @override
   Map<ShooterRating, RatingChange> updateShooterRatings({
     required ShootingMatch match,
+    bool isMatchOngoing = false,
     required List<ShooterRating> shooters,
     required Map<ShooterRating, RelativeScore> scores,
     required Map<ShooterRating, RelativeMatchScore> matchScores,

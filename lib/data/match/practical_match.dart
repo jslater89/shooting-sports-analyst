@@ -85,7 +85,8 @@ class PracticalMatch {
   int? maxPoints;
   int stageScoreCount = 0;
 
-  bool get inProgress => false; //practiscoreId == "02aa1e15-5464-4a01-9b28-95d5e14cfade";
+  /// Whether a match is in progress for ratings purposes.
+  bool get inProgress => practiscoreId == "12d1cd35-3556-44db-af09-5153f975c447";
 
   PracticalMatch copy() {
     var newMatch = PracticalMatch()
@@ -262,7 +263,7 @@ class PracticalMatch {
         for(var shooter in innerShooters) {
           var rating = ratings!.lookup(shooter);
           if(r == null) {
-            r = ratings.lookupRater(shooter)?.ratingSystem;
+            r = ratings.lookupOldRater(shooter)?.ratingSystem;
             if(r == null) {
               break;
             }
