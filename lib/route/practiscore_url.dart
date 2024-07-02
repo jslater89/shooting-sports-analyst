@@ -1,21 +1,37 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 // ignore: avoid_web_libraries_in_flutter
 //import 'dart:html';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
-import 'package:uspsa_result_viewer/data/results_file_parser.dart';
-import 'package:uspsa_result_viewer/html_or/html_or.dart';
-import 'package:uspsa_result_viewer/ui/empty_scaffold.dart';
-import 'package:uspsa_result_viewer/ui/result_page.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/practiscore_parser.dart';
+import 'package:shooting_sports_analyst/data/results_file_parser.dart';
+import 'package:shooting_sports_analyst/data/source/practiscore_report.dart';
+import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/ipsc.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/empty_scaffold.dart';
+import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:http/http.dart' as http;
+
+var _log = SSALogger("UrlResultPage");
 
 class PractiscoreResultPage extends StatefulWidget {
   final String? matchId;
   final String? resultUrl;
+  final String sourceId;
 
-  const PractiscoreResultPage({Key? key, this.matchId, this.resultUrl}) : super(key: key);
+  const PractiscoreResultPage({Key? key, this.matchId, this.resultUrl, required this.sourceId}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() {
@@ -24,7 +40,7 @@ class PractiscoreResultPage extends StatefulWidget {
 }
 
 class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
-  PracticalMatch? _match;
+  ShootingMatch? _match;
   bool _operationInProgress = false;
 
   @override
@@ -37,15 +53,17 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
   }
 
   Future<void> _getResultFileMatch() async {
+    var matchSource = MatchSourceRegistry().getByCode(widget.sourceId, PractiscoreHitFactorReportParser(uspsaSport));
+
     try {
       var response = await http.get(Uri.parse(widget.resultUrl!));
       if(response.statusCode < 400) {
         var responseString = response.body;
         if (responseString.startsWith("\$")) {
-          var result = await processScoreFile(responseString);
+          // TODO: this is broken
+          var result = await matchSource.getMatchFromId(responseString, typeHint: SportType.uspsa);
           if(result.isOk()) {
             var match = result.unwrap();
-            match.practiscoreId = widget.matchId ?? "n/a";
             setState(() {
               _match = match;
             });
@@ -55,14 +73,14 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
           }
         }
         else {
-          debugPrint("Bad file contents");
+          _log.w("Bad file contents");
         }
       }
 
-      debugPrint("response: $response");
+      _log.v("response: $response");
     }
-    catch(err) {
-
+    catch(err, st) {
+      _log.e("Error downloading match file", error: err, stackTrace: st);
     }
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to download result file from ${widget.resultUrl}.")));
   }
@@ -70,81 +88,20 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
   Future<void> _getPractiscoreMatch() async {
     var proxyUrl = getProxyUrl();
     var reportUrl = "${proxyUrl}https://practiscore.com/reports/web/${widget.matchId}";
-    debugPrint("Report download URL: $reportUrl");
+    _log.d("Report download URL: $reportUrl");
 
-    var responseString = "";
-    try {
-      var response = await http.get(Uri.parse(reportUrl));
-      if(response.statusCode < 400) {
-        responseString = response.body;
-        if (responseString.startsWith(r"$")) {
-          var result = await processScoreFile(responseString);
-          if(result.isOk()) {
-            var match = result.unwrap();
-            match.practiscoreId = widget.matchId ?? "n/a";
-            setState(() {
-              _match = match;
-            });
-          }
-          else {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.unwrapErr().message)));
-          }
-          return;
-        }
-      }
-      else if(response.statusCode == 404) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("No match record exists at given URL.")));
-        debugPrint("No match record at $reportUrl");
-        return;
-      }
+    var matchSource = MatchSourceRegistry().getByCode(widget.sourceId, PractiscoreHitFactorReportParser(uspsaSport));
 
-      debugPrint("response: ${response.body.split("\n").first}");
+    var result = await matchSource.getMatchFromId(widget.matchId!, typeHint: SportType.uspsa);
+    if(result.isOk()) {
+      var match = result.unwrap();
+      setState(() {
+        _match = match;
+      });
     }
-    catch(err, stackTrace) {
-      debugPrint("download error: $err ${err.runtimeType}");
-      debugPrint("$stackTrace");
-      if (err is http.ClientException) {
-        http.ClientException ce = err;
-        debugPrint("${ce.uri} ${ce.message}");
-      }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to download match report.")));
-      return;
+    else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.unwrapErr().message)));
     }
-
-    try {
-      var token = getClubNameToken(responseString);
-      debugPrint("Token: $token");
-      var body = {
-        '_token': token,
-        'ClubName': 'None',
-        'ClubCode': 'None',
-        'matchId': widget.matchId,
-      };
-      var response = await http.post(Uri.parse(reportUrl), body: body);
-      if(response.statusCode < 400) {
-        var responseString = response.body;
-        if (responseString.startsWith(r"$")) {
-          var result = await processScoreFile(responseString);
-          if(result.isOk()) {
-            var match = result.unwrap();
-            match.practiscoreId = widget.matchId ?? "n/a";
-            setState(() {
-              _match = match;
-            });
-          }
-          else {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.unwrapErr().message)));
-          }
-          return;
-        }
-      }
-
-      debugPrint("Didn't work: ${response.statusCode} ${response.body}");
-    }
-    catch(err) {
-      debugPrint("download error pt. 2: $err ${err.runtimeType}");
-    }
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to download match report.")));
   }
 
   @override
@@ -160,7 +117,7 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
     }
 
     return ResultPage(
-      canonicalMatch: _match,
+      canonicalMatch: _match!,
     );
   }
 }

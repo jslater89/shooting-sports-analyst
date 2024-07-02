@@ -53,3 +53,10 @@ app.*.map.json
 ratings*.csv
 *zip
 data/l2s.sqlite
+*.isar*
+coverage/
+
+# Closed sources for git status cleanliness
+# When adding a new closed-source thing, commit the stub, then
+# add to gitignore
+lib/closed_sources/psv2/

@@ -1,6 +1,6 @@
-# USPSA Elo Rating System
+# Elo Rating System
 Desktop builds of the result viewer contain an Elo rating system, which applies a modified
-Elo algorithm to USPSA match results to attempt to determine the approximate rating of each
+Elo algorithm to shooting match results to attempt to determine the approximate rating of each
 competitor.
 
 ## FAQ
@@ -9,8 +9,8 @@ The rating system code is not currently optimized to the point that it is feasib
 in the web app. For large datasets, it processes hundreds of thousands of stage scores with
 math not well-suited to browser JavaScript engines, which makes it too slow for most cases.
 
-USPSA Analyst also saves match results locally, since downloading files is the slowest part of
-the rating process, and to avoid hammering PractiScore too hard, and browser storage is
+Shooting Sports Analyst also saves match results locally, since downloading files is the slowest
+part of the rating process, and to avoid hammering PractiScore too hard, and browser storage is
 not up to the task.
 
 **Why do the tooltips in some shooter details say the expected place is 2nd or below, but the
@@ -94,7 +94,7 @@ combined western PA/eastern PA/Maryland/Northern Virginia/Delaware set.
   Ratings with high error (low confidence) will be adjusted more quickly.
 * **Rating engine**: choose from three rating engines. Elo is the default and best option. OpenSkill
   is a Bayesian rating system similar to Microsoft TrueSkill, which unfortunately seems to converge
-  too slowly for USPSA analysis. Points series provides several ways to run a club or regional
+  too slowly for shooting analysis. Points series provides several ways to run a club or regional
   points series.
 
 ##### Elo settings

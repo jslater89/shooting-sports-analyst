@@ -1,11 +1,20 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'package:flutter/foundation.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:intl/intl.dart';
-import 'package:uspsa_result_viewer/util.dart';
+import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 const verboseParse = false;
 
-enum MatchGetError implements Error {
+var _log = SSALogger("WebReportParser");
+
+enum MatchGetError implements ResultErr {
   notHitFactor,
   network,
   noMatch,
@@ -83,7 +92,7 @@ PracticalMatch _processResultLines({required List<String> infoLines, required Li
   }
 
   match.stageScoreCount = stageScoreCount;
-  if(verboseParse) print("Processed match ${match.name} with ${match.shooters.length} shooters, ${match.stages.length} stages, and $stageScoreCount stage scores");
+  if(verboseParse) _log.i("Processed match ${match.name} with ${match.shooters.length} shooters, ${match.stages.length} stages, and $stageScoreCount stage scores");
 
   return match;
 }
@@ -96,17 +105,17 @@ final DateFormat _df = DateFormat("MM/dd/yyyy");
 void _readInfoLines(PracticalMatch match, List<String> infoLines) {
   for(String line in infoLines) {
     if(line.startsWith(_MATCH_NAME)) {
-      // print("Found match name");
+      // _log.v("Found match name");
       match.name = line.replaceFirst(_MATCH_NAME, "");
     }
     else if(line.startsWith(_MATCH_DATE)) {
-      // print("Found match date");
+      // _log.v("Found match date");
       match.rawDate = line.replaceFirst(_MATCH_DATE, "");
       try {
         match.date = _df.parse(match.rawDate!);
       }
-      catch(e) {
-        print("Unable to parse date ${match.rawDate} $e");
+      catch(e, stackTrace) {
+        _log.e("Unable to parse date ${match.rawDate}", error: e, stackTrace: stackTrace);
       }
     }
     else if(line.startsWith(_MATCH_LEVEL)) {
@@ -116,7 +125,7 @@ void _readInfoLines(PracticalMatch match, List<String> infoLines) {
       else if(level.contains("II")) match.level = MatchLevel.II;
       else if(level.contains("I")) match.level = MatchLevel.I;
 
-      // print("${match.name} has $level => ${match.level}");
+      // _log.v("${match.name} has $level => ${match.level}");
     }
   }
 }
@@ -142,6 +151,7 @@ Map<int, Shooter> _readCompetitorLines(PracticalMatch match, List<String> compet
   for(String line in competitorLines) {
     try {
       List<String> splitLine = line.split(",");
+      var age = ShooterCategory.fromString(splitLine[_AGE]);
       Shooter s = Shooter()
         // PS shooter number, for deduplication in matches
         ..internalId = i
@@ -156,10 +166,14 @@ Map<int, Shooter> _readCompetitorLines(PracticalMatch match, List<String> compet
         ..female = splitLine[_LADY].toLowerCase() == "yes"
         ..dq = splitLine[_DQ_PISTOL].toLowerCase() == "yes" || splitLine[_DQ_RIFLE].toLowerCase() == "yes" || splitLine[_DQ_SHOTGUN].toLowerCase() == "yes";
 
+      if(age != null) {
+        s.categories = [age];
+      }
+
       shootersById[i++] = s;
       match.shooters.add(s);
-    } catch(err) {
-      print("Error parsing shooter: $line $err");
+    } catch(err, st) {
+      _log.e("Error parsing shooter: $line", error: err, stackTrace: st);
     }
   }
 
@@ -197,8 +211,8 @@ Map<int, Stage> _readStageLines(PracticalMatch match, List<String> stageLines) {
       stagesById[i++] = s;
       maxPoints += s.maxPoints;
       match.stages.add(s);
-    } catch(err) {
-      print("Error parsing stage for ${match.name ?? "(unnamed match)"}: $line $err");
+    } catch(err, st) {
+      _log.e("Error parsing stage for ${match.name ?? "(unnamed match)"}: $line", error: err, stackTrace: st);
     }
   }
 
@@ -258,7 +272,7 @@ int _readScoreLines(String matchName, List<String> stageScoreLines, Map<int, Sho
         correctedTime = true;
       }
 
-      if(verboseParse && correctedTime) print("Corrected time $originalTimeField to $timeField");
+      if(verboseParse && correctedTime) _log.d("Corrected time $originalTimeField to $timeField");
 
       Score s = Score(shooter: shooter, stage: stage)
         ..a = int.parse(splitLine[_A])
@@ -296,18 +310,18 @@ int _readScoreLines(String matchName, List<String> stageScoreLines, Map<int, Sho
       shooter.stageScores[stage] = s;
 
       if(s.penaltyPoints != int.parse(splitLine[_PENALTY_POINTS])) {
-        if(verboseParse) print("Penalty points mismatch for ${shooter.getName()} on ${stage.name}: ${s.penaltyPoints} vs ${splitLine[_PENALTY_POINTS]}");
+        if(verboseParse) _log.w("Penalty points mismatch for ${shooter.getName()} on ${stage.name}: ${s.penaltyPoints} vs ${splitLine[_PENALTY_POINTS]}");
       }
       if(s.rawPoints != int.parse(splitLine[_RAW_POINTS])) {
-        if(verboseParse) print("Raw points mismatch for ${shooter.getName()} on ${stage.name}: ${s.rawPoints} vs ${splitLine[_RAW_POINTS]}");
+        if(verboseParse) _log.w("Raw points mismatch for ${shooter.getName()} on ${stage.name}: ${s.rawPoints} vs ${splitLine[_RAW_POINTS]}");
       }
       if(s.getTotalPoints(scoreDQ: false) != int.parse(splitLine[_TOTAL_POINTS])) {
-        if(verboseParse) print("Total points mismatch for ${shooter.getName()} on ${stage.name}: ${s.getTotalPoints(scoreDQ: false)} vs ${splitLine[_TOTAL_POINTS]}");
+        if(verboseParse) _log.w("Total points mismatch for ${shooter.getName()} on ${stage.name}: ${s.getTotalPoints(scoreDQ: false)} vs ${splitLine[_TOTAL_POINTS]}");
       }
 
       i++;
-    } catch(err) {
-      print("Error parsing score in $matchName: $line $err");
+    } catch(err, st) {
+      _log.e("Error parsing score in $matchName: $line", error: err, stackTrace: st);
     }
   }
 

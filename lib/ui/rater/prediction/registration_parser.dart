@@ -1,8 +1,17 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'package:collection/collection.dart';
 import 'package:html_unescape/html_unescape_small.dart';
-import 'package:uspsa_result_viewer/data/match/shooter.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/match/shooter.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:http/http.dart' as http;
+import 'package:shooting_sports_analyst/logger.dart';
+
+var _log = SSALogger("RegistrationParser");
 
 class RegistrationResult {
   final String name;
@@ -41,7 +50,7 @@ class Registration {
 
 Future<RegistrationResult?> getRegistrations(String url, List<Division> divisions, List<ShooterRating> knownShooters) async {
   if(!url.endsWith("squadding")) {
-    print("Wrong URL");
+    _log.i("Wrong URL");
     return null;
   }
 
@@ -52,10 +61,10 @@ Future<RegistrationResult?> getRegistrations(String url, List<Division> division
       return _parseRegistrations(responseHtml, divisions, knownShooters);
     }
     else {
-      print("Failed to get registration URL: $response");
+      _log.e("Failed to get registration URL: $response");
     }
-  } catch(e) {
-    print("Failed to get registration: $e");
+  } catch(e, st) {
+    _log.e("Failed to get registration", error: e, stackTrace: st);
   }
   return null;
 }
@@ -74,7 +83,7 @@ RegistrationResult _parseRegistrations(String registrationHtml, List<Division> d
     var nameMatch = matchRegex.firstMatch(line);
     if(nameMatch != null) {
       matchName = nameMatch.namedGroup("matchname")!;
-      print("Match name: $matchName");
+      _log.d("Match name: $matchName");
     }
 
     var match = shooterRegex.firstMatch(line);
@@ -91,7 +100,7 @@ RegistrationResult _parseRegistrations(String registrationHtml, List<Division> d
         ratings[Registration(name: shooterName, division: d, classification: classification)] = foundShooter;
       }
       else {
-        print("Missing shooter for: $shooterName");
+        _log.d("Missing shooter for: $shooterName");
         unmatched.add(
           Registration(name: shooterName, division: d, classification: classification)
         );

@@ -1,8 +1,15 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 
 class StageSelectDialog extends StatefulWidget {
-  final Map<Stage, bool?> initialState;
+  final Map<MatchStage, bool?> initialState;
 
   const StageSelectDialog({Key? key, required this.initialState}) : super(key: key);
 
@@ -11,7 +18,7 @@ class StageSelectDialog extends StatefulWidget {
 }
 
 class _StageSelectDialogState extends State<StageSelectDialog> {
-  late Map<Stage, bool?> state;
+  late Map<MatchStage, bool?> state;
 
   @override
   void initState() {
@@ -19,11 +26,10 @@ class _StageSelectDialogState extends State<StageSelectDialog> {
     super.initState();
   }
 
-  void _toggle(Stage s, bool? value) {
+  void _toggle(MatchStage s, bool? value) {
     setState(() {
       state[s] = value;
     });
-    //debugPrint("Filtered stages: $state");
   }
 
   @override
@@ -33,7 +39,7 @@ class _StageSelectDialogState extends State<StageSelectDialog> {
       SizedBox(height: 10),
     ]..addAll(
       state.keys.map(
-        (Stage s) => CheckboxListTile(value: state[s], onChanged: (v) => _toggle(s, v), title: Text(s.name),)
+        (MatchStage s) => CheckboxListTile(value: state[s], onChanged: (v) => _toggle(s, v), title: Text(s.name),)
       )
     );
 

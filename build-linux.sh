@@ -6,15 +6,15 @@ fi
 PROJ_ROOT=$(pwd)
 fvm flutter build linux
 cd build/linux/x64/release || exit
-rm uspsa-result-viewer.zip
-rm -rf uspsa-result-viewer
-cp -r bundle uspsa-result-viewer
-cp -r "$PROJ_ROOT/assets" uspsa-result-viewer
-cp "$PROJ_ROOT/data/L2s-Since-2019.json" uspsa-result-viewer
-cp "$PROJ_ROOT/data/Nationals-and-Area-Matches.json" uspsa-result-viewer
-mv uspsa-result-viewer/assets/linux-install.sh uspsa-result-viewer
-echo "$VERSION" > uspsa-result-viewer/version.txt
-zip -r uspsa-result-viewer.zip uspsa-result-viewer
+rm shooting-sports-analyst.zip
+rm -rf shooting-sports-analyst
+cp -r bundle shooting-sports-analyst
+cp -r "$PROJ_ROOT/assets" shooting-sports-analyst
+cp "$PROJ_ROOT/data/L2s-Since-2019.json" shooting-sports-analyst
+cp "$PROJ_ROOT/data/Nationals-and-Area-Matches.json" shooting-sports-analyst
+mv shooting-sports-analyst/assets/linux-install.sh shooting-sports-analyst
+echo "$VERSION" > shooting-sports-analyst/version.txt
+zip -r shooting-sports-analyst.zip shooting-sports-analyst
 cd "$PROJ_ROOT" || exit
-cp build/linux/x64/release/uspsa-result-viewer.zip "uspsa-analyst-$VERSION-linux.zip"
+cp build/linux/x64/release/shooting-sports-analyst.zip "shooting-sports-analyst-$VERSION-linux.zip"
 

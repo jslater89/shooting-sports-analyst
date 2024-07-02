@@ -1,9 +1,15 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/rating_settings.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settings.dart';
 
 class EloSettingsController extends RaterSettingsController<EloSettings> with ChangeNotifier {
   EloSettings _currentSettings;

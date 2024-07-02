@@ -1,16 +1,25 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
-import 'package:uspsa_result_viewer/data/ranking/prediction/match_prediction.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
-import 'package:uspsa_result_viewer/html_or/html_or.dart';
-import 'package:uspsa_result_viewer/ui/widget/box_and_whisker.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/confirm_dialog.dart';
-import 'package:uspsa_result_viewer/ui/widget/score_row.dart';
+import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/practiscore_parser.dart';
+import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
+import 'package:shooting_sports_analyst/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/widget/box_and_whisker.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
+
+var _log = SSALogger("PredictionView");
 
 class PredictionView extends StatefulWidget {
   const PredictionView({Key? key, required this.rater, required this.predictions}) : super(key: key);
@@ -93,11 +102,11 @@ class _PredictionViewState extends State<PredictionView> {
               ),
             // endif kDebugMode
             Tooltip(
-              message: "Download predictions as CSV",
+              message: "Export predictions as CSV",
               child: IconButton(
                 icon: Icon(Icons.save_alt),
                 onPressed: () async {
-                  String contents = "Name,Member Number,Class,5%,35%,Mean,65%,95%,Low Place,Mid Place,High Place,Actual Percent,Actual Place\n";
+                  String contents = "Name,Member Number,Class,Rating,5%,35%,Mean,65%,95%,Low Place,Mid Place,High Place,Actual Percent,Actual Place\n";
 
                   for(var pred in sortedPredictions) {
                     double midLow = (PredictionView._percentFloor + pred.lowerBox / highPrediction * PredictionView._percentMult) * 100;
@@ -110,16 +119,19 @@ class _PredictionViewState extends State<PredictionView> {
                     int highPlace = pred.highPlace;
                     var outcome = outcomes[pred];
 
-                    contents += "${pred.shooter.getName(suffixes: false)},";
-                    contents += "${pred.shooter.originalMemberNumber},";
-                    contents += "${pred.shooter.lastClassification.name},";
-                    contents += "$low,$midLow,$mean,$midHigh,$high,$lowPlace,$midPlace,$highPlace";
+                    String line = "";
+                    line += "${pred.shooter.getName(suffixes: false)},";
+                    line += "${pred.shooter.originalMemberNumber},";
+                    line += "${pred.shooter.lastClassification.name},";
+                    line += "${pred.shooter.rating.round()},";
+                    line += "$low,$midLow,$mean,$midHigh,$high,$lowPlace,$midPlace,$highPlace";
 
                     if(outcome != null) {
-                      contents += ",${outcome.percent * 100},${outcome.place}";
+                      line += ",${outcome.percent * 100},${outcome.place}";
                     }
 
-                    contents += "\n";
+                    // _log.vv(line);
+                    contents += "$line\n";
                   }
 
                   HtmlOr.saveFile("predictions.csv", contents);
@@ -174,7 +186,7 @@ class _PredictionViewState extends State<PredictionView> {
 
     var match = result.unwrap();
 
-    var filters = widget.rater.filters!;
+    var filters = widget.rater.filters;
     var shooters = match.filterShooters(
       filterMode: filters.mode,
       divisions: filters.activeDivisions.toList(),
@@ -204,11 +216,11 @@ class _PredictionViewState extends State<PredictionView> {
         }
       }
       else {
-        print("No rating for ${shooter.getName(suffixes: false)}");
+        _log.d("No rating for ${shooter.getName(suffixes: false)}");
       }
     }
 
-    print("Registrants: ${shooters.length} Predictions: ${shooters.length} Matched: ${knownShooters.length}");
+    _log.i("Registrants: ${shooters.length} Predictions: ${shooters.length} Matched: ${knownShooters.length}");
 
     var outcome = widget.rater.ratingSystem.validate(
         shooters: knownShooters,
@@ -218,7 +230,7 @@ class _PredictionViewState extends State<PredictionView> {
     );
 
     if(outcome.mutatedInputs) {
-      print("Predictions changed");
+      _log.i("Predictions changed");
       setState(() {
         sortedPredictions = outcome.actualResults.keys.sorted((a, b) => b.ordinal.compareTo(a.ordinal));
         searchedPredictions = search.isEmpty ? sortedPredictions : sortedPredictions.where((p) =>
@@ -245,7 +257,7 @@ class _PredictionViewState extends State<PredictionView> {
         if(outcomePercent >= boxLowPercent && outcomePercent <= boxHighPercent) correct68 += 1;
       }
     }
-    print("Pct. correct: $correct68/$correct95/$total (${(correct68 / total * 100).toStringAsFixed(1)}%/${(correct95 / total * 100).toStringAsFixed(1)}%)");
+    _log.i("Pct. correct: $correct68/$correct95/$total (${(correct68 / total * 100).toStringAsFixed(1)}%/${(correct95 / total * 100).toStringAsFixed(1)}%)");
 
     setState(() {
       outcomes = outcome.actualResults;

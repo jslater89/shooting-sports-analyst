@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'dart:async';
 import 'dart:convert';
 
@@ -6,15 +12,18 @@ import 'package:flutter/widgets.dart';
 import 'package:hive/hive.dart';
 import 'package:sanitize_filename/sanitize_filename.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:uspsa_result_viewer/data/match/shooter.dart';
-import 'package:uspsa_result_viewer/data/ranking/member_number_correction.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/openskill/openskill_rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/points/points_rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
-import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
-import 'package:uspsa_result_viewer/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/data/match/shooter.dart';
+import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/data/ranking/shooter_aliases.dart';
+import 'package:shooting_sports_analyst/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/logger.dart';
+
+var _log = SSALogger("RatingProjectMgr");
 
 class RatingProjectManager {
   static const projectPrefix = "project/";
@@ -65,37 +74,37 @@ class RatingProjectManager {
           var mapName = key.replaceFirst(projectPrefix, "");
           if(mapName != project.name) {
             _projects[mapName] = project;
-            debugPrint("Inflating $key (${project.name}) to $mapName");
+            _log.v("Inflating $key (${project.name}) to $mapName");
           }
           else {
             _projects[project.name] = project;
-            debugPrint("Inflating $key to ${project.name}");
+            _log.v("Inflating $key to ${project.name}");
           }
         }
-        catch(e) {
-          debugPrint("Error decoding project $key: $e");
-          debugPrint(_box.get(key));
+        catch(e, st) {
+          _log.e("Error decoding project $key", error: e, stackTrace: st);
+          _log.i("Content: ${_box.get(key)}");
         }
       }
     }
   }
 
   Future<void> _migrate() async {
-    print("Migrating ProjectManager to HiveDB");
+    _log.i("Migrating ProjectManager to HiveDB");
     for(var key in _prefs.getKeys()) {
       if (key.startsWith(projectPrefix)) {
         var string = _prefs.getString(key);
         if (string != null) {
           _box.put(key, string);
-          print("Moved $key to Hive");
+          _log.v("Moved $key to Hive");
         }
         _prefs.remove(key);
-        print("Deleted $key from shared prefs");
+        _log.v("Deleted $key from shared prefs");
       }
     }
 
     _box.put(_migrated, "true");
-    print("Migration complete");
+    _log.i("Migration complete");
   }
 
   Future<void> exportToFile(RatingProject project) async {
@@ -111,8 +120,8 @@ class RatingProjectManager {
         var project =  RatingProject.fromJson(encodedProject);
         project.name = "${project.name}";
         return project;
-      } catch(e) {
-        print("Error loading file: $e");
+      } catch(e, st) {
+        _log.e("Error loading file", error: e, stackTrace: st);
       }
     }
 
@@ -143,7 +152,7 @@ class RatingProjectManager {
     if(mapName != null && mapName != project.name) {
       projectNames.add(mapName);
     }
-    debugPrint("Saved project ${project.name} to: $projectNames");
+    _log.d("Saved project ${project.name} to: $projectNames");
   }
 
   Future<void> deleteProject(String name) async {
@@ -158,10 +167,10 @@ class RatingProjectManager {
   RatingProject? loadProject(String name) {
     var project = _projects[name];
     if(project != null) {
-      print("Returning ${project.name} from $name");
+      _log.d("Returning ${project.name} from $name");
     }
     else {
-      print("No project for $name");
+      _log.w("No project for $name");
     }
     return project;
   }
@@ -174,6 +183,7 @@ const _limitedLoCoCombineModeKey = "combineLimLoCo";
 const _combineOpenPCCKey = "combineOpPCC";
 const _keepHistoryKey = "keepHistory";
 const _urlsKey = "urls";
+const _ongoingUrlsKey = "ongoingUrls";
 const _whitelistKey = "memNumWhitelist";
 const _aliasesKey = "aliases";
 const _memberNumberMappingsKey = "numMappings";
@@ -196,6 +206,7 @@ class RatingProject {
   String name;
   RatingHistorySettings settings;
   List<String> matchUrls;
+  List<String> ongoingMatchUrls;
 
   /// These URLs will be used to calculate ratings, and should be a subset of [matchUrls].
   ///
@@ -208,6 +219,7 @@ class RatingProject {
     required this.name,
     required this.settings,
     required this.matchUrls,
+    required this.ongoingMatchUrls,
     List<String>? filteredUrls,
   }) : this._filteredUrls = filteredUrls;
 
@@ -275,9 +287,10 @@ class RatingProject {
       recognizedDivisions: recognizedDivisions,
     );
     var matchUrls = (encodedProject[_urlsKey] as List<dynamic>).map((item) => item as String).toList();
+    var ongoingUrls = ((encodedProject[_ongoingUrlsKey] ?? []) as List<dynamic>).map((item) => item as String).toList();
     var name = encodedProject[_nameKey] as String;
 
-    var rp = RatingProject(name: name, settings: settings, matchUrls: matchUrls);
+    var rp = RatingProject(name: name, settings: settings, matchUrls: matchUrls, ongoingMatchUrls: ongoingUrls);
     return rp;
   }
 
@@ -300,6 +313,7 @@ class RatingProject {
     map[_checkDataEntryKey] = settings.checkDataEntryErrors;
     map[_keepHistoryKey] = settings.preserveHistory;
     map[_urlsKey] = matchUrls;
+    map[_ongoingUrlsKey] = ongoingMatchUrls;
     map[_whitelistKey] = settings.memberNumberWhitelist;
     map[_aliasesKey] = settings.shooterAliases;
     map[_memberNumberMappingsKey] = settings.userMemberNumberMappings;

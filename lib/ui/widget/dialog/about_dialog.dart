@@ -1,8 +1,14 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/html_or/html_or.dart';
-import 'package:uspsa_result_viewer/version.dart';
+import 'package:shooting_sports_analyst/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/version.dart';
 
 void showAbout(BuildContext context, Size screenSize) {
   showDialog(
@@ -23,16 +29,19 @@ void showAbout(BuildContext context, Size screenSize) {
                                 "Visit the repository at "
                         ),
                         TextSpan(
-                            text: "https://github.com/jslater89/uspsa-result-viewer",
+                            text: "https://github.com/jslater89/shooting-sports-analyst",
                             style: Theme.of(context).textTheme.bodyText1!.apply(color: Theme.of(context).colorScheme.primary),
                             recognizer: TapGestureRecognizer()..onTap = () async {
-                              String url = "https://github.com/jslater89/uspsa-result-viewer";
+                              String url = "https://github.com/jslater89/shooting-sports-analyst";
                               HtmlOr.openLink(url);
                             }
                         ),
                         TextSpan(
                             style: Theme.of(context).textTheme.bodyText1,
-                            text: " for more information.\n\nUSPSA Analyst v${VersionInfo.version}\n© Jay Slater ${DateTime.now().year}\nGPL 3.0+"
+                            text: " for more information.\nShooting Sports Analyst v${VersionInfo.version}\nMPL 2.0, except where noted\n\n"
+                                "USPSA, IDPA, PCSL, PractiScore, and other trade names or trademarks are used solely for descriptive or "
+                                "nominative purposes, and their use does not imply endorsement by their respective rights-holders, or affiliation "
+                                "between them and Shooting Sports Analyst."
                         )
                       ]
                   )

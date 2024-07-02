@@ -1,12 +1,18 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/results_file_parser.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/loading_dialog.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/url_entry_dialog.dart';
-import 'package:uspsa_result_viewer/util.dart';
+import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/results_file_parser.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/loading_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/url_entry_dialog.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 /// Choose matches from the match cache, or a list of matches.
 class MatchCacheChooserDialog extends StatefulWidget {

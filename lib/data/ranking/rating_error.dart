@@ -1,9 +1,15 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/util.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 import 'model/shooter_rating.dart';
 
-abstract class RatingError extends Error {
+abstract class RatingError extends ResultErr {
   @override
   String get message;
 }

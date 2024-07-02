@@ -1,5 +1,11 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
+import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
 
 class EnterNameDialog extends StatefulWidget {
   const EnterNameDialog({Key? key, this.initial}) : super(key: key);
@@ -86,18 +92,15 @@ class _EnterNameDialogState extends State<EnterNameDialog> {
 
             if(confirm && confirmed) {
               Navigator.of(context).pop(nameController.text);
-              debugPrint("Saving");
             }
             else if(confirm && !confirmed) {
               confirmed = true;
               setState(() {
                 _errorText = "Tap again to confirm.";
               });
-              debugPrint("Confirm requested");
             }
             else {
               Navigator.of(context).pop(nameController.text);
-              debugPrint("Confirm not needed");
             }
           },
         )

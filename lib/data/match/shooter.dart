@@ -1,7 +1,16 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'package:flutter/foundation.dart';
-// import 'package:uspsa_result_viewer/data/db/object/match/shooter.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/results_file_parser.dart';
+// import 'package:shooting_sports_analyst/data/db/object/match/shooter.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/results_file_parser.dart';
+import 'package:shooting_sports_analyst/logger.dart';
+
+var _log = SSALogger("OldShooter");
 
 class Shooter {
   String firstName = "";
@@ -38,6 +47,7 @@ class Shooter {
   Division? division;
   Classification? classification;
   PowerFactor? powerFactor;
+  List<ShooterCategory> categories = [];
 
   Map<Stage, Score> stageScores = {};
 
@@ -52,20 +62,8 @@ class Shooter {
   }
 
   Shooter copy(PracticalMatch parent) {
-    var newShooter = Shooter()
-      ..firstName = firstName
-      ..lastName = lastName
-      ..internalId = internalId
-      ..originalMemberNumber = originalMemberNumber
-      ..memberNumber = memberNumber
-      ..reentry = reentry
-      ..dq = dq
-      ..division = division
-      ..classification = classification
-      ..powerFactor = powerFactor
-      ..female = female
-      ..stageScores = {};
-
+    var newShooter = copyWithoutScores();
+    
     stageScores.forEach((stage, score) {
       newShooter.stageScores[parent.lookupStage(stage)!] = score.copy(newShooter, stage);
     });
@@ -86,6 +84,7 @@ class Shooter {
       ..classification = classification
       ..powerFactor = powerFactor
       ..female = female
+      ..categories = ([]..addAll(categories))
       ..stageScores = {};
 
     return newShooter;
@@ -103,6 +102,7 @@ class Shooter {
     classification = other.classification;
     powerFactor = other.powerFactor;
     female = other.female;
+    categories = []..addAll(other.categories);
   }
 
   // void copyDbVitalsFrom(DbShooterVitals other) {
@@ -172,7 +172,7 @@ enum Division {
       case "revo":
       case "revolver": return Division.revolver;
       default: {
-        if(verboseParse) debugPrint("Unknown division: $s");
+        if(verboseParse) _log.w("Unknown division: $s");
         return Division.unknown;
       }
     }
@@ -249,6 +249,32 @@ enum Classification {
   unknown,
 }
 
+enum ShooterCategory {
+  junior,
+  senior,
+  superSenior,
+  distinguishedSenior;
+  
+  static ShooterCategory? fromString(String s) {
+    return switch(s.toLowerCase()) {
+      "junior" => junior,
+      "senior" => senior,
+      "super senior" => superSenior,
+      "distinguished senior" => distinguishedSenior,
+      String() => null,
+    };
+  }
+  
+  String displayString() {
+    return switch(this) {
+      junior => "Junior",
+      senior => "Senior",
+      superSenior => "Super Senior",
+      distinguishedSenior => "Distinguished Senior",
+    };
+  }
+}
+
 extension ClassificationFrom on Classification {
   static Classification string(String s) {
     s = s.trim().toLowerCase();
@@ -268,7 +294,7 @@ extension ClassificationFrom on Classification {
       case "u": return Classification.U;
       case "x": return Classification.U;
       default:
-        if(verboseParse) debugPrint("Unknown classification: $s");
+        if(verboseParse) _log.w("Unknown classification: $s");
         return Classification.U;
     }
   }
@@ -335,11 +361,5 @@ extension PDisplayString on PowerFactor?{
       case PowerFactor.subminor: return "sub";
       default: return "?";
     }
-  }
-}
-
-extension AsPercentage on double {
-  String asPercentage({int decimals = 2}) {
-    return (this * 100).toStringAsFixed(decimals);
   }
 }

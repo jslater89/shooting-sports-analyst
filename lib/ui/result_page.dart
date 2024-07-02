@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'dart:math';
 
 import 'package:collection/collection.dart';
@@ -5,27 +11,34 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
-import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
-import 'package:uspsa_result_viewer/data/search_query_parser.dart';
-import 'package:uspsa_result_viewer/data/sort_mode.dart';
-import 'package:uspsa_result_viewer/html_or/html_or.dart';
-import 'package:uspsa_result_viewer/route/compare_shooter_results.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/about_dialog.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/score_list_settings_dialog.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/score_stats_dialog.dart';
-import 'package:uspsa_result_viewer/ui/widget/filter_controls.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/match_breakdown.dart';
-import 'package:uspsa_result_viewer/ui/widget/score_list.dart';
+import 'package:shooting_sports_analyst/data/database/match_database.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/data/search_query_parser.dart';
+import 'package:shooting_sports_analyst/data/sort_mode.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/match/stage_stats_calculator.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/route/compare_shooter_results.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/about_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/score_list_settings_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/stage_stats_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/filter_controls.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/match_breakdown.dart';
+import 'package:shooting_sports_analyst/ui/widget/score_list.dart';
+
+SSALogger _log = SSALogger("ResultPage");
 
 class ResultPage extends StatefulWidget {
-  final PracticalMatch? canonicalMatch;
+  final ShootingMatch canonicalMatch;
   final String appChromeLabel;
   final bool allowWhatIf;
-  final Stage? initialStage;
+  final MatchStage? initialStage;
   final FilterSet? initialFilters;
 
   /// A map of RaterGroups to Raters, possibly containing
@@ -35,7 +48,7 @@ class ResultPage extends StatefulWidget {
   const ResultPage({
     Key? key,
     required this.canonicalMatch,
-    this.appChromeLabel = "USPSA Analyst",
+    this.appChromeLabel = "Shooting Sports Analyst",
     this.allowWhatIf = true,
     this.initialFilters,
     this.initialStage,
@@ -56,19 +69,20 @@ class _ResultPageState extends State<ResultPage> {
   ScrollController _horizontalScrollController = ScrollController();
 
   late BuildContext _innerContext;
-  PracticalMatch? _currentMatch;
+  late ShootingMatch _currentMatch;
+  late MatchStatsCalculator _matchStats;
 
   bool _operationInProgress = false;
-
-  FilterSet _filters = FilterSet();
+  Sport get sport => widget.canonicalMatch.sport;
+  late FilterSet _filters;
   List<RelativeMatchScore> _baseScores = [];
+  List<RelativeMatchScore> _searchedScores = [];
   String _searchTerm = "";
   bool _invalidSearch = false;
-  List<RelativeMatchScore> _searchedScores = [];
   StageMenuItem _currentStageMenuItem = StageMenuItem.match();
-  List<Stage> _filteredStages = [];
-  Stage? _stage;
-  SortMode _sortMode = SortMode.score;
+  List<MatchStage> _filteredStages = [];
+  MatchStage? _stage;
+  late SortMode _sortMode;
   String _lastQuery = "";
 
   ScoreDisplaySettingsModel _settings = ScoreDisplaySettingsModel(ScoreDisplaySettings(
@@ -80,13 +94,13 @@ class _ResultPageState extends State<ResultPage> {
 
   int get _matchMaxPoints => _filteredStages.map((stage) => stage.maxPoints).sum;
 
-  List<Shooter> get _filteredShooters => _baseScores.map((score) => score.shooter).toList();
+  List<MatchEntry> get _filteredShooters => _baseScores.map((score) => score.shooter).toList();
 
   /// If true, in what-if mode. If false, not in what-if mode.
   bool _whatIfMode = false;
-  Map<Stage, List<Shooter>> _editedShooters = {};
-  List<Shooter> get _allEditedShooters {
-    Set<Shooter> shooterSet = {};
+  Map<MatchStage, List<MatchEntry>> _editedShooters = {};
+  List<MatchEntry> get _allEditedShooters {
+    Set<MatchEntry> shooterSet = {};
     for(var list in _editedShooters.values) {
       shooterSet.addAll(list);
     }
@@ -98,29 +112,43 @@ class _ResultPageState extends State<ResultPage> {
   void initState() {
     super.initState();
 
+    Set<int> squads = {};
+    for(var s in widget.canonicalMatch.shooters) {
+      if(s.squad != null) {
+        squads.add(s.squad!);
+      }
+    }
+
+    var squadList = squads.toList()..sort();
+    _filters = FilterSet(widget.canonicalMatch.sport, knownSquads: squadList);
+    _sortMode = sport.resultSortModes.first;
+
     if(kIsWeb) {
       SystemChrome.setApplicationSwitcherDescription(
           ApplicationSwitcherDescription(
-            label: "Results: ${widget.canonicalMatch!.name}",
+            label: "Results: ${widget.canonicalMatch.name}",
             primaryColor: 0x3f51b5, // Colors.indigo
           )
       );
     }
 
     _appFocus = FocusNode();
-    _currentMatch = widget.canonicalMatch!.copy();
-    _filteredStages = []..addAll(_currentMatch!.stages);
+    _currentMatch = widget.canonicalMatch.copy();
+    _matchStats = MatchStatsCalculator(_currentMatch);
+    _log.v(_matchStats);
+    _filteredStages = []..addAll(_currentMatch.stages);
 
-    var scores = _currentMatch!.getScores(scoreDQ: _filters.scoreDQs, stages: _filteredStages);
+    var scores = _currentMatch.getScores(scoreDQ: _filters.scoreDQs, stages: _filteredStages);
 
-    _baseScores = scores;
+    _baseScores = scores.values.toList();
     _searchedScores = []..addAll(_baseScores);
 
     if(widget.initialStage != null) {
-      var stageCopy = _currentMatch!.lookupStage(widget.initialStage!);
+      var stageCopy = _currentMatch.lookupStage(widget.initialStage!);
       if(stageCopy != null) _applyStage(StageMenuItem(stageCopy));
     }
     if(widget.initialFilters != null) {
+      widget.initialFilters!.knownSquads = squadList;
       _applyFilters(widget.initialFilters!);
     }
   }
@@ -141,14 +169,16 @@ class _ResultPageState extends State<ResultPage> {
     c.jumpTo(newPosition);
   }
 
-  List<Shooter> _filterShooters() {
-    List<Shooter> filteredShooters = _currentMatch!.filterShooters(
+  List<MatchEntry> _filterShooters() {
+    List<MatchEntry> filteredShooters = _currentMatch.filterShooters(
       filterMode: _filters.mode,
       allowReentries: _filters.reentries,
       divisions: _filters.divisions.keys.where((element) => _filters.divisions[element]!).toList(),
       classes: _filters.classifications.keys.where((element) => _filters.classifications[element]!).toList(),
       powerFactors: _filters.powerFactors.keys.where((element) => _filters.powerFactors[element]!).toList(),
       ladyOnly: _filters.femaleOnly,
+      squads: _filters.squads,
+      ageCategories: _filters.ageCategories.keys.where((element) => _filters.ageCategories[element]!).toList(),
     );
     return filteredShooters;
   }
@@ -156,7 +186,7 @@ class _ResultPageState extends State<ResultPage> {
   void _applyFilters(FilterSet filters) {
     _filters = filters;
 
-    List<Shooter> filteredShooters = _filterShooters();
+    List<MatchEntry> filteredShooters = _filterShooters();
 
     if(filteredShooters.length == 0) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Filters match 0 shooters!")));
@@ -168,13 +198,13 @@ class _ResultPageState extends State<ResultPage> {
     }
 
     setState(() {
-      _baseScores = _currentMatch!.getScores(
+      _baseScores = _currentMatch.getScores(
         shooters: filteredShooters,
         scoreDQ: _filters.scoreDQs,
         stages: _filteredStages,
         predictionMode: _settings.value.predictionMode,
         ratings: widget.ratings,
-      );
+      ).values.toList();
       _searchedScores = []..addAll(_baseScores);
     });
 
@@ -195,7 +225,7 @@ class _ResultPageState extends State<ResultPage> {
     }
   }
 
-  void _selectStages(List<Stage> stages) {
+  void _selectStages(List<MatchStage> stages) {
     setState(() {
       _applyStage(_stage != null && stages.contains(_stage) ? StageMenuItem(_stage!) : StageMenuItem.match());
       _filteredStages = stages;
@@ -205,36 +235,7 @@ class _ResultPageState extends State<ResultPage> {
   }
 
   void _applySortMode(SortMode s) {
-    switch(s) {
-      case SortMode.score:
-        _baseScores.sortByScore(stage: _stage);
-        break;
-      case SortMode.time:
-        _baseScores.sortByTime(stage: _stage, scoreDQs: _filters.scoreDQs);
-        break;
-      case SortMode.alphas:
-        _baseScores.sortByAlphas(stage: _stage);
-        break;
-      case SortMode.availablePoints:
-        _baseScores.sortByAvailablePoints(stage: _stage);
-        break;
-      case SortMode.lastName:
-        _baseScores.sortBySurname();
-        break;
-      case SortMode.rating:
-        if(widget.ratings != null) {
-          _baseScores.sortByRating(ratings: widget.ratings!, displayMode: _settings.value.ratingMode, match: _currentMatch!);
-        }
-        else {
-          // We shouldn't hit this, because we hide rating sort if there aren't any ratings,
-          // but just in case...
-          return _baseScores.sortByScore(stage: _stage);
-        }
-        break;
-      case SortMode.classification:
-        _baseScores.sortByClassification();
-        break;
-    }
+    _applySortModeTo(s, _baseScores);
 
     setState(() {
       _sortMode = s;
@@ -243,10 +244,54 @@ class _ResultPageState extends State<ResultPage> {
     });
   }
 
+  void _applySortModeTo(SortMode s, List<RelativeMatchScore> scores) {
+    switch(s) {
+      case SortMode.score:
+        scores.sortByScore(stage: _stage);
+        break;
+      case SortMode.time:
+        scores.sortByTime(stage: _stage, scoreDQs: _filters.scoreDQs, scoring: sport.matchScoring);
+        break;
+      case SortMode.alphas:
+        scores.sortByAlphas(stage: _stage);
+        break;
+      case SortMode.availablePoints:
+        scores.sortByAvailablePoints(stage: _stage);
+        break;
+      case SortMode.lastName:
+        scores.sortBySurname();
+        break;
+      case SortMode.rating:
+        if(widget.ratings != null) {
+          //_baseScores.sortByRating(ratings: widget.ratings!, displayMode: _settings.value.ratingMode, match: _currentMatch!);
+
+          // TODO: restore when we can rate new matches
+          scores.sortByScore(stage: _stage);
+        }
+        else {
+          // We shouldn't hit this, because we hide rating sort if there aren't any ratings,
+          // but just in case...
+          scores.sortByScore(stage: _stage);
+        }
+        break;
+      case SortMode.classification:
+        scores.sortByClassification();
+        break;
+      case SortMode.rawTime:
+        scores.sortByRawTime(scoreDQs: _filters.scoreDQs, stage: _stage, scoring: sport.matchScoring);
+        break;
+      case SortMode.idpaAccuracy:
+        scores.sortByIdpaAccuracy(stage: _stage, scoring: sport.matchScoring);
+        break;
+      default:
+        _log.e("Unknown sort type $s");
+    }
+  }
+
   void _applySearchTerm(String query) {
     _lastQuery = query;
     if(query.startsWith("?")) {
-      var queryElements = parseQuery(query);
+      var queryElements = parseQuery(sport, query);
       if(queryElements != null) {
         setState(() {
           _invalidSearch = false;
@@ -296,8 +341,8 @@ class _ResultPageState extends State<ResultPage> {
 
     setState(() {
       _whatIfMode = true;
-      _baseScores = scores;
-      _searchedScores = []..addAll(scores);
+      _baseScores = scores.values.toList();
+      _searchedScores = []..addAll(scores.values);
     });
 
     _applySortMode(_sortMode);
@@ -308,8 +353,9 @@ class _ResultPageState extends State<ResultPage> {
     var size = MediaQuery.of(context).size;
 
     Widget sortWidget = FilterControls(
+      sport: sport,
       filters: _filters,
-      allStages: _currentMatch!.stages,
+      allStages: _currentMatch.stages,
       filteredStages: _filteredStages,
       currentStage: _currentStageMenuItem,
       sortMode: _sortMode,
@@ -354,8 +400,8 @@ class _ResultPageState extends State<ResultPage> {
 
         setState(() {
           _whatIfMode = true;
-          _baseScores = scores;
-          _searchedScores = []..addAll(scores);
+          _baseScores = scores.values.toList();
+          _searchedScores = []..addAll(scores.values);
         });
 
         _applySortMode(_sortMode);
@@ -367,7 +413,7 @@ class _ResultPageState extends State<ResultPage> {
     final primaryColor = Theme.of(context).primaryColor;
     final backgroundColor = Theme.of(context).backgroundColor;
 
-    if(_operationInProgress) debugPrint("Operation in progress");
+    if(_operationInProgress) _log.v("Operation in progress");
 
     var animation = (_operationInProgress) ?
     AlwaysStoppedAnimation<Color>(backgroundColor) : AlwaysStoppedAnimation<Color>(primaryColor);
@@ -382,11 +428,11 @@ class _ResultPageState extends State<ResultPage> {
                   icon: Icon(Icons.undo),
                   onPressed: () async {
                     _currentMatch = widget.canonicalMatch!.copy();
-                    List<Shooter> filteredShooters = _filterShooters();
+                    List<MatchEntry> filteredShooters = _filterShooters();
                     var scores = _currentMatch!.getScores(shooters: filteredShooters);
 
                     //debugPrint("Match: $_currentMatch Stage: $_stage Shooters: $_filteredShooters Scores: $scores");
-                    debugPrint("${_filteredShooters[0].stageScores}");
+                    debugPrint("${_filteredShooters[0].scores}");
 
                     // Not sure if vestigial or the sign of a bug
                     // var filteredStages = []..addAll(_filteredStages);
@@ -395,8 +441,8 @@ class _ResultPageState extends State<ResultPage> {
                       _editedShooters = {};
                       _currentMatch = _currentMatch;
                       _stage = _stage == null ? null : _currentMatch!.lookupStage(_stage!);
-                      _baseScores = scores;
-                      _searchedScores = []..addAll(scores);
+                      _baseScores = scores.values.toList();
+                      _searchedScores = []..addAll(scores.values);
                       _whatIfMode = false;
                     });
 
@@ -436,6 +482,29 @@ class _ResultPageState extends State<ResultPage> {
               )
           )
       );
+      if(!kIsWeb) {
+        actions.add(
+          Tooltip(
+            message: "Save match to database.",
+            child: IconButton(
+              icon: Icon(Icons.save),
+              onPressed: () async {
+                var result = await AnalystDatabase().save(widget.canonicalMatch);
+                if(result.isErr()) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text("Error saving match: $e")
+                  ));
+                }
+                else {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text("Saved match to database"),
+                  ));
+                }
+              },
+            )
+          )
+        );
+      }
       actions.add(
         Tooltip(
             message: "Display a match breakdown.",
@@ -443,7 +512,7 @@ class _ResultPageState extends State<ResultPage> {
               icon: Icon(Icons.table_chart),
               onPressed: () {
                 showDialog(context: context, builder: (context) {
-                  return MatchBreakdown(shooters: _currentMatch!.shooters);
+                  return MatchBreakdown(sport: sport, shooters: _currentMatch!.shooters);
                 });
               },
             )
@@ -460,6 +529,19 @@ class _ResultPageState extends State<ResultPage> {
       //     )
       //   )
       // );
+      if(_stage != null) actions.add(
+        Tooltip(
+          message: "View stage hit statistics",
+          child: IconButton(
+            icon: Icon(Icons.bar_chart),
+            onPressed: () {
+              var stats = MatchStatsCalculator(_currentMatch!);
+              var stageStats = stats.stageStats[_stage!]!;
+              StageStatsDialog.show(context, stageStats);
+            }
+          )
+        )
+      );
       actions.add(
         Tooltip(
           message: "Compare shooter results.",
@@ -497,7 +579,7 @@ class _ResultPageState extends State<ResultPage> {
               }
             },
           ),
-        )
+        ),
       );
     }
     actions.add(
@@ -554,7 +636,7 @@ class _ResultPageState extends State<ResultPage> {
         onWillPop: () async {
           if(kIsWeb) {
             SystemChrome.setApplicationSwitcherDescription(ApplicationSwitcherDescription(
-              label: "USPSA Analyst",
+              label: "Shooting Sports Analyst",
               primaryColor: 0x3f51b5, // Colors.indigo
             ));
           }
@@ -645,7 +727,9 @@ enum MatchPredictionMode {
   highAvailable,
   averageStageFinish,
   averageHistoricalFinish,
+  /// Predict only shooters who have completed at least one stage.
   eloAwarePartial,
+  /// Predict shooters who haven't appeared at the match yet, but are registered.
   eloAwareFull;
 
   static List<MatchPredictionMode> dropdownValues(bool includeElo) {

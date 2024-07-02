@@ -1,4 +1,10 @@
-import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
+import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 
 class ConnectedShooter {
   static final dateComparisonClosure = (ConnectedShooter a, ConnectedShooter b) => a.lastSeen.compareTo(b.lastSeen);

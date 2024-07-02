@@ -1,18 +1,32 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'dart:convert';
 // ignore: avoid_web_libraries_in_flutter
 import 'package:flutter/foundation.dart';
 import 'package:fluttericon/rpg_awesome_icons.dart';
-import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
+import 'package:shooting_sports_analyst/data/source/source.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/html_or/html_or.dart';
 
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/practiscore_parser.dart';
-import 'package:uspsa_result_viewer/main.dart';
-import 'package:uspsa_result_viewer/route/elo_tuner_page.dart';
-import 'package:uspsa_result_viewer/ui/empty_scaffold.dart';
-import 'package:uspsa_result_viewer/ui/result_page.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/match_cache_chooser_dialog.dart';
+import 'package:shooting_sports_analyst/data/practiscore_parser.dart';
+import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/main.dart';
+import 'package:shooting_sports_analyst/route/elo_tuner_page.dart';
+import 'package:shooting_sports_analyst/route/match_database_manager.dart';
+import 'package:shooting_sports_analyst/ui/empty_scaffold.dart';
+import 'package:shooting_sports_analyst/ui/result_page.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/match_cache_chooser_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/match_source_chooser_dialog.dart';
+
+var _log = SSALogger("HomePage");
 
 class HomePage extends StatefulWidget {
   @override
@@ -44,13 +58,13 @@ class _HomePageState extends State<HomePage> {
   void _launchPresetPractiscore({String? url}) async {
     var matchId = await getMatchId(context, presetUrl: url);
     if(matchId != null) {
-      HtmlOr.navigateTo(context, "/web/$matchId");
+      HtmlOr.navigateTo(context, "/web/report-uspsa/$matchId");
     }
   }
 
   void _launchNonPractiscoreFile({required String url}) async {
     var urlBytes = Base64Codec.urlSafe().encode(url.codeUnits);
-    HtmlOr.navigateTo(context, "/webfile/$urlBytes");
+    HtmlOr.navigateTo(context, "/webfile/report-uspsa/$urlBytes");
   }
 
   @override
@@ -110,20 +124,13 @@ class _HomePageState extends State<HomePage> {
     var children = [
       GestureDetector(
         onTap: () async {
-          MatchCacheIndexEntry? entry = await showDialog<MatchCacheIndexEntry>(
-            context: context, builder: (context) => MatchCacheChooserDialog(showStats: true, showIds: true),
-            barrierDismissible: false,
-          );
-          if(entry != null) {
-            var match = await MatchCache().getByIndex(entry);
-            Navigator.of(context).push(MaterialPageRoute(builder: (context) => ResultPage(canonicalMatch: match)));
-          }
+          Navigator.of(context).push(MaterialPageRoute(builder: (context) => MatchDatabaseManagerPage()));
         },
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.dataset, size: 230, color: Colors.grey,),
-            Text("View and manage matches in the match cache", style: Theme
+            Text("View and manage matches in the match database", style: Theme
                 .of(context)
                 .textTheme
                 .subtitle1!
@@ -175,7 +182,7 @@ class _HomePageState extends State<HomePage> {
               await Navigator.of(context).pushNamed('/local', arguments: contents);
             }
             else {
-              debugPrint("Null file contents");
+              _log.d("Null file contents");
             }
           });
         },
@@ -194,28 +201,25 @@ class _HomePageState extends State<HomePage> {
       ),
       GestureDetector(
         onTap: () async {
-          setState(() {
-            _operationInProgress = true;
-          });
-          var matchId = await getMatchId(context);
-          if(matchId != null) {
-            // get the full UUID-styled ID
-            matchId = await processMatchUrl(matchId);
-          }
-          setState(() {
-            _operationInProgress = false;
-          });
+          MatchSource source;
+          ShootingMatch match;
 
-          if(matchId != null) {
-            await Navigator.of(context).pushNamed('/web/$matchId');
+          var response = await showDialog(context: context, builder: (context) => MatchSourceChooserDialog(sources: MatchSourceRegistry().sources));
+          if(response == null) {
+            return;
           }
+
+          (source, match) = response;
+
+          _log.i("Displaying match ${match.sourceIds} with ${source.code}");
+          await Navigator.of(context).pushNamed('/web/${source.code}/${match.sourceIds.first}');
         },
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             SizedBox(height: column ? 0 : 50),
             Icon(Icons.cloud_download, size: 230, color: Colors.grey,),
-            Text("Click to download a report.txt file from Practiscore", style: Theme
+            Text("Click to download matches from Internet sources", style: Theme
                 .of(context)
                 .textTheme
                 .subtitle1!

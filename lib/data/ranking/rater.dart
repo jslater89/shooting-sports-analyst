@@ -1,24 +1,35 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
-// import 'package:uspsa_result_viewer/data/db/object/rating/rating_event.dart';
-// import 'package:uspsa_result_viewer/data/db/object/rating/rating_project.dart';
-// import 'package:uspsa_result_viewer/data/db/object/rating/shooter_rating.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/ranking/member_number_correction.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/openskill/model/model_utils.dart';
-import 'package:uspsa_result_viewer/data/ranking/rating_error.dart';
-import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
-import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
-import 'package:uspsa_result_viewer/data/ranking/timings.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
+// import 'package:shooting_sports_analyst/data/db/object/rating/rating_event.dart';
+// import 'package:shooting_sports_analyst/data/db/object/rating/rating_project.dart';
+// import 'package:shooting_sports_analyst/data/db/object/rating/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/openskill/model/model_utils.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/data/ranking/shooter_aliases.dart';
+import 'package:shooting_sports_analyst/data/ranking/timings.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart' as newShooter;
+import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:fuzzywuzzy/fuzzywuzzy.dart' as strdiff;
-import 'package:uspsa_result_viewer/util.dart';
+import 'package:shooting_sports_analyst/util.dart';
+
+var _log = SSALogger("Rater");
 
 class Rater {
   List<PracticalMatch> _matches;
+  List<PracticalMatch> _ongoingMatches;
 
   /// Maps processed member numbers to shooter ratings.
   ///
@@ -61,7 +72,7 @@ class Rater {
 
   RaterGroup group;
 
-  FilterSet get filters => group.filters;
+  OldFilterSet get filters => group.filters;
 
   bool byStage;
   List<String> memberNumberWhitelist;
@@ -78,6 +89,7 @@ class Rater {
 
   Rater({
     required List<PracticalMatch> matches,
+    required List<PracticalMatch> ongoingMatches,
     required this.ratingSystem,
     required this.group,
     this.byStage = false,
@@ -92,6 +104,7 @@ class Rater {
     this.recognizedDivisions = const {},
     this.memberNumberWhitelist = const []})
       : this._matches = matches,
+        this._ongoingMatches = ongoingMatches,
         this._memberNumberMappingBlacklist = memberNumberMappingBlacklist,
         this._userMemberNumberMappings = userMemberNumberMappings,
         this._dataCorrections = dataCorrections
@@ -113,6 +126,7 @@ class Rater {
   Rater.copy(Rater other) :
         this.knownShooters = {},
         this._matches = other._matches.map((m) => m.copy()).toList(),
+        this._ongoingMatches = [], // updated in constructor body
         this.byStage = other.byStage,
         this._memberNumbersEncountered = Set()..addAll(other._memberNumbersEncountered),
         this._memberNumberMappings = {}..addAll(other._memberNumberMappings),
@@ -126,6 +140,7 @@ class Rater {
         this.memberNumberWhitelist = other.memberNumberWhitelist,
         this.progressCallbackInterval = other.progressCallbackInterval,
         this.ratingSystem = other.ratingSystem {
+    this._ongoingMatches = _matches.where((match) => other._ongoingMatches.any((otherMatch) => match.practiscoreId == otherMatch.practiscoreId)).toList();
     for(var entry in _memberNumberMappings.entries) {
       if (entry.key == entry.value) {
         // If, per the member number mappings, this is the canonical mapping, copy it immediately.
@@ -256,7 +271,7 @@ class Rater {
         totalRounds += s.minRounds;
         stageRoundCounts.add(s.minRounds);
 
-        if(s.minRounds <= 4) debugPrint("${m.name} ${s.name} ${s.minRounds}rds");
+        if(s.minRounds <= 4) _log.d("${m.name} ${s.name} ${s.minRounds}rds");
       }
       matchLengths.add(stages);
       matchRoundCounts.add(totalRounds);
@@ -277,12 +292,12 @@ class Rater {
     var stageRoundsMode = mode(stageRoundCounts);
     var matchRoundsMode = mode(matchRoundCounts);
 
-    debugPrint("Initial ratings complete for ${knownShooters.length} shooters in ${_matches.length} matches in ${filters.activeDivisions.toList()}");
-    debugPrint("Match length in stages (min/max/average/median/mode): ${matchLengths.min}/${matchLengths.max}/${matchLengths.average.toStringAsFixed(1)}/${matchLengths[matchLengths.length ~/ 2]}/$matchLengthMode");
-    debugPrint("Match length in rounds (average/median/mode): ${matchRoundCounts.min}/${matchRoundCounts.max}/${matchRoundCounts.average.toStringAsFixed(1)}/${matchRoundCounts[matchRoundCounts.length ~/ 2]}/$matchRoundsMode");
-    debugPrint("Stage length in rounds (average/median/mode): ${stageRoundCounts.min}/${stageRoundCounts.max}/${stageRoundCounts.average.toStringAsFixed(1)}/${stageRoundCounts[stageRoundCounts.length ~/ 2]}/$stageRoundsMode");
-    debugPrint("DQs per 100 shooters (average/median): ${dqsPer100.min.toStringAsFixed(3)}/${dqsPer100.max.toStringAsFixed(3)}/${dqsPer100.average.toStringAsFixed(3)}/${dqsPer100[dqsPer100.length ~/ 2].toStringAsFixed(3)}");
-    // debugPrint("Stage round counts: $stageRoundCounts");
+    _log.i("Initial ratings complete for ${knownShooters.length} shooters in ${_matches.length} matches in ${filters.activeDivisions.toList()}");
+    _log.i("Match length in stages (min/max/average/median/mode): ${matchLengths.min}/${matchLengths.max}/${matchLengths.average.toStringAsFixed(1)}/${matchLengths[matchLengths.length ~/ 2]}/$matchLengthMode");
+    _log.i("Match length in rounds (average/median/mode): ${matchRoundCounts.min}/${matchRoundCounts.max}/${matchRoundCounts.average.toStringAsFixed(1)}/${matchRoundCounts[matchRoundCounts.length ~/ 2]}/$matchRoundsMode");
+    _log.i("Stage length in rounds (average/median/mode): ${stageRoundCounts.min}/${stageRoundCounts.max}/${stageRoundCounts.average.toStringAsFixed(1)}/${stageRoundCounts[stageRoundCounts.length ~/ 2]}/$stageRoundsMode");
+    _log.i("DQs per 100 shooters (average/median): ${dqsPer100.min.toStringAsFixed(3)}/${dqsPer100.max.toStringAsFixed(3)}/${dqsPer100.average.toStringAsFixed(3)}/${dqsPer100[dqsPer100.length ~/ 2].toStringAsFixed(3)}");
+    // _log.i("Stage round counts: $stageRoundCounts");
     return RatingResult.ok();
   }
 
@@ -298,7 +313,7 @@ class Rater {
 
     _removeUnseenShooters();
 
-    debugPrint("Ratings update complete for $changed shooters (${knownShooters.length} total) in ${_matches.length} matches in ${filters.activeDivisions.toList()}");
+    _log.i("Ratings update complete for $changed shooters (${knownShooters.length} total) in ${_matches.length} matches in ${filters.activeDivisions.toList()}");
     return RatingResult.ok();
   }
 
@@ -313,12 +328,18 @@ class Rater {
     for(Shooter s in shooters) {
       var processed = processMemberNumber(s.memberNumber);
       var corrections = _dataCorrections.getByInvalidNumber(processed);
+      var name = _processName(s);
       for(var correction in corrections) {
-          var name = _processName(s);
           if (correction.name == name) {
             processed = correction.correctedNumber;
             break;
           }
+      }
+      if(processed.isEmpty) {
+        var emptyCorrection = _dataCorrections.getEmptyCorrectionByName(name);
+        if(emptyCorrection != null) {
+          processed = emptyCorrection.correctedNumber;
+        }
       }
       if(processed.isNotEmpty && !s.reentry) {
         s.memberNumber = processed;
@@ -355,6 +376,11 @@ class Rater {
   }
 
   ShooterRating? ratingFor(Shooter s) {
+    var processed = processMemberNumber(s.memberNumber);
+    return maybeKnownShooter(processed);
+  }
+
+  ShooterRating? ratingForNew(newShooter.MatchEntry s) {
     var processed = processMemberNumber(s.memberNumber);
     return maybeKnownShooter(processed);
   }
@@ -449,7 +475,11 @@ class Rater {
         for(var n in list) {
           var type = _MemNumType.classify(n);
           numbers[type] ??= [];
-          numbers[type]!.add(n);
+
+          // The Joey Sauerland rule
+          if(!numbers[type]!.contains(n)) {
+            numbers[type]!.add(n);
+          }
         }
 
         var bestNumberOptions = _MemNumType.targetNumber(numbers);
@@ -490,7 +520,7 @@ class Rater {
         }
 
         if(automaticMappingFailed) {
-          if(verbose) print("Ignoring $name with numbers $list: multiple numbers of type ${failedType?.name}");
+          if(verbose) _log.i("Automapping failed for $name with numbers $list: multiple numbers of type ${failedType?.name}");
           if(checkDataEntryErrors && failedType != null && numbers[failedType]!.length == 2) {
             var n1 = numbers[failedType]![0];
             var n2 = numbers[failedType]![1];
@@ -514,13 +544,14 @@ class Rater {
             // Everything in 'is not that shooter' will get blacklisted against everything in
             // 'is one shooter'.
             if(_memberNumberMappingBlacklist[n1] == n2 || _memberNumberMappingBlacklist[n2] == n1) {
+              _log.i("Mapping is blacklisted");
               continue;
             }
-            else if (strdiff.ratio(n1, n2) > 65) {
+            else if (strdiff.ratio(n1, n2) > 65 || n1.length > 6 || n2.length > 6) {
               var s1 = knownShooters[n1];
               var s2 = knownShooters[n2];
               if(s1 != null && s2 != null) {
-                print("Fixable error for $n1->$s1 and $n2->$s2");
+                _log.d("$name ");
                 return RatingResult.err(ShooterMappingError(
                   culprits: [s1, s2],
                   accomplices: {},
@@ -529,10 +560,14 @@ class Rater {
               }
             }
             else {
+              var s1 = knownShooters[n1];
+              var s2 = knownShooters[n2];
+              _log.w("$s1 ($n1) and $s2 ($n2) could not be mapped but may be the same person");
               continue;
             }
           }
           else {
+            _log.i("More than 2 member numbers");
             continue;
           }
         }
@@ -592,12 +627,12 @@ class Rater {
         }
 
         if(!unmapped) {
-          if(verbose) print("Nothing to do for $name and $list; all mapped to $bestNumber already");
+          if(verbose) _log.v("Nothing to do for $name and $list; all mapped to $bestNumber already");
           continue;
         }
 
         if(crossMapped) {
-          if(verbose) print("$name with $list has cross mappings");
+          if(verbose) _log.v("$name with $list has cross mappings");
           continue;
         }
 
@@ -609,7 +644,7 @@ class Rater {
         }
 
         if(withHistory.length > 1) {
-          if(verbose) print("Ignoring $name with numbers $list: ${withHistory.length} ratings have history: $withHistory");
+          if(verbose) _log.w("Ignoring $name with numbers $list: ${withHistory.length} ratings have history: $withHistory");
           Map<ShooterRating, List<ShooterRating>> accomplices = {};
 
           for(var culprit in withHistory) {
@@ -623,7 +658,7 @@ class Rater {
           ));
         }
 
-        if(verbose) debugPrint("Shooter $name has >=2 member numbers, mapping: ${numbers.values.flattened.toList()} to $bestNumber");
+        if(verbose) _log.v("Shooter $name has >=2 member numbers, mapping: ${numbers.values.flattened.toList()} to $bestNumber");
 
         var target = knownShooters[bestNumber]!;
 
@@ -661,7 +696,7 @@ class Rater {
       var targetNum = _memberNumberMappings[sourceNum]!;
 
       if(targetNum == source.memberNumber && _memberNumberMappings[sourceNum] != target.memberNumber) {
-        print("Additionally mapping $sourceNum to ${target.memberNumber}");
+        _log.i("Additionally mapping $sourceNum to ${target.memberNumber}");
         _memberNumberMappings[sourceNum] = target.memberNumber;
       }
     }
@@ -723,6 +758,10 @@ class Rater {
         rating.firstName = shooter.firstName;
         rating.lastName = shooter.lastName;
 
+        // Update age categories
+        rating.categories.clear();
+        rating.categories.addAll(shooter.categories);
+
         // Update the shooter's member number: the CSV exports are more useful if it's the most
         // recent one. // TODO: this would be handy, but it changes the math somehow (not removing unseen?)
         // rating.shooter.memberNumber = shooter.memberNumber;
@@ -764,7 +803,7 @@ class Rater {
     var connectednessMod = /*1.0;*/ 1.0 + max(-0.2, min(0.2, (((localAverageConnectedness / connectednessDenominator) - 1.0) * 2))); // * 1: how much to adjust the percentages by
     if(Timings.enabled) timings.connectednessModMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
 
-    // debugPrint("Connectedness for ${match.name}: ${localAverageConnectedness.toStringAsFixed(2)}/${connectednessDenominator.toStringAsFixed(2)} => ${connectednessMod.toStringAsFixed(3)}");
+    // _log.d("Connectedness for ${match.name}: ${localAverageConnectedness.toStringAsFixed(2)}/${connectednessDenominator.toStringAsFixed(2)} => ${connectednessMod.toStringAsFixed(3)}");
 
     Map<ShooterRating, Map<RelativeScore, RatingEvent>> changes = {};
     Set<ShooterRating> shootersAtMatch = Set();
@@ -914,7 +953,7 @@ class Rater {
           .sorted((a, b) => b.connectedness.compareTo(a.connectedness))
           .sublist(0, min(ShooterRating.maxConnections, shootersAtMatch.length));
 
-      // debugPrint("Updating connectedness at ${match.name} for ${shootersAtMatch.length} of ${knownShooters.length} shooters");
+      // _log.d("Updating connectedness at ${match.name} for ${shootersAtMatch.length} of ${knownShooters.length} shooters");
       for (var rating in shootersAtMatch) {
         averageBefore += rating.connectedness;
         rating.updateConnections(match.date!, encounteredList);
@@ -928,7 +967,7 @@ class Rater {
 
       averageBefore /= encounteredList.length;
       averageAfter /= encounteredList.length;
-      // debugPrint("Averages: ${averageBefore.toStringAsFixed(1)} -> ${averageAfter.toStringAsFixed(1)} vs. ${expectedConnectedness.toStringAsFixed(1)}");
+      // _log.d("Averages: ${averageBefore.toStringAsFixed(1)} -> ${averageAfter.toStringAsFixed(1)} vs. ${expectedConnectedness.toStringAsFixed(1)}");
     }
     if(Timings.enabled) timings.updateConnectednessMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
   }
@@ -937,6 +976,7 @@ class Rater {
   bool _verifyShooter(Shooter s) {
     if(_verifyCache.containsKey(s)) return _verifyCache[s]!;
 
+    var finalMemberNumber = s.memberNumber;
     if(!byStage && s.dq) {
       _verifyCache[s] = false;
       return false;
@@ -946,13 +986,19 @@ class Rater {
       return false;
     }
     if(s.memberNumber.isEmpty) {
+      var processedName = _processName(s);
+      var emptyCorrection = _dataCorrections.getEmptyCorrectionByName(processedName);
+      if(emptyCorrection != null) {
+        finalMemberNumber = processMemberNumber(emptyCorrection.correctedNumber);
+      }
+
       _verifyCache[s] = false;
       return false;
     }
 
     // This is already processed, because _verifyShooter is only called from _getShooters
     // after member numbers have been processed.
-    String memNum = s.memberNumber;
+    String memNum = finalMemberNumber;
 
     if(maybeKnownShooter(memNum) == null) {
       _verifyCache[s] = false;
@@ -987,7 +1033,7 @@ class Rater {
         if(stageScore == null) {
           filteredScores.remove(s);
           filteredShooters.remove(s.shooter);
-          print("WARN: null stage score");
+          _log.w("null stage score for ${s.shooter}");
           continue;
         }
 
@@ -1057,6 +1103,7 @@ class Rater {
 
         var update = ratingSystem.updateShooterRatings(
           match: match,
+          isMatchOngoing: _ongoingMatches.contains(match),
           shooters: [aRating, bRating],
           scores: {
             aRating: aStageScore,
@@ -1233,7 +1280,7 @@ class Rater {
         var stageScore = scoreMap[rating];
 
         if(stageScore == null) {
-          print("Null stage score for $rating on ${stage.name}");
+          _log.w("Null stage score for $rating on ${stage.name}");
           continue;
         }
 
@@ -1317,13 +1364,13 @@ class Rater {
 
     // People entered with empty or invalid member numbers
     if(firstRating == null || secondRating == null) {
-      // print("Unexpected null in pubstomp detection");
+      // _log.d("Unexpected null in pubstomp detection");
       return false;
     }
 
     // if(processMemberNumber(first.shooter.memberNumber) == "68934" || processMemberNumber(first.shooter.memberNumber) == "5172") {
-    //   debugPrint("${firstScore.percent.toStringAsFixed(2)} ${(firstScore.relativePoints/secondScore.relativePoints).toStringAsFixed(3)}");
-    //   debugPrint("${firstRating.rating.round()} > ${secondRating.rating.round()}");
+    //   _log.d("${firstScore.percent.toStringAsFixed(2)} ${(firstScore.relativePoints/secondScore.relativePoints).toStringAsFixed(3)}");
+    //   _log.d("${firstRating.rating.round()} > ${secondRating.rating.round()}");
     // }
 
     // It's only a pubstomp if:
@@ -1335,7 +1382,7 @@ class Rater {
         && firstClass.index <= Classification.M.index
         && secondClass.index - firstClass.index >= 2
         && firstRating.rating - secondRating.rating > 200) {
-      // print("Pubstomp multiplier for $firstRating over $secondRating");
+      // _log.d("Pubstomp multiplier for $firstRating over $secondRating");
       return true;
 
     }
@@ -1384,7 +1431,7 @@ class Rater {
       case Classification.D:
         return 1;
       case Classification.U:
-        return _strengthForClass(Classification.C);
+        return _strengthForClass(Classification.A);
       default:
         return 2.5;
     }

@@ -1,5 +1,11 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/ranking/evolution/predator_prey.dart';
+import 'package:shooting_sports_analyst/data/ranking/evolution/predator_prey.dart';
 
 class PredatorPreyView<P extends Prey> extends StatelessWidget {
   const PredatorPreyView({Key? key, required this.grid, required this.nonDominated, this.highlight}) : super(key: key);

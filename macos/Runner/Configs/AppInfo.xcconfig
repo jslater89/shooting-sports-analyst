@@ -5,10 +5,10 @@
 // 'flutter create' template.
 
 // The application's name. By default this is also the title of the Flutter window.
-PRODUCT_NAME = USPSA Analyst
+PRODUCT_NAME = Shooting Sports Analyst
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.generico.uspsaResultViewer
+PRODUCT_BUNDLE_IDENTIFIER = com.generico.shootingSportsAnalyst
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2022 Jay Slater. All rights reserved. Available under GPLv3.0.
+PRODUCT_COPYRIGHT = © 2024 Jay Slater and contributors. Available under MPLv2.0.

@@ -1,14 +1,22 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'dart:math';
 
 import 'package:collection/collection.dart';
-// import 'package:uspsa_result_viewer/data/db/object/match/shooter.dart';
-// import 'package:uspsa_result_viewer/data/db/object/rating/shooter_rating.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/average_rating.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/connected_shooter.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/rating_change.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater.dart';
-import 'package:uspsa_result_viewer/data/sorted_list.dart';
+// import 'package:shooting_sports_analyst/data/db/object/match/shooter.dart';
+// import 'package:shooting_sports_analyst/data/db/object/rating/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/average_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/connected_shooter.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/sorted_list.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 abstract class ShooterRating extends Shooter {
   /// The number of events over which trend/variance are calculated.
@@ -57,10 +65,10 @@ abstract class ShooterRating extends Shooter {
   ///
   /// If the shooter was not rated prior to the match and none of the
   /// above cases apply, returns the shooter's current rating.
-  double ratingForEvent(PracticalMatch match, Stage? stage, {bool beforeMatch = false}) {
+  double ratingForEvent(ShootingMatch match, Stage? stage, {bool beforeMatch = false}) {
     RatingEvent? candidateEvent;
     for(var e in ratingEvents.reversed) {
-      if(e.match.practiscoreId == match.practiscoreId && (candidateEvent == null || beforeMatch)) {
+      if(e.match.practiscoreId == match.sourceIds.first && (candidateEvent == null || beforeMatch)) {
         if(stage == null) {
           // Because we're going backward, this will get the last change from the
           // match.
@@ -108,6 +116,21 @@ abstract class ShooterRating extends Shooter {
         events.add(e);
       }
       else if(stage != null && e.match.practiscoreId == match.practiscoreId && e.stage?.name == stage.name) {
+        events.add(e);
+      }
+    }
+
+    if(events.isEmpty) return null;
+    else return events.map((e) => e.ratingChange).sum;
+  }
+
+  double? changeForNewEvent(ShootingMatch match, MatchStage? stage) {
+    List<RatingEvent> events = [];
+    for(var e in ratingEvents.reversed) {
+      if(stage == null && e.match.practiscoreId == match.sourceIds.first) {
+        events.add(e);
+      }
+      else if(stage != null && e.match.practiscoreId == match.sourceIds.first && e.stage?.name == stage.name) {
         events.add(e);
       }
     }
@@ -190,22 +213,13 @@ abstract class ShooterRating extends Shooter {
 
       change = change * scale;
 
-      // if(Rater.processMemberNumber(shooter.memberNumber) == "122755") {
-      //   debugPrint("${connection.shooter.shooter.getName(suffixes: false)} contributed $change to ${shooter.getName(suffixes: false)}");
-      // }
-
       c += change;
     }
-
-    // if(Rater.processMemberNumber(shooter.memberNumber) == "122755") {
-    //   debugPrint("${shooter.getName(suffixes: false)} changed to $c");
-    // }
 
     _connectedness = c;
   }
 
   void updateConnections(DateTime now, List<ShooterRating> encountered) {
-    // if(Rater.processMemberNumber(this.shooter.memberNumber) == "122755")  print("Shooter $this has ${connectedShooters.length} connections, encountered ${encountered.length} shooters");
     int added = 0;
     int updated = 0;
 
@@ -227,14 +241,11 @@ abstract class ShooterRating extends Shooter {
     for(var shooter in encountered) {
       var currentConnection = connMap[shooter];
       if(currentConnection != null) {
-        // if(Rater.processMemberNumber(this.shooter.memberNumber) == "122755")  print("Updated connection to $shooter");
         currentConnection.connectedness = shooter.connectedness;
         currentConnection.lastSeen = now;
         updated++;
       }
       else if(shooter != this) {
-        // if(Rater.processMemberNumber(this.shooter.memberNumber) == "122755")  print("Added connection to $shooter");
-
         // No need to add this connection if our list is full and it's worst than our current worst connection.
         if(lowValueConnections.length >= maxConnections) {
           var worstConnection = lowValueConnections.first;
@@ -251,10 +262,9 @@ abstract class ShooterRating extends Shooter {
         added++;
       }
       else {
-        // if(Rater.processMemberNumber(this.shooter.memberNumber) == "122755") print("Ignoring self");
+        // ignoring self
       }
     }
-    // if(Rater.processMemberNumber(this.shooter.memberNumber) == "122755") print("Now has ${connectedShooters.length} connections, added $added, updated $updated of ${encountered.length - 1}");
 
     if(connectedShooters.length > maxConnections) {
       int nToRemove = connectedShooters.length - maxConnections;
@@ -267,8 +277,6 @@ abstract class ShooterRating extends Shooter {
         connectedShooters.remove(connection);
         i++;
       }
-
-      // if(Rater.processMemberNumber(this.shooter.memberNumber) == "122755") print("${nToRemove} were above the connection limit\n");
     }
   }
 
@@ -362,7 +370,7 @@ abstract class ShooterRating extends Shooter {
       this._connectedness = other._connectedness,
       this.lastSeen = other.lastSeen,
       this.firstSeen = other.firstSeen,
-      this.alternateMemberNumbers = other.alternateMemberNumbers,
+      this.alternateMemberNumbers = []..addAll(other.alternateMemberNumbers),
       this.connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure)..addAll(other.connectedShooters.map((e) => ConnectedShooter.copy(e)))
   {
     super.copyVitalsFrom(other);

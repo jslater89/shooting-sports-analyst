@@ -1,21 +1,71 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/rating_system.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
-import 'package:uspsa_result_viewer/data/ranking/prediction/match_prediction.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
-import 'package:uspsa_result_viewer/ui/result_page.dart';
-import 'package:uspsa_result_viewer/ui/widget/score_list.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/result_page.dart';
+import 'package:shooting_sports_analyst/ui/widget/score_list.dart';
+
+var _log = SSALogger("OldMatch");
 
 enum MatchLevel {
   I,
   II,
   III,
   IV,
+}
+
+class OldFilterSet {
+  FilterMode mode = FilterMode.and;
+  bool reentries = true;
+  bool scoreDQs = true;
+  bool femaleOnly = false;
+
+  late Map<Division, bool> divisions;
+  late Map<Classification, bool> classifications;
+  late Map<PowerFactor, bool> powerFactors;
+
+  OldFilterSet({bool empty = false}) {
+    divisions = {};
+    classifications = {};
+    powerFactors = {};
+
+    for (Division d in Division.values) {
+      divisions[d] = !empty;
+    }
+
+    for (Classification c in Classification.values) {
+      classifications[c] = !empty;
+    }
+
+    for (PowerFactor f in PowerFactor.values) {
+      powerFactors[f] = !empty;
+    }
+  }
+
+  Iterable<Division> get activeDivisions => divisions.keys.where((div) => divisions[div] ?? false);
+
+  Map<Division, bool> divisionListToMap(List<Division> divisions) {
+    Map<Division, bool> map = {};
+    for(var d in Division.values) {
+      map[d] = divisions.contains(d);
+    }
+
+    return map;
+  }
 }
 
 class PracticalMatch {
@@ -34,7 +84,8 @@ class PracticalMatch {
   int? maxPoints;
   int stageScoreCount = 0;
 
-  bool get inProgress => false;
+  /// Whether a match is in progress for ratings purposes.
+  bool get inProgress => practiscoreId == "12d1cd35-3556-44db-af09-5153f975c447";
 
   PracticalMatch copy() {
     var newMatch = PracticalMatch()
@@ -117,7 +168,7 @@ class PracticalMatch {
     if(innerShooters.length == 0 || innerStages.length == 0) return [];
 
     int matchMaxPoints = innerStages.map<int>((e) => e.maxPoints).reduce((a, b) => a + b);
-    // print("Max points for match: $matchMaxPoints");
+    // _log.v("Max points for match: $matchMaxPoints");
 
     // Create a total score for each shooter, precalculating what we can and
     // prepopulating what we can't.
@@ -155,7 +206,7 @@ class PracticalMatch {
       }
 
       matchScores[shooter]!.percentTotalPoints = shooterTotalPoints.toDouble() / matchMaxPoints.toDouble();
-      //print("${shooter.firstName} ${shooter.lastName} shot ${totalScores[shooter].percentTotalPoints} total points");
+      //_log.v("${shooter.firstName} ${shooter.lastName} shot ${totalScores[shooter].percentTotalPoints} total points");
     }
 
 
@@ -175,11 +226,11 @@ class PracticalMatch {
       if(innerShooters[0].stageScores[stage] == null) {
         // we've clearly hit some awful condition here, so let's
         // just bail out
-        print("Winner of ${stage.name}: ${innerShooters[0].firstName} ${innerShooters[0].lastName}");
+        _log.e("Winner of ${stage.name}: ${innerShooters[0].firstName} ${innerShooters[0].lastName} has null score");
         continue;
       }
       double highHitFactor = innerShooters[0].stageScores[stage]!.getHitFactor(scoreDQ: scoreDQ);
-      //print("Winner of ${stage.name}: ${shooters[0].firstName} ${shooters[0].lastName} with ${shooters[0].stageScores[stage].hitFactor}");
+      //_log.v("Winner of ${stage.name}: ${shooters[0].firstName} ${shooters[0].lastName} with ${shooters[0].stageScores[stage].hitFactor}");
 
       int place = 1;
       for(Shooter shooter in innerShooters) {
@@ -211,7 +262,7 @@ class PracticalMatch {
         for(var shooter in innerShooters) {
           var rating = ratings!.lookup(shooter);
           if(r == null) {
-            r = ratings.lookupRater(shooter)?.ratingSystem;
+            r = ratings.lookupOldRater(shooter)?.ratingSystem;
             if(r == null) {
               break;
             }

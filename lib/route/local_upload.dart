@@ -1,8 +1,18 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/results_file_parser.dart';
-import 'package:uspsa_result_viewer/ui/empty_scaffold.dart';
-import 'package:uspsa_result_viewer/ui/result_page.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/results_file_parser.dart';
+import 'package:shooting_sports_analyst/data/source/practiscore_report.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/match/translator.dart';
+import 'package:shooting_sports_analyst/ui/empty_scaffold.dart';
+import 'package:shooting_sports_analyst/ui/result_page.dart';
 
 class UploadedResultPage extends StatefulWidget {
   const UploadedResultPage({Key? key}) : super(key: key);
@@ -12,7 +22,7 @@ class UploadedResultPage extends StatefulWidget {
 }
 
 class _UploadedResultPageState extends State<UploadedResultPage> {
-  PracticalMatch? _match;
+  ShootingMatch? _match;
   String? _resultString;
   bool _operationInProgress = false;
 
@@ -36,10 +46,10 @@ class _UploadedResultPageState extends State<UploadedResultPage> {
 
       }
 
-      var result = await processScoreFile(_resultString!);
+      var processor = PractiscoreHitFactorReportParser(uspsaSport);
+      var result = await processor.parseWebReport(_resultString!);
       if(result.isOk()) {
         var match = result.unwrap();
-        match.practiscoreId = "n/a";
         setState(() {
           _match = match;
         });
@@ -73,7 +83,7 @@ class _UploadedResultPageState extends State<UploadedResultPage> {
     }
 
     return ResultPage(
-      canonicalMatch: _match,
+      canonicalMatch: _match!,
     );
   }
 }

@@ -1,8 +1,17 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/logger.dart';
+
+var _log = SSALogger("NativeHtmlOr");
 
 Controller _controller = Controller();
 Controller get controller => _controller;
@@ -24,7 +33,7 @@ class Controller extends ControlInterface {
     if(result != null) {
       var f = result.files[0];
       var nativeFile = File(f.path ?? "/error!");
-      debugPrint("File: ${nativeFile.path} ${await nativeFile.length()}");
+      _log.d("File: ${nativeFile.path} ${await nativeFile.length()}");
       onFileContents(await nativeFile.readAsString());
     }
     else {
@@ -38,7 +47,7 @@ class Controller extends ControlInterface {
     if(result != null) {
       var f = result.files[0];
       var nativeFile = File(f.path ?? "/error!");
-      debugPrint("File: ${nativeFile.path} ${await nativeFile.length()}");
+      _log.d("File: ${nativeFile.path} ${await nativeFile.length()}");
       return await nativeFile.readAsString();
     }
     else {
@@ -53,12 +62,22 @@ class Controller extends ControlInterface {
 
   @override
   void saveFile(String defaultName, String fileContents) async {
-    print("Last directory? $lastDirectoryPath");
+    _log.d("Last directory? $lastDirectoryPath");
     var path = await FilePicker.platform.saveFile(fileName: defaultName, initialDirectory: lastDirectoryPath ?? Directory.current.absolute.path + Platform.pathSeparator);
     if(path != null) {
       var file = File(path);
       lastDirectoryPath = file.parent.absolute.path;
       await file.writeAsString(fileContents);
+    }
+  }
+
+  void saveBuffer(String defaultName, List<int> buffer) async {
+    _log.d("Last directory? $lastDirectoryPath");
+    var path = await FilePicker.platform.saveFile(fileName: defaultName, initialDirectory: lastDirectoryPath ?? Directory.current.absolute.path + Platform.pathSeparator);
+    if(path != null) {
+      var file = File(path);
+      lastDirectoryPath = file.parent.absolute.path;
+      await file.writeAsBytes(buffer);
     }
   }
 }

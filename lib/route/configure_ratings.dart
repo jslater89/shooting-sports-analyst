@@ -1,35 +1,45 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/match/practical_match.dart';
-import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
-import 'package:uspsa_result_viewer/data/ranking/member_number_correction.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/rating_settings.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/rating_system.dart';
-import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/openskill/openskill_rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/openskill/openskill_settings.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/points/points_rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/points/points_settings.dart';
-import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
-import 'package:uspsa_result_viewer/data/ranking/shooter_aliases.dart';
-import 'package:uspsa_result_viewer/data/results_file_parser.dart';
-import 'package:uspsa_result_viewer/html_or/html_or.dart';
-import 'package:uspsa_result_viewer/ui/rater/enter_practiscore_source_dialog.dart';
-import 'package:uspsa_result_viewer/ui/rater/match_list_filter_dialog.dart';
-import 'package:uspsa_result_viewer/ui/rater/member_number_correction_dialog.dart';
-import 'package:uspsa_result_viewer/ui/rater/member_number_dialog.dart';
-import 'package:uspsa_result_viewer/ui/rater/member_number_map_dialog.dart';
-import 'package:uspsa_result_viewer/ui/result_page.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/confirm_dialog.dart';
-import 'package:uspsa_result_viewer/ui/rater/enter_name_dialog.dart';
-import 'package:uspsa_result_viewer/ui/rater/enter_urls_dialog.dart';
-import 'package:uspsa_result_viewer/ui/rater/select_project_dialog.dart';
-import 'package:uspsa_result_viewer/ui/rater/shooter_aliases_dialog.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/loading_dialog.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/match_cache_chooser_dialog.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/rater_groups_dialog.dart';
-import 'package:uspsa_result_viewer/ui/widget/match_cache_loading_indicator.dart';
+import 'package:shooting_sports_analyst/data/match/practical_match.dart';
+import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
+import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
+import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/points/points_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/data/ranking/shooter_aliases.dart';
+import 'package:shooting_sports_analyst/data/results_file_parser.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/rater/enter_practiscore_source_dialog.dart';
+import 'package:shooting_sports_analyst/ui/rater/match_list_filter_dialog.dart';
+import 'package:shooting_sports_analyst/ui/rater/member_number_correction_dialog.dart';
+import 'package:shooting_sports_analyst/ui/rater/member_number_dialog.dart';
+import 'package:shooting_sports_analyst/ui/rater/member_number_map_dialog.dart';
+import 'package:shooting_sports_analyst/ui/result_page.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
+import 'package:shooting_sports_analyst/ui/rater/enter_name_dialog.dart';
+import 'package:shooting_sports_analyst/ui/rater/enter_urls_dialog.dart';
+import 'package:shooting_sports_analyst/ui/rater/select_project_dialog.dart';
+import 'package:shooting_sports_analyst/ui/rater/shooter_aliases_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/loading_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/match_cache_chooser_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/rater_groups_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/match_cache_loading_indicator.dart';
+
+var _log = SSALogger("ConfigureRatingsPage");
 
 class ConfigureRatingsPage extends StatefulWidget {
   const ConfigureRatingsPage({Key? key, required this.onSettingsReady}) : super(key: key);
@@ -45,6 +55,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
   bool matchCacheReady = false;
   List<String> matchUrls = [];
+  Map<String, bool> ongoingMatchUrls = {};
   MatchListFilters? filters = MatchListFilters();
   List<String>? filteredMatchUrls;
   Map<String, PracticalMatch> knownMatches = {};
@@ -131,17 +142,17 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       });
     }
 
-    print("Getting ${unknownUrls.length} unknown URLs");
+    _log.i("Getting ${unknownUrls.length} unknown URLs");
     var matches = await cache.batchGet(unknownUrls, callback: (url, result) {
       if(result.isOk() && mounted) {
         var match = result.unwrap();
-        print("Fetched ${match.name} from ${url.split("/").last}");
+        _log.v("Fetched ${match.name} from ${url.split("/").last}");
         setState(() {
           knownMatches[url] = match;
         });
       }
       else if(result.isErr()) {
-        print("Error getting match: ${result.unwrapErr()}");
+        _log.w("Error getting match: ${result.unwrapErr()}");
       }
     });
 
@@ -180,7 +191,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     }
     else {
       // This should only happen if we've never launched before, so...
-      print("Autosaved project is null");
+      _log.i("Autosaved project is null, assuming first start");
 
       _ratingSystem = MultiplayerPercentEloRater();
       _settingsController = _ratingSystem.newSettingsController();
@@ -201,6 +212,10 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       filteredMatchUrls = null;
       filters = null;
       matchUrls = []..addAll(project.matchUrls);
+      ongoingMatchUrls = {};
+      for(var m in project.ongoingMatchUrls) {
+        ongoingMatchUrls[m] = true;
+      }
       _keepHistory = project.settings.preserveHistory;
       _checkDataEntryErrors = project.settings.checkDataEntryErrors;
       _groups = []..addAll(project.settings.groups);
@@ -230,7 +245,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       _lastProjectName = project.name;
       _settingsWidget = _settingsWidget;
     });
-    debugPrint("Loaded ${project.name}");
+    _log.i("Loaded ${project.name}");
   }
 
   @override
@@ -565,7 +580,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                       return MatchCacheChooserDialog(multiple: true);
                                     }, barrierDismissible: false);
 
-                                    print("Entries from cache: $indexEntries");
+                                    _log.v("Entries from cache: $indexEntries");
 
                                     if(indexEntries == null) return;
 
@@ -673,7 +688,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                               child: GestureDetector(
                                                 onTap: () async {
                                                   if(!MatchCache.readyNow) {
-                                                    print("Match cache not ready");
+                                                    _log.d("Match cache not ready");
                                                     return;
                                                   }
                                                   var cache = MatchCache();
@@ -681,7 +696,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                                   var match = await cache.getMatchImmediate(url);
                                                   if(match != null && (match.name?.isNotEmpty ?? false)) {
                                                     Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-                                                      return ResultPage(canonicalMatch: match, allowWhatIf: false);
+                                                      return ResultPage(canonicalMatch: ShootingMatch.fromOldMatch(match), allowWhatIf: false);
                                                     }));
                                                   }
                                                   else {
@@ -695,6 +710,32 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                                   overflow: TextOverflow.fade
                                                 ),
                                               ),
+                                            )
+                                          ),
+                                          Tooltip(
+                                            message: (ongoingMatchUrls[url] ?? false) ?
+                                                "This match is in progress. Click to toggle." :
+                                                "This match is completed. Click to toggle.",
+                                            child: IconButton(
+                                              icon: Icon(
+                                                (ongoingMatchUrls[url] ?? false) ?
+                                                  Icons.calendar_today :
+                                                  Icons.event_available
+                                              ),
+                                              color: (ongoingMatchUrls[url] ?? false) ?
+                                                  Theme.of(context).primaryColor :
+                                                  Colors.grey[350],
+                                              onPressed: () {
+                                                if(ongoingMatchUrls[url] ?? false) {
+                                                  setState(() {
+                                                    ongoingMatchUrls.remove(url);
+                                                  });
+                                                } else {
+                                                  setState(() {
+                                                    ongoingMatchUrls[url] = true;
+                                                  });
+                                                }
+                                              },
                                             )
                                           ),
                                           Tooltip(
@@ -800,7 +841,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       return true;
     }));
 
-    print("Filtered ${matchUrls.length} urls to ${filteredMatchUrls!.length} Level: $filteredByLevel Before: $filteredByBefore After: $filteredByAfter");
+    _log.d("Filtered ${matchUrls.length} urls to ${filteredMatchUrls!.length} Level: $filteredByLevel Before: $filteredByBefore After: $filteredByAfter");
 
     setState(() {
       filteredMatchUrls = filteredMatchUrls;
@@ -866,11 +907,12 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       name: _lastProjectName ?? name,
       settings: settings,
       matchUrls: []..addAll(matchUrls),
+      ongoingMatchUrls: []..addAll(ongoingMatchUrls.keys), // URLs are removed instead of set to false
       filteredUrls: (filteredMatchUrls?.isNotEmpty ?? false) ? filteredMatchUrls! : null,
     );
 
     await RatingProjectManager().saveProject(project, mapName: mapName);
-    debugPrint("Saved ${project.name} to $mapName" + (isAutosave ? " (autosave)" : ""));
+    _log.i("Saved ${project.name} to $mapName" + (isAutosave ? " (autosave)" : ""));
 
     if(mounted) {
       setState(() {
@@ -1037,7 +1079,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
             }
           }
 
-          print("Imported ${imported.name}");
+          _log.i("Imported ${imported.name}");
 
           _loadProject(imported);
           updateUrls();
@@ -1054,9 +1096,10 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         }
 
         var project = RatingProject(
-            name: "${_lastProjectName ?? "Unnamed Project"}",
-            settings: settings,
-            matchUrls: []..addAll(matchUrls)
+          name: "${_lastProjectName ?? "Unnamed Project"}",
+          settings: settings,
+          matchUrls: []..addAll(matchUrls),
+          ongoingMatchUrls: []..addAll(ongoingMatchUrls.keys), // URLs are removed instead of set to false
         );
         await RatingProjectManager().exportToFile(project);
         break;

@@ -1,19 +1,32 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/sort_mode.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
-import 'package:uspsa_result_viewer/ui/widget/stage_select_dialog.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/sort_mode.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/stage_select_dialog.dart';
+
+var _log = SSALogger("FilterControls");
 
 class FilterControls extends StatefulWidget {
+  final Sport sport;
+
   final SortMode sortMode;
 
   /// All stages in the current match. Used to populate the stage
   /// filter dialog in what-if mode.
-  final List<Stage> allStages;
+  final List<MatchStage> allStages;
 
   /// The stages currently scored. Used to populate the stage
   /// select dropdown.
-  final List<Stage> filteredStages;
+  final List<MatchStage> filteredStages;
 
   final StageMenuItem currentStage;
   final FilterSet filters;
@@ -24,7 +37,7 @@ class FilterControls extends StatefulWidget {
   final Function(StageMenuItem) onStageChanged;
   final Function(FilterSet) onFiltersChanged;
   final Function(String) onSearchChanged;
-  final Function(List<Stage>) onStageSetChanged;
+  final Function(List<MatchStage>) onStageSetChanged;
 
   final bool searchError;
   final bool hasRatings;
@@ -33,6 +46,7 @@ class FilterControls extends StatefulWidget {
   const FilterControls(
     {
       Key? key,
+      required this.sport,
       required this.sortMode,
       required this.currentStage,
       required this.allStages,
@@ -70,33 +84,14 @@ class _FilterControlsState extends State<FilterControls> {
 
   List<DropdownMenuItem<SortMode>> _buildSortItems() {
     return [
-      DropdownMenuItem<SortMode>(
-        child: Text(SortMode.score.displayString()),
-        value: SortMode.score,
-      ),
-      DropdownMenuItem<SortMode>(
-        child: Text(SortMode.time.displayString()),
-        value: SortMode.time,
-      ),
-      DropdownMenuItem<SortMode>(
-        child: Text(SortMode.alphas.displayString()),
-        value: SortMode.alphas,
-      ),
-      DropdownMenuItem<SortMode>(
-        child: Text(SortMode.availablePoints.displayString()),
-        value: SortMode.availablePoints,
-      ),
-      DropdownMenuItem<SortMode>(
-        child: Text(SortMode.lastName.displayString()),
-        value: SortMode.lastName,
-      ),
+      for(var mode in widget.sport.resultSortModes)
+        DropdownMenuItem<SortMode>(
+          child: Text(mode.displayString()),
+          value: mode,
+        ),
       if(widget.hasRatings) DropdownMenuItem<SortMode>(
         child: Text(SortMode.rating.displayString()),
         value: SortMode.rating,
-      ),
-      DropdownMenuItem<SortMode>(
-        child: Text(SortMode.classification.displayString()),
-        value: SortMode.classification,
       ),
     ];
   }
@@ -109,7 +104,7 @@ class _FilterControlsState extends State<FilterControls> {
       )
     ];
 
-    for(Stage s in widget.filteredStages) {
+    for(MatchStage s in widget.filteredStages) {
       stageMenuItems.add(
           DropdownMenuItem<StageMenuItem>(
               child: Text(s.name),
@@ -181,7 +176,7 @@ class _FilterControlsState extends State<FilterControls> {
                     ),
                   ),
                   SizedBox(width: 10),
-                  Column(
+                  if(widget.sport.resultSortModes.isNotEmpty) Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text("Sort by...", style: Theme.of(context).textTheme.caption),
@@ -198,7 +193,7 @@ class _FilterControlsState extends State<FilterControls> {
                       ),
                     ],
                   ),
-                  SizedBox(width: 10),
+                  if(widget.sport.resultSortModes.isNotEmpty) SizedBox(width: 10),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -211,11 +206,11 @@ class _FilterControlsState extends State<FilterControls> {
                         items: _buildStageMenuItems(),
                         onChanged: (StageMenuItem? item) async {
                           if(item == StageMenuItem.filter()) {
-                            var stages = await showDialog<List<Stage>>(
+                            var stages = await showDialog<List<MatchStage>>(
                               context: context,
                               builder: (context) {
-                                var initialState = <Stage, bool>{};
-                                for(Stage s in widget.allStages) {
+                                var initialState = <MatchStage, bool>{};
+                                for(MatchStage s in widget.allStages) {
                                   initialState[s] = widget.filteredStages.contains(s);
                                 }
                                 return StageSelectDialog(initialState: initialState);
@@ -223,7 +218,7 @@ class _FilterControlsState extends State<FilterControls> {
                             );
 
                             if(stages != null) {
-                              debugPrint("Filtered stages: $stages");
+                              _log.d("Filtered stages: $stages");
                               widget.onStageSetChanged(stages);
                             }
                           }
@@ -242,7 +237,7 @@ class _FilterControlsState extends State<FilterControls> {
                       child: Text("FILTERS"),
                       onPressed: () async {
                         var filters = await showDialog<FilterSet>(context: context, builder: (context) {
-                          return FilterDialog(currentFilters: this.widget.filters,);
+                          return FilterDialog(currentFilters: this.widget.filters);
                         });
 
                         if(filters != null) {
@@ -288,12 +283,12 @@ enum StageMenuItemType {
   match,
 }
 class StageMenuItem {
-  StageMenuItem(Stage stage) : this.stage = stage, this.type = StageMenuItemType.stage;
+  StageMenuItem(MatchStage stage) : this.stage = stage, this.type = StageMenuItemType.stage;
   StageMenuItem.filter() : this.type = StageMenuItemType.filter;
   StageMenuItem.match() : this.type = StageMenuItemType.match;
 
   StageMenuItemType type;
-  Stage? stage;
+  MatchStage? stage;
 
   @override
   bool operator ==(Object other) {

@@ -1,4 +1,10 @@
 /*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
+/*
 Spitballing some ideas:
 
 1. Confidence intervals
@@ -11,7 +17,7 @@ See if rating percentage correlates with match finish percentage?
 2. As above, but with probabilities.
  */
 
-import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 
 /// A prediction for a shooter's finish.
 ///
@@ -42,9 +48,7 @@ class ShooterPrediction {
   String toString() {
     return "${shooter.getName(suffixes: false)}: ${mean.toStringAsPrecision(4)} ± ${twoSigma.toStringAsPrecision(4)}";
   }
-}
 
-extension PredictionMaths on ShooterPrediction {
   double get center => mean;
   double get upperBox => mean + oneSigma + shift;
   double get lowerBox => mean - oneSigma + shift;

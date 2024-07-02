@@ -1,12 +1,21 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/html_or/html_or.dart';
-import 'package:uspsa_result_viewer/ui/widget/captioned_text.dart';
-import 'package:uspsa_result_viewer/ui/widget/score_list.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/ui/widget/captioned_text.dart';
+import 'package:shooting_sports_analyst/ui/widget/score_list.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 class ShooterResultCard extends StatelessWidget {
   final RelativeMatchScore? matchScore;
-  final RelativeScore? stageScore;
+  final RelativeStageScore? stageScore;
   final bool scoreDQ;
 
   const ShooterResultCard({Key? key, this.matchScore, this.stageScore, this.scoreDQ = true}) : super(key: key);
@@ -40,17 +49,17 @@ class ShooterResultCard extends StatelessWidget {
               children: [
                 CaptionedText(
                   captionText: "Match Score",
-                  text: "${matchScore!.total.relativePoints.toStringAsFixed(2)} (${matchScore!.total.percent.asPercentage()}%)"
+                  text: "${matchScore!.points.toStringAsFixed(2)} (${matchScore!.ratio.asPercentage()}%)"
                 ),
                 SizedBox(width: 12),
                 CaptionedText(
                   captionText: "Time",
-                  text: "${matchScore!.total.score.time.toStringAsFixed(2)}s",
+                  text: "${matchScore!.total.finalTime.toStringAsFixed(2)}s",
                 )
               ],
             ),
             SizedBox(height: 10),
-            MatchScoreBody(result: matchScore!.total)
+            MatchScoreBody(result: matchScore!.total, powerFactor: matchScore!.shooter.powerFactor),
           ],
         ),
       ),
@@ -58,7 +67,7 @@ class ShooterResultCard extends StatelessWidget {
   }
 
   Widget _buildStageCard(BuildContext context) {
-    Shooter shooter = stageScore!.score.shooter;
+    MatchEntry shooter = stageScore!.shooter;
     List<Widget> timeHolder = [];
     var stringTimes = stageScore!.score.stringTimes;
 
@@ -98,18 +107,18 @@ class ShooterResultCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 CaptionedText(
-                    captionText: "Hit Factor",
-                    text: "${stageScore!.score.getHitFactor(scoreDQ: scoreDQ).toStringAsFixed(4)}",
+                    captionText: stageScore!.score.displayLabel,
+                    text: stageScore!.score.displayString,
                 ),
                 SizedBox(width: 12),
                 CaptionedText(
                   captionText: "Time",
-                  text: "${stageScore!.score.time.toStringAsFixed(2)}s",
+                  text: "${stageScore!.score.finalTime.toStringAsFixed(2)}s",
                 ),
                 SizedBox(width: 12),
                 CaptionedText(
                   captionText: "Stage Score",
-                  text: "${stageScore!.relativePoints.toStringAsFixed(2)} (${stageScore!.percent.asPercentage()}%)"
+                  text: "${stageScore!.points.toStringAsFixed(2)} (${stageScore!.ratio.asPercentage()}%)"
                 )
               ],
             ),
@@ -117,7 +126,7 @@ class ShooterResultCard extends StatelessWidget {
             ]..addAll(
               timeHolder
             )..add(
-              MatchScoreBody(result: stageScore)
+              MatchScoreBody(result: stageScore!.score, powerFactor: stageScore!.shooter.powerFactor),
             ),
         ),
       ),
@@ -125,7 +134,7 @@ class ShooterResultCard extends StatelessWidget {
   }
 
 
-  Widget _buildShooterLink(BuildContext context, Shooter shooter) {
+  Widget _buildShooterLink(BuildContext context, MatchEntry shooter) {
     if(shooter.originalMemberNumber != "") {
       return MouseRegion(
         cursor: SystemMouseCursors.click,
@@ -137,7 +146,8 @@ class ShooterResultCard extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                "${shooter.getName()} - ${shooter.division?.displayString() ?? "NO DIVISION"} ${shooter.classification.displayString()}",
+                // TODO: handle division-free/classification-free sports
+                "${shooter.getName()} - ${shooter.division?.name ?? "NO DIVISION"} ${shooter.classification?.name ?? "NO CLASSIFICATION"}",
                 style: Theme.of(context).textTheme.headline6!.copyWith(
                   color: Theme.of(context).primaryColor,
                   decoration: TextDecoration.underline,
@@ -155,82 +165,53 @@ class ShooterResultCard extends StatelessWidget {
       );
     }
     return Text(
-      "${shooter.getName()} - ${shooter.division?.displayString() ?? "NO DIVISION"} ${shooter.classification.displayString()}",
+      "${shooter.getName()} - ${shooter.division?.name ?? "NO DIVISION"} ${shooter.classification?.name ?? "NO CLASSIFICATION"}",
       style: Theme.of(context).textTheme.headline6,
     );
   }
 }
 
 class MatchScoreBody extends StatelessWidget {
-  final RelativeScore? result;
+  final RawScore result;
+  final PowerFactor powerFactor;
 
-  const MatchScoreBody({Key? key, this.result}) : super(key: key);
+  const MatchScoreBody({Key? key, required this.result, required this.powerFactor}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    List<Widget> scoreText = [];
+    for(var e in powerFactor.targetEvents.values) {
+      scoreText.add(CaptionedText(
+        captionText: e.name,
+        text: "${result.targetEvents[e] ?? 0}",
+      ));
+      scoreText.add(SizedBox(width: 12));
+    }
+    if(scoreText.isNotEmpty) scoreText.removeLast();
+
+    List<Widget> penaltyText = [];
+    for(var e in powerFactor.penaltyEvents.values) {
+      penaltyText.add(CaptionedText(
+        captionText: e.name,
+        text: "${result.targetEvents[e] ?? 0}",
+      ));
+      penaltyText.add(SizedBox(width: 12));
+    }
+    if(penaltyText.isNotEmpty) penaltyText.removeLast();
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Row(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            CaptionedText(
-              captionText: "A",
-              text: "${result!.score.a}",
-            ),
-            SizedBox(width: 12),
-            CaptionedText(
-              captionText: "C",
-              text: "${result!.score.c + result!.score.b}",
-            ),
-            SizedBox(width: 12),
-            CaptionedText(
-              captionText: "D",
-              text: "${result!.score.d}",
-            ),
-            SizedBox(width: 12),
-            CaptionedText(
-              captionText: "M",
-              text: "${result!.score.m}",
-            ),
-            SizedBox(width: 12),
-            CaptionedText(
-              captionText: "NS",
-              text: "${result!.score.ns}",
-            )
-          ],
+          children: scoreText,
         ),
         SizedBox(height: 10),
         Row(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            CaptionedText(
-              captionText: "Procedural",
-              text: "${result!.score.procedural}",
-            ),
-            SizedBox(width: 12),
-            CaptionedText(
-              captionText: "Late Shot",
-              text: "${result!.score.lateShot}",
-            ),
-            SizedBox(width: 12),
-            CaptionedText(
-              captionText: "Extra Shot",
-              text: "${result!.score.extraShot}",
-            ),
-            SizedBox(width: 12),
-            CaptionedText(
-              captionText: "Extra Hit",
-              text: "${result!.score.extraHit}",
-            ),
-            SizedBox(width: 12),
-            CaptionedText(
-              captionText: "Other",
-              text: "${result!.score.otherPenalty}",
-            )
-          ],
+          children: penaltyText,
         ),
       ],
     );

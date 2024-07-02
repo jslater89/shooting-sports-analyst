@@ -1,12 +1,22 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/rating_error.dart';
-import 'package:uspsa_result_viewer/ui/rater/shooter_stats_dialog.dart';
-import 'package:uspsa_result_viewer/ui/result_page.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/ui/rater/shooter_stats_dialog.dart';
+import 'package:shooting_sports_analyst/ui/result_page.dart';
+
+var _log = SSALogger("MemberNrCollisionDialog");
 
 class MemberNumberCollisionDialog extends StatefulWidget {
   const MemberNumberCollisionDialog({Key? key, required this.data}) : super(key: key);
@@ -100,7 +110,7 @@ class _MemberNumberCollisionDialogState extends State<MemberNumberCollisionDialo
                   memberNumber2: culprit2.memberNumber,
                 );
 
-                print(fix.toString());
+                _log.d(fix.toString());
                 Navigator.of(context).pop(fix);
               },
             ),
@@ -113,7 +123,7 @@ class _MemberNumberCollisionDialogState extends State<MemberNumberCollisionDialo
                   memberNumber2: culprit1.firstSeen.isBefore(culprit2.firstSeen) ? culprit2.memberNumber : culprit1.memberNumber,
                 );
 
-                print(fix.toString());
+                _log.d(fix.toString());
                 Navigator.of(context).pop(fix);
               },
             ),
@@ -124,7 +134,7 @@ class _MemberNumberCollisionDialogState extends State<MemberNumberCollisionDialo
                     culprit1: culprit1, culprit2: culprit2
                 ));
 
-                print(fix.toString());
+                _log.d(fix.toString());
                 if(fix != null) {
                   Navigator.of(context).pop(fix);
                 }
@@ -174,7 +184,7 @@ class _MemberNumberCollisionDialogState extends State<MemberNumberCollisionDialo
                 onTap: () {
                   Navigator.of(context).push(MaterialPageRoute(builder: (context) {
                     return ResultPage(
-                      canonicalMatch: match,
+                      canonicalMatch: ShootingMatch.fromOldMatch(match),
                       allowWhatIf: false,
                     );
                   }));

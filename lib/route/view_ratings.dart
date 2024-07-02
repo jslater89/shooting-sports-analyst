@@ -1,33 +1,45 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 
 import 'dart:math';
 
+import 'package:archive/archive.dart';
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttericon/rpg_awesome_icons.dart';
-import 'package:uspsa_result_viewer/data/match_cache/match_cache.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
-import 'package:uspsa_result_viewer/data/ranking/rating_error.dart';
-import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
-import 'package:uspsa_result_viewer/data/results_file_parser.dart';
-import 'package:uspsa_result_viewer/data/search_query_parser.dart';
-import 'package:uspsa_result_viewer/html_or/html_or.dart';
-import 'package:uspsa_result_viewer/ui/rater/member_number_correction_dialog.dart';
-import 'package:uspsa_result_viewer/ui/rater/member_number_dialog.dart';
-import 'package:uspsa_result_viewer/ui/rater/prediction/prediction_view.dart';
-import 'package:uspsa_result_viewer/ui/rater/prediction/registration_parser.dart';
-import 'package:uspsa_result_viewer/ui/rater/rater_stats_dialog.dart';
-import 'package:uspsa_result_viewer/ui/rater/rater_view.dart';
-import 'package:uspsa_result_viewer/ui/rater/rating_filter_dialog.dart';
-import 'package:uspsa_result_viewer/ui/result_page.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/associate_registrations.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/filter_dialog.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/match_cache_chooser_dialog.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/member_number_collision_dialog.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/url_entry_dialog.dart';
-import 'package:uspsa_result_viewer/util.dart';
+import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/data/results_file_parser.dart';
+import 'package:shooting_sports_analyst/data/old_search_query_parser.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/rater/member_number_correction_dialog.dart';
+import 'package:shooting_sports_analyst/ui/rater/member_number_dialog.dart';
+import 'package:shooting_sports_analyst/ui/rater/prediction/prediction_view.dart';
+import 'package:shooting_sports_analyst/ui/rater/prediction/registration_parser.dart';
+import 'package:shooting_sports_analyst/ui/rater/rater_stats_dialog.dart';
+import 'package:shooting_sports_analyst/ui/rater/rater_view.dart';
+import 'package:shooting_sports_analyst/ui/rater/rating_filter_dialog.dart';
+import 'package:shooting_sports_analyst/ui/result_page.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/associate_registrations.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/match_cache_chooser_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/member_number_collision_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/url_entry_dialog.dart';
+import 'package:shooting_sports_analyst/util.dart';
+
+var _log = SSALogger("RatingsViewPage");
 
 class RatingsViewPage extends StatefulWidget {
   const RatingsViewPage({
@@ -346,7 +358,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
     var match = _selectedMatch;
     if(match == null) {
-      debugPrint("No match selected!");
+      _log.w("No match selected!");
       return Container();
     }
 
@@ -650,10 +662,54 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
       case _MenuEntry.csvExport:
         if(_selectedMatch != null) {
-          var tab = activeTabs[_tabController.index];
-          var rater = _history.raterFor(_selectedMatch!, tab);
-          var csv = rater.toCSV(ratings: _ratings);
-          HtmlOr.saveFile("ratings-${tab.label}.csv", csv);
+          var archive = Archive();
+          for(var tab in activeTabs) {
+            var rater = _history.raterFor(_selectedMatch!, tab);
+            var sortedRatings = rater.uniqueShooters.where((e) => e.ratingEvents.length >= _minRatings);
+
+            Duration? maxAge;
+            if(_maxDays > 0) {
+              maxAge = Duration(days: _maxDays);
+            }
+
+            var hiddenShooters = [];
+            for(var s in _history.settings.hiddenShooters) {
+              hiddenShooters.add(Rater.processMemberNumber(s));
+            }
+
+            if(maxAge != null) {
+              var cutoff = _selectedMatch?.date ?? DateTime.now();
+              cutoff = cutoff.subtract(maxAge);
+              sortedRatings = sortedRatings.where((r) => r.lastSeen.isAfter(cutoff));
+            }
+
+            if(_filters.ladyOnly) {
+              sortedRatings = sortedRatings.where((r) => r.female);
+            }
+
+            if(_filters.activeCategories.isNotEmpty) {
+              sortedRatings = sortedRatings.where((r) =>
+                  r.categories.any((c) => _filters.activeCategories.contains(c)));
+            }
+
+            if(hiddenShooters.isNotEmpty) {
+              sortedRatings = sortedRatings.where((r) => !hiddenShooters.contains(r.memberNumber));
+            }
+
+            var comparator = rater.ratingSystem.comparatorFor(_sortMode) ?? _sortMode.comparator();
+            var asList = sortedRatings.sorted(comparator);
+
+            var csv = rater.toCSV(ratings: asList);
+            archive.addFile(ArchiveFile.string("${tab.label.safeFilename()}.csv", csv));
+          }
+          var zip = ZipEncoder().encode(archive); 
+
+          if(zip != null) {
+            HtmlOr.saveBuffer("ratings-${_history.project.name.safeFilename()}.zip", zip);
+          }
+          else {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to encode archive")));
+          }
         }
         break;
 
@@ -686,7 +742,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
           var match = await MatchCache().getByIndex(indexEntry);
           Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-            return ResultPage(canonicalMatch: match, allowWhatIf: false, ratings: ratings);
+            return ResultPage(canonicalMatch: ShootingMatch.fromOldMatch(match), allowWhatIf: false, ratings: ratings);
           }));
         }
         break;
@@ -884,7 +940,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       message =
           "The manual member number mapping below was entered in reverse: the source "
               "rating (on the left) contains no history, while the target rating "
-              "(on the right) contains history. USPSA Analyst can fix this automatically, "
+              "(on the right) contains history. Analyst can fix this automatically, "
               "or delete the user mapping.";
     }
     else {
@@ -1025,6 +1081,16 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         if(m != null) m
     ];
 
+    var ongoingMatches = <PracticalMatch>[
+      for(var u in widget.project.ongoingMatchUrls)
+        if(_matchUrls[u] != null) _matchUrls[u]!
+    ];
+
+    _log.d("The following matches are ongoing:");
+    for(var m in ongoingMatches) {
+      _log.d("\t${m.name}");
+    }
+
     setState(() {
       _loadingState = _LoadingState.updatingCache;
       _totalProgress = 1;
@@ -1054,16 +1120,21 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     await Future.delayed(Duration(milliseconds: 1));
 
     // Copy the project so we can edit it in the rater view without breaking
-    _history = RatingHistory(project: widget.project.copy(), matches: actualMatches, progressCallback: (currentSteps, totalSteps, eventName) async {
-      setState(() {
-        _currentProgress = currentSteps;
-        _totalProgress = totalSteps;
-        _loadingEventName = eventName;
-      });
+    _history = RatingHistory(
+      project: widget.project.copy(),
+      matches: actualMatches,
+      ongoingMatches: ongoingMatches,
+      progressCallback: (currentSteps, totalSteps, eventName) async {
+        setState(() {
+          _currentProgress = currentSteps;
+          _totalProgress = totalSteps;
+          _loadingEventName = eventName;
+        });
 
-      // print("Rating history progress: $_currentProgress/$_totalProgress $eventName");
-      await Future.delayed(Duration(milliseconds: 1));
-    });
+        // print("Rating history progress: $_currentProgress/$_totalProgress $eventName");
+        await Future.delayed(Duration(milliseconds: 1));
+      }
+    );
 
     var result = await _processMatches();
 
@@ -1164,13 +1235,13 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
     DateTime start = DateTime.now();
     var result = await _history.processInitialMatches();
-    print("Processing ratings took ${DateTime.now().difference(start).inMilliseconds / 1000} sec");
+    _log.i("Processing ratings took ${DateTime.now().difference(start).inMilliseconds / 1000} sec");
     if(result.isErr()) {
       _presentError(result.unwrapErr());
       return false;
     }
 
-    debugPrint("History ready with ${_history.matches.length} matches after ${urls.length} URLs and ${failedMatches.length} failures");
+    _log.i("History ready with ${_history.matches.length} matches after ${urls.length} URLs and ${failedMatches.length} failures");
     setState(() {
       _selectedMatch = _history.matches.last;
       _loadingState = _LoadingState.done;
@@ -1215,6 +1286,8 @@ extension _Utilities on RaterGroup {
         return "LIM/LO/CO";
       case RaterGroup.opticHandguns:
         return "OPEN/LO/CO";
+      case RaterGroup.ironsHandguns:
+        return "IRONS";
       case RaterGroup.combined:
         return "COMBINED";
     }

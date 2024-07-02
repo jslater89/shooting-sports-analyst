@@ -1,12 +1,18 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'dart:math';
 
 import 'package:collection/collection.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/rating_change.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/points/points_rating_change.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/points/points_settings.dart';
-import 'package:uspsa_result_viewer/data/sorted_list.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rating_change.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/points/points_settings.dart';
+import 'package:shooting_sports_analyst/data/sorted_list.dart';
 
 class PointsRating extends ShooterRating {
   final PointsSettings settings;

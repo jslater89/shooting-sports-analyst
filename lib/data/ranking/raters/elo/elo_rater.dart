@@ -1,11 +1,17 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 // TODO: there may still be something to this system
 // ... but OpenSkill is more tempting to figure out.
 
 // import 'dart:math';
 //
 // import 'package:flutter/foundation.dart';
-// import 'package:uspsa_result_viewer/data/model.dart';
-// import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
+// import 'package:shooting_sports_analyst/data/model.dart';
+// import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 //
 // class EloRater implements RatingSystem {
 //   @override

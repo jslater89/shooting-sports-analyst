@@ -1,14 +1,20 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/match/practical_match.dart';
-import 'package:uspsa_result_viewer/data/match/relative_scores.dart';
-import 'package:uspsa_result_viewer/data/match/shooter.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/rating_change.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/rating_mode.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/rating_settings.dart';
-import 'package:uspsa_result_viewer/data/ranking/model/shooter_rating.dart';
-import 'package:uspsa_result_viewer/data/ranking/prediction/match_prediction.dart';
-import 'package:uspsa_result_viewer/ui/rater/rater_view.dart';
-import 'package:uspsa_result_viewer/ui/widget/score_row.dart';
+import 'package:shooting_sports_analyst/data/match/practical_match.dart';
+import 'package:shooting_sports_analyst/data/match/relative_scores.dart';
+import 'package:shooting_sports_analyst/data/match/shooter.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_mode.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
+import 'package:shooting_sports_analyst/ui/rater/rater_view.dart';
+import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 
 abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C extends RaterSettingsController<S>> {
   /// Use in rating changes
@@ -19,6 +25,10 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
 
   /// Given some number of shooters (see [RatingMode]), update their ratings
   /// and return a map of the changes.
+  ///
+  /// [isMatchOngoing] tells the rating engine that a match is in progress for
+  /// ratings purposes: match blend will be disabled and certain DNFs will be
+  /// ignored.
   ///
   /// [shooter] is the shooter or shooters whose ratings should change. [scores]
   /// is a list of scores for the rating event in question. [matchScores] is a list
@@ -35,6 +45,7 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
   /// entries for all shooters in the rating event.
   Map<ShooterRating, RatingChange> updateShooterRatings({
     required PracticalMatch match,
+    bool isMatchOngoing = false,
     required List<ShooterRating> shooters,
     required Map<ShooterRating, RelativeScore> scores,
     required Map<ShooterRating, RelativeMatchScore> matchScores,

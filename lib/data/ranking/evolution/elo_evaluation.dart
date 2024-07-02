@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 
 /*
 It seems like the right choice, on reading about it a little. We do actually have several
@@ -18,15 +24,15 @@ I may think of others, but this is a pretty good set to start with.
 import 'dart:math';
 
 import 'package:collection/collection.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/ranking/evolution/predator_prey.dart';
-import 'package:uspsa_result_viewer/data/ranking/project_manager.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_rater_settings.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/ranking/evolution/predator_prey.dart';
+import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 
 class EloEvaluator extends Prey<EloEvaluator> {
   int generation;
@@ -65,9 +71,11 @@ class EloEvaluator extends Prey<EloEvaluator> {
     var h = RatingHistory(
       verbose: false,
       matches: data.trainingData,
+      ongoingMatches: [],
       project: RatingProject(
           name: "Evolutionary test",
           matchUrls: data.trainingData.map((e) => e.practiscoreId).toList(),
+          ongoingMatchUrls: [],
           settings: RatingHistorySettings(
             algorithm: MultiplayerPercentEloRater(settings: settings),
             groups: [data.group],

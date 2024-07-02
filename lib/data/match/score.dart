@@ -1,11 +1,20 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
-import 'package:uspsa_result_viewer/ui/result_page.dart';
-import 'package:uspsa_result_viewer/ui/widget/score_list.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/result_page.dart';
+import 'package:shooting_sports_analyst/ui/widget/score_list.dart';
+
+var _log = SSALogger("OldScore");
 
 class Score {
   Shooter shooter;
@@ -76,6 +85,10 @@ class Score {
   }
 
   int get penaltyCount {
+    return procedural + lateShot + extraShot + extraHit + otherPenalty;
+  }
+
+  int get proceduralCount {
     return procedural + lateShot + extraShot + extraHit + otherPenalty;
   }
 
@@ -173,7 +186,7 @@ extension ScoringFrom on Scoring {
       case "fixed": return Scoring.fixedTime;
       case "chrono": return Scoring.chrono;
       default: {
-        debugPrint("Unknown scoring: $s");
+        _log.w("Unknown scoring: $s");
         return Scoring.unknown;
       }
     }
@@ -285,13 +298,13 @@ extension Sorting on List<RelativeMatchScore> {
     });
   }
 
-  void sortByRating({required Map<RaterGroup, Rater> ratings, required RatingDisplayMode displayMode, required PracticalMatch match}) {
-    this.sort((a, b) {
-      var aRating = ratings.lookupRating(shooter: a.shooter, mode: displayMode, match: match) ?? -1000;
-      var bRating = ratings.lookupRating(shooter: b.shooter, mode: displayMode, match: match) ?? -1000;
-      return bRating.compareTo(aRating);
-    });
-  }
+  // void sortByRating({required Map<RaterGroup, Rater> ratings, required RatingDisplayMode displayMode, required PracticalMatch match}) {
+  //   this.sort((a, b) {
+  //     var aRating = ratings.lookupRating(shooter: a.shooter, mode: displayMode, match: match) ?? -1000;
+  //     var bRating = ratings.lookupRating(shooter: b.shooter, mode: displayMode, match: match) ?? -1000;
+  //     return bRating.compareTo(aRating);
+  //   });
+  // }
 
   void sortByClassification() {
     this.sort((a, b) {

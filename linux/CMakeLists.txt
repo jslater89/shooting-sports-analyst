@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.10)
 project(runner LANGUAGES CXX)
 
-set(BINARY_NAME "uspsa_result_viewer")
-set(APPLICATION_ID "uspsa-result-viewer")
+set(BINARY_NAME "shooting_sports_analyst")
+set(APPLICATION_ID "shooting_sports_analyst")
 
 cmake_policy(SET CMP0063 NEW)
 

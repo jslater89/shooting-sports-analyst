@@ -1,16 +1,22 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
-import 'package:uspsa_result_viewer/data/model.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater_types.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/elo/elo_shooter_rating.dart';
-import 'package:uspsa_result_viewer/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
-import 'package:uspsa_result_viewer/data/ranking/rating_history.dart';
-import 'package:uspsa_result_viewer/data/search_query_parser.dart';
-import 'package:uspsa_result_viewer/ui/rater/rating_filter_dialog.dart';
-import 'package:uspsa_result_viewer/ui/rater/shooter_stats_dialog.dart';
+import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/data/old_search_query_parser.dart';
+import 'package:shooting_sports_analyst/ui/rater/rating_filter_dialog.dart';
+import 'package:shooting_sports_analyst/ui/rater/shooter_stats_dialog.dart';
 
 class RaterView extends StatefulWidget {
   const RaterView({
@@ -80,6 +86,7 @@ class _RaterViewState extends State<RaterView> {
 
   int _ratingWindow = 12;
   List<Widget> _buildRatingRows() {
+    // TODO: turn this into a Provider and a model, since we need it both in the parent and here
     var hiddenShooters = [];
     for(int i = 0; i < widget.hiddenShooters.length; i++) {
       hiddenShooters.add(Rater.processMemberNumber(widget.hiddenShooters[i]));
@@ -101,6 +108,11 @@ class _RaterViewState extends State<RaterView> {
 
     if(widget.filters.ladyOnly) {
       sortedRatings = sortedRatings.where((r) => r.female);
+    }
+
+    if(widget.filters.activeCategories.isNotEmpty) {
+      sortedRatings = sortedRatings.where((r) =>
+          r.categories.any((c) => widget.filters.activeCategories.contains(c)));
     }
 
     if(widget.search != null && widget.search!.isNotEmpty) {
@@ -206,7 +218,7 @@ extension RatingSortModeNames on RatingSortMode {
   }
 }
 
-extension _SortFunctions on RatingSortMode {
+extension SortFunctions on RatingSortMode {
   Comparator<ShooterRating> comparator() {
     switch(this) {
       case RatingSortMode.rating:

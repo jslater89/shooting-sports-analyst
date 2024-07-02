@@ -1,9 +1,15 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'package:uspsa_result_viewer/data/ranking/member_number_correction.dart';
-import 'package:uspsa_result_viewer/data/ranking/rater.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/confirm_dialog.dart';
-import 'package:uspsa_result_viewer/ui/widget/dialog/member_number_collision_dialog.dart';
+import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/member_number_collision_dialog.dart';
 
 class MemberNumberCorrectionListDialog extends StatefulWidget {
   const MemberNumberCorrectionListDialog({
@@ -186,7 +192,7 @@ class _MemberNumberCorrectionListDialogState extends State<MemberNumberCorrectio
       });
       return;
     }
-    if(!validate(source)) return;
+    if(!validate(source, allowEmpty: true)) return;
     if(!validate(target)) return;
 
     name = name.toLowerCase().replaceAll(RegExp(r"[^a-zA-Z0-9]"), "");
@@ -213,7 +219,8 @@ class _MemberNumberCorrectionListDialogState extends State<MemberNumberCorrectio
     });
   }
 
-  bool validate(String input) {
+  bool validate(String input, {bool allowEmpty = false}) {
+    if(allowEmpty && input.isEmpty) return true;
     if(!input.contains(RegExp(r"[0-9]+"))) {
       setState(() {
         errorText = "Member number must contain at least one number.";

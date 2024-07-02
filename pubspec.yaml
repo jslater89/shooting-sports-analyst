@@ -1,5 +1,5 @@
-name: uspsa_result_viewer
-description: A USPSA match result viewer and Elo rater.
+name: shooting_sports_analyst
+description: A tool for score display and Elo analysis of shooting sports.
 
 # The following line prevents the package from being accidentally published to
 # pub.dev using `pub publish`. This is preferred for private packages.
@@ -15,7 +15,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
 # Read more about iOS versioning at
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-version: 6.5.5+1
+version: 7.0.0+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -53,15 +53,22 @@ dependencies:
   fuzzywuzzy: ^0.2.0
   html_unescape: ^2.0.0
   provider: ^6.0.5
+  json_annotation: ^4.8.1
+  archive: ^3.4.10
+  mutex: ^3.1.0
+  toml: ^0.14.0
+  stack_trace: ^1.11.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_launcher_icons: ^0.13.0
   build_runner: ^2.2.0
+  isar_generator: ^3.0.5
   hive_generator: ^2.0.0
+  json_serializable: ^6.6.0
 
-flutter_icons:
+flutter_launcher_icons:
   android: false
   ios: false
   image_path: "assets/icon.png"
@@ -81,6 +88,8 @@ flutter_icons:
 
 # The following section is specific to Flutter.
 flutter:
+  assets:
+    - assets/icon.png
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
