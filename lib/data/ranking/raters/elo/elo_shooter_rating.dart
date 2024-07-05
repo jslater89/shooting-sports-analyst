@@ -22,7 +22,6 @@ enum _DoubleKeys {
 class EloShooterRating extends ShooterRating {
   static late double errorScale;
 
-  double rating;
   double get variance => wrappedRating.doubleData[_DoubleKeys.variance.index];
   set variance(double v) => wrappedRating.doubleData[_DoubleKeys.variance.index] = v;
 
@@ -157,13 +156,22 @@ class EloShooterRating extends ShooterRating {
     // return sqrt(variance);
   }
 
-  List<RatingEvent> ratingEvents = [];
+  List<RatingEvent> get ratingEvents {
+    if(!wrappedRating.events.isLoaded) {
+      wrappedRating.events.loadSync();
+    }
+    var events = <EloRatingEvent>[];
+    for(var e in wrappedRating.events) {
+      events.add(EloRatingEvent.wrap(e));
+    }
+    return events;
+  }
   List<RatingEvent> emptyRatingEvents = [];
 
   // TODO: combine this in more intelligent fashion, preserving order where possible
   List<RatingEvent> get combinedRatingEvents => []..addAll(ratingEvents)..addAll(emptyRatingEvents);
 
-  EloShooterRating(MatchEntry shooter, this.rating, {required super.sport, required DateTime date}) :
+  EloShooterRating(MatchEntry shooter, double initialRating, {required super.sport, required DateTime date}) :
       super(shooter,
         date: date,
         intDataElements: 0,
@@ -175,7 +183,7 @@ class EloShooterRating extends ShooterRating {
         lastName: lastName,
         memberNumber: memberNumber,
         female: female,
-        rating: rating,
+        rating: initialRating,
         error: 0.0,
         connectedness: connectedness,
         firstSeen: firstSeen,
@@ -191,11 +199,8 @@ class EloShooterRating extends ShooterRating {
   void updateFromEvents(List<RatingEvent> events) {
     for(var e in events) {
       e as EloRatingEvent;
-      if(e.baseK == 0) {
-        emptyRatingEvents.add(e);
-      }
-      else {
-        ratingEvents.add(e);
+      wrappedRating.events.add(e.wrappedEvent);
+      if(e.baseK != 0) {
         rating += e.ratingChange;
       }
     }
@@ -221,17 +226,25 @@ class EloShooterRating extends ShooterRating {
     // }
   }
 
+  /// Replaces all rating events with a new set of rating events.
+  ///
+  /// This is used in copy functions, and _does not_ save the link!
+  /// The caller must persist it.
+  void replaceAllRatingEvents(List<EloRatingEvent> events) {
+    wrappedRating.events.clear();
+    wrappedRating.events.addAll(events.map((e) => e.wrappedEvent));
+  }
+
   void copyRatingFrom(EloShooterRating other) {
     super.copyRatingFrom(other);
     this.rating = other.rating;
     this.variance = other.variance;
-    this.ratingEvents = other.ratingEvents.map((e) => EloRatingEvent.copy(e as EloRatingEvent)).toList();
+    this.replaceAllRatingEvents(other.ratingEvents.map((e) => EloRatingEvent.copy(e as EloRatingEvent)).toList());
   }
 
   EloShooterRating.copy(EloShooterRating other) :
-        this.rating = other.rating,
-        this.ratingEvents = other.ratingEvents.map((e) => EloRatingEvent.copy(e as EloRatingEvent)).toList(),
         super.copy(other) {
+    this.replaceAllRatingEvents(other.ratingEvents.map((e) => EloRatingEvent.copy(e as EloRatingEvent)).toList());
     this.variance = other.variance;
   }
 

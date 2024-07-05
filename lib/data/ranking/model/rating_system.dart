@@ -64,6 +64,8 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
   /// Create a new shooter rating for the given information.
   ShooterRating newShooterRating(MatchEntry shooter, {required Sport sport, required DateTime date});
 
+  /// Given a database shooter rating, return a typed shooter rating that
+  /// wraps it.
   T wrapDbRating(DbShooterRating rating);
 
   RatingEvent newEvent({

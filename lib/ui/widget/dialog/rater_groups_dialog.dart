@@ -10,10 +10,20 @@ import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 
 class RaterGroupsDialog extends StatefulWidget {
-  const RaterGroupsDialog({Key? key, required this.groups, this.groupProvider}) : super(key: key);
+  const RaterGroupsDialog({Key? key, required this.selectedGroups, this.customGroups = const [], this.groupProvider}) : super(key: key);
 
   final RatingGroupsProvider? groupProvider;
-  final List<DbRatingGroup> groups;
+  final List<DbRatingGroup> selectedGroups;
+  final List<DbRatingGroup> customGroups;
+
+  List<DbRatingGroup> get allGroups {
+    List<DbRatingGroup> all = [];
+    if(groupProvider != null) {
+      all.addAll(groupProvider!.builtinRatingGroups);
+    }
+    all.addAll(customGroups);
+    return all;
+  }
 
   @override
   State<RaterGroupsDialog> createState() => _RaterGroupsDialogState();
@@ -29,7 +39,7 @@ class _RaterGroupsDialogState extends State<RaterGroupsDialog> {
   void initState() {
     super.initState();
 
-    for(var g in widget.groups) {
+    for(var g in widget.selectedGroups) {
       checked[g] = true;
     }
   }
@@ -64,11 +74,11 @@ class _RaterGroupsDialogState extends State<RaterGroupsDialog> {
                     });
                   },
                 ),
-                TextButton(
+                if(provider?.defaultRatingGroups.isNotEmpty ?? false) TextButton(
                   child: Text("DEFAULT"),
                   onPressed: () {
                     checked.clear();
-                    for(var g in RaterGroup.defaultGroups) {
+                    for(var g in provider!.defaultRatingGroups) {
                       checked[g] = true;
                     }
 
@@ -77,11 +87,11 @@ class _RaterGroupsDialogState extends State<RaterGroupsDialog> {
                     });
                   },
                 ),
-                TextButton(
+                if(provider?.divisionRatingGroups.isNotEmpty ?? false) TextButton(
                   child: Text("DIVISIONS"),
                   onPressed: () {
                     checked.clear();
-                    for(var g in RaterGroup.divisionGroups) {
+                    for(var g in provider!.divisionRatingGroups) {
                       checked[g] = true;
                     }
 
@@ -104,7 +114,7 @@ class _RaterGroupsDialogState extends State<RaterGroupsDialog> {
                 TextButton(
                   child: Text("OK"),
                   onPressed: () {
-                    Navigator.of(context).pop(RaterGroup.values.where((g) => checked[g] ?? false).toList());
+                    Navigator.of(context).pop(widget.allGroups.where((g) => checked[g] ?? false).toList());
                   },
                 )
               ],
@@ -117,7 +127,7 @@ class _RaterGroupsDialogState extends State<RaterGroupsDialog> {
 
   List<Widget> buildRaterGroupRows() {
     List<Widget> widgets = [];
-    for(var g in RaterGroup.values) {
+    for(var g in widget.allGroups) {
       widgets.add(
         CheckboxListTile(
           value: checked[g] ?? false,

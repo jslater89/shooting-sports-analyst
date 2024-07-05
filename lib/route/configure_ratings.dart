@@ -432,7 +432,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                       icon: Icon(Icons.edit),
                                       onPressed: () async {
                                         var groups = await showDialog(context: context, builder: (context) {
-                                          return RaterGroupsDialog(groups: _groups, groupProvider: sport?.builtinRatingGroupsProvider);
+                                          return RaterGroupsDialog(selectedGroups: _groups, groupProvider: sport?.builtinRatingGroupsProvider);
                                         });
 
                                         if(groups != null) {

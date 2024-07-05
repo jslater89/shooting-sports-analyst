@@ -13,6 +13,7 @@ import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_sourc
 import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
@@ -259,14 +260,21 @@ class DbRatingEvent {
 
   @Backlink(to: 'events')
   final owner = IsarLink<DbShooterRating>();
+
+  /// The match. See [setMatch].
   final match = IsarLink<DbShootingMatch>();
 
   /// Set the match for this event, updating both the [match] link
   /// and [matchId].
-  Future<void> setMatch(DbShootingMatch m) {
+  Future<void> setMatch(DbShootingMatch m, {bool save = true}) {
     matchId = m.sourceIds.first;
     match.value = m;
-    return match.save();
+    if(save) {
+      return match.save();
+    }
+    else {
+      return Future.value();
+    }
   }
 
   /// A match identifier for the match. See [setMatch].
@@ -276,7 +284,7 @@ class DbRatingEvent {
   int entryId;
 
   /// The stage number of this score, or -1 if this is a rating event
-  /// for a full match.
+  /// for a full match or a match without stages.
   int stageNumber;
 
   DateTime date;
@@ -289,6 +297,11 @@ class DbRatingEvent {
   /// number.
   @Index()
   int get dateAndStageNumber => (date.millisecondsSinceEpoch ~/ 1000) + stageNumber;
+
+  /// Floating-point data used by specific kinds of rating events.
+  List<double> doubleData;
+  /// Integer data used by specific kinds of rating events.
+  List<int> intData;
 
   @ignore
   Map<String, List<dynamic>> info;
@@ -314,10 +327,30 @@ class DbRatingEvent {
     required this.stageNumber,
     required this.entryId,
     required this.matchId,
-  });
+    int doubleDataElements = 0,
+    int intDataElements = 0,
+  }) :
+    intData = List.filled(intDataElements, 0, growable: true),
+    doubleData = List.filled(doubleDataElements, 0.0, growable: true);
 
   DbRatingEvent copy() {
+    var event =  DbRatingEvent(
+      ratingChange: this.ratingChange,
+      oldRating: this.oldRating,
+      info: {}..addEntries(this.info.entries.map((e) => MapEntry(e.key, []..addAll(e.value)))),
+      extraData: {}..addEntries(this.extraData.entries.map((e) => MapEntry(e.key, []..addAll(e.value)))),
+      score: this.score.copy(),
+      matchScore: this.matchScore.copy(),
+      date: this.date,
+      stageNumber: this.stageNumber,
+      entryId: this.entryId,
+      matchId: this.matchId,
+    )..intData = ([]..addAll(intData))..doubleData = ([]..addAll(doubleData));
 
+    event.match.value = this.match.value;
+    event.owner.value = this.owner.value;
+
+    return event;
   }
 }
 
@@ -345,4 +378,17 @@ class DbRelativeScore {
     this.ratio = 0,
     this.points = 0,
   });
+
+  DbRelativeScore.fromHydrated(RelativeScore score) :
+      place = score.place,
+      ratio = score.ratio,
+      points = score.points;
+
+  DbRelativeScore copy() {
+    return DbRelativeScore(
+      place: place,
+      ratio: ratio,
+      points: points,
+    );
+  }
 }

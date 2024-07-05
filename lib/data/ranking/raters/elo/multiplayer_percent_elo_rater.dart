@@ -677,7 +677,9 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   RatingEvent newEvent({
     required ShootingMatch match,
     MatchStage? stage,
-    required ShooterRating rating, required RelativeScore score, Map<String, List<dynamic>> info = const {}
+    required ShooterRating rating,
+    required RelativeScore score,
+    Map<String, List<dynamic>> info = const {},
   }) {
     return EloRatingEvent(oldRating: rating.rating, match: match, stage: stage, score: score, ratingChange: 0, info: info, baseK: 0, effectiveK: 0, backRatingError: 0);
   }

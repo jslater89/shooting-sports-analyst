@@ -90,11 +90,32 @@ extension RatingProjectDatabase on AnalystDatabase {
     return isar.writeTxn(() async {
       await isar.dbShooterRatings.put(rating);
       if(linksChanged) {
+        await rating.events.save();
         await rating.project.save();
         await rating.group.save();
       }
       return rating;
     });
+  }
+
+  /// Update DbShooterRatings that have changed as part of the rating process.
+  Future<int> updateChangedRatings(Iterable<DbShooterRating> ratings) {
+    return isar.writeTxn(() async {
+      int count = 0;
+
+      for(var r in ratings) {
+        if(!r.isPersisted) {
+          _log.w("Unexpectedly unpersisted DB rating");
+          await r.project.save();
+          await r.group.save();
+        }
+        await isar.dbShooterRatings.put(r);
+        await r.events.save();
+      }
+
+      return count;
+    });
+
   }
 
   Future<int> countShooterRatings(DbRatingProject project, DbRatingGroup group) async {
@@ -112,19 +133,21 @@ extension RatingProjectDatabase on AnalystDatabase {
 
   Future<List<DbRatingEvent>> getRatingEventsFor(DbShooterRating rating, {
     int limit = 0,
+    int offset = 0,
     DateTime? after,
     DateTime? before,
   }) async {
-    var query = _buildShooterEventQuery(rating, limit: limit, after: after, before: before);
+    var query = _buildShooterEventQuery(rating, limit: limit, offset: offset, after: after, before: before);
     return query.findAll();
   }
 
   List<DbRatingEvent> getRatingEventsForSync(DbShooterRating rating, {
     int limit = 0,
+    int offset = 0,
     DateTime? after,
     DateTime? before,
   }) {
-    var query = _buildShooterEventQuery(rating, limit: limit, after: after, before: before);
+    var query = _buildShooterEventQuery(rating, limit: limit, offset: offset, after: after, before: before);
     return query.findAllSync();
   }
 

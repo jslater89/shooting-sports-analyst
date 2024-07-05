@@ -69,6 +69,8 @@ class DbShooterRating extends Shooter with DbSportEntity {
   @Backlink(to: "ratings")
   final project = IsarLink<DbRatingProject>();
   final group = IsarLink<DbRatingGroup>();
+
+  /// All events belonging to this rating.
   final events = IsarLinks<DbRatingEvent>();
 
   int get length => events.countSync();

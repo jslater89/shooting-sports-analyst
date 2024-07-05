@@ -44,6 +44,14 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
   /// DbShooterRating to store its data.
   DbShooterRating wrappedRating;
 
+  DbRatingGroup get group {
+    if(!wrappedRating.group.isLoaded) {
+      wrappedRating.group.loadSync();
+    }
+
+    return wrappedRating.group.value!;
+  }
+
   /// Whether the data contained by [wrappedRating] has been persisted.
   bool get isPersisted => wrappedRating.isPersisted;
   
@@ -259,6 +267,9 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
   }
 
   void updateConnections(DateTime now, List<ShooterRating> encountered) {
+    // TODO: change algorithm here, maybe?
+    // connectedness is the number of unique shooters a shooter has shot against recently,
+    // as a percentage of the count of shooters in the DB
     int added = 0;
     int updated = 0;
 

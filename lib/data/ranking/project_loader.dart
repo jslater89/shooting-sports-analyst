@@ -497,10 +497,14 @@ class RatingProjectLoader {
         }
 
         for(var r in changes.keys) {
-          r.updateFromEvents(changes[r]!.values.toList());
-          r.updateTrends(changes[r]!.values.toList());
+          var wrapped = ratingSystem.wrapDbRating(r);
+          wrapped.updateFromEvents(changes[r]!.values.toList());
+          wrapped.updateTrends(changes[r]!.values.toList());
           shootersAtMatch.add(r);
         }
+
+        AnalystDatabase().updateChangedRatings(changes.keys);
+
         changes.clear();
       }
     }
@@ -559,10 +563,13 @@ class RatingProjectLoader {
       }
 
       for(var r in changes.keys) {
-        r.updateFromEvents(changes[r]!.values.toList());
-        r.updateTrends(changes[r]!.values.toList());
+        var wrapped = ratingSystem.wrapDbRating(r);
+        wrapped.updateFromEvents(changes[r]!.values.toList());
+        wrapped.updateTrends(changes[r]!.values.toList());
         shootersAtMatch.add(r);
       }
+
+      AnalystDatabase().updateChangedRatings(changes.keys);
       changes.clear();
     }
     if(Timings.enabled) timings.rateShootersMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
@@ -582,7 +589,7 @@ class RatingProjectLoader {
       // _log.d("Updating connectedness at ${match.name} for ${shootersAtMatch.length} of ${knownShooters.length} shooters");
       for (var rating in shootersAtMatch) {
         averageBefore += rating.connectedness;
-        rating.updateConnections(match.date!, encounteredList);
+        rating.updateConnections(match.date, encounteredList);
         rating.lastSeen = match.date;
       }
 
@@ -670,13 +677,6 @@ class RatingProjectLoader {
     required double connectednessMod,
     required double weightMod
   }) async {
-    // Check for pubstomp
-    var pubstompMod = 1.0;
-    if(_pubstomp(scores)) {
-      pubstompMod = 0.33;
-    }
-    matchStrength *= pubstompMod;
-
     // A cache of wrapped shooter ratings, so we don't have to hit the DB every time.
     Map<String, ShooterRating> wrappedRatings = {};
 
@@ -709,6 +709,13 @@ class RatingProjectLoader {
         eventWeightMultiplier: weightMod,
       );
 
+      // Check for pubstomp
+      var pubstompMod = 1.0;
+      if(_pubstomp(wrappedRatings, scores)) {
+        pubstompMod = 0.33;
+      }
+      matchStrength *= pubstompMod;
+
       for(var rating in scoreMap.keys) {
         var stageScore = scoreMap[rating];
 
@@ -737,7 +744,7 @@ class RatingProjectLoader {
 
         scoreMap[rating] = s;
         matchScoreMap[rating] = s;
-        changes[rating] ??= {};
+        changes[rating.wrappedRating] ??= {};
         wrappedRatings[num] = rating;
       }
 
@@ -767,7 +774,7 @@ class RatingProjectLoader {
     }
   }
 
-  bool _pubstomp(List<RelativeMatchScore> scores) {
+  bool _pubstomp(Map<String, ShooterRating> wrappedRatings, List<RelativeMatchScore> scores) {
     if(scores.length < 2) return false;
 
     var sorted = scores.sorted((a, b) => b.ratio.compareTo(a.ratio));
@@ -778,12 +785,12 @@ class RatingProjectLoader {
     var firstClass = first.shooter.classification;
     var secondClass = second.shooter.classification;
 
-    var firstRating = maybeKnownShooter(first.shooter.memberNumber);
-    var secondRating = maybeKnownShooter(second.shooter.memberNumber);
+    var firstRating = wrappedRatings[first.shooter.memberNumber];
+    var secondRating = wrappedRatings[second.shooter.memberNumber];
 
     // People entered with empty or invalid member numbers
     if(firstRating == null || secondRating == null) {
-      // _log.d("Unexpected null in pubstomp detection");
+      _log.w("Unexpected null in pubstomp detection");
       return false;
     }
 
