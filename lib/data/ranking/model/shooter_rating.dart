@@ -399,8 +399,8 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
       this.sportName = sport.name,
       super(firstName: shooter.firstName, lastName: shooter.lastName) {
     this.lastClassification = shooter.classification ?? sport.classifications.fallback();
-    this.firstSeen = date ?? DateTime.now();
-    this.lastSeen = date ?? DateTime.now();
+    this.firstSeen = date;
+    this.lastSeen = date;
     super.copyVitalsFrom(shooter);
   }
 
@@ -413,6 +413,14 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
     this.lastSeen = date ?? DateTime.now();
     super.copyVitalsFrom(shooter);
   }
+
+  ShooterRating.wrapDbRating(DbShooterRating rating) :
+      this.wrappedRating = rating,
+      this.sportName = rating.sportName,
+      super(firstName: rating.firstName, lastName: rating.lastName) {
+    super.copyVitalsFrom(rating);
+  }
+
 
   @override
   bool equalsShooter(Shooter other) {

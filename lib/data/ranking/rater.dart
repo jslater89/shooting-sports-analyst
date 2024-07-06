@@ -819,8 +819,8 @@ class Rater {
           eventWeightMultiplier: weightMod,
         );
 
-        changes[aRating]![aStageScore] ??= ratingSystem.newEvent(rating: aRating, match: match, stage: stage, score: aStageScore);
-        changes[bRating]![bStageScore] ??= ratingSystem.newEvent(rating: bRating, match: match, stage: stage, score: bStageScore);
+        changes[aRating]![aStageScore] ??= ratingSystem.newEvent(rating: aRating, match: match, stage: stage, score: aStageScore, matchScore: aScore);
+        changes[bRating]![bStageScore] ??= ratingSystem.newEvent(rating: bRating, match: match, stage: stage, score: bStageScore, matchScore: bScore);
 
         changes[aRating]![aStageScore]!.apply(update[aRating]!);
         changes[bRating]![bStageScore]!.apply(update[bRating]!);
@@ -844,8 +844,8 @@ class Rater {
           connectednessMultiplier: connectednessMod,
         );
 
-        changes[aRating]![aScore] ??= ratingSystem.newEvent(rating: aRating, match: match, score: aScore);
-        changes[bRating]![bScore] ??= ratingSystem.newEvent(rating: bRating, match: match, score: bScore);
+        changes[aRating]![aScore] ??= ratingSystem.newEvent(rating: aRating, match: match, score: aScore, matchScore: aScore);
+        changes[bRating]![bScore] ??= ratingSystem.newEvent(rating: bRating, match: match, score: bScore, matchScore: aScore);
 
         changes[aRating]![aScore.total]!.apply(update[aRating]!);
         changes[bRating]![bScore.total]!.apply(update[bRating]!);
@@ -908,7 +908,7 @@ class Rater {
       if(Timings.enabled) timings.updateMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
 
       if(!changes[rating]!.containsKey(stageScore)) {
-        changes[rating]![stageScore] = ratingSystem.newEvent(rating: rating, match: match, stage: stage, score: stageScore);
+        changes[rating]![stageScore] = ratingSystem.newEvent(rating: rating, match: match, stage: stage, score: stageScore, matchScore: score);
         changes[rating]![stageScore]!.apply(update[rating]!);
         changes[rating]![stageScore]!.info = update[rating]!.info;
       }
@@ -931,6 +931,7 @@ class Rater {
           rating: rating,
           match: match,
           score: score,
+          matchScore: score,
           info: update[rating]!.info,
         );
 
@@ -980,14 +981,20 @@ class Rater {
 
       for(var rating in scoreMap.keys) {
         var stageScore = scoreMap[rating];
+        var matchScore = matchScoreMap[rating];
 
         if(stageScore == null) {
           _log.w("Null stage score for $rating on ${stage.name}");
           continue;
         }
 
+        if(matchScore == null) {
+          _log.w("Null match score for $rating on ${stage.name}");
+          continue;
+        }
+
         if (!changes[rating]!.containsKey(stageScore)) {
-          changes[rating]![stageScore] = ratingSystem.newEvent(rating: rating, match: match, stage: stage, score: stageScore);
+          changes[rating]![stageScore] = ratingSystem.newEvent(rating: rating, match: match, stage: stage, score: stageScore, matchScore: matchScore);
           changes[rating]![stageScore]!.apply(update[rating]!);
           changes[rating]![stageScore]!.info = update[rating]!.info;
         }
@@ -1022,6 +1029,7 @@ class Rater {
             rating: rating,
             match: match,
             score: score,
+            matchScore: score as RelativeMatchScore,
             info: update[rating]!.info,
           );
 

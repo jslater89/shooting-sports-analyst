@@ -54,11 +54,13 @@ abstract class RatingEvent {
     return match.stages.firstWhereOrNull((s) => s.stageId == wrappedEvent.stageNumber);
   }
 
+  bool get byStage => wrappedEvent.stageNumber >= 0;
+
   // TODO: calculate/cache
   // will probably need byStage in here too
   late RelativeScore score;
   RelativeStageScore get scoreForStage {
-    if(stage != null) return score as RelativeStageScore;
+    if(byStage) return score as RelativeStageScore;
     else throw StateError("attempted to get stage score for match event");
   }
 

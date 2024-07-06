@@ -167,12 +167,7 @@ class RatingProjectLoader {
         }
 
         // 3.1.2. Rank match through code in Rater
-        // TODO: copy _rankMatch.
-        // Calculate global connectedness with the connectedness property query.
-        // Calculate match connectedness by maybeKnownShooter lookups of everyone.
-        // (Keep those around and pass them forward, maybe?)
-
-        // 3.1.3. Update database with rating changes
+        _rankMatch(group, match);
       }
 
       // 3.2. DB-delete any shooters we added who recorded no scores in any matches in
@@ -410,6 +405,7 @@ class RatingProjectLoader {
     totalConnectedness = 0.0;
     totalShooters = 0;
     Map<String, DbShooterRating> ratingsAtMatch = {};
+    Map<String, ShooterRating> wrappedRatings = {};
     for(var shooter in shooters) {
       var rating = await AnalystDatabase().maybeKnownShooter(
         project: project,
@@ -421,6 +417,7 @@ class RatingProjectLoader {
         totalConnectedness += rating.connectedness;
         totalShooters += 1;
         ratingsAtMatch[shooter.memberNumber] = rating;
+        wrappedRatings[shooter.memberNumber] = ratingSystem.wrapDbRating(rating);
       }
     }
     var localAverageConnectedness = totalConnectedness / (totalShooters > 0 ? totalShooters : 1.0);
@@ -441,13 +438,13 @@ class RatingProjectLoader {
 
         var weightMod = 1.0 + max(-0.20, min(0.10, (s.maxPoints - 120) /  400));
 
-        Map<DbShooterRating, RelativeScore> stageScoreMap = {};
-        Map<DbShooterRating, RelativeMatchScore> matchScoreMap = {};
+        Map<ShooterRating, RelativeScore> stageScoreMap = {};
+        Map<ShooterRating, RelativeMatchScore> matchScoreMap = {};
 
         for(var score in filteredScores) {
           String num = score.shooter.memberNumber;
           var stageScore = score.stageScores[s]!;
-          var rating = ratingsAtMatch[num]!;
+          var rating = wrappedRatings[num]!;
           stageScoreMap[rating] = stageScore;
           matchScoreMap[rating] = score;
         }
@@ -457,6 +454,7 @@ class RatingProjectLoader {
               match: match,
               group: group,
               stage: s,
+              wrappedRatings: wrappedRatings,
               scores: filteredScores,
               changes: changes,
               matchStrength: strengthMod,
@@ -470,6 +468,7 @@ class RatingProjectLoader {
               _processRoundRobin(
                 match: match,
                 stage: s,
+                wrappedRatings: wrappedRatings,
                 shooters: filteredShooters,
                 scores: filteredScores,
                 startIndex: i,
@@ -483,6 +482,7 @@ class RatingProjectLoader {
               _processOneshot(
                   match: match,
                   stage: s,
+                  wrappedRatings: wrappedRatings,
                   shooter: filteredShooters[i],
                   scores: filteredScores,
                   stageScores: stageScoreMap,
@@ -511,11 +511,11 @@ class RatingProjectLoader {
     else { // by match
       var (filteredShooters, filteredScores) = _filterScores(shooters, scores.values.toList(), null);
 
-      Map<DbShooterRating, RelativeMatchScore> matchScoreMap = {};
+      Map<ShooterRating, RelativeMatchScore> matchScoreMap = {};
 
       for(var score in filteredScores) {
         String num = score.shooter.memberNumber;
-        matchScoreMap[ratingsAtMatch[num]!] = score;
+        matchScoreMap[wrappedRatings[num]!] = score;
       }
 
       if(ratingSystem.mode == RatingMode.wholeEvent) {
@@ -523,6 +523,7 @@ class RatingProjectLoader {
             match: match,
             group: group,
             stage: null,
+            wrappedRatings: wrappedRatings,
             scores: filteredScores,
             changes: changes,
             matchStrength: strengthMod,
@@ -536,6 +537,7 @@ class RatingProjectLoader {
             _processRoundRobin(
               match: match,
               stage: null,
+              wrappedRatings: wrappedRatings,
               shooters: filteredShooters,
               scores: filteredScores,
               startIndex: i,
@@ -549,6 +551,7 @@ class RatingProjectLoader {
             _processOneshot(
                 match: match,
                 stage: null,
+                wrappedRatings: wrappedRatings,
                 shooter: filteredShooters[i],
                 scores: filteredScores,
                 stageScores: matchScoreMap,
@@ -589,12 +592,14 @@ class RatingProjectLoader {
       // _log.d("Updating connectedness at ${match.name} for ${shootersAtMatch.length} of ${knownShooters.length} shooters");
       for (var rating in shootersAtMatch) {
         averageBefore += rating.connectedness;
-        rating.updateConnections(match.date, encounteredList);
+        // TODO: restore
+        // rating.updateConnections(match.date, encounteredList);
         rating.lastSeen = match.date;
       }
 
       for (var rating in shootersAtMatch) {
-        rating.updateConnectedness();
+        // TODO: restore
+        // rating.updateConnectedness();
         averageAfter += rating.connectedness;
       }
 
@@ -671,6 +676,7 @@ class RatingProjectLoader {
     required DbRatingGroup group,
     required ShootingMatch match,
     MatchStage? stage,
+    required Map<String, ShooterRating> wrappedRatings,
     required List<RelativeMatchScore> scores,
     required Map<DbShooterRating, Map<RelativeScore, RatingEvent>> changes,
     required double matchStrength,
@@ -699,6 +705,13 @@ class RatingProjectLoader {
         wrappedRatings[num] = rating;
       }
 
+      // Check for pubstomp
+      var pubstompMod = 1.0;
+      if (_pubstomp(wrappedRatings, scores)) {
+        pubstompMod = 0.33;
+      }
+      matchStrength *= pubstompMod;
+
       var update = ratingSystem.updateShooterRatings(
         match: match,
         shooters: scoreMap.keys.toList(),
@@ -709,29 +722,28 @@ class RatingProjectLoader {
         eventWeightMultiplier: weightMod,
       );
 
-      // Check for pubstomp
-      var pubstompMod = 1.0;
-      if(_pubstomp(wrappedRatings, scores)) {
-        pubstompMod = 0.33;
-      }
-      matchStrength *= pubstompMod;
-
       for(var rating in scoreMap.keys) {
         var stageScore = scoreMap[rating];
+        var matchScore = matchScoreMap[rating];
 
         if(stageScore == null) {
           _log.w("Null stage score for $rating on ${stage.name}");
           continue;
         }
 
+        if(matchScore == null) {
+          _log.w("Null match score for $rating on ${stage.name}");
+          continue;
+        }
+
         if (!changes[rating]!.containsKey(stageScore)) {
-          changes[rating]![stageScore] = ratingSystem.newEvent(rating: rating, match: match, stage: stage, score: stageScore);
+          changes[rating]![stageScore] = ratingSystem.newEvent(rating: rating, match: match, stage: stage, score: stageScore, matchScore: matchScore);
           changes[rating]![stageScore]!.apply(update[rating]!);
           changes[rating]![stageScore]!.info = update[rating]!.info;
         }
       }
     }
-    else {
+    else { // by match
       var scoreMap = <ShooterRating, RelativeScore>{};
       var matchScoreMap = <ShooterRating, RelativeMatchScore>{};
       for(var s in scores) {
@@ -747,6 +759,13 @@ class RatingProjectLoader {
         changes[rating.wrappedRating] ??= {};
         wrappedRatings[num] = rating;
       }
+
+      // Check for pubstomp
+      var pubstompMod = 1.0;
+      if(_pubstomp(wrappedRatings, scores)) {
+        pubstompMod = 0.33;
+      }
+      matchStrength *= pubstompMod;
 
       var update = ratingSystem.updateShooterRatings(
         match: match,
@@ -765,11 +784,206 @@ class RatingProjectLoader {
             rating: rating,
             match: match,
             score: score,
+            matchScore: score as RelativeMatchScore,
             info: update[rating]!.info,
           );
 
           changes[rating]![score]!.apply(update[rating]!);
         }
+      }
+    }
+  }
+
+  void _processRoundRobin({
+    required ShootingMatch match,
+    MatchStage? stage,
+    required Map<String, ShooterRating> wrappedRatings,
+    required List<MatchEntry> shooters,
+    required List<RelativeMatchScore> scores,
+    required int startIndex,
+    required Map<DbShooterRating, Map<RelativeScore, RatingEvent>> changes,
+    required double matchStrength,
+    required double connectednessMod,
+    required double weightMod,
+  }) {
+
+    MatchEntry a = shooters[startIndex];
+    var score = scores.firstWhere((element) => element.shooter == a);
+
+    // Check for pubstomp
+    var pubstompMod = 1.0;
+    if(score.ratio >= 1.0) {
+      if(_pubstomp(wrappedRatings, scores)) {
+        pubstompMod = 0.33;
+      }
+    }
+    matchStrength *= pubstompMod;
+
+    for(int j = startIndex + 1; j < shooters.length; j++) {
+      Shooter b = shooters[j];
+
+      String memNumA = a.memberNumber;
+      String memNumB = b.memberNumber;
+
+      // unmarked reentries
+      if(memNumA == memNumB) continue;
+
+      ShooterRating aRating = wrappedRatings[memNumA]!;
+      ShooterRating bRating = wrappedRatings[memNumB]!;
+
+      changes[aRating.wrappedRating] ??= {};
+      changes[bRating.wrappedRating] ??= {};
+
+      RelativeMatchScore aScore = scores.firstWhere((score) => score.shooter == a);
+      RelativeMatchScore bScore = scores.firstWhere((score) => score.shooter == b);
+
+      if(stage != null) {
+        RelativeScore aStageScore = aScore.stageScores[stage]!;
+        RelativeScore bStageScore = bScore.stageScores[stage]!;
+
+        _encounteredMemberNumber(memNumA);
+        _encounteredMemberNumber(memNumB);
+
+        var update = ratingSystem.updateShooterRatings(
+          match: match,
+          isMatchOngoing: project.matchesInProgress.contains(match),
+          shooters: [aRating, bRating],
+          scores: {
+            aRating: aStageScore,
+            bRating: bStageScore,
+          },
+          matchScores: {
+            aRating: aScore,
+            bRating: bScore,
+          },
+          matchStrengthMultiplier: matchStrength,
+          connectednessMultiplier: connectednessMod,
+          eventWeightMultiplier: weightMod,
+        );
+
+        changes[aRating]![aStageScore] ??=
+            ratingSystem.newEvent(rating: aRating, match: match, stage: stage, score: aStageScore, matchScore: aScore);
+        changes[bRating]![bStageScore] ??=
+            ratingSystem.newEvent(rating: bRating, match: match, stage: stage, score: bStageScore, matchScore: bScore);
+
+        changes[aRating]![aStageScore]!.apply(update[aRating]!);
+        changes[bRating]![bStageScore]!.apply(update[bRating]!);
+      }
+      else {
+        _encounteredMemberNumber(memNumA);
+        _encounteredMemberNumber(memNumB);
+
+        var update = ratingSystem.updateShooterRatings(
+          match: match,
+          isMatchOngoing: project.matchesInProgress.contains(match),
+          shooters: [aRating, bRating],
+          scores: {
+            aRating: aScore,
+            bRating: bScore,
+          },
+          matchScores: {
+            aRating: aScore,
+            bRating: bScore,
+          },
+          matchStrengthMultiplier: matchStrength,
+          connectednessMultiplier: connectednessMod,
+          eventWeightMultiplier: weightMod,
+        );
+
+        changes[aRating]![aScore] ??= ratingSystem.newEvent(rating: aRating, match: match, score: aScore, matchScore: aScore);
+        changes[bRating]![bScore] ??= ratingSystem.newEvent(rating: bRating, match: match, score: bScore, matchScore: aScore);
+
+        changes[aRating]![aScore.total]!.apply(update[aRating]!);
+        changes[bRating]![bScore.total]!.apply(update[bRating]!);
+      }
+    }
+  }
+
+  void _processOneshot({
+    required ShootingMatch match,
+    MatchStage? stage,
+    required MatchEntry shooter,
+    required List<RelativeMatchScore> scores,
+    required Map<String, ShooterRating> wrappedRatings,
+    required Map<DbShooterRating, Map<RelativeScore, RatingEvent>> changes,
+    required Map<ShooterRating, RelativeScore> stageScores,
+    required Map<ShooterRating, RelativeMatchScore> matchScores,
+    required double matchStrength,
+    required double connectednessMod,
+    required double weightMod
+  }) {
+    String memNum = shooter.memberNumber;
+
+    ShooterRating rating = wrappedRatings[memNum]!;
+
+    changes[rating.wrappedRating] ??= {};
+    RelativeMatchScore score = scores.firstWhere((score) => score.shooter == shooter);
+
+    late DateTime start;
+    if(Timings.enabled) start = DateTime.now();
+    // Check for pubstomp
+    var pubstompMod = 1.0;
+    if(score.ratio >= 1.0) {
+      if(_pubstomp(wrappedRatings, scores)) {
+        pubstompMod = 0.33;
+      }
+    }
+    matchStrength *= pubstompMod;
+    if(Timings.enabled) timings.pubstompMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
+
+    if(stage != null) {
+      RelativeStageScore stageScore = score.stageScores[stage]!;
+
+      // If the shooter has already had a rating change for this stage, don't recalc.
+      for(var existingScore in changes[rating]!.keys) {
+        existingScore as RelativeStageScore;
+        if(existingScore.stage == stage) return;
+      }
+
+      _encounteredMemberNumber(memNum);
+
+      if(Timings.enabled) start = DateTime.now();
+      var update = ratingSystem.updateShooterRatings(
+        match: match,
+        shooters: [rating],
+        scores: stageScores,
+        matchScores: matchScores,
+        matchStrengthMultiplier: matchStrength,
+        connectednessMultiplier: connectednessMod,
+        eventWeightMultiplier: weightMod,
+      );
+      if(Timings.enabled) timings.updateMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
+
+      if(!changes[rating]!.containsKey(stageScore)) {
+        changes[rating]![stageScore] =
+            ratingSystem.newEvent(rating: rating, match: match, stage: stage, score: stageScore, matchScore: score);
+        changes[rating]![stageScore]!.apply(update[rating]!);
+        changes[rating]![stageScore]!.info = update[rating]!.info;
+      }
+    }
+    else {
+      _encounteredMemberNumber(memNum);
+
+      var update = ratingSystem.updateShooterRatings(
+        match: match,
+        shooters: [rating],
+        scores: matchScores,
+        matchScores: matchScores,
+        matchStrengthMultiplier: matchStrength,
+        connectednessMultiplier: connectednessMod,
+      );
+
+      // You only get one rating change per match.
+      if(changes[rating]!.isEmpty) {
+        changes[rating]![score] = ratingSystem.newEvent(
+          rating: rating,
+          match: match,
+          score: score,
+          matchScore: score,
+          info: update[rating]!.info,
+        );
+
+        changes[rating]![score.total]!.apply(update[rating]!);
       }
     }
   }

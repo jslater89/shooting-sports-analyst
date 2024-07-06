@@ -679,9 +679,26 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     MatchStage? stage,
     required ShooterRating rating,
     required RelativeScore score,
+    required RelativeMatchScore matchScore,
     Map<String, List<dynamic>> info = const {},
   }) {
-    return EloRatingEvent(oldRating: rating.rating, match: match, stage: stage, score: score, ratingChange: 0, info: info, baseK: 0, effectiveK: 0, backRatingError: 0);
+    return EloRatingEvent(
+      oldRating: rating.rating,
+      match: match,
+      stage: stage,
+      score: score,
+      matchScore: matchScore,
+      ratingChange: 0,
+      info: info,
+      baseK: 0,
+      effectiveK: 0,
+      backRatingError: 0
+    );
+  }
+
+  @override
+  EloShooterRating wrapDbRating(DbShooterRating rating) {
+    return EloShooterRating.wrapDbRating(rating);
   }
 
   @override

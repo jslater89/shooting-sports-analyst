@@ -191,10 +191,7 @@ class EloShooterRating extends ShooterRating {
     );
   }
 
-  // EloShooterRating.fromDb(DbEloRating rating) :
-  //     rating = rating.rating,
-  //     variance = rating.variance,
-  //     super.fromVitals(rating);
+  EloShooterRating.wrapDbRating(DbShooterRating rating) : super.wrapDbRating(rating);
 
   void updateFromEvents(List<RatingEvent> events) {
     for(var e in events) {

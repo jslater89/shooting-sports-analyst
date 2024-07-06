@@ -63,6 +63,10 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   /// of the overall list of matches in a project.
   final filteredMatches = IsarLinks<DbShootingMatch>();
 
+  /// A list of ongoing matches, which will be treated slightly differently by the rating
+  /// algorithm.
+  final matchesInProgress = IsarLinks<DbShootingMatch>();
+
   /// The IsarLinks of matches to use for calculating ratings for this project. If
   /// [filteredMatches] is not empty, it will be used. If it is empty, [matches] will
   /// be used instead.

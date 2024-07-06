@@ -71,7 +71,10 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
   RatingEvent newEvent({
     required ShootingMatch match,
     MatchStage? stage,
-    required ShooterRating rating, required RelativeScore score, Map<String, List<dynamic>> info = const {}
+    required ShooterRating rating,
+    required RelativeScore score,
+    required RelativeMatchScore matchScore,
+    Map<String, List<dynamic>> info = const {},
   });
 
   /// Return a string containing a CSV representation of the

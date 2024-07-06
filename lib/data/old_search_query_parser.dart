@@ -51,7 +51,7 @@ class SearchQueryElement {
   bool matchesShooterRating(ShooterRating? s) {
     if(classification != null && s!.lastClassification != classification) return false;
     if(division != null && s!.division != division) return false;
-    if(powerFactor != null && s!.powerFactor != powerFactor) return false;
+    // if(powerFactor != null && s!.powerFactor != powerFactor) return false;
     if(name != null && !s!.getName().toLowerCase().startsWith(name!) && !s.lastName.toLowerCase().startsWith(name!)) return false;
 
     return true;
