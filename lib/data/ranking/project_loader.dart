@@ -644,7 +644,7 @@ class RatingProjectLoader {
     // Filter out badly marked classifier reshoots
     if(score.score.targetEventCount == 0 && score.score.rawTime <= 0.1) return false;
 
-    // The George Williams Rule
+    // The George Williams Rule: filter out suspiciously high hit factors
     if(sport.defaultStageScoring is HitFactorScoring) {
       if(score.score.hitFactor > 30) return false;
     }

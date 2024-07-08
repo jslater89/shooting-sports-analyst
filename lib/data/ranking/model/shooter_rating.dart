@@ -184,9 +184,6 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
     else return events.map((e) => e.ratingChange).sum;
   }
 
-  /// Alternate member numbers this shooter is known by.
-  List<String> alternateMemberNumbers = [];
-
   @ignore
   int get length => ratingEvents.length;
 
@@ -337,9 +334,8 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
     this._connectedness = other._connectedness;
     this.lastClassification = other.lastClassification;
     this.lastSeen = other.lastSeen;
-    if(!this.alternateMemberNumbers.contains(other.originalMemberNumber)) {
-      this.alternateMemberNumbers.add(other.originalMemberNumber);
-    }
+    this.wrappedRating.copyRatingFrom(other.wrappedRating);
+    this.knownMemberNumbers.add(other.originalMemberNumber);
     this.connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure)..addAll(other.connectedShooters.map((e) => ConnectedShooter.copy(e)));
   }
 
@@ -382,7 +378,7 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
   void copyVitalsFrom(covariant ShooterRating other) {
     this.firstName = other.firstName;
     this.lastName = other.lastName;
-    this.alternateMemberNumbers = other.alternateMemberNumbers;
+    this.knownMemberNumbers = {}..addAll(other.knownMemberNumbers);
   }
 
   ShooterRating(MatchEntry shooter, {
@@ -426,11 +422,11 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
   bool equalsShooter(Shooter other) {
     if(super.equalsShooter(other)) return true;
 
-    for(var number in alternateMemberNumbers) {
+    for(var number in knownMemberNumbers) {
       var processed = Rater.processMemberNumber(number);
 
       if(other is ShooterRating) {
-        for(var otherNumber in alternateMemberNumbers) {
+        for(var otherNumber in other.knownMemberNumbers) {
           var otherProcessed = Rater.processMemberNumber(otherNumber);
           if(processed == otherProcessed) return true;
         }
@@ -454,11 +450,10 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
       this.wrappedRating = DbShooterRating.empty(sport: other.sport),
       this.sportName = other.sportName,
       this._connectedness = other._connectedness,
-
-      this.alternateMemberNumbers = []..addAll(other.alternateMemberNumbers),
       this.connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure)..addAll(other.connectedShooters.map((e) => ConnectedShooter.copy(e))),
       super(firstName: other.firstName, lastName: other.lastName)
   {
+    this.knownMemberNumbers = {}..addAll(other.knownMemberNumbers);
     this.lastClassification = other.lastClassification;
     this.lastSeen = other.lastSeen;
     this.firstSeen = other.firstSeen;

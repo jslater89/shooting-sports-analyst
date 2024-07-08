@@ -192,10 +192,10 @@ class _MemberNumberCollisionDialogState extends State<MemberNumberCollisionDialo
               ),
             ),
           Divider(),
-          if(culprit.alternateMemberNumbers.isNotEmpty)
+          if(culprit.knownMemberNumbers.isNotEmpty)
             Text("Alternate Member Numbers", style: Theme.of(context).textTheme.subtitle1),
-          if(culprit.alternateMemberNumbers.isNotEmpty)
-            for(var number in culprit.alternateMemberNumbers)
+          if(culprit.knownMemberNumbers.isNotEmpty)
+            for(var number in culprit.knownMemberNumbers)
               MouseRegion(
                 cursor: SystemMouseCursors.click,
                 child: GestureDetector(
@@ -205,7 +205,7 @@ class _MemberNumberCollisionDialogState extends State<MemberNumberCollisionDialo
                   },
                 ),
               ),
-          if(culprit.alternateMemberNumbers.isNotEmpty)
+          if(culprit.knownMemberNumbers.isNotEmpty)
             Divider(),
           Text("Related Shooters", style: Theme.of(context).textTheme.subtitle1),
           for(var shooter in accomplices)
