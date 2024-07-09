@@ -234,7 +234,7 @@ class DbRatingGroup with DbSportEntity {
     f.reentries = false;
     f.scoreDQs = false;
 
-    f.divisions = FilterSet.divisionListToMap(divisions);
+    f.divisions = FilterSet.divisionListToMap(sport, divisions);
 
     return f;
   }

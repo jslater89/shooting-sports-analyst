@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/match/practical_match.dart' as oldschema;
+import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 import 'package:shooting_sports_analyst/data/sport/match/translator.dart';
@@ -83,7 +84,7 @@ class ShootingMatch {
     List<MatchStage>? stages,
     bool scoreDQ = true,
     MatchPredictionMode predictionMode = MatchPredictionMode.none,
-    Map<DbRatingGroup, Rater>? ratings,
+    RatingDataSource? ratings,
   }) {
     var innerShooters = shooters ?? this.shooters;
     var innerStages = stages ?? this.stages;

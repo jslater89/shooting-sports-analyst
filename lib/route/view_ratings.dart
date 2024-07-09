@@ -16,6 +16,7 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
 import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
+import 'package:shooting_sports_analyst/data/ranking/project_loader.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
@@ -61,7 +62,6 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   bool _operationInProgress = false;
 
   /// Maps URLs to matches
-  Map<String, PracticalMatch?> _matchUrls = {};
   late TextEditingController _searchController;
   String? searchError;
   late TextEditingController _minRatingsController;
@@ -73,14 +73,12 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   late RatingHistory _history;
   bool _historyChanged = false;
 
-  late List<DbRatingGroup> activeTabs;
+  List<DbRatingGroup> activeTabs = [];
 
+  late RatingProjectSettings _settings;
   RatingSortMode _sortMode = RatingSortMode.rating;
   ShootingMatch? _selectedMatch;
-  MatchCache _matchCache = MatchCache();
   late TabController _tabController;
-
-  var _loadingScrollController = ScrollController();
 
   Duration durationSinceLastYear() {
     var now = DateTime.now();
@@ -156,8 +154,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   }
 
   Future<void> _init() async {
+    _settings = await widget.dataSource.getSettings().unwrap();
     activeTabs = await widget.dataSource.getGroups().unwrap();
-    _loadMatches(widget.matchUrls);
   }
 
   String _searchTerm = "";
@@ -230,7 +228,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         appBar: AppBar(
           title: Text(title),
           centerTitle: true,
-          actions: _loadingState == _LoadingState.done ? actions : null,
+          actions: actions,
           bottom: _operationInProgress ? PreferredSize(
             preferredSize: Size(double.infinity, 5),
             child: LinearProgressIndicator(value: null, backgroundColor: primaryColor, valueColor: animation),
@@ -242,82 +240,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   }
 
   Widget _body() {
-    if(_loadingState != _LoadingState.done) return _matchLoadingIndicator();
-    else return _ratingView();
-  }
-
-  int _currentProgress = 0;
-  int _totalProgress = 0;
-  String? _loadingEventName;
-
-  Widget _matchLoadingIndicator() {
-    Widget loadingText;
-
-    if(_loadingEventName != null) {
-      var parts = _loadingEventName!.split(" - ");
-
-      if(parts.length >= 2) {
-        var divisionText = parts[0];
-        var eventText = parts.sublist(1).join(" - ");
-        loadingText = Row(
-          mainAxisSize: MainAxisSize.max,
-          children: [
-            Expanded(child: Container()),
-            Expanded(flex: 6, child: Text("Now: ${_loadingState.label}", style: Theme.of(context).textTheme.subtitle2, textAlign: TextAlign.center)),
-            Expanded(flex: 2, child: Text(divisionText, overflow: TextOverflow.ellipsis, softWrap: false, textAlign: TextAlign.center)),
-            Expanded(flex: 6, child: Text(eventText, overflow: TextOverflow.ellipsis, softWrap: false, textAlign: TextAlign.center)),
-            Expanded(child: Container())
-          ],
-        );
-      }
-      else {
-        loadingText = Row(
-          mainAxisSize: MainAxisSize.max,
-          children: [
-            Expanded(child: Container()),
-            Expanded(flex: 3, child: Text("Now: ${_loadingState.label}", style: Theme.of(context).textTheme.subtitle2, textAlign: TextAlign.center)),
-            Expanded(flex: 3, child: Text(_loadingEventName!, overflow: TextOverflow.ellipsis, softWrap: false)),
-            Expanded(child: Container())
-          ],
-        );
-      }
-    }
-    else {
-      loadingText = Text("Now: ${_loadingState.label}", style: Theme.of(context).textTheme.subtitle2);
-    }
-
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text("Loading...", style: Theme.of(context).textTheme.subtitle1),
-          loadingText,
-          SizedBox(height: 10),
-          if(_totalProgress > 0)
-            LinearProgressIndicator(
-              value: _currentProgress / _totalProgress,
-            ),
-          SizedBox(height: 20),
-          Expanded(
-            child: Scrollbar(
-              controller: _loadingScrollController,
-              thumbVisibility: true,
-              child: SingleChildScrollView(
-                controller: _loadingScrollController,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ..._matchUrls.keys.toList().reversed.map((url) {
-                      return Text("${url.split("/").last}: ${_matchUrls[url]?.name ?? "Loading..."}");
-                    })
-                  ],
-                ),
-              ),
-            )
-          )
-        ],
-      ),
-    );
+    return _ratingView();
   }
 
   List<ShooterRating> _ratings = [];
@@ -330,8 +253,6 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       _log.w("No match selected!");
       return Container();
     }
-
-    if(_loadingState != _LoadingState.done) return Container();
 
     return Column(
       children: [
@@ -378,7 +299,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
   List<Widget> _buildRatingViewHeader() {
     var size = MediaQuery.of(context).size;
-    var sortModes = widget.settings.algorithm.supportedSorts;
+    var sortModes = _settings.algorithm.supportedSorts;
 
     return [
       ConstrainedBox(
@@ -421,7 +342,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                       ),
                       items: sortModes.map((s) {
                         return DropdownMenuItem(
-                          child: Text(widget.settings.algorithm.nameForSort(s)),
+                          child: Text(_settings.algorithm.nameForSort(s)),
                           value: s,
                         );
                       }).toList(),
@@ -471,14 +392,14 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                     ),
                   ),
                   Tooltip(
-                    message: "Filter shooters with fewer than this many ${widget.settings.byStage ? "stages" : "matches"} from view.",
+                    message: "Filter shooters with fewer than this many ${_settings.byStage ? "stages" : "matches"} from view.",
                     child: SizedBox(
                       width: 80,
                       child: TextField(
                         controller: _minRatingsController,
                         autofocus: false,
                         decoration: InputDecoration(
-                          helperText: "Min. ${widget.settings.byStage ? "Stages" : "Matches"}",
+                          helperText: "Min. ${_settings.byStage ? "Stages" : "Matches"}",
                         ),
                         keyboardType: TextInputType.number,
                         inputFormatters: [
@@ -745,7 +666,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     }
   }
 
-  Future<void> _startPredictionView(Rater rater, RaterGroup tab) async {
+  Future<void> _startPredictionView(Rater rater, OldRaterGroup tab) async {
     var options = _ratings.toSet().toList(); //rater.knownShooters.values.toSet().toList();
     options.sort((a, b) => b.rating.compareTo(a.rating));
     List<ShooterRating>? shooters = [];
@@ -968,70 +889,6 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     // Save the fix here, too.
     var pm = RatingProjectManager();
     await pm.saveProject(_history.project, mapName: RatingProjectManager.autosaveName);
-  }
-
-  Future<bool> _loadMatches(List<String> urls) async {
-    await _matchCache.ready;
-
-    await Future.delayed(Duration(milliseconds: 100));
-
-    int lastPause = -100;
-    await _matchCache.save(progressCallback: (currentSteps, totalSteps) async {
-      if((currentSteps - lastPause) > 10) {
-        lastPause = currentSteps;
-        setState(() {
-          _currentProgress = currentSteps;
-          _totalProgress = totalSteps;
-        });
-
-        //debugPrint("Match cache progress: $_currentProgress/$_totalProgress");
-        await Future.delayed(Duration(milliseconds: 1));
-      }
-    });
-
-    setState(() {
-      _loadingState = _LoadingState.processingScores;
-    });
-
-    await Future.delayed(Duration(milliseconds: 1));
-
-    _history = RatingHistory(
-      project: widget.dataSource,
-      matches: actualMatches,
-      progressCallback: (currentSteps, totalSteps, eventName) async {
-        setState(() {
-          _currentProgress = currentSteps;
-          _totalProgress = totalSteps;
-          _loadingEventName = eventName;
-        });
-
-        // print("Rating history progress: $_currentProgress/$_totalProgress $eventName");
-        await Future.delayed(Duration(milliseconds: 1));
-      },
-      sport: _history.sport,
-    );
-
-    var result = await _processMatches();
-
-    return result;
-  }
-
-  Future<bool> _processMatches() async {
-    DateTime start = DateTime.now();
-    var result = await _history.processInitialMatches();
-    _log.i("Processing ratings took ${DateTime.now().difference(start).inMilliseconds / 1000} sec");
-    if(result.isErr()) {
-      _presentError(result.unwrapErr());
-      return false;
-    }
-
-    _log.i("History ready with ${_history.matches.length} matches.");
-    setState(() {
-      _selectedMatch = _history.matches.last;
-      _loadingState = _LoadingState.done;
-    });
-
-    return true;
   }
 }
 

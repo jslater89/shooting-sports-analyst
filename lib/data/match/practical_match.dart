@@ -157,7 +157,7 @@ class PracticalMatch {
     List<Stage>? stages,
     bool scoreDQ = true,
     MatchPredictionMode predictionMode = MatchPredictionMode.none,
-    Map<DbRatingGroup, Rater>? ratings,
+    Map<OldRaterGroup, Rater>? ratings,
   }) {
     if(ratings == null && !MatchPredictionMode.dropdownValues(false).contains(predictionMode)) {
       throw ArgumentError("must provide ratings when asking for a ratings-aware prediction mode");

@@ -6,6 +6,7 @@
 
 import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settings.dart';
@@ -16,6 +17,8 @@ import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/member_number_collision_dialog.dart';
+import 'package:shooting_sports_analyst/data/match/practical_match.dart' as old;
+import 'package:shooting_sports_analyst/data/match/shooter.dart' as olds;
 
 var _log = SSALogger("RatingHistory");
 
@@ -271,5 +274,145 @@ class RatingHistory {
     );
 
     return r;
+  }
+}
+
+enum OldRaterGroup {
+  open,
+  pcc,
+  limited,
+  carryOptics,
+  limitedOptics,
+  singleStack,
+  production,
+  revolver,
+  limited10,
+  locap,
+  openPcc,
+  limitedCO,
+  limitedLO,
+  limOpsCO,
+  limLoCo,
+  opticHandguns,
+  ironsHandguns,
+  combined;
+
+  static get defaultGroups => [
+    open,
+    limited,
+    pcc,
+    carryOptics,
+    limitedOptics,
+    locap,
+  ];
+
+  static get divisionGroups => [
+    open,
+    limited,
+    pcc,
+    carryOptics,
+    limitedOptics,
+    singleStack,
+    production,
+    limited10,
+    revolver,
+  ];
+
+  old.OldFilterSet get filters {
+    return old.OldFilterSet(
+      empty: true,
+    )
+      ..mode = FilterMode.or
+      ..divisions = divisionMap
+      ..reentries = false
+      ..scoreDQs = false;
+  }
+
+  Map<olds.Division, bool> get divisionMap {
+    var divisionMap = <olds.Division, bool>{};
+    divisions.forEach((element) => divisionMap[element] = true);
+    return divisionMap;
+  }
+
+  List<olds.Division> get divisions {
+    switch(this) {
+      case OldRaterGroup.open:
+        return [olds.Division.open];
+      case OldRaterGroup.limited:
+        return [olds.Division.limited];
+      case OldRaterGroup.pcc:
+        return [olds.Division.pcc];
+      case OldRaterGroup.carryOptics:
+        return [olds.Division.carryOptics];
+      case OldRaterGroup.locap:
+        return [olds.Division.singleStack, olds.Division.limited10, olds.Division.production, olds.Division.revolver];
+      case OldRaterGroup.singleStack:
+        return [olds.Division.singleStack];
+      case OldRaterGroup.production:
+        return [olds.Division.production];
+      case OldRaterGroup.limited10:
+        return [olds.Division.limited10];
+      case OldRaterGroup.revolver:
+        return [olds.Division.revolver];
+      case OldRaterGroup.openPcc:
+        return [olds.Division.open, olds.Division.pcc];
+      case OldRaterGroup.limitedCO:
+        return [olds.Division.limited, olds.Division.carryOptics];
+      case OldRaterGroup.limitedOptics:
+        return [olds.Division.limitedOptics];
+      case OldRaterGroup.limOpsCO:
+        return [olds.Division.limitedOptics, olds.Division.carryOptics];
+      case OldRaterGroup.limLoCo:
+        return [olds.Division.limited, olds.Division.carryOptics, olds.Division.limitedOptics];
+      case OldRaterGroup.limitedLO:
+        return [olds.Division.limited, olds.Division.limitedOptics];
+      case OldRaterGroup.opticHandguns:
+        return [olds.Division.open, olds.Division.carryOptics, olds.Division.limitedOptics];
+      case OldRaterGroup.ironsHandguns:
+        return [olds.Division.limited, olds.Division.production, olds.Division.singleStack, olds.Division.revolver, olds.Division.limited10];
+      case OldRaterGroup.combined:
+        return olds.Division.values;
+    }
+  }
+
+  String get uiLabel {
+    switch(this) {
+      case OldRaterGroup.open:
+        return "Open";
+      case OldRaterGroup.limited:
+        return "Limited";
+      case OldRaterGroup.pcc:
+        return "PCC";
+      case OldRaterGroup.carryOptics:
+        return "Carry Optics";
+      case OldRaterGroup.singleStack:
+        return "Single Stack";
+      case OldRaterGroup.production:
+        return "Production";
+      case OldRaterGroup.limited10:
+        return "Limited 10";
+      case OldRaterGroup.revolver:
+        return "Revolver";
+      case OldRaterGroup.locap:
+        return "Locap";
+      case OldRaterGroup.openPcc:
+        return "Open/PCC";
+      case OldRaterGroup.limitedCO:
+        return "Limited/CO";
+      case OldRaterGroup.limitedOptics:
+        return "Limited Optics";
+      case OldRaterGroup.limOpsCO:
+        return "LO/CO";
+      case OldRaterGroup.limLoCo:
+        return "LO/CO/Limited";
+      case OldRaterGroup.limitedLO:
+        return "Limited/LO";
+      case OldRaterGroup.opticHandguns:
+        return "Optic Handguns";
+      case OldRaterGroup.ironsHandguns:
+        return "Irons Handguns";
+      case OldRaterGroup.combined:
+        return "Combined";
+    }
   }
 }

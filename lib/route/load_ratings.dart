@@ -25,6 +25,11 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
 
   late RatingProjectLoader loader;
 
+  int _currentProgress = 0;
+  int _totalProgress = 0;
+  String? _loadingEventName;
+  var _loadingScrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
@@ -54,5 +59,75 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
   @override
   Widget build(BuildContext context) {
     return const Placeholder();
+  }
+
+  Widget _matchLoadingIndicator() {
+    Widget loadingText;
+
+    if(_loadingEventName != null) {
+      var parts = _loadingEventName!.split(" - ");
+
+      if(parts.length >= 2) {
+        var divisionText = parts[0];
+        var eventText = parts.sublist(1).join(" - ");
+        loadingText = Row(
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            Expanded(child: Container()),
+            Expanded(flex: 6, child: Text("Now: ${currentState.label}", style: Theme.of(context).textTheme.subtitle2, textAlign: TextAlign.center)),
+            Expanded(flex: 2, child: Text(divisionText, overflow: TextOverflow.ellipsis, softWrap: false, textAlign: TextAlign.center)),
+            Expanded(flex: 6, child: Text(eventText, overflow: TextOverflow.ellipsis, softWrap: false, textAlign: TextAlign.center)),
+            Expanded(child: Container())
+          ],
+        );
+      }
+      else {
+        loadingText = Row(
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            Expanded(child: Container()),
+            Expanded(flex: 3, child: Text("Now: ${currentState.label}", style: Theme.of(context).textTheme.subtitle2, textAlign: TextAlign.center)),
+            Expanded(flex: 3, child: Text(_loadingEventName!, overflow: TextOverflow.ellipsis, softWrap: false)),
+            Expanded(child: Container())
+          ],
+        );
+      }
+    }
+    else {
+      loadingText = Text("Now: ${currentState.label}", style: Theme.of(context).textTheme.subtitle2);
+    }
+
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text("Loading...", style: Theme.of(context).textTheme.subtitle1),
+          loadingText,
+          SizedBox(height: 10),
+          if(_totalProgress > 0)
+            LinearProgressIndicator(
+              value: _currentProgress / _totalProgress,
+            ),
+          SizedBox(height: 20),
+          Expanded(
+              child: Scrollbar(
+                controller: _loadingScrollController,
+                thumbVisibility: true,
+                child: SingleChildScrollView(
+                  controller: _loadingScrollController,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ...widget.project.matches.toList().reversed.map((match) {
+                        return Text("${match.eventName}");
+                      })
+                    ],
+                  ),
+                ),
+              )
+          )
+        ],
+      ),
+    );
   }
 }

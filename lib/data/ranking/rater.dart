@@ -25,6 +25,7 @@ import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart' as newShooter;
 
 var _log = SSALogger("Rater");
 
@@ -375,6 +376,11 @@ class Rater {
   }
 
   ShooterRating? ratingFor(Shooter s) {
+    var processed = processMemberNumber(s.memberNumber);
+    return maybeKnownShooter(processed);
+  }
+
+  ShooterRating? ratingForNew(newShooter.MatchEntry s) {
     var processed = processMemberNumber(s.memberNumber);
     return maybeKnownShooter(processed);
   }

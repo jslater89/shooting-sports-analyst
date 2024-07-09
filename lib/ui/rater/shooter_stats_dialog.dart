@@ -10,6 +10,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
@@ -40,7 +41,7 @@ class ShooterStatsDialog extends StatefulWidget {
   final bool showDivisions;
   final ShooterRating rating;
   final ShootingMatch match;
-  final Map<DbRatingGroup, Rater>? ratings;
+  final RatingDataSource? ratings;
 
   @override
   State<ShooterStatsDialog> createState() => _ShooterStatsDialogState();
@@ -453,7 +454,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     var division = newMatch.sport.divisions.lookupByName(e.score.shooter.division?.displayName ?? "Open")!;
     var filters = FilterSet(newMatch.sport, empty: true)
       ..mode = FilterMode.or;
-    filters.divisions = FilterSet.divisionListToMap([division]);
+    filters.divisions = FilterSet.divisionListToMap(sport, [division]);
     Navigator.of(context).push(MaterialPageRoute(builder: (context) {
       return ResultPage(
         canonicalMatch: newMatch,

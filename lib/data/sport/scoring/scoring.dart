@@ -10,6 +10,7 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/match/practical_match.dart';
+import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
@@ -32,7 +33,7 @@ sealed class MatchScoring {
     required List<MatchStage> stages,
     bool scoreDQ = true,
     MatchPredictionMode predictionMode = MatchPredictionMode.none,
-    Map<DbRatingGroup, Rater>? ratings,
+    RatingDataSource? ratings,
   });
 }
 
@@ -66,7 +67,7 @@ final class RelativeStageFinishScoring extends MatchScoring {
     required List<MatchStage> stages,
     bool scoreDQ = true, 
     MatchPredictionMode predictionMode = MatchPredictionMode.none,
-    Map<DbRatingGroup, Rater>? ratings,
+    RatingDataSource? ratings,
   }) {
     if(shooters.length == 0 || stages.length == 0) return {};
 

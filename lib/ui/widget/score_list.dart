@@ -37,7 +37,7 @@ class ScoreList extends StatelessWidget {
   final Function(MatchEntry, MatchStage?, bool wholeMatch) onScoreEdited;
   final List<MatchEntry> editedShooters;
   final bool whatIfMode;
-  final Map<RaterGroup, Rater>? ratings;
+  final Map<OldRaterGroup, Rater>? ratings;
 
   // Will only be used once match is no longer null
   Sport get sport => match!.sport;
@@ -528,7 +528,7 @@ class ScoreList extends StatelessWidget {
   }
 }
 
-extension LookupShooterRating on Map<RaterGroup, Rater> {
+extension LookupShooterRating on Map<OldRaterGroup, Rater> {
   ShooterRating? lookup(old.Shooter s) {
     // TODO: fix when raters are converted
     for(var group in this.keys) {
@@ -580,7 +580,7 @@ extension LookupShooterRating on Map<RaterGroup, Rater> {
   }
 
   Rater? lookupRater(ShootingMatch match, MatchEntry s) {
-    RaterGroup? group = null;
+    OldRaterGroup? group = null;
     outer:for(var g in this.keys) {
       for(var division in g.divisions) {
         var matchingDivision = match.sport.divisions.lookupByName(division.name, fallback: false);
