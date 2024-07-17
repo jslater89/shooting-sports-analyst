@@ -21,7 +21,7 @@ var _log = SSALogger("RaterStatsDialog");
 class RaterStatsDialog extends StatefulWidget {
   const RaterStatsDialog(this.group, this.statistics, {Key? key}) : super(key: key);
 
-  final DbRatingGroup group;
+  final RatingGroup group;
   final RaterStatistics statistics;
 
   static const _width = 500.0;

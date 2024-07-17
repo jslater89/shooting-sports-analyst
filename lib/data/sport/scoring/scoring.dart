@@ -310,7 +310,7 @@ final class CumulativeScoring extends MatchScoring {
     required List<MatchStage> stages,
     bool scoreDQ = true,
     MatchPredictionMode predictionMode = MatchPredictionMode.none,
-    Map<DbRatingGroup, Rater>? ratings,
+    Map<RatingGroup, Rater>? ratings,
   }) {
     if(shooters.length == 0 || stages.length == 0) return {};
 
@@ -1256,7 +1256,7 @@ extension Sorting on List<RelativeMatchScore> {
     });
   }
 
-  void sortByRating({required Map<DbRatingGroup, Rater> ratings, required RatingDisplayMode displayMode, required PracticalMatch match}) {
+  void sortByRating({required Map<RatingGroup, Rater> ratings, required RatingDisplayMode displayMode, required PracticalMatch match}) {
     this.sort((a, b) {
       return a.shooter.lastName.compareTo(b.shooter.lastName);
 

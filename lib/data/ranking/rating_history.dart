@@ -47,14 +47,14 @@ class RatingHistory {
   // Prime, so we skip around the list better
   static const int progressCallbackInterval = 7;
 
-  List<DbRatingGroup> get groups => []..addAll(project.groups);
+  List<RatingGroup> get groups => []..addAll(project.groups);
 
   late DbRatingProject project;
   bool verbose;
 
   /// Maps matches to a map of [Rater]s, which hold the incremental ratings
   /// after that match has been processed.
-  Map<ShootingMatch, Map<DbRatingGroup, Rater>> _ratersByDivision = {};
+  Map<ShootingMatch, Map<RatingGroup, Rater>> _ratersByDivision = {};
 
   Future<void> Function(int currentSteps, int totalSteps, String? eventName)? progressCallback;
 
@@ -93,7 +93,7 @@ class RatingHistory {
     return _processInitialMatches();
   }
 
-  void loadRatings(Map<DbRatingGroup, Rater> ratings) {
+  void loadRatings(Map<RatingGroup, Rater> ratings) {
     _ratersByDivision[_matches.last] = ratings;
   }
   
@@ -131,14 +131,14 @@ class RatingHistory {
     return true;
   }
 
-  Rater latestRaterFor(DbRatingGroup group) {
+  Rater latestRaterFor(RatingGroup group) {
     if(!project.groups.contains(group)) throw ArgumentError("Invalid group");
     var raters = _ratersByDivision[matches.last]!;
 
     return raters[group]!;
   }
 
-  Rater raterFor(ShootingMatch match, DbRatingGroup group) {
+  Rater raterFor(ShootingMatch match, RatingGroup group) {
     if(!project.groups.contains(group)) throw ArgumentError("Invalid group");
     if(!_matches.contains(match)) throw ArgumentError("Invalid match");
 
@@ -251,7 +251,7 @@ class RatingHistory {
     return RatingResult.ok();
   }
   
-  Rater _raterForGroup(List<ShootingMatch> matches, DbRatingGroup group, [Future<void> Function(int, int, String?)? progressCallback]) {
+  Rater _raterForGroup(List<ShootingMatch> matches, RatingGroup group, [Future<void> Function(int, int, String?)? progressCallback]) {
     var divisionMap = <Division, bool>{};
     group.divisions.forEach((element) => divisionMap[element] = true);
     Timings().reset();

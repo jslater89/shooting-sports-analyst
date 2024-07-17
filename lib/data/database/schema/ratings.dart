@@ -119,10 +119,10 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
     encodedSettings = jsonEncode(map);
   }
 
-  final dbGroups = IsarLinks<DbRatingGroup>();
+  final dbGroups = IsarLinks<RatingGroup>();
 
   @ignore
-  List<DbRatingGroup> get groups {
+  List<RatingGroup> get groups {
     if(!dbGroups.isLoaded) {
       dbGroups.loadSync();
     }
@@ -149,7 +149,7 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   // Ratings
   final ratings = IsarLinks<DbShooterRating>();
 
-  Future<List<DbShooterRating>> ratingsForGroup(DbRatingGroup group) async {
+  Future<List<DbShooterRating>> ratingsForGroup(RatingGroup group) async {
     return ratings.filter().group((q) => q.uuidEqualTo(group.uuid)).findAll();
   }
 
@@ -189,13 +189,13 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   }
 
   @override
-  Future<DataSourceResult<List<DbRatingGroup>>> getGroups() {
+  Future<DataSourceResult<List<RatingGroup>>> getGroups() {
     return Future.value(DataSourceResult.ok(groups));
   }
 }
 
 @collection
-class DbRatingGroup with DbSportEntity {
+class RatingGroup with DbSportEntity {
   Id get id => uuid.stableHash;
 
   @Index(unique: true)
@@ -240,7 +240,7 @@ class DbRatingGroup with DbSportEntity {
   }
 
   /// Default constructor for Isar.
-  DbRatingGroup({
+  RatingGroup({
     required this.uuid,
     required this.sportName,
     required this.name,
@@ -249,7 +249,7 @@ class DbRatingGroup with DbSportEntity {
   });
 
   /// Constructor that will create a new UUID if a string ID is not provided.
-  DbRatingGroup.create({
+  RatingGroup.create({
     String? uuid,
     required this.sportName,
     required this.name,

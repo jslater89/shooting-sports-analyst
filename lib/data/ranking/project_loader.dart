@@ -225,7 +225,7 @@ class RatingProjectLoader {
   ///
   /// Use [encounter] if you want shooters to be added regardless of whether they appear
   /// in scores. (i.e., shooters who DQ on the first stage, or are no-shows but still included in the data)
-  Future<int> _addShootersFromMatch(DbRatingGroup group, ShootingMatch match) async {
+  Future<int> _addShootersFromMatch(RatingGroup group, ShootingMatch match) async {
     int added = 0;
     int updated = 0;
     var shooters = _getShooters(group, match);
@@ -274,7 +274,7 @@ class RatingProjectLoader {
     return added + updated;
   }
 
-  List<MatchEntry> _getShooters(DbRatingGroup group, ShootingMatch match, {bool verify = false}) {
+  List<MatchEntry> _getShooters(RatingGroup group, ShootingMatch match, {bool verify = false}) {
     var filters = group.filters;
     var shooters = <MatchEntry>[];
     shooters = match.filterShooters(
@@ -297,7 +297,7 @@ class RatingProjectLoader {
   }
 
   Map<Shooter, bool> _verifyCache = {};
-  Future<bool> _verifyShooter(DbRatingGroup g, MatchEntry s) async {
+  Future<bool> _verifyShooter(RatingGroup g, MatchEntry s) async {
     if(_verifyCache.containsKey(s)) return _verifyCache[s]!;
 
     var finalMemberNumber = s.memberNumber;
@@ -349,7 +349,7 @@ class RatingProjectLoader {
   }
 
   double get _centerStrength => sport.ratingStrengthProvider?.centerStrength ?? 1.0;
-  Future<void> _rankMatch(DbRatingGroup group, ShootingMatch match) async {
+  Future<void> _rankMatch(RatingGroup group, ShootingMatch match) async {
     late DateTime start;
     if(Timings.enabled) start = DateTime.now();
     var shooters = _getShooters(group, match, verify: true);
@@ -673,7 +673,7 @@ class RatingProjectLoader {
   }
 
   Future<void> _processWholeEvent({
-    required DbRatingGroup group,
+    required RatingGroup group,
     required ShootingMatch match,
     MatchStage? stage,
     required Map<String, ShooterRating> wrappedRatings,

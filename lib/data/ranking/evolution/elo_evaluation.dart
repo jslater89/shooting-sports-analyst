@@ -184,7 +184,7 @@ class EloEvaluationData {
   final String name;
   final List<ShootingMatch> trainingData;
   final List<ShootingMatch> evaluationData;
-  final DbRatingGroup group;
+  final RatingGroup group;
   final double expectedMaxRating;
 
   EloEvaluationData({required this.name, required this.trainingData, required this.evaluationData, required this.group, required this.expectedMaxRating});

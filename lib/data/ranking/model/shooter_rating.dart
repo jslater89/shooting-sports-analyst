@@ -24,8 +24,7 @@ import 'package:shooting_sports_analyst/util.dart';
 
 var _log = SSALogger("ShooterRating");
 
-/// ShooterRatings are convenience wrappers around [DbShooterRating], which
-///
+/// ShooterRatings are convenience wrappers around [DbShooterRating].
 abstract class ShooterRating extends Shooter with DbSportEntity {
   String sportName;
 
@@ -44,7 +43,7 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
   /// DbShooterRating to store its data.
   DbShooterRating wrappedRating;
 
-  DbRatingGroup get group {
+  RatingGroup get group {
     if(!wrappedRating.group.isLoaded) {
       wrappedRating.group.loadSync();
     }

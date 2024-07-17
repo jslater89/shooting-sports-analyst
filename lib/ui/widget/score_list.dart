@@ -9,6 +9,8 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
+import 'package:shooting_sports_analyst/data/ranking/interface/synchronous_rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
@@ -24,7 +26,7 @@ import 'package:shooting_sports_analyst/ui/widget/dialog/shooter_card.dart';
 import 'package:shooting_sports_analyst/util.dart';
 import 'package:shooting_sports_analyst/data/model.dart' as old;
 
-class ScoreList extends StatelessWidget {
+class ScoreList extends StatefulWidget {
   final ShootingMatch? match;
   final int? maxPoints;
   final MatchStage? stage;
@@ -37,10 +39,7 @@ class ScoreList extends StatelessWidget {
   final Function(MatchEntry, MatchStage?, bool wholeMatch) onScoreEdited;
   final List<MatchEntry> editedShooters;
   final bool whatIfMode;
-  final Map<OldRaterGroup, Rater>? ratings;
-
-  // Will only be used once match is no longer null
-  Sport get sport => match!.sport;
+  final RatingDataSource? ratings;
 
   const ScoreList({
     Key? key,
@@ -60,37 +59,61 @@ class ScoreList extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<ScoreList> createState() => _ScoreListState();
+}
+
+class _ScoreListState extends State<ScoreList> {
+  // Will only be used once match is no longer null
+  Sport get sport => widget.match!.sport;
+
+  SynchronousRatingDataSource? ratingCache;
+
+  @override
+  void initState() {
+    super.initState();
+
+    if(widget.ratings != null) {
+      ratingCache = SynchronousRatingDataSource(widget.ratings!);
+      ratingCache!.addListener(() {
+        setState(() {
+          // ratings were reloaded
+        });
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     Widget keyWidget;
 
-    int? displayMaxPoints = maxPoints;
-    if(maxPoints == null) displayMaxPoints = match!.maxPoints;
+    int? displayMaxPoints = widget.maxPoints;
+    if(widget.maxPoints == null) displayMaxPoints = widget.match!.maxPoints;
 
     var screenSize = MediaQuery.of(context).size;
     var maxWidth = screenSize.width;
 
-    if(match == null) {
+    if(widget.match == null) {
       keyWidget = Container();
     }
     else {
-      keyWidget = stage == null ? _buildMatchScoreKey(screenSize, displayMaxPoints) : _buildStageScoreKey(screenSize);
+      keyWidget = widget.stage == null ? _buildMatchScoreKey(screenSize, displayMaxPoints) : _buildStageScoreKey(screenSize);
     }
 
     return SingleChildScrollView(
-      controller: horizontalScrollController,
+      controller: widget.horizontalScrollController,
       scrollDirection: Axis.horizontal,
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          minWidth: minWidth,
-          maxWidth: max(maxWidth, minWidth),
+          minWidth: widget.minWidth,
+          maxWidth: max(maxWidth, widget.minWidth),
         ),
         child: GestureDetector(
           onPanUpdate: (details) {
-            if(horizontalScrollController != null) {
-              _adjustScroll(horizontalScrollController!, amount: -details.delta.dx);
+            if(widget.horizontalScrollController != null) {
+              _adjustScroll(widget.horizontalScrollController!, amount: -details.delta.dx);
             }
-            if(verticalScrollController != null) {
-              _adjustScroll(verticalScrollController!, amount: -details.delta.dy);
+            if(widget.verticalScrollController != null) {
+              _adjustScroll(widget.verticalScrollController!, amount: -details.delta.dy);
             }
           },
           child: Column(
@@ -99,13 +122,13 @@ class ScoreList extends StatelessWidget {
               keyWidget,
               Expanded(child: Scrollbar(
                 thumbVisibility: true,
-                controller: verticalScrollController,
+                controller: widget.verticalScrollController,
                 child: ListView.builder(
-                  controller: verticalScrollController,
-                  itemCount: (filteredScores.length),
+                  controller: widget.verticalScrollController,
+                  itemCount: (widget.filteredScores.length),
                   itemBuilder: (ctx, i) {
-                    if(stage == null) return _buildMatchScoreRow(index: i, context: context);
-                    else if(stage != null) return _buildStageScoreRow(context, i, stage!);
+                    if(widget.stage == null) return _buildMatchScoreRow(index: i, context: context);
+                    else if(widget.stage != null) return _buildStageScoreRow(context, i, widget.stage!);
                     else return Container();
                   }
                 ),
@@ -117,12 +140,11 @@ class ScoreList extends StatelessWidget {
     );
   }
 
-
   Widget _buildMatchScoreKey(Size screenSize, int? maxPoints) {
     return ConstrainedBox(
       constraints: BoxConstraints(
-          minWidth: minWidth,
-          maxWidth: max(screenSize.width, minWidth)
+          minWidth: widget.minWidth,
+          maxWidth: max(screenSize.width, widget.minWidth)
       ),
       child: Container(
           decoration: BoxDecoration(
@@ -139,7 +161,7 @@ class ScoreList extends StatelessWidget {
                 Expanded(flex: 1, child: Text("Row")),
                 Expanded(flex: 1, child: Text("Place")),
                 Expanded(flex: 3, child: Text("Name")),
-                if(ratings != null) Consumer<ScoreDisplaySettingsModel>(
+                if(widget.ratings != null) Consumer<ScoreDisplaySettingsModel>(
                     builder: (context, model, _) {
                       var message;
                       switch(model.value.ratingMode) {
@@ -165,8 +187,8 @@ class ScoreList extends StatelessWidget {
                 Expanded(flex: 2, child: Text("Match %")),
                 if(sport.matchScoring is CumulativeScoring && sport.type.isTimePlus) Expanded(flex: 2, child: Text("Final Time"))
                 else Expanded(flex: 2, child: Text("Match Pts.")),
-                if(match?.inProgress ?? false) Expanded(flex: 1, child: Text("Through", textAlign: TextAlign.end)),
-                if(match?.inProgress ?? false) SizedBox(width: 15),
+                if(widget.match?.inProgress ?? false) Expanded(flex: 1, child: Text("Through", textAlign: TextAlign.end)),
+                if(widget.match?.inProgress ?? false) SizedBox(width: 15),
                 if(sport.type.isTimePlus) Expanded(flex: 2, child: Text("Raw Time"))
                 else Expanded(flex: 2, child: Text("Time")),
                 if(sport.type.isHitFactor) Expanded(flex: 3, child: Tooltip(
@@ -222,28 +244,28 @@ class ScoreList extends StatelessWidget {
   }
 
   Widget _buildMatchScoreRow({required BuildContext context, required int index}) {
-    var score = filteredScores[index];
+    var score = widget.filteredScores[index];
     var stagesComplete = 0;
-    if(match?.inProgress ?? false) {
+    if(widget.match?.inProgress ?? false) {
       stagesComplete = score.stageScores.values.where((element) => !element.score.dnf).length;
     }
 
     return GestureDetector(
       onTap: () async {
-        if(whatIfMode) {
+        if(widget.whatIfMode) {
           var action = await (showDialog<ShooterDialogAction>(context: context, barrierDismissible: false, builder: (context) {
-            return EditableShooterCard(sport: match!.sport, matchScore: score, scoreDQ: scoreDQ);
+            return EditableShooterCard(sport: widget.match!.sport, matchScore: score, scoreDQ: widget.scoreDQ);
           }));
 
           if(action != null) {
             if(action.scoreEdit.rescore) {
               // Any edits from here are always going to be whole-match changes
-              onScoreEdited(score.shooter, null, true);
+              widget.onScoreEdited(score.shooter, null, true);
             }
             if(action.launchComparison) {
               Navigator.of(context).push(MaterialPageRoute(
                 builder: (context) => CompareShooterResultsPage(
-                  scores: baseScores,
+                  scores: widget.baseScores,
                   initialShooters: [score.shooter],
                 )
               ));
@@ -252,13 +274,13 @@ class ScoreList extends StatelessWidget {
         }
         else {
           var action = await showDialog<ShooterDialogAction>(context: context, builder: (context) {
-            return ShooterResultCard(matchScore: score, scoreDQ: scoreDQ,);
+            return ShooterResultCard(matchScore: score, scoreDQ: widget.scoreDQ,);
           });
 
           if(action != null && action.launchComparison) {
             Navigator.of(context).push(MaterialPageRoute(
                 builder: (context) => CompareShooterResultsPage(
-                  scores: baseScores,
+                  scores: widget.baseScores,
                   initialShooters: [score.shooter],
                 )
             ));
@@ -267,31 +289,37 @@ class ScoreList extends StatelessWidget {
       },
       child: ScoreRow(
         color: index % 2 == 1 ? Colors.grey[200] : Colors.white,
-        edited: editedShooters.contains(score.shooter),
+        edited: widget.editedShooters.contains(score.shooter),
         child: Padding(
           padding: const EdgeInsets.all(2.0),
           child: Row(
             children: [
-              Expanded(flex: 1, child: Text("${baseScores.indexOf(score) + 1}")),
+              Expanded(flex: 1, child: Text("${widget.baseScores.indexOf(score) + 1}")),
               Expanded(flex: 1, child: Text("${score.place}")),
               Expanded(flex: 3, child: Text(score.shooter.getName())),
-              if(ratings != null) Consumer<ScoreDisplaySettingsModel>(
+              if(widget.ratings != null) Consumer<ScoreDisplaySettingsModel>(
                 builder: (context, model, _) {
                   String text = "n/a";
-                  // TODO: fix when ratings are converted
-                  switch(model.value.ratingMode) {
-                    case RatingDisplayMode.preMatch:
-                      var rating = ratings!.lookupNew(match!, score.shooter)?.ratingForEvent(match!, null, beforeMatch: true).round();
-                      if(rating != null) text = rating.toString();
-                      break;
-                    case RatingDisplayMode.postMatch:
-                      var rating = ratings!.lookupNew(match!, score.shooter)?.ratingForEvent(match!, null, beforeMatch: false).round();
-                      if(rating != null) text = rating.toString();
-                      break;
-                    case RatingDisplayMode.change:
-                      var rating = ratings!.lookupNew(match!, score.shooter)?.changeForNewEvent(match!, null);
-                      if(rating != null) text = rating.toStringAsFixed(1);
-                      break;
+                  var dbRating = ratingCache!.lookupRating(score.shooter);
+                  var settings = ratingCache!.getSettings();
+
+                  if(dbRating != null && settings != null) {
+                    var rating = settings.algorithm.wrapDbRating(dbRating);
+
+                    switch(model.value.ratingMode) {
+                      case RatingDisplayMode.preMatch:
+                        var r = rating.ratingForEvent(widget.match!, null, beforeMatch: true).round();
+                        text = r.toString();
+                        break;
+                      case RatingDisplayMode.postMatch:
+                        var r = rating.ratingForEvent(widget.match!, null, beforeMatch: false).round();
+                        text = r.toString();
+                        break;
+                      case RatingDisplayMode.change:
+                        var r = rating.changeForNewEvent(widget.match!, null);
+                        if(r != null) text = r.toStringAsFixed(1);
+                        break;
+                    }
                   }
                   return Expanded(flex: 1, child: Text(text));
                 }
@@ -301,8 +329,8 @@ class ScoreList extends StatelessWidget {
               if(sport.hasPowerFactors) Expanded(flex: 1, child: Text(score.shooter.powerFactor.shortName)),
               Expanded(flex: 2, child: Text("${score.ratio.asPercentage()}%")),
               Expanded(flex: 2, child: Text(score.points.toStringAsFixed(2))),
-              if(match?.inProgress ?? false) Expanded(flex: 1, child: Text("$stagesComplete", textAlign: TextAlign.end)),
-              if(match?.inProgress ?? false) SizedBox(width: 15),
+              if(widget.match?.inProgress ?? false) Expanded(flex: 1, child: Text("$stagesComplete", textAlign: TextAlign.end)),
+              if(widget.match?.inProgress ?? false) SizedBox(width: 15),
               if(sport.type.isTimePlus) Expanded(flex: 2, child: Text(score.total.rawTime.toStringAsFixed(2)))
               else Expanded(flex: 2, child: Text(score.total.finalTime.toStringAsFixed(2))),
               if(sport.type.isHitFactor) Consumer<ScoreDisplaySettingsModel>(
@@ -313,7 +341,7 @@ class ScoreList extends StatelessWidget {
                       // TODO: 'and this is a USPSA-style fixed time stage' via match.sport.matchScoring
                       if(s.scoring is PointsScoring) {
                         var bestPoints = 0;
-                        for(var score in baseScores) {
+                        for(var score in widget.baseScores) {
                           if(score.stageScores[s] != null && score.stageScores[s]!.score.points > bestPoints) {
                             bestPoints = score.stageScores[s]!.score.points;
                           }
@@ -321,11 +349,11 @@ class ScoreList extends StatelessWidget {
                         stageMax[s] = bestPoints;
                       }
                     }
-                    return Expanded(flex: 3, child: Text("${!scoreDQ && score.shooter.dq ? 0 : score.total.getTotalPoints(countPenalties: model.value.availablePointsCountPenalties)} "
+                    return Expanded(flex: 3, child: Text("${!widget.scoreDQ && score.shooter.dq ? 0 : score.total.getTotalPoints(countPenalties: model.value.availablePointsCountPenalties)} "
                         "(${score.percentTotalPointsWithSettings(scoreDQ: true, countPenalties: model.value.availablePointsCountPenalties, stageMaxPoints: stageMax).asPercentage()}%)"));
                   }
                   else {
-                    return Expanded(flex: 3, child: Text("${!scoreDQ && score.shooter.dq ? 0 : score.total.getTotalPoints(countPenalties: model.value.availablePointsCountPenalties)} "
+                    return Expanded(flex: 3, child: Text("${!widget.scoreDQ && score.shooter.dq ? 0 : score.total.getTotalPoints(countPenalties: model.value.availablePointsCountPenalties)} "
                         "(${score.percentTotalPointsWithSettings(scoreDQ: true, countPenalties: model.value.availablePointsCountPenalties).asPercentage()}%)"));
                   }
                 },
@@ -341,8 +369,8 @@ class ScoreList extends StatelessWidget {
   Widget _buildStageScoreKey(Size screenSize) {
     return ConstrainedBox(
       constraints: BoxConstraints(
-          minWidth: minWidth,
-          maxWidth: max(screenSize.width, minWidth)
+          minWidth: widget.minWidth,
+          maxWidth: max(screenSize.width, widget.minWidth)
       ),
       child: Container(
           decoration: BoxDecoration(
@@ -358,7 +386,7 @@ class ScoreList extends StatelessWidget {
                 Expanded(flex: 1, child: Text("Row")),
                 Expanded(flex: 1, child: Text("Place")),
                 Expanded(flex: 3, child: Text("Name")),
-                if(ratings != null) Consumer<ScoreDisplaySettingsModel>(
+                if(widget.ratings != null) Consumer<ScoreDisplaySettingsModel>(
                   builder: (context, model, _) {
                     var message;
                     switch(model.value.ratingMode) {
@@ -383,7 +411,7 @@ class ScoreList extends StatelessWidget {
                 if(sport.hasPowerFactors) Expanded(flex: 1, child: Text("PF")),
                 if(sport.type.isHitFactor) Expanded(flex: 3, child: Tooltip(
                     message: "The number of points out of the maximum possible for this stage.",
-                    child: Text("Points/${stage!.maxPoints}"))
+                    child: Text("Points/${widget.stage!.maxPoints}"))
                 ),
                 if(sport.type.isTimePlus) Expanded(flex: 2, child: Text("Final Time")),
                 if(sport.type.isTimePlus) Expanded(flex: 2, child: Text("Raw Time"))
@@ -398,26 +426,27 @@ class ScoreList extends StatelessWidget {
       ),
     );
   }
+
   Widget _buildStageScoreRow(BuildContext context, int i, MatchStage stage) {
-    var matchScore = filteredScores[i];
-    var stageScore = filteredScores[i].stageScores[stage];
+    var matchScore = widget.filteredScores[i];
+    var stageScore = widget.filteredScores[i].stageScores[stage];
 
     return GestureDetector(
       onTap: () async {
-        if(whatIfMode) {
+        if(widget.whatIfMode) {
           var action = await (showDialog<ShooterDialogAction>(context: context, barrierDismissible: false, builder: (context) {
-            return EditableShooterCard(sport: match!.sport, stageScore: stageScore, scoreDQ: scoreDQ,);
+            return EditableShooterCard(sport: widget.match!.sport, stageScore: stageScore, scoreDQ: widget.scoreDQ,);
           }));
 
           if(action != null) {
             if (action.scoreEdit.rescore) {
-              onScoreEdited(matchScore.shooter, stage, action.scoreEdit.wholeMatch);
+              widget.onScoreEdited(matchScore.shooter, stage, action.scoreEdit.wholeMatch);
             }
             if (action.launchComparison) {
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) => CompareShooterResultsPage(
-                    scores: baseScores,
+                    scores: widget.baseScores,
                     initialShooters: [matchScore.shooter],
                   )
                 )
@@ -427,13 +456,13 @@ class ScoreList extends StatelessWidget {
         }
         else {
           var action = await showDialog<ShooterDialogAction>(context: context, builder: (context) {
-            return ShooterResultCard(stageScore: stageScore, scoreDQ: scoreDQ,);
+            return ShooterResultCard(stageScore: stageScore, scoreDQ: widget.scoreDQ,);
           });
 
           if(action != null && action.launchComparison) {
             Navigator.of(context).push(MaterialPageRoute(
                 builder: (context) => CompareShooterResultsPage(
-                  scores: baseScores,
+                  scores: widget.baseScores,
                   initialShooters: [matchScore.shooter],
                 )
             ));
@@ -442,31 +471,37 @@ class ScoreList extends StatelessWidget {
       },
       child: ScoreRow(
         color: i % 2 == 1 ? Colors.grey[200] : Colors.white,
-        edited: editedShooters.contains(matchScore.shooter),
+        edited: widget.editedShooters.contains(matchScore.shooter),
         child: Padding(
           padding: const EdgeInsets.all(2.0),
           child: Row(
             children: [
-              Expanded(flex: 1, child: Text("${baseScores.indexOf(matchScore) + 1}")),
+              Expanded(flex: 1, child: Text("${widget.baseScores.indexOf(matchScore) + 1}")),
               Expanded(flex: 1, child: Text("${stageScore?.place}")),
               Expanded(flex: 3, child: Text(matchScore.shooter.getName())),
-              if(ratings != null) Consumer<ScoreDisplaySettingsModel>(
+              if(widget.ratings != null) Consumer<ScoreDisplaySettingsModel>(
                   builder: (context, model, _) {
                     String text = "n/a";
-                    // TODO: restore when ratings are converted
-                    switch(model.value.ratingMode) {
-                      case RatingDisplayMode.preMatch:
-                        var rating = ratings!.lookupNew(match!, matchScore.shooter)?.ratingForEvent(match!, null, beforeMatch: true).round();
-                        if(rating != null) text = rating.toString();
-                        break;
-                      case RatingDisplayMode.postMatch:
-                        var rating = ratings!.lookupNew(match!, matchScore.shooter)?.ratingForEvent(match!, null, beforeMatch: false).round();
-                        if(rating != null) text = rating.toString();
-                        break;
-                      case RatingDisplayMode.change:
-                        var rating = ratings!.lookupNew(match!, matchScore.shooter)?.changeForNewEvent(match!, stage);
-                        if(rating != null) text = rating.toStringAsFixed(1);
-                        break;
+                    var dbRating = ratingCache!.lookupRating(matchScore.shooter);
+                    var settings = ratingCache!.getSettings();
+
+                    if(dbRating != null && settings != null) {
+                      var rating = settings.algorithm.wrapDbRating(dbRating);
+
+                      switch(model.value.ratingMode) {
+                        case RatingDisplayMode.preMatch:
+                          var r = rating.ratingForEvent(widget.match!, null, beforeMatch: true).round();
+                          text = r.toString();
+                          break;
+                        case RatingDisplayMode.postMatch:
+                          var r = rating.ratingForEvent(widget.match!, null, beforeMatch: false).round();
+                          text = r.toString();
+                          break;
+                        case RatingDisplayMode.change:
+                          var r = rating.changeForNewEvent(widget.match!, stage);
+                          if(r != null) text = r.toStringAsFixed(1);
+                          break;
+                      }
                     }
                     return Expanded(flex: 1, child: Text(text));
                   }
@@ -476,7 +511,7 @@ class ScoreList extends StatelessWidget {
               if(sport.hasPowerFactors) Expanded(flex: 1, child: Text(matchScore.shooter.powerFactor.shortName)),
               if(sport.type.isHitFactor) Consumer<ScoreDisplaySettingsModel>(
                 builder: (context, model, _) {
-                  var matchScoring = match!.sport.matchScoring;
+                  var matchScoring = widget.match!.sport.matchScoring;
                   bool hasFixedTime = false;
                   if(matchScoring is RelativeStageFinishScoring) {
                     if(matchScoring.pointsAreUSPSAFixedTime) hasFixedTime = true;
@@ -486,7 +521,7 @@ class ScoreList extends StatelessWidget {
                     int maxPoints = 0;
 
                     if(stageScore!.score.scoring is PointsScoring) {
-                      for(var score in baseScores) {
+                      for(var score in widget.baseScores) {
                         if(score.stageScores[stage] != null && score.stageScores[stage]!.score.points > maxPoints) {
                           maxPoints = score.stageScores[stage]!.score.points;
                         }
@@ -496,12 +531,12 @@ class ScoreList extends StatelessWidget {
                       maxPoints = stage.maxPoints;
                     }
 
-                    return Expanded(flex: 3, child: Text("${!scoreDQ && stageScore.shooter.dq ? 0 : stageScore.score.getTotalPoints(countPenalties: model.value.availablePointsCountPenalties)} "
-                        "(${((stageScore.getPercentTotalPoints(scoreDQ: scoreDQ, countPenalties: model.value.availablePointsCountPenalties, maxPoints: maxPoints)).asPercentage(decimals: 1))}%)"));
+                    return Expanded(flex: 3, child: Text("${!widget.scoreDQ && stageScore.shooter.dq ? 0 : stageScore.score.getTotalPoints(countPenalties: model.value.availablePointsCountPenalties)} "
+                        "(${((stageScore.getPercentTotalPoints(scoreDQ: widget.scoreDQ, countPenalties: model.value.availablePointsCountPenalties, maxPoints: maxPoints)).asPercentage(decimals: 1))}%)"));
                   }
                   else {
-                    return Expanded(flex: 3, child: Text("${!scoreDQ && (stageScore?.shooter.dq ?? false)? 0 : stageScore?.score.getTotalPoints()} "
-                        "(${((stageScore?.getPercentTotalPoints(scoreDQ: scoreDQ, countPenalties: model.value.availablePointsCountPenalties) ?? 0).asPercentage(decimals: 1))}%)"));
+                    return Expanded(flex: 3, child: Text("${!widget.scoreDQ && (stageScore?.shooter.dq ?? false)? 0 : stageScore?.score.getTotalPoints()} "
+                        "(${((stageScore?.getPercentTotalPoints(scoreDQ: widget.scoreDQ, countPenalties: model.value.availablePointsCountPenalties) ?? 0).asPercentage(decimals: 1))}%)"));
                   }
                 },
               ),

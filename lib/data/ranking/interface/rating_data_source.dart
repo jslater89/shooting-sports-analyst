@@ -5,7 +5,9 @@
  */
 
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
+import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 enum DataSourceError implements ResultErr {
@@ -28,11 +30,16 @@ class DataSourceResult<T> extends Result<T, DataSourceError> {
 
 /// A RatingDataSource is a view into a rating project sufficient for the UI
 /// to display it and interact with it.
+///
+///
 abstract interface class RatingDataSource {
   Future<DataSourceResult<RatingProjectSettings>> getSettings();
-  Future<DataSourceResult<List<DbRatingGroup>>> getGroups();
+  Future<DataSourceResult<List<RatingGroup>>> getGroups();
   Future<DataSourceResult<List<int>>> getMatchDatabaseIds();
   Future<DataSourceResult<List<String>>> matchSourceIds();
+
+  /// Look up a rating for a given match entry.
+  Future<DataSourceResult<DbShooterRating?>> lookupRating(MatchEntry shooter);
 }
 
 /// An EditableRatingDataSource is a view into a rating project sufficient to

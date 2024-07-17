@@ -13,11 +13,11 @@ class RaterGroupsDialog extends StatefulWidget {
   const RaterGroupsDialog({Key? key, required this.selectedGroups, this.customGroups = const [], this.groupProvider}) : super(key: key);
 
   final RatingGroupsProvider? groupProvider;
-  final List<DbRatingGroup> selectedGroups;
-  final List<DbRatingGroup> customGroups;
+  final List<RatingGroup> selectedGroups;
+  final List<RatingGroup> customGroups;
 
-  List<DbRatingGroup> get allGroups {
-    List<DbRatingGroup> all = [];
+  List<RatingGroup> get allGroups {
+    List<RatingGroup> all = [];
     if(groupProvider != null) {
       all.addAll(groupProvider!.builtinRatingGroups);
     }
@@ -31,7 +31,7 @@ class RaterGroupsDialog extends StatefulWidget {
 
 class _RaterGroupsDialogState extends State<RaterGroupsDialog> {
 
-  Map<DbRatingGroup, bool> checked = {};
+  Map<RatingGroup, bool> checked = {};
 
   RatingGroupsProvider? get provider => widget.groupProvider;
 

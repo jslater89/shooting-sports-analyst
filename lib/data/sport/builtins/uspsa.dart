@@ -210,17 +210,17 @@ class _UspsaPubstompProvider implements PubstompProvider {
 
 class _UspsaRatingGroupsProvider implements RatingGroupsProvider {
   @override
-  List<DbRatingGroup> get builtinRatingGroups => _builtinRaterGroups;
+  List<RatingGroup> get builtinRatingGroups => _builtinRaterGroups;
 
   @override
-  List<DbRatingGroup> get defaultRatingGroups => divisionRatingGroups;
+  List<RatingGroup> get defaultRatingGroups => divisionRatingGroups;
 
   @override
-  List<DbRatingGroup> get divisionRatingGroups => _builtinRaterGroups.where((g) => g.divisionNames.length == 1).toList();
+  List<RatingGroup> get divisionRatingGroups => _builtinRaterGroups.where((g) => g.divisionNames.length == 1).toList();
 }
 
-final _builtinRaterGroups = <DbRatingGroup>[
-  DbRatingGroup.create(
+final _builtinRaterGroups = <RatingGroup>[
+  RatingGroup.create(
     uuid: "uspsa-open",
     sportName: _uspsaName,
     name: "Open",
@@ -228,7 +228,7 @@ final _builtinRaterGroups = <DbRatingGroup>[
       uspsaOpen.name,
     ]
   ),
-  DbRatingGroup.create(
+  RatingGroup.create(
     uuid: "uspsa-limited",
     sportName: _uspsaName,
     name: "Limited",
@@ -237,7 +237,7 @@ final _builtinRaterGroups = <DbRatingGroup>[
       uspsaLimited.name,
     ],
   ),
-  DbRatingGroup.create(
+  RatingGroup.create(
     uuid: "uspsa-pcc",
     sportName: _uspsaName,
     name: "PCC",
@@ -245,7 +245,7 @@ final _builtinRaterGroups = <DbRatingGroup>[
       uspsaPcc.name,
     ],
   ),
-  DbRatingGroup.create(
+  RatingGroup.create(
     uuid: "uspsa-carryoptics",
     sportName: _uspsaName,
     name: "Carry Optics",
@@ -254,7 +254,7 @@ final _builtinRaterGroups = <DbRatingGroup>[
       uspsaCarryOptics.name,
     ],
   ),
-  DbRatingGroup.create(
+  RatingGroup.create(
     uuid: "uspsa-locap",
     sportName: _uspsaName,
     name: "Locap",
@@ -265,7 +265,7 @@ final _builtinRaterGroups = <DbRatingGroup>[
       uspsaRevolver.name,
     ],
   ),
-  DbRatingGroup.create(
+  RatingGroup.create(
     uuid: "uspsa-singlestack",
     sportName: _uspsaName,
     name: "Single Stack",
@@ -274,7 +274,7 @@ final _builtinRaterGroups = <DbRatingGroup>[
       uspsaSingleStack.name,
     ],
   ),
-  DbRatingGroup.create(
+  RatingGroup.create(
     uuid: "uspsa-production",
     sportName: _uspsaName,
     name: "Production",
@@ -283,7 +283,7 @@ final _builtinRaterGroups = <DbRatingGroup>[
       uspsaProduction.name,
     ],
   ),
-  DbRatingGroup.create(
+  RatingGroup.create(
     uuid: "uspsa-limited10",
     sportName: _uspsaName,
     name: "Limited 10",
@@ -292,7 +292,7 @@ final _builtinRaterGroups = <DbRatingGroup>[
       uspsaLimited10.name,
     ],
   ),
-  DbRatingGroup.create(
+  RatingGroup.create(
     uuid: "uspsa-revolver",
     sportName: _uspsaName,
     name: "Revolver",
@@ -301,7 +301,7 @@ final _builtinRaterGroups = <DbRatingGroup>[
       uspsaRevolver.name,
     ],
   ),
-  DbRatingGroup.create(
+  RatingGroup.create(
     uuid: "uspsa-open-pcc",
     sportName: _uspsaName,
     name: "Open/PCC",
@@ -310,7 +310,7 @@ final _builtinRaterGroups = <DbRatingGroup>[
       uspsaPcc.name,
     ],
   ),
-  DbRatingGroup.create(
+  RatingGroup.create(
     uuid: "uspsa-limited-co",
     sportName: _uspsaName,
     name: "Limited/Carry Optics",
@@ -320,7 +320,7 @@ final _builtinRaterGroups = <DbRatingGroup>[
       uspsaCarryOptics.name,
     ],
   ),
-  DbRatingGroup.create(
+  RatingGroup.create(
     uuid: "uspsa-limited-optics",
     sportName: _uspsaName,
     name: "Limited Optics",
@@ -329,7 +329,7 @@ final _builtinRaterGroups = <DbRatingGroup>[
       uspsaLimitedOptics.name,
     ],
   ),
-  DbRatingGroup.create(
+  RatingGroup.create(
     uuid: "uspsa-lo-co",
     sportName: _uspsaName,
     name: "LO/CO",
@@ -338,7 +338,7 @@ final _builtinRaterGroups = <DbRatingGroup>[
       uspsaCarryOptics.name,
     ],
   ),
-  DbRatingGroup.create(
+  RatingGroup.create(
     uuid: "uspsa-lim-lo-co",
     sportName: _uspsaName,
     name: "Limited/LO/CO",
@@ -349,7 +349,7 @@ final _builtinRaterGroups = <DbRatingGroup>[
       uspsaCarryOptics.name,
     ],
   ),
-  DbRatingGroup.create(
+  RatingGroup.create(
     uuid: "uspsa-limited-lo",
     sportName: _uspsaName,
     name: "Limited/LO",
@@ -358,7 +358,7 @@ final _builtinRaterGroups = <DbRatingGroup>[
       uspsaLimitedOptics.name,
     ],
   ),
-  DbRatingGroup.create(
+  RatingGroup.create(
     uuid: "uspsa-optic-handguns",
     sportName: _uspsaName,
     name: "Optic Handguns",
@@ -369,7 +369,7 @@ final _builtinRaterGroups = <DbRatingGroup>[
       uspsaLimitedOptics.name,
     ],
   ),
-  DbRatingGroup.create(
+  RatingGroup.create(
     uuid: "uspsa-irons-handguns",
     sportName: _uspsaName,
     name: "Irons Handguns",
@@ -382,7 +382,7 @@ final _builtinRaterGroups = <DbRatingGroup>[
       uspsaLimited10.name,
     ],
   ),
-  DbRatingGroup.create(
+  RatingGroup.create(
     uuid: "uspsa-combined",
     sportName: _uspsaName,
     name: "Combined",

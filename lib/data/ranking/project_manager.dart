@@ -215,9 +215,9 @@ class RatingProject with DbSportEntity {
   RatingProjectSettings settings;
   final matches = IsarLinks<DbShootingMatch>;
   final matchesInProgress = IsarLinks<DbShootingMatch>;
-  final customGroups = IsarLinks<DbRatingGroup>;
+  final customGroups = IsarLinks<RatingGroup>;
   final List<String> builtinGroupNames;
-  List<DbRatingGroup> get builtinRatingGroups {
+  List<RatingGroup> get builtinRatingGroups {
     var provider = sport.builtinRatingGroupsProvider;
     if(provider == null) {
       _log.w("Attempted to get builtin rating groups for $sportName which doesn't provide them");

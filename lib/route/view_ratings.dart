@@ -73,7 +73,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   late RatingHistory _history;
   bool _historyChanged = false;
 
-  List<DbRatingGroup> activeTabs = [];
+  List<RatingGroup> activeTabs = [];
 
   late RatingProjectSettings _settings;
   RatingSortMode _sortMode = RatingSortMode.rating;
@@ -666,7 +666,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     }
   }
 
-  Future<void> _startPredictionView(Rater rater, OldRaterGroup tab) async {
+  Future<void> _startPredictionView(Rater rater, RatingGroup tab) async {
     var options = _ratings.toSet().toList(); //rater.knownShooters.values.toSet().toList();
     options.sort((a, b) => b.rating.compareTo(a.rating));
     List<ShooterRating>? shooters = [];

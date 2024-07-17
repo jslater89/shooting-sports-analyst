@@ -69,7 +69,7 @@ class DbShooterRating extends Shooter with DbSportEntity {
   @Index(composite: [CompositeIndex("group")], unique: true)
   @Backlink(to: "ratings")
   final project = IsarLink<DbRatingProject>();
-  final group = IsarLink<DbRatingGroup>();
+  final group = IsarLink<RatingGroup>();
 
   /// All events belonging to this rating.
   final events = IsarLinks<DbRatingEvent>();

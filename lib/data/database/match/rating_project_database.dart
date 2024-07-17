@@ -59,7 +59,7 @@ extension RatingProjectDatabase on AnalystDatabase {
   /// a rating is not found. [memberNumber] is assumed to be processed.
   Future<DbShooterRating?> maybeKnownShooter({
     required DbRatingProject project,
-    required DbRatingGroup group,
+    required RatingGroup group,
     required String memberNumber
   }) {
     return isar.dbShooterRatings.where().dbKnownMemberNumbersElementEqualTo(memberNumber)
@@ -71,7 +71,7 @@ extension RatingProjectDatabase on AnalystDatabase {
 
   Future<DbShooterRating> newShooterRatingFromWrapped({
     required DbRatingProject project,
-    required DbRatingGroup group,
+    required RatingGroup group,
     required ShooterRating rating,
   }) {
     var dbRating = rating.wrappedRating;
@@ -118,13 +118,13 @@ extension RatingProjectDatabase on AnalystDatabase {
 
   }
 
-  Future<int> countShooterRatings(DbRatingProject project, DbRatingGroup group) async {
+  Future<int> countShooterRatings(DbRatingProject project, RatingGroup group) async {
     return await project.ratings.filter()
         .group((q) => q.idEqualTo(group.id))
         .count();
   }
 
-  Future<List<double>> getConnectedness(DbRatingProject project, DbRatingGroup group) {
+  Future<List<double>> getConnectedness(DbRatingProject project, RatingGroup group) {
     return project.ratings.filter()
         .group((q) => q.idEqualTo(group.id))
         .connectednessProperty()

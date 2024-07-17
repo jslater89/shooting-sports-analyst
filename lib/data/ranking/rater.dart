@@ -74,7 +74,7 @@ class Rater {
 
   RatingSystem ratingSystem;
 
-  DbRatingGroup group;
+  RatingGroup group;
 
   FilterSet get filters => group.filters;
 

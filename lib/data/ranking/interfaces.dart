@@ -47,7 +47,7 @@ abstract interface class PubstompProvider {
 /// string ID for each group in the UUID property, of the form
 /// `'sportname-groupname'`.
 abstract interface class RatingGroupsProvider {
-  List<DbRatingGroup> get builtinRatingGroups;
-  List<DbRatingGroup> get divisionRatingGroups;
-  List<DbRatingGroup> get defaultRatingGroups;
+  List<RatingGroup> get builtinRatingGroups;
+  List<RatingGroup> get divisionRatingGroups;
+  List<RatingGroup> get defaultRatingGroups;
 }

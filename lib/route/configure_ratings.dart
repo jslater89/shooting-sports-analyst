@@ -78,7 +78,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
   bool _keepHistory = false;
 
-  List<DbRatingGroup> _groups = [];
+  List<RatingGroup> _groups = [];
   bool _checkDataEntryErrors = true;
 
   ScrollController _settingsScroll = ScrollController();
@@ -926,7 +926,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
   void _restoreDefaults() {
     _settingsController.restoreDefaults();
-    List<DbRatingGroup> groups = [];
+    List<RatingGroup> groups = [];
     var provider = sport!.builtinRatingGroupsProvider;
     if(provider != null) {
       groups = provider.defaultRatingGroups;
