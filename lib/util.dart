@@ -151,6 +151,12 @@ extension StableIntHash on int {
   }
 }
 
+int combineHashes(int hash, int value) {
+  hash = 0x1fffffff & (hash + value);
+  hash = 0x1fffffff & (hash + ((0x0007ffff & hash) << 10));
+  return hash ^ (hash >> 6);
+}
+
 extension AsPercentage on double {
   String asPercentage({int decimals = 2}) {
     return (this * 100).toStringAsFixed(decimals);

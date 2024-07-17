@@ -8,7 +8,11 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
+import 'package:shooting_sports_analyst/data/ranking/interface/synchronous_rating_data_source.dart';
+import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_shooter_rating.dart';
@@ -22,8 +26,8 @@ import 'package:shooting_sports_analyst/ui/rater/shooter_stats_dialog.dart';
 class RaterView extends StatefulWidget {
   const RaterView({
     Key? key,
-    required this.history,
-    required this.rater,
+    required this.dataSource,
+    required this.group,
     required this.currentMatch,
     this.search, this.maxAge, this.minRatings = 0,
     this.sortMode = RatingSortMode.rating,
@@ -36,8 +40,8 @@ class RaterView extends StatefulWidget {
   final Duration? maxAge;
   final RatingFilters filters;
   final int minRatings;
-  final RatingHistory history;
-  final Rater rater;
+  final RatingDataSource dataSource;
+  final RatingGroup group;
   final ShootingMatch currentMatch;
   final RatingSortMode sortMode;
 
@@ -51,8 +55,34 @@ class RaterView extends StatefulWidget {
 }
 
 class _RaterViewState extends State<RaterView> {
+  late RatingProjectSettings settings;
+  late List<RatingGroup> groups;
+  late List<ShooterRating> uniqueRatings;
+
   @override
   Widget build(BuildContext context) {
+    var cachedSource = Provider.of<SynchronousRatingDataSource>(context);
+
+    var s = cachedSource.getSettings();
+    var g = cachedSource.getGroups();
+
+    // TODO: lean on state/DB for this eventually?
+    var ratings = cachedSource.getRatings(widget.group);
+    if(s == null || g == null || ratings == null) {
+      return CircularProgressIndicator(value: null);
+    }
+    else {
+      var wrappedRatings = [
+        for(var r in ratings)
+          settings.algorithm.wrapDbRating(r)
+      ];
+      setState(() {
+        settings = s;
+        groups = g;
+        uniqueRatings = wrappedRatings;
+      });
+    }
+
     return Column(
       children: [
         ..._buildRatingKey(),
@@ -79,7 +109,7 @@ class _RaterViewState extends State<RaterView> {
           ),
           child: Padding(
             padding: const EdgeInsets.all(2.0),
-            child: widget.rater.ratingSystem.buildRatingKey(context)
+            child: settings.algorithm.buildRatingKey(context)
           )
       ),
     )];
@@ -93,7 +123,7 @@ class _RaterViewState extends State<RaterView> {
       hiddenShooters.add(Rater.processMemberNumber(widget.hiddenShooters[i]));
     }
 
-    var sortedRatings = widget.rater.uniqueShooters.where((e) => e.ratingEvents.length >= widget.minRatings);
+    var sortedRatings = uniqueRatings.where((e) => e.ratingEvents.length >= widget.minRatings);
     // var sortedRatings = widget.rater.uniqueShooters.where((e) => e.ratingEvents.length > widget.minRatings).sorted((a, b) {
     //   var bRating = b.averageRating(window: _ratingWindow);
     //   var aRating = a.averageRating(window: _ratingWindow);
@@ -140,7 +170,7 @@ class _RaterViewState extends State<RaterView> {
       sortedRatings = sortedRatings.where((r) => !hiddenShooters.contains(r.memberNumber));
     }
 
-    var comparator = widget.rater.ratingSystem.comparatorFor(widget.sortMode) ?? widget.sortMode.comparator();
+    var comparator = settings.algorithm.comparatorFor(widget.sortMode) ?? widget.sortMode.comparator();
     var asList = sortedRatings.sorted(comparator);
     
     widget.onRatingsFiltered?.call(asList);
@@ -155,15 +185,11 @@ class _RaterViewState extends State<RaterView> {
               return GestureDetector(
                 key: Key(asList[i].memberNumber),
                 onTap: () {
-                  var ratings = <RatingGroup, Rater>{};
-                  for(var group in widget.history.groups) {
-                    ratings[group] = widget.history.latestRaterFor(group);
-                  }
                   showDialog(context: context, builder: (context) {
-                    return ShooterStatsDialog(rating: asList[i], match: widget.currentMatch, ratings: ratings, showDivisions: widget.rater.group.divisions.length > 1);
+                    return ShooterStatsDialog(rating: asList[i], match: widget.currentMatch, ratings: widget.dataSource, showDivisions: widget.group.divisions.length > 1);
                   });
                 },
-                child: widget.rater.ratingSystem.buildRatingRow(
+                child: settings.algorithm.buildRatingRow(
                   context: context,
                   place: i + 1,
                   rating: asList[i],

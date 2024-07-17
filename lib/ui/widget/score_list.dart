@@ -300,7 +300,7 @@ class _ScoreListState extends State<ScoreList> {
               if(widget.ratings != null) Consumer<ScoreDisplaySettingsModel>(
                 builder: (context, model, _) {
                   String text = "n/a";
-                  var dbRating = ratingCache!.lookupRating(score.shooter);
+                  var dbRating = ratingCache!.lookupRatingByMatchEntry(score.shooter);
                   var settings = ratingCache!.getSettings();
 
                   if(dbRating != null && settings != null) {
@@ -482,7 +482,7 @@ class _ScoreListState extends State<ScoreList> {
               if(widget.ratings != null) Consumer<ScoreDisplaySettingsModel>(
                   builder: (context, model, _) {
                     String text = "n/a";
-                    var dbRating = ratingCache!.lookupRating(matchScore.shooter);
+                    var dbRating = ratingCache!.lookupRatingByMatchEntry(matchScore.shooter);
                     var settings = ratingCache!.getSettings();
 
                     if(dbRating != null && settings != null) {

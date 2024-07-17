@@ -38,8 +38,10 @@ abstract interface class RatingDataSource {
   Future<DataSourceResult<List<int>>> getMatchDatabaseIds();
   Future<DataSourceResult<List<String>>> matchSourceIds();
 
-  /// Look up a rating for a given match entry.
-  Future<DataSourceResult<DbShooterRating?>> lookupRating(MatchEntry shooter);
+  /// Look up a rating for a given member number.
+  Future<DataSourceResult<DbShooterRating?>> lookupRating(RatingGroup group, String memberNumber);
+
+  Future<DataSourceResult<List<DbShooterRating>>> getRatings(RatingGroup group);
 }
 
 /// An EditableRatingDataSource is a view into a rating project sufficient to

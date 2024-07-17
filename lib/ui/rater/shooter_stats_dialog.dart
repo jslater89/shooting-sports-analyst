@@ -448,7 +448,6 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     );
   }
 
-  // TODO: restore once rater is updated
   void _launchScoreView(RatingEvent e) {
     var newMatch = e.match;
     var division = newMatch.sport.divisions.lookupByName(e.score.shooter.division?.displayName ?? "Open")!;
