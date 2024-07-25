@@ -8,6 +8,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_mode.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
@@ -114,11 +115,24 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
 
   @override
   RatingEvent newEvent({
-    required ShootingMatch match, MatchStage? stage,
-    required ShooterRating rating, required RelativeScore score, Map<String, List<dynamic>> info = const {}
+    required ShootingMatch match,
+    MatchStage? stage,
+    required ShooterRating rating,
+    required RelativeMatchScore matchScore,
+    required RelativeScore score,
+    Map<String, List<dynamic>> info = const {}
   }) {
     rating as OpenskillRating;
-    return OpenskillRatingEvent(initialMu: rating.mu, muChange: 0, sigmaChange: 0, match: match, stage: stage, score: score, info: info);
+    return OpenskillRatingEvent(
+      initialMu: rating.mu,
+      muChange: 0,
+      sigmaChange: 0,
+      match: match,
+      stage: stage,
+      score: score,
+      matchScore: matchScore,
+      info: info
+    );
   }
 
   @override
@@ -222,6 +236,11 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
 
   @override
   int histogramBucketSize(int shooters, int matchCount) => 10;
+
+  @override
+  OpenskillRating wrapDbRating(DbShooterRating rating) {
+    return OpenskillRating.wrapDbRating(rating);
+  }
 }
 
 class OpenskillScore {

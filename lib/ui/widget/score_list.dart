@@ -66,14 +66,14 @@ class _ScoreListState extends State<ScoreList> {
   // Will only be used once match is no longer null
   Sport get sport => widget.match!.sport;
 
-  SynchronousRatingDataSource? ratingCache;
+  ChangeNotifierRatingDataSource? ratingCache;
 
   @override
   void initState() {
     super.initState();
 
     if(widget.ratings != null) {
-      ratingCache = SynchronousRatingDataSource(widget.ratings!);
+      ratingCache = ChangeNotifierRatingDataSource(widget.ratings!);
       ratingCache!.addListener(() {
         setState(() {
           // ratings were reloaded

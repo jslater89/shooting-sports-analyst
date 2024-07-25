@@ -228,8 +228,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
           ],
         )) ?? false;
       },
-      child: ChangeNotifierProvider<SynchronousRatingDataSource>(
-        create: (_) => SynchronousRatingDataSource(widget.dataSource),
+      child: ChangeNotifierProvider<ChangeNotifierRatingDataSource>(
+        create: (_) => ChangeNotifierRatingDataSource(widget.dataSource),
         builder: (context, _) {
           return Scaffold(
             appBar: AppBar(

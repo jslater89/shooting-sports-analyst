@@ -5,30 +5,61 @@
  */
 
 
+import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rating_change.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
+
+enum _DoubleKeys {
+  mu,
+  sigma,
+}
 
 class OpenskillRating extends ShooterRating {
   @override
   double get rating => ordinal;
 
-  double mu;
-  double sigma;
+  double get mu => wrappedRating.doubleData[_DoubleKeys.mu.index];
+  set mu(double v) => wrappedRating.doubleData[_DoubleKeys.mu.index] = v;
+
+  double get sigma => wrappedRating.doubleData[_DoubleKeys.sigma.index];
+  set sigma(double v) => wrappedRating.doubleData[_DoubleKeys.sigma.index] = v;
 
   double get ordinal => mu - 2*sigma;
 
-  @override
-  List<RatingEvent> ratingEvents = [];
+  List<RatingEvent> get ratingEvents {
+    if(!wrappedRating.events.isLoaded) {
+      wrappedRating.events.loadSync();
+    }
+    var events = <OpenskillRatingEvent>[];
+    for(var e in wrappedRating.events) {
+      events.add(OpenskillRatingEvent.wrap(e));
+    }
+    return events;
+  }
+  List<RatingEvent> emptyRatingEvents = [];
 
-  OpenskillRating(MatchEntry shooter, this.mu, this.sigma, {required super.sport, required DateTime date}) :
-      super(shooter, date: date, doubleDataElements: 2, intDataElements: 0);
+  OpenskillRating(MatchEntry shooter, double mu, double sigma, {required super.sport, required DateTime date}) :
+      super(shooter, date: date, doubleDataElements: 2, intDataElements: 0) {
+    this.mu = mu;
+    this.sigma = sigma;
+  }
+
+  void replaceAllRatingEvents(List<OpenskillRatingEvent> events) {
+    wrappedRating.events.clear();
+    wrappedRating.events.addAll(events.map((e) => e.wrappedEvent));
+  }
 
   OpenskillRating.copy(OpenskillRating other) :
-      this.mu = other.mu,
-      this.sigma = other.sigma,
-      this.ratingEvents = other.ratingEvents.map((e) => OpenskillRatingEvent.copy(e as OpenskillRatingEvent)).toList(),
-      super.copy(other);
+      super.copy(other) {
+    {
+      this.replaceAllRatingEvents(other.ratingEvents.map((e) => OpenskillRatingEvent.copy(e as OpenskillRatingEvent)).toList());
+      this.mu = mu;
+      this.sigma = sigma;
+    }
+  }
+
+  OpenskillRating.wrapDbRating(DbShooterRating rating) : super.wrapDbRating(rating);
 
   @override
   void updateFromEvents(List<RatingEvent> events) {
@@ -65,7 +96,4 @@ class OpenskillRating extends ShooterRating {
 
   @override
   List<RatingEvent> get combinedRatingEvents => []..addAll(ratingEvents)..addAll(emptyRatingEvents);
-
-  @override
-  List<RatingEvent> emptyRatingEvents = [];
 }

@@ -4,34 +4,49 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rater.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 
+enum _DoubleKeys {
+  sigmaChange
+}
+
 class OpenskillRatingEvent extends RatingEvent {
-  double muChange;
-  double sigmaChange;
+  double get sigmaChange => wrappedEvent.doubleData[_DoubleKeys.sigmaChange.index];
+  set sigmaChange(double v) => wrappedEvent.doubleData[_DoubleKeys.sigmaChange.index] = v;
 
-  double initialMu;
+  double get initialMu => super.oldRating;
+  set initialMu(double v) => super.oldRating = v;
 
-  double get oldRating => initialMu;
-  double get ratingChange => muChange;
+  double get muChange => super.ratingChange;
+  set muChange(double v) => super.ratingChange = v;
 
   OpenskillRatingEvent({
-    required this.initialMu,
-    required this.muChange,
-    required this.sigmaChange,
+    required double initialMu,
+    required double muChange,
+    required double sigmaChange,
     required ShootingMatch match,
     MatchStage? stage,
     required RelativeScore score,
+    required RelativeScore matchScore,
     Map<String, List<dynamic>> info = const {}
-  }) : super(
-    match: match,
-    stage: stage,
-    score: score,
-    info: info,
-  );
+  }) : super(wrappedEvent: DbRatingEvent(
+    ratingChange: muChange,
+    oldRating: initialMu,
+    matchId: match.sourceIds.first,
+    stageNumber: stage?.stageId ?? -1,
+    score: DbRelativeScore.fromHydrated(score),
+    matchScore: DbRelativeScore.fromHydrated(matchScore),
+    entryId: score.shooter.entryId,
+    date: match.date,
+    intDataElements: 0,
+    doubleDataElements: _DoubleKeys.values.length,
+  )) {
+    this.info = info;
+  }
 
   @override
   void apply(RatingChange change) {
@@ -40,8 +55,12 @@ class OpenskillRatingEvent extends RatingEvent {
   }
 
   OpenskillRatingEvent.copy(OpenskillRatingEvent other) :
-      this.initialMu = other.initialMu,
-      this.muChange = other.muChange,
-      this.sigmaChange = other.sigmaChange,
-      super.copy(other);
+      super.copy(other) {
+    this.initialMu = other.initialMu;
+    this.muChange = other.muChange;
+    this.sigmaChange = other.sigmaChange;
+  }
+
+  OpenskillRatingEvent.wrap(DbRatingEvent event) :
+        super(wrappedEvent: event);
 }

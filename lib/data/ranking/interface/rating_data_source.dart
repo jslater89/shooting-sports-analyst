@@ -35,6 +35,7 @@ class DataSourceResult<T> extends Result<T, DataSourceError> {
 abstract interface class RatingDataSource {
   Future<DataSourceResult<RatingProjectSettings>> getSettings();
   Future<DataSourceResult<List<RatingGroup>>> getGroups();
+  Future<DataSourceResult<RatingGroup?>> groupForDivision(Division? division);
   Future<DataSourceResult<List<int>>> getMatchDatabaseIds();
   Future<DataSourceResult<List<String>>> matchSourceIds();
 
@@ -42,6 +43,13 @@ abstract interface class RatingDataSource {
   Future<DataSourceResult<DbShooterRating?>> lookupRating(RatingGroup group, String memberNumber);
 
   Future<DataSourceResult<List<DbShooterRating>>> getRatings(RatingGroup group);
+}
+
+/// A PreloadedRatingDataSource is a rating data source that has precached its data locally.
+abstract interface class PreloadedRatingDataSource {
+  RatingProjectSettings getSettings();
+  DbShooterRating? lookupRating(RatingGroup group, String memberNumber);
+  RatingGroup? groupForDivision(Division? division);
 }
 
 /// An EditableRatingDataSource is a view into a rating project sufficient to

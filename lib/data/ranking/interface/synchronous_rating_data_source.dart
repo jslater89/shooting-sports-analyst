@@ -6,15 +6,15 @@ import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
-/// SynchronousRatingDataSource is a caching source for rating data, for use in
+/// This is a caching source for rating data, for use in
 /// UI contexts where the async nature of RatingDataSource is awkward.
 ///
 /// Calls to methods in this class will cause notifyListeners to be called when
 /// new data is available in the cache.
-class SynchronousRatingDataSource with ChangeNotifier {
+class ChangeNotifierRatingDataSource with ChangeNotifier {
   RatingDataSource _source;
 
-  SynchronousRatingDataSource(this._source);
+  ChangeNotifierRatingDataSource(this._source);
 
   /// Returns a shooter rating from the cache.
   DbShooterRating? lookupRatingByMatchEntry(MatchEntry entry) {

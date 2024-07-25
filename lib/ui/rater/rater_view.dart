@@ -61,7 +61,7 @@ class _RaterViewState extends State<RaterView> {
 
   @override
   Widget build(BuildContext context) {
-    var cachedSource = Provider.of<SynchronousRatingDataSource>(context);
+    var cachedSource = Provider.of<ChangeNotifierRatingDataSource>(context);
 
     var s = cachedSource.getSettings();
     var g = cachedSource.getGroups();

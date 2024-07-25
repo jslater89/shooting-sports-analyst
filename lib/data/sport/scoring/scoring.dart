@@ -33,7 +33,7 @@ sealed class MatchScoring {
     required List<MatchStage> stages,
     bool scoreDQ = true,
     MatchPredictionMode predictionMode = MatchPredictionMode.none,
-    RatingDataSource? ratings,
+    PreloadedRatingDataSource? ratings,
   });
 }
 
@@ -67,7 +67,7 @@ final class RelativeStageFinishScoring extends MatchScoring {
     required List<MatchStage> stages,
     bool scoreDQ = true, 
     MatchPredictionMode predictionMode = MatchPredictionMode.none,
-    RatingDataSource? ratings,
+    PreloadedRatingDataSource? ratings,
   }) {
     if(shooters.length == 0 || stages.length == 0) return {};
 
@@ -175,15 +175,15 @@ final class RelativeStageFinishScoring extends MatchScoring {
       if(predictionMode.eloAware) {
         RatingSystem? r = null;
         for(var shooter in shooters) {
-          var rating = ratings!.lookupNew(match, shooter);
+          var group = ratings!.groupForDivision(shooter.division);
+          if(group == null) continue;
+
+          var rating = ratings.lookupRating(group, shooter.memberNumber);
           if(r == null) {
-            r = ratings.lookupRater(match, shooter)?.ratingSystem;
-            if(r == null) {
-              break;
-            }
+            r = ratings.getSettings().algorithm;
           }
           if(rating != null) {
-            locatedRatings.add(rating);
+            locatedRatings.add(r.wrapDbRating(rating));
           }
         }
 
@@ -237,26 +237,32 @@ final class RelativeStageFinishScoring extends MatchScoring {
                 stageScoreTotals.incrementBy(shooter, stage.maxPoints * averageStagePercentage);
               }
               else if (predictionMode == MatchPredictionMode.averageHistoricalFinish) {
-                var rating = ratings!.lookupNew(match, shooter);
-                if(rating != null) {
-                  stageScoreTotals.incrementBy(shooter, stage.maxPoints * rating.averagePercentFinishes(offset: stagesCompleted));
-                }
-                else {
-                  // Use average stage percentage if we don't have a match history for this shooter
-                  stageScoreTotals.incrementBy(shooter, stage.maxPoints * averageStagePercentage);
+                var group = ratings!.groupForDivision(shooter.division);
+                if(group != null) {
+                  var rating = ratings.lookupRating(group, shooter.memberNumber);
+                  if (rating != null) {
+                    stageScoreTotals.incrementBy(shooter, stage.maxPoints * rating.averagePercentFinishes(offset: stagesCompleted));
+                  }
+                  else {
+                    // Use average stage percentage if we don't have a match history for this shooter
+                    stageScoreTotals.incrementBy(shooter, stage.maxPoints * averageStagePercentage);
+                  }
                 }
               }
               else if (predictionMode.eloAware) {
-                var rating = ratings!.lookupNew(match, shooter);
-                var prediction = predictions[rating];
-                if(prediction != null && highPrediction != null) {
-                  // TODO: distribute this according to a Gumbel or normal cumulative distribution function
-                  var percent = 0.3 + ((prediction.mean + prediction.shift / 2) / (highPrediction.halfHighPrediction + highPrediction.shift / 2) * 0.7);
-                  stageScoreTotals.incrementBy(shooter, stage.maxPoints * percent);
-                }
-                else {
-                  // Use average stage percentage
-                  stageScoreTotals.incrementBy(shooter, stage.maxPoints * averageStagePercentage);
+                var group = ratings!.groupForDivision(shooter.division);
+                if(group != null) {
+                  var rating = ratings.lookupRating(group, shooter.memberNumber);
+                  var prediction = predictions[rating];
+                  if (prediction != null && highPrediction != null) {
+                    // TODO: distribute this according to a Gumbel or normal cumulative distribution function
+                    var percent = 0.3 + ((prediction.mean + prediction.shift / 2) / (highPrediction.halfHighPrediction + highPrediction.shift / 2) * 0.7);
+                    stageScoreTotals.incrementBy(shooter, stage.maxPoints * percent);
+                  }
+                  else {
+                    // Use average stage percentage
+                    stageScoreTotals.incrementBy(shooter, stage.maxPoints * averageStagePercentage);
+                  }
                 }
               }
             }
@@ -310,7 +316,7 @@ final class CumulativeScoring extends MatchScoring {
     required List<MatchStage> stages,
     bool scoreDQ = true,
     MatchPredictionMode predictionMode = MatchPredictionMode.none,
-    Map<RatingGroup, Rater>? ratings,
+    PreloadedRatingDataSource? ratings,
   }) {
     if(shooters.length == 0 || stages.length == 0) return {};
 
