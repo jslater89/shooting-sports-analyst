@@ -45,7 +45,7 @@ final idpaSport = Sport(
       const Division(name: "CO", longName: "Carry Optics", shortName: "CO"),
       const Division(name: "CCP", longName: "Compact Carry Pistol", shortName: "CCP"),
       const Division(name: "BUG", longName: "Backup Gun", shortName: "BUG"),
-      const Division(name: "REV", longName: "Revolver", shortName: "REV", alternateNames: ["REVO"]),
+      const Division(name: "REV", longName: "Revolver", shortName: "REV", alternateNames: ["REVO", "SSR", "ESR"]),
       const Division(name: "NFC", longName: "Not For Competition", shortName: "NFC", alternateNames: ["SPD"], fallback: true),
     ],
     powerFactors: [
