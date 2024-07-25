@@ -7,6 +7,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_mode.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
@@ -151,9 +152,17 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
     MatchStage? stage,
     required ShooterRating rating,
     required RelativeScore score,
+    required RelativeMatchScore matchScore,
     Map<String, List<dynamic>> info = const {}
   }) {
-    return PointsRatingEvent(oldRating: rating.rating, ratingChange: 0, match: match, score: score, info: info);
+    return PointsRatingEvent(
+      oldRating: rating.rating,
+      ratingChange: 0,
+      match: match,
+      score: score,
+      matchScore: matchScore,
+      info: info
+    );
   }
 
   @override
@@ -167,8 +176,14 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
   }
 
   @override
-  PointsRating newShooterRating(MatchEntry shooter, {DateTime? date, required Sport sport}) {
-    return PointsRating(sport, shooter, settings, date: date, participationBonus: model.participationBonus);
+  PointsRating newShooterRating(MatchEntry shooter, {required DateTime date, required Sport sport}) {
+    return PointsRating(
+      shooter,
+      sport: sport,
+      date: date,
+      participationBonus: model.participationBonus,
+      matchesToCount: settings.matchesToCount,
+    );
   }
 
   @override
@@ -216,6 +231,11 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
     changes = model.apply(scores);
 
     return changes;
+  }
+
+  @override
+  PointsRating wrapDbRating(DbShooterRating rating) {
+    return PointsRating.wrapDbRating(rating);
   }
 }
 

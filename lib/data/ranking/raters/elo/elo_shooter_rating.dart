@@ -169,6 +169,7 @@ class EloShooterRating extends ShooterRating {
   List<RatingEvent> emptyRatingEvents = [];
 
   // TODO: combine this in more intelligent fashion, preserving order where possible
+  // TODO: ... like with database queries, maybe
   List<RatingEvent> get combinedRatingEvents => []..addAll(ratingEvents)..addAll(emptyRatingEvents);
 
   EloShooterRating(MatchEntry shooter, double initialRating, {required super.sport, required DateTime date}) :

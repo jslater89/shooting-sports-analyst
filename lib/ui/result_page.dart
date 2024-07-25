@@ -185,7 +185,7 @@ class _ResultPageState extends State<ResultPage> {
     return filteredShooters;
   }
 
-  void _applyFilters(FilterSet filters) {
+  Future<void> _applyFilters(FilterSet filters) async {
     _filters = filters;
 
     List<MatchEntry> filteredShooters = _filterShooters();

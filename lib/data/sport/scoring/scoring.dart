@@ -692,6 +692,12 @@ abstract class RelativeScore {
     required this.ratio,
     required this.points,
   });
+
+  RelativeScore.copy(RelativeScore other) :
+    this.shooter = other.shooter,
+    this.place = other.place,
+    this.ratio = other.ratio,
+    this.points = other.points;
 }
 
 /// A relative match score is an overall score for an entire match.

@@ -149,8 +149,8 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   // Ratings
   final ratings = IsarLinks<DbShooterRating>();
 
-  Future<List<DbShooterRating>> ratingsForGroup(RatingGroup group) async {
-    return ratings.filter().group((q) => q.uuidEqualTo(group.uuid)).findAll();
+  Future<DataSourceResult<List<DbShooterRating>>> getRatings(RatingGroup group) async {
+    return DataSourceResult.ok(await ratings.filter().group((q) => q.uuidEqualTo(group.uuid)).findAll());
   }
 
   DbRatingProject({
@@ -191,6 +191,23 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   @override
   Future<DataSourceResult<List<RatingGroup>>> getGroups() {
     return Future.value(DataSourceResult.ok(groups));
+  }
+
+  @override
+  Future<DataSourceResult<RatingGroup?>> groupForDivision(Division? division) {
+    // TODO: implement groupForDivision
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<DataSourceResult<DbShooterRating?>> lookupRating(RatingGroup group, String memberNumber) async {
+    var results = await ratings
+        .filter()
+        .dbKnownMemberNumbersElementMatches(memberNumber)
+        .and()
+        .group((q) => q.uuidEqualTo(group.uuid)).findAll();
+
+    return DataSourceResult.ok(results.firstOrNull);
   }
 }
 

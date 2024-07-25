@@ -4,23 +4,39 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 
 class PointsRatingEvent extends RatingEvent {
   PointsRatingEvent({
-    required this.oldRating,
-    required this.ratingChange,
+    required double oldRating,
+    required double ratingChange,
     required ShootingMatch match,
+    MatchStage? stage,
     required RelativeScore score,
+    required RelativeScore matchScore,
     Map<String, List<dynamic>> info = const {}
-  }) : super(match: match, score: score, info: info);
+  }) : super(
+    wrappedEvent: DbRatingEvent(
+      ratingChange: ratingChange,
+      oldRating: oldRating,
+      matchId: match.sourceIds.first,
+      date: match.date,
+      stageNumber: stage?.stageId ?? -1,
+      entryId: score.shooter.entryId,
+      score: DbRelativeScore.fromHydrated(score),
+      matchScore: DbRelativeScore.fromHydrated(matchScore),
+      intDataElements: 0,
+      doubleDataElements: 0,
+  ));
 
   PointsRatingEvent.copy(PointsRatingEvent other) :
-      this.oldRating = other.oldRating,
-      this.ratingChange = other.ratingChange,
       super.copy(other);
+
+  PointsRatingEvent.wrap(DbRatingEvent event) :
+        super(wrappedEvent: event);
 
   @override
   void apply(RatingChange change) {
@@ -31,10 +47,4 @@ class PointsRatingEvent extends RatingEvent {
       ratingChange += change.change[RatingSystem.ratingKey]!;
     }
   }
-
-  @override
-  final double oldRating;
-
-  @override
-  double ratingChange;
 }

@@ -84,7 +84,7 @@ class ShootingMatch {
     List<MatchStage>? stages,
     bool scoreDQ = true,
     MatchPredictionMode predictionMode = MatchPredictionMode.none,
-    RatingDataSource? ratings,
+    PreloadedRatingDataSource? ratings,
   }) {
     var innerShooters = shooters ?? this.shooters;
     var innerStages = stages ?? this.stages;
