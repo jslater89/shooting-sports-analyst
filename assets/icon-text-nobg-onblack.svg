@@ -9,7 +9,7 @@
    width="768"
    height="768"
    style="fill-rule:evenodd;stroke-linecap:round;stroke-linejoin:round"
-   inkscape:export-filename="/home/jay/ssa-onblack.png"
+   inkscape:export-filename="/home/jay/ssa-banner.png"
    inkscape:export-xdpi="300.05853"
    inkscape:export-ydpi="300.05853"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
@@ -34,13 +34,13 @@
    inkscape:window-height="1128"
    id="namedview23755"
    showgrid="false"
-   inkscape:zoom="0.33953581"
-   inkscape:cx="569.8957"
-   inkscape:cy="796.6759"
+   inkscape:zoom="0.67907162"
+   inkscape:cx="341.6429"
+   inkscape:cy="352.68739"
    inkscape:window-x="0"
-   inkscape:window-y="0"
+   inkscape:window-y="1200"
    inkscape:window-maximized="1"
-   inkscape:current-layer="svg23753"
+   inkscape:current-layer="g79749"
    inkscape:pagecheckerboard="0" />
 <defs
    id="defs16139">
@@ -65,7 +65,13 @@
 
 
 </defs>
-<g
+<rect
+   style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:5.10337;stroke-linecap:round;stroke-linejoin:round"
+   id="rect14434"
+   width="874.03772"
+   height="840.31348"
+   x="-49.538246"
+   y="-24.775101" /><g
    clip-path="url(#clipId0)"
    id="g16141"
    style="fill:none;stroke:#000000;stroke-width:0.1" />
@@ -73,6 +79,39 @@
 
 
 <g
+   id="g33600"
+   transform="translate(1.159678e-5)"><g
+     id="g79749"><text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:85.3333px;line-height:0.85;font-family:'Federal Escort Scanlines';-inkscape-font-specification:'Federal Escort Scanlines, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:center;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#894ba2;fill-opacity:1"
+       x="383.06131"
+       y="580.88922"
+       id="text6038"><tspan
+         sodipodi:role="line"
+         x="383.06131"
+         y="580.88922"
+         id="tspan23588"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:85.3333px;font-family:'Federal Escort Halftone';-inkscape-font-specification:'Federal Escort Halftone';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#894ba2;fill-opacity:1">SHOOTING</tspan></text><text
+       xml:space="preserve"
+       style="font-size:85.3333px;line-height:1.25;font-family:'Federal Escort Bullet';-inkscape-font-specification:'Federal Escort Bullet';letter-spacing:0px;word-spacing:0px"
+       x="182.74159"
+       y="644.23889"
+       id="text27246"><tspan
+         sodipodi:role="line"
+         id="tspan27244"
+         x="182.74159"
+         y="644.23889"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:85.3333px;font-family:'Federal Escort Halftone';-inkscape-font-specification:'Federal Escort Halftone, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#894ba2;fill-opacity:1">SPORTS</tspan></text><text
+       xml:space="preserve"
+       style="font-size:85.3333px;line-height:1.25;font-family:'Federal Escort Bullet';-inkscape-font-specification:'Federal Escort Bullet';letter-spacing:0px;word-spacing:0px;fill:#000000"
+       x="146.09093"
+       y="707.58856"
+       id="text30340"><tspan
+         sodipodi:role="line"
+         id="tspan30338"
+         x="146.09093"
+         y="707.58856"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:85.3333px;font-family:'Federal Escort Halftone';-inkscape-font-specification:'Federal Escort Halftone';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#894ba2;fill-opacity:1">ANALYST</tspan></text></g></g><g
    id="g24193"
    transform="matrix(0.68851199,0,0,0.68851199,118.75694,14.78173)"><g
      id="g12175"><path
@@ -220,37 +259,4 @@
        r="27.731001"
        cy="360.99542"
        cx="14.047415"
-       style="fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#333333;stroke-width:17.1746;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" /></g></g><g
-   id="g33600"
-   transform="translate(1.159678e-5)"><g
-     id="g79749"><text
-       xml:space="preserve"
-       style="font-size:85.3333px;line-height:0.85;font-family:'Federal Escort Scanlines';-inkscape-font-specification:'Federal Escort Scanlines, Normal';text-align:center;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#894ba2;fill-opacity:1;font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal"
-       x="383.06131"
-       y="580.88922"
-       id="text6038"><tspan
-         sodipodi:role="line"
-         x="383.06131"
-         y="580.88922"
-         id="tspan23588"
-         style="fill:#894ba2;fill-opacity:1;-inkscape-font-specification:'Federal Escort Scanlines, Normal';font-family:'Federal Escort Scanlines';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal;font-size:85.33329773px;font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal">SHOOTING</tspan></text><text
-       xml:space="preserve"
-       style="font-size:85.3333px;line-height:1.25;font-family:'Federal Escort Bullet';-inkscape-font-specification:'Federal Escort Bullet';letter-spacing:0px;word-spacing:0px"
-       x="182.74159"
-       y="644.23889"
-       id="text27246"><tspan
-         sodipodi:role="line"
-         id="tspan27244"
-         x="182.74159"
-         y="644.23889"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:85.3333px;font-family:'Federal Escort Halftone';-inkscape-font-specification:'Federal Escort Halftone, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#894ba2;fill-opacity:1">SPORTS</tspan></text><text
-       xml:space="preserve"
-       style="font-size:85.3333px;line-height:1.25;font-family:'Federal Escort Bullet';-inkscape-font-specification:'Federal Escort Bullet';letter-spacing:0px;word-spacing:0px;fill:#000000"
-       x="146.09093"
-       y="707.58856"
-       id="text30340"><tspan
-         sodipodi:role="line"
-         id="tspan30338"
-         x="146.09093"
-         y="707.58856"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:85.3333px;font-family:'Federal Escort';-inkscape-font-specification:'Federal Escort, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#894ba2;fill-opacity:1">ANALYST</tspan></text></g></g></svg>
+       style="fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#333333;stroke-width:17.1746;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" /></g></g></svg>
