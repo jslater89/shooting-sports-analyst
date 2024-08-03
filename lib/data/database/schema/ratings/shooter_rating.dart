@@ -4,10 +4,12 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 
 part 'shooter_rating.g.dart';
@@ -92,6 +94,11 @@ class DbShooterRating extends Shooter with DbSportEntity {
     return AnalystDatabase().getRatingEventsForSync(this, limit: window, offset: offset);
   }
 
+  double averageFinishRatio({int window = 0, int offset = 0}) {
+    var events = getEventsInWindowSync(window: window, offset: offset);
+    return events.map((e) => e.score.ratio).average;
+  }
+
   DbShooterRating({
     required this.sportName,
     required this.firstName,
@@ -142,3 +149,5 @@ class DbShooterRating extends Shooter with DbSportEntity {
     this.intData = []..addAll(other.intData);
   }
 }
+
+typedef WrappedRatingGenerator = ShooterRating Function(DbShooterRating r);

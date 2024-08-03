@@ -396,7 +396,8 @@ class Rater {
   RatingResult _deduplicateShooters() {
     if(sport.shooterDeduplicator != null) {
       return sport.shooterDeduplicator!.deduplicateShooters(
-        knownShooters: knownShooters,
+        ratingWrapper: (r) => ratingSystem.wrapDbRating(r),
+        knownShooters: {},
         shooterAliases: _shooterAliases,
         currentMappings: _memberNumberMappings,
         userMappings: _userMemberNumberMappings,

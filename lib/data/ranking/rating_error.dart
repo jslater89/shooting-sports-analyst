@@ -23,13 +23,13 @@ class ShooterMappingError extends RatingError {
   /// The ratings that caused this error. Will always contain two entries.
   ///
   /// The first entry is the desired source, the second is the desired target.
-  List<DbShooterRating> culprits;
+  List<ShooterRating> culprits;
 
   /// A map of the [culprits] to a list of ratings of interest in solving this issue.
   ///
   /// Accomplices will contain, primarily, other shooters with identical names to the
   /// shooter in question, which may help reveal data entry errors.
-  Map<DbShooterRating, List<DbShooterRating>> accomplices;
+  Map<ShooterRating, List<ShooterRating>> accomplices;
 
   bool dataEntry;
 }

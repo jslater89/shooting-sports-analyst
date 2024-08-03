@@ -241,7 +241,7 @@ final class RelativeStageFinishScoring extends MatchScoring {
                 if(group != null) {
                   var rating = ratings.lookupRating(group, shooter.memberNumber);
                   if (rating != null) {
-                    stageScoreTotals.incrementBy(shooter, stage.maxPoints * rating.averagePercentFinishes(offset: stagesCompleted));
+                    stageScoreTotals.incrementBy(shooter, stage.maxPoints * rating.averageFinishRatio(offset: stagesCompleted));
                   }
                   else {
                     // Use average stage percentage if we don't have a match history for this shooter

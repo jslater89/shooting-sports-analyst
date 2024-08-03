@@ -57,7 +57,7 @@ class Result<T, E extends ResultErr> {
   Result.errFrom(Result<Object?, E> other) : this._error = other.unwrapErr(), this._result = null;
 }
 
-extension AsyncResult<T, E extends ResultErr, Q extends Result<T, E>> on Future<Q> {
+extension AsyncResult<T, E extends ResultErr> on Future<Result<T, E>> {
   Future<bool> isOk() async {
     var res = await this;
     return res.isOk();

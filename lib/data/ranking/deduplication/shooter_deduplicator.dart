@@ -2,6 +2,8 @@ import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 
+import '../../database/schema/ratings/shooter_rating.dart';
+
 /// ShooterDeduplicators implement shooter deduplication: the process
 /// whereby shooters in sports that can have multiple member numbers
 /// per unique person (like USPSA's A/TY/FY, L, B, RD setup) are turned
@@ -35,7 +37,8 @@ abstract class ShooterDeduplicator {
   /// blacklists. Numbers appearing as keys in [mappingBlacklist] must not be
   /// mapped to the corresponding values.
   RatingResult deduplicateShooters({
-    required Map<String, ShooterRating> knownShooters,
+    required WrappedRatingGenerator ratingWrapper,
+    required Map<String, DbShooterRating> knownShooters,
     required Map<String, String> shooterAliases,
     required Map<String, String> currentMappings,
     required Map<String, String> userMappings,

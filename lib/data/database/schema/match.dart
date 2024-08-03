@@ -110,6 +110,14 @@ class DbShootingMatch {
       sourceIds: []..addAll(this.sourceIds),
     ));
   }
+
+  static int Function(DbShootingMatch a, DbShootingMatch b) dateComparator = (a, b) {
+    // Sort remaining matches by date descending, then by name ascending
+    var dateSort = b.date.compareTo(a.date);
+    if (dateSort != 0) return dateSort;
+
+    return a.eventName.compareTo(b.eventName);
+  };
 }
 
 @embedded

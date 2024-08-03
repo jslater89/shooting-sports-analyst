@@ -261,9 +261,9 @@ class PracticalMatch {
       if(predictionMode.eloAware) {
         RatingSystem? r = null;
         for(var shooter in innerShooters) {
-          var rating = ratings!.lookup(shooter);
+          var rating = null;
           if(r == null) {
-            r = ratings.lookupOldRater(shooter)?.ratingSystem;
+            r = ratings!.lookupOldRater(shooter)?.ratingSystem;
             if(r == null) {
               break;
             }
@@ -320,7 +320,7 @@ class PracticalMatch {
                 matchScores[shooter]!.total.relativePoints += stage.maxPoints * averageStagePercentage;
               }
               else if (predictionMode == MatchPredictionMode.averageHistoricalFinish) {
-                var rating = ratings!.lookup(shooter);
+                var rating = null;
                 if(rating != null) {
                   matchScores[shooter]!.total.relativePoints += stage.maxPoints * rating.averagePercentFinishes(offset: stagesCompleted);
                 }
@@ -330,7 +330,7 @@ class PracticalMatch {
                 }
               }
               else if (predictionMode.eloAware) {
-                var rating = ratings!.lookup(shooter);
+                var rating = null;
                 var prediction = predictions[rating];
                 if(prediction != null && highPrediction != null) {
                   var percent = 0.3 + ((prediction.mean + prediction.shift / 2) / (highPrediction.halfHighPrediction + highPrediction.shift / 2) * 0.7);

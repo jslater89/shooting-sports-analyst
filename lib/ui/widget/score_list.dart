@@ -564,17 +564,6 @@ class _ScoreListState extends State<ScoreList> {
 }
 
 extension LookupShooterRating on Map<OldRaterGroup, Rater> {
-  ShooterRating? lookup(old.Shooter s) {
-    // TODO: fix when raters are converted
-    for(var group in this.keys) {
-      if(group.divisions.contains(s.division)) {
-        return this[group]!.ratingFor(s);
-      }
-    }
-
-    return null;
-  }
-
   ShooterRating? lookupNew(ShootingMatch match, MatchEntry s) {
     Rater? group = lookupRater(match, s);
 

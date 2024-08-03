@@ -13,6 +13,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/interface/memory_cached_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
@@ -199,13 +200,17 @@ class _ResultPageState extends State<ResultPage> {
       return;
     }
 
+    PreloadedRatingDataSource? cachedRatings = null;
+    if(widget.ratings != null) {
+      cachedRatings = (await InMemoryCachedRatingSource()..initFrom(widget.ratings!, ratingsToCache: filteredShooters));
+    }
     setState(() {
       _baseScores = _currentMatch.getScores(
         shooters: filteredShooters,
         scoreDQ: _filters.scoreDQs,
         stages: _filteredStages,
         predictionMode: _settings.value.predictionMode,
-        ratings: widget.ratings,
+        ratings: cachedRatings,
       ).values.toList();
       _searchedScores = []..addAll(_baseScores);
     });
@@ -332,13 +337,18 @@ class _ResultPageState extends State<ResultPage> {
     return false;
   }
 
-  void _updateHypotheticalScores() {
-    var scores = _currentMatch!.getScores(
+  Future<void> _updateHypotheticalScores() async {
+    PreloadedRatingDataSource? cachedRatings = null;
+    if(widget.ratings != null) {
+      cachedRatings = (await InMemoryCachedRatingSource()..initFrom(widget.ratings!, ratingsToCache: _filteredShooters));
+    }
+
+    var scores = _currentMatch.getScores(
       shooters: _filteredShooters,
       scoreDQ: _filters.scoreDQs,
       stages: _filteredStages,
       predictionMode: _settings.value.predictionMode,
-      ratings: widget.ratings,
+      ratings: cachedRatings,
     );
 
     setState(() {

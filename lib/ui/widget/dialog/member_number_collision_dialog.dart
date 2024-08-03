@@ -6,6 +6,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shooting_sports_analyst/data/model.dart';
@@ -147,12 +150,12 @@ class _MemberNumberCollisionDialogState extends State<MemberNumberCollisionDialo
   }
 
   Widget _shooterCard(ShooterRating culprit, List<ShooterRating> accomplices) {
-    var matchSet = <PracticalMatch>{};
+    var matchSet = <ShootingMatch>{};
     for(var event in culprit.ratingEvents) {
       matchSet.add(event.match);
     }
     var matches = matchSet.toList();
-    matches.sort(PracticalMatch.dateComparator);
+    matches.sort(ShootingMatch.dateComparator);
     if(matches.length > 5) {
       matches = matches.sublist(0, 5);
     }
@@ -180,11 +183,11 @@ class _MemberNumberCollisionDialogState extends State<MemberNumberCollisionDialo
             MouseRegion(
               cursor: SystemMouseCursors.click,
               child: GestureDetector(
-                child: Text(match.name ?? "unnamed match"),
+                child: Text(match.name),
                 onTap: () {
                   Navigator.of(context).push(MaterialPageRoute(builder: (context) {
                     return ResultPage(
-                      canonicalMatch: ShootingMatch.fromOldMatch(match),
+                      canonicalMatch: match,
                       allowWhatIf: false,
                     );
                   }));

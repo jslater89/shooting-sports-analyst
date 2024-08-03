@@ -101,6 +101,15 @@ class AnalystDatabase {
     return null;
   }
 
+  DbShootingMatch? getMatchByAnySourceIdSync(List<String> ids) {
+    for(var id in ids) {
+      var match = isar.dbShootingMatchs.getBySourceIdsSync([id]);
+      if(match != null) return match;
+    }
+
+    return null;
+  }
+
   Future<void> migrateFromMatchCache(ProgressCallback callback) async {
     _log.d("Migrating from match cache");
     var cache = MatchCache();

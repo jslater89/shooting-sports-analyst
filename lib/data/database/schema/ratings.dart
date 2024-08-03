@@ -195,8 +195,21 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
 
   @override
   Future<DataSourceResult<RatingGroup?>> groupForDivision(Division? division) {
-    // TODO: implement groupForDivision
-    throw UnimplementedError();
+    var fewestDivisions = 65536;
+    RatingGroup? outGroup = null;
+    if(division == null) {
+      // TODO: this might not be the right result for a null division
+      return Future.value(DataSourceResult.ok(groups.firstOrNull));
+    }
+
+    for(var group in groups) {
+      if(group.divisions.length < fewestDivisions && group.divisions.contains(division)) {
+        fewestDivisions = group.divisions.length;
+        outGroup = group;
+      }
+    }
+
+    return Future.value(DataSourceResult.ok(outGroup));
   }
 
   @override
