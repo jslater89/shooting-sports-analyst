@@ -9,6 +9,7 @@ import 'dart:async';
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_query_element.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/match/translator.dart';
@@ -44,6 +45,9 @@ class AnalystDatabase {
     isar = await Isar.open([
       DbShootingMatchSchema,
       DbRatingProjectSchema,
+      RatingGroupSchema,
+      DbRatingEventSchema,
+      DbShooterRatingSchema,
     ], directory: "db", name: "database");
     _readyCompleter.complete();
   }

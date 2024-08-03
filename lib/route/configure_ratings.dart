@@ -25,6 +25,7 @@ import 'package:shooting_sports_analyst/data/ranking/raters/points/points_settin
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 import 'package:shooting_sports_analyst/data/ranking/shooter_aliases.dart';
 import 'package:shooting_sports_analyst/data/results_file_parser.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
@@ -203,6 +204,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       _log.i("Autosaved project is null, assuming first start");
 
       _ratingSystem = MultiplayerPercentEloRater();
+      sport = uspsaSport;
       _settingsController = _ratingSystem.newSettingsController();
       setState(() {
         _settingsWidget = null;
@@ -216,6 +218,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   }
 
   void _loadProject(DbRatingProject project) {
+    sport = project.sport;
     knownMatches = {};
     setState(() {
       filteredMatchUrls = null;
