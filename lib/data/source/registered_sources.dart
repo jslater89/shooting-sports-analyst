@@ -22,7 +22,11 @@ class MatchSourceRegistry {
   MatchSourceRegistry._();
 
   MatchSource getByCode(String code, MatchSource fallback) {
-    return sources.firstWhereOrNull((e) => e.code == code) ?? fallback;
+    return sources.firstWhereOrNull((e) => e.handledCodes.contains(code)) ?? fallback;
+  }
+
+  MatchSource? getByCodeOrNull(String code) {
+    return sources.firstWhereOrNull((e) => e.handledCodes.contains(code));
   }
 
   List<MatchSource> _sources = [

@@ -10,7 +10,7 @@ import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 
 class MatchSourceChooserDialog extends StatefulWidget {
-  const MatchSourceChooserDialog({Key? key, this.hintText, required this.sources, this.title, this.descriptionText, this.validator}) : super(key: key);
+  const MatchSourceChooserDialog({Key? key, this.hintText, required this.sources, this.title, this.descriptionText}) : super(key: key);
 
   /// The title for the URL entry dialog.
   final String? title;
@@ -20,7 +20,6 @@ class MatchSourceChooserDialog extends StatefulWidget {
   final String? hintText;
   /// The list of match sources to allow.
   final List<MatchSource> sources;
-  final String? Function(String)? validator;
 
   @override
   State<MatchSourceChooserDialog> createState() => _MatchSourceChooserDialogState();

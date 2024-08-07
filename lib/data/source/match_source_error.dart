@@ -53,3 +53,9 @@ class FormatError extends MatchSourceError {
 
   FormatError(this.underlying);
 }
+
+class GeneralError extends MatchSourceError {
+  String get message => underlying.message;
+  final ResultErr underlying;
+  GeneralError(this.underlying);
+}

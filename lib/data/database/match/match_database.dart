@@ -55,20 +55,23 @@ class AnalystDatabase {
   AnalystDatabase._();
 
   /// The standard match query: index on name if present or date if not.
-  Future<List<DbShootingMatch>> queryMatches({String? name, DateTime? after, DateTime? before, int page = 0, MatchSortField sort = const DateSort()}) {
+  Future<List<DbShootingMatch>> queryMatches({String? name, DateTime? after, DateTime? before, int page = 0, int pageSize = 100, MatchSortField sort = const DateSort()}) {
     Query<DbShootingMatch> finalQuery = _buildMatchQuery(
       [
         if(name != null)
           NamePartsQuery(name),
         DateQuery(after: after, before: before),
       ],
-      limit: 100,
-      offset: page * 100,
+      limit: pageSize,
+      offset: page * pageSize,
     );
 
     return finalQuery.findAll();
   }
 
+  /// Save a match.
+  ///
+  /// The provided ShootingMatch will have its database ID set if the save succeeds.
   Future<Result<DbShootingMatch, ResultErr>> saveMatch(ShootingMatch match) async {
     if(match.sourceIds.isEmpty || match.sourceCode.isEmpty) {
       throw ArgumentError("Match must have at least one source ID and a source code to be saved in the database");
@@ -93,6 +96,8 @@ class AnalystDatabase {
       return Result.err(StringError("$e"));
     }
 
+    // For least confusion
+    match.databaseId = dbMatch.id;
     return Result.ok(dbMatch);
   }
 
@@ -103,6 +108,28 @@ class AnalystDatabase {
     }
 
     return null;
+  }
+
+  Future<Result<bool, ResultErr>> deleteMatch(int id) async {
+    try {
+      var result = await isar.dbShootingMatchs.delete(id);
+      return Result.ok(result);
+    }
+    catch(e, stackTrace) {
+      _log.e("Failed to delete match", error: e, stackTrace: stackTrace);
+      return Result.err(StringError(e.toString()));
+    }
+  }
+
+  Future<Result<bool, ResultErr>> deleteMatchBySourceId(String id) async {
+    try {
+      var result = await isar.dbShootingMatchs.deleteBySourceIds([id]);
+      return Result.ok(result);
+    }
+    catch(e, stackTrace) {
+      _log.e("Failed to delete match", error: e, stackTrace: stackTrace);
+      return Result.err(StringError(e.toString()));
+    }
   }
 
   DbShootingMatch? getMatchByAnySourceIdSync(List<String> ids) {

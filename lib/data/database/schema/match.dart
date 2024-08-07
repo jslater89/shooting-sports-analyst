@@ -8,6 +8,7 @@
 import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
@@ -21,7 +22,7 @@ part 'match.g.dart';
 typedef ExternalId = int;
 
 @collection
-class DbShootingMatch {
+class DbShootingMatch with DbSportEntity {
   Id id = Isar.autoIncrement;
   String eventName;
 
@@ -36,7 +37,7 @@ class DbShootingMatch {
 
   /// A list of IDs this match is known by at its source.
   ///
-  /// The [MatchDatabase] utility class will not allow matches without a source ID to be saved to
+  /// The [AnalystDatabase] utility class will not allow matches without a source ID to be saved to
   /// the underlying database.
   ///
   /// See the note on [ShootingMatch.sourceIds] regarding collisions between matches from multiple

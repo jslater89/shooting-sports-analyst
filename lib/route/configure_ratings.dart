@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/match/practical_match.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
@@ -25,6 +26,7 @@ import 'package:shooting_sports_analyst/data/ranking/raters/points/points_settin
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 import 'package:shooting_sports_analyst/data/ranking/shooter_aliases.dart';
 import 'package:shooting_sports_analyst/data/results_file_parser.dart';
+import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
@@ -44,6 +46,7 @@ import 'package:shooting_sports_analyst/ui/rater/select_project_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/shooter_aliases_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/loading_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_cache_chooser_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/match_database_chooser_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/rater_groups_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/match_cache_loading_indicator.dart';
 
@@ -64,11 +67,10 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   Sport? sport;
 
   bool matchCacheReady = false;
-  List<String> matchUrls = [];
-  Map<String, bool> ongoingMatchUrls = {};
+  List<DbShootingMatch> projectMatches = [];
+  Map<DbShootingMatch, bool> ongoingMatches = {};
   MatchListFilters? filters = MatchListFilters();
-  List<String>? filteredMatchUrls;
-  Map<String, PracticalMatch> knownMatches = {};
+  List<DbShootingMatch>? filteredMatches;
   String? _lastProjectName;
 
   late RaterSettingsController _settingsController;
@@ -109,73 +111,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
   /// Checks the match cache for URL names, and starts downloading any
   /// matches that aren't in the cache.
-  Future<void> updateUrls() async {
-    await MatchCache().ready;
-    var cache = MatchCache();
-
-    var loadingFuture = MatchCache().ensureUrlsLoaded(matchUrls, (a, b) async {
-      await Future.delayed(Duration(milliseconds: 1));
-    });
-    await showDialog(context: context, builder: (context) => LoadingDialog(title: "Loading required matches...", waitOn: loadingFuture));
-
-    // Deduplicate
-    Map<PracticalMatch, bool> duplicatedMatches = {};
-    Map<String, bool> urlsToRemove = {};
-
-    List<String> unknownUrls = [];
-
-    for(var url in matchUrls) {
-      // Don't check canonical ID here, because it's slow
-      var result = await cache.getMatch(url, localOnly: true, checkCanonId: false);
-
-      if (result.isOk()) {
-        var match = result.unwrap();
-        if (duplicatedMatches[match] ?? false) {
-          urlsToRemove[url] = true;
-        }
-        else {
-          duplicatedMatches[match] = true;
-          if(match.name != null) knownMatches[url] = match;
-        }
-      }
-      else {
-        var err = result.unwrapErr();
-        if (err == MatchGetError.notInCache) {
-          unknownUrls.add(url);
-        }
-      }
-    }
-
-    matchUrls.removeWhere((element) => urlsToRemove[element] ?? false);
-
-    if(mounted) {
-      setState(() {
-        // urlDisplayNames update
-      });
-    }
-
-    _log.i("Getting ${unknownUrls.length} unknown URLs");
-    var matches = await cache.batchGet(unknownUrls, callback: (url, result) {
-      if(result.isOk() && mounted) {
-        var match = result.unwrap();
-        _log.v("Fetched ${match.name} from ${url.split("/").last}");
-        setState(() {
-          knownMatches[url] = match;
-        });
-      }
-      else if(result.isErr()) {
-        _log.w("Error getting match: ${result.unwrapErr()}");
-      }
-    });
-
-    // Ordinarily, the match cache is saved during the rating loading screen,
-    // after we've downloaded matches but before we start doing the math.
-    // Put this here, so anything we download gets saved if we exit rather
-    // than advancing.
-    if(matches.isNotEmpty) {
-      cache.save(forceResave: matches.map((e) => e.practiscoreId).toList());
-    }
-
+  Future<void> updateMatches() async {
     if(filters != null) _filterMatches();
   }
 
@@ -217,11 +153,14 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     }
   }
 
-  void _loadProject(DbRatingProject project) {
+  Future<void> _loadProject(DbRatingProject project) async {
     sport = project.sport;
-    knownMatches = {};
+    if(!project.matches.isLoaded) {
+      await project.matches.load();
+    }
+    projectMatches = [...project.matches];
     setState(() {
-      filteredMatchUrls = null;
+      filteredMatches = null;
       filters = null;
       _keepHistory = project.settings.preserveHistory;
       _checkDataEntryErrors = project.settings.checkDataEntryErrors;
@@ -352,7 +291,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
                   if(settings == null) return;
 
-                  if(matchUrls.isEmpty || filteredMatchUrls != null && filteredMatchUrls!.isEmpty) {
+                  if(projectMatches.isEmpty || filteredMatches != null && filteredMatches!.isEmpty) {
                     setState(() {
                       _validationError = "No match URLs entered";
                     });
@@ -520,89 +459,58 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                         children: [
                           Row(
                             children: [
-                              Text("Matches (${filteredMatchUrls?.length ?? matchUrls.length})", style: Theme.of(context).textTheme.labelLarge),
-                              Tooltip(
-                                message: "Add a match from a PractiScore results page link.",
-                                child: IconButton(
-                                  icon: Icon(Icons.add),
-                                  color: Theme.of(context).primaryColor,
-                                  onPressed: () async {
-                                    var urls = await showDialog<List<String>>(context: context, builder: (context) {
-                                      return EnterUrlsDialog(cache: MatchCache(), existingUrls: matchUrls);
-                                    }, barrierDismissible: false);
-
-                                    if(urls == null) return;
-
-                                    for(var url in urls.reversed) {
-                                      if(!matchUrls.contains(url)) {
-                                        matchUrls.insert(0, url);
-                                      }
-                                    }
-
-                                    setState(() {
-                                      // matchUrls
-                                    });
-
-                                    updateUrls();
-                                  },
-                                ),
-                              ),
+                              Text("Matches (${filteredMatches?.length ?? projectMatches.length})", style: Theme.of(context).textTheme.labelLarge),
                               Tooltip(
                                 message: "Add match links parsed from PractiScore page source.",
                                 child: IconButton(
                                   icon: Icon(Icons.link),
                                   color: Theme.of(context).primaryColor,
                                   onPressed: () async {
-                                    var urls = await showDialog<List<String>>(context: context, builder: (context) {
-                                      return EnterPractiscoreSourceDialog();
-                                    }, barrierDismissible: false);
-
-                                    if(urls == null) return;
-
-                                    for(var url in urls.reversed) {
-                                      if(!matchUrls.contains(url)) {
-                                        matchUrls.insert(0, url);
-                                      }
-                                    }
-
-                                    setState(() {
-                                      filteredMatchUrls = null;
-                                      filters = null;
-                                      // matchUrls
-                                    });
-
-                                    updateUrls();
+                                    // var urls = await showDialog<List<String>>(context: context, builder: (context) {
+                                    //   return EnterPractiscoreSourceDialog();
+                                    // }, barrierDismissible: false);
+                                    //
+                                    // if(urls == null) return;
+                                    //
+                                    // for(var url in urls.reversed) {
+                                    //   if(!projectMatches.contains(url)) {
+                                    //     projectMatches.insert(0, url);
+                                    //   }
+                                    // }
+                                    //
+                                    // setState(() {
+                                    //   filteredMatches = null;
+                                    //   filters = null;
+                                    //   // matchUrls
+                                    // });
+                                    //
+                                    // updateMatches();
                                   },
                                 ),
                               ),
                               Tooltip(
-                                message: "Add a match from the match cache.",
+                                message: "Add a match from the match database.",
                                 child: IconButton(
                                   icon: Icon(Icons.dataset),
                                   color: Theme.of(context).primaryColor,
                                   onPressed: () async {
-                                    var indexEntries = await showDialog<List<MatchCacheIndexEntry>>(context: context, builder: (context) {
-                                      return MatchCacheChooserDialog(multiple: true);
+                                    var dbEntries = await showDialog<List<DbShootingMatch>>(context: context, builder: (context) {
+                                      return MatchDatabaseChooserDialog(multiple: true);
                                     }, barrierDismissible: false);
 
-                                    _log.v("Entries from cache: $indexEntries");
+                                    _log.v("Entries from DB: $dbEntries");
 
-                                    if(indexEntries == null) return;
+                                    if(dbEntries == null) return;
 
-                                    for(var entry in indexEntries) {
-                                      var url = MatchCache().getIndexUrl(entry);
-                                      if (url == null) throw StateError("impossible");
+                                    for(var entry in dbEntries) {
 
-                                      if (!matchUrls.contains(url)) {
-                                        matchUrls.insert(0, url);
-                                      }
                                     }
 
                                     setState(() {
                                       // matchUrls
                                     });
 
-                                    updateUrls();
+                                    updateMatches();
                                   },
                                 ),
                               ),
@@ -620,9 +528,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
                                     if(delete ?? false) {
                                       setState(() {
-                                        matchUrls.clear();
-                                        filteredMatchUrls?.clear();
-                                        knownMatches.clear();
+                                        projectMatches.clear();
+                                        filteredMatches?.clear();
                                       });
                                     }
                                   }
@@ -662,7 +569,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                     }
                                     else {
                                       setState(() {
-                                        filteredMatchUrls = null;
+                                        filteredMatches = null;
                                       });
                                     }
                                   },
@@ -683,7 +590,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     // show newest additions at the top
-                                    for(var url in filteredMatchUrls ?? matchUrls)
+                                    for(var match in filteredMatches ?? projectMatches)
                                       Row(
                                         mainAxisSize: MainAxisSize.max,
                                         children: [
@@ -691,70 +598,56 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                             child: MouseRegion(
                                               cursor: SystemMouseCursors.click,
                                               child: GestureDetector(
-                                                onTap: () async {
-                                                  if(!MatchCache.readyNow) {
-                                                    _log.d("Match cache not ready");
-                                                    return;
-                                                  }
-                                                  var cache = MatchCache();
-
-                                                  var match = await cache.getMatchImmediate(url);
-                                                  if(match != null && (match.name?.isNotEmpty ?? false)) {
-                                                    Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-                                                      return ResultPage(canonicalMatch: ShootingMatch.fromOldMatch(match), allowWhatIf: false);
-                                                    }));
-                                                  }
-                                                  else {
-                                                    HtmlOr.openLink(url);
-                                                  }
+                                                onTap: () {
+                                                  Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+                                                    return ResultPage(canonicalMatch: match.hydrate().unwrap(), allowWhatIf: false);
+                                                  }));
                                                 },
                                                 child: Text(
-                                                  knownMatches[url] != null && knownMatches[url]!.name!.isNotEmpty ?
-                                                    knownMatches[url]!.name! :
-                                                    knownMatches[url] != null ? "$url (missing name)" : url,
+                                                  match.eventName,
                                                   overflow: TextOverflow.fade
                                                 ),
                                               ),
                                             )
                                           ),
                                           Tooltip(
-                                            message: (ongoingMatchUrls[url] ?? false) ?
+                                            message: (ongoingMatches[match] ?? false) ?
                                                 "This match is in progress. Click to toggle." :
                                                 "This match is completed. Click to toggle.",
                                             child: IconButton(
                                               icon: Icon(
-                                                (ongoingMatchUrls[url] ?? false) ?
+                                                (ongoingMatches[match] ?? false) ?
                                                   Icons.calendar_today :
                                                   Icons.event_available
                                               ),
-                                              color: (ongoingMatchUrls[url] ?? false) ?
+                                              color: (ongoingMatches[match] ?? false) ?
                                                   Theme.of(context).primaryColor :
                                                   Colors.grey[350],
                                               onPressed: () {
-                                                if(ongoingMatchUrls[url] ?? false) {
+                                                if(ongoingMatches[match] ?? false) {
                                                   setState(() {
-                                                    ongoingMatchUrls.remove(url);
+                                                    ongoingMatches.remove(match);
                                                   });
                                                 } else {
                                                   setState(() {
-                                                    ongoingMatchUrls[url] = true;
+                                                    ongoingMatches[match] = true;
                                                   });
                                                 }
                                               },
                                             )
                                           ),
                                           Tooltip(
-                                            message: "Remove this match from the cache, redownloading it.",
+                                            message: "Reload this match from its source.",
                                             child: IconButton(
                                               icon: Icon(Icons.refresh),
                                               color: Theme.of(context).primaryColor,
-                                              onPressed: () {
-                                                MatchCache().deleteMatchByUrl(url);
-                                                setState(() {
-                                                  knownMatches.remove(url);
-                                                });
+                                              onPressed: () async {
+                                                projectMatches.remove(match);
+                                                ongoingMatches.remove(match);
+                                                filteredMatches?.remove(match);
 
-                                                updateUrls();
+                                                var result = await MatchSource.reloadMatch(match);
+                                                projectMatches.add(DbShootingMatch.from(result.unwrap()));
                                               },
                                             ),
                                           ),
@@ -763,9 +656,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                             color: Theme.of(context).primaryColor,
                                             onPressed: () {
                                               setState(() {
-                                                matchUrls.remove(url);
-                                                filteredMatchUrls?.remove(url);
-                                                knownMatches.remove(url);
+                                                projectMatches.remove(match);
+                                                filteredMatches?.remove(match);
                                               });
                                             },
                                           )
@@ -792,53 +684,38 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     var cache = MatchCache();
     await cache.ready;
 
-    matchUrls.sort((a, b) {
-      var matchA = cache.getIndexImmediate(a);
-      var matchB = cache.getIndexImmediate(b);
-
-      // Sort uncached matches to the top
-      if(matchA == null && matchB == null) return 0;
-      if(matchA == null && matchB != null) return -1;
-      if(matchA != null && matchB == null) return 1;
-
+    projectMatches.sort((matchA, matchB) {
       // Sort remaining matches by date descending, then by name ascending
       if(!alphabetic) {
-        var dateSort = matchB!.matchDate.compareTo(matchA!.matchDate);
+        var dateSort = matchB.date.compareTo(matchA.date);
         if (dateSort != 0) return dateSort;
       }
 
-      return matchA!.matchName.compareTo(matchB!.matchName);
+      return matchA.eventName.compareTo(matchB.eventName);
     });
 
-    updateUrls();
+    updateMatches();
   }
 
   void _filterMatches() {
     if(filters == null) return;
 
-    filteredMatchUrls = [];
+    filteredMatches = [];
     var filteredByLevel = 0;
     var filteredByBefore = 0;
     var filteredByAfter = 0;
-    filteredMatchUrls!.addAll(matchUrls.where((element) {
-      var match = knownMatches[element];
-      // Add any un-fetched URLs. We'll filter them because this will get
-      // re-called
-      if(match == null) return true;
-
-      // 'Always include' is the least surprising thing to do with null match
-      // levels, surprisingly
-      if(match.level != null && !filters!.levels.contains(match.level)) {
+    filteredMatches!.addAll(projectMatches.where((match) {
+      if(!filters!.levels.contains(match.matchEventLevel)) {
         filteredByLevel += 1;
         return false;
       }
 
-      if(filters!.after != null && match.date!.isBefore(filters!.after!)) {
+      if(filters!.after != null && match.date.isBefore(filters!.after!)) {
         filteredByAfter += 1;
         return false;
       }
 
-      if(filters!.before != null && match.date!.isAfter(filters!.before!)) {
+      if(filters!.before != null && match.date.isAfter(filters!.before!)) {
         filteredByBefore += 1;
         return false;
       }
@@ -846,10 +723,10 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       return true;
     }));
 
-    _log.d("Filtered ${matchUrls.length} urls to ${filteredMatchUrls!.length} Level: $filteredByLevel Before: $filteredByBefore After: $filteredByAfter");
+    _log.d("Filtered ${projectMatches.length} urls to ${filteredMatches!.length} Level: $filteredByLevel Before: $filteredByBefore After: $filteredByAfter");
 
     setState(() {
-      filteredMatchUrls = filteredMatchUrls;
+      filteredMatches = filteredMatches;
     });
   }
 
@@ -978,9 +855,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
               setState(() {
                 _lastProjectName = controller.text.trim().isNotEmpty ? controller.text.trim() : "New Project";
 
-                matchUrls.clear();
-                filteredMatchUrls?.clear();
-                knownMatches.clear();
+                projectMatches.clear();
+                filteredMatches?.clear();
               });
               _restoreDefaults();
             }
@@ -988,7 +864,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         ),
       ),
       Tooltip(
-        message: "Save current project to local storage.",
+        message: "Save current project to database.",
         child: IconButton(
           icon: Icon(Icons.save),
           onPressed: () async {
@@ -1123,21 +999,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         break;
 
 
-      case _MenuEntry.clearCache:
-        var delete = await showDialog<bool>(context: context, builder: (context) {
-          return ConfirmDialog(
-            content: Text("Clearing the match cache will redownload all matches from PractiScore."),
-            positiveButtonLabel: "CLEAR",
-          );
-        });
-
-        if(delete ?? false) {
-          await MatchCache().ready;
-          MatchCache().clear();
-        }
-        break;
-
-
       case _MenuEntry.numberMappings:
         var mappings = await showDialog<Map<String, String>>(context: context, builder: (context) {
           return MemberNumberMapDialog(
@@ -1224,8 +1085,7 @@ enum _MenuEntry {
   numberMappings,
   numberMappingBlacklist,
   numberWhitelist,
-  shooterAliases,
-  clearCache;
+  shooterAliases;
 
   static List<_MenuEntry> get menu => [
     hiddenShooters,
@@ -1234,7 +1094,6 @@ enum _MenuEntry {
     numberMappingBlacklist,
     numberWhitelist,
     shooterAliases,
-    clearCache,
   ];
 
   String get label {
@@ -1253,8 +1112,6 @@ enum _MenuEntry {
         return "Number mapping blacklist";
       case _MenuEntry.numberWhitelist:
         return "Member number whitelist";
-      case _MenuEntry.clearCache:
-        return "Clear cache";
       case _MenuEntry.shooterAliases:
         return "Shooter aliases";
     }

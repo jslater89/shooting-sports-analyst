@@ -37,6 +37,10 @@ var _log = SSALogger("ReportFileMatchSource");
 /// If the sport has event levels, they must match the PractiScore I/II/III
 /// format in one of the name fields.
 class PractiscoreHitFactorReportParser extends MatchSource {
+  static const uspsaCode = "report-uspsa";
+  static const ipscCode = "report-ipsc";
+  static const pcslCode = "report-pcsl";
+
   Sport sport;
   bool verboseParse;
 
@@ -71,9 +75,8 @@ class PractiscoreHitFactorReportParser extends MatchSource {
 
       if(sourceIds == null) {
         var syntheticId = info.name.stableHash ^ info.date.millisecondsSinceEpoch.stableHash;
-        sourceIds = [syntheticId.toRadixString(36)];
+        sourceIds = [applyCode(syntheticId.toRadixString(36))];
       }
-      sourceIds = sourceIds.map((id) => "$code:$id").toList();
 
       ShootingMatch m = ShootingMatch(
         name: info.name,
@@ -440,13 +443,13 @@ class PractiscoreHitFactorReportParser extends MatchSource {
 
   String get code {
     if(sport == uspsaSport) {
-      return "report-uspsa";
+      return uspsaCode;
     }
     else if(sport == ipscSport) {
-      return "report-ipsc";
+      return ipscCode;
     }
     else if(sport == pcslSport) {
-      return "report-pcsl";
+      return pcslCode;
     }
     else {
       throw UnimplementedError();
@@ -455,11 +458,12 @@ class PractiscoreHitFactorReportParser extends MatchSource {
 
   @override
   Future<Result<ShootingMatch, MatchSourceError>> getMatchFromId(String id, {SportType? typeHint, Sport? sport}) async {
-    var fileContentsResult = await getPractiscoreReportFile(id);
+    var noPrefixId = removeCode(id);
+    var fileContentsResult = await getPractiscoreReportFile(noPrefixId);
     if(fileContentsResult.isErr()) {
       return Result.err(fileContentsResult.unwrapErr());
     }
-    return Future.value(parseWebReport(fileContentsResult.unwrap(), sourceIds: [id]));
+    return Future.value(parseWebReport(fileContentsResult.unwrap(), sourceIds: [applyCode(id)]));
   }
 
   @override

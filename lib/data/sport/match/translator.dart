@@ -7,6 +7,7 @@
 import 'package:shooting_sports_analyst/data/match/practical_match.dart' as old;
 import 'package:shooting_sports_analyst/data/match/score.dart';
 import 'package:shooting_sports_analyst/data/match/shooter.dart' as oldS;
+import 'package:shooting_sports_analyst/data/source/practiscore_report.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
@@ -93,8 +94,8 @@ extension MatchTranslator on ShootingMatch {
       shooters: newShooters,
       level: uspsaSport.eventLevels.lookupByName((match.level ?? old.MatchLevel.I).name)!,
       sourceIds: [
-        match.practiscoreId,
-        if(match.practiscoreIdShort != null) match.practiscoreIdShort!,
+        "${PractiscoreHitFactorReportParser.uspsaCode}:${match.practiscoreId}",
+        if(match.practiscoreIdShort != null) "${PractiscoreHitFactorReportParser.uspsaCode}:${match.practiscoreIdShort!}",
       ]
     );
 

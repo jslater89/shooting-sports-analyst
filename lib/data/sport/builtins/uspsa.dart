@@ -59,10 +59,10 @@ final _minorPowerFactor = PowerFactor("Minor",
   penaltyEvents: _uspsaPenalties,
 );
 
-final String _uspsaName = "USPSA";
+final String uspsaName = "USPSA";
 
 final uspsaSport = Sport(
-  _uspsaName,
+  uspsaName,
   type: SportType.uspsa,
   matchScoring: RelativeStageFinishScoring(pointsAreUSPSAFixedTime: true),
   defaultStageScoring: const HitFactorScoring(),
@@ -222,7 +222,7 @@ class _UspsaRatingGroupsProvider implements RatingGroupsProvider {
 final _builtinRaterGroups = <RatingGroup>[
   RatingGroup.create(
     uuid: "uspsa-open",
-    sportName: _uspsaName,
+    sportName: uspsaName,
     name: "Open",
     divisionNames: [
       uspsaOpen.name,
@@ -230,7 +230,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.create(
     uuid: "uspsa-limited",
-    sportName: _uspsaName,
+    sportName: uspsaName,
     name: "Limited",
     displayName: "LIM",
     divisionNames: [
@@ -239,7 +239,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.create(
     uuid: "uspsa-pcc",
-    sportName: _uspsaName,
+    sportName: uspsaName,
     name: "PCC",
     divisionNames: [
       uspsaPcc.name,
@@ -247,7 +247,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.create(
     uuid: "uspsa-carryoptics",
-    sportName: _uspsaName,
+    sportName: uspsaName,
     name: "Carry Optics",
     displayName: "CO",
     divisionNames: [
@@ -256,7 +256,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.create(
     uuid: "uspsa-locap",
-    sportName: _uspsaName,
+    sportName: uspsaName,
     name: "Locap",
     divisionNames: [
       uspsaSingleStack.name,
@@ -267,7 +267,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.create(
     uuid: "uspsa-singlestack",
-    sportName: _uspsaName,
+    sportName: uspsaName,
     name: "Single Stack",
     displayName: "SS",
     divisionNames: [
@@ -276,7 +276,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.create(
     uuid: "uspsa-production",
-    sportName: _uspsaName,
+    sportName: uspsaName,
     name: "Production",
     displayName: "PROD",
     divisionNames: [
@@ -285,7 +285,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.create(
     uuid: "uspsa-limited10",
-    sportName: _uspsaName,
+    sportName: uspsaName,
     name: "Limited 10",
     displayName: "L10",
     divisionNames: [
@@ -294,7 +294,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.create(
     uuid: "uspsa-revolver",
-    sportName: _uspsaName,
+    sportName: uspsaName,
     name: "Revolver",
     displayName: "REVO",
     divisionNames: [
@@ -303,7 +303,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.create(
     uuid: "uspsa-open-pcc",
-    sportName: _uspsaName,
+    sportName: uspsaName,
     name: "Open/PCC",
     divisionNames: [
       uspsaOpen.name,
@@ -312,7 +312,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.create(
     uuid: "uspsa-limited-co",
-    sportName: _uspsaName,
+    sportName: uspsaName,
     name: "Limited/Carry Optics",
     displayName: "LIM/CO",
     divisionNames: [
@@ -322,7 +322,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.create(
     uuid: "uspsa-limited-optics",
-    sportName: _uspsaName,
+    sportName: uspsaName,
     name: "Limited Optics",
     displayName: "LO",
     divisionNames: [
@@ -331,7 +331,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.create(
     uuid: "uspsa-lo-co",
-    sportName: _uspsaName,
+    sportName: uspsaName,
     name: "LO/CO",
     divisionNames: [
       uspsaLimitedOptics.name,
@@ -340,7 +340,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.create(
     uuid: "uspsa-lim-lo-co",
-    sportName: _uspsaName,
+    sportName: uspsaName,
     name: "Limited/LO/CO",
     displayName: "Lim/LO/CO",
     divisionNames: [
@@ -351,7 +351,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.create(
     uuid: "uspsa-limited-lo",
-    sportName: _uspsaName,
+    sportName: uspsaName,
     name: "Limited/LO",
     divisionNames: [
       uspsaLimited.name,
@@ -360,7 +360,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.create(
     uuid: "uspsa-optic-handguns",
-    sportName: _uspsaName,
+    sportName: uspsaName,
     name: "Optic Handguns",
     displayName: "Optics",
     divisionNames: [
@@ -371,7 +371,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.create(
     uuid: "uspsa-irons-handguns",
-    sportName: _uspsaName,
+    sportName: uspsaName,
     name: "Irons Handguns",
     displayName: "Irons",
     divisionNames: [
@@ -384,7 +384,7 @@ final _builtinRaterGroups = <RatingGroup>[
   ),
   RatingGroup.create(
     uuid: "uspsa-combined",
-    sportName: _uspsaName,
+    sportName: uspsaName,
     name: "Combined",
     divisionNames: [
       uspsaOpen.name,

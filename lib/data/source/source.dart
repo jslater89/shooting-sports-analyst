@@ -5,7 +5,10 @@
  */
 
 import 'package:flutter/widgets.dart';
+import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/source/match_source_error.dart';
+import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -16,13 +19,24 @@ import 'package:shooting_sports_analyst/util.dart';
 abstract class MatchSource {
   /// A name suitable for display.
   String get name;
+
   /// A URL-encodable code for internal identification.
   ///
-  /// If match IDs are likely to overlap with IDs from other sources, and those IDs
-  /// do not point to the same match (if, e.g., two sources identify matches with
-  /// an incrementing integer ID), match IDs should be prefixed with code (by convention)
-  /// so that they do not overlap in the database.
+  /// Match IDs should be prefixed with 'code', so that they don't overlap in the database.
   String get code;
+
+  /// If this source can handle codes from other sources, it should contain [code]s for
+  /// those sources in this array. It should also include its own code.
+  List<String> get handledCodes => [code];
+
+  String removeCode(String matchId) {
+    return matchId.replaceFirst("$code:", "");
+  }
+
+  String applyCode(String matchId) {
+    if(matchId.startsWith("$code:")) return matchId;
+    else return "$code:$matchId";
+  }
 
   bool get isImplemented;
   bool get canSearch;
@@ -64,6 +78,31 @@ abstract class MatchSource {
   ///
   /// Call [onMatchSelected] with a match if one is selected and downloaded.
   Widget getDownloadMatchUI(void Function(ShootingMatch) onMatchSelected);
+
+  static Future<Result<ShootingMatch, MatchSourceError>> reloadMatch(DbShootingMatch match) async {
+    var source = MatchSourceRegistry().getByCodeOrNull(match.sourceCode);
+
+    if(source == null || !source.isImplemented) {
+      return Result.err(UnsupportedMatchType("No source for ${match.sourceCode}"));
+    }
+
+    var result = await source.getMatchFromId(match.sourceIds.first, sport: match.sport);
+
+    if(result.isOk()) {
+      var match = result.unwrap();
+      var r = await AnalystDatabase().saveMatch(match);
+      if(r.isOk()) {
+        match.databaseId = r.unwrap().id;
+        return Result.ok(match);
+      }
+      else {
+        return Result.err(GeneralError(r.unwrapErr()));
+      }
+    }
+    else {
+      return Result.errFrom(result);
+    }
+  }
 }
 
 /// A parent class for implementation-specific search result information.

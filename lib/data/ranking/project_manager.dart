@@ -238,7 +238,7 @@ class RatingProject with DbSportEntity {
   }
 
   factory RatingProject.fromJson(Map<String, dynamic> encodedProject) {
-    var sportName = (encodedProject[_sportKey] ?? "uspsa") as String;
+    var sportName = (encodedProject[_sportKey] ?? uspsaName) as String;
     var sport = SportRegistry().lookup(sportName)!;
 
     var algorithmName = (encodedProject[algorithmKey] ?? multiplayerEloValue) as String;
