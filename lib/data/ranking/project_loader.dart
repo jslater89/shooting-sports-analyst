@@ -184,7 +184,7 @@ class RatingProjectLoader {
       // this group.
 
       var count = await db.countShooterRatings(project, group);
-      _log.i("Initial ratings complete for $count shooters in ${matches.length} in ${group.filters.divisions.keys}");
+      _log.i("Initial ratings complete for $count shooters in ${matches.length} matches in ${group.filters.activeDivisions}");
     }
     // 3.3. Calculate match stats
     List<int> matchLengths = [];

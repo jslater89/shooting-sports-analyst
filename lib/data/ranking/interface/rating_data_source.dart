@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
@@ -33,11 +34,13 @@ class DataSourceResult<T> extends Result<T, DataSourceError> {
 ///
 ///
 abstract interface class RatingDataSource {
+  Future<DataSourceResult<String>> getProjectName();
   Future<DataSourceResult<RatingProjectSettings>> getSettings();
   Future<DataSourceResult<List<RatingGroup>>> getGroups();
   Future<DataSourceResult<RatingGroup?>> groupForDivision(Division? division);
   Future<DataSourceResult<List<int>>> getMatchDatabaseIds();
-  Future<DataSourceResult<List<String>>> matchSourceIds();
+  Future<DataSourceResult<List<String>>> getMatchSourceIds();
+  Future<DataSourceResult<DbShootingMatch>> getLatestMatch();
 
   /// Look up a rating for a given member number.
   Future<DataSourceResult<DbShooterRating?>> lookupRating(RatingGroup group, String memberNumber);

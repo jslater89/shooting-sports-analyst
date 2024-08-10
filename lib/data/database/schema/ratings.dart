@@ -190,12 +190,23 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   }
 
   @override
-  Future<DataSourceResult<List<String>>> matchSourceIds() async {
+  Future<DataSourceResult<List<String>>> getMatchSourceIds() async {
     if(!matches.isLoaded) {
       await matches.load();
     }
 
     return DataSourceResult.ok(matches.map((m) => m.sourceIds.first).toList());
+  }
+
+  @override
+  Future<DataSourceResult<DbShootingMatch>> getLatestMatch() async {
+    var match = await matches.filter().sortByDateDesc().findFirst();
+    if(match == null) {
+      return DataSourceResult.err(DataSourceError.invalidRequest);
+    }
+    else {
+      return DataSourceResult.ok(match);
+    }
   }
 
   @override
@@ -231,6 +242,11 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
         .group((q) => q.idEqualTo(group.id)).findAll();
 
     return DataSourceResult.ok(results.firstOrNull);
+  }
+
+  @override
+  Future<DataSourceResult<String>> getProjectName() {
+    return Future.value(DataSourceResult.ok(name));
   }
 }
 
@@ -295,7 +311,12 @@ class RatingGroup with DbSportEntity {
     required this.name,
     this.displayName,
     this.divisionNames = const [],
-  }) : this.uuid = uuid ?? UuidV4().generate() ;
+  }) : this.uuid = uuid ?? UuidV4().generate();
+
+  @override
+  String toString() {
+    return name;
+  }
 }
 
 @collection

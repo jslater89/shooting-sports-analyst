@@ -20,9 +20,20 @@ import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_perc
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/data/old_search_query_parser.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/rater/rating_filter_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/shooter_stats_dialog.dart';
 
+SSALogger _log = SSALogger("RaterView");
+
+// TODO: this will have to be (more) stateful
+// Tab views get discarded after every switch. Replace
+// the filter parameters with a Provider, use the Provider to prod
+// the RatingDataSource, load more as needed when scrolling, etc.
+//
+// Alternately, provide a cached data source at the RaterView level that loads
+// them all, or (sigh) switch from the array-data model to the
+// typed-members-data model, at least for things we want to sort on.
 class RaterView extends StatefulWidget {
   const RaterView({
     Key? key,
@@ -59,6 +70,8 @@ class _RaterViewState extends State<RaterView> {
   late List<RatingGroup> groups;
   late List<ShooterRating> uniqueRatings;
 
+  bool initialized = false;
+
   @override
   Widget build(BuildContext context) {
     var cachedSource = Provider.of<ChangeNotifierRatingDataSource>(context);
@@ -69,9 +82,18 @@ class _RaterViewState extends State<RaterView> {
     // TODO: lean on state/DB for this eventually?
     var ratings = cachedSource.getRatings(widget.group);
     if(s == null || g == null || ratings == null) {
-      return CircularProgressIndicator(value: null);
+      return _progressCircle();
     }
     else {
+      if(!initialized) {
+        _log.i("Loading cached ratings for ${widget.group}");
+        settings = s;
+        groups = g;
+        uniqueRatings = ratings.map((e) => settings.algorithm.wrapDbRating(e)).toList();
+        initialized = true;
+      }
+      settings = s;
+      groups = g;
       var wrappedRatings = [
         for(var r in ratings)
           settings.algorithm.wrapDbRating(r)
@@ -88,6 +110,16 @@ class _RaterViewState extends State<RaterView> {
         ..._buildRatingKey(),
         ..._buildRatingRows(),
       ]
+    );
+  }
+
+  Widget _progressCircle() {
+    return Center(
+      child: SizedBox(
+        width: 64,
+        height: 64,
+        child: CircularProgressIndicator(value: null),
+      ),
     );
   }
 

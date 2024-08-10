@@ -71,15 +71,15 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   int _minRatings = 0;
   int _maxDays = 365;
   RatingFilters _filters = RatingFilters(ladyOnly: false);
-  
-  late RatingHistory _history;
-  bool _historyChanged = false;
 
   List<RatingGroup> activeTabs = [];
 
+  bool initialized = false;
+  String _projectName = "";
   late RatingProjectSettings _settings;
+  bool _settingsChanged = false;
   RatingSortMode _sortMode = RatingSortMode.rating;
-  ShootingMatch? _selectedMatch;
+  late ShootingMatch _selectedMatch;
   late TabController _tabController;
 
   Duration durationSinceLastYear() {
@@ -156,8 +156,23 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   }
 
   Future<void> _init() async {
+    _projectName = await widget.dataSource.getProjectName().unwrap();
     _settings = await widget.dataSource.getSettings().unwrap();
     activeTabs = await widget.dataSource.getGroups().unwrap();
+    _selectedMatch = (await widget.dataSource.getLatestMatch()).unwrap().hydrate().unwrap();
+    _tabController = TabController(
+        length: activeTabs.length,
+        vsync: this,
+        initialIndex: 0,
+        // TODO: Flutter broke this again, go back to seconds: 0 when fixed
+        animationDuration: Duration(microseconds: 1)
+    );
+
+    _log.i("Loaded ${_projectName} at ${_selectedMatch} with ${activeTabs}");
+
+    setState(() {
+      initialized = true;
+    });
   }
 
   String _searchTerm = "";
@@ -176,23 +191,11 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
     List<Widget> actions = _generateActions();
 
-    var title = "";
-    try {
-      title = _history.project.name;
-    }
-    catch(e) {
-      // Should maybe make history.project nullable rather than late, since
-      // we hit this hard
-      title = "Shooter Rating Calculator";
-    }
-
+    var title = _projectName;
     return WillPopScope(
       onWillPop: () async {
         var message = "If you leave this page, you will need to recalculate ratings to view it again.";
 
-        if(_historyChanged) {
-          message += "\n\nYou have unsaved changes to this rating project. Save first?";
-        }
         return await showDialog<bool>(context: context, builder: (context) => AlertDialog(
           title: Text("Return to main menu?"),
           content: Text(message),
@@ -204,24 +207,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
               },
             ),
             TextButton(
-              child: Text("LEAVE" + (_historyChanged ? " WITHOUT SAVING" : "")),
+              child: Text("LEAVE"),
               onPressed: () {
-                Navigator.of(context).pop(true);
-              },
-            ),
-            if(_historyChanged) TextButton(
-              child: Text("SAVE AND LEAVE"),
-              onPressed: () async {
-                _log.w("SAVING IN RATINGS NOT SUPPORTED");
-                // TODO: fix
-                // This project is also the autosave, so save it there too
-                // var pm = RatingProjectManager();
-                // await pm.saveProject(_history.project, mapName: RatingProjectManager.autosaveName);
-
-                setState(() {
-                  _historyChanged = false;
-                });
-
                 Navigator.of(context).pop(true);
               },
             ),
@@ -241,15 +228,11 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                 child: LinearProgressIndicator(value: null, backgroundColor: primaryColor, valueColor: animation),
               ) : null,
             ),
-            body: _body(),
+            body: _ratingView(),
           );
         },
       ),
     );
-  }
-
-  Widget _body() {
-    return _ratingView();
   }
 
   List<ShooterRating> _ratings = [];
@@ -257,8 +240,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   Widget _ratingView() {
     final backgroundColor = Theme.of(context).backgroundColor;
 
-    var match = _selectedMatch;
-    if(match == null) {
+    if(!initialized) {
       _log.w("No match selected!");
       return Container();
     }
@@ -271,7 +253,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
             controller: _tabController,
             tabs: activeTabs.map((t) {
               return Tab(
-                text: t.displayName,
+                text: t.uiLabel,
               );
             }).toList(),
           ),
@@ -288,7 +270,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
               return RaterView(
                 dataSource: widget.dataSource,
                 group: t,
-                currentMatch: match,
+                currentMatch: _selectedMatch,
                 search: _searchTerm,
                 minRatings: _minRatings,
                 maxAge: maxAge,
@@ -297,7 +279,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                 onRatingsFiltered: (ratings) {
                   _ratings = ratings;
                 },
-                hiddenShooters: _history.settings.hiddenShooters,
+                hiddenShooters: _settings.hiddenShooters,
               );
             }).toList(),
           ),
@@ -324,23 +306,22 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                 spacing: 20.0,
                 runSpacing: 10.0,
                 children: [
+                  // TODO: replace with display only
+                  // at least until we support using the database to go back
+                  // in time more easily
                   DropdownButton<ShootingMatch>(
                     underline: Container(
                       height: 1,
                       color: Colors.black,
                     ),
-                    items: _history.matches.reversed.map((m) {
-                      return DropdownMenuItem<ShootingMatch>(
-                        child: Text(m.name ?? "<unnamed match>"),
-                        value: m,
-                      );
-                    }).toList(),
+                    items: [
+                      DropdownMenuItem<ShootingMatch>(
+                        child: Text(_selectedMatch!.name),
+                        value: _selectedMatch,
+                      )
+                    ],
                     value: _selectedMatch,
-                    onChanged: _history.matches.length == 1 ? null : (m) {
-                      setState(() {
-                        _selectedMatch = m;
-                      });
-                    },
+                    onChanged: null,
                   ),
                   Tooltip(
                     message: "Sort rows by this field.",
@@ -463,58 +444,38 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   }
 
   List<Widget> _generateActions() {
-    if(_selectedMatch == null) return [];
+    if(!initialized) return [];
 
     // These are replicated in actions below, because generateActions is only
     // called when the state of this widget changes, and tab switching happens
     // fully below this widget.
-    var tab = activeTabs[_tabController.index];
-    var rater = _history.raterFor(_selectedMatch!, tab);
+    // (n.b. tab/rater used to be initialized here once)
 
     return [
-      if(rater.ratingSystem.supportsPrediction) Tooltip(
+      if(_settings.algorithm.supportsPrediction) Tooltip(
         message: "Predict the outcome of a match based on ratings.",
         child: IconButton(
           icon: Icon(RpgAwesome.crystal_ball),
           onPressed: () {
             var tab = activeTabs[_tabController.index];
-            var rater = _history.raterFor(_selectedMatch!, tab);
-            _startPredictionView(rater, tab);
+            // TODO: restore
+            // var rater = _history.raterFor(_selectedMatch!, tab);
+            // _startPredictionView(rater, tab);
           },
         ),
       ), // end if: supports ratings
-      if(_historyChanged) Tooltip(
-        message: "Save the rating project.",
-        child: IconButton(
-          icon: Icon(Icons.save),
-          onPressed: () async {
-            // This project is also the autosave, so save it there too
-            // TODO: fix
-            _log.w("SAVING IN RATINGS NOT SUPPORTED");
-            // var pm = RatingProjectManager();
-            // await pm.saveProject(_history.project, mapName: RatingProjectManager.autosaveName);
-
-            setState(() {
-              _historyChanged = false;
-            });
-
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Saved project.")));
-          },
-        ),
-      ), // end if: history changed
       Tooltip(
           message: "View statistics for this division or group.",
           child: IconButton(
             icon: Icon(Icons.bar_chart),
             onPressed: () async {
-              if(_selectedMatch != null) {
-                var tab = activeTabs[_tabController.index];
-                var rater = _history.raterFor(_selectedMatch!, tab);
-                var statistics = rater.getStatistics(ratings: _ratings);
-                showDialog(context: context, builder: (context) {
-                  return RaterStatsDialog(tab, statistics);
-                });
-              }
+              var tab = activeTabs[_tabController.index];
+              // TODO: restore
+              // var rater = _history.raterFor(_selectedMatch!, tab);
+              // var statistics = rater.getStatistics(ratings: _ratings);
+              // showDialog(context: context, builder: (context) {
+              //   return RaterStatsDialog(tab, statistics);
+              // });
             },
           )
       ),
@@ -523,7 +484,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         child: IconButton(
           icon: Icon(Icons.remove_red_eye_rounded),
           onPressed: () async {
-            var existingHidden = _history.settings.hiddenShooters;
+            var existingHidden = _settings.hiddenShooters;
             var hidden = await showDialog<List<String>>(context: context, builder: (context) {
               return MemberNumberDialog(
                 title: "Hide shooters",
@@ -536,8 +497,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
             if(hidden != null) {
               setState(() {
-                _history.settings.hiddenShooters = hidden;
-                _historyChanged = true;
+                _settings.hiddenShooters = hidden;
+                _settingsChanged = true;
               });
             }
           },
@@ -562,68 +523,67 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     switch(item) {
 
       case _MenuEntry.csvExport:
-        if(_selectedMatch != null) {
-          var archive = Archive();
-          for(var tab in activeTabs) {
-            var rater = _history.raterFor(_selectedMatch!, tab);
-            var sortedRatings = rater.uniqueShooters.where((e) => e.ratingEvents.length >= _minRatings);
+        var archive = Archive();
+        for(var tab in activeTabs) {
+          var ratings = (await widget.dataSource.getRatings(tab).unwrap()).map((e) => (_settings.algorithm.wrapDbRating(e)));
+          var sortedRatings = ratings.where((e) => e.length >= _minRatings);
 
-            Duration? maxAge;
-            if(_maxDays > 0) {
-              maxAge = Duration(days: _maxDays);
-            }
-
-            var hiddenShooters = [];
-            for(var s in _history.settings.hiddenShooters) {
-              hiddenShooters.add(Rater.processMemberNumber(s));
-            }
-
-            if(maxAge != null) {
-              var cutoff = _selectedMatch?.date ?? DateTime.now();
-              cutoff = cutoff.subtract(maxAge);
-              sortedRatings = sortedRatings.where((r) => r.lastSeen.isAfter(cutoff));
-            }
-
-            if(_filters.ladyOnly) {
-              sortedRatings = sortedRatings.where((r) => r.female);
-            }
-
-            if(_filters.activeCategories.isNotEmpty) {
-              sortedRatings = sortedRatings.where((r) =>
-                  _filters.activeCategories.contains(r.ageCategory));
-            }
-
-            if(hiddenShooters.isNotEmpty) {
-              sortedRatings = sortedRatings.where((r) => !hiddenShooters.contains(r.memberNumber));
-            }
-
-            var comparator = rater.ratingSystem.comparatorFor(_sortMode) ?? _sortMode.comparator();
-            var asList = sortedRatings.sorted(comparator);
-
-            var csv = rater.toCSV(ratings: asList);
-            archive.addFile(ArchiveFile.string("${tab.name.safeFilename()}.csv", csv));
+          Duration? maxAge;
+          if(_maxDays > 0) {
+            maxAge = Duration(days: _maxDays);
           }
-          var zip = ZipEncoder().encode(archive); 
 
-          if(zip != null) {
-            HtmlOr.saveBuffer("ratings-${_history.project.name.safeFilename()}.zip", zip);
+          var hiddenShooters = [];
+          for(var s in _settings.hiddenShooters) {
+            hiddenShooters.add(Rater.processMemberNumber(s));
           }
-          else {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to encode archive")));
+
+          if(maxAge != null) {
+            var cutoff = _selectedMatch?.date ?? DateTime.now();
+            cutoff = cutoff.subtract(maxAge);
+            sortedRatings = sortedRatings.where((r) => r.lastSeen.isAfter(cutoff));
           }
+
+          if(_filters.ladyOnly) {
+            sortedRatings = sortedRatings.where((r) => r.female);
+          }
+
+          if(_filters.activeCategories.isNotEmpty) {
+            sortedRatings = sortedRatings.where((r) =>
+                _filters.activeCategories.contains(r.ageCategory));
+          }
+
+          if(hiddenShooters.isNotEmpty) {
+            sortedRatings = sortedRatings.where((r) => !hiddenShooters.contains(r.memberNumber));
+          }
+
+          var comparator = _settings.algorithm.comparatorFor(_sortMode) ?? _sortMode.comparator();
+          var asList = sortedRatings.sorted(comparator);
+
+          var csv = _settings.algorithm.ratingsToCsv(asList);
+          archive.addFile(ArchiveFile.string("${tab.name.safeFilename()}.csv", csv));
         }
+        var zip = ZipEncoder().encode(archive);
+
+        if(zip != null) {
+          HtmlOr.saveBuffer("ratings-${_projectName.safeFilename()}.zip", zip);
+        }
+        else {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to encode archive")));
+        }
+
         break;
 
 
       case _MenuEntry.dataErrors:
         var changed = await showDialog<bool>(barrierDismissible: false, context: context, builder: (context) => MemberNumberCorrectionListDialog(
-          corrections: _history.settings.memberNumberCorrections,
+          corrections: _settings.memberNumberCorrections,
           width: 700,
         ));
 
         if(changed ?? false) {
           setState(() {
-            _historyChanged = true;
+            _settingsChanged = true;
           });
         }
         break;
@@ -748,7 +708,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
     // TODO: write registration info to cache
 
-    int seed = _history.matches.last.date?.millisecondsSinceEpoch ?? 1054124681;
+    int seed = _selectedMatch.date.millisecondsSinceEpoch;
     var predictions = rater.ratingSystem.predict(shooters, seed: seed);
     Navigator.of(context).push(MaterialPageRoute(builder: (context) {
       return PredictionView(rater: rater, predictions: predictions);
