@@ -7,6 +7,7 @@
 import 'dart:convert';
 
 import 'package:isar/isar.dart';
+import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
@@ -63,7 +64,7 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   /// of the overall list of matches in a project.
   final filteredMatches = IsarLinks<DbShootingMatch>();
 
-  /// A list of ongoing matches, which will be treated slightly differently by the rating
+  /// A list of ongoing matches, which may be treated slightly differently by the rating
   /// algorithm.
   final matchesInProgress = IsarLinks<DbShootingMatch>();
 
@@ -88,6 +89,10 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
 
       return filteredMatches;
     }
+  }
+
+  Future<void> resetMatches() async {
+    // TODO
   }
 
   /// The set of matches last used to calculate ratings for this match.
@@ -136,21 +141,26 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
 
   /// Delete all shooter ratings and rating events belonging to this project.
   Future<void> resetRatings() async {
-    await ratings.load();
-    var eventCount = 0;
-    ratings.forEach((r) {
-      // TODO: r.resetEvents
-    });
+    return AnalystDatabase().isar.writeTxn(() async {
+      await ratings.load();
+      var eventCount = 0;
+      for(var r in ratings) {
+        var count = await r.events.filter().deleteAll();
+        await r.events.reset();
+        eventCount += count;
+      }
 
-    var count = await ratings.filter().deleteAll();
-    _log.i("Cleared $count ratings and $eventCount events");
+      var count = await ratings.filter().deleteAll();
+      await ratings.reset();
+      _log.i("Cleared $count ratings and $eventCount events");
+    });
   }
 
   // Ratings
   final ratings = IsarLinks<DbShooterRating>();
 
   Future<DataSourceResult<List<DbShooterRating>>> getRatings(RatingGroup group) async {
-    return DataSourceResult.ok(await ratings.filter().group((q) => q.uuidEqualTo(group.uuid)).findAll());
+    return DataSourceResult.ok(await ratings.filter().group((q) => q.idEqualTo(group.id)).findAll());
   }
 
   DbRatingProject({
@@ -218,7 +228,7 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
         .filter()
         .dbKnownMemberNumbersElementMatches(memberNumber)
         .and()
-        .group((q) => q.uuidEqualTo(group.uuid)).findAll();
+        .group((q) => q.idEqualTo(group.id)).findAll();
 
     return DataSourceResult.ok(results.firstOrNull);
   }
@@ -291,6 +301,9 @@ class RatingGroup with DbSportEntity {
 @collection
 class DbRatingEvent {
   Id id = Isar.autoIncrement;
+
+  @ignore
+  bool get isPersisted => id != Isar.autoIncrement;
 
   @Backlink(to: 'events')
   final owner = IsarLink<DbShooterRating>();

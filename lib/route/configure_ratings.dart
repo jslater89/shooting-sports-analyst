@@ -64,7 +64,19 @@ class ConfigureRatingsPage extends StatefulWidget {
 class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   final bool _operationInProgress = false;
 
-  Sport? sport;
+  Sport _sport = uspsaSport;
+  Sport get sport => _sport;
+  set sport(Sport v) {
+    if(v != _sport) {
+      if(v.builtinRatingGroupsProvider != null) {
+        _groups = [...v.builtinRatingGroupsProvider!.defaultRatingGroups];
+      }
+      else {
+        _groups = [];
+      }
+    }
+    _sport = v;
+  }
 
   bool matchCacheReady = false;
   List<DbShootingMatch> projectMatches = [];
@@ -101,6 +113,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
     prefs = Provider.of<SharedPreferences>(context, listen: false);
     matchCacheReady = MatchCache.readyNow;
+    sport = uspsaSport;
 
     if(!matchCacheReady) _warmUpMatchCache();
 
@@ -112,7 +125,14 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   /// Checks the match cache for URL names, and starts downloading any
   /// matches that aren't in the cache.
   Future<void> updateMatches() async {
-    if(filters != null) _filterMatches();
+    if(filters != null) {
+      _filterMatches();
+    }
+    else {
+      setState(() {
+        filteredMatches = projectMatches;
+      });
+    }
   }
 
   Future<void> _warmUpMatchCache() async {
@@ -159,6 +179,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       await project.matches.load();
     }
     projectMatches = [...project.matches];
+    _groups = [...project.groups];
     setState(() {
       filteredMatches = null;
       filters = null;
@@ -503,7 +524,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                     if(dbEntries == null) return;
 
                                     for(var entry in dbEntries) {
-
+                                      if(!projectMatches.contains(entry)) {
+                                        projectMatches.add(entry);
+                                      }
                                     }
 
                                     setState(() {
@@ -657,6 +680,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                             onPressed: () {
                                               setState(() {
                                                 projectMatches.remove(match);
+                                                ongoingMatches.remove(match);
                                                 filteredMatches?.remove(match);
                                               });
                                             },
@@ -786,10 +810,17 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     String mapName = isAutosave || _lastProjectName == null ? RatingProjectManager.autosaveName : _lastProjectName!;
 
     var project = DbRatingProject(
-      sportName: "USPSA",
+      sportName: sport.name,
       name: _lastProjectName ?? name,
       settings: settings,
     );
+
+    project.matches.addAll(projectMatches);
+    if(filteredMatches != null && filteredMatches!.isNotEmpty) {
+      project.filteredMatches.addAll(filteredMatches!);
+    }
+
+    project.dbGroups.addAll(_groups);
 
     await AnalystDatabase().saveRatingProject(project);
     prefs.setInt(Preferences.lastProjectId, project.id);
@@ -807,7 +838,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   void _restoreDefaults() {
     _settingsController.restoreDefaults();
     List<RatingGroup> groups = [];
-    var provider = sport!.builtinRatingGroupsProvider;
+    var provider = sport.builtinRatingGroupsProvider;
     if(provider != null) {
       groups = provider.defaultRatingGroups;
     }

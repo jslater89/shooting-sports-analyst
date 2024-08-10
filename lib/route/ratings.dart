@@ -10,6 +10,7 @@ import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_sourc
 import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 import 'package:shooting_sports_analyst/route/configure_ratings.dart';
+import 'package:shooting_sports_analyst/route/load_ratings.dart';
 import 'package:shooting_sports_analyst/route/view_ratings.dart';
 
 class RatingsContainerPage extends StatefulWidget {
@@ -23,6 +24,7 @@ class _RatingsContainerPageState extends State<RatingsContainerPage> {
   DbRatingProject? project;
 
   bool get configured => project != null;
+  bool calculated = false;
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +35,17 @@ class _RatingsContainerPageState extends State<RatingsContainerPage> {
             this.project = project;
           });
         }
+      );
+    }
+    else if(!calculated) {
+      return LoadRatingsPage(
+        project: project!,
+        forceRecalculate: true,
+        onRatingsComplete: () {
+          setState(() {
+            calculated = true;
+          });
+        },
       );
     }
     else {

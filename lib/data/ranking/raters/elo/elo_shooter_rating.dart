@@ -197,10 +197,10 @@ class EloShooterRating extends ShooterRating {
   void updateFromEvents(List<RatingEvent> events) {
     for(var e in events) {
       e as EloRatingEvent;
-      wrappedRating.events.add(e.wrappedEvent);
       if(e.baseK != 0) {
         rating += e.ratingChange;
       }
+      wrappedRating.newRatingEvents.add(e.wrappedEvent);
     }
   }
 

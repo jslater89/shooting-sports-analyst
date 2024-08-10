@@ -20,9 +20,9 @@ enum _DoubleKeys {
 }
 
 class EloRatingEvent extends RatingEvent {
-  RelativeScore get matchScore {
-    return extraData[MultiplayerPercentEloRater.matchScoreKey]! as RelativeScore;
-  }
+  // RelativeScore get matchScore {
+  //   return extraData[MultiplayerPercentEloRater.matchScoreKey]! as RelativeScore;
+  // }
 
   double get error => wrappedEvent.doubleData[_DoubleKeys.error.index];
   set error(double v) => wrappedEvent.doubleData[_DoubleKeys.error.index] = v;

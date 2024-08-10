@@ -11,6 +11,7 @@ import 'package:shooting_sports_analyst/data/database/match/match_query_element.
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/match/translator.dart';
 import 'package:shooting_sports_analyst/logger.dart';
@@ -49,6 +50,16 @@ class AnalystDatabase {
       DbRatingEventSchema,
       DbShooterRatingSchema,
     ], directory: "db", name: "database");
+
+    isar.writeTxn(() async {
+      for(var sport in SportRegistry().availableSports) {
+        var provider = sport.builtinRatingGroupsProvider;
+        if(provider != null) {
+          await isar.ratingGroups.putAll(provider.builtinRatingGroups);
+        }
+      }
+    });
+
     _readyCompleter.complete();
   }
 

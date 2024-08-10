@@ -224,6 +224,7 @@ final _builtinRaterGroups = <RatingGroup>[
     uuid: "uspsa-open",
     sportName: uspsaName,
     name: "Open",
+    displayName: "OPEN",
     divisionNames: [
       uspsaOpen.name,
     ]
@@ -304,7 +305,7 @@ final _builtinRaterGroups = <RatingGroup>[
   RatingGroup.create(
     uuid: "uspsa-open-pcc",
     sportName: uspsaName,
-    name: "Open/PCC",
+    name: "OPEN/PCC",
     divisionNames: [
       uspsaOpen.name,
       uspsaPcc.name,
@@ -342,7 +343,7 @@ final _builtinRaterGroups = <RatingGroup>[
     uuid: "uspsa-lim-lo-co",
     sportName: uspsaName,
     name: "Limited/LO/CO",
-    displayName: "Lim/LO/CO",
+    displayName: "LIM/LO/CO",
     divisionNames: [
       uspsaLimited.name,
       uspsaLimitedOptics.name,
@@ -353,6 +354,7 @@ final _builtinRaterGroups = <RatingGroup>[
     uuid: "uspsa-limited-lo",
     sportName: uspsaName,
     name: "Limited/LO",
+    displayName: "LIM/LO",
     divisionNames: [
       uspsaLimited.name,
       uspsaLimitedOptics.name,

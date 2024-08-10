@@ -93,10 +93,12 @@ class RatingProjectLoader {
 
     // nothing to do
     if(matchesToAdd.isEmpty) {
+      _log.i("No new matches");
       return Result.ok(null);
     }
 
     if(!canAppend) {
+      _log.i("Unable to append: resetting ratings");
       await project.resetRatings();
     }
 
@@ -118,6 +120,11 @@ class RatingProjectLoader {
       }
     }
 
+    callback(progress: 0, total: matchesToAdd.length, state: LoadingState.processingScores);
+    var result = await _addMatches(hydratedMatches);
+    if(result.isErr()) return Result.errFrom(result);
+
+    callback(progress: 1, total: 1, state: LoadingState.done);
     return Result.ok(null);
   }
 
@@ -129,7 +136,7 @@ class RatingProjectLoader {
     for(var group in project.groups) {
       for (var match in matches) {
         // 1. For each match, add shooters.
-        _addShootersFromMatch(group, match);
+        await _addShootersFromMatch(group, match);
       }
 
       // 2. Deduplicate shooters.
@@ -167,7 +174,10 @@ class RatingProjectLoader {
         }
 
         // 3.1.2. Rank match through code in Rater
-        _rankMatch(group, match);
+        // TODO: may be possible to remove this 'await' once everything is working
+        // May allow some processing to proceed in 'parallel', or at least while DB
+        // operations are happening
+        await _rankMatch(group, match);
       }
 
       // 3.2. DB-delete any shooters we added who recorded no scores in any matches in
@@ -228,7 +238,7 @@ class RatingProjectLoader {
   Future<int> _addShootersFromMatch(RatingGroup group, ShootingMatch match) async {
     int added = 0;
     int updated = 0;
-    var shooters = _getShooters(group, match);
+    var shooters = await _getShooters(group, match);
     for(MatchEntry s in shooters) {
       var processed = Rater.processMemberNumber(s.memberNumber);
       var corrections = _dataCorrections.getByInvalidNumber(processed);
@@ -266,7 +276,7 @@ class RatingProjectLoader {
           rating.firstName = s.firstName;
           rating.lastName = s.lastName;
           updated += 1;
-          db.upsertDbShooterRating(rating);
+          await db.upsertDbShooterRating(rating);
         }
       }
     }
@@ -274,7 +284,7 @@ class RatingProjectLoader {
     return added + updated;
   }
 
-  List<MatchEntry> _getShooters(RatingGroup group, ShootingMatch match, {bool verify = false}) {
+  Future<List<MatchEntry>> _getShooters(RatingGroup group, ShootingMatch match, {bool verify = false}) async {
     var filters = group.filters;
     var shooters = <MatchEntry>[];
     shooters = match.filterShooters(
@@ -290,7 +300,7 @@ class RatingProjectLoader {
     }
 
     if(verify) {
-      shooters.retainWhereAsync((element) async => await _verifyShooter(group, element));
+      await shooters.retainWhereAsync((element) async => await _verifyShooter(group, element));
     }
 
     return shooters;
@@ -352,8 +362,14 @@ class RatingProjectLoader {
   Future<void> _rankMatch(RatingGroup group, ShootingMatch match) async {
     late DateTime start;
     if(Timings.enabled) start = DateTime.now();
-    var shooters = _getShooters(group, match, verify: true);
+    var shooters = await _getShooters(group, match, verify: true);
     var scores = match.getScores(shooters: shooters, scoreDQ: settings.byStage);
+
+    // Skip when a match has no shooters in a group
+    if(shooters.length == 0 && scores.length == 0) {
+      return;
+    }
+
     if(Timings.enabled) timings.getShootersAndScoresMillis += (DateTime.now().difference(start).inMicroseconds);
 
     if(Timings.enabled) start = DateTime.now();
@@ -497,13 +513,14 @@ class RatingProjectLoader {
         }
 
         for(var r in changes.keys) {
+          await r.events.load();
           var wrapped = ratingSystem.wrapDbRating(r);
           wrapped.updateFromEvents(changes[r]!.values.toList());
           wrapped.updateTrends(changes[r]!.values.toList());
           shootersAtMatch.add(r);
         }
 
-        AnalystDatabase().updateChangedRatings(changes.keys);
+        await AnalystDatabase().updateChangedRatings(changes.keys);
 
         changes.clear();
       }
@@ -935,7 +952,7 @@ class RatingProjectLoader {
       RelativeStageScore stageScore = score.stageScores[stage]!;
 
       // If the shooter has already had a rating change for this stage, don't recalc.
-      for(var existingScore in changes[rating]!.keys) {
+      for(var existingScore in changes[rating.wrappedRating]!.keys) {
         existingScore as RelativeStageScore;
         if(existingScore.stage == stage) return;
       }
@@ -954,11 +971,11 @@ class RatingProjectLoader {
       );
       if(Timings.enabled) timings.updateMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
 
-      if(!changes[rating]!.containsKey(stageScore)) {
-        changes[rating]![stageScore] =
+      if(!changes[rating.wrappedRating]!.containsKey(stageScore)) {
+        changes[rating.wrappedRating]![stageScore] =
             ratingSystem.newEvent(rating: rating, match: match, stage: stage, score: stageScore, matchScore: score);
-        changes[rating]![stageScore]!.apply(update[rating]!);
-        changes[rating]![stageScore]!.info = update[rating]!.info;
+        changes[rating.wrappedRating]![stageScore]!.apply(update[rating]!);
+        changes[rating.wrappedRating]![stageScore]!.info = update[rating]!.info;
       }
     }
     else {
@@ -1066,7 +1083,7 @@ extension AsyncRetainWhere<T> on List<T> {
   Future<void> retainWhereAsync(Future<bool> Function(T) test) async {
     List<T> toRemove = [];
     for(var i in this) {
-      if(await test(i)) {
+      if(!(await test(i))) {
         toRemove.add(i);
       }
     }

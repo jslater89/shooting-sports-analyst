@@ -76,6 +76,10 @@ class DbShooterRating extends Shooter with DbSportEntity {
   /// All events belonging to this rating.
   final events = IsarLinks<DbRatingEvent>();
 
+  @ignore
+  List<DbRatingEvent> newRatingEvents = [];
+
+  @ignore
   int get length => events.countSync();
 
   double rating;
@@ -147,6 +151,11 @@ class DbShooterRating extends Shooter with DbSportEntity {
     }
     this.doubleData = []..addAll(other.doubleData);
     this.intData = []..addAll(other.intData);
+  }
+
+  @override
+  String toString() {
+    return "$name ${group.value?.name} ($rating)";
   }
 }
 

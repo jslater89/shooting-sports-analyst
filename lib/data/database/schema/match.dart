@@ -119,6 +119,11 @@ class DbShootingMatch with DbSportEntity {
 
     return a.eventName.compareTo(b.eventName);
   };
+
+  @override
+  String toString() {
+    return "$eventName ($id) (${sourceIds.firstOrNull})";
+  }
 }
 
 @embedded

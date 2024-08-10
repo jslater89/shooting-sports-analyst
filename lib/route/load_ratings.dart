@@ -4,6 +4,9 @@ import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_loader.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
+import 'package:shooting_sports_analyst/logger.dart';
+
+SSALogger _log = SSALogger("LoadRatingsPage");
 
 /// LoadRatingsPage accepts a configured DbRatingProject from ConfigureRatingsPage,
 /// then handles displaying progress while the rating project calculates ratings
@@ -11,10 +14,11 @@ import 'package:shooting_sports_analyst/data/sport/model.dart';
 /// ready to go.
 
 class LoadRatingsPage extends StatefulWidget {
-  const LoadRatingsPage({super.key, required this.project, this.forceRecalculate = false});
+  const LoadRatingsPage({super.key, required this.project, this.forceRecalculate = false, required this.onRatingsComplete});
   
   final bool forceRecalculate;
   final DbRatingProject project;
+  final VoidCallback onRatingsComplete;
 
   @override
   State<LoadRatingsPage> createState() => _LoadRatingsPageState();
@@ -35,6 +39,7 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
     super.initState();
 
     loader = RatingProjectLoader(widget.project, callback);
+    calculateRatings();
   }
 
   Future<void> calculateRatings() async {
@@ -43,7 +48,10 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
       currentState = LoadingState.readingMatches;
     });
 
-
+    var result = await loader.calculateRatings();
+    if(result.isErr()) {
+      _log.e(result.unwrapErr());
+    }
   }
 
   void callback({
@@ -51,14 +59,31 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
     required int total,
     required LoadingState state
   }) {
+    if(state != currentState) {
+      _log.i("Rating calculation state changed: $state");
+    }
+    else {
+      _log.vv("$progress/$total");
+    }
     setState(() {
       currentState = state;
     });
+
+    if(state == LoadingState.done) {
+      widget.onRatingsComplete();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return const Placeholder();
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Loading..."),
+      ),
+      body: Center(
+        child: _matchLoadingIndicator(),
+      ),
+    );
   }
 
   Widget _matchLoadingIndicator() {

@@ -18,14 +18,34 @@ extension RatingProjectDatabase on AnalystDatabase {
     return isar.dbRatingProjects.where().idEqualTo(id).findFirst();
   }
 
-  Future<DbRatingProject> saveRatingProject(DbRatingProject project) async {
+  Future<DbRatingProject?> getRatingProjectByName(String name) async {
+    return isar.dbRatingProjects.where().nameEqualTo(name).findFirst();
+  }
+
+  Future<DbRatingProject> saveRatingProject(DbRatingProject project, {bool checkName = true}) async {
+    if(checkName) {
+      var existingProject = await getRatingProjectByName(project.name);
+      if(existingProject != null) {
+        project.id = existingProject.id;
+
+        await isar.writeTxn(() async {
+
+          await existingProject.matches.reset();
+          await existingProject.filteredMatches.reset();
+          await existingProject.lastUsedMatches.reset();
+          await existingProject.dbGroups.reset();
+
+          return true;
+        });
+      }
+    }
     await isar.writeTxn(() async {
       await isar.dbRatingProjects.put(project);
-      project.dbGroups.save();
-      project.ratings.save();
-      project.matches.save();
-      project.filteredMatches.save();
-      project.lastUsedMatches.save();
+      await project.dbGroups.save();
+      await project.ratings.save();
+      await project.matches.save();
+      await project.filteredMatches.save();
+      await project.lastUsedMatches.save();
     });
     return project;
   }
@@ -36,21 +56,28 @@ extension RatingProjectDatabase on AnalystDatabase {
 
   Future<bool> deleteRatingProject(DbRatingProject project) async {
     // clear all linked shooter ratings
-    if(!project.ratings.isLoaded) {
-      await project.ratings.load();
-      for(var rating in project.ratings) {
-        deleteShooterRating(rating);
+    return isar.writeTxn(() async {
+      if(!project.ratings.isLoaded) {
+        await project.ratings.load();
+        for(var rating in project.ratings) {
+          _innerDeleteShooterRating(rating);
+        }
       }
-    }
 
-    return isar.dbRatingProjects.delete(project.id);
+      return isar.dbRatingProjects.delete(project.id);
+    });
+  }
+
+  Future<bool> _innerDeleteShooterRating(DbShooterRating rating) async {
+      var deleted = await rating.events.filter().deleteAll();
+      _log.v("Deleted $deleted events while deleting rating");
+      return isar.dbShooterRatings.delete(rating.id);
   }
 
   Future<bool> deleteShooterRating(DbShooterRating rating) async {
-    // TODO: clear all linked rating events
-    var deleted = await rating.events.filter().deleteAll();
-    _log.v("Deleted $deleted events while deleting rating");
-    return isar.dbShooterRatings.delete(rating.id);
+    return isar.writeTxn(() async {
+      return _innerDeleteShooterRating(rating);
+    });
   }
 
   // TODO: cache loaded shooters?
@@ -74,13 +101,17 @@ extension RatingProjectDatabase on AnalystDatabase {
     required RatingGroup group,
     required ShooterRating rating,
   }) {
-    var dbRating = rating.wrappedRating;
-    if(!dbRating.isPersisted) {
+    return isar.writeTxn(() async {
+      var dbRating = rating.wrappedRating;
       dbRating.project.value = project;
       dbRating.group.value = group;
-    }
-    
-    return upsertDbShooterRating(dbRating, linksChanged: dbRating.isPersisted);
+      await isar.dbShooterRatings.put(dbRating);
+
+      await dbRating.project.save();
+      await dbRating.group.save();
+
+      return dbRating;
+    });
   }
 
   /// Upsert a DbShooterRating.
@@ -110,6 +141,13 @@ extension RatingProjectDatabase on AnalystDatabase {
           await r.group.save();
         }
         await isar.dbShooterRatings.put(r);
+        for(var event in r.newRatingEvents) {
+          if(!event.isPersisted) {
+            await isar.dbRatingEvents.put(event);
+          }
+        }
+        r.newRatingEvents.clear();
+
         await r.events.save();
       }
 
@@ -120,13 +158,13 @@ extension RatingProjectDatabase on AnalystDatabase {
 
   Future<int> countShooterRatings(DbRatingProject project, RatingGroup group) async {
     return await project.ratings.filter()
-        .group((q) => q.idEqualTo(group.id))
+        .group((q) => q.uuidEqualTo(group.uuid))
         .count();
   }
 
   Future<List<double>> getConnectedness(DbRatingProject project, RatingGroup group) {
     return project.ratings.filter()
-        .group((q) => q.idEqualTo(group.id))
+        .group((q) => q.uuidEqualTo(group.uuid))
         .connectednessProperty()
         .findAll();
   }
