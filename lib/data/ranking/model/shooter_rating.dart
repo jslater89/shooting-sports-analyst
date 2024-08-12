@@ -345,11 +345,19 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
     return matchChange(lastMatch);
   }
 
-  double matchChange(ShootingMatch match) {
-    double change = ratingEvents.where((e) => e.match == match)
+  double matchChange(SourceIdsProvider match) {
+    var matchEvents = this.matchEvents(match);
+    if (matchEvents.isEmpty) {
+      return 0;
+    }
+    double change = matchEvents
         .map((e) => e.ratingChange)
         .reduce((a, b) => a + b);
     return change;
+  }
+
+  List<RatingEvent> matchEvents(SourceIdsProvider match) {
+    return ratingEvents.where((e) => e.match.sourceIds.any((id) => match.sourceIds.contains(id))).toList();
   }
 
   List<MatchHistoryEntry> careerHistory() {

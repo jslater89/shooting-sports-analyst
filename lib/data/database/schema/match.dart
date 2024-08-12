@@ -22,7 +22,7 @@ part 'match.g.dart';
 typedef ExternalId = int;
 
 @collection
-class DbShootingMatch with DbSportEntity {
+class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
   Id id = Isar.autoIncrement;
   String eventName;
 

@@ -32,7 +32,6 @@
 *.msi
 *.AppImage
 *.g.dart
-.fvm/flutter_sdk
 
 web/index.html
 
@@ -60,3 +59,6 @@ coverage/
 # When adding a new closed-source thing, commit the stub, then
 # add to gitignore
 lib/closed_sources/psv2/
+
+# FVM Version Cache
+.fvm/

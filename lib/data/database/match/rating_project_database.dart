@@ -6,6 +6,7 @@
 
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
@@ -141,11 +142,15 @@ extension RatingProjectDatabase on AnalystDatabase {
           await r.group.save();
         }
         await isar.dbShooterRatings.put(r);
+        var eventFutures = <Future>[];
         for(var event in r.newRatingEvents) {
           if(!event.isPersisted) {
-            await isar.dbRatingEvents.put(event);
+            eventFutures.add(isar.dbRatingEvents.put(event).then((_) => event.match.save()));
+            r.events.add(event);
           }
         }
+        await Future.wait(eventFutures);
+
         r.newRatingEvents.clear();
 
         await r.events.save();

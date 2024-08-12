@@ -37,9 +37,9 @@ class DbShooterRating extends Shooter with DbSportEntity {
 
 
   @Index()
-  List<String> get firstNameParts => firstName.split(RegExp(r'\w+'));
+  List<String> get firstNameParts => firstName.split(RegExp(r'\s+'));
   @Index()
-  List<String> get lastNameParts => lastName.split(RegExp(r'\w+'));
+  List<String> get lastNameParts => lastName.split(RegExp(r'\s+'));
 
   @Index()
   String get deduplicatorName {

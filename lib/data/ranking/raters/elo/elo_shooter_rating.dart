@@ -7,6 +7,8 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
+import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 // import 'package:shooting_sports_analyst/data/db/object/rating/elo/db_elo_rating.dart';
 import 'package:shooting_sports_analyst/data/model.dart';
@@ -131,9 +133,14 @@ class EloShooterRating extends ShooterRating {
     return decayingErrorWithWindow(window: window, fullEffect: fullEffect, offset: offset, decayAfterFull: decayAfterFull) * (errorScale);
   }
 
-  // TODO: an error path that uses sqrt(avg-rating-change^2)
-  // It returns something in the same neighborhood as this method, and is also
-  // always denominated in Elo units
+  double get averageRatingChangeError => averageRatingChangeErrorWithWindow();
+
+  double averageRatingChangeErrorWithWindow({int window = ShooterRating.baseTrendWindow, int offset = 0}) {
+    if (ratingEvents.isEmpty) return 0.0;
+    var events = eventsForWindow(window: window, offset: offset);
+    return sqrt(events.map((e) => e.ratingChange * e.ratingChange).average);
+  }
+
   double get standardError => normalizedDecayingErrorWithWindow(
     window: (ShooterRating.baseTrendWindow * 1.5).round(),
     fullEffect: ShooterRating.baseTrendWindow,
@@ -157,14 +164,8 @@ class EloShooterRating extends ShooterRating {
   }
 
   List<RatingEvent> get ratingEvents {
-    if(!wrappedRating.events.isLoaded) {
-      wrappedRating.events.loadSync();
-    }
-    var events = <EloRatingEvent>[];
-    for(var e in wrappedRating.events) {
-      events.add(EloRatingEvent.wrap(e));
-    }
-    return events;
+    var events = AnalystDatabase().getRatingEventsForSync(wrappedRating);
+    return events.map((e) => EloRatingEvent.wrap(e)).toList();
   }
   List<RatingEvent> emptyRatingEvents = [];
 
@@ -178,18 +179,16 @@ class EloShooterRating extends ShooterRating {
         intDataElements: 0,
         doubleDataElements: _DoubleKeys.values.length,
       ) {
-    this.wrappedRating = DbShooterRating(
-        sportName: sportName,
-        firstName: firstName,
-        lastName: lastName,
-        memberNumber: memberNumber,
-        female: female,
-        rating: initialRating,
-        error: 0.0,
-        connectedness: connectedness,
-        firstSeen: firstSeen,
-        lastSeen: lastSeen,
-    );
+    this.wrappedRating.sportName = sportName;
+    this.wrappedRating.firstName = firstName;
+    this.wrappedRating.lastName = lastName;
+    this.wrappedRating.memberNumber = memberNumber;
+    this.wrappedRating.female = female;
+    this.wrappedRating.rating = initialRating;
+    this.wrappedRating.error = 0.0;
+    this.wrappedRating.connectedness = connectedness;
+    this.wrappedRating.firstSeen = firstSeen;
+    this.wrappedRating.lastSeen = lastSeen;
   }
 
   EloShooterRating.wrapDbRating(DbShooterRating rating) : super.wrapDbRating(rating);

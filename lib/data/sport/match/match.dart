@@ -18,12 +18,18 @@ import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 
+abstract interface class SourceIdsProvider {
+  List<String> get sourceIds;
+}
+
 enum FilterMode {
   or, and,
 }
 
+
+
 /// A match in some shooting event.
-class ShootingMatch {
+class ShootingMatch implements SourceIdsProvider {
   /// The identifier corresponding to this match in the local database.
   int? databaseId;
 

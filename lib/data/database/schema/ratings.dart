@@ -331,7 +331,7 @@ class DbRatingEvent {
 
   /// The match. See [setMatch].
   final match = IsarLink<DbShootingMatch>();
-
+  
   /// Set the match for this event, updating both the [match] link
   /// and [matchId].
   Future<void> setMatch(DbShootingMatch m, {bool save = true}) {
@@ -374,7 +374,10 @@ class DbRatingEvent {
   @ignore
   Map<String, List<dynamic>> info;
   String get infoAsJson => jsonEncode(info);
-  set infoAsJson(String v) => info = jsonDecode(v);
+  set infoAsJson(String v) {
+    var data = jsonDecode(v) as Map<String, dynamic>;
+    info = data.cast<String, List<dynamic>>();
+  }
 
   @ignore
   Map<String, dynamic> extraData;
