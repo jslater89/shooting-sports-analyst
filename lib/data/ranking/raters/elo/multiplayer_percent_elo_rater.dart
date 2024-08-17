@@ -592,7 +592,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
     var trend = rating.trend.round();
     var positivity = (rating.direction * 100).round();
-    var error = rating.standardError;
+    var error = rating.standardError; //rating.decayingAverageRatingChangeError;
     if(doBackRating) {
       error = rating.backRatingError;
     }

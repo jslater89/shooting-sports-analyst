@@ -135,10 +135,39 @@ class EloShooterRating extends ShooterRating {
 
   double get averageRatingChangeError => averageRatingChangeErrorWithWindow();
 
+  double get decayingAverageRatingChangeError => decayingAverageRatingChangeErrorWithWindow(window: (ShooterRating.baseTrendWindow * 1.5).round());
+
   double averageRatingChangeErrorWithWindow({int window = ShooterRating.baseTrendWindow, int offset = 0}) {
     if (ratingEvents.isEmpty) return 0.0;
     var events = eventsForWindow(window: window, offset: offset);
     return sqrt(events.map((e) => e.ratingChange * e.ratingChange).average);
+  }
+
+  double decayingAverageRatingChangeErrorWithWindow({
+    int window = ShooterRating.baseTrendWindow * 2,
+    int fullEffect = ShooterRating.baseTrendWindow,
+    int offset = 0,
+    double decayAfterFull = 0.9,
+  }) {
+    if (ratingEvents.isEmpty) return 0.0;
+    var events = eventsForWindow(window: window, offset: offset);
+    
+    double currentDecay = 1.0;
+    double weightedSum = 0.0;
+    double totalWeight = 0.0;
+    
+    var reversed = events.reversed.toList();
+    for (int i = 0; i < reversed.length; i++) {
+      var e = reversed[i] as EloRatingEvent;
+      if (i >= fullEffect) {
+        currentDecay *= decayAfterFull;
+      }
+      
+      weightedSum += pow(e.ratingChange, 2) * currentDecay;
+      totalWeight += currentDecay;
+    }
+    
+    return sqrt(weightedSum / totalWeight);
   }
 
   double get standardError => normalizedDecayingErrorWithWindow(
