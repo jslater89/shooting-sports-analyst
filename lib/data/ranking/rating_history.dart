@@ -287,6 +287,7 @@ enum RaterGroup {
   revolver,
   limited10,
   locap,
+  tenRounds,
   openPcc,
   limitedCO,
   limitedLO,
@@ -371,6 +372,8 @@ enum RaterGroup {
         return [Division.limited, Division.production, Division.singleStack, Division.revolver, Division.limited10];
       case RaterGroup.combined:
         return Division.values;
+      case RaterGroup.tenRounds:
+        return [Division.singleStack, Division.revolver, Division.limited10];
     }
   }
 
@@ -412,6 +415,8 @@ enum RaterGroup {
         return "Irons Handguns";
       case RaterGroup.combined:
         return "Combined";
+      case RaterGroup.tenRounds:
+        return "10-Round";
     }
   }
 }

@@ -1290,6 +1290,8 @@ extension _Utilities on RaterGroup {
         return "IRONS";
       case RaterGroup.combined:
         return "COMBINED";
+      case RaterGroup.tenRounds:
+        return "10-ROUND";
     }
   }
 }
