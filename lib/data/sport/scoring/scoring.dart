@@ -173,6 +173,17 @@ final class RelativeStageFinishScoring extends MatchScoring {
       if(predictionMode.eloAware) {
         RatingSystem? r = null;
         for(var shooter in shooters) {
+          if(predictionMode == MatchPredictionMode.eloAwarePartial) {
+            var nonDnf = false;
+            for(var score in shooter.scores.values) {
+              if(score.scoring is IgnoredScoring) continue;
+              if(!score.dnf) {
+                nonDnf = true;
+                break;
+              }
+            }
+            if(!nonDnf) continue;
+          }
           var rating = ratings!.lookupNew(match, shooter);
           if(r == null) {
             r = ratings.lookupRater(match, shooter)?.ratingSystem;
@@ -843,6 +854,11 @@ class RawScore {
       targetEvents: {}..addAll(targetEvents),
       penaltyEvents: {}..addAll(penaltyEvents),
     );
+  }
+
+  @override
+  String toString() {
+    return displayString;
   }
 }
 
