@@ -323,6 +323,8 @@ class _FilterDialogState extends State<FilterDialog> {
           var filters = FilterSet(_filters.sport);
           filters.reentries =_filters.reentries;
           filters.scoreDQs = _filters.scoreDQs;
+          filters.knownSquads = _filters.knownSquads;
+          filters.squads = _filters.squads;
           filters.divisions[uspsaSport.divisions.lookupByName("PCC")!] = false;
 
           setState(() {
@@ -336,6 +338,8 @@ class _FilterDialogState extends State<FilterDialog> {
           var filters = FilterSet(_filters.sport);
           filters.reentries =_filters.reentries;
           filters.scoreDQs = _filters.scoreDQs;
+          filters.knownSquads = _filters.knownSquads;
+          filters.squads = _filters.squads;
           filters.divisions[uspsaSport.divisions.lookupByName("PCC")!] = false;
           filters.divisions[uspsaSport.divisions.lookupByName("L10")!] = false;
           filters.divisions[uspsaSport.divisions.lookupByName("PROD")!] = false;
@@ -353,6 +357,8 @@ class _FilterDialogState extends State<FilterDialog> {
             var filters = FilterSet(_filters.sport);
             filters.reentries =_filters.reentries;
             filters.scoreDQs = _filters.scoreDQs;
+            filters.knownSquads = _filters.knownSquads;
+            filters.squads = _filters.squads;
             filters.divisions[uspsaSport.divisions.lookupByName("PCC")!] = false;
             filters.divisions[uspsaSport.divisions.lookupByName("OPEN")!] = false;
             filters.divisions[uspsaSport.divisions.lookupByName("LIM")!] = false;
@@ -371,11 +377,15 @@ class _FilterDialogState extends State<FilterDialog> {
           bool? secondGun = _filters.reentries;
           FilterMode mode = FilterMode.and;
           bool? scoreDQs = _filters.scoreDQs;
+          List<int> knownSquads = _filters.knownSquads;
+          List<int> squads = _filters.squads;
           setState(() {
             _filters = FilterSet(_filters.sport);
             _filters.reentries = secondGun;
             _filters.mode = mode;
             _filters.scoreDQs = scoreDQs;
+            _filters.knownSquads = knownSquads;
+            _filters.squads = squads;
           });
         },
       ),
@@ -385,11 +395,15 @@ class _FilterDialogState extends State<FilterDialog> {
           bool? secondGun = _filters.reentries;
           FilterMode mode = FilterMode.or;
           bool? scoreDQs = _filters.scoreDQs;
+          List<int> knownSquads = _filters.knownSquads;
+          List<int> squads = _filters.squads;
           setState(() {
             _filters = FilterSet(_filters.sport, empty: true);
             _filters.reentries = secondGun;
             _filters.mode = mode;
             _filters.scoreDQs = scoreDQs;
+            _filters.knownSquads = knownSquads;
+            _filters.squads = squads;
           });
         },
       ),
