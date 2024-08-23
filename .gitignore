@@ -34,6 +34,9 @@
 *.g.dart
 .fvm/flutter_sdk
 
+# config now stored in .fvmrc
+.fvm
+
 web/index.html
 
 # Web related
