@@ -412,4 +412,9 @@ class AgeCategory extends NameLookupEntity {
   const AgeCategory({
     required this.name, this.alternateNames = const [],
   });
+
+  @override
+  String toString() {
+    return displayName;
+  }
 }
