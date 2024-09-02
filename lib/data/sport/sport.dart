@@ -7,6 +7,7 @@
 import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/sort_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/display_settings.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/fantasy_scoring_calculator.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 
@@ -85,6 +86,8 @@ class Sport {
 
   late final SportDisplaySettings displaySettings;
 
+  final FantasyScoringCalculator? fantasyScoresProvider;
+
   Sport(this.name, {
     required this.matchScoring,
     required this.defaultStageScoring,
@@ -105,6 +108,7 @@ class Sport {
     /// The power factor to use when generating default display settings.
     /// No effect if [displaySettings] is provided.
     PowerFactor? displaySettingsPowerFactor,
+    this.fantasyScoresProvider,
   }) :
         classifications = Map.fromEntries(classifications.map((e) => MapEntry(e.name, e))),
         divisions = Map.fromEntries(divisions.map((e) => MapEntry(e.name, e))),
@@ -120,7 +124,7 @@ class Sport {
   }
 }
 
-class PowerFactor implements NameLookupEntity {
+class PowerFactor extends NameLookupEntity {
   String get longName => name;
   final String name;
   final String shortName;
@@ -158,7 +162,7 @@ class PowerFactor implements NameLookupEntity {
   }
 }
 
-class Division implements NameLookupEntity {
+class Division extends NameLookupEntity {
   String get longName => _longName ?? name;
   final String? _longName;
   /// Name is the long display name for a division.
@@ -210,6 +214,27 @@ abstract class NameLookupEntity {
   bool get fallback => false;
 
   const NameLookupEntity();
+
+  bool matches(String value) {
+    String lower = value.toLowerCase();
+    if(shortName.toLowerCase() == lower) {
+        return true;
+      }
+
+      if(name.toLowerCase() == lower) {
+        return true;
+      }
+
+      if(longName.toLowerCase() == lower) {
+        return true;
+      }
+
+      if(alternateNames.any((alternateName) => alternateName.toLowerCase() == lower)) {
+        return true;
+      }
+
+      return false;
+  }
 }
 
 extension LookupNameInList<T extends NameLookupEntity> on Iterable<T> {
@@ -267,7 +292,7 @@ extension LookupNameInMap<T extends NameLookupEntity> on Map<String, T> {
   }
 }
 
-class Classification implements NameLookupEntity {
+class Classification extends NameLookupEntity {
   final int index;
   String get longName => name;
   final String name;
@@ -302,7 +327,7 @@ enum EventLevel {
   international;
 }
 
-class MatchLevel implements NameLookupEntity {
+class MatchLevel extends NameLookupEntity {
   String get longName => name;
   final String name;
   final String shortName;

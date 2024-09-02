@@ -58,6 +58,17 @@ class _ScoreListSettingsDialogState extends State<ScoreListSettingsDialog> {
                 }
               },
             ),
+            CheckboxListTile(
+              title: Text("Show fantasy points"),
+              value: settings.showFantasyScores,
+              onChanged: (v) {
+                if(v != null) {
+                  setState(() {
+                    settings.showFantasyScores = v;
+                  });
+                }
+              },
+            ),
             if(widget.showRatingsSettings) ListTile(
               title: Text("Rating display mode"),
               trailing: DropdownButton<RatingDisplayMode>(

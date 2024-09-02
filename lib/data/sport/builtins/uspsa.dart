@@ -4,7 +4,9 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:shooting_sports_analyst/data/sort_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/sorts.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/uspsa_utils/uspsa_fantasy_calculator.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
@@ -35,6 +37,7 @@ final uspsaSport = Sport(
   hasStages: true,
   displaySettingsPowerFactor: _minorPowerFactor,
   resultSortModes: hitFactorSorts,
+  fantasyScoresProvider: const USPSAFantasyScoringCalculator(),
   eventLevels: [
     const MatchLevel(name: "Level I", shortName: "I", alternateNames: ["Local"], eventLevel: EventLevel.local),
     const MatchLevel(name: "Level II", shortName: "II", alternateNames: ["Regional/State"], eventLevel: EventLevel.regional),
@@ -93,5 +96,5 @@ final uspsaSport = Sport(
       fallback: true,
       penaltyEvents: _uspsaPenalties,
     ),
-  ]
+  ],
 );

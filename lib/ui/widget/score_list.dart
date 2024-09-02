@@ -13,6 +13,7 @@ import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/fantasy_scoring_calculator.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
@@ -26,6 +27,7 @@ import 'package:shooting_sports_analyst/data/model.dart' as old;
 
 class ScoreList extends StatelessWidget {
   final ShootingMatch? match;
+  final Map<MatchEntry, FantasyScore>? fantasyScores;
   final int? maxPoints;
   final MatchStage? stage;
   final List<RelativeMatchScore> baseScores;
@@ -57,6 +59,7 @@ class ScoreList extends StatelessWidget {
     this.whatIfMode = false,
     this.editedShooters = const [],
     this.ratings,
+    this.fantasyScores,
   }) : super(key: key);
 
   @override
@@ -165,6 +168,7 @@ class ScoreList extends StatelessWidget {
                 Expanded(flex: 2, child: Text("Match %")),
                 if(sport.matchScoring is CumulativeScoring && sport.type.isTimePlus) Expanded(flex: 2, child: Text("Final Time"))
                 else Expanded(flex: 2, child: Text("Match Pts.")),
+                if(fantasyScores != null) Expanded(flex: 2, child: Text("F. Pts.")),
                 if(match?.inProgress ?? false) Expanded(flex: 1, child: Text("Through", textAlign: TextAlign.end)),
                 if(match?.inProgress ?? false) SizedBox(width: 15),
                 if(sport.type.isTimePlus) Expanded(flex: 2, child: Text("Raw Time"))
@@ -301,6 +305,13 @@ class ScoreList extends StatelessWidget {
               if(sport.hasPowerFactors) Expanded(flex: 1, child: Text(score.shooter.powerFactor.shortName)),
               Expanded(flex: 2, child: Text("${score.ratio.asPercentage()}%")),
               Expanded(flex: 2, child: Text(score.points.toStringAsFixed(2))),
+              if(fantasyScores != null) Expanded(
+                flex: 2,
+                child: Tooltip(
+                  message: fantasyScores![score.shooter]?.tooltip,
+                  child: Text(fantasyScores![score.shooter]?.points.toStringAsFixed(2) ?? "0.0"),
+                )
+              ),
               if(match?.inProgress ?? false) Expanded(flex: 1, child: Text("$stagesComplete", textAlign: TextAlign.end)),
               if(match?.inProgress ?? false) SizedBox(width: 15),
               if(sport.type.isTimePlus) Expanded(flex: 2, child: Text(score.total.rawTime.toStringAsFixed(2)))

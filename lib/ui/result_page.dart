@@ -16,8 +16,10 @@ import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 import 'package:shooting_sports_analyst/data/search_query_parser.dart';
 import 'package:shooting_sports_analyst/data/sort_mode.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/uspsa_utils/uspsa_fantasy_calculator.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/match/stage_stats_calculator.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/fantasy_scoring_calculator.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
@@ -75,6 +77,7 @@ class _ResultPageState extends State<ResultPage> {
   bool _operationInProgress = false;
   Sport get sport => widget.canonicalMatch.sport;
   late FilterSet _filters;
+  Map<MatchEntry, FantasyScore>? _fantasyScores;
   List<RelativeMatchScore> _baseScores = [];
   List<RelativeMatchScore> _searchedScores = [];
   String _searchTerm = "";
@@ -90,6 +93,7 @@ class _ResultPageState extends State<ResultPage> {
     availablePointsCountPenalties: true,
     fixedTimeAvailablePointsFromDivisionMax: true,
     predictionMode: MatchPredictionMode.none,
+    showFantasyScores: false,
   ));
 
   int get _matchMaxPoints => _filteredStages.map((stage) => stage.maxPoints).sum;
@@ -283,6 +287,9 @@ class _ResultPageState extends State<ResultPage> {
       case SortMode.idpaAccuracy:
         scores.sortByIdpaAccuracy(stage: _stage, scoring: sport.matchScoring);
         break;
+      case SortMode.fantasyPoints:
+        scores.sortByFantasyPoints(fantasyScores: _fantasyScores);
+        break;
       default:
         _log.e("Unknown sort type $s");
     }
@@ -348,6 +355,25 @@ class _ResultPageState extends State<ResultPage> {
     _applySortMode(_sortMode);
   }
 
+  void _updateFantasyScores() {
+    _log.d("Updating fantasy scores: ${_settings.value.showFantasyScores}");
+    var fantasyScoringCalculator = _currentMatch.sport.fantasyScoresProvider;
+    if(fantasyScoringCalculator != null && _settings.value.showFantasyScores) {
+      setState(() {
+        _fantasyScores = fantasyScoringCalculator.calculateFantasyScores(_currentMatch);
+      });
+    }
+    else {
+      if(_sortMode == SortMode.fantasyPoints) {
+        _sortMode = SortMode.score;
+        _applySortMode(_sortMode);
+      }
+      setState(() {
+        _fantasyScores = null;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     var size = MediaQuery.of(context).size;
@@ -367,6 +393,7 @@ class _ResultPageState extends State<ResultPage> {
       onStageChanged: _applyStage,
       onStageSetChanged: _selectStages,
       onSearchChanged: _applySearchTerm,
+      hasFantasyScores: _fantasyScores != null,
     );
 
     Widget listWidget = ScoreList(
@@ -380,6 +407,7 @@ class _ResultPageState extends State<ResultPage> {
       verticalScrollController: _verticalScrollController,
       horizontalScrollController: _horizontalScrollController,
       minWidth: _MIN_WIDTH,
+      fantasyScores: _fantasyScores,
       onScoreEdited: (shooter, stage, wholeMatch) {
         if(wholeMatch) {
           for(var stage in _currentMatch!.stages) {
@@ -572,9 +600,13 @@ class _ResultPageState extends State<ResultPage> {
 
               if(newSettings != null) {
                 var oldPredictionMode = _settings.value.predictionMode;
+                var oldShowFantasyPoints = _settings.value.showFantasyScores;
                 _settings.value = newSettings;
                 if(_settings.value.predictionMode != oldPredictionMode) {
                   _updateHypotheticalScores();
+                }
+                if(_settings.value.showFantasyScores != oldShowFantasyPoints) {
+                  _updateFantasyScores();
                 }
               }
             },
@@ -690,18 +722,21 @@ class ScoreDisplaySettings {
   MatchPredictionMode predictionMode;
   bool availablePointsCountPenalties;
   bool fixedTimeAvailablePointsFromDivisionMax;
+  bool showFantasyScores;
 
   ScoreDisplaySettings({
     required this.ratingMode,
     required this.availablePointsCountPenalties,
     required this.fixedTimeAvailablePointsFromDivisionMax,
     required this.predictionMode,
+    required this.showFantasyScores,
   });
   ScoreDisplaySettings.copy(ScoreDisplaySettings other) :
       this.ratingMode = other.ratingMode,
       this.availablePointsCountPenalties = other.availablePointsCountPenalties,
       this.fixedTimeAvailablePointsFromDivisionMax = other.fixedTimeAvailablePointsFromDivisionMax,
-      this.predictionMode = other.predictionMode;
+      this.predictionMode = other.predictionMode,
+      this.showFantasyScores = other.showFantasyScores;
 }
 
 enum RatingDisplayMode {

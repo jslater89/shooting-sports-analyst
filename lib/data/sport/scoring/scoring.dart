@@ -15,6 +15,7 @@ import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/fantasy_scoring_calculator.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
@@ -797,7 +798,16 @@ class RawScore {
   int get penaltyCount => penaltyEvents.values.sum;
   double get finalTime => rawTime + _scoreMaps.timeAdjustment;
 
-  int getTotalPoints({bool countPenalties = true, bool allowNegative = false}) {
+  /// Get the sum of points for this score.
+  /// 
+  /// If [countPenalties] is true, all penalties are counted, including e.g. procedurals and other non-target penalties.
+  /// 
+  /// If [allowNegative] is true, the total may go below zero.
+  /// 
+  /// If [includeTargetPenalties] is true, penalties resulting from hits or lack of hits on targets (M, NS, etc.) are
+  /// included in the total. For example, in a USPSA match, includeTargetPenalties = false would include only A, C, and
+  /// D hits.
+  int getTotalPoints({bool countPenalties = true, bool allowNegative = false, bool includeTargetPenalties = true}) {
     if(countPenalties) {
       if(allowNegative) {
         return points;
@@ -807,7 +817,18 @@ class RawScore {
       }
     }
     else {
-      return targetEvents.points;
+      if(includeTargetPenalties) {
+        if(allowNegative) {
+          return targetEvents.points;
+        }
+        else {
+          return max(0, targetEvents.points);
+        }
+      }
+      else {
+        var positiveEvents = targetEvents.keys.where((e) => e.pointChange >= 0).toList();
+        return positiveEvents.map((e) => targetEvents[e]! * e.pointChange).sum;
+      }
     }
   }
 
@@ -864,7 +885,7 @@ class RawScore {
 
 /// A ScoringEvent is the minimal unit of score change in a shooting sports
 /// discipline, based on a hit on target.
-class ScoringEvent implements NameLookupEntity {
+class ScoringEvent extends NameLookupEntity {
   String get longName => name;
   final String name;
   final String shortName;
@@ -1108,6 +1129,17 @@ extension Sorting on List<RelativeMatchScore> {
         return a.total.rawTime.compareTo(b.total.rawTime);
       });
     }
+  }
+
+  void sortByFantasyPoints({required Map<Shooter, FantasyScore>? fantasyScores}) {
+    this.sort((a, b) {
+      var aScore = fantasyScores?[a.shooter];
+      var bScore = fantasyScores?[b.shooter];
+      if(aScore == null && bScore == null) return a.shooter.lastName.compareTo(b.shooter.lastName);
+      else if(aScore == null) return 1;
+      else if(bScore == null) return -1;
+      return bScore.points.compareTo(aScore.points);
+    });
   }
 
   void sortByIdpaAccuracy({MatchStage? stage, required MatchScoring scoring}) {
