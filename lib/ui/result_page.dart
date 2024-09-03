@@ -594,7 +594,9 @@ class _ResultPageState extends State<ResultPage> {
             onPressed: () async {
               var newSettings = await showDialog<ScoreDisplaySettings>(context: context, builder: (context) {
                 return ScoreListSettingsDialog(
-                  initialSettings: _settings.value, showRatingsSettings: widget.ratings != null
+                  initialSettings: _settings.value,
+                  showRatingsSettings: widget.ratings != null,
+                  showFantasySettings: sport.fantasyScoresProvider != null,
                 );
               });
 

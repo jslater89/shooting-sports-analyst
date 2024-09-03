@@ -22,6 +22,8 @@ class USPSAFantasyScoringCalculator implements FantasyScoringCalculator<USPSAFan
     Map<Division, int> gmCounts = {};
     for(var division in match.sport.divisions.values) {
       shooterCounts[division] = 0;
+      gmCounts[division] = 0;
+      eligible[division] = false;
     }
 
     for(var entry in match.shooters) {
@@ -117,6 +119,7 @@ class USPSAFantasyScoringCalculator implements FantasyScoringCalculator<USPSAFan
 
           // Points for stage wins, top 10%, and top 25%.
           if(stageScore.place == 1) {
+          // if(stageScore.percentage >= 95) {
             scoreMap.incrementBy(USPSAFantasyScoringCategory.stageWins, 100 / stageCount);
           }
           else if(stageScore.percentage >= 90) {
@@ -128,6 +131,7 @@ class USPSAFantasyScoringCalculator implements FantasyScoringCalculator<USPSAFan
 
           double timePercentage = lowTime / stageScore.score.finalTime * 100;
           if(stageScore.score.finalTime == lowTime) {
+          // if(timePercentage >= 95) {
             scoreMap.incrementBy(USPSAFantasyScoringCategory.rawTimeWins, 100 / stageCount);
           }
           else if(timePercentage >= 90) {
@@ -140,6 +144,7 @@ class USPSAFantasyScoringCalculator implements FantasyScoringCalculator<USPSAFan
           int stagePoints = _getStagePoints(stageScore.score);
           double accuracyPercentage = stagePoints / highScore * 100;
           if(stagePoints == highScore) {
+          //if(accuracyPercentage >= 95) {
             scoreMap.incrementBy(USPSAFantasyScoringCategory.accuracyWins, 100 / stageCount);
           }
           else if(accuracyPercentage >= 90) {

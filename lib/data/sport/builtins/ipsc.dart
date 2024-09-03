@@ -5,6 +5,7 @@
  */
 
 import 'package:shooting_sports_analyst/data/sport/builtins/sorts.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/uspsa_utils/uspsa_fantasy_calculator.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 
@@ -34,6 +35,7 @@ final ipscSport = Sport(
   hasStages: true,
   displaySettingsPowerFactor: _minorPowerFactor,
   resultSortModes: hitFactorSorts,
+  fantasyScoresProvider: const USPSAFantasyScoringCalculator(),
   eventLevels: [
     const MatchLevel(name: "Level I", shortName: "I", alternateNames: ["Local"], eventLevel: EventLevel.local),
     const MatchLevel(name: "Level II", shortName: "II", alternateNames: ["Regional"], eventLevel: EventLevel.regional),
