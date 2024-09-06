@@ -33,6 +33,9 @@
 *.AppImage
 *.g.dart
 
+# config now stored in .fvmrc
+.fvm
+
 web/index.html
 
 # Web related

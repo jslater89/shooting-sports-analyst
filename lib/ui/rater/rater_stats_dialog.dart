@@ -228,6 +228,7 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
 
   Widget _boxPlot(BuildContext context) {
     Map<Classification, Widget> plots = {};
+    Map<Classification, String> tooltips = {};
 
     double maxOverall = double.negativeInfinity;
     double minOverall = double.infinity;
@@ -240,6 +241,14 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
 
       if(ratings.first < minOverall) minOverall = ratings.first;
       if(ratings.last > maxOverall) maxOverall = ratings.last;
+
+      tooltips[cls] = "${cls.name}:\n" +
+        "Quartile size: ${(len * 0.25).floor()}\n" +
+        "Min: ${ratings.first.round()}\n" +
+        "Q1: ${ratings[(len * .25).floor()].round()}\n" +
+        "Median: ${ratings[len ~/ 2].round()}\n" +
+        "Q3: ${ratings[min(len - 1, (len * .75).floor())].round()}\n" +
+        "Max: ${ratings.last.round()}";
 
       plots[cls] = BoxAndWhiskerPlot(
         direction: PlotDirection.vertical,
@@ -295,7 +304,10 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
                 Expanded(
                   child: Padding(
                     padding: EdgeInsets.all(8.0),
-                    child: plots[cls]!,
+                    child: Tooltip(
+                      message: tooltips[cls]!,
+                      child: plots[cls]!
+                    ),
                   ),
                 ),
                 Text(cls.displayString()),

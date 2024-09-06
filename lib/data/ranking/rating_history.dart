@@ -288,6 +288,7 @@ enum OldRaterGroup {
   revolver,
   limited10,
   locap,
+  tenRounds,
   openPcc,
   limitedCO,
   limitedLO,
@@ -372,6 +373,8 @@ enum OldRaterGroup {
         return [olds.Division.limited, olds.Division.production, olds.Division.singleStack, olds.Division.revolver, olds.Division.limited10];
       case OldRaterGroup.combined:
         return olds.Division.values;
+      case OldRaterGroup.tenRounds:
+        return [olds.Division.singleStack, olds.Division.revolver, olds.Division.limited10];
     }
   }
 
@@ -413,6 +416,8 @@ enum OldRaterGroup {
         return "Irons Handguns";
       case OldRaterGroup.combined:
         return "Combined";
+      case OldRaterGroup.tenRounds:
+        return "10-Round";
     }
   }
 }

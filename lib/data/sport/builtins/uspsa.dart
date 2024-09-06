@@ -9,7 +9,9 @@ import 'package:shooting_sports_analyst/data/ranking/deduplication/uspsa_dedupli
 import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_settings.dart';
+import 'package:shooting_sports_analyst/data/sort_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/sorts.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/uspsa_utils/uspsa_fantasy_calculator.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 
@@ -71,6 +73,7 @@ final uspsaSport = Sport(
   resultSortModes: hitFactorSorts,
   shooterDeduplicator: const USPSADeduplicator(),
   eventLevels: _matchLevels,
+  fantasyScoresProvider: const USPSAFantasyScoringCalculator(),
   classifications: [
     uspsaGM,
     uspsaM,

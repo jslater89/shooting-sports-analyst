@@ -17,6 +17,7 @@ import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/data/old_search_query_parser.dart';
@@ -343,9 +344,14 @@ extension SortFunctions on RatingSortMode {
         return (a, b) => a.lastName.compareTo(b.lastName);
       case RatingSortMode.pointsPerMatch:
         return (a, b) {
-          var aPpm = a.rating / a.length;
-          var bPpm = b.rating / b.length;
-          return bPpm.compareTo(aPpm);
+          if(a is PointsRating && b is PointsRating) {
+            var aPpm = a.rating / a.usedEvents().length;
+            var bPpm = b.rating / b.usedEvents().length;
+            return bPpm.compareTo(aPpm);
+          }
+          else {
+            return b.rating.compareTo(a.rating);
+          }
         };
     }
   }

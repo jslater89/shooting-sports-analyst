@@ -657,7 +657,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
       csv += "${s.originalMemberNumber},";
       csv += "${s.lastClassification?.name ?? "?"},";
-      csv += "${s.getName(suffixes: false)},";
+      csv += "${s.getName(suffixes: false).replaceAll(RegExp(r'[",]', caseSensitive: false), "")},"; // sanitize for CSV
       csv += "${s.rating.round()},${lastMatchChange.round()},"
           "${error.toStringAsFixed(2)},"
           "${trend.toStringAsFixed(2)},"
