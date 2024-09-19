@@ -1265,14 +1265,11 @@ extension Sorting on List<RelativeMatchScore> {
     });
   }
 
-  void sortByRating({required Map<RaterGroup, Rater> ratings, required RatingDisplayMode displayMode, required PracticalMatch match}) {
+  void sortByRating({required Map<RaterGroup, Rater> ratings, required RatingDisplayMode displayMode, required ShootingMatch match, MatchStage? stage}) {
     this.sort((a, b) {
-      return a.shooter.lastName.compareTo(b.shooter.lastName);
-
-      // TODO: restore when ratings use the new feature
-      // var aRating = ratings.lookupRating(shooter: a.shooter, mode: displayMode, match: match) ?? -1000;
-      // var bRating = ratings.lookupRating(shooter: b.shooter, mode: displayMode, match: match) ?? -1000;
-      // return bRating.compareTo(aRating);
+      var aRating = ratings.lookupRating(shooter: a.shooter, mode: displayMode, match: match, stage: stage) ?? -1000;
+      var bRating = ratings.lookupRating(shooter: b.shooter, mode: displayMode, match: match, stage: stage) ?? -1000;
+      return bRating.compareTo(aRating);
     });
   }
 

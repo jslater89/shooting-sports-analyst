@@ -210,6 +210,7 @@ class DbMatchEntry {
     powerFactorName = entry.powerFactor.name,
     divisionName = entry.division?.name,
     classificationName = entry.classification?.name,
+    ageCategoryName = entry.ageCategory?.name,
     scores = entry.scores.keys.map((stage) {
       return DbRawScore.from(stage.stageId, entry.scores[stage]!);
     }).toList();

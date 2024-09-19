@@ -267,10 +267,7 @@ class _ResultPageState extends State<ResultPage> {
         break;
       case SortMode.rating:
         if(widget.ratings != null) {
-          //_baseScores.sortByRating(ratings: widget.ratings!, displayMode: _settings.value.ratingMode, match: _currentMatch!);
-
-          // TODO: restore when we can rate new matches
-          scores.sortByScore(stage: _stage);
+          scores.sortByRating(ratings: widget.ratings!, displayMode: _settings.value.ratingMode, match: _currentMatch, stage: _stage);
         }
         else {
           // We shouldn't hit this, because we hide rating sort if there aren't any ratings,
@@ -559,7 +556,7 @@ class _ResultPageState extends State<ResultPage> {
       // );
       if(_stage != null) actions.add(
         Tooltip(
-          message: "View stage hit statistics",
+          message: "View stage statistics",
           child: IconButton(
             icon: Icon(Icons.bar_chart),
             onPressed: () {
