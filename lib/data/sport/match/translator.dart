@@ -59,7 +59,7 @@ extension MatchTranslator on ShootingMatch {
             if(oldScore.ns > 0) powerFactor.targetEvents.lookupByName("NS")!: oldScore.ns,
           },
           penaltyEvents: {
-            if(oldScore.penaltyCount > 0) powerFactor.penaltyEvents.lookupByName("Procedural")!: oldScore.penaltyCount,
+            if(oldScore.tenPointPenaltyCount > 0) powerFactor.penaltyEvents.lookupByName("Procedural")!: oldScore.tenPointPenaltyCount,
             if(oldScore.lateShot > 0) powerFactor.penaltyEvents.lookupByName("Overtime shot")!: oldScore.lateShot,
           }
         );
