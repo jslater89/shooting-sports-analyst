@@ -20,6 +20,10 @@ extension MatchTranslator on ShootingMatch {
   static ShootingMatch shootingMatchFrom(old.PracticalMatch match) {
     List<MatchStage> newStages = [];
     for(var oldStage in match.stages) {
+      if(oldStage.type != Scoring.chrono && oldStage.maxPoints == 0 && oldStage.minRounds == 0) {
+        _log.e("old stage has no max points or min rounds: ${oldStage.name}, substituting 100 points");
+        oldStage.maxPoints = 100;
+      }
       newStages.add(MatchStage(
         stageId: oldStage.internalId,
         name: oldStage.name,

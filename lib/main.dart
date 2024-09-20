@@ -29,6 +29,7 @@ import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 import 'package:shooting_sports_analyst/data/source/practiscore_report.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/db_oneoffs.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/route/local_upload.dart';
@@ -103,6 +104,8 @@ void main() async {
 
   await AnalystDatabase().ready;
   _log.i("Database ready");
+
+  oneoffDbAnalyses(AnalystDatabase());
 
   if(!HtmlOr.isWeb) {
     var path = await getApplicationSupportDirectory();

@@ -9,6 +9,7 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/match/practical_match.dart';
+import 'package:shooting_sports_analyst/data/match/relative_scores.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
@@ -18,9 +19,12 @@ import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/fantasy_scoring_calculator.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_list.dart';
 import 'package:shooting_sports_analyst/util.dart';
+
+SSALogger _log = SSALogger("Scoring");
 
 /// Match scoring is how a list of absolute scores are converted to relative
 /// scores, and then to overall match scores.
@@ -79,6 +83,7 @@ final class RelativeStageFinishScoring extends MatchScoring {
       if(scoring is IgnoredScoring) continue;
 
       if(stage.maxPoints == 0 && fixedStageValue == null) {
+        _log.e("relative stage finish scoring requires stage max points or fixed stage value");
         throw ArgumentError("relative stage finish scoring requires stage max points or fixed stage value");
       }
 
@@ -144,6 +149,23 @@ final class RelativeStageFinishScoring extends MatchScoring {
         );
         stageScores[shooter] ??= {};
         stageScores[shooter]![stage] = relativeStageScore;
+      }
+    }
+
+    if(stageScores.isEmpty) {
+      // Nobody completed any stages, so set all their stage scores to 0.
+      for(var shooter in shooters) {
+        for(var stage in stages) {
+          stageScores[shooter] ??= {};
+          stageScores[shooter]![stage] = RelativeStageScore(
+            shooter: shooter,
+            stage: stage,
+            score: shooter.scores[stage]!,
+            place: 0,
+            ratio: 0,
+            points: 0,
+          );
+        }
       }
     }
 
@@ -671,8 +693,8 @@ class IgnoredScoring extends StageScoring {
 
 /// A relative score is a raw score placed against other scores.
 abstract class RelativeScore {
-  int place;
-  double ratio;
+  final int place;
+  final double ratio;
   double get percentage => ratio * 100;
 
   /// points holds the final score for this relative score, whether
@@ -681,9 +703,9 @@ abstract class RelativeScore {
   /// In a [RelativeStageFinishScoring] match, it's the number of stage
   /// points or the total number of match points. In a [CumulativeScoring]
   /// match, it's the final points or time per stage/match.
-  double points;
+  final double points;
 
-  RelativeScore({
+  const RelativeScore({
     required this.place,
     required this.ratio,
     required this.points,
