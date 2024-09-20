@@ -9,6 +9,10 @@ import 'package:shooting_sports_analyst/logger.dart';
 SSALogger _log = SSALogger("DbOneoffs");
 
 Future<void> oneoffDbAnalyses(AnalystDatabase db) async {
+
+}
+
+Future<void> _lady90PercentFinishes(AnalystDatabase db) async {
   var startTime = DateTime.now();
   var matches = await db.matchDb.dbShootingMatchs
     .filter()
