@@ -11,6 +11,7 @@ import 'package:shooting_sports_analyst/data/database/match/match_database.dart'
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
@@ -40,6 +41,7 @@ mixin DbSportEntity {
   set sport(Sport s) => sportName = s.name;
 }
 
+// TODO: this should also implement PreloadedRatingDataSource
 @collection
 class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRatingDataSource {
   Id id = Isar.autoIncrement;
@@ -247,6 +249,11 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   @override
   Future<DataSourceResult<String>> getProjectName() {
     return Future.value(DataSourceResult.ok(name));
+  }
+
+  @override
+  Future<DataSourceResult<ShooterRating>> wrapDbRating(DbShooterRating rating) {
+    return Future.value(DataSourceResult.ok(settings.algorithm.wrapDbRating(rating)));
   }
 }
 

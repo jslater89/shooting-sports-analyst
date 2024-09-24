@@ -84,6 +84,8 @@ class Score {
     return score;
   }
 
+  int get tenPointPenaltyCount => procedural + extraShot + extraHit + otherPenalty;
+
   int get penaltyCount {
     return procedural + lateShot + extraShot + extraHit + otherPenalty;
   }

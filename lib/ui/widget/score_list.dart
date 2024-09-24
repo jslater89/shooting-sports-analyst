@@ -589,20 +589,18 @@ extension LookupShooterRating on Map<OldRaterGroup, Rater> {
     return null;
   }
 
-  double? lookupRating({required Shooter shooter, RatingDisplayMode mode = RatingDisplayMode.preMatch, required ShootingMatch match}) {
-    // TODO: fix when ratings are converted
-    // switch(mode) {
-    //   case RatingDisplayMode.preMatch:
-    //     var rating = this.lookup(shooter)?.ratingForEvent(match, null, beforeMatch: true);
-    //     return rating;
-    //   case RatingDisplayMode.postMatch:
-    //     var rating = this.lookup(shooter)?.ratingForEvent(match, null, beforeMatch: false);
-    //     return rating;
-    //   case RatingDisplayMode.change:
-    //     var rating = this.lookup(shooter)?.changeForEvent(match, null);
-    //     return rating;
-    // }
-    return null;
+  double? lookupRating({required MatchEntry shooter, RatingDisplayMode mode = RatingDisplayMode.preMatch, required ShootingMatch match, MatchStage? stage}) {
+    switch(mode) {
+      case RatingDisplayMode.preMatch:
+        var rating = this.lookupNew(match, shooter)?.ratingForEvent(match, null, beforeMatch: true);
+        return rating;
+      case RatingDisplayMode.postMatch:
+        var rating = this.lookupNew(match, shooter)?.ratingForEvent(match, null, beforeMatch: false);
+        return rating;
+      case RatingDisplayMode.change:
+        var rating = this.lookupNew(match, shooter)?.changeForNewEvent(match, stage);
+        return rating;
+    }
   }
 
   Rater? lookupOldRater(old.Shooter shooter) {

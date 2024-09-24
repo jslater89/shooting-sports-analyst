@@ -2,6 +2,7 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
+import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -12,12 +13,17 @@ class InMemoryCachedRatingSource implements PreloadedRatingDataSource {
   late Map<RatingGroup, Map<String, DbShooterRating>> ratings;
 
   @override
-  RatingProjectSettings getSettings() {
+  RatingProjectSettings getSettingsSync() {
     return settings;
   }
 
   @override
-  RatingGroup? groupForDivision(Division? division) {
+  ShooterRating? wrapDbRatingSync(DbShooterRating rating) {
+    return settings.algorithm.wrapDbRating(rating);
+  }
+
+  @override
+  RatingGroup? groupForDivisionSync(Division? division) {
     var fewestDivisions = 65536;
     RatingGroup? outGroup = null;
     if(division == null) {
@@ -36,7 +42,7 @@ class InMemoryCachedRatingSource implements PreloadedRatingDataSource {
   }
 
   @override
-  DbShooterRating? lookupRating(RatingGroup group, String memberNumber) {
+  DbShooterRating? lookupRatingSync(RatingGroup group, String memberNumber) {
     return ratings[group]?[memberNumber];
   }
 

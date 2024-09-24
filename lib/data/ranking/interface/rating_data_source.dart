@@ -45,14 +45,17 @@ abstract interface class RatingDataSource {
   /// Look up a rating for a given member number.
   Future<DataSourceResult<DbShooterRating?>> lookupRating(RatingGroup group, String memberNumber);
 
+  Future<DataSourceResult<ShooterRating>> wrapDbRating(DbShooterRating rating);
+
   Future<DataSourceResult<List<DbShooterRating>>> getRatings(RatingGroup group);
 }
 
 /// A PreloadedRatingDataSource is a rating data source that has precached its data locally.
 abstract interface class PreloadedRatingDataSource {
-  RatingProjectSettings getSettings();
-  DbShooterRating? lookupRating(RatingGroup group, String memberNumber);
-  RatingGroup? groupForDivision(Division? division);
+  RatingProjectSettings getSettingsSync();
+  DbShooterRating? lookupRatingSync(RatingGroup group, String memberNumber);
+  ShooterRating? wrapDbRatingSync(DbShooterRating rating);
+  RatingGroup? groupForDivisionSync(Division? division);
 }
 
 /// An EditableRatingDataSource is a view into a rating project sufficient to

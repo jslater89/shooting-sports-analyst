@@ -11,7 +11,7 @@ import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/match/practical_match.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
-import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/match/relative_scores.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
@@ -20,9 +20,12 @@ import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/fantasy_scoring_calculator.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_list.dart';
 import 'package:shooting_sports_analyst/util.dart';
+
+SSALogger _log = SSALogger("Scoring");
 
 /// Match scoring is how a list of absolute scores are converted to relative
 /// scores, and then to overall match scores.
@@ -81,6 +84,7 @@ final class RelativeStageFinishScoring extends MatchScoring {
       if(scoring is IgnoredScoring) continue;
 
       if(stage.maxPoints == 0 && fixedStageValue == null) {
+        _log.e("relative stage finish scoring requires stage max points or fixed stage value");
         throw ArgumentError("relative stage finish scoring requires stage max points or fixed stage value");
       }
 
@@ -149,6 +153,23 @@ final class RelativeStageFinishScoring extends MatchScoring {
       }
     }
 
+    if(stageScores.isEmpty) {
+      // Nobody completed any stages, so set all their stage scores to 0.
+      for(var shooter in shooters) {
+        for(var stage in stages) {
+          stageScores[shooter] ??= {};
+          stageScores[shooter]![stage] = RelativeStageScore(
+            shooter: shooter,
+            stage: stage,
+            score: shooter.scores[stage]!,
+            place: 0,
+            ratio: 0,
+            points: 0,
+          );
+        }
+      }
+    }
+
     // Next, build match point totals for each shooter, summing the points available
     // per stage.
     Map<MatchEntry, double> stageScoreTotals = {};
@@ -176,10 +197,10 @@ final class RelativeStageFinishScoring extends MatchScoring {
       if(predictionMode.eloAware) {
         RatingSystem? r = null;
         for(var shooter in shooters) {
-          var group = ratings!.groupForDivision(shooter.division);
+          var group = ratings!.groupForDivisionSync(shooter.division);
           if(group == null) continue;
 
-          var rating = ratings.lookupRating(group, shooter.memberNumber);
+          var rating = ratings.lookupRatingSync(group, shooter.memberNumber);
           if(predictionMode == MatchPredictionMode.eloAwarePartial) {
             var nonDnf = false;
             for(var score in shooter.scores.values) {
@@ -192,7 +213,7 @@ final class RelativeStageFinishScoring extends MatchScoring {
             if(!nonDnf) continue;
           }
           if(r == null) {
-            r = ratings.getSettings().algorithm;
+            r = ratings.getSettingsSync().algorithm;
           }
           if(rating != null) {
             locatedRatings.add(r.wrapDbRating(rating));
@@ -249,9 +270,9 @@ final class RelativeStageFinishScoring extends MatchScoring {
                 stageScoreTotals.incrementBy(shooter, stage.maxPoints * averageStagePercentage);
               }
               else if (predictionMode == MatchPredictionMode.averageHistoricalFinish) {
-                var group = ratings!.groupForDivision(shooter.division);
+                var group = ratings!.groupForDivisionSync(shooter.division);
                 if(group != null) {
-                  var rating = ratings.lookupRating(group, shooter.memberNumber);
+                  var rating = ratings.lookupRatingSync(group, shooter.memberNumber);
                   if (rating != null) {
                     stageScoreTotals.incrementBy(shooter, stage.maxPoints * rating.averageFinishRatio(offset: stagesCompleted));
                   }
@@ -262,9 +283,9 @@ final class RelativeStageFinishScoring extends MatchScoring {
                 }
               }
               else if (predictionMode.eloAware) {
-                var group = ratings!.groupForDivision(shooter.division);
+                var group = ratings!.groupForDivisionSync(shooter.division);
                 if(group != null) {
-                  var rating = ratings.lookupRating(group, shooter.memberNumber);
+                  var rating = ratings.lookupRatingSync(group, shooter.memberNumber);
                   var prediction = predictions[rating];
                   if (prediction != null && highPrediction != null) {
                     // TODO: distribute this according to a Gumbel or normal cumulative distribution function
@@ -677,39 +698,50 @@ class IgnoredScoring extends StageScoring {
   const IgnoredScoring();
 }
 
-/// A relative score is a raw score placed against other scores.
-abstract class RelativeScore {
-  /// The shooter to whom this score belongs.
-  MatchEntry shooter;
-
+/// A bare relative score is a relative score without any attached shooter.
+abstract class BareRelativeScore {
   /// The ordinal place represented by this score: 1 for 1st, 2 for 2nd, etc.
-  int place;
+  final int place;
   /// The ratio of this score to the winning score: 1.0 for the winner, 0.9 for a 90% finish,
   /// 0.8 for an 80% finish, etc.
-  double ratio;
-  /// A convenience getter for [ratio] * 100.
-  double get percentage => ratio * 100;
-
+  final double ratio;
   /// points holds the final score for this relative score, whether
   /// calculated or simply repeated from an attached [RawScore].
   ///
   /// In a [RelativeStageFinishScoring] match, it's the number of stage
   /// points or the total number of match points. In a [CumulativeScoring]
   /// match, it's the final points or time per stage/match.
-  double points;
+  final double points;
 
-  RelativeScore({
-    required this.shooter,
+  /// A convenience getter for [ratio] * 100.
+  double get percentage => ratio * 100;
+
+  const BareRelativeScore({
     required this.place,
     required this.ratio,
     required this.points,
   });
+}
+
+/// A relative score is a raw score placed against other scores.
+abstract class RelativeScore extends BareRelativeScore {
+  /// The shooter to whom this score belongs.
+  final MatchEntry shooter;
+
+  const RelativeScore({
+    required this.shooter,
+    required super.place,
+    required super.ratio,
+    required super.points,
+  });
 
   RelativeScore.copy(RelativeScore other) :
     this.shooter = other.shooter,
-    this.place = other.place,
-    this.ratio = other.ratio,
-    this.points = other.points;
+    super(
+      place: other.place,
+      ratio: other.ratio,
+      points: other.points,
+    );
 }
 
 /// A relative match score is an overall score for an entire match.
@@ -1316,14 +1348,25 @@ extension Sorting on List<RelativeMatchScore> {
     });
   }
 
-  void sortByRating({required Map<RatingGroup, Rater> ratings, required RatingDisplayMode displayMode, required PracticalMatch match}) {
+  void sortByRating({required PreloadedRatingDataSource ratings, required RatingDisplayMode displayMode, required ShootingMatch match, MatchStage? stage}) {
     this.sort((a, b) {
-      return a.shooter.lastName.compareTo(b.shooter.lastName);
+      var aGroup = ratings.groupForDivisionSync(a.shooter.division);
+      var bGroup = ratings.groupForDivisionSync(b.shooter.division);
+      if(aGroup == null || bGroup == null) return b.ratio.compareTo(a.ratio);
 
-      // TODO: restore when ratings use the new feature
-      // var aRating = ratings.lookupRating(shooter: a.shooter, mode: displayMode, match: match) ?? -1000;
-      // var bRating = ratings.lookupRating(shooter: b.shooter, mode: displayMode, match: match) ?? -1000;
-      // return bRating.compareTo(aRating);
+      var aRating = ratings.lookupRatingSync(aGroup, a.shooter.memberNumber);
+      var bRating = ratings.lookupRatingSync(bGroup, b.shooter.memberNumber);
+
+      if(aRating == null || bRating == null) return b.ratio.compareTo(a.ratio);
+      
+      var settings = ratings.getSettingsSync();
+      var aRatingWrapped = settings.algorithm.wrapDbRating(aRating);
+      var bRatingWrapped = settings.algorithm.wrapDbRating(bRating);
+
+      var aRatingValue = aRatingWrapped.ratingForEvent(match, stage);
+      var bRatingValue = bRatingWrapped.ratingForEvent(match, stage);
+
+      return bRatingValue.compareTo(aRatingValue);
     });
   }
 
