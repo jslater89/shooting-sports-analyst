@@ -392,6 +392,13 @@ class _ResultPageState extends State<ResultPage> {
 
           if(matchRes.isOk()) {
             var match = matchRes.unwrap();
+
+            if(match.level == null || match.level!.eventLevel.index < _canonicalMatch.level!.eventLevel.index) {
+              // In the case where we originally pulled a match from the old PractiScore CSV report parser,
+              // we might have match level data that doesn't come down through the new source, so keep the
+              // old data if it looks suspicious.
+              match.level = _canonicalMatch.level;
+            }
             setState(() {
               _canonicalMatch = match;
               _currentMatch = match.copy();
