@@ -39,9 +39,10 @@ final uspsaSport = Sport(
   resultSortModes: hitFactorSorts,
   fantasyScoresProvider: const USPSAFantasyScoringCalculator(),
   eventLevels: [
-    const MatchLevel(name: "Level I", shortName: "I", alternateNames: ["Local"], eventLevel: EventLevel.local),
-    const MatchLevel(name: "Level II", shortName: "II", alternateNames: ["Regional/State"], eventLevel: EventLevel.regional),
-    const MatchLevel(name: "Level III", shortName: "III", alternateNames: ["Area/National"], eventLevel: EventLevel.national),
+    const MatchLevel(name: "Level I", shortName: "I", alternateNames: ["Local", "L1"], eventLevel: EventLevel.local),
+    const MatchLevel(name: "Level II", shortName: "II", alternateNames: ["Regional/State", "L2"], eventLevel: EventLevel.regional),
+    const MatchLevel(name: "Level III", shortName: "III", alternateNames: ["Area", "L3"], eventLevel: EventLevel.area),
+    const MatchLevel(name: "Nationals", shortName: "IV", alternateNames: ["National", "L4"], eventLevel: EventLevel.national),
   ],
   classifications: [
     const Classification(index: 0, name: "Grandmaster", shortName: "GM", alternateNames: ["G"]),

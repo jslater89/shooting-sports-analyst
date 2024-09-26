@@ -187,6 +187,7 @@ class ShootingMatch {
       sport: sport,
       rawDate: rawDate,
       date: date,
+      sourceCode: sourceCode,
       sourceIds: []..addAll(sourceIds),
       level: level,
       databaseId: databaseId,

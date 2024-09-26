@@ -150,6 +150,7 @@ class DbShootingMatch {
       sport: sport,
       shooters: hydratedShooters.map((e) => e.unwrap()).toList(),
       level: matchLevel,
+      sourceCode: this.sourceCode,
       sourceIds: []..addAll(this.sourceIds),
     ));
   }
