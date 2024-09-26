@@ -29,6 +29,10 @@ class MatchSourceRegistry {
     return sources.firstWhereOrNull((e) => e.handledCodes.contains(code));
   }
 
+  MatchSource? getByCodeOrNull(String code) {
+    return sources.firstWhereOrNull((e) => e.code == code);
+  }
+
   List<MatchSource> _sources = [
     PSv2MatchSource(),
     PractiscoreHitFactorReportParser(uspsaSport),

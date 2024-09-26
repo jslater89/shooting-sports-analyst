@@ -5,14 +5,16 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 
 class MatchBreakdown extends StatelessWidget {
   final List<MatchEntry> shooters;
+  final ShootingMatch match;
   final Sport sport;
 
-  const MatchBreakdown({Key? key, required this.sport, required this.shooters}) : super(key: key);
+  const MatchBreakdown({Key? key, required this.sport, required this.match, required this.shooters}) : super(key: key);
 
   /// To the left: a table of division/class numbers.
   @override
@@ -45,6 +47,8 @@ class MatchBreakdown extends StatelessWidget {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if(match.level != null) Text("Match level: ${match.level!.displayName}"),
+          SizedBox(height: 12),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: _buildTable(shooterCounts)

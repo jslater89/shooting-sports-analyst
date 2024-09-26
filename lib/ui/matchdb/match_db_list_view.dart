@@ -65,7 +65,7 @@ class _MatchDatabaseListViewState extends State<MatchDatabaseListView> {
                 itemBuilder: (context, i) {
                   var match = listModel.searchedMatches[i];
                   return GestureDetector(
-                    onTap: () {
+                    onTap: () async {
                       var fullMatchResult = match.hydrate();
                       if(fullMatchResult.isErr()) {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -74,12 +74,13 @@ class _MatchDatabaseListViewState extends State<MatchDatabaseListView> {
                         _log.w("match db error: ${fullMatchResult.unwrapErr().message}");
                         return;
                       }
-                      Navigator.of(context).push(MaterialPageRoute(builder: (context) =>
+                      await Navigator.of(context).push(MaterialPageRoute(builder: (context) =>
                           ResultPage(
                             canonicalMatch: fullMatchResult.unwrap(),
                             allowWhatIf: true,
                           ),
                       ));
+                      // TODO: refresh list in case we pulled new match information with a refresh
                     },
                     child: ScoreRow(
                       index: i,

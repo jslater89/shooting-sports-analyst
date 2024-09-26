@@ -1,4 +1,5 @@
 #!/bin/bash
 
-rm -rf psv2
-git clone git@github.com:jslater89/psv2_match_source psv2
+rm psv2
+ln -s ../../../shooting-sports-analyst-closed-sources/psv2_match_source psv2
+

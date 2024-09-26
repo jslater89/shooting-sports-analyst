@@ -38,14 +38,16 @@ const uspsaC = Classification(index: 4, name: "C", shortName: "C");
 const uspsaD = Classification(index: 5, name: "D", shortName: "D");
 const uspsaU = Classification(index: 6, name: "Unclassified", shortName: "U", fallback: true);
 
-const _level1 = MatchLevel(name: "Level I", shortName: "I", alternateNames: ["Local"], eventLevel: EventLevel.local);
-const _level2 = MatchLevel(name: "Level II", shortName: "II", alternateNames: ["Regional/State"], eventLevel: EventLevel.regional);
-const _level3 = MatchLevel(name: "Level III", shortName: "III", alternateNames: ["Area/National"], eventLevel: EventLevel.national);
+const _level1 = MatchLevel(name: "Level I", shortName: "I", alternateNames: ["Local", "L1"], eventLevel: EventLevel.local);
+const _level2 = MatchLevel(name: "Level II", shortName: "II", alternateNames: ["Regional/State", "L2"], eventLevel: EventLevel.regional);
+const _level3 = MatchLevel(name: "Level III", shortName: "III", alternateNames: ["Area", "L3"], eventLevel: EventLevel.area);
+const _level4 = MatchLevel(name: "Nationals", shortName: "IV", alternateNames: ["National", "L4"], eventLevel: EventLevel.national);
 
 const _matchLevels = [
   _level1,
   _level2,
   _level3,
+  _level4,
 ];
 
 final _minorPowerFactor = PowerFactor("Minor",

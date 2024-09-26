@@ -61,8 +61,9 @@ class PSv2MatchSource extends MatchSource {
   @override
   List<SportType> get supportedSports => [];
 
+  static const String psv2Code = "psv2";
   @override
-  String get code => "psv2";
+  String get code => psv2Code;
 
   @override
   Future<Result<ShootingMatch, MatchSourceError>> getMatchFromId(String id, {Sport? sport, SportType? typeHint}) {
