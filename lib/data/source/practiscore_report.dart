@@ -419,7 +419,7 @@ class PractiscoreHitFactorReportParser extends MatchSource {
   }
 
   @override
-  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromSearch(MatchSearchResult<InternalMatchType> result, {SportType? typeHint, Sport? sport}) {
+  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromSearch(MatchSearchResult<InternalMatchType> result, {InternalMatchFetchOptions? options, SportType? typeHint, Sport? sport}) {
     return Future.value(Result.err(MatchSourceError.unsupportedOperation));
   }
 
@@ -452,7 +452,7 @@ class PractiscoreHitFactorReportParser extends MatchSource {
   }
 
   @override
-  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromId(String id, {SportType? typeHint, Sport? sport}) async {
+  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromId(String id, {SportType? typeHint, Sport? sport, InternalMatchFetchOptions? options}) async {
     var fileContentsResult = await getPractiscoreReportFile(id);
     if(fileContentsResult.isErr()) {
       return Result.err(fileContentsResult.unwrapErr());

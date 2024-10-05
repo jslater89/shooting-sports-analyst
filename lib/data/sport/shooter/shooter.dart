@@ -84,6 +84,8 @@ class MatchEntry extends Shooter {
 
   int? squad;
 
+  String? sourceId;
+
   MatchEntry({
     required super.firstName,
     required super.lastName,
@@ -98,6 +100,7 @@ class MatchEntry extends Shooter {
     this.division,
     this.classification,
     super.female,
+    this.sourceId,
   });
 
   MatchEntry copy(List<MatchStage> stageCopies) {
@@ -123,6 +126,7 @@ class MatchEntry extends Shooter {
       female: female,
       ageCategory: ageCategory,
       squad: squad,
+      sourceId: sourceId,
     );
 
     e.knownMemberNumbers = {}..addAll(knownMemberNumbers);

@@ -223,6 +223,9 @@ class MatchStage {
   String classifierNumber;
   StageScoring scoring;
 
+  /// An optional source-specific identifier for this stage.
+  String? sourceId;
+
   MatchStage({
     required this.stageId,
     required this.name,
@@ -231,6 +234,7 @@ class MatchStage {
     this.maxPoints = 0,
     this.classifier = false,
     this.classifierNumber = "",
+    this.sourceId,
   });
 
   MatchStage copy() {

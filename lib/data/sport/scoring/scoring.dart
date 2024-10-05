@@ -8,6 +8,7 @@ import 'dart:collection';
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/match/practical_match.dart';
 import 'package:shooting_sports_analyst/data/match/relative_scores.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';

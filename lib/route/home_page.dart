@@ -21,6 +21,7 @@ import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/main.dart';
 import 'package:shooting_sports_analyst/route/elo_tuner_page.dart';
 import 'package:shooting_sports_analyst/route/match_database_manager.dart';
+import 'package:shooting_sports_analyst/route/practiscore_url.dart';
 import 'package:shooting_sports_analyst/ui/empty_scaffold.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_cache_chooser_dialog.dart';
@@ -212,7 +213,7 @@ class _HomePageState extends State<HomePage> {
           (source, match) = response;
 
           _log.i("Displaying match ${match.sourceIds} with ${source.code}");
-          await Navigator.of(context).pushNamed('/web/${source.code}/${match.sourceIds.first}');
+          Navigator.of(context).push(MaterialPageRoute(builder: (context) => PractiscoreResultPage(match: match, sourceId: source.code)));
         },
         child: Column(
           mainAxisSize: MainAxisSize.min,
