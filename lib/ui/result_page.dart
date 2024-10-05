@@ -615,7 +615,7 @@ class _ResultPageState extends State<ResultPage> {
       // );
       if(_stage != null) actions.add(
         Tooltip(
-          message: "View stage statistics",
+          message: "View stage statistics.",
           child: IconButton(
             icon: Icon(Icons.bar_chart),
             onPressed: () {

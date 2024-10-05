@@ -1125,14 +1125,16 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       matches: actualMatches,
       ongoingMatches: ongoingMatches,
       progressCallback: (currentSteps, totalSteps, eventName) async {
-        setState(() {
-          _currentProgress = currentSteps;
-          _totalProgress = totalSteps;
-          _loadingEventName = eventName;
-        });
+        if(mounted) {
+          setState(() {
+            _currentProgress = currentSteps;
+            _totalProgress = totalSteps;
+            _loadingEventName = eventName;
+          });
 
-        // print("Rating history progress: $_currentProgress/$_totalProgress $eventName");
-        await Future.delayed(Duration(milliseconds: 1));
+          // print("Rating history progress: $_currentProgress/$_totalProgress $eventName");
+          await Future.delayed(Duration(milliseconds: 1));
+        }
       }
     );
 
