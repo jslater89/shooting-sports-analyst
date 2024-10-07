@@ -15,6 +15,7 @@ import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 
 enum FilterMode {
   or, and,
@@ -56,6 +57,9 @@ class ShootingMatch {
   /// Shooters in this match.
   List<MatchEntry> shooters;
 
+  Set<int> squadNumbers = {};
+  List<int> get sortedSquadNumbers => squadNumbers.toList()..sort();
+
   /// Whether a match is in progress for score display purposes.
   bool get inProgress => DateTime.now().isBefore(date.add(Duration(days: 7)));
   int get maxPoints => stages.map((s) => s.maxPoints).sum;
@@ -71,10 +75,38 @@ class ShootingMatch {
     required this.sport,
     required this.stages,
     required this.shooters,
-  });
+  }) {
+    updateSquadNumbers();
+  }
+
+  void updateSquadNumbers() {
+    squadNumbers.clear();
+    for(MatchEntry s in shooters) {
+      if(s.squad != null) {
+        squadNumbers.add(s.squad!);
+      }
+    }
+  }
 
   factory ShootingMatch.fromOldMatch(oldschema.PracticalMatch match) {
-    return MatchTranslator.shootingMatchFrom(match);
+    var newMatch = MatchTranslator.shootingMatchFrom(match);
+    newMatch.updateSquadNumbers();
+    return newMatch;
+  }
+
+  Map<MatchEntry, RelativeMatchScore> getScoresFromFilters(FilterSet filters, {
+    List<MatchStage>? stages,
+    MatchPredictionMode predictionMode = MatchPredictionMode.none,
+    Map<RaterGroup, Rater>? ratings,
+  }) {
+    var innerShooters = applyFilterSet(filters);
+    return getScores(
+      shooters: innerShooters,
+      stages: stages,
+      scoreDQ: filters.scoreDQs,
+      predictionMode: predictionMode,
+      ratings: ratings,
+    );
   }
 
   Map<MatchEntry, RelativeMatchScore> getScores({
@@ -113,6 +145,18 @@ class ShootingMatch {
     }
 
     return null;
+  }
+
+  List<MatchEntry> applyFilterSet(FilterSet filters) {
+    return filterShooters(
+      filterMode: filters.mode,
+      divisions: filters.activeDivisions.toList(),
+      powerFactors: filters.activePowerFactors.toList(),
+      classes: filters.activeClassifications.toList(),
+      squads: filters.squads,
+      ladyOnly: filters.femaleOnly,
+      ageCategories: filters.activeAgeCategories.toList(),
+    );
   }
 
   /// Filters shooters by division, power factor, and classification.

@@ -26,6 +26,7 @@ import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/route/broadcast_booth_page.dart';
 import 'package:shooting_sports_analyst/route/compare_shooter_results.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/about_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/score_list_settings_dialog.dart';
@@ -424,6 +425,11 @@ class _ResultPageState extends State<ResultPage> {
           }
         }
         break;
+      case _MenuEntry.broadcastBooth:
+        Navigator.of(context).pushReplacement(MaterialPageRoute(
+          builder: (context) => BroadcastBoothPage(match: _currentMatch),
+        ));
+        break;
       case _MenuEntry.about:
         var size = MediaQuery.of(context).size;
         showAbout(_innerContext, size);
@@ -504,7 +510,7 @@ class _ResultPageState extends State<ResultPage> {
 
     List<Widget> actions = [];
 
-    if(_currentMatch != null && _whatIfMode && widget.allowWhatIf) {
+    if(_whatIfMode && widget.allowWhatIf) {
       actions.add(
           Tooltip(
               message: "Exit what-if mode, restoring the original match scores.",
@@ -538,7 +544,7 @@ class _ResultPageState extends State<ResultPage> {
           )
       );
     }
-    else if(_currentMatch != null && !_whatIfMode && widget.allowWhatIf) {
+    else if(!_whatIfMode && widget.allowWhatIf) {
       actions.add(
         Tooltip(
             message: "Enter what-if mode, allowing you to edit stage scores.",
@@ -553,126 +559,124 @@ class _ResultPageState extends State<ResultPage> {
         )
       );
     }
-    if(_currentMatch != null) {
-      actions.add(
-          Tooltip(
-              message: "Save match results to CSV.",
-              child: IconButton(
-                icon: Icon(Icons.save_alt),
-                onPressed: () {
-                  var csv = _searchedScores.toCSV();
-                  HtmlOr.saveFile("match-results.csv", csv);
-                },
-              )
-          )
-      );
-      if(!kIsWeb) {
-        actions.add(
-          Tooltip(
-            message: "Save match to database.",
-            child: IconButton(
-              icon: Icon(Icons.save),
-              onPressed: () async {
-                var result = await AnalystDatabase().save(_canonicalMatch);
-                if(result.isErr()) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text("Error saving match: $e")
-                  ));
-                }
-                else {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text("Saved match to database"),
-                  ));
-                }
-              },
-            )
-          )
-        );
-      }
-      actions.add(
+    actions.add(
         Tooltip(
-            message: "Display a match breakdown.",
+            message: "Save match results to CSV.",
             child: IconButton(
-              icon: Icon(Icons.table_chart),
+              icon: Icon(Icons.save_alt),
               onPressed: () {
-                showDialog(context: context, builder: (context) {
-                  return MatchBreakdown(sport: sport, match: _currentMatch, shooters: _currentMatch!.shooters);
-                });
+                var csv = _searchedScores.toCSV();
+                HtmlOr.saveFile("match-results.csv", csv);
               },
             )
         )
-      );
-      // actions.add(
-      //   Tooltip(
-      //     message: "Display statistics about the currently-filtered scores.",
-      //     child: IconButton(
-      //       icon: Icon(Icons.show_chart),
-      //       onPressed: () {
-      //         showDialog(context: context, builder: (context) => ScoreStatsDialog(scores: []..addAll(_baseScores), stage: _stage));
-      //       },
-      //     )
-      //   )
-      // );
-      if(_stage != null) actions.add(
-        Tooltip(
-          message: "View stage statistics.",
-          child: IconButton(
-            icon: Icon(Icons.bar_chart),
-            onPressed: () {
-              var stats = MatchStatsCalculator(_currentMatch!);
-              var stageStats = stats.stageStats[_stage!]!;
-              StageStatsDialog.show(context, stageStats);
-            }
-          )
-        )
-      );
+    );
+    if(!kIsWeb) {
       actions.add(
         Tooltip(
-          message: "Compare shooter results.",
+          message: "Save match to database.",
           child: IconButton(
-            icon: Icon(Icons.compare_arrows),
-            onPressed: () {
-              Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) => CompareShooterResultsPage(
-                  scores: _baseScores,
-                  initialShooters: [_filteredShooters.first],
-                )
-              ));
-            },
-          ),
-        )
-      );
-      actions.add(
-        Tooltip(
-          message: "Display settings.",
-          child: IconButton(
-            icon: Icon(Icons.settings),
+            icon: Icon(Icons.save),
             onPressed: () async {
-              var newSettings = await showDialog<ScoreDisplaySettings>(context: context, builder: (context) {
-                return ScoreListSettingsDialog(
-                  initialSettings: _settings.value,
-                  showRatingsSettings: widget.ratings != null,
-                  showFantasySettings: sport.fantasyScoresProvider != null,
-                );
-              });
-
-              if(newSettings != null) {
-                var oldPredictionMode = _settings.value.predictionMode;
-                var oldShowFantasyPoints = _settings.value.showFantasyScores;
-                _settings.value = newSettings;
-                if(_settings.value.predictionMode != oldPredictionMode) {
-                  _updateHypotheticalScores();
-                }
-                if(_settings.value.showFantasyScores != oldShowFantasyPoints) {
-                  _updateFantasyScores();
-                }
+              var result = await AnalystDatabase().saveMatch(_canonicalMatch);
+              if(result.isErr()) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text("Error saving match: $e")
+                ));
+              }
+              else {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text("Saved match to database"),
+                ));
               }
             },
-          ),
-        ),
+          )
+        )
       );
     }
     actions.add(
+      Tooltip(
+          message: "Display a match breakdown.",
+          child: IconButton(
+            icon: Icon(Icons.table_chart),
+            onPressed: () {
+              showDialog(context: context, builder: (context) {
+                return MatchBreakdown(sport: sport, match: _currentMatch, shooters: _currentMatch!.shooters);
+              });
+            },
+          )
+      )
+    );
+    // actions.add(
+    //   Tooltip(
+    //     message: "Display statistics about the currently-filtered scores.",
+    //     child: IconButton(
+    //       icon: Icon(Icons.show_chart),
+    //       onPressed: () {
+    //         showDialog(context: context, builder: (context) => ScoreStatsDialog(scores: []..addAll(_baseScores), stage: _stage));
+    //       },
+    //     )
+    //   )
+    // );
+    if(_stage != null) actions.add(
+      Tooltip(
+        message: "View stage statistics.",
+        child: IconButton(
+          icon: Icon(Icons.bar_chart),
+          onPressed: () {
+            var stats = MatchStatsCalculator(_currentMatch!);
+            var stageStats = stats.stageStats[_stage!]!;
+            StageStatsDialog.show(context, stageStats);
+          }
+        )
+      )
+    );
+    actions.add(
+      Tooltip(
+        message: "Compare shooter results.",
+        child: IconButton(
+          icon: Icon(Icons.compare_arrows),
+          onPressed: () {
+            Navigator.of(context).push(MaterialPageRoute(
+              builder: (context) => CompareShooterResultsPage(
+                scores: _baseScores,
+                initialShooters: [_filteredShooters.first],
+              )
+            ));
+          },
+        ),
+      )
+    );
+    actions.add(
+      Tooltip(
+        message: "Display settings.",
+        child: IconButton(
+          icon: Icon(Icons.settings),
+          onPressed: () async {
+            var newSettings = await showDialog<ScoreDisplaySettings>(context: context, builder: (context) {
+              return ScoreListSettingsDialog(
+                initialSettings: _settings.value,
+                showRatingsSettings: widget.ratings != null,
+                showFantasySettings: sport.fantasyScoresProvider != null,
+              );
+            });
+
+            if(newSettings != null) {
+              var oldPredictionMode = _settings.value.predictionMode;
+              var oldShowFantasyPoints = _settings.value.showFantasyScores;
+              _settings.value = newSettings;
+              if(_settings.value.predictionMode != oldPredictionMode) {
+                _updateHypotheticalScores();
+              }
+              if(_settings.value.showFantasyScores != oldShowFantasyPoints) {
+                _updateFantasyScores();
+              }
+            }
+          },
+        ),
+      ),
+    );
+      actions.add(
       PopupMenuButton<_MenuEntry>(
         onSelected: (item) => _handleThreeDotClick(item),
         itemBuilder: (context) {
@@ -854,12 +858,15 @@ enum MatchPredictionMode {
 
   enum _MenuEntry {
     refresh,
+    broadcastBooth,
     about;
 
     String get label {
       switch (this) {
         case _MenuEntry.about:
           return "About";
+        case _MenuEntry.broadcastBooth:
+          return "Broadcast mode";
         case _MenuEntry.refresh:
           return "Refresh";
       }
