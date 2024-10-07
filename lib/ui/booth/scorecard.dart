@@ -24,15 +24,17 @@ class BoothScorecard extends StatefulWidget {
 
 class _BoothScorecardState extends State<BoothScorecard> {
   DateTime lastScoresCalculated = DateTime(0);
+  int lastScorecardCount = 0;
 
   Map<MatchEntry, RelativeMatchScore> scores = {};
   List<MatchEntry> displayedShooters = [];
 
-  late VoidCallback listener;
+  VoidCallback? listener;
 
   @override
   void initState() {
     super.initState();
+    // _log.v("${widget.scorecard.name} (${widget.hashCode} ${hashCode} ${widget.scorecard.hashCode}) initState");
    
     var model = context.read<BroadcastBoothModel>();
     _calculateScores();
@@ -40,25 +42,19 @@ class _BoothScorecardState extends State<BoothScorecard> {
     listener = () {
       if(!mounted) {
         _log.e("${widget.scorecard.name} was notified, but not mounted");
+        // _log.v("${widget.scorecard.name} (${widget.hashCode} ${hashCode} ${widget.scorecard.hashCode}) listener not mounted");
         return;
       }
       
       var model = context.read<BroadcastBoothModel>();
-      if(model.tickerModel.lastUpdateTime.isAfter(lastScoresCalculated)) {
+      if(model.tickerModel.lastUpdateTime.isAfter(lastScoresCalculated) || lastScorecardCount != model.scorecardCount) {
         _calculateScores();
       }
       else {
-        _log.w("${widget.scorecard.name} was notified, but last update time ${model.tickerModel.lastUpdateTime} is before $lastScoresCalculated");
+        _log.w("${widget.scorecard.name} (${widget.hashCode} ${hashCode} ${widget.scorecard.hashCode}) was notified, but last update time ${model.tickerModel.lastUpdateTime} is before $lastScoresCalculated");
       }
     };
-    model.addListener(listener);
-  }
-
-  @override
-  void dispose() {
-    var model = context.read<BroadcastBoothModel>();
-    model.removeListener(listener);
-    super.dispose();
+    model.addListener(listener!);
   }
 
   Future<void> _calculateScores() async {
@@ -83,12 +79,14 @@ class _BoothScorecardState extends State<BoothScorecard> {
 
     setState(() {
       lastScoresCalculated = model.tickerModel.lastUpdateTime;
+      lastScorecardCount = model.scorecardCount;
     });
     _log.i("Score filters for ${widget.scorecard.name} match ${scores.length}, display filters match ${displayedShooters.length}");
   }
 
   @override
   Widget build(BuildContext context) {
+    // print("${widget.scorecard.name} (${widget.hashCode} ${hashCode} ${widget.scorecard.hashCode}) build");
     var match = context.read<BroadcastBoothModel>().latestMatch;
     var sizeModel = context.read<ScorecardGridSizeModel>();
     var controller = context.read<BroadcastBoothController>();
@@ -129,6 +127,15 @@ class _BoothScorecardState extends State<BoothScorecard> {
                         onPressed: () async {
                           var confirm = await ConfirmDialog.show(context, title: "Remove scorecard?", positiveButtonLabel: "REMOVE");
                           if(confirm ?? false) {
+                            var model = context.read<BroadcastBoothModel>();
+                            if(listener != null) {
+                              model.removeListener(listener!);
+                            }
+                            else {
+                              _log.w("${widget.scorecard.name} has null listener!");
+                            }
+                            _log.i("Removing scorecard ${widget.scorecard.name}");
+                            // _log.v("${widget.scorecard.name} (${widget.hashCode} ${hashCode} ${widget.scorecard.hashCode}) removed");
                             controller.removeScorecard(widget.scorecard);
                           }
                         },
@@ -192,10 +199,10 @@ class _BoothScorecardState extends State<BoothScorecard> {
       ),
       child: Row(
         children: [
-          SizedBox(width: _shooterColumnWidth, child: Text("Shooter", textAlign: TextAlign.right)),
+          SizedBox(width: _shooterColumnWidth, child: Text("Competitor", textAlign: TextAlign.right)),
           SizedBox(width: _stageColumnWidth, child: Text("Total", textAlign: TextAlign.center)),
           ...stages.map((stage) => SizedBox(width: _stageColumnWidth, child: Text("Stage ${stage.stageId}", textAlign: TextAlign.center))),
-          SizedBox(width: _shooterColumnWidth, child: Text("Shooter", textAlign: TextAlign.left)),
+          SizedBox(width: _shooterColumnWidth, child: Text("Competitor", textAlign: TextAlign.left)),
         ],
       ),
     );

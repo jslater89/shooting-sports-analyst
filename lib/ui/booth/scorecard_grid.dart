@@ -145,10 +145,10 @@ class BoothScorecardRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var controller = context.read<BroadcastBoothController>();
+    var controller = context.watch<BroadcastBoothController>();
     var sizeModel = context.read<ScorecardGridSizeModel>();
     var children = <Widget>[];
-    children.addAll(scorecardRow.map((scorecard) => BoothScorecard(scorecard: scorecard)).toList());
+    children.addAll(scorecardRow.map((scorecard) => BoothScorecard(key: ValueKey(scorecard.hashCode),scorecard: scorecard)).toList());
     if(scorecardRow.length < sizeModel.columnCount) {
       children.add(Container(
         width: sizeModel.cardWidth,

@@ -27,6 +27,7 @@ class BroadcastBoothModel with ChangeNotifier {
   String matchId;
 
   List<List<ScorecardModel>> scorecards = [];
+  int get scorecardCount => scorecards.map((row) => row.length).reduce((a, b) => a + b);
 
   bool get ready => _readyCompleter.isCompleted;
   Future<void> get readyFuture => _readyCompleter.future;
