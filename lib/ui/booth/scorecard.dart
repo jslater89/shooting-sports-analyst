@@ -13,6 +13,7 @@ import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/booth/controller.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_grid.dart';
+import 'package:shooting_sports_analyst/ui/booth/scorecard_move.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_settings.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
@@ -133,6 +134,15 @@ class _BoothScorecardState extends State<BoothScorecard> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        TextButton(
+                          child: Icon(Icons.open_with),
+                          onPressed: () async {
+                            var direction = await ScorecardMoveDialog.show(context, scorecard: widget.scorecard, validMoves: controller.validMoves(widget.scorecard));
+                            if(direction != null) {
+                              controller.moveScorecard(widget.scorecard, direction);
+                            }
+                          },
+                        ),
                         TextButton(
                           child: Icon(Icons.settings),
                           onPressed: () async {

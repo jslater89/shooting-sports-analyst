@@ -89,6 +89,113 @@ class BroadcastBoothController {
     model.update();
   }
 
+  List<MoveDirection> validMoves(ScorecardModel scorecard) {
+    var row = model.scorecards.firstWhereOrNull((row) => row.contains(scorecard));
+    if(row == null) {
+      _log.w("Could not find scorecard ${scorecard.name} to move");
+      return [];
+    }
+    var index = model.scorecards.indexOf(row);
+    var indexInRow = row.indexOf(scorecard);
+    var moves = <MoveDirection>[];
+
+    // For vertical movement, we only allow moves to existing rows.
+    if(index < model.scorecards.length - 1) {
+      moves.add(MoveDirection.down);
+    }
+    if(index > 0) {
+      moves.add(MoveDirection.up);
+    }
+
+    // For side-to-side movement, we only allow swaps with existing scorecards.
+    if(indexInRow > 0) {
+      moves.add(MoveDirection.left);
+    }
+    if(indexInRow < row.length - 1) {
+      moves.add(MoveDirection.right);
+    }
+
+    return moves;
+  }
+
+  bool moveScorecard(ScorecardModel scorecard, MoveDirection direction) {
+    var row = model.scorecards.firstWhereOrNull((row) => row.contains(scorecard));
+    if(row == null) {
+      _log.w("Could not find scorecard ${scorecard.name} to move");
+      return false;
+    }
+    var rowIndex = model.scorecards.indexOf(row);
+    var colIndex = row.indexOf(scorecard);
+
+    var result = false;
+
+    // For vertical moves, insert into the row at our current index, or at the end.
+    if(direction == MoveDirection.up) {
+      if(rowIndex == 0) {
+        return false;
+      }
+      row.remove(scorecard);
+
+      var newRow = model.scorecards[rowIndex - 1];
+      if(colIndex >= newRow.length) {
+        newRow.add(scorecard);
+      }
+      else {
+        newRow.insert(colIndex, scorecard);
+      }
+      result = true;
+    }
+    else if(direction == MoveDirection.down) {
+      if(rowIndex == model.scorecards.length - 1) {
+        return false;
+      }
+      row.remove(scorecard);
+
+      var newRow = model.scorecards[rowIndex + 1];
+      if(colIndex >= newRow.length) {
+        newRow.add(scorecard);
+      }
+      else {
+        newRow.insert(colIndex, scorecard);
+      }
+      result = true;
+    }
+    else if(direction == MoveDirection.left) {
+      if(colIndex == 0) {
+        return false;
+      }
+      
+      row.remove(scorecard);
+      var targetCol = colIndex - 1;
+      if(targetCol >= row.length) {
+        row.add(scorecard);
+      }
+      else {
+        row.insert(targetCol, scorecard);
+      }
+      result = true;
+    }
+    else if(direction == MoveDirection.right) {
+      if(colIndex == row.length - 1) {
+        return false;
+      }
+      row.remove(scorecard);
+
+      var targetCol = colIndex + 1;
+      if(targetCol >= row.length) {
+        row.add(scorecard);
+      }
+      else {
+        row.insert(targetCol, scorecard);
+      }
+      result = true;
+    }
+    if(result) {
+      model.update();
+    }
+    return result;
+  }
+
   void tickerEdited(BoothTickerModel edited) {
     model.tickerModel.copyFrom(edited);
     model.update();
@@ -111,4 +218,11 @@ class BroadcastBoothController {
   void dispose() {
     _refreshTimer?.cancel();
   }
+}
+
+enum MoveDirection {
+  up,
+  down,
+  left,
+  right,
 }

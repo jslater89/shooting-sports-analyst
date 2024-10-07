@@ -6,6 +6,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 
@@ -54,6 +55,7 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
   TextEditingController nameController = TextEditingController();
   int scoreFilteredCount = 0;
   int displayFilteredCount = 0;
+
   @override
   void initState() {
     super.initState();
@@ -114,6 +116,134 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
               displayFilteredCount = displayFiltered.length;
             });
           },
+        ),
+        TextButton(
+          child: Text("SELECT COMPETITORS"),
+          onPressed: () async {
+            var competitors = await MatchEntrySelectDialog.show(
+              context, 
+              match: widget.match, 
+              filters: scorecard.displayFilters.filterSet ?? FilterSet(widget.match.sport),
+              previousSelection: scorecard.displayFilters.entryIds ?? <int>[],
+            );
+            if(competitors != null) {
+              scorecard.displayFilters.entryIds = competitors.map((e) => e.entryId).toList();
+              if(competitors.isEmpty) {
+                scorecard.displayFilters.entryIds = null;
+              }
+
+              var displayFiltered = scorecard.displayFilters.apply(widget.match);
+              setState(() {
+                displayFilteredCount = displayFiltered.length;
+              });
+            }
+          },
+        )
+      ],
+    );
+  }
+}
+
+class MatchEntrySelectDialog extends StatefulWidget {
+  const MatchEntrySelectDialog({super.key, required this.match, required this.filters, required this.previousSelection});
+
+  final ShootingMatch match;
+  final FilterSet filters;
+  final List<int> previousSelection;
+
+  @override
+  State<MatchEntrySelectDialog> createState() => _MatchEntrySelectDialogState();
+
+  static Future<List<MatchEntry>?> show(BuildContext context, {required ShootingMatch match, required FilterSet filters, required List<int> previousSelection}) {
+    return showDialog<List<MatchEntry>>(
+      context: context,
+      builder: (context) => MatchEntrySelectDialog(match: match, filters: filters, previousSelection: previousSelection),
+    );
+  }
+}
+
+class _MatchEntrySelectDialogState extends State<MatchEntrySelectDialog> {
+  List<MatchEntry> selectedEntries = [];
+  List<MatchEntry> baseEntries = [];
+  List<MatchEntry> shooters = [];
+
+  String search = "";
+
+  @override
+  void initState() {
+    super.initState();
+    baseEntries = widget.match.applyFilterSet(widget.filters);
+    baseEntries.sort((a, b) => a.lastName.compareTo(b.lastName));
+    shooters = baseEntries;
+    selectedEntries = baseEntries.where((e) => widget.previousSelection.contains(e.entryId)).toList();
+  }
+
+  void _updateSearch(String value) {
+    setState(() {
+      shooters = baseEntries.where((e) => e.getName(suffixes: false).toLowerCase().contains(value.toLowerCase())).toList();
+      search = value;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text("Select competitors"),
+      content: SizedBox(
+        width: 400,
+        height: 600,
+        child: Column(
+          children: [
+            TextField(
+              decoration: InputDecoration(labelText: "Search"),
+              onChanged: (value) => _updateSearch(value),
+            ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: shooters.length,
+                itemBuilder: (context, index) {
+                  var shooter = shooters[index];
+                  return CheckboxListTile(
+                    value: selectedEntries.contains(shooter),
+                    title: Text(shooter.name),
+                    onChanged: (value) {
+                      setState(() {
+                        if(value == true) {
+                          selectedEntries.add(shooter);
+                        } 
+                        else {
+                          selectedEntries.remove(shooter);
+                        }
+                      });
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(<MatchEntry>[]),
+              child: const Text("CLEAR"),
+            ),
+            Row(
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text("CANCEL"),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(selectedEntries),
+                  child: const Text("SAVE"),
+                ),
+              ],
+            ),
+          ],
         ),
       ],
     );
