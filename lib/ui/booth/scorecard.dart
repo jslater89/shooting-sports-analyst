@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
@@ -122,40 +128,42 @@ class _BoothScorecardState extends State<BoothScorecard> {
                     padding: const EdgeInsets.only(left: 8.0),
                     child: Text("${widget.scorecard.name} (showing ${displayedShooters.length} competitors of ${scores.length} scored)"),
                   ),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: Icon(Icons.settings),
-                        onPressed: () async {
-                          var editedScorecard = await ScorecardSettingsDialog.show(context, scorecard: widget.scorecard.copy(), match: match);
-                          if(editedScorecard != null) {
-                            widget.scorecard.copyFrom(editedScorecard);
-                            controller.scorecardEdited(widget.scorecard);
-                            _calculateScores();
-                          }
-                        },
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.close),
-                        onPressed: () async {
-                          var confirm = await ConfirmDialog.show(context, title: "Remove scorecard?", positiveButtonLabel: "REMOVE");
-                          if(confirm ?? false) {
-                            var model = context.read<BroadcastBoothModel>();
-                            if(listener != null) {
-                              model.removeListener(listener!);
-                              _log.i("Removed listener for ${widget.scorecard.name}");
+                  SizedBox(
+                    height: 40,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextButton(
+                          child: Icon(Icons.settings),
+                          onPressed: () async {
+                            var editedScorecard = await ScorecardSettingsDialog.show(context, scorecard: widget.scorecard.copy(), match: match);
+                            if(editedScorecard != null) {
+                              controller.scorecardEdited(widget.scorecard, editedScorecard);
+                              _calculateScores();
                             }
-                            else {
-                              _log.w("${widget.scorecard.name} has null listener!");
+                          },
+                        ),
+                        TextButton(
+                          child: Icon(Icons.close),
+                          onPressed: () async {
+                            var confirm = await ConfirmDialog.show(context, title: "Remove scorecard?", positiveButtonLabel: "REMOVE");
+                            if(confirm ?? false) {
+                              var model = context.read<BroadcastBoothModel>();
+                              if(listener != null) {
+                                model.removeListener(listener!);
+                                _log.i("Removed listener for ${widget.scorecard.name}");
+                              }
+                              else {
+                                _log.w("${widget.scorecard.name} has null listener!");
+                              }
+                              _log.i("Removing scorecard ${widget.scorecard.name}");
+                              // _log.v("${widget.scorecard.name} (${widget.hashCode} ${hashCode} ${widget.scorecard.hashCode}) removed");
+                              controller.removeScorecard(widget.scorecard);
                             }
-                            _log.i("Removing scorecard ${widget.scorecard.name}");
-                            // _log.v("${widget.scorecard.name} (${widget.hashCode} ${hashCode} ${widget.scorecard.hashCode}) removed");
-                            controller.removeScorecard(widget.scorecard);
-                          }
-                        },
-                      ),
-                    ],
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),

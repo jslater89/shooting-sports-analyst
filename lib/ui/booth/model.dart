@@ -95,6 +95,8 @@ class BoothTickerModel with ChangeNotifier {
   
   DateTime lastUpdateTime = DateTime.now();
 
+  bool paused;
+
   @JsonKey(includeFromJson: false, includeToJson: false)
   DateTime get nextUpdateTime => lastUpdateTime.add(Duration(seconds: updateInterval));
 
@@ -104,13 +106,13 @@ class BoothTickerModel with ChangeNotifier {
   @JsonKey(includeFromJson: false, includeToJson: false)
   Duration get timeUntilUpdate => nextUpdateTime.difference(DateTime.now());
 
-  void update(DateTime refreshTime) {
-    lastUpdateTime = refreshTime;
+  void update() {
     notifyListeners();
   }
 
   BoothTickerModel({
-    this.updateInterval = 300,
+    this.updateInterval = 180,
+    this.paused = false,
     DateTime? lastUpdateTime,
   }) : lastUpdateTime = lastUpdateTime ?? DateTime.now();
 
@@ -121,6 +123,7 @@ class BoothTickerModel with ChangeNotifier {
   void copyFrom(BoothTickerModel other) {
     updateInterval = other.updateInterval;
     lastUpdateTime = other.lastUpdateTime;
+    paused = other.paused;
   }
 }
 

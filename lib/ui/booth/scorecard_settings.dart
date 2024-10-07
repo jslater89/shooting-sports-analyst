@@ -1,9 +1,15 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 
-/// ScorecardSettingsDialog is a modal host for [ScorecardSettings].
+/// ScorecardSettingsDialog is a modal host for [ScorecardSettingsWidget].
 class ScorecardSettingsDialog extends StatelessWidget {
   const ScorecardSettingsDialog({super.key, required this.scorecard, required this.match});
 
@@ -14,7 +20,7 @@ class ScorecardSettingsDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text("Settings"),
-      content: ScorecardSettings(scorecard: scorecard, match: match),
+      content: ScorecardSettingsWidget(scorecard: scorecard, match: match),
       actions: [
         TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text("CANCEL")),
         TextButton(onPressed: () => Navigator.of(context).pop(scorecard), child: const Text("SAVE")),
@@ -33,16 +39,16 @@ class ScorecardSettingsDialog extends StatelessWidget {
 
 /// ScorecardSettings edits the provided scorecard.
 /// Edits happen in place, so use [ScorecardModel.copy] to get a copy if confirm/discard is needed.
-class ScorecardSettings extends StatefulWidget {
-  const ScorecardSettings({super.key, required this.scorecard, required this.match});
+class ScorecardSettingsWidget extends StatefulWidget {
+  const ScorecardSettingsWidget({super.key, required this.scorecard, required this.match});
 
   final ScorecardModel scorecard;
   final ShootingMatch match;
   @override
-  State<ScorecardSettings> createState() => _ScorecardSettingsState();
+  State<ScorecardSettingsWidget> createState() => _ScorecardSettingsWidgetState();
 }
 
-class _ScorecardSettingsState extends State<ScorecardSettings> {
+class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
   late ScorecardModel scorecard;
 
   TextEditingController nameController = TextEditingController();
@@ -71,7 +77,10 @@ class _ScorecardSettingsState extends State<ScorecardSettings> {
           onChanged: (value) => scorecard.name = value,
         ),
         SizedBox(height: 16),
-        Text("Scoring filters match $scoreFilteredCount of ${widget.match.shooters.length} competitors."),
+        Tooltip(
+          message: "Scoring filters determine the set of shooters used to calculate scores for this scorecard.",
+          child: Text("Scoring filters match $scoreFilteredCount of ${widget.match.shooters.length} competitors.")
+        ),
         TextButton(
           child: Text("EDIT SCORING FILTERS"),
           onPressed: () async {
@@ -86,7 +95,10 @@ class _ScorecardSettingsState extends State<ScorecardSettings> {
           },
         ),
         SizedBox(height: 16),
-        Text("Display filters match $displayFilteredCount of ${widget.match.shooters.length} competitors."),
+        Tooltip(
+          message: "Display filters determine the set of shooters shown on this scorecard.",
+          child: Text("Display filters match $displayFilteredCount of ${widget.match.shooters.length} competitors."),
+        ),
         TextButton(
           child: Text("EDIT DISPLAY FILTERS"),
           onPressed: () async {

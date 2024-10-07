@@ -32,19 +32,12 @@ class BroadcastBoothController {
 
     model.previousMatch = model.latestMatch;
     model.latestMatch = matchRes.unwrap();
+    model.tickerModel.lastUpdateTime = DateTime.now();
 
     // The ticker determines whether the UI updates, so make sure it's updated
     // before we send the UI update.
-    model.tickerModel.update(DateTime.now());
+    model.tickerModel.update();
     model.update();
-
-    // A manual refresh cancels the timer and schedules a new update updateInterval seconds out.
-    if(manual) {
-      _refreshTimer?.cancel();
-      _refreshTimer = Timer.periodic(Duration(seconds: model.tickerModel.updateInterval), (timer) {
-        refreshMatch(manual: false);
-      });
-    }
 
     return true;
   }
@@ -91,13 +84,27 @@ class BroadcastBoothController {
     model.update();
   }
 
-  void scorecardEdited(ScorecardModel scorecard) {
+  void scorecardEdited(ScorecardModel original, ScorecardModel edited) {
+    original.copyFrom(edited);
     model.update();
   }
 
+  void tickerEdited(BoothTickerModel edited) {
+    model.tickerModel.copyFrom(edited);
+    model.update();
+  }
+
+  void toggleUpdatePause() {
+    model.tickerModel.paused = !model.tickerModel.paused;
+    model.tickerModel.update();
+  }
+
   BroadcastBoothController(this.model) {
-    _refreshTimer = Timer.periodic(Duration(seconds: model.tickerModel.updateInterval), (timer) {
-      refreshMatch(manual: false);
+    // The refresh timer checks if the next update should have happened and refreshes if so.
+    _refreshTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+      if(!model.tickerModel.paused && model.tickerModel.timeUntilUpdate.isNegative) {
+        refreshMatch(manual: false);
+      }
     });
   }
 
