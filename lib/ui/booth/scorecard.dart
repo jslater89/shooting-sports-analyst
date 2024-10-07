@@ -134,6 +134,10 @@ class _BoothScorecardState extends State<BoothScorecard> {
       return scores[b]!.points.compareTo(scores[a]!.points);
     });
 
+    if(widget.scorecard.displayFilters.topN != null) {
+      displayedShooters = displayedShooters.take(widget.scorecard.displayFilters.topN!).toList();
+    }
+
     setState(() {
       _updateChangeFlags(model);
     });

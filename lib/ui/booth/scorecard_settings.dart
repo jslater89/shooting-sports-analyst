@@ -4,6 +4,8 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
@@ -53,6 +55,7 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
   late ScorecardModel scorecard;
 
   TextEditingController nameController = TextEditingController();
+  TextEditingController topNController = TextEditingController();
   int scoreFilteredCount = 0;
   int displayFilteredCount = 0;
 
@@ -66,6 +69,11 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
     
     var displayFiltered = scorecard.displayFilters.apply(widget.match);
     displayFilteredCount = displayFiltered.length;
+    if(scorecard.displayFilters.topN != null) {
+      displayFilteredCount = min(displayFilteredCount, scorecard.displayFilters.topN!);
+    }
+
+    topNController.text = scorecard.displayFilters.topN?.toString() ?? "";
   }
 
   @override
@@ -114,6 +122,9 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
             var displayFiltered = scorecard.displayFilters.apply(widget.match);
             setState(() {
               displayFilteredCount = displayFiltered.length;
+              if(scorecard.displayFilters.topN != null) {
+                displayFilteredCount = min(displayFilteredCount, scorecard.displayFilters.topN!);
+              }
             });
           },
         ),
@@ -135,10 +146,60 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
               var displayFiltered = scorecard.displayFilters.apply(widget.match);
               setState(() {
                 displayFilteredCount = displayFiltered.length;
+                if(scorecard.displayFilters.topN != null) {
+                  displayFilteredCount = min(displayFilteredCount, scorecard.displayFilters.topN!);
+                }
               });
             }
           },
-        )
+        ),
+        SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                decoration: InputDecoration(
+                  labelText: "Limit to top N competitors",
+                  hintText: "Enter a number",
+                  errorText: scorecard.displayFilters.topN != null && int.tryParse(scorecard.displayFilters.topN.toString()) == null
+                      ? "Please enter a valid positive integer"
+                      : null,
+                ),
+                keyboardType: TextInputType.number,
+                onChanged: (value) {
+                  setState(() {
+                    if (value.isEmpty) {
+                      setState(() {
+                        scorecard.displayFilters.topN = null;
+                        displayFilteredCount = scorecard.displayFilters.apply(widget.match).length;
+                      });
+                    }
+                    else {
+                      int? parsed = int.tryParse(value);
+                      if (parsed != null && parsed > 0) {
+                        setState(() {
+                          scorecard.displayFilters.topN = parsed;
+                          displayFilteredCount = scorecard.displayFilters.apply(widget.match).length;
+                          displayFilteredCount = min(displayFilteredCount, parsed);
+                        });
+                      }
+                    }
+                  });
+                },
+                controller: topNController,
+              ),
+            ),
+            TextButton(
+              child: Icon(Icons.clear),
+              onPressed: () {
+                setState(() {
+                  scorecard.displayFilters.topN = null;
+                  displayFilteredCount = scorecard.displayFilters.apply(widget.match).length;
+                });
+              },
+            ),
+          ],
+        ),
       ],
     );
   }

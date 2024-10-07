@@ -29,6 +29,7 @@ class BroadcastBoothModel with ChangeNotifier {
   String matchId;
 
   DateTime? timewarpScoresBefore;
+  @JsonKey(fromJson: GlobalScorecardSettingsModel.maybeFromJson)
   GlobalScorecardSettingsModel globalScorecardSettings = GlobalScorecardSettingsModel();
 
   List<List<ScorecardModel>> scorecards = [];
@@ -205,16 +206,19 @@ class ScorecardModel {
 class DisplayFilters {
   FilterSet? filterSet;
   List<int>? entryIds;
+  int? topN;
 
   DisplayFilters({
     this.filterSet,
     this.entryIds,
+    this.topN,
   });
 
   DisplayFilters copy() {
     return DisplayFilters(
       filterSet: filterSet?.copy(),
       entryIds: entryIds?.toList(),
+      topN: topN,
     );
   }
 

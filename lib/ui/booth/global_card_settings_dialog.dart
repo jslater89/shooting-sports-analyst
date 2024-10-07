@@ -21,6 +21,11 @@ class GlobalScorecardSettingsModel {
 
   factory GlobalScorecardSettingsModel.fromJson(Map<String, dynamic> json) => _$GlobalScorecardSettingsModelFromJson(json);
   Map<String, dynamic> toJson() => _$GlobalScorecardSettingsModelToJson(this);
+
+  static GlobalScorecardSettingsModel maybeFromJson(Map<String, dynamic>? json) {
+    if(json == null) return GlobalScorecardSettingsModel();
+    return GlobalScorecardSettingsModel.fromJson(json);
+  }
 }
 
 /// GlobalScorecardSettingsDialog is a modal host for [GlobalScorecardSettingsWidget].
