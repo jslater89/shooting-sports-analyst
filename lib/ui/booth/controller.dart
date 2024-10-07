@@ -33,8 +33,10 @@ class BroadcastBoothController {
     model.previousMatch = model.latestMatch;
     model.latestMatch = matchRes.unwrap();
 
-    model.update();
+    // The ticker determines whether the UI updates, so make sure it's updated
+    // before we send the UI update.
     model.tickerModel.update(DateTime.now());
+    model.update();
 
     // A manual refresh cancels the timer and schedules a new update updateInterval seconds out.
     if(manual) {

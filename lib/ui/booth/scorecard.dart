@@ -31,18 +31,26 @@ class _BoothScorecardState extends State<BoothScorecard> {
 
   VoidCallback? listener;
 
+  bool disposed = false;
+  late BroadcastBoothModel cachedModel;
+
   @override
   void initState() {
     super.initState();
     // _log.v("${widget.scorecard.name} (${widget.hashCode} ${hashCode} ${widget.scorecard.hashCode}) initState");
    
     var model = context.read<BroadcastBoothModel>();
+    cachedModel = model;
     _calculateScores();
-    
+  
     listener = () {
       if(!mounted) {
-        _log.e("${widget.scorecard.name} was notified, but not mounted");
-        // _log.v("${widget.scorecard.name} (${widget.hashCode} ${hashCode} ${widget.scorecard.hashCode}) listener not mounted");
+        _log.e("${widget.scorecard.name} ${hashCode} was notified, but not mounted");
+        if(!disposed) {
+          var model = context.read<BroadcastBoothModel>();
+          model.removeListener(listener!);
+          _log.i("Removed listener for ${widget.scorecard.name}");
+        }
         return;
       }
       
@@ -55,6 +63,12 @@ class _BoothScorecardState extends State<BoothScorecard> {
       }
     };
     model.addListener(listener!);
+  }
+
+  void dispose() {
+    disposed = true;
+    cachedModel.removeListener(listener!);
+    super.dispose();
   }
 
   Future<void> _calculateScores() async {
@@ -130,6 +144,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
                             var model = context.read<BroadcastBoothModel>();
                             if(listener != null) {
                               model.removeListener(listener!);
+                              _log.i("Removed listener for ${widget.scorecard.name}");
                             }
                             else {
                               _log.w("${widget.scorecard.name} has null listener!");
