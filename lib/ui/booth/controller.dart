@@ -9,6 +9,7 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/ui/booth/global_card_settings_dialog.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
@@ -116,6 +117,26 @@ class BroadcastBoothController {
     }
 
     return moves;
+  }
+
+  void timewarp(DateTime? scoresBefore) {
+    for(var row in model.scorecards) {
+      for(var scorecard in row) {
+        scorecard.scoresBefore = scoresBefore;
+      }
+    }
+    model.timewarpScoresBefore = scoresBefore;
+    model.update();
+  }
+
+  void globalScorecardSettingsEdited(GlobalScorecardSettingsModel settings) {
+    model.globalScorecardSettings = settings;
+    for(var row in model.scorecards) {
+      for(var scorecard in row) {
+        scorecard.copyGlobalSettingsFrom(settings);;
+      }
+    }
+    model.update();
   }
 
   bool moveScorecard(ScorecardModel scorecard, MoveDirection direction) {

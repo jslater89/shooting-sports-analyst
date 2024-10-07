@@ -331,6 +331,7 @@ class DbRawScore {
   List<DbScoringEventCount> scoringEvents;
   List<DbScoringEventCount> penaltyEvents;
   List<double> stringTimes;
+  DateTime? modified;
 
   DbRawScore({
     this.stageId = -1,
@@ -339,6 +340,7 @@ class DbRawScore {
     this.scoringEvents = const [],
     this.penaltyEvents = const [],
     this.stringTimes = const [],
+    this.modified,
   });
 
   DbRawScore.from(int stageId, RawScore score) :
@@ -347,7 +349,8 @@ class DbRawScore {
     rawTime = score.rawTime,
     stringTimes = []..addAll(score.stringTimes),
     scoringEvents = score.targetEvents.keys.map((event) => DbScoringEventCount(name: event.name, count: score.targetEvents[event]!)).toList(),
-    penaltyEvents = score.penaltyEvents.keys.map((event) => DbScoringEventCount(name: event.name, count: score.penaltyEvents[event]!)).toList();
+    penaltyEvents = score.penaltyEvents.keys.map((event) => DbScoringEventCount(name: event.name, count: score.penaltyEvents[event]!)).toList(),
+    modified = score.modified;
 
   Result<RawScore, ResultErr> hydrate(PowerFactor pf) {
     for(var event in scoringEvents) {
@@ -363,6 +366,7 @@ class DbRawScore {
       stringTimes: []..addAll(stringTimes),
       targetEvents: Map.fromEntries(scoringEvents.map((event) => MapEntry(pf.targetEvents.lookupByName(event.name)!, event.count))),
       penaltyEvents: Map.fromEntries(penaltyEvents.map((event) => MapEntry(pf.penaltyEvents.lookupByName(event.name)!, event.count))),
+      modified: modified,
     ));
   }
 }

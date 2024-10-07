@@ -38,6 +38,8 @@ sealed class MatchScoring {
     bool scoreDQ = true,
     MatchPredictionMode predictionMode = MatchPredictionMode.none,
     Map<RaterGroup, Rater>? ratings,
+    DateTime? scoresAfter,
+    DateTime? scoresBefore,
   });
 }
 
@@ -64,6 +66,18 @@ final class RelativeStageFinishScoring extends MatchScoring {
 
   RelativeStageFinishScoring({this.fixedStageValue, this.pointsAreUSPSAFixedTime = false});
 
+  bool _isInTimeRange(RawScore? score, {DateTime? scoresAfter, DateTime? scoresBefore}) {
+    if(score == null) return true;
+
+    if(scoresAfter != null && score.modified != null && score.modified!.isBefore(scoresAfter)) {
+      return false;
+    }
+    if(scoresBefore != null && score.modified != null && score.modified!.isAfter(scoresBefore)) {
+      return false;
+    }
+    return true;
+  }
+
   @override
   Map<MatchEntry, RelativeMatchScore> calculateMatchScores({
     required ShootingMatch match,
@@ -72,6 +86,8 @@ final class RelativeStageFinishScoring extends MatchScoring {
     bool scoreDQ = true, 
     MatchPredictionMode predictionMode = MatchPredictionMode.none,
     Map<RaterGroup, Rater>? ratings,
+    DateTime? scoresAfter,
+    DateTime? scoresBefore,
   }) {
     if(shooters.length == 0 || stages.length == 0) return {};
 
@@ -96,9 +112,10 @@ final class RelativeStageFinishScoring extends MatchScoring {
       for(var shooter in shooters) {
         var stageScore = shooter.scores[stage];
 
-        if(stageScore == null) {
+        bool isInTimeRange = _isInTimeRange(stageScore, scoresAfter: scoresAfter, scoresBefore: scoresBefore);
+
+        if(stageScore == null || !isInTimeRange) {
           stageScore = RawScore(scoring: scoring, targetEvents: {});
-          shooter.scores[stage] = stageScore;
         }
 
         scores[shooter] = stageScore;
@@ -232,12 +249,12 @@ final class RelativeStageFinishScoring extends MatchScoring {
 
       for(var shooter in shooters) {
         // Do match predictions for shooters who have completed at least one stage.
-        if(shooter.firstName == "Matthew" && shooter.lastName == "Hemple") {
-          print("break");
-        }
         if((stageScores[shooter]?.length ?? 0) > 0 || predictionMode == MatchPredictionMode.eloAwareFull) {
           double averageStagePercentage = 0.0;
           int stagesCompleted = 0;
+          if(shooter.lastName == "Tang") {
+            print("break");
+          }
 
           if(predictionMode == MatchPredictionMode.averageStageFinish
               || predictionMode == MatchPredictionMode.averageHistoricalFinish
@@ -261,8 +278,9 @@ final class RelativeStageFinishScoring extends MatchScoring {
 
           for (MatchStage stage in stages) {
             if(stage.scoring is IgnoredScoring) continue;
+            var stageScore = shooter.scores[stage];
 
-            if (shooter.scores[stage] == null || shooter.scores[stage]!.dnf) {
+            if (stageScore == null || stageScore.dnf || !_isInTimeRange(stageScore, scoresAfter: scoresAfter, scoresBefore: scoresBefore)) {
               if (predictionMode == MatchPredictionMode.highAvailable) {
                 stageScoreTotals.incrementBy(shooter, stage.maxPoints.toDouble());
               }
@@ -344,6 +362,8 @@ final class CumulativeScoring extends MatchScoring {
     bool scoreDQ = true,
     MatchPredictionMode predictionMode = MatchPredictionMode.none,
     Map<RaterGroup, Rater>? ratings,
+    DateTime? scoresAfter,
+    DateTime? scoresBefore,
   }) {
     if(shooters.length == 0 || stages.length == 0) return {};
 
@@ -368,9 +388,16 @@ final class CumulativeScoring extends MatchScoring {
       for(var shooter in shooters) {
         var stageScore = shooter.scores[stage];
 
-        if(stageScore == null) {
+        bool isInTimeRange = true;
+        if(scoresAfter != null && stageScore?.modified != null && stageScore!.modified!.isAfter(scoresAfter!)) {
+          isInTimeRange = false;
+        }
+        if(scoresBefore != null && stageScore?.modified != null && stageScore!.modified!.isBefore(scoresBefore!)) {
+          isInTimeRange = false;
+        }
+
+        if(stageScore == null || !isInTimeRange) {
           stageScore = RawScore(scoring: scoring, targetEvents: {});
-          shooter.scores[stage] = stageScore;
         }
 
         scores[shooter] = stageScore;
@@ -803,7 +830,12 @@ class RawScore {
   /// Penalty events for this score: that is, events caused by a competitor's
   /// actions or failures to act outside of hits or misses on targets.
   Map<ScoringEvent, int> penaltyEvents;
+
+  /// A list of string times for this score.
   List<double> stringTimes;
+
+  /// The time this score was last modified.
+  DateTime? modified;
   
   List<Map<ScoringEvent, int>> get _scoreMaps => [targetEvents, penaltyEvents];
 
@@ -861,6 +893,7 @@ class RawScore {
     required this.targetEvents,
     this.penaltyEvents = const {},
     this.stringTimes = const [],
+    this.modified,
   });
 
   bool get dnf =>
@@ -897,6 +930,7 @@ class RawScore {
       rawTime: rawTime,
       targetEvents: {}..addAll(targetEvents),
       penaltyEvents: {}..addAll(penaltyEvents),
+      modified: modified,
     );
   }
 

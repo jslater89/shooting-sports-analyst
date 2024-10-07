@@ -96,6 +96,8 @@ class ShootingMatch {
 
   Map<MatchEntry, RelativeMatchScore> getScoresFromFilters(FilterSet filters, {
     List<MatchStage>? stages,
+    DateTime? scoresAfter,
+    DateTime? scoresBefore,
     MatchPredictionMode predictionMode = MatchPredictionMode.none,
     Map<RaterGroup, Rater>? ratings,
   }) {
@@ -106,15 +108,34 @@ class ShootingMatch {
       scoreDQ: filters.scoreDQs,
       predictionMode: predictionMode,
       ratings: ratings,
+      scoresAfter: scoresAfter,
+      scoresBefore: scoresBefore,
     );
   }
 
+  /// Calculate scores for shooters in this match.
+  /// 
+  /// [shooters] and [stages] default to all shooters and stages in this match.
+  /// 
+  /// [scoreDQ] calculates partial scores for shooters who have been disqualified.
+  /// 
+  /// [predictionMode], if not [MatchPredictionMode.none], assigns predicted scores
+  /// to shooters on stages they have not yet completed.
+  /// 
+  /// [ratings] supports rating-based [predictionMode]s.
+  /// 
+  /// [scoresAfter] and [scoresBefore], if used, will drop scores that occur
+  /// before [scoresAfter] and after [scoresBefore].
   Map<MatchEntry, RelativeMatchScore> getScores({
     List<MatchEntry>? shooters,
     List<MatchStage>? stages,
     bool scoreDQ = true,
     MatchPredictionMode predictionMode = MatchPredictionMode.none,
     Map<RaterGroup, Rater>? ratings,
+    /// Include only scores occurring after this time.
+    DateTime? scoresAfter,
+    /// Include only scores occurring before this time.
+    DateTime? scoresBefore,
   }) {
     var innerShooters = shooters ?? this.shooters;
     var innerStages = stages ?? this.stages;
@@ -126,6 +147,8 @@ class ShootingMatch {
       scoreDQ: scoreDQ,
       predictionMode: predictionMode,
       ratings: ratings,
+      scoresAfter: scoresAfter,
+      scoresBefore: scoresBefore,
     );
   }
 

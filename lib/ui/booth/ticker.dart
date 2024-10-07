@@ -9,9 +9,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/ui/booth/controller.dart';
+import 'package:shooting_sports_analyst/ui/booth/global_card_settings_dialog.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
 import 'package:intl/intl.dart';
 import 'package:shooting_sports_analyst/ui/booth/ticker_settings.dart';
+import 'package:shooting_sports_analyst/ui/booth/timewarp_dialog.dart';
 
 class BoothTicker extends StatefulWidget {
   const BoothTicker({super.key});
@@ -69,7 +71,7 @@ class _BoothTickerState extends State<BoothTicker> {
                       SizedBox(width: 10),
                       Text("Since last update: ${_timerFormat(model.tickerModel.timeSinceUpdate)}"),
                       SizedBox(width: 10),
-                      Text("Until next update: ${model.tickerModel.paused ? "-:--" : _timerFormat(timeUntilUpdate)}"),
+                      Text("Until next update: ${model.tickerModel.paused ? "(paused)" : _timerFormat(timeUntilUpdate)}"),
                       SizedBox(width: 10),
                       TextButton(
                         child: model.tickerModel.paused ? Icon(Icons.play_arrow) : Icon(Icons.pause),
@@ -83,14 +85,17 @@ class _BoothTickerState extends State<BoothTicker> {
                           controller.refreshMatch();
                         },
                       ),
-                      TextButton(
-                        child: Icon(Icons.settings),
-                        onPressed: () async {
-                          var result = await TickerSettingsDialog.show(context, tickerModel: model.tickerModel);
-                          if(result != null) {
-                            controller.tickerEdited(result);
-                          }
-                        },
+                      Tooltip(
+                        message: "Adjust ticker settings and match update frequency.",
+                        child: TextButton(
+                          child: Icon(Icons.settings),
+                          onPressed: () async {
+                            var result = await TickerSettingsDialog.show(context, tickerModel: model.tickerModel);
+                            if(result != null) {
+                              controller.tickerEdited(result);
+                            }
+                          },
+                        ),
                       ),
                     ],
                   ),
@@ -98,6 +103,38 @@ class _BoothTickerState extends State<BoothTicker> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     mainAxisSize: MainAxisSize.max,
                     children: [
+                      Tooltip(
+                        message: "View scores at earlier points in time.",
+                        child: TextButton(
+                          child: Row(
+                            children: [
+                              Icon(Icons.timer),
+                              Text("Time warp${model.timewarpScoresBefore != null ? " (${DateFormat.yMd().format(model.timewarpScoresBefore!)} ${DateFormat.Hm().format(model.timewarpScoresBefore!)})" : ""}"),
+                            ],
+                          ),
+                          onPressed: () async {
+                            var result = await TimewarpDialog.show(context, match: model.latestMatch, initialDateTime: model.timewarpScoresBefore);
+                            controller.timewarp(result);
+                          }
+                        ),
+                      ),
+                      Tooltip(
+                        message: "Adjust scoring and display settings for all scorecards.",
+                        child: TextButton(
+                          child: Row(
+                            children: [
+                              Icon(Icons.dashboard),
+                              Text("Card settings"),
+                            ],
+                          ),
+                          onPressed: () async {
+                            var result = await GlobalScorecardSettingsDialog.show(context, settings: model.globalScorecardSettings);
+                            if(result != null) {
+                              controller.globalScorecardSettingsEdited(result);
+                            }
+                          }
+                        ),
+                      ),
                       TextButton(
                         child: Row(
                           children: [

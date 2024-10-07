@@ -15,6 +15,7 @@ import 'package:shooting_sports_analyst/ui/booth/model.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_grid.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_move.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_settings.dart';
+import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 
@@ -32,6 +33,9 @@ class BoothScorecard extends StatefulWidget {
 class _BoothScorecardState extends State<BoothScorecard> {
   DateTime lastScoresCalculated = DateTime(0);
   int lastScorecardCount = 0;
+  DateTime? lastScoresBefore;
+  DateTime? lastScoresAfter;
+  MatchPredictionMode lastPredictionMode = MatchPredictionMode.none;
 
   Map<MatchEntry, RelativeMatchScore> scores = {};
   List<MatchEntry> displayedShooters = [];
@@ -62,14 +66,41 @@ class _BoothScorecardState extends State<BoothScorecard> {
       }
       
       var model = context.read<BroadcastBoothModel>();
-      if(model.tickerModel.lastUpdateTime.isAfter(lastScoresCalculated) || lastScorecardCount != model.scorecardCount) {
+      if(_hasChanges(model)) {
         _calculateScores();
       }
       else {
-        _log.w("${widget.scorecard.name} (${widget.hashCode} ${hashCode} ${widget.scorecard.hashCode}) was notified, but last update time ${model.tickerModel.lastUpdateTime} is before $lastScoresCalculated");
+        _log.w("${widget.scorecard.name} (${widget.hashCode} ${hashCode} ${widget.scorecard.hashCode}) was notified, but no changes detected");
       }
     };
     model.addListener(listener!);
+  }
+
+  bool _hasChanges(BroadcastBoothModel model) {
+    if(lastScoresBefore != widget.scorecard.scoresBefore) {
+      return true;
+    }
+    if(lastScoresAfter != widget.scorecard.scoresAfter) {
+      return true;
+    }
+    if(lastPredictionMode != widget.scorecard.predictionMode) {
+      return true;
+    }
+    if(lastScorecardCount != model.scorecardCount) {
+      return true;
+    }
+    if(lastScoresCalculated.isBefore(model.tickerModel.lastUpdateTime)) {
+      return true;
+    }
+    return false;
+  }
+
+  void _updateChangeFlags(BroadcastBoothModel model) {
+    lastScoresBefore = widget.scorecard.scoresBefore;
+    lastScoresAfter = widget.scorecard.scoresAfter;
+    lastPredictionMode = widget.scorecard.predictionMode;
+    lastScorecardCount = model.scorecardCount;
+    lastScoresCalculated = model.tickerModel.lastUpdateTime;
   }
 
   void dispose() {
@@ -83,7 +114,12 @@ class _BoothScorecardState extends State<BoothScorecard> {
     await model.readyFuture;
 
     var match = model.latestMatch;
-    scores = match.getScoresFromFilters(widget.scorecard.scoreFilters);
+    scores = match.getScoresFromFilters(
+      widget.scorecard.scoreFilters,
+      scoresAfter: widget.scorecard.scoresAfter,
+      scoresBefore: widget.scorecard.scoresBefore,
+      predictionMode: widget.scorecard.predictionMode,
+    );
     displayedShooters = widget.scorecard.displayFilters.apply(match);
     displayedShooters.sort((a, b) {
       if(scores[a] == null && scores[b] == null) {
@@ -99,8 +135,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
     });
 
     setState(() {
-      lastScoresCalculated = model.tickerModel.lastUpdateTime;
-      lastScorecardCount = model.scorecardCount;
+      _updateChangeFlags(model);
     });
     _log.i("Score filters for ${widget.scorecard.name} match ${scores.length}, display filters match ${displayedShooters.length}");
   }
@@ -279,7 +314,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
             ),
             ...stages.map((stage) {
                 var stageScore = score.stageScores[stage];
-                if(stageScore == null) {
+                if(stageScore == null || stageScore.score.dnf) {
                   return SizedBox(width: _stageColumnWidth, child: Text("-", textAlign: TextAlign.center));
                 }
                 return SizedBox(

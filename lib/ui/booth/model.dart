@@ -13,6 +13,8 @@ import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/booth/global_card_settings_dialog.dart';
+import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 
 part 'model.g.dart';
@@ -25,6 +27,9 @@ class BroadcastBoothModel with ChangeNotifier {
 
   String matchSource;
   String matchId;
+
+  DateTime? timewarpScoresBefore;
+  GlobalScorecardSettingsModel globalScorecardSettings = GlobalScorecardSettingsModel();
 
   List<List<ScorecardModel>> scorecards = [];
   int get scorecardCount => scorecards.map((row) => row.length).reduce((a, b) => a + b);
@@ -42,7 +47,7 @@ class BroadcastBoothModel with ChangeNotifier {
       _readyCompleter.complete();
     }
   
-  BroadcastBoothModel.json(this.matchSource, this.matchId);
+  BroadcastBoothModel.json(this.matchSource, this.matchId, this.globalScorecardSettings);
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   ShootingMatch get latestMatch => _latestMatch;
@@ -136,15 +141,34 @@ class ScorecardModel {
   FilterSet scoreFilters;
   DisplayFilters displayFilters;
 
+  // Time warp settings
+  DateTime? scoresAfter;
+  DateTime? scoresBefore;
+
+  @JsonKey(defaultValue: MatchPredictionMode.none)
+  MatchPredictionMode predictionMode;
+
   ScorecardModel({
     required this.name,
     required this.scoreFilters,
     required this.displayFilters,
     required this.parent,
+    this.scoresAfter,
+    this.scoresBefore,
+    this.predictionMode = MatchPredictionMode.none,
   });
 
   // parent is set by the parent model
-  ScorecardModel.json(this.name, this.scoreFilters, this.displayFilters);
+  ScorecardModel.json(
+    this.name,
+    this.scoreFilters,
+    this.displayFilters,
+    {
+      required this.predictionMode,
+      this.scoresAfter,
+      this.scoresBefore,
+    }
+  );
 
   ScorecardModel copy() {
     return ScorecardModel(
@@ -152,6 +176,9 @@ class ScorecardModel {
       scoreFilters: scoreFilters.copy(),
       displayFilters: displayFilters.copy(),
       parent: parent,
+      scoresAfter: scoresAfter,
+      scoresBefore: scoresBefore,
+      predictionMode: predictionMode,
     );
   }
 
@@ -159,6 +186,13 @@ class ScorecardModel {
     name = other.name;
     scoreFilters = other.scoreFilters.copy();
     displayFilters = other.displayFilters.copy();
+    scoresAfter = other.scoresAfter;
+    scoresBefore = other.scoresBefore;
+    predictionMode = other.predictionMode;
+  }
+
+  void copyGlobalSettingsFrom(GlobalScorecardSettingsModel settings) {
+    predictionMode = settings.predictionMode;
   }
 
   factory ScorecardModel.fromJson(Map<String, dynamic> json) => _$ScorecardModelFromJson(json);

@@ -5,6 +5,7 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -61,10 +62,13 @@ class ShooterComparisonCard extends StatelessWidget {
     var headlineTheme = Theme.of(context).textTheme.titleMedium?.copyWith(color: color);
     var textTheme = Theme.of(context).textTheme.bodyMedium?.copyWith(color: color);
 
+    var modified = stageScore.score.modified?.toLocal();
+
     return [
       Divider(),
       Text("Stage ${stage.stageId} - ${stage.name}",
         style: headlineTheme, overflow: TextOverflow.ellipsis),
+      Text(modified != null ? "${DateFormat.yMd().format(modified)} ${DateFormat.Hms().format(modified)}" : ""),
       Text("${stageScore.place} - ${stageScore.ratio.asPercentage()}% - ${stageScore.score.displayString}",
         style: textTheme,
       ),
