@@ -97,6 +97,14 @@ class FilterSet {
   Map<String, dynamic> toJson() {
     return _$FilterSetToJson(this);
   }
+
+  bool get isEmpty => 
+    squads.isEmpty
+    && !femaleOnly
+    && activeDivisions.isEmpty
+    && activeClassifications.isEmpty
+    && activePowerFactors.isEmpty
+    && activeAgeCategories.isEmpty;
 }
 
 class FilterDialog extends StatefulWidget {

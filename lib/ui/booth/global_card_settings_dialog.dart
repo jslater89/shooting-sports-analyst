@@ -24,6 +24,12 @@ class GlobalScorecardSettingsModel with ChangeNotifier {
     this.minScorecardWidth = 900.0,
   });
 
+  GlobalScorecardSettingsModel copy() => GlobalScorecardSettingsModel(
+    predictionMode: predictionMode,
+    minScorecardHeight: minScorecardHeight,
+    minScorecardWidth: minScorecardWidth,
+  );
+
   factory GlobalScorecardSettingsModel.fromJson(Map<String, dynamic> json) => _$GlobalScorecardSettingsModelFromJson(json);
   Map<String, dynamic> toJson() => _$GlobalScorecardSettingsModelToJson(this);
 

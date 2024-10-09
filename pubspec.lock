@@ -228,7 +228,7 @@ packages:
     source: hosted
     version: "2.3.3"
   fading_edge_scrollview:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: fading_edge_scrollview
       sha256: "1f84fe3ea8e251d00d5735e27502a6a250e4aa3d3b330d3fdcb475af741464ef"
@@ -991,14 +991,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.6.0"
-  ticker_text:
-    dependency: "direct main"
-    description:
-      name: ticker_text
-      sha256: ec93b445d02d66f50ab66a2d931d413d616b5022fec08c4cb7954c7036d43da1
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.1.0"
   time:
     dependency: transitive
     description:

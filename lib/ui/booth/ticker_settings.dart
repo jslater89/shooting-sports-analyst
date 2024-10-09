@@ -243,7 +243,7 @@ class _TickerCriterionEditDialogState extends State<TickerCriterionEditDialog> {
                 if (newValue != null) {
                   setState(() {
                     _editedCriterion.type = switch(newValue) {
-                      ExtremeScore.extremeScoreName => ExtremeScore.above(changeThreshold: 90),
+                      ExtremeScore.extremeScoreName => ExtremeScore.above(changeThreshold: 10),
                       MatchLeadChange.matchLeadChangeName => MatchLeadChange(),
                       StageLeadChange.stageLeadChangeName => StageLeadChange(),
                       _ => throw Exception("Invalid event type"),

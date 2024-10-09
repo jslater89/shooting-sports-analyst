@@ -9,12 +9,15 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/booth/controller.dart';
 import 'package:shooting_sports_analyst/ui/booth/help_dialog.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_grid.dart';
 import 'package:shooting_sports_analyst/ui/booth/ticker.dart';
+
+SSALogger _log = SSALogger("BroadcastBoothPage");
 
 class BroadcastBoothPage extends StatefulWidget {
   const BroadcastBoothPage({super.key, required this.match});
@@ -69,9 +72,11 @@ class _BroadcastBoothPageState extends State<BroadcastBoothPage> {
                 var projectJson = await HtmlOr.pickAndReadFileNow();
                 if(projectJson != null) {
                   var projectMap = jsonDecode(projectJson);
+                  _log.i("Creating new booth model...");
                   var newModel = BroadcastBoothModel.fromJson(projectMap);
-                  await model.copyFrom(newModel, resetLastUpdateTime: true);
-                  await controller.refreshMatch();
+                  _log.i("New booth model created");
+                  await controller.loadFrom(newModel);
+                  _log.i("New booth model ready");
                   setState(() {});
                 }
               },

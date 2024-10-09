@@ -47,6 +47,7 @@ class BroadcastBoothModel with ChangeNotifier {
   bool get inTimewarp => timewarpScoresBefore != null;
 
   DateTime? timewarpScoresBefore;
+
   @JsonKey(defaultValue: false)
   bool calculateTimewarpTickerEvents = false;
 
@@ -117,6 +118,9 @@ class BroadcastBoothModel with ChangeNotifier {
     matchSource = other.matchSource;
     matchId = other.matchId;
     scorecards = other.scorecards.map((row) => row.map((scorecard) => scorecard.copy()..parent = this).toList()).toList();
+    timewarpScoresBefore = other.timewarpScoresBefore;
+    calculateTimewarpTickerEvents = other.calculateTimewarpTickerEvents;
+    globalScorecardSettings = other.globalScorecardSettings.copy();
   }
 }
 
@@ -173,12 +177,16 @@ class BoothTickerModel with ChangeNotifier {
   @JsonKey(includeFromJson: false, includeToJson: false, defaultValue: [])
   List<TickerEvent> liveTickerEvents = [];
 
+  /// True if the ticker has new events, and the ticker row should be updated.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  bool hasNewEvents = false;
+
   void update() {
     notifyListeners();
   }
 
   BoothTickerModel({
-    this.updateInterval = 180,
+    this.updateInterval = 300,
     this.paused = false,
     DateTime? lastUpdateTime,
     this.tickerSpeed = 30,
@@ -195,6 +203,8 @@ class BoothTickerModel with ChangeNotifier {
     globalTickerCriteria = other.globalTickerCriteria;
     tickerSpeed = other.tickerSpeed;
     paused = other.paused;
+    timewarpTickerEvents = other.timewarpTickerEvents;
+    hasNewEvents = other.hasNewEvents;
   }
 
   BoothTickerModel copy() => BoothTickerModel.fromJson(toJson());
@@ -363,6 +373,8 @@ class DisplayFilters {
 
     return entries;
   }
+
+  bool get isEmpty => filterSet == null && entryIds == null && topN == null;
 
   factory DisplayFilters.fromJson(Map<String, dynamic> json) => _$DisplayFiltersFromJson(json);
   Map<String, dynamic> toJson() => _$DisplayFiltersToJson(this);

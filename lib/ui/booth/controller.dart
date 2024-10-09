@@ -20,6 +20,16 @@ SSALogger _log = SSALogger("BoothController");
 class BroadcastBoothController {
   BroadcastBoothModel model;
 
+  Future<void> loadFrom(BroadcastBoothModel newModel) async {
+    await model.copyFrom(newModel, resetLastUpdateTime: true);
+    
+    // these will be rebuilt if the model is in timewarp
+    // live ticker events will be cleared/recreated in refreshMatch
+    model.tickerModel.timewarpTickerEvents.clear();
+    
+    await refreshMatch();
+  }
+
   Timer? _refreshTimer;
   Future<bool> refreshMatch({bool manual = true}) async {
     var source = MatchSourceRegistry().getByCodeOrNull(model.matchSource);
@@ -45,10 +55,15 @@ class BroadcastBoothController {
     return true;
   }
 
+  Timer? _tickerHasNewEventsTimer;
+  Timer? _tickerTimewarpResetTimer;
   void addTickerEvents(List<TickerEvent> events) {
     if(events.isEmpty) {
       return;
     }
+
+    _tickerTimewarpResetTimer?.cancel();
+    _tickerTimewarpResetTimer = null;
 
     if(model.inTimewarp && model.calculateTimewarpTickerEvents) {
       model.tickerModel.timewarpTickerEvents.addAll(events);
@@ -60,7 +75,15 @@ class BroadcastBoothController {
       model.tickerModel.liveTickerEvents.sort((a, b) => b.priority.index.compareTo(a.priority.index));
       _log.v("Live ticker events: ${model.tickerModel.liveTickerEvents.length}");
     }
-    model.tickerModel.update();
+    
+    if(_tickerHasNewEventsTimer == null) {
+      _tickerHasNewEventsTimer = Timer(const Duration(milliseconds: 250), () {
+        _log.i("Dispatching ticker update");
+        model.tickerModel.hasNewEvents = true;
+        model.tickerModel.update();
+        _tickerHasNewEventsTimer = null;
+      });
+    }
   }
   
   void addScorecardRow() {
@@ -150,6 +173,15 @@ class BroadcastBoothController {
     model.timewarpScoresBefore = scoresBefore;
     model.tickerModel.timewarpTickerEvents.clear();
     model.calculateTimewarpTickerEvents = calculateTickerEvents;
+
+    // Reset the ticker after a short delay, in case no events come in.
+    // If events do come in, [addTickerEvents] will clear the timer.
+    _tickerTimewarpResetTimer = Timer(const Duration(milliseconds: 500), () {
+      _log.i("No-event ticker reset timer fired");
+      model.tickerModel.hasNewEvents = true;
+      model.tickerModel.update();
+      model.update();
+    });
     model.update();
   }
 

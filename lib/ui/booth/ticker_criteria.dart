@@ -311,6 +311,9 @@ class MatchLeadChange extends TickerEventType {
     required DateTime updateTime,
   }) {
     var change = changes[competitor]!;
+
+    // two possible cases: shooter gained the lead by dint of his own stage scores, or lost
+    // the lead due to someone else placing ahead of him on other stages.
     if(change.newScore.place == 1 && change.oldScore.place != 1) {
       var secondPlace = newScores.entries.firstWhereOrNull((e) => e.value.place == 2);
       String message = "${competitor.getName(suffixes: false).toUpperCase()} (${scorecard.name}) now leads the match";
@@ -320,6 +323,23 @@ class MatchLeadChange extends TickerEventType {
         var margin = change.newScore.points - secondChange.points;
         var ratioMargin = change.newScore.ratio - secondChange.ratio;
         message += " over ${secondCompetitor.getName(suffixes: false).toUpperCase()} by ${margin.toStringAsFixed(1)} points (${ratioMargin.asPercentage()}%)";
+      }
+      return [TickerEvent(
+        generatedAt: updateTime,
+        message: message,
+        reason: typeName,
+        priority: priority,
+      )];
+    }
+    else if(change.newScore.place != 1 && change.oldScore.place == 1) {
+      var firstPlace = newScores.entries.firstWhereOrNull((e) => e.value.place == 1);
+      String message = "${competitor.getName(suffixes: false).toUpperCase()} (${scorecard.name}) lost the match lead";
+      if(firstPlace != null) {
+        var firstCompetitor = firstPlace.key;
+        var firstChange = firstPlace.value;
+        var margin = firstChange.points - change.newScore.points;
+        var ratioMargin = firstChange.ratio - change.newScore.ratio;
+        message += " to ${firstCompetitor.getName(suffixes: false).toUpperCase()} by ${margin.toStringAsFixed(1)} points (${ratioMargin.asPercentage()}%)";
       }
       return [TickerEvent(
         generatedAt: updateTime,

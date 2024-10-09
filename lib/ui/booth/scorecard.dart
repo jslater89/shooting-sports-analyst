@@ -140,7 +140,6 @@ class _BoothScorecardState extends State<BoothScorecard> {
     var match = model.latestMatch;
     Map<MatchEntry, RelativeMatchScore> oldScores = {};
 
-
     if(model.inTimewarp) {
       showingTimewarp = true;
       oldScores = match.getScoresFromFilters(
@@ -165,10 +164,6 @@ class _BoothScorecardState extends State<BoothScorecard> {
       predictionMode: widget.scorecard.predictionMode,
     );
 
-    if(oldScores.isNotEmpty) {
-      _calculateTickerUpdates(model, oldScores, scores);
-    }
-
     displayedShooters = widget.scorecard.displayFilters.apply(match);
     displayedShooters.sort((a, b) {
       if(scores[a] == null && scores[b] == null) {
@@ -185,6 +180,10 @@ class _BoothScorecardState extends State<BoothScorecard> {
 
     if(widget.scorecard.displayFilters.topN != null) {
       displayedShooters = displayedShooters.take(widget.scorecard.displayFilters.topN!).toList();
+    }
+
+    if(oldScores.isNotEmpty) {
+      _calculateTickerUpdates(model, oldScores, scores);
     }
 
     setState(() {
@@ -219,7 +218,6 @@ class _BoothScorecardState extends State<BoothScorecard> {
 
   @override
   Widget build(BuildContext context) {
-    // print("${widget.scorecard.name} (${widget.hashCode} ${hashCode} ${widget.scorecard.hashCode}) build");
     var match = context.read<BroadcastBoothModel>().latestMatch;
     var sizeModel = context.read<ScorecardGridSizeModel>();
     var controller = context.read<BroadcastBoothController>();
@@ -334,6 +332,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
 
   static const _shooterColumnWidth = 200.0;
   static const _stageColumnWidth = 75.0;
+  static const _scoreRowHeight = 55.0;
 
   Widget _buildHeaderRow(ShootingMatch match) {
     var stages = match.stages.where((s) => !(s.scoring is IgnoredScoring)).toList();
@@ -368,13 +367,17 @@ class _BoothScorecardState extends State<BoothScorecard> {
       return ScoreRow(
         hoverEnabled: true,
         bold: false,
-        child: Row(
-          children: [
-            SizedBox(width: _shooterColumnWidth, child: Text(entry.getName(), textAlign: TextAlign.right)),
-            SizedBox(width: _stageColumnWidth, child: Text("-", textAlign: TextAlign.center)),
-            ...stages.map((stage) => SizedBox(width: _stageColumnWidth, child: Text("-", textAlign: TextAlign.center))),
-            SizedBox(width: _shooterColumnWidth, child: Text(entry.getName(), textAlign: TextAlign.left)),
-          ],
+        child: SizedBox(
+          height: _scoreRowHeight,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              SizedBox(width: _shooterColumnWidth, child: Text(entry.getName(), textAlign: TextAlign.right)),
+              SizedBox(width: _stageColumnWidth, child: Text("-", textAlign: TextAlign.center)),
+              ...stages.map((stage) => SizedBox(width: _stageColumnWidth, child: Text("-", textAlign: TextAlign.center))),
+              SizedBox(width: _shooterColumnWidth, child: Text(entry.getName(), textAlign: TextAlign.left)),
+            ],
+          ),
         ),
       );
     }
@@ -383,43 +386,75 @@ class _BoothScorecardState extends State<BoothScorecard> {
       hoverEnabled: true,
       bold: false,
       color: index % 2 == 0 ? Colors.white : Colors.grey[200],
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 1.0),
-        child: Row(
-          children: [
-            SizedBox(width: _shooterColumnWidth, child: Text(entry.getName(), textAlign: TextAlign.right)),
-            SizedBox(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: _shooterColumnWidth,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text(entry.getName(), textAlign: TextAlign.right),
+                if(score.isComplete) Tooltip(message: "All stages complete.", child: Icon(Icons.lock, size: 16, color: Colors.grey[500])),
+              ],
+            ),
+          ),
+          Container(
+            height: _scoreRowHeight,
+            decoration: BoxDecoration(
+              border: Border(
+                right: BorderSide()
+              ),
+            ),
+            child: SizedBox(
               width: _stageColumnWidth,
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   OrdinalPlaceText(place: score.place, textAlign: TextAlign.center, color: matchScoreColor),
                   Text("${score.percentage.toStringAsFixed(2)}%", textAlign: TextAlign.center, style: TextStyle(color: matchScoreColor)),
+                  Text("${score.points.toStringAsFixed(1)}pt", textAlign: TextAlign.center, style: TextStyle(color: matchScoreColor)),
                 ],
               ),
             ),
-            ...stages.map((stage) {
-                var stageScore = score.stageScores[stage];
-                var stageScoreColor = changedStages.containsKey(stage.stageId) ? Colors.green[500] : null;
-                if(stageScore == null || stageScore.score.dnf) {
-                  return SizedBox(width: _stageColumnWidth, child: Text("-", textAlign: TextAlign.center));
-                }
-                return SizedBox(
-                  width: _stageColumnWidth,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      OrdinalPlaceText(place: stageScore.place, textAlign: TextAlign.center, color: stageScoreColor),
-                      Text("${stageScore.percentage.toStringAsFixed(2)}%", textAlign: TextAlign.center, style: TextStyle(color: stageScoreColor)),
-                      Text(stageScore.score.displayString, textAlign: TextAlign.center, style: TextStyle(color: stageScoreColor)),
-                    ],
-                  ),
-                );
+          ),
+          ...stages.map((stage) {
+              var stageScore = score.stageScores[stage];
+              var stageScoreColor = changedStages.containsKey(stage.stageId) ? Colors.green[500] : null;
+              if(stageScore == null || stageScore.score.dnf) {
+                return SizedBox(width: _stageColumnWidth, child: Text("-", textAlign: TextAlign.center));
               }
+              return SizedBox(
+                width: _stageColumnWidth,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    OrdinalPlaceText(place: stageScore.place, textAlign: TextAlign.center, color: stageScoreColor),
+                    Tooltip(
+                      message: "${stageScore.points.toStringAsFixed(1)}pt",
+                      child: Text("${stageScore.percentage.toStringAsFixed(2)}%", textAlign: TextAlign.center, style: TextStyle(color: stageScoreColor))
+                    ),
+                    Tooltip(
+                      message: match.sport.displaySettings.formatTooltip(stageScore.score),
+                      child: Text(stageScore.score.displayString, textAlign: TextAlign.center, style: TextStyle(color: stageScoreColor))
+                    ),
+                  ],
+                ),
+              );
+            }
+          ),
+          SizedBox(
+            width: _shooterColumnWidth,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if(score.isComplete) Tooltip(message: "All stages complete.", child: Icon(Icons.lock, size: 16, color: Colors.grey[500])),
+                Text(entry.getName(), textAlign: TextAlign.right),
+              ],
             ),
-            SizedBox(width: _shooterColumnWidth, child: Text(entry.getName(), textAlign: TextAlign.left)),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

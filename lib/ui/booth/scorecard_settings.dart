@@ -64,16 +64,24 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
     super.initState();
     scorecard = widget.scorecard;
     nameController.text = scorecard.name;
+
+    _applyScoreFilters();
+    _applyDisplayFilters();
+
+    topNController.text = scorecard.displayFilters.topN?.toString() ?? "";
+  }
+
+  void _applyScoreFilters() {
     var scoreFiltered = widget.match.applyFilterSet(scorecard.scoreFilters);
     scoreFilteredCount = scoreFiltered.length;
-    
+  }
+
+  void _applyDisplayFilters() {
     var displayFiltered = scorecard.displayFilters.apply(widget.match);
     displayFilteredCount = displayFiltered.length;
     if(scorecard.displayFilters.topN != null) {
       displayFilteredCount = min(displayFilteredCount, scorecard.displayFilters.topN!);
     }
-
-    topNController.text = scorecard.displayFilters.topN?.toString() ?? "";
   }
 
   @override
@@ -97,9 +105,14 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
             var filters = await FilterDialog.show(context, scorecard.scoreFilters);
             if(filters != null) {
               scorecard.scoreFilters = filters;
-              var scoreFiltered = widget.match.applyFilterSet(scorecard.scoreFilters);
+              _applyScoreFilters();
+
+              if(scorecard.displayFilters.isEmpty) {
+                scorecard.displayFilters.filterSet = scorecard.scoreFilters.copy();
+                _applyDisplayFilters();
+              }
+
               setState(() {
-                scoreFilteredCount = scoreFiltered.length;
               });
             }
           },
@@ -113,18 +126,20 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
           child: Text("EDIT DISPLAY FILTERS"),
           onPressed: () async {
             var filters = await FilterDialog.show(context, scorecard.displayFilters.filterSet 
-                ?? FilterSet(widget.match.sport, empty: true)
-                  ..mode = FilterMode.or
-                  ..knownSquads = widget.match.sortedSquadNumbers
-            );
-            scorecard.displayFilters.filterSet = filters;
+              ?? FilterSet(widget.match.sport, empty: true));
 
-            var displayFiltered = scorecard.displayFilters.apply(widget.match);
+            // returns null on cancel
+            if(filters == null) {
+              return;
+            }
+
+            if(filters.isEmpty) {
+              scorecard.displayFilters.filterSet = null;
+            }
+
+            scorecard.displayFilters.filterSet = filters;
             setState(() {
-              displayFilteredCount = displayFiltered.length;
-              if(scorecard.displayFilters.topN != null) {
-                displayFilteredCount = min(displayFilteredCount, scorecard.displayFilters.topN!);
-              }
+              _applyDisplayFilters();
             });
           },
         ),
@@ -143,13 +158,7 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
                 scorecard.displayFilters.entryIds = null;
               }
 
-              var displayFiltered = scorecard.displayFilters.apply(widget.match);
-              setState(() {
-                displayFilteredCount = displayFiltered.length;
-                if(scorecard.displayFilters.topN != null) {
-                  displayFilteredCount = min(displayFilteredCount, scorecard.displayFilters.topN!);
-                }
-              });
+              _applyDisplayFilters();
             }
           },
         ),
@@ -171,7 +180,7 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
                     if (value.isEmpty) {
                       setState(() {
                         scorecard.displayFilters.topN = null;
-                        displayFilteredCount = scorecard.displayFilters.apply(widget.match).length;
+                        _applyDisplayFilters();
                       });
                     }
                     else {
@@ -179,8 +188,7 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
                       if (parsed != null && parsed > 0) {
                         setState(() {
                           scorecard.displayFilters.topN = parsed;
-                          displayFilteredCount = scorecard.displayFilters.apply(widget.match).length;
-                          displayFilteredCount = min(displayFilteredCount, parsed);
+                          _applyDisplayFilters();
                         });
                       }
                     }
@@ -194,7 +202,7 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
               onPressed: () {
                 setState(() {
                   scorecard.displayFilters.topN = null;
-                  displayFilteredCount = scorecard.displayFilters.apply(widget.match).length;
+                  _applyDisplayFilters();
                 });
               },
             ),

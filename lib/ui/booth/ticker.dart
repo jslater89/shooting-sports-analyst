@@ -15,7 +15,7 @@ import 'package:shooting_sports_analyst/ui/booth/model.dart';
 import 'package:intl/intl.dart';
 import 'package:shooting_sports_analyst/ui/booth/ticker_settings.dart';
 import 'package:shooting_sports_analyst/ui/booth/timewarp_dialog.dart';
-import 'package:ticker_text/ticker_text.dart';
+import 'package:shooting_sports_analyst/ui/widget/ticker_text.dart';
 
 SSALogger _log = SSALogger("BoothTicker");
 
@@ -47,7 +47,7 @@ class _BoothTickerState extends State<BoothTicker> {
     super.dispose();
   }
 
-  var tickerController = TickerTextController(autoStart: true);
+  var tickerController = TickerTextController(autoStart: false);
 
   DateTime lastAutoscrollTime = DateTime(0);
 
@@ -64,19 +64,24 @@ class _BoothTickerState extends State<BoothTicker> {
       timeUntilUpdate = Duration(seconds: 0);
     }
 
-    if(model.inTimewarp && model.calculateTimewarpTickerEvents && model.timewarpScoresBefore != lastAutoscrollTime) {
-      _cachedTickerWidgets = _buildTickerWidgets(model);
-      lastAutoscrollTime = model.timewarpScoresBefore!;
-      tickerController.stopScroll();
-      Timer(const Duration(seconds: 1), () => tickerController.startScroll());
-      _log.i("Restarting ticker after timewarp");
-    }
-    else if(!model.inTimewarp && model.tickerModel.lastUpdateTime != lastAutoscrollTime) {
-      _cachedTickerWidgets = _buildTickerWidgets(model);
-      lastAutoscrollTime = model.tickerModel.lastUpdateTime;
-      tickerController.stopScroll();
-      Timer(const Duration(seconds: 1), () => tickerController.startScroll());
-      _log.i("Restarting ticker after update");
+    if(model.tickerModel.hasNewEvents) {
+      if(model.inTimewarp && model.calculateTimewarpTickerEvents && model.timewarpScoresBefore != lastAutoscrollTime) {
+        _cachedTickerWidgets = _buildTickerWidgets(model);
+        lastAutoscrollTime = model.timewarpScoresBefore!;
+        tickerController.stopScroll();
+        Timer(const Duration(seconds: 1), () => tickerController.startScroll());
+        _log.i("Restarting ticker after timewarp");
+        setState(() {});
+      }
+      else if(!model.inTimewarp && model.tickerModel.lastUpdateTime != lastAutoscrollTime) {
+        _cachedTickerWidgets = _buildTickerWidgets(model);
+        lastAutoscrollTime = model.tickerModel.lastUpdateTime;
+        tickerController.stopScroll();
+        Timer(const Duration(seconds: 1), () => tickerController.startScroll());
+        _log.i("Restarting ticker after update");
+        setState(() {});
+      }
+      model.tickerModel.hasNewEvents = false;
     }
 
     return SizedBox(
@@ -140,7 +145,9 @@ class _BoothTickerState extends State<BoothTicker> {
                             ],
                           ),
                           onPressed: () async {
-                            var result = await TimewarpDialog.show(context, match: model.latestMatch, initialDateTime: model.timewarpScoresBefore);
+                            var result = await TimewarpDialog.show(
+                              context, match: model.latestMatch, initialDateTime: model.timewarpScoresBefore
+                            );
                             controller.timewarp(result);
                           }
                         ),
@@ -228,7 +235,7 @@ class _BoothTickerState extends State<BoothTicker> {
                       startPauseDuration: Duration(seconds: 2),
                       returnDuration: Duration(milliseconds: 500),
                       child: Row(
-                        key: ValueKey(_cachedTickerWidgets.length),
+                        key: ValueKey(lastAutoscrollTime),
                         mainAxisSize: MainAxisSize.min,
                         children: _cachedTickerWidgets,
                       ),

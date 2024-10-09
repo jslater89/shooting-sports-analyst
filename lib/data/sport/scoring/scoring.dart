@@ -174,6 +174,17 @@ final class RelativeStageFinishScoring extends MatchScoring {
       // Nobody completed any stages, so set all their stage scores to 0.
       for(var shooter in shooters) {
         for(var stage in stages) {
+          var stageScore = shooter.scores[stage];
+          if(stageScore == null) {
+            // deleted shooters don't have scores, so generate a bunch of DNF scores
+            // for them.
+            // _log.w("Filling in empty score for ${shooter.getName()} on ${stage.toString()}");
+            shooter.scores[stage] = RawScore(
+              scoring: stage.scoring,
+              targetEvents: {},
+              modified: match.date.copyWith(hour: 0, minute: 0, second: 0),
+            );
+          }
           stageScores[shooter] ??= {};
           stageScores[shooter]![stage] = RelativeStageScore(
             shooter: shooter,
@@ -271,7 +282,13 @@ final class RelativeStageFinishScoring extends MatchScoring {
             }
           }
 
+          // If they're already done, there's nothing to predict.
           if(stagesCompleted >= stages.length) continue;
+
+          // If they've completed zero stages, high available is
+          // meaningless (it's just 100%), and average stage finish
+          // is also meaningless (it's just 0%), so skip them.
+          if(stagesCompleted == 0) continue;
 
           for (MatchStage stage in stages) {
             if(stage.scoring is IgnoredScoring) continue;
@@ -788,6 +805,16 @@ class RelativeMatchScore extends RelativeScore {
     }
 
     return false;
+  }
+
+  bool get isComplete {
+    for(var s in stageScores.values) {
+      if(s.score.dnf) {
+        return false;
+      }
+    }
+
+    return true;
   }
 }
 
