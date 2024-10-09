@@ -8,12 +8,16 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/booth/controller.dart';
 import 'package:shooting_sports_analyst/ui/booth/global_card_settings_dialog.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
 import 'package:intl/intl.dart';
 import 'package:shooting_sports_analyst/ui/booth/ticker_settings.dart';
 import 'package:shooting_sports_analyst/ui/booth/timewarp_dialog.dart';
+import 'package:ticker_text/ticker_text.dart';
+
+SSALogger _log = SSALogger("BoothTicker");
 
 class BoothTicker extends StatefulWidget {
   const BoothTicker({super.key});
@@ -24,6 +28,8 @@ class BoothTicker extends StatefulWidget {
 
 class _BoothTickerState extends State<BoothTicker> {
   late Timer _tickerTimer;
+
+
 
   @override
   void initState() {
@@ -41,6 +47,12 @@ class _BoothTickerState extends State<BoothTicker> {
     super.dispose();
   }
 
+  var tickerController = TickerTextController(autoStart: true);
+
+  DateTime lastAutoscrollTime = DateTime(0);
+
+  List<Widget> _cachedTickerWidgets = [];
+
   @override
   Widget build(BuildContext context) {
     var model = context.watch<BroadcastBoothModel>();
@@ -50,6 +62,21 @@ class _BoothTickerState extends State<BoothTicker> {
     var timeUntilUpdate = model.tickerModel.timeUntilUpdate;
     if(timeUntilUpdate < Duration(seconds: 0)) {
       timeUntilUpdate = Duration(seconds: 0);
+    }
+
+    if(model.inTimewarp && model.calculateTimewarpTickerEvents && model.timewarpScoresBefore != lastAutoscrollTime) {
+      _cachedTickerWidgets = _buildTickerWidgets(model);
+      lastAutoscrollTime = model.timewarpScoresBefore!;
+      tickerController.stopScroll();
+      Timer(const Duration(seconds: 1), () => tickerController.startScroll());
+      _log.i("Restarting ticker after timewarp");
+    }
+    else if(!model.inTimewarp && model.tickerModel.lastUpdateTime != lastAutoscrollTime) {
+      _cachedTickerWidgets = _buildTickerWidgets(model);
+      lastAutoscrollTime = model.tickerModel.lastUpdateTime;
+      tickerController.stopScroll();
+      Timer(const Duration(seconds: 1), () => tickerController.startScroll());
+      _log.i("Restarting ticker after update");
     }
 
     return SizedBox(
@@ -108,14 +135,32 @@ class _BoothTickerState extends State<BoothTicker> {
                         child: TextButton(
                           child: Row(
                             children: [
-                              Icon(Icons.timer),
-                              Text("Time warp${model.timewarpScoresBefore != null ? " (${DateFormat.yMd().format(model.timewarpScoresBefore!)} ${DateFormat.Hm().format(model.timewarpScoresBefore!)})" : ""}"),
+                              Icon(Icons.restore),
+                              Text("Time warp${model.inTimewarp ? " (${DateFormat.yMd().format(model.timewarpScoresBefore!)} ${DateFormat.Hm().format(model.timewarpScoresBefore!)})" : ""}"),
                             ],
                           ),
                           onPressed: () async {
                             var result = await TimewarpDialog.show(context, match: model.latestMatch, initialDateTime: model.timewarpScoresBefore);
                             controller.timewarp(result);
                           }
+                        ),
+                      ),
+                      if(model.inTimewarp) Tooltip(
+                        message: "Rewind time warp by one update interval.",
+                        child: TextButton(
+                          child: Icon(Icons.fast_rewind),
+                          onPressed: () {
+                            controller.timewarp(model.timewarpScoresBefore!.subtract(Duration(seconds: model.tickerModel.updateInterval)));
+                          },
+                        ),
+                      ),
+                      if(model.inTimewarp) Tooltip(
+                        message: "Fast forward time warp by one update interval.",
+                        child: TextButton(
+                          child: Icon(Icons.fast_forward),
+                          onPressed: () {
+                            controller.timewarp(model.timewarpScoresBefore!.add(Duration(seconds: model.tickerModel.updateInterval)));
+                          },
                         ),
                       ),
                       Tooltip(
@@ -162,11 +207,58 @@ class _BoothTickerState extends State<BoothTicker> {
                   )
                 ],
               ),
+              Row(
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  Tooltip(
+                    message: "Restart the ticker from the beginning.",
+                    child: TextButton(
+                      child: Icon(Icons.refresh),
+                      onPressed: () {
+                        tickerController.stopScroll();
+                        Timer(Duration(seconds: 1), () => tickerController.startScroll());
+                      },
+                    ),
+                  ),
+                  Expanded(
+                    child: TickerText(
+                      controller: tickerController,
+                      scrollDirection: Axis.horizontal,
+                      speed: model.tickerModel.tickerSpeed,
+                      startPauseDuration: Duration(seconds: 2),
+                      returnDuration: Duration(milliseconds: 500),
+                      child: Row(
+                        key: ValueKey(_cachedTickerWidgets.length),
+                        mainAxisSize: MainAxisSize.min,
+                        children: _cachedTickerWidgets,
+                      ),
+                    ),
+                  ),
+                ],
+              )
             ],
           ),
         ),
       ),
     );
+  }
+
+  List<Widget> _buildTickerWidgets(BroadcastBoothModel model) {
+    var widgets = <Widget>[];
+    var events = model.inTimewarp ? model.tickerModel.timewarpTickerEvents : model.tickerModel.liveTickerEvents;
+    for(var event in events) {
+      var style = event.priority.textStyle;
+      widgets.add(Text(event.message, style: style));
+      widgets.add(Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+        child: Text('•'),
+      ));
+    }
+    if(widgets.isNotEmpty) {
+      widgets.removeLast();
+    }
+    // _log.v("Ticker events: ${events.length}");
+    return widgets;
   }
 
   String _timerFormat(Duration duration) {

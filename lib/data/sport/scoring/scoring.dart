@@ -252,9 +252,6 @@ final class RelativeStageFinishScoring extends MatchScoring {
         if((stageScores[shooter]?.length ?? 0) > 0 || predictionMode == MatchPredictionMode.eloAwareFull) {
           double averageStagePercentage = 0.0;
           int stagesCompleted = 0;
-          if(shooter.lastName == "Tang") {
-            print("break");
-          }
 
           if(predictionMode == MatchPredictionMode.averageStageFinish
               || predictionMode == MatchPredictionMode.averageHistoricalFinish

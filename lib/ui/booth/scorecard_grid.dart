@@ -8,9 +8,11 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:json_annotation/json_annotation.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/booth/controller.dart';
+import 'package:shooting_sports_analyst/ui/booth/global_card_settings_dialog.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard.dart';
 
@@ -19,16 +21,19 @@ SSALogger _log = SSALogger("BoothScorecardGrid");
 class ScorecardGridSizeModel {
   ScorecardGridSizeModel({
     required this.screenSize,
-  });
+  }) { 
+    cardHeight = minScorecardHeight;
+    cardWidth = minScorecardWidth;
+  }
 
-  static const _minScorecardWidth = 900.0;
-  static const _minScorecardHeight = 400.0;
+  double minScorecardWidth = 900.0;
+  double minScorecardHeight = 400.0;
 
   int rowCount = 1;
   int columnCount = 1;
 
-  double cardHeight = _minScorecardHeight;
-  double cardWidth = _minScorecardWidth;
+  late double cardHeight;
+  late double cardWidth;
 
   Size screenSize;
 
@@ -51,12 +56,18 @@ class ScorecardGridSizeModel {
     double provisionalCardHeight = adjustedHeight / this.rowCount;
     double provisionalCardWidth = adjustedWidth / this.columnCount;
 
-    this.cardHeight = max(provisionalCardHeight, _minScorecardHeight.toDouble());
-    this.cardWidth = max(provisionalCardWidth, _minScorecardWidth.toDouble());
+    this.cardHeight = max(provisionalCardHeight, minScorecardHeight);
+    this.cardWidth = max(provisionalCardWidth, minScorecardWidth);
 
     _log.v("Scorecard grid size ${this.rowCount}x${this.columnCount} -> ${this.cardHeight}x${this.cardWidth}");
 
     // notifyListeners();
+  }
+
+  void applyFrom(GlobalScorecardSettingsModel settings) {
+    this.minScorecardHeight = settings.minScorecardHeight;
+    this.minScorecardWidth = settings.minScorecardWidth;
+    this.update();
   }
 }
 
@@ -96,15 +107,15 @@ class ScorecardInnerGrid extends StatefulWidget {
     super.key,
   });
 
-  final ScrollController _verticalScrollController = ScrollController();
-  final ScrollController _horizontalScrollController = ScrollController();
-
   @override
   State<ScorecardInnerGrid> createState() => _ScorecardInnerGridState();
 }
 
 class _ScorecardInnerGridState extends State<ScorecardInnerGrid> {
   late ScorecardGridSizeModel _gridSizeModel;
+
+  final ScrollController _verticalScrollController = ScrollController();
+  final ScrollController _horizontalScrollController = ScrollController();
 
   @override
   void initState() {
@@ -115,21 +126,23 @@ class _ScorecardInnerGridState extends State<ScorecardInnerGrid> {
 
   @override
   Widget build(BuildContext context) {
-    var model = context.read<BroadcastBoothModel>();
+    var model = context.watch<BroadcastBoothModel>();
 
     return LayoutBuilder(
       builder: (context, constraints) {
         int rowCount = model.scorecards.length;
         int columnCount = model.scorecards.map((row) => row.length).maxOrNull ?? 0;
+
+        _gridSizeModel.applyFrom(model.globalScorecardSettings);
         _gridSizeModel.update(rowCount: rowCount, columnCount: columnCount, size: constraints.biggest);
         return Provider.value(
           value: _gridSizeModel,
           child: SingleChildScrollView(
             scrollDirection: Axis.vertical,
-            controller: widget._verticalScrollController,
+            controller: _verticalScrollController,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              controller: widget._horizontalScrollController,
+              controller: _horizontalScrollController,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

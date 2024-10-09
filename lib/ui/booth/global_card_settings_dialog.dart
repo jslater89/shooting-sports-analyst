@@ -6,17 +6,22 @@
 
 import 'package:flutter/material.dart';
 import 'package:json_annotation/json_annotation.dart';
+import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
 
 part 'global_card_settings_dialog.g.dart';
 
 @JsonSerializable()
-class GlobalScorecardSettingsModel {
+class GlobalScorecardSettingsModel with ChangeNotifier {
   MatchPredictionMode predictionMode;
+  double minScorecardHeight;
+  double minScorecardWidth;
 
   GlobalScorecardSettingsModel({
     this.predictionMode = MatchPredictionMode.none,
+    this.minScorecardHeight = 400.0,
+    this.minScorecardWidth = 900.0,
   });
 
   factory GlobalScorecardSettingsModel.fromJson(Map<String, dynamic> json) => _$GlobalScorecardSettingsModelFromJson(json);
@@ -25,6 +30,11 @@ class GlobalScorecardSettingsModel {
   static GlobalScorecardSettingsModel maybeFromJson(Map<String, dynamic>? json) {
     if(json == null) return GlobalScorecardSettingsModel();
     return GlobalScorecardSettingsModel.fromJson(json);
+  }
+
+  bool validate() {
+    notifyListeners();
+    return minScorecardWidth > 0 && minScorecardWidth <= 4096 && minScorecardHeight > 0 && minScorecardHeight <= 4096;
   }
 }
 
@@ -36,13 +46,20 @@ class GlobalScorecardSettingsDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text("Global Scorecard Settings"),
-      content: GlobalScorecardSettingsWidget(settings: settings),
-      actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text("CANCEL")),
-        TextButton(onPressed: () => Navigator.of(context).pop(settings), child: const Text("SAVE")),
-      ],
+    return ChangeNotifierProvider.value(
+      value: settings,
+      child: AlertDialog(
+        title: const Text("Global Scorecard Settings"),
+        content: GlobalScorecardSettingsWidget(settings: settings),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text("CANCEL")),
+          TextButton(onPressed: () {
+            if (settings.validate()) {
+              Navigator.of(context).pop(settings);
+            }
+          }, child: const Text("SAVE")),
+        ],
+      ),
     );
   }
 
@@ -69,14 +86,20 @@ class GlobalScorecardSettingsWidget extends StatefulWidget {
 class _GlobalScorecardSettingsWidgetState extends State<GlobalScorecardSettingsWidget> {
   late GlobalScorecardSettingsModel settings;
 
+  TextEditingController minScorecardWidthController = TextEditingController();
+  TextEditingController minScorecardHeightController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
-    settings = widget.settings;
+    settings = context.read<GlobalScorecardSettingsModel>();
+    minScorecardWidthController.text = settings.minScorecardWidth.toString();
+    minScorecardHeightController.text = settings.minScorecardHeight.toString();
   }
 
   @override
   Widget build(BuildContext context) {
+    var model = context.watch<GlobalScorecardSettingsModel>();
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -89,13 +112,47 @@ class _GlobalScorecardSettingsWidgetState extends State<GlobalScorecardSettingsW
           )).toList(),
           onChanged: (value) {
             if (value != null) {
-              setState(() {
-                settings.predictionMode = value;
-              });
+              model.predictionMode = value;
+              model.validate();
             }
           },
         ),
-        // Add more global settings here as needed
+        TextFormField(
+          decoration: InputDecoration(
+            labelText: "Minimum scorecard width",
+            errorText: model.minScorecardWidth <= 0 || model.minScorecardWidth > 4096 ? "Please enter a positive number between 1 and 4096" : null,
+          ),
+          keyboardType: TextInputType.number,
+          controller: minScorecardWidthController,
+          onChanged: (value) {
+            double? parsed = double.tryParse(value);
+            if(parsed != null) {
+              model.minScorecardWidth = parsed;
+            }
+            else {
+              model.minScorecardWidth = -1;
+            }
+            model.validate();
+          },
+        ),
+        TextFormField(
+          decoration: InputDecoration(
+            labelText: "Minimum scorecard height",
+            errorText: model.minScorecardHeight <= 0 || model.minScorecardHeight > 4096 ? "Please enter a positive number between 1 and 4096" : null,
+          ),
+          keyboardType: TextInputType.number,
+          controller: minScorecardHeightController,
+          onChanged: (value) {
+            double? parsed = double.tryParse(value);
+            if(parsed != null) {
+              model.minScorecardHeight = parsed;
+            }
+            else {
+              model.minScorecardHeight = -1;
+            }
+            model.validate();
+          },
+        ),
       ],
     );
   }

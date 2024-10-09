@@ -7,6 +7,7 @@
 import 'dart:async';
 
 import 'package:collection/collection.dart';
+import 'package:mutex/mutex.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/ui/booth/global_card_settings_dialog.dart';
@@ -34,6 +35,7 @@ class BroadcastBoothController {
     model.previousMatch = model.latestMatch;
     model.latestMatch = matchRes.unwrap();
     model.tickerModel.lastUpdateTime = DateTime.now();
+    model.tickerModel.liveTickerEvents.clear();
 
     // The ticker determines whether the UI updates, so make sure it's updated
     // before we send the UI update.
@@ -42,10 +44,29 @@ class BroadcastBoothController {
 
     return true;
   }
+
+  void addTickerEvents(List<TickerEvent> events) {
+    if(events.isEmpty) {
+      return;
+    }
+
+    if(model.inTimewarp && model.calculateTimewarpTickerEvents) {
+      model.tickerModel.timewarpTickerEvents.addAll(events);
+      model.tickerModel.timewarpTickerEvents.sort((a, b) => b.priority.index.compareTo(a.priority.index));
+      _log.v("Timewarp ticker events: ${model.tickerModel.timewarpTickerEvents.length}");
+    }
+    else {
+      model.tickerModel.liveTickerEvents.addAll(events);
+      model.tickerModel.liveTickerEvents.sort((a, b) => b.priority.index.compareTo(a.priority.index));
+      _log.v("Live ticker events: ${model.tickerModel.liveTickerEvents.length}");
+    }
+    model.tickerModel.update();
+  }
   
   void addScorecardRow() {
     model.scorecards.add([
       ScorecardModel(
+        id: model.nextValidScorecardId,
         name: "New scorecard",
         scoreFilters: FilterSet(model.latestMatch.sport, empty: true)..mode = FilterMode.or,
         displayFilters: DisplayFilters(),
@@ -59,6 +80,7 @@ class BroadcastBoothController {
     var row = model.scorecards.firstWhereOrNull((row) => row == scorecardRow);
     if(row != null) {
       row.add(ScorecardModel(
+        id: model.nextValidScorecardId,
         name: "New scorecard",
         scoreFilters: FilterSet(model.latestMatch.sport, empty: true)..mode = FilterMode.or,
         displayFilters: DisplayFilters(),
@@ -119,13 +141,15 @@ class BroadcastBoothController {
     return moves;
   }
 
-  void timewarp(DateTime? scoresBefore) {
+  void timewarp(DateTime? scoresBefore, {bool calculateTickerEvents = true}) {
     for(var row in model.scorecards) {
       for(var scorecard in row) {
         scorecard.scoresBefore = scoresBefore;
       }
     }
     model.timewarpScoresBefore = scoresBefore;
+    model.tickerModel.timewarpTickerEvents.clear();
+    model.calculateTimewarpTickerEvents = calculateTickerEvents;
     model.update();
   }
 

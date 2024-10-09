@@ -5,6 +5,7 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
@@ -12,6 +13,7 @@ import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/booth/controller.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
+import 'package:shooting_sports_analyst/ui/booth/score_utils.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_grid.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_move.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_settings.dart';
@@ -38,12 +40,15 @@ class _BoothScorecardState extends State<BoothScorecard> {
   MatchPredictionMode lastPredictionMode = MatchPredictionMode.none;
 
   Map<MatchEntry, RelativeMatchScore> scores = {};
+  Map<MatchEntry, MatchScoreChange> scoreChanges = {};
   List<MatchEntry> displayedShooters = [];
 
   VoidCallback? listener;
 
   bool disposed = false;
   late BroadcastBoothModel cachedModel;
+
+  bool showingTimewarp = false;
 
   @override
   void initState() {
@@ -74,6 +79,22 @@ class _BoothScorecardState extends State<BoothScorecard> {
       }
     };
     model.addListener(listener!);
+    _controlListener = (event) {
+      if(event.logicalKey == LogicalKeyboardKey.controlLeft || event.logicalKey == LogicalKeyboardKey.controlRight) {
+        if(event is KeyDownEvent) {
+          setState(() {
+            innerScrollPhysics = const NeverScrollableScrollPhysics();
+          });
+        }
+        else {
+          setState(() {
+            innerScrollPhysics = const ClampingScrollPhysics();
+          });
+        }
+      }
+      return false;
+    };
+    HardwareKeyboard.instance.addHandler(_controlListener);
   }
 
   bool _hasChanges(BroadcastBoothModel model) {
@@ -95,6 +116,8 @@ class _BoothScorecardState extends State<BoothScorecard> {
     return false;
   }
 
+  late KeyEventCallback _controlListener;
+
   void _updateChangeFlags(BroadcastBoothModel model) {
     lastScoresBefore = widget.scorecard.scoresBefore;
     lastScoresAfter = widget.scorecard.scoresAfter;
@@ -106,6 +129,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
   void dispose() {
     disposed = true;
     cachedModel.removeListener(listener!);
+    HardwareKeyboard.instance.removeHandler(_controlListener);
     super.dispose();
   }
 
@@ -114,12 +138,37 @@ class _BoothScorecardState extends State<BoothScorecard> {
     await model.readyFuture;
 
     var match = model.latestMatch;
+    Map<MatchEntry, RelativeMatchScore> oldScores = {};
+
+
+    if(model.inTimewarp) {
+      showingTimewarp = true;
+      oldScores = match.getScoresFromFilters(
+        widget.scorecard.scoreFilters,
+        scoresAfter: widget.scorecard.scoresAfter,
+        scoresBefore: widget.scorecard.scoresBefore?.add(Duration(seconds: -model.tickerModel.updateInterval)),
+        predictionMode: widget.scorecard.predictionMode,
+      );
+    }
+    else if(!showingTimewarp) {
+      // skip the first ticker update after leaving timewarp, since 
+      oldScores = scores;
+    }
+    else {
+      showingTimewarp = false;
+    }
+
     scores = match.getScoresFromFilters(
       widget.scorecard.scoreFilters,
       scoresAfter: widget.scorecard.scoresAfter,
       scoresBefore: widget.scorecard.scoresBefore,
       predictionMode: widget.scorecard.predictionMode,
     );
+
+    if(oldScores.isNotEmpty) {
+      _calculateTickerUpdates(model, oldScores, scores);
+    }
+
     displayedShooters = widget.scorecard.displayFilters.apply(match);
     displayedShooters.sort((a, b) {
       if(scores[a] == null && scores[b] == null) {
@@ -143,6 +192,30 @@ class _BoothScorecardState extends State<BoothScorecard> {
     });
     _log.i("Score filters for ${widget.scorecard.name} match ${scores.length}, display filters match ${displayedShooters.length}");
   }
+
+  void _calculateTickerUpdates(BroadcastBoothModel model, Map<MatchEntry, RelativeMatchScore> oldScores, Map<MatchEntry, RelativeMatchScore> newScores) {
+    var changes = calculateScoreChanges(oldScores, newScores);
+    _log.v("${widget.scorecard.name} (id:${widget.scorecard.id}) has ${changes.length} changes");
+    if(changes.isNotEmpty) {
+      var controller = context.read<BroadcastBoothController>();
+      changes.removeWhere((e, c) => !displayedShooters.contains(e));
+      for(var criterion in model.tickerModel.globalTickerCriteria) {
+        var events = criterion.checkEvents(
+          scorecard: widget.scorecard,
+          changes: changes,
+          newScores: newScores,
+          updateTime: model.tickerModel.lastUpdateTime,
+        );
+        controller.addTickerEvents(events);
+      }
+    }
+
+    setState(() {
+      scoreChanges = changes;
+    });
+  }
+
+  ScrollPhysics innerScrollPhysics = const ClampingScrollPhysics();
 
   @override
   Widget build(BuildContext context) {
@@ -238,12 +311,14 @@ class _BoothScorecardState extends State<BoothScorecard> {
         Expanded(
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
+            physics: innerScrollPhysics,
             child: Column(
               children: [
                 _buildHeaderRow(match),
                 Expanded(
                   child: SingleChildScrollView(
                     scrollDirection: Axis.vertical,
+                    physics: innerScrollPhysics,
                     child: Column(children: [
                       ...scoreRows,
                     ])
@@ -282,6 +357,12 @@ class _BoothScorecardState extends State<BoothScorecard> {
 
   Widget _buildScoreRow(ShootingMatch match, MatchEntry entry, int index) {
     var score = scores[entry];
+    var change = scoreChanges[entry];
+
+    Map<int, bool> changedStages = {};
+    for(StageScoreChange change in change?.stageScoreChanges.values.toList() ?? <StageScoreChange>[]) {
+      changedStages[change.newScore.stage.stageId] = true;
+    }
     var stages = match.stages.where((s) => !(s.scoring is IgnoredScoring)).toList();
     if(score == null) {
       return ScoreRow(
@@ -297,6 +378,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
         ),
       );
     }
+    var matchScoreColor = changedStages.isNotEmpty ? Colors.green[500] : null;
     return ScoreRow(
       hoverEnabled: true,
       bold: false,
@@ -311,13 +393,14 @@ class _BoothScorecardState extends State<BoothScorecard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  OrdinalPlaceText(place: score.place, textAlign: TextAlign.center),
-                  Text("${score.percentage.toStringAsFixed(2)}%", textAlign: TextAlign.center),
+                  OrdinalPlaceText(place: score.place, textAlign: TextAlign.center, color: matchScoreColor),
+                  Text("${score.percentage.toStringAsFixed(2)}%", textAlign: TextAlign.center, style: TextStyle(color: matchScoreColor)),
                 ],
               ),
             ),
             ...stages.map((stage) {
                 var stageScore = score.stageScores[stage];
+                var stageScoreColor = changedStages.containsKey(stage.stageId) ? Colors.green[500] : null;
                 if(stageScore == null || stageScore.score.dnf) {
                   return SizedBox(width: _stageColumnWidth, child: Text("-", textAlign: TextAlign.center));
                 }
@@ -326,9 +409,9 @@ class _BoothScorecardState extends State<BoothScorecard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      OrdinalPlaceText(place: stageScore.place, textAlign: TextAlign.center),
-                      Text("${stageScore.percentage.toStringAsFixed(2)}%", textAlign: TextAlign.center),
-                      Text(stageScore.score.displayString, textAlign: TextAlign.center),
+                      OrdinalPlaceText(place: stageScore.place, textAlign: TextAlign.center, color: stageScoreColor),
+                      Text("${stageScore.percentage.toStringAsFixed(2)}%", textAlign: TextAlign.center, style: TextStyle(color: stageScoreColor)),
+                      Text(stageScore.score.displayString, textAlign: TextAlign.center, style: TextStyle(color: stageScoreColor)),
                     ],
                   ),
                 );
@@ -343,11 +426,11 @@ class _BoothScorecardState extends State<BoothScorecard> {
 }
 
 class OrdinalPlaceText extends StatelessWidget {
-  const OrdinalPlaceText({super.key, required this.place, this.textAlign = TextAlign.left});
+  const OrdinalPlaceText({super.key, required this.place, this.textAlign = TextAlign.left, this.color});
 
   final int place;
   final TextAlign textAlign;
-
+  final Color? color;
   @override
   Widget build(BuildContext context) {
     var prefix = "";
@@ -358,7 +441,7 @@ class OrdinalPlaceText extends StatelessWidget {
     }
     else if(place == 2) {
       prefix = "🥈";
-      prefixColor = Colors.grey[400]!;
+      prefixColor = Colors.grey[600]!;
     }
     else if(place == 3) {
       prefix = "🥉";
@@ -369,7 +452,7 @@ class OrdinalPlaceText extends StatelessWidget {
       mainAxisAlignment: _textAlignToMainAxisAlign(textAlign),
       children: [
         if(prefix.isNotEmpty) Text(prefix, style: TextStyle(color: prefixColor)),
-        Text(place.ordinalPlace),
+        Text(place.ordinalPlace, style: TextStyle(color: color)),
       ]
     );
   }

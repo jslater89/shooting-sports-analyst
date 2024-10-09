@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/ui/booth/controller.dart';
+import 'package:shooting_sports_analyst/ui/booth/help_dialog.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_grid.dart';
@@ -74,7 +75,13 @@ class _BroadcastBoothPageState extends State<BroadcastBoothPage> {
                   setState(() {});
                 }
               },
-            )
+            ),
+            IconButton(
+              icon: const Icon(Icons.help),
+              onPressed: () {
+                showDialog(context: context, builder: (context) => BoothHelpDialog());
+              },
+            ),
           ],
         ),
         body: Column(

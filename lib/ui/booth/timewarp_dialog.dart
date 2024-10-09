@@ -9,19 +9,18 @@ import 'package:intl/intl.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 
 class TimewarpDialog extends StatefulWidget {
-  const TimewarpDialog({super.key, required this.match, required this.initialDateTime});
+  const TimewarpDialog({super.key, required this.match, this.initialDateTime});
 
   final ShootingMatch match;
-  final DateTime initialDateTime;
+  final DateTime? initialDateTime;
 
   @override
   State<TimewarpDialog> createState() => _TimewarpDialogState();
 
   static Future<DateTime?> show(BuildContext context, {required ShootingMatch match, DateTime? initialDateTime}) {
-    initialDateTime ??= DateTime.now();
     return showDialog<DateTime>(
       context: context,
-      builder: (context) => TimewarpDialog(match: match, initialDateTime: initialDateTime!),
+      builder: (context) => TimewarpDialog(match: match, initialDateTime: initialDateTime),
       barrierDismissible: false,
     );
   }
@@ -35,9 +34,14 @@ class _TimewarpDialogState extends State<TimewarpDialog> {
   @override
   void initState() {
     super.initState();
-    selectedDateTime = widget.initialDateTime;
     earliestDateTime = _findEarliestScoreDate();
-    latestDateTime = DateTime.now();
+    latestDateTime = _findLatestScoreDate(earliestDateTime);
+    if(widget.initialDateTime != null && widget.initialDateTime!.isAfter(earliestDateTime) && widget.initialDateTime!.isBefore(latestDateTime)) {
+      selectedDateTime = widget.initialDateTime!;
+    }
+    else {
+      selectedDateTime = latestDateTime;
+    }
   }
 
   DateTime _findEarliestScoreDate() {
@@ -52,6 +56,18 @@ class _TimewarpDialogState extends State<TimewarpDialog> {
     return earliest;
   }
 
+  DateTime _findLatestScoreDate(DateTime earliest) {
+    DateTime latest = earliest;
+    for (var entry in widget.match.shooters) {
+      for (var score in entry.scores.values) {
+        if (score.modified != null && score.modified!.isAfter(latest)) {
+          latest = score.modified!;
+        }
+      }
+    }
+    return latest;
+  }
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -61,49 +77,56 @@ class _TimewarpDialogState extends State<TimewarpDialog> {
         children: [
           Text("Select a date and time to view scores as of that time."),
           SizedBox(height: 16),
-          ElevatedButton(
-            child: Text(DateFormat.yMd().format(selectedDateTime)),
-            onPressed: () async {
-              final DateTime? picked = await showDatePicker(
-                context: context,
-                initialDate: selectedDateTime,
-                firstDate: earliestDateTime,
-                lastDate: latestDateTime,
-              );
-              if (picked != null && picked != selectedDateTime) {
-                setState(() {
-                  selectedDateTime = DateTime(
-                    picked.year,
-                    picked.month,
-                    picked.day,
-                    selectedDateTime.hour,
-                    selectedDateTime.minute,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton(
+                child: Text(DateFormat.yMd().format(selectedDateTime)),
+                onPressed: () async {
+                  final DateTime? picked = await showDatePicker(
+                    context: context,
+                    initialDate: selectedDateTime,
+                    firstDate: earliestDateTime,
+                    lastDate: latestDateTime,
+                    initialEntryMode: DatePickerEntryMode.input,
                   );
-                });
-              }
-            },
-          ),
-          SizedBox(height: 8),
-          ElevatedButton(
-            child: Text(DateFormat.Hm().format(selectedDateTime)),
-            onPressed: () async {
-              final TimeOfDay? picked = await showTimePicker(
-                context: context,
-                initialTime: TimeOfDay.fromDateTime(selectedDateTime),
-              );
-              if (picked != null) {
-                setState(() {
-                  selectedDateTime = DateTime(
-                    selectedDateTime.year,
-                    selectedDateTime.month,
-                    selectedDateTime.day,
-                    picked.hour,
-                    picked.minute,
+                  if (picked != null && picked != selectedDateTime) {
+                    setState(() {
+                      selectedDateTime = DateTime(
+                        picked.year,
+                        picked.month,
+                        picked.day,
+                        selectedDateTime.hour,
+                        selectedDateTime.minute,
+                      );
+                    });
+                  }
+                },
+              ),
+              SizedBox(width: 8),
+              ElevatedButton(
+                child: Text(DateFormat.Hm().format(selectedDateTime)),
+                onPressed: () async {
+                  final TimeOfDay? picked = await showTimePicker(
+                    context: context,
+                    initialTime: TimeOfDay.fromDateTime(selectedDateTime),
+                    initialEntryMode: TimePickerEntryMode.input,
                   );
-                });
-              }
-            },
-          ),
+                  if (picked != null) {
+                    setState(() {
+                      selectedDateTime = DateTime(
+                        selectedDateTime.year,
+                        selectedDateTime.month,
+                        selectedDateTime.day,
+                        picked.hour,
+                        picked.minute,
+                      );
+                    });
+                  }
+                },
+              )
+            ],
+          )
         ],
       ),
       actions: [
