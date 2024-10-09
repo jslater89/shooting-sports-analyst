@@ -74,14 +74,14 @@ class _TickerSettingsWidgetState extends State<TickerSettingsWidget> {
           keyboardType: TextInputType.number,
           onChanged: (value) {
             int? interval = int.tryParse(value);
-            if (interval != null && interval > 0) {
+            if (interval != null && interval >= 60) {
               widget.tickerModel.updateInterval = interval;
               setState(() {
                 _updateIntervalErrorText = null;
               });
             } else {
               setState(() {
-                _updateIntervalErrorText = "Please enter a valid positive integer";
+                _updateIntervalErrorText = "Please enter a valid positive integer 60 or greater";
               });
             }
           },
@@ -96,14 +96,14 @@ class _TickerSettingsWidgetState extends State<TickerSettingsWidget> {
           keyboardType: TextInputType.number,
           onChanged: (value) {
             int? speed = int.tryParse(value);
-            if (speed != null && speed > 0 && speed < 200) {
+            if (speed != null && speed >= 10 && speed <= 200) {
               setState(() {
                 widget.tickerModel.tickerSpeed = speed;
                 _tickerSpeedErrorText = null;
               });
             } else {
               setState(() {
-                _tickerSpeedErrorText = "Please enter a number between 1 and 199";
+                _tickerSpeedErrorText = "Please enter a number between 10 and 200";
               });
             }
           },
