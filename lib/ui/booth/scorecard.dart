@@ -363,7 +363,10 @@ class _BoothScorecardState extends State<BoothScorecard> {
         children: [
           SizedBox(width: _shooterColumnWidth, child: Text("Competitor", textAlign: TextAlign.right)),
           SizedBox(width: _stageColumnWidth, child: Text("Total", textAlign: TextAlign.center)),
-          ...stages.map((stage) => SizedBox(width: _stageColumnWidth, child: Text("Stage ${stage.stageId}", textAlign: TextAlign.center))),
+          ...stages.map((stage) => Tooltip(
+            message: "${stage.name}",
+            child: SizedBox(width: _stageColumnWidth, child: Text("Stage ${stage.stageId}", textAlign: TextAlign.center))
+          )),
           SizedBox(width: _shooterColumnWidth, child: Text("Competitor", textAlign: TextAlign.left)),
         ],
       ),
