@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/match_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/matchdb/widget/match_db_list_view_search.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
@@ -17,7 +18,13 @@ import 'package:shooting_sports_analyst/util.dart';
 var _log = SSALogger("MatchDbListView");
 
 class MatchDatabaseListView extends StatefulWidget {
-  const MatchDatabaseListView({super.key});
+  const MatchDatabaseListView({super.key, this.onMatchSelected, this.flat = false});
+
+  final bool flat;
+
+  /// If provided, this function will be called when a match is selected, instead
+  /// of navigating to the result page for that match.
+  final void Function(ShootingMatch)? onMatchSelected;
 
   @override
   State<MatchDatabaseListView> createState() => _MatchDatabaseListViewState();
@@ -57,7 +64,7 @@ class _MatchDatabaseListViewState extends State<MatchDatabaseListView> {
       builder: (context, listModel, child) {
         return Column(
           children: [
-            MatchDbListViewSearch(),
+            MatchDbListViewSearch(flat: widget.flat),
             _tableHeader(),
             Expanded(
               child: ListView.builder(
@@ -74,12 +81,18 @@ class _MatchDatabaseListViewState extends State<MatchDatabaseListView> {
                         _log.w("match db error: ${fullMatchResult.unwrapErr().message}");
                         return;
                       }
-                      await Navigator.of(context).push(MaterialPageRoute(builder: (context) =>
+
+                      if(widget.onMatchSelected != null) {
+                        widget.onMatchSelected!(fullMatchResult.unwrap());
+                      }
+                      else {
+                        await Navigator.of(context).push(MaterialPageRoute(builder: (context) =>
                           ResultPage(
                             canonicalMatch: fullMatchResult.unwrap(),
                             allowWhatIf: true,
                           ),
-                      ));
+                        ));
+                      }
                       // TODO: refresh list in case we pulled new match information with a refresh
                     },
                     child: ScoreRow(

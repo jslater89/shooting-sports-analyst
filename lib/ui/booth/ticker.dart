@@ -69,7 +69,7 @@ class _BoothTickerState extends State<BoothTicker> {
         _cachedTickerWidgets = _buildTickerWidgets(model);
         lastAutoscrollTime = model.timewarpScoresBefore!;
         tickerController.stopScroll();
-        Timer(const Duration(seconds: 1), () => tickerController.startScroll());
+        Timer(const Duration(seconds: 1), () { if(mounted) tickerController.startScroll(); });
         _log.i("Restarting ticker after timewarp");
         setState(() {});
       }
@@ -77,7 +77,7 @@ class _BoothTickerState extends State<BoothTicker> {
         _cachedTickerWidgets = _buildTickerWidgets(model);
         lastAutoscrollTime = model.tickerModel.lastUpdateTime;
         tickerController.stopScroll();
-        Timer(const Duration(seconds: 1), () => tickerController.startScroll());
+        Timer(const Duration(seconds: 1), () { if(mounted) tickerController.startScroll(); });
         _log.i("Restarting ticker after update");
         setState(() {});
       }
@@ -223,7 +223,7 @@ class _BoothTickerState extends State<BoothTicker> {
                       child: Icon(Icons.refresh),
                       onPressed: () {
                         tickerController.stopScroll();
-                        Timer(Duration(seconds: 1), () => tickerController.startScroll());
+                        Timer(const Duration(seconds: 1), () { if(mounted) tickerController.startScroll(); });
                       },
                     ),
                   ),

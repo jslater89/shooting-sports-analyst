@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -195,6 +196,21 @@ class _BoothScorecardState extends State<BoothScorecard> {
   void _calculateTickerUpdates(BroadcastBoothModel model, Map<MatchEntry, RelativeMatchScore> oldScores, Map<MatchEntry, RelativeMatchScore> newScores) {
     var changes = calculateScoreChanges(oldScores, newScores);
     _log.v("${widget.scorecard.name} (id:${widget.scorecard.id}) has ${changes.length} changes");
+
+    // It's possible for the match lead to change without either shooter involved entering a new score,
+    // because of hit factor magic. If that happens, manually add a change entry, so that the ticker
+    // can report it.
+    var newFirstPlace = newScores.keys.first;
+    var previousEntry = oldScores.keys.firstWhereOrNull((e) => e.entryId == newFirstPlace.entryId);
+    if(previousEntry != null) {
+      var previousPosition = oldScores[previousEntry]?.place;
+      if(previousPosition != null && previousPosition != 1) {
+        if(!changes.containsKey(newFirstPlace)) {
+          changes[newFirstPlace] = MatchScoreChange(oldScore: oldScores[previousEntry]!, newScore: newScores[newFirstPlace]!);
+        }
+      }
+    }
+
     if(changes.isNotEmpty) {
       var controller = context.read<BroadcastBoothController>();
       changes.removeWhere((e, c) => !displayedShooters.contains(e));
@@ -447,7 +463,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
           SizedBox(
             width: _shooterColumnWidth,
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 if(score.isComplete) Tooltip(message: "All stages complete.", child: Icon(Icons.lock, size: 16, color: Colors.grey[500])),
                 Text(entry.getName(), textAlign: TextAlign.right),

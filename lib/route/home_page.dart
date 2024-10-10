@@ -19,6 +19,7 @@ import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/practiscore_parser.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/main.dart';
+import 'package:shooting_sports_analyst/route/broadcast_booth_page.dart';
 import 'package:shooting_sports_analyst/route/elo_tuner_page.dart';
 import 'package:shooting_sports_analyst/route/match_database_manager.dart';
 import 'package:shooting_sports_analyst/route/practiscore_url.dart';
@@ -97,17 +98,20 @@ class _HomePageState extends State<HomePage> {
       child: _launchingFromParam ? Center(child: Text("Launching...")) : SizedBox(
         height: size.height,
         width: size.width,
-        child: size.width > 800 ? Column(
-          children: [
-            Row(
-              mainAxisSize: MainAxisSize.max,
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: _selectButtons(column: false),
-            ),
-            SizedBox(height: 50),
-            if(HtmlOr.isDesktop) _desktopLinks(column: false),
-          ],
+        child: size.width > 800 ? Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.max,
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: _selectButtons(column: false),
+              ),
+              SizedBox(height: 100),
+              if(HtmlOr.isDesktop) _desktopLinks(column: false),
+            ],
+          ),
         ) : SingleChildScrollView(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.start,
@@ -135,7 +139,27 @@ class _HomePageState extends State<HomePage> {
                 .of(context)
                 .textTheme
                 .subtitle1!
-                .apply(color: Colors.grey)),
+                .apply(color: Colors.grey),
+                textAlign: TextAlign.center,
+                ),
+          ],
+        ),
+      ),
+      GestureDetector(
+        onTap: () {
+          Navigator.of(context).push(MaterialPageRoute(builder: (context) => BroadcastBoothPage(match: null)));
+        },
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.cell_tower, size: 230, color: Colors.grey,),
+            Text("Enter broadcast mode", style: Theme
+                .of(context)
+                .textTheme
+                .titleMedium!
+                .apply(color: Colors.grey),
+                textAlign: TextAlign.center,
+                ),
           ],
         ),
       ),
@@ -147,29 +171,39 @@ class _HomePageState extends State<HomePage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.insights, size: 230, color: Colors.grey,),
-            Text("Click to generate ratings for shooters in a list of matches", style: Theme
+            Text("Generate ratings for shooters in a list of matches", style: Theme
                 .of(context)
                 .textTheme
-                .subtitle1!
-                .apply(color: Colors.grey)),
+                .titleMedium!
+                .apply(color: Colors.grey),
+                textAlign: TextAlign.center,
+                ),
           ],
         ),
       ),
+    ];
+    var additionalChildren = <Widget>[
+      
     ];
     if(column) {
       return Column(
         children: [
           ...children,
+          ...additionalChildren,
           SizedBox(height: 50)
         ]
       );
     }
     else {
-      return Row(
-        mainAxisSize: MainAxisSize.max,
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: children.map((e) => Expanded(child: e)).toList(),
+      return Column(
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: children.map((e) => Expanded(child: e)).toList(),
+          ),
+        ],
       );
     }
   }
@@ -192,11 +226,13 @@ class _HomePageState extends State<HomePage> {
           children: [
             SizedBox(height: column ? 0 : 50),
             Icon(Icons.cloud_upload, size: 230, color: Colors.grey,),
-            Text("Click to upload a report.txt file from your device", style: Theme
+            Text("Upload a report.txt file from your device", style: Theme
                 .of(context)
                 .textTheme
-                .subtitle1!
-                .apply(color: Colors.grey)),
+                .titleMedium!
+                .apply(color: Colors.grey),
+                textAlign: TextAlign.center,
+                ),
           ],
         ),
       ),
@@ -220,11 +256,13 @@ class _HomePageState extends State<HomePage> {
           children: [
             SizedBox(height: column ? 0 : 50),
             Icon(Icons.cloud_download, size: 230, color: Colors.grey,),
-            Text("Click to download matches from Internet sources", style: Theme
+            Text("Download matches from Internet sources", style: Theme
                 .of(context)
                 .textTheme
-                .subtitle1!
-                .apply(color: Colors.grey)),
+                .titleMedium!
+                .apply(color: Colors.grey),
+                textAlign: TextAlign.center,
+                ),
           ],
         ),
       ),

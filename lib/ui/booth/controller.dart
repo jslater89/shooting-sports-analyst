@@ -42,7 +42,9 @@ class BroadcastBoothController {
       return false;
     }
 
-    model.previousMatch = model.latestMatch;
+    if(model.ready) {
+      model.previousMatch = model.latestMatch;
+    }
     model.latestMatch = matchRes.unwrap();
     model.tickerModel.lastUpdateTime = DateTime.now();
     model.tickerModel.liveTickerEvents.clear();
