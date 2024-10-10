@@ -428,9 +428,9 @@ class _BoothScorecardState extends State<BoothScorecard> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  OrdinalPlaceText(place: score.place, textAlign: TextAlign.center, color: matchScoreColor),
+                  _wrapWithPlaceChange(change, OrdinalPlaceText(place: score.place, textAlign: TextAlign.center, color: matchScoreColor)),
                   Text("${score.percentage.toStringAsFixed(2)}%", textAlign: TextAlign.center, style: TextStyle(color: matchScoreColor)),
-                  Text("${score.points.toStringAsFixed(1)}pt", textAlign: TextAlign.center, style: TextStyle(color: matchScoreColor)),
+                  _wrapWithPointsChange(change, Text("${score.points.toStringAsFixed(1)}pt", textAlign: TextAlign.center, style: TextStyle(color: matchScoreColor))),
                 ],
               ),
             ),
@@ -472,6 +472,32 @@ class _BoothScorecardState extends State<BoothScorecard> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _wrapWithPlaceChange(MatchScoreChange? change, Widget child) {
+    if(change == null) {
+      return child;
+    }
+    var delta = change.oldScore.place - change.newScore.place;
+    var message = "${delta > 0 ? "+" : ""}${delta}";
+    if(delta == 0) {
+      message = "-";
+    }
+    return Tooltip(
+      message: message,
+      child: child
+    );
+  }
+
+  Widget _wrapWithPointsChange(MatchScoreChange? change, Widget child) {
+    if(change == null) {
+      return child;
+    }
+    var delta = change.newScore.points - change.oldScore.points;
+    return Tooltip(
+      message: "${delta > 0 ? "+" : ""}${delta.toStringAsFixed(1)}pt",
+      child: child
     );
   }
 }
