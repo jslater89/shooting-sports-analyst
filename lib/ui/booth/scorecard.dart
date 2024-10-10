@@ -198,15 +198,32 @@ class _BoothScorecardState extends State<BoothScorecard> {
     _log.v("${widget.scorecard.name} (id:${widget.scorecard.id}) has ${changes.length} changes");
 
     // It's possible for the match lead to change without either shooter involved entering a new score,
-    // because of hit factor magic. If that happens, manually add a change entry, so that the ticker
-    // can report it.
-    var newFirstPlace = newScores.keys.first;
-    var previousEntry = oldScores.keys.firstWhereOrNull((e) => e.entryId == newFirstPlace.entryId);
-    if(previousEntry != null) {
-      var previousPosition = oldScores[previousEntry]?.place;
-      if(previousPosition != null && previousPosition != 1) {
-        if(!changes.containsKey(newFirstPlace)) {
-          changes[newFirstPlace] = MatchScoreChange(oldScore: oldScores[previousEntry]!, newScore: newScores[newFirstPlace]!);
+    // because of hit factor magic: the leader loses points against 2nd because a third party lays down
+    // a stage win on a stage 1 and 2 aren't shooting. To make sure we show a match lead change ticker
+    // alert, we need to do some additional checking here.
+
+    // 1. If there is no lead change between the old and new scores, skip it.
+    // 2. If there is a lead change, verify that the score change calculation found
+    //    it—i.e., that the lead change resulted from a stage score submitted by
+    //    one or both of the contenders.
+    // 3. If it didn't, find the previous first place shooter and create an event that
+    //    the ticker will show as 'lost the lead'.
+    // 2024 Area 5 Limited Optics, from about 15:30 to 16:00 on  is a good test case for this.
+    if(newScores.keys.first.entryId != oldScores.keys.first.entryId) {
+      var matchLeadChange = changes.values.firstWhereOrNull((element) => 
+        (element.newScore.place == 1 && element.oldScore.place != 1)
+        || (element.newScore.place != 1 && element.oldScore.place == 1)
+      );
+      if(matchLeadChange == null) {
+        var newFirstPlace = newScores.keys.first;
+        var previousEntry = oldScores.keys.firstWhereOrNull((e) => e.entryId == newFirstPlace.entryId);
+        if(previousEntry != null) {
+          var previousPosition = oldScores[previousEntry]?.place;
+          if(previousPosition != null && previousPosition != 1) {
+            if(!changes.containsKey(newFirstPlace)) {
+              changes[newFirstPlace] = MatchScoreChange(oldScore: oldScores[previousEntry]!, newScore: newScores[newFirstPlace]!);
+            }
+          }
         }
       }
     }

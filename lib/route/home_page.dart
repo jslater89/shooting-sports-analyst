@@ -101,6 +101,7 @@ class _HomePageState extends State<HomePage> {
         child: size.width > 800 ? Padding(
           padding: const EdgeInsets.all(8.0),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Row(
                 mainAxisSize: MainAxisSize.max,
@@ -108,7 +109,7 @@ class _HomePageState extends State<HomePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: _selectButtons(column: false),
               ),
-              SizedBox(height: 100),
+              SizedBox(height: 60),
               if(HtmlOr.isDesktop) _desktopLinks(column: false),
             ],
           ),
@@ -182,14 +183,10 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     ];
-    var additionalChildren = <Widget>[
-      
-    ];
     if(column) {
       return Column(
         children: [
           ...children,
-          ...additionalChildren,
           SizedBox(height: 50)
         ]
       );
@@ -224,7 +221,6 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(height: column ? 0 : 50),
             Icon(Icons.cloud_upload, size: 230, color: Colors.grey,),
             Text("Upload a report.txt file from your device", style: Theme
                 .of(context)
@@ -254,7 +250,6 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(height: column ? 0 : 50),
             Icon(Icons.cloud_download, size: 230, color: Colors.grey,),
             Text("Download matches from Internet sources", style: Theme
                 .of(context)
