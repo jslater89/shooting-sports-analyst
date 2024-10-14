@@ -74,7 +74,9 @@ class _BroadcastBoothPageState extends State<BroadcastBoothPage> {
         await c.loadFrom(newModel);
       }
       _log.i("New booth model ready");
-      setState(() {});
+      setState(() {
+        scaffoldTitle = model!.latestMatch.name;
+      });
     }
   }
 

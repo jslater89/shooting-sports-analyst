@@ -191,7 +191,7 @@ class BroadcastBoothController {
     model.globalScorecardSettings = settings;
     for(var row in model.scorecards) {
       for(var scorecard in row) {
-        scorecard.copyGlobalSettingsFrom(settings);;
+        scorecard.copyGlobalSettingsFrom(settings);
       }
     }
     model.update();

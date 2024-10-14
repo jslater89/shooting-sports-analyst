@@ -264,23 +264,19 @@ final class RelativeStageFinishScoring extends MatchScoring {
           double averageStagePercentage = 0.0;
           int stagesCompleted = 0;
 
-          if(predictionMode == MatchPredictionMode.averageStageFinish
-              || predictionMode == MatchPredictionMode.averageHistoricalFinish
-              || predictionMode.eloAware
-          ) {
-            for(MatchStage stage in stages) {
-              if(stage.scoring is IgnoredScoring) continue;
+          for(MatchStage stage in stages) {
+            if(stage.scoring is IgnoredScoring) continue;
 
-              var stageScore = stageScores[shooter]?[stage];
-              if(stageScore != null && !stageScore.score.dnf) {
-                averageStagePercentage += stageScore.ratio;
-                stagesCompleted += 1;
-              }
-            }
-            if(stagesCompleted > 0) {
-              averageStagePercentage = averageStagePercentage / stagesCompleted;
+            var stageScore = stageScores[shooter]?[stage];
+            if(stageScore != null && !stageScore.score.dnf && _isInTimeRange(stageScore.score, scoresAfter: scoresAfter, scoresBefore: scoresBefore)) {
+              averageStagePercentage += stageScore.ratio;
+              stagesCompleted += 1;
             }
           }
+          if(stagesCompleted > 0) {
+            averageStagePercentage = averageStagePercentage / stagesCompleted;
+          }
+        
 
           // If they're already done, there's nothing to predict.
           if(stagesCompleted >= stages.length) continue;

@@ -176,7 +176,11 @@ class _TickerSettingsWidgetState extends State<TickerSettingsWidget> {
                   child: Icon(Icons.settings),
                   onPressed: () async {
                     var updatedCriterion = await TickerCriterionEditDialog.show(context, criterion: c);
-                    setState(() {});
+                    setState(() {
+                      if(updatedCriterion != null) {
+                        widget.tickerModel.globalTickerCriteria[widget.tickerModel.globalTickerCriteria.indexOf(c)] = updatedCriterion;
+                      }
+                    });
                   }
                 ),
                 TextButton(
