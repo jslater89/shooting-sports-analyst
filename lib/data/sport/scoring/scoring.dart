@@ -186,14 +186,14 @@ final class RelativeStageFinishScoring extends MatchScoring {
             );
           }
           stageScores[shooter] ??= {};
-          stageScores[shooter]![stage] = RelativeStageScore(
-            shooter: shooter,
-            stage: stage,
-            score: shooter.scores[stage]!,
-            place: 0,
-            ratio: 0,
-            points: 0,
-          );
+          // stageScores[shooter]![stage] = RelativeStageScore(
+          //   shooter: shooter,
+          //   stage: stage,
+          //   score: shooter.scores[stage]!,
+          //   place: 0,
+          //   ratio: 0,
+          //   points: 0,
+          // );
         }
       }
     }
@@ -341,7 +341,7 @@ final class RelativeStageFinishScoring extends MatchScoring {
         shooter: shooter,
         stageScores: shooterStageScores,
         place: i + 1,
-        ratio: totalScore / bestTotalScore,
+        ratio: bestTotalScore == 0 ? 0 : totalScore / bestTotalScore,
         points: totalScore,
       );
     }

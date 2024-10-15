@@ -54,7 +54,12 @@ Map<MatchEntry, MatchScoreChange> calculateScoreChanges(Map<MatchEntry, Relative
 
     var change = MatchScoreChange(oldScore: oldScore, newScore: newScore);
     for(var stage in oldScore.stageScores.keys) {
-      var newStage = newScore.stageScores.keys.firstWhere((s) => s.stageId == stage.stageId);
+      var newStage = newScore.stageScores.keys.firstWhereOrNull((s) => s.stageId == stage.stageId);
+
+      if(newStage == null) {
+        // Observed when using the forward/back timewarp buttons from before a match to during a match.
+        continue;
+      }
       var oldStageScore = oldScore.stageScores[stage];
       var newStageScore = newScore.stageScores[newStage];
 
