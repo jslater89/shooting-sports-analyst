@@ -54,27 +54,27 @@ class _TimewarpDialogState extends State<TimewarpDialog> {
   }
 
   DateTime _findEarliestScoreDate() {
-    DateTime earliest = DateTime.now();
+    DateTime earliest = DateTime.now().toUtc();
     for (var entry in widget.match.shooters) {
       for (var score in entry.scores.values) {
         if (score.modified != null && score.modified!.isBefore(earliest)) {
-          earliest = score.modified!;
+          earliest = score.modified!.toUtc();
         }
       }
     }
-    return earliest.toUtc();
+    return earliest;
   }
 
   DateTime _findLatestScoreDate(DateTime earliest) {
-    DateTime latest = earliest;
+    DateTime latest = earliest.toUtc();
     for (var entry in widget.match.shooters) {
       for (var score in entry.scores.values) {
         if (score.modified != null && score.modified!.isAfter(latest)) {
-          latest = score.modified!;
+          latest = score.modified!.toUtc();
         }
       }
     }
-    return latest.toUtc();
+    return latest;
   }
 
   List<Widget> _dayButtons() {

@@ -129,8 +129,8 @@ final class RelativeStageFinishScoring extends MatchScoring {
       }
 
       if(bestScore == null) {
-        // Nobody completed this stage, so move on to the next one
-        continue;
+        // Nobody completed this stage, so set bestScore to avoid any /0
+        bestScore = RawScore(scoring: scoring, targetEvents: {});
       }
 
       // How many match points the stage is worth.
@@ -439,6 +439,7 @@ final class CumulativeScoring extends MatchScoring {
 
       if(bestScore == null) {
         // Nobody completed this stage, so move on to the next one
+        // TODO: see the change in RelativeStageFinishScoring, and see if it applies here
         continue;
       }
 
@@ -640,6 +641,13 @@ sealed class StageScoring {
   /// 0.95 for a highScoreBest scoring.
   double ratio(RawScore score, RawScore comparedTo) {
     var result = 0.0;
+
+    // We may sometimes pass in a zero compared-to score,
+    // and we don't want to NaN-poison future calculations.
+    if(comparedTo.dnf) {
+      return 0.0;
+    }
+
     if(highScoreBest) {
       result = interpret(score) / interpret(comparedTo);
     }

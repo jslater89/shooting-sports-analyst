@@ -102,6 +102,10 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
         TextButton(
           child: Text("EDIT SCORING FILTERS"),
           onPressed: () async {
+            if(scorecard.scoreFilters.knownSquads.isEmpty) {
+              scorecard.scoreFilters.knownSquads = widget.match.squadNumbers.toList();
+              scorecard.scoreFilters.knownSquads.sort();
+            }
             var filters = await FilterDialog.show(context, scorecard.scoreFilters);
             if(filters != null) {
               scorecard.scoreFilters = filters;
