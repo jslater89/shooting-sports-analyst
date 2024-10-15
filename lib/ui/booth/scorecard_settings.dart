@@ -125,6 +125,10 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
         TextButton(
           child: Text("EDIT DISPLAY FILTERS"),
           onPressed: () async {
+            if(scorecard.displayFilters.filterSet?.knownSquads.isEmpty ?? false) {
+              scorecard.displayFilters.filterSet!.knownSquads = widget.match.squadNumbers.toList();
+              scorecard.displayFilters.filterSet!.knownSquads.sort();
+            }
             var filters = await FilterDialog.show(context, scorecard.displayFilters.filterSet 
               ?? FilterSet(widget.match.sport, empty: true));
 
