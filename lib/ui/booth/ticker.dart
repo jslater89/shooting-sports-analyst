@@ -16,6 +16,7 @@ import 'package:intl/intl.dart';
 import 'package:shooting_sports_analyst/ui/booth/ticker_settings.dart';
 import 'package:shooting_sports_analyst/ui/booth/timewarp_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/ticker_text.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 SSALogger _log = SSALogger("BoothTicker");
 
@@ -84,6 +85,8 @@ class _BoothTickerState extends State<BoothTicker> {
       model.tickerModel.hasNewEvents = false;
     }
 
+    var timewarpTime = model.timewarpScoresBefore?.toLocal();
+
     return SizedBox(
       width: MediaQuery.of(context).size.width,
       child: Card(
@@ -141,7 +144,7 @@ class _BoothTickerState extends State<BoothTicker> {
                           child: Row(
                             children: [
                               Icon(Icons.restore),
-                              Text("Time warp${model.inTimewarp ? " (${DateFormat.yMd().format(model.timewarpScoresBefore!)} ${DateFormat.Hm().format(model.timewarpScoresBefore!)})" : ""}"),
+                              Text("Time warp${model.inTimewarp ? " (${yMdHm(timewarpTime!)})" : ""}"),
                             ],
                           ),
                           onPressed: () async {
