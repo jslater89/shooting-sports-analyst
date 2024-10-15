@@ -332,35 +332,36 @@ class _BoothScorecardState extends State<BoothScorecard> {
 
   Widget _buildTable() {
     var match = context.read<BroadcastBoothModel>().latestMatch;
-    List<Widget> scoreRows = [];
-    for(int i = 0; i < displayedShooters.length; i++) {
-      scoreRows.add(_buildScoreRow(match, displayedShooters[i], i));
-    }
 
-    return Row(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            physics: innerScrollPhysics,
-            child: Column(
-              children: [
-                _buildHeaderRow(match),
-                Expanded(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.vertical,
-                    physics: innerScrollPhysics,
-                    child: Column(children: [
-                      ...scoreRows,
-                    ])
-                  ),
-                ),
-              ],
-            ),
-          ),
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: innerScrollPhysics,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: _calculateTotalWidth(match),
         ),
-      ],
+        child: Column(
+          children: [
+            _buildHeaderRow(match),
+            Expanded(
+              child: ListView.builder(
+                padding: EdgeInsets.all(0),
+                physics: innerScrollPhysics,
+                itemCount: displayedShooters.length,
+                itemBuilder: (context, index) {
+                  return _buildScoreRow(match, displayedShooters[index], index);
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
+  }
+
+  double _calculateTotalWidth(ShootingMatch match) {
+    int stageCount = match.stages.where((s) => !(s.scoring is IgnoredScoring)).length;
+    return _shooterColumnWidth * 2 + _stageColumnWidth * (stageCount + 1) + 1;
   }
 
   static const _shooterColumnWidth = 200.0;
