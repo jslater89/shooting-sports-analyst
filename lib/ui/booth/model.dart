@@ -217,13 +217,23 @@ class TickerEvent {
   String message;
   /// The ticker event type name, e.g. [ExtremeScore.extremeScoreName]
   String reason;
-  /// The priority of the ticker event. Formatting 
+  /// The entry ID of the competitor that is most relevant to this ticker
+  /// event. Generally, the competitor whose score changed.
+  int relevantCompetitorEntryId;
+  /// The number of other competitors that are also relevant to this ticker
+  /// event. When discarding duplicate ticker events for the same real event,
+  /// the ticker event relating to the largest number of competitors is
+  /// generally the one we want to show.
+  int relevantCompetitorCount;
+  /// The priority of the ticker event.
   TickerPriority priority;
 
   TickerEvent({
     required this.generatedAt,
     required this.message,
     required this.reason,
+    required this.relevantCompetitorEntryId,
+    this.relevantCompetitorCount = 1,
     this.priority = TickerPriority.medium,
   });
 

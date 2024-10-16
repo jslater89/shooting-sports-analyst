@@ -176,6 +176,8 @@ class ExtremeScore extends TickerEventType {
         if(diff.abs() >= changeThreshold) {
           if(above && aboveAverage || !above && belowAverage) {
             events.add(TickerEvent(
+              relevantCompetitorEntryId: competitor.entryId,
+              relevantCompetitorCount: newScores.length,
               generatedAt: updateTime,
               message: "${competitor.getName(suffixes: false).toUpperCase()} (${scorecard.name}) has a new extreme ${extremeWord}score (${stagePercent.toStringAsFixed(1)}%) on stage ${stageChange.newScore.stage.stageId} ($diffSign${diff.toStringAsFixed(2)}%)",
               reason: typeName,
@@ -325,7 +327,9 @@ class MatchLeadChange extends TickerEventType {
         message += " over ${secondCompetitor.getName(suffixes: false).toUpperCase()} by ${margin.toStringAsFixed(1)} points (${ratioMargin.asPercentage()}%)";
       }
       return [TickerEvent(
+        relevantCompetitorEntryId: competitor.entryId,
         generatedAt: updateTime,
+        relevantCompetitorCount: newScores.length,
         message: message,
         reason: typeName,
         priority: priority,
@@ -342,6 +346,8 @@ class MatchLeadChange extends TickerEventType {
         message += " to ${firstCompetitor.getName(suffixes: false).toUpperCase()} by ${margin.toStringAsFixed(1)} points (${ratioMargin.asPercentage()}%)";
       }
       return [TickerEvent(
+        relevantCompetitorEntryId: competitor.entryId,
+        relevantCompetitorCount: newScores.length,
         generatedAt: updateTime,
         message: message,
         reason: typeName,
@@ -395,6 +401,8 @@ class StageLeadChange extends TickerEventType {
             message += " over ${secondCompetitor.getName(suffixes: false).toUpperCase()} by ${margin.toStringAsFixed(1)} points (${ratioMargin.asPercentage()}%)";
           }
           events.add(TickerEvent(
+            relevantCompetitorEntryId: competitor.entryId,
+            relevantCompetitorCount: newScores.length,
             generatedAt: updateTime,
             message: message,
             reason: typeName,

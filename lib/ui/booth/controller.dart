@@ -69,22 +69,69 @@ class BroadcastBoothController {
 
     if(model.inTimewarp && model.calculateTimewarpTickerEvents) {
       model.tickerModel.timewarpTickerEvents.addAll(events);
-      model.tickerModel.timewarpTickerEvents.sort((a, b) => b.priority.index.compareTo(a.priority.index));
       _log.v("Timewarp ticker events: ${model.tickerModel.timewarpTickerEvents.length}");
     }
     else {
       model.tickerModel.liveTickerEvents.addAll(events);
-      model.tickerModel.liveTickerEvents.sort((a, b) => b.priority.index.compareTo(a.priority.index));
       _log.v("Live ticker events: ${model.tickerModel.liveTickerEvents.length}");
     }
     
     if(_tickerHasNewEventsTimer == null) {
       _tickerHasNewEventsTimer = Timer(const Duration(milliseconds: 250), () {
         _log.i("Dispatching ticker update");
+        _deduplicateTickerEvents();
         model.tickerModel.hasNewEvents = true;
         model.tickerModel.update();
         _tickerHasNewEventsTimer = null;
       });
+    }
+  }
+
+  void _deduplicateTickerEvents() {
+    List<TickerEvent> eventList = [];
+    if(model.inTimewarp) {
+      eventList.addAll(model.tickerModel.timewarpTickerEvents);
+    }
+    else {
+      eventList.addAll(model.tickerModel.liveTickerEvents);
+    }
+
+    Map<_TickerEventEquality, List<TickerEvent>> eventMap = {};
+    for(var event in eventList) {
+      var key = _TickerEventEquality(event);
+      if(eventMap[key] == null) {
+        eventMap[key] = [];
+      }
+      eventMap[key]!.add(event);
+    }
+    
+    List<TickerEvent> outputEvents = [];
+    for(var events in eventMap.values) {
+      if(events.length == 1) {
+        outputEvents.add(events[0]);
+      }
+      else {
+        // Take the event with the most relevant competitors.
+        outputEvents.add(events.reduce((a, b) =>
+          a.relevantCompetitorCount > b.relevantCompetitorCount ? a : b
+        ));
+      }
+    }
+
+    outputEvents.sort((a, b) {
+      if(a.priority != b.priority) {
+        return b.priority.index.compareTo(a.priority.index);
+      }
+      return b.relevantCompetitorCount.compareTo(a.relevantCompetitorCount);
+    });
+
+    if(model.inTimewarp) {
+      model.tickerModel.timewarpTickerEvents.clear();
+      model.tickerModel.timewarpTickerEvents.addAll(outputEvents);
+    }
+    else {
+      model.tickerModel.liveTickerEvents.clear();
+      model.tickerModel.liveTickerEvents.addAll(outputEvents);
     }
   }
   
@@ -304,4 +351,22 @@ enum MoveDirection {
   down,
   left,
   right,
+}
+
+class _TickerEventEquality {
+  TickerEvent t;
+
+  _TickerEventEquality(this.t);
+
+  // For our purposes, two ticker events are equal if they have the same
+  // priority and reason, and concern the same competitor.
+  bool operator ==(Object other) {
+    if(other is _TickerEventEquality) {
+      return t.priority == other.t.priority && t.reason == other.t.reason && t.relevantCompetitorEntryId == other.t.relevantCompetitorEntryId;
+    }
+    return false;
+  }
+
+  int get hashCode => Object.hashAll([t.priority, t.reason, t.relevantCompetitorEntryId]);
+
 }
