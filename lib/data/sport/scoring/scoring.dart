@@ -859,6 +859,9 @@ class RawScore {
   /// actions or failures to act outside of hits or misses on targets.
   Map<ScoringEvent, int> penaltyEvents;
 
+  /// Whether this score resulted in a DQ.
+  bool dq;
+
   /// A list of string times for this score.
   List<double> stringTimes;
 
@@ -922,6 +925,7 @@ class RawScore {
     this.penaltyEvents = const {},
     this.stringTimes = const [],
     this.modified,
+    this.dq = false,
   });
 
   bool get dnf =>

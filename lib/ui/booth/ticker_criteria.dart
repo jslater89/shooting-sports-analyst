@@ -3,11 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
 import 'package:shooting_sports_analyst/ui/booth/score_utils.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 part 'ticker_criteria.g.dart';
+
+SSALogger _log = SSALogger("TickerCriteria");
 
 @JsonSerializable()
 class TickerEventCriterion {
@@ -54,6 +57,7 @@ sealed class TickerEventType {
     ExtremeScore.extremeScoreName => ExtremeScore.fromJson(json),
     MatchLeadChange.matchLeadChangeName => MatchLeadChange.fromJson(json),
     StageLeadChange.stageLeadChangeName => StageLeadChange.fromJson(json),
+    Disqualification.disqualificationName => Disqualification.fromJson(json),
     _ => throw Exception("Unknown TickerEventType: ${json["typeName"]}"),
   };
 
@@ -416,6 +420,65 @@ class StageLeadChange extends TickerEventType {
   
   @override
   String get uiLabel => "Stage lead change";
+
+  @override
+  Widget? buildSettingsUI(BuildContext context) {
+    return null;
+  }
+}
+
+@JsonSerializable()
+class Disqualification extends TickerEventType {
+  static const disqualificationName = "disqualification";
+  @JsonKey(includeToJson: true)
+  final String typeName = disqualificationName;
+
+  Disqualification() : super(disqualificationName);
+
+  factory Disqualification.fromJson(Map<String, dynamic> json) => _$DisqualificationFromJson(json);
+  Map<String, dynamic> toJson() => _$DisqualificationToJson(this);
+
+  @override
+  List<TickerEvent> generateEvents({
+    required ScorecardModel scorecard,
+    required MatchEntry competitor,
+    required Map<MatchEntry, MatchScoreChange> changes,
+    required Map<MatchEntry, RelativeMatchScore> newScores,
+    required TickerPriority priority,
+    required DateTime updateTime,
+  }) {
+    var change = changes[competitor]!;
+
+    // DQs can be reported in two ways: either the shooter's match entry has a DQ marker in
+    // the new score but not the old one, which we might see if watching a match live, or
+    // the shooter has a DQ in one of the new raw scores but none of the old ones, which we
+    // are more likely to see in time warp.
+    if(
+      !change.oldScore.shooter.dq && change.newScore.shooter.dq
+      || !change.oldScore.stageScores.values.any((e) => e.score.dq) && change.newScore.stageScores.values.any((e) => e.score.dq)
+    ) {
+      var newStage = change.newScore.stageScores.keys.firstWhereOrNull((e) =>
+        change.newScore.stageScores[e]!.score.dq
+      );
+
+      var message = "${competitor.getName(suffixes: false).toUpperCase()} (${scorecard.name}) was disqualified";
+      if(newStage != null) {
+        message += " on stage ${newStage.stageId}";
+      }
+      return [TickerEvent(
+        relevantCompetitorEntryId: competitor.entryId,
+        relevantCompetitorCount: newScores.length,
+        generatedAt: updateTime,
+        message: message,
+        reason: typeName,
+        priority: priority,
+      )];
+    }
+    return [];
+  }
+
+  @override
+  String get uiLabel => "Disqualification";
 
   @override
   Widget? buildSettingsUI(BuildContext context) {

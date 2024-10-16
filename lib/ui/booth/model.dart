@@ -132,6 +132,10 @@ class BoothTickerModel with ChangeNotifier {
       priority: TickerPriority.high,
     ),
     TickerEventCriterion(
+      type: Disqualification(),
+      priority: TickerPriority.high,
+    ),
+    TickerEventCriterion(
       type: StageLeadChange(),
       priority: TickerPriority.medium,
     ),

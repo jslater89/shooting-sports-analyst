@@ -82,6 +82,9 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
     if(scorecard.displayFilters.topN != null) {
       displayFilteredCount = min(displayFilteredCount, scorecard.displayFilters.topN!);
     }
+    if(scorecard.displayFilters.entryIds != null) {
+      displayFilteredCount = min(displayFilteredCount, scorecard.displayFilters.entryIds!.length);
+    }
   }
 
   @override
@@ -167,6 +170,7 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
               }
 
               _applyDisplayFilters();
+              setState(() {});
             }
           },
         ),

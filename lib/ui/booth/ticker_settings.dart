@@ -242,6 +242,7 @@ class _TickerCriterionEditDialogState extends State<TickerCriterionEditDialog> {
                 DropdownMenuItem(value: ExtremeScore.extremeScoreName, child: Text("Extreme score")),
                 DropdownMenuItem(value: MatchLeadChange.matchLeadChangeName, child: Text("Match lead change")),
                 DropdownMenuItem(value: StageLeadChange.stageLeadChangeName, child: Text("Stage lead change")),
+                DropdownMenuItem(value: Disqualification.disqualificationName, child: Text("Disqualification")),
               ],
               onChanged: (String? newValue) {
                 if (newValue != null) {
@@ -250,6 +251,7 @@ class _TickerCriterionEditDialogState extends State<TickerCriterionEditDialog> {
                       ExtremeScore.extremeScoreName => ExtremeScore.above(changeThreshold: 10),
                       MatchLeadChange.matchLeadChangeName => MatchLeadChange(),
                       StageLeadChange.stageLeadChangeName => StageLeadChange(),
+                      Disqualification.disqualificationName => Disqualification(),
                       _ => throw Exception("Invalid event type"),
                     };
                   });
