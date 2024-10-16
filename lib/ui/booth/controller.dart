@@ -6,8 +6,10 @@
 
 import 'dart:async';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:collection/collection.dart';
 import 'package:mutex/mutex.dart';
+import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/ui/booth/global_card_settings_dialog.dart';
@@ -19,6 +21,7 @@ SSALogger _log = SSALogger("BoothController");
 
 class BroadcastBoothController {
   BroadcastBoothModel model;
+  final player = AudioPlayer();
 
   Future<void> loadFrom(BroadcastBoothModel newModel) async {
     await model.copyFrom(newModel, resetLastUpdateTime: true);
@@ -36,7 +39,9 @@ class BroadcastBoothController {
     if(source == null) {
       return false;
     }
-    var matchRes = await source.getMatchFromId(model.matchId);
+    var matchRes = await source.getMatchFromId(model.matchId, options: PSv2MatchFetchOptions(
+      downloadScoreLogs: true,
+    ));
     if(matchRes.isErr()) {
       _log.e("unable to refresh match: ${matchRes.unwrapErr()}");
       return false;
@@ -54,18 +59,24 @@ class BroadcastBoothController {
     model.tickerModel.update();
     model.update();
 
+    if(model.tickerModel.updateBell) {
+      player.play(AssetSource("audio/update-bell.mp3"));
+    }
+
+    _scheduleTickerReset();
+
     return true;
   }
 
   Timer? _tickerHasNewEventsTimer;
-  Timer? _tickerTimewarpResetTimer;
+  Timer? _tickerResetTimer;
   void addTickerEvents(List<TickerEvent> events) {
     if(events.isEmpty) {
       return;
     }
 
-    _tickerTimewarpResetTimer?.cancel();
-    _tickerTimewarpResetTimer = null;
+    _tickerResetTimer?.cancel();
+    _tickerResetTimer = null;
 
     if(model.inTimewarp && model.calculateTimewarpTickerEvents) {
       model.tickerModel.timewarpTickerEvents.addAll(events);
@@ -85,6 +96,17 @@ class BroadcastBoothController {
         _tickerHasNewEventsTimer = null;
       });
     }
+  }
+
+  // Reset the ticker after a short delay, in case no events come in.
+  // If events do come in, [addTickerEvents] will clear the timer.
+  void _scheduleTickerReset() {
+    _tickerResetTimer = Timer(const Duration(milliseconds: 500), () {
+      _log.i("No-event ticker reset timer fired");
+      model.tickerModel.hasNewEvents = true;
+      model.tickerModel.update();
+      model.update();
+    });
   }
 
   void _deduplicateTickerEvents() {
@@ -223,14 +245,7 @@ class BroadcastBoothController {
     model.tickerModel.timewarpTickerEvents.clear();
     model.calculateTimewarpTickerEvents = calculateTickerEvents;
 
-    // Reset the ticker after a short delay, in case no events come in.
-    // If events do come in, [addTickerEvents] will clear the timer.
-    _tickerTimewarpResetTimer = Timer(const Duration(milliseconds: 500), () {
-      _log.i("No-event ticker reset timer fired");
-      model.tickerModel.hasNewEvents = true;
-      model.tickerModel.update();
-      model.update();
-    });
+    _scheduleTickerReset();
     model.update();
   }
 

@@ -150,6 +150,10 @@ class BoothTickerModel with ChangeNotifier {
   ];
 
   int updateInterval = 300;
+
+  /// Whether to play a notification sound when the match updates.
+  @JsonKey(defaultValue: false)
+  bool updateBell = false;
   
   DateTime lastUpdateTime = DateTime.now();
 
@@ -195,6 +199,7 @@ class BoothTickerModel with ChangeNotifier {
     DateTime? lastUpdateTime,
     this.tickerSpeed = 30,
     List<TickerEventCriterion>? globalTickerCriteria,
+    this.updateBell = false,
   }) : lastUpdateTime = lastUpdateTime ?? DateTime.now(), globalTickerCriteria = globalTickerCriteria ?? defaultTickerCriteria;
 
   factory BoothTickerModel.fromJson(Map<String, dynamic> json) => _$BoothTickerModelFromJson(json);
@@ -208,6 +213,7 @@ class BoothTickerModel with ChangeNotifier {
     tickerSpeed = other.tickerSpeed;
     paused = other.paused;
     timewarpTickerEvents = other.timewarpTickerEvents;
+    updateBell = other.updateBell;
     hasNewEvents = other.hasNewEvents;
   }
 

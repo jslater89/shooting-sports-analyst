@@ -87,6 +87,18 @@ class _TickerSettingsWidgetState extends State<TickerSettingsWidget> {
           },
         ),
         SizedBox(height: 16),
+        CheckboxListTile(
+          title: Text("Play a notification sound when the match updates"),
+          value: widget.tickerModel.updateBell,
+          contentPadding: EdgeInsets.zero,
+          controlAffinity: ListTileControlAffinity.leading,
+          onChanged: (value) {
+            setState(() {
+              widget.tickerModel.updateBell = value ?? false;
+            });
+          },
+        ),
+        SizedBox(height: 16),
         TextFormField(
           initialValue: widget.tickerModel.tickerSpeed.toString(),
           decoration: InputDecoration(

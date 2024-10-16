@@ -63,6 +63,7 @@ dependencies:
   toml: ^0.14.0
   stack_trace: ^1.11.0
   fading_edge_scrollview: ^4.1.1
+  audioplayers: ^5.2.1
 
 dev_dependencies:
   flutter_test:
@@ -97,7 +98,7 @@ flutter_launcher_icons:
 flutter:
   assets:
     - assets/icon.png
-
+    - assets/audio/update-bell.mp3
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
