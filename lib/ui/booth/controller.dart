@@ -73,7 +73,8 @@ class BroadcastBoothController {
         stageScore.score.modified?.isAfter(priorUpdateTime) ?? false
       )
     )) {
-      player.play(AssetSource("audio/update-bell.mp3"));
+      var volume = model.tickerModel.updateBellVolume;
+      player.play(AssetSource("audio/update-bell.mp3"), volume: volume);
     }
     else {
       _log.i("No new scores since ${priorUpdateTime.toString()}");

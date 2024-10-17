@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
 import 'package:shooting_sports_analyst/ui/booth/ticker_criteria.dart';
@@ -97,6 +98,31 @@ class _TickerSettingsWidgetState extends State<TickerSettingsWidget> {
               widget.tickerModel.updateBell = value ?? false;
             });
           },
+        ),
+        if (widget.tickerModel.updateBell) SizedBox(height: 16),
+        if (widget.tickerModel.updateBell) Row(
+          children: [
+            Expanded(
+              child: Slider(
+                value: widget.tickerModel.updateBellVolume,
+                min: 0.0,
+                max: 1.0,
+                onChanged: (double value) {
+                  setState(() {
+                    widget.tickerModel.updateBellVolume = value;
+                  });
+                },
+                onChangeEnd: (double value) {
+                  AudioPlayer().play(AssetSource("audio/update-bell.mp3"), volume: value);
+                },
+              ),
+            ),
+            SizedBox(width: 16),
+            Text(
+              "Volume: ${(widget.tickerModel.updateBellVolume * 100).toStringAsFixed(0)}%",
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ],
         ),
         SizedBox(height: 16),
         TextFormField(
