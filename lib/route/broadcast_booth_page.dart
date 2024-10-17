@@ -56,6 +56,12 @@ class _BroadcastBoothPageState extends State<BroadcastBoothPage> {
     super.initState();
   }
 
+  @override
+  void dispose() {
+    controller?.dispose();
+    super.dispose();
+  }
+
   void _openExistingProject() async {
     var c = controller;
 

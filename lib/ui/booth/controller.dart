@@ -375,6 +375,8 @@ class BroadcastBoothController {
 
   void dispose() {
     _refreshTimer?.cancel();
+    _tickerResetTimer?.cancel();
+    _tickerHasNewEventsTimer?.cancel();
   }
 }
 
