@@ -22,6 +22,7 @@ SSALogger _log = SSALogger("BoothController");
 class BroadcastBoothController {
   BroadcastBoothModel model;
   final player = AudioPlayer();
+  bool refreshPending = false;
 
   Future<void> loadFrom(BroadcastBoothModel newModel) async {
     await model.copyFrom(newModel, resetLastUpdateTime: true);
@@ -35,6 +36,11 @@ class BroadcastBoothController {
 
   Timer? _refreshTimer;
   Future<bool> refreshMatch({bool manual = true}) async {
+    if(refreshPending) {
+      return false;
+    }
+
+    refreshPending = true;
     var source = MatchSourceRegistry().getByCodeOrNull(model.matchSource);
     if(source == null) {
       return false;
@@ -47,11 +53,12 @@ class BroadcastBoothController {
       return false;
     }
 
+    var priorUpdateTime = model.tickerModel.lastUpdateTime;
     if(model.ready) {
       model.previousMatch = model.latestMatch;
     }
     model.latestMatch = matchRes.unwrap();
-    model.tickerModel.lastUpdateTime = DateTime.now();
+    model.tickerModel.lastUpdateTime = DateTime.now().toUtc();
     model.tickerModel.liveTickerEvents.clear();
 
     // The ticker determines whether the UI updates, so make sure it's updated
@@ -59,12 +66,22 @@ class BroadcastBoothController {
     model.tickerModel.update();
     model.update();
 
-    if(model.tickerModel.updateBell) {
+    // If there are any new scores since the last update, ding if settings allow.
+    var scores = model.latestMatch.getScores();
+    if(model.tickerModel.updateBell && scores.values.any((score) => 
+      score.stageScores.values.any((stageScore) => 
+        stageScore.score.modified?.isAfter(priorUpdateTime) ?? false
+      )
+    )) {
       player.play(AssetSource("audio/update-bell.mp3"));
+    }
+    else {
+      _log.i("No new scores since ${priorUpdateTime.toString()}");
     }
 
     _scheduleTickerReset();
 
+    refreshPending = false;
     return true;
   }
 
