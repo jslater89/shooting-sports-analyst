@@ -102,7 +102,7 @@ class _BoothTickerState extends State<BoothTicker> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     mainAxisSize: MainAxisSize.max,
                     children: [
-                      Text("Updated at: ${DateFormat.Hm().format(model.tickerModel.lastUpdateTime)}"),
+                      Text("Updated at: ${DateFormat.Hm().format(model.tickerModel.lastUpdateTime.toLocal())}"),
                       SizedBox(width: 10),
                       Text("Since last update: ${_timerFormat(model.tickerModel.timeSinceUpdate)}"),
                       SizedBox(width: 10),
