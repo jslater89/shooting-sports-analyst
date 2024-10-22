@@ -125,7 +125,7 @@ class _BoothTickerState extends State<BoothTicker> {
                         child: TextButton(
                           child: Icon(Icons.settings),
                           onPressed: () async {
-                            var result = await TickerSettingsDialog.show(context, tickerModel: model.tickerModel);
+                            var result = await TickerSettingsDialog.show(context, boothModel: model);
                             if(result != null) {
                               controller.tickerEdited(result);
                             }

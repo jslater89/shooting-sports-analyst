@@ -1,8 +1,11 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:json_annotation/json_annotation.dart';
+import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
+import 'package:shooting_sports_analyst/html_or/fake_html.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
 import 'package:shooting_sports_analyst/ui/booth/score_utils.dart';
@@ -60,6 +63,7 @@ sealed class TickerEventType {
     MatchLeadChange.matchLeadChangeName => MatchLeadChange.fromJson(json),
     StageLeadChange.stageLeadChangeName => StageLeadChange.fromJson(json),
     Disqualification.disqualificationName => Disqualification.fromJson(json),
+    NewShooterScore.newShooterScoreName => NewShooterScore.fromJson(json),
     _ => throw Exception("Unknown TickerEventType: ${json["typeName"]}"),
   };
 
@@ -77,7 +81,7 @@ sealed class TickerEventType {
   String get uiLabel;
 
   bool get hasSettingsUI => false;
-  Widget? buildSettingsUI(BuildContext context);
+  Widget? buildSettingsUI(BuildContext context, BroadcastBoothModel boothModel);
 }
 
 @JsonSerializable()
@@ -204,7 +208,7 @@ class ExtremeScore extends TickerEventType {
   bool get hasSettingsUI => true;
 
   @override
-  Widget? buildSettingsUI(BuildContext context) {
+  Widget? buildSettingsUI(BuildContext context, BroadcastBoothModel boothModel) {
     return StatefulBuilder(
       builder: (BuildContext context, StateSetter setState) {
         return Column(
@@ -376,7 +380,7 @@ class MatchLeadChange extends TickerEventType {
   String get uiLabel => "Match lead change";
 
   @override
-  Widget? buildSettingsUI(BuildContext context) {
+  Widget? buildSettingsUI(BuildContext context, BroadcastBoothModel boothModel) {
     return null;
   }
 }
@@ -438,7 +442,7 @@ class StageLeadChange extends TickerEventType {
   String get uiLabel => "Stage lead change";
 
   @override
-  Widget? buildSettingsUI(BuildContext context) {
+  Widget? buildSettingsUI(BuildContext context, BroadcastBoothModel boothModel) {
     return null;
   }
 }
@@ -478,7 +482,7 @@ class Disqualification extends TickerEventType {
         change.newScore.stageScores[e]!.score.dq
       );
 
-      var message = "${competitor.getName(suffixes: false).toUpperCase()} (${scorecard.name}) was disqualified";
+      var message = "${competitor.name.toUpperCase()} (${scorecard.name}) was disqualified";
       if(newStage != null) {
         message += " on stage ${newStage.stageId}";
       }
@@ -500,7 +504,111 @@ class Disqualification extends TickerEventType {
   String get uiLabel => "Disqualification";
 
   @override
-  Widget? buildSettingsUI(BuildContext context) {
+  Widget? buildSettingsUI(BuildContext context, BroadcastBoothModel boothModel) {
     return null;
   }
+}
+
+@JsonSerializable()
+class NewShooterScore extends TickerEventType {
+  static const newShooterScoreName = "newShooterScore";
+  @JsonKey(includeToJson: true)
+  final String typeName = newShooterScoreName;
+
+  NewShooterScore({required this.shooterUuid, required this.shooterName}) : super(newShooterScoreName);
+
+  String shooterUuid;
+  String shooterName;
+
+  factory NewShooterScore.fromJson(Map<String, dynamic> json) => _$NewShooterScoreFromJson(json);
+  Map<String, dynamic> toJson() => _$NewShooterScoreToJson(this);
+
+  @override
+  List<TickerEvent> generateEvents({
+    required ScorecardModel scorecard,
+    required MatchEntry competitor,
+    required int displayedCompetitors,
+    required Map<MatchEntry, MatchScoreChange> changes,
+    required Map<MatchEntry, RelativeMatchScore> newScores,
+    required TickerPriority priority,
+    required DateTime updateTime,
+  }) {
+    var change = changes[competitor]!;
+    var stageChanges = change.stageScoreChanges;
+
+    var scoreMessage = "";
+    if(stageChanges.isNotEmpty) {
+      if(stageChanges.length == 1) {
+        var stageChange = stageChanges.values.first;
+        scoreMessage = " (${stageChange.newScore.ratio.asPercentage()}%) on stage ${stageChange.newScore.stage.stageId}";
+
+        var oldStageRatios = change.oldScore.stageScores.values.where((e) => !e.score.dnf).map((e) => e.ratio);
+        if(oldStageRatios.isNotEmpty) {
+          var average = oldStageRatios.average;
+          var difference = stageChange.newScore.ratio - average;
+          var differenceChar = difference > 0 ? "+" : "";
+          scoreMessage += " (${differenceChar}${difference.asPercentage()}%)";
+        }
+      }
+      else {
+        scoreMessage = " on multiple stages";
+      }
+    }
+
+    if(competitor.sourceId != null) {
+      if(competitor.sourceId == shooterUuid) {
+        return [TickerEvent(
+          relevantCompetitorEntryId: competitor.entryId,
+          relevantCompetitorEntryUuid: competitor.sourceId,
+          relevantCompetitorCount: newScores.length,
+          displayedCompetitorCount: displayedCompetitors,
+          generatedAt: updateTime,
+          message: "${shooterName.toUpperCase()} (${scorecard.name}) has a new score${scoreMessage}",
+          reason: typeName,
+          priority: priority,
+        )];
+      }
+    }
+    else if("${competitor.entryId}" == shooterUuid) {
+      return [];
+    }
+    
+    // no change found
+    return [];
+  }
+
+  @override
+  bool get hasSettingsUI => true;
+
+  @override
+  Widget? buildSettingsUI(BuildContext context, BroadcastBoothModel boothModel) {
+    var match = boothModel.latestMatch;
+    var textController = TextEditingController(text: shooterName);
+    return StatefulBuilder(
+      builder: (context, setState) {
+        return TypeAheadField<MatchEntry>(
+          textFieldConfiguration: TextFieldConfiguration(
+            controller: textController,
+            decoration: InputDecoration(labelText: "Competitor"),
+          ),
+          suggestionsCallback: (pattern) async {
+            return match.shooters.where((e) => e.name.toLowerCase().contains(pattern.toLowerCase()));
+          },
+          itemBuilder: (context, MatchEntry entry) => ListTile(
+            title: Text(entry.name)
+          ),
+          onSuggestionSelected: (MatchEntry entry) {
+            setState(() {
+              shooterUuid = entry.sourceId ?? "${entry.entryId}";
+              shooterName = entry.name;
+            });
+            textController.text = entry.name;
+          },
+        );
+      }
+    );
+  }
+  
+  @override
+  String get uiLabel => "$shooterName scores";
 }

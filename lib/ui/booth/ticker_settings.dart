@@ -6,20 +6,22 @@
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
 import 'package:shooting_sports_analyst/ui/booth/ticker_criteria.dart';
 
 /// TickerSettingsDialog is a modal host for [TickerSettingsWidget].
 class TickerSettingsDialog extends StatelessWidget {
-  const TickerSettingsDialog({super.key, required this.tickerModel});
+  const TickerSettingsDialog({super.key, required this.boothModel});
 
-  final BoothTickerModel tickerModel;
+  final BroadcastBoothModel boothModel;
+  BoothTickerModel get tickerModel => boothModel.tickerModel;
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text("Ticker Settings"),
-      content: TickerSettingsWidget(tickerModel: tickerModel),
+      content: TickerSettingsWidget(boothModel: boothModel),
       actions: [
         TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text("CANCEL")),
         TextButton(onPressed: () => Navigator.of(context).pop(tickerModel), child: const Text("SAVE")),
@@ -27,10 +29,10 @@ class TickerSettingsDialog extends StatelessWidget {
     );
   }
 
-  static Future<BoothTickerModel?> show(BuildContext context, {required BoothTickerModel tickerModel}) {
+  static Future<BoothTickerModel?> show(BuildContext context, {required BroadcastBoothModel boothModel}) {
     return showDialog<BoothTickerModel>(
       context: context,
-      builder: (context) => TickerSettingsDialog(tickerModel: tickerModel),
+      builder: (context) => TickerSettingsDialog(boothModel: boothModel),
       barrierDismissible: false,
     );
   }
@@ -39,9 +41,10 @@ class TickerSettingsDialog extends StatelessWidget {
 /// TickerSettingsWidget edits the provided BoothTickerModel.
 /// Edits happen in place, so use BoothTickerModel.copyFrom to get a copy if confirm/discard is needed.
 class TickerSettingsWidget extends StatefulWidget {
-  const TickerSettingsWidget({super.key, required this.tickerModel});
+  const TickerSettingsWidget({super.key, required this.boothModel});
 
-  final BoothTickerModel tickerModel;
+  final BroadcastBoothModel boothModel;
+  BoothTickerModel get tickerModel => boothModel.tickerModel;
 
   @override
   State<TickerSettingsWidget> createState() => _TickerSettingsWidgetState();
@@ -170,7 +173,7 @@ class _TickerSettingsWidgetState extends State<TickerSettingsWidget> {
                   type: MatchLeadChange(),
                   priority: TickerPriority.high,
                 );
-                newAlert = await TickerCriterionEditDialog.show(context, criterion: newAlert);
+                newAlert = await TickerCriterionEditDialog.show(context, criterion: newAlert, boothModel: widget.boothModel);
                 if(newAlert != null) {
                   widget.tickerModel.globalTickerCriteria.add(newAlert);
                   setState(() {});
@@ -213,7 +216,7 @@ class _TickerSettingsWidgetState extends State<TickerSettingsWidget> {
                 TextButton(
                   child: Icon(Icons.settings),
                   onPressed: () async {
-                    var updatedCriterion = await TickerCriterionEditDialog.show(context, criterion: c);
+                    var updatedCriterion = await TickerCriterionEditDialog.show(context, criterion: c, boothModel: widget.boothModel);
                     setState(() {
                       if(updatedCriterion != null) {
                         widget.tickerModel.globalTickerCriteria[widget.tickerModel.globalTickerCriteria.indexOf(c)] = updatedCriterion;
@@ -240,16 +243,17 @@ class _TickerSettingsWidgetState extends State<TickerSettingsWidget> {
 
 class TickerCriterionEditDialog extends StatefulWidget {
   final TickerEventCriterion criterion;
+  final BroadcastBoothModel boothModel;
 
-  const TickerCriterionEditDialog({Key? key, required this.criterion}) : super(key: key);
+  const TickerCriterionEditDialog({Key? key, required this.criterion, required this.boothModel}) : super(key: key);
 
   @override
   _TickerCriterionEditDialogState createState() => _TickerCriterionEditDialogState();
 
-  static Future<TickerEventCriterion?> show(BuildContext context, {required TickerEventCriterion criterion}) {
+  static Future<TickerEventCriterion?> show(BuildContext context, {required TickerEventCriterion criterion, required BroadcastBoothModel boothModel}) {
     return showDialog<TickerEventCriterion>(
       context: context,
-      builder: (context) => TickerCriterionEditDialog(criterion: criterion),
+      builder: (context) => TickerCriterionEditDialog(criterion: criterion, boothModel: boothModel),
     );
   }
 }
@@ -281,6 +285,7 @@ class _TickerCriterionEditDialogState extends State<TickerCriterionEditDialog> {
                 DropdownMenuItem(value: MatchLeadChange.matchLeadChangeName, child: Text("Match lead change")),
                 DropdownMenuItem(value: StageLeadChange.stageLeadChangeName, child: Text("Stage lead change")),
                 DropdownMenuItem(value: Disqualification.disqualificationName, child: Text("Disqualification")),
+                DropdownMenuItem(value: NewShooterScore.newShooterScoreName, child: Text("Competitor scores")),
               ],
               onChanged: (String? newValue) {
                 if (newValue != null) {
@@ -290,6 +295,7 @@ class _TickerCriterionEditDialogState extends State<TickerCriterionEditDialog> {
                       MatchLeadChange.matchLeadChangeName => MatchLeadChange(),
                       StageLeadChange.stageLeadChangeName => StageLeadChange(),
                       Disqualification.disqualificationName => Disqualification(),
+                      NewShooterScore.newShooterScoreName => NewShooterScore(shooterUuid: "", shooterName: ""),
                       _ => throw Exception("Invalid event type"),
                     };
                   });
@@ -317,7 +323,7 @@ class _TickerCriterionEditDialogState extends State<TickerCriterionEditDialog> {
             ),
             SizedBox(height: 16),
             if (_editedCriterion.type.hasSettingsUI)
-              _editedCriterion.type.buildSettingsUI(context)!,
+              _editedCriterion.type.buildSettingsUI(context, widget.boothModel)!,
           ],
         ),
       ),

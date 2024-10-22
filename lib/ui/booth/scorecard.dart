@@ -350,17 +350,18 @@ class _BoothScorecardState extends State<BoothScorecard> {
       ),
       // all non-chrono stages, plus initial columns for competitor name and total
       columnCount: match.stages.where((s) => !(s.scoring is IgnoredScoring)).length + 2,
-      rowCount: displayedShooters.length,
+      // all displayed shooters, plus header row
+      rowCount: displayedShooters.length + 1,
       // pin the competitor name and total columns
       pinnedColumnCount: 2,
       // pin the header row
       pinnedRowCount: 1,
       cellBuilder: (context, vicinity) {
         if(vicinity.row == 0) {
-          return _buildHeaderCell(context, vicinity);
+          return _buildHeaderCell(context, vicinity, match);
         }
         else {
-          return _buildScoreCell(context, vicinity);
+          return _buildScoreCell(context, vicinity, match);
         }
       },
       columnBuilder: (column) {
@@ -411,7 +412,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
     );
   }
 
-  Widget _buildHeaderCell(BuildContext context, TableVicinity vicinity) {
+  Widget _buildHeaderCell(BuildContext context, TableVicinity vicinity, ShootingMatch match) {
     if(vicinity.column == 0) {
       return Text("Competitor", textAlign: TextAlign.right);
     }
@@ -419,9 +420,11 @@ class _BoothScorecardState extends State<BoothScorecard> {
       return Text("Total", textAlign: TextAlign.center);
     }
     else {
-      var match = context.read<BroadcastBoothModel>().latestMatch;
       var stage = match.stages.where((s) => !(s.scoring is IgnoredScoring)).toList()[vicinity.column - 2];
-      return Text("Stage ${stage.stageId}", textAlign: TextAlign.center);
+      return Tooltip(
+        message: "${stage.name} (${stage.maxPoints}pt)",
+        child: Text("Stage ${stage.stageId}", textAlign: TextAlign.center),
+      );
     }
   }
 
@@ -430,30 +433,32 @@ class _BoothScorecardState extends State<BoothScorecard> {
   static const _scoreRowHeight = 55.0;
 
 
-  Widget _buildScoreCell(BuildContext context, TableVicinity vicinity) {
+  Widget _buildScoreCell(BuildContext context, TableVicinity vicinity, ShootingMatch match) {
+    var entry = displayedShooters[vicinity.row - 1];
+    var score = scores[entry];
+    var change = scoreChanges[entry];
     if(vicinity.column == 0) {
-      return Center(
-        child: SizedBox(
-          width: _shooterColumnWidth,
-          child: Text(displayedShooters[vicinity.row - 1].getName(), textAlign: TextAlign.right),
-        ),
+      return Row(
+        children: [
+          Expanded(child: Text(entry.getName(), textAlign: TextAlign.right)),
+          if(score != null && score.isComplete) Tooltip(
+            message: "All stages complete",
+            child: Icon(Icons.lock, color: Colors.grey[600], size: 16)
+          ),
+        ],
       );
     }
     else {
-      var entry = displayedShooters[vicinity.row - 1];
-      var score = scores[entry];
-      var change = scoreChanges[entry];
-
       if(vicinity.column == 1) {
-        return _buildTotalScoreCell(context, vicinity, entry, score, change);
+        return _buildTotalScoreCell(context, vicinity, entry, score, change, match);
       }
       else {
-        return _buildStageScoreCell(context, vicinity, entry, score, change);
+        return _buildStageScoreCell(context, vicinity, entry, score, change, match);
       }
     }
   }
 
-  Widget _buildTotalScoreCell(BuildContext context, TableVicinity vicinity, MatchEntry entry, RelativeMatchScore? score, MatchScoreChange? change) {
+  Widget _buildTotalScoreCell(BuildContext context, TableVicinity vicinity, MatchEntry entry, RelativeMatchScore? score, MatchScoreChange? change, ShootingMatch match) {
     if(score == null) {
       return Center(child: Text("-", textAlign: TextAlign.center));
     }
@@ -469,8 +474,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
     );
   }
 
-  Widget _buildStageScoreCell(BuildContext context, TableVicinity vicinity, MatchEntry entry, RelativeMatchScore? score, MatchScoreChange? change) {
-    var match = context.read<BroadcastBoothModel>().latestMatch;
+  Widget _buildStageScoreCell(BuildContext context, TableVicinity vicinity, MatchEntry entry, RelativeMatchScore? score, MatchScoreChange? change, ShootingMatch match) {
     var stages = match.stages.where((s) => !(s.scoring is IgnoredScoring)).toList();
     var stage = stages[vicinity.column - 2];
     var stageScore = score?.stageScores[stage];
