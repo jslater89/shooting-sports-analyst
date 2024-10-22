@@ -27,6 +27,7 @@ class TickerEventCriterion {
 
   List<TickerEvent> checkEvents({
     required ScorecardModel scorecard,
+    required int displayedCompetitorCount,
     required Map<MatchEntry, MatchScoreChange> changes,
     required Map<MatchEntry, RelativeMatchScore> newScores,
     required DateTime updateTime,
@@ -36,6 +37,7 @@ class TickerEventCriterion {
       var e = type.generateEvents(
         scorecard: scorecard,
         competitor: mapEntry.key,
+        displayedCompetitors: displayedCompetitorCount,
         changes: changes,
         newScores: newScores,
         priority: priority,
@@ -65,6 +67,7 @@ sealed class TickerEventType {
   List<TickerEvent> generateEvents({
     required ScorecardModel scorecard,
     required MatchEntry competitor,
+    required int displayedCompetitors,
     required Map<MatchEntry, MatchScoreChange> changes,
     required Map<MatchEntry, RelativeMatchScore> newScores,
     required TickerPriority priority,
@@ -150,6 +153,7 @@ class ExtremeScore extends TickerEventType {
   List<TickerEvent> generateEvents({
     required ScorecardModel scorecard,
     required MatchEntry competitor,
+    required int displayedCompetitors,
     required Map<MatchEntry, MatchScoreChange> changes,
     required Map<MatchEntry, RelativeMatchScore> newScores,
     required TickerPriority priority,
@@ -181,7 +185,9 @@ class ExtremeScore extends TickerEventType {
           if(above && aboveAverage || !above && belowAverage) {
             events.add(TickerEvent(
               relevantCompetitorEntryId: competitor.entryId,
+              relevantCompetitorEntryUuid: competitor.sourceId,
               relevantCompetitorCount: newScores.length,
+              displayedCompetitorCount: displayedCompetitors,
               generatedAt: updateTime,
               message: "${competitor.getName(suffixes: false).toUpperCase()} (${scorecard.name}) has a new extreme ${extremeWord}score (${stagePercent.toStringAsFixed(1)}%) on stage ${stageChange.newScore.stage.stageId} ($diffSign${diff.toStringAsFixed(2)}%)",
               reason: typeName,
@@ -311,6 +317,7 @@ class MatchLeadChange extends TickerEventType {
   List<TickerEvent> generateEvents({
     required ScorecardModel scorecard,
     required MatchEntry competitor,
+    required int displayedCompetitors,
     required Map<MatchEntry, MatchScoreChange> changes,
     required Map<MatchEntry, RelativeMatchScore> newScores,
     required TickerPriority priority,
@@ -332,8 +339,10 @@ class MatchLeadChange extends TickerEventType {
       }
       return [TickerEvent(
         relevantCompetitorEntryId: competitor.entryId,
+        relevantCompetitorEntryUuid: competitor.sourceId,
         generatedAt: updateTime,
         relevantCompetitorCount: newScores.length,
+        displayedCompetitorCount: displayedCompetitors,
         message: message,
         reason: typeName,
         priority: priority,
@@ -351,7 +360,9 @@ class MatchLeadChange extends TickerEventType {
       }
       return [TickerEvent(
         relevantCompetitorEntryId: competitor.entryId,
+        relevantCompetitorEntryUuid: competitor.sourceId,
         relevantCompetitorCount: newScores.length,
+        displayedCompetitorCount: displayedCompetitors,
         generatedAt: updateTime,
         message: message,
         reason: typeName,
@@ -385,6 +396,7 @@ class StageLeadChange extends TickerEventType {
   List<TickerEvent> generateEvents({
     required ScorecardModel scorecard,
     required MatchEntry competitor,
+    required int displayedCompetitors,
     required Map<MatchEntry, MatchScoreChange> changes,
     required Map<MatchEntry, RelativeMatchScore> newScores,
     required TickerPriority priority,
@@ -394,7 +406,9 @@ class StageLeadChange extends TickerEventType {
     var change = changes[competitor]!;
     if(change.stageScoreChanges.isNotEmpty) {
       for(var stageChange in change.stageScoreChanges.values) {
-        if(stageChange.newScore.place == 1 && stageChange.oldScore.place != 1) {
+        // If the old score is null, this is the first score for this stage, so don't show a 'gained the lead'
+        // message.
+        if(stageChange.newScore.place == 1 && (stageChange.oldScore?.place ?? 1) != 1) {
           var secondPlace = newScores.entries.firstWhereOrNull((e) => e.value.stageScores[stageChange.newScore.stage]?.place == 2);
           String message = "${competitor.getName(suffixes: false).toUpperCase()} (${scorecard.name}) now leads stage ${stageChange.newScore.stage.stageId}";
           if(secondPlace != null) {
@@ -406,7 +420,9 @@ class StageLeadChange extends TickerEventType {
           }
           events.add(TickerEvent(
             relevantCompetitorEntryId: competitor.entryId,
+            relevantCompetitorEntryUuid: competitor.sourceId,
             relevantCompetitorCount: newScores.length,
+            displayedCompetitorCount: displayedCompetitors,
             generatedAt: updateTime,
             message: message,
             reason: typeName,
@@ -442,6 +458,7 @@ class Disqualification extends TickerEventType {
   List<TickerEvent> generateEvents({
     required ScorecardModel scorecard,
     required MatchEntry competitor,
+    required int displayedCompetitors,
     required Map<MatchEntry, MatchScoreChange> changes,
     required Map<MatchEntry, RelativeMatchScore> newScores,
     required TickerPriority priority,
@@ -467,7 +484,9 @@ class Disqualification extends TickerEventType {
       }
       return [TickerEvent(
         relevantCompetitorEntryId: competitor.entryId,
+        relevantCompetitorEntryUuid: competitor.sourceId,
         relevantCompetitorCount: newScores.length,
+        displayedCompetitorCount: displayedCompetitors,
         generatedAt: updateTime,
         message: message,
         reason: typeName,

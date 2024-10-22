@@ -978,6 +978,28 @@ class RawScore {
     );
   }
 
+  /// Returns true if this score differs from the other score.
+  /// 
+  /// Differs means 'has different times or hits'.
+  bool equivalentTo(RawScore? other) {
+    if(other == null) return false;
+
+    // Scores are equal if raw time and scoring event counts are the same.
+    if(rawTime != other.rawTime) return false;
+    if(targetEvents.length != other.targetEvents.length) return false;
+    if(penaltyEvents.length != other.penaltyEvents.length) return false;
+
+    for(var e in targetEvents.keys) {
+      if(targetEvents[e] != other.targetEvents[e]) return false;
+    }
+
+    for(var e in penaltyEvents.keys) {
+      if(penaltyEvents[e] != other.penaltyEvents[e]) return false;
+    }
+
+    return true;
+  }
+
   @override
   String toString() {
     return displayString;

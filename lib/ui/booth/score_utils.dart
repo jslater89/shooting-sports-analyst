@@ -25,13 +25,13 @@ class MatchScoreChange {
 }
 
 class StageScoreChange {
-  RelativeStageScore oldScore;
+  RelativeStageScore? oldScore;
   RelativeStageScore newScore;
 
   StageScoreChange({required this.oldScore, required this.newScore});
 
-  double get ratioChange => newScore.ratio - oldScore.ratio;
-  int get placeChange => oldScore.place - newScore.place;
+  double get ratioChange => oldScore == null ? 0 : newScore.ratio - oldScore!.ratio;
+  int get placeChange => oldScore == null ? 0 : oldScore!.place - newScore.place;
 }
 
 Map<MatchEntry, MatchScoreChange> calculateScoreChanges(Map<MatchEntry, RelativeMatchScore> oldScores, Map<MatchEntry, RelativeMatchScore> newScores) {
@@ -63,8 +63,14 @@ Map<MatchEntry, MatchScoreChange> calculateScoreChanges(Map<MatchEntry, Relative
       var oldStageScore = oldScore.stageScores[stage];
       var newStageScore = newScore.stageScores[newStage];
 
-      if(newStageScore?.score.modified != oldStageScore?.score.modified) {
-        change.stageScoreChanges[stage] = StageScoreChange(oldScore: oldStageScore!, newScore: newStageScore!);
+      // If the new score is not null, and it is newer than the old score, and the scores
+      // have different times or hits, then it counts as a change.
+      if(newStageScore != null 
+          && newStageScore.score.modified != null 
+          && (oldStageScore == null || newStageScore.score.modified!.isAfter(oldStageScore.score.modified ?? DateTime(0)))
+          && !newStageScore.score.equivalentTo(oldStageScore?.score)
+      ) {
+        change.stageScoreChanges[stage] = StageScoreChange(oldScore: oldStageScore, newScore: newStageScore);
       }
     }
 

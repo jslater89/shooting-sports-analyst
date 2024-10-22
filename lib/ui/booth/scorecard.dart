@@ -234,6 +234,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
       for(var criterion in model.tickerModel.globalTickerCriteria) {
         var events = criterion.checkEvents(
           scorecard: widget.scorecard,
+          displayedCompetitorCount: displayedShooters.length,
           changes: changes,
           newScores: newScores,
           updateTime: model.tickerModel.lastUpdateTime,
@@ -254,6 +255,12 @@ class _BoothScorecardState extends State<BoothScorecard> {
     var match = context.read<BroadcastBoothModel>().latestMatch;
     var sizeModel = context.read<ScorecardGridSizeModel>();
     var controller = context.read<BroadcastBoothController>();
+
+    var title = "${widget.scorecard.name} (showing ${displayedShooters.length} competitors of ${scores.length} scored)";
+    if(scoreChanges.isNotEmpty) {
+      var scoreWord = scoreChanges.length == 1 ? "score" : "scores";
+      title += " (${scoreChanges.length} new ${scoreWord})";
+    }
   
     return Container(
       padding: EdgeInsets.all(2),
@@ -270,7 +277,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.only(left: 8.0),
-                    child: Text("${widget.scorecard.name} (showing ${displayedShooters.length} competitors of ${scores.length} scored)"),
+                    child: Text(title),
                   ),
                   SizedBox(
                     height: 40,
@@ -409,10 +416,10 @@ class _BoothScorecardState extends State<BoothScorecard> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              SizedBox(width: _shooterColumnWidth, child: Text(entry.getName(), textAlign: TextAlign.right)),
+              SizedBox(width: _shooterColumnWidth, child: Text(entry.getName(), textAlign: TextAlign.right, overflow: TextOverflow.fade)),
               SizedBox(width: _stageColumnWidth, child: Text("-", textAlign: TextAlign.center)),
               ...stages.map((stage) => SizedBox(width: _stageColumnWidth, child: Text("-", textAlign: TextAlign.center))),
-              SizedBox(width: _shooterColumnWidth, child: Text(entry.getName(), textAlign: TextAlign.left)),
+              SizedBox(width: _shooterColumnWidth, child: Text(entry.getName(), textAlign: TextAlign.left, overflow: TextOverflow.fade)),
             ],
           ),
         ),
@@ -431,7 +438,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Text(entry.getName(), textAlign: TextAlign.right),
+                Text(entry.getName(), textAlign: TextAlign.right, overflow: TextOverflow.fade),
                 if(score.isComplete) Tooltip(message: "All stages complete.", child: Icon(Icons.lock, size: 16, color: Colors.grey[500])),
               ],
             ),
@@ -487,7 +494,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 if(score.isComplete) Tooltip(message: "All stages complete.", child: Icon(Icons.lock, size: 16, color: Colors.grey[500])),
-                Text(entry.getName(), textAlign: TextAlign.right),
+                Text(entry.getName(), textAlign: TextAlign.right, overflow: TextOverflow.fade),
               ],
             ),
           ),

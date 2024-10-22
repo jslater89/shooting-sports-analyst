@@ -84,6 +84,8 @@ class MatchEntry extends Shooter {
 
   int? squad;
 
+  /// The unique/stable identifier for this shooter in the source data,
+  /// if entryId does not meet those criteria.
   String? sourceId;
 
   MatchEntry({

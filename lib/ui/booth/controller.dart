@@ -152,9 +152,12 @@ class BroadcastBoothController {
       }
       else {
         // Take the event with the most relevant competitors.
-        outputEvents.add(events.reduce((a, b) =>
-          a.relevantCompetitorCount > b.relevantCompetitorCount ? a : b
-        ));
+        outputEvents.add(events.reduce((a, b) {
+          if(a.relevantCompetitorCount == b.relevantCompetitorCount) {
+            return a.displayedCompetitorCount > b.displayedCompetitorCount ? a : b;
+          }
+          return a.relevantCompetitorCount > b.relevantCompetitorCount ? a : b;
+        }));
       }
     }
 
@@ -183,6 +186,7 @@ class BroadcastBoothController {
         scoreFilters: FilterSet(model.latestMatch.sport, empty: true)..mode = FilterMode.or,
         displayFilters: DisplayFilters(),
         parent: model,
+        predictionMode: model.globalScorecardSettings.predictionMode,
       )
     ]);
     model.update();
@@ -197,6 +201,7 @@ class BroadcastBoothController {
         scoreFilters: FilterSet(model.latestMatch.sport, empty: true)..mode = FilterMode.or,
         displayFilters: DisplayFilters(),
         parent: model,
+        predictionMode: model.globalScorecardSettings.predictionMode,
       ));
     }
     else {
@@ -397,7 +402,13 @@ class _TickerEventEquality {
   // priority and reason, and concern the same competitor.
   bool operator ==(Object other) {
     if(other is _TickerEventEquality) {
-      return t.priority == other.t.priority && t.reason == other.t.reason && t.relevantCompetitorEntryId == other.t.relevantCompetitorEntryId;
+      var nonIdEquality = t.priority == other.t.priority && t.reason == other.t.reason;
+      if(!nonIdEquality) return false;
+
+      if(t.relevantCompetitorEntryUuid != null) {
+        return t.relevantCompetitorEntryUuid == other.t.relevantCompetitorEntryUuid;
+      }
+      return t.relevantCompetitorEntryId == other.t.relevantCompetitorEntryId;
     }
     return false;
   }

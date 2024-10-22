@@ -233,11 +233,18 @@ class TickerEvent {
   /// The entry ID of the competitor that is most relevant to this ticker
   /// event. Generally, the competitor whose score changed.
   int relevantCompetitorEntryId;
+  /// The UUID of the competitor that is most relevant to this ticker
+  /// event. Generally, the competitor whose score changed.
+  String? relevantCompetitorEntryUuid;
   /// The number of other competitors that are also relevant to this ticker
   /// event. When discarding duplicate ticker events for the same real event,
   /// the ticker event relating to the largest number of competitors is
   /// generally the one we want to show.
   int relevantCompetitorCount;
+  /// The number of competitors displayed on the scorecard that relates to
+  /// this ticker event. When deduplicating, we will generally want to keep
+  /// the ticker event with the most competitors displayed.
+  int displayedCompetitorCount;
   /// The priority of the ticker event.
   TickerPriority priority;
 
@@ -247,6 +254,8 @@ class TickerEvent {
     required this.reason,
     required this.relevantCompetitorEntryId,
     this.relevantCompetitorCount = 1,
+    this.displayedCompetitorCount = 1,
+    this.relevantCompetitorEntryUuid,
     this.priority = TickerPriority.medium,
   });
 
@@ -362,11 +371,13 @@ class ScorecardModel {
 class DisplayFilters {
   FilterSet? filterSet;
   List<int>? entryIds;
+  List<String>? entryUuids;
   int? topN;
 
   DisplayFilters({
     this.filterSet,
     this.entryIds,
+    this.entryUuids,
     this.topN,
   });
 
@@ -374,6 +385,7 @@ class DisplayFilters {
     return DisplayFilters(
       filterSet: filterSet?.copy(),
       entryIds: entryIds?.toList(),
+      entryUuids: entryUuids?.toList(),
       topN: topN,
     );
   }
@@ -392,6 +404,10 @@ class DisplayFilters {
 
     if(entryIds != null) {
       entries.retainWhere((e) => entryIds!.contains(e.entryId));
+    }
+
+    if(entryUuids != null) {
+      entries.retainWhere((e) => entryUuids!.contains(e.sourceId));
     }
 
     return entries;

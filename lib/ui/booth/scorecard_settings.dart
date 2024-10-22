@@ -9,8 +9,11 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
+
+SSALogger _log = SSALogger("ScorecardSettingsDialog");
 
 /// ScorecardSettingsDialog is a modal host for [ScorecardSettingsWidget].
 class ScorecardSettingsDialog extends StatelessWidget {
@@ -157,16 +160,41 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
         TextButton(
           child: Text("SELECT COMPETITORS"),
           onPressed: () async {
-            var competitors = await MatchEntrySelectDialog.show(
-              context, 
-              match: widget.match, 
-              filters: scorecard.displayFilters.filterSet ?? FilterSet(widget.match.sport),
-              previousSelection: scorecard.displayFilters.entryIds ?? <int>[],
-            );
+            var previouslySelectedInts = scorecard.displayFilters.entryIds;
+            var previouslySelectedStrings = scorecard.displayFilters.entryUuids;
+
+            List<MatchEntry>? competitors;
+            if(previouslySelectedStrings != null) {
+              competitors = await MatchEntrySelectDialog.show<String>(
+                context, 
+                match: widget.match, 
+                filters: scorecard.displayFilters.filterSet ?? FilterSet(widget.match.sport),
+                previousSelection: previouslySelectedStrings,
+              );
+            }
+            else {
+              competitors = await MatchEntrySelectDialog.show<int>(
+                context, 
+                match: widget.match, 
+                filters: scorecard.displayFilters.filterSet ?? FilterSet(widget.match.sport),
+                previousSelection: previouslySelectedInts ?? <int>[],
+              );
+            }
             if(competitors != null) {
-              scorecard.displayFilters.entryIds = competitors.map((e) => e.entryId).toList();
-              if(competitors.isEmpty) {
+              if(competitors.every((e) => e.sourceId != null)) {
+                scorecard.displayFilters.entryUuids = competitors.map((e) => e.sourceId!).toList();
                 scorecard.displayFilters.entryIds = null;
+                _log.vv("Using source IDs");
+              }
+              else {
+                scorecard.displayFilters.entryIds = competitors.map((e) => e.entryId).toList();
+                scorecard.displayFilters.entryUuids = null;
+                _log.vv("Using entry IDs");
+              }
+              if(competitors.isEmpty) {
+                scorecard.displayFilters.entryUuids = null;
+                scorecard.displayFilters.entryIds = null;
+                _log.vv("No competitors selected, resetting competitor filter");
               }
 
               _applyDisplayFilters();
@@ -225,25 +253,31 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
   }
 }
 
-class MatchEntrySelectDialog extends StatefulWidget {
+/// MatchEntrySelectDialog selects match entries from a match's shooters.
+/// 
+/// If T is String, the dialog will use [MatchEntry.sourceId] as the unique identifier. Otherwise,
+/// it will use [MatchEntry.entryId].
+/// 
+/// If T is String but some entries have null source IDs, this dialog will throw an exception.
+class MatchEntrySelectDialog<T> extends StatefulWidget {
   const MatchEntrySelectDialog({super.key, required this.match, required this.filters, required this.previousSelection});
 
   final ShootingMatch match;
   final FilterSet filters;
-  final List<int> previousSelection;
+  final List<T> previousSelection;
 
   @override
-  State<MatchEntrySelectDialog> createState() => _MatchEntrySelectDialogState();
+  State<MatchEntrySelectDialog<T>> createState() => _MatchEntrySelectDialogState<T>();
 
-  static Future<List<MatchEntry>?> show(BuildContext context, {required ShootingMatch match, required FilterSet filters, required List<int> previousSelection}) {
+  static Future<List<MatchEntry>?> show<T>(BuildContext context, {required ShootingMatch match, required FilterSet filters, required List<T> previousSelection}) {
     return showDialog<List<MatchEntry>>(
       context: context,
-      builder: (context) => MatchEntrySelectDialog(match: match, filters: filters, previousSelection: previousSelection),
+      builder: (context) => MatchEntrySelectDialog<T>(match: match, filters: filters, previousSelection: previousSelection),
     );
   }
 }
 
-class _MatchEntrySelectDialogState extends State<MatchEntrySelectDialog> {
+class _MatchEntrySelectDialogState<T> extends State<MatchEntrySelectDialog<T>> {
   List<MatchEntry> selectedEntries = [];
   List<MatchEntry> baseEntries = [];
   List<MatchEntry> shooters = [];
@@ -256,7 +290,21 @@ class _MatchEntrySelectDialogState extends State<MatchEntrySelectDialog> {
     baseEntries = widget.match.applyFilterSet(widget.filters);
     baseEntries.sort((a, b) => a.lastName.compareTo(b.lastName));
     shooters = baseEntries;
-    selectedEntries = baseEntries.where((e) => widget.previousSelection.contains(e.entryId)).toList();
+
+    _log.vv("T is ${T.toString()}");
+    if(T == String) {
+      selectedEntries = baseEntries.where((e) => widget.previousSelection.contains(e.sourceId!)).toList();
+    }
+    else {
+      selectedEntries = baseEntries.where((e) => widget.previousSelection.contains(e.entryId)).toList();
+    }
+
+    if(T == String) {
+      _log.vv("Matched ${selectedEntries.length} of ${baseEntries.length} shooters using source IDs");
+    }
+    else {
+      _log.vv("Matched ${selectedEntries.length} of ${baseEntries.length} shooters using entry IDs");
+    }
   }
 
   void _updateSearch(String value) {
