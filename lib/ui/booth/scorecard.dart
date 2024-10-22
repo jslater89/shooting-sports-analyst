@@ -21,6 +21,7 @@ import 'package:shooting_sports_analyst/ui/booth/scorecard_settings.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
+import 'package:two_dimensional_scrollables/two_dimensional_scrollables.dart';
 
 SSALogger _log = SSALogger("BoothScorecard");
 
@@ -340,166 +341,154 @@ class _BoothScorecardState extends State<BoothScorecard> {
   Widget _buildTable() {
     var match = context.read<BroadcastBoothModel>().latestMatch;
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: innerScrollPhysics,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: _calculateTotalWidth(match),
-        ),
-        child: Column(
-          children: [
-            _buildHeaderRow(match),
-            Expanded(
-              child: ListView.builder(
-                padding: EdgeInsets.all(0),
-                physics: innerScrollPhysics,
-                itemCount: displayedShooters.length,
-                itemBuilder: (context, index) {
-                  return _buildScoreRow(match, displayedShooters[index], index);
-                },
+    return TableView.builder(
+      horizontalDetails: ScrollableDetails.horizontal(
+        physics: innerScrollPhysics,
+      ),
+      verticalDetails: ScrollableDetails.vertical(
+        physics: innerScrollPhysics,
+      ),
+      // all non-chrono stages, plus initial columns for competitor name and total
+      columnCount: match.stages.where((s) => !(s.scoring is IgnoredScoring)).length + 2,
+      rowCount: displayedShooters.length,
+      // pin the competitor name and total columns
+      pinnedColumnCount: 2,
+      // pin the header row
+      pinnedRowCount: 1,
+      cellBuilder: (context, vicinity) {
+        if(vicinity.row == 0) {
+          return _buildHeaderCell(context, vicinity);
+        }
+        else {
+          return _buildScoreCell(context, vicinity);
+        }
+      },
+      columnBuilder: (column) {
+        TableSpanExtent extent;
+        TableSpanDecoration? decoration;
+
+        if(column == 0) {
+          extent = FixedTableSpanExtent(_shooterColumnWidth);
+        }
+        else {
+          extent = FixedTableSpanExtent(_stageColumnWidth);
+        }
+
+        // Vertical line after the 'total' column.
+        if(column == 1) {
+          decoration = TableSpanDecoration(
+            border: TableSpanBorder(
+              trailing: BorderSide(color: Colors.black),
+            ),
+          );
+        }
+        
+        return TableSpan(
+          extent: extent,
+          backgroundDecoration: decoration,
+        );
+      },
+      rowBuilder: (row) {
+        if(row == 0) {
+          return TableSpan(
+            extent: FixedTableSpanExtent(20),
+            backgroundDecoration: TableSpanDecoration(
+              border: TableSpanBorder(
+                trailing: BorderSide(color: Colors.black),
               ),
             ),
-          ],
-        ),
-      ),
+          );
+        }
+        else {
+          return TableSpan(
+            extent: FixedTableSpanExtent(_scoreRowHeight),
+            backgroundDecoration: TableSpanDecoration(
+              color: row % 2 == 0 ? Colors.white : Colors.grey[200],
+            ),
+          );
+        }
+      },
     );
   }
 
-  double _calculateTotalWidth(ShootingMatch match) {
-    int stageCount = match.stages.where((s) => !(s.scoring is IgnoredScoring)).length;
-    return _shooterColumnWidth * 2 + _stageColumnWidth * (stageCount + 1) + 1;
+  Widget _buildHeaderCell(BuildContext context, TableVicinity vicinity) {
+    if(vicinity.column == 0) {
+      return Text("Competitor", textAlign: TextAlign.right);
+    }
+    else if(vicinity.column == 1) {
+      return Text("Total", textAlign: TextAlign.center);
+    }
+    else {
+      var match = context.read<BroadcastBoothModel>().latestMatch;
+      var stage = match.stages.where((s) => !(s.scoring is IgnoredScoring)).toList()[vicinity.column - 2];
+      return Text("Stage ${stage.stageId}", textAlign: TextAlign.center);
+    }
   }
 
   static const _shooterColumnWidth = 200.0;
   static const _stageColumnWidth = 75.0;
   static const _scoreRowHeight = 55.0;
 
-  Widget _buildHeaderRow(ShootingMatch match) {
-    var stages = match.stages.where((s) => !(s.scoring is IgnoredScoring)).toList();
-    return Container(
-      decoration: BoxDecoration(
-        border: Border(
-            bottom: BorderSide()
-        ),
-        color: Colors.white,
-      ),
-      child: Row(
-        children: [
-          SizedBox(width: _shooterColumnWidth, child: Text("Competitor", textAlign: TextAlign.right)),
-          SizedBox(width: _stageColumnWidth, child: Text("Total", textAlign: TextAlign.center)),
-          ...stages.map((stage) => Tooltip(
-            message: "${stage.name}",
-            child: SizedBox(width: _stageColumnWidth, child: Text("Stage ${stage.stageId}", textAlign: TextAlign.center))
-          )),
-          SizedBox(width: _shooterColumnWidth, child: Text("Competitor", textAlign: TextAlign.left)),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildScoreRow(ShootingMatch match, MatchEntry entry, int index) {
-    var score = scores[entry];
-    var change = scoreChanges[entry];
-
-    Map<int, bool> changedStages = {};
-    for(StageScoreChange change in change?.stageScoreChanges.values.toList() ?? <StageScoreChange>[]) {
-      changedStages[change.newScore.stage.stageId] = true;
-    }
-    var stages = match.stages.where((s) => !(s.scoring is IgnoredScoring)).toList();
-    if(score == null) {
-      return ScoreRow(
-        hoverEnabled: true,
-        bold: false,
+  Widget _buildScoreCell(BuildContext context, TableVicinity vicinity) {
+    if(vicinity.column == 0) {
+      return Center(
         child: SizedBox(
-          height: _scoreRowHeight,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              SizedBox(width: _shooterColumnWidth, child: Text(entry.getName(), textAlign: TextAlign.right, overflow: TextOverflow.fade)),
-              SizedBox(width: _stageColumnWidth, child: Text("-", textAlign: TextAlign.center)),
-              ...stages.map((stage) => SizedBox(width: _stageColumnWidth, child: Text("-", textAlign: TextAlign.center))),
-              SizedBox(width: _shooterColumnWidth, child: Text(entry.getName(), textAlign: TextAlign.left, overflow: TextOverflow.fade)),
-            ],
-          ),
+          width: _shooterColumnWidth,
+          child: Text(displayedShooters[vicinity.row - 1].getName(), textAlign: TextAlign.right),
         ),
       );
     }
-    var matchScoreColor = changedStages.isNotEmpty ? Colors.green[500] : null;
-    return ScoreRow(
-      hoverEnabled: true,
-      bold: false,
-      color: index % 2 == 0 ? Colors.white : Colors.grey[200],
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: _shooterColumnWidth,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Text(entry.getName(), textAlign: TextAlign.right, overflow: TextOverflow.fade),
-                if(score.isComplete) Tooltip(message: "All stages complete.", child: Icon(Icons.lock, size: 16, color: Colors.grey[500])),
-              ],
-            ),
-          ),
-          Container(
-            height: _scoreRowHeight,
-            decoration: BoxDecoration(
-              border: Border(
-                right: BorderSide()
-              ),
-            ),
-            child: SizedBox(
-              width: _stageColumnWidth,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  _wrapWithPlaceChange(change, OrdinalPlaceText(place: score.place, textAlign: TextAlign.center, color: matchScoreColor)),
-                  Text("${score.percentage.toStringAsFixed(2)}%", textAlign: TextAlign.center, style: TextStyle(color: matchScoreColor)),
-                  _wrapWithPointsChange(change, Text("${score.points.toStringAsFixed(1)}pt", textAlign: TextAlign.center, style: TextStyle(color: matchScoreColor))),
-                ],
-              ),
-            ),
-          ),
-          ...stages.map((stage) {
-              var stageScore = score.stageScores[stage];
-              var stageScoreColor = changedStages.containsKey(stage.stageId) ? Colors.green[500] : null;
-              if(stageScore == null || stageScore.score.dnf) {
-                return SizedBox(width: _stageColumnWidth, child: Text("-", textAlign: TextAlign.center));
-              }
-              return SizedBox(
-                width: _stageColumnWidth,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    OrdinalPlaceText(place: stageScore.place, textAlign: TextAlign.center, color: stageScoreColor),
-                    Tooltip(
-                      message: "${stageScore.points.toStringAsFixed(1)}pt",
-                      child: Text("${stageScore.percentage.toStringAsFixed(2)}%", textAlign: TextAlign.center, style: TextStyle(color: stageScoreColor))
-                    ),
-                    Tooltip(
-                      message: match.sport.displaySettings.formatTooltip(stageScore.score),
-                      child: Text(stageScore.score.displayString, textAlign: TextAlign.center, style: TextStyle(color: stageScoreColor))
-                    ),
-                  ],
-                ),
-              );
-            }
-          ),
-          SizedBox(
-            width: _shooterColumnWidth,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                if(score.isComplete) Tooltip(message: "All stages complete.", child: Icon(Icons.lock, size: 16, color: Colors.grey[500])),
-                Text(entry.getName(), textAlign: TextAlign.right, overflow: TextOverflow.fade),
-              ],
-            ),
-          ),
-        ],
-      ),
+    else {
+      var entry = displayedShooters[vicinity.row - 1];
+      var score = scores[entry];
+      var change = scoreChanges[entry];
+
+      if(vicinity.column == 1) {
+        return _buildTotalScoreCell(context, vicinity, entry, score, change);
+      }
+      else {
+        return _buildStageScoreCell(context, vicinity, entry, score, change);
+      }
+    }
+  }
+
+  Widget _buildTotalScoreCell(BuildContext context, TableVicinity vicinity, MatchEntry entry, RelativeMatchScore? score, MatchScoreChange? change) {
+    if(score == null) {
+      return Center(child: Text("-", textAlign: TextAlign.center));
+    }
+    var matchScoreColor = change != null ? Colors.green[500] : null;
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _wrapWithPlaceChange(change, OrdinalPlaceText(place: score.place, textAlign: TextAlign.center, color: matchScoreColor)),
+        Text("${score.percentage.toStringAsFixed(2)}%", textAlign: TextAlign.center, style: TextStyle(color: matchScoreColor)),
+        _wrapWithPointsChange(change, Text("${score.points.toStringAsFixed(1)}pt", textAlign: TextAlign.center, style: TextStyle(color: matchScoreColor))),
+      ],
+    );
+  }
+
+  Widget _buildStageScoreCell(BuildContext context, TableVicinity vicinity, MatchEntry entry, RelativeMatchScore? score, MatchScoreChange? change) {
+    var match = context.read<BroadcastBoothModel>().latestMatch;
+    var stages = match.stages.where((s) => !(s.scoring is IgnoredScoring)).toList();
+    var stage = stages[vicinity.column - 2];
+    var stageScore = score?.stageScores[stage];
+    var stageChange = change?.stageScoreChanges[stage];
+
+    if(stageScore == null || stageScore.score.dnf) {
+      return Center(child: Text("-", textAlign: TextAlign.center));
+    }
+
+    var stageScoreColor = stageChange != null ? Colors.green[500] : null;
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        OrdinalPlaceText(place: stageScore.place, textAlign: TextAlign.center, color: stageScoreColor),
+        Tooltip(message: "${stageScore.points.toStringAsFixed(1)}pt", child: Text("${stageScore.percentage.toStringAsFixed(2)}%", textAlign: TextAlign.center, style: TextStyle(color: stageScoreColor))),
+        Tooltip(message: match.sport.displaySettings.formatTooltip(stageScore.score), child: Text(stageScore.score.displayString, textAlign: TextAlign.center, style: TextStyle(color: stageScoreColor))),
+      ],
     );
   }
 
