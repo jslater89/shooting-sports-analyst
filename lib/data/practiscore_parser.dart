@@ -19,8 +19,11 @@ import 'package:shooting_sports_analyst/util.dart';
 var _log = SSALogger("PractiscoreParser");
 
 String getClubNameToken(String source) {
-  var tokenLine = source.split("\n").firstWhere((element) => element.startsWith('<meta name="csrf-token"'), orElse: () => "");
-  var token = tokenLine.split('"')[3];
+  var tokenLine = source.split("\n").firstWhere((element) => element.trim().startsWith('<meta name="csrf-token"'), orElse: () => "");
+  var tokenSplit = tokenLine.split('"');
+  // _log.vv("tokenLine: $tokenLine");
+  // _log.vv("tokenSplit: $tokenSplit");
+  var token = tokenSplit[3];
   return token;
 }
 
