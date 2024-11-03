@@ -101,6 +101,29 @@ abstract class ShooterRating extends Shooter {
     }
   }
 
+  /// Returns the shooter's rating as of the given date.
+  ///
+  /// If the shooter's rating history starts after the given date,
+  /// this returns the shooter's earliest rating.
+  double ratingForDate(DateTime date) {
+    RatingEvent? lastEvent;
+
+    // Find the first event that occurred before the given date.
+    for(var e in ratingEvents.reversed) {
+      if(e.match.date!.isBefore(date) && (lastEvent == null || lastEvent.match.date!.isAfter(date))) {
+        break;
+      }
+      lastEvent = e;
+    }
+
+    if(lastEvent != null) {
+      return lastEvent.newRating;
+    }
+    else {
+      return rating;
+    }
+  }
+
   /// Returns the shooter's rating change for the given event.
   ///
   /// If stage is null, returns the shooter's total rating change

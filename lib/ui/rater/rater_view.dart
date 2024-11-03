@@ -30,10 +30,12 @@ class RaterView extends StatefulWidget {
     required this.filters,
     this.onRatingsFiltered,
     this.hiddenShooters = const [],
+    this.changeSince,
   }) : super(key: key);
 
   final String? search;
   final Duration? maxAge;
+  final DateTime? changeSince;
   final RatingFilters filters;
   final int minRatings;
   final RatingHistory history;
@@ -79,7 +81,7 @@ class _RaterViewState extends State<RaterView> {
           ),
           child: Padding(
             padding: const EdgeInsets.all(2.0),
-            child: widget.rater.ratingSystem.buildRatingKey(context)
+            child: widget.rater.ratingSystem.buildRatingKey(context, trendDate: widget.changeSince)
           )
       ),
     )];
@@ -140,7 +142,7 @@ class _RaterViewState extends State<RaterView> {
       sortedRatings = sortedRatings.where((r) => !hiddenShooters.contains(r.memberNumber));
     }
 
-    var comparator = widget.rater.ratingSystem.comparatorFor(widget.sortMode) ?? widget.sortMode.comparator();
+    var comparator = widget.rater.ratingSystem.comparatorFor(widget.sortMode, changeSince: widget.changeSince) ?? widget.sortMode.comparator(changeSince: widget.changeSince);
     var asList = sortedRatings.sorted(comparator);
     
     widget.onRatingsFiltered?.call(asList);
@@ -167,6 +169,7 @@ class _RaterViewState extends State<RaterView> {
                   context: context,
                   place: i + 1,
                   rating: asList[i],
+                  trendDate: widget.changeSince,
                 )
               );
             },
@@ -220,7 +223,7 @@ extension RatingSortModeNames on RatingSortMode {
 }
 
 extension SortFunctions on RatingSortMode {
-  Comparator<ShooterRating> comparator() {
+  Comparator<ShooterRating> comparator({DateTime? changeSince}) {
     switch(this) {
       case RatingSortMode.rating:
         return (a, b) => b.rating.compareTo(a.rating);
@@ -256,7 +259,6 @@ extension SortFunctions on RatingSortMode {
           if(a is EloShooterRating && b is EloShooterRating) {
             double aLastMatchChange = a.lastMatchChange;
             double bLastMatchChange = b.lastMatchChange;
-
             return bLastMatchChange.compareTo(aLastMatchChange);
           }
           throw ArgumentError();
@@ -272,11 +274,20 @@ extension SortFunctions on RatingSortMode {
           throw ArgumentError();
         };
       case RatingSortMode.trend:
-        return (a, b) {
-          var aTrend = a.trend;
-          var bTrend = b.trend;
-          return bTrend.compareTo(aTrend);
-        };
+        if(changeSince != null) {
+          return (a, b) {
+            double aChange = a.rating - a.ratingForDate(changeSince);
+            double bChange = b.rating - b.ratingForDate(changeSince);
+            return bChange.compareTo(aChange);
+          };
+        }
+        else {
+          return (a, b) {
+            var aTrend = a.trend;
+            var bTrend = b.trend;
+            return bTrend.compareTo(aTrend);
+          };
+        }
       case RatingSortMode.stages:
         return (a, b) => b.ratingEvents.length.compareTo(a.ratingEvents.length);
       case RatingSortMode.firstName:

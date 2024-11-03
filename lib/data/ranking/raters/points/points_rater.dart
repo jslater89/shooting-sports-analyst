@@ -49,7 +49,7 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
   static const _trailPaddingFlex = 4;
 
   @override
-  Row buildRatingKey(BuildContext context) {
+  Row buildRatingKey(BuildContext context, {DateTime? trendDate}) {
     return Row(
       mainAxisSize: MainAxisSize.max,
       children: [
@@ -72,7 +72,7 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
   }
 
   @override
-  ScoreRow buildRatingRow({required BuildContext context, required int place, required ShooterRating rating}) {
+  ScoreRow buildRatingRow({required BuildContext context, required int place, required ShooterRating rating, DateTime? trendDate}) {
     rating as PointsRating;
 
     var ratingText = "";

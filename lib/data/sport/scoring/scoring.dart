@@ -1095,15 +1095,34 @@ extension ScoreListUtilities on Iterable<RawScore> {
 }
 
 extension MatchScoresToCSV on List<RelativeMatchScore> {
-  String toCSV() {
+  String toCSV({MatchStage? stage}) {
     String csv = "Member#,Name,MatchPoints,Percentage\n";
-    var sorted = this.sorted((a, b) => a.place.compareTo(b.place));
+    var sorted = this.sorted((a, b) {
+      if(stage != null) {
+        if(a.stageScores.containsKey(stage) && b.stageScores.containsKey(stage)) {
+          return a.stageScores[stage]!.place.compareTo(b.stageScores[stage]!.place);
+        }
+        else if(a.stageScores.containsKey(stage)) {
+          return -1;
+        }
+        else if(b.stageScores.containsKey(stage)) {
+          return 1;
+        }
+        else {
+          return 0;
+        }
+      }
+      else {
+        return a.place.compareTo(b.place);
+      }
+    });
 
     for(var score in sorted) {
+      var scoreOfInterest = stage == null ? score : score.stageScores[stage];
       csv += "${score.shooter.memberNumber},";
       csv += "${score.shooter.getName(suffixes: false)},";
-      csv += "${score.total.points.toStringAsFixed(2)},";
-      csv += "${score.ratio.asPercentage()}\n";
+      csv += "${stage == null ? score.total.points.toStringAsFixed(2) : scoreOfInterest?.points.toStringAsFixed(2) ?? 0},";
+      csv += "${scoreOfInterest?.ratio.asPercentage() ?? 0}\n";
     }
 
     return csv;

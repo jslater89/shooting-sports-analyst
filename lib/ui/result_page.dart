@@ -561,12 +561,18 @@ class _ResultPageState extends State<ResultPage> {
     }
     actions.add(
         Tooltip(
-            message: "Save match results to CSV.",
+            message: "Save ${_stage == null ? "match" : "stage"} results to CSV.",
             child: IconButton(
               icon: Icon(Icons.save_alt),
               onPressed: () {
-                var csv = _searchedScores.toCSV();
-                HtmlOr.saveFile("match-results.csv", csv);
+                String csv = "";
+                if(_stage == null) {
+                  csv = _searchedScores.toCSV();
+                }
+                else {
+                  csv = _searchedScores.toCSV(stage: _stage);
+                }
+                HtmlOr.saveFile("${_stage == null ? "match" : "stage"}-results.csv", csv);
               },
             )
         )

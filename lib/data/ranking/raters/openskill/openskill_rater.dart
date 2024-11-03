@@ -43,7 +43,7 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
   double get betaSquared => beta * beta;
 
   @override
-  Row buildRatingKey(BuildContext context) {
+  Row buildRatingKey(BuildContext context, {DateTime? trendDate}) {
     return Row(
         mainAxisSize: MainAxisSize.max,
         children: [
@@ -62,8 +62,11 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
   }
 
   @override
-  ScoreRow buildRatingRow({required BuildContext context, required int place, required ShooterRating rating}) {
+  ScoreRow buildRatingRow({required BuildContext context, required int place, required ShooterRating rating, DateTime? trendDate}) {
     var trend = rating.rating - rating.averageRating().firstRating;
+    if(trendDate != null) {
+      trend = rating.rating - rating.ratingForDate(trendDate);
+    }
     rating as OpenskillRating;
 
     return ScoreRow(
