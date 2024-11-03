@@ -274,6 +274,12 @@ final class RelativeStageFinishScoring extends MatchScoring {
           // is also meaningless (it's just 0%), so skip them.
           if(stagesCompleted == 0) continue;
 
+          // Average stage finish with only one stage completed means a bunch of people will have 100%
+          // predicted scores at the very start of a day, so at least wait until they have two scores
+          // and a slightly better chance of dropping some points somewhere, or overlapping with another
+          // high-quality shooter.
+          if(predictionMode == MatchPredictionMode.averageStageFinish && stagesCompleted < 2) continue;
+
           for (MatchStage stage in stages) {
             if(stage.scoring is IgnoredScoring) continue;
             var stageScore = shooter.scores[stage];
