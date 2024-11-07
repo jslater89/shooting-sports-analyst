@@ -311,6 +311,9 @@ class ScorecardModel {
   @JsonKey(defaultValue: MatchPredictionMode.none)
   MatchPredictionMode predictionMode;
 
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  bool get scoresMultipleDivisions => scoreFilters.activeDivisions.length > 1;
+
   ScorecardModel({
     required this.id,
     required this.name,

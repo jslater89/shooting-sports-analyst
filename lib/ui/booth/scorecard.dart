@@ -78,6 +78,9 @@ class _BoothScorecardState extends State<BoothScorecard> {
       }
       else {
         _log.w("${widget.scorecard.name} (${widget.hashCode} ${hashCode} ${widget.scorecard.hashCode}) was notified, but no changes detected");
+        setState(() {
+          _updateChangeFlags(model);
+        });
       }
     };
     model.addListener(listener!);
@@ -136,6 +139,10 @@ class _BoothScorecardState extends State<BoothScorecard> {
   }
 
   Future<void> _calculateScores() async {
+    if(disposed) {
+      _log.w("${widget.scorecard.name} (${widget.hashCode} ${hashCode} ${widget.scorecard.hashCode}) disposed, skipping score calculation");
+      return;
+    }
     var model = context.read<BroadcastBoothModel>();
     await model.readyFuture;
 
@@ -152,7 +159,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
       );
     }
     else if(!showingTimewarp) {
-      // skip the first ticker update after leaving timewarp, since 
+      // skip the first ticker update after leaving timewarp
       oldScores = scores;
     }
     else {
@@ -437,10 +444,25 @@ class _BoothScorecardState extends State<BoothScorecard> {
     var entry = displayedShooters[vicinity.row - 1];
     var score = scores[entry];
     var change = scoreChanges[entry];
+    var shooterTooltip = "";
+    if(widget.scorecard.scoresMultipleDivisions && entry.division != null) {
+      shooterTooltip = "${entry.division!.displayName}";
+      if(entry.classification != null) {
+        shooterTooltip += " ${entry.classification!.shortDisplayName}";
+      }
+    }
+    else if(entry.classification != null) {
+      shooterTooltip = " ${entry.classification!.shortDisplayName} ";
+    }
+
     if(vicinity.column == 0) {
       return Row(
         children: [
-          Expanded(child: Text(entry.getName(), textAlign: TextAlign.right)),
+          Expanded(child: Container()),
+          Tooltip(
+            message: shooterTooltip,
+            child: Text(entry.getName(), textAlign: TextAlign.right),
+          ),
           if(score != null && score.isComplete) Tooltip(
             message: "All stages complete",
             child: Icon(Icons.lock, color: Colors.grey[600], size: 16)
@@ -478,7 +500,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
     var stages = match.stages.where((s) => !(s.scoring is IgnoredScoring)).toList();
     var stage = stages[vicinity.column - 2];
     var stageScore = score?.stageScores[stage];
-    var stageChange = change?.stageScoreChanges[stage];
+    var stageChange = change?.stageScoreChanges.values.firstWhereOrNull((e) => e.newScore.stage.stageId == stage.stageId);
 
     if(stageScore == null || stageScore.score.dnf) {
       return Center(child: Text("-", textAlign: TextAlign.center));
