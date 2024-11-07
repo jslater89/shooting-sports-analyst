@@ -58,6 +58,7 @@ ratings*.csv
 data/l2s.sqlite
 *.isar*
 coverage/
+*booth*json
 
 # Closed sources for git status cleanliness
 # When adding a new closed-source thing, commit the stub, then
