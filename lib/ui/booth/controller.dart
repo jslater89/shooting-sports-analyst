@@ -8,6 +8,7 @@ import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
 import 'package:mutex/mutex.dart';
 import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
@@ -77,7 +78,22 @@ class BroadcastBoothController {
       player.play(AssetSource("audio/update-bell.mp3"), volume: volume);
     }
     else {
-      _log.i("No new scores since ${priorUpdateTime.toString()}");
+      if(model.tickerModel.updateBell) {
+        _log.i("No new scores since ${priorUpdateTime.toString()}");
+        if(kDebugMode) {
+          var latestScore = scores.values.reduce((a, b) {
+            var aLatest = a.stageScores.values.reduce((a, b) =>
+              (a.score.modified ?? DateTime(0)).isAfter(b.score.modified ?? DateTime(0)) ? a : b);
+
+            var bLatest = b.stageScores.values.reduce((a, b) =>
+              (a.score.modified ?? DateTime(0)).isAfter(b.score.modified ?? DateTime(0)) ? a : b);
+            return (aLatest.score.modified ?? DateTime(0)).isAfter(bLatest.score.modified ?? DateTime(0)) ? a : b;
+          });
+          var latestStageScore = latestScore.stageScores.values.reduce((a, b) =>
+            (a.score.modified ?? DateTime(0)).isAfter(b.score.modified ?? DateTime(0)) ? a : b);
+          _log.i("Latest score: ${latestStageScore.score.modified}");
+        }
+      }
     }
 
     _scheduleTickerReset();
