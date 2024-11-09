@@ -26,6 +26,8 @@ class ScorecardModel {
   FilterSet scoreFilters;
   ScorecardFilters? newScoreFilters;
 
+  TableTextSize tableTextSize;
+
   @JsonKey(includeFromJson: false, includeToJson: false)
   ScorecardFilters get fullScoreFilters {
     if(newScoreFilters == null) {
@@ -61,6 +63,7 @@ class ScorecardModel {
     required this.displayFilters,
     required this.parent,
     this.newScoreFilters,
+    this.tableTextSize = TableTextSize.normal,
     this.scoresAfter,
     this.scoresBefore,
     this.predictionMode = MatchPredictionMode.none,
@@ -78,6 +81,7 @@ class ScorecardModel {
     this.newScoreFilters,
     this.displayFilters,
     {
+      this.tableTextSize = TableTextSize.normal,
       required this.predictionMode,
       this.scoresAfter,
       this.scoresBefore,
@@ -98,6 +102,7 @@ class ScorecardModel {
       scoresAfter: scoresAfter,
       scoresBefore: scoresBefore,
       predictionMode: predictionMode,
+      tableTextSize: tableTextSize,
     );
   }
 
@@ -109,10 +114,12 @@ class ScorecardModel {
     scoresAfter = other.scoresAfter;
     scoresBefore = other.scoresBefore;
     predictionMode = other.predictionMode;
+    tableTextSize = other.tableTextSize;
   }
 
   void copyGlobalSettingsFrom(GlobalScorecardSettingsModel settings) {
     predictionMode = settings.predictionMode;
+    tableTextSize = settings.tableTextSize;
   }
 
   factory ScorecardModel.fromJson(Map<String, dynamic> json) => _$ScorecardModelFromJson(json);

@@ -111,9 +111,9 @@ class _BoothScorecardState extends State<BoothScorecard> {
     if(sc.lastPredictionMode != sc.predictionMode) {
       return true;
     }
-    if(sc.lastScorecardCount != model.scorecardCount) {
-      return true;
-    }
+    // if(sc.lastScorecardCount != model.scorecardCount) {
+    //   return true;
+    // }
     if(sc.lastScoresCalculated.isBefore(model.tickerModel.lastUpdateTime)) {
       return true;
     }
@@ -126,7 +126,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
     sc.lastScoresBefore = sc.scoresBefore;
     sc.lastScoresAfter = sc.scoresAfter;
     sc.lastPredictionMode = sc.predictionMode;
-    sc.lastScorecardCount = model.scorecardCount;
+    // sc.lastScorecardCount = model.scorecardCount;
     sc.lastScoresCalculated = model.tickerModel.lastUpdateTime;
   }
 
@@ -369,6 +369,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
   Widget _buildTable() {
     var match = context.read<BroadcastBoothModel>().latestMatch;
 
+
     return TableView.builder(
       horizontalDetails: ScrollableDetails.horizontal(
         physics: innerScrollPhysics,
@@ -395,14 +396,14 @@ class _BoothScorecardState extends State<BoothScorecard> {
       columnBuilder: (column) {
         TableSpanExtent extent;
         TableSpanDecoration? decoration;
-
+      
         if(column == 0) {
-          extent = FixedTableSpanExtent(_shooterColumnWidth);
+          extent = FixedTableSpanExtent(_shooterColumnWidth * sc.tableTextSize.fontSizeFactor);
         }
         else {
-          extent = FixedTableSpanExtent(_stageColumnWidth);
+          extent = FixedTableSpanExtent(_stageColumnWidth * sc.tableTextSize.fontSizeFactor);
         }
-
+      
         // Vertical line after the 'total' column.
         if(column == 1) {
           decoration = TableSpanDecoration(
@@ -420,7 +421,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
       rowBuilder: (row) {
         if(row == 0) {
           return TableSpan(
-            extent: FixedTableSpanExtent(_headerHeight),
+            extent: FixedTableSpanExtent(_headerHeight * sc.tableTextSize.fontSizeFactor),
             backgroundDecoration: TableSpanDecoration(
               border: TableSpanBorder(
                 trailing: BorderSide(color: Colors.black),
@@ -430,7 +431,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
         }
         else {
           return TableSpan(
-            extent: FixedTableSpanExtent(_scoreRowHeight),
+            extent: FixedTableSpanExtent(_scoreRowHeight * sc.tableTextSize.fontSizeFactor),
             backgroundDecoration: TableSpanDecoration(
               color: row % 2 == 0 ? Colors.white : Colors.grey[200],
             ),
@@ -442,16 +443,28 @@ class _BoothScorecardState extends State<BoothScorecard> {
 
   Widget _buildHeaderCell(BuildContext context, TableVicinity vicinity, ShootingMatch match) {
     if(vicinity.column == 0) {
-      return Text("Competitor", textAlign: TextAlign.right);
+      return Text(
+        "Competitor",
+        textAlign: TextAlign.right,
+        textScaleFactor: sc.tableTextSize.fontSizeFactor,
+      );
     }
     else if(vicinity.column == 1) {
-      return Text("Total", textAlign: TextAlign.center);
+      return Text(
+        "Total",
+        textAlign: TextAlign.center,
+        textScaleFactor: sc.tableTextSize.fontSizeFactor,
+      );
     }
     else {
       var stage = match.stages.where((s) => !(s.scoring is IgnoredScoring)).toList()[vicinity.column - 2];
       return Tooltip(
         message: "${stage.name} (${stage.maxPoints}pt)",
-        child: Text("Stage ${stage.stageId}", textAlign: TextAlign.center),
+        child: Text(
+          "Stage ${stage.stageId}",
+          textAlign: TextAlign.center,
+          textScaleFactor: sc.tableTextSize.fontSizeFactor,
+        ),
       );
     }
   }
@@ -484,7 +497,12 @@ class _BoothScorecardState extends State<BoothScorecard> {
           Flexible(
             child: Tooltip(
               message: shooterTooltip,
-              child: Text(entry.getName(), textAlign: TextAlign.right, softWrap: true),
+              child: Text(
+                entry.getName(),
+                textAlign: TextAlign.right,
+                softWrap: true,
+                textScaleFactor: sc.tableTextSize.fontSizeFactor,
+              ),
             ),
           ),
           if(score != null && score.isComplete) Tooltip(
@@ -513,9 +531,30 @@ class _BoothScorecardState extends State<BoothScorecard> {
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        _wrapWithPlaceChange(change, OrdinalPlaceText(place: score.place, textAlign: TextAlign.center, color: matchScoreColor)),
-        Text("${score.percentage.toStringAsFixed(2)}%", textAlign: TextAlign.center, style: TextStyle(color: matchScoreColor)),
-        _wrapWithPointsChange(change, Text("${score.points.toStringAsFixed(1)}pt", textAlign: TextAlign.center, style: TextStyle(color: matchScoreColor))),
+        _wrapWithPlaceChange(
+          change,
+          OrdinalPlaceText(
+            place: score.place,
+            textAlign: TextAlign.center,
+            color: matchScoreColor,
+            textScaleFactor: sc.tableTextSize.fontSizeFactor,
+          )
+        ),
+        Text(
+          "${score.percentage.toStringAsFixed(2)}%",
+          textAlign: TextAlign.center,
+          style: TextStyle(color: matchScoreColor),
+          textScaleFactor: sc.tableTextSize.fontSizeFactor,
+        ),
+        _wrapWithPointsChange(
+          change,
+          Text(
+            "${score.points.toStringAsFixed(1)}pt",
+            textAlign: TextAlign.center,
+            style: TextStyle(color: matchScoreColor),
+            textScaleFactor: sc.tableTextSize.fontSizeFactor,
+          )
+        ),
       ],
     );
   }
@@ -527,7 +566,13 @@ class _BoothScorecardState extends State<BoothScorecard> {
     var stageChange = change?.stageScoreChanges.values.firstWhereOrNull((e) => e.newScore.stage.stageId == stage.stageId);
 
     if(stageScore == null || stageScore.score.dnf) {
-      return Center(child: Text("-", textAlign: TextAlign.center));
+      return Center(
+        child: Text(
+          "-",
+          textAlign: TextAlign.center,
+          textScaleFactor: sc.tableTextSize.fontSizeFactor,
+        ),
+      );
     }
 
     var stageScoreColor = stageChange != null ? Colors.green[500] : null;
@@ -535,9 +580,30 @@ class _BoothScorecardState extends State<BoothScorecard> {
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        OrdinalPlaceText(place: stageScore.place, textAlign: TextAlign.center, color: stageScoreColor),
-        Tooltip(message: "${stageScore.points.toStringAsFixed(1)}pt", child: Text("${stageScore.percentage.toStringAsFixed(2)}%", textAlign: TextAlign.center, style: TextStyle(color: stageScoreColor))),
-        Tooltip(message: match.sport.displaySettings.formatTooltip(stageScore.score), child: Text(stageScore.score.displayString, textAlign: TextAlign.center, style: TextStyle(color: stageScoreColor))),
+        OrdinalPlaceText(
+          place: stageScore.place,
+          textAlign: TextAlign.center,
+          color: stageScoreColor,
+          textScaleFactor: sc.tableTextSize.fontSizeFactor,
+        ),
+        Tooltip(
+          message: "${stageScore.points.toStringAsFixed(1)}pt",
+          child: Text(
+            "${stageScore.percentage.toStringAsFixed(2)}%",
+            textAlign: TextAlign.center,
+            style: TextStyle(color: stageScoreColor),
+            textScaleFactor: sc.tableTextSize.fontSizeFactor,
+          ),
+        ),
+        Tooltip(
+          message: match.sport.displaySettings.formatTooltip(stageScore.score),
+          child: Text(
+            stageScore.score.displayString,
+            textAlign: TextAlign.center,
+            style: TextStyle(color: stageScoreColor),
+            textScaleFactor: sc.tableTextSize.fontSizeFactor,
+          ),
+        ),
       ],
     );
   }
@@ -570,11 +636,13 @@ class _BoothScorecardState extends State<BoothScorecard> {
 }
 
 class OrdinalPlaceText extends StatelessWidget {
-  const OrdinalPlaceText({super.key, required this.place, this.textAlign = TextAlign.left, this.color});
+  const OrdinalPlaceText({super.key, required this.place, this.textAlign = TextAlign.left, this.color, this.textScaleFactor});
 
   final int place;
   final TextAlign textAlign;
   final Color? color;
+  final double? textScaleFactor;
+
   @override
   Widget build(BuildContext context) {
     var prefix = "";
@@ -596,7 +664,7 @@ class OrdinalPlaceText extends StatelessWidget {
       mainAxisAlignment: _textAlignToMainAxisAlign(textAlign),
       children: [
         if(prefix.isNotEmpty) Text(prefix, style: TextStyle(color: prefixColor)),
-        Text(place.ordinalPlace, style: TextStyle(color: color)),
+        Text(place.ordinalPlace, style: TextStyle(color: color), textScaleFactor: textScaleFactor),
       ]
     );
   }

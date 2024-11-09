@@ -17,17 +17,20 @@ class GlobalScorecardSettingsModel with ChangeNotifier {
   MatchPredictionMode predictionMode;
   double minScorecardHeight;
   double minScorecardWidth;
+  TableTextSize tableTextSize;
 
   GlobalScorecardSettingsModel({
     this.predictionMode = MatchPredictionMode.none,
     this.minScorecardHeight = 400.0,
     this.minScorecardWidth = 900.0,
+    this.tableTextSize = TableTextSize.normal,
   });
 
   GlobalScorecardSettingsModel copy() => GlobalScorecardSettingsModel(
     predictionMode: predictionMode,
     minScorecardHeight: minScorecardHeight,
     minScorecardWidth: minScorecardWidth,
+    tableTextSize: tableTextSize,
   );
 
   factory GlobalScorecardSettingsModel.fromJson(Map<String, dynamic> json) => _$GlobalScorecardSettingsModelFromJson(json);
@@ -123,6 +126,20 @@ class _GlobalScorecardSettingsWidgetState extends State<GlobalScorecardSettingsW
             }
           },
         ),
+        DropdownButtonFormField<TableTextSize>(
+          value: settings.tableTextSize,
+          decoration: const InputDecoration(labelText: "Table text size"),
+          items: TableTextSize.values.map((size) => DropdownMenuItem(
+            value: size,
+            child: Text(size.uiLabel),
+          )).toList(),
+          onChanged: (value) {
+            if (value != null) {
+              model.tableTextSize = value;
+              model.validate();
+            }
+          },
+        ),
         TextFormField(
           decoration: InputDecoration(
             labelText: "Minimum scorecard width",
@@ -162,4 +179,22 @@ class _GlobalScorecardSettingsWidgetState extends State<GlobalScorecardSettingsW
       ],
     );
   }
+}
+
+enum TableTextSize {
+  small,
+  normal,
+  large;
+
+  String get uiLabel => switch(this) {
+    TableTextSize.small => "Small",
+    TableTextSize.normal => "Normal",
+    TableTextSize.large => "Large",
+  };
+
+  double get fontSizeFactor => switch(this) {
+    TableTextSize.small => 0.8,
+    TableTextSize.normal => 1.0,
+    TableTextSize.large => 1.2,
+  };
 }
