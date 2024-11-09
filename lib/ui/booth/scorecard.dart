@@ -55,7 +55,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
   @override
   void initState() {
     super.initState();
-    // _log.v("${widget.scorecard.name} (${widget.hashCode} ${hashCode} ${widget.scorecard.hashCode}) initState");
+    _log.v("${widget.scorecard.name} (${widget.hashCode} ${hashCode} ${widget.scorecard.hashCode}) initState");
    
     var model = context.read<BroadcastBoothModel>();
     cachedModel = model;
@@ -77,7 +77,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
         _calculateScores();
       }
       else {
-        _log.w("${widget.scorecard.name} (${widget.hashCode} ${hashCode} ${widget.scorecard.hashCode}) was notified, but no changes detected");
+        _log.w("${widget.scorecard.name} (${widget.hashCode} ${hashCode} ${widget.scorecard.hashCode}) was notified, but UI change flags are false");
         setState(() {
           _updateChangeFlags(model);
         });
@@ -152,7 +152,9 @@ class _BoothScorecardState extends State<BoothScorecard> {
     if(model.inTimewarp) {
       showingTimewarp = true;
       oldScores = match.getScoresFromFilters(
-        widget.scorecard.scoreFilters,
+        widget.scorecard.fullScoreFilters.filterSet!,
+        shooterUuids: widget.scorecard.fullScoreFilters.entryUuids,
+        shooterIds: widget.scorecard.fullScoreFilters.entryIds,
         scoresAfter: widget.scorecard.scoresAfter,
         scoresBefore: widget.scorecard.scoresBefore?.add(Duration(seconds: -model.tickerModel.updateInterval)),
         predictionMode: widget.scorecard.predictionMode,
@@ -168,12 +170,16 @@ class _BoothScorecardState extends State<BoothScorecard> {
 
     scores = match.getScoresFromFilters(
       widget.scorecard.scoreFilters,
+      shooterUuids: widget.scorecard.fullScoreFilters.entryUuids,
+      shooterIds: widget.scorecard.fullScoreFilters.entryIds,
       scoresAfter: widget.scorecard.scoresAfter,
       scoresBefore: widget.scorecard.scoresBefore,
       predictionMode: widget.scorecard.predictionMode,
     );
 
     displayedShooters = widget.scorecard.displayFilters.apply(match);
+    displayedShooters.retainWhere((e) => scores.keys.contains(e));
+
     displayedShooters.sort((a, b) {
       if(scores[a] == null && scores[b] == null) {
         return 0;
@@ -260,7 +266,8 @@ class _BoothScorecardState extends State<BoothScorecard> {
 
   @override
   Widget build(BuildContext context) {
-    var match = context.read<BroadcastBoothModel>().latestMatch;
+    var boothModel = context.read<BroadcastBoothModel>();
+    var match = boothModel.latestMatch;
     var sizeModel = context.read<ScorecardGridSizeModel>();
     var controller = context.read<BroadcastBoothController>();
 
@@ -269,6 +276,8 @@ class _BoothScorecardState extends State<BoothScorecard> {
       var scoreWord = scoreChanges.length == 1 ? "score" : "scores";
       title += " (${scoreChanges.length} new ${scoreWord})";
     }
+
+    var isMaximized = widget.scorecard.id == boothModel.maximizedScorecardId;
   
     return Container(
       padding: EdgeInsets.all(2),
@@ -310,6 +319,15 @@ class _BoothScorecardState extends State<BoothScorecard> {
                               _calculateScores();
                             }
                           },
+                        ),
+                        Tooltip(
+                          message: isMaximized ? "Minimize" : "Maximize",
+                          child: TextButton(
+                            child: Icon(isMaximized ? Icons.minimize : Icons.maximize),
+                            onPressed: () {
+                              controller.maximizeScorecard(isMaximized ? null : widget.scorecard);
+                            },
+                          ),
                         ),
                         TextButton(
                           child: Icon(Icons.close),

@@ -58,6 +58,12 @@ class BroadcastBoothModel with ChangeNotifier {
   List<List<ScorecardModel>> scorecards = [];
   int get scorecardCount => scorecards.map((row) => row.length).reduce((a, b) => a + b);
 
+  /// A single scorecard to be displayed in place of the entire grid.
+  int? maximizedScorecardId;
+  
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  ScorecardModel? get maximizedScorecard => maximizedScorecardId != null ? scorecards.expand((row) => row).firstWhereOrNull((scorecard) => scorecard.id == maximizedScorecardId) : null;
+
   bool get ready => _readyCompleter.isCompleted;
   Future<void> get readyFuture => _readyCompleter.future;
   Completer<void> _readyCompleter = Completer<void>();
@@ -121,6 +127,7 @@ class BroadcastBoothModel with ChangeNotifier {
     timewarpScoresBefore = other.timewarpScoresBefore;
     calculateTimewarpTickerEvents = other.calculateTimewarpTickerEvents;
     globalScorecardSettings = other.globalScorecardSettings.copy();
+    maximizedScorecardId = other.maximizedScorecardId;
   }
 }
 
@@ -301,8 +308,29 @@ class ScorecardModel {
   @JsonKey(defaultValue: 0)
   int id;
   String name;
+
+  // We're switching to full filters for scoring, but we keep the old FilterSet-only
+  // score filters for backward compatibility.
   FilterSet scoreFilters;
-  DisplayFilters displayFilters;
+  ScorecardFilters? newScoreFilters;
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  ScorecardFilters get fullScoreFilters {
+    if(newScoreFilters == null) {
+      return ScorecardFilters(
+        filterSet: scoreFilters,
+      );
+    }
+    return newScoreFilters!;
+  }
+  void setFullScoreFilters(ScorecardFilters filters) {
+    newScoreFilters = filters;
+    if(filters.filterSet == null) {
+      scoreFilters = filters.filterSet!;
+    }
+  }
+
+  ScorecardFilters displayFilters;
 
   // Time warp settings
   DateTime? scoresAfter;
@@ -312,7 +340,7 @@ class ScorecardModel {
   MatchPredictionMode predictionMode;
 
   @JsonKey(includeFromJson: false, includeToJson: false)
-  bool get scoresMultipleDivisions => scoreFilters.activeDivisions.length > 1;
+  bool get scoresMultipleDivisions => (fullScoreFilters.filterSet?.activeDivisions.length ?? 0) > 1;
 
   ScorecardModel({
     required this.id,
@@ -320,16 +348,22 @@ class ScorecardModel {
     required this.scoreFilters,
     required this.displayFilters,
     required this.parent,
+    this.newScoreFilters,
     this.scoresAfter,
     this.scoresBefore,
     this.predictionMode = MatchPredictionMode.none,
-  });
+  }) {
+    if(newScoreFilters == null) {
+      newScoreFilters = ScorecardFilters(filterSet: scoreFilters);
+    }
+  }
 
   // parent is set by the parent model
   ScorecardModel.json(
     this.id,
     this.name,
     this.scoreFilters,
+    this.newScoreFilters,
     this.displayFilters,
     {
       required this.predictionMode,
@@ -339,10 +373,14 @@ class ScorecardModel {
   );
 
   ScorecardModel copy() {
+    if(newScoreFilters == null) {
+      newScoreFilters = ScorecardFilters(filterSet: scoreFilters);
+    }
     return ScorecardModel(
       id: id,
       name: name,
-      scoreFilters: scoreFilters.copy(),
+      scoreFilters: scoreFilters,
+      newScoreFilters: newScoreFilters,
       displayFilters: displayFilters.copy(),
       parent: parent,
       scoresAfter: scoresAfter,
@@ -354,6 +392,7 @@ class ScorecardModel {
   void copyFrom(ScorecardModel other) {
     name = other.name;
     scoreFilters = other.scoreFilters.copy();
+    newScoreFilters = other.newScoreFilters?.copy();
     displayFilters = other.displayFilters.copy();
     scoresAfter = other.scoresAfter;
     scoresBefore = other.scoresBefore;
@@ -370,22 +409,30 @@ class ScorecardModel {
   String toString() => name;
 }
 
+/// Filters for a scorecard, either for scoring or display.
+/// 
+/// [filterSet] is standard Analyst match filters.
+/// [entryIds] and [entryUuids] are used to filter down to specific
+/// match entries. For PractiScore, entryUuids is preferred because
+/// entryIds is unstable between full tablet syncs, apparently.
+/// [topN] applies to display only, and limits the number of entries
+/// shown on a scorecard.
 @JsonSerializable()
-class DisplayFilters {
+class ScorecardFilters {
   FilterSet? filterSet;
   List<int>? entryIds;
   List<String>? entryUuids;
   int? topN;
 
-  DisplayFilters({
+  ScorecardFilters({
     this.filterSet,
     this.entryIds,
     this.entryUuids,
     this.topN,
   });
 
-  DisplayFilters copy() {
-    return DisplayFilters(
+  ScorecardFilters copy() {
+    return ScorecardFilters(
       filterSet: filterSet?.copy(),
       entryIds: entryIds?.toList(),
       entryUuids: entryUuids?.toList(),
@@ -418,6 +465,6 @@ class DisplayFilters {
 
   bool get isEmpty => filterSet == null && entryIds == null && topN == null;
 
-  factory DisplayFilters.fromJson(Map<String, dynamic> json) => _$DisplayFiltersFromJson(json);
-  Map<String, dynamic> toJson() => _$DisplayFiltersToJson(this);
+  factory ScorecardFilters.fromJson(Map<String, dynamic> json) => _$ScorecardFiltersFromJson(json);
+  Map<String, dynamic> toJson() => _$ScorecardFiltersToJson(this);
 }

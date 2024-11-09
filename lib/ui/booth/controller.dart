@@ -74,6 +74,7 @@ class BroadcastBoothController {
         stageScore.score.modified?.isAfter(priorUpdateTime) ?? false
       )
     )) {
+      _log.d("Playing update bell");
       var volume = model.tickerModel.updateBellVolume;
       player.play(AssetSource("audio/update-bell.mp3"), volume: volume);
     }
@@ -200,7 +201,7 @@ class BroadcastBoothController {
         id: model.nextValidScorecardId,
         name: "New scorecard",
         scoreFilters: FilterSet(model.latestMatch.sport, empty: true)..mode = FilterMode.or,
-        displayFilters: DisplayFilters(),
+        displayFilters: ScorecardFilters(),
         parent: model,
         predictionMode: model.globalScorecardSettings.predictionMode,
       )
@@ -215,7 +216,7 @@ class BroadcastBoothController {
         id: model.nextValidScorecardId,
         name: "New scorecard",
         scoreFilters: FilterSet(model.latestMatch.sport, empty: true)..mode = FilterMode.or,
-        displayFilters: DisplayFilters(),
+        displayFilters: ScorecardFilters(),
         parent: model,
         predictionMode: model.globalScorecardSettings.predictionMode,
       ));
@@ -223,6 +224,14 @@ class BroadcastBoothController {
     else {
       _log.w("Could not find scorecard row to add column");
     }
+    model.update();
+  }
+
+  /// Maximize a scorecard to take up the entire grid.
+  /// 
+  /// [scorecard] should be the scorecard to maximize, or null to clear the maximized scorecard.
+  void maximizeScorecard(ScorecardModel? scorecard) {
+    model.maximizedScorecardId = scorecard?.id;
     model.update();
   }
 

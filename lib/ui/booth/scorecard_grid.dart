@@ -113,7 +113,6 @@ class ScorecardInnerGrid extends StatefulWidget {
 
 class _ScorecardInnerGridState extends State<ScorecardInnerGrid> {
   late ScorecardGridSizeModel _gridSizeModel;
-
   final ScrollController _verticalScrollController = ScrollController();
   final ScrollController _horizontalScrollController = ScrollController();
 
@@ -127,9 +126,17 @@ class _ScorecardInnerGridState extends State<ScorecardInnerGrid> {
   @override
   Widget build(BuildContext context) {
     var model = context.watch<BroadcastBoothModel>();
-
     return LayoutBuilder(
       builder: (context, constraints) {
+        if(model.maximizedScorecardId != null) {
+          var scorecard = model.maximizedScorecard;
+          _gridSizeModel.update(rowCount: 1, columnCount: 1, size: constraints.biggest);
+          return Provider.value(
+            value: _gridSizeModel,
+            child: BoothScorecard(key: ValueKey(scorecard.hashCode), scorecard: scorecard!),
+          );
+        }
+
         int rowCount = model.scorecards.length;
         int columnCount = model.scorecards.map((row) => row.length).maxOrNull ?? 0;
 
@@ -167,7 +174,7 @@ class BoothScorecardRow extends StatelessWidget {
     var controller = context.watch<BroadcastBoothController>();
     var sizeModel = context.read<ScorecardGridSizeModel>();
     var children = <Widget>[];
-    children.addAll(scorecardRow.map((scorecard) => BoothScorecard(key: ValueKey(scorecard.hashCode),scorecard: scorecard)).toList());
+    children.addAll(scorecardRow.map((scorecard) => BoothScorecard(key: ValueKey(scorecard.hashCode), scorecard: scorecard)).toList());
     if(scorecardRow.length < sizeModel.columnCount) {
       children.add(Container(
         width: sizeModel.cardWidth,

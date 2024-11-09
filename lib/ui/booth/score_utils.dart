@@ -56,6 +56,11 @@ Map<MatchEntry, MatchScoreChange> calculateScoreChanges(Map<MatchEntry, Relative
     var nonzeroOldScores = oldScore.stageScores.values.where((s) => !s.score.dnf);
     var nonzeroNewScores = newScore.stageScores.values.where((s) => !s.score.dnf);
     for(var stage in oldScore.stageScores.keys) {
+      if(stage.scoring is IgnoredScoring) {
+        // Don't notify for e.g. chronograph
+        continue;
+      }
+
       var newStage = newScore.stageScores.keys.firstWhereOrNull((s) => s.stageId == stage.stageId);
 
       if(newStage == null) {

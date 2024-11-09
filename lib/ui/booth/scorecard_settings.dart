@@ -75,18 +75,29 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
   }
 
   void _applyScoreFilters() {
-    var scoreFiltered = widget.match.applyFilterSet(scorecard.scoreFilters);
+    var scoreFiltered = scorecard.fullScoreFilters.apply(widget.match);
+
+    if(scorecard.fullScoreFilters.entryIds != null) {
+      scoreFilteredCount = min(scoreFilteredCount, scorecard.fullScoreFilters.entryIds!.length);
+    }
+    if(scorecard.fullScoreFilters.entryUuids != null) {
+      scoreFilteredCount = min(scoreFilteredCount, scorecard.fullScoreFilters.entryUuids!.length);
+    }
     scoreFilteredCount = scoreFiltered.length;
   }
 
   void _applyDisplayFilters() {
     var displayFiltered = scorecard.displayFilters.apply(widget.match);
     displayFilteredCount = displayFiltered.length;
+    displayFilteredCount = min(displayFilteredCount, scoreFilteredCount);
     if(scorecard.displayFilters.topN != null) {
       displayFilteredCount = min(displayFilteredCount, scorecard.displayFilters.topN!);
     }
     if(scorecard.displayFilters.entryIds != null) {
       displayFilteredCount = min(displayFilteredCount, scorecard.displayFilters.entryIds!.length);
+    }
+    if(scorecard.displayFilters.entryUuids != null) {
+      displayFilteredCount = min(displayFilteredCount, scorecard.displayFilters.entryUuids!.length);
     }
   }
 
@@ -124,6 +135,51 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
 
               setState(() {
               });
+            }
+          },
+        ),
+        TextButton(
+          child: Text("SELECT COMPETITORS"),
+          onPressed: () async {
+            var previouslySelectedInts = scorecard.fullScoreFilters.entryIds;
+            var previouslySelectedStrings = scorecard.fullScoreFilters.entryUuids;
+
+            List<MatchEntry>? competitors;
+            if(previouslySelectedStrings != null) {
+              competitors = await MatchEntrySelectDialog.show<String>(
+                context, 
+                match: widget.match, 
+                filters: scorecard.fullScoreFilters.filterSet ?? FilterSet(widget.match.sport),
+                previousSelection: previouslySelectedStrings,
+              );
+            }
+            else {
+              competitors = await MatchEntrySelectDialog.show<int>(
+                context, 
+                match: widget.match, 
+                filters: scorecard.fullScoreFilters.filterSet ?? FilterSet(widget.match.sport),
+                previousSelection: previouslySelectedInts ?? <int>[],
+              );
+            }
+            if(competitors != null) {
+              if(competitors.every((e) => e.sourceId != null)) {
+                scorecard.fullScoreFilters.entryUuids = competitors.map((e) => e.sourceId!).toList();
+                scorecard.fullScoreFilters.entryIds = null;
+                _log.vv("Using source IDs");
+              }
+              else {
+                scorecard.fullScoreFilters.entryIds = competitors.map((e) => e.entryId).toList();
+                scorecard.fullScoreFilters.entryUuids = null;
+                _log.vv("Using entry IDs");
+              }
+              if(competitors.isEmpty) {
+                scorecard.fullScoreFilters.entryUuids = null;
+                scorecard.fullScoreFilters.entryIds = null;
+                _log.vv("No competitors selected, resetting competitor filter");
+              }
+
+              _applyScoreFilters();
+              setState(() {});
             }
           },
         ),
