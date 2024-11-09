@@ -94,7 +94,13 @@ class ShootingMatch {
     return newMatch;
   }
 
+  /// Calculate scores for shooters in this match, according to a provided FilterSet.
+  ///
+  /// If [shooterUuids] or [shooterIds] are provided, they will be applied after
+  /// the FilterSet.
   Map<MatchEntry, RelativeMatchScore> getScoresFromFilters(FilterSet filters, {
+    List<String>? shooterUuids,
+    List<int>? shooterIds,
     List<MatchStage>? stages,
     DateTime? scoresAfter,
     DateTime? scoresBefore,
@@ -102,6 +108,13 @@ class ShootingMatch {
     Map<RaterGroup, Rater>? ratings,
   }) {
     var innerShooters = applyFilterSet(filters);
+    if(shooterUuids != null) {
+      innerShooters.retainWhere((s) => shooterUuids.contains(s.sourceId));
+    }
+    if(shooterIds != null) {
+      innerShooters.retainWhere((s) => shooterIds.contains(s.entryId));
+    }
+
     return getScores(
       shooters: innerShooters,
       stages: stages,
