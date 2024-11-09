@@ -417,7 +417,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
       rowBuilder: (row) {
         if(row == 0) {
           return TableSpan(
-            extent: FixedTableSpanExtent(20),
+            extent: FixedTableSpanExtent(_headerHeight),
             backgroundDecoration: TableSpanDecoration(
               border: TableSpanBorder(
                 trailing: BorderSide(color: Colors.black),
@@ -455,6 +455,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
 
   static const _shooterColumnWidth = 200.0;
   static const _stageColumnWidth = 75.0;
+  static const _headerHeight = 20.0;
   static const _scoreRowHeight = 55.0;
 
 
@@ -475,11 +476,13 @@ class _BoothScorecardState extends State<BoothScorecard> {
 
     if(vicinity.column == 0) {
       return Row(
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          Expanded(child: Container()),
-          Tooltip(
-            message: shooterTooltip,
-            child: Text(entry.getName(), textAlign: TextAlign.right),
+          Flexible(
+            child: Tooltip(
+              message: shooterTooltip,
+              child: Text(entry.getName(), textAlign: TextAlign.right, softWrap: true),
+            ),
           ),
           if(score != null && score.isComplete) Tooltip(
             message: "All stages complete",
