@@ -16,6 +16,7 @@ import 'package:shooting_sports_analyst/ui/booth/controller.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
 import 'package:shooting_sports_analyst/ui/booth/score_utils.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_grid.dart';
+import 'package:shooting_sports_analyst/ui/booth/scorecard_model.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_move.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_settings.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
@@ -35,16 +36,6 @@ class BoothScorecard extends StatefulWidget {
 }
 
 class _BoothScorecardState extends State<BoothScorecard> {
-  DateTime lastScoresCalculated = DateTime(0);
-  int lastScorecardCount = 0;
-  DateTime? lastScoresBefore;
-  DateTime? lastScoresAfter;
-  MatchPredictionMode lastPredictionMode = MatchPredictionMode.none;
-
-  Map<MatchEntry, RelativeMatchScore> scores = {};
-  Map<MatchEntry, MatchScoreChange> scoreChanges = {};
-  List<MatchEntry> displayedShooters = [];
-
   VoidCallback? listener;
 
   bool disposed = false;
@@ -52,14 +43,22 @@ class _BoothScorecardState extends State<BoothScorecard> {
 
   bool showingTimewarp = false;
 
+  ScorecardModel get sc => widget.scorecard;
+
   @override
   void initState() {
     super.initState();
-    _log.v("${widget.scorecard.name} (${widget.hashCode} ${hashCode} ${widget.scorecard.hashCode}) initState");
+    // _log.v("${widget.scorecard.name} (${widget.hashCode} ${hashCode} ${widget.scorecard.hashCode}) initState");
    
     var model = context.read<BroadcastBoothModel>();
     cachedModel = model;
-    _calculateScores();
+
+    // Check for changes at init time, since all of the change
+    // properties belong to our scorecard model, and may not require
+    // recalculation at this time.
+    if(_hasChanges(model)) {
+      _calculateScores();
+    }
   
     listener = () {
       if(!mounted) {
@@ -103,19 +102,19 @@ class _BoothScorecardState extends State<BoothScorecard> {
   }
 
   bool _hasChanges(BroadcastBoothModel model) {
-    if(lastScoresBefore != widget.scorecard.scoresBefore) {
+    if(sc.lastScoresBefore != sc.scoresBefore) {
       return true;
     }
-    if(lastScoresAfter != widget.scorecard.scoresAfter) {
+    if(sc.lastScoresAfter != sc.scoresAfter) {
       return true;
     }
-    if(lastPredictionMode != widget.scorecard.predictionMode) {
+    if(sc.lastPredictionMode != sc.predictionMode) {
       return true;
     }
-    if(lastScorecardCount != model.scorecardCount) {
+    if(sc.lastScorecardCount != model.scorecardCount) {
       return true;
     }
-    if(lastScoresCalculated.isBefore(model.tickerModel.lastUpdateTime)) {
+    if(sc.lastScoresCalculated.isBefore(model.tickerModel.lastUpdateTime)) {
       return true;
     }
     return false;
@@ -124,11 +123,11 @@ class _BoothScorecardState extends State<BoothScorecard> {
   late KeyEventCallback _controlListener;
 
   void _updateChangeFlags(BroadcastBoothModel model) {
-    lastScoresBefore = widget.scorecard.scoresBefore;
-    lastScoresAfter = widget.scorecard.scoresAfter;
-    lastPredictionMode = widget.scorecard.predictionMode;
-    lastScorecardCount = model.scorecardCount;
-    lastScoresCalculated = model.tickerModel.lastUpdateTime;
+    sc.lastScoresBefore = sc.scoresBefore;
+    sc.lastScoresAfter = sc.scoresAfter;
+    sc.lastPredictionMode = sc.predictionMode;
+    sc.lastScorecardCount = model.scorecardCount;
+    sc.lastScoresCalculated = model.tickerModel.lastUpdateTime;
   }
 
   void dispose() {
@@ -162,49 +161,53 @@ class _BoothScorecardState extends State<BoothScorecard> {
     }
     else if(!showingTimewarp) {
       // skip the first ticker update after leaving timewarp
-      oldScores = scores;
+      oldScores = sc.scores;
     }
     else {
       showingTimewarp = false;
     }
 
-    scores = match.getScoresFromFilters(
-      widget.scorecard.scoreFilters,
-      shooterUuids: widget.scorecard.fullScoreFilters.entryUuids,
-      shooterIds: widget.scorecard.fullScoreFilters.entryIds,
-      scoresAfter: widget.scorecard.scoresAfter,
-      scoresBefore: widget.scorecard.scoresBefore,
-      predictionMode: widget.scorecard.predictionMode,
+    sc.scores = match.getScoresFromFilters(
+      sc.scoreFilters,
+      shooterUuids: sc.fullScoreFilters.entryUuids,
+      shooterIds: sc.fullScoreFilters.entryIds,
+      scoresAfter: sc.scoresAfter,
+      scoresBefore: sc.scoresBefore,
+      predictionMode: sc.predictionMode,
     );
 
-    displayedShooters = widget.scorecard.displayFilters.apply(match);
-    displayedShooters.retainWhere((e) => scores.keys.contains(e));
-
-    displayedShooters.sort((a, b) {
-      if(scores[a] == null && scores[b] == null) {
-        return 0;
-      }
-      else if(scores[a] == null) {
-        return 1;
-      }
-      else if(scores[b] == null) {
-        return -1;
-      }
-      return scores[b]!.points.compareTo(scores[a]!.points);
-    });
-
-    if(widget.scorecard.displayFilters.topN != null) {
-      displayedShooters = displayedShooters.take(widget.scorecard.displayFilters.topN!).toList();
-    }
+    _applyDisplayFilters(match);
 
     if(oldScores.isNotEmpty) {
-      _calculateTickerUpdates(model, oldScores, scores);
+      _calculateTickerUpdates(model, oldScores, sc.scores);
     }
 
     setState(() {
       _updateChangeFlags(model);
     });
-    _log.i("Score filters for ${widget.scorecard.name} match ${scores.length}, display filters match ${displayedShooters.length}");
+    _log.i("Score filters for ${widget.scorecard.name} match ${sc.scores.length}, display filters match ${sc.displayedShooters.length}");
+  }
+
+  void _applyDisplayFilters(ShootingMatch match) {
+    sc.displayedShooters = sc.displayFilters.apply(match);
+    sc.displayedShooters.retainWhere((e) => sc.scores.keys.contains(e));
+
+    sc.displayedShooters.sort((a, b) {
+      if(sc.scores[a] == null && sc.scores[b] == null) {
+        return 0;
+      }
+      else if(sc.scores[a] == null) {
+        return 1;
+      }
+      else if(sc.scores[b] == null) {
+        return -1;
+      }
+      return sc.scores[b]!.points.compareTo(sc.scores[a]!.points);
+    });
+
+    if(sc.displayFilters.topN != null) {
+      sc.displayedShooters = sc.displayedShooters.take(sc.displayFilters.topN!).toList();
+    }
   }
 
   void _calculateTickerUpdates(BroadcastBoothModel model, Map<MatchEntry, RelativeMatchScore> oldScores, Map<MatchEntry, RelativeMatchScore> newScores) {
@@ -244,11 +247,11 @@ class _BoothScorecardState extends State<BoothScorecard> {
 
     if(changes.isNotEmpty) {
       var controller = context.read<BroadcastBoothController>();
-      changes.removeWhere((e, c) => !displayedShooters.contains(e));
+      changes.removeWhere((e, c) => !sc.displayedShooters.contains(e));
       for(var criterion in model.tickerModel.globalTickerCriteria) {
         var events = criterion.checkEvents(
           scorecard: widget.scorecard,
-          displayedCompetitorCount: displayedShooters.length,
+          displayedCompetitorCount: sc.displayedShooters.length,
           changes: changes,
           newScores: newScores,
           updateTime: model.tickerModel.lastUpdateTime,
@@ -258,7 +261,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
     }
 
     setState(() {
-      scoreChanges = changes;
+      sc.scoreChanges = changes;
     });
   }
 
@@ -271,10 +274,10 @@ class _BoothScorecardState extends State<BoothScorecard> {
     var sizeModel = context.read<ScorecardGridSizeModel>();
     var controller = context.read<BroadcastBoothController>();
 
-    var title = "${widget.scorecard.name} (showing ${displayedShooters.length} competitors of ${scores.length} scored)";
-    if(scoreChanges.isNotEmpty) {
-      var scoreWord = scoreChanges.length == 1 ? "score" : "scores";
-      title += " (${scoreChanges.length} new ${scoreWord})";
+    var title = "${widget.scorecard.name} (showing ${sc.displayedShooters.length} competitors of ${sc.scores.length} scored)";
+    if(sc.scoreChanges.isNotEmpty) {
+      var scoreWord = sc.scoreChanges.length == 1 ? "score" : "scores";
+      title += " (${sc.scoreChanges.length} new ${scoreWord})";
     }
 
     var isMaximized = widget.scorecard.id == boothModel.maximizedScorecardId;
@@ -376,7 +379,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
       // all non-chrono stages, plus initial columns for competitor name and total
       columnCount: match.stages.where((s) => !(s.scoring is IgnoredScoring)).length + 2,
       // all displayed shooters, plus header row
-      rowCount: displayedShooters.length + 1,
+      rowCount: sc.displayedShooters.length + 1,
       // pin the competitor name and total columns
       pinnedColumnCount: 2,
       // pin the header row
@@ -460,11 +463,11 @@ class _BoothScorecardState extends State<BoothScorecard> {
 
 
   Widget _buildScoreCell(BuildContext context, TableVicinity vicinity, ShootingMatch match) {
-    var entry = displayedShooters[vicinity.row - 1];
-    var score = scores[entry];
-    var change = scoreChanges[entry];
+    var entry = sc.displayedShooters[vicinity.row - 1];
+    var score = sc.scores[entry];
+    var change = sc.scoreChanges[entry];
     var shooterTooltip = "";
-    if(widget.scorecard.scoresMultipleDivisions && entry.division != null) {
+    if(sc.scoresMultipleDivisions && entry.division != null) {
       shooterTooltip = "${entry.division!.displayName}";
       if(entry.classification != null) {
         shooterTooltip += " ${entry.classification!.shortDisplayName}";

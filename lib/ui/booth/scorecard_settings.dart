@@ -11,6 +11,7 @@ import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
+import 'package:shooting_sports_analyst/ui/booth/scorecard_model.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 
 SSALogger _log = SSALogger("ScorecardSettingsDialog");

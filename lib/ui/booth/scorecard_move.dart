@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/ui/booth/controller.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
+import 'package:shooting_sports_analyst/ui/booth/scorecard_model.dart';
 
 class ScorecardMoveDialog extends StatelessWidget {
   const ScorecardMoveDialog({super.key, required this.scorecard, required this.validMoves});

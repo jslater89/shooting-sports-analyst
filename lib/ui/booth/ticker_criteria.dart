@@ -9,6 +9,7 @@ import 'package:shooting_sports_analyst/html_or/fake_html.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
 import 'package:shooting_sports_analyst/ui/booth/score_utils.dart';
+import 'package:shooting_sports_analyst/ui/booth/scorecard_model.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 part 'ticker_criteria.g.dart';

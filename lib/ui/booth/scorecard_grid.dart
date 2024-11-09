@@ -15,6 +15,7 @@ import 'package:shooting_sports_analyst/ui/booth/controller.dart';
 import 'package:shooting_sports_analyst/ui/booth/global_card_settings_dialog.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard.dart';
+import 'package:shooting_sports_analyst/ui/booth/scorecard_model.dart';
 
 SSALogger _log = SSALogger("BoothScorecardGrid");
 
