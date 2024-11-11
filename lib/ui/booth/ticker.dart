@@ -183,7 +183,7 @@ class _BoothTickerState extends State<BoothTicker> {
                             ],
                           ),
                           onPressed: () async {
-                            var result = await GlobalScorecardSettingsDialog.show(context, settings: model.globalScorecardSettings);
+                            var result = await GlobalScorecardSettingsDialog.show(context, settings: model.globalScorecardSettings.copy());
                             if(result != null) {
                               controller.globalScorecardSettingsEdited(result);
                             }

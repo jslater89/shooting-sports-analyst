@@ -205,6 +205,7 @@ class BroadcastBoothController {
         displayFilters: ScorecardFilters(),
         parent: model,
         predictionMode: model.globalScorecardSettings.predictionMode,
+        tableTextSize: model.globalScorecardSettings.tableTextSize,
       )
     ]);
     model.update();
@@ -220,6 +221,7 @@ class BroadcastBoothController {
         displayFilters: ScorecardFilters(),
         parent: model,
         predictionMode: model.globalScorecardSettings.predictionMode,
+        tableTextSize: model.globalScorecardSettings.tableTextSize,
       ));
     }
     else {
