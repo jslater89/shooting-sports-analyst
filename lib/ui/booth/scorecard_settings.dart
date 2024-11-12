@@ -12,6 +12,7 @@ import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_model.dart';
+import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 
 SSALogger _log = SSALogger("ScorecardSettingsDialog");
@@ -304,6 +305,19 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
               },
             ),
           ],
+        ),
+        DropdownButtonFormField<MatchPredictionMode>(
+          value: scorecard.predictionMode,
+          decoration: const InputDecoration(labelText: "Prediction mode"),
+          items: MatchPredictionMode.dropdownValues(false).map((mode) => DropdownMenuItem(
+            value: mode,
+            child: Text(mode.uiLabel),
+          )).toList(),
+          onChanged: (value) {
+            if (value != null) {
+              scorecard.predictionMode = value;
+            }
+          },
         ),
       ],
     );
