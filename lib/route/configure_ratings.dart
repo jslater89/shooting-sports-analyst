@@ -1122,6 +1122,27 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         }
         break;
 
+      case _MenuEntry.reloadProjectMatches:
+        var delete = await showDialog<bool>(context: context, builder: (context) {
+          return ConfirmDialog(
+            content: Text("Reloading matches will redownload all matches in this project from PractiScore."),
+            positiveButtonLabel: "RELOAD",
+          );
+        });
+
+        if(delete ?? false) {
+          await MatchCache().ready;
+          for(var url in matchUrls) {
+            MatchCache().deleteMatchByUrl(url);
+            knownMatches.remove(url);
+          }
+
+          setState(() {});
+
+          updateUrls();
+        }
+        break;
+
 
       case _MenuEntry.clearCache:
         var delete = await showDialog<bool>(context: context, builder: (context) {
@@ -1225,6 +1246,7 @@ enum _MenuEntry {
   numberMappingBlacklist,
   numberWhitelist,
   shooterAliases,
+  reloadProjectMatches,
   clearCache;
 
   static List<_MenuEntry> get menu => [
@@ -1234,6 +1256,7 @@ enum _MenuEntry {
     numberMappingBlacklist,
     numberWhitelist,
     shooterAliases,
+    reloadProjectMatches,
     clearCache,
   ];
 
@@ -1253,6 +1276,8 @@ enum _MenuEntry {
         return "Number mapping blacklist";
       case _MenuEntry.numberWhitelist:
         return "Member number whitelist";
+      case _MenuEntry.reloadProjectMatches:
+        return "Reload matches in project";
       case _MenuEntry.clearCache:
         return "Clear cache";
       case _MenuEntry.shooterAliases:
