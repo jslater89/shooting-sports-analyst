@@ -177,6 +177,7 @@ class DbMatchStage {
   bool classifier;
   String classifierNumber;
   String scoringType;
+  String? sourceId;
 
   DbMatchStage({
     this.name = "(invalid name)",
@@ -186,6 +187,7 @@ class DbMatchStage {
     this.classifier = false,
     this.classifierNumber = "",
     this.scoringType = "(invalid)",
+    this.sourceId,
   });
 
   DbMatchStage.from(MatchStage stage) :
@@ -195,7 +197,8 @@ class DbMatchStage {
     maxPoints = stage.maxPoints,
     classifier = stage.classifier,
     classifierNumber = stage.classifierNumber,
-    scoringType = stage.scoring.dbString;
+    scoringType = stage.scoring.dbString,
+    sourceId = stage.sourceId;
 
   MatchStage hydrate() {
     return MatchStage(
@@ -206,6 +209,7 @@ class DbMatchStage {
       classifier: classifier,
       classifierNumber: classifierNumber,
       scoring: StageScoring.fromDbString(scoringType),
+      sourceId: sourceId,
     );
   }
 }
@@ -229,6 +233,7 @@ class DbMatchEntry {
   String? ageCategoryName;
   List<DbRawScore> scores;
   DbMatchScore? precalculatedScore;
+  String? sourceId;
 
   DbMatchEntry({
     this.entryId = -1,
@@ -247,6 +252,7 @@ class DbMatchEntry {
     this.squad,
     this.scores = const [],
     this.precalculatedScore,
+    this.sourceId,
   });
 
   factory DbMatchEntry.from(MatchEntry entry, RelativeMatchScore? score) {
@@ -269,6 +275,7 @@ class DbMatchEntry {
         return DbRawScore.from(stage.stageId, entry.scores[stage]!);
       }).toList(),
       precalculatedScore: DbMatchScore.from(score),
+      sourceId: entry.sourceId,
     );
   }
 
@@ -321,6 +328,7 @@ class DbMatchEntry {
       classification: classification,
       ageCategory: category,
       scores: hydratedScores.map((stage, result) => MapEntry(stage, result.unwrap())),
+      sourceId: sourceId,
     )
         ..originalMemberNumber = originalMemberNumber
         ..knownMemberNumbers = ({}..addAll(knownMemberNumbers))
@@ -336,6 +344,7 @@ class DbRawScore {
   List<DbScoringEventCount> scoringEvents;
   List<DbScoringEventCount> penaltyEvents;
   List<double> stringTimes;
+  DateTime? modified;
 
   DbRawScore({
     this.stageId = -1,
@@ -344,6 +353,7 @@ class DbRawScore {
     this.scoringEvents = const [],
     this.penaltyEvents = const [],
     this.stringTimes = const [],
+    this.modified,
   });
 
   DbRawScore.from(int stageId, RawScore score) :
@@ -352,7 +362,8 @@ class DbRawScore {
     rawTime = score.rawTime,
     stringTimes = []..addAll(score.stringTimes),
     scoringEvents = score.targetEvents.keys.map((event) => DbScoringEventCount(name: event.name, count: score.targetEvents[event]!)).toList(),
-    penaltyEvents = score.penaltyEvents.keys.map((event) => DbScoringEventCount(name: event.name, count: score.penaltyEvents[event]!)).toList();
+    penaltyEvents = score.penaltyEvents.keys.map((event) => DbScoringEventCount(name: event.name, count: score.penaltyEvents[event]!)).toList(),
+    modified = score.modified;
 
   Result<RawScore, ResultErr> hydrate(PowerFactor pf) {
     for(var event in scoringEvents) {
@@ -368,6 +379,7 @@ class DbRawScore {
       stringTimes: []..addAll(stringTimes),
       targetEvents: Map.fromEntries(scoringEvents.map((event) => MapEntry(pf.targetEvents.lookupByName(event.name)!, event.count))),
       penaltyEvents: Map.fromEntries(penaltyEvents.map((event) => MapEntry(pf.penaltyEvents.lookupByName(event.name)!, event.count))),
+      modified: modified,
     ));
   }
 }

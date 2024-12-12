@@ -11,6 +11,7 @@ import 'package:shooting_sports_analyst/util.dart';
 class SportDisplaySettings {
   /// Whether to display classification in overviews etc.
   bool showClassification;
+  bool showTime;
 
   /// The columns to display
   List<ColumnGroup> scoreColumns;
@@ -25,6 +26,7 @@ class SportDisplaySettings {
     required this.scoreColumns,
     this.showClassification = true,
     this.eventNamesAsSuffix = true,
+    this.showTime = true,
   });
 
   factory SportDisplaySettings.defaultForSport(Sport sport, {PowerFactor? powerFactor}) {
@@ -133,6 +135,19 @@ class SportDisplaySettings {
         scoreColumns: groups,
       );
     }
+  }
+
+  String formatTooltip(RawScore score) {
+    List<String> scoreComponents = [];
+    for(var column in scoreColumns) {
+      scoreComponents.add(column.format(score));
+    }
+
+    if(showTime) {
+      scoreComponents.add("${score.finalTime.toStringAsFixed(2)}s");
+    }
+
+    return scoreComponents.join(" ");
   }
 }
 

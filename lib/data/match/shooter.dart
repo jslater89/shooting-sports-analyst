@@ -253,7 +253,9 @@ enum ShooterCategory {
   junior,
   senior,
   superSenior,
-  distinguishedSenior;
+  distinguishedSenior,
+  lawEnforcement,
+  military;
   
   static ShooterCategory? fromString(String s) {
     return switch(s.toLowerCase()) {
@@ -261,6 +263,8 @@ enum ShooterCategory {
       "senior" => senior,
       "super senior" => superSenior,
       "distinguished senior" => distinguishedSenior,
+      "law enforcement" => lawEnforcement,
+      "military" => military,
       String() => null,
     };
   }
@@ -271,6 +275,8 @@ enum ShooterCategory {
       senior => "Senior",
       superSenior => "Super Senior",
       distinguishedSenior => "Distinguished Senior",
+      lawEnforcement => "Law Enforcement",
+      military => "Military",
     };
   }
 }

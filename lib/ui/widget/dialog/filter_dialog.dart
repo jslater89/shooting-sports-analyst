@@ -5,20 +5,30 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:json_annotation/json_annotation.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
+import 'package:shooting_sports_analyst/data/sport/jsonutils.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 
+part 'filter_dialog.g.dart';
+
+@JsonSerializable()
 class FilterSet {
+  @JsonKey(toJson: sportToJson, fromJson: sportFromJson)
   Sport sport;
   FilterMode mode = FilterMode.and;
   bool reentries = true;
   bool scoreDQs = true;
   bool femaleOnly = false;
 
+  @JsonKey(toJson: divisionMapToJson, includeToJson: true, includeFromJson: false)
   late Map<Division, bool> divisions;
+  @JsonKey(toJson: classificationMapToJson, includeToJson: true, includeFromJson: false)
   late Map<Classification, bool> classifications;
+  @JsonKey(toJson: powerFactorMapToJson, includeToJson: true, includeFromJson: false)
   late Map<PowerFactor, bool> powerFactors;
+  @JsonKey(toJson: ageCategoryMapToJson, includeToJson: true, includeFromJson: false)
   late Map<AgeCategory, bool> ageCategories;
   List<int> squads = [];
   List<int> knownSquads;
@@ -51,6 +61,9 @@ class FilterSet {
   }
 
   Iterable<Division> get activeDivisions => divisions.keys.where((div) => divisions[div] ?? false);
+  Iterable<Classification> get activeClassifications => classifications.keys.where((c) => classifications[c] ?? false);
+  Iterable<PowerFactor> get activePowerFactors => powerFactors.keys.where((f) => powerFactors[f] ?? false);
+  Iterable<AgeCategory> get activeAgeCategories => ageCategories.keys.where((c) => ageCategories[c] ?? false);
 
   static Map<Division, bool> divisionListToMap(Sport sport, List<Division> divisions) {
     Map<Division, bool> map = {};
@@ -60,6 +73,38 @@ class FilterSet {
 
     return map;
   }
+
+  FilterSet copy() {
+    return FilterSet.fromJson(toJson());
+  }
+
+  factory FilterSet.fromJson(Map<String, dynamic> json) {
+    var set = _$FilterSetFromJson(json);
+    var divisionMap = json['divisions'] as Map<String, dynamic>;
+    set.divisions = divisionMapFromJson(set.sport, divisionMap);
+
+    var classificationMap = json['classifications'] as Map<String, dynamic>;
+    set.classifications = classificationMapFromJson(set.sport, classificationMap);
+
+    var powerFactorMap = json['powerFactors'] as Map<String, dynamic>;
+    set.powerFactors = powerFactorMapFromJson(set.sport, powerFactorMap);
+
+    var ageCategoryMap = json['ageCategories'] as Map<String, dynamic>;
+    set.ageCategories = ageCategoryMapFromJson(set.sport, ageCategoryMap);
+    return set;
+  }
+
+  Map<String, dynamic> toJson() {
+    return _$FilterSetToJson(this);
+  }
+
+  bool get isEmpty => 
+    squads.isEmpty
+    && !femaleOnly
+    && activeDivisions.isEmpty
+    && activeClassifications.isEmpty
+    && activePowerFactors.isEmpty
+    && activeAgeCategories.isEmpty;
 }
 
 class FilterDialog extends StatefulWidget {
@@ -72,6 +117,9 @@ class FilterDialog extends StatefulWidget {
     return _FilterDialogState();
   }
 
+  static Future<FilterSet?> show(BuildContext context, FilterSet currentFilters) {
+    return showDialog<FilterSet>(context: context, builder: (context) => FilterDialog(currentFilters: currentFilters));
+  }
 }
 
 class _FilterDialogState extends State<FilterDialog> {

@@ -16,7 +16,7 @@ import 'package:shooting_sports_analyst/util.dart';
 /// A MatchSource represents some way to retrieve match data from a remote source,
 /// like a database or website. Matches are keyed by a unique ID—for PractiScore, for
 /// instance, the key is the long-style UUID.
-abstract class MatchSource {
+abstract class MatchSource<T extends InternalMatchType, S extends InternalMatchFetchOptions> {
   /// A name suitable for display.
   String get name;
 
@@ -44,7 +44,7 @@ abstract class MatchSource {
   
   /// findMatches may return a MatchSearchResult<T> if needed. See
   /// [InternalMatchType].
-  Future<Result<List<MatchSearchResult>, MatchSourceError>> findMatches(String search);
+  Future<Result<List<MatchSearchResult<T>>, MatchSourceError>> findMatches(String search);
 
   /// Given a search result, get the match it corresponds to.
   ///
@@ -60,7 +60,7 @@ abstract class MatchSource {
   /// [MatchSourceError.typeMismatch].
   ///
   /// A caller providing [sport] requires a match belonging to the provided sport.
-  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromSearch(MatchSearchResult result, {SportType? typeHint, Sport? sport});
+  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromSearch(MatchSearchResult<T> result, {SportType? typeHint, Sport? sport, S? options});
 
   /// Get a match identified by the given ID.
   ///
@@ -69,7 +69,7 @@ abstract class MatchSource {
   /// [MatchSourceError.typeMismatch].
   ///
   /// A caller providing [sport] requires a match belonging to the provided sport.
-  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromId(String id, {SportType? typeHint, Sport? sport});
+  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromId(String id, {SportType? typeHint, Sport? sport, S? options});
 
   /// Return the UI to be displayed in the 'get match' dialog.
   ///
@@ -110,7 +110,13 @@ abstract class MatchSource {
 /// If, for instance, a source uses different parsers/readers for different
 /// kinds of matches, and the correct parser can be determined from a search
 /// result, this can be used to store that information.
-interface class InternalMatchType {}
+abstract class InternalMatchType {}
+
+/// A parent class for implementation-specific match download options.
+/// 
+/// For instance, the PSv2 source uses this to indicate whether the match
+/// fetcher should attempt to download score logs and interpret them.
+abstract class InternalMatchFetchOptions {}
 
 /// A match found by interrogating the match source.
 ///

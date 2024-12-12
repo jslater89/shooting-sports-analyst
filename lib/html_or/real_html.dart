@@ -54,11 +54,11 @@ class Controller extends ControlInterface {
   bool get needsProxy => true;
 
   @override
-  void saveFile(String defaultName, String fileContents) {
-    launch("data:application/octet-stream;base64,${base64Encode(utf8.encode(fileContents))}");
+  Future<bool> saveFile(String defaultName, String fileContents) {
+    return launch("data:application/octet-stream;base64,${base64Encode(utf8.encode(fileContents))}");
   }
 
-  void saveBuffer(String defaultName, List<int> buffer) {
-    launch("data:application/octet-stream;base64,${base64Encode(buffer)}");
+  Future<bool> saveBuffer(String defaultName, List<int> buffer) {
+    return launch("data:application/octet-stream;base64,${base64Encode(buffer)}");
   }
 }

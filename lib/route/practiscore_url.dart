@@ -30,8 +30,9 @@ class PractiscoreResultPage extends StatefulWidget {
   final String? matchId;
   final String? resultUrl;
   final String sourceId;
+  final ShootingMatch? match;
 
-  const PractiscoreResultPage({Key? key, this.matchId, this.resultUrl, required this.sourceId}) : super(key: key);
+  const PractiscoreResultPage({Key? key, this.matchId, this.resultUrl, required this.sourceId, this.match}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() {
@@ -47,9 +48,20 @@ class _PractiscoreResultPageState extends State<PractiscoreResultPage> {
   void initState() {
     super.initState();
 
-    if(widget.matchId != null)        _getPractiscoreMatch();
-    else if(widget.resultUrl != null) _getResultFileMatch();
-    else throw StateError("missing match ID or result URL");
+    if(widget.match != null) {
+      setState(() {
+        _match = widget.match;
+      });
+    }
+    else if(widget.matchId != null) {
+      _getPractiscoreMatch();
+    }
+    else if(widget.resultUrl != null) {
+      _getResultFileMatch();
+    }
+    else {
+      throw StateError("missing match ID or result URL");
+    }
   }
 
   Future<void> _getResultFileMatch() async {

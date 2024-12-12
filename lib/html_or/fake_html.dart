@@ -61,23 +61,44 @@ class Controller extends ControlInterface {
   String? lastDirectoryPath;
 
   @override
-  void saveFile(String defaultName, String fileContents) async {
+  Future<bool> saveFile(String defaultName, String fileContents) async {
     _log.d("Last directory? $lastDirectoryPath");
-    var path = await FilePicker.platform.saveFile(fileName: defaultName, initialDirectory: lastDirectoryPath ?? Directory.current.absolute.path + Platform.pathSeparator);
-    if(path != null) {
-      var file = File(path);
-      lastDirectoryPath = file.parent.absolute.path;
-      await file.writeAsString(fileContents);
+    try {
+      var path = await FilePicker.platform.saveFile(fileName: defaultName, initialDirectory: lastDirectoryPath ?? Directory.current.absolute.path + Platform.pathSeparator);
+      if(path != null) {
+        var file = File(path);
+        lastDirectoryPath = file.parent.absolute.path;
+        await file.writeAsString(fileContents);
+        return true;
+      }
+      else {
+        return false;
+      }
+    }
+    catch(e) {
+      _log.e("Error saving file: $e");
+      return false;
     }
   }
 
-  void saveBuffer(String defaultName, List<int> buffer) async {
+  @override
+  Future<bool> saveBuffer(String defaultName, List<int> buffer) async {
     _log.d("Last directory? $lastDirectoryPath");
-    var path = await FilePicker.platform.saveFile(fileName: defaultName, initialDirectory: lastDirectoryPath ?? Directory.current.absolute.path + Platform.pathSeparator);
-    if(path != null) {
-      var file = File(path);
-      lastDirectoryPath = file.parent.absolute.path;
-      await file.writeAsBytes(buffer);
+    try {
+      var path = await FilePicker.platform.saveFile(fileName: defaultName, initialDirectory: lastDirectoryPath ?? Directory.current.absolute.path + Platform.pathSeparator);
+      if(path != null) {
+        var file = File(path);
+        lastDirectoryPath = file.parent.absolute.path;
+        await file.writeAsBytes(buffer);
+        return true;
+      }
+      else {
+        return false;
+      }
+    }
+    catch(e) {
+      _log.e("Error saving file: $e");
+      return false;
     }
   }
 }

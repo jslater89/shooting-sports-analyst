@@ -88,7 +88,7 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
   // ****** Self-describing UI ******
 
   List<RatingSortMode> get supportedSorts => RatingSortMode.values;
-  int Function(ShooterRating a, ShooterRating b)? comparatorFor(RatingSortMode mode) {
+  int Function(ShooterRating a, ShooterRating b)? comparatorFor(RatingSortMode mode, {DateTime? changeSince}) {
     return null;
   }
   String nameForSort(RatingSortMode mode) {
@@ -109,13 +109,16 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
   RaterSettingsWidget<S, C> newSettingsWidget(C controller);
 
   /// Return a Row containing labels for a table of shooter ratings.
-  Row buildRatingKey(BuildContext context);
+  Row buildRatingKey(BuildContext context, {DateTime? trendDate});
 
   /// Return a ScoreRow containing values for a given shooter rating in a table of shooter ratings.
   ///
   /// [rating] is guaranteed to be the subclass of ShooterRating corresponding to this
   /// rating system.
-  ScoreRow buildRatingRow({required BuildContext context, required int place, required ShooterRating rating});
+  ///
+  /// If [trendDate] is provided, the rating change since that date should be displayed in
+  /// place of the last-30-events trend.
+  ScoreRow buildRatingRow({required BuildContext context, required int place, required ShooterRating rating, DateTime? trendDate});
 
   /// Return ShooterPredictions for the list of shooters.
   ///

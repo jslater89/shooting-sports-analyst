@@ -38,7 +38,6 @@ import 'package:shooting_sports_analyst/ui/rater/rater_view.dart';
 import 'package:shooting_sports_analyst/ui/rater/rating_filter_dialog.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/associate_registrations.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_cache_chooser_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/member_number_collision_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/url_entry_dialog.dart';
@@ -81,6 +80,10 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   RatingSortMode _sortMode = RatingSortMode.rating;
   late ShootingMatch _selectedMatch;
   late TabController _tabController;
+
+  DateTime? _changeSince;
+
+  var _loadingScrollController = ScrollController();
 
   Duration durationSinceLastYear() {
     var now = DateTime.now();
@@ -272,6 +275,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                 group: t,
                 currentMatch: _selectedMatch,
                 search: _searchTerm,
+                changeSince: _changeSince,
                 minRatings: _minRatings,
                 maxAge: maxAge,
                 sortMode: _sortMode,
@@ -521,6 +525,12 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
   Future<void> _handleClick(_MenuEntry item) async {
     switch(item) {
+      case _MenuEntry.setChangeSince:
+        var date = await showDatePicker(context: context, initialDate: _changeSince ?? DateTime.now(), firstDate: DateTime(2015, 1, 1), lastDate: DateTime.now());
+        setState(() {
+          _changeSince = date;
+        });
+        break;
 
       case _MenuEntry.csvExport:
         var archive = Archive();
@@ -864,6 +874,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 }
 
 enum _MenuEntry {
+  setChangeSince,
   csvExport,
   dataErrors,
   viewResults,
@@ -871,6 +882,8 @@ enum _MenuEntry {
 
   String get label {
     switch(this) {
+      case _MenuEntry.setChangeSince:
+        return "Set date for trend";
       case _MenuEntry.csvExport:
         return "Export ratings as CSV";
       case _MenuEntry.dataErrors:

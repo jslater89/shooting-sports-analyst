@@ -63,13 +63,65 @@ final pcslSport = Sport(
     const Classification(index: 1, name: "Coachable Shooter", shortName: "CS"),
   ],
   divisions: [
-    const Division(name: "2-Gun Prac.", longName: "2-Gun Practical", shortName: "2GP", alternateNames: ["Practical"]),
-    const Division(name: "2-Gun Comp.", longName: "2-Gun Competition", shortName: "2GC"),
-    const Division(name: "Competition", shortName: "COMP", alternateNames: ["Competition (COMP)", "1-Gun Competition"], fallback: true),
-    const Division(name: "Practical Optics", shortName: "PO", alternateNames: ["Practical Optics (PO)", "1-Gun Practical Optics"]),
-    const Division(name: "Practical Irons", shortName: "PI", alternateNames: ["Practical Irons (PI)", "1-Gun Practical Irons"]),
-    const Division(name: "Actual Carry Pistol", shortName: "ACP", alternateNames: ["Actual Carry Pistol (ACP)", "1-Gun Actual Carry Pistol", "1-Gun ACP (Actual Carry Pistol)"]),
-    const Division(name: "PCC", shortName: "PCC", alternateNames: ["Pistol Caliber Carbine (PCC)", "Pistol Caliber Carbine (PCC)", "1-Gun PCC", "1-Gun Pistol Caliber Carbine"]),
+    const Division(
+      name: "Open",
+      longName: "Open",
+      shortName: "OPEN",
+    ),
+    const Division(
+      name: "Practical",
+      longName: "2-Gun Practical",
+      shortName: "2GP",
+      alternateNames: ["Practical (2-Gun)"],
+    ),
+    const Division(
+      name: "2-Gun Comp.",
+      longName: "2-Gun Competition", 
+      shortName: "2GC",
+      alternateNames: ["Competition (2-Gun)"],
+    ),
+    const Division(
+      name: "Competition",
+      shortName: "COMP",
+      alternateNames: ["Competition (COMP)", "1-Gun Competition"],
+      fallback: true,
+    ),
+    const Division(
+      name: "Practical Optics",
+      shortName: "PO",
+      alternateNames: [
+        "Practical Optics (PO)",
+        "1-Gun Practical Optics",
+        "Practical Optics (Pistol)",
+      ],
+    ),
+    const Division(
+      name: "Practical Irons",
+      shortName: "PI", 
+      alternateNames: [
+        "Practical Irons (PI)",
+        "1-Gun Practical Irons",
+        "Practical Irons (Pistol)",
+      ],
+    ),
+    const Division(
+      name: "Actual Carry Pistol",
+      shortName: "ACP",
+      alternateNames: [
+        "Actual Carry Pistol (ACP)",
+        "1-Gun Actual Carry Pistol",
+        "1-Gun ACP (Actual Carry Pistol)",
+      ],
+    ),
+    const Division(
+      name: "PCC",
+      shortName: "PCC",
+      alternateNames: [
+        "Pistol Caliber Carbine (PCC)",
+        "1-Gun PCC",
+        "1-Gun Pistol Caliber Carbine",
+      ],
+    ),
   ],
   powerFactors: [
     PowerFactor("",

@@ -107,7 +107,8 @@ class PracticalMatch {
     return newMatch;
   }
 
-  /// Looks up a stage  by name.
+  /// Looks up a stage by name. Safe to use when
+  /// the stage comes from a different match object.
   Stage? lookupStage(Stage stage) {
     for(Stage s in stages) {
       if(stage.name == s.name) return s;

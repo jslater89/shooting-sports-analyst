@@ -1,7 +1,14 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
+
 import 'dart:io';
 
 import 'package:isar/isar.dart';
-import 'package:shooting_sports_analyst/data/database/match_database.dart';
+import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
@@ -14,7 +21,7 @@ Future<void> oneoffDbAnalyses(AnalystDatabase db) async {
 
 Future<void> _lady90PercentFinishes(AnalystDatabase db) async {
   var startTime = DateTime.now();
-  var matches = await db.matchDb.dbShootingMatchs
+  var matches = await db.isar.dbShootingMatchs
     .filter()
     .shootersElement((q) =>
       q.femaleEqualTo(true)

@@ -1029,6 +1029,38 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         }
         break;
 
+      case _MenuEntry.clearCache:
+        showDialog(context: context, builder: (context) => AlertDialog(
+          title: Text("Pending reimplementation"),
+          content: Text("This feature is pending reimplementation. It will be available soon."),
+        ));
+        break;
+
+      case _MenuEntry.reloadProjectMatches:
+        showDialog(context: context, builder: (context) => AlertDialog(
+          title: Text("Pending reimplementation"),
+          content: Text("This feature is pending reimplementation. It will be available soon."),
+        ));
+        // var delete = await showDialog<bool>(context: context, builder: (context) {
+        //   return ConfirmDialog(
+        //     content: Text("Reloading matches will redownload all matches in this project from PractiScore."),
+        //     positiveButtonLabel: "RELOAD",
+        //   );
+        // });
+
+        // if(delete ?? false) {
+        //   await MatchCache().ready;
+        //   for(var url in matchUrls) {
+        //     MatchCache().deleteMatchByUrl(url);
+        //     knownMatches.remove(url);
+        //   }
+
+        //   setState(() {});
+
+        //   updateUrls();
+        // }
+        break;
+
 
       case _MenuEntry.numberMappings:
         var mappings = await showDialog<Map<String, String>>(context: context, builder: (context) {
@@ -1116,7 +1148,9 @@ enum _MenuEntry {
   numberMappings,
   numberMappingBlacklist,
   numberWhitelist,
-  shooterAliases;
+  shooterAliases,
+  reloadProjectMatches,
+  clearCache;
 
   static List<_MenuEntry> get menu => [
     hiddenShooters,
@@ -1125,6 +1159,8 @@ enum _MenuEntry {
     numberMappingBlacklist,
     numberWhitelist,
     shooterAliases,
+    reloadProjectMatches,
+    clearCache,
   ];
 
   String get label {
@@ -1143,6 +1179,10 @@ enum _MenuEntry {
         return "Number mapping blacklist";
       case _MenuEntry.numberWhitelist:
         return "Member number whitelist";
+      case _MenuEntry.reloadProjectMatches:
+        return "Reload matches in project";
+      case _MenuEntry.clearCache:
+        return "Clear cache";
       case _MenuEntry.shooterAliases:
         return "Shooter aliases";
     }

@@ -16,7 +16,7 @@ import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 
 const _uspsaPenalties = [
-  const ScoringEvent("Procedural", shortName: "P", pointChange: -10),
+  const ScoringEvent("Procedural", shortName: "P", pointChange: -10, alternateNames: ["Proc"]),
   const ScoringEvent("Overtime shot", shortName: "OS", pointChange: -5),
 ];
 
@@ -57,7 +57,7 @@ final _minorPowerFactor = PowerFactor("Minor",
     const ScoringEvent("C", pointChange: 3, alternateNames: ["B"]),
     const ScoringEvent("D", pointChange: 1),
     const ScoringEvent("M", pointChange: -10),
-    const ScoringEvent("NS", pointChange: -10),
+    const ScoringEvent("NS", pointChange: -10, alternateNames: ["NoShoot"]),
     const ScoringEvent("NPM", pointChange: 0, displayInOverview: false),
   ],
   penaltyEvents: _uspsaPenalties,

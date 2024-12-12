@@ -208,3 +208,7 @@ extension SanitizeFilename on String {
     return result.length > 255 ? result.substring(0, 255) : result;
   }
 }
+
+String yMdHm(DateTime date) {
+  return DateFormat.yMd().format(date) + " " + DateFormat.Hm().format(date);
+}

@@ -6,7 +6,6 @@
 
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
-import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
