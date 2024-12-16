@@ -1131,7 +1131,9 @@ class Rater {
   RaterStatistics getStatistics({List<ShooterRating>? ratings}) {
     if(ratings != null) return _calculateStats(ratings);
 
-    if(_cachedStats == null) _cachedStats = _calculateStats(null);
+    if(true || _cachedStats == null) {
+      _cachedStats = _calculateStats(null);
+    }
 
     return _cachedStats!;
   }
@@ -1144,8 +1146,10 @@ class Rater {
     var bucketSize = ratingSystem.histogramBucketSize(ratings.length, _matches.length);
 
     var count = ratings.length;
-    var allRatings = ratings.map((r) => r.rating);
-    var allHistoryLengths = ratings.map((r) => r.ratingEvents.length);
+    var allRatings = ratings.map((r) => r.rating).toList()..sort();
+    var allHistoryLengths = ratings.map((r) => r.ratingEvents.length).toList()..sort(
+      (a, b) => a.compareTo(b)
+    );
 
     var histogram = <int, int>{};
     var yearOfEntryHistogram = <int, int>{};
@@ -1195,9 +1199,11 @@ class Rater {
     return RaterStatistics(
       shooters: count,
       averageRating: allRatings.average,
+      medianRating: allRatings.median,
       minRating: allRatings.min,
       maxRating: allRatings.max,
       averageHistory: allHistoryLengths.average,
+      medianHistory: allHistoryLengths.median,
       histogram: histogram,
       countByClass: countsByClass,
       averageByClass: averagesByClass,
@@ -1251,9 +1257,11 @@ extension _StrengthBonus on MatchLevel {
 class RaterStatistics {
   int shooters;
   double averageRating;
+  double medianRating;
   double minRating;
   double maxRating;
   double averageHistory;
+  int medianHistory;
 
   int histogramBucketSize;
   Map<int, int> histogram;
@@ -1271,9 +1279,11 @@ class RaterStatistics {
   RaterStatistics({
     required this.shooters,
     required this.averageRating,
+    required this.medianRating,
     required this.minRating,
     required this.maxRating,
     required this.averageHistory,
+    required this.medianHistory,
     required this.countByClass,
     required this.averageByClass,
     required this.minByClass,

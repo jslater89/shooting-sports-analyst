@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:collection/collection.dart';
 import 'package:intl/intl.dart';
 
 final DateFormat programmerYmdFormat = DateFormat("yyyy-MM-dd");
@@ -76,6 +77,22 @@ extension AsyncResult<T, E extends ResultErr> on Future<Result<T, E>> {
   Future<E> unwrapErr() async {
     var res = await this;
     return res.unwrapErr();
+  }
+}
+
+extension ListStatistics<T extends Comparable> on List<T> {
+  T get median {
+    if(this.isEmpty) throw ArgumentError("empty list");
+
+    late List<T> sorted;
+    if(this.isSorted((a, b) => a.compareTo(b))) {
+      sorted = this;
+    }
+    else {
+      sorted = this.sorted((a, b) => a.compareTo(b));
+    }
+
+    return sorted[sorted.length ~/ 2];
   }
 }
 
