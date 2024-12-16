@@ -82,8 +82,14 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
       Divider(height: 2, thickness: 1),
       Row(
         children: [
-          Expanded(flex: 4, child: Text("Average rating", style: Theme.of(context).textTheme.bodyMedium)),
-          Expanded(flex: 2, child: Text("${widget.statistics.averageRating.round()}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
+          Expanded(flex: 4, child: Text("Average/median rating", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(
+            flex: 2,
+            child: Text("${widget.statistics.averageRating.round()}/${widget.statistics.medianRating.round()}",
+                style: Theme.of(context).textTheme.bodyMedium,
+                textAlign: TextAlign.right
+            )
+          ),
         ],
       ),
       Divider(height: 2, thickness: 1),
@@ -96,8 +102,11 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
       Divider(height: 2, thickness: 1),
       Row(
         children: [
-          Expanded(flex: 4, child: Text("Average history length", style: Theme.of(context).textTheme.bodyMedium)),
-          Expanded(flex: 2, child: Text("${widget.statistics.averageHistory.toStringAsFixed(1)}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
+          Expanded(flex: 4, child: Text("Average/median history length", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(
+            flex: 2, 
+            child: Text("${widget.statistics.averageHistory.toStringAsFixed(1)}/${widget.statistics.medianHistory}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)
+          ),
         ],
       ),
       Divider(height: 2, thickness: 1),
