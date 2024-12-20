@@ -27,16 +27,6 @@ extension RatingProjectDatabase on AnalystDatabase {
       var existingProject = await getRatingProjectByName(project.name);
       if(existingProject != null) {
         project.id = existingProject.id;
-
-        await isar.writeTxn(() async {
-
-          await existingProject.matches.reset();
-          await existingProject.filteredMatches.reset();
-          await existingProject.lastUsedMatches.reset();
-          await existingProject.dbGroups.reset();
-
-          return true;
-        });
       }
     }
     await isar.writeTxn(() async {

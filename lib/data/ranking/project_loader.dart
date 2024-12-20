@@ -84,16 +84,39 @@ class RatingProjectLoader {
     var lastUsed = await project.lastUsedMatches.filter().sortByDateDesc().findAll();
     bool canAppend = false;
 
+    // TODO: check consistency of project settings and reset if needed
+    // Things to check:
+    // * project sport vs match sports
+
+
+    // If this project records a list of matches used to calculate ratings, we
+    // may be able to append to it rather than running the full calculation.
+    // If every match in [matchesToAdd] is after the most recent match in [lastUsed],
+    // we can append.
     if(lastUsed.isNotEmpty) {
-      var missingMatches = matchesToAdd.where((e) => !lastUsed.contains(e)).toList();
+      // a match in matchesToAdd needs to be rated if no matches in lastUsed
+      // share a source and any source IDs with it
+      var missingMatches = matchesToAdd.where((m) =>
+        lastUsed.none((l) =>
+          l.sourceCode == m.sourceCode &&
+          l.sourceIds.any((id) => m.sourceIds.contains(id))
+        )
+      ).toList();
       var mostRecentMatch = lastUsed.first;
+      _log.i("Checking for append: cutoff date is ${mostRecentMatch.date}");
       canAppend = !fullRecalc && missingMatches.every((m) => m.date.isAfter(mostRecentMatch.date));
-      if(canAppend) matchesToAdd = missingMatches;
+      if(canAppend) {
+        matchesToAdd = missingMatches;
+      }
+    }
+    else {
+      _log.i("No last used matches (first time calculation)");
     }
 
     // nothing to do
     if(matchesToAdd.isEmpty) {
       _log.i("No new matches");
+      callback(progress: 0, total: 0, state: LoadingState.done);
       return Result.ok(null);
     }
 
@@ -101,6 +124,17 @@ class RatingProjectLoader {
       _log.i("Unable to append: resetting ratings");
       await project.resetRatings();
     }
+    else {
+      _log.i("Appending to ratings");
+    }
+
+    // If we're appending, this will be only the new matches.
+    // If we're not appending, this will be all the matches, and
+    // clearing the old list happens in the resetRatings call above.
+    project.lastUsedMatches.addAll(matchesToAdd);
+    await AnalystDatabase().isar.writeTxn(() async {
+      await project.lastUsedMatches.save();
+    });
 
     callback(progress: 0, total: matchesToAdd.length, state: LoadingState.readingMatches);
     List<ShootingMatch> hydratedMatches = [];
@@ -117,6 +151,7 @@ class RatingProjectLoader {
       else {
         var match = matchRes.unwrap();
         hydratedMatches.add(match);
+        callback(progress: hydratedMatches.length, total: matchesToAdd.length, state: LoadingState.readingMatches);
       }
     }
 
@@ -133,6 +168,8 @@ class RatingProjectLoader {
   }
 
   Future<Result<void, RatingProjectLoadError>> _addMatches(List<ShootingMatch> matches) async {
+    int totalSteps = project.groups.length * matches.length;
+    int currentStep = 0;
     for(var group in project.groups) {
       for (var match in matches) {
         // 1. For each match, add shooters.
@@ -178,6 +215,9 @@ class RatingProjectLoader {
         // May allow some processing to proceed in 'parallel', or at least while DB
         // operations are happening
         await _rankMatch(group, match);
+
+        callback(progress: currentStep, total: totalSteps, state: LoadingState.processingScores);
+        currentStep += 1;
       }
 
       // 3.2. DB-delete any shooters we added who recorded no scores in any matches in
@@ -212,6 +252,7 @@ class RatingProjectLoader {
         if(s.dq) dqs += 1;
       }
       dqsPer100.add(dqs * (100 / m.shooters.length));
+
     }
 
     matchLengths.sort();

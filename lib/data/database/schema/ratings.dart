@@ -152,6 +152,7 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
         eventCount += count;
       }
 
+      await lastUsedMatches.reset();
       var count = await ratings.filter().deleteAll();
       await ratings.reset();
       _log.i("Cleared $count ratings and $eventCount events");

@@ -5,6 +5,7 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_loader.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 SSALogger _log = SSALogger("LoadRatingsPage");
 
@@ -65,7 +66,7 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
     else {
       _log.vv("$progress/$total");
     }
-    setState(() {
+    setStateIfMounted(() {
       currentState = state;
     });
 

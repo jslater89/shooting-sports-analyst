@@ -78,6 +78,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     _sport = v;
   }
 
+  DbRatingProject? _loadedProject;
+
   bool matchCacheReady = false;
   List<DbShootingMatch> projectMatches = [];
   Map<DbShootingMatch, bool> ongoingMatches = {};
@@ -174,6 +176,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   }
 
   Future<void> _loadProject(DbRatingProject project) async {
+    _loadedProject = project;
     sport = project.sport;
     if(!project.matches.isLoaded) {
       await project.matches.load();
@@ -809,11 +812,17 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     bool isAutosave = name == RatingProjectManager.autosaveName;
     String mapName = isAutosave || _lastProjectName == null ? RatingProjectManager.autosaveName : _lastProjectName!;
 
-    var project = DbRatingProject(
-      sportName: sport.name,
-      name: _lastProjectName ?? name,
-      settings: settings,
-    );
+    DbRatingProject project;
+    if(_loadedProject != null) {
+      project = _loadedProject!;
+    }
+    else {
+      project = DbRatingProject(
+        sportName: sport.name,
+        name: _lastProjectName ?? name,
+        settings: settings,
+      );
+    }
 
     project.matches.addAll(projectMatches);
     if(filteredMatches != null && filteredMatches!.isNotEmpty) {

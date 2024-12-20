@@ -4,7 +4,10 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:ui';
+
 import 'package:collection/collection.dart';
+import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
 
 final DateFormat programmerYmdFormat = DateFormat("yyyy-MM-dd");
@@ -228,4 +231,13 @@ extension SanitizeFilename on String {
 
 String yMdHm(DateTime date) {
   return DateFormat.yMd().format(date) + " " + DateFormat.Hm().format(date);
+}
+
+extension SetStateIfMounted<T extends StatefulWidget> on State<T> {
+  void setStateIfMounted(VoidCallback fn) {
+    if(mounted) {
+      // ignore: invalid_use_of_protected_member
+      setState(fn);
+    }
+  }
 }
