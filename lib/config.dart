@@ -46,6 +46,7 @@ class ConfigLoader with ChangeNotifier {
       var doc = await TomlDocument.load("./config.toml");
       var deserialized = SerializedConfig.fromToml(doc.toMap());
       config = deserialized;
+      _log.i("Loaded config: $config");
       notifyListeners();
     }
     catch(e, st) {
@@ -54,17 +55,28 @@ class ConfigLoader with ChangeNotifier {
   }
 
   Future<void> save() async {
-
+    var doc = TomlDocument.fromMap(config.toToml());
+    var str = await doc.toString();
+    File f = File("./config.toml");
+    f.writeAsStringSync(str);
   }
 }
 
 @JsonSerializable()
 class SerializedConfig {
-  @JsonKey(defaultValue: Level.info)
+  @JsonKey(defaultValue: Level.debug)
   Level logLevel;
   
   factory SerializedConfig.fromToml(Map<String, dynamic> json) => _$SerializedConfigFromJson(json);
   Map<String, dynamic> toToml() => _$SerializedConfigToJson(this);
 
   SerializedConfig({required this.logLevel});
+
+  @override
+  String toString() {
+    var builder = StringBuffer();
+    builder.writeln("Config:");
+    builder.writeln("\tlogLevel = ${logLevel.name}");
+    return builder.toString();
+  }
 }
