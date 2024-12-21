@@ -7,11 +7,7 @@
 // ignore: avoid_web_libraries_in_flutter
 
 import 'dart:convert';
-import 'dart:io';
-import 'dart:math';
 
-
-import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:path_provider/path_provider.dart';
@@ -19,19 +15,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shooting_sports_analyst/config.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
-import 'package:shooting_sports_analyst/data/database/schema/match.dart';
-// import 'package:shooting_sports_analyst/data/db/object/match/match.dart';
-// import 'package:shooting_sports_analyst/data/db/object/rating/rating_project.dart';
-// import 'package:shooting_sports_analyst/data/db/project/project_db.dart';
-import 'package:shooting_sports_analyst/data/match/practical_match.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
-import 'package:shooting_sports_analyst/data/ranking/evolution/elo_tuner.dart';
-import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
-import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settings.dart';
-import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
-import 'package:shooting_sports_analyst/data/source/practiscore_report.dart';
-import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
-import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/db_oneoffs.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
@@ -41,9 +25,6 @@ import 'package:shooting_sports_analyst/route/practiscore_url.dart';
 import 'package:shooting_sports_analyst/route/ratings.dart';
 import 'configure_nonweb.dart' if (dart.library.html) 'configure_web.dart';
 import 'package:fluro/fluro.dart' as fluro;
-
-import 'data/ranking/evolution/genome.dart';
-import 'data/results_file_parser.dart';
 
 var _log = SSALogger("main");
 
