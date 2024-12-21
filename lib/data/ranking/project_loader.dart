@@ -125,7 +125,7 @@ class RatingProjectLoader {
       await project.resetRatings();
     }
     else {
-      _log.i("Appending to ratings");
+      _log.i("Appending ${matchesToAdd.length} matches to ratings");
     }
 
     // If we're appending, this will be only the new matches.

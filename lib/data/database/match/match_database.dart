@@ -114,7 +114,7 @@ class AnalystDatabase {
 
   Future<DbShootingMatch?> getMatchByAnySourceId(List<String> ids) async {
     for(var id in ids) {
-      var match = await isar.dbShootingMatchs.getBySourceIds([id]);
+      var match = await isar.dbShootingMatchs.getByIndex("sourceIds", [id]);
       if(match != null) return match;
     }
 
