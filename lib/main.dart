@@ -17,6 +17,7 @@ import 'package:hive/hive.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shooting_sports_analyst/config.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 // import 'package:shooting_sports_analyst/data/db/object/match/match.dart';
@@ -103,6 +104,9 @@ void main() async {
   configureApp();
 
   WidgetsFlutterBinding.ensureInitialized();
+
+  await ConfigLoader().ready;
+  initLogger();
 
   await AnalystDatabase().ready;
   _log.i("Database ready");

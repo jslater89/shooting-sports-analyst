@@ -13,15 +13,24 @@ import 'package:mutex/mutex.dart';
 import 'package:shooting_sports_analyst/config.dart';
 import 'package:stack_trace/stack_trace.dart';
 
-const _RELEASE_FILTER_LEVEL = Level.debug;
-
 SSALogger _log = SSALogger.consoleOnly("LoggerInternal");
+
+// We will log at trace level until config is loaded, at which
+// point either the config file or the default in config.dart
+// takes effect.
+Level _minLevel = Level.trace;
+
+void initLogger() {
+  ConfigLoader().addListener(() {
+    _minLevel = ConfigLoader().config.logLevel;
+  });
+}
 
 class _SSALogFilter extends LogFilter {
   @override
   bool shouldLog(LogEvent event) {
     if(kReleaseMode) {
-      if(event.level >= _RELEASE_FILTER_LEVEL) {
+      if(event.level >= _minLevel) {
         return true;
       }
       else {
@@ -203,7 +212,6 @@ class SSALogger extends LogPrinter {
   static const _callsiteLevel = kDebugMode ? Level.debug : Level.warning;
 
   late _SSALogOutput _output;
-  late Level _minLevel;
   late Logger _logger;
 
   final String tag;
@@ -221,10 +229,6 @@ class SSALogger extends LogPrinter {
     // This needs to be able to load independently of other
     // components,
     _minLevel = Level.trace;
-
-    ConfigLoader().addListener(() {
-      _minLevel = ConfigLoader().config.logLevel;
-    });
 
     _output = _SSALogOutput(console: true, file: true);
     _logger = new Logger(
