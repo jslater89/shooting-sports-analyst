@@ -5,7 +5,7 @@
  */
 
 class Timings {
-  static const enabled = false;
+  static const enabled = true;
 
   static Timings? _instance;
 

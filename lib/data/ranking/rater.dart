@@ -162,7 +162,7 @@ class Rater {
       _addShootersFromMatch(m, encounter: true);
     }
     if(Timings.enabled) timings.addShootersMillis = (DateTime.now().difference(start).inMicroseconds / 1000);
-    if(Timings.enabled) timings.shooterCount = knownShooters.length;
+    if(Timings.enabled) timings.shooterCount += knownShooters.length;
 
     if(Timings.enabled) start = DateTime.now();
     var result = _deduplicateShooters();
@@ -208,7 +208,7 @@ class Rater {
       _addShootersFromMatch(m);
     }
     if(Timings.enabled) timings.addShootersMillis = (DateTime.now().difference(start).inMicroseconds / 1000);
-    if(Timings.enabled) timings.shooterCount = knownShooters.length;
+    if(Timings.enabled) timings.shooterCount += knownShooters.length;
 
     if(Timings.enabled) start = DateTime.now();
 
