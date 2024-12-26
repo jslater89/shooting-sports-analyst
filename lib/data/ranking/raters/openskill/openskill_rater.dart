@@ -5,6 +5,7 @@
  */
 
 
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -176,6 +177,11 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
       csv += "${s.length}\n";
     }
     return csv;
+  }
+
+  @override
+  List<JsonShooterRating> ratingsToJson(List<ShooterRating> ratings) {
+    return ratings.map((e) => JsonShooterRating.fromShooterRating(e)).toList();
   }
 
   // TODO

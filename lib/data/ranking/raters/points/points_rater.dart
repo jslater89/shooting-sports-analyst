@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -213,6 +214,11 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
     }
 
     return contents;
+  }
+
+  @override
+  List<JsonShooterRating> ratingsToJson(List<ShooterRating> ratings) {
+    return ratings.map((e) => JsonShooterRating.fromShooterRating(e)).toList();
   }
 
   @override

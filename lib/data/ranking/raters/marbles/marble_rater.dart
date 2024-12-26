@@ -212,6 +212,11 @@ class MarbleRater extends RatingSystem<MarbleRating, MarbleSettings, MarbleSetti
   }
 
   @override
+  List<JsonShooterRating> ratingsToJson(List<ShooterRating> ratings) {
+    return ratings.map((e) => JsonShooterRating.fromShooterRating(e)).toList();
+  }
+
+  @override
   Map<ShooterRating<RatingEvent>, RatingChange> updateShooterRatings({
     required ShootingMatch match, bool isMatchOngoing = false,
     required List<ShooterRating> shooters,

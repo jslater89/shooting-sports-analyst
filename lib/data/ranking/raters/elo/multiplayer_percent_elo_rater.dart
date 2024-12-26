@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:collection/collection.dart';
@@ -11,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:intl/intl.dart';
+import 'package:json_annotation/json_annotation.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/gumbel.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
@@ -686,6 +688,11 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
           "${s.length}\n";
     }
     return csv;
+  }
+
+  @override
+  List<JsonShooterRating> ratingsToJson(List<ShooterRating> ratings) {
+    return ratings.map((e) => JsonShooterRating.fromShooterRating(e)).toList();
   }
 
   @override

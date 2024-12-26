@@ -5,6 +5,7 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:json_annotation/json_annotation.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
@@ -24,6 +25,8 @@ import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/ui/rater/rater_view.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 import 'package:shooting_sports_analyst/util.dart';
+
+part 'rating_system.g.dart';
 
 abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C extends RaterSettingsController<S>> {
   /// Use in rating changes
@@ -89,6 +92,12 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
   /// Return a string containing a CSV representation of the
   /// given shooter ratings.
   String ratingsToCsv(List<ShooterRating> ratings);
+
+  /// Return a string containing a JSON representation of the
+  /// given shooter ratings.
+  List<JsonShooterRating> ratingsToJson(List<ShooterRating> ratings);
+
+  /// Encode the given shooter ratings into a JSON object.
   void encodeToJson(Map<String, dynamic> json);
 
   /// Return the current settings for this rating system.
@@ -252,4 +261,34 @@ class SimpleMatchResult {
     required this.percent,
     required this.place,
   });
+}
+
+@JsonSerializable()
+class JsonShooterRating {
+  final String memberNumber;
+  final List<String> knownMemberNumbers;
+  final List<String> possibleMemberNumbers;
+  final String name;
+  final String division;
+  final double rating;
+
+  JsonShooterRating({
+    required this.memberNumber,
+    required this.name,
+    required this.division,
+    required this.rating,
+    required this.knownMemberNumbers,
+    required this.possibleMemberNumbers,
+  });
+
+  JsonShooterRating.fromShooterRating(ShooterRating rating) :
+    memberNumber = rating.memberNumber,
+    knownMemberNumbers = rating.knownMemberNumbers.toList(),
+    possibleMemberNumbers = rating.allPossibleMemberNumbers.toList(),
+    name = rating.getName(suffixes: false),
+    division = rating.division?.name ?? "(unknown)",
+    rating = rating.rating;
+
+  factory JsonShooterRating.fromJson(Map<String, dynamic> json) => _$JsonShooterRatingFromJson(json);
+  Map<String, dynamic> toJson() => _$JsonShooterRatingToJson(this);
 }

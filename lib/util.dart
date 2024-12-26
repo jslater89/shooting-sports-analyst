@@ -25,6 +25,11 @@ class NativeError extends ResultErr {
   static Result<T, NativeError> result<T>(Error e) {
     return Result.err(NativeError(e));
   }
+
+  @override
+  String toString() {
+    return "NativeError: $e";
+  }
 }
 
 class NativeException extends ResultErr {

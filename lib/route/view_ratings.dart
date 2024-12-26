@@ -6,6 +6,8 @@
 
 
 
+import 'dart:convert';
+
 import 'package:archive/archive.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
@@ -536,7 +538,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         )
       ),
       PopupMenuButton<_MenuEntry>(
-        onSelected: (item) => _handleClick(item, context),
+        onSelected: (item) => _handleClick(item),
         itemBuilder: (context) {
           List<PopupMenuEntry<_MenuEntry>> items = _MenuEntry.values.map((v) =>
             PopupMenuItem(
@@ -553,44 +555,9 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   Future<bool> _exportCsv() async {
     try {
       var archive = Archive();
-      var sport = await widget.dataSource.getSport().unwrap();
       for(var tab in activeTabs) {
-        var ratings = (await widget.dataSource.getRatings(tab).unwrap()).map((e) => (_settings.algorithm.wrapDbRating(e)));
-        var sortedRatings = ratings.where((e) => e.length >= _minRatings);
-
-        Duration? maxAge;
-        if(_maxDays > 0) {
-          maxAge = Duration(days: _maxDays);
-        }
-
-        var hiddenShooters = [];
-        for(var s in _settings.hiddenShooters) {
-          hiddenShooters.add(ShooterDeduplicator.numberProcessor(sport)(s));
-        }
-
-        if(maxAge != null) {
-          var cutoff = _selectedMatch.date;
-          cutoff = cutoff.subtract(maxAge);
-          sortedRatings = sortedRatings.where((r) => r.lastSeen.isAfter(cutoff));
-        }
-
-        if(_filters.ladyOnly) {
-          sortedRatings = sortedRatings.where((r) => r.female);
-        }
-
-        if(_filters.activeCategories.isNotEmpty) {
-          sortedRatings = sortedRatings.where((r) =>
-              _filters.activeCategories.contains(r.ageCategory));
-        }
-
-        if(hiddenShooters.isNotEmpty) {
-          sortedRatings = sortedRatings.where((r) => !hiddenShooters.contains(r.memberNumber));
-        }
-
-        var comparator = _settings.algorithm.comparatorFor(_sortMode) ?? _sortMode.comparator();
-        var asList = sortedRatings.sorted(comparator);
-
-        var csv = _settings.algorithm.ratingsToCsv(asList);
+        var ratings = await _ratingsForExport(tab);
+        var csv = _settings.algorithm.ratingsToCsv(ratings);
         archive.add(ArchiveFile.string("${tab.name.safeFilename()}.csv", csv));
       }
       var zip = ZipEncoder().encode(archive, autoClose: true);
@@ -602,7 +569,46 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     }
   }
 
-  Future<void> _handleClick(_MenuEntry item, BuildContext context) async {
+  Future<List<ShooterRating>> _ratingsForExport(RatingGroup tab) async {
+    var sport = await widget.dataSource.getSport().unwrap();
+    var ratings = (await widget.dataSource.getRatings(tab).unwrap()).map((e) => (_settings.algorithm.wrapDbRating(e)));
+    var sortedRatings = ratings.where((e) => e.length >= _minRatings);
+
+    Duration? maxAge;
+    if(_maxDays > 0) {
+      maxAge = Duration(days: _maxDays);
+    }
+
+    var hiddenShooters = [];
+    for(var s in _settings.hiddenShooters) {
+      hiddenShooters.add(ShooterDeduplicator.numberProcessor(sport)(s));
+    }
+
+    if(maxAge != null) {
+      var cutoff = _selectedMatch.date;
+      cutoff = cutoff.subtract(maxAge);
+      sortedRatings = sortedRatings.where((r) => r.lastSeen.isAfter(cutoff));
+    }
+
+    if(_filters.ladyOnly) {
+      sortedRatings = sortedRatings.where((r) => r.female);
+    }
+
+    if(_filters.activeCategories.isNotEmpty) {
+      sortedRatings = sortedRatings.where((r) =>
+          _filters.activeCategories.contains(r.ageCategory));
+    }
+
+    if(hiddenShooters.isNotEmpty) {
+      sortedRatings = sortedRatings.where((r) => !hiddenShooters.contains(r.memberNumber));
+    }
+
+    var comparator = _settings.algorithm.comparatorFor(_sortMode) ?? _sortMode.comparator();
+    var asList = sortedRatings.sorted(comparator);
+    return asList;
+  }
+
+  Future<void> _handleClick(_MenuEntry item) async {
     switch(item) {
       case _MenuEntry.setChangeSince:
         var date = await showDatePicker(context: context, initialDate: _changeSince ?? DateTime.now(), firstDate: DateTime(2015, 1, 1), lastDate: DateTime.now());
@@ -619,6 +625,16 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
           title: "Exporting ratings...",
         );
 
+      case _MenuEntry.jsonExport:
+        var archive = Archive();
+        for(var tab in activeTabs) {
+          var asList = await _ratingsForExport(tab);
+          var json = _settings.algorithm.ratingsToJson(asList);
+          var jsonString = JsonUtf8Encoder().convert(json);
+          archive.addFile(ArchiveFile("${tab.name.safeFilename()}.json", jsonString.length, jsonString));
+        }
+        var zip = ZipEncoder().encode(archive);
+        HtmlOr.saveBuffer("ratings-${_projectName.safeFilename()}-json.zip", zip);
 
       case _MenuEntry.dataErrors:
         var changed = await showDialog<bool>(barrierDismissible: false, context: context, builder: (context) => MemberNumberCorrectionListDialog(
@@ -735,6 +751,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 enum _MenuEntry {
   setChangeSince,
   csvExport,
+  jsonExport,
   dataErrors,
   viewResults,
   otherSettings;
@@ -745,6 +762,8 @@ enum _MenuEntry {
         return "Set date for trend";
       case _MenuEntry.csvExport:
         return "Export ratings as CSV";
+      case _MenuEntry.jsonExport:
+        return "Export ratings as JSON";
       case _MenuEntry.dataErrors:
         return "Fix data entry errors";
       case _MenuEntry.viewResults:
