@@ -62,7 +62,7 @@ class EloRatingEvent extends RatingEvent {
     doubleDataElements: _DoubleKeys.values.length,
   )) {
     this.info = info;
-    wrappedEvent.setMatch(DbShootingMatch.from(match), save: false);
+    wrappedEvent.setMatchId(match.sourceIds.first, load: false);
   }
 
   EloRatingEvent.wrap(DbRatingEvent event) :

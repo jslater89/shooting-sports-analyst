@@ -73,6 +73,7 @@ class RatingProjectLoader {
   Future<Result<void, RatingProjectLoadError>> calculateRatings({bool fullRecalc = false}) async {
     timings.reset();
 
+    var start = DateTime.now();
     callback(progress: -1, total: -1, state: LoadingState.readingMatches);
     var matchesLink = await project.matchesToUse();
 
@@ -121,7 +122,12 @@ class RatingProjectLoader {
     }
 
     if(!canAppend) {
-      _log.i("Unable to append: resetting ratings");
+      if(fullRecalc) {
+        _log.i("Unable to append: full recalculation requested");
+      }
+      else {
+        _log.i("Unable to append: resetting ratings");
+      }
       await project.resetRatings();
     }
     else {
@@ -155,6 +161,8 @@ class RatingProjectLoader {
       }
     }
 
+    if(Timings.enabled) timings.retrieveMatchesMillis = (DateTime.now().difference(start).inMilliseconds).toDouble();
+
     callback(progress: 0, total: matchesToAdd.length, state: LoadingState.processingScores);
     var result = await _addMatches(hydratedMatches);
     if(result.isErr()) return Result.errFrom(result);
@@ -167,65 +175,83 @@ class RatingProjectLoader {
     return _addMatches([match]);
   }
 
-  Future<Result<void, RatingProjectLoadError>> _addMatches(List<ShootingMatch> matches) async {
-    int totalSteps = project.groups.length * matches.length;
-    int currentStep = 0;
-    for(var group in project.groups) {
-      for (var match in matches) {
-        // 1. For each match, add shooters.
-        await _addShootersFromMatch(group, match);
-      }
 
-      // 2. Deduplicate shooters.
-      // TODO
-      // The only way around having to load every shooter for deduplication is to
-      // store some of what we currently calculate in deduplicateShooters ahead of
-      // time, when we do _addShootersFromMatch. I think we mostly need a list of numbers
-      // per recorded name, although maybe the other way around would be good to have too?
+  int _totalMatchSteps = 0;
+  int _currentMatchStep = 0;
+  Future<Result<void, RatingProjectLoadError>> _addMatchesToGroup(RatingGroup group, List<ShootingMatch> matches) async {
+    for (var match in matches) {
+      // 1. For each match, add shooters.
+      await _addShootersFromMatch(group, match);
+    }
 
-      // At this point we have an accurate count of shooters so far, which we'll need for various maths.
-      var shooterCount = await AnalystDatabase().countShooterRatings(project, group);
+    // 2. Deduplicate shooters.
+    // TODO
+    // The only way around having to load every shooter for deduplication is to
+    // store some of what we currently calculate in deduplicateShooters ahead of
+    // time, when we do _addShootersFromMatch. I think we mostly need a list of numbers
+    // per recorded name, although maybe the other way around would be good to have too?
 
-      for (var match in matches) {
-        // 3.1.1. Check recognized divisions
-        var onlyDivisions = settings.recognizedDivisions[match.sourceIds.first];
-        if(onlyDivisions != null) {
-          var divisionsOfInterest = group.filters.divisions.entries.where((e) => e.value).map((e) => e.key).toList();
+    // At this point we have an accurate count of shooters so far, which we'll need for various maths.
+    var shooterCount = await AnalystDatabase().countShooterRatings(project, group);
 
-          // Process this iff onlyDivisions contains at least one division of interest
-          // e.g. this rater/dOI is prod, oD is open/limited; oD contains 0 of dOI, so
-          // skip.
-          //
-          // e.g. this rater/dOI is lim/CO, oD is open/limited; oD contains 1 of dOI,
-          // so don't skip.
-          bool skip = true;
-          for(var d in divisionsOfInterest) {
-            if(onlyDivisions.contains(d)) {
-              skip = false;
-              break;
-            }
-          }
-          if(skip) {
-            continue;
+    var start = DateTime.now();
+    for (var match in matches) {
+      // 3.1.1. Check recognized divisions
+      var onlyDivisions = settings.recognizedDivisions[match.sourceIds.first];
+      if(onlyDivisions != null) {
+        var divisionsOfInterest = group.filters.divisions.entries.where((e) => e.value).map((e) => e.key).toList();
+
+        // Process this iff onlyDivisions contains at least one division of interest
+        // e.g. this rater/dOI is prod, oD is open/limited; oD contains 0 of dOI, so
+        // skip.
+        //
+        // e.g. this rater/dOI is lim/CO, oD is open/limited; oD contains 1 of dOI,
+        // so don't skip.
+        bool skip = true;
+        for(var d in divisionsOfInterest) {
+          if(onlyDivisions.contains(d)) {
+            skip = false;
+            break;
           }
         }
-
-        // 3.1.2. Rank match through code in Rater
-        // TODO: may be possible to remove this 'await' once everything is working
-        // May allow some processing to proceed in 'parallel', or at least while DB
-        // operations are happening
-        await _rankMatch(group, match);
-
-        callback(progress: currentStep, total: totalSteps, state: LoadingState.processingScores);
-        currentStep += 1;
+        if(skip) {
+          continue;
+        }
       }
 
-      // 3.2. DB-delete any shooters we added who recorded no scores in any matches in
-      // this group.
-
-      var count = await db.countShooterRatings(project, group);
-      _log.i("Initial ratings complete for $count shooters in ${matches.length} matches in ${group.filters.activeDivisions}");
+      // 3.1.2. Rank match through code in Rater
+      // TODO: may be possible to remove this 'await' once everything is working
+      // May allow some processing to proceed in 'parallel', or at least while DB
+      // operations are happening
+      await _rankMatch(group, match);
+      _currentMatchStep += 1;
+      callback(progress: _currentMatchStep, total: _totalMatchSteps, state: LoadingState.processingScores, eventName: match.name, groupName: group.name);
     }
+
+    var count = await db.countShooterRatings(project, group);
+    if(Timings.enabled) timings.rateMatchesMillis += (DateTime.now().difference(start).inMilliseconds).toDouble();
+    _log.i("Initial ratings complete for $count shooters in ${matches.length} matches in ${group.filters.activeDivisions}");
+
+    // 3.2. DB-delete any shooters we added who recorded no scores in any matches in
+    // this group.
+
+    return Result.ok(null);
+  }
+
+  Future<Result<void, RatingProjectLoadError>> _addMatches(List<ShootingMatch> matches) async {
+    _totalMatchSteps = project.groups.length * matches.length;
+    List<Future<Result<void, RatingProjectLoadError>>> futures = [];
+    for(var group in project.groups) {
+      // futures.add(_addMatchesToGroup(group, matches));
+      await _addMatchesToGroup(group, matches);
+    }
+    // var results = await Future.wait(futures);
+    // for(var result in results) {
+    //   if(result.isErr()) return result;
+    // }
+
+    if(Timings.enabled) timings.matchCount += matches.length;
+
     // 3.3. Calculate match stats
     List<int> matchLengths = [];
     List<int> matchRoundCounts = [];
@@ -277,6 +303,7 @@ class RatingProjectLoader {
   /// Use [encounter] if you want shooters to be added regardless of whether they appear
   /// in scores. (i.e., shooters who DQ on the first stage, or are no-shows but still included in the data)
   Future<int> _addShootersFromMatch(RatingGroup group, ShootingMatch match) async {
+    var start = DateTime.now();
     int added = 0;
     int updated = 0;
     var shooters = await _getShooters(group, match);
@@ -320,6 +347,12 @@ class RatingProjectLoader {
           await db.upsertDbShooterRating(rating);
         }
       }
+    }
+
+    if(Timings.enabled) {
+      timings.addShootersMillis = (DateTime.now().difference(start).inMilliseconds).toDouble();
+      timings.shooterCount += added;
+      timings.matchEntryCount += shooters.length;
     }
 
     return added + updated;
@@ -491,6 +524,7 @@ class RatingProjectLoader {
     if(settings.byStage) {
       for(MatchStage s in match.stages) {
 
+        var innerStart = DateTime.now();
         var (filteredShooters, filteredScores) = _filterScores(shooters, scores.values.toList(), s);
 
         var weightMod = 1.0 + max(-0.20, min(0.10, (s.maxPoints - 120) /  400));
@@ -505,6 +539,7 @@ class RatingProjectLoader {
           stageScoreMap[rating] = stageScore;
           matchScoreMap[rating] = score;
         }
+        if(Timings.enabled) timings.scoreMapMillis += (DateTime.now().difference(innerStart).inMicroseconds).toDouble();
 
         if(ratingSystem.mode == RatingMode.wholeEvent) {
           await _processWholeEvent(
@@ -553,6 +588,7 @@ class RatingProjectLoader {
           }
         }
 
+        var persistStart = DateTime.now();
         for(var r in changes.keys) {
           await r.events.load();
           var wrapped = ratingSystem.wrapDbRating(r);
@@ -562,6 +598,7 @@ class RatingProjectLoader {
         }
 
         await AnalystDatabase().updateChangedRatings(changes.keys);
+        if(Timings.enabled) timings.persistRatingChangesMillis += (DateTime.now().difference(persistStart).inMicroseconds).toDouble();
 
         changes.clear();
       }
@@ -1012,12 +1049,14 @@ class RatingProjectLoader {
       );
       if(Timings.enabled) timings.updateMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
 
+      if(Timings.enabled) start = DateTime.now();
       if(!changes[rating.wrappedRating]!.containsKey(stageScore)) {
         changes[rating.wrappedRating]![stageScore] =
             ratingSystem.newEvent(rating: rating, match: match, stage: stage, score: stageScore, matchScore: score);
         changes[rating.wrappedRating]![stageScore]!.apply(update[rating]!);
         changes[rating.wrappedRating]![stageScore]!.info = update[rating]!.info;
       }
+      if(Timings.enabled) timings.changeMapMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
     }
     else {
       _encounteredMemberNumber(memNum);
@@ -1090,7 +1129,7 @@ class RatingProjectLoader {
 /// A callback for RatingProjectLoader. When progress and total are both 0, show no progress.
 /// When progress and total are both negative, show indeterminate progress. When total is positive,
 /// show determinate progress with progress as the counter.
-typedef RatingProjectLoaderCallback = void Function({required int progress, required int total, required LoadingState state});
+typedef RatingProjectLoaderCallback = void Function({required int progress, required int total, required LoadingState state, String? eventName, String? groupName});
 
 enum LoadingState {
   /// Processing has not yet begun

@@ -339,6 +339,16 @@ class DbRatingEvent {
 
   /// The match. See [setMatch].
   final match = IsarLink<DbShootingMatch>();
+
+  Future<void> setMatchId(String id, {bool load = false}) {
+    matchId = id;
+    if(load) {
+      return match.load();
+    }
+    else {
+      return Future.value();
+    }
+  }
   
   /// Set the match for this event, updating both the [match] link
   /// and [matchId].

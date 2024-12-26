@@ -7,6 +7,7 @@ import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_loader.dart';
+import 'package:shooting_sports_analyst/data/ranking/timings.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -37,6 +38,7 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
   int _currentProgress = 0;
   int _totalProgress = 0;
   String? _loadingEventName;
+  String? _loadingGroupName;
   var _loadingScrollController = ScrollController();
 
   @override
@@ -53,7 +55,7 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
       currentState = LoadingState.readingMatches;
     });
 
-    var result = await loader.calculateRatings();
+    var result = await loader.calculateRatings(fullRecalc: widget.forceRecalculate);
     if(result.isErr()) {
       _log.e(result.unwrapErr());
     }
@@ -62,7 +64,9 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
   void callback({
     required int progress,
     required int total,
-    required LoadingState state
+    required LoadingState state,
+    String? eventName,
+    String? groupName,
   }) {
     if(state != currentState) {
       _log.i("Rating calculation state changed: $state");
@@ -72,9 +76,14 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
     }
     setStateIfMounted(() {
       currentState = state;
+      _loadingEventName = eventName;
+      _loadingGroupName = groupName;
+      _currentProgress = progress;
+      _totalProgress = total;
     });
 
     if(state == LoadingState.done) {
+      _log.i(Timings());
       widget.onRatingsComplete();
     }
   }
@@ -85,9 +94,7 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
       appBar: AppBar(
         title: Text("Loading..."),
       ),
-      body: Center(
-        child: _matchLoadingIndicator(),
-      ),
+      body: _matchLoadingIndicator(),
     );
   }
 
@@ -118,6 +125,7 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
             Expanded(child: Container()),
             Expanded(flex: 3, child: Text("Now: ${currentState.label}", style: Theme.of(context).textTheme.subtitle2, textAlign: TextAlign.center)),
             Expanded(flex: 3, child: Text(_loadingEventName!, overflow: TextOverflow.ellipsis, softWrap: false)),
+            Expanded(flex: 3, child: Text(_loadingGroupName!, overflow: TextOverflow.ellipsis, softWrap: false)),
             Expanded(child: Container())
           ],
         );
@@ -140,21 +148,21 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
             ),
           SizedBox(height: 20),
           Expanded(
-              child: Scrollbar(
+            child: Scrollbar(
+              controller: _loadingScrollController,
+              thumbVisibility: true,
+              child: SingleChildScrollView(
                 controller: _loadingScrollController,
-                thumbVisibility: true,
-                child: SingleChildScrollView(
-                  controller: _loadingScrollController,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ...widget.project.matches.toList().reversed.map((match) {
-                        return Text("${match.eventName}");
-                      })
-                    ],
-                  ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ...widget.project.matches.toList().reversed.map((match) {
+                      return Text("${match.eventName}");
+                    })
+                  ],
                 ),
-              )
+              ),
+            )
           )
         ],
       ),

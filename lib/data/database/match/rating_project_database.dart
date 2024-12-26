@@ -6,6 +6,7 @@
 
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
@@ -124,6 +125,8 @@ extension RatingProjectDatabase on AnalystDatabase {
     return isar.writeTxn(() async {
       int count = 0;
 
+      Map<String, DbShootingMatch> matches = {};
+
       for(var r in ratings) {
         if(!r.isPersisted) {
           _log.w("Unexpectedly unpersisted DB rating");
@@ -134,6 +137,14 @@ extension RatingProjectDatabase on AnalystDatabase {
         var eventFutures = <Future>[];
         for(var event in r.newRatingEvents) {
           if(!event.isPersisted) {
+            if(event.matchId.isNotEmpty && (!event.match.isLoaded || event.match.value == null)) {
+              var match = matches[event.matchId];
+              if(match == null) {
+                match = await this.getMatchByAnySourceId([event.matchId]);
+                matches[event.matchId] = match!;
+              }
+              event.match.value = match;
+            }
             eventFutures.add(isar.dbRatingEvents.put(event).then((_) => event.match.save()));
             r.events.add(event);
           }
