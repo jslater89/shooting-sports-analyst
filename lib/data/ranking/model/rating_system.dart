@@ -13,6 +13,7 @@ import 'package:shooting_sports_analyst/data/ranking/model/rating_mode.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:shooting_sports_analyst/ui/rater/rater_view.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 
@@ -71,6 +72,12 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
   /// Return a string containing a CSV representation of the
   /// given shooter ratings.
   String ratingsToCsv(List<ShooterRating> ratings);
+
+  /// Return a string containing a JSON representation of the
+  /// given shooter ratings.
+  List<JsonShooterRating> ratingsToJson(List<ShooterRating> ratings);
+
+  /// Encode the given shooter ratings into a JSON object.
   void encodeToJson(Map<String, dynamic> json);
 
   /// Return the current settings for this rating system.

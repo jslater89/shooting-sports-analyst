@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -15,6 +16,7 @@ import 'package:shooting_sports_analyst/data/ranking/model/rating_mode.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/models/decaying_points.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/models/f1_points.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/models/inverse_place.dart';
@@ -186,6 +188,11 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
     }
 
     return contents;
+  }
+
+  @override
+  List<JsonShooterRating> ratingsToJson(List<ShooterRating> ratings) {
+    return ratings.map((e) => JsonShooterRating.fromShooterRating(e)).toList();
   }
 
   @override

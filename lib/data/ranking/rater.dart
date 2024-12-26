@@ -14,6 +14,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/model/model_utils.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
@@ -1401,6 +1402,11 @@ class Rater {
     }
 
     return false;
+  }
+
+  List<JsonShooterRating> toJSON({List<ShooterRating>? ratings}) {
+    var sortedShooters = ratings ?? uniqueShooters.sorted((a, b) => b.rating.compareTo(a.rating));
+    return ratingSystem.ratingsToJson(sortedShooters);
   }
 
   String toCSV({List<ShooterRating>? ratings}) {

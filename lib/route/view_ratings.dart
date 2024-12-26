@@ -5,6 +5,7 @@
  */
 
 
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:archive/archive.dart';
@@ -659,6 +660,44 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     ];
   }
 
+  List<ShooterRating> _ratingsForExport(Rater rater, RaterGroup tab) {
+    var sortedRatings = rater.uniqueShooters.where((e) => e.ratingEvents.length >= _minRatings);
+
+    Duration? maxAge;
+    if(_maxDays > 0) {
+      maxAge = Duration(days: _maxDays);
+    }
+
+    var hiddenShooters = [];
+    for(var s in _history.settings.hiddenShooters) {
+      hiddenShooters.add(Rater.processMemberNumber(s));
+    }
+
+    if(maxAge != null) {
+      var cutoff = _selectedMatch?.date ?? DateTime.now();
+      cutoff = cutoff.subtract(maxAge);
+      sortedRatings = sortedRatings.where((r) => r.lastSeen.isAfter(cutoff));
+    }
+
+    if(_filters.ladyOnly) {
+      sortedRatings = sortedRatings.where((r) => r.female);
+    }
+
+    if(_filters.activeCategories.isNotEmpty) {
+      sortedRatings = sortedRatings.where((r) =>
+          r.categories.any((c) => _filters.activeCategories.contains(c)));
+    }
+
+    if(hiddenShooters.isNotEmpty) {
+      sortedRatings = sortedRatings.where((r) => !hiddenShooters.contains(r.memberNumber));
+    }
+
+    var comparator = rater.ratingSystem.comparatorFor(_sortMode) ?? _sortMode.comparator();
+    var asList = sortedRatings.sorted(comparator);
+
+    return asList;
+  }
+
   Future<void> _handleClick(_MenuEntry item) async {
     switch(item) {
       case _MenuEntry.setChangeSince:
@@ -673,40 +712,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
           var archive = Archive();
           for(var tab in activeTabs) {
             var rater = _history.raterFor(_selectedMatch!, tab);
-            var sortedRatings = rater.uniqueShooters.where((e) => e.ratingEvents.length >= _minRatings);
-
-            Duration? maxAge;
-            if(_maxDays > 0) {
-              maxAge = Duration(days: _maxDays);
-            }
-
-            var hiddenShooters = [];
-            for(var s in _history.settings.hiddenShooters) {
-              hiddenShooters.add(Rater.processMemberNumber(s));
-            }
-
-            if(maxAge != null) {
-              var cutoff = _selectedMatch?.date ?? DateTime.now();
-              cutoff = cutoff.subtract(maxAge);
-              sortedRatings = sortedRatings.where((r) => r.lastSeen.isAfter(cutoff));
-            }
-
-            if(_filters.ladyOnly) {
-              sortedRatings = sortedRatings.where((r) => r.female);
-            }
-
-            if(_filters.activeCategories.isNotEmpty) {
-              sortedRatings = sortedRatings.where((r) =>
-                  r.categories.any((c) => _filters.activeCategories.contains(c)));
-            }
-
-            if(hiddenShooters.isNotEmpty) {
-              sortedRatings = sortedRatings.where((r) => !hiddenShooters.contains(r.memberNumber));
-            }
-
-            var comparator = rater.ratingSystem.comparatorFor(_sortMode) ?? _sortMode.comparator();
-            var asList = sortedRatings.sorted(comparator);
-
+            var asList = _ratingsForExport(rater, tab);
             var csv = rater.toCSV(ratings: asList);
             archive.addFile(ArchiveFile.string("${tab.label.safeFilename()}.csv", csv));
           }
@@ -721,6 +727,26 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         }
         break;
 
+      case _MenuEntry.jsonExport:
+        if(_selectedMatch != null) {
+          var archive = Archive();
+          for(var tab in activeTabs) {
+            var rater = _history.raterFor(_selectedMatch!, tab);
+            var asList = _ratingsForExport(rater, tab);
+            var json = rater.toJSON(ratings: asList);
+            var jsonString = JsonUtf8Encoder().convert(json);
+            archive.addFile(ArchiveFile("${tab.label.safeFilename()}.json", jsonString.length, jsonString));
+          }
+          var zip = ZipEncoder().encode(archive); 
+
+          if(zip != null) {
+            HtmlOr.saveBuffer("ratings-${_history.project.name.safeFilename()}.zip", zip);
+          }
+          else {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to encode archive")));
+          }
+        }
+        break;
 
       case _MenuEntry.dataErrors:
         var changed = await showDialog<bool>(barrierDismissible: false, context: context, builder: (context) => MemberNumberCorrectionListDialog(
@@ -1309,6 +1335,7 @@ extension _Utilities on RaterGroup {
 enum _MenuEntry {
   setChangeSince,
   csvExport,
+  jsonExport,
   dataErrors,
   viewResults,
   addMatch;
@@ -1319,6 +1346,8 @@ enum _MenuEntry {
         return "Set date for trend";
       case _MenuEntry.csvExport:
         return "Export ratings as CSV";
+      case _MenuEntry.jsonExport:
+        return "Export ratings as JSON";
       case _MenuEntry.dataErrors:
         return "Fix data entry errors";
       case _MenuEntry.viewResults:
