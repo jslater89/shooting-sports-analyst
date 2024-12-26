@@ -161,7 +161,7 @@ class RatingProjectLoader {
       }
     }
 
-    if(Timings.enabled) timings.retrieveMatchesMillis = (DateTime.now().difference(start).inMilliseconds).toDouble();
+    if(Timings.enabled) timings.retrieveMatchesMillis = (DateTime.now().difference(start).inMicroseconds / 1000);
 
     callback(progress: 0, total: matchesToAdd.length, state: LoadingState.processingScores);
     var result = await _addMatches(hydratedMatches);
@@ -229,7 +229,7 @@ class RatingProjectLoader {
     }
 
     var count = await db.countShooterRatings(project, group);
-    if(Timings.enabled) timings.rateMatchesMillis += (DateTime.now().difference(start).inMilliseconds).toDouble();
+    if(Timings.enabled) timings.rateMatchesMillis += (DateTime.now().difference(start).inMicroseconds / 1000);
     _log.i("Initial ratings complete for $count shooters in ${matches.length} matches in ${group.filters.activeDivisions}");
 
     // 3.2. DB-delete any shooters we added who recorded no scores in any matches in
@@ -350,7 +350,7 @@ class RatingProjectLoader {
     }
 
     if(Timings.enabled) {
-      timings.addShootersMillis = (DateTime.now().difference(start).inMilliseconds).toDouble();
+      timings.addShootersMillis = (DateTime.now().difference(start).inMicroseconds / 1000);
       timings.shooterCount += added;
       timings.matchEntryCount += shooters.length;
     }
@@ -444,7 +444,7 @@ class RatingProjectLoader {
       return;
     }
 
-    if(Timings.enabled) timings.getShootersAndScoresMillis += (DateTime.now().difference(start).inMicroseconds);
+    if(Timings.enabled) timings.getShootersAndScoresMillis += (DateTime.now().difference(start).inMicroseconds / 1000);
 
     if(Timings.enabled) start = DateTime.now();
     // Based on strength of competition, vary rating gain between 25% and 150%.
@@ -477,7 +477,7 @@ class RatingProjectLoader {
     matchStrength = matchStrength / shooters.length;
     double levelStrengthBonus = sport.ratingStrengthProvider?.strengthBonusForMatchLevel(match.level) ?? 1.0;
     double strengthMod =  (1.0 + max(-0.75, min(0.5, ((matchStrength) - _centerStrength) * 0.2))) * (levelStrengthBonus);
-    if(Timings.enabled) timings.matchStrengthMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
+    if(Timings.enabled) timings.matchStrengthMillis += (DateTime.now().difference(start).inMicroseconds / 1000);
 
     if(Timings.enabled) start = DateTime.now();
     // Based on connectedness, vary rating gain between 80% and 120%
@@ -512,7 +512,7 @@ class RatingProjectLoader {
     }
     var localAverageConnectedness = totalConnectedness / (totalShooters > 0 ? totalShooters : 1.0);
     var connectednessMod = /*1.0;*/ 1.0 + max(-0.2, min(0.2, (((localAverageConnectedness / connectednessDenominator) - 1.0) * 2))); // * 1: how much to adjust the percentages by
-    if(Timings.enabled) timings.connectednessModMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
+    if(Timings.enabled) timings.connectednessModMillis += (DateTime.now().difference(start).inMicroseconds / 1000);
 
     // _log.d("Connectedness for ${match.name}: ${localAverageConnectedness.toStringAsFixed(2)}/${connectednessDenominator.toStringAsFixed(2)} => ${connectednessMod.toStringAsFixed(3)}");
 
@@ -539,7 +539,7 @@ class RatingProjectLoader {
           stageScoreMap[rating] = stageScore;
           matchScoreMap[rating] = score;
         }
-        if(Timings.enabled) timings.scoreMapMillis += (DateTime.now().difference(innerStart).inMicroseconds).toDouble();
+        if(Timings.enabled) timings.scoreMapMillis += (DateTime.now().difference(innerStart).inMicroseconds / 1000);
 
         if(ratingSystem.mode == RatingMode.wholeEvent) {
           await _processWholeEvent(
@@ -598,7 +598,7 @@ class RatingProjectLoader {
         }
 
         await AnalystDatabase().updateChangedRatings(changes.keys);
-        if(Timings.enabled) timings.persistRatingChangesMillis += (DateTime.now().difference(persistStart).inMicroseconds).toDouble();
+        if(Timings.enabled) timings.persistRatingChangesMillis += (DateTime.now().difference(persistStart).inMicroseconds / 1000);
 
         changes.clear();
       }
@@ -670,7 +670,7 @@ class RatingProjectLoader {
       AnalystDatabase().updateChangedRatings(changes.keys);
       changes.clear();
     }
-    if(Timings.enabled) timings.rateShootersMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
+    if(Timings.enabled) timings.rateShootersMillis += (DateTime.now().difference(start).inMicroseconds / 1000);
 
     if(Timings.enabled) start = DateTime.now();
     if(shooters.length > 1) {
@@ -702,7 +702,7 @@ class RatingProjectLoader {
       averageAfter /= encounteredList.length;
       // _log.d("Averages: ${averageBefore.toStringAsFixed(1)} -> ${averageAfter.toStringAsFixed(1)} vs. ${expectedConnectedness.toStringAsFixed(1)}");
     }
-    if(Timings.enabled) timings.updateConnectednessMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
+    if(Timings.enabled) timings.updateConnectednessMillis += (DateTime.now().difference(start).inMicroseconds / 1000);
   }
 
   (List<MatchEntry>, List<RelativeMatchScore>) _filterScores(List<MatchEntry> shooters, List<RelativeMatchScore> scores, MatchStage? stage) {
@@ -1024,7 +1024,7 @@ class RatingProjectLoader {
       }
     }
     matchStrength *= pubstompMod;
-    if(Timings.enabled) timings.pubstompMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
+    if(Timings.enabled) timings.pubstompMillis += (DateTime.now().difference(start).inMicroseconds / 1000);
 
     if(stage != null) {
       RelativeStageScore stageScore = score.stageScores[stage]!;
@@ -1047,7 +1047,7 @@ class RatingProjectLoader {
         connectednessMultiplier: connectednessMod,
         eventWeightMultiplier: weightMod,
       );
-      if(Timings.enabled) timings.updateMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
+      if(Timings.enabled) timings.updateMillis += (DateTime.now().difference(start).inMicroseconds / 1000);
 
       if(Timings.enabled) start = DateTime.now();
       if(!changes[rating.wrappedRating]!.containsKey(stageScore)) {
@@ -1056,7 +1056,7 @@ class RatingProjectLoader {
         changes[rating.wrappedRating]![stageScore]!.apply(update[rating]!);
         changes[rating.wrappedRating]![stageScore]!.info = update[rating]!.info;
       }
-      if(Timings.enabled) timings.changeMapMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
+      if(Timings.enabled) timings.changeMapMillis += (DateTime.now().difference(start).inMicroseconds / 1000);
     }
     else {
       _encounteredMemberNumber(memNum);

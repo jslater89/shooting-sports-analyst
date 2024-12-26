@@ -133,7 +133,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
         scores: scores,
         matchScores: matchScores
     );
-    if(Timings.enabled) timings.calcExpectedScore += (DateTime.now().difference(start).inMicroseconds).toDouble();
+    if(Timings.enabled) timings.calcExpectedScore += (DateTime.now().difference(start).inMicroseconds / 1000);
 
     if(params.usedScores == 1) {
       return {
@@ -249,7 +249,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     var changeFromPlace = effectiveK * (params.usedScores - 1) * (actualScore.placeComponent * placeWeight - (params.expectedScore * placeWeight));
 
     var change = changeFromPlace + changeFromPercent;
-    if(Timings.enabled) timings.updateRatings += (DateTime.now().difference(start).inMicroseconds).toDouble();
+    if(Timings.enabled) timings.updateRatings += (DateTime.now().difference(start).inMicroseconds / 1000);
 
     if(change.isNaN || change.isInfinite) {
       MatchStage? stage;
@@ -371,7 +371,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       ],
       if(doBackRating) "Back rating/error/steps/size: %00.0f/%00.1f/%d/%00.2f": [backRatingRaw, backRatingErr, steps, stepSize],
     };
-    if(Timings.enabled) timings.printInfo += (DateTime.now().difference(start).inMicroseconds).toDouble();
+    if(Timings.enabled) timings.printInfo += (DateTime.now().difference(start).inMicroseconds / 1000);
 
     return {
       aRating: RatingChange(change: {
