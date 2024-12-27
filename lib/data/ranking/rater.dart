@@ -161,12 +161,12 @@ class Rater {
     for(ShootingMatch m in matches) {
       _addShootersFromMatch(m, encounter: true);
     }
-    if(Timings.enabled) timings.addShootersMillis = (DateTime.now().difference(start).inMicroseconds).toDouble();
+    if(Timings.enabled) timings.add(TimingType.addShooters, DateTime.now().difference(start).inMicroseconds);
     if(Timings.enabled) timings.shooterCount = knownShooters.length;
 
     if(Timings.enabled) start = DateTime.now();
     var result = _deduplicateShooters();
-    if(Timings.enabled) timings.dedupShootersMillis = (DateTime.now().difference(start).inMicroseconds).toDouble();
+    if(Timings.enabled) timings.add(TimingType.dedupShooters, DateTime.now().difference(start).inMicroseconds);
 
     return result;
   }
@@ -207,7 +207,7 @@ class Rater {
     for(ShootingMatch m in _matches) {
       _addShootersFromMatch(m);
     }
-    if(Timings.enabled) timings.addShootersMillis = (DateTime.now().difference(start).inMicroseconds).toDouble();
+    if(Timings.enabled) timings.add(TimingType.addShooters, DateTime.now().difference(start).inMicroseconds);
     if(Timings.enabled) timings.shooterCount = knownShooters.length;
 
     if(Timings.enabled) start = DateTime.now();
@@ -215,7 +215,7 @@ class Rater {
     var dedupResult = _deduplicateShooters();
     if(dedupResult.isErr()) return dedupResult;
 
-    if(Timings.enabled) timings.dedupShootersMillis = (DateTime.now().difference(start).inMicroseconds).toDouble();
+    if(Timings.enabled) timings.add(TimingType.dedupShooters, DateTime.now().difference(start).inMicroseconds);
 
     int totalSteps = _matches.length;
     int currentSteps = 0;
@@ -245,7 +245,7 @@ class Rater {
 
       if(Timings.enabled) start = DateTime.now();
       _rankMatch(m);
-      if(Timings.enabled) timings.rateMatchesMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
+      if(Timings.enabled) timings.add(TimingType.rateMatches, DateTime.now().difference(start).inMicroseconds);
       if(Timings.enabled) timings.matchCount += 1;
 
       currentSteps += 1;
@@ -254,7 +254,7 @@ class Rater {
 
     if(Timings.enabled) start = DateTime.now();
     _removeUnseenShooters();
-    if(Timings.enabled) timings.removeUnseenShootersMillis += (DateTime.now().difference(start).inMicroseconds);
+    if(Timings.enabled) timings.add(TimingType.removeUnseenShooters, DateTime.now().difference(start).inMicroseconds);
 
     List<int> matchLengths = [];
     List<int> matchRoundCounts = [];
@@ -446,7 +446,7 @@ class Rater {
     if(Timings.enabled) start = DateTime.now();
     var shooters = _getShooters(match, verify: true);
     var scores = match.getScores(shooters: shooters, scoreDQ: byStage);
-    if(Timings.enabled) timings.getShootersAndScoresMillis += (DateTime.now().difference(start).inMicroseconds);
+    if(Timings.enabled) timings.add(TimingType.getShootersAndScores, DateTime.now().difference(start).inMicroseconds);
 
     if(Timings.enabled) start = DateTime.now();
     // Based on strength of competition, vary rating gain between 25% and 150%.
@@ -477,7 +477,7 @@ class Rater {
     }
     matchStrength = matchStrength / shooters.length;
     double strengthMod =  (1.0 + max(-0.75, min(0.5, ((matchStrength) - _centerStrength) * 0.2))) * (match.level?.strengthBonus ?? 1.0);
-    if(Timings.enabled) timings.matchStrengthMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
+    if(Timings.enabled) timings.add(TimingType.calcMatchStrength, DateTime.now().difference(start).inMicroseconds);
 
     if(Timings.enabled) start = DateTime.now();
     // Based on connectedness, vary rating gain between 80% and 120%
@@ -509,7 +509,7 @@ class Rater {
     }
     var localAverageConnectedness = totalConnectedness / (totalShooters > 0 ? totalShooters : 1.0);
     var connectednessMod = /*1.0;*/ 1.0 + max(-0.2, min(0.2, (((localAverageConnectedness / connectednessDenominator) - 1.0) * 2))); // * 1: how much to adjust the percentages by
-    if(Timings.enabled) timings.connectednessModMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
+    if(Timings.enabled) timings.add(TimingType.calcConnectedness, DateTime.now().difference(start).inMicroseconds);
 
     // _log.d("Connectedness for ${match.name}: ${localAverageConnectedness.toStringAsFixed(2)}/${connectednessDenominator.toStringAsFixed(2)} => ${connectednessMod.toStringAsFixed(3)}");
 
@@ -647,7 +647,7 @@ class Rater {
       }
       changes.clear();
     }
-    if(Timings.enabled) timings.rateShootersMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
+    if(Timings.enabled) timings.add(TimingType.rateShooters, DateTime.now().difference(start).inMicroseconds);
 
     if(Timings.enabled) start = DateTime.now();
     if(match.date != null && shooters.length > 1) {
@@ -677,7 +677,7 @@ class Rater {
       averageAfter /= encounteredList.length;
       // _log.d("Averages: ${averageBefore.toStringAsFixed(1)} -> ${averageAfter.toStringAsFixed(1)} vs. ${expectedConnectedness.toStringAsFixed(1)}");
     }
-    if(Timings.enabled) timings.updateConnectednessMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
+    if(Timings.enabled) timings.add(TimingType.updateConnectedness, DateTime.now().difference(start).inMicroseconds);
   }
 
   Map<Shooter, bool> _verifyCache = {};
@@ -889,7 +889,7 @@ class Rater {
       }
     }
     matchStrength *= pubstompMod;
-    if(Timings.enabled) timings.pubstompMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
+    if(Timings.enabled) timings.add(TimingType.pubstomp, DateTime.now().difference(start).inMicroseconds);
 
     if(stage != null) {
       RelativeStageScore stageScore = score.stageScores[stage]!;
@@ -912,7 +912,7 @@ class Rater {
         connectednessMultiplier: connectednessMod,
         eventWeightMultiplier: weightMod,
       );
-      if(Timings.enabled) timings.updateMillis += (DateTime.now().difference(start).inMicroseconds).toDouble();
+      if(Timings.enabled) timings.add(TimingType.update, DateTime.now().difference(start).inMicroseconds);
 
       if(!changes[rating]!.containsKey(stageScore)) {
         changes[rating]![stageScore] = ratingSystem.newEvent(rating: rating, match: match, stage: stage, score: stageScore, matchScore: score);

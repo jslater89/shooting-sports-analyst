@@ -10,6 +10,7 @@ import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/timings.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 
 var _log = SSALogger("RatingProjectDatabase");
@@ -123,25 +124,33 @@ extension RatingProjectDatabase on AnalystDatabase {
   /// Update DbShooterRatings that have changed as part of the rating process.
   Future<int> updateChangedRatings(Iterable<DbShooterRating> ratings) {
     return isar.writeTxn(() async {
+      late DateTime start;
       int count = 0;
 
       Map<String, DbShootingMatch> matches = {};
 
       for(var r in ratings) {
+        if(Timings.enabled) start = DateTime.now();
         if(!r.isPersisted) {
           _log.w("Unexpectedly unpersisted DB rating");
           await r.project.save();
           await r.group.save();
         }
         await isar.dbShooterRatings.put(r);
+        if(Timings.enabled) Timings().add(TimingType.saveDbRating, DateTime.now().difference(start).inMicroseconds);
+
+        if(Timings.enabled) start = DateTime.now();
         var eventFutures = <Future>[];
         for(var event in r.newRatingEvents) {
           if(!event.isPersisted) {
             if(event.matchId.isNotEmpty && (!event.match.isLoaded || event.match.value == null)) {
               var match = matches[event.matchId];
               if(match == null) {
+                late DateTime matchStart;
+                if(Timings.enabled) matchStart = DateTime.now();
                 match = await this.getMatchByAnySourceId([event.matchId]);
                 matches[event.matchId] = match!;
+                if(Timings.enabled) Timings().add(TimingType.getEventMatches, DateTime.now().difference(matchStart).inMicroseconds);
               }
               event.match.value = match;
             }
@@ -150,10 +159,9 @@ extension RatingProjectDatabase on AnalystDatabase {
           }
         }
         await Future.wait(eventFutures);
-
         r.newRatingEvents.clear();
-
         await r.events.save();
+        if(Timings.enabled) Timings().add(TimingType.persistEvents, DateTime.now().difference(start).inMicroseconds);
       }
 
       return count;
