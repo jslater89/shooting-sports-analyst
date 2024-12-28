@@ -618,32 +618,6 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         //   }));
         // }
         break;
-
-
-      case _MenuEntry.addMatch:
-        // TODO: same as above
-
-        // var entry = await showDialog<MatchCacheIndexEntry>(
-        //     context: context,
-        //     builder: (context) => MatchCacheChooserDialog(
-        //       helpText:
-        //       "Add a match to the rating list from the cache. Use the plus button to download a new one.\n\n"
-        //           "You must save the project from the rating screen for the match to be included in future "
-        //           "rating runs. In future rating runs, matches will be sorted by date even if not added in "
-        //           "date order here.",
-        //     )
-        // );
-        //
-        // if(entry != null) {
-        //   var match = await MatchCache().getByIndex(entry);
-        //   _history.addMatch(match);
-        //
-        //   setState(() {
-        //     _selectedMatch = _history.matches.last;
-        //     _historyChanged = true;
-        //   });
-        // }
-        break;
     }
   }
 
@@ -877,8 +851,7 @@ enum _MenuEntry {
   setChangeSince,
   csvExport,
   dataErrors,
-  viewResults,
-  addMatch;
+  viewResults;
 
   String get label {
     switch(this) {
@@ -890,8 +863,6 @@ enum _MenuEntry {
         return "Fix data entry errors";
       case _MenuEntry.viewResults:
         return "View match results";
-      case _MenuEntry.addMatch:
-        return "Add another match";
     }
   }
 }
