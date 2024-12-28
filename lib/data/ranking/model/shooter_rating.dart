@@ -380,7 +380,7 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
   }
 
   List<RatingEvent> matchEvents(SourceIdsProvider match) {
-    return ratingEvents.where((e) => e.match.sourceIds.any((id) => match.sourceIds.contains(id))).toList();
+    return ratingEvents.where((e) => e.match.sourceIds.intersects(match.sourceIds)).toList();
   }
 
   List<MatchHistoryEntry> careerHistory() {

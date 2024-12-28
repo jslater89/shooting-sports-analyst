@@ -49,6 +49,7 @@ import 'package:shooting_sports_analyst/ui/widget/dialog/match_cache_chooser_dia
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_database_chooser_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/rater_groups_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/match_cache_loading_indicator.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 var _log = SSALogger("ConfigureRatingsPage");
 
@@ -138,11 +139,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   }
 
   Future<void> _warmUpMatchCache() async {
-    // Allow time for the 'loading' screen to display
-    await Future.delayed(Duration(milliseconds: 1));
-
-    await MatchCache().ready;
-    if(mounted) setState(() {
+    // we don't use it anymore
+    setStateIfMounted(() {
       matchCacheReady = true;
     });
   }

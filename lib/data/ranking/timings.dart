@@ -69,6 +69,10 @@ class Timings {
     for(var e in elements) {
       e.reset();
     }
+
+    matchEntryCount = 0;
+    shooterCount = 0;
+    matchCount = 0;
   }
 
   void add(TimingType type, int microseconds) {

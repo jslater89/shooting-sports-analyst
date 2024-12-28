@@ -241,3 +241,13 @@ extension SetStateIfMounted<T extends StatefulWidget> on State<T> {
     }
   }
 }
+
+extension ListOverlap<T> on List<T> {
+  List<T> intersection(List<T> other) {
+    return this.where((e) => other.contains(e)).toList();
+  }
+
+  bool intersects(List<T> other) {
+    return this.any((e) => other.contains(e));
+  }
+}
