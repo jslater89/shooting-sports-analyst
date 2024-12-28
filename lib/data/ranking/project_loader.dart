@@ -8,6 +8,7 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
+import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
@@ -71,6 +72,7 @@ class RatingProjectLoader {
   RatingProjectLoader(this.project, this.callback);
 
   Future<Result<void, RatingProjectLoadError>> calculateRatings({bool fullRecalc = false}) async {
+    HydratedMatchCache().clear();
     timings.reset();
 
     var start = DateTime.now();

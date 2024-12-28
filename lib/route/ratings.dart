@@ -40,7 +40,7 @@ class _RatingsContainerPageState extends State<RatingsContainerPage> {
     else if(!calculated) {
       return LoadRatingsPage(
         project: project!,
-        forceRecalculate: true,
+        forceRecalculate: false,
         onRatingsComplete: () {
           setState(() {
             calculated = true;

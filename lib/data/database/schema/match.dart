@@ -7,6 +7,7 @@
 
 import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
+import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
@@ -123,7 +124,12 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
     );
   }
 
-  Result<ShootingMatch, ResultErr> hydrate() {
+  Result<ShootingMatch, ResultErr> hydrate({bool useCache = false}) {
+    if(useCache) {
+      var cached = HydratedMatchCache().get(this);
+      if(cached.isOk()) return Result.ok(cached.unwrap());
+    }
+
     var sport = SportRegistry().lookup(sportName);
     if(sport == null) {
       return Result.err(StringError("sport not found"));

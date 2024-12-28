@@ -5,6 +5,7 @@
  */
 
 import 'package:collection/collection.dart';
+import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
@@ -43,8 +44,14 @@ abstract class RatingEvent {
   ShootingMatch? _cachedMatch;
   ShootingMatch get match {
     if(_cachedMatch == null) {
+      var res = HydratedMatchCache().getBySourceId(wrappedEvent.matchId);
+      if(res.isOk()) {
+        _cachedMatch = res.unwrap();
+      }
+    }
+    if(_cachedMatch == null) {
       wrappedEvent.match.loadSync();
-      var res = wrappedEvent.match.value!.hydrate();
+      var res = wrappedEvent.match.value!.hydrate(useCache: true);
       _cachedMatch = res.unwrap();
     }
 
