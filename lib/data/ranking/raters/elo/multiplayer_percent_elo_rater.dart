@@ -13,6 +13,7 @@ import 'package:intl/intl.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:normal/normal.dart';
 import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/json_shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/gumbel.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
@@ -27,8 +28,6 @@ import 'package:shooting_sports_analyst/ui/rater/prediction/prediction_view.dart
 import 'package:shooting_sports_analyst/ui/rater/rater_view.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 import 'package:shooting_sports_analyst/util.dart';
-
-part 'multiplayer_percent_elo_rater.g.dart';
 
 var _log = SSALogger("MultiplayerPctEloRater");
 
@@ -925,28 +924,4 @@ class _ActualScore {
     required this.placeBlend,
     required this.score,
   });
-}
-
-@JsonSerializable()
-class JsonShooterRating {
-  final String memberNumber;
-  final String name;
-  final String division;
-  final double rating;
-
-  JsonShooterRating({
-    required this.memberNumber,
-    required this.name,
-    required this.division,
-    required this.rating,
-  });
-
-  JsonShooterRating.fromShooterRating(ShooterRating rating) :
-    memberNumber = rating.memberNumber,
-    name = rating.getName(suffixes: false),
-    division = rating.division?.name ?? "(unknown)",
-    rating = rating.rating;
-
-  factory JsonShooterRating.fromJson(Map<String, dynamic> json) => _$JsonShooterRatingFromJson(json);
-  Map<String, dynamic> toJson() => _$JsonShooterRatingToJson(this);
 }
