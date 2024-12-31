@@ -16,7 +16,29 @@ import 'package:shooting_sports_analyst/logger.dart';
 SSALogger _log = SSALogger("DbOneoffs");
 
 Future<void> oneoffDbAnalyses(AnalystDatabase db) async {
+  // await _addMemberNumbersToMatches(db);
+  await _doesMyQueryWork(db);
+}
 
+Future<void> _addMemberNumbersToMatches(AnalystDatabase db) async {
+  var matches = await db.isar.dbShootingMatchs.where().anyDate().findAll();
+  for(var match in matches) {
+    match.memberNumbersAppearing = match.shooters.map((e) => e.memberNumber).where((e) => e.isNotEmpty).toList();
+  }
+  await db.isar.writeTxn(() async {
+    await db.isar.dbShootingMatchs.putAll(matches);
+  });
+  _log.i("${matches.length} matches updated");
+}
+
+Future<void> _doesMyQueryWork(AnalystDatabase db) async {
+  var startTime = DateTime.now();
+  var matches = await db.queryMatchesByCompetitorMemberNumbers(["A102675", "TY102675", "FY102675"], pageSize: 5);
+  var timeTaken = DateTime.now().difference(startTime).inMilliseconds;
+  for(var match in matches) {
+    _log.i("${match}");
+  }
+  _log.i("${matches.length} matches found in ${timeTaken}ms");
 }
 
 Future<void> _lady90PercentFinishes(AnalystDatabase db) async {

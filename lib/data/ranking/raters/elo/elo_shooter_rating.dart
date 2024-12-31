@@ -16,9 +16,16 @@ import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 enum _DoubleKeys {
   variance,
+  shortTrend,
+  mediumTrend,
+  longTrend,
+  shortDirection,
+  mediumDirection,
+  longDirection
 }
 
 class EloShooterRating extends ShooterRating {
@@ -27,14 +34,25 @@ class EloShooterRating extends ShooterRating {
   double get variance => wrappedRating.doubleData[_DoubleKeys.variance.index];
   set variance(double v) => wrappedRating.doubleData[_DoubleKeys.variance.index] = v;
 
-  double get direction => directionWithWindow(ShooterRating.baseTrendWindow);
-  double get shortDirection => directionWithWindow(ShooterRating.baseTrendWindow ~/ 2);
-  double get longDirection => directionWithWindow(ShooterRating.baseTrendWindow * 2);
+  double get direction => wrappedRating.doubleData[_DoubleKeys.mediumDirection.index];
+  set direction(double v) => wrappedRating.doubleData[_DoubleKeys.mediumDirection.index] = v;
 
-  double directionWithWindow(int window) {
+  double get shortDirection => wrappedRating.doubleData[_DoubleKeys.shortDirection.index];
+  set shortDirection(double v) => wrappedRating.doubleData[_DoubleKeys.shortDirection.index] = v;
+
+  double get longDirection => wrappedRating.doubleData[_DoubleKeys.longDirection.index];
+  set longDirection(double v) => wrappedRating.doubleData[_DoubleKeys.longDirection.index] = v;
+
+  double directionWithWindow(int window, {List<RatingEvent>? preloadedEvents}) {
     if(wrappedRating.length == 0) return 0;
 
-    var events = wrappedRating.getEventsInWindowSync(window: window);
+    late List<IRatingEvent> events;
+    if(preloadedEvents != null) {
+      events = preloadedEvents.getTailWindow(window);
+    }
+    else {
+      events = wrappedRating.getEventsInWindowSync(window: window);
+    }
 
     int total = events.length;
     int positive = events.where((element) => element.ratingChange >= 0).length;
@@ -43,9 +61,14 @@ class EloShooterRating extends ShooterRating {
     return ((positive / total) - 0.5) * 2.0;
   }
 
-  double get shortTrend => rating - averageRating(window: ShooterRating.baseTrendWindow ~/ 2).firstRating;
-  double get mediumTrend => rating - averageRating(window: ShooterRating.baseTrendWindow).firstRating;
-  double get longTrend => rating - averageRating(window: ShooterRating.baseTrendWindow * 2).firstRating;
+  double get shortTrend => wrappedRating.doubleData[_DoubleKeys.shortTrend.index];
+  set shortTrend(double v) => wrappedRating.doubleData[_DoubleKeys.shortTrend.index] = v;
+
+  double get mediumTrend => wrappedRating.doubleData[_DoubleKeys.mediumTrend.index];
+  set mediumTrend(double v) => wrappedRating.doubleData[_DoubleKeys.mediumTrend.index] = v;
+
+  double get longTrend => wrappedRating.doubleData[_DoubleKeys.longTrend.index];
+  set longTrend(double v) => wrappedRating.doubleData[_DoubleKeys.longTrend.index] = v;
 
   // double get trend => (shortTrend + mediumTrend + longTrend) / 3;
 
@@ -170,10 +193,15 @@ class EloShooterRating extends ShooterRating {
     return sqrt(weightedSum / totalWeight);
   }
 
-  double get standardError => normalizedDecayingErrorWithWindow(
-    window: (ShooterRating.baseTrendWindow * 1.5).round(),
-    fullEffect: ShooterRating.baseTrendWindow,
-  );
+  set standardError(double v) => wrappedRating.error = v;
+  double get standardError => wrappedRating.error;
+
+  double calculateStandardError() {
+    return normalizedDecayingErrorWithWindow(
+      window: (ShooterRating.baseTrendWindow * 1.5).round(),
+      fullEffect: ShooterRating.baseTrendWindow,
+    );
+  }
 
   double standardErrorWithOffset({int offset = 0}) {
     return normalizedDecayingErrorWithWindow(
@@ -192,11 +220,32 @@ class EloShooterRating extends ShooterRating {
     // return sqrt(variance);
   }
 
+  List<RatingEvent>? _ratingEvents = null;
+
   List<RatingEvent> get ratingEvents {
-    var events = AnalystDatabase().getRatingEventsForSync(wrappedRating);
-    return events.map((e) => EloRatingEvent.wrap(e)).toList();
+    if(_ratingEvents == null) {
+      var events = AnalystDatabase().getRatingEventsForSync(wrappedRating);
+      _ratingEvents = events.map((e) => EloRatingEvent.wrap(e)).toList();
+    }
+
+    List<EloRatingEvent> newRatingEvents = [];
+    if(wrappedRating.newRatingEvents.isNotEmpty) {
+      var unpersistedEvents = wrappedRating.newRatingEvents.map((e) => EloRatingEvent.wrap(e));
+      newRatingEvents.addAll(unpersistedEvents);
+    }
+
+    var out = [..._ratingEvents!, ...newRatingEvents];
+    return out;
   }
   List<RatingEvent> emptyRatingEvents = [];
+
+  void clearRatingEventCache() {
+    _ratingEvents = null;
+  }
+
+  void ratingEventsChanged() {
+    clearRatingEventCache();
+  }
 
   // TODO: combine this in more intelligent fashion, preserving order where possible
   // TODO: ... like with database queries, maybe
@@ -230,20 +279,32 @@ class EloShooterRating extends ShooterRating {
       }
       wrappedRating.newRatingEvents.add(e.wrappedEvent);
     }
+
+    standardError = calculateStandardError();
   }
 
   void updateTrends(List<RatingEvent> changes) {
+    var longTrendWindow = min(ratingEvents.length, ShooterRating.baseTrendWindow * 2);
     var trendWindow = min(ratingEvents.length, ShooterRating.baseTrendWindow);
+    
 
-    var events = ratingEvents.sublist(ratingEvents.length - trendWindow);
-
-    if(trendWindow == 0) {
+    if(longTrendWindow == 0) {
       return;
     }
 
-    var stdDev = sqrt(events.map((e) => pow(e.ratingChange, 2)).sum / (events.length - 1));
+    var events = ratingEvents.sublist(ratingEvents.length - longTrendWindow);
+    var stdDevEvents = events.getTailWindow(trendWindow);
+    var stdDev = sqrt(stdDevEvents.map((e) => pow(e.ratingChange, 2)).sum / (stdDevEvents.length - 1));
 
     variance = stdDev;
+
+    shortDirection = directionWithWindow(ShooterRating.baseTrendWindow ~/ 2, preloadedEvents: events);
+    direction = directionWithWindow(ShooterRating.baseTrendWindow, preloadedEvents: events);
+    longDirection = directionWithWindow(ShooterRating.baseTrendWindow * 2, preloadedEvents: events);
+
+    shortTrend = rating - averageRating(window: ShooterRating.baseTrendWindow ~/ 2, preloadedEvents: events).firstRating;
+    mediumTrend = rating - averageRating(window: ShooterRating.baseTrendWindow, preloadedEvents: events).firstRating;
+    longTrend = rating - averageRating(window: ShooterRating.baseTrendWindow * 2, preloadedEvents: events).firstRating;
 
     // if(Rater.processMemberNumber(shooter.memberNumber) == "128393") {
     //   debugPrint("Trends for ${shooter.lastName}");
@@ -257,6 +318,7 @@ class EloShooterRating extends ShooterRating {
   /// This is used in copy functions, and _does not_ save the link!
   /// The caller must persist it.
   void replaceAllRatingEvents(List<EloRatingEvent> events) {
+    clearRatingEventCache();
     wrappedRating.events.clear();
     wrappedRating.events.addAll(events.map((e) => e.wrappedEvent));
   }

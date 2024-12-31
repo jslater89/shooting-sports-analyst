@@ -25,6 +25,12 @@ class Shooter {
   /// All member numbers this shooter has been known by, normalized as [originalMemberNumber].
   Set<String> knownMemberNumbers = {};
 
+  @ignore
+  /// All member numbers this shooter has been known by, normalized as [originalMemberNumber],
+  /// excluding the current member number.
+  List<String> get noncanonicalMemberNumbers => 
+    [...knownMemberNumbers]..retainWhere((element) => element != _memberNumber);
+
   @Index()
   /// The shooter's most recent member number, normalized as [originalMemberNumber].
   String get memberNumber => _memberNumber;

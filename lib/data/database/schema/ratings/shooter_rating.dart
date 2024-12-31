@@ -80,7 +80,9 @@ class DbShooterRating extends Shooter with DbSportEntity {
   List<DbRatingEvent> newRatingEvents = [];
 
   @ignore
-  int get length => events.countSync();
+  int get length => events.countSync() + newRatingEvents.length;
+
+  // TODO: move rating events getters from elo_shooter_rating to here
 
   double rating;
   double error;

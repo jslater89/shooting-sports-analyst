@@ -25,7 +25,7 @@ class AnalystDatabase {
   static const eventNameIndex = "eventNameParts";
   static const sourceIdsIndex = "sourceIds";
   static const dateIndex = "date";
-
+  static const memberNumbersAppearingIndex = "memberNumbersAppearing";
   static Future<void> get readyStatic => _readyCompleter.future;
   static Completer<void> _readyCompleter = Completer();
 
@@ -80,6 +80,53 @@ class AnalystDatabase {
     return finalQuery.findAll();
   }
 
+  Future<List<DbShootingMatch>> queryMatchesByCompetitorMemberNumbers(List<String> memberNumbers, {int page = 0, int pageSize = 10}) async {
+    if(memberNumbers.isEmpty) return [];
+
+    List<WhereClause> whereClauses = [];
+    for(var memberNumber in memberNumbers) {
+      whereClauses.add(IndexWhereClause.equalTo(
+        indexName: AnalystDatabase.memberNumbersAppearingIndex,
+        value: [memberNumber],
+      ));
+    }
+
+    Query<DbShootingMatch> query = isar.dbShootingMatchs.buildQuery(
+      whereClauses: whereClauses,
+      sortBy: [
+        SortProperty(property: DateQuery().property, sort: Sort.desc),
+      ],
+      limit: pageSize,
+      offset: page * pageSize,
+    );
+
+    return await query.findAll();
+  }
+
+  Future<List<String>> queryMatchNamesByCompetitorMemberNumbers(List<String> memberNumbers, {int page = 0, int pageSize = 10}) async {
+    if(memberNumbers.isEmpty) return [];
+
+    List<WhereClause> whereClauses = [];
+    for(var memberNumber in memberNumbers) {
+      whereClauses.add(IndexWhereClause.equalTo(
+        indexName: AnalystDatabase.memberNumbersAppearingIndex,
+        value: [memberNumber],
+      ));
+    }
+
+    Query<String> query = isar.dbShootingMatchs.buildQuery(
+      whereClauses: whereClauses,
+      sortBy: [
+        SortProperty(property: DateQuery().property, sort: Sort.desc),
+      ],
+      limit: pageSize,
+      offset: page * pageSize,
+      property: "eventName",
+    );
+
+    return await query.findAll();
+  }
+
   /// Save a match.
   ///
   /// The provided ShootingMatch will have its database ID set if the save succeeds.
@@ -114,11 +161,16 @@ class AnalystDatabase {
 
   Future<DbShootingMatch?> getMatchByAnySourceId(List<String> ids) async {
     for(var id in ids) {
-      var match = await isar.dbShootingMatchs.getByIndex("sourceIds", [id]);
+      var match = await isar.dbShootingMatchs.getByIndex(AnalystDatabase.sourceIdsIndex, [id]);
       if(match != null) return match;
     }
 
     return null;
+  }
+
+  Future<List<DbShootingMatch>> getMatchesByMemberNumbers(List<String> memberNumbers) async {
+    var matches = await isar.dbShootingMatchs.getAllByIndex(AnalystDatabase.memberNumbersAppearingIndex, [memberNumbers]);
+    return matches.where((e) => e != null).toList().cast<DbShootingMatch>();
   }
 
   Future<Result<bool, ResultErr>> deleteMatch(int id) async {

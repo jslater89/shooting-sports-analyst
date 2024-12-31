@@ -251,3 +251,19 @@ extension ListOverlap<T> on List<T> {
     return this.any((e) => other.contains(e));
   }
 }
+
+extension WindowedList<T> on List<T> {
+  /// Get a windowed view into the list, optionally offset by [offset],
+  /// starting at the head of the list.
+  List<T> getWindow(int window, {int offset = 0}) {
+    if(offset + window > length) return this;
+    return sublist(offset, offset + window);
+  }
+
+  /// Get a windowed view into the list, starting at the tail of the list,
+  /// optionally offset by [offset].
+  List<T> getTailWindow(int window, {int offset = 0}) {
+    if(offset + window > length) return this;
+    return sublist(length - window - offset, length - offset);
+  }
+}

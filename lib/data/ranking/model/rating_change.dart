@@ -28,7 +28,13 @@ class RatingChange {
   }
 }
 
-abstract class RatingEvent {
+abstract interface class IRatingEvent {
+  double get ratingChange;
+  double get oldRating;
+  double get newRating;
+}
+
+abstract class RatingEvent implements IRatingEvent {
   String get eventName => "${match.name}" + (stage == null ? "" : " - ${stage!.name}");
 
   Map<String, List<dynamic>> get info => wrappedEvent.info;

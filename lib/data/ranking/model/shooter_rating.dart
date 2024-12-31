@@ -87,6 +87,10 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
   /// at least one other person.
   List<RatingEvent> get ratingEvents;
 
+  /// Called by the rating project loader when rating events change, so that
+  /// the shooter rating can clear any relevant caches.
+  void ratingEventsChanged();
+
   /// All of the empty rating events in this shooter's history where the
   /// shooter competed against nobody else.
   List<RatingEvent> get emptyRatingEvents;
@@ -211,15 +215,17 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
 
   void updateFromEvents(List<RatingEvent> events);
 
-  AverageRating averageRating({int window = ShooterRating.baseTrendWindow}) {
+  AverageRating averageRating({int window = ShooterRating.baseTrendWindow, List<RatingEvent>? preloadedEvents}) {
     double runningRating = rating;
     double lowestPoint = rating;
     double highestPoint = rating;
 
+    var eventBase = preloadedEvents ?? ratingEvents;
+
     late List<RatingEvent> ratingEventList;
     List<double> intermediateRatings = [];
-    if(window > ratingEvents.length) ratingEventList = ratingEvents;
-    else ratingEventList = ratingEvents.sublist(ratingEvents.length - window);
+    if(window > eventBase.length) ratingEventList = eventBase;
+    else ratingEventList = eventBase.sublist(eventBase.length - window);
 
     for(var event in ratingEventList.reversed) {
       var intermediateRating = runningRating - event.ratingChange;

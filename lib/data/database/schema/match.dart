@@ -59,6 +59,10 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
   List<DbMatchStage> stages;
   List<DbMatchEntry> shooters;
 
+  @Index(name: AnalystDatabase.memberNumbersAppearingIndex, type: IndexType.value)
+  /// A list of member numbers that appear in this match, for quick filtering by competitor.
+  List<String> memberNumbersAppearing;
+
   DbShootingMatch({
     this.id = Isar.autoIncrement,
     required this.eventName,
@@ -71,13 +75,18 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
     required this.sourceCode,
     required this.stages,
     required this.shooters,
+    required this.memberNumbersAppearing,
   });
 
   factory DbShootingMatch.from(ShootingMatch match) {
     Set<Division> divisionsAppearing = {};
+    Set<String> memberNumbersAppearing = {};
     for(var shooter in match.shooters) {
       if(shooter.division != null) {
         divisionsAppearing.add(shooter.division!);
+      }
+      if(shooter.memberNumber.isNotEmpty) {
+        memberNumbersAppearing.add(shooter.memberNumber);
       }
     }
     Map<MatchEntry, RelativeMatchScore> shooterScores = {};
@@ -121,6 +130,7 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
       sportName: match.sport.name,
       shooters: dbEntries,
       stages: []..addAll(match.stages.map((s) => DbMatchStage.from(s))),
+      memberNumbersAppearing: memberNumbersAppearing.toList(),
     );
   }
 

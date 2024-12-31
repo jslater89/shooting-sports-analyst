@@ -59,3 +59,14 @@ abstract class ShooterDeduplicator {
     return name;
   }
 }
+
+/// Types of member numbers that can identify a competitor.
+///
+/// As of the initial writing, these are USPSA's member number categories.
+/// Other sports may be added as necessary, or simply overlap with these.
+enum MemberNumberType {
+  associate,
+  life,
+  benefactor,
+  areaOrRegionalDirector,
+}

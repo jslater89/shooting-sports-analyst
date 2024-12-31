@@ -25,14 +25,15 @@ class _RatingsContainerPageState extends State<RatingsContainerPage> {
 
   bool get configured => project != null;
   bool calculated = false;
-
+  bool forceRecalculate = false;
   @override
   Widget build(BuildContext context) {
     if(!configured) {
       return ConfigureRatingsPage(
-        onSettingsReady: (DbRatingProject project) async {
+        onSettingsReady: (DbRatingProject project, bool forceRecalculate) async {
           setState(() {
             this.project = project;
+            this.forceRecalculate = forceRecalculate;
           });
         }
       );
@@ -40,7 +41,7 @@ class _RatingsContainerPageState extends State<RatingsContainerPage> {
     else if(!calculated) {
       return LoadRatingsPage(
         project: project!,
-        forceRecalculate: false,
+        forceRecalculate: forceRecalculate,
         onRatingsComplete: () {
           setState(() {
             calculated = true;

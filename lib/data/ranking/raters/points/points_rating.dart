@@ -140,4 +140,9 @@ class PointsRating extends ShooterRating {
 
   @override
   List<RatingEvent> emptyRatingEvents = [];
+  
+  @override
+  void ratingEventsChanged() {
+    // no-op
+  }
 }

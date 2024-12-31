@@ -11,6 +11,7 @@ import 'package:shooting_sports_analyst/data/database/match/match_database.dart'
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
@@ -328,7 +329,7 @@ class RatingGroup with DbSportEntity {
 }
 
 @collection
-class DbRatingEvent {
+class DbRatingEvent implements IRatingEvent {
   Id id = Isar.autoIncrement;
 
   @ignore
