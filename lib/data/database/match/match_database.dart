@@ -22,6 +22,8 @@ import '../schema/match.dart';
 var _log = SSALogger("MatchDb");
 
 class AnalystDatabase {
+  static const knownMemberNumbersIndex = "knownMemberNumbers";
+  static const allPossibleMemberNumbersIndex = "allPossibleMemberNumbers";
   static const eventNameIndex = "eventNameParts";
   static const sourceIdsIndex = "sourceIds";
   static const dateIndex = "date";

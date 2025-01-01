@@ -31,6 +31,12 @@ class Shooter {
   List<String> get noncanonicalMemberNumbers => 
     [...knownMemberNumbers]..retainWhere((element) => element != _memberNumber);
 
+  @ignore
+  /// All possible member numbers this shooter could be known by, including e.g.
+  /// A/TY/FY forms of an associate number in USPSA. Currently used only by
+  /// [ShooterRating] and [DbShooterRating].
+  Set<String> allPossibleMemberNumbers = {};
+
   @Index()
   /// The shooter's most recent member number, normalized as [originalMemberNumber].
   String get memberNumber => _memberNumber;

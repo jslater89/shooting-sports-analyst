@@ -26,9 +26,13 @@ class DbShooterRating extends Shooter with DbSportEntity {
   @ignore
   bool get isPersisted => id != Isar.autoIncrement;
 
-  @Index(type: IndexType.hashElements)
+  @Index(name: AnalystDatabase.knownMemberNumbersIndex, type: IndexType.hashElements)
   List<String> get dbKnownMemberNumbers => List<String>.from(knownMemberNumbers);
   set dbKnownMemberNumbers(List<String> values) => knownMemberNumbers = {}..addAll(values);
+
+  @Index(name: AnalystDatabase.allPossibleMemberNumbersIndex, type: IndexType.hashElements)
+  List<String> get dbAllPossibleMemberNumbers => List<String>.from(allPossibleMemberNumbers);
+  set dbAllPossibleMemberNumbers(List<String> values) => allPossibleMemberNumbers = {}..addAll(values);
 
   @Index()
   String firstName;

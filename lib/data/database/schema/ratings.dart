@@ -31,6 +31,9 @@ part 'ratings.g.dart';
 
 var _log = SSALogger("DbRatingSchema");
 
+/// A mixin that provides a convenience property [sport] to access the sport
+/// associated with this entity, stored in [sportName]. To use, mix in this
+/// class and add a [sportName] property to the class.
 mixin DbSportEntity {
   /// Do not set sportName directly. Instead, use [sport].
   String get sportName;
@@ -42,7 +45,6 @@ mixin DbSportEntity {
   set sport(Sport s) => sportName = s.name;
 }
 
-// TODO: this should also implement PreloadedRatingDataSource
 @collection
 class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRatingDataSource {
   Id id = Isar.autoIncrement;
@@ -129,6 +131,10 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
 
   final dbGroups = IsarLinks<RatingGroup>();
 
+  /// A list of member number mappings detected automatically while loading this
+  /// project.
+  List<DbMemberNumberMapping> automaticNumberMappings = [];
+
   @ignore
   List<RatingGroup> get groups {
     if(!dbGroups.isLoaded) {
@@ -167,11 +173,16 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
     return DataSourceResult.ok(await ratings.filter().group((q) => q.idEqualTo(group.id)).findAll());
   }
 
+  Future<DataSourceResult<List<DbShooterRating>>> getRatingsByDeduplicatorName(String deduplicatorName) async {
+    return DataSourceResult.ok(await ratings.filter().deduplicatorNameEqualTo(deduplicatorName).findAll());
+  }
+
   DbRatingProject({
     required this.name,
     required this.sportName,
     this.encodedSettings = "{}",
     this.transientDataEntryErrorSkip = false,
+    this.automaticNumberMappings = const [],
     RatingProjectSettings? settings,
   }) {
     if(settings != null) {
@@ -257,6 +268,35 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   Future<DataSourceResult<ShooterRating>> wrapDbRating(DbShooterRating rating) {
     return Future.value(DataSourceResult.ok(settings.algorithm.wrapDbRating(rating)));
   }
+}
+
+@embedded
+class DbMemberNumberMapping {
+  String deduplicatorName;
+  List<String> sourceNumbers;
+  String targetNumber;
+  bool automatic;
+
+  DbMemberNumberMapping({
+    this.deduplicatorName = "",
+    this.sourceNumbers = const [],
+    this.targetNumber = "",
+    this.automatic = false,
+  });
+
+  operator ==(Object other) {
+    if(!(other is DbMemberNumberMapping)) return false;
+    if(other.sourceNumbers.length != sourceNumbers.length) return false;
+    if(other.targetNumber != targetNumber) return false;
+    if(other.deduplicatorName != deduplicatorName) return false;
+    if(other.automatic != automatic) return false;
+    if(!other.sourceNumbers.containsAll(sourceNumbers)) return false;
+
+    return true;
+  }
+
+  int get hashCode =>
+    Object.hash(deduplicatorName, targetNumber, automatic, Object.hashAllUnordered(sourceNumbers));
 }
 
 @collection

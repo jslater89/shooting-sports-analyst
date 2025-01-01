@@ -25,6 +25,11 @@ import 'package:shooting_sports_analyst/util.dart';
 var _log = SSALogger("ShooterRating");
 
 /// ShooterRatings are convenience wrappers around [DbShooterRating].
+/// 
+/// They hold some common functionality for all shooter ratings. Concrete
+/// implementations for different rating types can provide cleaner access
+/// to the underlying data, especially for the intData and doubleData arrays
+/// on DbShooterRating.
 abstract class ShooterRating extends Shooter with DbSportEntity {
   String sportName;
 
@@ -33,6 +38,14 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
 
   String get lastName => wrappedRating.lastName;
   set lastName(String n) => wrappedRating.lastName = n;
+
+  set memberNumber(String m) {
+    super.memberNumber = m;
+    var deduplicator = sport.shooterDeduplicator;
+    if(deduplicator != null) {
+      allPossibleMemberNumbers.addAll(deduplicator.alternateForms(m));
+    }
+  }
   
   /// The DB rating object backing this rating. If its ID property
   /// is [Isar.autoIncrement], it is assumed that the rating has not

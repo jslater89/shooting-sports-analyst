@@ -187,11 +187,6 @@ class RatingProjectLoader {
     }
 
     // 2. Deduplicate shooters.
-    // TODO
-    // The only way around having to load every shooter for deduplication is to
-    // store some of what we currently calculate in deduplicateShooters ahead of
-    // time, when we do _addShootersFromMatch. I think we mostly need a list of numbers
-    // per recorded name, although maybe the other way around would be good to have too?
 
     // At this point we have an accurate count of shooters so far, which we'll need for various maths.
     var shooterCount = await AnalystDatabase().countShooterRatings(project, group);
@@ -305,6 +300,11 @@ class RatingProjectLoader {
   /// Use [encounter] if you want shooters to be added regardless of whether they appear
   /// in scores. (i.e., shooters who DQ on the first stage, or are no-shows but still included in the data)
   Future<int> _addShootersFromMatch(RatingGroup group, ShootingMatch match) async {
+    // TODO: ensure we're using allPossibleMemberNumbers where appropriate.
+    // we want to make sure that in any case where we query to ask whether a shooter exists,
+    // we query against allPossibleMemberNumbers rather than knownMemberNumbers, so we don't
+    // have to worry about deduplicating A/TY/FY forms in USPSA.
+
     var start = DateTime.now();
     int added = 0;
     int updated = 0;

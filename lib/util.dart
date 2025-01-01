@@ -250,6 +250,10 @@ extension ListOverlap<T> on List<T> {
   bool intersects(List<T> other) {
     return this.any((e) => other.contains(e));
   }
+
+  bool containsAll(List<T> other) {
+    return other.every((e) => this.contains(e));
+  }
 }
 
 extension WindowedList<T> on List<T> {

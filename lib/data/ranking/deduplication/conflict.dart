@@ -23,11 +23,9 @@ class Conflict {
   /// Up to the last five matches where each member number appears.
   Map<String, List<DbShootingMatch>> matches;
 
-  /// The causes of the conflict. This may be empty in scenarios where the
-  /// conflict can be resolved automatically.
+  /// The causes of the conflict.
   List<ConflictType> causes;
-  /// Proposed actions to resolve the conflict. If [causes] is empty, the proposed
-  /// actions here are [probably] safe to apply automatically.
+  /// Proposed actions to resolve the conflict.
   List<DeduplicationAction> proposedActions;
 
   Conflict({
@@ -44,6 +42,8 @@ class Conflict {
 /// resolved with high confidence.
 sealed class ConflictType {
   const ConflictType();
+
+  bool get canResolveAutomatically => false;
 }
 
 /// In multiple-numbers-of-type conflicts, one deduplicator name has
@@ -68,6 +68,9 @@ class MultipleNumbersOfType extends ConflictType {
     return 0;
   }
   bool get probableTypo => stringDifference > 65;
+
+  @override
+  bool get canResolveAutomatically => probableTypo;
 
   const MultipleNumbersOfType({
     required this.deduplicatorName,

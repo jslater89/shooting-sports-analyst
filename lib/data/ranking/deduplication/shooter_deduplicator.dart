@@ -58,6 +58,40 @@ abstract class ShooterDeduplicator {
 
     return name;
   }
+
+  /// If calculable, return a list of alternate forms of the provided member number.
+  /// The returned list will always include the original number, even if no calculation
+  /// is possible (in which case it will be the only element in the list).
+  /// 
+  /// In cases (like frickin' USPSA) where member 123456 may be prefixed in one of
+  /// several ways without changing the numeric element (A, TY, FY) or the underlying
+  /// member, we want to be able to save all of them to the database at once.
+  List<String> alternateForms(String number);
+
+  /// A normalized member number is a member number that has been processed for
+  /// display purposes.
+  /// 
+  /// The default implementation removes all non-alphanumeric characters and
+  /// converts to uppercase.
+  String normalizeNumber(String number) {
+    return number.toUpperCase().replaceAll(RegExp(r"[^A-Z0-9]"), "");
+  }
+
+  /// A processed member number is a member number that has been processed to
+  /// meet the condition that string equality equals member equality.
+  /// 
+  /// The default implementation returns the normalized number.
+  String processNumber(String number) {
+    return normalizeNumber(number);
+  }
+
+  /// Classify a member number into a member number type.
+  MemberNumberType classify(String number);
+
+  /// Given a map of member number types to lists of member numbers, return
+  /// a list of member numbers that are valid target numbers for a member
+  /// number mapping.
+  List<String> targetNumber(Map<MemberNumberType, List<String>> numbers);
 }
 
 /// Types of member numbers that can identify a competitor.
@@ -65,8 +99,12 @@ abstract class ShooterDeduplicator {
 /// As of the initial writing, these are USPSA's member number categories.
 /// Other sports may be added as necessary, or simply overlap with these.
 enum MemberNumberType {
-  associate,
+  standard,
   life,
   benefactor,
-  areaOrRegionalDirector,
+  regionDirector;
+
+  bool betterThan(MemberNumberType other) {
+    return other.index > this.index;
+  }
 }
