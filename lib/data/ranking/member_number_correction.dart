@@ -34,10 +34,6 @@ class MemberNumberCorrection {
 }
 
 class MemberNumberCorrectionContainer {
-  // TODO: figure out how to represent these so that a shooter can have multiples
-  // Probably need to be keyed by both name and invalid number, or these maps should
-  // be maps to lists.
-
   // Neither of those will break JSON serialization
   Map<String, List<MemberNumberCorrection>> _byName = {};
   Map<String, List<MemberNumberCorrection>> _byInvalidNumber = {};

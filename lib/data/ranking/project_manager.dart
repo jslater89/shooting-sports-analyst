@@ -261,9 +261,7 @@ class RatingProject with DbSportEntity {
       userMemberNumberMappings: ((encodedProject[_memberNumberMappingsKey] ?? <String, dynamic>{}) as Map<String, dynamic>).map<String, String>((k, v) =>
         MapEntry(k, v as String)
       ),
-      memberNumberMappingBlacklist: ((encodedProject[_memberNumberMappingBlacklistKey] ?? <String, dynamic>{}) as Map<String, dynamic>).map<String, String>((k, v) =>
-          MapEntry(k, v as String)
-      ),
+      memberNumberMappingBlacklist: _decodeMemberNumberMappingBlacklist(encodedProject),
       hiddenShooters: ((encodedProject[_hiddenShootersKey] ?? []) as List<dynamic>).map((item) => item as String).toList(),
       memberNumberCorrections: MemberNumberCorrectionContainer.fromJson((encodedProject[_memberNumberCorrectionsKey] ?? []) as List<dynamic>),
       recognizedDivisions: recognizedDivisions,
@@ -331,7 +329,7 @@ class RatingProjectSettings {
   /// to those numbers will not be merged.
   ///
   /// Should be in [Rater.processMemberNumber] format.
-  Map<String, String> memberNumberMappingBlacklist;
+  Map<String, List<String>> memberNumberMappingBlacklist;
 
   /// A list of shooters to hide from the rating display, based on member number.
   ///
@@ -406,9 +404,7 @@ class RatingProjectSettings {
       userMemberNumberMappings: ((encodedProject[_memberNumberMappingsKey] ?? <String, dynamic>{}) as Map<String, dynamic>).map<String, String>((k, v) =>
         MapEntry(k, v as String)
       ),
-      memberNumberMappingBlacklist: ((encodedProject[_memberNumberMappingBlacklistKey] ?? <String, dynamic>{}) as Map<String, dynamic>).map<String, String>((k, v) =>
-        MapEntry(k, v as String)
-      ),
+      memberNumberMappingBlacklist: _decodeMemberNumberMappingBlacklist(encodedProject),
       hiddenShooters: ((encodedProject[_hiddenShootersKey] ?? []) as List<dynamic>).map((item) => item as String).toList(),
       memberNumberCorrections: MemberNumberCorrectionContainer.fromJson((encodedProject[_memberNumberCorrectionsKey] ?? []) as List<dynamic>),
       recognizedDivisions: recognizedDivisions,
@@ -421,7 +417,8 @@ class RatingProjectSettings {
         userMemberNumberMappings[fix.memberNumber1] = fix.memberNumber2;
         break;
       case CollisionFixAction.blacklist:
-        memberNumberMappingBlacklist[fix.memberNumber1] = fix.memberNumber2;
+        memberNumberMappingBlacklist[fix.memberNumber1] ??= [];
+        memberNumberMappingBlacklist[fix.memberNumber1]!.add(fix.memberNumber2);
         break;
       case CollisionFixAction.dataFix:
         memberNumberCorrections.add(MemberNumberCorrection(
@@ -437,4 +434,19 @@ class RatingProjectSettings {
         break;
     }
   }
+}
+
+Map<String, List<String>> _decodeMemberNumberMappingBlacklist(Map<String, dynamic> encodedProject) {
+  var memberNumberMappingBlacklist = <String, List<String>>{};
+  var blacklistJson = (encodedProject[_memberNumberMappingBlacklistKey] ?? <String, dynamic>{}) as Map<String, dynamic>;
+  for(var key in blacklistJson.keys) {
+    var value = blacklistJson[key];
+    if(value is String) {
+      memberNumberMappingBlacklist[key] = [value];
+    }
+    else {
+      memberNumberMappingBlacklist[key] = (value as List<dynamic>).map((item) => item as String).toList();
+    }
+  }
+  return memberNumberMappingBlacklist;
 }

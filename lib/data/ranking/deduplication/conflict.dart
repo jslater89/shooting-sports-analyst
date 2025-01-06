@@ -12,7 +12,7 @@ import 'package:fuzzywuzzy/fuzzywuzzy.dart' as fuzzywuzzy;
 /// Conflicts can be caused by:
 /// - Two competitors (i.e., two member numbers) who have different names,
 ///   which will lead to a list of 
-class Conflict {
+class DeduplicatorCollision {
   /// The deduplicator name is the processed (alphabetic only, no punctuation or spaces, all lowercase)
   /// name that has multiple member numbers/shooter ratings.
   String deduplicatorName;
@@ -21,14 +21,16 @@ class Conflict {
   /// The shooter ratings corresponding to the member numbers.
   Map<String, DbShooterRating> shooterRatings;
   /// Up to the last five matches where each member number appears.
+  // TODO: maybe we load this in the UI when people are reviewing, for speed reasons?
   Map<String, List<DbShootingMatch>> matches;
 
-  /// The causes of the conflict.
+  /// The causes of the conflict. In the case where we can automap (at most one member number
+  /// of each type), this will be empty.
   List<ConflictType> causes;
   /// Proposed actions to resolve the conflict.
   List<DeduplicationAction> proposedActions;
 
-  Conflict({
+  DeduplicatorCollision({
     required this.deduplicatorName,
     required this.memberNumbers,
     required this.shooterRatings,
@@ -44,6 +46,17 @@ sealed class ConflictType {
   const ConflictType();
 
   bool get canResolveAutomatically => false;
+}
+
+/// A conflict or conflict(s) that has already been resolved in the project settings
+/// by user mappings or previous runs of a deduplicator (i.e., during a full recalculation
+/// but after at least one full calculation has been run). All actions in a [Conflict] with
+/// one [ConflictType] of this type should be applied automatically before presenting the
+/// conflict to the user.
+class FixedInSettings extends ConflictType {
+  bool get canResolveAutomatically => true;
+
+  const FixedInSettings();
 }
 
 /// In multiple-numbers-of-type conflicts, one deduplicator name has
@@ -85,12 +98,17 @@ class MultipleNumbersOfType extends ConflictType {
 /// of the types.
 /// 
 /// [sourceConflicts] and [targetConflicts] indicate whether the
-/// source numbers or target numbers caused the conflict. [conflictingType]
+/// source numbers or target numbers caused the conflict. [conflictingTypes]
 /// indicates the type of the conflicting member numbers.
 ///
-/// The list of conflicting member numbers guarantees that all its
-/// member numbers are of the same type. The non-conflicting numbers
+/// The list of target member numbers guarantees that all its
+/// member numbers are of the same type. The source member numbers
 /// may be of different types.
+/// 
+/// [relevantBlacklistEntries] is a filtered view of the project's blacklist
+/// that includes only entries relevant to this conflict: any blacklist targets
+/// for blacklist entries for the conflict sources that match the conflict targets
+/// or sources.
 /// 
 /// e.g.
 /// 
@@ -100,22 +118,44 @@ class MultipleNumbersOfType extends ConflictType {
 /// 
 /// deduplicatorName: "johndoe"
 /// sourceConflicts: true, targetConflicts: false
-/// conflictingType: associate
+/// conflictingTypes: [associate]
+/// 
+/// Source:    Target:
+///  A12345     L1234
+///  A67890     L5678
+/// 
+/// deduplicatorName: "johndoe"
+/// sourceConflicts: true, targetConflicts: true
+/// conflictingTypes: [associate, lifetime]
+/// 
+/// Source:    Target:
+///  A12345     B123
+///  A67890     B456
+///  L1234
+/// 
+/// deduplicatorName: "johndoe"
+/// sourceConflicts: true, targetConflicts: true
+/// conflictingTypes: [associate, benefactor]
 class AmbiguousMapping extends ConflictType {
   final String deduplicatorName;
   final List<String> sourceNumbers;
   final List<String> targetNumbers;
 
   final bool sourceConflicts;
-  bool get targetConflicts => !sourceConflicts;
+  final bool targetConflicts;
+  final bool crossMapping;
+  final Map<String, List<String>> relevantBlacklistEntries;
 
-  final MemberNumberType conflictingType;
+  final List<MemberNumberType> conflictingTypes;
 
   const AmbiguousMapping({
     required this.deduplicatorName,
     required this.sourceNumbers,
     required this.targetNumbers,
     required this.sourceConflicts,
-    required this.conflictingType,
+    required this.targetConflicts,
+    required this.conflictingTypes,
+    required this.relevantBlacklistEntries,
+    this.crossMapping = false,
   });
 }

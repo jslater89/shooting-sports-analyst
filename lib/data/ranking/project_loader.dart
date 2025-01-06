@@ -331,6 +331,7 @@ class RatingProjectLoader {
           project: project,
           group: group,
           memberNumber: s.memberNumber,
+          usePossibleMemberNumbers: true,
         );
         if(rating == null) {
           var newRating = ratingSystem.newShooterRating(s, sport: project.sport, date: match.date);
@@ -346,6 +347,19 @@ class RatingProjectLoader {
           rating.firstName = s.firstName;
           rating.lastName = s.lastName;
           updated += 1;
+          
+          // We asked for allPossibleMemberNumbers, so if this member number isn't
+          // in the knownMemberNumbers list, add it.
+          if(!rating.knownMemberNumbers.contains(s.memberNumber)) {
+            rating.knownMemberNumbers.add(s.memberNumber);
+          }
+
+          // If this is an international member number and the member number doesn't
+          // start with INTL, add it.
+          if(s.memberNumber.startsWith("INTL")) {
+            rating.knownMemberNumbers.add("INTL${s.memberNumber}");
+          }
+
           await db.upsertDbShooterRating(rating);
         }
       }

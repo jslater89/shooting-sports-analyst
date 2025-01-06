@@ -79,13 +79,23 @@ extension RatingProjectDatabase on AnalystDatabase {
   Future<DbShooterRating?> maybeKnownShooter({
     required DbRatingProject project,
     required RatingGroup group,
-    required String memberNumber
+    required String memberNumber,
+    bool usePossibleMemberNumbers = false,
   }) {
-    return isar.dbShooterRatings.where().dbKnownMemberNumbersElementEqualTo(memberNumber)
+    if(usePossibleMemberNumbers) {
+      return isar.dbShooterRatings.where().dbAllPossibleMemberNumbersElementEqualTo(memberNumber)
         .filter()
         .project((q) => q.idEqualTo(project.id))
         .group((q) => q.uuidEqualTo(group.uuid))
         .findFirst();
+    }
+    else {
+      return isar.dbShooterRatings.where().dbKnownMemberNumbersElementEqualTo(memberNumber)
+        .filter()
+        .project((q) => q.idEqualTo(project.id))
+        .group((q) => q.uuidEqualTo(group.uuid))
+        .findFirst();
+    }
   }
 
   Future<DbShooterRating> newShooterRatingFromWrapped({

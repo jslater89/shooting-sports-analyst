@@ -92,6 +92,11 @@ abstract class ShooterDeduplicator {
   /// a list of member numbers that are valid target numbers for a member
   /// number mapping.
   List<String> targetNumber(Map<MemberNumberType, List<String>> numbers);
+
+  /// Given a map of member number types to lists of member numbers, return
+  /// a list of member numbers that are valid target numbers for a member
+  /// number mapping. If there are no valid target numbers, return null.
+  List<String>? maybeTargetNumber(Map<MemberNumberType, List<String>> numbers);
 }
 
 /// Types of member numbers that can identify a competitor.
@@ -99,6 +104,11 @@ abstract class ShooterDeduplicator {
 /// As of the initial writing, these are USPSA's member number categories.
 /// Other sports may be added as necessary, or simply overlap with these.
 enum MemberNumberType {
+  /// In USPSA, some international competitors enter an IPSC regional member
+  /// number, which we want to prefix with INTL during processing.
+  international,
+  
+  /// 
   standard,
   life,
   benefactor,
