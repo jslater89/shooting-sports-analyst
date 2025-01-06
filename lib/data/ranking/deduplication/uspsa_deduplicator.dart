@@ -17,11 +17,6 @@ import 'package:shooting_sports_analyst/util.dart';
 
 var _log = SSALogger("USPSADeduplicator");
 
-class DeduplicationResult extends Result<List<DeduplicatorCollision>, RatingError> {
-  DeduplicationResult.ok(super.value) : super.ok();
-  DeduplicationResult.err(super.error) : super.err();
-}
-
 class USPSADeduplicator extends ShooterDeduplicator {
   const USPSADeduplicator();
 
@@ -107,25 +102,6 @@ class USPSADeduplicator extends ShooterDeduplicator {
           numbersToRatings[number] = rating;
         }
       }
-
-      // TODO: applying a user mapping may make further deduplication unnecessary.
-      /* thinking aloud here...
-      in what cases is further deduplication unnecessary?
-      * if we have user mapping, we know that source -> target is true.
-      * a better automapping is possible, but only if the target number type is better
-        than the mapping's target. We should probably present that to the user as a
-        proposed UserMapping rather than an AutoMapping, so we don't have to do anything
-        funky with the UserMapping overrides AutoMapping priority. (If we send a UserMapping
-        with all of the member numbers, it'll overwrite the old mappings in the project settings,
-        so we don't need to worry about that on the next recalc.)
-      * MultipleNumbersOfType conflicts are possible without exception, and also possible
-        in cases where they wouldn't otherwise be possible (A123456 -> L1234, A123457 e.g.),
-        since the mapped number only counts as one.
-      * AmbiguousMapping conflicts are not possible with any of the source or target numbers,
-        because we've already mapped manually.
-
-        So we need to progress, but we also need to check against detectedUserMappings.
-      */
 
       // Check if any user mappings apply to the list of ratings, and if they haven't been
       // previously applied. This can happen if we're doing a full recalculation.
@@ -253,13 +229,21 @@ class USPSADeduplicator extends ShooterDeduplicator {
       // Simplest case: there is only one member number of each type
       // appearing, so we assume that the multiple entries are for
       // the same person.
-      bool canAutoMap = false;
+      bool canAutoMap = true;
       for(var type in numbers.keys) {
-        if(numbers[type]!.length == 1) {
-          canAutoMap = true;
+        if(numbers[type]!.length != 1) {
+          canAutoMap = false;
           break;
         }
       }
+
+      // TODO: see below (automapping with user mappings)
+      // A better automapping is possible, but only if the target number type is better
+      // than the mapping's target. We should probably present that to the user as a
+      // proposed UserMapping rather than an AutoMapping, so we don't have to do anything
+      // funky with the UserMapping overrides AutoMapping priority. (If we send a UserMapping
+      // with all of the member numbers, it'll overwrite the old mappings in the project settings,
+      // so we don't need to worry about that on the next recalc.)
 
       if(canAutoMap) {
         // If canAutoMap is true, then all of our member number lists have
@@ -338,7 +322,22 @@ class USPSADeduplicator extends ShooterDeduplicator {
 
       // MultipleNumbersOfType conflicts are a simpler case of AmbiguousMapping
       // conflicts. We can report MultipleNumbersOfType conflicts on their own
-      // only if there are member numbers of only one type.
+      // only if there are member numbers of only one type, or in a special case
+      // around user mappings: two member numbers of the same type, one of
+      // which is mapped to a different type. (A123456 -> L1234, A123457 e.g., or
+      // A123456 -> L1234, L1235)
+
+      // TODO: rewrite this a bit.
+      // We can handle the special case by trying multiple times, copying the numbers
+      // map, and removing one half of the user mappings at a time. If any of the
+      // numbers maps so generated meets the criteria for a MultipleNumbersOfType
+      // conflict, we can run the detection algorithm on it.
+
+      // e.g. A123456 -> L1234, A123457:
+      // 1. No-removal list: [A123456, A123457, L1234]: can't multiple-numbers-of-type it.
+      // 2. Removal of A123456: [A123457, L1234]: can't multiple-numbers-of-type it.
+      // 3. Removal of L1234: [A123456, A123457]: can multiple-numbers-of-type it.
+
       List<MemberNumberType> typesWithMultipleNumbers = [];
       for(var type in numbers.keys) {
         if(numbers[type]!.length > 1) {
@@ -379,10 +378,13 @@ class USPSADeduplicator extends ShooterDeduplicator {
           }
 
           if(sourceNumbers.isNotEmpty) {
-            proposedActions.add(UserMapping(
-              sourceNumbers: sourceNumbers,
-              targetNumber: probableTarget,
-            ));
+            for(var source in sourceNumbers) {
+              proposedActions.add(DataEntryFix(
+                deduplicatorName: name,
+                sourceNumber: source,
+                targetNumber: probableTarget,
+              ));
+            }
           }
         }
 
@@ -410,17 +412,27 @@ class USPSADeduplicator extends ShooterDeduplicator {
       // 2. At least two member number types have more than zero member numbers.
       // This is an ambiguous mapping, and we can't really guess about it.
 
-      // TODO: remove any detected mappings from the numbers map.
+      // AmbiguousMapping conflicts are not possible with any of the source or target numbers
+      // in detected mappings by definition; they're already mapped. Copy the numbers map and
+      // remove them before checking for conflicting types.
+
+      Map<MemberNumberType, List<String>> ambiguousCheckNumbers = numbers.deepCopy();
+      for(var mapping in detectedMappings.entries) {
+        for(var type in ambiguousCheckNumbers.keys) {
+          ambiguousCheckNumbers[type]!.remove(mapping.key);
+          ambiguousCheckNumbers[type]!.remove(mapping.value);
+        }
+      }
 
       List<MemberNumberType> conflictingTypes = [];
-      for(var type in numbers.keys) {
-        if(numbers[type]!.length > 1) {
+      for(var type in ambiguousCheckNumbers.keys) {
+        if(ambiguousCheckNumbers[type]!.length > 1) {
           conflictingTypes.add(type);
         }
       }
 
-      var targetNumbers = targetNumber(numbers);
-      var sourceNumbers = numbers.values.flattened.where((e) => !targetNumbers.contains(e)).toList();
+      var targetNumbers = targetNumber(ambiguousCheckNumbers);
+      var sourceNumbers = ambiguousCheckNumbers.values.flattened.where((e) => !targetNumbers.contains(e)).toList();
 
       var sourceConflicts = false;
       for(var number in sourceNumbers) {
@@ -448,7 +460,7 @@ class USPSADeduplicator extends ShooterDeduplicator {
 
       conflicts.add(DeduplicatorCollision(
         deduplicatorName: name,
-        memberNumbers: numbers.values.flattened.toList(),
+        memberNumbers: ambiguousCheckNumbers.values.flattened.toList(),
         shooterRatings: numbersToRatings,
         matches: {},
         causes: [
@@ -540,5 +552,14 @@ class USPSADeduplicator extends ShooterDeduplicator {
     }
 
     return null;
+  }
+}
+
+extension DeepCopyMemberNumberMap on Map<MemberNumberType, List<String>> {
+  Map<MemberNumberType, List<String>> deepCopy() {
+    return {
+      for(var type in keys) 
+        type: [...this[type]!]
+    };
   }
 }

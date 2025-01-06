@@ -2,11 +2,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
-
-import '../../database/schema/ratings/shooter_rating.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 /// ShooterDeduplicators implement shooter deduplication: the process
 /// whereby shooters in sports that can have multiple member numbers
@@ -40,15 +41,11 @@ abstract class ShooterDeduplicator {
   /// [mappingBlacklist] is the list of user-specified member number mapping
   /// blacklists. Numbers appearing as keys in [mappingBlacklist] must not be
   /// mapped to the corresponding values.
-  RatingResult deduplicateShooters({
-    required WrappedRatingGenerator ratingWrapper,
-    required Map<String, DbShooterRating> knownShooters,
-    required Map<String, String> shooterAliases,
-    required Map<String, String> currentMappings,
-    required Map<String, String> userMappings,
-    required Map<String, String> mappingBlacklist,
+  Future<DeduplicationResult> deduplicateShooters({
+    required DbRatingProject ratingProject,
+    required List<DbShooterRating> newRatings,
     bool checkDataEntryErrors = true,
-    bool verbose = false,
+    bool verbose = false
   });
 
   static String processName(Shooter shooter) {
@@ -107,7 +104,7 @@ enum MemberNumberType {
   /// In USPSA, some international competitors enter an IPSC regional member
   /// number, which we want to prefix with INTL during processing.
   international,
-  
+
   /// 
   standard,
   life,
@@ -117,4 +114,9 @@ enum MemberNumberType {
   bool betterThan(MemberNumberType other) {
     return other.index > this.index;
   }
+}
+
+class DeduplicationResult extends Result<List<DeduplicatorCollision>, RatingError> {
+  DeduplicationResult.ok(super.value) : super.ok();
+  DeduplicationResult.err(super.error) : super.err();
 }
