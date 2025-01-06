@@ -155,7 +155,9 @@ class USPSADeduplicator extends ShooterDeduplicator {
         else {
           // If there are multiple target numbers, we have a cross mapping. We might
           // be able to resolve it automatically if there's a single best target number.
-          _log.w("Cross mapping for rating $rating\n    User mappings: $userMappingsForRating\n    Auto mappings: $autoMappingsForRating");
+          // It's only a potential cross mapping because if we have A123456 -> L1234 and
+          // L1234 -> B123, we can correct that by mapping everything to the best target.
+          _log.w("Potential cross mapping for rating $rating\n    User mappings: $userMappingsForRating\n    Auto mappings: $autoMappingsForRating");
           Map<MemberNumberType, List<String>> classifiedTargetNumbers = {};
           for(var target in targetNumbers) {
             var type = classify(target);
@@ -226,7 +228,7 @@ class USPSADeduplicator extends ShooterDeduplicator {
         ));
       }
 
-      // Simplest case: there is only one member number of each type
+      // Simplest (remaining) case: there is only one member number of each type
       // appearing, so we assume that the multiple entries are for
       // the same person.
       bool canAutoMap = true;
@@ -296,19 +298,86 @@ class USPSADeduplicator extends ShooterDeduplicator {
         }
 
         if(!blacklisted) {
-          conflicts.add(DeduplicatorCollision(
-            deduplicatorName: name,
-            memberNumbers: localAllNumbers,
-            shooterRatings: numbersToRatings,
-            matches: {},
-            causes: [],
-            proposedActions: [
-              AutoMapping(
+          // If we don't have any implicated user mappings, we can add an AutoMapping.
+          // If we do have implicated user mappings, we should present it as a UserMapping
+          // for priority reasons.
+          bool canAddMapping = true;
+          bool shouldAddUserMapping = false;
+
+          Map<String, String> implicatedMappings = {};
+          for(var source in sources) {
+            var target = detectedMappings[source];
+            if(target != null) {
+              implicatedMappings[source] = target;
+            }
+          }
+
+          // If we have a detected mapping, we can only continue if
+          // the newly detected auto mapping target is better than all of
+          // the implicated mapping targets, and in that scenario,
+          // we should make sure that all of the detected mapping sources
+          // are included in the new mapping.
+          if(implicatedMappings.isNotEmpty) {
+            // 2025-01-06: I think this should be length 1, because
+            // a set of mappings that maps to different things is a cross
+            // mapping and we bail to resolve that manually.
+
+            bool isUserMapping = false;
+            bool shouldUpdateMapping = true;
+            for(var mapping in implicatedMappings.entries) {
+              var mappingTarget = mapping.value;
+              var mappingType = classify(mappingTarget);
+              var detectedType = classify(target!);
+              if(detectedType.betterThan(mappingType)) {
+                shouldUpdateMapping = true;
+
+                if(detectedUserMappings[mapping.key] == mappingTarget) {
+                  isUserMapping = true;
+                }
+              }
+              else {
+                canAddMapping = false;
+              }
+            }
+
+            if(shouldUpdateMapping) {
+              for(var source in implicatedMappings.keys) {
+                if(!sources.contains(source)) {
+                  sources.add(source);
+                }
+              }
+
+              if(isUserMapping) {
+                shouldAddUserMapping = true;
+              }
+            }
+          }
+
+          if(canAddMapping) {
+            DeduplicationAction proposedAction;
+            if(shouldAddUserMapping) {
+              proposedAction = UserMapping(
                 sourceNumbers: sources,
                 targetNumber: target!,
-              ),
-            ],
-          ));
+              );
+            }
+            else {
+              proposedAction = AutoMapping(
+                sourceNumbers: sources,
+                targetNumber: target!,
+              );
+            }
+            conflicts.add(DeduplicatorCollision(
+              deduplicatorName: name,
+              memberNumbers: localAllNumbers,
+              shooterRatings: numbersToRatings,
+              matches: {},
+              causes: [],
+              proposedActions: [
+                proposedAction,
+              ],
+            ));
+          }
         }
 
         continue;
@@ -319,6 +388,8 @@ class USPSADeduplicator extends ShooterDeduplicator {
 
       // Assumptions at this point:
       // 1. At least one member number type has more than one member number.
+      // (there are more, but I need to finish the code, write some tests, and
+      // see how it works before I go to the trouble of documenting them)
 
       // MultipleNumbersOfType conflicts are a simpler case of AmbiguousMapping
       // conflicts. We can report MultipleNumbersOfType conflicts on their own
@@ -327,7 +398,6 @@ class USPSADeduplicator extends ShooterDeduplicator {
       // which is mapped to a different type. (A123456 -> L1234, A123457 e.g., or
       // A123456 -> L1234, L1235)
 
-      // TODO: rewrite this a bit.
       // We can handle the special case by trying multiple times, copying the numbers
       // map, and removing one half of the user mappings at a time. If any of the
       // numbers maps so generated meets the criteria for a MultipleNumbersOfType
@@ -338,73 +408,92 @@ class USPSADeduplicator extends ShooterDeduplicator {
       // 2. Removal of A123456: [A123457, L1234]: can't multiple-numbers-of-type it.
       // 3. Removal of L1234: [A123456, A123457]: can multiple-numbers-of-type it.
 
-      List<MemberNumberType> typesWithMultipleNumbers = [];
-      for(var type in numbers.keys) {
-        if(numbers[type]!.length > 1) {
-          typesWithMultipleNumbers.add(type);
-        }
+
+      // For each mapping, create one copy of the numbers map with the source removed,
+      // and one copy with the target removed.
+      var multipleCheckNumbers = numbers.deepCopy();
+      List<Map<MemberNumberType, List<String>>> multipleCheckNumbersList = [];
+      multipleCheckNumbersList.add(multipleCheckNumbers);
+      for(var mapping in detectedMappings.entries) {
+        var sourceType = classify(mapping.key);
+        var targetType = classify(mapping.value);
+
+        multipleCheckNumbers = numbers.deepCopy();
+        multipleCheckNumbers[sourceType]!.remove(mapping.key);
+        multipleCheckNumbersList.add(multipleCheckNumbers);
+
+        multipleCheckNumbers = numbers.deepCopy();
+        multipleCheckNumbers[targetType]!.remove(mapping.value);
+        multipleCheckNumbersList.add(multipleCheckNumbers);
       }
 
-      if(typesWithMultipleNumbers.length == 1 && numbers[typesWithMultipleNumbers.first]!.length > 1) {
-        var type = typesWithMultipleNumbers.first;
-        List<DeduplicationAction> proposedActions = [];
-        // Since callers of this function will probably pass in member numbers in order of appearance,
-        // for member numbers that are likely typos, the first item in the list is probably the
-        // correct one. Do fuzzy string comparison to determine if we propose a blacklist for a given
-        // number, or a user mapping.
-        var probableTarget = numbers[type]!.first;
-        List<String> sourceNumbers = [];
-        for(var number in numbers[type]!.sublist(1)) {
-          var strdiff = fuzzywuzzy.weightedRatio(probableTarget, number);
-          if(strdiff > 65) {
-            // experimentally, 65 (on a 0-100 scale) works pretty well.
-            sourceNumbers.add(number);
-          }
-          else if(blacklist[number]?.contains(probableTarget) == false) {
-            proposedActions.add(Blacklist(
-              sourceNumber: number,
-              targetNumber: probableTarget,
-              bidirectional: true,
-            ));
+
+      for(var numbers in multipleCheckNumbersList) {
+        List<MemberNumberType> typesWithMultipleNumbers = [];
+        for(var type in numbers.keys) {
+          if(numbers[type]!.length > 1) {
+            typesWithMultipleNumbers.add(type);
           }
         }
 
-        if(sourceNumbers.isNotEmpty) {
-          for(var blacklistSource in blacklist.keys) {
-            var blacklistTarget = blacklist[blacklistSource]!;
-            if(blacklistTarget == probableTarget) {
-              sourceNumbers.remove(blacklistSource);
+        if(typesWithMultipleNumbers.length == 1 && numbers[typesWithMultipleNumbers.first]!.length > 1) {
+          var type = typesWithMultipleNumbers.first;
+          List<DeduplicationAction> proposedActions = [];
+          // Since callers of this function will probably pass in member numbers in order of appearance,
+          // for member numbers that are likely typos, the first item in the list is probably the
+          // correct one. Do fuzzy string comparison to determine if we propose a blacklist for a given
+          // number, or a user mapping.
+          var probableTarget = numbers[type]!.first;
+          List<String> sourceNumbers = [];
+          for(var number in numbers[type]!.sublist(1)) {
+            var strdiff = fuzzywuzzy.weightedRatio(probableTarget, number);
+            if(strdiff > 65) {
+              // experimentally, 65 (on a 0-100 scale) works pretty well.
+              sourceNumbers.add(number);
+            }
+            else if(blacklist[number]?.contains(probableTarget) == false) {
+              proposedActions.add(Blacklist(
+                sourceNumber: number,
+                targetNumber: probableTarget,
+                bidirectional: true,
+              ));
             }
           }
 
           if(sourceNumbers.isNotEmpty) {
-            for(var source in sourceNumbers) {
-              proposedActions.add(DataEntryFix(
-                deduplicatorName: name,
-                sourceNumber: source,
-                targetNumber: probableTarget,
-              ));
+            for(var blacklistSource in blacklist.keys) {
+              var blacklistTarget = blacklist[blacklistSource]!;
+              if(blacklistTarget == probableTarget) {
+                sourceNumbers.remove(blacklistSource);
+              }
+            }
+
+            if(sourceNumbers.isNotEmpty) {
+              for(var source in sourceNumbers) {
+                proposedActions.add(DataEntryFix(
+                  deduplicatorName: name,
+                  sourceNumber: source,
+                  targetNumber: probableTarget,
+                ));
+              }
             }
           }
+
+          conflicts.add(DeduplicatorCollision(
+            deduplicatorName: name,
+            memberNumbers: numbers[typesWithMultipleNumbers.first]!,
+            shooterRatings: numbersToRatings,
+            matches: {},
+            causes: [
+              MultipleNumbersOfType(
+                deduplicatorName: name,
+                memberNumberType: typesWithMultipleNumbers.first,
+                memberNumbers: numbers[typesWithMultipleNumbers.first]!,
+              ),
+            ],
+            proposedActions: proposedActions,
+          ));
         }
-
-        conflicts.add(DeduplicatorCollision(
-          deduplicatorName: name,
-          memberNumbers: numbers[typesWithMultipleNumbers.first]!,
-          shooterRatings: numbersToRatings,
-          matches: {},
-          causes: [
-            MultipleNumbersOfType(
-              deduplicatorName: name,
-              memberNumberType: typesWithMultipleNumbers.first,
-              memberNumbers: numbers[typesWithMultipleNumbers.first]!,
-            ),
-          ],
-          proposedActions: proposedActions,
-        ));
-
-        // In the scenario expressed by the conditional, we don't have anything else to do here.
-        continue;
       }
 
       // Assumptions at this point:
