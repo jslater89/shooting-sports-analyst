@@ -34,7 +34,8 @@ class Shooter {
   @ignore
   /// All possible member numbers this shooter could be known by, including e.g.
   /// A/TY/FY forms of an associate number in USPSA. Currently used only by
-  /// [ShooterRating] and [DbShooterRating].
+  /// [ShooterRating] and [DbShooterRating]; not guaranteed to be set in non-
+  /// ShooterRating contexts.
   Set<String> allPossibleMemberNumbers = {};
 
   @Index()
@@ -49,6 +50,15 @@ class Shooter {
     }
     knownMemberNumbers.add(processedNumber);
     _memberNumber = processedNumber;
+  }
+
+  void addKnownMemberNumbers(List<String> numbers) {
+    for(var number in numbers) {
+      var normalized = normalizeNumber(number);
+      if(normalized.isNotEmpty) {
+        knownMemberNumbers.add(normalized);
+      }
+    }
   }
 
   static String normalizeNumber(String number) {

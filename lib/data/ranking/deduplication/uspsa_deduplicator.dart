@@ -3,17 +3,12 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import 'package:collection/collection.dart';
-import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
-import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
-import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
-import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
 import 'package:fuzzywuzzy/fuzzywuzzy.dart' as fuzzywuzzy;
 import 'package:shooting_sports_analyst/logger.dart';
-import 'package:shooting_sports_analyst/util.dart';
 
 var _log = SSALogger("USPSADeduplicator");
 

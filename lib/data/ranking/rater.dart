@@ -52,7 +52,7 @@ class Rater {
   /// More precisely, if the target number for an N-number mapping
   /// is a value in this map, the key to that value will not be
   /// included in the N-number mapping.
-  Map<String, String> _memberNumberMappingBlacklist = {};
+  Map<String, List<String>> _memberNumberMappingBlacklist = {};
 
   MemberNumberCorrectionContainer _dataCorrections;
 
@@ -103,7 +103,7 @@ class Rater {
     this.checkDataEntryErrors = true,
     Map<String, String>? shooterAliases,
     Map<String, String> userMemberNumberMappings = const {},
-    Map<String, String> memberNumberMappingBlacklist = const {},
+    Map<String, List<String>> memberNumberMappingBlacklist = const {},
     required MemberNumberCorrectionContainer dataCorrections,
     this.verbose = true,
     this.recognizedDivisions = const {},
@@ -394,19 +394,7 @@ class Rater {
   }
 
   RatingResult _deduplicateShooters() {
-    if(sport.shooterDeduplicator != null) {
-      return sport.shooterDeduplicator!.deduplicateShooters(
-        ratingWrapper: (r) => ratingSystem.wrapDbRating(r),
-        knownShooters: {},
-        shooterAliases: _shooterAliases,
-        currentMappings: _memberNumberMappings,
-        userMappings: _userMemberNumberMappings,
-        mappingBlacklist: _memberNumberMappingBlacklist,
-      );
-    }
-    else {
-      return RatingResult.ok();
-    }
+    return RatingResult.ok();
   }
 
   void _removeUnseenShooters() {

@@ -50,7 +50,7 @@ const _matchLevels = [
   _level4,
 ];
 
-final _minorPowerFactor = PowerFactor("Minor",
+final uspsaMinorPF = PowerFactor("Minor",
   shortName: "min",
   targetEvents: [
     const ScoringEvent("A", pointChange: 5),
@@ -71,7 +71,7 @@ final uspsaSport = Sport(
   matchScoring: RelativeStageFinishScoring(pointsAreUSPSAFixedTime: true),
   defaultStageScoring: const HitFactorScoring(),
   hasStages: true,
-  displaySettingsPowerFactor: _minorPowerFactor,
+  displaySettingsPowerFactor: uspsaMinorPF,
   resultSortModes: hitFactorSorts,
   shooterDeduplicator: const USPSADeduplicator(),
   eventLevels: _matchLevels,
@@ -115,7 +115,7 @@ final uspsaSport = Sport(
       ],
       penaltyEvents: _uspsaPenalties,
     ),
-    _minorPowerFactor,
+    uspsaMinorPF,
     PowerFactor("Subminor",
       shortName: "sub",
       doesNotScore: true,

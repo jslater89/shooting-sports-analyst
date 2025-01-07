@@ -35,6 +35,7 @@ import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/preference_names.dart';
 import 'package:shooting_sports_analyst/ui/rater/enter_practiscore_source_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/match_list_filter_dialog.dart';
+import 'package:shooting_sports_analyst/ui/rater/member_number_blacklist_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_correction_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_map_dialog.dart';
@@ -105,7 +106,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   List<String> _memNumWhitelist = [];
   Map<String, String> _memNumMappings = {};
   Map<String, String> _shooterAliases = defaultShooterAliases;
-  Map<String, String> _memNumMappingBlacklist = {};
+  Map<String, List<String>> _memNumMappingBlacklist = {};
   MemberNumberCorrectionContainer _memNumCorrections = MemberNumberCorrectionContainer();
   List<String> _hiddenShooters = [];
   String _validationError = "";
@@ -1103,8 +1104,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         break;
 
       case _MenuEntry.numberMappingBlacklist:
-        var mappings = await showDialog<Map<String, String>>(context: context, builder: (context) {
-          return MemberNumberMapDialog(
+        var mappings = await showDialog<Map<String, List<String>>>(context: context, builder: (context) {
+          return MemberNumberBlacklistDialog(
             title: "Member number mapping blacklist",
             helpText: "The automatic member number mapper will treat numbers entered here as different. "
                 "For numbers of the same type (associate to associate, lifetime to lifetime, etc.), this "

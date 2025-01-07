@@ -7,9 +7,10 @@
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
-class MemberNumberMapDialog extends StatefulWidget {
-  const MemberNumberMapDialog({
+class MemberNumberBlacklistDialog extends StatefulWidget {
+  const MemberNumberBlacklistDialog({
     Key? key,
     this.initialMap = const {},
     required this.title,
@@ -19,7 +20,7 @@ class MemberNumberMapDialog extends StatefulWidget {
     this.width = 600,
   }) : super(key: key);
 
-  final Map<String, String> initialMap;
+  final Map<String, List<String>> initialMap;
   final String title;
   final String? helpText;
   final String? sourceHintText;
@@ -27,11 +28,11 @@ class MemberNumberMapDialog extends StatefulWidget {
   final double width;
 
   @override
-  State<MemberNumberMapDialog> createState() => _MemberNumberMapDialogState();
+  State<MemberNumberBlacklistDialog> createState() => _MemberNumberBlacklistDialogState();
 }
 
-class _MemberNumberMapDialogState extends State<MemberNumberMapDialog> {
-  Map<String, String> mappings = {};
+class _MemberNumberBlacklistDialogState extends State<MemberNumberBlacklistDialog> {
+  Map<String, List<String>> mappings = {};
   String errorText = "";
 
   var sourceController = TextEditingController();
@@ -172,7 +173,7 @@ class _MemberNumberMapDialogState extends State<MemberNumberMapDialog> {
     }
 
     setState(() {
-      mappings[source] = target;
+      mappings.addToList(source, target);
       sourceController.clear();
       targetController.clear();
     });

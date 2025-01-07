@@ -8,6 +8,7 @@ import 'dart:async';
 
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_query_element.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
@@ -16,8 +17,6 @@ import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/match/translator.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
-
-import '../schema/match.dart';
 
 var _log = SSALogger("MatchDb");
 
@@ -42,16 +41,25 @@ class AnalystDatabase {
     return _instance!;
   }
 
+  static AnalystDatabase? _testInstance;
+  factory AnalystDatabase.test() {
+    if(_testInstance == null) {
+      _testInstance = AnalystDatabase._();
+      _testInstance!._init(test: true);
+    }
+    return _testInstance!;
+  }
+
   late Isar isar;
 
-  Future<void> _init() async {
+  Future<void> _init({bool test = false}) async {
     isar = await Isar.open([
       DbShootingMatchSchema,
       DbRatingProjectSchema,
       RatingGroupSchema,
       DbRatingEventSchema,
       DbShooterRatingSchema,
-    ], directory: "db", name: "database");
+    ], directory: "db", name: test ? "test-database" : "database");
 
     isar.writeTxn(() async {
       for(var sport in SportRegistry().availableSports) {

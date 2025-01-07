@@ -1,567 +1,228 @@
+import 'dart:math';
+
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
+import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
+import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
+import 'package:shooting_sports_analyst/data/ranking/deduplication/uspsa_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
-import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
-import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
-import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
+import 'package:shooting_sports_analyst/data/sport/model.dart';
+import 'package:shooting_sports_analyst/util.dart';
+import 'package:uuid/uuid.dart';
 
 void main() async {
+  var db = AnalystDatabase.test();
 
-  // TODO: restore
-  // group("simple deduplication", () {
-  //   test("simple shooter deduplication", () async {
-  //     var matches = deduplicationTestData();
-  //
-  //     var history = RatingHistory(matches: matches, progressCallback: (a, b, c) async {});
-  //     await history.processInitialMatches();
-  //
-  //     var rater = history.raterFor(history.matches.last, RaterGroup.open);
-  //
-  //     expect(rater.uniqueShooters.length, 2);
-  //     var doe = rater.uniqueShooters.firstWhere((element) => element.lastName == "Doe");
-  //     expect(doe.memberNumber, "L1234");
-  //     expect(doe.originalMemberNumber, "L1234");
-  //
-  //     // 3 one-stage matches
-  //     expect(doe.length, 3);
-  //   });
-  //
-  //   test("copied deduplication", () async {
-  //     var matches = deduplicationTestData();
-  //
-  //     var history = RatingHistory(matches: matches, progressCallback: (a, b, c) async {});
-  //     await history.processInitialMatches();
-  //
-  //     var rater = history.raterFor(history.matches.last, RaterGroup.open);
-  //
-  //     var newRater = Rater.copy(rater);
-  //     expect(newRater.uniqueShooters.length, 2);
-  //   });
-  //
-  //   test("post-initial mapping", () async {
-  //     var matches = deduplicationTestData();
-  //
-  //     var history = RatingHistory(matches: matches, progressCallback: (a, b, c) async {});
-  //     await history.processInitialMatches();
-  //
-  //     await history.addMatch(rdMemberNumberTestData());
-  //     var rater = history.raterFor(history.matches.last, RaterGroup.open);
-  //     expect(rater.uniqueShooters.length, 2);
-  //     var johnson = rater.uniqueShooters.firstWhere((element) => element.lastName == "Johnson");
-  //     expect(johnson.memberNumber, "L5432");
-  //     expect(johnson.originalMemberNumber, "L5432");
-  //   });
-  //
-  //   test("mapped shooter deduplication", () async {
-  //     var matches = mappedDeduplicationTestData();
-  //
-  //     RatingProjectSettings settings = RatingProjectSettings(algorithm: MultiplayerPercentEloRater());
-  //     settings.userMemberNumberMappings = {"12345": "L1234"};
-  //     var project = RatingProject(name: "Test", settings: settings, matchUrls: []);
-  //
-  //     var history = RatingHistory(matches: matches, project: project, progressCallback: (a, b, c) async {});
-  //     await history.processInitialMatches();
-  //
-  //     var rater = history.raterFor(history.matches.last, RaterGroup.open);
-  //
-  //     expect(rater.uniqueShooters.length, 2);
-  //     var doe = rater.uniqueShooters.firstWhere((element) => element.lastName == "Doe");
-  //     expect(doe.memberNumber, "L1234");
-  //     expect(doe.originalMemberNumber, "L1234");
-  //
-  //     // 3 one-stage matches
-  //     expect(doe.length, 3);
-  //   });
-  // });
-  //
-  // group("blacklist testing", () {
-  //   test("blacklisted mappings", () async {
-  //     var matches = deduplicationTestData();
-  //     RatingProjectSettings settings = RatingProjectSettings(algorithm: MultiplayerPercentEloRater());
-  //     settings.memberNumberMappingBlacklist = {"12345": "L1234"};
-  //     var project = RatingProject(name: "Test", settings: settings, matchUrls: []);
-  //     var history = RatingHistory(project: project, matches: matches);
-  //     await history.processInitialMatches();
-  //     var rater = history.raterFor(history.matches.last, RaterGroup.open);
-  //
-  //     expect(rater.uniqueShooters.length, 3);
-  //     var does = rater.uniqueShooters.where((s) => s.lastName == "Doe");
-  //     expect(does.length, 2);
-  //     bool seen1 = false;
-  //     bool seen2 = false;
-  //     for(var d in does) {
-  //       if(d.originalMemberNumber.startsWith("L")) seen1 = true;
-  //       if(d.originalMemberNumber.startsWith("A")) seen2 = true;
-  //     }
-  //     expect(seen1, true);
-  //     expect(seen2, true);
-  //   });
-  //
-  //   test("user mappings and blacklist", () async {
-  //     var matches = deduplicationTestData();
-  //     RatingProjectSettings settings = RatingProjectSettings(algorithm: MultiplayerPercentEloRater());
-  //     settings.memberNumberMappingBlacklist = {"12345": "L1234"};
-  //     settings.userMemberNumberMappings = {"12345": "54321"};
-  //     var project = RatingProject(name: "Test", settings: settings, matchUrls: []);
-  //     var history = RatingHistory(project: project, matches: matches);
-  //     var result = await history.processInitialMatches();
-  //
-  //     if(result.isErr()) {
-  //       var err = result.unwrapErr() as ShooterMappingError;
-  //       print(err.culprits);
-  //       print(err.accomplices);
-  //     }
-  //     expect(result.isOk(), true);
-  //
-  //     var rater = history.raterFor(history.matches.last, RaterGroup.open);
-  //
-  //     expect(rater.uniqueShooters.length, 2);
-  //     var does = rater.uniqueShooters.where((s) => s.lastName == "Doe");
-  //     expect(does.length, 1);
-  //     var johnsons = rater.uniqueShooters.where((s) => s.lastName == "Johnson");
-  //     expect(johnsons.length, 1);
-  //     expect(rater.memberNumberMappings["12345"], "54321");
-  //   });
-  // });
+  setUpAll(() async {
+    print("Setting up test data");
+    await setupTestDb(db);
+  });
+
+  test("Simple DataEntryFix deduplication (standalone)", () async {
+    var project = DbRatingProject(
+      name: "DataEntryFix Test Project",
+      sportName: uspsaSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+      )
+    );
+
+    var dbMatch = await db.getMatchByAnySourceId(["simple-data-entry-fix"]);
+    project.matches.add(dbMatch!);
+
+    await db.saveRatingProject(project);
+    var deduplicator = USPSADeduplicator();
+    var match = dbMatch.hydrate().unwrap();
+
+    List<DbShooterRating> newRatings = [];
+    for(var competitor in match.shooters) {
+      var r = DbShooterRating(
+        sportName: uspsaSport.name,
+        firstName: competitor.firstName,
+        lastName: competitor.lastName,
+        rating: 1000,
+        memberNumber: competitor.memberNumber,
+        female: competitor.female,
+        error: 0,
+        connectedness: 0,
+        firstSeen: match.date,
+        lastSeen: match.date,
+      );
+      r.copyVitalsFrom(competitor);
+      newRatings.add(r);
+    }
+
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      checkDataEntryErrors: true,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    
+    var results = deduplication.unwrap();
+    expect(reason: "has results", results.length, equals(1));
+    expect(reason: "has cause", results[0].causes.length, equals(1));
+    expect(reason: "cause is MultipleNumbersOfType", results[0].causes.first, isA<MultipleNumbersOfType>());
+    expect(reason: "has proposed action", results[0].proposedActions.length, equals(1));
+    expect(reason: "proposed action is DataEntryFix", results[0].proposedActions.first, isA<DataEntryFix>());
+    var fix = results[0].proposedActions.first as DataEntryFix;
+    expect(reason: "target number", fix.targetNumber, equals("A123456"));
+    expect(reason: "source number", fix.sourceNumber, equals("A123457"));
+  });
+
+  test("Simple Blacklist deduplication", () {
+  });
 }
 
-List<PracticalMatch> deduplicationTestData() {
-  PracticalMatch m1 = PracticalMatch();
-  m1.name = "Match 1";
-  m1.reportContents = "";
-  m1.practiscoreId = "1";
-  m1.level = MatchLevel.I;
-  m1.date = DateTime(2022, 12, 1, 0, 0, 0);
+Future<void> setupTestDb(AnalystDatabase db) async {
+  db.isar.writeTxn(() async {
+    await db.isar.clear();
+  });
 
-  Stage s1 = Stage(
-    name: "Stage 1",
-    internalId: 1,
-    classifier: false,
-    classifierNumber: "",
-    maxPoints: 10,
-    minRounds: 2,
-    type: Scoring.comstock,
+  var competitorMap = generateCompetitors();
+
+  var simpleDataEntryMatch = generateMatch(
+    shooters: [competitorMap["A123456"]!, competitorMap["A123457"]!],
+    date: DateTime(2024, 1, 1),
+    matchName: "Simple DataEntryFix",
+    matchId: "simple-data-entry-fix",
   );
 
-  Shooter shooter1 = Shooter();
-  shooter1.firstName = "John";
-  shooter1.lastName = "Doe";
-  shooter1.memberNumber = "A12345";
-  shooter1.powerFactor = PowerFactor.minor;
-  shooter1.division = Division.open;
-  shooter1.classification = Classification.B;
-  shooter1.reentry = false;
-  shooter1.dq = false;
-  
-  shooter1.stageScores = {
-    s1: Score(
-      shooter: shooter1,
-      stage: s1
-    )
-      ..a=2
-      ..time=3.5
-  };
-
-  Shooter shooter1b = Shooter();
-  shooter1b.firstName = "Bob";
-  shooter1b.lastName = "Johnson";
-  shooter1b.memberNumber = "A54321";
-  shooter1b.powerFactor = PowerFactor.minor;
-  shooter1b.division = Division.open;
-  shooter1b.classification = Classification.B;
-  shooter1b.reentry = false;
-  shooter1b.dq = false;
-
-  shooter1b.stageScores = {
-    s1: Score(
-        shooter: shooter1b,
-        stage: s1
-    )
-      ..a=1
-      ..c=1
-      ..time=4.5
-  };
-
-  m1.shooters = [shooter1, shooter1b];
-  m1.stages = [s1];
-  m1.maxPoints = s1.maxPoints;
-  
-  // match 2
-
-  PracticalMatch m2 = PracticalMatch();
-  m2.name = "Match 2";
-  m2.practiscoreId = "2";
-  m2.reportContents = "";
-  m2.level = MatchLevel.I;
-  m2.date = DateTime(2022, 12, 2, 0, 0, 0);
-
-  Stage s2 = Stage(
-    name: "Stage 2",
-    internalId: 1,
-    classifier: false,
-    classifierNumber: "",
-    maxPoints: 10,
-    minRounds: 2,
-    type: Scoring.comstock,
+  var simpleBlacklistMatch = generateMatch(
+    shooters: [competitorMap["A123456"]!, competitorMap["A76691"]!],
+    date: DateTime(2024, 1, 7),
+    matchName: "Simple Blacklist",
+    matchId: "simple-blacklist",
   );
 
-  Shooter shooter2 = Shooter();
-  shooter2.firstName = "John";
-  shooter2.lastName = "Doe";
-  shooter2.memberNumber = "L1234";
-  shooter2.powerFactor = PowerFactor.minor;
-  shooter2.division = Division.open;
-  shooter2.classification = Classification.B;
-  shooter2.reentry = false;
-  shooter2.dq = false;
-
-  shooter2.stageScores = {
-    s2: Score(
-        shooter: shooter2,
-        stage: s2
-    )
-      ..a=1
-      ..c=1
-      ..time=3.5
-  };
-
-  Shooter shooter2b = Shooter();
-  shooter2b.firstName = "Bob";
-  shooter2b.lastName = "Johnson";
-  shooter2b.memberNumber = "A54321";
-  shooter2b.powerFactor = PowerFactor.minor;
-  shooter2b.division = Division.open;
-  shooter2b.classification = Classification.B;
-  shooter2b.reentry = false;
-  shooter2b.dq = false;
-
-  shooter2b.stageScores = {
-    s2: Score(
-        shooter: shooter2b,
-        stage: s2
-    )
-      ..c=2
-      ..time=3.25
-  };
-
-  m2.shooters = [shooter2, shooter2b];
-  m2.stages = [s2];
-  m2.maxPoints = s2.maxPoints;
-  
-  // match 3
-
-  PracticalMatch m3 = PracticalMatch();
-  m3.name = "Match 3";
-  m3.practiscoreId = "2";
-  m3.reportContents = "";
-  m3.level = MatchLevel.I;
-  m3.date = DateTime(2022, 12, 2, 0, 0, 0);
-
-  Stage s3 = Stage(
-    name: "Stage 3",
-    internalId: 1,
-    classifier: false,
-    classifierNumber: "",
-    maxPoints: 10,
-    minRounds: 2,
-    type: Scoring.comstock,
-  );
-
-  Shooter shooter3 = Shooter();
-  shooter3.firstName = "John";
-  shooter3.lastName = "Doe";
-  shooter3.memberNumber = "A12345";
-  shooter3.powerFactor = PowerFactor.minor;
-  shooter3.division = Division.open;
-  shooter3.classification = Classification.B;
-  shooter3.reentry = false;
-  shooter3.dq = false;
-
-  shooter3.stageScores = {
-    s3: Score(
-        shooter: shooter3,
-        stage: s3
-    )
-      ..a=1
-      ..c=1
-      ..time=3.5
-  };
-
-  Shooter shooter3b = Shooter();
-  shooter3b.firstName = "Bob";
-  shooter3b.lastName = "Johnson";
-  shooter3b.memberNumber = "A54321";
-  shooter3b.powerFactor = PowerFactor.minor;
-  shooter3b.division = Division.open;
-  shooter3b.classification = Classification.B;
-  shooter3b.reentry = false;
-  shooter3b.dq = false;
-
-  shooter3b.stageScores = {
-    s3: Score(
-        shooter: shooter3b,
-        stage: s3
-    )
-      ..c=2
-      ..time=3.25
-  };
-
-  m3.shooters = [shooter3, shooter3b];
-  m3.stages = [s3];
-  m3.maxPoints = s3.maxPoints;
-
-  return [m1, m2, m3];
+  var futures = [
+    db.saveMatch(simpleDataEntryMatch),
+    db.saveMatch(simpleBlacklistMatch),
+  ];
+  await Future.wait(futures);
 }
 
-PracticalMatch rdMemberNumberTestData() {
-  PracticalMatch m3 = PracticalMatch();
-  m3.name = "Match 4";
-  m3.practiscoreId = "2";
-  m3.reportContents = "";
-  m3.level = MatchLevel.I;
-  m3.date = DateTime(2022, 12, 2, 0, 0, 0);
+/// Generates a list of competitors useful for deduplication testing.
+Map<String, Shooter> generateCompetitors() {
+  Map<String, Shooter> competitors = {};
 
-  Stage s3 = Stage(
-    name: "Stage 2",
-    internalId: 1,
-    classifier: false,
-    classifierNumber: "",
-    maxPoints: 10,
-    minRounds: 2,
-    type: Scoring.comstock,
+  // John Deduplicator, first through fifth of his name
+  competitors["A123456"] = Shooter(
+    firstName: "John",
+    lastName: "Deduplicator",
+    memberNumber: "A123456",
+  );
+  competitors["A123457"] = Shooter(
+    firstName: "John",
+    lastName: "Deduplicator",
+    memberNumber: "A123457",
+  );
+  competitors["L1234"] = Shooter(
+    firstName: "John",
+    lastName: "Deduplicator",
+    memberNumber: "L1234",
+  );
+  competitors["B123"] = Shooter(
+    firstName: "John",
+    lastName: "Deduplicator",
+    memberNumber: "B123",
+  );
+  competitors["RD12"] = Shooter(
+    firstName: "John",
+    lastName: "Deduplicator",
+    memberNumber: "RD12",
   );
 
-  Shooter shooter3 = Shooter();
-  shooter3.firstName = "John";
-  shooter3.lastName = "Doe";
-  shooter3.memberNumber = "L1234";
-  shooter3.powerFactor = PowerFactor.minor;
-  shooter3.division = Division.open;
-  shooter3.classification = Classification.B;
-  shooter3.reentry = false;
-  shooter3.dq = false;
+  competitors["A124456"] = Shooter(
+    firstName: "Naan",
+    lastName: "Deduplicator",
+    memberNumber: "A124456",
+  );
+  competitors["A76691"] = Shooter(
+    firstName: "Bon",
+    lastName: "Deduplicator",
+    memberNumber: "A76691",
+  );
 
-  shooter3.stageScores = {
-    s3: Score(
-        shooter: shooter3,
-        stage: s3
-    )
-      ..a=1
-      ..c=1
-      ..time=3.5
-  };
-
-  Shooter shooter3b = Shooter();
-  shooter3b.firstName = "Bob";
-  shooter3b.lastName = "Johnson";
-  shooter3b.memberNumber = "L5432";
-  shooter3b.powerFactor = PowerFactor.minor;
-  shooter3b.division = Division.open;
-  shooter3b.classification = Classification.B;
-  shooter3b.reentry = false;
-  shooter3b.dq = false;
-
-  shooter3b.stageScores = {
-    s3: Score(
-        shooter: shooter3b,
-        stage: s3
-    )
-      ..c=2
-      ..time=3.25
-  };
-
-  m3.shooters = [shooter3, shooter3b];
-  m3.stages = [s3];
-  m3.maxPoints = s3.maxPoints;
-  
-  return m3;
+  return competitors;
 }
 
-List<PracticalMatch> mappedDeduplicationTestData() {
-  PracticalMatch m1 = PracticalMatch();
-  m1.name = "Match 1";
-  m1.reportContents = "";
-  m1.practiscoreId = "1";
-  m1.level = MatchLevel.I;
-  m1.date = DateTime(2022, 12, 1, 0, 0, 0);
+ShootingMatch generateMatch({required List<Shooter> shooters, int stageCount = 5, String matchName = "Test Match", required DateTime date, String? matchId}) {
+  var r = Random();
+  var stages = List.generate(stageCount, (index) {
+    int roundCount = r.nextInt(20) + 12;
+    return MatchStage(
+      stageId: index + 1, name: "Stage ${index + 1}", scoring: HitFactorScoring(),
+      minRounds: roundCount, maxPoints: roundCount * 5,
+    );
+  });
 
-  Stage s1 = Stage(
-    name: "Stage 1",
-    internalId: 1,
-    classifier: false,
-    classifierNumber: "",
-    maxPoints: 10,
-    minRounds: 2,
-    type: Scoring.comstock,
+  var entries = List.generate(shooters.length, (index) {
+    var shooter = shooters[index];
+
+    Map<MatchStage, RawScore> scores = {};
+
+    for(var stage in stages) {
+      Map<ScoringEvent, int> hitCounts = {};
+      for(int i = 0; i < stage.minRounds; i++) {
+        int hitDie = r.nextInt(100);
+        if(hitDie > 10) {
+          hitCounts.increment(uspsaMinorPF.targetEvents.lookupByName("A")!);
+        }
+        else if(hitDie > 5) {
+          hitCounts.increment(uspsaMinorPF.targetEvents.lookupByName("C")!);
+        }
+        else if(hitDie > 3) {
+          hitCounts.increment(uspsaMinorPF.targetEvents.lookupByName("D")!);
+        }
+        else if(hitDie > 0) {
+          hitCounts.increment(uspsaMinorPF.targetEvents.lookupByName("M")!);
+        }
+        else {
+          hitCounts.increment(uspsaMinorPF.targetEvents.lookupByName("NS")!);
+        }
+      }
+
+      // Time is between 0.4 and 0.6 times the number of rounds.
+      var time = stage.minRounds * 0.5 * (1 - ((r.nextDouble() - 0.5) * 0.2));
+
+      scores[stage] = RawScore(
+        scoring: stage.scoring,
+        targetEvents: hitCounts,
+        rawTime: time,
+      );
+    }
+
+    var entry = MatchEntry(
+      entryId: index,
+      firstName: shooter.firstName,
+      lastName: shooter.lastName,
+      powerFactor: uspsaMinorPF,
+      scores: scores,
+    );
+
+    entry.copyVitalsFrom(shooter);
+
+    return entry;
+  });
+
+  var match = ShootingMatch(
+    stages: stages,
+    name: matchName,
+    rawDate: date.toIso8601String(),
+    date: date,
+    sport: uspsaSport,
+    shooters: entries,
+    sourceIds: [matchId ?? Uuid().v4()],
+    sourceCode: "test-autogen",
   );
 
-  Shooter shooter1 = Shooter();
-  shooter1.firstName = "John";
-  shooter1.lastName = "Doe";
-  shooter1.memberNumber = "A12345";
-  shooter1.powerFactor = PowerFactor.minor;
-  shooter1.division = Division.open;
-  shooter1.classification = Classification.B;
-  shooter1.reentry = false;
-  shooter1.dq = false;
+  return match;
 
-  shooter1.stageScores = {
-    s1: Score(
-        shooter: shooter1,
-        stage: s1
-    )
-      ..a=2
-      ..time=3.5
-  };
-
-  Shooter shooter1b = Shooter();
-  shooter1b.firstName = "Bob";
-  shooter1b.lastName = "Johnson";
-  shooter1b.memberNumber = "A54321";
-  shooter1b.powerFactor = PowerFactor.minor;
-  shooter1b.division = Division.open;
-  shooter1b.classification = Classification.B;
-  shooter1b.reentry = false;
-  shooter1b.dq = false;
-
-  shooter1b.stageScores = {
-    s1: Score(
-        shooter: shooter1b,
-        stage: s1
-    )
-      ..a=1
-      ..c=1
-      ..time=4.5
-  };
-
-  m1.shooters = [shooter1, shooter1b];
-  m1.stages = [s1];
-  m1.maxPoints = s1.maxPoints;
-
-  // match 2
-
-  PracticalMatch m2 = PracticalMatch();
-  m2.name = "Match 2";
-  m2.practiscoreId = "2";
-  m2.reportContents = "";
-  m2.level = MatchLevel.I;
-  m2.date = DateTime(2022, 12, 2, 0, 0, 0);
-
-  Stage s2 = Stage(
-    name: "Stage 2",
-    internalId: 1,
-    classifier: false,
-    classifierNumber: "",
-    maxPoints: 10,
-    minRounds: 2,
-    type: Scoring.comstock,
-  );
-
-  Shooter shooter2 = Shooter();
-  shooter2.firstName = "John C.";
-  shooter2.lastName = "Doe";
-  shooter2.memberNumber = "L1234";
-  shooter2.powerFactor = PowerFactor.minor;
-  shooter2.division = Division.open;
-  shooter2.classification = Classification.B;
-  shooter2.reentry = false;
-  shooter2.dq = false;
-
-  shooter2.stageScores = {
-    s2: Score(
-        shooter: shooter2,
-        stage: s2
-    )
-      ..a=1
-      ..c=1
-      ..time=3.5
-  };
-
-  Shooter shooter2b = Shooter();
-  shooter2b.firstName = "Bob";
-  shooter2b.lastName = "Johnson";
-  shooter2b.memberNumber = "A54321";
-  shooter2b.powerFactor = PowerFactor.minor;
-  shooter2b.division = Division.open;
-  shooter2b.classification = Classification.B;
-  shooter2b.reentry = false;
-  shooter2b.dq = false;
-
-  shooter2b.stageScores = {
-    s2: Score(
-        shooter: shooter2b,
-        stage: s2
-    )
-      ..c=2
-      ..time=3.25
-  };
-
-  m2.shooters = [shooter2, shooter2b];
-  m2.stages = [s2];
-  m2.maxPoints = s2.maxPoints;
-
-  // match 3
-
-  PracticalMatch m3 = PracticalMatch();
-  m3.name = "Match 3";
-  m3.practiscoreId = "2";
-  m3.reportContents = "";
-  m3.level = MatchLevel.I;
-  m3.date = DateTime(2022, 12, 2, 0, 0, 0);
-
-  Stage s3 = Stage(
-    name: "Stage 3",
-    internalId: 1,
-    classifier: false,
-    classifierNumber: "",
-    maxPoints: 10,
-    minRounds: 2,
-    type: Scoring.comstock,
-  );
-
-  Shooter shooter3 = Shooter();
-  shooter3.firstName = "John";
-  shooter3.lastName = "Doe";
-  shooter3.memberNumber = "A12345";
-  shooter3.powerFactor = PowerFactor.minor;
-  shooter3.division = Division.open;
-  shooter3.classification = Classification.B;
-  shooter3.reentry = false;
-  shooter3.dq = false;
-
-  shooter3.stageScores = {
-    s3: Score(
-        shooter: shooter3,
-        stage: s3
-    )
-      ..a=1
-      ..c=1
-      ..time=3.5
-  };
-
-  Shooter shooter3b = Shooter();
-  shooter3b.firstName = "Bob";
-  shooter3b.lastName = "Johnson";
-  shooter3b.memberNumber = "A54321";
-  shooter3b.powerFactor = PowerFactor.minor;
-  shooter3b.division = Division.open;
-  shooter3b.classification = Classification.B;
-  shooter3b.reentry = false;
-  shooter3b.dq = false;
-
-  shooter3b.stageScores = {
-    s3: Score(
-        shooter: shooter3b,
-        stage: s3
-    )
-      ..c=2
-      ..time=3.25
-  };
-
-  m3.shooters = [shooter3, shooter3b];
-  m3.stages = [s3];
-  m3.maxPoints = s3.maxPoints;
-
-  return [m1, m2, m3];
+  
 }
