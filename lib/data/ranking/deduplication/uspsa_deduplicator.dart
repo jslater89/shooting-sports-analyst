@@ -9,6 +9,7 @@ import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:fuzzywuzzy/fuzzywuzzy.dart' as fuzzywuzzy;
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 var _log = SSALogger("USPSADeduplicator");
 
@@ -46,14 +47,24 @@ class USPSADeduplicator extends ShooterDeduplicator {
     // possible—if the target of a blacklist is also the target of the
     // proposed automapping, prefer to remove the source of the blacklist
     // rather than the target.
-    var blacklist = ratingProject.settings.memberNumberMappingBlacklist;
+    // We make a copy of this because it is modified in some cases below
+    // to track the impact of proposed changes.
+    Map<String, List<String>> blacklist = ratingProject.settings.memberNumberMappingBlacklist.deepCopy();
 
     Set<String> deduplicatorNames = {};
 
     Map<String, List<String>> namesToNumbers = {};
     Map<String, List<DbShooterRating>> ratingsByName = {};
 
+    /// The overall list of conflicts.
     List<DeduplicatorCollision> conflicts = [];
+
+    /// The list of conflicts for each deduplicator name, so that steps
+    /// further into the code can examine the conflicts already detected.
+    /// Name conflicts from one iteration of the loop are added to [conflicts]
+    /// at the start of the next iteration (or just after the loop for the last
+    /// iteration).
+    List<DeduplicatorCollision> nameConflicts = [];
 
     // Retrieve deduplicator names from the new ratings.
     // The only names that can cause conflicts are those
@@ -61,10 +72,15 @@ class USPSADeduplicator extends ShooterDeduplicator {
     // add ratings.
     for(var rating in newRatings) {
       deduplicatorNames.add(rating.deduplicatorName);
+      ratingsByName[rating.deduplicatorName] ??= [];
+      ratingsByName[rating.deduplicatorName]!.add(rating);
     }
 
     // Detect conflicts for each name.
     for(var name in deduplicatorNames) {
+      conflicts.addAll(nameConflicts);
+      nameConflicts.clear();
+
       var ratingsRes = await ratingProject.getRatingsByDeduplicatorName(name);
 
       if(ratingsRes.isErr()) {
@@ -72,7 +88,7 @@ class USPSADeduplicator extends ShooterDeduplicator {
         continue;
       }
 
-      var ratings = ratingsRes.unwrap();
+      var ratings = [...ratingsByName[name]!, ...ratingsRes.unwrap()];
 
       // One rating doesn't need to be deduplicated.
       if(ratings.length <= 1) {
@@ -126,6 +142,10 @@ class USPSADeduplicator extends ShooterDeduplicator {
         }
         for(var target in autoMappingsForRating.values) {
           targetNumbers.add(target);
+        }
+
+        if(targetNumbers.isEmpty) {
+          continue;
         }
 
         // If all of the target numbers are the same, the mappings are consistent,
@@ -199,7 +219,7 @@ class USPSADeduplicator extends ShooterDeduplicator {
       // If we have any entries in the ambiguousMappings list, this is a cross mapping, and
       // we need the user to tell us what to do.
       if(ambiguousMappings.isNotEmpty) {
-        conflicts.add(DeduplicatorCollision(
+        nameConflicts.add(DeduplicatorCollision(
           deduplicatorName: name,
           memberNumbers: numbers.values.flattened.toList(),
           shooterRatings: numbersToRatings,
@@ -213,7 +233,7 @@ class USPSADeduplicator extends ShooterDeduplicator {
       // Otherwise, if we have preexisting mapping actions, add a 'conflict' so that the
       // resolution system knows to 
       if(preexistingMappingActions.isNotEmpty) {
-        conflicts.add(DeduplicatorCollision(
+        nameConflicts.add(DeduplicatorCollision(
           deduplicatorName: name,
           memberNumbers: numbers.values.flattened.toList(),
           shooterRatings: numbersToRatings,
@@ -258,7 +278,7 @@ class USPSADeduplicator extends ShooterDeduplicator {
         // the target after doing so.
         for(var n1 in localAllNumbers) {
           for(var n2 in localAllNumbers) {
-            if(blacklist[n1]?.contains(n2) == true) {
+            if(blacklist[n1]?.contains(n2) ?? false) {
               if(n2 == target) {
                 localNumbers.values.forEach((e) => e.remove(n1));
                 var maybeTarget = maybeTargetNumber(localNumbers)?.firstOrNull;
@@ -446,12 +466,16 @@ class USPSADeduplicator extends ShooterDeduplicator {
               // experimentally, 65 (on a 0-100 scale) works pretty well.
               sourceNumbers.add(number);
             }
-            else if(blacklist[number]?.contains(probableTarget) == false) {
+            else if(!(blacklist[number]?.contains(probableTarget) ?? false)) {
               proposedActions.add(Blacklist(
                 sourceNumber: number,
                 targetNumber: probableTarget,
                 bidirectional: true,
               ));
+              // We don't want to consider this number as a potential mapping in the autoresolvable
+              // AmbiguousMapping case, so add it to the local blacklist even if the user chooses
+              // not to blacklist it later on.
+              blacklist.addToList(number, probableTarget);
             }
           }
 
@@ -474,7 +498,7 @@ class USPSADeduplicator extends ShooterDeduplicator {
             }
           }
 
-          conflicts.add(DeduplicatorCollision(
+          nameConflicts.add(DeduplicatorCollision(
             deduplicatorName: name,
             memberNumbers: numbers[typesWithMultipleNumbers.first]!,
             shooterRatings: numbersToRatings,
@@ -508,15 +532,110 @@ class USPSADeduplicator extends ShooterDeduplicator {
         }
       }
 
+      // MultipleNumbersOfType conflicts can remove numbers from consideration. For DataEntryFix
+      // proposed actions, we can remove the source number because it counts as the target number
+      // going forward. For Blacklist proposed actions, we can't remove anything, because either
+      // the source or target could be mapped to the number of another type.
+      for(var conflict in nameConflicts) {
+        if(conflict.causes.isNotEmpty && conflict.causes.first is MultipleNumbersOfType) {
+          var solution = conflict.proposedActions.first;
+          if(solution is DataEntryFix) {
+            for(var type in ambiguousCheckNumbers.keys) {
+              ambiguousCheckNumbers[type]!.remove(solution.sourceNumber);
+            }
+          }
+          else if(solution is Blacklist) {
+            // MultipleNumbersOfType only blacklists numbers of like type, so if
+            // we have a blacklist, we can't actually remove anything from the list,
+            // unless there are no other types of numbers in the map.
+            var multipleNumbersType = (conflict.causes.first as MultipleNumbersOfType).memberNumberType;
+            bool hasOtherTypes = false;
+            for(var type in ambiguousCheckNumbers.keys.whereNot((e) => e == multipleNumbersType)) {
+              if(ambiguousCheckNumbers[type]!.isNotEmpty) {
+                hasOtherTypes = true;
+                break;
+              }
+            }
+            if(!hasOtherTypes) {
+              ambiguousCheckNumbers[multipleNumbersType]!.remove(solution.sourceNumber);
+              ambiguousCheckNumbers[multipleNumbersType]!.remove(solution.targetNumber);
+            }
+          }
+        }
+      }
+
       List<MemberNumberType> conflictingTypes = [];
+      Map<MemberNumberType, bool> hasEntries = {};
       for(var type in ambiguousCheckNumbers.keys) {
         if(ambiguousCheckNumbers[type]!.length > 1) {
           conflictingTypes.add(type);
         }
+        hasEntries[type] = ambiguousCheckNumbers[type]!.isNotEmpty;
+      }
+
+      if(conflictingTypes.isEmpty && hasEntries.values.where((e) => !e).length <= 1) {
+        // If there are no conflicting types and at most one type with any entries left,
+        // then we don't need to add an ambiguous mapping entry (i.e., all of the
+        // numbers have been handled in some previous conflict or mapping).
+        continue;
       }
 
       var targetNumbers = targetNumber(ambiguousCheckNumbers);
       var sourceNumbers = ambiguousCheckNumbers.values.flattened.where((e) => !targetNumbers.contains(e)).toList();
+
+      // At this point, we might have a numbers map with only one element of each type,
+      // which is an unambiguous mapping if not blacklisted.
+
+      if(targetNumbers.length == 1) {
+        var target = targetNumbers.first;
+        bool allTypesHaveOneNumber = true;
+        List<String> sources = [];
+        for(var entry in ambiguousCheckNumbers.entries) {
+          if(entry.value.length > 1) {
+            allTypesHaveOneNumber = false;
+            break;
+          }
+          sources.add(entry.value.first); // and only
+        }
+
+        if(allTypesHaveOneNumber) {
+          // Remove any blacklisted mappings from sources to target.
+          Set<String> blacklistedSources = {};
+          for(var source in sources) {
+            if(blacklist[source]?.contains(target) ?? false) {
+              blacklistedSources.add(source);
+            }
+          }
+          sources.removeWhere((e) => blacklistedSources.contains(e));
+
+          if(sources.isNotEmpty) {
+            nameConflicts.add(DeduplicatorCollision(
+              deduplicatorName: name,
+              memberNumbers: ambiguousCheckNumbers.values.flattened.toList(),
+              shooterRatings: numbersToRatings,
+              matches: {},
+              causes: [
+                AmbiguousMapping(
+                  deduplicatorName: name,
+                  sourceNumbers: ambiguousCheckNumbers.values.flattened.toList(),
+                  targetNumbers: [target],
+                  sourceConflicts: false,
+                  targetConflicts: false,
+                  conflictingTypes: [],
+                  relevantBlacklistEntries: {},
+                ),
+              ],
+              proposedActions: [],
+            ));
+
+            // Remove target and sources from the numbers map, so that we
+            // don't report unnecessary AmbiguousMappings in the below check.
+            for(var number in [target, ...sources]) {
+              ambiguousCheckNumbers[classify(number)]!.remove(number);
+            }
+          }
+        }        
+      }
 
       var sourceConflicts = false;
       for(var number in sourceNumbers) {
@@ -542,7 +661,7 @@ class USPSADeduplicator extends ShooterDeduplicator {
         }
       }
 
-      conflicts.add(DeduplicatorCollision(
+      nameConflicts.add(DeduplicatorCollision(
         deduplicatorName: name,
         memberNumbers: ambiguousCheckNumbers.values.flattened.toList(),
         shooterRatings: numbersToRatings,
@@ -561,6 +680,7 @@ class USPSADeduplicator extends ShooterDeduplicator {
         proposedActions: [],
       ));
     }
+    conflicts.addAll(nameConflicts);
 
     return DeduplicationResult.ok(conflicts);
   }
@@ -639,8 +759,8 @@ class USPSADeduplicator extends ShooterDeduplicator {
   }
 }
 
-extension DeepCopyMemberNumberMap on Map<MemberNumberType, List<String>> {
-  Map<MemberNumberType, List<String>> deepCopy() {
+extension DeepCopyMemberNumberMap<T, U> on Map<T, List<U>> {
+  Map<T, List<U>> deepCopy() {
     return {
       for(var type in keys) 
         type: [...this[type]!]
