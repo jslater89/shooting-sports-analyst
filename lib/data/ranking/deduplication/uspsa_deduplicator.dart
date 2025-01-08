@@ -78,9 +78,6 @@ class USPSADeduplicator extends ShooterDeduplicator {
 
     // Detect conflicts for each name.
     for(var name in deduplicatorNames) {
-      conflicts.addAll(nameConflicts);
-      nameConflicts.clear();
-
       var ratingsRes = await ratingProject.getRatingsByDeduplicatorName(name);
 
       if(ratingsRes.isErr()) {
@@ -113,6 +110,15 @@ class USPSADeduplicator extends ShooterDeduplicator {
           numbersToRatings[number] = rating;
         }
       }
+
+      var conflict = DeduplicatorCollision(
+        deduplicatorName: name,
+        memberNumbers: numbers.values.flattened.toList(),
+        shooterRatings: numbersToRatings,
+        matches: {},
+        causes: [],
+        proposedActions: [],
+      );
 
       // Check if any user mappings apply to the list of ratings, and if they haven't been
       // previously applied. This can happen if we're doing a full recalculation.
@@ -219,28 +225,15 @@ class USPSADeduplicator extends ShooterDeduplicator {
       // If we have any entries in the ambiguousMappings list, this is a cross mapping, and
       // we need the user to tell us what to do.
       if(ambiguousMappings.isNotEmpty) {
-        nameConflicts.add(DeduplicatorCollision(
-          deduplicatorName: name,
-          memberNumbers: numbers.values.flattened.toList(),
-          shooterRatings: numbersToRatings,
-          matches: {},
-          causes: ambiguousMappings,
-          proposedActions: [],
-        ));
+        conflict.causes.addAll(ambiguousMappings);
+        conflicts.add(conflict);
         continue;
       }
 
       // Otherwise, if we have preexisting mapping actions, add a 'conflict' so that the
       // resolution system knows to 
       if(preexistingMappingActions.isNotEmpty) {
-        nameConflicts.add(DeduplicatorCollision(
-          deduplicatorName: name,
-          memberNumbers: numbers.values.flattened.toList(),
-          shooterRatings: numbersToRatings,
-          matches: {},
-          causes: [],
-          proposedActions: preexistingMappingActions,
-        ));
+        conflict.proposedActions.addAll(preexistingMappingActions);
       }
 
       // Simplest (remaining) case: there is only one member number of each type
@@ -266,9 +259,9 @@ class USPSADeduplicator extends ShooterDeduplicator {
         // If canAutoMap is true, then all of our member number lists have
         // length 1, so we can assume that 'first' is a valid operation at
         // this point.
-        var localNumbers = numbers;
-        var localAllNumbers = localNumbers.values.flattened.toList();
-        var target = maybeTargetNumber(localNumbers)?.first;
+        var autoMapNumbers = numbers;
+        var autoMapFlatNumbers = autoMapNumbers.values.flattened.toList();
+        var target = maybeTargetNumber(autoMapNumbers)?.first;
         var blacklisted = false;
 
         // Check for blacklisted mappings.
@@ -276,12 +269,12 @@ class USPSADeduplicator extends ShooterDeduplicator {
         // remove N1 from the list of sources. Otherwise, remove
         // N2 from the numbers map. In both cases, recalculate
         // the target after doing so.
-        for(var n1 in localAllNumbers) {
-          for(var n2 in localAllNumbers) {
+        for(var n1 in autoMapFlatNumbers) {
+          for(var n2 in autoMapFlatNumbers) {
             if(blacklist[n1]?.contains(n2) ?? false) {
               if(n2 == target) {
-                localNumbers.values.forEach((e) => e.remove(n1));
-                var maybeTarget = maybeTargetNumber(localNumbers)?.firstOrNull;
+                autoMapNumbers.values.forEach((e) => e.remove(n1));
+                var maybeTarget = maybeTargetNumber(autoMapNumbers)?.firstOrNull;
                 if(maybeTarget != null) {
                   target = maybeTarget;
                 }
@@ -290,8 +283,8 @@ class USPSADeduplicator extends ShooterDeduplicator {
                 }
               }
               else {
-                localNumbers.values.forEach((e) => e.remove(n2));
-                var maybeTarget = maybeTargetNumber(localNumbers)?.firstOrNull;
+                autoMapNumbers.values.forEach((e) => e.remove(n2));
+                var maybeTarget = maybeTargetNumber(autoMapNumbers)?.firstOrNull;
                 if(maybeTarget != null) {
                   target = maybeTarget;
                 }
@@ -305,8 +298,8 @@ class USPSADeduplicator extends ShooterDeduplicator {
 
         // If, at the end of blacklist checking, we have no target or no sources,
         // then there's nothing to do, and we can fall through to the next check.
-        localAllNumbers = localNumbers.values.flattened.toList();
-        var sources = localAllNumbers.where((e) => e != target).toList();
+        autoMapFlatNumbers = autoMapNumbers.values.flattened.toList();
+        var sources = autoMapFlatNumbers.where((e) => e != target).toList();
 
         if(target == null || sources.isEmpty) {
           blacklisted = true;
@@ -382,20 +375,11 @@ class USPSADeduplicator extends ShooterDeduplicator {
                 targetNumber: target!,
               );
             }
-            conflicts.add(DeduplicatorCollision(
-              deduplicatorName: name,
-              memberNumbers: localAllNumbers,
-              shooterRatings: numbersToRatings,
-              matches: {},
-              causes: [],
-              proposedActions: [
-                proposedAction,
-              ],
-            ));
+            conflict.proposedActions.add(proposedAction);
+            conflicts.add(conflict);
+            continue;
           }
         }
-
-        continue;
       }
 
 
@@ -498,20 +482,12 @@ class USPSADeduplicator extends ShooterDeduplicator {
             }
           }
 
-          nameConflicts.add(DeduplicatorCollision(
+          conflict.causes.add(MultipleNumbersOfType(
             deduplicatorName: name,
+            memberNumberType: typesWithMultipleNumbers.first,
             memberNumbers: numbers[typesWithMultipleNumbers.first]!,
-            shooterRatings: numbersToRatings,
-            matches: {},
-            causes: [
-              MultipleNumbersOfType(
-                deduplicatorName: name,
-                memberNumberType: typesWithMultipleNumbers.first,
-                memberNumbers: numbers[typesWithMultipleNumbers.first]!,
-              ),
-            ],
-            proposedActions: proposedActions,
           ));
+          conflict.proposedActions.addAll(proposedActions);
         }
       }
 
@@ -536,9 +512,11 @@ class USPSADeduplicator extends ShooterDeduplicator {
       // proposed actions, we can remove the source number because it counts as the target number
       // going forward. For Blacklist proposed actions, we can't remove anything, because either
       // the source or target could be mapped to the number of another type.
-      for(var conflict in nameConflicts) {
-        if(conflict.causes.isNotEmpty && conflict.causes.first is MultipleNumbersOfType) {
-          var solution = conflict.proposedActions.first;
+      for(var cause in conflict.causes) {
+        if(cause is MultipleNumbersOfType) {
+          // At present, Blacklist and DataEntryFix can only be proposed by the MultipleNumbersOfType
+          // conflict, so we can just take the first one of those.
+          var solution = conflict.proposedActions.firstWhere((e) => e is DataEntryFix || e is Blacklist);
           if(solution is DataEntryFix) {
             for(var type in ambiguousCheckNumbers.keys) {
               ambiguousCheckNumbers[type]!.remove(solution.sourceNumber);
@@ -564,6 +542,7 @@ class USPSADeduplicator extends ShooterDeduplicator {
         }
       }
 
+
       List<MemberNumberType> conflictingTypes = [];
       Map<MemberNumberType, bool> hasEntries = {};
       for(var type in ambiguousCheckNumbers.keys) {
@@ -573,29 +552,30 @@ class USPSADeduplicator extends ShooterDeduplicator {
         hasEntries[type] = ambiguousCheckNumbers[type]!.isNotEmpty;
       }
 
-      if(conflictingTypes.isEmpty && hasEntries.values.where((e) => !e).length <= 1) {
+      if(conflictingTypes.isEmpty && hasEntries.values.where((e) => e).length <= 1) {
         // If there are no conflicting types and at most one type with any entries left,
         // then we don't need to add an ambiguous mapping entry (i.e., all of the
         // numbers have been handled in some previous conflict or mapping).
+        conflicts.add(conflict);
         continue;
       }
 
       var targetNumbers = targetNumber(ambiguousCheckNumbers);
-      var sourceNumbers = ambiguousCheckNumbers.values.flattened.where((e) => !targetNumbers.contains(e)).toList();
+      var sourceNumbers = ambiguousCheckNumbers.values.flattened.toList();
 
       // At this point, we might have a numbers map with only one element of each type,
       // which is an unambiguous mapping if not blacklisted.
 
       if(targetNumbers.length == 1) {
         var target = targetNumbers.first;
+        var sources = [...sourceNumbers];
+        sources.remove(target);
         bool allTypesHaveOneNumber = true;
-        List<String> sources = [];
-        for(var entry in ambiguousCheckNumbers.entries) {
-          if(entry.value.length > 1) {
+        for(var list in ambiguousCheckNumbers.values) {
+          if(list.length > 1) {
             allTypesHaveOneNumber = false;
             break;
           }
-          sources.add(entry.value.first); // and only
         }
 
         if(allTypesHaveOneNumber) {
@@ -609,23 +589,18 @@ class USPSADeduplicator extends ShooterDeduplicator {
           sources.removeWhere((e) => blacklistedSources.contains(e));
 
           if(sources.isNotEmpty) {
-            nameConflicts.add(DeduplicatorCollision(
+            conflict.causes.add(AmbiguousMapping(
               deduplicatorName: name,
-              memberNumbers: ambiguousCheckNumbers.values.flattened.toList(),
-              shooterRatings: numbersToRatings,
-              matches: {},
-              causes: [
-                AmbiguousMapping(
-                  deduplicatorName: name,
-                  sourceNumbers: ambiguousCheckNumbers.values.flattened.toList(),
-                  targetNumbers: [target],
-                  sourceConflicts: false,
-                  targetConflicts: false,
-                  conflictingTypes: [],
-                  relevantBlacklistEntries: {},
-                ),
-              ],
-              proposedActions: [],
+              sourceNumbers: sourceNumbers,
+              targetNumbers: [target],
+              sourceConflicts: false,
+              targetConflicts: false,
+              conflictingTypes: [],
+              relevantBlacklistEntries: {},
+            ));
+            conflict.proposedActions.add(AutoMapping(
+              sourceNumbers: sources,
+              targetNumber: target,
             ));
 
             // Remove target and sources from the numbers map, so that we
@@ -634,7 +609,12 @@ class USPSADeduplicator extends ShooterDeduplicator {
               ambiguousCheckNumbers[classify(number)]!.remove(number);
             }
           }
-        }        
+        }
+      }
+
+      if(ambiguousCheckNumbers.deepEmpty()) {
+        conflicts.add(conflict);
+        continue;
       }
 
       var sourceConflicts = false;
@@ -661,26 +641,17 @@ class USPSADeduplicator extends ShooterDeduplicator {
         }
       }
 
-      nameConflicts.add(DeduplicatorCollision(
+      conflict.causes.add(AmbiguousMapping(
         deduplicatorName: name,
-        memberNumbers: ambiguousCheckNumbers.values.flattened.toList(),
-        shooterRatings: numbersToRatings,
-        matches: {},
-        causes: [
-          AmbiguousMapping(
-            deduplicatorName: name,
-            sourceNumbers: sourceNumbers,
-            targetNumbers: targetNumbers,
-            sourceConflicts: sourceConflicts,
-            targetConflicts: targetConflicts,
-            conflictingTypes: conflictingTypes,
-            relevantBlacklistEntries: relevantBlacklistEntries,
-          ),
-        ],
-        proposedActions: [],
+        sourceNumbers: sourceNumbers,
+        targetNumbers: targetNumbers,
+        sourceConflicts: sourceConflicts,
+        targetConflicts: targetConflicts,
+        conflictingTypes: conflictingTypes,
+        relevantBlacklistEntries: relevantBlacklistEntries,
       ));
+      conflicts.add(conflict);
     }
-    conflicts.addAll(nameConflicts);
 
     return DeduplicationResult.ok(conflicts);
   }
@@ -765,5 +736,12 @@ extension DeepCopyMemberNumberMap<T, U> on Map<T, List<U>> {
       for(var type in keys) 
         type: [...this[type]!]
     };
+  }
+
+  bool deepEmpty() {
+    for(var value in values) {
+      if(value.isNotEmpty) return false;
+    }
+    return true;
   }
 }
