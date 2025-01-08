@@ -541,7 +541,7 @@ class USPSADeduplicator extends ShooterDeduplicator {
           }
         }
       }
-
+    
 
       List<MemberNumberType> conflictingTypes = [];
       Map<MemberNumberType, bool> hasEntries = {};
@@ -562,6 +562,7 @@ class USPSADeduplicator extends ShooterDeduplicator {
 
       var targetNumbers = targetNumber(ambiguousCheckNumbers);
       var sourceNumbers = ambiguousCheckNumbers.values.flattened.toList();
+      sourceNumbers.removeWhere((e) => targetNumbers.contains(e));
 
       // At this point, we might have a numbers map with only one element of each type,
       // which is an unambiguous mapping if not blacklisted.
@@ -569,7 +570,6 @@ class USPSADeduplicator extends ShooterDeduplicator {
       if(targetNumbers.length == 1) {
         var target = targetNumbers.first;
         var sources = [...sourceNumbers];
-        sources.remove(target);
         bool allTypesHaveOneNumber = true;
         for(var list in ambiguousCheckNumbers.values) {
           if(list.length > 1) {
@@ -628,14 +628,15 @@ class USPSADeduplicator extends ShooterDeduplicator {
 
       var targetConflicts = targetNumbers.length > 1;
 
+      // Find blacklist entries that are relevant to the ambiguous mapping
       Map<String, List<String>> relevantBlacklistEntries = {};
-      for(var number in sourceNumbers) {
-        var blacklistEntries = blacklist[number];
+      for(var sourceNumber in sourceNumbers) {
+        var blacklistEntries = blacklist[sourceNumber];
         if(blacklistEntries != null) {
           for(var number in [...targetNumbers, ...sourceNumbers]) {
             if(blacklistEntries.contains(number)) {
-              relevantBlacklistEntries[number] ??= [];
-              relevantBlacklistEntries[number]!.add(number);
+              relevantBlacklistEntries[sourceNumber] ??= [];
+              relevantBlacklistEntries[sourceNumber]!.add(number);
             }
           }
         }

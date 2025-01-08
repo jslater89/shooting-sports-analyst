@@ -7,6 +7,7 @@ import 'package:shooting_sports_analyst/data/database/match/rating_project_datab
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
+import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/uspsa_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
@@ -34,31 +35,8 @@ void main() async {
       )
     );
 
-    var dbMatch = await db.getMatchByAnySourceId(["data-entry-fix-similar-numbers"]);
-    project.matches.add(dbMatch!);
-
-    await db.saveRatingProject(project);
+    var newRatings = await addMatchToTest(db, project, "data-entry-fix-similar-numbers");
     var deduplicator = USPSADeduplicator();
-    var match = dbMatch.hydrate().unwrap();
-
-    List<DbShooterRating> newRatings = [];
-    for(var competitor in match.shooters) {
-      var r = DbShooterRating(
-        sportName: uspsaSport.name,
-        firstName: competitor.firstName,
-        lastName: competitor.lastName,
-        rating: 1000,
-        memberNumber: competitor.memberNumber,
-        female: competitor.female,
-        error: 0,
-        connectedness: 0,
-        firstSeen: match.date,
-        lastSeen: match.date,
-      );
-      r.copyVitalsFrom(competitor);
-      newRatings.add(r);
-    }
-
     var deduplication = await deduplicator.deduplicateShooters(
       ratingProject: project,
       newRatings: newRatings,
@@ -86,31 +64,8 @@ void main() async {
       )
     );
 
-    var dbMatch = await db.getMatchByAnySourceId(["data-entry-fix-dissimilar-numbers"]);
-    project.matches.add(dbMatch!);
-
-    await db.saveRatingProject(project);
+    var newRatings = await addMatchToTest(db, project, "data-entry-fix-dissimilar-numbers");
     var deduplicator = USPSADeduplicator();
-    var match = dbMatch.hydrate().unwrap();
-
-    List<DbShooterRating> newRatings = [];
-    for(var competitor in match.shooters) {
-      var r = DbShooterRating(
-        sportName: uspsaSport.name,
-        firstName: competitor.firstName,
-        lastName: competitor.lastName,
-        rating: 1000,
-        memberNumber: competitor.memberNumber,
-        female: competitor.female,
-        error: 0,
-        connectedness: 0,
-        firstSeen: match.date,
-        lastSeen: match.date,
-      );
-      r.copyVitalsFrom(competitor);
-      newRatings.add(r);
-    }
-
     var deduplication = await deduplicator.deduplicateShooters(
       ratingProject: project,
       newRatings: newRatings,
@@ -138,31 +93,8 @@ void main() async {
       )
     );
 
-    var dbMatch = await db.getMatchByAnySourceId(["auto-mapping-a-l"]);
-    project.matches.add(dbMatch!);
-
-    await db.saveRatingProject(project);
+    var newRatings = await addMatchToTest(db, project, "auto-mapping-a-l");
     var deduplicator = USPSADeduplicator();
-    var match = dbMatch.hydrate().unwrap();
-
-    List<DbShooterRating> newRatings = [];
-    for(var competitor in match.shooters) {
-      var r = DbShooterRating(
-        sportName: uspsaSport.name,
-        firstName: competitor.firstName,
-        lastName: competitor.lastName,
-        rating: 1000,
-        memberNumber: competitor.memberNumber,
-        female: competitor.female,
-        error: 0,
-        connectedness: 0,
-        firstSeen: match.date,
-        lastSeen: match.date,
-      );
-      r.copyVitalsFrom(competitor);
-      newRatings.add(r);
-    }
-
     var deduplication = await deduplicator.deduplicateShooters(
       ratingProject: project,
       newRatings: newRatings,
@@ -189,31 +121,8 @@ void main() async {
       )
     );
 
-    var dbMatch = await db.getMatchByAnySourceId(["auto-mapping-a-rd"]);
-    project.matches.add(dbMatch!);
-
-    await db.saveRatingProject(project);
+    var newRatings = await addMatchToTest(db, project, "auto-mapping-a-rd");
     var deduplicator = USPSADeduplicator();
-    var match = dbMatch.hydrate().unwrap();
-
-    List<DbShooterRating> newRatings = [];
-    for(var competitor in match.shooters) {
-      var r = DbShooterRating(
-        sportName: uspsaSport.name,
-        firstName: competitor.firstName,
-        lastName: competitor.lastName,
-        rating: 1000,
-        memberNumber: competitor.memberNumber,
-        female: competitor.female,
-        error: 0,
-        connectedness: 0,
-        firstSeen: match.date,
-        lastSeen: match.date,
-      );
-      r.copyVitalsFrom(competitor);
-      newRatings.add(r);
-    }
-
     var deduplication = await deduplicator.deduplicateShooters(
       ratingProject: project,
       newRatings: newRatings,
@@ -240,31 +149,8 @@ void main() async {
       )
     );
 
-    var dbMatch = await db.getMatchByAnySourceId(["auto-mapping-l-rd"]);
-    project.matches.add(dbMatch!);
-
-    await db.saveRatingProject(project);
+    var newRatings = await addMatchToTest(db, project, "auto-mapping-l-rd");
     var deduplicator = USPSADeduplicator();
-    var match = dbMatch.hydrate().unwrap();
-
-    List<DbShooterRating> newRatings = [];
-    for(var competitor in match.shooters) {
-      var r = DbShooterRating(
-        sportName: uspsaSport.name,
-        firstName: competitor.firstName,
-        lastName: competitor.lastName,
-        rating: 1000,
-        memberNumber: competitor.memberNumber,
-        female: competitor.female,
-        error: 0,
-        connectedness: 0,
-        firstSeen: match.date,
-        lastSeen: match.date,
-      );
-      r.copyVitalsFrom(competitor);
-      newRatings.add(r);
-    }
-
     var deduplication = await deduplicator.deduplicateShooters(
       ratingProject: project,
       newRatings: newRatings,
@@ -316,6 +202,44 @@ void main() async {
     expect(reason: "data entry fix target number", dataEntryFix.targetNumber, equals("A123456"));
     expect(reason: "auto mapping target number", autoMapping.targetNumber, equals("L1234"));
     expect(reason: "auto mapping source numbers", autoMapping.sourceNumbers, unorderedEquals(["A123456"]));
+  });
+  
+  test("AmbiguousMapping Unresolvable", () async {
+    var project = DbRatingProject(
+      name: "AmbiguousMapping Unresolvable",
+      sportName: uspsaSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "ambiguous-mapping-unresolvable");
+    var deduplicator = USPSADeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      checkDataEntryErrors: true,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    expect(reason: "number of causes", results[0].causes, hasLength(2));
+    var multipleNumbersCause = results[0].causes.firstWhereOrNull((e) => e is MultipleNumbersOfType) as MultipleNumbersOfType;
+    var ambiguousMappingCause = results[0].causes.firstWhereOrNull((e) => e is AmbiguousMapping) as AmbiguousMapping;
+    expect(reason: "has multiple numbers cause", multipleNumbersCause, isNotNull);
+    expect(reason: "has ambiguous mapping cause", ambiguousMappingCause, isNotNull);
+    expect(reason: "ambiguous mapping indicates source conflicts", ambiguousMappingCause.sourceConflicts, isTrue);
+    expect(reason: "ambiguous mapping does not indicate target conflicts", ambiguousMappingCause.targetConflicts, isFalse);
+    expect(reason: "ambiguous mapping has correct source numbers", ambiguousMappingCause.sourceNumbers, unorderedEquals(["A123456", "A76691"]));
+    expect(reason: "ambiguous mapping has correct target numbers", ambiguousMappingCause.targetNumbers, unorderedEquals(["L1234"]));
+    expect(reason: "ambiguous mapping has correct conflicting types", ambiguousMappingCause.conflictingTypes, unorderedEquals([MemberNumberType.standard]));
+    expect(reason: "number of proposed actions", results[0].proposedActions, hasLength(1));
+    var blacklist = results[0].proposedActions.firstWhereOrNull((e) => e is Blacklist) as Blacklist;
+    expect(reason: "has blacklist", blacklist, isNotNull);
+    var n1 = blacklist.sourceNumber;
+    var n2 = blacklist.targetNumber;
+    expect(reason: "blacklist numbers", [n1, n2], unorderedEquals(["A123456", "A76691"]));
   });
   // #endregion
 }
@@ -398,6 +322,13 @@ Future<void> setupTestDb(AnalystDatabase db) async {
     matchId: "ambiguous-mapping-resolvable",
   );
 
+  var simpleAmbiguousMappingUnresolvableMatch = generateMatch(
+    shooters: [competitorMap["A123456"]!, competitorMap["A76691"]!, competitorMap["L1234"]!],
+    date: DateTime(2024, 2, 4),
+    matchName: "AmbiguousMapping Unresolvable",
+    matchId: "ambiguous-mapping-unresolvable",
+  );
+
   var futures = [
     db.saveMatch(simpleDataEntryMatch),
     db.saveMatch(simpleBlacklistMatch),
@@ -405,6 +336,7 @@ Future<void> setupTestDb(AnalystDatabase db) async {
     db.saveMatch(simpleAutoMappingMatch2),
     db.saveMatch(simpleAutoMappingMatch3),
     db.saveMatch(simpleAmbiguousMappingMatch),
+    db.saveMatch(simpleAmbiguousMappingUnresolvableMatch),
   ];
   await Future.wait(futures);
 }
