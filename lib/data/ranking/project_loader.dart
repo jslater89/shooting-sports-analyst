@@ -300,11 +300,6 @@ class RatingProjectLoader {
   /// Use [encounter] if you want shooters to be added regardless of whether they appear
   /// in scores. (i.e., shooters who DQ on the first stage, or are no-shows but still included in the data)
   Future<int> _addShootersFromMatch(RatingGroup group, ShootingMatch match) async {
-    // TODO: ensure we're using allPossibleMemberNumbers where appropriate.
-    // we want to make sure that in any case where we query to ask whether a shooter exists,
-    // we query against allPossibleMemberNumbers rather than knownMemberNumbers, so we don't
-    // have to worry about deduplicating A/TY/FY forms in USPSA.
-
     var start = DateTime.now();
     int added = 0;
     int updated = 0;
@@ -327,6 +322,18 @@ class RatingProjectLoader {
       }
       if(processed.isNotEmpty && !s.reentry) {
         s.memberNumber = processed;
+        var possibleNumbers = sport.shooterDeduplicator?.alternateForms(s.memberNumber) ?? [s.memberNumber];
+        String? mappingTarget;
+        for(var number in possibleNumbers) {
+          mappingTarget = settings.userMemberNumberMappings[number];
+          if(mappingTarget != null) {
+            break;
+          }
+        }
+        if(mappingTarget != null) {
+          s.memberNumber = mappingTarget;
+        }
+
         var rating = await db.maybeKnownShooter(
           project: project,
           group: group,
