@@ -407,6 +407,10 @@ class USPSADeduplicator extends ShooterDeduplicator {
                 targetNumber: target!,
               );
             }
+            // The action we want to add contains all of the member numbers for this
+            // conflict, so we can clear all of the previous proposed actions.
+            conflict.proposedActions.clear();
+
             conflict.proposedActions.add(proposedAction);
             conflicts.add(conflict);
             continue;

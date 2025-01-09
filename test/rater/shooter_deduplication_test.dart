@@ -302,6 +302,134 @@ void main() async {
     expect(reason: "number of proposed actions", results[0].proposedActions, isEmpty);
   });
   
+  test("Improvable UserMapping", () async {
+    var project = DbRatingProject(
+      name: "Improvable UserMapping",
+      sportName: uspsaSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+        memberNumberMappingBlacklist: {},
+        userMemberNumberMappings: {
+          "A123456": "L1234",
+        },
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "improvable-user-mapping");
+    var deduplicator = USPSADeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      checkDataEntryErrors: true,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    expect(reason: "number of causes", results[0].causes, isEmpty);
+    expect(reason: "number of proposed actions", results[0].proposedActions, hasLength(1));
+    expect(reason: "proposed action is UserMapping", results[0].proposedActions.first, isA<UserMapping>());
+    var fix = results[0].proposedActions.first as UserMapping;
+    expect(reason: "target number", fix.targetNumber, equals("B123"));
+    expect(reason: "source numbers", fix.sourceNumbers, unorderedEquals(["A123456", "L1234"]));
+  });
+
+  test("Improvable AutoMapping", () async {
+    var project = DbRatingProject(
+      name: "Improvable AutoMapping",
+      sportName: uspsaSport.name,
+      automaticNumberMappings: [
+        DbMemberNumberMapping(
+          deduplicatorName: "johndeduplicator",
+          sourceNumbers: ["A123456"],
+          targetNumber: "L1234",
+          automatic: true,
+        ),
+      ],
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+        memberNumberMappingBlacklist: {},
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "improvable-user-mapping");
+    var deduplicator = USPSADeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      checkDataEntryErrors: true,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    expect(reason: "number of causes", results[0].causes, isEmpty);
+    expect(reason: "number of proposed actions", results[0].proposedActions, hasLength(1));
+    expect(reason: "proposed action is AutoMapping", results[0].proposedActions.first, isA<AutoMapping>());
+    var fix = results[0].proposedActions.first as AutoMapping;
+    expect(reason: "target number", fix.targetNumber, equals("B123"));
+    expect(reason: "source numbers", fix.sourceNumbers, unorderedEquals(["A123456", "L1234"]));
+  });
+
+  test("Blacklisted AutoMapping 1", () async {
+    var project = DbRatingProject(
+      name: "Blacklisted AutoMapping 1",
+      sportName: uspsaSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+        memberNumberMappingBlacklist: {
+          "A123456": ["L1234"],
+        },
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "improvable-user-mapping");
+    var deduplicator = USPSADeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      checkDataEntryErrors: true,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    expect(reason: "number of causes", results[0].causes, isEmpty);
+    expect(reason: "number of proposed actions", results[0].proposedActions, hasLength(1));
+    expect(reason: "proposed action is AutoMapping", results[0].proposedActions.first, isA<AutoMapping>());
+    var fix = results[0].proposedActions.first as AutoMapping;
+    expect(reason: "target number", fix.targetNumber, equals("B123"));
+    expect(reason: "source numbers", fix.sourceNumbers, unorderedEquals(["A123456"]));
+  });
+
+  test("Blacklisted AutoMapping 2", () async {
+    var project = DbRatingProject(
+      name: "Blacklisted AutoMapping 2",
+      sportName: uspsaSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+        memberNumberMappingBlacklist: {
+          "A123456": ["L1234", "B123"],
+          "L1234": ["B123"],
+        },
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "improvable-user-mapping");
+    var deduplicator = USPSADeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      checkDataEntryErrors: true,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    expect(reason: "number of causes", results[0].causes, isEmpty);
+    expect(reason: "number of proposed actions", results[0].proposedActions, isEmpty);
+  });
+
   test("AutoMapping A->L", () async {
     var project = DbRatingProject(
       name: "AutoMapping A->L",
@@ -576,6 +704,13 @@ Future<void> setupTestDb(AnalystDatabase db) async {
     matchId: "resolvable-cross-mapping-2",
   );
 
+  var improvableUserMappingMatch = generateMatch(
+    shooters: [competitorMap["A123456"]!, competitorMap["L1234"]!, competitorMap["B123"]!],
+    date: DateTime(2024, 3, 14),
+    matchName: "Improvable User Mapping",
+    matchId: "improvable-user-mapping",
+  );
+
   var futures = [
     db.saveMatch(simpleDataEntryMatch),
     db.saveMatch(simpleBlacklistMatch),
@@ -588,6 +723,7 @@ Future<void> setupTestDb(AnalystDatabase db) async {
     db.saveMatch(dataEntryFixUserMappedMatch),
     db.saveMatch(resolvableCrossMappingMatch),
     db.saveMatch(resolvableCrossMappingMatch2),
+    db.saveMatch(improvableUserMappingMatch),
   ];
   await Future.wait(futures);
 }
