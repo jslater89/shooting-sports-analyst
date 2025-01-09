@@ -26,7 +26,7 @@ void main() async {
 
   // #region Tests
 
-  test("DataEntryFix similar numbers", () async {
+  test("DataEntryFix Similar Numbers", () async {
     var project = DbRatingProject(
       name: "DataEntryFix Test Project",
       sportName: uspsaSport.name,
@@ -55,7 +55,7 @@ void main() async {
     expect(reason: "source number", fix.sourceNumber, equals("A123457"));
   });
 
-  test("DataEntryFix dissimilar numbers", () async {
+  test("DataEntryFix Dissimilar Numbers", () async {
     var project = DbRatingProject(
       name: "DataEntryFix Test Project 2",
       sportName: uspsaSport.name,
@@ -84,6 +84,224 @@ void main() async {
     expect(reason: "source number", fix.sourceNumber, equals("A76691"));
   });
 
+  test("User-Mapped Dissimilar Numbers", () async {
+    var project = DbRatingProject(
+      name: "DataEntryFix User-Mapped",
+      sportName: uspsaSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+        userMemberNumberMappings: {
+          "A76691": "A123456",
+        },
+        memberNumberMappingBlacklist: {},
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "data-entry-fix-user-mapped");
+    var deduplicator = USPSADeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      checkDataEntryErrors: true,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    expect(reason: "number of causes", results[0].causes, hasLength(1));
+    expect(reason: "cause is FixedInSettings", results[0].causes.first, isA<FixedInSettings>());
+    expect(reason: "number of proposed actions", results[0].proposedActions, hasLength(1));
+    expect(reason: "proposed action is PreexistingMapping", results[0].proposedActions.first, isA<PreexistingMapping>());
+    var fix = results[0].proposedActions.first as PreexistingMapping;
+    expect(reason: "target number", fix.targetNumber, equals("A123456"));
+    expect(reason: "source number", fix.sourceNumber, equals("A76691"));
+  });
+
+  test("User-Mapped Dissimilar Numbers", () async {
+    var project = DbRatingProject(
+      name: "DataEntryFix User-Mapped",
+      sportName: uspsaSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+        userMemberNumberMappings: {
+          "A76691": "A123456",
+        },
+        memberNumberMappingBlacklist: {},
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "data-entry-fix-user-mapped");
+    var deduplicator = USPSADeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      checkDataEntryErrors: true,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    expect(reason: "number of causes", results[0].causes, hasLength(1));
+    expect(reason: "cause is FixedInSettings", results[0].causes.first, isA<FixedInSettings>());
+    expect(reason: "number of proposed actions", results[0].proposedActions, hasLength(1));
+    expect(reason: "proposed action is PreexistingMapping", results[0].proposedActions.first, isA<PreexistingMapping>());
+    var fix = results[0].proposedActions.first as PreexistingMapping;
+    expect(reason: "target number", fix.targetNumber, equals("A123456"));
+    expect(reason: "source number", fix.sourceNumber, equals("A76691"));
+  });
+
+  test("Resolvable Cross Mapping", () async {
+    var project = DbRatingProject(
+      name: "Resolvable Cross Mapping",
+      sportName: uspsaSport.name,
+      automaticNumberMappings: [
+        DbMemberNumberMapping(
+          deduplicatorName: "johndeduplicator",
+          sourceNumbers: ["A123456"],
+          targetNumber: "L1234",
+          automatic: true,
+        ),
+      ],
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+        userMemberNumberMappings: {
+          "L1234": "B123",
+        },
+        memberNumberMappingBlacklist: {},
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "resolvable-cross-mapping");
+    var deduplicator = USPSADeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      checkDataEntryErrors: true,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    expect(reason: "number of causes", results[0].causes, hasLength(2));
+    var fixedInSettings = results[0].causes.firstWhereOrNull((e) => e is FixedInSettings) as FixedInSettings;
+    var ambiguousMapping = results[0].causes.firstWhereOrNull((e) => e is AmbiguousMapping) as AmbiguousMapping;
+    expect(reason: "causes contains FixedInSettings", fixedInSettings, isNotNull);
+    expect(reason: "causes contains AmbiguousMapping", ambiguousMapping, isNotNull);
+    expect(reason: "number of proposed actions", results[0].proposedActions, hasLength(2));
+    var actions = results[0].proposedActions.cast<PreexistingMapping>();
+    expect(reason: "proposed actions contains A->B mapping", actions, predicate<List<PreexistingMapping>>((list) => list.any((e) => e.sourceNumber == "A123456" && e.targetNumber == "B123")));
+    expect(reason: "proposed actions contains L->B mapping", actions, predicate<List<PreexistingMapping>>((list) => list.any((e) => e.sourceNumber == "L1234" && e.targetNumber == "B123")));
+  });
+
+  test("Resolvable Cross Mapping 2", () async {
+    var project = DbRatingProject(
+      name: "Resolvable Cross Mapping 2",
+      sportName: uspsaSport.name,
+      automaticNumberMappings: [
+        DbMemberNumberMapping(
+          deduplicatorName: "johndeduplicator",
+          sourceNumbers: ["A123456"],
+          targetNumber: "L1234",
+          automatic: true,
+        ),
+      ],
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+        userMemberNumberMappings: {
+          "A123456": "L1235",
+        },
+        memberNumberMappingBlacklist: {},
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "resolvable-cross-mapping-2");
+    var deduplicator = USPSADeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      checkDataEntryErrors: true,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    expect(reason: "number of causes", results[0].causes, hasLength(1));
+    expect(reason: "cause is MultipleNumbersOfType", results[0].causes.first, isA<MultipleNumbersOfType>());
+    expect(reason: "number of proposed actions", results[0].proposedActions, hasLength(2));
+    var preexistingMapping = results[0].proposedActions.firstWhereOrNull((e) => e is PreexistingMapping) as PreexistingMapping;
+    expect(reason: "preexisting mapping source number", preexistingMapping.sourceNumber, equals("A123456"));
+    expect(reason: "preexisting mapping target number", preexistingMapping.targetNumber, equals("L1235"));
+    var dataEntryFix = results[0].proposedActions.firstWhereOrNull((e) => e is DataEntryFix) as DataEntryFix;
+    expect(reason: "data entry fix source number", dataEntryFix.sourceNumber, equals("L1234"));
+    expect(reason: "data entry fix target number", dataEntryFix.targetNumber, equals("L1235"));
+  });
+
+  test("Auto-Mapped Dissimilar Numbers", () async {
+    var project = DbRatingProject(
+      name: "DataEntryFix Auto-Mapped",
+      sportName: uspsaSport.name,
+      automaticNumberMappings: [
+        DbMemberNumberMapping(
+          deduplicatorName: "johndeduplicator",
+          sourceNumbers: ["A76691"],
+          targetNumber: "A123456",
+          automatic: true,
+        ),
+      ],
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+        memberNumberMappingBlacklist: {},
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "data-entry-fix-user-mapped");
+    var deduplicator = USPSADeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      checkDataEntryErrors: true,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    expect(reason: "number of causes", results[0].causes, hasLength(1));
+    expect(reason: "cause is FixedInSettings", results[0].causes.first, isA<FixedInSettings>());
+    expect(reason: "number of proposed actions", results[0].proposedActions, hasLength(1));
+    expect(reason: "proposed action is PreexistingMapping", results[0].proposedActions.first, isA<PreexistingMapping>());
+    var fix = results[0].proposedActions.first as PreexistingMapping;
+    expect(reason: "target number", fix.targetNumber, equals("A123456"));
+    expect(reason: "source number", fix.sourceNumber, equals("A76691"));
+  });
+
+  test("Pre-Blacklisted Similar Numbers", () async {
+    var project = DbRatingProject(
+      name: "DataEntryFix Pre-Blacklisted",
+      sportName: uspsaSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+        memberNumberMappingBlacklist: {},
+      )
+    );
+
+    project.settings.memberNumberMappingBlacklist["A123456"] = ["A123457"];
+    project.settings.memberNumberMappingBlacklist["A123457"] = ["A123456"];
+
+    var newRatings = await addMatchToTest(db, project, "data-entry-fix-pre-blacklisted");
+    var deduplicator = USPSADeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      checkDataEntryErrors: true,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    expect(reason: "number of causes", results[0].causes, isEmpty);
+    expect(reason: "number of proposed actions", results[0].proposedActions, isEmpty);
+  });
+  
   test("AutoMapping A->L", () async {
     var project = DbRatingProject(
       name: "AutoMapping A->L",
@@ -241,6 +459,7 @@ void main() async {
     var n2 = blacklist.targetNumber;
     expect(reason: "blacklist numbers", [n1, n2], unorderedEquals(["A123456", "A76691"]));
   });
+
   // #endregion
 }
 
@@ -317,16 +536,44 @@ Future<void> setupTestDb(AnalystDatabase db) async {
 
   var simpleAmbiguousMappingMatch = generateMatch(
     shooters: [competitorMap["A123456"]!, competitorMap["A123457"]!, competitorMap["L1234"]!],
-    date: DateTime(2024, 2, 4),
+    date: DateTime(2024, 2, 1),
     matchName: "AmbiguousMapping Resolvable",
     matchId: "ambiguous-mapping-resolvable",
   );
 
   var simpleAmbiguousMappingUnresolvableMatch = generateMatch(
     shooters: [competitorMap["A123456"]!, competitorMap["A76691"]!, competitorMap["L1234"]!],
-    date: DateTime(2024, 2, 4),
+    date: DateTime(2024, 2, 7),
     matchName: "AmbiguousMapping Unresolvable",
     matchId: "ambiguous-mapping-unresolvable",
+  );
+
+  var dataEntryFixPreBlacklistedMatch = generateMatch(
+    shooters: [competitorMap["A123456"]!, competitorMap["A123457"]!],
+    date: DateTime(2024, 2, 14),
+    matchName: "DataEntryFix Pre-Blacklisted",
+    matchId: "data-entry-fix-pre-blacklisted",
+  );
+
+  var dataEntryFixUserMappedMatch = generateMatch(
+    shooters: [competitorMap["A123456"]!, competitorMap["A76691"]!],
+    date: DateTime(2024, 2, 21),
+    matchName: "DataEntryFix User-Mapped",
+    matchId: "data-entry-fix-user-mapped",
+  );
+
+  var resolvableCrossMappingMatch = generateMatch(
+    shooters: [competitorMap["A123456"]!, competitorMap["L1234"]!, competitorMap["B123"]!],
+    date: DateTime(2024, 2, 28),
+    matchName: "Resolvable Cross Mapping",
+    matchId: "resolvable-cross-mapping",
+  );
+
+  var resolvableCrossMappingMatch2 = generateMatch(
+    shooters: [competitorMap["A123456"]!, competitorMap["L1234"]!, competitorMap["L1235"]!],
+    date: DateTime(2024, 3, 7),
+    matchName: "Resolvable Cross Mapping 2",
+    matchId: "resolvable-cross-mapping-2",
   );
 
   var futures = [
@@ -337,6 +584,10 @@ Future<void> setupTestDb(AnalystDatabase db) async {
     db.saveMatch(simpleAutoMappingMatch3),
     db.saveMatch(simpleAmbiguousMappingMatch),
     db.saveMatch(simpleAmbiguousMappingUnresolvableMatch),
+    db.saveMatch(dataEntryFixPreBlacklistedMatch),
+    db.saveMatch(dataEntryFixUserMappedMatch),
+    db.saveMatch(resolvableCrossMappingMatch),
+    db.saveMatch(resolvableCrossMappingMatch2),
   ];
   await Future.wait(futures);
 }
@@ -377,6 +628,13 @@ Map<String, Shooter> generateCompetitors() {
     firstName: "John",
     lastName: "Deduplicator",
     memberNumber: "A76691",
+  );
+
+  /// Another unrelated John Deduplicator
+  competitors["L1235"] = Shooter(
+    firstName: "John",
+    lastName: "Deduplicator",
+    memberNumber: "L1235",
   );
 
   competitors["A124456"] = Shooter(

@@ -30,6 +30,25 @@ class DeduplicatorCollision {
   /// Proposed actions to resolve the conflict.
   List<DeduplicationAction> proposedActions;
 
+  bool coversNumbers(Iterable<String> numbers) {
+    Map<String, bool> numberCovered = {};
+    for(var number in numbers) {
+      for(var a in proposedActions) {
+        if(a.coveredNumbers.contains(number)) {
+          numberCovered[number] = true;
+          continue;
+        }
+      }
+    }
+
+    for(var number in numbers) {
+      if(!numberCovered.containsKey(number)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   DeduplicatorCollision({
     required this.deduplicatorName,
     required this.memberNumbers,
@@ -71,6 +90,7 @@ class MultipleNumbersOfType extends ConflictType {
   final String deduplicatorName;
   final MemberNumberType memberNumberType;
   final List<String> memberNumbers;
+
 
   /// If there are exactly two member numbers, the string difference between
   /// them (0 for totally dissimilar, 100 for identical).

@@ -122,105 +122,129 @@ class USPSADeduplicator extends ShooterDeduplicator {
 
       // Check if any user mappings apply to the list of ratings, and if they haven't been
       // previously applied. This can happen if we're doing a full recalculation.
+
+      // First, find all of the mappings that apply to this rating.
       List<PreexistingMapping> preexistingMappingActions = [];
       List<AmbiguousMapping> ambiguousMappings = [];
+      Map<String, String> possibleMappings = {};
+      Map<String, String> possibleUserMappings = {};
       for(var rating in ratings) {
-        // Find all of the mappings that apply to this rating.
-        Map<String, String> userMappingsForRating = {};
-        Map<String, String> autoMappingsForRating = {};
         for(var number in rating.knownMemberNumbers) {
           var userTarget = userMappings[number];
           var autoTarget = allMappings[number];
           if(userTarget != null && !rating.knownMemberNumbers.contains(userTarget)) {
-            userMappingsForRating[number] = userTarget;
+            possibleUserMappings[number] = userTarget;
+            possibleMappings[number] = userTarget;
           }
           if(autoTarget != null && !rating.knownMemberNumbers.contains(autoTarget)) {
-            autoMappingsForRating[number] = autoTarget;
-          }
-        }
-
-        // Find all of the targets for those mappings.
-        Set<String> targetNumbers = {};
-        Set<String> userTargetNumbers = {};
-        for(var target in userMappingsForRating.values) {
-          targetNumbers.add(target);
-          userTargetNumbers.add(target);
-        }
-        for(var target in autoMappingsForRating.values) {
-          targetNumbers.add(target);
-        }
-
-        if(targetNumbers.isEmpty) {
-          continue;
-        }
-
-        // If all of the target numbers are the same, the mappings are consistent,
-        // and we can add them to preexistingMappingActions.
-        if(targetNumbers.length == 1) {
-          for(var source in autoMappingsForRating.keys) {
-            preexistingMappingActions.add(PreexistingMapping(
-              sourceNumber: source,
-              targetNumber: targetNumbers.first,
-            ));
-            detectedMappings[source] = targetNumbers.first;
-          }
-          for(var source in userMappingsForRating.keys) {
-            preexistingMappingActions.add(PreexistingMapping(
-              sourceNumber: source,
-              targetNumber: targetNumbers.first,
-            ));
-            detectedUserMappings[source] = targetNumbers.first;
-            detectedMappings[source] = targetNumbers.first;
-          }
-        }
-        else {
-          // If there are multiple target numbers, we have a cross mapping. We might
-          // be able to resolve it automatically if there's a single best target number.
-          // It's only a potential cross mapping because if we have A123456 -> L1234 and
-          // L1234 -> B123, we can correct that by mapping everything to the best target.
-          _log.w("Potential cross mapping for rating $rating\n    User mappings: $userMappingsForRating\n    Auto mappings: $autoMappingsForRating");
-          Map<MemberNumberType, List<String>> classifiedTargetNumbers = {};
-          for(var target in targetNumbers) {
-            var type = classify(target);
-            classifiedTargetNumbers[type] ??= [];
-            classifiedTargetNumbers[type]!.add(target);
-          }
-          var finalTargets = targetNumber(classifiedTargetNumbers);
-          if(finalTargets.length == 1) {
-            var finalTarget = finalTargets.first;
-            for(var source in autoMappingsForRating.keys) {
-              preexistingMappingActions.add(PreexistingMapping(
-                sourceNumber: source,
-                targetNumber: finalTarget,
-              ));
-              detectedMappings[source] = finalTarget;
+            // If there's already a user mapping for this number, don't override it.
+            // TODO: mark this for deletion in some way.
+            if(!possibleMappings.containsKey(number)) {
+              possibleMappings[number] = autoTarget;
             }
-            for(var source in userMappingsForRating.keys) {
-              preexistingMappingActions.add(PreexistingMapping(
-                sourceNumber: source,
-                targetNumber: finalTarget,
-              ));
-              detectedUserMappings[source] = finalTarget;
-              detectedMappings[source] = finalTarget;
-            }
-          }
-          else {
-            _log.e("Unable to resolve cross mapping");
-            var targetTypes = classifiedTargetNumbers.keys.toList();
-            ambiguousMappings.add(AmbiguousMapping(
-              deduplicatorName: name,
-              sourceNumbers: rating.knownMemberNumbers.toList(),
-              targetNumbers: targetNumbers.toList(),
-              sourceConflicts: false,
-              targetConflicts: true,
-              conflictingTypes: targetTypes,
-              relevantBlacklistEntries: {},
-              crossMapping: true,
-            ));
-            continue;
           }
         }
       }
+
+      // Possible mappings contains all of the mappings that apply to the given ratings
+      // that are not already applied. We need to verify that they all point to the same
+      // target, and if they do, we can add PreexistingMapping actions for the source
+      // numbers.
+      Set<String> possibleTargetNumbers = {};
+      Set<String> possibleUserTargetNumbers = {};
+      for(var target in possibleUserMappings.values) {
+        possibleTargetNumbers.add(target);
+        possibleUserTargetNumbers.add(target);
+      }
+      for(var target in possibleMappings.values) {
+        possibleTargetNumbers.add(target);
+      }
+
+      // If all of the target numbers are the same, the mappings are consistent,
+      // and we can add them to preexistingMappingActions.
+      if(possibleTargetNumbers.length == 1) {
+        for(var source in possibleUserMappings.keys) {
+          preexistingMappingActions.add(PreexistingMapping(
+            sourceNumber: source,
+            targetNumber: possibleTargetNumbers.first,
+            automatic: false,
+          ));
+          detectedUserMappings[source] = possibleTargetNumbers.first;
+          detectedMappings[source] = possibleTargetNumbers.first;
+        }
+        for(var source in possibleMappings.keys) {
+          if(!detectedMappings.containsKey(source)) {
+            preexistingMappingActions.add(PreexistingMapping(
+              sourceNumber: source,
+              targetNumber: possibleTargetNumbers.first,
+              automatic: true,
+            ));
+            detectedMappings[source] = possibleTargetNumbers.first;
+          }
+        }
+      }
+      else if(possibleTargetNumbers.length > 1){
+        // If there are multiple target numbers, we have a cross mapping. We might
+        // be able to resolve it automatically if there's a single best target number.
+        // It's only a potential cross mapping because if we have A123456 -> L1234 and
+        // L1234 -> B123, we can correct that by mapping everything to the best target.
+        _log.w("Potential cross mapping for name $name\n    User mappings: $possibleUserMappings\n    All mappings: $possibleMappings");
+        Map<MemberNumberType, List<String>> classifiedTargetNumbers = {};
+        for(var target in possibleTargetNumbers) {
+          var type = classify(target);
+          classifiedTargetNumbers[type] ??= [];
+          classifiedTargetNumbers[type]!.add(target);
+        }
+        var finalTargets = targetNumber(classifiedTargetNumbers);
+        if(finalTargets.length == 1) {
+          var finalTarget = finalTargets.first;
+          for(var source in possibleUserMappings.keys) {
+            preexistingMappingActions.add(PreexistingMapping(
+              sourceNumber: source,
+              targetNumber: finalTarget,
+              automatic: false,
+            ));
+            detectedUserMappings[source] = finalTarget;
+            detectedMappings[source] = finalTarget;
+          }
+          for(var source in possibleMappings.keys) {
+            if(!detectedMappings.containsKey(source)) {
+              preexistingMappingActions.add(PreexistingMapping(
+                sourceNumber: source,
+              targetNumber: finalTarget,
+              automatic: true,
+              ));
+              detectedMappings[source] = finalTarget;
+            }
+          }
+
+          conflict.causes.add(AmbiguousMapping(
+            deduplicatorName: name,
+            sourceNumbers: possibleMappings.keys.toList(),
+            targetNumbers: possibleTargetNumbers.toList(),
+            sourceConflicts: possibleMappings.length > 1,
+            targetConflicts: possibleTargetNumbers.length > 1,
+            conflictingTypes: classifiedTargetNumbers.keys.toList(),
+            relevantBlacklistEntries: {},
+            crossMapping: true,
+          ));
+        }
+        else {
+          _log.e("Unable to resolve cross mapping");
+          var targetTypes = classifiedTargetNumbers.keys.toList();
+          ambiguousMappings.add(AmbiguousMapping(
+            deduplicatorName: name,
+            sourceNumbers: possibleMappings.keys.toList(),
+            targetNumbers: possibleTargetNumbers.toList(),
+            sourceConflicts: possibleMappings.length > 1,
+            targetConflicts: possibleTargetNumbers.length > 1,
+            conflictingTypes: targetTypes,
+            relevantBlacklistEntries: {},
+            crossMapping: true,
+          ));
+        }
+      }
+    
 
       // If we have any entries in the ambiguousMappings list, this is a cross mapping, and
       // we need the user to tell us what to do.
@@ -231,9 +255,17 @@ class USPSADeduplicator extends ShooterDeduplicator {
       }
 
       // Otherwise, if we have preexisting mapping actions, add a 'conflict' so that the
-      // resolution system knows to 
+      // resolution system knows to apply them to the DB objects.
       if(preexistingMappingActions.isNotEmpty) {
         conflict.proposedActions.addAll(preexistingMappingActions);
+
+        // If the detected preexisting mappings cover all of the member numbers,
+        // we can skip the rest of the checks.
+        if(conflict.coversNumbers(numbers.values.flattened)) {
+          conflict.causes.add(FixedInSettings());
+          conflicts.add(conflict);
+          continue;
+        }
       }
 
       // Simplest (remaining) case: there is only one member number of each type
@@ -443,8 +475,18 @@ class USPSADeduplicator extends ShooterDeduplicator {
           // correct one. Do fuzzy string comparison to determine if we propose a blacklist for a given
           // number, or a user mapping.
           var probableTarget = numbers[type]!.first;
+
+          // If there are any detected mappings whose target is better than or equal to our current target,
+          // we should use that as the target instead—consider a case where we have a mapping A123456 -> L1235,
+          // but an L1234 typo appears before L1235. We want to take the mapping into account.
+          for(var number in detectedMappings.values) {
+            if(classify(number).betterThanOrEqual(type)) {
+              probableTarget = number;
+              break;
+            }
+          }
           List<String> sourceNumbers = [];
-          for(var number in numbers[type]!.sublist(1)) {
+          for(var number in numbers[type]!.where((e) => e != probableTarget)) {
             var strdiff = fuzzywuzzy.weightedRatio(probableTarget, number);
             if(strdiff > 65) {
               // experimentally, 65 (on a 0-100 scale) works pretty well.
@@ -466,28 +508,33 @@ class USPSADeduplicator extends ShooterDeduplicator {
           if(sourceNumbers.isNotEmpty) {
             for(var blacklistSource in blacklist.keys) {
               var blacklistTarget = blacklist[blacklistSource]!;
-              if(blacklistTarget == probableTarget) {
+              if(blacklistTarget.contains(probableTarget)) {
                 sourceNumbers.remove(blacklistSource);
               }
             }
 
             if(sourceNumbers.isNotEmpty) {
               for(var source in sourceNumbers) {
-                proposedActions.add(DataEntryFix(
+                var action = DataEntryFix(
                   deduplicatorName: name,
                   sourceNumber: source,
                   targetNumber: probableTarget,
-                ));
+                );
+                if(conflict.proposedActions.none((e) => e == action)) {
+                  proposedActions.add(action);
+                }
               }
             }
           }
 
-          conflict.causes.add(MultipleNumbersOfType(
-            deduplicatorName: name,
-            memberNumberType: typesWithMultipleNumbers.first,
-            memberNumbers: numbers[typesWithMultipleNumbers.first]!,
-          ));
-          conflict.proposedActions.addAll(proposedActions);
+          if(proposedActions.isNotEmpty) {
+            conflict.causes.add(MultipleNumbersOfType(
+              deduplicatorName: name,
+              memberNumberType: typesWithMultipleNumbers.first,
+              memberNumbers: numbers[typesWithMultipleNumbers.first]!,
+            ));
+            conflict.proposedActions.addAll(proposedActions);
+          }
         }
       }
 
@@ -516,7 +563,7 @@ class USPSADeduplicator extends ShooterDeduplicator {
         if(cause is MultipleNumbersOfType) {
           // At present, Blacklist and DataEntryFix can only be proposed by the MultipleNumbersOfType
           // conflict, so we can just take the first one of those.
-          var solution = conflict.proposedActions.firstWhere((e) => e is DataEntryFix || e is Blacklist);
+          var solution = conflict.proposedActions.firstWhereOrNull((e) => e is DataEntryFix || e is Blacklist);
           if(solution is DataEntryFix) {
             for(var type in ambiguousCheckNumbers.keys) {
               ambiguousCheckNumbers[type]!.remove(solution.sourceNumber);
@@ -541,7 +588,6 @@ class USPSADeduplicator extends ShooterDeduplicator {
           }
         }
       }
-    
 
       List<MemberNumberType> conflictingTypes = [];
       Map<MemberNumberType, bool> hasEntries = {};
@@ -562,6 +608,26 @@ class USPSADeduplicator extends ShooterDeduplicator {
 
       var targetNumbers = targetNumber(ambiguousCheckNumbers);
       var sourceNumbers = ambiguousCheckNumbers.values.flattened.toList();
+
+      // If every remaining number is blacklisted to every other number, we can skip
+      // the remaining checks.
+      bool allBlacklisted = true;
+      for(var s1 in sourceNumbers) {
+        for(var s2 in sourceNumbers) {
+          if(s1 != s2 && !(blacklist[s1]?.contains(s2) ?? false)) {
+            allBlacklisted = false;
+            break;
+          }
+        }
+      }
+
+      if(allBlacklisted) {
+        conflicts.add(conflict);
+        continue;
+      }
+
+      // Remove the target numbers from source numbers to match the expected behavior
+      // in [AmbiguousMapping].
       sourceNumbers.removeWhere((e) => targetNumbers.contains(e));
 
       // At this point, we might have a numbers map with only one element of each type,

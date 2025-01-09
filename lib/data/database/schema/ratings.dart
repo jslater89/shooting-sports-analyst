@@ -291,7 +291,6 @@ class DbMemberNumberMapping {
     if(other.deduplicatorName != deduplicatorName) return false;
     if(other.automatic != automatic) return false;
     if(!other.sourceNumbers.containsAll(sourceNumbers)) return false;
-
     return true;
   }
 

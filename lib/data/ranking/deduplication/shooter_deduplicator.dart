@@ -112,7 +112,11 @@ enum MemberNumberType {
   regionDirector;
 
   bool betterThan(MemberNumberType other) {
-    return other.index > this.index;
+    return this.index > other.index;
+  }
+
+  bool betterThanOrEqual(MemberNumberType other) {
+    return this.index >= other.index;
   }
 }
 
