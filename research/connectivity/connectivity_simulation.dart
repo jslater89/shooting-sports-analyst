@@ -169,6 +169,8 @@ class Competitor {
   final int shooterId;
   final List<int> matchIds = [];
   static const int windowSize = 5;  // Keep last 5 matches
+  static const double baseLinkWeight = 0.5;
+  static const double linkWeightRange = 1.0;
   
   // Store windows in chronological order
   List<MatchWindow> get windows => allWindows.getTailWindow(windowSize);
@@ -195,15 +197,24 @@ class Competitor {
 
   // Calculated properties
   int get matchCount => windows.length;
-  int get uniqueOpponentCount => windows
+  Set<int> get uniqueOpponents => windows
     .expand((w) => w.uniqueOpponents)
-    .toSet()
-    .length;
-  int get totalOpponents => windows
+    .toSet();
+  int get uniqueOpponentCount => uniqueOpponents.length;
+  double uniqueOpponentsScore(Map<int, Competitor> allCompetitors) {
+    double score = 0;
+    for(var connectionId in uniqueOpponents) {
+      var connectionConnectivity = allCompetitors[connectionId]!.connectivityScore;
+      var linkWeight = baseLinkWeight + (connectionConnectivity / 100) * linkWeightRange;
+      score += linkWeight;
+    }
+    return score;
+  }
+  int get totalOpponentCount => windows
     .map((w) => w.totalOpponents)
     .sum;
   double get averageMatchSize => 
-    windows.isEmpty ? 0 : totalOpponents / matchCount;
+    windows.isEmpty ? 0 : totalOpponentCount / matchCount;
 }
 
 
@@ -241,25 +252,25 @@ class ConnectivityTracker {
     match.globalMedianConnectivityScore = (allCompetitors.values.map((c) => c.connectivityScore).toList()..sort()).elementAt(allCompetitors.values.length ~/ 2);
 
     // Recalculate scores for all participants
-    _updateScores(matchCompetitors.values.where((c) => c.matchCount > 0), maxExistingConnectivity);
+    _updateScores(matchCompetitors.values.where((c) => c.matchCount > 0), allCompetitors, maxExistingConnectivity);
   }
   
-  void _updateScores(Iterable<Competitor> activeCompetitors, double maxExistingConnectivity) {
+  void _updateScores(Iterable<Competitor> activeCompetitors, Map<int, Competitor> allCompetitors, double maxExistingConnectivity) {
     if (activeCompetitors.isEmpty) return;
     
     double maxScore = maxExistingConnectivity;
     // Calculate raw scores using the unique * total / (unique + total) formula
     for (var competitor in activeCompetitors) {
-      var unique = competitor.uniqueOpponentCount;
-      var total = competitor.totalOpponents;
+      var uniqueScore = competitor.uniqueOpponentsScore(allCompetitors);
+      var totalScore = competitor.totalOpponentCount;
       
-      if (unique == 0 || total == 0) {
+      if (uniqueScore == 0 || totalScore == 0) {
         competitor.connectivityScore = 0.0;
         continue;
       }
       
       // Raw score = (unique * total) / (unique + total)
-      competitor.connectivityScore = (unique * total) / (unique + total);
+      competitor.connectivityScore = (uniqueScore * totalScore) / (uniqueScore + totalScore);
       if(competitor.connectivityScore > maxScore) {
         maxScore = competitor.connectivityScore;
       }
@@ -739,7 +750,7 @@ void _printCompetitorDetail(Competitor competitor, Map<int, Match> matches) {
   print("\nCompetitor ${competitor.shooterId}:");
   print("Connectivity Score: ${competitor.connectivityScore.toStringAsFixed(1)}");
   print("Total Unique Opponents: ${competitor.uniqueOpponentCount}");
-  print("Total Opponents: ${competitor.totalOpponents}");
+  print("Total Opponents: ${competitor.totalOpponentCount}");
   print("Average Match Size: ${competitor.averageMatchSize.toStringAsFixed(1)}");
   print("\nMatch Windows:");
   
