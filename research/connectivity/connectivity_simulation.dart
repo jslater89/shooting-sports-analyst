@@ -17,8 +17,7 @@ void main() {
   int matchWindowSize = 30;
   for (var match in matches.values.sorted((a, b) => a.start.compareTo(b.start))) {
     var matchCompetitors = Map.fromEntries(competitors.entries.where((e) => match.competitorIds.contains(e.key)));
-    var maxExistingConnectivity = competitors.values.map((c) => c.connectivityScore).max;
-    connectivityTracker.processMatch(match, matchWindow, matchCompetitors, competitors, maxExistingConnectivity);
+    connectivityTracker.processMatch(match, matchWindow, matchCompetitors, competitors);
     i++;
 
     // Maintain a window of the last 30 matches
@@ -36,13 +35,14 @@ void main() {
   analyzeConnectivity(connectivityTracker, competitors, matches);
 }
 
+const int highActivityCount = 2500;
+
 (Map<int, Competitor> competitors, Map<int, Match> matches) generateEntities() {
   var random = Random();
   Map<int, Competitor> lowActivityCompetitors = {};
   Map<int, Competitor> highActivityCompetitors = {};
   Map<int, Match> matches = {};
 
-  int highActivityCount = 2500;
   int initialLowActivityCount = 2500;
 
   double lowActivityCompetitorRetirementBaseRate = 0.20;
@@ -76,20 +76,20 @@ void main() {
   int newCompetitorsPerMatch = 0;
   for(int i = 0; i < 520; i++) {
     matches[i] = Match(i, start);
+
+    var activeIds = lowActivityCompetitors.keys
+      .where((id) => id >= minimumLowActivityId)
+      .toList();
     
     // Year boundary check
     if (start.year > currentYear) {
       // Retire some existing low-activity competitors, and create new ones.
-      annualRetirementCount = (lowActivityCompetitors.length * (random.nextDouble() * lowActivityCompetitorRetirementVariance + lowActivityCompetitorRetirementBaseRate)).round();
-      annualNewCompetitorCount = (lowActivityCompetitors.length * (random.nextDouble() * lowActivityCompetitorGrowthVariance + lowActivityCompetitorGrowthBaseRate)).round();
+      annualRetirementCount = (activeIds.length * (random.nextDouble() * lowActivityCompetitorRetirementVariance + lowActivityCompetitorRetirementBaseRate)).round();
+      annualNewCompetitorCount = (activeIds.length * (random.nextDouble() * lowActivityCompetitorGrowthVariance + lowActivityCompetitorGrowthBaseRate)).round();
       print("Year ${start.year}: Retiring $annualRetirementCount competitors, adding $annualNewCompetitorCount new competitors over the year");
       currentYear = start.year;
     }
 
-    // Retire competitors over the course of the year
-    var activeIds = lowActivityCompetitors.keys
-      .where((id) => id >= minimumLowActivityId)
-      .toList();
     minimumLowActivityId = activeIds[(annualRetirementCount / 52).round()];  // Move up the minimum ID
     
     // Log-normal distribution for match size
@@ -169,21 +169,22 @@ class Competitor {
   final int shooterId;
   final List<int> matchIds = [];
   static const int windowSize = 5;  // Keep last 5 matches
-  static const double baseLinkWeight = 0.5;
-  static const double linkWeightRange = 1.0;
+  static const double lowConnectivityLinkWeight = 0.5;
+  static const double lowConnectivityLinkScore = 0;
+  static const double mediumConnectivityLinkWeight = 1.0;
+  static const double mediumConnectivityLinkScore = 40;
+  static const double highConnectivityLinkWeight = 2.0;
+  static const double highConnectivityLinkScore = 100;
   
   // Store windows in chronological order
   List<MatchWindow> get windows => allWindows.getTailWindow(windowSize);
   List<MatchWindow> allWindows = [];
   double connectivityScore = 0.0;
+  double rawConnectivityScore = 0.0;
 
   void addMatch(int matchId, DateTime date, Iterable<int> opponents) {
     // Create new window for this match
-    Set<int> priorOpponents = {};
-    for(var window in windows) {
-      priorOpponents.addAll(window.uniqueOpponents);
-    }
-    var newOpponents = opponents.where((id) => id != shooterId && !priorOpponents.contains(id)).toSet();
+    var newOpponents = opponents.where((id) => id != shooterId && windows.map((w) => w.uniqueOpponents).none((o) => o.contains(id))).toSet();
     var window = MatchWindow(
       matchId: matchId,
       date: date,
@@ -205,8 +206,23 @@ class Competitor {
     double score = 0;
     for(var connectionId in uniqueOpponents) {
       var connectionConnectivity = allCompetitors[connectionId]!.connectivityScore;
-      var linkWeight = baseLinkWeight + (connectionConnectivity / 100) * linkWeightRange;
-      score += linkWeight;
+      if(connectionConnectivity < mediumConnectivityLinkScore) {
+        // lerp from lowConnectivityLinkWeight to mediumConnectivityLinkWeight based on
+        // lowConnectivityLinkScore to mediumConnectivityLinkScore
+        var lerp = (connectionConnectivity - lowConnectivityLinkScore) / (mediumConnectivityLinkScore - lowConnectivityLinkScore);
+        var linkWeight = lerp * (mediumConnectivityLinkWeight - lowConnectivityLinkWeight) + lowConnectivityLinkWeight;
+        score += linkWeight;
+      }
+      else if(connectionConnectivity > mediumConnectivityLinkScore) {
+        // lerp from mediumConnectivityLinkWeight to highConnectivityLinkWeight based on
+        // mediumConnectivityLinkScore to highConnectivityLinkScore
+        var lerp = (connectionConnectivity - mediumConnectivityLinkScore) / (highConnectivityLinkScore - mediumConnectivityLinkScore);
+        var linkWeight = lerp * (highConnectivityLinkWeight - mediumConnectivityLinkWeight) + mediumConnectivityLinkWeight;
+        score += linkWeight;
+      }
+      else {
+        score += mediumConnectivityLinkWeight;
+      }
     }
     return score;
   }
@@ -233,7 +249,7 @@ class Match {
 }
 
 class ConnectivityTracker {
-  void processMatch(Match match, List<Match> matchWindow, Map<int, Competitor> matchCompetitors, Map<int, Competitor> allCompetitors, double maxExistingConnectivity) {
+  void processMatch(Match match, List<Match> matchWindow, Map<int, Competitor> matchCompetitors, Map<int, Competitor> allCompetitors) {
     var shooters = match.competitorIds;
     
     // Update each competitor's windows
@@ -247,38 +263,49 @@ class ConnectivityTracker {
 
     match.averageConnectivityScore = matchCompetitors.values.map((c) => c.connectivityScore).average;
     match.medianConnectivityScore = (matchCompetitors.values.map((c) => c.connectivityScore).toList()..sort()).elementAt(matchCompetitors.values.length ~/ 2);
-            
-    match.globalAverageConnectivityScore = allCompetitors.values.map((c) => c.connectivityScore).average;
-    match.globalMedianConnectivityScore = (allCompetitors.values.map((c) => c.connectivityScore).toList()..sort()).elementAt(allCompetitors.values.length ~/ 2);
+
+    List<double> scores = [];
+    double maxRawConnectivity = 0.0;
+    for(var competitor in allCompetitors.values) {
+      if(competitor.windows.isNotEmpty && competitor.windows.last.date.isAfter(match.start.subtract(Duration(days: 730)))) {
+        scores.add(competitor.connectivityScore);
+        if(competitor.rawConnectivityScore > maxRawConnectivity) {
+          maxRawConnectivity = competitor.rawConnectivityScore;
+        }
+      }
+    }
+
+    match.globalAverageConnectivityScore = scores.average;
+    match.globalMedianConnectivityScore = (scores..sort()).elementAt(scores.length ~/ 2);
 
     // Recalculate scores for all participants
-    _updateScores(matchCompetitors.values.where((c) => c.matchCount > 0), allCompetitors, maxExistingConnectivity);
+    _updateScores(matchCompetitors.values.where((c) => c.matchCount > 0), allCompetitors, maxRawConnectivity);
   }
   
   void _updateScores(Iterable<Competitor> activeCompetitors, Map<int, Competitor> allCompetitors, double maxExistingConnectivity) {
     if (activeCompetitors.isEmpty) return;
     
     double maxScore = maxExistingConnectivity;
-    // Calculate raw scores using the unique * total / (unique + total) formula
+    // Calculate raw scores using the (unique * total) / (unique + total) formula
     for (var competitor in activeCompetitors) {
       var uniqueScore = competitor.uniqueOpponentsScore(allCompetitors);
       var totalScore = competitor.totalOpponentCount;
       
       if (uniqueScore == 0 || totalScore == 0) {
+        competitor.rawConnectivityScore = 0.0;
         competitor.connectivityScore = 0.0;
         continue;
       }
-      
-      // Raw score = (unique * total) / (unique + total)
-      competitor.connectivityScore = (uniqueScore * totalScore) / (uniqueScore + totalScore);
-      if(competitor.connectivityScore > maxScore) {
-        maxScore = competitor.connectivityScore;
+
+      competitor.rawConnectivityScore = (uniqueScore * totalScore) / (uniqueScore + totalScore);
+      if(competitor.rawConnectivityScore > maxScore) {
+        maxScore = competitor.rawConnectivityScore;
       }
     }
     
     if (maxScore > 0) {
       for (var competitor in activeCompetitors) {
-        competitor.connectivityScore = (competitor.connectivityScore / maxScore) * 100;
+        competitor.connectivityScore = (competitor.rawConnectivityScore / maxScore) * 100;
       }
     }
   }
@@ -400,11 +427,30 @@ void analyzeConnectivity(
 
   print("\nMatch vs Global Connectivity Analysis:");
   var matchDiffs = matches.values.map((m) => {
+    "avgConnectivity": m.averageConnectivityScore,
+    "medianConnectivity": m.medianConnectivityScore,
     "avgDiff": m.averageConnectivityScore - m.globalAverageConnectivityScore,
     "medianDiff": m.medianConnectivityScore - m.globalMedianConnectivityScore,
     "date": m.start,
     "size": m.competitorIds.length,
   }).toList();
+
+
+  print("\nMatch Average Connectivity Distribution:");
+  print(_createHistogram(
+    matchDiffs.map((d) => d["avgConnectivity"] as double).toList(),
+    buckets: 20,
+    width: 60,
+    entityName: "matches"
+  ));
+
+  print("\nMatch Median Connectivity Distribution:");
+  print(_createHistogram(
+    matchDiffs.map((d) => d["medianConnectivity"] as double).toList(),
+    buckets: 20,
+    width: 60,
+    entityName: "matches"
+  ));
   
   print("\nConnectivity Differences (Match - Global):");
   print("Average Difference: ${matchDiffs.map((d) => d["avgDiff"]).cast<double>().average.toStringAsFixed(1)}");
@@ -420,7 +466,7 @@ void analyzeConnectivity(
   print("Q3: ${diffQuartiles.q3.toStringAsFixed(1)}");
   
   print("\nMatch Average Connectivity Score Distribution:");
-  print(_createHistogram(avgDiffs, buckets: 20, width: 60, entityName: "matches"));
+  print(_createHistogram(avgDiffs, buckets: 40, width: 60, entityName: "matches"));
 
   print("\nMedian Difference Distribution:");
   print("Std Dev: ${_calculateStdDev(medianDiffs).toStringAsFixed(1)}");
@@ -429,7 +475,7 @@ void analyzeConnectivity(
   print("Q3: ${medianQuartiles.q3.toStringAsFixed(1)}");
 
   print("\nMatch Median Connectivity Score Distribution:");
-  print(_createHistogram(medianDiffs, buckets: 20, width: 60, entityName: "matches"));
+  print(_createHistogram(medianDiffs, buckets: 40, width: 60, entityName: "matches"));
   
   // Correlation with match size
   var correlation = _calculateCorrelation(
@@ -455,10 +501,21 @@ void analyzeConnectivity(
   var monthlyDiffs = <DateTime, List<Map<String, dynamic>>>{};
   for (var match in sortedMatches) {
     var monthKey = DateTime(match.start.year, match.start.month);
+    List<double> globalAveragesToDate = [];
+    for(var match in sortedMatches.takeWhile((value) => value.start.isBefore(match.start))) {
+      globalAveragesToDate.add(match.globalAverageConnectivityScore);
+    }
+    var avgToDate = globalAveragesToDate.isNotEmpty ? globalAveragesToDate.average : avgMean;
+    var stdDevToDate = globalAveragesToDate.isNotEmpty ? _calculateStdDev(globalAveragesToDate) : avgStdDev;
+    
+    if(stdDevToDate == 0.0) {
+      stdDevToDate = avgStdDev;
+      avgToDate = avgMean;
+    }
     monthlyDiffs.putIfAbsent(monthKey, () => []).add({
       "avgDiff": match.averageConnectivityScore - match.globalAverageConnectivityScore,
       "medianDiff": match.medianConnectivityScore - match.globalMedianConnectivityScore,
-      "avgZScore": (match.averageConnectivityScore - avgMean) / avgStdDev,
+      "avgZScore": (match.averageConnectivityScore - avgToDate) / stdDevToDate,
       "size": match.competitorIds.length,
     });
   }
@@ -744,6 +801,50 @@ void analyzeConnectivity(
           "raw=${avgRawScore.toStringAsFixed(1).padLeft(5)} "
           "window=${avgWindowSize.toStringAsFixed(1).padLeft(4)}");
   }
+
+  print("\nConnectivity Distribution by Competitor Type:");
+  
+  var lowActivityScores = competitors.values
+      .where((c) => c.shooterId >= highActivityCount)  // ID >= 2500 means low activity
+      .where((c) => c.windows.isNotEmpty &&c.windows.last.date.isAfter(matches.values.last.start.subtract(Duration(days: 730))))
+      .map((c) => c.connectivityScore)
+      .toList();
+      
+  var highActivityScores = competitors.values
+      .where((c) => c.shooterId < highActivityCount)   // ID < 2500 means high activity
+      .where((c) => c.windows.isNotEmpty&& c.windows.last.date.isAfter(matches.values.last.start.subtract(Duration(days: 730))))
+      .map((c) => c.connectivityScore)
+      .toList();
+  
+  print("\nLow Activity Competitor Connectivity Distribution:");
+  print(_createHistogram(lowActivityScores, buckets: 20, width: 60, entityName: "low-activity"));
+  
+  print("\nHigh Activity Competitor Connectivity Distribution:");
+  print(_createHistogram(highActivityScores, buckets: 20, width: 60, entityName: "high-activity"));
+
+  print("\nLow Activity Competitor Match Count Distribution:");
+  print(_createHistogram(
+    competitors.values
+      .where((c) => c.shooterId >= highActivityCount)
+      .map((c) => c.matchIds.length.toDouble())
+      .toList(),
+    buckets: 20,
+    width: 60,
+    integral: true,
+    entityName: "low-activity"
+  ));
+  
+  print("\nHigh Activity Competitor Match Count Distribution:");
+  print(_createHistogram(
+    competitors.values
+      .where((c) => c.shooterId < highActivityCount)
+      .map((c) => c.matchIds.length.toDouble())
+      .toList(),
+    buckets: 20,
+    width: 60,
+    integral: true,
+    entityName: "high-activity"
+  ));
 }
 
 void _printCompetitorDetail(Competitor competitor, Map<int, Match> matches) {
@@ -807,6 +908,7 @@ String _createHistogram(List<double> values, {
   int width = 60,
   double Function(double)? valueMapper,
   String entityName = "competitors",
+  bool integral = false,
 }) {
   if (values.isEmpty) return "No data";
   
@@ -815,6 +917,10 @@ String _createHistogram(List<double> values, {
   var max = values.max;
   var range = max - min;
   var bucketSize = range / buckets;
+  if(integral) {
+    bucketSize = bucketSize.roundToDouble();
+    buckets = (range / bucketSize).round();
+  }
   
   // Count values in each bucket
   var counts = List.filled(buckets, 0);
@@ -843,7 +949,7 @@ String _createHistogram(List<double> values, {
   }
   
   // Add legend
-  buffer.writeln("\nTotal: ${values.length} competitors");
+  buffer.writeln("\nTotal: ${values.length} $entityName");
   buffer.writeln("Bucket size: ${bucketSize.toStringAsFixed(1)} points");
   
   return buffer.toString();
