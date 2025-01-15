@@ -14,7 +14,7 @@ void main() {
   // Process matches in chronological order
   int i = 0;
   List<Match> matchWindow = [];
-  int matchWindowSize = 30;
+  int matchWindowSize = 100;
   for (var match in matches.values.sorted((a, b) => a.start.compareTo(b.start))) {
     var matchCompetitors = Map.fromEntries(competitors.entries.where((e) => match.competitorIds.contains(e.key)));
     connectivityTracker.processMatch(match, matchWindow, matchCompetitors, competitors);
@@ -242,8 +242,10 @@ class Match {
 
   double averageConnectivityScore = 0;
   double medianConnectivityScore = 0;
-  double globalAverageConnectivityScore = 0;
-  double globalMedianConnectivityScore = 0;
+  double competitorGlobalAverageConnectivityScore = 0;
+  double competitorGlobalMedianConnectivityScore = 0;
+  double matchGlobalAverageConnectivityScore = 0;
+  double matchGlobalMedianConnectivityScore = 0;
 
   List<int> competitorIds = [];
 }
@@ -275,8 +277,14 @@ class ConnectivityTracker {
       }
     }
 
-    match.globalAverageConnectivityScore = scores.average;
-    match.globalMedianConnectivityScore = (scores..sort()).elementAt(scores.length ~/ 2);
+    match.competitorGlobalAverageConnectivityScore = scores.average;
+    match.competitorGlobalMedianConnectivityScore = (scores..sort()).elementAt(scores.length ~/ 2);
+
+    var matchWindowAverages = matchWindow.map((m) => m.averageConnectivityScore).toList();
+    var matchWindowMedians = matchWindow.map((m) => m.medianConnectivityScore).toList();
+    // default to 1 instead of 0 for 'identity' instead of 'crash'
+    match.matchGlobalAverageConnectivityScore = matchWindow.isNotEmpty ? matchWindowAverages.average : 1;
+    match.matchGlobalMedianConnectivityScore = matchWindow.isNotEmpty ? (matchWindowMedians..sort()).elementAt(matchWindowMedians.length ~/ 2) : 1;
 
     // Recalculate scores for all participants
     _updateScores(matchCompetitors.values.where((c) => c.matchCount > 0), allCompetitors, maxRawConnectivity);
@@ -429,8 +437,10 @@ void analyzeConnectivity(
   var matchDiffs = matches.values.map((m) => {
     "avgConnectivity": m.averageConnectivityScore,
     "medianConnectivity": m.medianConnectivityScore,
-    "avgDiff": m.averageConnectivityScore - m.globalAverageConnectivityScore,
-    "medianDiff": m.medianConnectivityScore - m.globalMedianConnectivityScore,
+    "avgDiff": m.averageConnectivityScore - m.competitorGlobalAverageConnectivityScore,
+    "medianDiff": m.medianConnectivityScore - m.competitorGlobalMedianConnectivityScore,
+    "avgDiffMatch": m.averageConnectivityScore - m.matchGlobalAverageConnectivityScore,
+    "medianDiffMatch": m.medianConnectivityScore - m.matchGlobalMedianConnectivityScore,
     "date": m.start,
     "size": m.competitorIds.length,
   }).toList();
@@ -452,7 +462,7 @@ void analyzeConnectivity(
     entityName: "matches"
   ));
   
-  print("\nConnectivity Differences (Match - Global):");
+  print("\nConnectivity Differences (Match - CompetitorGlobal):");
   print("Average Difference: ${matchDiffs.map((d) => d["avgDiff"]).cast<double>().average.toStringAsFixed(1)}");
   print("Median Difference: ${matchDiffs.map((d) => d["medianDiff"]).cast<double>().average.toStringAsFixed(1)}");
   
@@ -482,40 +492,84 @@ void analyzeConnectivity(
     matchDiffs.map((d) => d["size"] as int).toList(),
     avgDiffs
   );
-  print("\nCorrelation with Match Size: ${correlation.toStringAsFixed(3)}");
+  print("\nCorrelation with Match Size: ");
+  print("    Averages: ${correlation.toStringAsFixed(3)}");
+  print("    Medians: ${_calculateCorrelation(
+    matchDiffs.map((d) => d["size"] as int).toList(),
+    medianDiffs
+  ).toStringAsFixed(3)}");
+
+  print("\nConnectivity Differences (Match vs MatchGlobal):");
+
+  print("\nMatchGlobal Median Connectivity Score Distribution:");
+  print(_createHistogram(
+    matchDiffs.map((d) => d["medianDiffMatch"] as double).toList(),
+    buckets: 20,
+    width: 60,
+    entityName: "matches"
+  ));
+  print("Median Difference: ${matchDiffs.map((d) => d["medianDiffMatch"]).cast<double>().average.toStringAsFixed(1)}");
+  print("Median Difference Std Dev: ${_calculateStdDev(matchDiffs.map((d) => d["medianDiffMatch"] as double).toList()).toStringAsFixed(1)}");
+
+  print("\nMatchGlobal Average Connectivity Score Distribution:");
+  print(_createHistogram(
+    matchDiffs.sublist(200).map((d) => d["avgDiffMatch"] as double).toList(),
+    buckets: 20,
+    width: 60,
+    entityName: "matches"
+  ));
+  print("Average Difference: ${matchDiffs.sublist(200).map((d) => d["avgDiffMatch"]).cast<double>().average.toStringAsFixed(1)}");
+  print("Average Difference Std Dev: ${_calculateStdDev(matchDiffs.sublist(200).map((d) => d["avgDiffMatch"] as double).toList()).toStringAsFixed(1)}");
 
   print("\nConnectivity Difference Time Series:");
-  var matchMedians = matches.values.map((m) => m.medianConnectivityScore).toList();
-  var matchAverages = matches.values.map((m) => m.averageConnectivityScore).toList();
+  var matchCompetitorGlobalMedians = matches.values.map((m) => m.medianConnectivityScore).toList();
+  var matchCompetitorGlobalAverages = matches.values.map((m) => m.averageConnectivityScore).toList();
+  var matchMatchGlobalAverages = matches.values.map((m) => m.matchGlobalAverageConnectivityScore).toList();
+  var matchMatchGlobalMedians = matches.values.map((m) => m.matchGlobalMedianConnectivityScore).toList();
   
-  var medianMean = matchMedians.average;
-  var medianStdDev = _calculateStdDev(matchMedians);
-  var avgMean = matchAverages.average;
-  var avgStdDev = _calculateStdDev(matchAverages);
+  var medianMean = matchCompetitorGlobalMedians.average;
+  var medianStdDev = _calculateStdDev(matchCompetitorGlobalMedians);
+  var avgMean = matchCompetitorGlobalAverages.average;
+  var avgStdDev = _calculateStdDev(matchCompetitorGlobalAverages);
 
+  var matchAvgMean = matchMatchGlobalAverages.average;
+  var matchAvgStdDev = _calculateStdDev(matchMatchGlobalAverages);
   var sortedMatches = matches.values
     .sorted((a, b) => a.start.compareTo(b.start))
     .toList();
-    
+
   // Group by month for readability
   var monthlyDiffs = <DateTime, List<Map<String, dynamic>>>{};
   for (var match in sortedMatches) {
     var monthKey = DateTime(match.start.year, match.start.month);
     List<double> globalAveragesToDate = [];
-    for(var match in sortedMatches.takeWhile((value) => value.start.isBefore(match.start))) {
-      globalAveragesToDate.add(match.globalAverageConnectivityScore);
+    List<double> matchAveragesToDate = [];
+    for(var match in sortedMatches.where((value) => value.start.isBefore(match.start))) {
+      globalAveragesToDate.add(match.competitorGlobalAverageConnectivityScore);
+      matchAveragesToDate.add(match.matchGlobalAverageConnectivityScore);
     }
     var avgToDate = globalAveragesToDate.isNotEmpty ? globalAveragesToDate.average : avgMean;
-    var stdDevToDate = globalAveragesToDate.isNotEmpty ? _calculateStdDev(globalAveragesToDate) : avgStdDev;
-    
+    var stdDevToDate = avgStdDev;
+    var matchAvgToDate = matchAveragesToDate.isNotEmpty ? matchAveragesToDate.average : matchAvgMean;
+    var matchStdDevToDate = matchAvgStdDev;
+
     if(stdDevToDate == 0.0) {
       stdDevToDate = avgStdDev;
       avgToDate = avgMean;
     }
+    if(matchStdDevToDate == 0.0) {
+      matchStdDevToDate = matchAvgStdDev;
+      matchAvgToDate = matchAvgMean;
+    }
     monthlyDiffs.putIfAbsent(monthKey, () => []).add({
-      "avgDiff": match.averageConnectivityScore - match.globalAverageConnectivityScore,
-      "medianDiff": match.medianConnectivityScore - match.globalMedianConnectivityScore,
+      "avgDiff": match.averageConnectivityScore - match.competitorGlobalAverageConnectivityScore,
+      "medianDiff": match.medianConnectivityScore - match.competitorGlobalMedianConnectivityScore,
+      "avgDiffMatch": match.averageConnectivityScore - match.matchGlobalAverageConnectivityScore,
+      "medianDiffMatch": match.medianConnectivityScore - match.matchGlobalMedianConnectivityScore,
+      "matchAvgZScore": (match.averageConnectivityScore - matchAvgToDate) / matchStdDevToDate,
       "avgZScore": (match.averageConnectivityScore - avgToDate) / stdDevToDate,
+      "refAvg": avgToDate,
+      "refStdDev": stdDevToDate,
       "size": match.competitorIds.length,
     });
   }
@@ -533,14 +587,20 @@ void analyzeConnectivity(
     var diffs = entry.value;
     var avgZ = diffs.map((d) => d["avgZScore"] as double).average;
     var avgSize = diffs.map((d) => d["size"] as int).average;
-    
+    var refAvg = diffs.map((d) => d["refAvg"] as double).average;
+    var refStdDev = diffs.map((d) => d["refStdDev"] as double).average;
+    var matchAvgZScore = diffs.map((d) => d["matchAvgZScore"] as double).average;
     var centerPos = 30;
     var rawZPos = centerPos + (avgZ * scale).round();
     var zPos = rawZPos.clamp(0, 59);
+    var matchZPos = (centerPos + (matchAvgZScore * scale).round()).clamp(0, 59);
+
     
     var line = List.filled(60, ' ');
     line[centerPos] = '|';
     line[zPos] = '■';
+    line[matchZPos] = '□';
+
     
     // Add indicators for clamped values
     var clampIndicator = '';
@@ -550,9 +610,10 @@ void analyzeConnectivity(
     
     print("${month.toString().substring(0, 7)}: "
           "${line.join('')}$clampIndicator "
-          "z: ${avgZ.toStringAsFixed(2).padLeft(5)}, "
+          "z_cmp: ${avgZ.toStringAsFixed(2).padLeft(5)}, "
+          "z_mch: ${matchAvgZScore.toStringAsFixed(2).padLeft(5)}, "
           "matches: ${diffs.length}, "
-          "avg size: ${avgSize.toStringAsFixed(0)}");
+          "avg size: ${avgSize.toStringAsFixed(0).padLeft(3)}");
   }
   
   // Add legend
@@ -573,7 +634,7 @@ void analyzeConnectivity(
   
   print("\nMedian Z-Score Distribution:");
   print(_createHistogram(
-    matchMedians.map((m) => (m - medianMean) / medianStdDev).toList(),
+    matchCompetitorGlobalMedians.map((m) => (m - medianMean) / medianStdDev).toList(),
     buckets: 20,
     width: 60,
     valueMapper: (z) => medianMean + (z * medianStdDev),
@@ -582,10 +643,19 @@ void analyzeConnectivity(
   
   print("\nAverage Z-Score Distribution:");
   print(_createHistogram(
-    matchAverages.map((m) => (m - avgMean) / avgStdDev).toList(),
+    matchCompetitorGlobalAverages.map((m) => (m - avgMean) / avgStdDev).toList(),
     buckets: 20,
     width: 60,
     valueMapper: (z) => avgMean + (z * avgStdDev),
+    entityName: "matches"
+  ));
+
+  print("\nMatchGlobal Average Z-Score Distribution:");
+  print(_createHistogram(
+    matchMatchGlobalAverages.map((m) => (m - matchAvgMean) / matchAvgStdDev).toList(),
+    buckets: 40,
+    width: 60,
+    valueMapper: (z) => matchAvgMean + (z * matchAvgStdDev),
     entityName: "matches"
   ));
 
