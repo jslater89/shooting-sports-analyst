@@ -13,10 +13,10 @@ import 'package:shooting_sports_analyst/data/database/match/match_database.dart'
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
+import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
-import 'package:shooting_sports_analyst/data/ranking/model/rating_mode.dart';
-import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
@@ -56,9 +56,41 @@ class MatchLoadFailureError extends RatingProjectLoadError {
   String get message => "${cause.message} for ${failedMatch.eventName} (${underlying.runtimeType}: ${underlying.message})";
 }
 
+class DeduplicationError extends RatingProjectLoadError {
+  String message;
+  DeduplicationError(this.message);
+
+  static Result<T, DeduplicationError> result<T>(String message) {
+    return Result.err(DeduplicationError(message));
+  }
+}
+
+typedef RatingProjectLoaderCallback = void Function({required int progress, required int total, required LoadingState state, String? eventName, String? groupName});
+typedef RatingProjectLoaderDeduplicationCallback = Future<Result<List<DeduplicationAction>, DeduplicationError>> Function(List<DeduplicationCollision> deduplicationResult);
+
+/// RatingProjectLoaderHost contains a number of callbacks that the RatingProjectLoader
+/// will call as it progresses, both to update the UI and to allow for user interaction
+/// in cases where it is needed.
+class RatingProjectLoaderHost {
+  /// A callback for RatingProjectLoader progress. When progress and total are both 0, show no progress.
+  /// When progress and total are both negative, show indeterminate progress. When total is positive,
+  /// show determinate progress with progress as the counter.
+  RatingProjectLoaderCallback progressCallback;
+
+  /// A callback for when shooter deduplication is complete, and there are conflicts for the user to
+  /// resolve. [deduplicationResult] is the list of detected, unresolved conflicts. The callback will be
+  /// awaited by the project loader, and should return a list of actions to take to resolve the conflicts.
+  /// 
+  /// Return Result.ok if the conflicts are resolved and/or project loading should continue. Return
+  /// Result.err if project loading should stop.
+  RatingProjectLoaderDeduplicationCallback deduplicationCallback;
+
+  RatingProjectLoaderHost({required this.progressCallback, required this.deduplicationCallback});
+}
+
 class RatingProjectLoader {
   final DbRatingProject project;
-  final RatingProjectLoaderCallback callback;
+  final RatingProjectLoaderHost host;
   final db = AnalystDatabase();
   RatingProjectSettings get settings => project.settings;
   RatingSystem get ratingSystem => settings.algorithm;
@@ -69,14 +101,14 @@ class RatingProjectLoader {
   MemberNumberCorrectionContainer get _dataCorrections => settings.memberNumberCorrections;
   List<String> get memberNumberWhitelist => settings.memberNumberWhitelist;
 
-  RatingProjectLoader(this.project, this.callback);
+  RatingProjectLoader(this.project, this.host);
 
   Future<Result<void, RatingProjectLoadError>> calculateRatings({bool fullRecalc = false}) async {
     HydratedMatchCache().clear();
     timings.reset();
 
     var start = DateTime.now();
-    callback(progress: -1, total: -1, state: LoadingState.readingMatches);
+    host.progressCallback(progress: -1, total: -1, state: LoadingState.readingMatches);
     var matchesLink = await project.matchesToUse();
 
     // We want to add matches in ascending order, from oldest to newest.
@@ -119,7 +151,7 @@ class RatingProjectLoader {
     // nothing to do
     if(matchesToAdd.isEmpty) {
       _log.i("No new matches");
-      callback(progress: 0, total: 0, state: LoadingState.done);
+      host.progressCallback(progress: 0, total: 0, state: LoadingState.done);
       return Result.ok(null);
     }
 
@@ -144,7 +176,7 @@ class RatingProjectLoader {
       await project.lastUsedMatches.save();
     });
 
-    callback(progress: 0, total: matchesToAdd.length, state: LoadingState.readingMatches);
+    host.progressCallback(progress: 0, total: matchesToAdd.length, state: LoadingState.readingMatches);
     List<ShootingMatch> hydratedMatches = [];
     for(var dbMatch in matchesToAdd) {
       var matchRes = dbMatch.hydrate();
@@ -159,17 +191,17 @@ class RatingProjectLoader {
       else {
         var match = matchRes.unwrap();
         hydratedMatches.add(match);
-        callback(progress: hydratedMatches.length, total: matchesToAdd.length, state: LoadingState.readingMatches);
+        host.progressCallback(progress: hydratedMatches.length, total: matchesToAdd.length, state: LoadingState.readingMatches);
       }
     }
 
     if(Timings.enabled) timings.add(TimingType.retrieveMatches, DateTime.now().difference(start).inMicroseconds);
 
-    callback(progress: 0, total: matchesToAdd.length, state: LoadingState.processingScores);
+    host.progressCallback(progress: 0, total: matchesToAdd.length, state: LoadingState.processingScores);
     var result = await _addMatches(hydratedMatches);
     if(result.isErr()) return Result.errFrom(result);
 
-    callback(progress: 1, total: 1, state: LoadingState.done);
+    host.progressCallback(progress: 1, total: 1, state: LoadingState.done);
     return Result.ok(null);
   }
 
@@ -181,12 +213,26 @@ class RatingProjectLoader {
   int _totalMatchSteps = 0;
   int _currentMatchStep = 0;
   Future<Result<void, RatingProjectLoadError>> _addMatchesToGroup(RatingGroup group, List<ShootingMatch> matches) async {
+    List<DbShooterRating> newRatings = [];
     for (var match in matches) {
       // 1. For each match, add shooters.
-      await _addShootersFromMatch(group, match);
+      var (ratings, _) = await _addShootersFromMatch(group, match);
+      newRatings.addAll(ratings);
     }
 
     // 2. Deduplicate shooters.
+    var dedup = sport.shooterDeduplicator;
+    if(dedup != null) {
+      var start = DateTime.now();
+      var dedupResult = await dedup.deduplicateShooters(ratingProject: project, newRatings: newRatings);
+      if(Timings.enabled) timings.add(TimingType.dedupShooters, DateTime.now().difference(start).inMicroseconds);
+
+      if(dedupResult.isErr()) {
+        return DeduplicationError.result(dedupResult.unwrapErr().message);
+      }
+
+
+    }
 
     // At this point we have an accurate count of shooters so far, which we'll need for various maths.
     var shooterCount = await AnalystDatabase().countShooterRatings(project, group);
@@ -222,7 +268,7 @@ class RatingProjectLoader {
       // operations are happening
       await _rankMatch(group, match);
       _currentMatchStep += 1;
-      callback(progress: _currentMatchStep, total: _totalMatchSteps, state: LoadingState.processingScores, eventName: match.name, groupName: group.name);
+      host.progressCallback(progress: _currentMatchStep, total: _totalMatchSteps, state: LoadingState.processingScores, eventName: match.name, groupName: group.name);
     }
 
     var count = await db.countShooterRatings(project, group);
@@ -299,13 +345,20 @@ class RatingProjectLoader {
   ///
   /// Use [encounter] if you want shooters to be added regardless of whether they appear
   /// in scores. (i.e., shooters who DQ on the first stage, or are no-shows but still included in the data)
-  Future<int> _addShootersFromMatch(RatingGroup group, ShootingMatch match) async {
+  Future<(List<DbShooterRating>, int)> _addShootersFromMatch(RatingGroup group, ShootingMatch match) async {
     var start = DateTime.now();
     int added = 0;
     int updated = 0;
     var shooters = await _getShooters(group, match);
+    List<DbShooterRating> newRatings = [];
     for(MatchEntry s in shooters) {
+      // Process the member number:
+      // First, normalize it to our all caps/alphanumeric format.
+      // TODO: move this to Sport, because dashes may be valid in some places.
+      // TODO: validate that our workflow functions with A/TY/FY prefixes still in
       var processed = Rater.processMemberNumber(s.memberNumber);
+
+      // If there are data corrections for this member number, apply them.
       var corrections = _dataCorrections.getByInvalidNumber(processed);
       var name = ShooterDeduplicator.processName(s);
       for(var correction in corrections) {
@@ -314,6 +367,9 @@ class RatingProjectLoader {
           break;
         }
       }
+
+      // If the member number is empty, see if this is someone we've special-cased
+      // in case they enter an empty one. (IPSC competitors in the US, mainly.)
       if(processed.isEmpty) {
         var emptyCorrection = _dataCorrections.getEmptyCorrectionByName(name);
         if(emptyCorrection != null) {
@@ -321,12 +377,21 @@ class RatingProjectLoader {
         }
       }
       if(processed.isNotEmpty && !s.reentry) {
+        // If we have a member number after processing, we can use this competitor.
         s.memberNumber = processed;
+
+        // Look for valid mappings (user first, then auto), and apply them if found.
         var possibleNumbers = sport.shooterDeduplicator?.alternateForms(s.memberNumber) ?? [s.memberNumber];
         String? mappingTarget;
         for(var number in possibleNumbers) {
           mappingTarget = settings.userMemberNumberMappings[number];
           if(mappingTarget != null) {
+            break;
+          }
+
+          var automaticMapping = project.lookupAutomaticNumberMapping(number);
+          if(automaticMapping != null) {
+            mappingTarget = automaticMapping.targetNumber;
             break;
           }
         }
@@ -347,6 +412,7 @@ class RatingProjectLoader {
             group: group,
             project: project,
           );
+          newRatings.add(newRating.wrappedRating);
           added += 1;
         }
         else {
@@ -378,7 +444,7 @@ class RatingProjectLoader {
       timings.matchEntryCount += shooters.length;
     }
 
-    return added + updated;
+    return (newRatings, added + updated);
   }
 
   Future<List<MatchEntry>> _getShooters(RatingGroup group, ShootingMatch match, {bool verify = false}) async {
@@ -1155,11 +1221,6 @@ class RatingProjectLoader {
     // }
   }
 }
-
-/// A callback for RatingProjectLoader. When progress and total are both 0, show no progress.
-/// When progress and total are both negative, show indeterminate progress. When total is positive,
-/// show determinate progress with progress as the counter.
-typedef RatingProjectLoaderCallback = void Function({required int progress, required int total, required LoadingState state, String? eventName, String? groupName});
 
 enum LoadingState {
   /// Processing has not yet begun

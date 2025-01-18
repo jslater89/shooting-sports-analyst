@@ -21,18 +21,30 @@ class NativeError extends ResultErr {
   String get message => "$e";
   Error e;
   NativeError(this.e);
+
+  static Result<T, NativeError> result<T>(Error e) {
+    return Result.err(NativeError(e));
+  }
 }
 
 class NativeException extends ResultErr {
   String get message => "$e";
   Exception e;
   NativeException(this.e);
+
+  static Result<T, NativeException> result<T>(Exception e) {
+    return Result.err(NativeException(e));
+  }
 }
 
 class StringError extends ResultErr {
   final String message;
 
   const StringError(this.message);
+
+  static Result<T, StringError> result<T>(String message) {
+    return Result.err(StringError(message));
+  }
 }
 
 // My Rust is showing

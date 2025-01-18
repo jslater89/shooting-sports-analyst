@@ -1212,7 +1212,7 @@ class Rater {
   static Map<String, String> _processMemNumCache = {};
   static String processMemberNumber(String no) {
     if(_processMemNumCache.containsKey(no)) return _processMemNumCache[no]!;
-    var no2 = no.toUpperCase().replaceAll(RegExp(r"[^FYTABLRD0-9]"), "").replaceAll(RegExp(r"[ATYF]{1,2}"), "");
+    var no2 = no.toUpperCase().replaceAll(RegExp(r"[^FYTABLRD0-9]"), "");
 
     // If a member number contains no numbers, ignore it.
     if(!no2.contains(RegExp(r"[0-9]+"))) return "";

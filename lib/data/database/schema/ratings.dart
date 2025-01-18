@@ -135,6 +135,30 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   /// project.
   List<DbMemberNumberMapping> automaticNumberMappings = [];
 
+  /// Look up an automatic member number mapping for a given source number.
+  ///
+  /// Returns null if no mapping is found.
+  DbMemberNumberMapping? lookupAutomaticNumberMapping(String sourceNumber) {
+    if(_automaticNumberMappingCache == null) {
+      _automaticNumberMappingCache = {};
+      for(var mapping in automaticNumberMappings) {
+        for(var sourceNumber in mapping.sourceNumbers) {
+          _automaticNumberMappingCache![sourceNumber] = mapping;
+        }
+      }
+    }
+
+    return _automaticNumberMappingCache![sourceNumber];
+  }
+
+  /// Clear the automatic number mapping cache.
+  void clearAutomaticNumberMappingCache() {
+    _automaticNumberMappingCache = null;
+  }
+
+  @ignore
+  Map<String, DbMemberNumberMapping>? _automaticNumberMappingCache;
+
   @ignore
   List<RatingGroup> get groups {
     if(!dbGroups.isLoaded) {

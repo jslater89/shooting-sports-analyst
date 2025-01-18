@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
+import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_loader.dart';
 import 'package:shooting_sports_analyst/data/ranking/timings.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
@@ -34,6 +36,7 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
   LoadingState currentState = LoadingState.notStarted;
 
   late RatingProjectLoader loader;
+  late RatingProjectLoaderHost host;
 
   int _currentProgress = 0;
   int _totalProgress = 0;
@@ -45,7 +48,12 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
   void initState() {
     super.initState();
 
-    loader = RatingProjectLoader(widget.project, callback);
+    RatingProjectLoaderHost host = RatingProjectLoaderHost(
+      progressCallback: callback,
+      deduplicationCallback: deduplicationCallback,
+    );
+
+    loader = RatingProjectLoader(widget.project, host);
     calculateRatings();
   }
 
@@ -61,13 +69,17 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
     }
   }
 
-  void callback({
+  Future<Result<List<DeduplicationAction>, DeduplicationError>> deduplicationCallback(List<DeduplicationCollision> deduplicationResult) async {
+    return Result.ok([]);
+  }
+
+  Future<void> callback({
     required int progress,
     required int total,
     required LoadingState state,
     String? eventName,
     String? groupName,
-  }) {
+  }) async {
     if(state != currentState) {
       _log.i("Rating calculation state changed: $state");
     }
@@ -81,6 +93,8 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
       _currentProgress = progress;
       _totalProgress = total;
     });
+    // Allow a UI update
+    await Future.delayed(const Duration(microseconds: 1));
 
     if(state == LoadingState.done) {
       _log.i(Timings());

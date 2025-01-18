@@ -118,9 +118,25 @@ enum MemberNumberType {
   bool betterThanOrEqual(MemberNumberType other) {
     return this.index >= other.index;
   }
+
+  String get infixName => switch(this) {
+    international => "international",
+    standard => "standard",
+    life => "lifetime",
+    benefactor => "benefactor",
+    regionDirector => "region director"
+  };
+
+  String get uiName => switch(this) {
+    international => "International",
+    standard => "Standard",
+    life => "Lifetime",
+    benefactor => "Benefactor",
+    regionDirector => "Region Director"
+  };
 }
 
-class DeduplicationResult extends Result<List<DeduplicatorCollision>, RatingError> {
+class DeduplicationResult extends Result<List<DeduplicationCollision>, RatingError> {
   DeduplicationResult.ok(super.value) : super.ok();
   DeduplicationResult.err(super.error) : super.err();
 }

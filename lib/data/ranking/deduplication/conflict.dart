@@ -1,4 +1,5 @@
 
+import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
@@ -8,16 +9,13 @@ import 'package:fuzzywuzzy/fuzzywuzzy.dart' as fuzzywuzzy;
 
 /// A conflict is a potential discrepancy in competitor information that
 /// may require manual action to resolve.
-///
-/// Conflicts can be caused by:
-/// - Two competitors (i.e., two member numbers) who have different names,
-///   which will lead to a list of 
-class DeduplicatorCollision {
+class DeduplicationCollision {
   /// The deduplicator name is the processed (alphabetic only, no punctuation or spaces, all lowercase)
   /// name that has multiple member numbers/shooter ratings.
   String deduplicatorName;
   /// The member numbers that have been identified as conflicting in some way.
-  List<String> memberNumbers;
+  Map<MemberNumberType, List<String>> memberNumbers;
+  List<String> get flattenedMemberNumbers => memberNumbers.values.flattened.toList();
   /// The shooter ratings corresponding to the member numbers.
   Map<String, DbShooterRating> shooterRatings;
   /// Up to the last five matches where each member number appears.
@@ -30,26 +28,16 @@ class DeduplicatorCollision {
   /// Proposed actions to resolve the conflict.
   List<DeduplicationAction> proposedActions;
 
+  /// True if the collision involves all of the given numbers.
   bool coversNumbers(Iterable<String> numbers) {
-    Map<String, bool> numberCovered = {};
-    for(var number in numbers) {
-      for(var a in proposedActions) {
-        if(a.coveredNumbers.contains(number)) {
-          numberCovered[number] = true;
-          continue;
-        }
-      }
-    }
-
-    for(var number in numbers) {
-      if(!numberCovered.containsKey(number)) {
-        return false;
-      }
-    }
-    return true;
+    return numbers.every((n) => coversNumber(n));
   }
 
-  DeduplicatorCollision({
+  bool coversNumber(String number) {
+    return proposedActions.any((a) => a.coveredNumbers.contains(number));
+  }
+
+  DeduplicationCollision({
     required this.deduplicatorName,
     required this.memberNumbers,
     required this.shooterRatings,

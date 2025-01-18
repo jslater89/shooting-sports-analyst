@@ -4,6 +4,7 @@ sealed class DeduplicationAction {
   const DeduplicationAction();
 
   Iterable<String> get coveredNumbers;
+  DeduplicationAction copy();
 }
 
 /// PreexistingMapping is a mapping that has been detected
@@ -27,6 +28,13 @@ class PreexistingMapping extends DeduplicationAction {
     required this.targetNumber,
     required this.automatic,
   });
+
+  @override
+  PreexistingMapping copy() => PreexistingMapping(
+    sourceNumber: sourceNumber,
+    targetNumber: targetNumber,
+    automatic: automatic,
+  );
 }
 
 /// AutoMapping is a member number mapping that has been automatically
@@ -43,6 +51,12 @@ class AutoMapping extends DeduplicationAction {
     required this.sourceNumbers,
     required this.targetNumber,
   });
+
+  @override
+  AutoMapping copy() => AutoMapping(
+    sourceNumbers: [...sourceNumbers],
+    targetNumber: targetNumber,
+  );
 }
 
 /// Blacklist prevents mapping from a source number to a target
@@ -64,6 +78,13 @@ class Blacklist extends DeduplicationAction {
     required this.targetNumber,
     required this.bidirectional,
   });
+
+  @override
+  Blacklist copy() => Blacklist(
+    sourceNumber: sourceNumber,
+    targetNumber: targetNumber,
+    bidirectional: bidirectional,
+  );
 }
 
 /// UserMapping manually maps a list of source numbers
@@ -79,6 +100,12 @@ class UserMapping extends DeduplicationAction {
     required this.sourceNumbers,
     required this.targetNumber,
   });
+
+  @override
+  UserMapping copy() => UserMapping(
+    sourceNumbers: [...sourceNumbers],
+    targetNumber: targetNumber,
+  );
 }
 
 /// DataEntryFix corrects a typo in member number data
@@ -107,4 +134,11 @@ class DataEntryFix extends DeduplicationAction {
 
   @override
   int get hashCode => Object.hash(sourceNumber, targetNumber, deduplicatorName);
+
+  @override
+  DataEntryFix copy() => DataEntryFix(
+    sourceNumber: sourceNumber,
+    targetNumber: targetNumber,
+    deduplicatorName: deduplicatorName,
+  );
 }

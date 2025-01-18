@@ -58,6 +58,16 @@ data/l2s.sqlite
 *.isar*
 coverage/
 *booth*json
+logs/*
+*test.json
+libisar.so
+predictions*.csv
+sorted-elo-settings*.txt
+.vscode
+base.apk.cache/
+research/**/output.txt
+
+
 
 # Closed sources for git status cleanliness
 # When adding a new closed-source thing, commit the stub, then

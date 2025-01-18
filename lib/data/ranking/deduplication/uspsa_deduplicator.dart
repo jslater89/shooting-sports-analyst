@@ -57,14 +57,14 @@ class USPSADeduplicator extends ShooterDeduplicator {
     Map<String, List<DbShooterRating>> ratingsByName = {};
 
     /// The overall list of conflicts.
-    List<DeduplicatorCollision> conflicts = [];
+    List<DeduplicationCollision> conflicts = [];
 
     /// The list of conflicts for each deduplicator name, so that steps
     /// further into the code can examine the conflicts already detected.
     /// Name conflicts from one iteration of the loop are added to [conflicts]
     /// at the start of the next iteration (or just after the loop for the last
     /// iteration).
-    List<DeduplicatorCollision> nameConflicts = [];
+    List<DeduplicationCollision> nameConflicts = [];
 
     // Retrieve deduplicator names from the new ratings.
     // The only names that can cause conflicts are those
@@ -111,9 +111,9 @@ class USPSADeduplicator extends ShooterDeduplicator {
         }
       }
 
-      var conflict = DeduplicatorCollision(
+      var conflict = DeduplicationCollision(
         deduplicatorName: name,
-        memberNumbers: numbers.values.flattened.toList(),
+        memberNumbers: numbers.deepCopy(),
         shooterRatings: numbersToRatings,
         matches: {},
         causes: [],
