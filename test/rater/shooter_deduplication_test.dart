@@ -588,6 +588,74 @@ void main() async {
     expect(reason: "blacklist numbers", [n1, n2], unorderedEquals(["A123456", "A76691"]));
   });
 
+  test("AmbiguousMapping Resolvable 2", () async {
+    var project = DbRatingProject(
+      name: "AmbiguousMapping Resolvable 2",
+      sportName: uspsaSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "ambiguous-mapping-resolvable-2");
+    var deduplicator = USPSADeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      checkDataEntryErrors: true,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    expect(reason: "number of causes", results[0].causes, hasLength(2));
+    var multipleNumbersCause = results[0].causes.firstWhereOrNull((e) => e is MultipleNumbersOfType) as MultipleNumbersOfType;
+    var ambiguousMappingCause = results[0].causes.firstWhereOrNull((e) => e is AmbiguousMapping) as AmbiguousMapping;
+    expect(reason: "has multiple numbers cause", multipleNumbersCause, isNotNull);
+    expect(reason: "has ambiguous mapping cause", ambiguousMappingCause, isNotNull);
+    expect(reason: "number of proposed actions", results[0].proposedActions, hasLength(2));
+    var dataEntryFix = results[0].proposedActions.firstWhereOrNull((e) => e is DataEntryFix) as DataEntryFix;
+    var autoMapping = results[0].proposedActions.firstWhereOrNull((e) => e is AutoMapping) as AutoMapping;
+    expect(reason: "has data entry fix", dataEntryFix, isNotNull);
+    expect(reason: "has auto mapping", autoMapping, isNotNull);
+    expect(reason: "data entry fix source number", dataEntryFix.sourceNumber, equals("L1235"));
+    expect(reason: "data entry fix target number", dataEntryFix.targetNumber, equals("L1234"));
+    expect(reason: "auto mapping target number", autoMapping.targetNumber, equals("L1234"));
+    expect(reason: "auto mapping source numbers", autoMapping.sourceNumbers, unorderedEquals(["A123456"]));
+  });
+
+  test("AmbiguousMapping Unresolvable 2", () async {
+    var project = DbRatingProject(
+      name: "AmbiguousMapping Unresolvable 2",
+      sportName: uspsaSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "ambiguous-mapping-unresolvable-2");
+    var deduplicator = USPSADeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      checkDataEntryErrors: true,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    expect(reason: "number of causes", results[0].causes, hasLength(2));
+    var multipleNumbersCause = results[0].causes.firstWhereOrNull((e) => e is MultipleNumbersOfType) as MultipleNumbersOfType;
+    var ambiguousMappingCause = results[0].causes.firstWhereOrNull((e) => e is AmbiguousMapping) as AmbiguousMapping;
+    expect(reason: "has multiple numbers cause", multipleNumbersCause, isNotNull);
+    expect(reason: "has ambiguous mapping cause", ambiguousMappingCause, isNotNull);
+    expect(reason: "ambiguous mapping indicates source conflicts", ambiguousMappingCause.sourceConflicts, isFalse);
+    expect(reason: "ambiguous mapping indicates target conflicts", ambiguousMappingCause.targetConflicts, isTrue);
+    expect(reason: "ambiguous mapping has correct source numbers", ambiguousMappingCause.sourceNumbers, unorderedEquals(["A123456"]));
+    expect(reason: "ambiguous mapping has correct target numbers", ambiguousMappingCause.targetNumbers, unorderedEquals(["L1234", "L5678"]));
+    expect(reason: "ambiguous mapping has correct conflicting types", ambiguousMappingCause.conflictingTypes, unorderedEquals([MemberNumberType.life]));
+  });
+
   // #endregion
 }
 
@@ -676,6 +744,20 @@ Future<void> setupTestDb(AnalystDatabase db) async {
     matchId: "ambiguous-mapping-unresolvable",
   );
 
+  var simpleAmbiguousMappingResolvableMatch2 = generateMatch(
+    shooters: [competitorMap["A123456"]!, competitorMap["L1234"]!, competitorMap["L1235"]!],
+    date: DateTime(2024, 2, 7),
+    matchName: "AmbiguousMapping Resolvable 2",
+    matchId: "ambiguous-mapping-resolvable-2",
+  );
+
+  var simpleAmbiguousMappingUnresolvableMatch2 = generateMatch(
+    shooters: [competitorMap["A123456"]!, competitorMap["L5678"]!, competitorMap["L1234"]!],
+    date: DateTime(2024, 2, 7),
+    matchName: "AmbiguousMapping Unresolvable 2",
+    matchId: "ambiguous-mapping-unresolvable-2",
+  );
+
   var dataEntryFixPreBlacklistedMatch = generateMatch(
     shooters: [competitorMap["A123456"]!, competitorMap["A123457"]!],
     date: DateTime(2024, 2, 14),
@@ -719,6 +801,8 @@ Future<void> setupTestDb(AnalystDatabase db) async {
     db.saveMatch(simpleAutoMappingMatch3),
     db.saveMatch(simpleAmbiguousMappingMatch),
     db.saveMatch(simpleAmbiguousMappingUnresolvableMatch),
+    db.saveMatch(simpleAmbiguousMappingResolvableMatch2),
+    db.saveMatch(simpleAmbiguousMappingUnresolvableMatch2),
     db.saveMatch(dataEntryFixPreBlacklistedMatch),
     db.saveMatch(dataEntryFixUserMappedMatch),
     db.saveMatch(resolvableCrossMappingMatch),
@@ -771,6 +855,13 @@ Map<String, Shooter> generateCompetitors() {
     firstName: "John",
     lastName: "Deduplicator",
     memberNumber: "L1235",
+  );
+
+  /// Another unrelated John Deduplicator
+  competitors["L5678"] = Shooter(
+    firstName: "John",
+    lastName: "Deduplicator",
+    memberNumber: "L5678",
   );
 
   competitors["A124456"] = Shooter(
