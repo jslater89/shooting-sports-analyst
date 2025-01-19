@@ -28,11 +28,12 @@ class DeduplicationCollision {
   /// Proposed actions to resolve the conflict.
   List<DeduplicationAction> proposedActions;
 
-  /// True if the collision involves all of the given numbers.
+  /// True if the proposed fixes involve all of the given numbers.
   bool coversNumbers(Iterable<String> numbers) {
     return numbers.every((n) => coversNumber(n));
   }
 
+  /// True if the proposed fixes cover the given number.
   bool coversNumber(String number) {
     return proposedActions.any((a) => a.coveredNumbers.contains(number));
   }

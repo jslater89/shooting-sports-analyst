@@ -356,7 +356,7 @@ class RatingProjectLoader {
       // First, normalize it to our all caps/alphanumeric format.
       // TODO: move this to Sport, because dashes may be valid in some places.
       // TODO: validate that our workflow functions with A/TY/FY prefixes still in
-      var processed = Rater.processMemberNumber(s.memberNumber);
+      var processed = sport.shooterDeduplicator?.processNumber(s.memberNumber) ?? ShooterDeduplicator.normalizeNumberBasic(s.memberNumber);
 
       // If there are data corrections for this member number, apply them.
       var corrections = _dataCorrections.getByInvalidNumber(processed);

@@ -5,6 +5,7 @@ sealed class DeduplicationAction {
 
   Iterable<String> get coveredNumbers;
   DeduplicationAction copy();
+  String get descriptiveString;
 }
 
 /// PreexistingMapping is a mapping that has been detected
@@ -35,6 +36,9 @@ class PreexistingMapping extends DeduplicationAction {
     targetNumber: targetNumber,
     automatic: automatic,
   );
+
+  @override
+  String get descriptiveString => "Preexisting mapping: $sourceNumber -> $targetNumber";
 }
 
 /// AutoMapping is a member number mapping that has been automatically
@@ -57,6 +61,16 @@ class AutoMapping extends DeduplicationAction {
     sourceNumbers: [...sourceNumbers],
     targetNumber: targetNumber,
   );
+
+  @override
+  String get descriptiveString {
+    if(sourceNumbers.length == 1) {
+      return "Automatic mapping: ${sourceNumbers.first} -> $targetNumber";
+    }
+    else {
+      return "Automatic mapping: (${sourceNumbers.join(", ")}) -> $targetNumber";
+    }
+  }
 }
 
 /// Blacklist prevents mapping from a source number to a target
@@ -85,6 +99,16 @@ class Blacklist extends DeduplicationAction {
     targetNumber: targetNumber,
     bidirectional: bidirectional,
   );
+
+  @override
+  String get descriptiveString {
+    if(bidirectional) {
+      return "Blacklist: $sourceNumber <-> $targetNumber";
+    }
+    else {
+      return "Blacklist: $sourceNumber -> $targetNumber";
+    }
+  }
 }
 
 /// UserMapping manually maps a list of source numbers
@@ -106,6 +130,16 @@ class UserMapping extends DeduplicationAction {
     sourceNumbers: [...sourceNumbers],
     targetNumber: targetNumber,
   );
+
+  @override
+  String get descriptiveString {
+    if(sourceNumbers.length == 1) {
+      return "User mapping: ${sourceNumbers.first} -> $targetNumber";
+    }
+    else {
+      return "User mapping: (${sourceNumbers.join(", ")}) -> $targetNumber";
+    }
+  }
 }
 
 /// DataEntryFix corrects a typo in member number data
@@ -141,4 +175,7 @@ class DataEntryFix extends DeduplicationAction {
     targetNumber: targetNumber,
     deduplicatorName: deduplicatorName,
   );
+
+  @override
+  String get descriptiveString => "Data entry fix: $sourceNumber -> $targetNumber for $deduplicatorName";
 }

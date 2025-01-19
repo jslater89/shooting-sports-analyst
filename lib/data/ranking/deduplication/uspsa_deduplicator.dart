@@ -14,7 +14,15 @@ import 'package:shooting_sports_analyst/util.dart';
 var _log = SSALogger("USPSADeduplicator");
 
 class USPSADeduplicator extends ShooterDeduplicator {
-  const USPSADeduplicator();
+  static USPSADeduplicator? _instance;
+
+  USPSADeduplicator._();
+  factory USPSADeduplicator() {
+    if(_instance == null) {
+      _instance = USPSADeduplicator._();
+    }
+    return _instance!;
+  }
 
   @override
   Future<DeduplicationResult> deduplicateShooters({
@@ -750,6 +758,24 @@ class USPSADeduplicator extends ShooterDeduplicator {
         currentMappings[sourceNum] = target.memberNumber;
       }
     }
+  }
+
+  Map<String, String> _normalizeNumberCache = {};
+  /// Normalized USPSA numbers are all uppercase and contain only the following letters
+  /// in addition to numbers: FYTABLRD
+  @override
+  String normalizeNumber(String number) {
+    if(_normalizeNumberCache.containsKey(number)) return _normalizeNumberCache[number]!;
+    var n = number.toUpperCase().replaceAll(RegExp(r"[^FYTABLRD0-9]"), "");
+    _normalizeNumberCache[number] = n;
+    return n;
+  }
+
+  /// Processed USPSA numbers are identical to [normalizeNumber] normalized
+  /// numbers.
+  @override
+  String processNumber(String number) {
+    return normalizeNumber(number);
   }
 
   List<String> alternateForms(String number) {

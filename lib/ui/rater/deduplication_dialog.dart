@@ -1,8 +1,13 @@
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:intl/intl.dart';
+import 'package:shooting_sports_analyst/ui/widget/constrained_tooltip.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/deduplication/blacklist.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/deduplication/data_entry_fix.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/deduplication/mapping.dart';
 
 /// A dialog that accepts a list of deduplication collisions, displays them
 /// and the relevant information to the user, and allows the user to approve,
@@ -137,24 +142,119 @@ class _ConflictDetailsState extends State<ConflictDetails> {
     if(c == null) {
       return const Center(child: Text("No collision selected"));
     }
+
+    ProposedActionType? _proposedActionType;
     
     return SingleChildScrollView(
       child: Column(
         children: [
-          Text("Issues", style: Theme.of(context).textTheme.titleMedium),
+          Row(
+            children: [
+              Text("Issues", style: Theme.of(context).textTheme.titleMedium),
+              ConstrainedTooltip(
+                waitDuration: const Duration(seconds: 1),
+                message: "The detected causes of this collision.",
+                constraints: const BoxConstraints(maxWidth: 300),
+                child: const Icon(Icons.help_outline),
+              )
+            ],
+          ),
           for(var issue in c.causes)
             IssueDescription(issue: issue),
-          Text("Member Numbers", style: Theme.of(context).textTheme.titleMedium),
+          Row(
+            children: [
+              Text("Member Numbers", style: Theme.of(context).textTheme.titleMedium),
+              ConstrainedTooltip(
+                waitDuration: const Duration(seconds: 1),
+                message: "Member numbers in this conflict arranged by type. Numbers that apear in the proposed fixes " +
+                  "are highlighted in green. All numbers must appear in green before the conflict can be resolved.",
+                constraints: const BoxConstraints(maxWidth: 300),
+                child: const Icon(Icons.help_outline),
+              )
+            ],
+          ),
           Row(
             children: [
               for(var type in c.memberNumbers.keys)
                 MemberNumberTypeColumn(type: type, collision: c),
+            ],
+          ),
+          Row(
+            children: [
+              Text("Proposed Actions", style: Theme.of(context).textTheme.titleMedium),
+              ConstrainedTooltip(
+                waitDuration: const Duration(seconds: 1),
+                message: "Proposed actions to resolve this collision.\n\n" +
+                  "Use a BLACKLIST to indicate that two numbers refer to different competitors.\n" +
+                  "Use a DATA ENTRY FIX when a competitor has entered their member number incorrectly\n" +
+                  "Use a MAPPING to indicate that one member number belongs to the same competitor as another. " +
+                  "Mappings detected by the deduplicator are labeled 'Automatic Mapping'. Mappings specified by " +
+                  "the user are labeled 'User Mapping'. Mappings that appear in project settings but do not fully " +
+                  "resolve a conflict are labeled 'Preexisting Mapping'.",
+                constraints: const BoxConstraints(maxWidth: 300),
+                child: const Icon(Icons.help_outline),
+              )
+            ],
+          ),
+          for(var action in c.proposedActions)
+            ProposedAction(action: action, onRemove: () => setState(() {
+              c.proposedActions.remove(action);
+            })),
+          Row(
+            children: [
+              DropdownButton<ProposedActionType>(
+                items: ProposedActionType.values.map((e) => DropdownMenuItem(value: e, child: Text(e.uiLabel))).toList(),
+                onChanged: (value) => setState(() {
+                  if(value != null) {
+                    setState(() {
+                      _proposedActionType = value;
+                    });
+                  }
+                }),
+              ),
+              IconButton(icon: const Icon(Icons.add_circle_outline), onPressed: _proposedActionType == null ? null : () async {
+                if(_proposedActionType != null) {
+                  var memberNumbers = c.memberNumbers.values.flattened.toList();
+                  var coveredNumbers = c.proposedActions.map((e) => e.coveredNumbers).flattened.toList();
+                  DeduplicationAction? newAction;
+                  switch(_proposedActionType!) {
+                    case ProposedActionType.blacklist:
+                      newAction = await AddBlacklistEntryDialog.show(context, memberNumbers, coveredMemberNumbers: coveredNumbers);
+                      break;
+                    case ProposedActionType.dataEntryFix:
+                      newAction = await AddDataEntryFixDialog.show(context);
+                      break;
+                    case ProposedActionType.mapping:
+                      newAction = await AddMappingDialog.show(context);
+                      break;
+                  }
+
+                  if(newAction != null) {
+                    var na = newAction;
+                    setState(() {
+                      c.proposedActions.add(na);
+                    });
+                  }
+                }
+              }),
             ],
           )
         ],
       ),
     );
   }
+}
+
+enum ProposedActionType {
+  blacklist,
+  dataEntryFix,
+  mapping;
+
+  String get uiLabel => switch(this) {
+    ProposedActionType.blacklist => "Blacklist",
+    ProposedActionType.dataEntryFix => "Data Entry Fix",
+    ProposedActionType.mapping => "Mapping",
+  };
 }
 
 class IssueDescription extends StatelessWidget {
@@ -208,6 +308,23 @@ class MemberNumberTypeColumn extends StatelessWidget {
         Text(type.uiName),
         for(var number in collision.memberNumbers[type]!)
           Text(number, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: collision.coversNumber(number) ? Colors.green.shade600 : Colors.grey.shade400)),
+      ],
+    );
+  }
+}
+
+class ProposedAction extends StatelessWidget {
+  const ProposedAction({super.key, required this.action, required this.onRemove});
+
+  final DeduplicationAction action;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(action.descriptiveString),
+        IconButton(icon: const Icon(Icons.remove_circle_outline), onPressed: onRemove),
       ],
     );
   }

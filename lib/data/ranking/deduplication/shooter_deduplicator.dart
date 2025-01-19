@@ -71,11 +71,11 @@ abstract class ShooterDeduplicator {
   /// The default implementation removes all non-alphanumeric characters and
   /// converts to uppercase.
   String normalizeNumber(String number) {
-    return number.toUpperCase().replaceAll(RegExp(r"[^A-Z0-9]"), "");
+    return normalizeNumberBasic(number);
   }
 
   /// A processed member number is a member number that has been processed to
-  /// meet the condition that string equality equals member equality.
+  /// meet the condition that
   /// 
   /// The default implementation returns the normalized number.
   String processNumber(String number) {
@@ -94,6 +94,10 @@ abstract class ShooterDeduplicator {
   /// a list of member numbers that are valid target numbers for a member
   /// number mapping. If there are no valid target numbers, return null.
   List<String>? maybeTargetNumber(Map<MemberNumberType, List<String>> numbers);
+
+  static String normalizeNumberBasic(String number) {
+    return number.toUpperCase().replaceAll(RegExp(r"[^A-Z0-9]"), "");
+  }
 }
 
 /// Types of member numbers that can identify a competitor.
