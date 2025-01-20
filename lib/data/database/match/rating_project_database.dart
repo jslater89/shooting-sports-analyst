@@ -72,6 +72,15 @@ extension RatingProjectDatabase on AnalystDatabase {
     });
   }
 
+  Future<DbShooterRating> knownShooter({
+    required DbRatingProject project,
+    required RatingGroup group,
+    required String memberNumber,
+    bool usePossibleMemberNumbers = false,
+  }) async {
+    return (await maybeKnownShooter(project: project, group: group, memberNumber: memberNumber, usePossibleMemberNumbers: usePossibleMemberNumbers))!;
+  }
+
   // TODO: cache loaded shooters?
   // Let's do it the dumb way first, and go from there.
   /// Retrieves a possible shooter rating from the database, or null if

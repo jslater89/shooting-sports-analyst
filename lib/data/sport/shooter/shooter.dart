@@ -52,7 +52,7 @@ class Shooter {
     _memberNumber = processedNumber;
   }
 
-  void addKnownMemberNumbers(List<String> numbers) {
+  void addKnownMemberNumbers(Iterable<String> numbers) {
     for(var number in numbers) {
       var normalized = normalizeNumber(number);
       if(normalized.isNotEmpty) {

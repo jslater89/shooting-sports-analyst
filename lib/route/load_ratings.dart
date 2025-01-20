@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
@@ -9,9 +10,11 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_loader.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/points/points_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/timings.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/rater/deduplication_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 SSALogger _log = SSALogger("LoadRatingsPage");
@@ -70,7 +73,13 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
   }
 
   Future<Result<List<DeduplicationAction>, DeduplicationError>> deduplicationCallback(List<DeduplicationCollision> deduplicationResult) async {
-    return Result.ok([]);
+    var userApproves = await DeduplicationDialog.show(context, deduplicationResult);
+    if(userApproves ?? false) {
+      return Result.ok(deduplicationResult.map((e) => e.proposedActions).flattened.toList());
+    }
+    else {
+      return Result.err(DeduplicationError("User requested cancelation."));
+    }
   }
 
   Future<void> callback({

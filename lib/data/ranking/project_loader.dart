@@ -7,6 +7,7 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:fuzzywuzzy/fuzzywuzzy.dart' as fuzzywuzzy;
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
@@ -230,8 +231,35 @@ class RatingProjectLoader {
       if(dedupResult.isErr()) {
         return DeduplicationError.result(dedupResult.unwrapErr().message);
       }
+      else {
+        var conflicts = dedupResult.unwrap();
+        int resolvedInSettings = 0;
+        for(var conflict in conflicts) {
+          if(conflict.causes.length == 1 && conflict.causes.first is FixedInSettings) {
+            resolvedInSettings += 1;
+            for(var action in conflict.proposedActions) {
+              await _applyDeduplicationAction(group, action);
+            }
+          }
+        }
 
+        _log.i("Resolved $resolvedInSettings conflicts of (${conflicts.length}) in settings");
+        conflicts.removeWhere((c) => c.causes.length == 1 && c.causes.first is FixedInSettings);
 
+        var userDedupResult = await host.deduplicationCallback(conflicts);
+        if(userDedupResult.isErr()) {
+          return DeduplicationError.result(userDedupResult.unwrapErr().message);
+        }
+
+        var actions = userDedupResult.unwrap();
+        for(var action in actions) {
+          await _applyDeduplicationAction(group, action);
+        }
+
+        // We don't need to check the name, because we've already saved the project
+        // (i.e. ensured it has a DB ID) at the end of the configure ratings page.
+        db.saveRatingProject(project, checkName: false);
+      }
     }
 
     // At this point we have an accurate count of shooters so far, which we'll need for various maths.
@@ -279,6 +307,126 @@ class RatingProjectLoader {
     // this group.
 
     return Result.ok(null);
+  }
+
+  /// Applies a deduplication action to the project.
+  /// 
+  /// UNLIKE the pre-DB code, this function is responsible for handling any competitor
+  /// merges required by the action, IN ADDITION TO updating the project settings.
+  /// 
+  /// (Since we've already added new ratings, we need to delete any redundant ones and make
+  /// sure any new ones are updated before we advance to calculating ratings.)
+  Future<void> _applyDeduplicationAction(RatingGroup group, DeduplicationAction action) async {
+    switch(action.runtimeType) {
+      // For mappings, we need to delete any source ratings, make sure the target has all relevant
+      // member numbers, and copy any data we're missing to the target.
+      case UserMapping || AutoMapping:
+        // Update the project settings for this mapping
+        var mapping = action as Mapping;
+        if(mapping is UserMapping) {
+          for(var sourceNumber in mapping.sourceNumbers) {
+            var existingMapping = settings.userMemberNumberMappings[sourceNumber];
+            settings.userMemberNumberMappings[sourceNumber] = mapping.targetNumber;
+            if(existingMapping != null) {
+              settings.userMemberNumberMappings[existingMapping] = mapping.targetNumber;
+              mapping.sourceNumbers.add(existingMapping);
+            }
+          }
+        }
+        else {
+          mapping as AutoMapping;
+          List<DbMemberNumberMapping> mappings = [];
+          for(var sourceNumber in mapping.sourceNumbers) {
+            var existingMapping = project.lookupAutomaticNumberMapping(sourceNumber);
+            if(existingMapping != null) {
+              mappings.add(existingMapping);
+            }
+          }
+
+          Set<String> sourceNumbers = {};
+          for(var m in mappings) {
+            sourceNumbers.addAll(m.sourceNumbers);
+          }
+          sourceNumbers.addAll(mapping.sourceNumbers);
+
+          mapping.sourceNumbers.clear();
+          mapping.sourceNumbers.addAll(sourceNumbers);
+          var newMapping = DbMemberNumberMapping(
+            sourceNumbers: sourceNumbers.toList(),
+            targetNumber: mapping.targetNumber,
+          );
+          project.automaticNumberMappings.removeWhere((m) => mappings.contains(m));
+          project.automaticNumberMappings.add(newMapping);
+        }
+
+        // Find any competitors who match sourceNumber and copy their data to the
+        // target number.
+        List<Future<DbShooterRating?>> futures = [];
+        for(var sourceNumber in mapping.sourceNumbers) {
+          // maybeKnownShooter here, because we might not have added all of the mapping sources yet.
+          futures.add(db.maybeKnownShooter(project: project, group: group, memberNumber: sourceNumber, usePossibleMemberNumbers: true));
+        }
+        var ratings = (await Future.wait(futures)).whereNotNull().toList();
+
+        // knownShooter here, because the target number came from the set of ratings known to the
+        // deduplicator.
+        var targetRating = await db.knownShooter(project: project, group: group, memberNumber: mapping.targetNumber, usePossibleMemberNumbers: true);
+        
+        // Add all of the source numbers to the target's known list
+        targetRating.addKnownMemberNumbers(mapping.sourceNumbers);
+
+        // For every source rating we can find, copy its member numbers to the target and
+        // delete it.
+        // If the rating has history, increment a count so we can warn the user that a full
+        // recalculation will be necessary for accuracy. In the meantime, copy from the longest
+        // rating to this one.
+        // TODO: check what the old code did re: copying rating events
+        int ratingsWithHistory = targetRating.length > 0 ? 1 : 0;
+        for(var r in ratings) {
+          if(r.length > 0) {
+            ratingsWithHistory += 1;
+
+            if(r.length > targetRating.length) {
+              targetRating.copyRatingFrom(r);
+            }
+          }
+          // TODO: copy vitals where sensible to do so
+          // based on last seen/first seen
+
+          targetRating.addKnownMemberNumbers(r.knownMemberNumbers);
+          db.deleteShooterRating(r);
+        }
+
+        if(ratingsWithHistory > 1) {
+          // TODO: warn user that a full recalculation is required for accuracy
+        }
+
+        db.upsertDbShooterRating(targetRating, linksChanged: false);
+
+        break;
+      case Blacklist:
+        // For blacklists, we aren't actually changing anything, just making a note in the project
+        // settings that the two already-distinct ratings ought to be that way.
+        var blacklist = action as Blacklist;
+
+        settings.memberNumberMappingBlacklist.addToList(blacklist.sourceNumber, blacklist.targetNumber);
+        if(blacklist.bidirectional) {
+          settings.memberNumberMappingBlacklist.addToList(blacklist.targetNumber, blacklist.sourceNumber);
+        }
+        break;
+      case DataEntryFix:
+        // For data entry fixes, we want to delete a source rating if its name matches the deduplicator name.
+        // We don't need to do anything to the target, because its data is presumed correct already.
+        var fix = action as DataEntryFix;
+        settings.memberNumberCorrections.add(fix.intoCorrection());
+
+        var sourceRating = await db.maybeKnownShooter(project: project, group: group, memberNumber: fix.sourceNumber);
+        if(sourceRating != null && sourceRating.deduplicatorName == fix.deduplicatorName) {
+          db.deleteShooterRating(sourceRating);
+        }
+
+        break;
+    }
   }
 
   Future<Result<void, RatingProjectLoadError>> _addMatches(List<ShootingMatch> matches) async {
@@ -416,6 +564,11 @@ class RatingProjectLoader {
           added += 1;
         }
         else {
+          var sName = ShooterDeduplicator.processName(s);
+          if(fuzzywuzzy.weightedRatio(rating.deduplicatorName, sName) < 75) {
+            _log.w("$s matches $rating by member number, but names have high string difference");
+          }
+
           // Update names for existing shooters on add, to eliminate the Mel Rodero -> Mel Rodero II problem in the L2+ set
           rating.firstName = s.firstName;
           rating.lastName = s.lastName;

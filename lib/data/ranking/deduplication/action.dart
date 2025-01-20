@@ -1,5 +1,7 @@
 
 
+import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
+
 sealed class DeduplicationAction {
   const DeduplicationAction();
 
@@ -44,12 +46,9 @@ class PreexistingMapping extends DeduplicationAction {
 /// AutoMapping is a member number mapping that has been automatically
 /// detected, most commonly because there is only one member number of
 /// each type.
-class AutoMapping extends DeduplicationAction {
+class AutoMapping extends Mapping {
   final List<String> sourceNumbers;
   final String targetNumber;
-
-  @override
-  Iterable<String> get coveredNumbers => [...sourceNumbers, targetNumber];
 
   const AutoMapping({
     required this.sourceNumbers,
@@ -111,16 +110,23 @@ class Blacklist extends DeduplicationAction {
   }
 }
 
-/// UserMapping manually maps a list of source numbers
-/// to a target number.
-class UserMapping extends DeduplicationAction {
-  final List<String> sourceNumbers;
-  final String targetNumber;
+abstract class Mapping extends DeduplicationAction {
+  List<String> get sourceNumbers;
+  String get targetNumber;
 
   @override
   Iterable<String> get coveredNumbers => [...sourceNumbers, targetNumber];
 
-  const UserMapping({
+  const Mapping();
+}
+
+/// UserMapping manually maps a list of source numbers
+/// to a target number.
+class UserMapping extends Mapping {
+  List<String> sourceNumbers;
+  String targetNumber;
+
+  UserMapping({
     required this.sourceNumbers,
     required this.targetNumber,
   });
@@ -178,4 +184,10 @@ class DataEntryFix extends DeduplicationAction {
 
   @override
   String get descriptiveString => "Data entry fix: $sourceNumber -> $targetNumber for $deduplicatorName";
+
+  MemberNumberCorrection intoCorrection() => MemberNumberCorrection(
+    name: deduplicatorName,
+    invalidNumber: sourceNumber,
+    correctedNumber: targetNumber,
+  );
 }

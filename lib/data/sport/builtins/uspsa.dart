@@ -73,7 +73,7 @@ final uspsaSport = Sport(
   hasStages: true,
   displaySettingsPowerFactor: uspsaMinorPF,
   resultSortModes: hitFactorSorts,
-  shooterDeduplicator: const USPSADeduplicator(),
+  shooterDeduplicator: USPSADeduplicator(),
   eventLevels: _matchLevels,
   fantasyScoresProvider: const USPSAFantasyScoringCalculator(),
   classifications: [

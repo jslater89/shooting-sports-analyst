@@ -266,6 +266,10 @@ extension ListOverlap<T> on Iterable<T> {
   bool containsAll(Iterable<T> other) {
     return other.every((e) => this.contains(e));
   }
+
+  Iterable<T> union(Iterable<T> other) {
+    return {...this, ...other};
+  }
 }
 
 extension WindowedList<T> on List<T> {
