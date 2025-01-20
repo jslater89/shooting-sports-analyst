@@ -9,12 +9,12 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 // import 'package:shooting_sports_analyst/data/db/object/match/shooter.dart';
 // import 'package:shooting_sports_analyst/data/db/object/rating/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/average_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/connected_shooter.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
-import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/sorted_list.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
@@ -470,13 +470,14 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
   @override
   bool equalsShooter(Shooter other) {
     if(super.equalsShooter(other)) return true;
+    var nameProcessor = sport.shooterDeduplicator?.processNumber ?? ShooterDeduplicator.normalizeNumberBasic;
 
     for(var number in knownMemberNumbers) {
-      var processed = Rater.processMemberNumber(number);
+      var processed = nameProcessor(number);
 
       if(other is ShooterRating) {
         for(var otherNumber in other.knownMemberNumbers) {
-          var otherProcessed = Rater.processMemberNumber(otherNumber);
+          var otherProcessed = nameProcessor(otherNumber);
           if(processed == otherProcessed) return true;
         }
       }

@@ -13,7 +13,7 @@ import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_mode.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
-import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
+import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/model/plackett_luce.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rating_change.dart';
@@ -109,7 +109,7 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
 
   @override
   encodeToJson(Map<String, dynamic> json) {
-    json[RatingProject.algorithmKey] = RatingProject.openskillValue;
+    json[OldRatingProject.algorithmKey] = OldRatingProject.openskillValue;
     settings.encodeToJson(json);
   }
 

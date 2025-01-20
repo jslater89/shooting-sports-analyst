@@ -10,8 +10,13 @@ import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
+import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/timings.dart';
+import 'package:shooting_sports_analyst/data/source/practiscore_report.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 var _log = SSALogger("RatingProjectDatabase");
 
@@ -221,6 +226,57 @@ extension RatingProjectDatabase on AnalystDatabase {
     return query.findAllSync();
   }
 
+  Future<Result<DbRatingProject, ResultErr>> migrateOldProject(OldRatingProject project, {String? nameOverride}) async {
+    var projectName = project.name;
+    var existingProject = await getRatingProjectByName(projectName);
+    if(existingProject != null) {
+      if(nameOverride != null) {
+        projectName = nameOverride;
+      }
+      else {
+        return Result.err(RatingMigrationError.nameOverlap);
+      }
+    }
+    else if(nameOverride != null) {
+      projectName = nameOverride;
+    }
+
+    DbRatingProject p = DbRatingProject(
+      name: projectName,
+      sportName: uspsaName,
+      settings: RatingProjectSettings.fromOld(project),
+    );
+
+    List<DbShootingMatch> matches = [];
+    var shortIdRegex = RegExp(r"^[0-9]{4,8}$");
+    for(var matchUrl in project.matchUrls) {
+      var id = matchUrl.split("/").last;
+      String? prefixedId = null;
+      if(shortIdRegex.hasMatch(id)) {
+        prefixedId = "${PractiscoreHitFactorReportParser.uspsaCode}:$id";
+      }
+      var match = await getMatchByAnySourceId([
+        id,
+        if(prefixedId != null) prefixedId,
+      ]);
+      if(match != null) {
+        matches.add(match);
+      }
+      else {
+        _log.w("Failed to find match $id in database");
+      }
+    }
+
+    p.matches.addAll(matches);
+    // TODO: see if I can do this better
+    p.dbGroups.addAll(p.sport.builtinRatingGroupsProvider?.defaultRatingGroups ?? []);
+
+    _log.i("Migrated ${p.name} to DB ratings with ${matches.length} matches (vs. ${project.matchUrls.length} in old project)");
+
+    await saveRatingProject(p, checkName: false);
+    return Result.ok(p);
+  }
+
   Query<DbRatingEvent> _buildShooterEventQuery(DbShooterRating rating, {
     int limit = 0,
     int offset = 0,
@@ -244,4 +300,12 @@ extension RatingProjectDatabase on AnalystDatabase {
 
     return query;
   }
+}
+
+enum RatingMigrationError implements ResultErr {
+  nameOverlap;
+
+  String get message => switch(this) {
+    nameOverlap => "Ratings database already contains a project with that name."
+  };
 }

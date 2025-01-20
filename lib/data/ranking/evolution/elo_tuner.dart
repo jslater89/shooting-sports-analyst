@@ -10,7 +10,7 @@ import 'package:shooting_sports_analyst/data/ranking/evolution/elo_evaluation.da
 import 'package:shooting_sports_analyst/data/ranking/evolution/genome.dart';
 import 'package:shooting_sports_analyst/data/ranking/evolution/predator_prey.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settings.dart';
-import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/data/ranking/legacy_loader/rating_history.dart';
 import 'dart:math' as math;
 
 import 'package:shooting_sports_analyst/logger.dart';
@@ -178,7 +178,7 @@ class EloTuner {
 
         if(!p.evaluated) {
           int totalProgress = 0;
-          int totalSteps = trainingData.values.map((d) => (d.trainingData.length / RatingHistory.progressCallbackInterval).round() + d.evaluationData.length).sum;
+          int totalSteps = trainingData.values.map((d) => (d.trainingData.length / OldRatingHistory.progressCallbackInterval).round() + d.evaluationData.length).sum;
           sw.reset();
           sw.start();
           for(var data in trainingData.values) {

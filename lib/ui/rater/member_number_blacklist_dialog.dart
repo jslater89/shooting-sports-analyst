@@ -5,13 +5,15 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 class MemberNumberBlacklistDialog extends StatefulWidget {
   const MemberNumberBlacklistDialog({
     Key? key,
+    this.sport,
     this.initialMap = const {},
     required this.title,
     this.helpText,
@@ -20,6 +22,7 @@ class MemberNumberBlacklistDialog extends StatefulWidget {
     this.width = 600,
   }) : super(key: key);
 
+  final Sport? sport;
   final Map<String, List<String>> initialMap;
   final String title;
   final String? helpText;
@@ -162,8 +165,8 @@ class _MemberNumberBlacklistDialogState extends State<MemberNumberBlacklistDialo
     if(!validate(source)) return;
     if(!validate(target)) return;
 
-    source = Rater.processMemberNumber(source);
-    target = Rater.processMemberNumber(target);
+    source = widget.sport == null ? source : ShooterDeduplicator.numberProcessor(widget.sport!)(source);
+    target = widget.sport == null ? target : ShooterDeduplicator.numberProcessor(widget.sport!)(target);
 
     if(source == target) {
       setState(() {

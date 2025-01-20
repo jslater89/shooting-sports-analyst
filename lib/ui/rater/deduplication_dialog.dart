@@ -51,7 +51,9 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
   /// The index of the collision that is currently selected.
   int? _selectedCollisionIndex;
 
-  DeduplicationCollision? get _selectedCollision => _selectedCollisionIndex != null ? widget.collisions[_selectedCollisionIndex!] : null;
+  DeduplicationCollision? get _selectedCollision => _selectedCollisionIndex != null ? _sortedCollisions[_selectedCollisionIndex!] : null;
+
+  List<DeduplicationCollision> _sortedCollisions = [];
 
   @override
   void initState() {
@@ -66,6 +68,9 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
     if(widget.collisions.isNotEmpty) {
       _selectedCollisionIndex = 0;
     }
+
+    _sortedCollisions = [...widget.collisions];
+    _sortedCollisions.sort((a, b) => a.deduplicatorName.compareTo(b.deduplicatorName));
   }
 
   @override
@@ -82,45 +87,54 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
         // Dialog content: a side pane list of collisions, and a main pane showing
         // collision details.
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
               width: 300,
               child: ListView.builder(
                 itemBuilder: (context, index) {
-                  var collision = widget.collisions[index];
+                  var collision = _sortedCollisions[index];
                   return ConflictListItem(
                     collision: collision,
+                    selected: _selectedCollisionIndex == index,
                     originalActions: _originalActions[collision]!,
                     onTap: () => setState(() {
                       _selectedCollisionIndex = index;
                     }),
                   );
                 },
-                itemCount: widget.collisions.length,        
+                itemCount: _sortedCollisions.length,        
               ),
             ),
+            const VerticalDivider(thickness: 1, width: 1),
             Expanded(
               child: ConflictDetails(collision: _selectedCollision),
             )
           ]
         ),
-      )
+      ),
+      actions: [
+        TextButton(child: const Text("CANCEL"), onPressed: () => Navigator.of(context).pop(false)),
+        TextButton(child: const Text("APPLY"), onPressed: () => Navigator.of(context).pop(true)),
+      ],
     );
   }
 }
 
 class ConflictListItem extends StatelessWidget {
-  const ConflictListItem({super.key, required this.collision, required this.originalActions, this.onTap});
+  const ConflictListItem({super.key, required this.collision, required this.originalActions, this.onTap, required this.selected});
 
   final DeduplicationCollision collision;
   final List<DeduplicationAction> originalActions;
   final VoidCallback? onTap;
+  final bool selected;
 
-    @override
+  @override
   Widget build(BuildContext context) {
+    var style = selected ? Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold) : null;
     return ListTile(
       onTap: onTap,
-      title: Text(collision.deduplicatorName),
+      title: Text(collision.deduplicatorName, style: style),
       subtitle: Text(collision.flattenedMemberNumbers.join(", "), softWrap: false, overflow: TextOverflow.ellipsis),
     );
   }
@@ -145,101 +159,112 @@ class _ConflictDetailsState extends State<ConflictDetails> {
 
     ProposedActionType? _proposedActionType;
     
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Text("Issues", style: Theme.of(context).textTheme.titleMedium),
-              ConstrainedTooltip(
-                waitDuration: const Duration(seconds: 1),
-                message: "The detected causes of this collision.",
-                constraints: const BoxConstraints(maxWidth: 300),
-                child: const Icon(Icons.help_outline),
-              )
-            ],
-          ),
-          for(var issue in c.causes)
-            IssueDescription(issue: issue),
-          Row(
-            children: [
-              Text("Member Numbers", style: Theme.of(context).textTheme.titleMedium),
-              ConstrainedTooltip(
-                waitDuration: const Duration(seconds: 1),
-                message: "Member numbers in this conflict arranged by type. Numbers that apear in the proposed fixes " +
-                  "are highlighted in green. All numbers must appear in green before the conflict can be resolved.",
-                constraints: const BoxConstraints(maxWidth: 300),
-                child: const Icon(Icons.help_outline),
-              )
-            ],
-          ),
-          Row(
-            children: [
-              for(var type in c.memberNumbers.keys)
-                MemberNumberTypeColumn(type: type, collision: c),
-            ],
-          ),
-          Row(
-            children: [
-              Text("Proposed Actions", style: Theme.of(context).textTheme.titleMedium),
-              ConstrainedTooltip(
-                waitDuration: const Duration(seconds: 1),
-                message: "Proposed actions to resolve this collision.\n\n" +
-                  "Use a BLACKLIST to indicate that two numbers refer to different competitors.\n" +
-                  "Use a DATA ENTRY FIX when a competitor has entered their member number incorrectly\n" +
-                  "Use a MAPPING to indicate that one member number belongs to the same competitor as another. " +
-                  "Mappings detected by the deduplicator are labeled 'Automatic Mapping'. Mappings specified by " +
-                  "the user are labeled 'User Mapping'. Mappings that appear in project settings but do not fully " +
-                  "resolve a conflict are labeled 'Preexisting Mapping'.",
-                constraints: const BoxConstraints(maxWidth: 300),
-                child: const Icon(Icons.help_outline),
-              )
-            ],
-          ),
-          for(var action in c.proposedActions)
-            ProposedAction(action: action, onRemove: () => setState(() {
-              c.proposedActions.remove(action);
-            })),
-          Row(
-            children: [
-              DropdownButton<ProposedActionType>(
-                items: ProposedActionType.values.map((e) => DropdownMenuItem(value: e, child: Text(e.uiLabel))).toList(),
-                onChanged: (value) => setState(() {
-                  if(value != null) {
-                    setState(() {
-                      _proposedActionType = value;
-                    });
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            Text(c.deduplicatorName, style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Text("Issues", style: Theme.of(context).textTheme.titleMedium),
+                ConstrainedTooltip(
+                  waitDuration: const Duration(milliseconds: 250),
+                  message: "The detected causes of this collision.",
+                  constraints: const BoxConstraints(maxWidth: 300),
+                  child: const Icon(Icons.help_outline),
+                )
+              ],
+            ),
+            for(var issue in c.causes)
+              IssueDescription(issue: issue),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Text("Member Numbers", style: Theme.of(context).textTheme.titleMedium),
+                ConstrainedTooltip(
+                  waitDuration: const Duration(milliseconds: 250),
+                  message: "Member numbers in this conflict arranged by type. Numbers that apear in the proposed fixes " +
+                    "are highlighted in green. All numbers must appear in green before the conflict can be resolved.",
+                  constraints: const BoxConstraints(maxWidth: 300),
+                  child: const Icon(Icons.help_outline),
+                )
+              ],
+            ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for(var type in c.memberNumbers.keys)
+                  MemberNumberTypeColumn(type: type, collision: c),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Text("Proposed Actions", style: Theme.of(context).textTheme.titleMedium),
+                ConstrainedTooltip(
+                  waitDuration: const Duration(milliseconds: 250),
+                  message: "Proposed actions to resolve this collision.\n\n" +
+                    "Use a BLACKLIST to indicate that two numbers refer to different competitors.\n" +
+                    "Use a DATA ENTRY FIX when a competitor has entered their member number incorrectly\n" +
+                    "Use a MAPPING to indicate that one member number belongs to the same competitor as another. " +
+                    "Mappings detected by the deduplicator are labeled 'Automatic Mapping'. Mappings specified by " +
+                    "the user are labeled 'User Mapping'. Mappings that appear in project settings but do not fully " +
+                    "resolve a conflict are labeled 'Preexisting Mapping'.",
+                  constraints: const BoxConstraints(maxWidth: 300),
+                  child: const Icon(Icons.help_outline),
+                )
+              ],
+            ),
+            for(var action in c.proposedActions)
+              ProposedAction(action: action, onRemove: () => setState(() {
+                c.proposedActions.remove(action);
+              })),
+            Row(
+              children: [
+                DropdownButton<ProposedActionType>(
+                  items: ProposedActionType.values.map((e) => DropdownMenuItem(value: e, child: Text(e.uiLabel))).toList(),
+                  onChanged: (value) => setState(() {
+                    if(value != null) {
+                      setState(() {
+                        _proposedActionType = value;
+                      });
+                    }
+                  }),
+                ),
+                IconButton(icon: const Icon(Icons.add_circle_outline), onPressed: _proposedActionType == null ? null : () async {
+                  if(_proposedActionType != null) {
+                    var memberNumbers = c.memberNumbers.values.flattened.toList();
+                    var coveredNumbers = c.proposedActions.map((e) => e.coveredNumbers).flattened.toList();
+                    DeduplicationAction? newAction;
+                    switch(_proposedActionType!) {
+                      case ProposedActionType.blacklist:
+                        newAction = await AddBlacklistEntryDialog.show(context, memberNumbers, coveredMemberNumbers: coveredNumbers);
+                        break;
+                      case ProposedActionType.dataEntryFix:
+                        newAction = await AddDataEntryFixDialog.show(context);
+                        break;
+                      case ProposedActionType.mapping:
+                        newAction = await AddMappingDialog.show(context);
+                        break;
+                    }
+
+                    if(newAction != null) {
+                      var na = newAction;
+                      setState(() {
+                        c.proposedActions.add(na);
+                      });
+                    }
                   }
                 }),
-              ),
-              IconButton(icon: const Icon(Icons.add_circle_outline), onPressed: _proposedActionType == null ? null : () async {
-                if(_proposedActionType != null) {
-                  var memberNumbers = c.memberNumbers.values.flattened.toList();
-                  var coveredNumbers = c.proposedActions.map((e) => e.coveredNumbers).flattened.toList();
-                  DeduplicationAction? newAction;
-                  switch(_proposedActionType!) {
-                    case ProposedActionType.blacklist:
-                      newAction = await AddBlacklistEntryDialog.show(context, memberNumbers, coveredMemberNumbers: coveredNumbers);
-                      break;
-                    case ProposedActionType.dataEntryFix:
-                      newAction = await AddDataEntryFixDialog.show(context);
-                      break;
-                    case ProposedActionType.mapping:
-                      newAction = await AddMappingDialog.show(context);
-                      break;
-                  }
-
-                  if(newAction != null) {
-                    var na = newAction;
-                    setState(() {
-                      c.proposedActions.add(na);
-                    });
-                  }
-                }
-              }),
-            ],
-          )
-        ],
+              ],
+            )
+          ],
+        ),
       ),
     );
   }
@@ -265,18 +290,18 @@ class IssueDescription extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch(issue) {
-      MultipleNumbersOfType(deduplicatorName: var name, memberNumberType: var type, memberNumbers: var numbers) => _buildMultipleNumbersOfType(name, type, numbers),
-      FixedInSettings() => Text("Fixed in settings (should never appear)"),
-      AmbiguousMapping() => _buildAmbiguousMapping(issue as AmbiguousMapping),
+      MultipleNumbersOfType(deduplicatorName: var name, memberNumberType: var type, memberNumbers: var numbers) => _buildMultipleNumbersOfType(context, name, type, numbers),
+      FixedInSettings() => Text("• Fixed in settings (should never appear)", style: Theme.of(context).textTheme.bodyMedium),
+      AmbiguousMapping() => _buildAmbiguousMapping(context, issue as AmbiguousMapping),
     };
   }
 
-  Widget _buildMultipleNumbersOfType(String deduplicatorName, MemberNumberType memberNumberType, List<String> memberNumbers) {
-    var text = "Multiple ${memberNumberType.infixName} numbers: ${memberNumbers.join(", ")}";
-    return Text(text);
+  Widget _buildMultipleNumbersOfType(BuildContext context, String deduplicatorName, MemberNumberType memberNumberType, List<String> memberNumbers) {
+    var text = "• Multiple ${memberNumberType.infixName} numbers: ${memberNumbers.join(", ")}";
+    return Text(text, style: Theme.of(context).textTheme.bodyMedium);
   }
 
-  Widget _buildAmbiguousMapping(AmbiguousMapping issue) {
+  Widget _buildAmbiguousMapping(BuildContext context, AmbiguousMapping issue) {
     late String sourceNumbers;
     late String targetNumbers;
     if(issue.sourceNumbers.length > 1) {
@@ -291,7 +316,7 @@ class IssueDescription extends StatelessWidget {
     else {
       targetNumbers = issue.targetNumbers.firstOrNull ?? "(null)";
     }
-    return Text("Ambiguous mapping from $sourceNumbers to $targetNumbers");
+    return Text("• Ambiguous mapping from $sourceNumbers to $targetNumbers", style: Theme.of(context).textTheme.bodyMedium);
   }
 }
 
@@ -303,12 +328,16 @@ class MemberNumberTypeColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {    
-    return Column(
-      children: [
-        Text(type.uiName),
-        for(var number in collision.memberNumbers[type]!)
-          Text(number, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: collision.coversNumber(number) ? Colors.green.shade600 : Colors.grey.shade400)),
-      ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(type.uiName, style: Theme.of(context).textTheme.titleSmall),
+          for(var number in collision.memberNumbers[type]!)
+            Text(number, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: collision.coversNumber(number) ? Colors.green.shade600 : Colors.grey.shade400)),
+        ],
+      ),
     );
   }
 }
@@ -323,7 +352,7 @@ class ProposedAction extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Text(action.descriptiveString),
+        Text(action.descriptiveString, style: Theme.of(context).textTheme.bodyMedium),
         IconButton(icon: const Icon(Icons.remove_circle_outline), onPressed: onRemove),
       ],
     );

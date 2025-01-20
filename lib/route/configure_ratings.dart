@@ -16,14 +16,15 @@ import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
 import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
-import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
+import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
+import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_settings.dart';
-import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/data/ranking/legacy_loader/rating_history.dart';
 import 'package:shooting_sports_analyst/data/ranking/shooter_aliases.dart';
 import 'package:shooting_sports_analyst/data/results_file_parser.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
@@ -39,6 +40,7 @@ import 'package:shooting_sports_analyst/ui/rater/member_number_blacklist_dialog.
 import 'package:shooting_sports_analyst/ui/rater/member_number_correction_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_map_dialog.dart';
+import 'package:shooting_sports_analyst/ui/rater/select_old_project_dialog.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/enter_name_dialog.dart';
@@ -410,7 +412,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                       icon: Icon(Icons.edit),
                                       onPressed: () async {
                                         var groups = await showDialog(context: context, builder: (context) {
-                                          return RaterGroupsDialog(selectedGroups: _groups, groupProvider: sport?.builtinRatingGroupsProvider);
+                                          return RaterGroupsDialog(selectedGroups: _groups, groupProvider: sport.builtinRatingGroupsProvider);
                                         });
 
                                         if(groups != null) {
@@ -1057,6 +1059,29 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         ));
         break;
 
+      case _MenuEntry.migrateFromOldProject:
+        var request = await showDialog<ProjectMigrateRequest>(context: context, builder: (context) {
+          return MigrateOldProjectDialog();
+        });
+
+        if(request != null) {
+          var result = await AnalystDatabase().migrateOldProject(request.project, nameOverride: request.nameOverride);
+          if(result.isOk()) {
+            _loadProject(result.unwrap());
+          }
+          else {
+            var err = result.unwrapErr();
+            _log.e("Failed to migrate old project: ${err.message}");
+            if(err == RatingMigrationError.nameOverlap) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("A project with that name already exists. Please specify a name override.")));
+            }
+            else {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to migrate old project: ${err.message}")));
+            }
+          }
+        }
+        break;
+
       case _MenuEntry.reloadProjectMatches:
         showDialog(context: context, builder: (context) => AlertDialog(
           title: Text("Pending reimplementation"),
@@ -1086,6 +1111,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       case _MenuEntry.numberMappings:
         var mappings = await showDialog<Map<String, String>>(context: context, builder: (context) {
           return MemberNumberMapDialog(
+            sport: sport,
             title: "Manual member number mappings",
             helpText: "If the automatic member number mapper does not correctly merge ratings "
                 "on two member numbers belonging to the same shooter, you can add manual mappings "
@@ -1106,6 +1132,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       case _MenuEntry.numberMappingBlacklist:
         var mappings = await showDialog<Map<String, List<String>>>(context: context, builder: (context) {
           return MemberNumberBlacklistDialog(
+            sport: sport,
             title: "Member number mapping blacklist",
             helpText: "The automatic member number mapper will treat numbers entered here as different. "
                 "For numbers of the same type (associate to associate, lifetime to lifetime, etc.), this "
@@ -1127,6 +1154,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       case _MenuEntry.hiddenShooters:
         var hidden = await showDialog<List<String>>(context: context, builder: (context) {
           return MemberNumberDialog(
+            sport: sport,
             title: "Hide shooters",
             helpText: "Hidden shooters will be used to calculate ratings, but not shown in the "
                 "display. Use this, for example, to hide non-local shooters from local ratings.\n\n"
@@ -1154,6 +1182,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
       case _MenuEntry.dataEntryErrors:
         showDialog(context: context, builder: (context) => MemberNumberCorrectionListDialog(
+          sport: sport,
           corrections: _memNumCorrections,
           width: 700,
         ));
@@ -1171,6 +1200,7 @@ enum _MenuEntry {
   numberWhitelist,
   shooterAliases,
   reloadProjectMatches,
+  migrateFromOldProject,
   clearCache;
 
   static List<_MenuEntry> get menu => [
@@ -1181,6 +1211,7 @@ enum _MenuEntry {
     numberWhitelist,
     shooterAliases,
     reloadProjectMatches,
+    migrateFromOldProject,
     clearCache,
   ];
 
@@ -1206,6 +1237,8 @@ enum _MenuEntry {
         return "Clear cache";
       case _MenuEntry.shooterAliases:
         return "Shooter aliases";
+      case _MenuEntry.migrateFromOldProject:
+        return "Migrate from old project";
     }
   }
 }

@@ -12,9 +12,8 @@ import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
-import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
-import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/data/ranking/legacy_loader/rating_history.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
@@ -259,30 +258,6 @@ class PracticalMatch {
       var locatedRatings = <ShooterRating>[];
       Map<ShooterRating, ShooterPrediction> predictions = {};
       ShooterPrediction? highPrediction;
-      if(predictionMode.eloAware) {
-        RatingSystem? r = null;
-        for(var shooter in innerShooters) {
-          var rating = null;
-          if(r == null) {
-            r = ratings!.lookupOldRater(shooter)?.ratingSystem;
-            if(r == null) {
-              break;
-            }
-          }
-          if(rating != null) {
-            locatedRatings.add(rating);
-          }
-        }
-
-        if(r != null && r.supportsPrediction) {
-          var preds = r.predict(locatedRatings);
-          preds.sort((a, b) => b.mean.compareTo(a.mean));
-          highPrediction = preds.first;
-          for(var pred in preds) {
-            predictions[pred.shooter] = pred;
-          }
-        }
-      }
 
       for(var shooter in innerShooters) {
         // Do match predictions for shooters who have completed at least one stage.

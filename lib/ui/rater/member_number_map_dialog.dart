@@ -5,12 +5,14 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 
 class MemberNumberMapDialog extends StatefulWidget {
   const MemberNumberMapDialog({
     Key? key,
+    this.sport,
     this.initialMap = const {},
     required this.title,
     this.helpText,
@@ -19,6 +21,7 @@ class MemberNumberMapDialog extends StatefulWidget {
     this.width = 600,
   }) : super(key: key);
 
+  final Sport? sport;
   final Map<String, String> initialMap;
   final String title;
   final String? helpText;
@@ -161,8 +164,8 @@ class _MemberNumberMapDialogState extends State<MemberNumberMapDialog> {
     if(!validate(source)) return;
     if(!validate(target)) return;
 
-    source = Rater.processMemberNumber(source);
-    target = Rater.processMemberNumber(target);
+    source = widget.sport == null ? source : ShooterDeduplicator.numberProcessor(widget.sport!)(source);
+    target = widget.sport == null ? target : ShooterDeduplicator.numberProcessor(widget.sport!)(target);
 
     if(source == target) {
       setState(() {

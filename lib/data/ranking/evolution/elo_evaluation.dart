@@ -25,14 +25,15 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/match/practical_match.dart';
 import 'package:shooting_sports_analyst/data/ranking/evolution/predator_prey.dart';
-import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
-import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/legacy_loader/old_rating_project.dart';
+import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
-import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/data/ranking/legacy_loader/rating_history.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
@@ -71,17 +72,17 @@ class EloEvaluator extends Prey<EloEvaluator> {
 
   Future<double> evaluate(EloEvaluationData data, [Future<void> Function(int, int)? callback]) async {
     int lastProgress = 0;
-    var h = RatingHistory(
-      sport: uspsaSport,
+    var h = OldRatingHistory(
       verbose: false,
       matches: [],
       ongoingMatches: [],
-      project: DbRatingProject(
-        sportName: "USPSA",
-          name: "Evolutionary test",
-          settings: RatingProjectSettings(
-            algorithm: MultiplayerPercentEloRater(settings: settings),
-          )
+      project: OldRatingProject(
+        matchUrls: [],
+        ongoingMatchUrls: [],
+        name: "Evolutionary test",
+        settings: OldRatingProjectSettings(
+          algorithm: MultiplayerPercentEloRater(settings: settings),
+        )
       ),
       progressCallback: (current, total, name) async {
         lastProgress = current;
@@ -98,50 +99,50 @@ class EloEvaluator extends Prey<EloEvaluator> {
     // });
 
     var rater = h.raterFor(h.matches.last, data.group);
-    var sorted = rater.knownShooters.values.sorted((a, b) => b.rating.compareTo(a.rating));
-    averageRatings[data.name] = sorted.map((r) => r.rating).average;
-    maxRatingDiffs[data.name] = (data.expectedMaxRating - sorted.first.rating).abs();
-    averageRatingErrors[data.name] = sorted.map((r) => (r as EloShooterRating).meanSquaredErrorWithWindow()).average;
+    // var sorted = rater.knownShooters.values.sorted((a, b) => b.rating.compareTo(a.rating));
+    // averageRatings[data.name] = sorted.map((r) => r.rating).average;
+    // maxRatingDiffs[data.name] = (data.expectedMaxRating - sorted.first.rating).abs();
+    // averageRatingErrors[data.name] = sorted.map((r) => (r as EloShooterRating).meanSquaredErrorWithWindow()).average;
 
     lastProgress += 1;
     for(var m in data.evaluationData) {
       await callback?.call(lastProgress++, data.evaluationData.length);
       int ordinalErrors = 0;
-      Map<MatchEntry, ShooterRating> registrations = {};
-      for(var shooter in m.shooters) {
-        var rating = rater.knownShooters[Rater.processMemberNumber(shooter.memberNumber)];
-        if(rating != null) registrations[shooter] = rating;
-      }
+      // Map<MatchEntry, ShooterRating> registrations = {};
+      // for(var shooter in m.shooters) {
+      //   var rating = rater.knownShooters[Rater.processMemberNumber(shooter.memberNumber)];
+      //   if(rating != null) registrations[shooter] = rating;
+      // }
 
-      int topN = max(1, (registrations.length * 0.15).round());
+      // int topN = max(1, (registrations.length * 0.15).round());
 
-      var predictions = rater.ratingSystem.predict(registrations.values.toList());
-      var scoreOutput = m.getScores(shooters: registrations.keys.toList());
+      // var predictions = rater.ratingSystem.predict(registrations.values.toList());
+      // var scoreOutput = m.getScores(shooters: registrations.keys.toList());
 
-      var scores = <ShooterRating, RelativeMatchScore>{};
-      for(var s in scoreOutput.values) {
-        var rating = registrations[s.shooter];
-        if(rating != null) scores[rating] = s;
-      }
+      // var scores = <ShooterRating, RelativeMatchScore>{};
+      // for(var s in scoreOutput.values) {
+      //   var rating = registrations[s.shooter];
+      //   if(rating != null) scores[rating] = s;
+      // }
 
-      var evaluations = rater.ratingSystem.validate(
-        shooters: registrations.values.toList(),
-        scores: scores.map((k, v) => MapEntry(k, v)),
-        matchScores: scores,
-        predictions: predictions,
-        chatty: false,
-      );
+      // var evaluations = rater.ratingSystem.validate(
+      //   shooters: registrations.values.toList(),
+      //   scores: scores.map((k, v) => MapEntry(k, v)),
+      //   matchScores: scores,
+      //   predictions: predictions,
+      //   chatty: false,
+      // );
 
-      var ordinalSorted = evaluations.actualResults.keys.sorted((a, b) => b.ordinal.compareTo(a.ordinal));
-      if(ordinalSorted.length > 0) {
-        for (int i = 1; i <= topN; i++) {
-          ordinalErrors += (i - (evaluations.actualResults[ordinalSorted[i - 1]]!.place)).abs();
-        }
-      }
+      // var ordinalSorted = evaluations.actualResults.keys.sorted((a, b) => b.ordinal.compareTo(a.ordinal));
+      // if(ordinalSorted.length > 0) {
+      //   for (int i = 1; i <= topN; i++) {
+      //     ordinalErrors += (i - (evaluations.actualResults[ordinalSorted[i - 1]]!.place)).abs();
+      //   }
+      // }
 
-      // I think unnormalizing here is right because it'll help stop the 'best system rates
-      // everyone equally and is thus never that wrong' problem.
-      errors[data.name] = evaluations.error * predictions.length;
+      // // I think unnormalizing here is right because it'll help stop the 'best system rates
+      // // everyone equally and is thus never that wrong' problem.
+      // errors[data.name] = evaluations.error * predictions.length;
 
       topNOrdinalErrors[data.name] = ordinalErrors;
     }
@@ -182,9 +183,9 @@ typedef EloEvalFunction = double Function(EloEvaluator);
 
 class EloEvaluationData {
   final String name;
-  final List<ShootingMatch> trainingData;
-  final List<ShootingMatch> evaluationData;
-  final RatingGroup group;
+  final List<PracticalMatch> trainingData;
+  final List<PracticalMatch> evaluationData;
+  final OldRaterGroup group;
   final double expectedMaxRating;
 
   EloEvaluationData({required this.name, required this.trainingData, required this.evaluationData, required this.group, required this.expectedMaxRating});

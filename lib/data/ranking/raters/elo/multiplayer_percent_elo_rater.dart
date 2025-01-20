@@ -13,7 +13,7 @@ import 'package:intl/intl.dart';
 import 'package:normal/normal.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/gumbel.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
-import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
+import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rating_change.dart';
@@ -674,7 +674,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
   @override
   void encodeToJson(Map<String, dynamic> json) {
-    json[RatingProject.algorithmKey] = RatingProject.multiplayerEloValue;
+    json[OldRatingProject.algorithmKey] = OldRatingProject.multiplayerEloValue;
     settings.encodeToJson(json);
   }
 

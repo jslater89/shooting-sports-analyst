@@ -6,12 +6,14 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 
 class MemberNumberDialog extends StatefulWidget {
   const MemberNumberDialog({
     Key? key,
+    this.sport,
     this.initialList = const [],
     required this.title,
     this.helpText,
@@ -20,6 +22,7 @@ class MemberNumberDialog extends StatefulWidget {
   }) : super(key: key);
 
   final List<String> initialList;
+  final Sport? sport;
   final String title;
   final String? helpText;
   final String? hintText;
@@ -142,7 +145,7 @@ class _MemberNumberDialogState extends State<MemberNumberDialog> {
     }
 
     setState(() {
-      numbers.add(Rater.processMemberNumber(input));
+      numbers.add(widget.sport == null ? input : ShooterDeduplicator.numberProcessor(widget.sport!)(input));
       inputController.clear();
     });
   }

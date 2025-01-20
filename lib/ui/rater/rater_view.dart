@@ -10,15 +10,16 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/synchronous_rating_data_source.dart';
-import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
-import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
+import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rating.dart';
-import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/data/ranking/legacy_loader/rating_history.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/data/old_search_query_parser.dart';
 import 'package:shooting_sports_analyst/logger.dart';
@@ -38,6 +39,7 @@ SSALogger _log = SSALogger("RaterView");
 class RaterView extends StatefulWidget {
   const RaterView({
     Key? key,
+    required this.sport,
     required this.dataSource,
     required this.group,
     required this.currentMatch,
@@ -49,6 +51,7 @@ class RaterView extends StatefulWidget {
     this.changeSince,
   }) : super(key: key);
 
+  final Sport sport;
   final String? search;
   final Duration? maxAge;
   final DateTime? changeSince;
@@ -155,7 +158,7 @@ class _RaterViewState extends State<RaterView> {
     // TODO: turn this into a Provider and a model, since we need it both in the parent and here
     var hiddenShooters = [];
     for(int i = 0; i < widget.hiddenShooters.length; i++) {
-      hiddenShooters.add(Rater.processMemberNumber(widget.hiddenShooters[i]));
+      hiddenShooters.add(ShooterDeduplicator.numberProcessor(widget.sport)(widget.hiddenShooters[i]));
     }
 
     var sortedRatings = uniqueRatings.where((e) => e.ratingEvents.length >= widget.minRatings);

@@ -27,6 +27,7 @@ class USPSADeduplicator extends ShooterDeduplicator {
   @override
   Future<DeduplicationResult> deduplicateShooters({
     required DbRatingProject ratingProject,
+    required RatingGroup group,
     required List<DbShooterRating> newRatings,
     bool checkDataEntryErrors = true,
     bool verbose = false
@@ -86,14 +87,27 @@ class USPSADeduplicator extends ShooterDeduplicator {
 
     // Detect conflicts for each name.
     for(var name in deduplicatorNames) {
-      var ratingsRes = await ratingProject.getRatingsByDeduplicatorName(name);
+      var ratingsRes = await ratingProject.getRatingsByDeduplicatorName(group, name);
 
       if(ratingsRes.isErr()) {
         _log.w("Failed to retrieve ratings for deduplicator name $name", error: ratingsRes.unwrapErr());
         continue;
       }
 
-      var ratings = [...ratingsByName[name]!, ...ratingsRes.unwrap()];
+      List<DbShooterRating> ratings = [];
+      Map<int, bool> dbIdsSeen = {};
+      for(var rating in ratingsByName[name]!) {
+        if(dbIdsSeen[rating.id] != true) {
+          ratings.add(rating);
+        }
+        dbIdsSeen[rating.id] = true;
+      }
+      for(var rating in ratingsRes.unwrap()) {
+        if(dbIdsSeen[rating.id] != true) {
+          ratings.add(rating);
+        }
+        dbIdsSeen[rating.id] = true;
+      }
 
       // One rating doesn't need to be deduplicated.
       if(ratings.length <= 1) {

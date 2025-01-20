@@ -6,14 +6,16 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
-import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/member_number_collision_dialog.dart';
 
 class MemberNumberCorrectionListDialog extends StatefulWidget {
   const MemberNumberCorrectionListDialog({
     Key? key,
+    this.sport,
     required this.corrections,
     this.title = "Fix data entry errors",
     this.helpText = "Use this feature to correct one-off data entry errors. If John Doe mistakenly enters "
@@ -25,6 +27,7 @@ class MemberNumberCorrectionListDialog extends StatefulWidget {
     this.width = 600,
   }) : super(key: key);
 
+  final Sport? sport;
   final MemberNumberCorrectionContainer corrections;
   final String title;
   final String? nameHintText;
@@ -196,8 +199,8 @@ class _MemberNumberCorrectionListDialogState extends State<MemberNumberCorrectio
     if(!validate(target)) return;
 
     name = name.toLowerCase().replaceAll(RegExp(r"[^a-zA-Z0-9]"), "");
-    source = Rater.processMemberNumber(source);
-    target = Rater.processMemberNumber(target);
+    source = widget.sport == null ? source : ShooterDeduplicator.numberProcessor(widget.sport!)(source);
+    target = widget.sport == null ? target : ShooterDeduplicator.numberProcessor(widget.sport!)(target);
 
     if(source == target) {
       setState(() {

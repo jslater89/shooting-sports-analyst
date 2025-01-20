@@ -7,7 +7,8 @@
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
-import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
+import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
+import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
@@ -34,6 +35,7 @@ class DataSourceResult<T> extends Result<T, DataSourceError> {
 ///
 ///
 abstract interface class RatingDataSource {
+  Future<DataSourceResult<Sport>> getSport();
   Future<DataSourceResult<String>> getProjectName();
   Future<DataSourceResult<RatingProjectSettings>> getSettings();
   Future<DataSourceResult<List<RatingGroup>>> getGroups();
@@ -52,6 +54,7 @@ abstract interface class RatingDataSource {
 
 /// A PreloadedRatingDataSource is a rating data source that has precached its data locally.
 abstract interface class PreloadedRatingDataSource {
+  Sport getSportSync();
   RatingProjectSettings getSettingsSync();
   DbShooterRating? lookupRatingSync(RatingGroup group, String memberNumber);
   ShooterRating? wrapDbRatingSync(DbShooterRating rating);

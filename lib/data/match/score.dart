@@ -6,13 +6,8 @@
 
 import 'dart:math';
 
-import 'package:flutter/foundation.dart';
 import 'package:shooting_sports_analyst/data/model.dart';
-import 'package:shooting_sports_analyst/data/ranking/rater.dart';
-import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 import 'package:shooting_sports_analyst/logger.dart';
-import 'package:shooting_sports_analyst/ui/result_page.dart';
-import 'package:shooting_sports_analyst/ui/widget/score_list.dart';
 
 var _log = SSALogger("OldScore");
 

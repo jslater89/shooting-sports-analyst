@@ -18,8 +18,8 @@ import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
-import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
-import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
+import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
 import 'package:shooting_sports_analyst/data/ranking/timings.dart';
@@ -214,51 +214,64 @@ class RatingProjectLoader {
   int _totalMatchSteps = 0;
   int _currentMatchStep = 0;
   Future<Result<void, RatingProjectLoadError>> _addMatchesToGroup(RatingGroup group, List<ShootingMatch> matches) async {
+    Map<String, bool> memberNumbersSeen = {};
     List<DbShooterRating> newRatings = [];
     for (var match in matches) {
       // 1. For each match, add shooters.
       var (ratings, _) = await _addShootersFromMatch(group, match);
-      newRatings.addAll(ratings);
+      for(var r in ratings) {
+        if(memberNumbersSeen[r.memberNumber] != true) {
+          newRatings.add(r);
+        }
+        memberNumbersSeen[r.memberNumber] = true;
+      }
     }
 
     // 2. Deduplicate shooters.
     var dedup = sport.shooterDeduplicator;
     if(dedup != null) {
       var start = DateTime.now();
-      var dedupResult = await dedup.deduplicateShooters(ratingProject: project, newRatings: newRatings);
+      var dedupResult = await dedup.deduplicateShooters(ratingProject: project, group: group, newRatings: newRatings);
       if(Timings.enabled) timings.add(TimingType.dedupShooters, DateTime.now().difference(start).inMicroseconds);
 
       if(dedupResult.isErr()) {
         return DeduplicationError.result(dedupResult.unwrapErr().message);
       }
       else {
+        bool didSomething = false;
         var conflicts = dedupResult.unwrap();
         int resolvedInSettings = 0;
         for(var conflict in conflicts) {
           if(conflict.causes.length == 1 && conflict.causes.first is FixedInSettings) {
             resolvedInSettings += 1;
             for(var action in conflict.proposedActions) {
+              didSomething = true;
               await _applyDeduplicationAction(group, action);
             }
           }
         }
 
-        _log.i("Resolved $resolvedInSettings conflicts of (${conflicts.length}) in settings");
+        _log.i("Resolved $resolvedInSettings conflicts (of ${conflicts.length}) in settings");
         conflicts.removeWhere((c) => c.causes.length == 1 && c.causes.first is FixedInSettings);
 
-        var userDedupResult = await host.deduplicationCallback(conflicts);
-        if(userDedupResult.isErr()) {
-          return DeduplicationError.result(userDedupResult.unwrapErr().message);
+        if(conflicts.length > 0) {
+          var userDedupResult = await host.deduplicationCallback(conflicts);
+          if(userDedupResult.isErr()) {
+            return DeduplicationError.result(userDedupResult.unwrapErr().message);
+          }
+
+          var actions = userDedupResult.unwrap();
+          for(var action in actions) {
+            didSomething = true;
+            await _applyDeduplicationAction(group, action);
+          }
         }
 
-        var actions = userDedupResult.unwrap();
-        for(var action in actions) {
-          await _applyDeduplicationAction(group, action);
+        if(didSomething) {
+          // We don't need to check the name, because we've already saved the project
+          // (i.e. ensured it has a DB ID) at the end of the configure ratings page.
+          db.saveRatingProject(project, checkName: false);
         }
-
-        // We don't need to check the name, because we've already saved the project
-        // (i.e. ensured it has a DB ID) at the end of the configure ratings page.
-        db.saveRatingProject(project, checkName: false);
       }
     }
 
@@ -555,6 +568,7 @@ class RatingProjectLoader {
         );
         if(rating == null) {
           var newRating = ratingSystem.newShooterRating(s, sport: project.sport, date: match.date);
+          newRating.allPossibleMemberNumbers.addAll(possibleNumbers);
           await db.newShooterRatingFromWrapped(
             rating: newRating,
             group: group,
@@ -611,8 +625,9 @@ class RatingProjectLoader {
       allowReentries: false,
     );
 
+    var numberProcessor = ShooterDeduplicator.numberProcessor(sport);
     for(var shooter in shooters) {
-      shooter.memberNumber = Rater.processMemberNumber(shooter.memberNumber);
+      shooter.memberNumber = numberProcessor(shooter.memberNumber);
     }
 
     if(verify) {
@@ -639,7 +654,8 @@ class RatingProjectLoader {
       var processedName = ShooterDeduplicator.processName(s);
       var emptyCorrection = _dataCorrections.getEmptyCorrectionByName(processedName);
       if(emptyCorrection != null) {
-        finalMemberNumber = Rater.processMemberNumber(emptyCorrection.correctedNumber);
+        var numberProcessor = sport.shooterDeduplicator?.processNumber ?? ShooterDeduplicator.normalizeNumberBasic;
+        finalMemberNumber = numberProcessor(emptyCorrection.correctedNumber);
       }
 
       _verifyCache[s] = false;

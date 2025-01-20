@@ -5,7 +5,6 @@
  */
 
 
-import 'dart:math';
 
 import 'package:archive/archive.dart';
 import 'package:collection/collection.dart';
@@ -14,32 +13,24 @@ import 'package:flutter/services.dart';
 import 'package:fluttericon/rpg_awesome_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
-import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
-import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/synchronous_rating_data_source.dart';
-import 'package:shooting_sports_analyst/data/ranking/project_loader.dart';
-import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
-import 'package:shooting_sports_analyst/data/ranking/rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
-import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
-import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
-import 'package:shooting_sports_analyst/data/results_file_parser.dart';
+import 'package:shooting_sports_analyst/data/ranking/legacy_loader/rating_history.dart';
 import 'package:shooting_sports_analyst/data/old_search_query_parser.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_correction_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/prediction/prediction_view.dart';
 import 'package:shooting_sports_analyst/ui/rater/prediction/registration_parser.dart';
-import 'package:shooting_sports_analyst/ui/rater/rater_stats_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/rater_view.dart';
 import 'package:shooting_sports_analyst/ui/rater/rating_filter_dialog.dart';
-import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/associate_registrations.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/match_cache_chooser_dialog.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/member_number_collision_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/url_entry_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
@@ -74,6 +65,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   List<RatingGroup> activeTabs = [];
 
   bool initialized = false;
+
+  late Sport _sport;
   String _projectName = "";
   late RatingProjectSettings _settings;
   bool _settingsChanged = false;
@@ -163,6 +156,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     _settings = await widget.dataSource.getSettings().unwrap();
     activeTabs = await widget.dataSource.getGroups().unwrap();
     _selectedMatch = (await widget.dataSource.getLatestMatch()).unwrap().hydrate().unwrap();
+    _sport = await widget.dataSource.getSport().unwrap();
     _tabController = TabController(
         length: activeTabs.length,
         vsync: this,
@@ -271,6 +265,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                 maxAge = Duration(days: _maxDays);
               }
               return RaterView(
+                sport: _sport,
                 dataSource: widget.dataSource,
                 group: t,
                 currentMatch: _selectedMatch,
@@ -534,6 +529,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
       case _MenuEntry.csvExport:
         var archive = Archive();
+        var sport = await widget.dataSource.getSport().unwrap();
         for(var tab in activeTabs) {
           var ratings = (await widget.dataSource.getRatings(tab).unwrap()).map((e) => (_settings.algorithm.wrapDbRating(e)));
           var sortedRatings = ratings.where((e) => e.length >= _minRatings);
@@ -545,7 +541,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
           var hiddenShooters = [];
           for(var s in _settings.hiddenShooters) {
-            hiddenShooters.add(Rater.processMemberNumber(s));
+            hiddenShooters.add(ShooterDeduplicator.numberProcessor(sport)(s));
           }
 
           if(maxAge != null) {
@@ -658,7 +654,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
     // TODO: pass in cached info if exists
 
-    var registrationResult = await getRegistrations(rater.sport, url, divisions, options);
+    //var registrationResult = await getRegistrations(rater.sport, url, divisions, options);
+    var registrationResult = null;
     if(registrationResult == null) {
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Unable to retrieve registrations"))
@@ -693,10 +690,10 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     // TODO: write registration info to cache
 
     int seed = _selectedMatch.date.millisecondsSinceEpoch;
-    var predictions = rater.ratingSystem.predict(shooters, seed: seed);
-    Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-      return PredictionView(rater: rater, predictions: predictions);
-    }));
+    // var predictions = rater.ratingSystem.predict(shooters, seed: seed);
+    // Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+    //   return PredictionView(rater: rater, predictions: predictions);
+    // }));
   }
 
   // void _presentError(RatingError error) async {

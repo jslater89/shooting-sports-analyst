@@ -5,7 +5,7 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
+import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
 
 class EnterNameDialog extends StatefulWidget {
   const EnterNameDialog({Key? key, this.initial}) : super(key: key);

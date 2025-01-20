@@ -12,7 +12,7 @@ import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_mode.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
-import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
+import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/models/decaying_points.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/models/f1_points.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/models/inverse_place.dart';
@@ -118,7 +118,7 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
 
   @override
   void encodeToJson(Map<String, dynamic> json) {
-    json[RatingProject.algorithmKey] = RatingProject.pointsValue;
+    json[OldRatingProject.algorithmKey] = OldRatingProject.pointsValue;
     settings.encodeToJson(json);
   }
 

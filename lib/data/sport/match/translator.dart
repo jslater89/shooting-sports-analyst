@@ -100,7 +100,8 @@ extension MatchTranslator on ShootingMatch {
       level: uspsaSport.eventLevels.lookupByName((match.level ?? old.MatchLevel.I).name)!,
       sourceCode: PSv2MatchSource.psv2Code,
       sourceIds: [
-        "${PractiscoreHitFactorReportParser.uspsaCode}:${match.practiscoreId}",
+        // practiscoreID is a UUID, so it doesn't need a prefix, but practiscoreIdShort is an incrementing int
+        "${match.practiscoreId}",
         if(match.practiscoreIdShort != null) "${PractiscoreHitFactorReportParser.uspsaCode}:${match.practiscoreIdShort!}",
       ]
     );

@@ -15,7 +15,7 @@ import 'package:shooting_sports_analyst/data/ranking/evolution/elo_evaluation.da
 import 'package:shooting_sports_analyst/data/ranking/evolution/elo_tuner.dart';
 import 'package:shooting_sports_analyst/data/ranking/evolution/genome.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settings.dart';
-import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
+import 'package:shooting_sports_analyst/data/ranking/legacy_loader/rating_history.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/rater/evolution/predator_prey_view.dart';

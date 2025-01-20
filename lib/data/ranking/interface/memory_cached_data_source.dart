@@ -5,16 +5,23 @@
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
-import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
+import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
+import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 class InMemoryCachedRatingSource implements PreloadedRatingDataSource {
+  late Sport sport;
   late RatingProjectSettings settings;
   late List<RatingGroup> groups;
   late Map<RatingGroup, Map<String, DbShooterRating>> ratings;
+
+  @override
+  Sport getSportSync() {
+    return sport;
+  }
 
   @override
   RatingProjectSettings getSettingsSync() {
@@ -53,6 +60,7 @@ class InMemoryCachedRatingSource implements PreloadedRatingDataSource {
   Future<void> initFrom(RatingDataSource source, {List<Shooter>? ratingsToCache}) async {
     settings = await source.getSettings().unwrap();
     groups = await source.getGroups().unwrap();
+    sport = await source.getSport().unwrap();
   }
 
 }

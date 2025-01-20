@@ -7,6 +7,7 @@ import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 /// ShooterDeduplicators implement shooter deduplication: the process
@@ -43,6 +44,7 @@ abstract class ShooterDeduplicator {
   /// mapped to the corresponding values.
   Future<DeduplicationResult> deduplicateShooters({
     required DbRatingProject ratingProject,
+    required RatingGroup group,
     required List<DbShooterRating> newRatings,
     bool checkDataEntryErrors = true,
     bool verbose = false
@@ -95,8 +97,33 @@ abstract class ShooterDeduplicator {
   /// number mapping. If there are no valid target numbers, return null.
   List<String>? maybeTargetNumber(Map<MemberNumberType, List<String>> numbers);
 
+  /// Default implementation of [normalizeNumber]: convert to uppercase and
+  /// remove all non-alphanumeric characters.
   static String normalizeNumberBasic(String number) {
-    return number.toUpperCase().replaceAll(RegExp(r"[^A-Z0-9]"), "");
+    if(_normalizeNumberBasicCache.containsKey(number)) return _normalizeNumberBasicCache[number]!;
+    var n = number.toUpperCase().replaceAll(RegExp(r"[^A-Z0-9]"), "");
+    _normalizeNumberBasicCache[number] = n;
+    return n;
+  }
+
+  static Map<String, String> _normalizeNumberBasicCache = {};
+
+  /// Returns a number processor for the given sport, falling back to a default
+  /// implementation if the sport does not have a shooter deduplicator.
+  /// 
+  /// See [processNumber] for more information the processing applied by a number
+  /// processor.
+  static String Function(String) numberProcessor(Sport sport) {
+    return sport.shooterDeduplicator?.processNumber ?? ShooterDeduplicator.normalizeNumberBasic;
+  }
+
+  /// Returns a number normalizer for the given sport, falling back to a default
+  /// implementation if the sport does not have a shooter deduplicator.
+  /// 
+  /// See [normalizeNumber] for more information the normalization applied by a
+  /// number normalizer.
+  static String Function(String) numberNormalizer(Sport sport) {
+    return sport.shooterDeduplicator?.normalizeNumber ?? ShooterDeduplicator.normalizeNumberBasic;
   }
 }
 

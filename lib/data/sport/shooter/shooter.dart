@@ -49,6 +49,7 @@ class Shooter {
       originalMemberNumber = processedNumber;
     }
     knownMemberNumbers.add(processedNumber);
+    allPossibleMemberNumbers.add(processedNumber);
     _memberNumber = processedNumber;
   }
 
@@ -57,6 +58,7 @@ class Shooter {
       var normalized = normalizeNumber(number);
       if(normalized.isNotEmpty) {
         knownMemberNumbers.add(normalized);
+        allPossibleMemberNumbers.add(normalized);
       }
     }
   }
@@ -87,6 +89,7 @@ class Shooter {
     this._memberNumber = other._memberNumber;
     this.originalMemberNumber = other.originalMemberNumber;
     this.knownMemberNumbers = {}..addAll(other.knownMemberNumbers);
+    this.allPossibleMemberNumbers = {}..addAll(other.allPossibleMemberNumbers);
     this.ageCategory = other.ageCategory;
     this.female = other.female;
   }

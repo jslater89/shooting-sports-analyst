@@ -11,6 +11,9 @@ import 'package:shooting_sports_analyst/data/ranking/model/rating_mode.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rater.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
@@ -166,6 +169,23 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
     1.2,
     1.1,
   ];
+
+  static const _multiplayerEloValue = "multiElo";
+  static const _openskillValue = "openskill";
+  static const _pointsValue = "points";
+
+  static RatingSystem algorithmForName(String name, Map<String, dynamic> encodedProject) {
+    switch(name) {
+      case _multiplayerEloValue:
+        return MultiplayerPercentEloRater.fromJson(encodedProject);
+      case _pointsValue:
+        return PointsRater.fromJson(encodedProject);
+      case _openskillValue:
+        return OpenskillRater.fromJson(encodedProject);
+      default:
+        throw ArgumentError();
+    }
+  }
 }
 
 class PredictionOutcome {

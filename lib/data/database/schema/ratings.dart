@@ -12,8 +12,10 @@ import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
-import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
+import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
+import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
@@ -115,8 +117,8 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   RatingProjectSettings get settings {
     if(_settings == null) {
       var jsonSettings = jsonDecodedSettings;
-      var algorithmName = (jsonSettings[RatingProject.algorithmKey] ?? RatingProject.multiplayerEloValue) as String;
-      var algorithm = RatingProject.algorithmForName(algorithmName, jsonSettings);
+      var algorithmName = (jsonSettings[OldRatingProject.algorithmKey] ?? OldRatingProject.multiplayerEloValue) as String;
+      var algorithm = RatingSystem.algorithmForName(algorithmName, jsonSettings);
       _settings = RatingProjectSettings.decodeFromJson(sport, algorithm, jsonSettings);
     }
 
@@ -193,12 +195,17 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   // Ratings
   final ratings = IsarLinks<DbShooterRating>();
 
+  // TODO: we can make these more efficient by querying the Ratings collection
+  // (since we can probably composite-index that by interesting queries)
   Future<DataSourceResult<List<DbShooterRating>>> getRatings(RatingGroup group) async {
     return DataSourceResult.ok(await ratings.filter().group((q) => q.idEqualTo(group.id)).findAll());
   }
 
-  Future<DataSourceResult<List<DbShooterRating>>> getRatingsByDeduplicatorName(String deduplicatorName) async {
-    return DataSourceResult.ok(await ratings.filter().deduplicatorNameEqualTo(deduplicatorName).findAll());
+  Future<DataSourceResult<List<DbShooterRating>>> getRatingsByDeduplicatorName(RatingGroup group, String deduplicatorName) async {
+    return DataSourceResult.ok(await ratings.filter()
+      .group((q) => q.idEqualTo(group.id))
+      .deduplicatorNameEqualTo(deduplicatorName)
+      .findAll());
   }
 
   DbRatingProject({
@@ -221,6 +228,11 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
     }
 
     return DataSourceResult.ok(matches.map((m) => m.id).toList());
+  }
+
+  @override
+  Future<DataSourceResult<Sport>> getSport() async {
+    return DataSourceResult.ok(sport);
   }
 
   @override
@@ -322,6 +334,10 @@ class DbMemberNumberMapping {
     Object.hash(deduplicatorName, targetNumber, automatic, Object.hashAllUnordered(sourceNumbers));
 }
 
+/// A RatingGroup is a collection of competitors rated against one another.
+///
+/// [uuid] is a unique identifier for the group. For hardcoded rating
+/// groups, specify an ID of the form 'sportName-groupName'.
 @collection
 class RatingGroup with DbSportEntity {
   Id get id => uuid.stableHash;
