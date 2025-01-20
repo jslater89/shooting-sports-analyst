@@ -73,7 +73,7 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
   }
 
   Future<Result<List<DeduplicationAction>, DeduplicationError>> deduplicationCallback(List<DeduplicationCollision> deduplicationResult) async {
-    var userApproves = await DeduplicationDialog.show(context, deduplicationResult);
+    var userApproves = await DeduplicationDialog.show(context, widget.project.sport, deduplicationResult);
     if(userApproves ?? false) {
       return Result.ok(deduplicationResult.map((e) => e.proposedActions).flattened.toList());
     }

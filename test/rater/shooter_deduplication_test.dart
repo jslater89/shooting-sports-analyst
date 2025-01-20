@@ -19,6 +19,7 @@ import 'package:uuid/uuid.dart';
 
 void main() async {
   var db = AnalystDatabase.test();
+  var ratingGroup = uspsaSport.builtinRatingGroupsProvider!.divisionRatingGroups.firstWhere((e) => e.name == "Open");
 
   setUpAll(() async {
     print("Setting up test data");
@@ -42,6 +43,7 @@ void main() async {
       ratingProject: project,
       newRatings: newRatings,
       checkDataEntryErrors: true,
+      group: ratingGroup,
     );
 
     expect(deduplication.isOk(), isTrue);
@@ -71,6 +73,7 @@ void main() async {
       ratingProject: project,
       newRatings: newRatings,
       checkDataEntryErrors: true,
+      group: ratingGroup,
     );
 
     expect(deduplication.isOk(), isTrue);
@@ -104,6 +107,7 @@ void main() async {
       ratingProject: project,
       newRatings: newRatings,
       checkDataEntryErrors: true,
+      group: ratingGroup,
     );
 
     expect(deduplication.isOk(), isTrue);
@@ -137,6 +141,7 @@ void main() async {
       ratingProject: project,
       newRatings: newRatings,
       checkDataEntryErrors: true,
+      group: ratingGroup,
     );
 
     expect(deduplication.isOk(), isTrue);
@@ -178,6 +183,7 @@ void main() async {
       ratingProject: project,
       newRatings: newRatings,
       checkDataEntryErrors: true,
+      group: ratingGroup,
     );
 
     expect(deduplication.isOk(), isTrue);
@@ -221,6 +227,7 @@ void main() async {
       ratingProject: project,
       newRatings: newRatings,
       checkDataEntryErrors: true,
+      group: ratingGroup,
     );
 
     expect(deduplication.isOk(), isTrue);
@@ -261,6 +268,7 @@ void main() async {
       ratingProject: project,
       newRatings: newRatings,
       checkDataEntryErrors: true,
+      group: ratingGroup,
     );
 
     expect(deduplication.isOk(), isTrue);
@@ -294,13 +302,12 @@ void main() async {
       ratingProject: project,
       newRatings: newRatings,
       checkDataEntryErrors: true,
+      group: ratingGroup,
     );
 
     expect(deduplication.isOk(), isTrue);
     var results = deduplication.unwrap();
-    expect(reason: "number of results", results, hasLength(1));
-    expect(reason: "number of causes", results[0].causes, isEmpty);
-    expect(reason: "number of proposed actions", results[0].proposedActions, isEmpty);
+    expect(reason: "number of results", results, isEmpty);
   });
   
   test("Improvable UserMapping", () async {
@@ -322,6 +329,7 @@ void main() async {
       ratingProject: project,
       newRatings: newRatings,
       checkDataEntryErrors: true,
+      group: ratingGroup,
     );
 
     expect(deduplication.isOk(), isTrue);
@@ -359,6 +367,7 @@ void main() async {
       ratingProject: project,
       newRatings: newRatings,
       checkDataEntryErrors: true,
+      group: ratingGroup,
     );
 
     expect(deduplication.isOk(), isTrue);
@@ -390,6 +399,7 @@ void main() async {
       ratingProject: project,
       newRatings: newRatings,
       checkDataEntryErrors: true,
+      group: ratingGroup,
     );
 
     expect(deduplication.isOk(), isTrue);
@@ -422,6 +432,7 @@ void main() async {
       ratingProject: project,
       newRatings: newRatings,
       checkDataEntryErrors: true,
+      group: ratingGroup,
     );
 
     expect(deduplication.isOk(), isTrue);
@@ -446,6 +457,7 @@ void main() async {
       ratingProject: project,
       newRatings: newRatings,
       checkDataEntryErrors: true,
+      group: ratingGroup,
     );
 
     expect(deduplication.isOk(), isTrue);
@@ -474,6 +486,7 @@ void main() async {
       ratingProject: project,
       newRatings: newRatings,
       checkDataEntryErrors: true,
+      group: ratingGroup,
     );
 
     expect(deduplication.isOk(), isTrue);
@@ -502,6 +515,7 @@ void main() async {
       ratingProject: project,
       newRatings: newRatings,
       checkDataEntryErrors: true,
+      group: ratingGroup,
     );
 
     expect(deduplication.isOk(), isTrue);
@@ -530,6 +544,7 @@ void main() async {
       ratingProject: project,
       newRatings: newRatings,
       checkDataEntryErrors: true,
+      group: ratingGroup,
     );
 
     expect(deduplication.isOk(), isTrue);
@@ -566,6 +581,7 @@ void main() async {
       ratingProject: project,
       newRatings: newRatings,
       checkDataEntryErrors: true,
+      group: ratingGroup,
     );
 
     expect(deduplication.isOk(), isTrue);
@@ -604,6 +620,7 @@ void main() async {
       ratingProject: project,
       newRatings: newRatings,
       checkDataEntryErrors: true,
+      group: ratingGroup,
     );
 
     expect(deduplication.isOk(), isTrue);
@@ -640,6 +657,7 @@ void main() async {
       ratingProject: project,
       newRatings: newRatings,
       checkDataEntryErrors: true,
+      group: ratingGroup,
     );
 
     expect(deduplication.isOk(), isTrue);
@@ -655,6 +673,29 @@ void main() async {
     expect(reason: "ambiguous mapping has correct source numbers", ambiguousMappingCause.sourceNumbers, unorderedEquals(["A123456"]));
     expect(reason: "ambiguous mapping has correct target numbers", ambiguousMappingCause.targetNumbers, unorderedEquals(["L1234", "L5678"]));
     expect(reason: "ambiguous mapping has correct conflicting types", ambiguousMappingCause.conflictingTypes, unorderedEquals([MemberNumberType.life]));
+  });
+
+  test("Multiple Associate Numbers", () async {
+    var project = DbRatingProject(
+      name: "Multiple Associate Numbers",
+      sportName: uspsaSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "multiple-associate-numbers");
+    var deduplicator = USPSADeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      checkDataEntryErrors: true,
+      group: ratingGroup,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, isEmpty);
   });
 
   // #endregion
@@ -794,6 +835,13 @@ Future<void> setupTestDb(AnalystDatabase db) async {
     matchId: "improvable-user-mapping",
   );
 
+  var multipleAssociateNumbersMatch = generateMatch(
+    shooters: [competitorMap["A123456"]!, competitorMap["TY123456"]!, competitorMap["FY123456"]!],
+    date: DateTime(2024, 3, 21),
+    matchName: "Multiple Associate Numbers",
+    matchId: "multiple-associate-numbers",
+  );
+
   var futures = [
     db.saveMatch(simpleDataEntryMatch),
     db.saveMatch(simpleBlacklistMatch),
@@ -809,6 +857,7 @@ Future<void> setupTestDb(AnalystDatabase db) async {
     db.saveMatch(resolvableCrossMappingMatch),
     db.saveMatch(resolvableCrossMappingMatch2),
     db.saveMatch(improvableUserMappingMatch),
+    db.saveMatch(multipleAssociateNumbersMatch),
   ];
   await Future.wait(futures);
 }
@@ -817,22 +866,42 @@ Future<void> setupTestDb(AnalystDatabase db) async {
 Map<String, Shooter> generateCompetitors() {
   Map<String, Shooter> competitors = {};
 
-  // John Deduplicator, first through fifth of his name
+  // John Deduplicator, first through seventh of his name
+  // All three associate numbers
   competitors["A123456"] = Shooter(
     firstName: "John",
     lastName: "Deduplicator",
     memberNumber: "A123456",
   );
+  competitors["TY123456"] = Shooter(
+    firstName: "John",
+    lastName: "Deduplicator",
+    memberNumber: "TY123456",
+  );
+  competitors["FY123456"] = Shooter(
+    firstName: "John",
+    lastName: "Deduplicator",
+    memberNumber: "FY123456",
+  );
+  // A typo
   competitors["A123457"] = Shooter(
     firstName: "John",
     lastName: "Deduplicator",
     memberNumber: "A123457",
   );
+  // A life number
   competitors["L1234"] = Shooter(
     firstName: "John",
     lastName: "Deduplicator",
     memberNumber: "L1234",
   );
+  // A typo
+    competitors["L1235"] = Shooter(
+    firstName: "John",
+    lastName: "Deduplicator",
+    memberNumber: "L1235",
+  );
+  // Benefactor and region director
   competitors["B123"] = Shooter(
     firstName: "John",
     lastName: "Deduplicator",
@@ -852,11 +921,6 @@ Map<String, Shooter> generateCompetitors() {
   );
 
   /// Another unrelated John Deduplicator
-  competitors["L1235"] = Shooter(
-    firstName: "John",
-    lastName: "Deduplicator",
-    memberNumber: "L1235",
-  );
 
   /// Another unrelated John Deduplicator
   competitors["L5678"] = Shooter(
@@ -922,6 +986,7 @@ ShootingMatch generateMatch({required List<Shooter> shooters, int stageCount = 5
 
     var entry = MatchEntry(
       entryId: index,
+      division: uspsaOpen,
       firstName: shooter.firstName,
       lastName: shooter.lastName,
       powerFactor: uspsaMinorPF,

@@ -45,6 +45,7 @@ class _SelectProjectDialogState extends State<SelectProjectDialog> {
             var project = projects[i];
             return ListTile(
               title: Text(project.name),
+              subtitle: Text("Database ID: ${project.id}"),
               trailing: IconButton(
                 icon: Icon(Icons.delete),
                 onPressed: () async {

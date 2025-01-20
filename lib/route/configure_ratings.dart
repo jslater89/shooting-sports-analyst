@@ -838,6 +838,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       );
     }
 
+    project.settings = settings;
     project.matches.addAll(projectMatches);
     if(filteredMatches != null && filteredMatches!.isNotEmpty) {
       project.filteredMatches.addAll(filteredMatches!);

@@ -124,11 +124,26 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
 
     return _settings!;
   }
+  /// Set the settings for this project. This will also update [encodedSettings]
+  /// so that changes are persisted to the database on the next save.
   set settings(RatingProjectSettings value) {
     _settings = value;
     Map<String, dynamic> map = {};
     value.encodeToJson(map);
     encodedSettings = jsonEncode(map);
+  }
+
+  /// Call after changing the map returned by [settings]. This updates [encodedSettings]
+  /// so that changes are persisted to the database on the next save.
+  void changedSettings() {
+    if(_settings != null) {
+      Map<String, dynamic> map = {};
+      _settings!.encodeToJson(map);
+      encodedSettings = jsonEncode(map);
+    }
+    else {
+      throw StateError("Settings not yet loaded");
+    }
   }
 
   final dbGroups = IsarLinks<RatingGroup>();

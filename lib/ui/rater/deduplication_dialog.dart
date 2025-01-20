@@ -1,13 +1,18 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:intl/intl.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/ui/text_styles.dart';
 import 'package:shooting_sports_analyst/ui/widget/constrained_tooltip.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/deduplication/blacklist.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/deduplication/data_entry_fix.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/deduplication/mapping.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// A dialog that accepts a list of deduplication collisions, displays them
 /// and the relevant information to the user, and allows the user to approve,
@@ -18,17 +23,18 @@ import 'package:shooting_sports_analyst/ui/widget/dialog/deduplication/mapping.d
 /// collisions' proposed actions and continue with loading the project, or
 /// `false` or `null` if the user wants to cancel project loading.
 class DeduplicationDialog extends StatefulWidget {
-  const DeduplicationDialog({super.key, required this.collisions});
+  const DeduplicationDialog({super.key, required this.sport, required this.collisions});
 
+  final Sport sport;
   final List<DeduplicationCollision> collisions;
 
   @override
   State<DeduplicationDialog> createState() => _DeduplicationDialogState();
 
-  static Future<bool?> show(BuildContext context, List<DeduplicationCollision> collisions) async {
+  static Future<bool?> show(BuildContext context, Sport sport, List<DeduplicationCollision> collisions) async {
     return showDialog<bool?>(
       context: context,
-      builder: (context) => DeduplicationDialog(collisions: collisions),
+      builder: (context) => DeduplicationDialog(sport: sport, collisions: collisions),
       barrierDismissible: false,
     );
   }
@@ -79,44 +85,47 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
     var width = parentSize.width * 0.8;
     var height = parentSize.height * 0.9;
 
-    return AlertDialog(
-      title: const Text("Resolve Conflicts"),
-      content: SizedBox(
-        width: width,
-        height: height,
-        // Dialog content: a side pane list of collisions, and a main pane showing
-        // collision details.
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 300,
-              child: ListView.builder(
-                itemBuilder: (context, index) {
-                  var collision = _sortedCollisions[index];
-                  return ConflictListItem(
-                    collision: collision,
-                    selected: _selectedCollisionIndex == index,
-                    originalActions: _originalActions[collision]!,
-                    onTap: () => setState(() {
-                      _selectedCollisionIndex = index;
-                    }),
-                  );
-                },
-                itemCount: _sortedCollisions.length,        
+    return Provider.value(
+      value: widget.sport,
+      child: AlertDialog(
+        title: const Text("Resolve Conflicts"),
+        content: SizedBox(
+          width: width,
+          height: height,
+          // Dialog content: a side pane list of collisions, and a main pane showing
+          // collision details.
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 300,
+                child: ListView.builder(
+                  itemBuilder: (context, index) {
+                    var collision = _sortedCollisions[index];
+                    return ConflictListItem(
+                      collision: collision,
+                      selected: _selectedCollisionIndex == index,
+                      originalActions: _originalActions[collision]!,
+                      onTap: () => setState(() {
+                        _selectedCollisionIndex = index;
+                      }),
+                    );
+                  },
+                  itemCount: _sortedCollisions.length,        
+                ),
               ),
-            ),
-            const VerticalDivider(thickness: 1, width: 1),
-            Expanded(
-              child: ConflictDetails(collision: _selectedCollision),
-            )
-          ]
+              const VerticalDivider(thickness: 1, width: 1),
+              Expanded(
+                child: ConflictDetails(collision: _selectedCollision),
+              )
+            ]
+          ),
         ),
+        actions: [
+          TextButton(child: const Text("CANCEL"), onPressed: () => Navigator.of(context).pop(false)),
+          TextButton(child: const Text("APPLY"), onPressed: () => Navigator.of(context).pop(true)),
+        ],
       ),
-      actions: [
-        TextButton(child: const Text("CANCEL"), onPressed: () => Navigator.of(context).pop(false)),
-        TextButton(child: const Text("APPLY"), onPressed: () => Navigator.of(context).pop(true)),
-      ],
     );
   }
 }
@@ -150,6 +159,8 @@ class ConflictDetails extends StatefulWidget {
 }
 
 class _ConflictDetailsState extends State<ConflictDetails> {
+  ProposedActionType? _proposedActionType;
+
   @override
   Widget build(BuildContext context) {
     var c = widget.collision;
@@ -157,7 +168,6 @@ class _ConflictDetailsState extends State<ConflictDetails> {
       return const Center(child: Text("No collision selected"));
     }
 
-    ProposedActionType? _proposedActionType;
     
     return Padding(
       padding: const EdgeInsets.all(8.0),
@@ -176,7 +186,10 @@ class _ConflictDetailsState extends State<ConflictDetails> {
                   waitDuration: const Duration(milliseconds: 250),
                   message: "The detected causes of this collision.",
                   constraints: const BoxConstraints(maxWidth: 300),
-                  child: const Icon(Icons.help_outline),
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 4.0),
+                    child: const Icon(Icons.help_outline, size: 20),
+                  ),
                 )
               ],
             ),
@@ -191,7 +204,10 @@ class _ConflictDetailsState extends State<ConflictDetails> {
                   message: "Member numbers in this conflict arranged by type. Numbers that apear in the proposed fixes " +
                     "are highlighted in green. All numbers must appear in green before the conflict can be resolved.",
                   constraints: const BoxConstraints(maxWidth: 300),
-                  child: const Icon(Icons.help_outline),
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 4.0),
+                    child: const Icon(Icons.help_outline, size: 20),
+                  ),
                 )
               ],
             ),
@@ -216,7 +232,10 @@ class _ConflictDetailsState extends State<ConflictDetails> {
                     "the user are labeled 'User Mapping'. Mappings that appear in project settings but do not fully " +
                     "resolve a conflict are labeled 'Preexisting Mapping'.",
                   constraints: const BoxConstraints(maxWidth: 300),
-                  child: const Icon(Icons.help_outline),
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 4.0),
+                    child: const Icon(Icons.help_outline, size: 20),
+                  ),
                 )
               ],
             ),
@@ -235,30 +254,29 @@ class _ConflictDetailsState extends State<ConflictDetails> {
                       });
                     }
                   }),
+                  value: _proposedActionType,
                 ),
-                IconButton(icon: const Icon(Icons.add_circle_outline), onPressed: _proposedActionType == null ? null : () async {
-                  if(_proposedActionType != null) {
-                    var memberNumbers = c.memberNumbers.values.flattened.toList();
-                    var coveredNumbers = c.proposedActions.map((e) => e.coveredNumbers).flattened.toList();
-                    DeduplicationAction? newAction;
-                    switch(_proposedActionType!) {
-                      case ProposedActionType.blacklist:
-                        newAction = await AddBlacklistEntryDialog.show(context, memberNumbers, coveredMemberNumbers: coveredNumbers);
-                        break;
-                      case ProposedActionType.dataEntryFix:
-                        newAction = await AddDataEntryFixDialog.show(context);
-                        break;
-                      case ProposedActionType.mapping:
-                        newAction = await AddMappingDialog.show(context);
-                        break;
-                    }
+                IconButton(padding: const EdgeInsets.all(6), iconSize: 20, icon: const Icon(Icons.add_circle_outline), onPressed: _proposedActionType == null ? null : () async {
+                  var memberNumbers = c.memberNumbers.values.flattened.toList();
+                  var coveredNumbers = c.proposedActions.map((e) => e.coveredNumbers).flattened.toList();
+                  DeduplicationAction? newAction;
+                  switch(_proposedActionType!) {
+                    case ProposedActionType.blacklist:
+                      newAction = await AddBlacklistEntryDialog.show(context, memberNumbers, coveredMemberNumbers: coveredNumbers);
+                      break;
+                    case ProposedActionType.dataEntryFix:
+                      newAction = await AddDataEntryFixDialog.show(context, c.deduplicatorName, memberNumbers, coveredMemberNumbers: coveredNumbers);
+                      break;
+                    case ProposedActionType.mapping:
+                      newAction = await AddMappingDialog.show(context, memberNumbers, coveredMemberNumbers: coveredNumbers);
+                      break;
+                  }
 
-                    if(newAction != null) {
-                      var na = newAction;
-                      setState(() {
-                        c.proposedActions.add(na);
-                      });
-                    }
+                  if(newAction != null) {
+                    var na = newAction;
+                    setState(() {
+                      c.proposedActions.add(na);
+                    });
                   }
                 }),
               ],
@@ -327,16 +345,42 @@ class MemberNumberTypeColumn extends StatelessWidget {
   final DeduplicationCollision collision;
 
   @override
-  Widget build(BuildContext context) {    
+  Widget build(BuildContext context) {
+    var sport = Provider.of<Sport>(context, listen: false);
+    bool uspsa = sport.name == uspsaName;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(type.uiName, style: Theme.of(context).textTheme.titleSmall),
-          for(var number in collision.memberNumbers[type]!)
-            Text(number, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: collision.coversNumber(number) ? Colors.green.shade600 : Colors.grey.shade400)),
+          if(uspsa)
+            for(var number in collision.memberNumbers[type]!)
+              _USPSALink(number: number, collision: collision),
+          if(!uspsa)
+            for(var number in collision.memberNumbers[type]!)
+              Text(number, style: TextStyles.bodyMedium(context).copyWith(color: collision.coversNumber(number) ? Colors.green.shade600 : Colors.grey.shade400)),
         ],
+      ),
+    );
+  }
+}
+
+class _USPSALink extends StatelessWidget {
+  const _USPSALink({super.key, required this.number, required this.collision});
+
+  final String number;
+  final DeduplicationCollision collision;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        child: Text(number, style: TextStyles.underlineBodyMedium(context).copyWith(color: collision.coversNumber(number) ? Colors.green.shade600 : Colors.grey.shade400)),
+        onTap: () {
+          launchUrl(Uri.parse("https://uspsa.org/classification/$number"));
+        },
       ),
     );
   }
@@ -353,7 +397,7 @@ class ProposedAction extends StatelessWidget {
     return Row(
       children: [
         Text(action.descriptiveString, style: Theme.of(context).textTheme.bodyMedium),
-        IconButton(icon: const Icon(Icons.remove_circle_outline), onPressed: onRemove),
+        IconButton(padding: const EdgeInsets.all(6), iconSize: 20, icon: const Icon(Icons.remove_circle_outline), onPressed: onRemove),
       ],
     );
   }

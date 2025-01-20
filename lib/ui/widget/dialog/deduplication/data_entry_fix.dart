@@ -2,24 +2,138 @@ import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 
 class AddDataEntryFixDialog extends StatefulWidget {
-  const AddDataEntryFixDialog({super.key});
+  const AddDataEntryFixDialog({super.key, required this.deduplicatorName, required this.memberNumbers, this.coveredMemberNumbers = const []});
 
+  final String deduplicatorName;
+  final List<String> memberNumbers;
+  final List<String> coveredMemberNumbers;
   @override
   State<AddDataEntryFixDialog> createState() => _AddDataEntryFixDialogState();
 
-  static Future<DeduplicationAction?> show(BuildContext context) async {
-    return showDialog<DeduplicationAction>(context: context, builder: (context) => const AddDataEntryFixDialog());
+  static Future<DeduplicationAction?> show(BuildContext context, String deduplicatorName, List<String> memberNumbers, {List<String> coveredMemberNumbers = const []}) async {
+    return showDialog<DeduplicationAction>(context: context, builder: (context) => AddDataEntryFixDialog(deduplicatorName: deduplicatorName, memberNumbers: memberNumbers, coveredMemberNumbers: coveredMemberNumbers));
   }
 }
 
 class _AddDataEntryFixDialogState extends State<AddDataEntryFixDialog> {
+  var invalidController = TextEditingController();
+  var correctedController = TextEditingController();
+
+  var invalidFocusNode = FocusNode();
+  var correctedFocusNode = FocusNode();
+
+  var invalidErrorText = "";
+  var correctedErrorText = "";
+  List<String> coveredNumbers = [];
+
+  @override
+  void initState() {
+    super.initState();
+    coveredNumbers = [...widget.coveredMemberNumbers];
+    invalidController.addListener(() {
+      setState(() {
+        invalidErrorText = "";
+      });
+    });
+    correctedController.addListener(() {
+      setState(() {
+        correctedErrorText = "";
+      });
+    });
+  }
+
+  bool validate() {
+    if(invalidController.text.isEmpty) {
+      setState(() {
+        invalidErrorText = "Source number is required";
+      });
+      return false;
+    }
+    if(correctedController.text.isEmpty) {
+      setState(() {
+        correctedErrorText = "Target number is required";
+      });
+      return false;
+    }
+    if(invalidController.text == correctedController.text) {
+      setState(() {
+        correctedErrorText = "Source and target cannot be the same";
+      });
+      return false;
+    }
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text("Data Entry Fix"),
+      content: FocusTraversalGroup(
+        policy: WidgetOrderTraversalPolicy(),
+        child: Row(
+          children: [
+            Expanded(
+              child: DropdownMenu<String>(
+                dropdownMenuEntries: widget.memberNumbers.map((e) => 
+                  DropdownMenuEntry(
+                    value: e,
+                    label: e,
+                    style: widget.coveredMemberNumbers.contains(e) ? ButtonStyle(textStyle: MaterialStateProperty.all(TextStyle(color: Colors.green.shade600))) : null,
+                  )
+                ).toList(),
+                controller: invalidController,
+                onSelected: (value) {
+                  if(value != null) {
+                    invalidController.text = value;
+                    setState(() {
+                      coveredNumbers.add(value);
+                    });
+                  }
+                },
+                requestFocusOnTap: true,
+                label: const Text("Incorrect"),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: DropdownMenu<String>(
+                dropdownMenuEntries: widget.memberNumbers.map((e) => 
+                  DropdownMenuEntry(
+                    value: e,
+                    label: e,
+                    style: coveredNumbers.contains(e) ? ButtonStyle(textStyle: MaterialStateProperty.all(TextStyle(color: Colors.green.shade600))) : null,
+                  )
+                ).toList(),
+                controller: correctedController,
+                onSelected: (value) {
+                  if(value != null) {
+                    correctedController.text = value;
+                    setState(() {
+                      coveredNumbers.add(value);
+                    });
+                  }
+                },
+                requestFocusOnTap: true,
+                label: const Text("Corrected"),
+              ),
+            ),
+          ],
+        ),
+      ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: const Text("CANCEL")),
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text("SAVE")),
+        TextButton(
+          child: Text("SAVE"),
+          onPressed: () {
+            if(validate()) {
+              Navigator.pop(context, DataEntryFix(
+                deduplicatorName: widget.deduplicatorName,
+                sourceNumber: invalidController.text,
+                targetNumber: correctedController.text,
+              ));
+            }
+          }
+        )
       ],
     );
   }

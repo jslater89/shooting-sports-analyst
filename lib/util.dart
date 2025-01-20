@@ -149,10 +149,30 @@ extension IncrementDoubleMap<T> on Map<T, double> {
 }
 
 extension ListMap<K, V> on Map<K, List<V>> {
+  /// Add [value] to the list at [key], creating the list if it doesn't exist.
   void addToList(K key, V value) {
     this[key] ??= [];
     var list = this[key]!;
     list.add(value);
+  }
+
+  /// Add [value] to the list at [key], creating the list if it doesn't exist,
+  /// but only if [value] is not already in the list.
+  bool addToListIfMissing(K key, V value) {
+    if(this[key]?.contains(value) ?? false) {
+      return false;
+    }
+    addToList(key, value);
+    return true;
+  }
+}
+
+extension SetMap<K, V> on Map<K, Set<V>> {
+  /// Add [value] to the set at [key], creating the set if it doesn't exist.
+  void addToSet(K key, V value) {
+    this[key] ??= {};
+    var set = this[key]!;
+    set.add(value);
   }
 }
 

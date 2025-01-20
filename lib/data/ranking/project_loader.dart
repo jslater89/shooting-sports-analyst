@@ -270,7 +270,8 @@ class RatingProjectLoader {
         if(didSomething) {
           // We don't need to check the name, because we've already saved the project
           // (i.e. ensured it has a DB ID) at the end of the configure ratings page.
-          db.saveRatingProject(project, checkName: false);
+          project.changedSettings();
+          db.saveRatingProject(project, checkName: true);
         }
       }
     }
@@ -368,8 +369,10 @@ class RatingProjectLoader {
             sourceNumbers: sourceNumbers.toList(),
             targetNumber: mapping.targetNumber,
           );
-          project.automaticNumberMappings.removeWhere((m) => mappings.contains(m));
-          project.automaticNumberMappings.add(newMapping);
+          var autoMappings = [...project.automaticNumberMappings];
+          autoMappings.removeWhere((m) => mappings.contains(m));
+          autoMappings.add(newMapping);
+          project.automaticNumberMappings = autoMappings;
         }
 
         // Find any competitors who match sourceNumber and copy their data to the
@@ -422,9 +425,9 @@ class RatingProjectLoader {
         // settings that the two already-distinct ratings ought to be that way.
         var blacklist = action as Blacklist;
 
-        settings.memberNumberMappingBlacklist.addToList(blacklist.sourceNumber, blacklist.targetNumber);
+        settings.memberNumberMappingBlacklist.addToListIfMissing(blacklist.sourceNumber, blacklist.targetNumber);
         if(blacklist.bidirectional) {
-          settings.memberNumberMappingBlacklist.addToList(blacklist.targetNumber, blacklist.sourceNumber);
+          settings.memberNumberMappingBlacklist.addToListIfMissing(blacklist.targetNumber, blacklist.sourceNumber);
         }
         break;
       case DataEntryFix:

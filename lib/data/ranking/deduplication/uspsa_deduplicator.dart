@@ -3,6 +3,7 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import 'package:collection/collection.dart';
+import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
@@ -12,6 +13,52 @@ import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 var _log = SSALogger("USPSADeduplicator");
+
+/// USPSAMemberNumber is a wrapper around USPSA member number strings that
+/// provides USPSA-specific equality rules (i.e., A/TY/FY/TYF/FYF numbers
+/// with the same numeric component are considered equal).
+class USPSAMemberNumber {
+  final MemberNumberType type;
+
+  /// The normalized number, rendered in all-caps alphanumeric characters.
+  final String normalizedNumber;
+
+  /// The internal number, rendered in all-caps alphanumeric characters,
+  /// with leading associate number components stripped.
+  final String internalNumber;
+
+  /// Construct a USPSA member number from a raw member number string.
+  USPSAMemberNumber(String memberNumber) :
+    type = USPSADeduplicator().classify(memberNumber),
+    normalizedNumber = USPSADeduplicator().processNumber(memberNumber),
+    internalNumber = USPSADeduplicator()._stripATYFY(memberNumber);
+
+  /// Construct a USPSA member number, providing all of the values directly.
+  USPSAMemberNumber.unsafe({required this.type, required this.normalizedNumber, required this.internalNumber});
+
+  @override
+  operator ==(Object other) {
+    if(other is USPSAMemberNumber) {
+      return type == other.type && internalNumber == other.internalNumber;
+    }
+    else if(other is String) {
+      var otherInternal = USPSADeduplicator()._stripATYFY(other);
+      return internalNumber == otherInternal;
+    }
+    return false;
+  }
+
+  @override
+  int get hashCode => Object.hash(type, internalNumber);
+
+  @override
+  String toString() {
+    if(type != MemberNumberType.standard) {
+      return normalizedNumber;
+    }
+    else return "$internalNumber ($normalizedNumber)";
+  }
+}
 
 class USPSADeduplicator extends ShooterDeduplicator {
   static USPSADeduplicator? _instance;
@@ -62,18 +109,10 @@ class USPSADeduplicator extends ShooterDeduplicator {
 
     Set<String> deduplicatorNames = {};
 
-    Map<String, List<String>> namesToNumbers = {};
     Map<String, List<DbShooterRating>> ratingsByName = {};
 
     /// The overall list of conflicts.
     List<DeduplicationCollision> conflicts = [];
-
-    /// The list of conflicts for each deduplicator name, so that steps
-    /// further into the code can examine the conflicts already detected.
-    /// Name conflicts from one iteration of the loop are added to [conflicts]
-    /// at the start of the next iteration (or just after the loop for the last
-    /// iteration).
-    List<DeduplicationCollision> nameConflicts = [];
 
     // Retrieve deduplicator names from the new ratings.
     // The only names that can cause conflicts are those
@@ -100,13 +139,17 @@ class USPSADeduplicator extends ShooterDeduplicator {
         if(dbIdsSeen[rating.id] != true) {
           ratings.add(rating);
         }
-        dbIdsSeen[rating.id] = true;
+        if(rating.id != 0 && rating.id != Isar.autoIncrement) {
+          dbIdsSeen[rating.id] = true;
+        }
       }
       for(var rating in ratingsRes.unwrap()) {
         if(dbIdsSeen[rating.id] != true) {
           ratings.add(rating);
         }
-        dbIdsSeen[rating.id] = true;
+        if(rating.id != 0 && rating.id != Isar.autoIncrement) {
+          dbIdsSeen[rating.id] = true;
+        }
       }
 
       // One rating doesn't need to be deduplicated.
@@ -127,10 +170,26 @@ class USPSADeduplicator extends ShooterDeduplicator {
         // non-primary member number.
         for(var number in rating.knownMemberNumbers) {
           var type = classify(number);
-          numbers[type] ??= [];
-          numbers[type]!.add(number);
+          numbers.addToList(type, number);
           numbersToRatings[number] = rating;
         }
+      }
+
+      // For each set of equivalent associate numbers, we only want to keep the best one.
+      Set<String> finalAssociateNumbers = {};
+      Map<USPSAMemberNumber, List<String>> associateNumbersByIdentity = {};
+      for(var number in numbers[MemberNumberType.standard] ?? []) {
+        var identity = USPSAMemberNumber(number);
+        associateNumbersByIdentity.addToList(identity, number);
+      }
+
+      for(var identity in associateNumbersByIdentity.keys) {
+        var bestNumber = _bestAssociateNumber(associateNumbersByIdentity[identity]!);
+        finalAssociateNumbers.add(bestNumber);
+      }
+
+      if(finalAssociateNumbers.isNotEmpty) {
+        numbers[MemberNumberType.standard] = finalAssociateNumbers.toList();
       }
 
       var conflict = DeduplicationCollision(
@@ -142,9 +201,23 @@ class USPSADeduplicator extends ShooterDeduplicator {
         proposedActions: [],
       );
 
+      if(conflict.flattenedMemberNumbers.length == 1) {
+        // If, after condensing equivalent associate numbers, we only have one number, we also
+        // don't have a conflict.
+        
+        Map<DbShooterRating, bool> distinctRatings = {};
+        for(var r in numbersToRatings.values) {
+          distinctRatings[r] = true;
+        }
+        if(distinctRatings.length != 1) {
+          // This log message is expected during tests.
+          _log.w("${distinctRatings.length} rating objects for $name, but only one member number: ${conflict.flattenedMemberNumbers.first}");
+        }
+        continue;
+      }
+
       // Check if any user mappings apply to the list of ratings, and if they haven't been
       // previously applied. This can happen if we're doing a full recalculation.
-
       // First, find all of the mappings that apply to this rating.
       List<PreexistingMapping> preexistingMappingActions = [];
       List<AmbiguousMapping> ambiguousMappings = [];
@@ -648,7 +721,11 @@ class USPSADeduplicator extends ShooterDeduplicator {
       }
 
       if(allBlacklisted) {
-        conflicts.add(conflict);
+        // If there are causes or actions, present the conflict to the user;
+        // otherwise, we've already done everything we need to do.
+        if(conflict.causes.isNotEmpty || conflict.proposedActions.isNotEmpty) {
+          conflicts.add(conflict);
+        }
         continue;
       }
 
@@ -790,6 +867,28 @@ class USPSADeduplicator extends ShooterDeduplicator {
   @override
   String processNumber(String number) {
     return normalizeNumber(number);
+  }
+
+  Map<String, String> _stripATYFYCache = {};
+  String _stripATYFY(String number) {
+    if(_stripATYFYCache.containsKey(number)) return _stripATYFYCache[number]!;
+    var n = number.replaceFirst(RegExp(r"[ATFY]{1,3}"), "");
+    _stripATYFYCache[number] = n;
+    return n;
+  }
+
+  /// Return the best (i.e. longest) associate number from a list of numbers.
+  String _bestAssociateNumber(List<String> numbers) {
+    String? fy;
+    String? ty;
+    String? a;
+
+    for(var number in numbers) {
+      if(number.startsWith("FY")) fy = number;
+      else if(number.startsWith("TY")) ty = number;
+      else if(number.startsWith("A")) a = number;
+    }
+    return fy ?? ty ?? a ?? numbers.first;
   }
 
   List<String> alternateForms(String number) {
