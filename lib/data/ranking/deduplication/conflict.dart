@@ -38,6 +38,10 @@ class DeduplicationCollision {
     return proposedActions.any((a) => a.coveredNumbers.contains(number));
   }
 
+  bool proposedActionsResolveConflict() {
+    return coversNumbers(memberNumbers.values.flattened);
+  }
+
   DeduplicationCollision({
     required this.deduplicatorName,
     required this.memberNumbers,

@@ -64,10 +64,10 @@ class AutoMapping extends Mapping {
   @override
   String get descriptiveString {
     if(sourceNumbers.length == 1) {
-      return "Automatic mapping: ${sourceNumbers.first} -> $targetNumber";
+      return "Automatic mapping: ${sourceNumbers.first} → $targetNumber";
     }
     else {
-      return "Automatic mapping: (${sourceNumbers.join(", ")}) -> $targetNumber";
+      return "Automatic mapping: (${sourceNumbers.join(", ")}) → $targetNumber";
     }
   }
 }
@@ -102,10 +102,10 @@ class Blacklist extends DeduplicationAction {
   @override
   String get descriptiveString {
     if(bidirectional) {
-      return "Blacklist: $sourceNumber <-> $targetNumber";
+      return "Blacklist: $sourceNumber ↔ $targetNumber";
     }
     else {
-      return "Blacklist: $sourceNumber -> $targetNumber";
+      return "Blacklist: $sourceNumber → $targetNumber";
     }
   }
 }
@@ -140,10 +140,10 @@ class UserMapping extends Mapping {
   @override
   String get descriptiveString {
     if(sourceNumbers.length == 1) {
-      return "User mapping: ${sourceNumbers.first} -> $targetNumber";
+      return "User mapping: ${sourceNumbers.first} → $targetNumber";
     }
     else {
-      return "User mapping: (${sourceNumbers.join(", ")}) -> $targetNumber";
+      return "User mapping: (${sourceNumbers.join(", ")}) → $targetNumber";
     }
   }
 }
@@ -183,7 +183,7 @@ class DataEntryFix extends DeduplicationAction {
   );
 
   @override
-  String get descriptiveString => "Data entry fix: $sourceNumber -> $targetNumber for $deduplicatorName";
+  String get descriptiveString => "Data entry fix: $sourceNumber → $targetNumber for $deduplicatorName";
 
   MemberNumberCorrection intoCorrection() => MemberNumberCorrection(
     name: deduplicatorName,

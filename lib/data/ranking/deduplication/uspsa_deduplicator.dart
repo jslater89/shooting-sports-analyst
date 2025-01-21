@@ -306,8 +306,8 @@ class USPSADeduplicator extends ShooterDeduplicator {
             if(!detectedMappings.containsKey(source)) {
               preexistingMappingActions.add(PreexistingMapping(
                 sourceNumber: source,
-              targetNumber: finalTarget,
-              automatic: true,
+                targetNumber: finalTarget,
+                automatic: true,
               ));
               detectedMappings[source] = finalTarget;
             }
@@ -549,11 +549,11 @@ class USPSADeduplicator extends ShooterDeduplicator {
         var targetType = classify(mapping.value);
 
         multipleCheckNumbers = numbers.deepCopy();
-        multipleCheckNumbers[sourceType]!.remove(mapping.key);
+        multipleCheckNumbers[sourceType]?.remove(mapping.key);
         multipleCheckNumbersList.add(multipleCheckNumbers);
 
         multipleCheckNumbers = numbers.deepCopy();
-        multipleCheckNumbers[targetType]!.remove(mapping.value);
+        multipleCheckNumbers[targetType]?.remove(mapping.value);
         multipleCheckNumbersList.add(multipleCheckNumbers);
       }
 
@@ -591,6 +591,7 @@ class USPSADeduplicator extends ShooterDeduplicator {
               // experimentally, 65 (on a 0-100 scale) works pretty well.
               sourceNumbers.add(number);
             }
+            // TODO: else if number is associate and too short or too long, preferentially make it a source
             else if(!(blacklist[number]?.contains(probableTarget) ?? false)) {
               proposedActions.add(Blacklist(
                 sourceNumber: number,

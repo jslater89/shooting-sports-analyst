@@ -1187,6 +1187,26 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
           corrections: _memNumCorrections,
           width: 700,
         ));
+
+      case _MenuEntry.clearDeduplication:
+        var confirm = await ConfirmDialog.show(
+          context,
+          title: "Clear deduplication information",
+          content: Text("WARNING: this will clear all deduplication information for the current project, "
+              "including all member number mappings, blacklist entries, and data entry fixes. Clearing "
+              "this data will require repairing all deduplication conflicts again. I only wrote this for "
+              "testing purposes. Are you absolutely sure you want to do this?"),
+          positiveButtonLabel: "CLEAR",
+          negativeButtonLabel: "CANCEL",
+        ) ?? false;
+
+        if(confirm && _loadedProject != null) {
+          _memNumMappings.clear();
+          _memNumMappingBlacklist.clear();
+          _memNumCorrections.clear();
+          _saveProject(_loadedProject!.name);
+        }
+        break;
     }
   }
 }
@@ -1202,6 +1222,7 @@ enum _MenuEntry {
   shooterAliases,
   reloadProjectMatches,
   migrateFromOldProject,
+  clearDeduplication,
   clearCache;
 
   static List<_MenuEntry> get menu => [
@@ -1213,6 +1234,7 @@ enum _MenuEntry {
     shooterAliases,
     reloadProjectMatches,
     migrateFromOldProject,
+    clearDeduplication,
     clearCache,
   ];
 
@@ -1240,6 +1262,8 @@ enum _MenuEntry {
         return "Shooter aliases";
       case _MenuEntry.migrateFromOldProject:
         return "Migrate from old project";
+      case _MenuEntry.clearDeduplication:
+        return "Clear deduplication information";
     }
   }
 }

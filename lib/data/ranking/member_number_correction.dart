@@ -56,6 +56,11 @@ class MemberNumberCorrectionContainer {
     }
   }
 
+  void clear() {
+    _byName.clear();
+    _byInvalidNumber.clear();
+  }
+
   /// Name should be processed.
   List<MemberNumberCorrection> getByName(String name) {
     return _byName[name] ?? [];

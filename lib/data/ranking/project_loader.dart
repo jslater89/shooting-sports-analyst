@@ -589,6 +589,9 @@ class RatingProjectLoader {
           // Update names for existing shooters on add, to eliminate the Mel Rodero -> Mel Rodero II problem in the L2+ set
           rating.firstName = s.firstName;
           rating.lastName = s.lastName;
+          if(match.date.isAfter(rating.lastSeen)) {
+            rating.lastSeen = match.date;
+          }
           updated += 1;
           
           // We asked for allPossibleMemberNumbers, so if this member number isn't
@@ -957,7 +960,6 @@ class RatingProjectLoader {
         averageBefore += rating.connectedness;
         // TODO: restore
         // rating.updateConnections(match.date, encounteredList);
-        rating.lastSeen = match.date;
       }
 
       for (var rating in shootersAtMatch) {
