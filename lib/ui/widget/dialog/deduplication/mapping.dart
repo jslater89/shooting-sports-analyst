@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
+import 'package:shooting_sports_analyst/ui/text_styles.dart';
 
 class AddMappingDialog extends StatefulWidget {
   const AddMappingDialog({super.key, required this.memberNumbers, this.coveredMemberNumbers = const [], this.editAction});
@@ -78,107 +79,118 @@ class _AddMappingDialogState extends State<AddMappingDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text("User Mapping"),
+      title: const Text("Add user mapping"),
       content: FocusTraversalGroup(
         policy: WidgetOrderTraversalPolicy(),
         child: SizedBox(
           width: 500,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              SizedBox(
-                width: 240,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.max,
+              Text(
+                "User mappings tie several valid source numbers (in the left column) to a single target number (in the right column). " +
+                "Specify user mappings to tie a competitor's actual member numbers together, in the event that the automatic detection " +
+                "algorithm fails to match them. To correct typos or other data entry errors, use data entry fixes instead.",
+                style: TextStyles.bodyMedium(context),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 240,
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: DropdownMenu<String>(
-                            dropdownMenuEntries: widget.memberNumbers.map((e) => 
-                              DropdownMenuEntry(
-                                value: e,
-                                label: e,
-                                style: widget.coveredMemberNumbers.contains(e) ? ButtonStyle(textStyle: MaterialStateProperty.all(TextStyle(color: Colors.green.shade600))) : null,
-                              )
-                            ).toList(),
-                            controller: sourceController,
-                            width: 190,
-                            errorText: sourceErrorText,
-                            onSelected: (value) {
-                              if(value != null) {
-                                sourceController.text = value;
-                                setState(() {
-                                  sourceErrorText = null;
-                                  coveredNumbers.add(value);
-                                });
-                              }
-                            },
-                            requestFocusOnTap: true,
-                            label: const Text("Source"),
-                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.max,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: DropdownMenu<String>(
+                                dropdownMenuEntries: widget.memberNumbers.map((e) => 
+                                  DropdownMenuEntry(
+                                    value: e,
+                                    label: e,
+                                    style: widget.coveredMemberNumbers.contains(e) ? ButtonStyle(textStyle: MaterialStateProperty.all(TextStyle(color: Colors.green.shade600))) : null,
+                                  )
+                                ).toList(),
+                                controller: sourceController,
+                                width: 190,
+                                errorText: sourceErrorText,
+                                onSelected: (value) {
+                                  if(value != null) {
+                                    sourceController.text = value;
+                                    setState(() {
+                                      sourceErrorText = null;
+                                      coveredNumbers.add(value);
+                                    });
+                                  }
+                                },
+                                requestFocusOnTap: true,
+                                label: const Text("Source"),
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: IconButton(padding: const EdgeInsets.all(6), iconSize: 20, icon: const Icon(Icons.add_circle_outline), onPressed: () {
+                                if(!sources.contains(sourceController.text)) {
+                                  setState(() {
+                                    sources.add(sourceController.text);
+                                    sourceErrorText = null;
+                                  });
+                                }
+                              }),
+                            ),
+                          ],
                         ),
                         Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: IconButton(padding: const EdgeInsets.all(6), iconSize: 20, icon: const Icon(Icons.add_circle_outline), onPressed: () {
-                            if(!sources.contains(sourceController.text)) {
-                              setState(() {
-                                sources.add(sourceController.text);
-                                sourceErrorText = null;
-                              });
-                            }
-                          }),
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: Divider(thickness: 1, height: 1),
                         ),
+                        for(var source in sources)
+                          Row(
+                            children: [
+                              Text(source, style: Theme.of(context).textTheme.bodyMedium),
+                              IconButton(padding: const EdgeInsets.all(6), iconSize: 20, icon: const Icon(Icons.remove_circle_outline), onPressed: () {
+                                setState(() {
+                                  sources.remove(source);
+                                });
+                              }),
+                            ],
+                          ),
+                        if(sources.isEmpty)
+                          Text("No sources", style: Theme.of(context).textTheme.bodyMedium),
                       ],
                     ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: Divider(thickness: 1, height: 1),
-                    ),
-                    for(var source in sources)
-                      Row(
-                        children: [
-                          Text(source, style: Theme.of(context).textTheme.bodyMedium),
-                          IconButton(padding: const EdgeInsets.all(6), iconSize: 20, icon: const Icon(Icons.remove_circle_outline), onPressed: () {
-                            setState(() {
-                              sources.remove(source);
-                            });
-                          }),
-                        ],
-                      ),
-                    if(sources.isEmpty)
-                      Text("No sources", style: Theme.of(context).textTheme.bodyMedium),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              DropdownMenu<String>(
-                dropdownMenuEntries: widget.memberNumbers.map((e) => 
-                  DropdownMenuEntry(
-                    value: e,
-                    label: e,
-                    style: coveredNumbers.contains(e) ? ButtonStyle(textStyle: MaterialStateProperty.all(TextStyle(color: Colors.green.shade600))) : null,
-                  )
-                ).toList(),
-                controller: targetController,
-                width: 200,
-                errorText: targetErrorText,
-                onSelected: (value) {
-                  if(value != null) {
-                    targetController.text = value;
-                    setState(() {
-                      coveredNumbers.add(value);
-                      targetErrorText = null;
-                    });
-                  }
-                },
-                requestFocusOnTap: true,
-                label: const Text("Target"),
+                  ),
+                  const SizedBox(width: 10),
+                  DropdownMenu<String>(
+                    dropdownMenuEntries: widget.memberNumbers.map((e) => 
+                      DropdownMenuEntry(
+                        value: e,
+                        label: e,
+                        style: coveredNumbers.contains(e) ? ButtonStyle(textStyle: MaterialStateProperty.all(TextStyle(color: Colors.green.shade600))) : null,
+                      )
+                    ).toList(),
+                    controller: targetController,
+                    width: 200,
+                    errorText: targetErrorText,
+                    onSelected: (value) {
+                      if(value != null) {
+                        targetController.text = value;
+                        setState(() {
+                          coveredNumbers.add(value);
+                          targetErrorText = null;
+                        });
+                      }
+                    },
+                    requestFocusOnTap: true,
+                    label: const Text("Target"),
+                  ),
+                ],
               ),
             ],
           ),

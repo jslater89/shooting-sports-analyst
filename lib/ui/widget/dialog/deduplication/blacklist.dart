@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
+import 'package:shooting_sports_analyst/ui/text_styles.dart';
 
 class AddBlacklistEntryDialog extends StatefulWidget {
   const AddBlacklistEntryDialog({super.key, required this.memberNumbers, this.coveredMemberNumbers = const [], this.editAction});
@@ -75,56 +76,68 @@ class _AddBlacklistEntryDialogState extends State<AddBlacklistEntryDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text("Blacklist Entry"),
+      title: const Text("Add blacklist entry"),
       content: FocusTraversalGroup(
         policy: WidgetOrderTraversalPolicy(),
         child: SizedBox(
           width: 500,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              DropdownMenu<String>(
-                dropdownMenuEntries: widget.memberNumbers.map((e) => 
-                  DropdownMenuEntry(
-                    value: e,
-                    label: e,
-                    style: widget.coveredMemberNumbers.contains(e) ? ButtonStyle(textStyle: MaterialStateProperty.all(TextStyle(color: Colors.green.shade600))) : null,
-                  )
-                ).toList(),
-                controller: sourceController,
-                width: 200,
-                onSelected: (value) {
-                  if(value != null) {
-                    sourceController.text = value;
-                    setState(() {
-                      coveredNumbers.add(value);
-                    });
-                  }
-                },
-                requestFocusOnTap: true,
-                label: const Text("Source"),
+              Text(
+                "Blacklist entries prevent a deduplicator from making automatic associations between two member numbers. " +
+                "Add a blacklist entry between two member numbers if their competitors share a deduplicator name, but " +
+                "are not the same person. When adding a blacklist entry alongside a data entry fix or user mapping, the blacklist " +
+                "entry must point to the target number, not the source number(s).",
+                style: TextStyles.bodyMedium(context),
               ),
-              const SizedBox(width: 10),
-              DropdownMenu<String>(
-                dropdownMenuEntries: widget.memberNumbers.map((e) => 
-                  DropdownMenuEntry(
-                    value: e,
-                    label: e,
-                    style: coveredNumbers.contains(e) ? ButtonStyle(textStyle: MaterialStateProperty.all(TextStyle(color: Colors.green.shade600))) : null,
-                  )
-                ).toList(),
-                controller: targetController,
-                width: 200,
-                onSelected: (value) {
-                  if(value != null) {
-                    targetController.text = value;
-                    setState(() {
-                      coveredNumbers.add(value);
-                    });
-                  }
-                },
-                requestFocusOnTap: true,
-                label: const Text("Target"),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  DropdownMenu<String>(
+                    dropdownMenuEntries: widget.memberNumbers.map((e) => 
+                      DropdownMenuEntry(
+                        value: e,
+                        label: e,
+                        style: widget.coveredMemberNumbers.contains(e) ? ButtonStyle(textStyle: MaterialStateProperty.all(TextStyle(color: Colors.green.shade600))) : null,
+                      )
+                    ).toList(),
+                    controller: sourceController,
+                    width: 200,
+                    onSelected: (value) {
+                      if(value != null) {
+                        sourceController.text = value;
+                        setState(() {
+                          coveredNumbers.add(value);
+                        });
+                      }
+                    },
+                    requestFocusOnTap: true,
+                    label: const Text("Source"),
+                  ),
+                  const SizedBox(width: 10),
+                  DropdownMenu<String>(
+                    dropdownMenuEntries: widget.memberNumbers.map((e) => 
+                      DropdownMenuEntry(
+                        value: e,
+                        label: e,
+                        style: coveredNumbers.contains(e) ? ButtonStyle(textStyle: MaterialStateProperty.all(TextStyle(color: Colors.green.shade600))) : null,
+                      )
+                    ).toList(),
+                    controller: targetController,
+                    width: 200,
+                    onSelected: (value) {
+                      if(value != null) {
+                        targetController.text = value;
+                        setState(() {
+                          coveredNumbers.add(value);
+                        });
+                      }
+                    },
+                    requestFocusOnTap: true,
+                    label: const Text("Target"),
+                  ),
+                ],
               ),
             ],
           ),

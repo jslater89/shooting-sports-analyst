@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
+import 'package:shooting_sports_analyst/ui/text_styles.dart';
 
 class AddDataEntryFixDialog extends StatefulWidget {
   const AddDataEntryFixDialog({super.key, required this.deduplicatorName, required this.memberNumbers, this.coveredMemberNumbers = const [], this.editAction});
@@ -77,65 +78,76 @@ class _AddDataEntryFixDialogState extends State<AddDataEntryFixDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text("Data Entry Fix"),
+      title: const Text("Add data entry fix"),
       content: FocusTraversalGroup(
         policy: WidgetOrderTraversalPolicy(),
         child: SizedBox(
           width: 500,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              DropdownMenu<String>(
-                dropdownMenuEntries: widget.memberNumbers.map((e) => 
-                  DropdownMenuEntry(
-                    value: e,
-                    label: e,
-                    style: widget.coveredMemberNumbers.contains(e) ? ButtonStyle(textStyle: MaterialStateProperty.all(TextStyle(color: Colors.green.shade600))) : null,
-                  )
-                ).toList(),
-                controller: invalidController,
-                width: 200,
-                onSelected: (value) {
-                  if(value != null) {
-                    invalidController.text = value;
-                    setState(() {
-                      coveredNumbers.add(value);
-                    });
-                  }
-                },
-                requestFocusOnTap: true,
-                label: const Text("Incorrect"),
+              Text(
+                "Data entry fixes correct typos and other data entry errors for a specific competitor. Whenever a competitor " +
+                "with the current deduplicator name enters the source number, it will be changed to the target number before " +
+                "being added to the database.",
+                style: TextStyles.bodyMedium(context),
               ),
-              const SizedBox(width: 10),
-              IconButton(
-                icon: const Icon(Icons.swap_horiz),
-                onPressed: () {
-                  var temp = invalidController.text;
-                  invalidController.text = correctedController.text;
-                  correctedController.text = temp;
-                },
-              ),
-              const SizedBox(width: 10),
-              DropdownMenu<String>(
-                dropdownMenuEntries: widget.memberNumbers.map((e) => 
-                  DropdownMenuEntry(
-                    value: e,
-                    label: e,
-                    style: coveredNumbers.contains(e) ? ButtonStyle(textStyle: MaterialStateProperty.all(TextStyle(color: Colors.green.shade600))) : null,
-                  )
-                ).toList(),
-                controller: correctedController,
-                width: 200,
-                onSelected: (value) {
-                  if(value != null) {
-                    correctedController.text = value;
-                    setState(() {
-                      coveredNumbers.add(value);
-                    });
-                  }
-                },
-                requestFocusOnTap: true,
-                label: const Text("Corrected"),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  DropdownMenu<String>(
+                    dropdownMenuEntries: widget.memberNumbers.map((e) => 
+                      DropdownMenuEntry(
+                        value: e,
+                        label: e,
+                        style: widget.coveredMemberNumbers.contains(e) ? ButtonStyle(textStyle: MaterialStateProperty.all(TextStyle(color: Colors.green.shade600))) : null,
+                      )
+                    ).toList(),
+                    controller: invalidController,
+                    width: 200,
+                    onSelected: (value) {
+                      if(value != null) {
+                        invalidController.text = value;
+                        setState(() {
+                          coveredNumbers.add(value);
+                        });
+                      }
+                    },
+                    requestFocusOnTap: true,
+                    label: const Text("Incorrect"),
+                  ),
+                  const SizedBox(width: 10),
+                  IconButton(
+                    icon: const Icon(Icons.swap_horiz),
+                    onPressed: () {
+                      var temp = invalidController.text;
+                      invalidController.text = correctedController.text;
+                      correctedController.text = temp;
+                    },
+                  ),
+                  const SizedBox(width: 10),
+                  DropdownMenu<String>(
+                    dropdownMenuEntries: widget.memberNumbers.map((e) => 
+                      DropdownMenuEntry(
+                        value: e,
+                        label: e,
+                        style: coveredNumbers.contains(e) ? ButtonStyle(textStyle: MaterialStateProperty.all(TextStyle(color: Colors.green.shade600))) : null,
+                      )
+                    ).toList(),
+                    controller: correctedController,
+                    width: 200,
+                    onSelected: (value) {
+                      if(value != null) {
+                        correctedController.text = value;
+                        setState(() {
+                          coveredNumbers.add(value);
+                        });
+                      }
+                    },
+                    requestFocusOnTap: true,
+                    label: const Text("Corrected"),
+                  ),
+                ],
               ),
             ],
           ),
