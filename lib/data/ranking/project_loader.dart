@@ -517,9 +517,7 @@ class RatingProjectLoader {
     List<DbShooterRating> newRatings = [];
     for(MatchEntry s in shooters) {
       // Process the member number:
-      // First, normalize it to our all caps/alphanumeric format.
-      // TODO: move this to Sport, because dashes may be valid in some places.
-      // TODO: validate that our workflow functions with A/TY/FY prefixes still in
+      // First, normalize it according to the sport's rules.
       var processed = sport.shooterDeduplicator?.processNumber(s.memberNumber) ?? ShooterDeduplicator.normalizeNumberBasic(s.memberNumber);
 
       // If there are data corrections for this member number, apply them.

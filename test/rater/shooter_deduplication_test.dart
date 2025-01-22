@@ -698,6 +698,177 @@ void main() async {
     expect(reason: "number of results", results, isEmpty);
   });
 
+  test("Simple No Prefix", () async {
+    var project = DbRatingProject(
+      name: "Simple No Prefix",
+      sportName: uspsaSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "simple-no-prefix");
+    var deduplicator = USPSADeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      checkDataEntryErrors: true,
+      group: ratingGroup,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    var result = results.first;
+    expect(reason: "number of proposed actions", result.proposedActions, hasLength(1));
+    var dataEntryFix = result.proposedActions.firstWhereOrNull((e) => e is DataEntryFix) as DataEntryFix;
+    expect(reason: "data entry fix source number", dataEntryFix.sourceNumber, equals("123456"));
+    expect(reason: "data entry fix target number", dataEntryFix.targetNumber, equals("A123456"));
+  });
+
+  test("Complex No Prefix", () async {
+    var project = DbRatingProject(
+      name: "Complex No Prefix",
+      sportName: uspsaSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "complex-no-prefix");
+    var deduplicator = USPSADeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      checkDataEntryErrors: true,
+      group: ratingGroup,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    var result = results.first;
+    expect(reason: "number of proposed actions", result.proposedActions, hasLength(2));
+    var dataEntryFix = result.proposedActions.firstWhereOrNull((e) => e is DataEntryFix) as DataEntryFix;
+    expect(reason: "data entry fix source number", dataEntryFix.sourceNumber, equals("123456"));
+    expect(reason: "data entry fix target number", dataEntryFix.targetNumber, equals("A123456"));
+    var autoMapping = result.proposedActions.firstWhereOrNull((e) => e is AutoMapping) as AutoMapping;
+    expect(reason: "auto mapping target number", autoMapping.targetNumber, equals("L1234"));
+    expect(reason: "auto mapping source numbers", autoMapping.sourceNumbers, unorderedEquals(["A123456"]));
+  });
+
+  test("International to Standard", () async {
+    var project = DbRatingProject(
+      name: "International to Standard",
+      sportName: uspsaSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "international-to-standard");
+    var deduplicator = USPSADeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      checkDataEntryErrors: true,
+      group: ratingGroup,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    var result = results.first;
+    expect(reason: "number of proposed actions", result.proposedActions, hasLength(1));
+    var dataEntryFix = result.proposedActions.firstWhereOrNull((e) => e is DataEntryFix) as DataEntryFix;
+    expect(reason: "data entry fix source number", dataEntryFix.sourceNumber, equals("52410"));
+    expect(reason: "data entry fix target number", dataEntryFix.targetNumber, equals("A124456"));
+  });
+
+  test("DataEntryFix Bad Associate", () async {
+    var project = DbRatingProject(
+      name: "DataEntryFix Bad Associate",
+      sportName: uspsaSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "data-entry-fix-bad-associate");
+    var deduplicator = USPSADeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      checkDataEntryErrors: true,
+      group: ratingGroup,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    var result = results.first;
+    expect(reason: "number of proposed actions", result.proposedActions, hasLength(1));
+    var dataEntryFix = result.proposedActions.firstWhereOrNull((e) => e is DataEntryFix) as DataEntryFix;
+    expect(reason: "data entry fix source number", dataEntryFix.sourceNumber, equals("TY123456L"));
+    expect(reason: "data entry fix target number", dataEntryFix.targetNumber, equals("A123456"));
+  });
+
+  test("DataEntryFix Bad Life", () async {
+    var project = DbRatingProject(
+      name: "DataEntryFix Bad Life",
+      sportName: uspsaSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "data-entry-fix-bad-life");
+    var deduplicator = USPSADeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      checkDataEntryErrors: true,
+      group: ratingGroup,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    var result = results.first;
+    expect(reason: "number of proposed actions", result.proposedActions, hasLength(1));
+    var dataEntryFix = result.proposedActions.firstWhereOrNull((e) => e is DataEntryFix) as DataEntryFix;
+    expect(reason: "data entry fix source number", dataEntryFix.sourceNumber, equals("L12"));
+    expect(reason: "data entry fix target number", dataEntryFix.targetNumber, equals("L1234"));
+  });
+
+  test("DataEntryFix Bad Benefactor", () async {
+    var project = DbRatingProject(
+      name: "DataEntryFix Bad Benefactor",
+      sportName: uspsaSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "data-entry-fix-bad-benefactor");
+    var deduplicator = USPSADeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      checkDataEntryErrors: true,
+      group: ratingGroup,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    var result = results.first;
+    expect(reason: "number of proposed actions", result.proposedActions, hasLength(1));
+    var dataEntryFix = result.proposedActions.firstWhereOrNull((e) => e is DataEntryFix) as DataEntryFix;
+    expect(reason: "data entry fix source number", dataEntryFix.sourceNumber, equals("B1234"));
+    expect(reason: "data entry fix target number", dataEntryFix.targetNumber, equals("B123"));
+  });
+
   // #endregion
 }
 

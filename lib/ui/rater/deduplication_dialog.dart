@@ -335,9 +335,39 @@ class _ConflictDetailsState extends State<ConflictDetails> {
                     ],
                   ),
                   for(var action in c.proposedActions)
-                    ProposedAction(action: action, onRemove: () => setState(() {
-                      c.proposedActions.remove(action);
-                    })),
+                    ProposedAction(
+                      action: action,
+                      onRemove: () => setState(() {
+                        c.proposedActions.remove(action);
+                      }),
+                      onEdit: () async {
+                        switch(action.runtimeType) {
+                          case Blacklist:
+                            action as Blacklist;
+                            var newAction = await AddBlacklistEntryDialog.edit(context, action.copy(), c.memberNumbers.values.flattened.toList(), coveredMemberNumbers: c.proposedActions.map((e) => e.coveredNumbers).flattened.toList());
+                            if(newAction != null) {
+                              setState(() {
+                                action.sourceNumber = newAction.sourceNumber;
+                                action.targetNumber = newAction.targetNumber;
+                              });
+                            }
+                            break;
+                          case DataEntryFix:
+                            action as DataEntryFix;
+                            var newAction = await AddDataEntryFixDialog.edit(context, action.copy(), c.memberNumbers.values.flattened.toList(), coveredMemberNumbers: c.proposedActions.map((e) => e.coveredNumbers).flattened.toList());
+                            if(newAction != null) {
+                              setState(() {
+                                action.sourceNumber = newAction.sourceNumber;
+                                action.targetNumber = newAction.targetNumber;
+                              });
+                            }
+                            break;
+                          case Mapping:
+                            var newAction = await AddMappingDialog.show(context, c.memberNumbers.values.flattened.toList(), coveredMemberNumbers: c.proposedActions.map((e) => e.coveredNumbers).flattened.toList());
+                            break;
+                        }
+                      }
+                    ),
                   Row(
                     children: [
                       DropdownButton<ProposedActionType>(
@@ -497,17 +527,19 @@ class _USPSALink extends StatelessWidget {
 }
 
 class ProposedAction extends StatelessWidget {
-  const ProposedAction({super.key, required this.action, required this.onRemove});
+  const ProposedAction({super.key, required this.action, required this.onRemove, required this.onEdit});
 
   final DeduplicationAction action;
   final VoidCallback onRemove;
+  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
         Text(action.descriptiveString, style: Theme.of(context).textTheme.bodyMedium),
-        IconButton(padding: const EdgeInsets.all(6), iconSize: 20, icon: const Icon(Icons.remove_circle_outline), onPressed: onRemove),
+        SizedBox(height: 30, child: IconButton(padding: const EdgeInsets.all(6), iconSize: 20, icon: const Icon(Icons.edit), onPressed: onEdit)),
+        SizedBox(height: 30, child: IconButton(padding: const EdgeInsets.all(6), iconSize: 20, icon: const Icon(Icons.remove_circle_outline), onPressed: onRemove)),
       ],
     );
   }

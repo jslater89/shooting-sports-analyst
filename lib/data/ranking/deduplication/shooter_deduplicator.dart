@@ -133,7 +133,7 @@ abstract class ShooterDeduplicator {
 /// Other sports may be added as necessary, or simply overlap with these.
 enum MemberNumberType {
   /// In USPSA, some international competitors enter an IPSC regional member
-  /// number, which we want to prefix with INTL during processing.
+  /// number.
   international,
 
   /// 

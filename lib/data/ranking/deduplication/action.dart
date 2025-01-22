@@ -75,8 +75,8 @@ class AutoMapping extends Mapping {
 /// Blacklist prevents mapping from a source number to a target
 /// number, or in both directions if [bidirectional] is true.
 class Blacklist extends DeduplicationAction {
-  final String sourceNumber;
-  final String targetNumber;
+  String sourceNumber;
+  String targetNumber;
 
   @override
   Iterable<String> get coveredNumbers => [sourceNumber, targetNumber];
@@ -84,9 +84,9 @@ class Blacklist extends DeduplicationAction {
   /// If [bidirectional] is true, then the rating project should add
   /// entries in both directions: blacklist[A123] = B456 and
   /// blacklist[B456] = A123.
-  final bool bidirectional;
+  bool bidirectional;
 
-  const Blacklist({
+  Blacklist({
     required this.sourceNumber,
     required this.targetNumber,
     required this.bidirectional,
@@ -152,14 +152,14 @@ class UserMapping extends Mapping {
 /// entry, treating [sourceNumber] as [targetNumber] when
 /// it is entered by a competitor matching [deduplicatorName].
 class DataEntryFix extends DeduplicationAction {
-  final String sourceNumber;
-  final String targetNumber;
+  String sourceNumber;
+  String targetNumber;
   final String deduplicatorName;
 
   @override
   Iterable<String> get coveredNumbers => [sourceNumber, targetNumber];
 
-  const DataEntryFix({
+  DataEntryFix({
     required this.sourceNumber,
     required this.targetNumber,
     required this.deduplicatorName,

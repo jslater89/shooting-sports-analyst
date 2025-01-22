@@ -2,16 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 
 class AddBlacklistEntryDialog extends StatefulWidget {
-  const AddBlacklistEntryDialog({super.key, required this.memberNumbers, this.coveredMemberNumbers = const []});
+  const AddBlacklistEntryDialog({super.key, required this.memberNumbers, this.coveredMemberNumbers = const [], this.editAction});
 
   final List<String> memberNumbers;
   final List<String> coveredMemberNumbers;
-
+  final Blacklist? editAction;
   @override
   State<AddBlacklistEntryDialog> createState() => _AddBlacklistEntryDialogState();
 
-  static Future<DeduplicationAction?> show(BuildContext context, List<String> memberNumbers, {List<String> coveredMemberNumbers = const []}) async {
-    return showDialog<DeduplicationAction>(context: context, builder: (context) => AddBlacklistEntryDialog(memberNumbers: memberNumbers, coveredMemberNumbers: coveredMemberNumbers));
+  static Future<Blacklist?> show(BuildContext context, List<String> memberNumbers, {List<String> coveredMemberNumbers = const []}) async {
+    return showDialog<Blacklist>(context: context, builder: (context) => AddBlacklistEntryDialog(memberNumbers: memberNumbers, coveredMemberNumbers: coveredMemberNumbers));
+  }
+
+  static Future<Blacklist?> edit(BuildContext context, Blacklist action, List<String> memberNumbers, {List<String> coveredMemberNumbers = const []}) async {
+    return showDialog<Blacklist>(context: context, builder: (context) => AddBlacklistEntryDialog(memberNumbers: memberNumbers, coveredMemberNumbers: coveredMemberNumbers, editAction: action));
   }
 }
 
@@ -40,6 +44,10 @@ class _AddBlacklistEntryDialogState extends State<AddBlacklistEntryDialog> {
         targetErrorText = "";
       });
     });
+    if(widget.editAction != null) {
+      sourceController.text = widget.editAction!.sourceNumber;
+      targetController.text = widget.editAction!.targetNumber;
+    }
   }
 
   bool validate() {

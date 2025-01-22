@@ -2,16 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 
 class AddDataEntryFixDialog extends StatefulWidget {
-  const AddDataEntryFixDialog({super.key, required this.deduplicatorName, required this.memberNumbers, this.coveredMemberNumbers = const []});
+  const AddDataEntryFixDialog({super.key, required this.deduplicatorName, required this.memberNumbers, this.coveredMemberNumbers = const [], this.editAction});
 
   final String deduplicatorName;
   final List<String> memberNumbers;
   final List<String> coveredMemberNumbers;
+  final DataEntryFix? editAction;
+
   @override
   State<AddDataEntryFixDialog> createState() => _AddDataEntryFixDialogState();
 
-  static Future<DeduplicationAction?> show(BuildContext context, String deduplicatorName, List<String> memberNumbers, {List<String> coveredMemberNumbers = const []}) async {
-    return showDialog<DeduplicationAction>(context: context, builder: (context) => AddDataEntryFixDialog(deduplicatorName: deduplicatorName, memberNumbers: memberNumbers, coveredMemberNumbers: coveredMemberNumbers));
+  static Future<DataEntryFix?> show(BuildContext context, String deduplicatorName, List<String> memberNumbers, {List<String> coveredMemberNumbers = const []}) async {
+    return showDialog<DataEntryFix>(context: context, builder: (context) => AddDataEntryFixDialog(deduplicatorName: deduplicatorName, memberNumbers: memberNumbers, coveredMemberNumbers: coveredMemberNumbers));
+  }
+
+  static Future<DataEntryFix?> edit(BuildContext context, DataEntryFix action, List<String> memberNumbers, {List<String> coveredMemberNumbers = const []}) async {
+    return showDialog<DataEntryFix>(context: context, builder: (context) => AddDataEntryFixDialog(editAction: action, deduplicatorName: action.deduplicatorName, memberNumbers: memberNumbers, coveredMemberNumbers: coveredMemberNumbers));
   }
 }
 
@@ -40,6 +46,10 @@ class _AddDataEntryFixDialogState extends State<AddDataEntryFixDialog> {
         correctedErrorText = "";
       });
     });
+    if(widget.editAction != null) {
+      invalidController.text = widget.editAction!.sourceNumber;
+      correctedController.text = widget.editAction!.targetNumber;
+    }
   }
 
   bool validate() {
