@@ -236,7 +236,7 @@ class MatchCache {
       match.practiscoreId = longId;
       match.practiscoreIdShort = shortId;
 
-      _log.v("Loaded ${entry.match.name} from $path to $ids");
+      //_log.v("Loaded ${entry.match.name} from $path to $ids");
       return match;
     }
     else {
@@ -602,6 +602,12 @@ class MatchCache {
 
   MatchCacheIndexEntry? indexEntryFor(PracticalMatch match) {
     return _index[match.practiscoreId];
+  }
+
+  MatchCacheIndexEntry? indexEntryForUrl(String url) {
+    var id = url.split("/").last;
+    if(id.contains("?")) id = _removeQuery(id);
+    return _index[id];
   }
 
   List<PracticalMatch> allMatches() {

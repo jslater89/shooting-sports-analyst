@@ -83,6 +83,7 @@ class PracticalMatch {
 
   int? maxPoints;
   int stageScoreCount = 0;
+  bool hasChrono = false;
 
   /// Whether a match is in progress for ratings purposes.
   bool get inProgress => practiscoreId == "12d1cd35-3556-44db-af09-5153f975c447";
@@ -92,6 +93,7 @@ class PracticalMatch {
       ..practiscoreId = practiscoreId
       ..practiscoreIdShort = practiscoreIdShort
       ..name = name
+      ..hasChrono = hasChrono
       ..rawDate = rawDate
       ..date = date
       ..level = level
