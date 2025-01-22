@@ -1,5 +1,4 @@
 import 'dart:math';
-
 import 'package:collection/collection.dart';
 
 void main() {
@@ -309,13 +308,15 @@ class ConnectivityTracker {
       if(competitor.rawConnectivityScore > maxScore) {
         maxScore = competitor.rawConnectivityScore;
       }
+
+      competitor.connectivityScore = sqrt(competitor.rawConnectivityScore + 1) * 24.5;
     }
     
-    if (maxScore > 0) {
-      for (var competitor in activeCompetitors) {
-        competitor.connectivityScore = (competitor.rawConnectivityScore / maxScore) * 100;
-      }
-    }
+    // if (maxScore > 0) {
+    //   for (var competitor in activeCompetitors) {
+    //     competitor.connectivityScore = (competitor.rawConnectivityScore / maxScore) * 100;
+    //   }
+    // }
   }
   
   // Helper method for analysis
@@ -351,6 +352,7 @@ void analyzeConnectivity(
     .toList();
     
   var allScores = activeCompetitors.map((c) => c.connectivityScore).toList();
+  var allRawScores = activeCompetitors.map((c) => c.rawConnectivityScore).toList();
 
   // Match Size Distribution Analysis
   // print("\nMatch Size Distribution:");
@@ -400,6 +402,11 @@ void analyzeConnectivity(
   print("Mean: ${allScores.average.toStringAsFixed(1)}");
   print("Median: ${_calculateMedian(allScores).toStringAsFixed(1)}");
   print("Std Dev: ${_calculateStdDev(allScores).toStringAsFixed(1)}");
+
+  print("\nRaw Score Distribution:");
+  print("Mean: ${allRawScores.average.toStringAsFixed(1)}");
+  print("Median: ${_calculateMedian(allRawScores).toStringAsFixed(1)}");
+  print("Std Dev: ${_calculateStdDev(allRawScores).toStringAsFixed(1)}");
   
   // Quartiles and IQR
   var quartiles = _calculateQuartiles(allScores);
