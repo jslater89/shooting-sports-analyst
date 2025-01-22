@@ -8,6 +8,7 @@ sealed class DeduplicationAction {
   Iterable<String> get coveredNumbers;
   DeduplicationAction copy();
   String get descriptiveString;
+  String get shortUiLabel;
 }
 
 /// PreexistingMapping is a mapping that has been detected
@@ -41,6 +42,9 @@ class PreexistingMapping extends DeduplicationAction {
 
   @override
   String get descriptiveString => "Preexisting mapping: $sourceNumber -> $targetNumber";
+
+  @override
+  String get shortUiLabel => "mapping";
 }
 
 /// AutoMapping is a member number mapping that has been automatically
@@ -70,6 +74,9 @@ class AutoMapping extends Mapping {
       return "Automatic mapping: (${sourceNumbers.join(", ")}) → $targetNumber";
     }
   }
+
+  @override
+  String get shortUiLabel => "mapping";
 }
 
 /// Blacklist prevents mapping from a source number to a target
@@ -108,6 +115,9 @@ class Blacklist extends DeduplicationAction {
       return "Blacklist: $sourceNumber → $targetNumber";
     }
   }
+
+  @override
+  String get shortUiLabel => "blacklist";
 }
 
 abstract class Mapping extends DeduplicationAction {
@@ -146,6 +156,9 @@ class UserMapping extends Mapping {
       return "User mapping: (${sourceNumbers.join(", ")}) → $targetNumber";
     }
   }
+
+  @override
+  String get shortUiLabel => "mapping";
 }
 
 /// DataEntryFix corrects a typo in member number data
@@ -190,4 +203,7 @@ class DataEntryFix extends DeduplicationAction {
     invalidNumber: sourceNumber,
     correctedNumber: targetNumber,
   );
+
+  @override
+  String get shortUiLabel => "data fix";
 }

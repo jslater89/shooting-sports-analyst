@@ -72,8 +72,8 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
     }
   }
 
-  Future<Result<List<DeduplicationAction>, DeduplicationError>> deduplicationCallback(List<DeduplicationCollision> deduplicationResult) async {
-    var userApproves = await DeduplicationDialog.show(context, widget.project.sport, deduplicationResult);
+  Future<Result<List<DeduplicationAction>, DeduplicationError>> deduplicationCallback(RatingGroup group,List<DeduplicationCollision> deduplicationResult) async {
+    var userApproves = await DeduplicationDialog.show(context, sport: widget.project.sport, collisions: deduplicationResult, group: group);
     if(userApproves ?? false) {
       return Result.ok(deduplicationResult.map((e) => e.proposedActions).flattened.toList());
     }
@@ -134,7 +134,7 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
           mainAxisSize: MainAxisSize.max,
           children: [
             Expanded(child: Container()),
-            Expanded(flex: 6, child: Text("Now: ${currentState.label}", style: Theme.of(context).textTheme.subtitle2, textAlign: TextAlign.center)),
+            Expanded(flex: 6, child: Text("Now: ${currentState.label}", style: Theme.of(context).textTheme.titleSmall, textAlign: TextAlign.center)),
             Expanded(flex: 2, child: Text(divisionText, overflow: TextOverflow.ellipsis, softWrap: false, textAlign: TextAlign.center)),
             Expanded(flex: 6, child: Text(eventText, overflow: TextOverflow.ellipsis, softWrap: false, textAlign: TextAlign.center)),
             Expanded(child: Container())
@@ -146,23 +146,35 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
           mainAxisSize: MainAxisSize.max,
           children: [
             Expanded(child: Container()),
-            Expanded(flex: 3, child: Text("Now: ${currentState.label}", style: Theme.of(context).textTheme.subtitle2, textAlign: TextAlign.center)),
+            Expanded(flex: 3, child: Text("Now: ${currentState.label}", style: Theme.of(context).textTheme.titleSmall, textAlign: TextAlign.center)),
             Expanded(flex: 3, child: Text(_loadingEventName!, overflow: TextOverflow.ellipsis, softWrap: false)),
-            Expanded(flex: 3, child: Text(_loadingGroupName!, overflow: TextOverflow.ellipsis, softWrap: false)),
+            Expanded(flex: 3, child: Text(_loadingGroupName ?? "(no group)", overflow: TextOverflow.ellipsis, softWrap: false)),
             Expanded(child: Container())
           ],
         );
       }
     }
     else {
-      loadingText = Text("Now: ${currentState.label}", style: Theme.of(context).textTheme.subtitle2);
+      List<Widget> elements = [
+        Expanded(flex: 3, child: Text("Now: ${currentState.label}", style: Theme.of(context).textTheme.titleSmall, textAlign: TextAlign.center)),
+        if(_loadingGroupName != null)
+          Expanded(flex: 3, child: Text(_loadingGroupName!, overflow: TextOverflow.ellipsis, softWrap: false, textAlign: TextAlign.center)),
+      ];
+      loadingText = Row(
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            Expanded(child: Container()),
+            ...elements,
+            Expanded(child: Container())
+          ],
+        );
     }
 
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text("Loading...", style: Theme.of(context).textTheme.subtitle1),
+          Text("Loading...", style: Theme.of(context).textTheme.titleMedium),
           loadingText,
           SizedBox(height: 10),
           if(_totalProgress > 0)

@@ -310,7 +310,7 @@ final _builtinRaterGroups = <RatingGroup>[
   RatingGroup.create(
     uuid: "uspsa-open-pcc",
     sportName: uspsaName,
-    name: "OPEN/PCC",
+    name: "Open/PCC",
     divisionNames: [
       uspsaOpen.name,
       uspsaPcc.name,
@@ -374,6 +374,7 @@ final _builtinRaterGroups = <RatingGroup>[
       uspsaOpen.name,
       uspsaCarryOptics.name,
       uspsaLimitedOptics.name,
+      uspsaLimited10.name,
     ],
   ),
   RatingGroup.create(
@@ -386,7 +387,6 @@ final _builtinRaterGroups = <RatingGroup>[
       uspsaProduction.name,
       uspsaSingleStack.name,
       uspsaRevolver.name,
-      uspsaLimited10.name,
     ],
   ),
   RatingGroup.create(

@@ -137,6 +137,7 @@ class _MyAppState extends State<MyApp> {
       return MaterialApp(
         title: 'Shooting Sports Analyst',
         theme: ThemeData(
+          useMaterial3: false,
           primarySwatch: Colors.indigo,
           visualDensity: VisualDensity.adaptivePlatformDensity,
         ),
@@ -149,6 +150,7 @@ class _MyAppState extends State<MyApp> {
         child: MaterialApp(
           title: 'Shooting Sports Analyst',
           theme: ThemeData(
+            useMaterial3: false,
             primarySwatch: Colors.indigo,
             visualDensity: VisualDensity.adaptivePlatformDensity,
           ),

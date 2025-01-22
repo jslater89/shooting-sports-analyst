@@ -2,15 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 
 class AddMappingDialog extends StatefulWidget {
-  const AddMappingDialog({super.key, required this.memberNumbers, this.coveredMemberNumbers = const []});
+  const AddMappingDialog({super.key, required this.memberNumbers, this.coveredMemberNumbers = const [], this.editAction});
 
   final List<String> memberNumbers;
   final List<String> coveredMemberNumbers;
+  final UserMapping? editAction;
+
   @override
   State<AddMappingDialog> createState() => _AddMappingDialogState();
 
-  static Future<DeduplicationAction?> show(BuildContext context, List<String> memberNumbers, {List<String> coveredMemberNumbers = const []}) async {
-    return showDialog<DeduplicationAction>(context: context, builder: (context) => AddMappingDialog(memberNumbers: memberNumbers, coveredMemberNumbers: coveredMemberNumbers));
+  static Future<UserMapping?> show(BuildContext context, List<String> memberNumbers, {List<String> coveredMemberNumbers = const []}) async {
+    return showDialog<UserMapping>(context: context, builder: (context) => AddMappingDialog(memberNumbers: memberNumbers, coveredMemberNumbers: coveredMemberNumbers));
+  }
+
+  static Future<UserMapping?> edit(BuildContext context, UserMapping action, List<String> memberNumbers, {List<String> coveredMemberNumbers = const []}) async {
+    return showDialog<UserMapping>(context: context, builder: (context) => AddMappingDialog(editAction: action, memberNumbers: memberNumbers, coveredMemberNumbers: coveredMemberNumbers));
   }
 }
 
@@ -21,9 +27,11 @@ class _AddMappingDialogState extends State<AddMappingDialog> {
   var sourceFocusNode = FocusNode();
   var targetFocusNode = FocusNode();
 
-  var sourceErrorText = "";
-  var targetErrorText = "";
+  String? sourceErrorText;
+  String? targetErrorText;
   List<String> coveredNumbers = [];
+
+  List<String> sources = [];
 
   @override
   void initState() {
@@ -31,32 +39,36 @@ class _AddMappingDialogState extends State<AddMappingDialog> {
     coveredNumbers = [...widget.coveredMemberNumbers];
     sourceController.addListener(() {
       setState(() {
-        sourceErrorText = "";
+        sourceErrorText = null;
       });
     });
     targetController.addListener(() {
       setState(() {
-        targetErrorText = "";
+        targetErrorText = null;
       });
     });
+    if(widget.editAction != null) {
+      sources = widget.editAction!.sourceNumbers;
+      targetController.text = widget.editAction!.targetNumber;
+    }
   }
 
   bool validate() {
-    if(sourceController.text.isEmpty) {
+    if(sources.isEmpty) {
       setState(() {
-        sourceErrorText = "Source number is required";
+        sourceErrorText = "No sources selected";
       });
       return false;
     }
     if(targetController.text.isEmpty) {
       setState(() {
-        targetErrorText = "Target number is required";
+        targetErrorText = "No target selected";
       });
       return false;
     }
-    if(sourceController.text == targetController.text) {
+    if(sources.contains(targetController.text)) {
       setState(() {
-        targetErrorText = "Source and target cannot be the same";
+        targetErrorText = "Target is a source";
       });
       return false;
     }
@@ -69,33 +81,83 @@ class _AddMappingDialogState extends State<AddMappingDialog> {
       title: const Text("User Mapping"),
       content: FocusTraversalGroup(
         policy: WidgetOrderTraversalPolicy(),
-        child: Row(
-          children: [
-            Expanded(
-              child: DropdownMenu<String>(
-                dropdownMenuEntries: widget.memberNumbers.map((e) => 
-                  DropdownMenuEntry(
-                    value: e,
-                    label: e,
-                    style: widget.coveredMemberNumbers.contains(e) ? ButtonStyle(textStyle: MaterialStateProperty.all(TextStyle(color: Colors.green.shade600))) : null,
-                  )
-                ).toList(),
-                controller: sourceController,
-                onSelected: (value) {
-                  if(value != null) {
-                    sourceController.text = value;
-                    setState(() {
-                      coveredNumbers.add(value);
-                    });
-                  }
-                },
-                requestFocusOnTap: true,
-                label: const Text("Source"),
+        child: SizedBox(
+          width: 500,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 240,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.max,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: DropdownMenu<String>(
+                            dropdownMenuEntries: widget.memberNumbers.map((e) => 
+                              DropdownMenuEntry(
+                                value: e,
+                                label: e,
+                                style: widget.coveredMemberNumbers.contains(e) ? ButtonStyle(textStyle: MaterialStateProperty.all(TextStyle(color: Colors.green.shade600))) : null,
+                              )
+                            ).toList(),
+                            controller: sourceController,
+                            width: 190,
+                            errorText: sourceErrorText,
+                            onSelected: (value) {
+                              if(value != null) {
+                                sourceController.text = value;
+                                setState(() {
+                                  sourceErrorText = null;
+                                  coveredNumbers.add(value);
+                                });
+                              }
+                            },
+                            requestFocusOnTap: true,
+                            label: const Text("Source"),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: IconButton(padding: const EdgeInsets.all(6), iconSize: 20, icon: const Icon(Icons.add_circle_outline), onPressed: () {
+                            if(!sources.contains(sourceController.text)) {
+                              setState(() {
+                                sources.add(sourceController.text);
+                                sourceErrorText = null;
+                              });
+                            }
+                          }),
+                        ),
+                      ],
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Divider(thickness: 1, height: 1),
+                    ),
+                    for(var source in sources)
+                      Row(
+                        children: [
+                          Text(source, style: Theme.of(context).textTheme.bodyMedium),
+                          IconButton(padding: const EdgeInsets.all(6), iconSize: 20, icon: const Icon(Icons.remove_circle_outline), onPressed: () {
+                            setState(() {
+                              sources.remove(source);
+                            });
+                          }),
+                        ],
+                      ),
+                    if(sources.isEmpty)
+                      Text("No sources", style: Theme.of(context).textTheme.bodyMedium),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: DropdownMenu<String>(
+              const SizedBox(width: 10),
+              DropdownMenu<String>(
                 dropdownMenuEntries: widget.memberNumbers.map((e) => 
                   DropdownMenuEntry(
                     value: e,
@@ -104,19 +166,22 @@ class _AddMappingDialogState extends State<AddMappingDialog> {
                   )
                 ).toList(),
                 controller: targetController,
+                width: 200,
+                errorText: targetErrorText,
                 onSelected: (value) {
                   if(value != null) {
                     targetController.text = value;
                     setState(() {
                       coveredNumbers.add(value);
+                      targetErrorText = null;
                     });
                   }
                 },
                 requestFocusOnTap: true,
                 label: const Text("Target"),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       actions: [
@@ -126,7 +191,7 @@ class _AddMappingDialogState extends State<AddMappingDialog> {
           onPressed: () {
             if(validate()) {
               Navigator.pop(context, UserMapping(
-                sourceNumbers: [sourceController.text],
+                sourceNumbers: sources,
                 targetNumber: targetController.text,
               ));
             }

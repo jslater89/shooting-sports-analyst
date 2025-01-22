@@ -31,7 +31,7 @@ class RaterGroupsDialog extends StatefulWidget {
 
 class _RaterGroupsDialogState extends State<RaterGroupsDialog> {
 
-  Map<RatingGroup, bool> checked = {};
+  Map<String, bool> uuidChecked = {};
 
   RatingGroupsProvider? get provider => widget.groupProvider;
 
@@ -40,7 +40,7 @@ class _RaterGroupsDialogState extends State<RaterGroupsDialog> {
     super.initState();
 
     for(var g in widget.selectedGroups) {
-      checked[g] = true;
+      uuidChecked[g.uuid] = true;
     }
   }
 
@@ -70,16 +70,16 @@ class _RaterGroupsDialogState extends State<RaterGroupsDialog> {
                   child: Text("NONE"),
                   onPressed: () {
                     setState(() {
-                      checked.clear();
+                      uuidChecked.clear();
                     });
                   },
                 ),
                 if(provider?.defaultRatingGroups.isNotEmpty ?? false) TextButton(
                   child: Text("DEFAULT"),
                   onPressed: () {
-                    checked.clear();
+                    uuidChecked.clear();
                     for(var g in provider!.defaultRatingGroups) {
-                      checked[g] = true;
+                      uuidChecked[g.uuid] = true;
                     }
 
                     setState(() {
@@ -90,9 +90,9 @@ class _RaterGroupsDialogState extends State<RaterGroupsDialog> {
                 if(provider?.divisionRatingGroups.isNotEmpty ?? false) TextButton(
                   child: Text("DIVISIONS"),
                   onPressed: () {
-                    checked.clear();
+                    uuidChecked.clear();
                     for(var g in provider!.divisionRatingGroups) {
-                      checked[g] = true;
+                      uuidChecked[g.uuid] = true;
                     }
 
                     setState(() {
@@ -114,7 +114,7 @@ class _RaterGroupsDialogState extends State<RaterGroupsDialog> {
                 TextButton(
                   child: Text("OK"),
                   onPressed: () {
-                    Navigator.of(context).pop(widget.allGroups.where((g) => checked[g] ?? false).toList());
+                    Navigator.of(context).pop(widget.allGroups.where((g) => uuidChecked[g.uuid] ?? false).toList());
                   },
                 )
               ],
@@ -130,13 +130,13 @@ class _RaterGroupsDialogState extends State<RaterGroupsDialog> {
     for(var g in widget.allGroups) {
       widgets.add(
         CheckboxListTile(
-          value: checked[g] ?? false,
+          value: uuidChecked[g.uuid] ?? false,
           onChanged: (value) {
             setState(() {
-              checked[g] = value ?? false;
+              uuidChecked[g.uuid] = value ?? false;
             });
           },
-          title: Text(g.uiLabel),
+          title: Text(g.name),
         )
       );
     }

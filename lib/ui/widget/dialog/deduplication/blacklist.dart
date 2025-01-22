@@ -78,10 +78,12 @@ class _AddBlacklistEntryDialogState extends State<AddBlacklistEntryDialog> {
       title: const Text("Blacklist Entry"),
       content: FocusTraversalGroup(
         policy: WidgetOrderTraversalPolicy(),
-        child: Row(
-          children: [
-            Expanded(
-              child: DropdownMenu<String>(
+        child: SizedBox(
+          width: 500,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              DropdownMenu<String>(
                 dropdownMenuEntries: widget.memberNumbers.map((e) => 
                   DropdownMenuEntry(
                     value: e,
@@ -90,6 +92,7 @@ class _AddBlacklistEntryDialogState extends State<AddBlacklistEntryDialog> {
                   )
                 ).toList(),
                 controller: sourceController,
+                width: 200,
                 onSelected: (value) {
                   if(value != null) {
                     sourceController.text = value;
@@ -101,10 +104,8 @@ class _AddBlacklistEntryDialogState extends State<AddBlacklistEntryDialog> {
                 requestFocusOnTap: true,
                 label: const Text("Source"),
               ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: DropdownMenu<String>(
+              const SizedBox(width: 10),
+              DropdownMenu<String>(
                 dropdownMenuEntries: widget.memberNumbers.map((e) => 
                   DropdownMenuEntry(
                     value: e,
@@ -113,6 +114,7 @@ class _AddBlacklistEntryDialogState extends State<AddBlacklistEntryDialog> {
                   )
                 ).toList(),
                 controller: targetController,
+                width: 200,
                 onSelected: (value) {
                   if(value != null) {
                     targetController.text = value;
@@ -124,8 +126,8 @@ class _AddBlacklistEntryDialogState extends State<AddBlacklistEntryDialog> {
                 requestFocusOnTap: true,
                 label: const Text("Target"),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       actions: [

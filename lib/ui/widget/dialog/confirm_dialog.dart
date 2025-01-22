@@ -7,18 +7,19 @@
 import 'package:flutter/material.dart';
 
 class ConfirmDialog extends StatelessWidget {
-  const ConfirmDialog({Key? key, this.content, this.title, this.positiveButtonLabel, this.negativeButtonLabel}) : super(key: key);
+  const ConfirmDialog({Key? key, this.content, this.title, this.positiveButtonLabel, this.negativeButtonLabel, this.width}) : super(key: key);
 
   final Widget? content;
   final String? title;
   final String? positiveButtonLabel;
   final String? negativeButtonLabel;
+  final double? width;
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(title ?? "Are you sure?"),
-      content: content,
+      content: SizedBox(width: width, child: content),
       actions: [
         TextButton(
           child: Text(negativeButtonLabel ?? "CANCEL"),
@@ -32,10 +33,10 @@ class ConfirmDialog extends StatelessWidget {
     );
   }
 
-  static Future<bool?> show(BuildContext context, {String? title, Widget? content, String? positiveButtonLabel, String? negativeButtonLabel}) async {
+  static Future<bool?> show(BuildContext context, {String? title, Widget? content, String? positiveButtonLabel, String? negativeButtonLabel, double? width}) async {
     return showDialog<bool>(
       context: context,
-      builder: (context) => ConfirmDialog(title: title, content: content, positiveButtonLabel: positiveButtonLabel, negativeButtonLabel: negativeButtonLabel),
+      builder: (context) => ConfirmDialog(title: title, content: content, positiveButtonLabel: positiveButtonLabel, negativeButtonLabel: negativeButtonLabel, width: width),
     );
   }
 }

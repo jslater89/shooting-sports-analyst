@@ -66,8 +66,8 @@ class DeduplicationError extends RatingProjectLoadError {
   }
 }
 
-typedef RatingProjectLoaderCallback = void Function({required int progress, required int total, required LoadingState state, String? eventName, String? groupName});
-typedef RatingProjectLoaderDeduplicationCallback = Future<Result<List<DeduplicationAction>, DeduplicationError>> Function(List<DeduplicationCollision> deduplicationResult);
+typedef RatingProjectLoaderCallback = Future<void> Function({required int progress, required int total, required LoadingState state, String? eventName, String? groupName});
+typedef RatingProjectLoaderDeduplicationCallback = Future<Result<List<DeduplicationAction>, DeduplicationError>> Function(RatingGroup group, List<DeduplicationCollision> deduplicationResult);
 
 /// RatingProjectLoaderHost contains a number of callbacks that the RatingProjectLoader
 /// will call as it progresses, both to update the UI and to allow for user interaction
@@ -109,7 +109,7 @@ class RatingProjectLoader {
     timings.reset();
 
     var start = DateTime.now();
-    host.progressCallback(progress: -1, total: -1, state: LoadingState.readingMatches);
+    await host.progressCallback(progress: -1, total: -1, state: LoadingState.readingMatches);
     var matchesLink = await project.matchesToUse();
 
     // We want to add matches in ascending order, from oldest to newest.
@@ -210,10 +210,7 @@ class RatingProjectLoader {
     return _addMatches([match]);
   }
 
-
-  int _totalMatchSteps = 0;
-  int _currentMatchStep = 0;
-  Future<Result<void, RatingProjectLoadError>> _addMatchesToGroup(RatingGroup group, List<ShootingMatch> matches) async {
+  Future<Result<void, RatingProjectLoadError>> _addMatchCompetitorsToGroup(RatingGroup group, List<ShootingMatch> matches) async {
     Map<String, bool> memberNumbersSeen = {};
     List<DbShooterRating> newRatings = [];
     for (var match in matches) {
@@ -255,7 +252,7 @@ class RatingProjectLoader {
         conflicts.removeWhere((c) => c.causes.length == 1 && c.causes.first is FixedInSettings);
 
         if(conflicts.length > 0) {
-          var userDedupResult = await host.deduplicationCallback(conflicts);
+          var userDedupResult = await host.deduplicationCallback(group, conflicts);
           if(userDedupResult.isErr()) {
             return DeduplicationError.result(userDedupResult.unwrapErr().message);
           }
@@ -276,6 +273,12 @@ class RatingProjectLoader {
       }
     }
 
+    return Result.ok(null);
+  }
+
+  int _totalMatchSteps = 0;
+  int _currentMatchStep = 0;
+  Future<Result<void, RatingProjectLoadError>> _addMatchScoresToGroup(RatingGroup group, List<ShootingMatch> matches) async {
     // At this point we have an accurate count of shooters so far, which we'll need for various maths.
     var shooterCount = await AnalystDatabase().countShooterRatings(project, group);
 
@@ -446,11 +449,31 @@ class RatingProjectLoader {
   }
 
   Future<Result<void, RatingProjectLoadError>> _addMatches(List<ShootingMatch> matches) async {
-    _totalMatchSteps = project.groups.length * matches.length;
+    var mainRatingsSteps = project.groups.length * matches.length;
+    var deduplicationSteps = project.groups.length;
+    _totalMatchSteps = mainRatingsSteps + deduplicationSteps;
+
+    host.progressCallback(
+      progress: _currentMatchStep,
+      total: _totalMatchSteps,
+      state: LoadingState.deduplicatingCompetitors,
+    );
+    for(var group in project.groups) {
+      _currentMatchStep += 1;
+      host.progressCallback(
+        progress: _currentMatchStep,
+        total: _totalMatchSteps,
+        state: LoadingState.deduplicatingCompetitors,
+        groupName: group.name,
+      );
+
+      await _addMatchCompetitorsToGroup(group, matches);
+    }
+
     List<Future<Result<void, RatingProjectLoadError>>> futures = [];
     for(var group in project.groups) {
-      // futures.add(_addMatchesToGroup(group, matches));
-      await _addMatchesToGroup(group, matches);
+      // futures.add(_addMatchScoresToGroup(group, matches));
+      await _addMatchScoresToGroup(group, matches);
     }
     // var results = await Future.wait(futures);
     // for(var result in results) {
@@ -1412,6 +1435,8 @@ enum LoadingState {
   downloadingMatches,
   /// Matches are being read from the database
   readingMatches,
+  /// Competitors are being deduplicated
+  deduplicatingCompetitors,
   /// Scores are being processed
   processingScores,
   /// Loading is complete
@@ -1425,6 +1450,8 @@ enum LoadingState {
         return "downloading matches";
       case LoadingState.readingMatches:
         return "loading matches from database";
+      case LoadingState.deduplicatingCompetitors:
+        return "deduplicating competitors";
       case LoadingState.processingScores:
         return "processing scores";
       case LoadingState.done:

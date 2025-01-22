@@ -1198,12 +1198,13 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
               "testing purposes. Are you absolutely sure you want to do this?"),
           positiveButtonLabel: "CLEAR",
           negativeButtonLabel: "CANCEL",
+          width: 500,
         ) ?? false;
-
         if(confirm && _loadedProject != null) {
           _memNumMappings.clear();
           _memNumMappingBlacklist.clear();
           _memNumCorrections.clear();
+          _loadedProject!.automaticNumberMappings.clear();
           _saveProject(_loadedProject!.name);
         }
         break;

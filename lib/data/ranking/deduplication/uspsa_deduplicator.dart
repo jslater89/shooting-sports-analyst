@@ -3,6 +3,8 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import 'package:collection/collection.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/widgets.dart';
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
@@ -10,7 +12,9 @@ import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:fuzzywuzzy/fuzzywuzzy.dart' as fuzzywuzzy;
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/text_styles.dart';
 import 'package:shooting_sports_analyst/util.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 var _log = SSALogger("USPSADeduplicator");
 
@@ -27,6 +31,8 @@ class USPSAMemberNumber {
   /// with leading associate number components stripped.
   final String internalNumber;
 
+  /// The numeric component of the member number, stripped of
+  /// any alphabetic characters.
   final String numericComponent;
 
   /// Construct a USPSA member number from a raw member number string.
@@ -42,11 +48,23 @@ class USPSAMemberNumber {
   @override
   operator ==(Object other) {
     if(other is USPSAMemberNumber) {
-      return type == other.type && internalNumber == other.internalNumber;
+      if(type != other.type) return false;
+      if(type == MemberNumberType.standard && other.type == MemberNumberType.standard) {
+        // Handle cases where people put extra letters in the numeric component
+        // How are people so bad at typing a two-letter prefix and a six-digit number?
+        return numericComponent == other.numericComponent;
+      }
+      return internalNumber == other.internalNumber;
     }
     else if(other is String) {
-      var otherInternal = USPSADeduplicator()._stripATYFY(other);
-      return internalNumber == otherInternal;
+      if(type == MemberNumberType.standard) {
+        var otherNumeric = other.replaceAll(RegExp(r'[^0-9]'), "");
+        return numericComponent == otherNumeric;
+      }
+      else {
+        var otherInternal = USPSADeduplicator()._stripATYFY(other);
+        return internalNumber == otherInternal;
+      }
     }
     return false;
   }
@@ -97,9 +115,6 @@ class USPSADeduplicator extends ShooterDeduplicator {
       allMappings[mapping.key] = mapping.value;
     }
 
-    Map<String, String> detectedMappings = {};
-    Map<String, String> detectedUserMappings = {};
-
     // The blacklist operates in subtly different ways for different
     // kinds of conflicts.
     // When checking if we can auto-map, we want to be as permissive as
@@ -129,11 +144,18 @@ class USPSADeduplicator extends ShooterDeduplicator {
 
     // Detect conflicts for each name.
     for(var name in deduplicatorNames) {
+      Map<String, String> detectedMappings = {};
+      Map<String, String> detectedUserMappings = {};
+
       var ratingsRes = await ratingProject.getRatingsByDeduplicatorName(group, name);
 
       if(ratingsRes.isErr()) {
         _log.w("Failed to retrieve ratings for deduplicator name $name", error: ratingsRes.unwrapErr());
         continue;
+      }
+
+      if(name == "christopheroosthuisen") {
+        print("break");
       }
 
       List<DbShooterRating> ratings = [];
@@ -1020,7 +1042,8 @@ class USPSADeduplicator extends ShooterDeduplicator {
     if(number.startsWith("B")) return MemberNumberType.benefactor;
     // Empirically, "FL" appears to be "foreign life"
     // cf. Lise Mahoney
-    if(number.startsWith("L") || number.startsWith("FL")) return MemberNumberType.life;
+    // Intended to match: L<digit> and FL<digit>
+    if(number.startsWith(RegExp("L[0-9]")) || number.startsWith(RegExp("FL[0-9]"))) return MemberNumberType.life;
 
     // Intended to match: A, TY, FY, F, TYF, and FYF.
     if(number.startsWith(RegExp(r"[ATFY]{1,3}"))) return MemberNumberType.standard;
@@ -1051,6 +1074,62 @@ class USPSADeduplicator extends ShooterDeduplicator {
     }
 
     return null;
+  }
+
+  @override
+  InlineSpan linksForMemberNumbers({
+    required BuildContext context,
+    required String text,
+    required List<String> memberNumbers,
+    TextStyle? runningStyle,
+    TextStyle? linkStyle,
+  }) {
+    runningStyle ??= TextStyles.bodyMedium(context);
+    linkStyle ??= TextStyles.linkBodyMedium(context);
+
+    Map<String, TextSpan> spans = {};
+    for(var number in memberNumbers) {
+      spans[number] = TextSpan(
+        text: number,
+        style: linkStyle,
+        recognizer: TapGestureRecognizer()..onTap = () => launchUrl(Uri.parse("https://uspsa.org/classification/$number")),
+        mouseCursor: SystemMouseCursors.click,
+      );
+    }
+
+    // Replace each member number with a guard string that will let us split
+    // after the member number.
+    // e.g.: "String contains A123456, a standard number" -> "String contains A123456||xx||, a standard number"
+    List<TextSpan> allSpans = [];
+    String splittableText = text;
+    for(var n in memberNumbers) {
+      splittableText = splittableText.replaceAll(n, "$n||xx||");
+    }
+
+    // Split the text into parts, and replace each part with a TextSpan, replacing each
+    // member number with its corresponding TextSpan.
+    // e.g.: "String contains A123456||xx||, a standard number" -> ["String contains A123456", ", a standard number"]
+    List<String> parts = splittableText.split("||xx||");
+    for(var part in parts) {
+      TextSpan? linkSpan;
+      for(var number in memberNumbers) {
+        if(part.contains(number)) {
+          linkSpan = spans[number];
+          // e.g. "String contains A123456" -> "String contains "
+          part = part.replaceFirst(number, "");
+          break;
+        }
+      }
+
+      allSpans.add(TextSpan(text: part, style: runningStyle));
+      if(linkSpan != null) {
+        allSpans.add(linkSpan);
+      }
+    }
+
+    return TextSpan(
+      children: allSpans,
+    );
   }
 }
 

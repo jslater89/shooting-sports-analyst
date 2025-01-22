@@ -2,6 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import 'package:flutter/widgets.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
@@ -96,6 +97,22 @@ abstract class ShooterDeduplicator {
   /// a list of member numbers that are valid target numbers for a member
   /// number mapping. If there are no valid target numbers, return null.
   List<String>? maybeTargetNumber(Map<MemberNumberType, List<String>> numbers);
+
+  /// Given a string containing member numbers, return an InlineSpan that provides
+  /// URL-launch links to the member's profile on those member numbers.
+  /// Default implementation returns a single InlineSpan with no links.
+  InlineSpan linksForMemberNumbers({
+    required BuildContext context,
+    required String text,
+    required List<String> memberNumbers,
+    TextStyle? runningStyle,
+    TextStyle? linkStyle,
+  }) {
+    return TextSpan(
+      text: text,
+      style: runningStyle,
+    );
+  }
 
   /// Default implementation of [normalizeNumber]: convert to uppercase and
   /// remove all non-alphanumeric characters.

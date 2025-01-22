@@ -1,17 +1,23 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/text_styles.dart';
 import 'package:shooting_sports_analyst/ui/widget/constrained_tooltip.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/deduplication/blacklist.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/deduplication/data_entry_fix.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/deduplication/mapping.dart';
+import 'package:shooting_sports_analyst/ui/widget/maybe_tooltip.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+var _log = SSALogger("DeduplicationDialog");
 
 /// A dialog that accepts a list of deduplication collisions, displays them
 /// and the relevant information to the user, and allows the user to approve,
@@ -22,18 +28,19 @@ import 'package:url_launcher/url_launcher.dart';
 /// collisions' proposed actions and continue with loading the project, or
 /// `false` or `null` if the user wants to cancel project loading.
 class DeduplicationDialog extends StatefulWidget {
-  const DeduplicationDialog({super.key, required this.sport, required this.collisions});
+  const DeduplicationDialog({super.key, required this.sport, required this.collisions, required this.group});
 
   final Sport sport;
   final List<DeduplicationCollision> collisions;
+  final RatingGroup group;
 
   @override
   State<DeduplicationDialog> createState() => _DeduplicationDialogState();
 
-  static Future<bool?> show(BuildContext context, Sport sport, List<DeduplicationCollision> collisions) async {
+  static Future<bool?> show(BuildContext context, {required Sport sport, required List<DeduplicationCollision> collisions, required RatingGroup group}) async {
     return showDialog<bool?>(
       context: context,
-      builder: (context) => DeduplicationDialog(sport: sport, collisions: collisions),
+      builder: (context) => DeduplicationDialog(sport: sport, collisions: collisions, group: group),
       barrierDismissible: false,
     );
   }
@@ -52,16 +59,18 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
   /// Indicates whether the collision's actions have been approved. Adding or removing
   /// actions to a collision implicitly approves it.
   Map<DeduplicationCollision, bool> _approved = {};
+  int get _approvedCount => _approved.values.where((e) => e).length;
 
   /// Indicates whether the collision has been viewed.
   Map<DeduplicationCollision, bool> _viewed = {};
-
+  int get _viewedCount => _viewed.values.where((e) => e).length;
   /// The index of the collision that is currently selected.
   int? _selectedCollisionIndex;
 
   DeduplicationCollision? get _selectedCollision => _selectedCollisionIndex != null ? _sortedCollisions[_selectedCollisionIndex!] : null;
 
   List<DeduplicationCollision> _sortedCollisions = [];
+  int get _totalCount => _sortedCollisions.length;
 
   @override
   void initState() {
@@ -109,10 +118,21 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
     var width = parentSize.width * 0.8;
     var height = parentSize.height * 0.9;
 
+    bool shouldAllowApply = _approvedCount == _totalCount;
+    bool shouldGrayApply = _viewedCount < _totalCount;
+    var applyText = !shouldAllowApply ? "PROGRESS: ${_approvedCount}/${_totalCount}" : "APPLY";
+    String? applyTooltip;
+    if(!shouldAllowApply) {
+      applyTooltip = "You must review and approve all conflicts marked with red or yellow icons before continuing.";
+    }
+    else if(shouldGrayApply) {
+      applyTooltip = "You should review all conflicts before continuing.";
+    }
+
     return Provider.value(
       value: widget.sport,
       child: AlertDialog(
-        title: const Text("Resolve Conflicts"),
+        title: Text("Resolve Conflicts (${widget.group.name})"),
         content: SizedBox(
           width: width,
           height: height,
@@ -123,22 +143,45 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
             children: [
               SizedBox(
                 width: 300,
-                child: ListView.builder(
-                  itemBuilder: (context, index) {
-                    var collision = _sortedCollisions[index];
-                    return ConflictListItem(
-                      collision: collision,
-                      selected: _selectedCollisionIndex == index,
-                      originalActions: _originalActions[collision]!,
-                      viewed: _viewed[collision] ?? false,
-                      approved: _approved[collision] ?? false,
-                      onTap: () => setState(() {
-                        _selectedCollisionIndex = index;
-                        _viewed[collision] = true;
-                      }),
-                    );
-                  },
-                  itemCount: _sortedCollisions.length,        
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Tooltip(
+                            message: "You should review all conflicts before continuing.",
+                            child: Text("Viewed: ${_viewedCount}/${_totalCount}", style: Theme.of(context).textTheme.bodyMedium)
+                          ),
+                          Tooltip(
+                            message: "You must approve all conflicts before continuing.",
+                            child: Text("Approved: ${_approvedCount}/${_totalCount}", style: Theme.of(context).textTheme.bodyMedium)
+                          ),
+                        ]
+                      ),
+                    ),
+                    Divider(thickness: 1, height: 1),
+                    Expanded(
+                      child: ListView.builder(
+                        itemBuilder: (context, index) {
+                          var collision = _sortedCollisions[index];
+                          return ConflictListItem(
+                            collision: collision,
+                            selected: _selectedCollisionIndex == index,
+                            originalActions: _originalActions[collision]!,
+                            viewed: _viewed[collision] ?? false,
+                            approved: _approved[collision] ?? false,
+                            onTap: () => setState(() {
+                              _selectedCollisionIndex = index;
+                              _viewed[collision] = true;
+                            }),
+                          );
+                        },
+                        itemCount: _sortedCollisions.length,        
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const VerticalDivider(thickness: 1, width: 1),
@@ -150,18 +193,28 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
                     const Divider(thickness: 1, height: 1),
                     Expanded(
                       child: ConflictDetails(
+                        sport: widget.sport,
                         collision: _selectedCollision,
-                        originalActions: _originalActions[_selectedCollision!] ?? [],
+                        originalActions: _originalActions[_selectedCollision] ?? [],
+                        approved: _approved[_selectedCollision] ?? false,
                         onApprove: () => setState(() {
                           _approved[_selectedCollision!] = true;
                           if(_selectedCollisionIndex! < _sortedCollisions.length - 1) {
                             _selectedCollisionIndex = _selectedCollisionIndex! + 1;
                             _viewed[_selectedCollision!] = true;
                           }
+                          else {
+                            _selectedCollisionIndex = 0;
+                            _viewed[_selectedCollision!] = true;
+                          }
                         }),
                         onRestore: () => setState(() {
                           _approved[_selectedCollision!] = false;
                         }),
+                        onEdit: () => setState(() {
+                          // refresh the conflict list tile
+                          _approved[_selectedCollision!] = false;
+                        })
                       ),
                     ),
                     const Divider(thickness: 1, height: 1),
@@ -173,8 +226,36 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
           ),
         ),
         actions: [
-          TextButton(child: const Text("CANCEL"), onPressed: () => Navigator.of(context).pop(false)),
-          TextButton(child: const Text("APPLY"), onPressed: () => Navigator.of(context).pop(true)),
+          TextButton(
+            child: const Text("CANCEL"),
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+          MaybeTooltip(
+            message: applyTooltip,
+            child: TextButton(
+              child: Text(applyText),
+              style: TextButton.styleFrom(foregroundColor: shouldGrayApply ? Colors.grey.shade500 : null),
+              onPressed: !shouldAllowApply ? null : () async {
+                if(shouldGrayApply) {
+                  var confirm = await ConfirmDialog.show(
+                    context,
+                    title: "Review incomplete",
+                    content: const Text("You have not reviewed all conflicts. Are you sure you want to continue?"),
+                    positiveButtonLabel: "CONTINUE",
+                    // TODO: SharedPreferences, troll James
+                    width: 400,
+                  );
+          
+                  if(confirm == true) {
+                    Navigator.of(context).pop(true);
+                  }
+                }
+                else {
+                  Navigator.of(context).pop(true);
+                }
+              }
+            ),
+          ),
         ],
       ),
     );
@@ -221,9 +302,34 @@ class ConflictListItem extends StatelessWidget {
     var fontWeight = selected ? FontWeight.bold : null;
     var color = viewed && green ? Colors.grey.shade500 : null;
     var style = Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: fontWeight, color: color);
+
+    // Show numbers in [source, target] format for DataEntryFixes and Mappings, which are
+    // directional.
+    List<String> numbers;
+    if(collision.proposedActions.length == 1 && collision.proposedActions.first is DataEntryFix) {
+      var action = collision.proposedActions.first as DataEntryFix;
+      numbers = [action.sourceNumber, action.targetNumber, ...collision.flattenedMemberNumbers.where((e) => e != action.sourceNumber && e != action.targetNumber)];
+    }
+    else if(collision.proposedActions.length == 1 && collision.proposedActions.first is Mapping) {
+      var action = collision.proposedActions.first as Mapping;
+      numbers = [...action.sourceNumbers, action.targetNumber, ...collision.flattenedMemberNumbers.where((e) => !action.sourceNumbers.contains(e) && e != action.targetNumber)];
+    }
+    else {
+      numbers = collision.flattenedMemberNumbers;
+    }
+
+    var subtitleText = numbers.join(", ");
+    if(collision.proposedActions.isNotEmpty) {
+      subtitleText += "\n(${collision.proposedActions.first.shortUiLabel}";
+      if(collision.proposedActions.length > 1) {
+        subtitleText += "+${collision.proposedActions.length - 1}";
+      }
+      subtitleText += ")";
+    }
     
     return ListTile(
       onTap: onTap,
+      visualDensity: VisualDensity.comfortable,
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -231,30 +337,46 @@ class ConflictListItem extends StatelessWidget {
           statusIcon,
         ],
       ),
-      subtitle: Text(collision.flattenedMemberNumbers.join(", "), softWrap: false, overflow: TextOverflow.ellipsis),
+      subtitle: Text(subtitleText, softWrap: false, overflow: TextOverflow.ellipsis),
     );
   }
 }
 
 class ConflictDetails extends StatefulWidget {
-  const ConflictDetails({super.key, required this.collision, required this.onApprove, this.onRestore, required this.originalActions});
+  const ConflictDetails({super.key, required this.sport, required this.collision, required this.onApprove, this.onRestore, required this.originalActions, this.onEdit, this.approved = false});
 
+  final Sport sport;
   final DeduplicationCollision? collision;
   final List<DeduplicationAction> originalActions;
   final VoidCallback onApprove;
   final VoidCallback? onRestore;
+  final VoidCallback? onEdit;
+  final bool approved;
+
   @override
   State<ConflictDetails> createState() => _ConflictDetailsState();
 }
 
 class _ConflictDetailsState extends State<ConflictDetails> {
   ProposedActionType? _proposedActionType;
+  var _actionNameController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     var c = widget.collision;
     if(c == null) {
       return const Center(child: Text("No collision selected"));
+    }
+
+    var resolvesConflict = c.proposedActionsResolveConflict();
+    String? tooltip;
+    String approveText = "APPROVE";
+    if(!resolvesConflict) {
+      tooltip = "Proposed actions must contain all relevant member numbers to approve.";
+    }
+    else if(widget.approved) {
+      tooltip = "You have already approved this conflict resolution.";
+      approveText = "APPROVED";
     }
 
     
@@ -288,7 +410,7 @@ class _ConflictDetailsState extends State<ConflictDetails> {
                     ],
                   ),
                   for(var issue in c.causes)
-                    IssueDescription(issue: issue),
+                    IssueDescription(sport: widget.sport, issue: issue),
                   const SizedBox(height: 10),
                   Row(
                     children: [
@@ -335,9 +457,11 @@ class _ConflictDetailsState extends State<ConflictDetails> {
                   ),
                   for(var action in c.proposedActions)
                     ProposedAction(
+                      sport: widget.sport,
                       action: action,
                       onRemove: () => setState(() {
                         c.proposedActions.remove(action);
+                        widget.onEdit?.call();
                       }),
                       onEdit: () async {
                         switch(action.runtimeType) {
@@ -349,6 +473,7 @@ class _ConflictDetailsState extends State<ConflictDetails> {
                                 action.sourceNumber = newAction.sourceNumber;
                                 action.targetNumber = newAction.targetNumber;
                               });
+                              widget.onEdit?.call();
                             }
                             break;
                           case DataEntryFix:
@@ -359,50 +484,150 @@ class _ConflictDetailsState extends State<ConflictDetails> {
                                 action.sourceNumber = newAction.sourceNumber;
                                 action.targetNumber = newAction.targetNumber;
                               });
+                              widget.onEdit?.call();
                             }
                             break;
-                          case Mapping:
-                            var newAction = await AddMappingDialog.show(context, c.memberNumbers.values.flattened.toList(), coveredMemberNumbers: c.proposedActions.map((e) => e.coveredNumbers).flattened.toList());
+                          case UserMapping || AutoMapping:
+                            UserMapping mapping;
+                            if(action is AutoMapping) {
+                              mapping = UserMapping(
+                                sourceNumbers: action.sourceNumbers,
+                                targetNumber: action.targetNumber,
+                              );
+                            }
+                            else {
+                              mapping = action as UserMapping;
+                            }
+                            var newAction = await AddMappingDialog.edit(context, mapping, c.memberNumbers.values.flattened.toList(), coveredMemberNumbers: c.proposedActions.map((e) => e.coveredNumbers).flattened.toList());
+                            if(newAction != null) {
+                              setState(() {
+                                mapping.sourceNumbers = newAction.sourceNumbers;
+                                mapping.targetNumber = newAction.targetNumber;
+                                if(action is AutoMapping) {
+                                  c.proposedActions.remove(action);
+                                  c.proposedActions.add(mapping);
+                                }
+                              });
+                              widget.onEdit?.call();
+                            }
                             break;
+                          default:
+                            _log.w("Unhandled action type: ${action.runtimeType}");
                         }
                       }
                     ),
                   Row(
                     children: [
-                      DropdownButton<ProposedActionType>(
-                        items: ProposedActionType.values.map((e) => DropdownMenuItem(value: e, child: Text(e.uiLabel))).toList(),
-                        onChanged: (value) => setState(() {
-                          if(value != null) {
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Focus(
+                          onFocusChange: (hasFocus) {
+                            if(!hasFocus) {
+                              _actionNameController.text = _proposedActionType?.uiLabel ?? "(none)";
+                            }
+                          },
+                          child: DropdownMenu<ProposedActionType>(
+                            dropdownMenuEntries: ProposedActionType.values.map((e) => DropdownMenuEntry(value: e, label: e.uiLabel)).toList(),
+                            onSelected: (value) => setState(() {
+                              if(value != null) {
+                                setState(() {
+                                  _proposedActionType = value;
+                                });
+                              }
+                            }),
+                            label: const Text("Add action"),
+                            initialSelection: _proposedActionType,
+                            enableSearch: true,
+                            controller: _actionNameController,
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: IconButton(padding: const EdgeInsets.all(6), iconSize: 20, icon: const Icon(Icons.add_circle_outline), onPressed: _proposedActionType == null ? null : () async {
+                          var memberNumbers = c.flattenedMemberNumbers;
+                          var coveredNumbers = c.proposedActions.map((e) => e.coveredNumbers).flattened.toList();
+                          DeduplicationAction? newAction;
+                          switch(_proposedActionType!) {
+                            case ProposedActionType.blacklist:
+                              if(memberNumbers.length == 2) {
+                                newAction = await AddBlacklistEntryDialog.edit(
+                                  context,
+                                  Blacklist(
+                                    sourceNumber: memberNumbers[0],
+                                    targetNumber: memberNumbers[1],
+                                    bidirectional: true,
+                                  ),
+                                  memberNumbers,
+                                  coveredMemberNumbers: coveredNumbers,
+                                );
+                              }
+                              else {
+                                newAction = await AddBlacklistEntryDialog.show(context, memberNumbers, coveredMemberNumbers: coveredNumbers);
+                              }
+                              break;
+                            case ProposedActionType.dataEntryFix:
+                              if(memberNumbers.length == 2) {
+                                newAction = await AddDataEntryFixDialog.edit(
+                                  context,
+                                  DataEntryFix(
+                                    sourceNumber: memberNumbers[1],
+                                    targetNumber: memberNumbers[0],
+                                    deduplicatorName: c.deduplicatorName,
+                                  ),
+                                  memberNumbers,
+                                  coveredMemberNumbers: coveredNumbers,
+                                );
+                              }
+                              else {
+                                newAction = await AddDataEntryFixDialog.show(context, c.deduplicatorName, memberNumbers, coveredMemberNumbers: coveredNumbers);
+                              }
+                              break;
+                            case ProposedActionType.mapping:
+                              MemberNumberType? bestSingleNumberType;
+                              for(var type in MemberNumberType.values) {
+                                if(c.memberNumbers[type]?.length == 1) {
+                                  bestSingleNumberType = type;
+                                }
+                              }
+                              if(bestSingleNumberType != null) {
+                                var targetNumber = c.memberNumbers[bestSingleNumberType]!.first;
+                                var sourceNumbers = <String>{};
+                                for(var number in c.flattenedMemberNumbers) {
+                                  if(number != targetNumber) {
+                                    sourceNumbers.add(number);
+                                  }
+                                }
+                                for(var number in c.proposedActions.map((e) => e.coveredNumbers).flattened.toList()) {
+                                  if(number != targetNumber) {
+                                    sourceNumbers.add(number);
+                                  }
+                                }
+                                newAction = await AddMappingDialog.edit(
+                                  context,
+                                  UserMapping(
+                                    targetNumber: targetNumber,
+                                    sourceNumbers: sourceNumbers.toList(),
+                                  ),
+                                  memberNumbers,
+                                  coveredMemberNumbers: coveredNumbers,
+                                );
+                              }
+                              else {
+                                newAction = await AddMappingDialog.show(context, memberNumbers, coveredMemberNumbers: coveredNumbers);
+                              }
+                              break;
+                          }
+                                  
+                          if(newAction != null) {
+                            var na = newAction;
                             setState(() {
-                              _proposedActionType = value;
+                              c.proposedActions.add(na);
                             });
+                            widget.onEdit?.call();
                           }
                         }),
-                        value: _proposedActionType,
                       ),
-                      IconButton(padding: const EdgeInsets.all(6), iconSize: 20, icon: const Icon(Icons.add_circle_outline), onPressed: _proposedActionType == null ? null : () async {
-                        var memberNumbers = c.memberNumbers.values.flattened.toList();
-                        var coveredNumbers = c.proposedActions.map((e) => e.coveredNumbers).flattened.toList();
-                        DeduplicationAction? newAction;
-                        switch(_proposedActionType!) {
-                          case ProposedActionType.blacklist:
-                            newAction = await AddBlacklistEntryDialog.show(context, memberNumbers, coveredMemberNumbers: coveredNumbers);
-                            break;
-                          case ProposedActionType.dataEntryFix:
-                            newAction = await AddDataEntryFixDialog.show(context, c.deduplicatorName, memberNumbers, coveredMemberNumbers: coveredNumbers);
-                            break;
-                          case ProposedActionType.mapping:
-                            newAction = await AddMappingDialog.show(context, memberNumbers, coveredMemberNumbers: coveredNumbers);
-                            break;
-                        }
-          
-                        if(newAction != null) {
-                          var na = newAction;
-                          setState(() {
-                            c.proposedActions.add(na);
-                          });
-                        }
-                      }),
                     ],
                   )
                 ],
@@ -418,7 +643,36 @@ class _ConflictDetailsState extends State<ConflictDetails> {
                 });
                 widget.onRestore?.call();
               }),
-              TextButton(child: const Text("APPROVE"), onPressed: widget.onApprove),
+              if(!widget.approved) TextButton(
+                child: const Text("IGNORE"),
+                onPressed: () async {
+                  var confirm = await ConfirmDialog.show(
+                    context,
+                    title: "Ignore conflict",
+                    content: const Text(
+                      "Ignoring this conflict will result in all member numbers being treated as unique competitors. " +
+                      "This conflict will be raised again on the next full recalculation. Do you want to ignore it?"
+                    ),
+                    positiveButtonLabel: "IGNORE",
+                    width: 400,
+                  );
+                  if(confirm == true) {
+                    widget.onApprove();
+                  }
+                },
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+              ),
+              MaybeTooltip(
+                message: tooltip,
+                child: TextButton(
+                  child: Text(approveText),
+                  onPressed: (resolvesConflict && !widget.approved) ? widget.onApprove : null,
+                ),
+              ),
+              if(widget.approved) TextButton(
+                child: const Text("NEXT"),
+                onPressed: widget.onApprove,
+              )
             ],
           )
         ],
@@ -440,25 +694,37 @@ enum ProposedActionType {
 }
 
 class IssueDescription extends StatelessWidget {
-  const IssueDescription({super.key, required this.issue});
+  const IssueDescription({super.key, required this.sport, required this.issue});
 
+  final Sport sport;
   final ConflictType issue;
 
   @override
   Widget build(BuildContext context) {
     return switch(issue) {
-      MultipleNumbersOfType(deduplicatorName: var name, memberNumberType: var type, memberNumbers: var numbers) => _buildMultipleNumbersOfType(context, name, type, numbers),
+      MultipleNumbersOfType(deduplicatorName: var name, memberNumberType: var type, memberNumbers: var numbers) => _buildMultipleNumbersOfType(context, sport, name, type, numbers),
       FixedInSettings() => Text("• Fixed in settings (should never appear)", style: Theme.of(context).textTheme.bodyMedium),
-      AmbiguousMapping() => _buildAmbiguousMapping(context, issue as AmbiguousMapping),
+      AmbiguousMapping() => _buildAmbiguousMapping(context, sport, issue as AmbiguousMapping),
     };
   }
 
-  Widget _buildMultipleNumbersOfType(BuildContext context, String deduplicatorName, MemberNumberType memberNumberType, List<String> memberNumbers) {
-    var text = "• Multiple ${memberNumberType.infixName} numbers: ${memberNumbers.join(", ")}";
-    return Text(text, style: Theme.of(context).textTheme.bodyMedium);
+  Widget _buildMultipleNumbersOfType(BuildContext context, Sport sport, String deduplicatorName, MemberNumberType memberNumberType, List<String> memberNumbers) {
+    var dedup = sport.shooterDeduplicator;
+    if(dedup != null) {
+      var text = "• Multiple ${memberNumberType.infixName} numbers: ${memberNumbers.join(", ")}";
+      return RichText(text: dedup.linksForMemberNumbers(
+        context: context,
+        text: text,
+        memberNumbers: memberNumbers,
+      ));
+    }
+    else {
+      return Text("• Multiple ${memberNumberType.infixName} numbers: ${memberNumbers.join(", ")}", style: Theme.of(context).textTheme.bodyMedium);
+    }
   }
 
-  Widget _buildAmbiguousMapping(BuildContext context, AmbiguousMapping issue) {
+  Widget _buildAmbiguousMapping(BuildContext context, Sport sport, AmbiguousMapping issue) {
+    var dedup = sport.shooterDeduplicator;
     late String sourceNumbers;
     late String targetNumbers;
     if(issue.sourceNumbers.length > 1) {
@@ -473,7 +739,16 @@ class IssueDescription extends StatelessWidget {
     else {
       targetNumbers = issue.targetNumbers.firstOrNull ?? "(null)";
     }
-    return Text("• Ambiguous mapping from $sourceNumbers to $targetNumbers", style: Theme.of(context).textTheme.bodyMedium);
+    if(dedup != null) {
+      return RichText(text: dedup.linksForMemberNumbers(
+        context: context,
+        text: "• Ambiguous mapping from $sourceNumbers to $targetNumbers",
+        memberNumbers: issue.sourceNumbers.toList(),
+      ));
+    }
+    else {
+      return Text("• Ambiguous mapping from $sourceNumbers to $targetNumbers", style: Theme.of(context).textTheme.bodyMedium);
+    }
   }
 }
 
@@ -526,17 +801,30 @@ class _USPSALink extends StatelessWidget {
 }
 
 class ProposedAction extends StatelessWidget {
-  const ProposedAction({super.key, required this.action, required this.onRemove, required this.onEdit});
+  const ProposedAction({super.key, required this.sport,required this.action, required this.onRemove, required this.onEdit});
 
+  final Sport sport;
   final DeduplicationAction action;
   final VoidCallback onRemove;
   final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
+    Widget textWidget;
+    var dedup = sport.shooterDeduplicator;
+    if(dedup != null) {
+      textWidget = RichText(text: dedup.linksForMemberNumbers(
+        context: context,
+        text: action.descriptiveString,
+        memberNumbers: action.coveredNumbers.toList(),
+      ));
+    }
+    else {
+      textWidget = Text(action.descriptiveString, style: Theme.of(context).textTheme.bodyMedium);
+    }
     return Row(
       children: [
-        Text(action.descriptiveString, style: Theme.of(context).textTheme.bodyMedium),
+        textWidget,
         SizedBox(height: 30, child: IconButton(padding: const EdgeInsets.all(6), iconSize: 20, icon: const Icon(Icons.edit), onPressed: onEdit)),
         SizedBox(height: 30, child: IconButton(padding: const EdgeInsets.all(6), iconSize: 20, icon: const Icon(Icons.remove_circle_outline), onPressed: onRemove)),
       ],
