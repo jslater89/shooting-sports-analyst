@@ -544,6 +544,9 @@ class RatingProjectLoader {
       // or "0", which we want to leave out to avoid cluttering blacklists.
       bool validCompetitor = processed.length > 1 && !s.reentry;
       if(validCompetitor) {
+        if(s.division?.name == "Limited" && (processed == "A102675" || processed == "TY102675")) {
+          print("break");
+        }
         // If we have a member number after processing, we can use this competitor.
         s.memberNumber = processed;
 
@@ -592,6 +595,15 @@ class RatingProjectLoader {
           // Update names for existing shooters on add, to eliminate the Mel Rodero -> Mel Rodero II problem in the L2+ set
           rating.firstName = s.firstName;
           rating.lastName = s.lastName;
+          // prefer to display newer member numbers
+          rating.memberNumber = s.memberNumber;
+
+          // TODO: only if better than last classification
+          // may require some help from [sport]
+          rating.lastClassification = s.classification;
+          rating.division = s.division;
+          rating.ageCategory = s.ageCategory;
+
           if(match.date.isAfter(rating.lastSeen)) {
             rating.lastSeen = match.date;
           }

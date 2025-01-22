@@ -46,6 +46,11 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
       allPossibleMemberNumbers.addAll(deduplicator.alternateForms(m));
     }
   }
+
+  @override
+  Set<String> get allPossibleMemberNumbers => wrappedRating.allPossibleMemberNumbers;
+  @override
+  set allPossibleMemberNumbers(Set<String> s) => wrappedRating.allPossibleMemberNumbers = s;
   
   /// The DB rating object backing this rating. If its ID property
   /// is [Isar.autoIncrement], it is assumed that the rating has not

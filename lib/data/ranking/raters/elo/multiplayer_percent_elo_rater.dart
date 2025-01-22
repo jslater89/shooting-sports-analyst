@@ -611,7 +611,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
             children: [
               Expanded(flex: _leadPaddingFlex, child: Text("")),
               Expanded(flex: _placeFlex, child: Text("$place")),
-              Expanded(flex: _memNumFlex, child: Text(rating.originalMemberNumber)),
+              Expanded(flex: _memNumFlex, child: Text(rating.memberNumber)),
               Expanded(flex: _classFlex, child: Text(rating.lastClassification?.shortDisplayName ?? "?")),
               Expanded(flex: _nameFlex, child: Text(rating.getName(suffixes: false))),
               Expanded(flex: _ratingFlex, child: Text("${rating.rating.round()}", textAlign: TextAlign.end)),

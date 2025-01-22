@@ -261,6 +261,9 @@ class EloShooterRating extends ShooterRating {
     this.wrappedRating.firstName = firstName;
     this.wrappedRating.lastName = lastName;
     this.wrappedRating.memberNumber = memberNumber;
+    this.wrappedRating.lastClassification = lastClassification;
+    this.wrappedRating.division = division;
+    this.wrappedRating.ageCategory = ageCategory;
     this.wrappedRating.female = female;
     this.wrappedRating.rating = initialRating;
     this.wrappedRating.error = 0.0;
