@@ -1013,6 +1013,55 @@ Future<void> setupTestDb(AnalystDatabase db) async {
     matchId: "multiple-associate-numbers",
   );
 
+  var simpleNoPrefixMatch = generateMatch(
+    shooters: [competitorMap["123456"]!, competitorMap["A123456"]!],
+    date: DateTime(2024, 3, 28),
+    matchName: "Simple No Prefix",
+    matchId: "simple-no-prefix",
+  );
+
+  var complexNoPrefixMatch = generateMatch(
+    shooters: [competitorMap["123456"]!, competitorMap["A123456"]!, competitorMap["L1234"]!],
+    date: DateTime(2024, 4, 1),
+    matchName: "Complex No Prefix",
+    matchId: "complex-no-prefix",
+  );
+
+  var internationalToStandardMatch = generateMatch(
+    shooters: [competitorMap["52410"]!, competitorMap["A124456"]!],
+    date: DateTime(2024, 4, 7),
+    matchName: "International to Standard",
+    matchId: "international-to-standard",
+  );
+
+  var dataEntryFixBadAssociateMatch = generateMatch(
+    shooters: [competitorMap["TY123456L"]!, competitorMap["A123456"]!,],
+    date: DateTime(2024, 4, 14),
+    matchName: "DataEntryFix Bad Associate",
+    matchId: "data-entry-fix-bad-associate",
+  );
+
+  var dataEntryFixBadAssociateMatch2 = generateMatch(
+    shooters: [competitorMap["TY1234"]!, competitorMap["A123456"]!,],
+    date: DateTime(2024, 4, 21),
+    matchName: "DataEntryFix Bad Associate 2",
+    matchId: "data-entry-fix-bad-associate-2",
+  );
+
+  var dataEntryFixBadLifeMatch = generateMatch(
+    shooters: [competitorMap["L12"]!, competitorMap["L1234"]!,],
+    date: DateTime(2024, 4, 28),
+    matchName: "DataEntryFix Bad Life",
+    matchId: "data-entry-fix-bad-life",
+  );
+
+  var dataEntryFixBadBenefactorMatch = generateMatch(
+    shooters: [competitorMap["B1234"]!, competitorMap["B123"]!,],
+    date: DateTime(2024, 5, 1),
+    matchName: "DataEntryFix Bad Benefactor",
+    matchId: "data-entry-fix-bad-benefactor",
+  );
+
   var futures = [
     db.saveMatch(simpleDataEntryMatch),
     db.saveMatch(simpleBlacklistMatch),
@@ -1029,6 +1078,13 @@ Future<void> setupTestDb(AnalystDatabase db) async {
     db.saveMatch(resolvableCrossMappingMatch2),
     db.saveMatch(improvableUserMappingMatch),
     db.saveMatch(multipleAssociateNumbersMatch),
+    db.saveMatch(simpleNoPrefixMatch),
+    db.saveMatch(complexNoPrefixMatch),
+    db.saveMatch(internationalToStandardMatch),
+    db.saveMatch(dataEntryFixBadAssociateMatch),
+    db.saveMatch(dataEntryFixBadAssociateMatch2),
+    db.saveMatch(dataEntryFixBadLifeMatch),
+    db.saveMatch(dataEntryFixBadBenefactorMatch),
   ];
   await Future.wait(futures);
 }
@@ -1037,17 +1093,41 @@ Future<void> setupTestDb(AnalystDatabase db) async {
 Map<String, Shooter> generateCompetitors() {
   Map<String, Shooter> competitors = {};
 
-  // John Deduplicator, first through seventh of his name
-  // All three associate numbers
+  // John Deduplicator, first through many-th of his name
   competitors["A123456"] = Shooter(
     firstName: "John",
     lastName: "Deduplicator",
     memberNumber: "A123456",
   );
+  competitors["123456"] = Shooter(
+    firstName: "John",
+    lastName: "Deduplicator",
+    memberNumber: "123456",
+  );
   competitors["TY123456"] = Shooter(
     firstName: "John",
     lastName: "Deduplicator",
     memberNumber: "TY123456",
+  );
+  competitors["TY123456L"] = Shooter(
+    firstName: "John",
+    lastName: "Deduplicator",
+    memberNumber: "TY123456L",
+  );
+  competitors["TY1234"] = Shooter(
+    firstName: "John",
+    lastName: "Deduplicator",
+    memberNumber: "TY1234",
+  );
+  competitors["L12"] = Shooter(
+    firstName: "John",
+    lastName: "Deduplicator",
+    memberNumber: "L12",
+  );
+  competitors["B1234"] = Shooter(
+    firstName: "John",
+    lastName: "Deduplicator",
+    memberNumber: "B1234",
   );
   competitors["FY123456"] = Shooter(
     firstName: "John",
@@ -1100,6 +1180,12 @@ Map<String, Shooter> generateCompetitors() {
     memberNumber: "L5678",
   );
 
+  // A Canadian Vaughn Deduplicator.
+  competitors["52410"] = Shooter(
+    firstName: "Vaughn",
+    lastName: "Deduplicator",
+    memberNumber: "52410",
+  );
   competitors["A124456"] = Shooter(
     firstName: "Vaughn",
     lastName: "Deduplicator",

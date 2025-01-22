@@ -538,7 +538,12 @@ class RatingProjectLoader {
           processed = emptyCorrection.correctedNumber;
         }
       }
-      if(processed.isNotEmpty && !s.reentry) {
+
+      // Something like "B9" is on the outside edge of plausible member numbers,
+      // but there are a lot of competitors in USPSA sets with numbers like "A",
+      // or "0", which we want to leave out to avoid cluttering blacklists.
+      bool validCompetitor = processed.length > 1 && !s.reentry;
+      if(validCompetitor) {
         // If we have a member number after processing, we can use this competitor.
         s.memberNumber = processed;
 
@@ -596,12 +601,6 @@ class RatingProjectLoader {
           // in the knownMemberNumbers list, add it.
           if(!rating.knownMemberNumbers.contains(s.memberNumber)) {
             rating.knownMemberNumbers.add(s.memberNumber);
-          }
-
-          // If this is an international member number and the member number doesn't
-          // start with INTL, add it.
-          if(s.memberNumber.startsWith("INTL")) {
-            rating.knownMemberNumbers.add("INTL${s.memberNumber}");
           }
 
           await db.upsertDbShooterRating(rating);

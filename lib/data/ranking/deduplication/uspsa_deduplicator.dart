@@ -27,14 +27,17 @@ class USPSAMemberNumber {
   /// with leading associate number components stripped.
   final String internalNumber;
 
+  final String numericComponent;
+
   /// Construct a USPSA member number from a raw member number string.
   USPSAMemberNumber(String memberNumber) :
     type = USPSADeduplicator().classify(memberNumber),
     normalizedNumber = USPSADeduplicator().processNumber(memberNumber),
-    internalNumber = USPSADeduplicator()._stripATYFY(memberNumber);
+    internalNumber = USPSADeduplicator()._stripATYFY(memberNumber),
+    numericComponent = memberNumber.replaceAll(RegExp(r'[^0-9]'), "");
 
   /// Construct a USPSA member number, providing all of the values directly.
-  USPSAMemberNumber.unsafe({required this.type, required this.normalizedNumber, required this.internalNumber});
+  USPSAMemberNumber.unsafe({required this.type, required this.normalizedNumber, required this.internalNumber, required this.numericComponent});
 
   @override
   operator ==(Object other) {
@@ -211,8 +214,47 @@ class USPSADeduplicator extends ShooterDeduplicator {
         }
         if(distinctRatings.length != 1) {
           // This log message is expected during tests.
+          // TODO: this shows up outside of tests too, for reasons I'm not totally sure about.
+          // Come back to it with the debugger at some point.
           _log.w("${distinctRatings.length} rating objects for $name, but only one member number: ${conflict.flattenedMemberNumbers.first}");
         }
+        continue;
+      }
+
+      // Special case: sometimes competitors (especially at locals) enter an A/TY/FY
+      // number without a prefix. Those will get classified to International. In the
+      // case where we have one International number whose numeric part is the same as
+      // the numeric part of a standard number, propose a DataEntryFix.
+      if(numbers[MemberNumberType.international]?.length == 1) { // null != 1
+        var internationalNumber = numbers[MemberNumberType.international]!.first;
+        if(internationalNumber.length >= 5 && internationalNumber.length <= 6) {
+          var international = USPSAMemberNumber(internationalNumber);
+          for(var standardNumber in numbers[MemberNumberType.standard] ?? []) {
+            var standard = USPSAMemberNumber(standardNumber);
+            var added = false;
+            if(international.internalNumber == standard.internalNumber) {
+              conflict.proposedActions.add(DataEntryFix(
+                deduplicatorName: name,
+                sourceNumber: internationalNumber,
+                targetNumber: standardNumber,
+              ));
+              added = true;
+            }
+            if(added) {
+              // If we added a DataEntryFix, remove the international number from the
+              // list for the remaining checks.
+              numbers[MemberNumberType.international]!.remove(internationalNumber);
+              break;
+            }
+          }
+        }
+      }
+
+      if(numbers.values.flattened.length == 1 && conflict.proposedActions.isNotEmpty) {
+        // If we have a single member number and we've added proposed actions,
+        // we handled a 1-1 'international'/no-prefix number in the block above, and
+        // can move on to the next conflict.
+        conflicts.add(conflict);
         continue;
       }
 
@@ -489,8 +531,28 @@ class USPSADeduplicator extends ShooterDeduplicator {
           }
 
           if(canAddMapping) {
+            // If we have a single international and a single standard number,
+            // we can add a DataEntryFix to fix the international number rather
+            // than a mapping, since no-prefix international numbers might overlap
+            // with American standard numbers.
+            var autoMapTypes = {...autoMapFlatNumbers.map((e) => classify(e))};
+            bool shouldAddInternationalDataEntryFix = false;
+            if(autoMapTypes.contains(MemberNumberType.international) && autoMapTypes.contains(MemberNumberType.standard)) {
+              if(autoMapNumbers[MemberNumberType.international]!.length == 1 && autoMapNumbers[MemberNumberType.standard]!.length == 1) {
+                shouldAddInternationalDataEntryFix = true;
+              }
+            }
+
             DeduplicationAction proposedAction;
-            if(shouldAddUserMapping) {
+            if(shouldAddInternationalDataEntryFix) {
+              var source = sources.where((e) => classify(e) == MemberNumberType.international).first;
+              proposedAction = DataEntryFix(
+                deduplicatorName: name,
+                sourceNumber: source,
+                targetNumber: target!,
+              );
+            }
+            else if(shouldAddUserMapping) {
               proposedAction = UserMapping(
                 sourceNumbers: sources,
                 targetNumber: target!,
@@ -569,11 +631,29 @@ class USPSADeduplicator extends ShooterDeduplicator {
         if(typesWithMultipleNumbers.length == 1 && numbers[typesWithMultipleNumbers.first]!.length > 1) {
           var type = typesWithMultipleNumbers.first;
           List<DeduplicationAction> proposedActions = [];
+          var numbersOfType = numbers[type]!;
           // Since callers of this function will probably pass in member numbers in order of appearance,
           // for member numbers that are likely typos, the first item in the list is probably the
           // correct one. Do fuzzy string comparison to determine if we propose a blacklist for a given
           // number, or a user mapping.
-          var probableTarget = numbers[type]!.first;
+          var probableTarget = numbersOfType.first;
+
+          bool containsBadFixTarget = false;
+
+          // There are some cases where that first number might not be the correct one, though, which we
+          // can detect with some heuristics.
+          if(_badDataEntryFixTarget(probableTarget)) {
+            containsBadFixTarget = true;
+            // Try to find a target that doesn't have heuristic problems.
+            for(var otherTarget in numbersOfType.sublist(1)) {
+              if(!_badDataEntryFixTarget(otherTarget)) {
+                // The first one we find is probably the correct one, by the same reasoning
+                // as above.
+                probableTarget = otherTarget;
+                break;
+              }
+            }
+          }
 
           // If there are any detected mappings whose target is better than or equal to our current target,
           // we should use that as the target instead—consider a case where we have a mapping A123456 -> L1235,
@@ -587,7 +667,10 @@ class USPSADeduplicator extends ShooterDeduplicator {
           List<String> sourceNumbers = [];
           for(var number in numbers[type]!.where((e) => e != probableTarget)) {
             var strdiff = fuzzywuzzy.weightedRatio(probableTarget, number);
-            if(strdiff > 65) {
+            if(strdiff > 65 || containsBadFixTarget) {
+              // Generally, if we encountered a facially invalid target, we want to
+              // recommend a DataEntryFix, on the theory that A1234 -> A123456 is probably
+              // a typo fix rather than two separate numbers (since A1234 isn't valid at all.)
               // experimentally, 65 (on a 0-100 scale) works pretty well.
               sourceNumbers.add(number);
             }
@@ -827,6 +910,32 @@ class USPSADeduplicator extends ShooterDeduplicator {
     return DeduplicationResult.ok(conflicts);
   }
 
+  bool _badDataEntryFixTarget(String number) {
+    // If the number ends with a letter, it's probably a typo or
+    // data entry error of the form "TY123456L" or something,
+    // which I have seen in the wild.
+    if(number.contains(RegExp(r"[A-Z]$"))) {
+      return true;
+    }
+
+    // If the number is too long or too short for its type, it isn't
+    // a valid target.
+    var n = USPSAMemberNumber(number);
+    if(n.type == MemberNumberType.standard && (n.internalNumber.length < 5 || n.internalNumber.length > 6)) {
+      return true;
+    }
+
+    if(n.type == MemberNumberType.life && (n.numericComponent.length < 3 || n.numericComponent.length > 4)) {
+      return true;
+    }
+
+    if(n.type == MemberNumberType.benefactor && (n.numericComponent.length < 2 || n.numericComponent.length > 3)) {
+      return true;
+    }
+
+    return false;
+  }
+
   /// Map ratings from one shooter to another. [source]'s history will
   /// be added to [target].
   void _mapRatings({
@@ -909,14 +1018,18 @@ class USPSADeduplicator extends ShooterDeduplicator {
   MemberNumberType classify(String number) {
     if(number.startsWith("RD")) return MemberNumberType.regionDirector;
     if(number.startsWith("B")) return MemberNumberType.benefactor;
-    if(number.startsWith("L")) return MemberNumberType.life;
+    // Empirically, "FL" appears to be "foreign life"
+    // cf. Lise Mahoney
+    if(number.startsWith("L") || number.startsWith("FL")) return MemberNumberType.life;
 
-    // A/TY/FY numbers issued to international competitors sometimes have an 'F' suffix,
-    // hence 1-3.
+    // Intended to match: A, TY, FY, F, TYF, and FYF.
     if(number.startsWith(RegExp(r"[ATFY]{1,3}"))) return MemberNumberType.standard;
+
     // International competitors sometimes enter a pure-numeric IPSC regional member number,
     // and we don't want to add A/TY/FY to those in [alternateForms] to avoid overlapping with
-    // USPSA-issued member numbers.
+    // USPSA-issued member numbers. We handle the special case when an American competitor
+    // enters their USPSA number without a prefix in a separate check, and treat it as a
+    // data entry error.
     if(number.startsWith(RegExp(r"[0-9]"))) return MemberNumberType.international;
 
     return MemberNumberType.standard;
