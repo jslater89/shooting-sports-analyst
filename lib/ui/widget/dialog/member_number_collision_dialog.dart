@@ -6,7 +6,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
+import 'package:shooting_sports_analyst/data/database/match/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/logger.dart';

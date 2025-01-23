@@ -8,7 +8,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
+import 'package:shooting_sports_analyst/data/database/match/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_query_element.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';

@@ -14,7 +14,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shooting_sports_analyst/config.dart';
-import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
+import 'package:shooting_sports_analyst/data/database/match/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
 import 'package:shooting_sports_analyst/db_oneoffs.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';

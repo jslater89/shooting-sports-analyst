@@ -7,7 +7,7 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
-import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
+import 'package:shooting_sports_analyst/data/database/match/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 // import 'package:shooting_sports_analyst/data/db/object/rating/elo/db_elo_rating.dart';

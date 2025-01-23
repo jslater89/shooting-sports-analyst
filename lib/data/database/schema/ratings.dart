@@ -7,8 +7,9 @@
 import 'dart:convert';
 
 import 'package:isar/isar.dart';
-import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
+import 'package:shooting_sports_analyst/data/database/match/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_report.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
@@ -97,6 +98,9 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
       return filteredMatches;
     }
   }
+
+  /// A list of reports generated since the last full recalculation.
+  List<RatingReport> reports = [];
 
   Future<void> resetMatches() async {
     // TODO

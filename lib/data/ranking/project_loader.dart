@@ -10,10 +10,11 @@ import 'package:collection/collection.dart';
 import 'package:fuzzywuzzy/fuzzywuzzy.dart' as fuzzywuzzy;
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
-import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
+import 'package:shooting_sports_analyst/data/database/match/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_report.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
@@ -400,10 +401,10 @@ class RatingProjectLoader {
         // recalculation will be necessary for accuracy. In the meantime, copy from the longest
         // rating to this one.
         // TODO: check what the old code did re: copying rating events
-        int ratingsWithHistory = targetRating.length > 0 ? 1 : 0;
+        List<DbShooterRating> ratingsWithHistory = [];
         for(var r in ratings) {
           if(r.length > 0) {
-            ratingsWithHistory += 1;
+            ratingsWithHistory.add(r);
 
             if(r.length > targetRating.length) {
               targetRating.copyRatingFrom(r);
@@ -416,7 +417,16 @@ class RatingProjectLoader {
           db.deleteShooterRating(r);
         }
 
-        if(ratingsWithHistory > 1) {
+        if(ratingsWithHistory.length > 1) {
+          var report = RatingReport(
+            type: RatingReportType.ratingMergeWithDualHistory,
+            severity: RatingReportSeverity.warning,
+            data: RatingMergeWithDualHistory(
+              ratingIds: ratingsWithHistory.map((r) => r.id).toList(),
+              ratingGroupUuid: group.uuid,
+            ),
+          );
+          project.reports.add(report);
           // TODO: warn user that a full recalculation is required for accuracy
         }
 
@@ -613,6 +623,16 @@ class RatingProjectLoader {
           var sName = ShooterDeduplicator.processName(s);
           if(fuzzywuzzy.weightedRatio(rating.deduplicatorName, sName) < 75) {
             _log.w("$s matches $rating by member number, but names have high string difference");
+            var report = RatingReport(
+              type: RatingReportType.stringDifferenceNameForSameNumber,
+              severity: RatingReportSeverity.info,
+              data: StringDifferenceNameForSameNumber(
+                names: [rating.deduplicatorName, sName],
+                number: s.memberNumber,
+                ratingGroupUuid: group.uuid,
+              ),
+            );
+            project.reports.add(report);
           }
 
           // Update names for existing shooters on add, to eliminate the Mel Rodero -> Mel Rodero II problem in the L2+ set
