@@ -51,13 +51,22 @@ abstract class ShooterDeduplicator {
     bool verbose = false
   });
 
+  /// Process a shooter's name into a deduplicator name.
+  /// 
+  /// This currently converts to lowercase, removes all whitespace, and removes all
+  /// non-alphanumeric characters.
   static String processName(Shooter shooter) {
-    String name = "${shooter.firstName.toLowerCase().replaceAll(RegExp(r"\s+"), "")}"
-        + "${shooter.lastName.toLowerCase().replaceAll(RegExp(r"\s+"), "")}";
+    var lowercaseName = shooter.name.toLowerCase();
+    if(_processNameCache.containsKey(lowercaseName)) return _processNameCache[lowercaseName]!;
+
+    String name = "${lowercaseName.replaceAll(RegExp(r"\s+"), "")}";
     name = name.replaceAll(RegExp(r"[^a-zA-Z0-9]"), "");
+
+    _processNameCache[lowercaseName] = name;
 
     return name;
   }
+  static Map<String, String> _processNameCache = {};
 
   /// If calculable, return a list of alternate forms of the provided member number.
   /// The returned list will always include the original number, even if no calculation
@@ -149,6 +158,9 @@ abstract class ShooterDeduplicator {
 /// As of the initial writing, these are USPSA's member number categories.
 /// Other sports may be added as necessary, or simply overlap with these.
 enum MemberNumberType {
+  /// A member number that cannot possibly be valid for the sport in question.
+  invalid,
+
   /// In USPSA, some international competitors enter an IPSC regional member
   /// number.
   international,
@@ -168,6 +180,7 @@ enum MemberNumberType {
   }
 
   String get infixName => switch(this) {
+    invalid => "invalid",
     international => "international",
     standard => "standard",
     life => "lifetime",
@@ -176,6 +189,7 @@ enum MemberNumberType {
   };
 
   String get uiName => switch(this) {
+    invalid => "Invalid",
     international => "International",
     standard => "Standard",
     life => "Lifetime",

@@ -869,6 +869,78 @@ void main() async {
     expect(reason: "data entry fix target number", dataEntryFix.targetNumber, equals("B123"));
   });
 
+  test("Invalid Number DataEntryFix", () async {
+    var project = DbRatingProject(
+      name: "Invalid Number DataEntryFix",
+      sportName: uspsaSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "invalid-number-data-entry-fix");
+    var deduplicator = USPSADeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      checkDataEntryErrors: true,
+      group: ratingGroup,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    var result = results.first;
+    expect(reason: "number of causes", result.causes, hasLength(1));
+    var cause = result.causes.first;
+    expect(reason: "cause is MultipleNumbersOfType", cause is MultipleNumbersOfType, isTrue);
+    var multipleNumbersOfType = cause as MultipleNumbersOfType;
+    expect(reason: "member number type", multipleNumbersOfType.memberNumberType, equals(MemberNumberType.standard));
+    expect(reason: "detected ABCD invalid", multipleNumbersOfType.probablyInvalidNumbers, equals(["ABCD"]));
+    expect(reason: "can resolve automatically", multipleNumbersOfType.canResolveAutomatically, isTrue);
+    expect(reason: "number of proposed actions", result.proposedActions, hasLength(1));
+    var dataEntryFix = result.proposedActions.firstWhereOrNull((e) => e is DataEntryFix) as DataEntryFix;
+    expect(reason: "data entry fix source number", dataEntryFix.sourceNumber, equals("ABCD"));
+    expect(reason: "data entry fix target number", dataEntryFix.targetNumber, equals("A123456"));
+  });
+
+  test("Invalid Number DataEntryFix 2", () async {
+    // Differs from the above in that this one would have selected the invalid number
+    // as the target (it's 'older', i.e. earlier in the test data).
+    var project = DbRatingProject(
+      name: "Invalid Number DataEntryFix 2",
+      sportName: uspsaSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "invalid-number-data-entry-fix-2");
+    var deduplicator = USPSADeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      checkDataEntryErrors: true,
+      group: ratingGroup,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    var result = results.first;
+    expect(reason: "number of causes", result.causes, hasLength(1));
+    var cause = result.causes.first;
+    expect(reason: "cause is MultipleNumbersOfType", cause is MultipleNumbersOfType, isTrue);
+    var multipleNumbersOfType = cause as MultipleNumbersOfType;
+    expect(reason: "member number type", multipleNumbersOfType.memberNumberType, equals(MemberNumberType.standard));
+    expect(reason: "detected ABCD invalid", multipleNumbersOfType.probablyInvalidNumbers, equals(["ABCD"]));
+    expect(reason: "can resolve automatically", multipleNumbersOfType.canResolveAutomatically, isTrue);
+    expect(reason: "number of proposed actions", result.proposedActions, hasLength(1));
+    var dataEntryFix = result.proposedActions.firstWhereOrNull((e) => e is DataEntryFix) as DataEntryFix;
+    expect(reason: "data entry fix source number", dataEntryFix.sourceNumber, equals("ABCD"));
+    expect(reason: "data entry fix target number", dataEntryFix.targetNumber, equals("A123456"));
+  });
+
   // #endregion
 }
 
@@ -1062,6 +1134,20 @@ Future<void> setupTestDb(AnalystDatabase db) async {
     matchId: "data-entry-fix-bad-benefactor",
   );
 
+  var invalidNumberDataEntryFixMatch = generateMatch(
+    shooters: [competitorMap["A123456"]!, competitorMap["ABCD"]!],
+    date: DateTime(2024, 5, 7),
+    matchName: "Invalid Number DataEntryFix",
+    matchId: "invalid-number-data-entry-fix",
+  );
+
+  var invalidNumberDataEntryFixMatch2 = generateMatch(
+    shooters: [competitorMap["ABCD"]!, competitorMap["A123456"]!],
+    date: DateTime(2024, 5, 14),
+    matchName: "Invalid Number DataEntryFix 2",
+    matchId: "invalid-number-data-entry-fix-2",
+  );
+
   var futures = [
     db.saveMatch(simpleDataEntryMatch),
     db.saveMatch(simpleBlacklistMatch),
@@ -1085,6 +1171,8 @@ Future<void> setupTestDb(AnalystDatabase db) async {
     db.saveMatch(dataEntryFixBadAssociateMatch2),
     db.saveMatch(dataEntryFixBadLifeMatch),
     db.saveMatch(dataEntryFixBadBenefactorMatch),
+    db.saveMatch(invalidNumberDataEntryFixMatch),
+    db.saveMatch(invalidNumberDataEntryFixMatch2),
   ];
   await Future.wait(futures);
 }
@@ -1113,6 +1201,12 @@ Map<String, Shooter> generateCompetitors() {
     firstName: "John",
     lastName: "Deduplicator",
     memberNumber: "TY123456L",
+  );
+  // why do people do this?
+  competitors["ABCD"] = Shooter(
+    firstName: "John",
+    lastName: "Deduplicator",
+    memberNumber: "ABCD",
   );
   competitors["TY1234"] = Shooter(
     firstName: "John",

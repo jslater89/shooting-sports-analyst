@@ -154,10 +154,6 @@ class USPSADeduplicator extends ShooterDeduplicator {
         continue;
       }
 
-      if(name == "christopheroosthuisen") {
-        print("break");
-      }
-
       List<DbShooterRating> ratings = [];
       Map<int, bool> dbIdsSeen = {};
       for(var rating in ratingsByName[name]!) {
@@ -225,6 +221,10 @@ class USPSADeduplicator extends ShooterDeduplicator {
         causes: [],
         proposedActions: [],
       );
+
+      if(name.startsWith("marcosrod")) {
+        print("break");
+      }
 
       if(conflict.flattenedMemberNumbers.length == 1) {
         // If, after condensing equivalent associate numbers, we only have one number, we also
@@ -660,15 +660,20 @@ class USPSADeduplicator extends ShooterDeduplicator {
           // number, or a user mapping.
           var probableTarget = numbersOfType.first;
 
-          bool containsBadFixTarget = false;
+          List<String> probablyInvalidNumbers = [];
+
+          for(var number in numbersOfType) {
+            if(_badDataEntryFixTarget(number)) {
+              probablyInvalidNumbers.add(number);
+            }
+          }
 
           // There are some cases where that first number might not be the correct one, though, which we
           // can detect with some heuristics.
-          if(_badDataEntryFixTarget(probableTarget)) {
-            containsBadFixTarget = true;
+          if(probablyInvalidNumbers.contains(probableTarget)) {
             // Try to find a target that doesn't have heuristic problems.
             for(var otherTarget in numbersOfType.sublist(1)) {
-              if(!_badDataEntryFixTarget(otherTarget)) {
+              if(!probablyInvalidNumbers.contains(otherTarget)) {
                 // The first one we find is probably the correct one, by the same reasoning
                 // as above.
                 probableTarget = otherTarget;
@@ -688,12 +693,21 @@ class USPSADeduplicator extends ShooterDeduplicator {
           }
           List<String> sourceNumbers = [];
           for(var number in numbers[type]!.where((e) => e != probableTarget)) {
-            var strdiff = fuzzywuzzy.weightedRatio(probableTarget, number);
-            if(strdiff > 65 || containsBadFixTarget) {
+            int strdiff = 0;
+            // Ignore prefixes for standard numbers.
+            if(type == MemberNumberType.standard) {
+              var uspsaNumber = USPSAMemberNumber(number);
+              var uspsaTarget = USPSAMemberNumber(probableTarget);
+              strdiff = fuzzywuzzy.weightedRatio(uspsaNumber.numericComponent, uspsaTarget.numericComponent);
+            }
+            else {
+              strdiff = fuzzywuzzy.weightedRatio(probableTarget, number);
+            }
+            if(strdiff > 65 || probablyInvalidNumbers.contains(number)) {
               // Generally, if we encountered a facially invalid target, we want to
-              // recommend a DataEntryFix, on the theory that A1234 -> A123456 is probably
-              // a typo fix rather than two separate numbers (since A1234 isn't valid at all.)
-              // experimentally, 65 (on a 0-100 scale) works pretty well.
+              // recommend a DataEntryFix with it as source, on the theory that A1234 -> A123456
+              // is probably a typo fix rather than two separate numbers (since A1234 isn't valid
+              // at all.)
               sourceNumbers.add(number);
             }
             // TODO: else if number is associate and too short or too long, preferentially make it a source
@@ -737,6 +751,7 @@ class USPSADeduplicator extends ShooterDeduplicator {
               deduplicatorName: name,
               memberNumberType: typesWithMultipleNumbers.first,
               memberNumbers: numbers[typesWithMultipleNumbers.first]!,
+              probablyInvalidNumbers: probablyInvalidNumbers,
             ));
             conflict.proposedActions.addAll(proposedActions);
           }
@@ -940,6 +955,12 @@ class USPSADeduplicator extends ShooterDeduplicator {
       return true;
     }
 
+    // If the number is all uppercase letters, it's probably a typo or
+    // a badly entered number.
+    if(number.startsWith(RegExp(r"[A-Z]+$"))) {
+      return true;
+    }
+
     // If the number is too long or too short for its type, it isn't
     // a valid target.
     var n = USPSAMemberNumber(number);
@@ -998,6 +1019,12 @@ class USPSADeduplicator extends ShooterDeduplicator {
   /// numbers.
   @override
   String processNumber(String number) {
+    // If the number is all zeroes, it's invalid, and we won't be able to use it to 
+    // identify a competitor.
+    if(RegExp(r"^0+$").hasMatch(number)) {
+      return "";
+    }
+
     return normalizeNumber(number);
   }
 
@@ -1038,6 +1065,10 @@ class USPSADeduplicator extends ShooterDeduplicator {
   }
 
   MemberNumberType classify(String number) {
+    // If the number contains no digits, treat it as a standard number so
+    // it will more likely get caught as an invalid number.
+    if(!number.contains(RegExp(r"[0-9]"))) return MemberNumberType.standard;
+
     if(number.startsWith("RD")) return MemberNumberType.regionDirector;
     if(number.startsWith("B")) return MemberNumberType.benefactor;
     // Empirically, "FL" appears to be "foreign life"
@@ -1054,6 +1085,8 @@ class USPSADeduplicator extends ShooterDeduplicator {
     // enters their USPSA number without a prefix in a separate check, and treat it as a
     // data entry error.
     if(number.startsWith(RegExp(r"[0-9]"))) return MemberNumberType.international;
+    // Commonly observed in the wild.
+    if(number.startsWith("AB")) return MemberNumberType.international;
 
     return MemberNumberType.standard;
   }
@@ -1087,6 +1120,13 @@ class USPSADeduplicator extends ShooterDeduplicator {
     runningStyle ??= TextStyles.bodyMedium(context);
     linkStyle ??= TextStyles.linkBodyMedium(context);
 
+    // sort member numbers by length, longest first, so that
+    // we never split a longer member number by a shorter one
+    // that happens to be a substring of it
+    // e.g. for "53007" and "A53007", if we split by "53007" first
+    // we'll end up with "A53007" -> ["A", "53007"] eventually
+    memberNumbers.sort((a, b) => b.length.compareTo(a.length));
+
     Map<String, TextSpan> spans = {};
     for(var number in memberNumbers) {
       spans[number] = TextSpan(
@@ -1097,28 +1137,35 @@ class USPSADeduplicator extends ShooterDeduplicator {
       );
     }
 
+    int index = 0;
+    Map<int, String> numberIndexes = {};
+
     // Replace each member number with a guard string that will let us split
     // after the member number.
-    // e.g.: "String contains A123456, a standard number" -> "String contains A123456||xx||, a standard number"
+    // e.g.: "String contains A123456, a standard number" -> "String contains ZzZ0XxX, a standard number"
     List<TextSpan> allSpans = [];
     String splittableText = text;
     for(var n in memberNumbers) {
-      splittableText = splittableText.replaceAll(n, "$n||xx||");
+      numberIndexes[index] = n;
+      splittableText = splittableText.replaceAll(n, "ZzZ${index}XxX");
+      index++;
     }
 
     // Split the text into parts, and replace each part with a TextSpan, replacing each
-    // member number with its corresponding TextSpan.
-    // e.g.: "String contains A123456||xx||, a standard number" -> ["String contains A123456", ", a standard number"]
-    List<String> parts = splittableText.split("||xx||");
+    // member number guard string with the corresponding text span.
+    // e.g.: "String contains ZzZ0XxX, a standard number" -> ["String contains ZzZ0", ", a standard number"]
+    List<String> parts = splittableText.split("XxX");
     for(var part in parts) {
       TextSpan? linkSpan;
-      for(var number in memberNumbers) {
-        if(part.contains(number)) {
-          linkSpan = spans[number];
-          // e.g. "String contains A123456" -> "String contains "
-          part = part.replaceFirst(number, "");
-          break;
-        }
+      // Each part should contain zero or one guard strings of the format ZzZ<index>.
+      // Extract it and replace it with the corresponding TextSpan.
+      var pattern = RegExp(r"ZzZ(\d+)");
+      var match = pattern.firstMatch(part);
+      if(match != null) {
+        var index = int.parse(match.group(1)!);
+        var number = numberIndexes[index];
+        linkSpan = spans[number];
+        part = part.replaceFirst(pattern, "");
       }
 
       allSpans.add(TextSpan(text: part, style: runningStyle));

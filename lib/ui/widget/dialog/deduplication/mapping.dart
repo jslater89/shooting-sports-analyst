@@ -87,11 +87,14 @@ class _AddMappingDialogState extends State<AddMappingDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                "User mappings tie several valid source numbers (in the left column) to a single target number (in the right column). " +
-                "Specify user mappings to tie a competitor's actual member numbers together, in the event that the automatic detection " +
-                "algorithm fails to match them. To correct typos or other data entry errors, use data entry fixes instead.",
-                style: TextStyles.bodyMedium(context),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  "User mappings tie several valid source numbers (in the left column) to a single target number (in the right column). " +
+                  "Specify user mappings to tie a competitor's actual member numbers together, in the event that the automatic detection " +
+                  "algorithm fails to match them. To correct typos or other data entry errors, use data entry fixes instead.",
+                  style: TextStyles.bodyMedium(context),
+                ),
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,

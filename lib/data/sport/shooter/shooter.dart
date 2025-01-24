@@ -63,6 +63,13 @@ class Shooter {
     }
   }
 
+  void removeKnownMemberNumbers(Iterable<String> numbers) {
+    for(var number in numbers) {
+      knownMemberNumbers.remove(number);
+      allPossibleMemberNumbers.remove(number);
+    }
+  }
+
   static String normalizeNumber(String number) {
     return number.toUpperCase().replaceAll(RegExp(r"[^A-Z0-9]"), "");
   }
@@ -98,8 +105,10 @@ class Shooter {
     return memberNumber == other.memberNumber;
   }
 
+  /// The shooter's name, without suffixes.
   String get name => getName(suffixes: false);
 
+  /// The shooter's name, with suffixes to indicate female
   String getName({bool suffixes = true}) {
     if(!suffixes) return [firstName, lastName].join(" ");
 

@@ -6,6 +6,7 @@
 
 import 'dart:convert';
 
+import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/match/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
@@ -75,6 +76,11 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   /// A list of ongoing matches, which may be treated slightly differently by the rating
   /// algorithm.
   final matchesInProgress = IsarLinks<DbShootingMatch>();
+
+  /// True if a full calculation has been completed for this project (set by the project
+  /// loader). A project with this flag set to false cannot have matches appended, and
+  /// must complete a full calculation before it can be used.
+  bool completedFullCalculation = false;
 
   /// The IsarLinks of matches to use for calculating ratings for this project. If
   /// [filteredMatches] is not empty, it will be used. If it is empty, [matches] will
@@ -172,6 +178,10 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
     return _automaticNumberMappingCache![sourceNumber];
   }
 
+  DbMemberNumberMapping? lookupAutomaticNumberMappingByTarget(String targetNumber) {
+    return automaticNumberMappings.firstWhereOrNull((mapping) => mapping.targetNumber == targetNumber);
+  }
+
   /// Clear the automatic number mapping cache.
   void clearAutomaticNumberMappingCache() {
     _automaticNumberMappingCache = null;
@@ -186,6 +196,10 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
       dbGroups.loadSync();
     }
     return []..addAll(dbGroups);
+  }
+  set groups(List<RatingGroup> value) {
+    dbGroups.clear();
+    dbGroups.addAll(value);
   }
 
   /// For the next full recalculation only, skip checking data entry

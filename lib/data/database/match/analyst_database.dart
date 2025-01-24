@@ -30,6 +30,9 @@ class AnalystDatabase {
   static Future<void> get readyStatic => _readyCompleter.future;
   static Completer<void> _readyCompleter = Completer();
 
+  static const maxSizeMiB = 1024 * 32;
+  static int get maxSizeBytes => maxSizeMiB * 1024 * 1024;
+
   Future<void> get ready => readyStatic;
 
   static AnalystDatabase? _instance;
@@ -53,13 +56,18 @@ class AnalystDatabase {
   late Isar isar;
 
   Future<void> _init({bool test = false}) async {
-    isar = await Isar.open([
-      DbShootingMatchSchema,
-      DbRatingProjectSchema,
-      RatingGroupSchema,
-      DbRatingEventSchema,
-      DbShooterRatingSchema,
-    ], directory: "db", name: test ? "test-database" : "database");
+    isar = await Isar.open(
+      [
+        DbShootingMatchSchema,
+        DbRatingProjectSchema,
+        RatingGroupSchema,
+        DbRatingEventSchema,
+        DbShooterRatingSchema,
+      ],
+      maxSizeMiB: 1024 * 32,
+      directory: "db",
+      name: test ? "test-database" : "database",
+    );
 
     isar.writeTxn(() async {
       for(var sport in SportRegistry().availableSports) {

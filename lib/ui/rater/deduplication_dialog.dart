@@ -61,6 +61,9 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
   Map<DeduplicationCollision, bool> _approved = {};
   int get _approvedCount => _approved.values.where((e) => e).length;
 
+  /// Indicates whether the collision has been edited.
+  Map<DeduplicationCollision, bool> _edited = {};
+
   /// Indicates whether the collision has been viewed.
   Map<DeduplicationCollision, bool> _viewed = {};
   int get _viewedCount => _viewed.values.where((e) => e).length;
@@ -75,13 +78,33 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
   @override
   void initState() {
     super.initState();
-    for(var collision in widget.collisions) {
+
+    _sortedCollisions = [...widget.collisions];
+    _populateMaps();
+    _defaultCollisionSort();
+
+    // We should never call this dialog if there are no collisions, but
+    // just to be safe, check
+    if(widget.collisions.isNotEmpty) {
+      _selectedCollisionIndex = 0;
+      _viewed[_selectedCollision!] = true;
+    }
+  }
+
+  void _populateMaps() {
+    for(var collision in _sortedCollisions) {
       _originalActions[collision] = [...collision.proposedActions.map((e) => e.copy())];
       _requiresAttention[collision] = collision.causes.any((e) => !e.canResolveAutomatically);
       _approved[collision] = _conflictIsGreen(collision, false);
     }
+  }
 
-    _sortedCollisions = [...widget.collisions];
+  Map<Type, int> _actionTypeOrder = {
+    DataEntryFix: 2,
+    Blacklist: 1,
+    Mapping: 0,
+  };
+  void _defaultCollisionSort() {
     _sortedCollisions.sort((a, b) {
       var aGreen = _approved[a] ?? false;
       var bGreen = _approved[b] ?? false;
@@ -94,22 +117,51 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
         return -1;
       }
       // Collisions containing AmbiguousMappings should be sorted to the top.
-      else if(a.causes.any((e) => e is AmbiguousMapping) && !b.causes.any((e) => e is AmbiguousMapping)) {
+      else if(_conflictIsRed(a, _approved[a] ?? false) && !_conflictIsRed(b, _approved[b] ?? false)) {
         return -1;
       }
-      else if(!a.causes.any((e) => e is AmbiguousMapping) && b.causes.any((e) => e is AmbiguousMapping)) {
+      else if(!_conflictIsRed(a, _approved[a] ?? false) && _conflictIsRed(b, _approved[b] ?? false)) {
+        return 1;
+      }
+
+      // Determine the most-likely-to-need-attention actions by type.
+      var aScores = a.proposedActions.map((e) => _actionTypeOrder[e.runtimeType] ?? 0);
+      var bScores = b.proposedActions.map((e) => _actionTypeOrder[e.runtimeType] ?? 0);
+      var aScore = 0;
+      var bScore = 0;
+      aScores.forEach((e) {
+        if(e > aScore) aScore = e;
+      });
+      bScores.forEach((e) {
+        if(e > bScore) bScore = e;
+      });
+
+      // Sort scores from high to low.
+      if(aScore > bScore) {
+        return -1;
+      }
+      else if(aScore < bScore) {
         return 1;
       }
 
       return a.deduplicatorName.compareTo(b.deduplicatorName);
     });
+  }
 
-    // We should never call this dialog if there are no collisions, but
-    // just to be safe, check
-    if(widget.collisions.isNotEmpty) {
-      _selectedCollisionIndex = 0;
-      _viewed[_selectedCollision!] = true;
-    }
+  /// Sort unapproved collisions to the top.
+  void _approvedCollisionSort() {
+    _sortedCollisions.sort((a, b) {
+      var aGreen = _approved[a] ?? false;
+      var bGreen = _approved[b] ?? false;
+      if(!aGreen && bGreen) {
+        return -1;
+      }
+      else if(aGreen && !bGreen) {
+        return 1;
+      }
+
+      return a.deduplicatorName.compareTo(b.deduplicatorName);
+    });
   }
 
   @override
@@ -172,7 +224,9 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
                             originalActions: _originalActions[collision]!,
                             viewed: _viewed[collision] ?? false,
                             approved: _approved[collision] ?? false,
+                            edited: _edited[collision] ?? false,
                             onTap: () => setState(() {
+                              _conflictIsGreen(collision, _approved[collision] ?? false);
                               _selectedCollisionIndex = index;
                               _viewed[collision] = true;
                             }),
@@ -214,6 +268,7 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
                         onEdit: () => setState(() {
                           // refresh the conflict list tile
                           _approved[_selectedCollision!] = false;
+                          _edited[_selectedCollision!] = true;
                         })
                       ),
                     ),
@@ -226,35 +281,69 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
           ),
         ),
         actions: [
-          TextButton(
-            child: const Text("CANCEL"),
-            onPressed: () => Navigator.of(context).pop(false),
-          ),
-          MaybeTooltip(
-            message: applyTooltip,
-            child: TextButton(
-              child: Text(applyText),
-              style: TextButton.styleFrom(foregroundColor: shouldGrayApply ? Colors.grey.shade500 : null),
-              onPressed: !shouldAllowApply ? null : () async {
-                if(shouldGrayApply) {
-                  var confirm = await ConfirmDialog.show(
-                    context,
-                    title: "Review incomplete",
-                    content: const Text("You have not reviewed all conflicts. Are you sure you want to continue?"),
-                    positiveButtonLabel: "CONTINUE",
-                    // TODO: SharedPreferences, troll James
-                    width: 400,
-                  );
-          
-                  if(confirm == true) {
-                    Navigator.of(context).pop(true);
-                  }
-                }
-                else {
-                  Navigator.of(context).pop(true);
-                }
-              }
-            ),
+          Row(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Tooltip(
+                    message: "Sort collisions requiring approval to the top.",
+                    child: TextButton(
+                      child: const Text("SORT UNAPPROVED"),
+                      onPressed: () => setState(() {
+                        _approvedCollisionSort();
+                      }),
+                    ),
+                  ),
+                  Tooltip(
+                    message: "Sort collisions by user attention required.",
+                    child: TextButton(
+                      child: const Text("SORT DEFAULT"),
+                      onPressed: () => setState(() {
+                        _defaultCollisionSort();
+                      }),
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,              
+                children: [
+                  TextButton(
+                    child: const Text("CANCEL"),
+                    onPressed: () => Navigator.of(context).pop(false),
+                  ),
+                  MaybeTooltip(
+                    message: applyTooltip,
+                    child: TextButton(
+                      child: Text(applyText),
+                      style: TextButton.styleFrom(foregroundColor: shouldGrayApply ? Colors.grey.shade500 : null),
+                      onPressed: !shouldAllowApply ? null : () async {
+                        if(shouldGrayApply) {
+                          var confirm = await ConfirmDialog.show(
+                            context,
+                            title: "Review incomplete",
+                            content: const Text("You have not reviewed all conflicts. Are you sure you want to continue?"),
+                            positiveButtonLabel: "CONTINUE",
+                            // TODO: SharedPreferences, troll James
+                            width: 400,
+                          );
+                  
+                          if(confirm == true) {
+                            Navigator.of(context).pop(true);
+                          }
+                        }
+                        else {
+                          Navigator.of(context).pop(true);
+                        }
+                      }
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ],
       ),
@@ -262,17 +351,25 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
   }
 }
 
-bool _conflictIsGreen(DeduplicationCollision collision, bool approved) {
+bool _conflictIsGreen(DeduplicationCollision collision, bool approved, {bool edited = false}) {
   // Show the green indicator if the collision can be automatically resolved, unless it contains an international
   // number...
-  bool autoResolve = collision.causes.every((e) => e.canResolveAutomatically) && collision.memberNumbers[MemberNumberType.international] == null;
+  bool autoResolve = edited != true &&collision.causes.every((e) => e.canResolveAutomatically) && collision.memberNumbers[MemberNumberType.international] == null;
   // Or the proposed actions cover the conflict and the user has approved the changes.
   bool userApproved = approved && collision.proposedActionsResolveConflict();
   return autoResolve || userApproved;
 }
 
+bool _conflictIsRed(DeduplicationCollision collision, bool approved) {
+  var green = _conflictIsGreen(collision, approved);
+  var hasAmbiguousMapping = collision.causes.any((e) => e is AmbiguousMapping);
+  var hasUncoveredNumbers = !collision.proposedActionsResolveConflict();
+
+  return !green && (hasAmbiguousMapping || hasUncoveredNumbers);
+}
+
 class ConflictListItem extends StatelessWidget {
-  const ConflictListItem({super.key, required this.collision, required this.originalActions, this.onTap, this.selected = false, this.viewed = false, this.approved = false});
+  const ConflictListItem({super.key, required this.collision, required this.originalActions, this.onTap, this.selected = false, this.viewed = false, this.approved = false, this.edited = false});
 
   final DeduplicationCollision collision;
   final List<DeduplicationAction> originalActions;
@@ -280,19 +377,16 @@ class ConflictListItem extends StatelessWidget {
   final bool selected;
   final bool viewed;
   final bool approved;
+  final bool edited;
 
   @override
   Widget build(BuildContext context) {
     Icon? statusIcon;
 
-    // Show the green indicator if the collision can be automatically resolved, unless it contains an international
-    // number...
-    var green = _conflictIsGreen(collision, approved);
-
-    if(!green && collision.causes.any((e) => e is AmbiguousMapping)) {
+    if(_conflictIsRed(collision, approved)) {
       statusIcon = Icon(Icons.warning, color: Colors.red.shade600);
     }
-    else if(green) {
+    else if(_conflictIsGreen(collision, approved, edited: edited)) {
       statusIcon = Icon(Icons.check_circle, color: Colors.green.shade600);
     }
     else {
@@ -300,7 +394,7 @@ class ConflictListItem extends StatelessWidget {
     }
 
     var fontWeight = selected ? FontWeight.bold : null;
-    var color = viewed && green ? Colors.grey.shade500 : null;
+    var color = viewed && _conflictIsGreen(collision, approved) ? Colors.grey.shade500 : null;
     var style = Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: fontWeight, color: color);
 
     // Show numbers in [source, target] format for DataEntryFixes and Mappings, which are
@@ -393,7 +487,7 @@ class _ConflictDetailsState extends State<ConflictDetails> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.max,
                 children: [
-                  Text(c.deduplicatorName, style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold)),
+                  Text("${c.shooterRatings.values.first.name}", style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 10),
                   Row(
                     children: [
@@ -607,7 +701,7 @@ class _ConflictDetailsState extends State<ConflictDetails> {
                                   context,
                                   UserMapping(
                                     targetNumber: targetNumber,
-                                    sourceNumbers: sourceNumbers.toList(),
+                                    sourceNumbers: c.causes.any((e) => e is AmbiguousMapping) ? [] : sourceNumbers.toList(),
                                   ),
                                   memberNumbers,
                                   coveredMemberNumbers: coveredNumbers,
@@ -702,24 +796,29 @@ class IssueDescription extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch(issue) {
-      MultipleNumbersOfType(deduplicatorName: var name, memberNumberType: var type, memberNumbers: var numbers) => _buildMultipleNumbersOfType(context, sport, name, type, numbers),
+      MultipleNumbersOfType() => _buildMultipleNumbersOfType(context, sport, issue as MultipleNumbersOfType),
       FixedInSettings() => Text("• Fixed in settings (should never appear)", style: Theme.of(context).textTheme.bodyMedium),
       AmbiguousMapping() => _buildAmbiguousMapping(context, sport, issue as AmbiguousMapping),
     };
   }
 
-  Widget _buildMultipleNumbersOfType(BuildContext context, Sport sport, String deduplicatorName, MemberNumberType memberNumberType, List<String> memberNumbers) {
+  Widget _buildMultipleNumbersOfType(BuildContext context, Sport sport, MultipleNumbersOfType issue) {
     var dedup = sport.shooterDeduplicator;
+    var probablyInvalidString = issue.probablyInvalidNumbers.isEmpty ? "" : " (probably invalid: ${issue.probablyInvalidNumbers.join(", ")})";
+    var strdiffString = "";
+    if(issue.stringDifference > 0 && issue.probablyInvalidNumbers.isEmpty) {
+      strdiffString = " (similarity: ${issue.stringDifference}%)";
+    }
     if(dedup != null) {
-      var text = "• Multiple ${memberNumberType.infixName} numbers: ${memberNumbers.join(", ")}";
+      var text = "• Multiple ${issue.memberNumberType.infixName} numbers: ${issue.memberNumbers.join(", ")}$probablyInvalidString$strdiffString";
       return RichText(text: dedup.linksForMemberNumbers(
         context: context,
         text: text,
-        memberNumbers: memberNumbers,
+        memberNumbers: issue.memberNumbers,
       ));
     }
     else {
-      return Text("• Multiple ${memberNumberType.infixName} numbers: ${memberNumbers.join(", ")}", style: Theme.of(context).textTheme.bodyMedium);
+      return Text("• Multiple ${issue.memberNumberType.infixName} numbers: ${issue.memberNumbers.join(", ")}$probablyInvalidString$strdiffString", style: Theme.of(context).textTheme.bodyMedium);
     }
   }
 
@@ -743,7 +842,7 @@ class IssueDescription extends StatelessWidget {
       return RichText(text: dedup.linksForMemberNumbers(
         context: context,
         text: "• Ambiguous mapping from $sourceNumbers to $targetNumbers",
-        memberNumbers: issue.sourceNumbers.toList(),
+        memberNumbers: [...issue.sourceNumbers, ...issue.targetNumbers],
       ));
     }
     else {

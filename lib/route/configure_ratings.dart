@@ -11,6 +11,7 @@ import 'package:shooting_sports_analyst/data/database/match/analyst_database.dar
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/database/util.dart';
 import 'package:shooting_sports_analyst/data/match/practical_match.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
 import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
@@ -183,6 +184,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       await project.matches.load();
     }
     projectMatches = [...project.matches];
+    // groups getter loads dbGroups if not loaded
     _groups = [...project.groups];
     setState(() {
       filteredMatches = null;
@@ -622,90 +624,85 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                             child: Scrollbar(
                               controller: _matchScroll,
                               thumbVisibility: true,
-                              child: SingleChildScrollView(
+                              child: ListView.builder(
                                 controller: _matchScroll,
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // show newest additions at the top
-                                    for(var match in filteredMatches ?? projectMatches)
-                                      Row(
-                                        mainAxisSize: MainAxisSize.max,
-                                        children: [
-                                          Expanded(
-                                            child: MouseRegion(
-                                              cursor: SystemMouseCursors.click,
-                                              child: GestureDetector(
-                                                onTap: () {
-                                                  Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-                                                    return ResultPage(canonicalMatch: match.hydrate().unwrap(), allowWhatIf: false);
-                                                  }));
-                                                },
-                                                child: Text(
-                                                  match.eventName,
-                                                  overflow: TextOverflow.fade
-                                                ),
-                                              ),
-                                            )
-                                          ),
-                                          Tooltip(
-                                            message: (ongoingMatches[match] ?? false) ?
-                                                "This match is in progress. Click to toggle." :
-                                                "This match is completed. Click to toggle.",
-                                            child: IconButton(
-                                              icon: Icon(
-                                                (ongoingMatches[match] ?? false) ?
-                                                  Icons.calendar_today :
-                                                  Icons.event_available
-                                              ),
-                                              color: (ongoingMatches[match] ?? false) ?
-                                                  Theme.of(context).primaryColor :
-                                                  Colors.grey[350],
-                                              onPressed: () {
-                                                if(ongoingMatches[match] ?? false) {
-                                                  setState(() {
-                                                    ongoingMatches.remove(match);
-                                                  });
-                                                } else {
-                                                  setState(() {
-                                                    ongoingMatches[match] = true;
-                                                  });
-                                                }
-                                              },
-                                            )
-                                          ),
-                                          Tooltip(
-                                            message: "Reload this match from its source.",
-                                            child: IconButton(
-                                              icon: Icon(Icons.refresh),
-                                              color: Theme.of(context).primaryColor,
-                                              onPressed: () async {
-                                                projectMatches.remove(match);
-                                                ongoingMatches.remove(match);
-                                                filteredMatches?.remove(match);
-
-                                                var result = await MatchSource.reloadMatch(match);
-                                                projectMatches.add(DbShootingMatch.from(result.unwrap()));
-                                              },
+                                itemCount: (filteredMatches ?? projectMatches).length,
+                                itemBuilder: (context, index) {
+                                  var match = (filteredMatches ?? projectMatches)[index];
+                                  return Row(
+                                    mainAxisSize: MainAxisSize.max,
+                                    children: [
+                                      Expanded(
+                                        child: MouseRegion(
+                                          cursor: SystemMouseCursors.click,
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+                                                return ResultPage(canonicalMatch: match.hydrate().unwrap(), allowWhatIf: false);
+                                              }));
+                                            },
+                                            child: Text(
+                                              match.eventName,
+                                              overflow: TextOverflow.fade
                                             ),
                                           ),
-                                          IconButton(
-                                            icon: Icon(Icons.remove),
-                                            color: Theme.of(context).primaryColor,
-                                            onPressed: () {
-                                              setState(() {
-                                                projectMatches.remove(match);
-                                                ongoingMatches.remove(match);
-                                                filteredMatches?.remove(match);
-                                              });
-                                            },
-                                          )
-                                        ],
+                                        )
                                       ),
-                                  ],
-                                ),
+                                      Tooltip(
+                                        message: (ongoingMatches[match] ?? false) ?
+                                            "This match is in progress. Click to toggle." :
+                                            "This match is completed. Click to toggle.",
+                                        child: IconButton(
+                                          icon: Icon(
+                                            (ongoingMatches[match] ?? false) ?
+                                              Icons.calendar_today :
+                                              Icons.event_available
+                                          ),
+                                          color: (ongoingMatches[match] ?? false) ?
+                                              Theme.of(context).primaryColor :
+                                              Colors.grey[350],
+                                          onPressed: () {
+                                            if(ongoingMatches[match] ?? false) {
+                                              setState(() {
+                                                ongoingMatches.remove(match);
+                                              });
+                                            } else {
+                                              setState(() {
+                                                ongoingMatches[match] = true;
+                                              });
+                                            }
+                                          },
+                                        )
+                                      ),
+                                      Tooltip(
+                                        message: "Reload this match from its source.",
+                                        child: IconButton(
+                                          icon: Icon(Icons.refresh),
+                                          color: Theme.of(context).primaryColor,
+                                          onPressed: () async {
+                                            projectMatches.remove(match);
+                                            ongoingMatches.remove(match);
+                                            filteredMatches?.remove(match);
+
+                                            var result = await MatchSource.reloadMatch(match);
+                                            projectMatches.add(DbShootingMatch.from(result.unwrap()));
+                                          },
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: Icon(Icons.remove),
+                                        color: Theme.of(context).primaryColor,
+                                        onPressed: () {
+                                          setState(() {
+                                            projectMatches.remove(match);
+                                            ongoingMatches.remove(match);
+                                            filteredMatches?.remove(match);
+                                          });
+                                        },
+                                      )
+                                    ],
+                                  );
+                                },
                               ),
                             ),
                           ),
@@ -839,16 +836,21 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     }
 
     project.settings = settings;
-    project.matches.addAll(projectMatches);
+    project.matches.setContentsTo(projectMatches, ensureLoaded: true);
     if(filteredMatches != null && filteredMatches!.isNotEmpty) {
-      project.filteredMatches.addAll(filteredMatches!);
+      project.filteredMatches.setContentsTo(filteredMatches!, ensureLoaded: true);
     }
 
-    project.dbGroups.addAll(_groups);
+    project.dbGroups.setContentsTo(_groups, ensureLoaded: true);
 
     await AnalystDatabase().saveRatingProject(project);
     prefs.setInt(Preferences.lastProjectId, project.id);
     _log.i("Saved ${project.name} to ${project.id}");
+
+    // debug
+    var savedProject = await AnalystDatabase().getRatingProjectById(project.id);
+    print("savedProject groups: ${savedProject?.groups.map((e) => e.name).join(", ")}");
+    // end debug
 
     if(mounted) {
       setState(() {

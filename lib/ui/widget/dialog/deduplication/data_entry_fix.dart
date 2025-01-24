@@ -86,11 +86,14 @@ class _AddDataEntryFixDialogState extends State<AddDataEntryFixDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                "Data entry fixes correct typos and other data entry errors for a specific competitor. Whenever a competitor " +
-                "with the current deduplicator name enters the source number, it will be changed to the target number before " +
-                "being added to the database.",
-                style: TextStyles.bodyMedium(context),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  "Data entry fixes correct typos and other data entry errors for a specific competitor. Whenever a competitor " +
+                  "with the current deduplicator name enters the source number, it will be changed to the target number before " +
+                  "being added to the database.",
+                  style: TextStyles.bodyMedium(context),
+                ),
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,

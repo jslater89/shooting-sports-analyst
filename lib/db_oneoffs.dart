@@ -17,7 +17,7 @@ SSALogger _log = SSALogger("DbOneoffs");
 
 Future<void> oneoffDbAnalyses(AnalystDatabase db) async {
   // await _addMemberNumbersToMatches(db);
-  await _doesMyQueryWork(db);
+  // await _doesMyQueryWork(db);
 }
 
 Future<void> _addMemberNumbersToMatches(AnalystDatabase db) async {

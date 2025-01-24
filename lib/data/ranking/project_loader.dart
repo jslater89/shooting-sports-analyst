@@ -47,6 +47,11 @@ enum MatchLoadFailureCause {
   }
 }
 
+class CanceledError extends RatingProjectLoadError {
+  @override
+  String get message => "User canceled loading";
+}
+
 class MatchLoadFailureError extends RatingProjectLoadError {
   final ResultErr underlying;
   final MatchLoadFailureCause cause;
@@ -98,6 +103,8 @@ class RatingProjectLoader {
   RatingSystem get ratingSystem => settings.algorithm;
   Sport get sport => project.sport;
 
+  bool _canceled = false;
+
   Timings timings = Timings();
 
   MemberNumberCorrectionContainer get _dataCorrections => settings.memberNumberCorrections;
@@ -111,6 +118,7 @@ class RatingProjectLoader {
 
     var start = DateTime.now();
     await host.progressCallback(progress: -1, total: -1, state: LoadingState.readingMatches);
+
     var matchesLink = await project.matchesToUse();
 
     // We want to add matches in ascending order, from oldest to newest.
@@ -124,6 +132,10 @@ class RatingProjectLoader {
     // TODO: check consistency of project settings and reset if needed
     // Things to check:
     // * project sport vs match sports
+
+    if(_canceled) {
+      return Result.err(CanceledError());
+    }
 
 
     // If this project records a list of matches used to calculate ratings, we
@@ -141,7 +153,7 @@ class RatingProjectLoader {
       ).toList();
       var mostRecentMatch = lastUsed.first;
       _log.i("Checking for append: cutoff date is ${mostRecentMatch.date}");
-      canAppend = !fullRecalc && missingMatches.every((m) => m.date.isAfter(mostRecentMatch.date));
+      canAppend = project.completedFullCalculation && !fullRecalc && missingMatches.every((m) => m.date.isAfter(mostRecentMatch.date));
       if(canAppend) {
         matchesToAdd = missingMatches;
       }
@@ -158,25 +170,33 @@ class RatingProjectLoader {
     }
 
     if(!canAppend) {
+      project.reports = [];
+      project.completedFullCalculation = false;
       if(fullRecalc) {
         _log.i("Unable to append: full recalculation requested");
       }
+      else if(!project.completedFullCalculation) {
+        _log.i("Unable to append: project has not completed a full calculation");
+      }
       else {
-        _log.i("Unable to append: resetting ratings");
+        _log.i("Unable to append: new matches occur before the last existing match");
       }
       await project.resetRatings();
     }
     else {
+      // Fixed-length list on DB load
+      project.reports = [...project.reports];
       _log.i("Appending ${matchesToAdd.length} matches to ratings");
     }
 
-    // If we're appending, this will be only the new matches.
+    // If we're appending, matchesToAdd will be only the new matches.
     // If we're not appending, this will be all the matches, and
     // clearing the old list happens in the resetRatings call above.
     project.lastUsedMatches.addAll(matchesToAdd);
     await AnalystDatabase().isar.writeTxn(() async {
       await project.lastUsedMatches.save();
     });
+    await db.saveRatingProject(project, checkName: true);
 
     host.progressCallback(progress: 0, total: matchesToAdd.length, state: LoadingState.readingMatches);
     List<ShootingMatch> hydratedMatches = [];
@@ -204,7 +224,14 @@ class RatingProjectLoader {
     if(result.isErr()) return Result.errFrom(result);
 
     host.progressCallback(progress: 1, total: 1, state: LoadingState.done);
+
+    project.completedFullCalculation = true;
+    await db.saveRatingProject(project, checkName: true);
     return Result.ok(null);
+  }
+
+  void cancel() {
+    _canceled = true;
   }
 
   Future<Result<void, RatingProjectLoadError>> _addMatch(ShootingMatch match) {
@@ -217,6 +244,11 @@ class RatingProjectLoader {
     for (var match in matches) {
       // 1. For each match, add shooters.
       var (ratings, _) = await _addShootersFromMatch(group, match);
+
+      if(_canceled) {
+        return Result.err(CanceledError());
+      }
+
       for(var r in ratings) {
         if(memberNumbersSeen[r.memberNumber] != true) {
           newRatings.add(r);
@@ -266,8 +298,6 @@ class RatingProjectLoader {
         }
 
         if(didSomething) {
-          // We don't need to check the name, because we've already saved the project
-          // (i.e. ensured it has a DB ID) at the end of the configure ratings page.
           project.changedSettings();
           db.saveRatingProject(project, checkName: true);
         }
@@ -285,6 +315,9 @@ class RatingProjectLoader {
 
     var start = DateTime.now();
     for (var match in matches) {
+      if(_canceled) {
+        return Result.err(CanceledError());
+      }
       // 3.1.1. Check recognized divisions
       var onlyDivisions = settings.recognizedDivisions[match.sourceIds.first];
       if(onlyDivisions != null) {
@@ -350,6 +383,9 @@ class RatingProjectLoader {
               mapping.sourceNumbers.add(existingMapping);
             }
           }
+
+          // If this overrides any automatic mappings, remove them.
+          project.automaticNumberMappings.removeWhere((autoMapping) => autoMapping.sourceNumbers.any((number) => mapping.sourceNumbers.contains(number)));
         }
         else {
           mapping as AutoMapping;
@@ -414,7 +450,7 @@ class RatingProjectLoader {
           // based on last seen/first seen
 
           targetRating.addKnownMemberNumbers(r.knownMemberNumbers);
-          db.deleteShooterRating(r);
+          await db.deleteShooterRating(r);
         }
 
         if(ratingsWithHistory.length > 1) {
@@ -427,15 +463,19 @@ class RatingProjectLoader {
             ),
           );
           project.reports.add(report);
-          // TODO: warn user that a full recalculation is required for accuracy
         }
 
-        db.upsertDbShooterRating(targetRating, linksChanged: false);
+        await db.upsertDbShooterRating(targetRating, linksChanged: false);
 
         break;
       case Blacklist:
-        // For blacklists, we aren't actually changing anything, just making a note in the project
-        // settings that the two already-distinct ratings ought to be that way.
+        // For blacklists, we might (i.e., will; I'm in the middle of fixing it) run into cases where a
+        // prior mapping and data entry fix conflict. Say A123456 enters member number L5432, and we
+        // auto-map that. Then we find that the competitor's number is actually L1234, and he enters it
+        // that way later. So, we'll present the user with a blacklist L5432 -> L1234. At that point,
+        // if there's a rating that has both blacklisted numbers, we need to remove one.
+        //
+        // Only I'm not actually sure how we pick the right one, or what we show to the user.
         var blacklist = action as Blacklist;
 
         settings.memberNumberMappingBlacklist.addToListIfMissing(blacklist.sourceNumber, blacklist.targetNumber);
@@ -445,14 +485,47 @@ class RatingProjectLoader {
         break;
       case DataEntryFix:
         // For data entry fixes, we want to delete a source rating if its name matches the deduplicator name.
-        // We don't need to do anything to the target, because its data is presumed correct already.
+        // Before we do that, though, we want to copy all of the member numbers except the source of this
+        // fix from the old one, in case it has accumulated other member numbers before the first erroneous
+        // data entry.
+        //
+        // There's code here to update mappings pointing to the source number, but I don't think we can
+        // include it generally, since fixes specify a name and mappings don't—it's possible we would be
+        // 'fixing' a valid mapping for a different competitor.
+        // TODO: test for this case
         var fix = action as DataEntryFix;
         settings.memberNumberCorrections.add(fix.intoCorrection());
 
         var sourceRating = await db.maybeKnownShooter(project: project, group: group, memberNumber: fix.sourceNumber);
         if(sourceRating != null && sourceRating.deduplicatorName == fix.deduplicatorName) {
-          db.deleteShooterRating(sourceRating);
+          var targetRating = await db.maybeKnownShooter(project: project, group: group, memberNumber: fix.targetNumber);
+          if(targetRating != null) {
+            if(sourceRating.knownMemberNumbers.any((n) => !targetRating.knownMemberNumbers.contains(n))) {
+              targetRating.addKnownMemberNumbers(sourceRating.knownMemberNumbers);
+              await db.upsertDbShooterRating(targetRating);
+            }
+          }
+          await db.deleteShooterRating(sourceRating);
         }
+
+        // var mapping = project.lookupAutomaticNumberMapping(fix.sourceNumber);
+        // if(mapping != null) {
+        //   mapping.sourceNumbers = [...mapping.sourceNumbers.where((n) => n != fix.sourceNumber), fix.targetNumber];
+        // }
+        // mapping = project.lookupAutomaticNumberMappingByTarget(fix.sourceNumber);
+        // if(mapping != null) {
+        //   mapping.targetNumber = fix.targetNumber;
+        // }
+
+        // var userMapping = settings.userMemberNumberMappings[fix.sourceNumber];
+        // if(userMapping != null) {
+        //   settings.userMemberNumberMappings[fix.targetNumber] = userMapping;
+        //   settings.userMemberNumberMappings.remove(fix.sourceNumber);
+        // }
+        // userMapping = settings.userMemberNumberMappings.entries.firstWhereOrNull((e) => e.value == fix.sourceNumber)?.key;
+        // if(userMapping != null) {
+        //   settings.userMemberNumberMappings[userMapping] = fix.targetNumber;
+        // }
 
         break;
     }
@@ -477,13 +550,15 @@ class RatingProjectLoader {
         groupName: group.name,
       );
 
-      await _addMatchCompetitorsToGroup(group, matches);
+      var result = await _addMatchCompetitorsToGroup(group, matches);
+      if(result.isErr()) return result;
     }
 
     List<Future<Result<void, RatingProjectLoadError>>> futures = [];
     for(var group in project.groups) {
       // futures.add(_addMatchScoresToGroup(group, matches));
-      await _addMatchScoresToGroup(group, matches);
+      var result = await _addMatchScoresToGroup(group, matches);
+      if(result.isErr()) return result;
     }
     // var results = await Future.wait(futures);
     // for(var result in results) {
@@ -553,14 +628,36 @@ class RatingProjectLoader {
       // First, normalize it according to the sport's rules.
       var processed = sport.shooterDeduplicator?.processNumber(s.memberNumber) ?? ShooterDeduplicator.normalizeNumberBasic(s.memberNumber);
 
-      // If there are data corrections for this member number, apply them.
-      var corrections = _dataCorrections.getByInvalidNumber(processed);
+      // Apply data corrections, checking each subsequent target for corrections where
+      // it is the source, until we find no more corrections.
       var name = ShooterDeduplicator.processName(s);
-      for(var correction in corrections) {
-        if (correction.name == name) {
-          processed = correction.correctedNumber;
-          break;
+
+      if(name.startsWith("marcosrod")) {
+        print("break");
+      }
+
+      Set<String> invalidMemberNumbers = {};
+      Set<String> previouslyVisitedNumbers = {processed};
+      bool dataEntryFixLoop = false;
+      while(true) {
+        // If there are data corrections for this member number, apply them.
+        var corrections = _dataCorrections.getByInvalidNumber(processed);
+        bool appliedCorrection = false;
+        for(var correction in corrections) {
+          if(previouslyVisitedNumbers.contains(correction.correctedNumber)) {
+            dataEntryFixLoop = true;
+            break;
+          }
+          if(correction.name == name) {
+            invalidMemberNumbers.add(correction.invalidNumber);
+            s.removeKnownMemberNumbers([correction.invalidNumber]);
+            processed = correction.correctedNumber;
+            previouslyVisitedNumbers.add(processed);
+            appliedCorrection = true;
+            break;
+          }
         }
+        if(!appliedCorrection) break;
       }
 
       // If the member number is empty, see if this is someone we've special-cased
@@ -577,9 +674,6 @@ class RatingProjectLoader {
       // or "0", which we want to leave out to avoid cluttering blacklists.
       bool validCompetitor = processed.length > 1 && !s.reentry;
       if(validCompetitor) {
-        if(s.division?.name == "Limited" && (processed == "A102675" || processed == "TY102675")) {
-          print("break");
-        }
         // If we have a member number after processing, we can use this competitor.
         s.memberNumber = processed;
 
@@ -602,12 +696,45 @@ class RatingProjectLoader {
           s.memberNumber = mappingTarget;
         }
 
+        while(true) {
+        // If there are data corrections for the mapped member number, fix that
+        // now.
+          var corrections = _dataCorrections.getByInvalidNumber(s.memberNumber);
+          bool appliedCorrection = false;
+          for(var correction in corrections) {
+            if(previouslyVisitedNumbers.contains(correction.correctedNumber)) {
+              dataEntryFixLoop = true;
+              break;
+            }
+            if(correction.name == name) {
+              s.memberNumber = correction.correctedNumber;
+              s.knownMemberNumbers.remove(correction.invalidNumber);
+              invalidMemberNumbers.add(correction.invalidNumber);
+              previouslyVisitedNumbers.add(correction.correctedNumber);
+              appliedCorrection = true;
+              break;
+            }
+          }
+          if(!appliedCorrection) break;
+        }
+
+        if(dataEntryFixLoop) {
+          _log.e("Data entry fix loop detected for ${s.memberNumber}: ${previouslyVisitedNumbers.join(", ")}");
+          var report = RatingReport(
+            type: RatingReportType.dataEntryFixLoop,
+            severity: RatingReportSeverity.severe,
+            data: DataEntryFixLoop(numbers: previouslyVisitedNumbers.toList()),
+          );
+          project.reports.add(report);
+        }
+
         var rating = await db.maybeKnownShooter(
           project: project,
           group: group,
           memberNumber: s.memberNumber,
           usePossibleMemberNumbers: true,
         );
+
         if(rating == null) {
           var newRating = ratingSystem.newShooterRating(s, sport: project.sport, date: match.date);
           newRating.allPossibleMemberNumbers.addAll(possibleNumbers);
@@ -620,8 +747,10 @@ class RatingProjectLoader {
           added += 1;
         }
         else {
+          rating.removeKnownMemberNumbers(invalidMemberNumbers);
+
           var sName = ShooterDeduplicator.processName(s);
-          if(fuzzywuzzy.weightedRatio(rating.deduplicatorName, sName) < 75) {
+          if(fuzzywuzzy.weightedRatio(rating.deduplicatorName, sName) < 50) {
             _log.w("$s matches $rating by member number, but names have high string difference");
             var report = RatingReport(
               type: RatingReportType.stringDifferenceNameForSameNumber,
@@ -1037,7 +1166,7 @@ class RatingProjectLoader {
         if(stageScore == null) {
           filteredScores.remove(s);
           filteredShooters.remove(s.shooter);
-          _log.w("null stage score for ${s.shooter}");
+          // _log.w("null stage score for ${s.shooter}");
           continue;
         }
 
@@ -1144,7 +1273,7 @@ class RatingProjectLoader {
         var matchScore = matchScoreMap[rating];
 
         if(stageScore == null) {
-          _log.w("Null stage score for $rating on ${stage.name}");
+          // _log.w("Null stage score for $rating on ${stage.name}");
           continue;
         }
 

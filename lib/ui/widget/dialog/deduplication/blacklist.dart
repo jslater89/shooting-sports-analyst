@@ -84,12 +84,15 @@ class _AddBlacklistEntryDialogState extends State<AddBlacklistEntryDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                "Blacklist entries prevent a deduplicator from making automatic associations between two member numbers. " +
-                "Add a blacklist entry between two member numbers if their competitors share a deduplicator name, but " +
-                "are not the same person. When adding a blacklist entry alongside a data entry fix or user mapping, the blacklist " +
-                "entry must point to the target number, not the source number(s).",
-                style: TextStyles.bodyMedium(context),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  "Blacklist entries prevent a deduplicator from making automatic associations between two member numbers. " +
+                  "Add a blacklist entry between two member numbers if their competitors share a deduplicator name, but " +
+                  "are not the same person. When adding a blacklist entry alongside a data entry fix or user mapping, the blacklist " +
+                  "entry must point to the target number, not the source number(s).",
+                  style: TextStyles.bodyMedium(context),
+                ),
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,

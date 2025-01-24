@@ -83,6 +83,7 @@ class MultipleNumbersOfType extends ConflictType {
   final String deduplicatorName;
   final MemberNumberType memberNumberType;
   final List<String> memberNumbers;
+  final List<String> probablyInvalidNumbers;
 
 
   /// If there are exactly two member numbers, the string difference between
@@ -93,15 +94,24 @@ class MultipleNumbersOfType extends ConflictType {
     }
     return 0;
   }
-  bool get probableTypo => stringDifference > 65;
+  bool get probableTypo => stringDifference > 50;
 
+  /// It's much easier to be confident in blacklists than in typos:
+  /// blacklists are bidirectional, and we can more readily assume that
+  /// John Doe [A52362, TY131849] refer to different people, rather than
+  /// trying to figure out which number between A52362 and A53262 is the
+  /// one John Doe meant.
+  ///
+  /// Assume we can resolve automatically if it's an obvious blacklist,
+  /// or if we have N-1 probably-invalid numbers out of N total.
   @override
-  bool get canResolveAutomatically => probableTypo;
+  bool get canResolveAutomatically => !probableTypo || (probablyInvalidNumbers.length == memberNumbers.length - 1);
 
   const MultipleNumbersOfType({
     required this.deduplicatorName,
     required this.memberNumberType,
     required this.memberNumbers,
+    required this.probablyInvalidNumbers,
   });
 }
 

@@ -40,11 +40,15 @@ class MemberNumberCorrectionContainer {
 
   void add(MemberNumberCorrection correction) {
     _byName[correction.name] ??= [];
-    _byName[correction.name]!.add(correction);
+    if(!_byName[correction.name]!.contains(correction)) {
+      _byName[correction.name]!.add(correction);
+    }
 
     if(correction.invalidNumber.isNotEmpty) {
       _byInvalidNumber[correction.invalidNumber] ??= [];
-      _byInvalidNumber[correction.invalidNumber]!.add(correction);
+      if(!_byInvalidNumber[correction.invalidNumber]!.contains(correction)) {
+        _byInvalidNumber[correction.invalidNumber]!.add(correction);
+      }
     }
   }
 

@@ -33,6 +33,9 @@ class RatingReport {
         case RatingReportType.ratingMergeWithDualHistory:
           _data = RatingMergeWithDualHistory.fromJson(jsonDecode(jsonEncodedData));
           break;
+        case RatingReportType.dataEntryFixLoop:
+          _data = DataEntryFixLoop.fromJson(jsonDecode(jsonEncodedData));
+          break;
       }
     }
     return _data!;
@@ -51,6 +54,7 @@ class RatingReport {
 enum RatingReportType {
   stringDifferenceNameForSameNumber,
   ratingMergeWithDualHistory,
+  dataEntryFixLoop,
 }
 
 enum RatingReportSeverity {
@@ -83,4 +87,14 @@ class RatingMergeWithDualHistory extends RatingReportData {
 
   factory RatingMergeWithDualHistory.fromJson(Map<String, dynamic> json) => _$RatingMergeWithDualHistoryFromJson(json);
   Map<String, dynamic> toJson() => _$RatingMergeWithDualHistoryToJson(this);
+}
+
+@JsonSerializable()
+class DataEntryFixLoop extends RatingReportData {
+  DataEntryFixLoop({required this.numbers});
+
+  List<String> numbers;
+
+  factory DataEntryFixLoop.fromJson(Map<String, dynamic> json) => _$DataEntryFixLoopFromJson(json);
+  Map<String, dynamic> toJson() => _$DataEntryFixLoopToJson(this);
 }

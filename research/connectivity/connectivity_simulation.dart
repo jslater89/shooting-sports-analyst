@@ -49,6 +49,12 @@ const int highActivityCount = 2500;
 
   double lowActivityCompetitorGrowthBaseRate = 0.24;
   double lowActivityCompetitorGrowthVariance = 0.03;
+
+  double highActivityCompetitorRetirementBaseRate = 0.03;
+  double highActivityCompetitorRetirementVariance = 0.01;
+
+  double highActivityCompetitorGrowthBaseRate = 0.03;
+  double highActivityCompetitorGrowthVariance = 0.01;
   
   // Fixed pool of high-activity competitors
   for(int i = 0; i < highActivityCount; i++) {
@@ -69,27 +75,47 @@ const int highActivityCount = 2500;
   DateTime start = DateTime(2018, 1, 1);
   int currentYear = 2018;
   int minimumLowActivityId = highActivityCount;  // Initial minimum ID for selection
+  int minimumHighActivityId = 0;
   
-  int annualNewCompetitorCount = 0;
-  int annualRetirementCount = 0;
-  int newCompetitorsPerMatch = 0;
+  int annualLowActivityNewCompetitorCount = 0;
+  int annualLowActivityRetirementCount = 0;
+  int annualHighActivityRetirementCount = 0;
+  int annualHighActivityNewCompetitorCount = 0;
   for(int i = 0; i < 520; i++) {
     matches[i] = Match(i, start);
 
-    var activeIds = lowActivityCompetitors.keys
-      .where((id) => id >= minimumLowActivityId)
+    var activeLowActivityIds = lowActivityCompetitors.keys
+      .where((id) => !lowActivityCompetitors[id]!.retired)
+      .toList();
+
+    var activeHighActivityIds = highActivityCompetitors.keys
+      .where((id) => !highActivityCompetitors[id]!.retired)
       .toList();
     
     // Year boundary check
     if (start.year > currentYear) {
       // Retire some existing low-activity competitors, and create new ones.
-      annualRetirementCount = (activeIds.length * (random.nextDouble() * lowActivityCompetitorRetirementVariance + lowActivityCompetitorRetirementBaseRate)).round();
-      annualNewCompetitorCount = (activeIds.length * (random.nextDouble() * lowActivityCompetitorGrowthVariance + lowActivityCompetitorGrowthBaseRate)).round();
-      print("Year ${start.year}: Retiring $annualRetirementCount competitors, adding $annualNewCompetitorCount new competitors over the year");
-      currentYear = start.year;
-    }
+      annualLowActivityRetirementCount = (activeLowActivityIds.length * (random.nextDouble() * lowActivityCompetitorRetirementVariance + lowActivityCompetitorRetirementBaseRate)).round();
+      annualLowActivityNewCompetitorCount = (activeLowActivityIds.length * (random.nextDouble() * lowActivityCompetitorGrowthVariance + lowActivityCompetitorGrowthBaseRate)).round();
 
-    minimumLowActivityId = activeIds[(annualRetirementCount / 52).round()];  // Move up the minimum ID
+      annualHighActivityRetirementCount = (activeHighActivityIds.length * (random.nextDouble() * highActivityCompetitorRetirementVariance + highActivityCompetitorRetirementBaseRate)).round();
+      annualHighActivityNewCompetitorCount = (activeHighActivityIds.length * (random.nextDouble() * highActivityCompetitorGrowthVariance + highActivityCompetitorGrowthBaseRate)).round();
+      print("Year ${start.year}: Retiring $annualLowActivityRetirementCount low-activity competitors, adding $annualLowActivityNewCompetitorCount new competitors over the year");
+      print("Year ${start.year}: Retiring $annualHighActivityRetirementCount high-activity competitors, adding $annualHighActivityNewCompetitorCount new competitors over the year");
+      currentYear = start.year;
+
+      var lowActivityRetirements = activeLowActivityIds.sample(annualLowActivityRetirementCount, random);
+      for(var id in lowActivityRetirements) {
+        lowActivityCompetitors[id]!.retired = true;
+        activeLowActivityIds.remove(id);
+      }
+
+      var highActivityRetirements = activeHighActivityIds.sample(annualHighActivityRetirementCount, random);
+      for(var id in highActivityRetirements) {
+        highActivityCompetitors[id]!.retired = true;
+        activeHighActivityIds.remove(id);
+      }
+    }
     
     // Log-normal distribution for match size
     var mu = log(150);
@@ -100,35 +126,58 @@ const int highActivityCount = 2500;
     var size = exp(mu + sigma * z).round().clamp(50, 500);
     totalSize += size;
 
-    // High activity competitors (30-50% of match)
-    var highActivitySize = 0.3 + 0.2 * random.nextDouble();
+    // High activity competitors (40-60% of match)
+    var highActivitySize = 0.4 + 0.2 * random.nextDouble();
     var lowActivitySize = 1 - highActivitySize;
     var lowActivityCount = (size * lowActivitySize).round();
+    var highActivityCount = size - lowActivityCount;
+
+    List<Competitor> newLowActivityCompetitors = [];
+    List<Competitor> newHighActivityCompetitors = [];
     
     // Add new competitors from the new pool
-    var newCompetitorCount = (annualNewCompetitorCount / 52).round();
-    for(int j = 0; j < newCompetitorCount; j++) {
-      lowActivityCompetitors[nextCompetitorId] = Competitor(nextCompetitorId);
+    var newLowActivityCompetitorCount = (annualLowActivityNewCompetitorCount / 52).round();
+    for(int j = 0; j < newLowActivityCompetitorCount; j++) {
+      var c = Competitor(nextCompetitorId);
+      lowActivityCompetitors[nextCompetitorId] = c;
+      newLowActivityCompetitors.add(c);
       nextCompetitorId++;
     }
-    // print("Match $i: Added $newCompetitorCount new competitors");
+
+    // Add new competitors from the high activity pool
+    var newHighActivityCompetitorCount = (annualHighActivityNewCompetitorCount / 52).round();
+    for(int j = 0; j < newHighActivityCompetitorCount; j++) {
+      var c = Competitor(nextCompetitorId);
+      highActivityCompetitors[nextCompetitorId] = c;
+      newHighActivityCompetitors.add(c);
+      nextCompetitorId++;
+    }
     
     // Select competitors for this match
-    var activeLowActivityCompetitors = lowActivityCompetitors.entries
-        .where((e) => e.key >= minimumLowActivityId)
-        .map((e) => e.value);
+    var activeLowActivityCompetitors = lowActivityCompetitors.values
+        .where((e) => !e.retired)
+        .toList();
 
-    var highActivitySample = highActivityCompetitors.values.sample((size * highActivitySize).round(), random);
-    var lowActivitySampleSize = lowActivityCount - newCompetitorCount;
+    var activeHighActivityCompetitors = highActivityCompetitors.values
+        .where((e) => !e.retired)
+        .toList();
+
+    var highActivitySampleSize = highActivityCount - newHighActivityCompetitors.length;
+    var lowActivitySampleSize = lowActivityCount - newLowActivityCompetitors.length;
     List<Competitor> lowActivitySample = [];
     if(lowActivitySampleSize > 0) {
       lowActivitySample = activeLowActivityCompetitors.sample(lowActivitySampleSize, random);
     }
+
+    List<Competitor> highActivitySample = [];
+    if(highActivitySampleSize > 0) {
+      highActivitySample = activeHighActivityCompetitors.sample(highActivitySampleSize, random);
+    }
         
     var c = highActivitySample
+      ..addAll(newHighActivityCompetitors)
       ..addAll(lowActivitySample)
-      ..addAll(lowActivityCompetitors.values
-          .where((c) => c.shooterId >= nextCompetitorId - newCompetitorCount));  // Add all new competitors
+      ..addAll(newLowActivityCompetitors);
     
     for(var competitor in c) {
       competitor.matchIds.add(i);
@@ -142,7 +191,8 @@ const int highActivityCount = 2500;
   print("\nFinal Statistics:");
   print("Total matches: ${matches.length}");
   print("Total competitors ever: ${competitors.length}");
-  print("Active low-activity competitors: ${lowActivityCompetitors.keys.where((id) => id >= minimumLowActivityId).length}");
+  print("Active low-activity competitors: ${lowActivityCompetitors.values.where((c) => !c.retired).length}");
+  print("Active high-activity competitors: ${highActivityCompetitors.values.where((c) => !c.retired).length}");
   print("Total entries: $totalSize");
 
   return (competitors, matches);
@@ -180,6 +230,8 @@ class Competitor {
   List<MatchWindow> allWindows = [];
   double connectivityScore = 0.0;
   double rawConnectivityScore = 0.0;
+
+  bool retired = false;
 
   void addMatch(int matchId, DateTime date, Iterable<int> opponents) {
     // Create new window for this match
@@ -587,7 +639,7 @@ void analyzeConnectivity(
     .expand((m) => [m.map((d) => d["avgZScore"] as double).average])
     .map((d) => d.abs())
     .max;
-  var scale = 30 / maxZ;  // Scale to fit in 60 chars (-30 to +30)
+  var scale = 30 / 2;  // Scale to fit in 60 chars (-30 to +30), in this case +2/-2SD
   
   for (var entry in monthlyDiffs.entries.toList()..sort((a, b) => a.key.compareTo(b.key))) {
     var month = entry.key;
@@ -617,8 +669,8 @@ void analyzeConnectivity(
     
     print("${month.toString().substring(0, 7)}: "
           "${line.join('')}$clampIndicator "
-          "z_cmp: ${avgZ.toStringAsFixed(2).padLeft(5)}, "
-          "z_mch: ${matchAvgZScore.toStringAsFixed(2).padLeft(5)}, "
+          "z_cmp_avg: ${avgZ.toStringAsFixed(2).padLeft(5)}, "
+          "z_mch_avg: ${matchAvgZScore.toStringAsFixed(2).padLeft(5)}, "
           "matches: ${diffs.length}, "
           "avg size: ${avgSize.toStringAsFixed(0).padLeft(3)}");
   }
@@ -701,7 +753,7 @@ void analyzeConnectivity(
       .toList();
       
     print("\nMatches with ${min.isFinite ? min.toStringAsFixed(1) : '-∞'} ≤ z < ${max.isFinite ? max.toStringAsFixed(1) : '∞'} (${rangeMatches.length} matches):");
-    print("  Average size: ${rangeMatches.map((m) => m.competitorIds.length).average.toStringAsFixed(1)}");
+    print("  Average size: ${rangeMatches.isNotEmpty ? rangeMatches.map((m) => m.competitorIds.length).average.toStringAsFixed(1) : 'N/A'}");
     // Add more characteristics here
   }
 

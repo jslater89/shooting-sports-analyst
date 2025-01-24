@@ -9,6 +9,7 @@ import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/match/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 
@@ -46,12 +47,7 @@ class DbShooterRating extends Shooter with DbSportEntity {
   List<String> get lastNameParts => lastName.split(RegExp(r'\s+'));
 
   @Index()
-  String get deduplicatorName {
-    var processedFirstName = firstName.toLowerCase().replaceAll(RegExp(r"\s+"), "");
-    var processedLastName = lastName.toLowerCase().replaceAll(RegExp(r"\s+"), "");
-
-    return "$processedFirstName$processedLastName";
-  }
+  String get deduplicatorName => ShooterDeduplicator.processName(this);
 
   // Additional biographical information
   String? ageCategoryName;

@@ -15,6 +15,7 @@ import 'package:shooting_sports_analyst/data/ranking/timings.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/rater/deduplication_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 SSALogger _log = SSALogger("LoadRatingsPage");
@@ -25,11 +26,12 @@ SSALogger _log = SSALogger("LoadRatingsPage");
 /// ready to go.
 
 class LoadRatingsPage extends StatefulWidget {
-  const LoadRatingsPage({super.key, required this.project, this.forceRecalculate = false, required this.onRatingsComplete});
+  const LoadRatingsPage({super.key, required this.project, this.forceRecalculate = false, required this.onRatingsComplete, required this.onError});
   
   final bool forceRecalculate;
   final DbRatingProject project;
   final VoidCallback onRatingsComplete;
+  final void Function(RatingProjectLoadError error) onError;
 
   @override
   State<LoadRatingsPage> createState() => _LoadRatingsPageState();
@@ -68,7 +70,9 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
 
     var result = await loader.calculateRatings(fullRecalc: widget.forceRecalculate);
     if(result.isErr()) {
-      _log.e(result.unwrapErr());
+      var error = result.unwrapErr();
+      _log.e(error.message);
+      widget.onError(error);
     }
   }
 
@@ -117,7 +121,27 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
       appBar: AppBar(
         title: Text("Loading..."),
       ),
-      body: _matchLoadingIndicator(),
+      body: PopScope(
+        canPop: false,
+        onPopInvoked: (_didPop) async {
+          var confirm = await ConfirmDialog.show(
+            context,
+            title: "Cancel loading?",
+            width: 500,
+            content: Text("Are you sure you want to cancel loading? If you cancel during rating calculation, it "
+            "may result in an inconsistent database state, and require a full recalculation."),
+            negativeButtonLabel: "CONTINUE LOADING",
+            positiveButtonLabel: "CANCEL LOADING",
+          );
+
+          if(confirm ?? false) {
+            // The loader will cancel itself at the next opportunity
+            // and return an error.
+            loader.cancel();
+          }
+        },
+        child: _matchLoadingIndicator()
+      ),
     );
   }
 
