@@ -6,8 +6,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shooting_sports_analyst/data/database/match/analyst_database.dart';
-import 'package:shooting_sports_analyst/ui/matchdb/match_db_list_view.dart';
+import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/db_statistics.dart';
+import 'package:shooting_sports_analyst/ui/database/match/match_db_list_view.dart';
+import 'package:shooting_sports_analyst/ui/database/stats/db_statistics_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/loading_dialog.dart';
 
 class MatchDatabaseManagerPage extends StatefulWidget {
@@ -44,26 +46,43 @@ class _MatchDatabaseManagerPageState extends State<MatchDatabaseManagerPage> {
             title: Text("Match Database"),
             centerTitle: true,
             actions: [
-              IconButton(
-                icon: Icon(Icons.copy),
-                onPressed: () async {
-                  listModel.loading = true;
-
-                  var db = AnalystDatabase();
-                  var loadingModel = ProgressModel();
-                  var future = db.migrateFromMatchCache((progress, total) async {
-                    loadingModel.total = total;
-                    loadingModel.current = progress;
-                    await Future.delayed(Duration.zero);
-                  });
-                  await LoadingDialog.show(
-                    context: context,
-                    waitOn: future,
-                    progressProvider: loadingModel,
-                  );
-                  listModel.search(null);
-                },
-              )
+              Tooltip(
+                message: "Show database statistics",
+                child: IconButton(
+                  icon: Icon(Icons.auto_graph),
+                  onPressed: () async {
+                    var db = AnalystDatabase();
+                    var stats = await db.getBasicDatabaseStatistics();
+                    showDialog(
+                      context: context,
+                      builder: (context) => DbStatisticsDialog(stats: stats),
+                    );
+                  },
+                ),
+              ),
+              Tooltip(
+                message: "Migrate matches from old match cache",
+                child: IconButton(
+                  icon: Icon(Icons.copy),
+                  onPressed: () async {
+                    listModel.loading = true;
+                
+                    var db = AnalystDatabase();
+                    var loadingModel = ProgressModel();
+                    var future = db.migrateFromMatchCache((progress, total) async {
+                      loadingModel.total = total;
+                      loadingModel.current = progress;
+                      await Future.delayed(Duration.zero);
+                    });
+                    await LoadingDialog.show(
+                      context: context,
+                      waitOn: future,
+                      progressProvider: loadingModel,
+                    );
+                    listModel.search(null);
+                  },
+                ),
+              ),
             ],
           ),
           body: MatchDatabaseListView(),

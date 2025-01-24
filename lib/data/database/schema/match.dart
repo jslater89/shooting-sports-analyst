@@ -8,7 +8,7 @@
 import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
-import 'package:shooting_sports_analyst/data/database/match/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
@@ -77,6 +77,19 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
     required this.shooters,
     required this.memberNumbersAppearing,
   });
+
+  DbShootingMatch.placeholder(this.id) :
+    eventName = "(invalid)",
+    rawDate = "(invalid)",
+    date = DateTime.now(),
+    matchLevelName = "(invalid)",
+    matchEventLevel = EventLevel.local,
+    sportName = "(invalid)",
+    sourceIds = [],
+    sourceCode = "(invalid)",
+    stages = [],
+    shooters = [],
+    memberNumbersAppearing = [];
 
   factory DbShootingMatch.from(ShootingMatch match) {
     Set<Division> divisionsAppearing = {};

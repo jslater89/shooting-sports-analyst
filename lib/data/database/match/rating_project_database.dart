@@ -5,7 +5,8 @@
  */
 
 import 'package:isar/isar.dart';
-import 'package:shooting_sports_analyst/data/database/match/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
@@ -77,50 +78,83 @@ extension RatingProjectDatabase on AnalystDatabase {
     });
   }
 
+  /// Retrieves a known shooter rating from the database.
+  /// 
+  /// if [useCache] is true, [loadedShooterRatingCache] will be checked for
+  /// a cached rating before querying the database.
   Future<DbShooterRating> knownShooter({
     required DbRatingProject project,
     required RatingGroup group,
     required String memberNumber,
     bool usePossibleMemberNumbers = false,
+    bool useCache = false,
+    bool saveToCache = true,
   }) async {
-    return (await maybeKnownShooter(project: project, group: group, memberNumber: memberNumber, usePossibleMemberNumbers: usePossibleMemberNumbers))!;
+    return (await maybeKnownShooter(project: project, group: group, memberNumber: memberNumber, usePossibleMemberNumbers: usePossibleMemberNumbers, useCache: useCache))!;
   }
-
-  // TODO: cache loaded shooters?
-  // Let's do it the dumb way first, and go from there.
+  
   /// Retrieves a possible shooter rating from the database, or null if
   /// a rating is not found. [memberNumber] is assumed to be processed.
+  /// 
+  /// if [useCache] is true, [loadedShooterRatingCache] will be checked for
+  /// a cached rating before querying the database.
   Future<DbShooterRating?> maybeKnownShooter({
     required DbRatingProject project,
     required RatingGroup group,
     required String memberNumber,
     bool usePossibleMemberNumbers = false,
-  }) {
+    bool useCache = false,
+    bool saveToCache = true,
+  }) async {
     if(usePossibleMemberNumbers) {
-      return isar.dbShooterRatings.where().dbAllPossibleMemberNumbersElementEqualTo(memberNumber)
+      if(useCache) {
+        var cachedRating = lookupCachedRating(group, memberNumber);
+        if(cachedRating != null) {
+          loadedShooterRatingCacheHits++;
+          return cachedRating;
+        }
+      }
+      var rating = await isar.dbShooterRatings.where().dbAllPossibleMemberNumbersElementEqualTo(memberNumber)
         .filter()
         .project((q) => q.idEqualTo(project.id))
         .group((q) => q.uuidEqualTo(group.uuid))
         .findFirst();
+      if(rating != null) {
+        if(saveToCache) {
+          cacheRating(group, rating);
+        }
+        loadedShooterRatingCacheMisses++;
+        return rating;
+      }
     }
     else {
-      return isar.dbShooterRatings.where().dbKnownMemberNumbersElementEqualTo(memberNumber)
+      var rating = await isar.dbShooterRatings.where().dbKnownMemberNumbersElementEqualTo(memberNumber)
         .filter()
         .project((q) => q.idEqualTo(project.id))
         .group((q) => q.uuidEqualTo(group.uuid))
         .findFirst();
+      if(rating != null && saveToCache) {
+        cacheRating(group, rating);
+      }
+      return rating;
     }
+    return null;
   }
 
   Future<DbShooterRating> newShooterRatingFromWrapped({
     required DbRatingProject project,
     required RatingGroup group,
     required ShooterRating rating,
+    bool useCache = true,
   }) {
+    
+    var dbRating = rating.wrappedRating;
+    dbRating.project.value = project;
+    dbRating.group.value = group;
+    if(useCache) {
+      cacheRating(group, dbRating);
+    }
     return isar.writeTxn(() async {
-      var dbRating = rating.wrappedRating;
-      dbRating.project.value = project;
-      dbRating.group.value = group;
       await isar.dbShooterRatings.put(dbRating);
 
       await dbRating.project.save();
@@ -133,7 +167,10 @@ extension RatingProjectDatabase on AnalystDatabase {
   /// Upsert a DbShooterRating.
   /// 
   /// If [linksChanged] is false, the links will not be saved in the write transaction.
-  Future<DbShooterRating> upsertDbShooterRating(DbShooterRating rating, {bool linksChanged = true}) {
+  Future<DbShooterRating> upsertDbShooterRating(DbShooterRating rating, {bool linksChanged = true, bool useCache = true}) {
+    if(useCache) {
+      cacheRating(rating.group.value!, rating);
+    }
     return isar.writeTxn(() async {
       await isar.dbShooterRatings.put(rating);
       if(linksChanged) {
@@ -146,8 +183,8 @@ extension RatingProjectDatabase on AnalystDatabase {
   }
 
   /// Update DbShooterRatings that have changed as part of the rating process.
-  Future<int> updateChangedRatings(Iterable<DbShooterRating> ratings) {
-    return isar.writeTxn(() async {
+  Future<int> updateChangedRatings(Iterable<DbShooterRating> ratings, {bool useCache = true}) async {
+    var count = await isar.writeTxn(() async {
       late DateTime start;
       int count = 0;
 
@@ -168,7 +205,23 @@ extension RatingProjectDatabase on AnalystDatabase {
         for(var event in r.newRatingEvents) {
           if(!event.isPersisted) {
             if(event.matchId.isNotEmpty && (!event.match.isLoaded || event.match.value == null)) {
-              var match = matches[event.matchId];
+              // If the hydrated match is cached, build a dummy match with the correct DB ID for the event.
+              var cacheResult = HydratedMatchCache().getBySourceId(event.matchId);
+              DbShootingMatch? match = null;
+              if(cacheResult.isOk()) {
+                var m = cacheResult.unwrap();
+                if(m.databaseId != null) {
+                  DbShootingMatch placeholder = DbShootingMatch.placeholder(m.databaseId!);
+                  match = placeholder;
+                }
+              }
+
+              // Otherwise, check our local cache.
+              if(match == null) {
+                match = matches[event.matchId];
+              }
+
+              // If it still isn't available, ask the DB.
               if(match == null) {
                 late DateTime matchStart;
                 if(Timings.enabled) matchStart = DateTime.now();
@@ -185,12 +238,19 @@ extension RatingProjectDatabase on AnalystDatabase {
         await Future.wait(eventFutures);
         r.newRatingEvents.clear();
         await r.events.save();
+
         if(Timings.enabled) Timings().add(TimingType.persistEvents, DateTime.now().difference(start).inMicroseconds);
       }
 
       return count;
     });
 
+    if(useCache) {
+      for(var r in ratings) {
+        cacheRating(r.group.value!, r);
+      }
+    }
+    return count;
   }
 
   Future<int> countShooterRatings(DbRatingProject project, RatingGroup group) async {

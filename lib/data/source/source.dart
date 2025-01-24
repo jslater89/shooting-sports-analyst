@@ -5,7 +5,7 @@
  */
 
 import 'package:flutter/widgets.dart';
-import 'package:shooting_sports_analyst/data/database/match/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/source/match_source_error.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';

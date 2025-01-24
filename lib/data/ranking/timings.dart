@@ -73,22 +73,30 @@ class Timings {
     matchEntryCount = 0;
     shooterCount = 0;
     matchCount = 0;
+    wallTime = 0;
   }
 
   void add(TimingType type, int microseconds) {
-    _elementsByType[type]!.microseconds += microseconds;
+    if(type == TimingType.wallTime) {
+      wallTime += microseconds;
+    }
+    else {
+      _elementsByType[type]!.microseconds += microseconds;
+    }
   }
 
   double get sum => elements.fold(0.0, (previousValue, element) => previousValue + element.microseconds);
   int matchEntryCount = 0;
   int shooterCount = 0;
   int matchCount = 0;
+  int wallTime = 0;
 
   @override
   String toString() {
     var content = "TIMINGS:\n";
     content += elements.map((e) => e.asString(0)).join("");
-    content += "Total: ${(sum / 1000).toStringAsFixed(1)} ms, ${((sum / 1000) / matchEntryCount).toStringAsFixed(3)} ms per match entry\n";
+    content += "Wall time: ${(wallTime / 1000).toStringAsFixed(1)} ms, ${((wallTime / 1000) / matchEntryCount).toStringAsFixed(3)} ms per match entry\n";
+    content += "vs. sum: ${(sum / 1000).toStringAsFixed(1)} ms, ${((sum / 1000) / matchEntryCount).toStringAsFixed(3)} ms per match entry\n";
     content += "Total of $shooterCount shooters, $matchCount matches, and $matchEntryCount entries";
 
     return content;
@@ -119,7 +127,8 @@ enum TimingType {
   saveDbRating,
   persistEvents,
   getEventMatches,
-  removeUnseenShooters;
+  removeUnseenShooters,
+  wallTime;
 
   String get label => switch(this) {
     TimingType.retrieveMatches => "Retrieve matches",
@@ -146,6 +155,7 @@ enum TimingType {
     TimingType.persistEvents => "Persist new events",
     TimingType.getEventMatches => "Get event matches",
     TimingType.removeUnseenShooters => "Remove unseen shooters",
+    TimingType.wallTime => "Wall time",
   };
 }
 

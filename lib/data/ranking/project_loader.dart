@@ -10,7 +10,7 @@ import 'package:collection/collection.dart';
 import 'package:fuzzywuzzy/fuzzywuzzy.dart' as fuzzywuzzy;
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
-import 'package:shooting_sports_analyst/data/database/match/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
@@ -110,10 +110,16 @@ class RatingProjectLoader {
   MemberNumberCorrectionContainer get _dataCorrections => settings.memberNumberCorrections;
   List<String> get memberNumberWhitelist => settings.memberNumberWhitelist;
 
-  RatingProjectLoader(this.project, this.host);
+  RatingProjectLoader(this.project, this.host, {this.parallel = false});
+  DateTime wallStart = DateTime.now();
+
+  bool parallel;
 
   Future<Result<void, RatingProjectLoadError>> calculateRatings({bool fullRecalc = false}) async {
+    wallStart = DateTime.now();
+
     HydratedMatchCache().clear();
+    db.clearLoadedShooterRatingCache();
     timings.reset();
 
     var start = DateTime.now();
@@ -166,6 +172,7 @@ class RatingProjectLoader {
     if(matchesToAdd.isEmpty) {
       _log.i("No new matches");
       host.progressCallback(progress: 0, total: 0, state: LoadingState.done);
+      timings.add(TimingType.wallTime, DateTime.now().difference(wallStart).inMicroseconds);
       return Result.ok(null);
     }
 
@@ -223,7 +230,11 @@ class RatingProjectLoader {
     var result = await _addMatches(hydratedMatches);
     if(result.isErr()) return Result.errFrom(result);
 
+    _log.i("Cache hits: ${db.loadedShooterRatingCacheHits}");
+    _log.i("Cache misses: ${db.loadedShooterRatingCacheMisses}");
+
     host.progressCallback(progress: 1, total: 1, state: LoadingState.done);
+    timings.add(TimingType.wallTime, DateTime.now().difference(wallStart).inMicroseconds);
 
     project.completedFullCalculation = true;
     await db.saveRatingProject(project, checkName: true);
@@ -420,13 +431,25 @@ class RatingProjectLoader {
         List<Future<DbShooterRating?>> futures = [];
         for(var sourceNumber in mapping.sourceNumbers) {
           // maybeKnownShooter here, because we might not have added all of the mapping sources yet.
-          futures.add(db.maybeKnownShooter(project: project, group: group, memberNumber: sourceNumber, usePossibleMemberNumbers: true));
+          futures.add(db.maybeKnownShooter(
+            project: project,
+            group: group,
+            memberNumber: sourceNumber,
+            usePossibleMemberNumbers: true,
+            useCache: true,
+          ));
         }
         var ratings = (await Future.wait(futures)).whereNotNull().toList();
 
         // knownShooter here, because the target number came from the set of ratings known to the
         // deduplicator.
-        var targetRating = await db.knownShooter(project: project, group: group, memberNumber: mapping.targetNumber, usePossibleMemberNumbers: true);
+        var targetRating = await db.knownShooter(
+          project: project,
+          group: group,
+          memberNumber: mapping.targetNumber,
+          usePossibleMemberNumbers: true,
+          useCache: true,
+        );
         
         // Add all of the source numbers to the target's known list
         targetRating.addKnownMemberNumbers(mapping.sourceNumbers);
@@ -496,9 +519,19 @@ class RatingProjectLoader {
         var fix = action as DataEntryFix;
         settings.memberNumberCorrections.add(fix.intoCorrection());
 
-        var sourceRating = await db.maybeKnownShooter(project: project, group: group, memberNumber: fix.sourceNumber);
+        var sourceRating = await db.maybeKnownShooter(
+          project: project,
+          group: group,
+          memberNumber: fix.sourceNumber,
+          useCache: true,
+        );
         if(sourceRating != null && sourceRating.deduplicatorName == fix.deduplicatorName) {
-          var targetRating = await db.maybeKnownShooter(project: project, group: group, memberNumber: fix.targetNumber);
+          var targetRating = await db.maybeKnownShooter(
+            project: project,
+            group: group,
+            memberNumber: fix.targetNumber,
+            useCache: true,
+          );
           if(targetRating != null) {
             if(sourceRating.knownMemberNumbers.any((n) => !targetRating.knownMemberNumbers.contains(n))) {
               targetRating.addKnownMemberNumbers(sourceRating.knownMemberNumbers);
@@ -555,15 +588,23 @@ class RatingProjectLoader {
     }
 
     List<Future<Result<void, RatingProjectLoadError>>> futures = [];
-    for(var group in project.groups) {
-      // futures.add(_addMatchScoresToGroup(group, matches));
-      var result = await _addMatchScoresToGroup(group, matches);
-      if(result.isErr()) return result;
+    if(parallel) {
+      for(var group in project.groups) {
+        futures.add(_addMatchScoresToGroup(group, matches));
+        // var result = await _addMatchScoresToGroup(group, matches);
+        // if(result.isErr()) return result;
+      }
+      var results = await Future.wait(futures);
+      for(var result in results) {
+        if(result.isErr()) return result;
+      }
     }
-    // var results = await Future.wait(futures);
-    // for(var result in results) {
-    //   if(result.isErr()) return result;
-    // }
+    else {
+      for(var group in project.groups) {
+        var result = await _addMatchScoresToGroup(group, matches);
+        if(result.isErr()) return result;
+      }
+    }
 
     if(Timings.enabled) timings.matchCount += matches.length;
 
@@ -631,10 +672,6 @@ class RatingProjectLoader {
       // Apply data corrections, checking each subsequent target for corrections where
       // it is the source, until we find no more corrections.
       var name = ShooterDeduplicator.processName(s);
-
-      if(name.startsWith("marcosrod")) {
-        print("break");
-      }
 
       Set<String> invalidMemberNumbers = {};
       Set<String> previouslyVisitedNumbers = {processed};
@@ -733,6 +770,7 @@ class RatingProjectLoader {
           group: group,
           memberNumber: s.memberNumber,
           usePossibleMemberNumbers: true,
+          useCache: true,
         );
 
         if(rating == null) {
@@ -853,7 +891,12 @@ class RatingProjectLoader {
     // after member numbers have been processed.
     String memNum = finalMemberNumber;
 
-    var rating = await db.maybeKnownShooter(project: project, group: g, memberNumber: finalMemberNumber);
+    var rating = await db.maybeKnownShooter(
+      project: project,
+      group: g,
+      memberNumber: finalMemberNumber,
+      useCache: true,
+    );
     if(rating == null) {
       _verifyCache[s] = false;
       return false;
@@ -898,7 +941,12 @@ class RatingProjectLoader {
       matchStrength += sport.ratingStrengthProvider?.strengthForClass(shooter.classification) ?? 1.0;
 
       // Update
-      var rating = await AnalystDatabase().maybeKnownShooter(project: project, group: group, memberNumber: shooter.memberNumber);
+      var rating = await AnalystDatabase().maybeKnownShooter(
+        project: project,
+        group: group,
+        memberNumber: shooter.memberNumber,
+        useCache: true,
+      );
       if(rating != null) {
         if(shooter.classification != null) {
           if(rating.lastClassification == null || shooter.classification!.index < rating.lastClassification!.index) {
@@ -946,6 +994,7 @@ class RatingProjectLoader {
         project: project,
         group: group,
         memberNumber: shooter.memberNumber,
+        useCache: true,
       );
 
       if(rating != null) {
@@ -1242,7 +1291,7 @@ class RatingProjectLoader {
         _encounteredMemberNumber(num);
 
         ShooterRating rating = wrappedRatings[num] ?? ratingSystem.wrapDbRating(
-            (await db.maybeKnownShooter(project: project, group: group, memberNumber: num))!
+            (await db.maybeKnownShooter(project: project, group: group, memberNumber: num, useCache: true))!
         );
 
         scoreMap[rating] = otherScore;
@@ -1297,7 +1346,7 @@ class RatingProjectLoader {
         _encounteredMemberNumber(num);
 
         ShooterRating rating = wrappedRatings[num] ?? ratingSystem.wrapDbRating(
-            (await db.maybeKnownShooter(project: project, group: group, memberNumber: num))!
+            (await db.maybeKnownShooter(project: project, group: group, memberNumber: num, useCache: true))!
         );
 
         scoreMap[rating] = s;

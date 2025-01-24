@@ -83,6 +83,27 @@ class AnalystDatabase {
 
   AnalystDatabase._();
 
+  /// Contains a cache of shooter ratings. By default, [knownShooter] and [maybeKnownShooter]
+  /// will not read from the cache. By default, ratings will be saved to the cache when
+  /// inserted, updated, or read.
+  Map<RatingGroup, Map<String, DbShooterRating>> loadedShooterRatingCache = {};
+  DbShooterRating? lookupCachedRating(RatingGroup group, String memberNumber) {
+    return loadedShooterRatingCache[group]?[memberNumber];
+  }
+  void cacheRating(RatingGroup group, DbShooterRating rating) {
+    loadedShooterRatingCache[group] ??= {};
+    for(var n in rating.allPossibleMemberNumbers) {
+      loadedShooterRatingCache[group]![n] = rating;
+    }
+  }
+  void clearLoadedShooterRatingCache() {
+    loadedShooterRatingCache.clear();
+    loadedShooterRatingCacheHits = 0;
+    loadedShooterRatingCacheMisses = 0;
+  }
+  int loadedShooterRatingCacheHits = 0;
+  int loadedShooterRatingCacheMisses = 0;
+
   /// The standard match query: index on name if present or date if not.
   Future<List<DbShootingMatch>> queryMatches({String? name, DateTime? after, DateTime? before, int page = 0, int pageSize = 100, MatchSortField sort = const DateSort()}) {
     Query<DbShootingMatch> finalQuery = _buildMatchQuery(

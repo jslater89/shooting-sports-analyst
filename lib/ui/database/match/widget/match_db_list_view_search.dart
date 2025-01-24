@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/logger.dart';
-import 'package:shooting_sports_analyst/ui/matchdb/match_db_list_view.dart';
+import 'package:shooting_sports_analyst/ui/database/match/match_db_list_view.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 var _log = SSALogger("MatchDbListSearch");

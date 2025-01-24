@@ -16,7 +16,7 @@ import 'package:shooting_sports_analyst/ui/booth/model.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_grid.dart';
 import 'package:shooting_sports_analyst/ui/booth/ticker.dart';
-import 'package:shooting_sports_analyst/ui/matchdb/match_db_select_dialog.dart';
+import 'package:shooting_sports_analyst/ui/database/match/match_db_select_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 SSALogger _log = SSALogger("BroadcastBoothPage");
