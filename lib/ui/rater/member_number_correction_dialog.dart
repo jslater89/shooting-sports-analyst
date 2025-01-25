@@ -47,11 +47,51 @@ class _MemberNumberCorrectionListDialogState extends State<MemberNumberCorrectio
   var sourceController = TextEditingController();
   var targetController = TextEditingController();
 
+  var nameFilterController = TextEditingController();
+  var sourceFilterController = TextEditingController();
+  var targetFilterController = TextEditingController();
+
   var nameFocusNode = FocusNode();
   var sourceFocusNode = FocusNode();
   var targetFocusNode = FocusNode();
 
+  List<MemberNumberCorrection>? filteredCorrections;
+
   var changed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    nameFilterController.addListener(_applyFilters);
+    sourceFilterController.addListener(_applyFilters);
+    targetFilterController.addListener(_applyFilters);
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    nameController.dispose();
+    sourceController.dispose();
+    targetController.dispose();
+    nameFilterController.dispose();
+    sourceFilterController.dispose();
+    targetFilterController.dispose();
+  }
+
+  void _applyFilters() {
+    if(nameFilterController.text.isEmpty && sourceFilterController.text.isEmpty && targetFilterController.text.isEmpty) {
+      filteredCorrections = null;
+    }
+    else {
+      filteredCorrections = widget.corrections.all.where((e) {
+        bool nameMatches = nameFilterController.text.isEmpty || e.name.contains(nameFilterController.text);
+        bool sourceMatches = sourceFilterController.text.isEmpty || e.invalidNumber.contains(sourceFilterController.text);
+        bool targetMatches = targetFilterController.text.isEmpty || e.correctedNumber.contains(targetFilterController.text);
+        return nameMatches && sourceMatches && targetMatches;
+      }).toList();
+    }
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,75 +106,135 @@ class _MemberNumberCorrectionListDialogState extends State<MemberNumberCorrectio
             if(widget.helpText != null) Text(widget.helpText!),
             Text(errorText, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).errorColor)),
             SizedBox(
-              width: widget.width / 1.5,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      focusNode: nameFocusNode,
-                      controller: nameController,
-                      decoration: InputDecoration(
-                          hintText: widget.nameHintText,
-                          suffix: IconButton(
-                            icon: Icon(Icons.forward),
-                            onPressed: () {
-                              advance();
-                            },
-                          )
+              width: widget.width / 1.25,
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text("Filter by...", style: Theme.of(context).textTheme.bodySmall),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: nameFilterController,
+                              decoration: InputDecoration(
+                                hintText: widget.nameHintText,
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            width: 5,
+                          ),
+                          Expanded(
+                            child: TextField(
+                              controller: sourceFilterController,
+                              decoration: InputDecoration(
+                                hintText: widget.sourceHintText,
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            width: 5,
+                          ),
+                          Expanded(
+                            child: TextField(
+                              controller: targetFilterController,
+                              decoration: InputDecoration(
+                                hintText: widget.targetHintText,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      onSubmitted: (input) {
-                        advance();
-                      },
-                    ),
+                    ],
                   ),
-                  SizedBox(
-                    width: 5,
-                  ),
-                  Expanded(
-                    child: TextField(
-                      focusNode: sourceFocusNode,
-                      controller: sourceController,
-                      decoration: InputDecoration(
-                          hintText: widget.sourceHintText,
-                          suffix: IconButton(
-                            icon: Icon(Icons.forward),
-                            onPressed: () {
-                              advance();
-                            },
-                          )
-                      ),
-                      onSubmitted: (input) {
-                        advance();
-                      },
-                    ),
-                  ),
-                  SizedBox(
-                    width: 5,
-                  ),
-                  Expanded(
-                    child: TextField(
-                      focusNode: targetFocusNode,
-                      controller: targetController,
-                      decoration: InputDecoration(
-                          hintText: widget.targetHintText,
-                          suffix: IconButton(
-                            icon: Icon(Icons.add),
-                            onPressed: () {
-                              submit(nameController.text, sourceController.text, targetController.text);
-                            },
-                          )
-                      ),
-                      onSubmitted: (input) {
-                        submit(nameController.text, sourceController.text, input);
-                      },
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
             SizedBox(height: 8),
-            for(var correction in widget.corrections.all) SizedBox(
-              width: widget.width / 1.5,
+            SizedBox(
+              width: widget.width / 1.25,
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text("Create new", style: Theme.of(context).textTheme.bodySmall),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              focusNode: nameFocusNode,
+                              controller: nameController,
+                              decoration: InputDecoration(
+                                  hintText: widget.nameHintText,
+                                  suffix: IconButton(
+                                    icon: Icon(Icons.forward),
+                                    onPressed: () {
+                                      advance();
+                                    },
+                                  )
+                              ),
+                              onSubmitted: (input) {
+                                advance();
+                              },
+                            ),
+                          ),
+                          SizedBox(
+                            width: 5,
+                          ),
+                          Expanded(
+                            child: TextField(
+                              focusNode: sourceFocusNode,
+                              controller: sourceController,
+                              decoration: InputDecoration(
+                                  hintText: widget.sourceHintText,
+                                  suffix: IconButton(
+                                    icon: Icon(Icons.forward),
+                                    onPressed: () {
+                                      advance();
+                                    },
+                                  )
+                              ),
+                              onSubmitted: (input) {
+                                advance();
+                              },
+                            ),
+                          ),
+                          SizedBox(
+                            width: 5,
+                          ),
+                          Expanded(
+                            child: TextField(
+                              focusNode: targetFocusNode,
+                              controller: targetController,
+                              decoration: InputDecoration(
+                                  hintText: widget.targetHintText,
+                                  suffix: IconButton(
+                                    icon: Icon(Icons.add),
+                                    onPressed: () {
+                                      submit(nameController.text, sourceController.text, targetController.text);
+                                    },
+                                  )
+                              ),
+                              onSubmitted: (input) {
+                                submit(nameController.text, sourceController.text, input);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: 8),
+            for(var correction in filteredCorrections ?? widget.corrections.all) SizedBox(
+              width: widget.width / 1.25,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 mainAxisSize: MainAxisSize.max,
@@ -147,6 +247,7 @@ class _MemberNumberCorrectionListDialogState extends State<MemberNumberCorrectio
                       setState(() {
                         changed = true;
                         widget.corrections.remove(correction);
+                        filteredCorrections?.remove(correction);
                       });
                     },
                   )
@@ -220,6 +321,7 @@ class _MemberNumberCorrectionListDialogState extends State<MemberNumberCorrectio
       sourceController.clear();
       targetController.clear();
     });
+    _applyFilters();
   }
 
   bool validate(String input, {bool allowEmpty = false}) {

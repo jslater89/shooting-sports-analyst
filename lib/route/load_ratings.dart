@@ -45,6 +45,8 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
 
   int _currentProgress = 0;
   int _totalProgress = 0;
+  int? _subProgress;
+  int? _subTotal;
   String? _loadingEventName;
   String? _loadingGroupName;
   var _loadingScrollController = ScrollController();
@@ -92,6 +94,8 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
     required LoadingState state,
     String? eventName,
     String? groupName,
+    int? subProgress,
+    int? subTotal,
   }) async {
     if(state != currentState) {
       _log.i("Rating calculation state changed: $state");
@@ -105,6 +109,8 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
       _loadingGroupName = groupName;
       _currentProgress = progress;
       _totalProgress = total;
+      _subProgress = subProgress;
+      _subTotal = subTotal;
     });
     // Allow a UI update
     await Future.delayed(const Duration(microseconds: 1));
@@ -149,34 +155,16 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
     Widget loadingText;
 
     if(_loadingEventName != null) {
-      var parts = _loadingEventName!.split(" - ");
-
-      if(parts.length >= 2) {
-        var divisionText = parts[0];
-        var eventText = parts.sublist(1).join(" - ");
-        loadingText = Row(
-          mainAxisSize: MainAxisSize.max,
-          children: [
-            Expanded(child: Container()),
-            Expanded(flex: 6, child: Text("Now: ${currentState.label}", style: Theme.of(context).textTheme.titleSmall, textAlign: TextAlign.center)),
-            Expanded(flex: 2, child: Text(divisionText, overflow: TextOverflow.ellipsis, softWrap: false, textAlign: TextAlign.center)),
-            Expanded(flex: 6, child: Text(eventText, overflow: TextOverflow.ellipsis, softWrap: false, textAlign: TextAlign.center)),
-            Expanded(child: Container())
-          ],
-        );
-      }
-      else {
-        loadingText = Row(
-          mainAxisSize: MainAxisSize.max,
-          children: [
-            Expanded(child: Container()),
-            Expanded(flex: 3, child: Text("Now: ${currentState.label}", style: Theme.of(context).textTheme.titleSmall, textAlign: TextAlign.center)),
-            Expanded(flex: 3, child: Text(_loadingEventName!, overflow: TextOverflow.ellipsis, softWrap: false)),
-            Expanded(flex: 3, child: Text(_loadingGroupName ?? "(no group)", overflow: TextOverflow.ellipsis, softWrap: false)),
-            Expanded(child: Container())
-          ],
-        );
-      }
+      loadingText = Row(
+        mainAxisSize: MainAxisSize.max,
+        children: [
+          Expanded(child: Container()),
+          Expanded(flex: 6, child: Text("Now: ${currentState.label}", style: Theme.of(context).textTheme.titleSmall, textAlign: TextAlign.right)),
+          Expanded(flex: 2, child: Text(_loadingGroupName ?? "(no group)", overflow: TextOverflow.ellipsis, softWrap: false, textAlign: TextAlign.center)),
+          Expanded(flex: 6, child: Text(_loadingEventName!, overflow: TextOverflow.ellipsis, softWrap: false)),
+          Expanded(child: Container())
+        ],
+      );
     }
     else {
       List<Widget> elements = [
@@ -203,7 +191,13 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
           SizedBox(height: 10),
           if(_totalProgress > 0)
             LinearProgressIndicator(
+              minHeight: 5,
               value: _currentProgress / _totalProgress,
+            ),
+          if(_subTotal != null && _subProgress != null && _subTotal! > 0)
+            LinearProgressIndicator(
+              minHeight: 5,
+              value: _subProgress! / _subTotal!,
             ),
           SizedBox(height: 20),
           Expanded(

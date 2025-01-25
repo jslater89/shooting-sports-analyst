@@ -11,6 +11,8 @@ import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
+typedef DeduplicatorProgressCallback = Future<void> Function(int current, int total, String description);
+
 /// ShooterDeduplicators implement shooter deduplication: the process
 /// whereby shooters in sports that can have multiple member numbers
 /// per unique person (like USPSA's A/TY/FY, L, B, RD setup) are turned
@@ -47,6 +49,7 @@ abstract class ShooterDeduplicator {
     required DbRatingProject ratingProject,
     required RatingGroup group,
     required List<DbShooterRating> newRatings,
+    DeduplicatorProgressCallback? progressCallback,
     bool checkDataEntryErrors = true,
     bool verbose = false
   });

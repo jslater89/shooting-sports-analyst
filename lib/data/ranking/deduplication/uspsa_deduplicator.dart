@@ -97,11 +97,14 @@ class USPSADeduplicator extends ShooterDeduplicator {
     required DbRatingProject ratingProject,
     required RatingGroup group,
     required List<DbShooterRating> newRatings,
+    DeduplicatorProgressCallback? progressCallback,
     bool checkDataEntryErrors = true,
     bool verbose = false
   }) async {
     var userMappings = ratingProject.settings.userMemberNumberMappings;
     var autoMappings = ratingProject.automaticNumberMappings;
+
+    await progressCallback?.call(0, 2, "Preparing data");
 
     // All known mappings, user and automatic. User-specified mappings will override
     // previously-detected automatic mappings.
@@ -114,6 +117,8 @@ class USPSADeduplicator extends ShooterDeduplicator {
     for(var mapping in userMappings.entries) {
       allMappings[mapping.key] = mapping.value;
     }
+
+    await progressCallback?.call(1, 2, "Preparing data");
 
     // The blacklist operates in subtly different ways for different
     // kinds of conflicts.
@@ -142,6 +147,9 @@ class USPSADeduplicator extends ShooterDeduplicator {
       ratingsByName[rating.deduplicatorName]!.add(rating);
     }
 
+    await progressCallback?.call(0, deduplicatorNames.length, "Detecting conflicts");
+    int step = 0;
+
     // Detect conflicts for each name.
     for(var name in deduplicatorNames) {
       Map<String, String> detectedMappings = {};
@@ -153,6 +161,9 @@ class USPSADeduplicator extends ShooterDeduplicator {
         _log.w("Failed to retrieve ratings for deduplicator name $name", error: ratingsRes.unwrapErr());
         continue;
       }
+
+      step += 1;
+      await progressCallback?.call(step, deduplicatorNames.length, "Detecting conflicts: $name");
 
       List<DbShooterRating> ratings = [];
       Map<int, bool> dbIdsSeen = {};
