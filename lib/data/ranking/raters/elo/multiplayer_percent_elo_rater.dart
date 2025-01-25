@@ -150,9 +150,10 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
     var actualScore = _calculateActualScore(match: match, score: aScore, matchScore: aMatchScore, params: params, isDnf: aMatchScore.isDnf);
 
+    var aLength = aRating.length;
     // The first N matches you shoot get bonuses for initial placement.
-    var placementMultiplier = aRating.ratingEvents.length < RatingSystem.initialPlacementMultipliers.length ?
-      RatingSystem.initialPlacementMultipliers[aRating.ratingEvents.length] : 1.0;
+    var placementMultiplier = aLength < RatingSystem.initialPlacementMultipliers.length ?
+      RatingSystem.initialPlacementMultipliers[aLength] : 1.0;
 
     // If lots of people zero a stage, we can't reason effectively about the relative
     // differences in performance of those people, compared to each other or compared

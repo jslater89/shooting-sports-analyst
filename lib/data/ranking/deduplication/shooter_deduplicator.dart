@@ -131,7 +131,6 @@ abstract class ShooterDeduplicator {
     _normalizeNumberBasicCache[number] = n;
     return n;
   }
-
   static Map<String, String> _normalizeNumberBasicCache = {};
 
   /// Returns a number processor for the given sport, falling back to a default

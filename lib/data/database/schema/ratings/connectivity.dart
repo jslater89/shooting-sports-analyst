@@ -1,6 +1,8 @@
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 
+part 'connectivity.g.dart';
+
 @embedded
 class BaselineConnectivity {
   String groupUuid;

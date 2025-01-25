@@ -499,7 +499,6 @@ class DbRatingEvent implements IRatingEvent {
   DateTime date;
   double ratingChange;
   double oldRating;
-  @ignore
   double get newRating => oldRating + ratingChange;
 
   /// A synthetic incrementing value used to sort rating events by date and stage

@@ -8,6 +8,8 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
+import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 // import 'package:shooting_sports_analyst/data/db/object/match/shooter.dart';
@@ -229,32 +231,36 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
   }
 
   @ignore
-  int get length => ratingEvents.length;
+  int get length => wrappedRating.length;
 
   void updateFromEvents(List<RatingEvent> events);
 
-  AverageRating averageRating({int window = ShooterRating.baseTrendWindow, List<RatingEvent>? preloadedEvents}) {
-    double runningRating = rating;
+  AverageRating averageRating({int window = ShooterRating.baseTrendWindow, List<double>? preloadedRatings}) {
     double lowestPoint = rating;
     double highestPoint = rating;
 
-    var eventBase = preloadedEvents ?? ratingEvents;
-
-    late List<RatingEvent> ratingEventList;
+    // The list of ratings, from oldest to newest.
+    // We need to reverse the database query, because we need order.desc to get the N most recent,
+    // but we want to iterate from oldest to newest.
+    List<double> ratings = preloadedRatings 
+      ?? AnalystDatabase().getRatingEventRatingForSync(wrappedRating, limit: window, offset: 0, order: Order.descending, newRating: false).reversed.toList();
     List<double> intermediateRatings = [];
-    if(window > eventBase.length) ratingEventList = eventBase;
-    else ratingEventList = eventBase.sublist(eventBase.length - window);
 
-    for(var event in ratingEventList.reversed) {
-      var intermediateRating = runningRating - event.ratingChange;
+    // Iterate from oldest to newest (although it doesn't really matter).
+    double firstRating = 0.0;
+    if(ratings.isNotEmpty) {
+      firstRating = ratings.first;
+    }
+    // We want to get a tail window here because preloadedRatings might be longer than required
+    for(var rating in ratings.getTailWindow(window)) {
+      var intermediateRating = rating;
       if(intermediateRating < lowestPoint) lowestPoint = intermediateRating;
       if(intermediateRating > highestPoint) highestPoint = intermediateRating;
       intermediateRatings.add(intermediateRating);
-      runningRating = intermediateRating;
     }
 
     var intermediateAverage = intermediateRatings.isEmpty ? 0.0 : intermediateRatings.average;
-    return AverageRating(firstRating: runningRating, minRating: lowestPoint, maxRating: highestPoint, averageOfIntermediates: intermediateAverage, window: window);
+    return AverageRating(firstRating: firstRating, minRating: lowestPoint, maxRating: highestPoint, averageOfIntermediates: intermediateAverage, window: window);
   }
 
   List<RatingEvent> eventsWithWindow({int window = baseTrendWindow, int offset = 0}) {

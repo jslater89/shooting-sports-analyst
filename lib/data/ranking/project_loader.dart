@@ -211,7 +211,7 @@ class RatingProjectLoader {
     host.progressCallback(progress: 0, total: matchesToAdd.length, state: LoadingState.readingMatches);
     List<ShootingMatch> hydratedMatches = [];
     for(var dbMatch in matchesToAdd) {
-      var matchRes = dbMatch.hydrate();
+      var matchRes = dbMatch.hydrate(useCache: true);
       if(matchRes.isErr()) {
         var err = matchRes.unwrapErr();
         return Result.err(MatchLoadFailureError(

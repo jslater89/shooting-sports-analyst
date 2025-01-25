@@ -206,6 +206,8 @@ extension RatingProjectDatabase on AnalystDatabase {
         for(var event in r.newRatingEvents) {
           if(!event.isPersisted) {
             if(event.matchId.isNotEmpty && (!event.match.isLoaded || event.match.value == null)) {
+              late DateTime matchStart;
+              if(Timings.enabled) matchStart = DateTime.now();
               // If the hydrated match is cached, build a dummy match with the correct DB ID for the event.
               var cacheResult = HydratedMatchCache().getBySourceId(event.matchId);
               DbShootingMatch? match = null;
@@ -224,13 +226,11 @@ extension RatingProjectDatabase on AnalystDatabase {
 
               // If it still isn't available, ask the DB.
               if(match == null) {
-                late DateTime matchStart;
-                if(Timings.enabled) matchStart = DateTime.now();
                 match = await this.getMatchByAnySourceId([event.matchId]);
                 matches[event.matchId] = match!;
-                if(Timings.enabled) Timings().add(TimingType.getEventMatches, DateTime.now().difference(matchStart).inMicroseconds);
               }
               event.match.value = match;
+              if(Timings.enabled) Timings().add(TimingType.getEventMatches, DateTime.now().difference(matchStart).inMicroseconds);
             }
             eventFutures.add(isar.dbRatingEvents.put(event).then((_) => event.match.save()));
             r.events.add(event);
@@ -299,8 +299,45 @@ extension RatingProjectDatabase on AnalystDatabase {
     int offset = 0,
     DateTime? after,
     DateTime? before,
+    Order order = Order.ascending,
   }) {
-    var query = _buildShooterEventDoubleDataQuery(rating, limit: limit, offset: offset, after: after, before: before);
+    var query = _buildShooterEventDoubleDataQuery(rating, limit: limit, offset: offset, after: after, before: before, order: order);
+    return query.findAllSync();
+  }
+
+  List<double> getRatingEventChangeForSync(DbShooterRating rating, {
+    int limit = 0,
+    int offset = 0,
+    DateTime? after,
+    DateTime? before,
+    Order order = Order.descending,
+  }) {
+    var query = _buildShooterEventRatingChangeQuery(rating, limit: limit, offset: offset, after: after, before: before, order: order);
+    return query.findAllSync();
+  }
+
+  /// Get a list of historical rating values for a given competitor.
+  /// 
+  /// [limit] and [offset] specify the range of values to return.
+  /// [after] and [before] limit results by date.
+  /// [order] specifies the order of the results (descending by default, or ascending)
+  /// [newRating] specifies whether to return the rating following this event's change (true),
+  /// or the rating before its change is applied (false).
+  List<double> getRatingEventRatingForSync(DbShooterRating rating, {
+    int limit = 0,
+    int offset = 0,
+    DateTime? after,
+    DateTime? before,
+    Order order = Order.descending,
+    bool newRating = true,
+  }) {
+    Query<double> query;
+    if(newRating) {
+      query = _buildShooterEventNewRatingQuery(rating, limit: limit, offset: offset, after: after, before: before, order: order);
+    }
+    else {
+      query = _buildShooterEventOldRatingQuery(rating, limit: limit, offset: offset, after: after, before: before, order: order);
+    }
     return query.findAllSync();
   }
 
@@ -360,9 +397,16 @@ extension RatingProjectDatabase on AnalystDatabase {
     int offset = 0,
     DateTime? after,
     DateTime? before,
+    Order order = Order.descending,
   }) {
-    var builder = rating.events.filter()
-        .sortByDateAndStageNumberDesc();
+    var b1 = rating.events.filter();
+    QueryBuilder<DbRatingEvent, DbRatingEvent, QAfterSortBy> builder;
+    if(order == Order.descending) {
+      builder = b1.sortByDateAndStageNumberDesc();
+    }
+    else {
+      builder = b1.sortByDateAndStageNumber();
+    }
     Query<DbRatingEvent> query;
     if(limit > 0) {
       if(offset > 0) {
@@ -385,23 +429,123 @@ Query<List<double>> _buildShooterEventDoubleDataQuery(DbShooterRating rating, {
   int offset = 0,
   DateTime? after,
   DateTime? before,
+  Order order = Order.descending,
 }) {
-  var builder = rating.events.filter()
-        .sortByDateAndStageNumberDesc();
-    Query<List<double>> query;
-    if(limit > 0) {
-      if(offset > 0) {
-        query = builder.offset(offset).limit(limit).doubleDataProperty().build();
-      }
-      else {
-        query = builder.limit(limit).doubleDataProperty().build();
-      }
+  var b1 = rating.events.filter();
+  QueryBuilder<DbRatingEvent, DbRatingEvent, QAfterSortBy> builder;
+  if(order == Order.descending) {
+    builder = b1.sortByDateAndStageNumberDesc();
+  }
+  else {
+    builder = b1.sortByDateAndStageNumber();
+  }
+  Query<List<double>> query;
+  if(limit > 0) {
+    if(offset > 0) {
+      query = builder.offset(offset).limit(limit).doubleDataProperty().build();
     }
     else {
-      query = builder.doubleDataProperty().build();
+      query = builder.limit(limit).doubleDataProperty().build();
     }
+  }
+  else {
+    query = builder.doubleDataProperty().build();
+  }
 
-    return query;
+  return query;
+}
+
+Query<double> _buildShooterEventRatingChangeQuery(DbShooterRating rating, {
+  int limit = 0,
+  int offset = 0,
+  DateTime? after,
+  DateTime? before,
+  Order order = Order.descending,
+}) {
+  var b1 = rating.events.filter();
+  QueryBuilder<DbRatingEvent, DbRatingEvent, QAfterSortBy> builder;
+  if(order == Order.descending) {
+    builder = b1.sortByDateAndStageNumberDesc();
+  }
+  else {
+    builder = b1.sortByDateAndStageNumber();
+  }
+  Query<double> query;
+  if(limit > 0) {
+    if(offset > 0) {
+      query = builder.offset(offset).limit(limit).ratingChangeProperty().build();
+    }
+    else {
+      query = builder.limit(limit).ratingChangeProperty().build();
+    }
+  }
+  else {
+    query = builder.ratingChangeProperty().build();
+  }
+
+  return query;
+}
+
+Query<double> _buildShooterEventNewRatingQuery(DbShooterRating rating, {
+  int limit = 0,
+  int offset = 0,
+  DateTime? after,
+  DateTime? before,
+  Order order = Order.descending,
+}) {
+  var b1 = rating.events.filter();
+  QueryBuilder<DbRatingEvent, DbRatingEvent, QAfterSortBy> builder;
+  if(order == Order.descending) {
+    builder = b1.sortByDateAndStageNumberDesc();
+  }
+  else {
+    builder = b1.sortByDateAndStageNumber();
+  }
+  Query<double> query;
+  if(limit > 0) {
+    if(offset > 0) {
+      query = builder.offset(offset).limit(limit).newRatingProperty().build();
+    }
+    else {
+      query = builder.limit(limit).newRatingProperty().build();
+    }
+  }
+  else {
+    query = builder.newRatingProperty().build();
+  }
+
+  return query;
+}
+
+Query<double> _buildShooterEventOldRatingQuery(DbShooterRating rating, {
+  int limit = 0,
+  int offset = 0,
+  DateTime? after,
+  DateTime? before,
+  Order order = Order.descending,
+}) {
+  var b1 = rating.events.filter();
+  QueryBuilder<DbRatingEvent, DbRatingEvent, QAfterSortBy> builder;
+  if(order == Order.descending) {
+    builder = b1.sortByDateAndStageNumberDesc();
+  }
+  else {
+    builder = b1.sortByDateAndStageNumber();
+  }
+  Query<double> query;
+  if(limit > 0) {
+    if(offset > 0) {
+      query = builder.offset(offset).limit(limit).oldRatingProperty().build();
+    }
+    else {
+      query = builder.limit(limit).oldRatingProperty().build();
+    }
+  }
+  else {
+    query = builder.oldRatingProperty().build();
+  }
+
+  return query;
 }
 
 enum RatingMigrationError implements ResultErr {

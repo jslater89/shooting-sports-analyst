@@ -43,19 +43,21 @@ class EloShooterRating extends ShooterRating {
   double get longDirection => wrappedRating.doubleData[_DoubleKeys.longDirection.index];
   set longDirection(double v) => wrappedRating.doubleData[_DoubleKeys.longDirection.index] = v;
 
-  double directionWithWindow(int window, {List<RatingEvent>? preloadedEvents}) {
-    if(wrappedRating.length == 0) return 0;
+  double directionWithWindow(int window, {List<double>? preloadedChanges, bool checkLength = true}) {
+    if(checkLength && (wrappedRating.length == 0)) return 0;
 
-    late List<IRatingEvent> events;
-    if(preloadedEvents != null) {
-      events = preloadedEvents.getTailWindow(window);
+    late List<double> changes;
+    if(preloadedChanges != null) {
+      changes = preloadedChanges.getTailWindow(window);
     }
     else {
-      events = wrappedRating.getEventsInWindowSync(window: window);
+      // This is in order from newest to oldest, but we don't need to switch it because direction doesn't
+      // care about the order of events.
+      changes = AnalystDatabase().getRatingEventChangeForSync(wrappedRating, limit: window, offset: 0, order: Order.descending);
     }
 
-    int total = events.length;
-    int positive = events.where((element) => element.ratingChange >= 0).length;
+    int total = changes.length;
+    int positive = changes.where((element) => element >= 0).length;
 
     // Center around zero, expand to range [-1, 1]
     return ((positive / total) - 0.5) * 2.0;
@@ -110,27 +112,26 @@ class EloShooterRating extends ShooterRating {
     int offset = 0,
     double decayAfterFull = 0.9,
   }) {
-    if(errors.isEmpty) return 0.5;
+    var dbWindow = window - wrappedRating.newRatingEvents.length;
+    List<double> dbRatingErrors = AnalystDatabase().getRatingEventDoubleDataForSync(
+      wrappedRating,
+      limit: dbWindow,
+      order: Order.descending,
+    ).map((e) => EloRatingEvent.getErrorFromDoubleData(e)).toList();
 
-    late List<double> ratingErrors;
-    if((window + offset) >= errors.length) {
-      if(offset < (errors.length)) ratingErrors = errors.sublist(0, errors.length - offset);
-      else ratingErrors = errors;
-    }
-    else {
-      ratingErrors = errors.sublist(errors.length - (window + offset), errors.length - offset);
-    }
+    // Get a list of errors in order from newest to oldest, including any new errors.
+    var newRatingErrors = wrappedRating.newRatingEvents.reversed.map((e) => EloRatingEvent.getError(e));
+    List<double> ratingErrors = [...newRatingErrors, ...dbRatingErrors];
 
     double currentDecay = 1.0;
     double squaredSum = 0.0;
     double length = 0.0;
-    var reversed = ratingErrors.reversed.toList();
-    for(int i = 0; i < reversed.length; i++) {
+    for(int i = 0; i < ratingErrors.length; i++) {
       if(i >= fullEffect) {
         currentDecay *= decayAfterFull;
       }
 
-      squaredSum += pow(reversed[i], 2) * currentDecay;
+      squaredSum += pow(ratingErrors[i], 2) * currentDecay;
       length += 1.0 * currentDecay;
     }
     return squaredSum / length;
@@ -237,22 +238,6 @@ class EloShooterRating extends ShooterRating {
     return out;
   }
 
-  List<double>? _errors = null;
-  List<double> get errors {
-    if(_errors == null) {
-      var doubleData = AnalystDatabase().getRatingEventDoubleDataForSync(wrappedRating);
-      _errors = doubleData.map((e) => EloRatingEvent.getErrorFromDoubleData(e)).toList();
-    }
-
-    List<double> newErrors = [];
-    if(wrappedRating.newRatingEvents.isNotEmpty) {
-      var unpersistedErrors = wrappedRating.newRatingEvents.map((e) => EloRatingEvent.getError(e));
-      newErrors.addAll(unpersistedErrors);
-    }
-
-    return [..._errors!, ...newErrors];
-  }
-
   List<RatingEvent> emptyRatingEvents = [];
 
   void clearRatingEventCache() {
@@ -304,31 +289,45 @@ class EloShooterRating extends ShooterRating {
   }
 
   void updateTrends(List<RatingEvent> changes) {
-    var currentLength = ratingEvents.length;
-    var longTrendWindow = min(currentLength, ShooterRating.baseTrendWindow * 2);
-    var trendWindow = min(currentLength, ShooterRating.baseTrendWindow);
+    // [changes] is not yet persisted, so we want a list of up to longTrendWindow events
+    // that is [...dbEvents, ...changes].
+    var longTrendWindow = ShooterRating.baseTrendWindow * 2;
+    var trendWindow = ShooterRating.baseTrendWindow;
+
+    var newEventContribution = changes.length;
+    var dbRequirement = longTrendWindow - newEventContribution;
 
     if(longTrendWindow == 0) {
       return;
     }
 
-    // TODO: get a double list of the longTrendWindow most recent historical rating changes
-    // TODO: get a double list of the longTrendWindow most recent historical ratings
-    // We only need the above TODOs, not the full rating events, which should
-    // speed things up dramatically.
-    var events = ratingEvents.sublist(ratingEvents.length - longTrendWindow);
-    var stdDevEvents = events.getTailWindow(trendWindow);
-    var stdDev = sqrt(stdDevEvents.map((e) => pow(e.ratingChange, 2)).sum / (stdDevEvents.length - 1));
+    List<double> ratingChanges = [];
+    List<double> ratingValues = [];
+
+    if(dbRequirement > 0) {
+      List<double> dbRatingChanges = AnalystDatabase().getRatingEventChangeForSync(wrappedRating, limit: dbRequirement, offset: 0, order: Order.descending);
+      List<double> dbRatingValues = AnalystDatabase().getRatingEventRatingForSync(wrappedRating, limit: dbRequirement, offset: 0, order: Order.descending);
+
+      // Put the list in order from oldest to newest.
+      ratingChanges.addAll(dbRatingChanges.reversed);
+      ratingValues.addAll(dbRatingValues.reversed);
+    }
+
+    ratingChanges.addAll(changes.map((e) => e.ratingChange));
+    ratingValues.addAll(changes.map((e) => e.newRating));
+
+    var stdDevChanges = ratingChanges.getTailWindow(trendWindow);
+    var stdDev = sqrt(stdDevChanges.map((e) => pow(e, 2)).sum / (stdDevChanges.length - 1));
 
     variance = stdDev;
 
-    shortDirection = directionWithWindow(ShooterRating.baseTrendWindow ~/ 2, preloadedEvents: events);
-    direction = directionWithWindow(ShooterRating.baseTrendWindow, preloadedEvents: events);
-    longDirection = directionWithWindow(ShooterRating.baseTrendWindow * 2, preloadedEvents: events);
+    shortDirection = directionWithWindow(ShooterRating.baseTrendWindow ~/ 2, preloadedChanges: ratingChanges, checkLength: false);
+    direction = directionWithWindow(ShooterRating.baseTrendWindow, preloadedChanges: ratingChanges, checkLength: false);
+    longDirection = directionWithWindow(ShooterRating.baseTrendWindow * 2, preloadedChanges: ratingChanges, checkLength: false);
 
-    shortTrend = rating - averageRating(window: ShooterRating.baseTrendWindow ~/ 2, preloadedEvents: events).firstRating;
-    mediumTrend = rating - averageRating(window: ShooterRating.baseTrendWindow, preloadedEvents: events).firstRating;
-    longTrend = rating - averageRating(window: ShooterRating.baseTrendWindow * 2, preloadedEvents: events).firstRating;
+    shortTrend = rating - averageRating(window: ShooterRating.baseTrendWindow ~/ 2, preloadedRatings: ratingValues).firstRating;
+    mediumTrend = rating - averageRating(window: ShooterRating.baseTrendWindow, preloadedRatings: ratingValues).firstRating;
+    longTrend = rating - averageRating(window: ShooterRating.baseTrendWindow * 2, preloadedRatings: ratingValues).firstRating;
 
     // if(Rater.processMemberNumber(shooter.memberNumber) == "128393") {
     //   debugPrint("Trends for ${shooter.lastName}");

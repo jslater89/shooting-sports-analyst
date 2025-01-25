@@ -18,7 +18,7 @@ import 'package:shooting_sports_analyst/data/sport/match/translator.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
-var _log = SSALogger("MatchDb");
+var _log = SSALogger("AnalystDb");
 
 class AnalystDatabase {
   static const knownMemberNumbersIndex = "knownMemberNumbers";
@@ -349,4 +349,9 @@ class AnalystDatabase {
       return (where, elements.where((element) => element != where));
     }
   }
+}
+
+enum Order {
+  ascending,
+  descending,
 }
