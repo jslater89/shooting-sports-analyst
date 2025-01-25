@@ -4,10 +4,10 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
-import 'package:shooting_sports_analyst/data/ranking/legacy_loader/rating_history.dart';
 
 class RaterGroupsDialog extends StatefulWidget {
   const RaterGroupsDialog({Key? key, required this.selectedGroups, this.customGroups = const [], this.groupProvider}) : super(key: key);
@@ -19,7 +19,7 @@ class RaterGroupsDialog extends StatefulWidget {
   List<RatingGroup> get allGroups {
     List<RatingGroup> all = [];
     if(groupProvider != null) {
-      all.addAll(groupProvider!.builtinRatingGroups);
+      all.addAll(groupProvider!.builtinRatingGroups.sorted((a, b) => a.sortOrder.compareTo(b.sortOrder)));
     }
     all.addAll(customGroups);
     return all;

@@ -208,11 +208,11 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
     if(!dbGroups.isLoaded) {
       dbGroups.loadSync();
     }
-    return []..addAll(dbGroups);
+    return []..addAll(dbGroups.sorted((a, b) => a.sortOrder.compareTo(b.sortOrder)));
   }
   set groups(List<RatingGroup> value) {
     dbGroups.clear();
-    dbGroups.addAll(value);
+    dbGroups.addAll(value.sorted((a, b) => a.sortOrder.compareTo(b.sortOrder)));
   }
 
   /// For the next full recalculation only, skip checking data entry
@@ -403,6 +403,8 @@ class RatingGroup with DbSportEntity {
 
   List<String> divisionNames;
 
+  int sortOrder;
+
   @ignore
   List<Division> get divisions =>
       divisionNames.map((name) => sport.divisions.lookupByName(name))
@@ -431,6 +433,7 @@ class RatingGroup with DbSportEntity {
     required this.uuid,
     required this.sportName,
     required this.name,
+    this.sortOrder = 0,
     this.displayName,
     this.divisionNames = const [],
   });
@@ -440,6 +443,7 @@ class RatingGroup with DbSportEntity {
     String? uuid,
     required this.sportName,
     required this.name,
+    this.sortOrder = 0,
     this.displayName,
     this.divisionNames = const [],
   }) : this.uuid = uuid ?? UuidV4().generate();

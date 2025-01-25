@@ -327,7 +327,7 @@ class RatingProjectLoader {
         group: group,
         newRatings: newRatings,
         progressCallback: (progress, total, description) async {
-          if(progress == 0 || progress % (max(10, total ~/ 250)) == 0) {
+          if(progress == 0 || progress % (max(5, total ~/ 250)) == 0) {
             await host.progressCallback(
               progress: _currentMatchStep,
               total: _totalMatchSteps,
