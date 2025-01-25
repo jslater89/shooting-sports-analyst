@@ -8,10 +8,12 @@ import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 part 'shooter_rating.g.dart';
 
@@ -86,7 +88,15 @@ class DbShooterRating extends Shooter with DbSportEntity {
 
   double rating;
   double error;
-  double connectedness;
+
+  /// Raw connectivity is the score before normalization/scaling.
+  double rawConnectivity;
+  /// Connectivity is the score after normalization/scaling.
+  @Index()
+  double connectivity;
+
+  /// Match windows contain competitor information 
+  List<MatchWindow> matchWindows = [];
 
   /// Use to store algorithm-specific double data.
   List<double> doubleData = [];
@@ -113,7 +123,8 @@ class DbShooterRating extends Shooter with DbSportEntity {
     required super.female,
     required this.rating,
     required this.error,
-    required this.connectedness,
+    required this.rawConnectivity,
+    required this.connectivity,
     required this.firstSeen,
     required this.lastSeen,
   }) : super(firstName: firstName, lastName: lastName);
@@ -126,7 +137,8 @@ class DbShooterRating extends Shooter with DbSportEntity {
     super.female = false,
     this.rating = 0.0,
     this.error = 0.0,
-    this.connectedness = 0.0,
+    this.rawConnectivity = 0.0,
+    this.connectivity = 0.0,
     DateTime? firstSeen,
     DateTime? lastSeen,
     int doubleDataLength = 0,
@@ -144,7 +156,7 @@ class DbShooterRating extends Shooter with DbSportEntity {
     // biographical info won't change
     this.rating = other.rating;
     this.error = other.error;
-    this.connectedness = other.connectedness;
+    this.connectivity = other.connectivity;
     if(other.firstSeen.isBefore(this.firstSeen)) {
       this.firstSeen = other.firstSeen;
     }
@@ -162,3 +174,46 @@ class DbShooterRating extends Shooter with DbSportEntity {
 }
 
 typedef WrappedRatingGenerator = ShooterRating Function(DbShooterRating r);
+
+@embedded
+class MatchWindow {
+  String matchSourceId;
+  late DateTime date;
+  List<int> get dbUniqueOpponentIds => uniqueOpponentIds.toList();
+  set dbUniqueOpponentIds(List<int> value) => uniqueOpponentIds = value.toSet();
+  int totalOpponents;
+
+  @ignore
+  Set<int> uniqueOpponentIds;
+
+  MatchWindow({
+    this.matchSourceId = "",
+    this.uniqueOpponentIds = const {},
+    this.totalOpponents = 0,
+  }) {
+    this.date = DateTime.now();
+  }
+
+  MatchWindow.createFromDbMatch({
+    required DbShootingMatch match,
+    required Set<int> uniqueOpponentIds,
+    required int totalOpponents,
+  }) :  this.matchSourceId = match.sourceIds.first,
+        this.date = match.date,
+        this.uniqueOpponentIds = uniqueOpponentIds,
+        this.totalOpponents = totalOpponents;
+
+  MatchWindow.createFromHydratedMatch({
+    required ShootingMatch match,
+    required Set<int> uniqueOpponentIds,
+    required int totalOpponents,
+  }) : this.matchSourceId = match.sourceIds.first,
+        this.date = match.date,
+        this.uniqueOpponentIds = uniqueOpponentIds,
+        this.totalOpponents = totalOpponents;
+
+  @override
+  String toString() {
+    return "MatchWindow(uniqueOpponentIds: ${uniqueOpponentIds.length}, totalOpponents: $totalOpponents, date: ${programmerYmdFormat.format(date)})";
+  }
+}

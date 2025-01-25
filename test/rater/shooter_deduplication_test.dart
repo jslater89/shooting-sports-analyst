@@ -961,7 +961,8 @@ Future<List<DbShooterRating>> addMatchToTest(AnalystDatabase db, DbRatingProject
       memberNumber: competitor.memberNumber,
       female: competitor.female,
       error: 0,
-      connectedness: 0,
+      connectivity: 0,
+      rawConnectivity: 0,
       firstSeen: match.date,
       lastSeen: match.date,
     );

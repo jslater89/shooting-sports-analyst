@@ -97,7 +97,7 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
       _log.i("Rating calculation state changed: $state");
     }
     else {
-      _log.vv("$progress/$total");
+      // _log.vv("$progress/$total");
     }
     setStateIfMounted(() {
       currentState = state;

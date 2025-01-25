@@ -307,3 +307,45 @@ extension WindowedList<T> on List<T> {
     return sublist(length - window - offset, length - offset);
   }
 }
+
+/// Linearly interpolate between [minOut], [centerOut], and [maxOut], based on
+/// [value] relative to [center].
+/// 
+/// When [value] <= [centerMinFactor] * [center], the result is [minOut]. 
+/// 
+/// Between [centerMinFactor] * [center] and [center], the result is linearly
+/// interpolated between [minOut] and [centerOut].
+/// 
+/// When [value] equals [center], the result is [centerOut].
+/// 
+/// When [value] is between [center] and [centerMaxFactor] * [center], the result
+/// is linearly interpolated between [centerOut] and [maxOut].
+/// 
+/// When [value] >= [centerMaxFactor] * [center], the result is [maxOut].
+double lerpAroundCenter({
+  required double value,
+  required double center,
+  double centerMinFactor = 0.5,
+  double centerMaxFactor = 2.0,
+  double minOut = 0.5,
+  double centerOut = 1.0,
+  double maxOut = 2.0,
+}) {
+  var bottom = center * centerMinFactor;
+  var top = center * centerMaxFactor;
+  if(value <= bottom) return minOut;
+  if(value >= top) return maxOut;
+  
+  // if value is greater than or equal to center, scale up from centerOut to maxOut
+  if(value >= center) {
+    var range = maxOut - centerOut;
+    var scale = (value - center) / (top - center);
+    return centerOut + range * scale;
+  }
+  // if value is less than center, scale down from centerOut to minOut
+  else {
+    var range = centerOut - minOut;
+    var scale = (center - value) / (center - bottom);
+    return minOut + range * scale;
+  }
+}

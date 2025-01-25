@@ -110,28 +110,27 @@ class EloShooterRating extends ShooterRating {
     int offset = 0,
     double decayAfterFull = 0.9,
   }) {
-    if(ratingEvents.isEmpty) return 0.5;
+    if(errors.isEmpty) return 0.5;
 
-    late List<RatingEvent> events;
-    if((window + offset) >= ratingEvents.length) {
-      if(offset < (ratingEvents.length)) events = ratingEvents.sublist(0, ratingEvents.length - offset);
-      else events = ratingEvents;
+    late List<double> ratingErrors;
+    if((window + offset) >= errors.length) {
+      if(offset < (errors.length)) ratingErrors = errors.sublist(0, errors.length - offset);
+      else ratingErrors = errors;
     }
     else {
-      events = ratingEvents.sublist(ratingEvents.length - (window + offset), ratingEvents.length - offset);
+      ratingErrors = errors.sublist(errors.length - (window + offset), errors.length - offset);
     }
 
     double currentDecay = 1.0;
     double squaredSum = 0.0;
     double length = 0.0;
-    var reversed = events.reversed.toList();
+    var reversed = ratingErrors.reversed.toList();
     for(int i = 0; i < reversed.length; i++) {
-      var e = reversed[i] as EloRatingEvent;
       if(i >= fullEffect) {
         currentDecay *= decayAfterFull;
       }
 
-      squaredSum += pow(e.error, 2) * currentDecay;
+      squaredSum += pow(reversed[i], 2) * currentDecay;
       length += 1.0 * currentDecay;
     }
     return squaredSum / length;
@@ -237,6 +236,23 @@ class EloShooterRating extends ShooterRating {
     var out = [..._ratingEvents!, ...newRatingEvents];
     return out;
   }
+
+  List<double>? _errors = null;
+  List<double> get errors {
+    if(_errors == null) {
+      var doubleData = AnalystDatabase().getRatingEventDoubleDataForSync(wrappedRating);
+      _errors = doubleData.map((e) => EloRatingEvent.getErrorFromDoubleData(e)).toList();
+    }
+
+    List<double> newErrors = [];
+    if(wrappedRating.newRatingEvents.isNotEmpty) {
+      var unpersistedErrors = wrappedRating.newRatingEvents.map((e) => EloRatingEvent.getError(e));
+      newErrors.addAll(unpersistedErrors);
+    }
+
+    return [..._errors!, ...newErrors];
+  }
+
   List<RatingEvent> emptyRatingEvents = [];
 
   void clearRatingEventCache() {
@@ -267,7 +283,8 @@ class EloShooterRating extends ShooterRating {
     this.wrappedRating.female = female;
     this.wrappedRating.rating = initialRating;
     this.wrappedRating.error = 0.0;
-    this.wrappedRating.connectedness = connectedness;
+    this.wrappedRating.rawConnectivity = 0.0;
+    this.wrappedRating.connectivity = 0.0;
     this.wrappedRating.firstSeen = firstSeen;
     this.wrappedRating.lastSeen = lastSeen;
   }
@@ -287,14 +304,18 @@ class EloShooterRating extends ShooterRating {
   }
 
   void updateTrends(List<RatingEvent> changes) {
-    var longTrendWindow = min(ratingEvents.length, ShooterRating.baseTrendWindow * 2);
-    var trendWindow = min(ratingEvents.length, ShooterRating.baseTrendWindow);
-    
+    var currentLength = ratingEvents.length;
+    var longTrendWindow = min(currentLength, ShooterRating.baseTrendWindow * 2);
+    var trendWindow = min(currentLength, ShooterRating.baseTrendWindow);
 
     if(longTrendWindow == 0) {
       return;
     }
 
+    // TODO: get a double list of the longTrendWindow most recent historical rating changes
+    // TODO: get a double list of the longTrendWindow most recent historical ratings
+    // We only need the above TODOs, not the full rating events, which should
+    // speed things up dramatically.
     var events = ratingEvents.sublist(ratingEvents.length - longTrendWindow);
     var stdDevEvents = events.getTailWindow(trendWindow);
     var stdDev = sqrt(stdDevEvents.map((e) => pow(e.ratingChange, 2)).sum / (stdDevEvents.length - 1));

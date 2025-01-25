@@ -10,6 +10,7 @@ import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings/connectivity.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_report.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
@@ -105,12 +106,21 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
     }
   }
 
+  /// Links to all of the ratings in this project.
+  final ratings = IsarLinks<DbShooterRating>();
+
   /// A list of reports generated since the last full recalculation.
   List<RatingReport> reports = [];
 
   Future<void> resetMatches() async {
     // TODO
   }
+
+  @ignore
+  ConnectivityContainer connectivityContainer = ConnectivityContainer();
+
+  List<BaselineConnectivity> get dbBaselineConnectivities => connectivityContainer.toList();
+  set dbBaselineConnectivities(List<BaselineConnectivity> value) => connectivityContainer.addAll(value);
 
   /// The set of matches last used to calculate ratings for this match.
   ///
@@ -178,6 +188,9 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
     return _automaticNumberMappingCache![sourceNumber];
   }
 
+  /// Look up an automatic number mapping by its target number.
+  /// 
+  /// Uncached; use with care.
   DbMemberNumberMapping? lookupAutomaticNumberMappingByTarget(String targetNumber) {
     return automaticNumberMappings.firstWhereOrNull((mapping) => mapping.targetNumber == targetNumber);
   }
@@ -224,9 +237,6 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
       _log.i("Cleared $count ratings and $eventCount events");
     });
   }
-
-  // Ratings
-  final ratings = IsarLinks<DbShooterRating>();
 
   // TODO: we can make these more efficient by querying the Ratings collection
   // (since we can probably composite-index that by interesting queries)
@@ -503,11 +513,23 @@ class DbRatingEvent implements IRatingEvent {
   List<int> intData;
 
   @ignore
-  Map<String, List<dynamic>> info;
-  String get infoAsJson => jsonEncode(info);
+  Map<String, List<dynamic>>? _info;
+  @ignore
+  Map<String, List<dynamic>> get info {
+    if(_info == null) {
+      var data = jsonDecode(_infoAsJson) as Map<String, dynamic>;
+      _info = data.cast<String, List<dynamic>>();
+    }
+    return _info!;
+  }
+  set info(Map<String, List<dynamic>> v) {
+    _info = v;
+  }
+
+  String _infoAsJson = "{}";
+  String get infoAsJson => _info == null ? _infoAsJson : jsonEncode(_info!);
   set infoAsJson(String v) {
-    var data = jsonDecode(v) as Map<String, dynamic>;
-    info = data.cast<String, List<dynamic>>();
+    _infoAsJson = v;
   }
 
   @ignore
@@ -521,8 +543,8 @@ class DbRatingEvent implements IRatingEvent {
   DbRatingEvent({
     required this.ratingChange,
     required this.oldRating,
-    this.info = const {},
     this.extraData = const {},
+    Map<String, List<dynamic>> info = const {},
     required this.score,
     required this.matchScore,
     required this.date,
@@ -533,7 +555,9 @@ class DbRatingEvent implements IRatingEvent {
     int intDataElements = 0,
   }) :
     intData = List.filled(intDataElements, 0, growable: true),
-    doubleData = List.filled(doubleDataElements, 0.0, growable: true);
+    doubleData = List.filled(doubleDataElements, 0.0, growable: true),
+    _info = info,
+    _infoAsJson = jsonEncode(info);
 
   DbRatingEvent copy() {
     var event =  DbRatingEvent(

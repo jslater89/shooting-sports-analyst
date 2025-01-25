@@ -106,14 +106,14 @@ extension RatingProjectDatabase on AnalystDatabase {
     bool useCache = false,
     bool saveToCache = true,
   }) async {
-    if(usePossibleMemberNumbers) {
-      if(useCache) {
-        var cachedRating = lookupCachedRating(group, memberNumber);
-        if(cachedRating != null) {
-          loadedShooterRatingCacheHits++;
-          return cachedRating;
-        }
+    if(useCache) {
+      var cachedRating = lookupCachedRating(group, memberNumber);
+      if(cachedRating != null) {
+        loadedShooterRatingCacheHits++;
+        return cachedRating;
       }
+    }
+    if(usePossibleMemberNumbers) {
       var rating = await isar.dbShooterRatings.where().dbAllPossibleMemberNumbersElementEqualTo(memberNumber)
         .filter()
         .project((q) => q.idEqualTo(project.id))
@@ -134,6 +134,7 @@ extension RatingProjectDatabase on AnalystDatabase {
         .group((q) => q.uuidEqualTo(group.uuid))
         .findFirst();
       if(rating != null && saveToCache) {
+        loadedShooterRatingCacheMisses++;
         cacheRating(group, rating);
       }
       return rating;
@@ -259,11 +260,18 @@ extension RatingProjectDatabase on AnalystDatabase {
         .count();
   }
 
-  Future<List<double>> getConnectedness(DbRatingProject project, RatingGroup group) {
+  Future<List<double>> getConnectivity(DbRatingProject project, RatingGroup group) {
     return project.ratings.filter()
         .group((q) => q.uuidEqualTo(group.uuid))
-        .connectednessProperty()
+        .connectivityProperty()
         .findAll();
+  }
+
+  Future<double> getConnectivitySum(DbRatingProject project, RatingGroup group) {
+    return project.ratings.filter()
+        .group((q) => q.uuidEqualTo(group.uuid))
+        .connectivityProperty()
+        .sum();
   }
 
   Future<List<DbRatingEvent>> getRatingEventsFor(DbShooterRating rating, {
@@ -283,6 +291,16 @@ extension RatingProjectDatabase on AnalystDatabase {
     DateTime? before,
   }) {
     var query = _buildShooterEventQuery(rating, limit: limit, offset: offset, after: after, before: before);
+    return query.findAllSync();
+  }
+
+  List<List<double>> getRatingEventDoubleDataForSync(DbShooterRating rating, {
+    int limit = 0,
+    int offset = 0,
+    DateTime? after,
+    DateTime? before,
+  }) {
+    var query = _buildShooterEventDoubleDataQuery(rating, limit: limit, offset: offset, after: after, before: before);
     return query.findAllSync();
   }
 
@@ -360,6 +378,30 @@ extension RatingProjectDatabase on AnalystDatabase {
 
     return query;
   }
+}
+
+Query<List<double>> _buildShooterEventDoubleDataQuery(DbShooterRating rating, {
+  int limit = 0,
+  int offset = 0,
+  DateTime? after,
+  DateTime? before,
+}) {
+  var builder = rating.events.filter()
+        .sortByDateAndStageNumberDesc();
+    Query<List<double>> query;
+    if(limit > 0) {
+      if(offset > 0) {
+        query = builder.offset(offset).limit(limit).doubleDataProperty().build();
+      }
+      else {
+        query = builder.limit(limit).doubleDataProperty().build();
+      }
+    }
+    else {
+      query = builder.doubleDataProperty().build();
+    }
+
+    return query;
 }
 
 enum RatingMigrationError implements ResultErr {

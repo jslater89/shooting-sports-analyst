@@ -5,6 +5,7 @@
  */
 
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/connectivity/sqrt_total_unique_product.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/uspsa_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
@@ -152,6 +153,7 @@ final uspsaSport = Sport(
   ratingStrengthProvider: _UspsaRatingStrengthProvider(),
   pubstompProvider: _UspsaPubstompProvider(),
   builtinRatingGroupsProvider: _UspsaRatingGroupsProvider(),
+  connectivityCalculator: SqrtTotalUniqueProductCalculator(),
 );
 
 class _UspsaRatingStrengthProvider implements RatingStrengthProvider {
@@ -168,7 +170,7 @@ class _UspsaRatingStrengthProvider implements RatingStrengthProvider {
       uspsaC => 2,
       uspsaD => 1,
       uspsaU => 2,
-      _ => 2.5,
+      _ => 2,
     };
   }
 

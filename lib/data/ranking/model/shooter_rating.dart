@@ -280,109 +280,20 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
     return percentFinishes / events.length;
   }
 
-  @ignore
-  /// The shooters off of whom this shooter's connectedness is based.
-  SortedList<ConnectedShooter> connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure);
-  double _connectedness = ShooterRating.baseConnectedness;
-  double get connectedness => _connectedness;
+  double get connectivity => wrappedRating.connectivity;
+  set connectivity(double v) => wrappedRating.connectivity = v;
 
-  void updateConnectedness() {
-    var c = ShooterRating.baseConnectedness;
-    for(var connection in connectedShooters.iterable) {
-      // Our connectedness increases by the connectedness of the other shooter, minus
-      // the connectedness they get from us.
-      var change = (connection.connectedness * ShooterRating.connectionPercentGain) - (_connectedness * ShooterRating.connectionPercentGain * connectionPercentGain);
-
-      // Fewer points for connecting with someone without a lot of ratings
-      var scale = min(1.0, connection.shooter.ratingEvents.length / ShooterRating.baseTrendWindow);
-
-      // Fewer points if you don't have a lot of ratings
-      // if(ratingEvents.length < baseTrendWindow) {
-      //   scale = min(1.0, max(0.25, scale * ratingEvents.length / baseTrendWindow));
-      // }
-
-      change = change * scale;
-
-      c += change;
-    }
-
-    _connectedness = c;
-  }
-
-  void updateConnections(DateTime now, List<ShooterRating> encountered) {
-    // TODO: change algorithm here, maybe?
-    // connectedness is the number of unique shooters a shooter has shot against recently,
-    // as a percentage of the count of shooters in the DB
-    int added = 0;
-    int updated = 0;
-
-    DateTime oldestAllowed = now.subtract(connectionExpiration);
-    Map<ShooterRating, ConnectedShooter> connMap = {};
-    for(var connection in connectedShooters.asIterable) {
-      if(connection.lastSeen.isAfter(oldestAllowed)) {
-        connMap[connection.shooter] = connection;
-      }
-      else {
-        // This is kosher because asIterable returns a copy
-        connectedShooters.remove(connection);
-      }
-    }
-
-    var lowValueConnections = SortedList<ConnectedShooter>(comparator: (a, b) => a.connectedness.compareTo(b.connectedness));
-    lowValueConnections.addAll(connectedShooters.iterable);
-
-    for(var shooter in encountered) {
-      var currentConnection = connMap[shooter];
-      if(currentConnection != null) {
-        currentConnection.connectedness = shooter.connectedness;
-        currentConnection.lastSeen = now;
-        updated++;
-      }
-      else if(shooter != this) {
-        // No need to add this connection if our list is full and it's worst than our current worst connection.
-        if(lowValueConnections.length >= maxConnections) {
-          var worstConnection = lowValueConnections.first;
-          if(shooter.connectedness < worstConnection.connectedness) continue;
-        }
-
-        var newConnection = ConnectedShooter(
-          shooter: shooter,
-          connectedness: shooter.connectedness,
-          lastSeen: now,
-        );
-        connectedShooters.add(newConnection);
-        lowValueConnections.add(newConnection);
-        added++;
-      }
-      else {
-        // ignoring self
-      }
-    }
-
-    if(connectedShooters.length > maxConnections) {
-      int nToRemove = connectedShooters.length - maxConnections;
-      var sorted = lowValueConnections;
-
-      int i = 0;
-      for(var connection in sorted.iterable) {
-        if(i >= nToRemove) break;
-
-        connectedShooters.remove(connection);
-        i++;
-      }
-    }
-  }
+  double get rawConnectivity => wrappedRating.rawConnectivity;
+  set rawConnectivity(double v) => wrappedRating.rawConnectivity = v;
 
   void updateTrends(List<RatingEvent> changes);
   double get trend => rating - averageRating().firstRating;
 
   void copyRatingFrom(covariant ShooterRating other) {
-    this._connectedness = other._connectedness;
     this.lastClassification = other.lastClassification;
     this.lastSeen = other.lastSeen;
     this.wrappedRating.copyRatingFrom(other.wrappedRating);
     this.knownMemberNumbers.add(other.originalMemberNumber);
-    this.connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure)..addAll(other.connectedShooters.map((e) => ConnectedShooter.copy(e)));
   }
 
   double get lastMatchChange {
@@ -504,8 +415,6 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
   ShooterRating.copy(ShooterRating other) :
       this.wrappedRating = DbShooterRating.empty(sport: other.sport),
       this.sportName = other.sportName,
-      this._connectedness = other._connectedness,
-      this.connectedShooters = SortedList(comparator: ConnectedShooter.dateComparisonClosure)..addAll(other.connectedShooters.map((e) => ConnectedShooter.copy(e))),
       super(firstName: other.firstName, lastName: other.lastName)
   {
     this.knownMemberNumbers = {}..addAll(other.knownMemberNumbers);

@@ -50,3 +50,63 @@ abstract interface class RatingGroupsProvider {
   List<RatingGroup> get divisionRatingGroups;
   List<RatingGroup> get defaultRatingGroups;
 }
+
+abstract interface class ConnectivityCalculator {
+  /// The data required for this calculator to calculate
+  /// a baseline connectivity score.
+  /// 
+  /// Only data requested in this list will be provided to
+  /// [calculateConnectivityBaseline].
+  List<ConnectivityRequiredData> get requiredBaselineData;
+  
+  /// Calculate the baseline connectivity score for a rating
+  /// group. Data requsted in [requiredBaselineData] will be
+  /// provided. Other data will be null.
+  double calculateConnectivityBaseline({
+    int? matchCount,
+    int? competitorCount,
+    double? connectivitySum,
+    List<double>? connectivityScores,
+  });
+
+  /// The number of matches to use for the connectivity calculation.
+  int get matchWindowCount;
+
+  /// Calculate the connectivity score for a shooter.
+  NewConnectivity calculateRatingConnectivity(DbShooterRating rating);
+
+  /// Calculate the connectivity score for a match, given a list of
+  /// connectivity scores.
+  double calculateMatchConnectivity(List<double> connectivityScores);
+  /// Calculate the scale factor for a given match connectivity vs. a baseline.
+  /// 
+  /// Clamp to [minScale] and [maxScale] if they are provided.
+  double getScaleFactor({
+    required double connectivity,
+    required double baseline,
+    double minScale = 0.8,
+    double maxScale = 1.2,
+  });
+
+  /// The default baseline connectivity score.
+  double get defaultBaselineConnectivity;
+}
+
+/// The data required for a connectivity calculator to calculate a baseline
+/// connectivity score.
+enum ConnectivityRequiredData {
+  matchCount,
+  competitorCount,
+  connectivitySum,
+  connectivityScores,
+}
+
+class NewConnectivity {
+  final double connectivity;
+  final double rawConnectivity;
+
+  const NewConnectivity({
+    required this.connectivity,
+    required this.rawConnectivity,
+  });
+}

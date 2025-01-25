@@ -14,10 +14,13 @@ import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings/connectivity.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_report.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
+import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
 import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
 import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
@@ -936,79 +939,89 @@ class RatingProjectLoader {
 
     if(Timings.enabled) start = DateTime.now();
     // Based on strength of competition, vary rating gain between 25% and 150%.
-    var matchStrength = 0.0;
-    for(var shooter in shooters) {
-      matchStrength += sport.ratingStrengthProvider?.strengthForClass(shooter.classification) ?? 1.0;
+    double strengthMod = 1.0;
+    if(sport.ratingStrengthProvider != null) {
+      var matchStrength = 0.0;
+      for(var shooter in shooters) {
+        matchStrength += sport.ratingStrengthProvider?.strengthForClass(shooter.classification) ?? 1.0;
 
-      // Update
-      var rating = await AnalystDatabase().maybeKnownShooter(
-        project: project,
-        group: group,
-        memberNumber: shooter.memberNumber,
-        useCache: true,
-      );
-      if(rating != null) {
-        if(shooter.classification != null) {
-          if(rating.lastClassification == null || shooter.classification!.index < rating.lastClassification!.index) {
-            rating.lastClassification = shooter.classification!;
+        // Update
+        var rating = await AnalystDatabase().maybeKnownShooter(
+          project: project,
+          group: group,
+          memberNumber: shooter.memberNumber,
+          useCache: true,
+        );
+        if(rating != null) {
+          if(shooter.classification != null) {
+            if(rating.lastClassification == null || shooter.classification!.index < rating.lastClassification!.index) {
+              rating.lastClassification = shooter.classification!;
+            }
           }
+
+          // Update the shooter's name: the most recent one is probably the most interesting/useful
+          rating.firstName = shooter.firstName;
+          rating.lastName = shooter.lastName;
+
+          // Update age categories
+          rating.ageCategory = shooter.ageCategory;
+
+          // Update the shooter's member number: the CSV exports are more useful if it's the most
+          // recent one. // TODO: this would be handy, but it changes the math somehow (not removing unseen?)
+          // TODO: DB column for
+          // rating.shooter.memberNumber = shooter.memberNumber;
         }
-
-        // Update the shooter's name: the most recent one is probably the most interesting/useful
-        rating.firstName = shooter.firstName;
-        rating.lastName = shooter.lastName;
-
-        // Update age categories
-        rating.ageCategory = shooter.ageCategory;
-
-        // Update the shooter's member number: the CSV exports are more useful if it's the most
-        // recent one. // TODO: this would be handy, but it changes the math somehow (not removing unseen?)
-        // TODO: DB column for
-        // rating.shooter.memberNumber = shooter.memberNumber;
       }
+      matchStrength = matchStrength / shooters.length;
+      double levelStrengthBonus = sport.ratingStrengthProvider?.strengthBonusForMatchLevel(match.level) ?? 1.0;
+      strengthMod =  (1.0 + max(-0.75, min(0.5, ((matchStrength) - _centerStrength) * 0.2))) * (levelStrengthBonus);
     }
-    matchStrength = matchStrength / shooters.length;
-    double levelStrengthBonus = sport.ratingStrengthProvider?.strengthBonusForMatchLevel(match.level) ?? 1.0;
-    double strengthMod =  (1.0 + max(-0.75, min(0.5, ((matchStrength) - _centerStrength) * 0.2))) * (levelStrengthBonus);
     if(Timings.enabled) timings.add(TimingType.calcMatchStrength, DateTime.now().difference(start).inMicroseconds);
 
+    Map<String, ShooterRating> wrappedRatings = {};
     if(Timings.enabled) start = DateTime.now();
     // Based on connectedness, vary rating gain between 80% and 120%
-    var totalConnectedness = 0.0;
-    var totalShooters = 0.0;
-    var connectedness = await AnalystDatabase().getConnectedness(project, group);
-
-    totalConnectedness = connectedness.sum;
-    totalShooters = connectedness.length.toDouble();
-
-    var globalAverageConnectedness = totalShooters < 1 ? 105.0 : totalConnectedness / totalShooters;
-    var globalMedianConnectedness = totalShooters < 1 ? 105.0 : connectedness[connectedness.length ~/ 2];
-    var connectednessDenominator = max(105.0, globalMedianConnectedness);
-
-    totalConnectedness = 0.0;
-    totalShooters = 0;
-    Map<String, DbShooterRating> ratingsAtMatch = {};
-    Map<String, ShooterRating> wrappedRatings = {};
-    for(var shooter in shooters) {
-      var rating = await AnalystDatabase().maybeKnownShooter(
-        project: project,
-        group: group,
-        memberNumber: shooter.memberNumber,
-        useCache: true,
-      );
-
-      if(rating != null) {
-        totalConnectedness += rating.connectedness;
-        totalShooters += 1;
-        ratingsAtMatch[shooter.memberNumber] = rating;
-        wrappedRatings[shooter.memberNumber] = ratingSystem.wrapDbRating(rating);
+    double connectednessMod = 1.0;
+    if(sport.connectivityCalculator != null) {
+      List<double> connectivityScores = [];
+      for(var shooter in shooters) {
+        var rating = await AnalystDatabase().maybeKnownShooter(
+          project: project,
+          group: group,
+          memberNumber: shooter.memberNumber,
+          useCache: true,
+        );
+        if(rating != null) {
+          connectivityScores.add(rating.connectivity);
+          wrappedRatings[shooter.memberNumber] = ratingSystem.wrapDbRating(rating);
+        }
+      }
+      
+      if(connectivityScores.isNotEmpty) {
+        var baseline = project.connectivityContainer.getConnectivity(group, defaultValue: sport.connectivityCalculator!.defaultBaselineConnectivity);
+        var matchConnectivity = sport.connectivityCalculator!.calculateMatchConnectivity(connectivityScores);
+        connectednessMod = sport.connectivityCalculator!.getScaleFactor(connectivity: matchConnectivity, baseline: baseline);
+        // _log.vv("Connectivity/baseline/mod before match: ${matchConnectivity.toStringAsFixed(1)}/${baseline.toStringAsFixed(1)}/${connectednessMod.toStringAsFixed(3)}");
       }
     }
-    var localAverageConnectedness = totalConnectedness / (totalShooters > 0 ? totalShooters : 1.0);
-    var connectednessMod = /*1.0;*/ 1.0 + max(-0.2, min(0.2, (((localAverageConnectedness / connectednessDenominator) - 1.0) * 2))); // * 1: how much to adjust the percentages by
+    else {
+      // We need to wrap ratings even if we don't have a connectivity calculator.
+      // Done separately (rather than once, before the loop) to save a match's
+      // worth of map accesses in the loop.
+      for(var shooter in shooters) {
+        var rating = await AnalystDatabase().maybeKnownShooter(
+          project: project,
+          group: group,
+          memberNumber: shooter.memberNumber,
+          useCache: true,
+        );
+        if(rating != null) {
+          wrappedRatings[shooter.memberNumber] = ratingSystem.wrapDbRating(rating);
+        }
+      }
+    }
+    
     if(Timings.enabled) timings.add(TimingType.calcConnectedness, DateTime.now().difference(start).inMicroseconds);
-
-    // _log.d("Connectedness for ${match.name}: ${localAverageConnectedness.toStringAsFixed(2)}/${connectednessDenominator.toStringAsFixed(2)} => ${connectednessMod.toStringAsFixed(3)}");
 
     Map<DbShooterRating, Map<RelativeScore, RatingEvent>> changes = {};
     Set<DbShooterRating> shootersAtMatch = Set();
@@ -1173,34 +1186,83 @@ class RatingProjectLoader {
     }
     if(Timings.enabled) timings.add(TimingType.rateShooters, DateTime.now().difference(start).inMicroseconds);
 
+    // Update connectivity
     if(Timings.enabled) start = DateTime.now();
-    if(shooters.length > 1) {
-      var averageBefore = 0.0;
-      var averageAfter = 0.0;
+    List<Future<void>> futures = [];
+    if(shooters.length > 1 && sport.connectivityCalculator != null) {
+      var calc = sport.connectivityCalculator!;
+      Set<int> uniqueIds = {...shootersAtMatch.map((e) => e.id)};
+      for(var rating in shootersAtMatch) {
+        var ids = {...uniqueIds.where((id) => id != rating.id)};
+        var window = MatchWindow.createFromHydratedMatch(
+          match: match,
+          uniqueOpponentIds: ids,
+          totalOpponents: ids.length,
+        );
 
-      // We need only consider at most the best [ShooterRating.maxConnections] connections. If a shooter's list is
-      // empty, we'll fill their list with these shooters. If a shooter's list is not empty, we can end up with at
-      // most maxConnections new entries in the list, by definition.
-      var encounteredList = shootersAtMatch
-          .sorted((a, b) => b.connectedness.compareTo(a.connectedness))
-          .sublist(0, min(ShooterRating.maxConnections, shootersAtMatch.length));
+        MatchWindow? oldestWindow;
+        // While we have more than 4 match windows, remove the oldest one.
+        while(rating.matchWindows.length > (calc.matchWindowCount - 1)) {
+          for(var window in rating.matchWindows) {
+            if(oldestWindow == null || window.date.isBefore(oldestWindow.date)) {
+              oldestWindow = window;
+            }
+          }
+          if(oldestWindow != null) {
+            rating.matchWindows.remove(oldestWindow);
+            oldestWindow = null;
+          }
+        }
+        rating.matchWindows.add(window);
 
-      // _log.d("Updating connectedness at ${match.name} for ${shootersAtMatch.length} of ${knownShooters.length} shooters");
-      for (var rating in shootersAtMatch) {
-        averageBefore += rating.connectedness;
-        // TODO: restore
-        // rating.updateConnections(match.date, encounteredList);
+        var newConnectivity = calc.calculateRatingConnectivity(rating);
+        rating.connectivity = newConnectivity.connectivity;
+        rating.rawConnectivity = newConnectivity.rawConnectivity;
+
+        futures.add(AnalystDatabase().upsertDbShooterRating(rating));
       }
 
-      for (var rating in shootersAtMatch) {
-        // TODO: restore
-        // rating.updateConnectedness();
-        averageAfter += rating.connectedness;
+      // Wait for shooter updates to finish
+      if(futures.isNotEmpty) { 
+        await Future.wait(futures);
       }
 
-      averageBefore /= encounteredList.length;
-      averageAfter /= encounteredList.length;
-      // _log.d("Averages: ${averageBefore.toStringAsFixed(1)} -> ${averageAfter.toStringAsFixed(1)} vs. ${expectedConnectedness.toStringAsFixed(1)}");
+      // Calculate new baseline
+      List<double>? connectivityScores;
+      double? connectivitySum;
+      int? matchCount;
+      int? competitorCount;
+
+      if(calc.requiredBaselineData.contains(ConnectivityRequiredData.connectivityScores)) {
+        connectivityScores = await db.getConnectivity(project, group);
+        competitorCount = connectivityScores.length;
+      }
+      if(calc.requiredBaselineData.contains(ConnectivityRequiredData.connectivitySum)) {
+        if(connectivityScores != null) {
+          connectivitySum = connectivityScores.sum;
+        }
+        else {
+          connectivitySum = await db.getConnectivitySum(project, group);
+        }
+      }
+      if(calc.requiredBaselineData.contains(ConnectivityRequiredData.competitorCount) && competitorCount == null) {
+        competitorCount = await db.countShooterRatings(project, group);
+      }
+      if(calc.requiredBaselineData.contains(ConnectivityRequiredData.matchCount)) {
+        matchCount = project.matches.length;
+      }
+
+      var baseline = calc.calculateConnectivityBaseline(
+        matchCount: matchCount,
+        competitorCount: competitorCount,
+        connectivitySum: connectivitySum,
+        connectivityScores: connectivityScores,
+      );
+      project.connectivityContainer.add(BaselineConnectivity(
+        groupUuid: group.uuid,
+        connectivity: baseline,
+      ));
+      // _log.vv("New baseline for ${group.name} after ${match.name}: ${baseline.toStringAsFixed(1)}");
     }
     if(Timings.enabled) timings.add(TimingType.updateConnectedness, DateTime.now().difference(start).inMicroseconds);
   }

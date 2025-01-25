@@ -64,11 +64,6 @@ class Sport {
   /// Sort modes that are meaningful for this sport.
   final List<SortMode> resultSortModes;
 
-  /// The deduplication logic used for this sport. Leave null if deduplication
-  /// is unnecessary, or specify an instance of ManualDeduplicator to use the
-  /// user mappings and mapping blacklist in rater settings.
-  final ShooterDeduplicator? shooterDeduplicator;
-
   /// Initial ratings for the Elo rating engine.
   Map<Classification, double> initialEloRatings;
 
@@ -101,10 +96,16 @@ class Sport {
 
   late final SportDisplaySettings displaySettings;
 
+  // TODO: generic typo-detection implementation for ICORE/IDPA/PCSL/etc.
+  /// The deduplication logic used for this sport. Leave null if deduplication
+  /// is unnecessary.
+  final ShooterDeduplicator? shooterDeduplicator;
+  /// 
   final RatingStrengthProvider? ratingStrengthProvider;
   final PubstompProvider? pubstompProvider;
   final RatingGroupsProvider? builtinRatingGroupsProvider;
   final FantasyScoringCalculator? fantasyScoresProvider;
+  final ConnectivityCalculator? connectivityCalculator;
 
   Sport(this.name, {
     required this.matchScoring,
@@ -133,6 +134,7 @@ class Sport {
     this.pubstompProvider,
     this.builtinRatingGroupsProvider,
     this.fantasyScoresProvider,
+    this.connectivityCalculator,
   }) :
         classifications = Map.fromEntries(classifications.map((e) => MapEntry(e.name, e))),
         divisions = Map.fromEntries(divisions.map((e) => MapEntry(e.name, e))),

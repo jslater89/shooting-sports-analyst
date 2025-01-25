@@ -68,6 +68,14 @@ class EloRatingEvent extends RatingEvent {
   EloRatingEvent.wrap(DbRatingEvent event) :
     super(wrappedEvent: event);
 
+  static double getError(DbRatingEvent event) {
+    return event.doubleData[_DoubleKeys.error.index];
+  }
+
+  static double getErrorFromDoubleData(List<double> doubleData) {
+    return doubleData[_DoubleKeys.error.index];
+  }
+
   EloRatingEvent.copy(EloRatingEvent other) :
       super.copy(other) {
     this.error = other.error;

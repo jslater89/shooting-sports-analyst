@@ -619,7 +619,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
               Expanded(flex: _matchChangeFlex, child: Text("${lastMatchChange.round()}", textAlign: TextAlign.end)),
               Expanded(flex: _trendFlex, child: Text("$trend", textAlign: TextAlign.end)),
               Expanded(flex: _directionFlex, child: Text("$positivity", textAlign: TextAlign.end)),
-              Expanded(flex: _connectednessFlex, child: Text("${(rating.connectedness - ShooterRating.baseConnectedness).toStringAsFixed(1)}", textAlign: TextAlign.end)),
+              Expanded(flex: _connectednessFlex, child: Text("${(rating.connectivity).toStringAsFixed(1)}", textAlign: TextAlign.end)),
               Expanded(flex: _stagesFlex, child: Text("${rating.length}", textAlign: TextAlign.end,)),
               Expanded(flex: _trailPaddingFlex, child: Text("")),
             ],
