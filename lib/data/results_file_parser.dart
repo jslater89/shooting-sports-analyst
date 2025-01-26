@@ -210,6 +210,9 @@ Map<int, Stage> _readStageLines(PracticalMatch match, List<String> stageLines) {
         type: splitLine.length > _SCORING ? ScoringFrom.string(splitLine[_SCORING]) : Scoring.comstock,
       );
 
+      if(s.type == Scoring.chrono) match.hasChrono = true;
+      if(s.name.toLowerCase().contains("chronograph")) match.hasChrono = true;
+
       stagesById[i++] = s;
       maxPoints += s.maxPoints;
       match.stages.add(s);

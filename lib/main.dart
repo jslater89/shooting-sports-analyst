@@ -23,6 +23,7 @@ import 'package:shooting_sports_analyst/route/local_upload.dart';
 import 'package:shooting_sports_analyst/route/home_page.dart';
 import 'package:shooting_sports_analyst/route/practiscore_url.dart';
 import 'package:shooting_sports_analyst/route/ratings.dart';
+import 'package:shooting_sports_analyst/util.dart';
 import 'configure_nonweb.dart' if (dart.library.html) 'configure_web.dart';
 import 'package:fluro/fluro.dart' as fluro;
 
@@ -92,7 +93,6 @@ void main() async {
   await AnalystDatabase().ready;
   _log.i("Database ready");
 
-  oneoffDbAnalyses(AnalystDatabase());
 
   if(!HtmlOr.isWeb) {
     var path = await getApplicationSupportDirectory();
@@ -104,6 +104,9 @@ void main() async {
     };
     MatchCache();
   }
+
+  oneoffDbAnalyses(AnalystDatabase());
+
 
   _log.i("Hive cache ready");
 
