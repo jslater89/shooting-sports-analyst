@@ -47,20 +47,26 @@ class StringError extends ResultErr {
   }
 }
 
+typedef Nullable<T> = T?;
+
 // My Rust is showing
 class Result<T, E extends ResultErr> {
+  bool _ok;
   final T? _result;
   final E? _error;
 
   bool isOk() {
-    return _result != null;
+    return _ok;
   }
 
   bool isErr() {
-    return _error != null;
+    return !_ok;
   }
 
   T unwrap() {
+    if(T == Nullable<T>) {
+      return _result as T;
+    }
     return _result!;
   }
 
@@ -68,9 +74,9 @@ class Result<T, E extends ResultErr> {
     return _error!;
   }
 
-  Result.ok(T result) : this._result = result, this._error = null;
-  Result.err(E error) : this._error = error, this._result = null;
-  Result.errFrom(Result<Object?, E> other) : this._error = other.unwrapErr(), this._result = null;
+  Result.ok(T result) : this._result = result, this._error = null, this._ok = true;
+  Result.err(E error) : this._error = error, this._result = null, this._ok = false;
+  Result.errFrom(Result<Object?, E> other) : this._error = other.unwrapErr(), this._result = null, this._ok = false;
 }
 
 extension AsyncResult<T, E extends ResultErr> on Future<Result<T, E>> {

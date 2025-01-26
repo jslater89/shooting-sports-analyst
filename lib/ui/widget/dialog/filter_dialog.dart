@@ -33,14 +33,14 @@ class FilterSet {
   List<int> squads = [];
   List<int> knownSquads;
 
-  FilterSet(this.sport, {bool empty = false, this.knownSquads = const []}) {
-    divisions = {};
+  FilterSet(this.sport, {bool empty = false, this.knownSquads = const [], List<Division>? divisions, this.mode = FilterMode.and}) {
+    this.divisions = {};
     classifications = {};
     powerFactors = {};
     ageCategories = {};
 
     for (Division d in sport.divisions.values) {
-      divisions[d] = !empty;
+      this.divisions[d] = !empty;
     }
 
     for (Classification c in sport.classifications.values) {
@@ -53,6 +53,10 @@ class FilterSet {
 
     for (AgeCategory c in sport.ageCategories.values) {
       ageCategories[c] = false;
+    }
+
+    for(var d in divisions ?? []) {
+      this.divisions[d] = true;
     }
 
     if(!empty) {

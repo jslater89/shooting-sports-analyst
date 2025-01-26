@@ -155,6 +155,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     _projectName = await widget.dataSource.getProjectName().unwrap();
     _settings = await widget.dataSource.getSettings().unwrap();
     activeTabs = await widget.dataSource.getGroups().unwrap();
+    activeTabs.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     _selectedMatch = (await widget.dataSource.getLatestMatch()).unwrap().hydrate().unwrap();
     _sport = await widget.dataSource.getSport().unwrap();
     _tabController = TabController(

@@ -101,7 +101,8 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
   double get rating => wrappedRating.rating;
   set rating(double v) => wrappedRating.rating = v;
 
-  /// All of the meaningful rating events in this shooter's history.
+  /// All of the meaningful rating events in this shooter's history, ordered
+  /// from newest to oldest.
   ///
   /// A meaningful rating event is an event where the shooter competed against
   /// at least one other person.
@@ -202,7 +203,7 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
   /// returns null.
   double? changeForEvent(ShootingMatch match, MatchStage? stage) {
     List<RatingEvent> events = [];
-    for(var e in ratingEvents.reversed) {
+    for(var e in ratingEvents) {
       if(stage == null && e.match.sourceIds.containsAny(match.sourceIds)) {
         events.add(e);
       }
@@ -215,9 +216,10 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
     else return events.map((e) => e.ratingChange).sum;
   }
 
+
   double? changeForNewEvent(ShootingMatch match, MatchStage? stage) {
     List<RatingEvent> events = [];
-    for(var e in ratingEvents.reversed) {
+    for(var e in ratingEvents) {
       if(stage == null && e.match.sourceIds.first == match.sourceIds.first) {
         events.add(e);
       }
@@ -305,7 +307,7 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
   double get lastMatchChange {
     if(length == 0) return 0;
 
-    var lastMatch = ratingEvents.last.match;
+    var lastMatch = ratingEvents.first.match;
     return matchChange(lastMatch);
   }
 

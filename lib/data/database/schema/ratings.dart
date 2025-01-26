@@ -327,14 +327,26 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
     return Future.value(DataSourceResult.ok(outGroup));
   }
 
+
   @override
-  Future<DataSourceResult<DbShooterRating?>> lookupRating(RatingGroup group, String memberNumber) async {
-    var results = await ratings
+  Future<DataSourceResult<DbShooterRating?>> lookupRating(RatingGroup group, String memberNumber, {bool allPossibleMemberNumbers = false}) async {
+    List<DbShooterRating> results = [];
+    if(allPossibleMemberNumbers) {
+      results = await ratings
+        .filter()
+        .dbAllPossibleMemberNumbersElementMatches(memberNumber)
+        .and()
+        .group((q) => q.idEqualTo(group.id))
+        .findAll();
+    }
+    else {
+      results = await ratings
         .filter()
         .dbKnownMemberNumbersElementMatches(memberNumber)
         .and()
-        .group((q) => q.idEqualTo(group.id)).findAll();
-
+        .group((q) => q.idEqualTo(group.id))
+        .findAll();
+    }
     return DataSourceResult.ok(results.firstOrNull);
   }
 

@@ -44,8 +44,14 @@ abstract interface class RatingDataSource {
   Future<DataSourceResult<List<String>>> getMatchSourceIds();
   Future<DataSourceResult<DbShootingMatch>> getLatestMatch();
 
-  /// Look up a rating for a given member number.
-  Future<DataSourceResult<DbShooterRating?>> lookupRating(RatingGroup group, String memberNumber);
+  /// Look up a shooter rating in [group] by [memberNumber].
+  ///
+  /// If [allPossibleMemberNumbers] is true and the sport supports calculating
+  /// alternate member number forms, this will search by all equivalent member
+  /// numbers for the competitor, not only those that they actually entered under.
+  /// 
+  /// Returns Result.ok(null) if no rating is found.
+  Future<DataSourceResult<DbShooterRating?>> lookupRating(RatingGroup group, String memberNumber, {bool allPossibleMemberNumbers = false});
 
   Future<DataSourceResult<ShooterRating>> wrapDbRating(DbShooterRating rating);
 

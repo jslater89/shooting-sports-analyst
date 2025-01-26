@@ -205,6 +205,6 @@ class MatchEntry extends Shooter {
 
   @override
   String toString() {
-    return "${getName(suffixes: false)} ($memberNumber)";
+    return "$name ($memberNumber $division $classification)";
   }
 }
