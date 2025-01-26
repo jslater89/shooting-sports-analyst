@@ -8,18 +8,24 @@ import 'dart:collection';
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/match/practical_match.dart';
+import 'package:shooting_sports_analyst/data/match/relative_scores.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/fantasy_scoring_calculator.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_list.dart';
 import 'package:shooting_sports_analyst/util.dart';
+
+SSALogger _log = SSALogger("Scoring");
 
 /// Match scoring is how a list of absolute scores are converted to relative
 /// scores, and then to overall match scores.
@@ -32,6 +38,8 @@ sealed class MatchScoring {
     bool scoreDQ = true,
     MatchPredictionMode predictionMode = MatchPredictionMode.none,
     Map<RaterGroup, Rater>? ratings,
+    DateTime? scoresAfter,
+    DateTime? scoresBefore,
   });
 }
 
@@ -66,6 +74,8 @@ final class RelativeStageFinishScoring extends MatchScoring {
     bool scoreDQ = true, 
     MatchPredictionMode predictionMode = MatchPredictionMode.none,
     Map<RaterGroup, Rater>? ratings,
+    DateTime? scoresAfter,
+    DateTime? scoresBefore,
   }) {
     if(shooters.length == 0 || stages.length == 0) return {};
 
@@ -78,6 +88,7 @@ final class RelativeStageFinishScoring extends MatchScoring {
       if(scoring is IgnoredScoring) continue;
 
       if(stage.maxPoints == 0 && fixedStageValue == null) {
+        _log.e("relative stage finish scoring requires stage max points or fixed stage value");
         throw ArgumentError("relative stage finish scoring requires stage max points or fixed stage value");
       }
 
@@ -89,9 +100,10 @@ final class RelativeStageFinishScoring extends MatchScoring {
       for(var shooter in shooters) {
         var stageScore = shooter.scores[stage];
 
-        if(stageScore == null) {
+        bool isInTimeRange = _isInTimeRange(stageScore, scoresAfter: scoresAfter, scoresBefore: scoresBefore);
+
+        if(stageScore == null || !isInTimeRange) {
           stageScore = RawScore(scoring: scoring, targetEvents: {});
-          shooter.scores[stage] = stageScore;
         }
 
         scores[shooter] = stageScore;
@@ -105,8 +117,8 @@ final class RelativeStageFinishScoring extends MatchScoring {
       }
 
       if(bestScore == null) {
-        // Nobody completed this stage, so move on to the next one
-        continue;
+        // Nobody completed this stage, so set bestScore to avoid any /0
+        bestScore = RawScore(scoring: scoring, targetEvents: {});
       }
 
       // How many match points the stage is worth.
@@ -146,6 +158,34 @@ final class RelativeStageFinishScoring extends MatchScoring {
       }
     }
 
+    if(stageScores.isEmpty) {
+      // Nobody completed any stages, so set all their stage scores to 0.
+      for(var shooter in shooters) {
+        for(var stage in stages) {
+          var stageScore = shooter.scores[stage];
+          if(stageScore == null) {
+            // deleted shooters don't have scores, so generate a bunch of DNF scores
+            // for them.
+            // _log.w("Filling in empty score for ${shooter.getName()} on ${stage.toString()}");
+            shooter.scores[stage] = RawScore(
+              scoring: stage.scoring,
+              targetEvents: {},
+              modified: match.date.copyWith(hour: 0, minute: 0, second: 0),
+            );
+          }
+          stageScores[shooter] ??= {};
+          // stageScores[shooter]![stage] = RelativeStageScore(
+          //   shooter: shooter,
+          //   stage: stage,
+          //   score: shooter.scores[stage]!,
+          //   place: 0,
+          //   ratio: 0,
+          //   points: 0,
+          // );
+        }
+      }
+    }
+
     // Next, build match point totals for each shooter, summing the points available
     // per stage.
     Map<MatchEntry, double> stageScoreTotals = {};
@@ -173,6 +213,17 @@ final class RelativeStageFinishScoring extends MatchScoring {
       if(predictionMode.eloAware) {
         RatingSystem? r = null;
         for(var shooter in shooters) {
+          if(predictionMode == MatchPredictionMode.eloAwarePartial) {
+            var nonDnf = false;
+            for(var score in shooter.scores.values) {
+              if(score.scoring is IgnoredScoring) continue;
+              if(!score.dnf) {
+                nonDnf = true;
+                break;
+              }
+            }
+            if(!nonDnf) continue;
+          }
           var rating = ratings!.lookupNew(match, shooter);
           if(r == null) {
             r = ratings.lookupRater(match, shooter)?.ratingSystem;
@@ -197,37 +248,43 @@ final class RelativeStageFinishScoring extends MatchScoring {
 
       for(var shooter in shooters) {
         // Do match predictions for shooters who have completed at least one stage.
-        if(shooter.firstName == "Matthew" && shooter.lastName == "Hemple") {
-          print("break");
-        }
         if((stageScores[shooter]?.length ?? 0) > 0 || predictionMode == MatchPredictionMode.eloAwareFull) {
           double averageStagePercentage = 0.0;
           int stagesCompleted = 0;
 
-          if(predictionMode == MatchPredictionMode.averageStageFinish
-              || predictionMode == MatchPredictionMode.averageHistoricalFinish
-              || predictionMode.eloAware
-          ) {
-            for(MatchStage stage in stages) {
-              if(stage.scoring is IgnoredScoring) continue;
+          for(MatchStage stage in stages) {
+            if(stage.scoring is IgnoredScoring) continue;
 
-              var stageScore = stageScores[shooter]?[stage];
-              if(stageScore != null && !stageScore.score.dnf) {
-                averageStagePercentage += stageScore.ratio;
-                stagesCompleted += 1;
-              }
-            }
-            if(stagesCompleted > 0) {
-              averageStagePercentage = averageStagePercentage / stagesCompleted;
+            var stageScore = stageScores[shooter]?[stage];
+            if(stageScore != null && !stageScore.score.dnf && _isInTimeRange(stageScore.score, scoresAfter: scoresAfter, scoresBefore: scoresBefore)) {
+              averageStagePercentage += stageScore.ratio;
+              stagesCompleted += 1;
             }
           }
+          if(stagesCompleted > 0) {
+            averageStagePercentage = averageStagePercentage / stagesCompleted;
+          }
+        
 
+          // If they're already done, there's nothing to predict.
           if(stagesCompleted >= stages.length) continue;
+
+          // If they've completed zero stages, high available is
+          // meaningless (it's just 100%), and average stage finish
+          // is also meaningless (it's just 0%), so skip them.
+          if(stagesCompleted == 0) continue;
+
+          // Average stage finish with only one stage completed means a bunch of people will have 100%
+          // predicted scores at the very start of a day, so at least wait until they have two scores
+          // and a slightly better chance of dropping some points somewhere, or overlapping with another
+          // high-quality shooter.
+          if(predictionMode == MatchPredictionMode.averageStageFinish && stagesCompleted < 2) continue;
 
           for (MatchStage stage in stages) {
             if(stage.scoring is IgnoredScoring) continue;
+            var stageScore = shooter.scores[stage];
 
-            if (shooter.scores[stage] == null || shooter.scores[stage]!.dnf) {
+            if (stageScore == null || stageScore.dnf || !_isInTimeRange(stageScore, scoresAfter: scoresAfter, scoresBefore: scoresBefore)) {
               if (predictionMode == MatchPredictionMode.highAvailable) {
                 stageScoreTotals.incrementBy(shooter, stage.maxPoints.toDouble());
               }
@@ -278,7 +335,7 @@ final class RelativeStageFinishScoring extends MatchScoring {
         shooter: shooter,
         stageScores: shooterStageScores,
         place: i + 1,
-        ratio: totalScore / bestTotalScore,
+        ratio: bestTotalScore == 0 ? 0 : totalScore / bestTotalScore,
         points: totalScore,
       );
     }
@@ -309,6 +366,8 @@ final class CumulativeScoring extends MatchScoring {
     bool scoreDQ = true,
     MatchPredictionMode predictionMode = MatchPredictionMode.none,
     Map<RaterGroup, Rater>? ratings,
+    DateTime? scoresAfter,
+    DateTime? scoresBefore,
   }) {
     if(shooters.length == 0 || stages.length == 0) return {};
 
@@ -333,9 +392,10 @@ final class CumulativeScoring extends MatchScoring {
       for(var shooter in shooters) {
         var stageScore = shooter.scores[stage];
 
-        if(stageScore == null) {
+        bool isInTimeRange = _isInTimeRange(stageScore, scoresAfter: scoresAfter, scoresBefore: scoresBefore);
+
+        if(stageScore == null || !isInTimeRange) {
           stageScore = RawScore(scoring: scoring, targetEvents: {});
-          shooter.scores[stage] = stageScore;
         }
 
         scores[shooter] = stageScore;
@@ -367,6 +427,7 @@ final class CumulativeScoring extends MatchScoring {
 
       if(bestScore == null) {
         // Nobody completed this stage, so move on to the next one
+        bestScore = RawScore(scoring: scoring, targetEvents: {});
         continue;
       }
 
@@ -403,6 +464,34 @@ final class CumulativeScoring extends MatchScoring {
         );
         stageScores[shooter] ??= {};
         stageScores[shooter]![stage] = relativeStageScore;
+      }
+    }
+
+    if(stageScores.isEmpty) {
+      // Nobody completed any stages, so set all their stage scores to 0.
+      for(var shooter in shooters) {
+        for(var stage in stages) {
+          var stageScore = shooter.scores[stage];
+          if(stageScore == null) {
+            // deleted shooters don't have scores, so generate a bunch of DNF scores
+            // for them.
+            // _log.w("Filling in empty score for ${shooter.getName()} on ${stage.toString()}");
+            shooter.scores[stage] = RawScore(
+              scoring: stage.scoring,
+              targetEvents: {},
+              modified: match.date.copyWith(hour: 0, minute: 0, second: 0),
+            );
+          }
+          stageScores[shooter] ??= {};
+          // stageScores[shooter]![stage] = RelativeStageScore(
+          //   shooter: shooter,
+          //   stage: stage,
+          //   score: shooter.scores[stage]!,
+          //   place: 0,
+          //   ratio: 0,
+          //   points: 0,
+          // );
+        }
       }
     }
 
@@ -568,6 +657,13 @@ sealed class StageScoring {
   /// 0.95 for a highScoreBest scoring.
   double ratio(RawScore score, RawScore comparedTo) {
     var result = 0.0;
+
+    // We may sometimes pass in a zero compared-to score,
+    // and we don't want to NaN-poison future calculations.
+    if(comparedTo.dnf) {
+      return 0.0;
+    }
+
     if(highScoreBest) {
       result = interpret(score) / interpret(comparedTo);
     }
@@ -659,8 +755,8 @@ class IgnoredScoring extends StageScoring {
 
 /// A relative score is a raw score placed against other scores.
 abstract class RelativeScore {
-  int place;
-  double ratio;
+  final int place;
+  final double ratio;
   double get percentage => ratio * 100;
 
   /// points holds the final score for this relative score, whether
@@ -669,9 +765,9 @@ abstract class RelativeScore {
   /// In a [RelativeStageFinishScoring] match, it's the number of stage
   /// points or the total number of match points. In a [CumulativeScoring]
   /// match, it's the final points or time per stage/match.
-  double points;
+  final double points;
 
-  RelativeScore({
+  const RelativeScore({
     required this.place,
     required this.ratio,
     required this.points,
@@ -730,6 +826,16 @@ class RelativeMatchScore extends RelativeScore {
 
     return false;
   }
+
+  bool get isComplete {
+    for(var s in stageScores.values) {
+      if(s.score.dnf) {
+        return false;
+      }
+    }
+
+    return true;
+  }
 }
 
 class RelativeStageScore extends RelativeScore {
@@ -768,7 +874,17 @@ class RawScore {
   /// Penalty events for this score: that is, events caused by a competitor's
   /// actions or failures to act outside of hits or misses on targets.
   Map<ScoringEvent, int> penaltyEvents;
+
+  /// Whether this score resulted in a DQ.
+  bool dq;
+
+  /// A list of string times for this score.
+  ///
+  /// Used for display purposes only, at present time.
   List<double> stringTimes;
+
+  /// The time this score was last modified.
+  DateTime? modified;
   
   List<Map<ScoringEvent, int>> get _scoreMaps => [targetEvents, penaltyEvents];
 
@@ -786,7 +902,16 @@ class RawScore {
   int get penaltyCount => penaltyEvents.values.sum;
   double get finalTime => rawTime + _scoreMaps.timeAdjustment;
 
-  int getTotalPoints({bool countPenalties = true, bool allowNegative = false}) {
+  /// Get the sum of points for this score.
+  /// 
+  /// If [countPenalties] is true, all penalties are counted, including e.g. procedurals and other non-target penalties.
+  /// 
+  /// If [allowNegative] is true, the total may go below zero.
+  /// 
+  /// If [includeTargetPenalties] is true, penalties resulting from hits or lack of hits on targets (M, NS, etc.) are
+  /// included in the total. For example, in a USPSA match, includeTargetPenalties = false would include only A, C, and
+  /// D hits.
+  int getTotalPoints({bool countPenalties = true, bool allowNegative = false, bool includeTargetPenalties = true}) {
     if(countPenalties) {
       if(allowNegative) {
         return points;
@@ -796,7 +921,18 @@ class RawScore {
       }
     }
     else {
-      return targetEvents.points;
+      if(includeTargetPenalties) {
+        if(allowNegative) {
+          return targetEvents.points;
+        }
+        else {
+          return max(0, targetEvents.points);
+        }
+      }
+      else {
+        var positiveEvents = targetEvents.keys.where((e) => e.pointChange >= 0).toList();
+        return positiveEvents.map((e) => targetEvents[e]! * e.pointChange).sum;
+      }
     }
   }
 
@@ -806,6 +942,8 @@ class RawScore {
     required this.targetEvents,
     this.penaltyEvents = const {},
     this.stringTimes = const [],
+    this.modified,
+    this.dq = false,
   });
 
   bool get dnf =>
@@ -842,13 +980,41 @@ class RawScore {
       rawTime: rawTime,
       targetEvents: {}..addAll(targetEvents),
       penaltyEvents: {}..addAll(penaltyEvents),
+      modified: modified,
     );
+  }
+
+  /// Returns true if this score differs from the other score.
+  /// 
+  /// Differs means 'has different times or hits'.
+  bool equivalentTo(RawScore? other) {
+    if(other == null) return false;
+
+    // Scores are equal if raw time and scoring event counts are the same.
+    if(rawTime != other.rawTime) return false;
+    if(targetEvents.length != other.targetEvents.length) return false;
+    if(penaltyEvents.length != other.penaltyEvents.length) return false;
+
+    for(var e in targetEvents.keys) {
+      if(targetEvents[e] != other.targetEvents[e]) return false;
+    }
+
+    for(var e in penaltyEvents.keys) {
+      if(penaltyEvents[e] != other.penaltyEvents[e]) return false;
+    }
+
+    return true;
+  }
+
+  @override
+  String toString() {
+    return displayString;
   }
 }
 
 /// A ScoringEvent is the minimal unit of score change in a shooting sports
 /// discipline, based on a hit on target.
-class ScoringEvent implements NameLookupEntity {
+class ScoringEvent extends NameLookupEntity {
   String get longName => name;
   final String name;
   final String shortName;
@@ -935,15 +1101,34 @@ extension ScoreListUtilities on Iterable<RawScore> {
 }
 
 extension MatchScoresToCSV on List<RelativeMatchScore> {
-  String toCSV() {
+  String toCSV({MatchStage? stage}) {
     String csv = "Member#,Name,MatchPoints,Percentage\n";
-    var sorted = this.sorted((a, b) => a.place.compareTo(b.place));
+    var sorted = this.sorted((a, b) {
+      if(stage != null) {
+        if(a.stageScores.containsKey(stage) && b.stageScores.containsKey(stage)) {
+          return a.stageScores[stage]!.place.compareTo(b.stageScores[stage]!.place);
+        }
+        else if(a.stageScores.containsKey(stage)) {
+          return -1;
+        }
+        else if(b.stageScores.containsKey(stage)) {
+          return 1;
+        }
+        else {
+          return 0;
+        }
+      }
+      else {
+        return a.place.compareTo(b.place);
+      }
+    });
 
     for(var score in sorted) {
+      var scoreOfInterest = stage == null ? score : score.stageScores[stage];
       csv += "${score.shooter.memberNumber},";
       csv += "${score.shooter.getName(suffixes: false)},";
-      csv += "${score.total.points.toStringAsFixed(2)},";
-      csv += "${score.ratio.asPercentage()}\n";
+      csv += "${stage == null ? score.total.points.toStringAsFixed(2) : scoreOfInterest?.points.toStringAsFixed(2) ?? 0},";
+      csv += "${scoreOfInterest?.ratio.asPercentage() ?? 0}\n";
     }
 
     return csv;
@@ -1094,6 +1279,17 @@ extension Sorting on List<RelativeMatchScore> {
     }
   }
 
+  void sortByFantasyPoints({required Map<Shooter, FantasyScore>? fantasyScores}) {
+    this.sort((a, b) {
+      var aScore = fantasyScores?[a.shooter];
+      var bScore = fantasyScores?[b.shooter];
+      if(aScore == null && bScore == null) return a.shooter.lastName.compareTo(b.shooter.lastName);
+      else if(aScore == null) return 1;
+      else if(bScore == null) return -1;
+      return bScore.points.compareTo(aScore.points);
+    });
+  }
+
   void sortByIdpaAccuracy({MatchStage? stage, required MatchScoring scoring}) {
     this.sort((a, b) {
       if (a.total.dnf && !b.total.dnf) {
@@ -1217,14 +1413,11 @@ extension Sorting on List<RelativeMatchScore> {
     });
   }
 
-  void sortByRating({required Map<RaterGroup, Rater> ratings, required RatingDisplayMode displayMode, required PracticalMatch match}) {
+  void sortByRating({required Map<RaterGroup, Rater> ratings, required RatingDisplayMode displayMode, required ShootingMatch match, MatchStage? stage}) {
     this.sort((a, b) {
-      return a.shooter.lastName.compareTo(b.shooter.lastName);
-
-      // TODO: restore when ratings use the new feature
-      // var aRating = ratings.lookupRating(shooter: a.shooter, mode: displayMode, match: match) ?? -1000;
-      // var bRating = ratings.lookupRating(shooter: b.shooter, mode: displayMode, match: match) ?? -1000;
-      // return bRating.compareTo(aRating);
+      var aRating = ratings.lookupRating(shooter: a.shooter, mode: displayMode, match: match, stage: stage) ?? -1000;
+      var bRating = ratings.lookupRating(shooter: b.shooter, mode: displayMode, match: match, stage: stage) ?? -1000;
+      return bRating.compareTo(aRating);
     });
   }
 
@@ -1233,4 +1426,16 @@ extension Sorting on List<RelativeMatchScore> {
       return (a.shooter.classification?.index ?? 100000).compareTo(b.shooter.classification?.index ?? 100000);
     });
   }
+}
+
+bool _isInTimeRange(RawScore? score, {DateTime? scoresAfter, DateTime? scoresBefore}) {
+  if(score == null) return true;
+
+  if(scoresAfter != null && score.modified != null && score.modified!.isBefore(scoresAfter)) {
+    return false;
+  }
+  if(scoresBefore != null && score.modified != null && score.modified!.isAfter(scoresBefore)) {
+    return false;
+  }
+  return true;
 }

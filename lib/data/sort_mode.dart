@@ -13,6 +13,7 @@ enum SortMode {
   lastName,
   rating,
   classification,
+  fantasyPoints,
 
   // Things sports need to declare they support
   alphas,
@@ -42,6 +43,8 @@ enum SortMode {
         return "Raw Time";
       case SortMode.idpaAccuracy:
         return "Accuracy";
+      case SortMode.fantasyPoints:
+        return "Fantasy Points";
     }
   }
 }

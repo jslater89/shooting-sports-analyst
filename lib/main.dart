@@ -15,7 +15,9 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:shooting_sports_analyst/data/database/match_database.dart';
+import 'package:shooting_sports_analyst/config.dart';
+import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 // import 'package:shooting_sports_analyst/data/db/object/match/match.dart';
 // import 'package:shooting_sports_analyst/data/db/object/rating/rating_project.dart';
 // import 'package:shooting_sports_analyst/data/db/project/project_db.dart';
@@ -28,12 +30,14 @@ import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 import 'package:shooting_sports_analyst/data/source/practiscore_report.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/db_oneoffs.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/route/local_upload.dart';
 import 'package:shooting_sports_analyst/route/home_page.dart';
 import 'package:shooting_sports_analyst/route/practiscore_url.dart';
 import 'package:shooting_sports_analyst/route/ratings.dart';
+import 'package:shooting_sports_analyst/util.dart';
 import 'configure_nonweb.dart' if (dart.library.html) 'configure_web.dart';
 import 'package:fluro/fluro.dart' as fluro;
 
@@ -100,8 +104,12 @@ void main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
 
+  await ConfigLoader().ready;
+  initLogger();
+
   await AnalystDatabase().ready;
   _log.i("Database ready");
+
 
   if(!HtmlOr.isWeb) {
     var path = await getApplicationSupportDirectory();
@@ -113,6 +121,9 @@ void main() async {
     };
     MatchCache();
   }
+
+  oneoffDbAnalyses(AnalystDatabase());
+
 
   _log.i("Hive cache ready");
 

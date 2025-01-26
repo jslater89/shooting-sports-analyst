@@ -14,7 +14,9 @@ import 'package:shooting_sports_analyst/util.dart';
 var _log = SSALogger("MatchDbListSearch");
 
 class MatchDbListViewSearch extends StatefulWidget {
-  const MatchDbListViewSearch({super.key});
+  const MatchDbListViewSearch({super.key, this.flat = false});
+
+  final bool flat;
 
   @override
   State<MatchDbListViewSearch> createState() => _MatchDbListViewSearchState();
@@ -45,7 +47,7 @@ class _MatchDbListViewSearchState extends State<MatchDbListViewSearch> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
-        elevation: 3.0,
+        elevation: widget.flat ? 0 : 3.0,
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(

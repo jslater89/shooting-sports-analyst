@@ -173,6 +173,7 @@ class RatingHistory {
     var currentMatches = <PracticalMatch>[];
 
     await progressCallback?.call(0, 1, null);
+    Timings().reset();
 
     if(_settings.preserveHistory) {
       int totalSteps = ((_settings.groups.length * _matches.length) / progressCallbackInterval).round();
@@ -196,8 +197,6 @@ class RatingHistory {
 
             var result = await r.calculateInitialRatings();
             if(result.isErr()) return result;
-
-            if(Timings.enabled) _log.i("Timings for $group: ${r.timings}");
 
             stepsFinished += 1;
             if(stepsFinished % progressCallbackInterval == 0) {
@@ -237,7 +236,6 @@ class RatingHistory {
         var result = await r.calculateInitialRatings();
         if(result.isErr()) return result;
         _ratersByDivision[_lastMatch]![group] = r;
-        if(Timings.enabled) _log.i("Timings for $group: ${r.timings}");
       }
     }
 
@@ -248,13 +246,14 @@ class RatingHistory {
       // scoreCount += m.getScores().length;
     }
     _log.i("Total of ${countUniqueShooters()} shooters, ${_matches.length} matches, and $stageCount stages");
+    if(Timings.enabled) _log.i(Timings());
+
     return RatingResult.ok();
   }
   
   Rater _raterForGroup(List<PracticalMatch> matches, RaterGroup group, [Future<void> Function(int, int, String?)? progressCallback]) {
     var divisionMap = <Division, bool>{};
     group.divisions.forEach((element) => divisionMap[element] = true);
-    Timings().reset();
     var r = Rater(
       matches: matches,
       ongoingMatches: ongoingMatches,
@@ -287,6 +286,7 @@ enum RaterGroup {
   revolver,
   limited10,
   locap,
+  tenRounds,
   openPcc,
   limitedCO,
   limitedLO,
@@ -371,6 +371,8 @@ enum RaterGroup {
         return [Division.limited, Division.production, Division.singleStack, Division.revolver, Division.limited10];
       case RaterGroup.combined:
         return Division.values;
+      case RaterGroup.tenRounds:
+        return [Division.singleStack, Division.revolver, Division.limited10];
     }
   }
 
@@ -412,6 +414,8 @@ enum RaterGroup {
         return "Irons Handguns";
       case RaterGroup.combined:
         return "Combined";
+      case RaterGroup.tenRounds:
+        return "10-Round";
     }
   }
 }

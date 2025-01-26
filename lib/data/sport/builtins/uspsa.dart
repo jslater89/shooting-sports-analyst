@@ -4,13 +4,15 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:shooting_sports_analyst/data/sort_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/sorts.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/uspsa_utils/uspsa_fantasy_calculator.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 
 const _uspsaPenalties = [
-  const ScoringEvent("Procedural", shortName: "P", pointChange: -10),
+  const ScoringEvent("Procedural", shortName: "P", pointChange: -10, alternateNames: ["Proc"]),
   const ScoringEvent("Overtime shot", shortName: "OS", pointChange: -5),
 ];
 
@@ -21,7 +23,7 @@ final _minorPowerFactor = PowerFactor("Minor",
     const ScoringEvent("C", pointChange: 3, alternateNames: ["B"]),
     const ScoringEvent("D", pointChange: 1),
     const ScoringEvent("M", pointChange: -10),
-    const ScoringEvent("NS", pointChange: -10),
+    const ScoringEvent("NS", pointChange: -10, alternateNames: ["NoShoot"]),
     const ScoringEvent("NPM", pointChange: 0, displayInOverview: false),
   ],
   penaltyEvents: _uspsaPenalties,
@@ -35,10 +37,12 @@ final uspsaSport = Sport(
   hasStages: true,
   displaySettingsPowerFactor: _minorPowerFactor,
   resultSortModes: hitFactorSorts,
+  fantasyScoresProvider: const USPSAFantasyScoringCalculator(),
   eventLevels: [
-    const MatchLevel(name: "Level I", shortName: "I", alternateNames: ["Local"], eventLevel: EventLevel.local),
-    const MatchLevel(name: "Level II", shortName: "II", alternateNames: ["Regional/State"], eventLevel: EventLevel.regional),
-    const MatchLevel(name: "Level III", shortName: "III", alternateNames: ["Area/National"], eventLevel: EventLevel.national),
+    const MatchLevel(name: "Level I", shortName: "I", alternateNames: ["Local", "L1"], eventLevel: EventLevel.local),
+    const MatchLevel(name: "Level II", shortName: "II", alternateNames: ["Regional/State", "L2"], eventLevel: EventLevel.regional),
+    const MatchLevel(name: "Level III", shortName: "III", alternateNames: ["Area", "L3"], eventLevel: EventLevel.area),
+    const MatchLevel(name: "Nationals", shortName: "IV", alternateNames: ["National", "L4"], eventLevel: EventLevel.national),
   ],
   classifications: [
     const Classification(index: 0, name: "Grandmaster", shortName: "GM", alternateNames: ["G"]),
@@ -93,5 +97,5 @@ final uspsaSport = Sport(
       fallback: true,
       penaltyEvents: _uspsaPenalties,
     ),
-  ]
+  ],
 );

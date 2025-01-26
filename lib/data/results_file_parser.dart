@@ -151,7 +151,6 @@ Map<int, Shooter> _readCompetitorLines(PracticalMatch match, List<String> compet
   for(String line in competitorLines) {
     try {
       List<String> splitLine = line.split(",");
-      var age = ShooterCategory.fromString(splitLine[_AGE]);
       Shooter s = Shooter()
         // PS shooter number, for deduplication in matches
         ..internalId = i
@@ -166,9 +165,12 @@ Map<int, Shooter> _readCompetitorLines(PracticalMatch match, List<String> compet
         ..female = splitLine[_LADY].toLowerCase() == "yes"
         ..dq = splitLine[_DQ_PISTOL].toLowerCase() == "yes" || splitLine[_DQ_RIFLE].toLowerCase() == "yes" || splitLine[_DQ_SHOTGUN].toLowerCase() == "yes";
 
-      if(age != null) {
-        s.categories = [age];
-      }
+      var age = ShooterCategory.fromString(splitLine[_AGE]);
+      s.categories = [
+        if(age != null) age,
+        if(splitLine[_LAW_ENFORCEMENT].toLowerCase() == "yes") ShooterCategory.lawEnforcement,
+        if(splitLine[_MILITARY].toLowerCase() == "yes") ShooterCategory.military,
+      ];
 
       shootersById[i++] = s;
       match.shooters.add(s);
@@ -207,6 +209,9 @@ Map<int, Stage> _readStageLines(PracticalMatch match, List<String> stageLines) {
         // that somehow manage to generate an invalid scores file
         type: splitLine.length > _SCORING ? ScoringFrom.string(splitLine[_SCORING]) : Scoring.comstock,
       );
+
+      if(s.type == Scoring.chrono) match.hasChrono = true;
+      if(s.name.toLowerCase().contains("chronograph")) match.hasChrono = true;
 
       stagesById[i++] = s;
       maxPoints += s.maxPoints;

@@ -7,15 +7,18 @@
 
 import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
-import 'package:shooting_sports_analyst/data/database/match_database.dart';
+import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 part 'match.g.dart';
+
+SSALogger _log = SSALogger("DbShootingMatch");
 
 // Thinking: store various sport properties like PowerFactor etc. as
 
@@ -38,10 +41,6 @@ class DbShootingMatch {
 
   /// A list of IDs this match is known by at its source.
   ///
-  /// The [MatchDatabase] utility class will not allow matches without a source ID to be saved to
-  /// the underlying database.
-  ///
-  /// See the note on [ShootingMatch.sourceIds] regarding collisions between matches from multiple
   /// The [MatchDatabase] utility class will not allow matches without a source ID to be saved to
   /// the underlying database.
   ///
@@ -74,18 +73,56 @@ class DbShootingMatch {
     required this.shooters,
   });
 
-  DbShootingMatch.from(ShootingMatch match) :
-    id = match.databaseId ?? Isar.autoIncrement,
-    eventName = match.name,
-    rawDate = match.rawDate,
-    date = match.date,
-    matchLevelName = match.level?.name,
-    matchEventLevel = match.level?.eventLevel ?? EventLevel.local,
-    sourceIds = []..addAll(match.sourceIds),
-    sourceCode = match.sourceCode,
-    sportName = match.sport.name,
-    shooters = []..addAll(match.shooters.map((s) => DbMatchEntry.from(s))),
-    stages = []..addAll(match.stages.map((s) => DbMatchStage.from(s)));
+  factory DbShootingMatch.from(ShootingMatch match) {
+    Set<Division> divisionsAppearing = {};
+    for(var shooter in match.shooters) {
+      if(shooter.division != null) {
+        divisionsAppearing.add(shooter.division!);
+      }
+    }
+    Map<MatchEntry, RelativeMatchScore> shooterScores = {};
+
+    if(divisionsAppearing.length > 1) {
+      // For each division, filter shooters and calculate match scores
+      for(var division in divisionsAppearing) {
+        var shooters = match.filterShooters(divisions: [division]);
+        var scores = match.getScores(shooters: shooters);
+        for(var entry in scores.entries) {
+          shooterScores[entry.key] = entry.value;
+        }
+      }
+    }
+    else {
+      // No need to filter, just calculate overall scores
+      var scores = match.getScores();
+      for(var entry in scores.entries) {
+        shooterScores[entry.key] = entry.value;
+      }
+    }
+
+    List<DbMatchEntry> dbEntries = [];
+    for(var entry in match.shooters) {
+      var score = shooterScores[entry];
+      if(score == null) {
+        _log.w("shooter score for ${entry.firstName} ${entry.lastName} not found, leaving out");
+      }
+      dbEntries.add(DbMatchEntry.from(entry, score));
+    }
+
+    return DbShootingMatch(
+      id: match.databaseId ?? Isar.autoIncrement,
+      eventName: match.name,
+      rawDate: match.rawDate,
+      date: match.date,
+      matchLevelName: match.level?.name,
+      matchEventLevel: match.level?.eventLevel ?? EventLevel.local,
+      sourceIds: []..addAll(match.sourceIds),
+      sourceCode: match.sourceCode,
+      sportName: match.sport.name,
+      shooters: dbEntries,
+      stages: []..addAll(match.stages.map((s) => DbMatchStage.from(s))),
+    );
+  }
 
   Result<ShootingMatch, ResultErr> hydrate() {
     var sport = SportRegistry().lookup(sportName);
@@ -113,6 +150,7 @@ class DbShootingMatch {
       sport: sport,
       shooters: hydratedShooters.map((e) => e.unwrap()).toList(),
       level: matchLevel,
+      sourceCode: this.sourceCode,
       sourceIds: []..addAll(this.sourceIds),
     ));
   }
@@ -127,6 +165,7 @@ class DbMatchStage {
   bool classifier;
   String classifierNumber;
   String scoringType;
+  String? sourceId;
 
   DbMatchStage({
     this.name = "(invalid name)",
@@ -136,6 +175,7 @@ class DbMatchStage {
     this.classifier = false,
     this.classifierNumber = "",
     this.scoringType = "(invalid)",
+    this.sourceId,
   });
 
   DbMatchStage.from(MatchStage stage) :
@@ -145,7 +185,8 @@ class DbMatchStage {
     maxPoints = stage.maxPoints,
     classifier = stage.classifier,
     classifierNumber = stage.classifierNumber,
-    scoringType = stage.scoring.dbString;
+    scoringType = stage.scoring.dbString,
+    sourceId = stage.sourceId;
 
   MatchStage hydrate() {
     return MatchStage(
@@ -156,6 +197,7 @@ class DbMatchStage {
       classifier: classifier,
       classifierNumber: classifierNumber,
       scoring: StageScoring.fromDbString(scoringType),
+      sourceId: sourceId,
     );
   }
 }
@@ -177,6 +219,8 @@ class DbMatchEntry {
   String? classificationName;
   String? ageCategoryName;
   List<DbRawScore> scores;
+  DbMatchScore? precalculatedScore;
+  String? sourceId;
 
   DbMatchEntry({
     this.entryId = -1,
@@ -194,25 +238,33 @@ class DbMatchEntry {
     this.ageCategoryName,
     this.squad,
     this.scores = const [],
+    this.precalculatedScore,
+    this.sourceId,
   });
 
-  DbMatchEntry.from(MatchEntry entry) :
-    entryId = entry.entryId,
-    firstName = entry.firstName,
-    lastName = entry.lastName,
-    memberNumber = entry.memberNumber,
-    originalMemberNumber = entry.originalMemberNumber,
-    knownMemberNumbers = entry.knownMemberNumbers.toList(),
-    female = entry.female,
-    dq = entry.dq,
-    squad = entry.squad,
-    reentry = entry.reentry,
-    powerFactorName = entry.powerFactor.name,
-    divisionName = entry.division?.name,
-    classificationName = entry.classification?.name,
-    scores = entry.scores.keys.map((stage) {
-      return DbRawScore.from(stage.stageId, entry.scores[stage]!);
-    }).toList();
+  factory DbMatchEntry.from(MatchEntry entry, RelativeMatchScore? score) {
+    return DbMatchEntry(
+      entryId: entry.entryId,
+      firstName: entry.firstName,
+      lastName: entry.lastName,
+      memberNumber: entry.memberNumber,
+      originalMemberNumber: entry.originalMemberNumber,
+      knownMemberNumbers: entry.knownMemberNumbers.toList(),
+      female: entry.female,
+      dq: entry.dq,
+      squad: entry.squad,
+      reentry: entry.reentry,
+      powerFactorName: entry.powerFactor.name,
+      divisionName: entry.division?.name,
+      classificationName: entry.classification?.name,
+      ageCategoryName: entry.ageCategory?.name,
+      scores: entry.scores.keys.map((stage) {
+        return DbRawScore.from(stage.stageId, entry.scores[stage]!);
+      }).toList(),
+      precalculatedScore: DbMatchScore.from(score),
+      sourceId: entry.sourceId,
+    );
+  }
 
   Result<MatchEntry, ResultErr> hydrate(Sport sport, Map<int, MatchStage> stagesById) {
     Division? division = null;
@@ -263,6 +315,7 @@ class DbMatchEntry {
       classification: classification,
       ageCategory: category,
       scores: hydratedScores.map((stage, result) => MapEntry(stage, result.unwrap())),
+      sourceId: sourceId,
     )
         ..originalMemberNumber = originalMemberNumber
         ..knownMemberNumbers = ({}..addAll(knownMemberNumbers))
@@ -278,6 +331,7 @@ class DbRawScore {
   List<DbScoringEventCount> scoringEvents;
   List<DbScoringEventCount> penaltyEvents;
   List<double> stringTimes;
+  DateTime? modified;
 
   DbRawScore({
     this.stageId = -1,
@@ -286,6 +340,7 @@ class DbRawScore {
     this.scoringEvents = const [],
     this.penaltyEvents = const [],
     this.stringTimes = const [],
+    this.modified,
   });
 
   DbRawScore.from(int stageId, RawScore score) :
@@ -294,7 +349,8 @@ class DbRawScore {
     rawTime = score.rawTime,
     stringTimes = []..addAll(score.stringTimes),
     scoringEvents = score.targetEvents.keys.map((event) => DbScoringEventCount(name: event.name, count: score.targetEvents[event]!)).toList(),
-    penaltyEvents = score.penaltyEvents.keys.map((event) => DbScoringEventCount(name: event.name, count: score.penaltyEvents[event]!)).toList();
+    penaltyEvents = score.penaltyEvents.keys.map((event) => DbScoringEventCount(name: event.name, count: score.penaltyEvents[event]!)).toList(),
+    modified = score.modified;
 
   Result<RawScore, ResultErr> hydrate(PowerFactor pf) {
     for(var event in scoringEvents) {
@@ -310,6 +366,7 @@ class DbRawScore {
       stringTimes: []..addAll(stringTimes),
       targetEvents: Map.fromEntries(scoringEvents.map((event) => MapEntry(pf.targetEvents.lookupByName(event.name)!, event.count))),
       penaltyEvents: Map.fromEntries(penaltyEvents.map((event) => MapEntry(pf.penaltyEvents.lookupByName(event.name)!, event.count))),
+      modified: modified,
     ));
   }
 }
@@ -323,4 +380,38 @@ class DbScoringEventCount {
     this.name = "(invalid)",
     this.count = -1,
   });
+}
+
+@embedded 
+class DbMatchScore extends RelativeScore {
+  /// The stage ID for this score, or -1 if this is a match score.
+  DbMatchScore.empty() : stageScores = [], super(place: 0, ratio: 0, points: 0);
+  DbMatchScore({super.place = 0, super.ratio = 0, super.points = 0, this.stageScores = const []});
+  DbMatchScore.match({required super.place, required super.ratio, required super.points, required this.stageScores});
+
+  factory DbMatchScore.from(RelativeMatchScore? score) {
+    if(score == null) {
+      return DbMatchScore.empty();
+    }
+    var stageScores = score.stageScores.keys.map((stage) => DbStageScore.from(stage, score.stageScores[stage]!)).toList();
+    return DbMatchScore(
+      place: score.place,
+      ratio: score.ratio,
+      points: score.points,
+      stageScores: stageScores,
+    );
+  }
+
+  List<DbStageScore> stageScores;
+}
+
+@embedded
+class DbStageScore extends RelativeScore {
+  int stageId;
+  DbStageScore.empty() : stageId = -1, super(place: 0, ratio: 0, points: 0);
+  DbStageScore({super.place = 0, super.ratio = 0, super.points = 0, this.stageId = -1});
+
+  DbStageScore.from(MatchStage stage, RelativeStageScore score) :
+    stageId = stage.stageId,
+    super(place: score.place, ratio: score.ratio, points: score.points);
 }

@@ -5,20 +5,30 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:json_annotation/json_annotation.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
+import 'package:shooting_sports_analyst/data/sport/jsonutils.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 
+part 'filter_dialog.g.dart';
+
+@JsonSerializable()
 class FilterSet {
+  @JsonKey(toJson: sportToJson, fromJson: sportFromJson)
   Sport sport;
   FilterMode mode = FilterMode.and;
   bool reentries = true;
   bool scoreDQs = true;
   bool femaleOnly = false;
 
+  @JsonKey(toJson: divisionMapToJson, includeToJson: true, includeFromJson: false)
   late Map<Division, bool> divisions;
+  @JsonKey(toJson: classificationMapToJson, includeToJson: true, includeFromJson: false)
   late Map<Classification, bool> classifications;
+  @JsonKey(toJson: powerFactorMapToJson, includeToJson: true, includeFromJson: false)
   late Map<PowerFactor, bool> powerFactors;
+  @JsonKey(toJson: ageCategoryMapToJson, includeToJson: true, includeFromJson: false)
   late Map<AgeCategory, bool> ageCategories;
   List<int> squads = [];
   List<int> knownSquads;
@@ -51,6 +61,9 @@ class FilterSet {
   }
 
   Iterable<Division> get activeDivisions => divisions.keys.where((div) => divisions[div] ?? false);
+  Iterable<Classification> get activeClassifications => classifications.keys.where((c) => classifications[c] ?? false);
+  Iterable<PowerFactor> get activePowerFactors => powerFactors.keys.where((f) => powerFactors[f] ?? false);
+  Iterable<AgeCategory> get activeAgeCategories => ageCategories.keys.where((c) => ageCategories[c] ?? false);
 
   Map<Division, bool> divisionListToMap(List<Division> divisions) {
     Map<Division, bool> map = {};
@@ -60,6 +73,38 @@ class FilterSet {
 
     return map;
   }
+
+  FilterSet copy() {
+    return FilterSet.fromJson(toJson());
+  }
+
+  factory FilterSet.fromJson(Map<String, dynamic> json) {
+    var set = _$FilterSetFromJson(json);
+    var divisionMap = json['divisions'] as Map<String, dynamic>;
+    set.divisions = divisionMapFromJson(set.sport, divisionMap);
+
+    var classificationMap = json['classifications'] as Map<String, dynamic>;
+    set.classifications = classificationMapFromJson(set.sport, classificationMap);
+
+    var powerFactorMap = json['powerFactors'] as Map<String, dynamic>;
+    set.powerFactors = powerFactorMapFromJson(set.sport, powerFactorMap);
+
+    var ageCategoryMap = json['ageCategories'] as Map<String, dynamic>;
+    set.ageCategories = ageCategoryMapFromJson(set.sport, ageCategoryMap);
+    return set;
+  }
+
+  Map<String, dynamic> toJson() {
+    return _$FilterSetToJson(this);
+  }
+
+  bool get isEmpty => 
+    squads.isEmpty
+    && !femaleOnly
+    && activeDivisions.isEmpty
+    && activeClassifications.isEmpty
+    && activePowerFactors.isEmpty
+    && activeAgeCategories.isEmpty;
 }
 
 class FilterDialog extends StatefulWidget {
@@ -72,6 +117,9 @@ class FilterDialog extends StatefulWidget {
     return _FilterDialogState();
   }
 
+  static Future<FilterSet?> show(BuildContext context, FilterSet currentFilters) {
+    return showDialog<FilterSet>(context: context, builder: (context) => FilterDialog(currentFilters: currentFilters));
+  }
 }
 
 class _FilterDialogState extends State<FilterDialog> {
@@ -323,6 +371,8 @@ class _FilterDialogState extends State<FilterDialog> {
           var filters = FilterSet(_filters.sport);
           filters.reentries =_filters.reentries;
           filters.scoreDQs = _filters.scoreDQs;
+          filters.knownSquads = _filters.knownSquads;
+          filters.squads = _filters.squads;
           filters.divisions[uspsaSport.divisions.lookupByName("PCC")!] = false;
 
           setState(() {
@@ -336,6 +386,8 @@ class _FilterDialogState extends State<FilterDialog> {
           var filters = FilterSet(_filters.sport);
           filters.reentries =_filters.reentries;
           filters.scoreDQs = _filters.scoreDQs;
+          filters.knownSquads = _filters.knownSquads;
+          filters.squads = _filters.squads;
           filters.divisions[uspsaSport.divisions.lookupByName("PCC")!] = false;
           filters.divisions[uspsaSport.divisions.lookupByName("L10")!] = false;
           filters.divisions[uspsaSport.divisions.lookupByName("PROD")!] = false;
@@ -353,6 +405,8 @@ class _FilterDialogState extends State<FilterDialog> {
             var filters = FilterSet(_filters.sport);
             filters.reentries =_filters.reentries;
             filters.scoreDQs = _filters.scoreDQs;
+            filters.knownSquads = _filters.knownSquads;
+            filters.squads = _filters.squads;
             filters.divisions[uspsaSport.divisions.lookupByName("PCC")!] = false;
             filters.divisions[uspsaSport.divisions.lookupByName("OPEN")!] = false;
             filters.divisions[uspsaSport.divisions.lookupByName("LIM")!] = false;
@@ -371,11 +425,15 @@ class _FilterDialogState extends State<FilterDialog> {
           bool? secondGun = _filters.reentries;
           FilterMode mode = FilterMode.and;
           bool? scoreDQs = _filters.scoreDQs;
+          List<int> knownSquads = _filters.knownSquads;
+          List<int> squads = _filters.squads;
           setState(() {
             _filters = FilterSet(_filters.sport);
             _filters.reentries = secondGun;
             _filters.mode = mode;
             _filters.scoreDQs = scoreDQs;
+            _filters.knownSquads = knownSquads;
+            _filters.squads = squads;
           });
         },
       ),
@@ -385,11 +443,15 @@ class _FilterDialogState extends State<FilterDialog> {
           bool? secondGun = _filters.reentries;
           FilterMode mode = FilterMode.or;
           bool? scoreDQs = _filters.scoreDQs;
+          List<int> knownSquads = _filters.knownSquads;
+          List<int> squads = _filters.squads;
           setState(() {
             _filters = FilterSet(_filters.sport, empty: true);
             _filters.reentries = secondGun;
             _filters.mode = mode;
             _filters.scoreDQs = scoreDQs;
+            _filters.knownSquads = knownSquads;
+            _filters.squads = squads;
           });
         },
       ),

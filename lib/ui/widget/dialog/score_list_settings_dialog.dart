@@ -8,10 +8,11 @@ import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 
 class ScoreListSettingsDialog extends StatefulWidget {
-  const ScoreListSettingsDialog({Key? key, required this.initialSettings, required this.showRatingsSettings}) : super(key: key);
+  const ScoreListSettingsDialog({Key? key, required this.initialSettings, required this.showRatingsSettings, required this.showFantasySettings}) : super(key: key);
 
   final ScoreDisplaySettings initialSettings;
   final bool showRatingsSettings;
+  final bool showFantasySettings;
 
   @override
   State<ScoreListSettingsDialog> createState() => _ScoreListSettingsDialogState();
@@ -54,6 +55,17 @@ class _ScoreListSettingsDialogState extends State<ScoreListSettingsDialog> {
                 if(v != null) {
                   setState(() {
                     settings.fixedTimeAvailablePointsFromDivisionMax = v;
+                  });
+                }
+              },
+            ),
+            if(widget.showFantasySettings) CheckboxListTile(
+              title: Text("Show fantasy points"),
+              value: settings.showFantasyScores,
+              onChanged: (v) {
+                if(v != null) {
+                  setState(() {
+                    settings.showFantasyScores = v;
                   });
                 }
               },

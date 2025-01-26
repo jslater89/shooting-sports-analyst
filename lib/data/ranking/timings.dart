@@ -5,7 +5,7 @@
  */
 
 class Timings {
-  static const enabled = false;
+  static const enabled = true;
 
   static Timings? _instance;
 
@@ -19,6 +19,7 @@ class Timings {
   void reset() {
     addShootersMillis = 0.0;
     shooterCount = 0;
+    matchEntryCount = 0;
     dedupShootersMillis = 0.0;
     rateMatchesMillis = 0.0;
     matchCount = 0;
@@ -38,7 +39,7 @@ class Timings {
 
   double addShootersMillis = 0.0;
   int shooterCount = 0;
-
+  int matchEntryCount = 0;
   double dedupShootersMillis = 0.0;
   
   // Begin match rating
@@ -72,22 +73,22 @@ class Timings {
   @override
   String toString() {
     var content = "TIMINGS:\n";
-    content += "Add shooters: ${addShootersMillis.toStringAsFixed(1)} for $shooterCount shooters\n";
-    content += "Dedup shooters: ${dedupShootersMillis.toStringAsFixed(1)}\n";
-    content += "Rate matches: ${rateMatchesMillis.toStringAsFixed(1)} for $matchCount matches\n";
-    content += "\tGet shooters/scores: ${getShootersAndScoresMillis.toStringAsFixed(1)}\n";
-    content += "\tCalc match strength: ${matchStrengthMillis.toStringAsFixed(1)}\n";
-    content += "\tCalc connectedness: ${connectednessModMillis.toStringAsFixed(1)}\n";
-    content += "\tRate shooters: ${rateShootersMillis.toStringAsFixed(1)}\n";
-    content += "\t\tPubstomp: ${pubstompMillis.toStringAsFixed(1)}\n";
-    content += "\t\tScore map: ${scoreMapMillis.toStringAsFixed(1)}\n";
-    content += "\t\tUpdate: ${updateMillis.toStringAsFixed(1)}\n";
-    content += "\t\t\tCalc expected: ${calcExpectedScore.toStringAsFixed(1)}\n";
-    content += "\t\t\tUpdate ratings: ${updateRatings.toStringAsFixed(1)}\n";
-    content += "\t\t\tPrint info: ${printInfo.toStringAsFixed(1)}\n";
-    content += "\tUpdate connectedness: ${updateConnectednessMillis.toStringAsFixed(1)}\n";
-    content += "Remove unseen shooters: ${removeUnseenShootersMillis.toStringAsFixed(1)}\n";
-    content += "Total: ${sum.toStringAsFixed(1)}, ${(sum / (shooterCount * matchCount)).toStringAsFixed(3)} per match entry";
+    content += "Add shooters: ${addShootersMillis.toStringAsFixed(3)} ms for $shooterCount shooters\n";
+    content += "Dedup shooters: ${dedupShootersMillis.toStringAsFixed(3)} ms\n";
+    content += "Rate matches: ${rateMatchesMillis.toStringAsFixed(3)} ms for $matchCount matches with $matchEntryCount entries\n";
+    content += "\tGet shooters/scores: ${getShootersAndScoresMillis.toStringAsFixed(3)} ms\n";
+    content += "\tCalc match strength: ${matchStrengthMillis.toStringAsFixed(3)} ms\n";
+    content += "\tCalc connectedness: ${connectednessModMillis.toStringAsFixed(3)} ms\n";
+    content += "\tRate shooters: ${rateShootersMillis.toStringAsFixed(3)} ms\n";
+    content += "\t\tPubstomp: ${pubstompMillis.toStringAsFixed(3)} ms\n";
+    content += "\t\tScore map: ${scoreMapMillis.toStringAsFixed(3)} ms\n";
+    content += "\t\tUpdate: ${updateMillis.toStringAsFixed(3)} ms\n";
+    content += "\t\t\tCalc expected: ${calcExpectedScore.toStringAsFixed(3)} ms\n";
+    content += "\t\t\tUpdate ratings: ${updateRatings.toStringAsFixed(3)} ms\n";
+    content += "\t\t\tPrint info: ${printInfo.toStringAsFixed(3)} ms\n";
+    content += "\tUpdate connectedness: ${updateConnectednessMillis.toStringAsFixed(3)} ms\n";
+    content += "Remove unseen shooters: ${removeUnseenShootersMillis.toStringAsFixed(3)} ms\n";
+    content += "Total: ${sum.toStringAsFixed(3)} ms, ${(sum / matchEntryCount).toStringAsFixed(3)} ms per match entry";
 
     return content;
   }

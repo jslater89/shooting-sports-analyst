@@ -11,8 +11,8 @@ import 'package:shooting_sports_analyst/data/sport/sport.dart';
 final _idpaPenalties = [
   const ScoringEvent("Non-Threat", timeChange: 5, alternateNames: ["Hits on Non-Threat"]),
   const ScoringEvent("PE", timeChange: 3, alternateNames: ["Procedural Error", "Finger PE"]),
-  const ScoringEvent("Flagrant", timeChange: 10),
-  const ScoringEvent("FTDR", timeChange: 30),
+  const ScoringEvent("Flagrant", timeChange: 10, alternateNames: ["Flagrant Penalty"]),
+  const ScoringEvent("FTDR", timeChange: 30, alternateNames: ["Failure to Do Right"]),
 ];
 
 final idpaSport = Sport(
@@ -45,14 +45,14 @@ final idpaSport = Sport(
       const Division(name: "CO", longName: "Carry Optics", shortName: "CO"),
       const Division(name: "CCP", longName: "Compact Carry Pistol", shortName: "CCP"),
       const Division(name: "BUG", longName: "Backup Gun", shortName: "BUG"),
-      const Division(name: "REV", longName: "Revolver", shortName: "REV", alternateNames: ["REVO"]),
+      const Division(name: "REV", longName: "Revolver", shortName: "REV", alternateNames: ["REVO", "SSR", "ESR"]),
       const Division(name: "NFC", longName: "Not For Competition", shortName: "NFC", alternateNames: ["SPD"], fallback: true),
     ],
     powerFactors: [
       PowerFactor("",
         targetEvents: [
           const ScoringEvent("-0", timeChange: 0),
-          const ScoringEvent("-1", timeChange: 1),
+          const ScoringEvent("-1", timeChange: 1, alternateNames: ["PD"]),
           const ScoringEvent("-3", timeChange: 3),
           const ScoringEvent("Miss", timeChange: 5),
         ],

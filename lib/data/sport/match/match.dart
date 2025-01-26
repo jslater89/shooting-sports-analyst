@@ -15,6 +15,7 @@ import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 
 enum FilterMode {
   or, and,
@@ -56,6 +57,9 @@ class ShootingMatch {
   /// Shooters in this match.
   List<MatchEntry> shooters;
 
+  Set<int> squadNumbers = {};
+  List<int> get sortedSquadNumbers => squadNumbers.toList()..sort();
+
   /// Whether a match is in progress for score display purposes.
   bool get inProgress => DateTime.now().isBefore(date.add(Duration(days: 7)));
   int get maxPoints => stages.map((s) => s.maxPoints).sum;
@@ -71,18 +75,80 @@ class ShootingMatch {
     required this.sport,
     required this.stages,
     required this.shooters,
-  });
-
-  factory ShootingMatch.fromOldMatch(oldschema.PracticalMatch match) {
-    return MatchTranslator.shootingMatchFrom(match);
+  }) {
+    updateSquadNumbers();
   }
 
+  void updateSquadNumbers() {
+    squadNumbers.clear();
+    for(MatchEntry s in shooters) {
+      if(s.squad != null) {
+        squadNumbers.add(s.squad!);
+      }
+    }
+  }
+
+  factory ShootingMatch.fromOldMatch(oldschema.PracticalMatch match) {
+    var newMatch = MatchTranslator.shootingMatchFrom(match);
+    newMatch.updateSquadNumbers();
+    return newMatch;
+  }
+
+  /// Calculate scores for shooters in this match, according to a provided FilterSet.
+  ///
+  /// If [shooterUuids] or [shooterIds] are provided, they will be applied after
+  /// the FilterSet.
+  Map<MatchEntry, RelativeMatchScore> getScoresFromFilters(FilterSet filters, {
+    List<String>? shooterUuids,
+    List<int>? shooterIds,
+    List<MatchStage>? stages,
+    DateTime? scoresAfter,
+    DateTime? scoresBefore,
+    MatchPredictionMode predictionMode = MatchPredictionMode.none,
+    Map<RaterGroup, Rater>? ratings,
+  }) {
+    var innerShooters = applyFilterSet(filters);
+    if(shooterUuids != null) {
+      innerShooters.retainWhere((s) => shooterUuids.contains(s.sourceId));
+    }
+    if(shooterIds != null) {
+      innerShooters.retainWhere((s) => shooterIds.contains(s.entryId));
+    }
+
+    return getScores(
+      shooters: innerShooters,
+      stages: stages,
+      scoreDQ: filters.scoreDQs,
+      predictionMode: predictionMode,
+      ratings: ratings,
+      scoresAfter: scoresAfter,
+      scoresBefore: scoresBefore,
+    );
+  }
+
+  /// Calculate scores for shooters in this match.
+  /// 
+  /// [shooters] and [stages] default to all shooters and stages in this match.
+  /// 
+  /// [scoreDQ] calculates partial scores for shooters who have been disqualified.
+  /// 
+  /// [predictionMode], if not [MatchPredictionMode.none], assigns predicted scores
+  /// to shooters on stages they have not yet completed.
+  /// 
+  /// [ratings] supports rating-based [predictionMode]s.
+  /// 
+  /// [scoresAfter] and [scoresBefore], if used, will drop scores that occur
+  /// before [scoresAfter] and after [scoresBefore].
   Map<MatchEntry, RelativeMatchScore> getScores({
     List<MatchEntry>? shooters,
     List<MatchStage>? stages,
     bool scoreDQ = true,
     MatchPredictionMode predictionMode = MatchPredictionMode.none,
     Map<RaterGroup, Rater>? ratings,
+    /// Include only scores occurring after this time.
+    DateTime? scoresAfter,
+    /// Include only scores occurring before this time.
+    DateTime? scoresBefore,
   }) {
     var innerShooters = shooters ?? this.shooters;
     var innerStages = stages ?? this.stages;
@@ -94,6 +160,8 @@ class ShootingMatch {
       scoreDQ: scoreDQ,
       predictionMode: predictionMode,
       ratings: ratings,
+      scoresAfter: scoresAfter,
+      scoresBefore: scoresBefore,
     );
   }
 
@@ -113,6 +181,18 @@ class ShootingMatch {
     }
 
     return null;
+  }
+
+  List<MatchEntry> applyFilterSet(FilterSet filters) {
+    return filterShooters(
+      filterMode: filters.mode,
+      divisions: filters.activeDivisions.toList(),
+      powerFactors: filters.activePowerFactors.toList(),
+      classes: filters.activeClassifications.toList(),
+      squads: filters.squads,
+      ladyOnly: filters.femaleOnly,
+      ageCategories: filters.activeAgeCategories.toList(),
+    );
   }
 
   /// Filters shooters by division, power factor, and classification.
@@ -187,6 +267,7 @@ class ShootingMatch {
       sport: sport,
       rawDate: rawDate,
       date: date,
+      sourceCode: sourceCode,
       sourceIds: []..addAll(sourceIds),
       level: level,
       databaseId: databaseId,
@@ -222,6 +303,9 @@ class MatchStage {
   String classifierNumber;
   StageScoring scoring;
 
+  /// An optional source-specific identifier for this stage.
+  String? sourceId;
+
   MatchStage({
     required this.stageId,
     required this.name,
@@ -230,6 +314,7 @@ class MatchStage {
     this.maxPoints = 0,
     this.classifier = false,
     this.classifierNumber = "",
+    this.sourceId,
   });
 
   MatchStage copy() {

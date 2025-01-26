@@ -23,7 +23,8 @@ cp -Force .\Release\*.dll shooting-sports-analyst
 cp -r -Force .\Release\data shooting-sports-analyst\
 
 If($Env:AppVeyor) {
-    $vsPath = "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\VC\Redist\MSVC\14.34.31931\x64\Microsoft.VC143.CRT"
+    # $vsPath = "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\VC\Redist\MSVC\14.34.31931\x64\Microsoft.VC143.CRT"
+    $vsPath = "C:\Windows\System32"
     cp -Force "$vsPath\msvcp140.dll" shooting-sports-analyst
     cp -Force "$vsPath\vcruntime140.dll" shooting-sports-analyst
     cp -Force "$vsPath\vcruntime140_1.dll" shooting-sports-analyst

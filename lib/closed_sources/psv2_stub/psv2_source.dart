@@ -31,27 +31,7 @@ class PSv2MatchSource extends MatchSource {
   }
 
   @override
-  Future<Result<ShootingMatch, MatchSourceError>> getHitFactorMatch(String id) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromSearch(MatchSearchResult<InternalMatchType> result, {Sport? sport, SportType? typeHint}) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<Result<ShootingMatch, MatchSourceError>> getPointsMatch(String id) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<Result<ShootingMatch, MatchSourceError>> getTimePlusPenaltiesMatch(String id) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<Result<ShootingMatch, MatchSourceError>> getTimePlusPointsDownMatch(String id) {
+  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromSearch(MatchSearchResult<InternalMatchType> result, {Sport? sport, SportType? typeHint, InternalMatchFetchOptions? options}) {
     throw UnimplementedError();
   }
 
@@ -61,11 +41,12 @@ class PSv2MatchSource extends MatchSource {
   @override
   List<SportType> get supportedSports => [];
 
+  static const String psv2Code = "psv2";
   @override
-  String get code => "psv2";
+  String get code => psv2Code;
 
   @override
-  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromId(String id, {Sport? sport, SportType? typeHint}) {
+  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromId(String id, {Sport? sport, SportType? typeHint, InternalMatchFetchOptions? options}) {
     // TODO: implement getMatchFromId
     throw UnimplementedError();
   }

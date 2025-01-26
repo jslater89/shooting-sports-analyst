@@ -236,7 +236,7 @@ class MatchCache {
       match.practiscoreId = longId;
       match.practiscoreIdShort = shortId;
 
-      _log.v("Loaded ${entry.match.name} from $path to $ids");
+      //_log.v("Loaded ${entry.match.name} from $path to $ids");
       return match;
     }
     else {
@@ -444,7 +444,7 @@ class MatchCache {
       _index[id] = index;
     }
 
-    _log.v("[MatchCache] Inserted cache and index entry for ${ids}");
+    _log.v("Inserted cache and index entry for ${ids}");
   }
 
   String? getUrl(PracticalMatch match) {
@@ -570,7 +570,7 @@ class MatchCache {
   }
 
   Set<String> _urlsInFlight = {};
-  Future<List<PracticalMatch>> batchGet(List<String> urls, {void Function(String, Result<PracticalMatch, MatchGetError>)? callback}) async {
+  Future<List<PracticalMatch>> batchGet(List<String> urls, {void Function(String, Result<PracticalMatch, MatchGetError>)? callback, bool forceUpdate = false}) async {
     List<PracticalMatch> downloaded = [];
     while(urls.isNotEmpty) {
       int batchSize = 0;
@@ -584,7 +584,7 @@ class MatchCache {
       for(var url in batchUrls) {
         if(!_urlsInFlight.contains(url)) {
           _urlsInFlight.add(url);
-          futures[url] = getMatch(url);
+          futures[url] = getMatch(url, forceUpdate: forceUpdate);
         }
       }
 
@@ -602,6 +602,12 @@ class MatchCache {
 
   MatchCacheIndexEntry? indexEntryFor(PracticalMatch match) {
     return _index[match.practiscoreId];
+  }
+
+  MatchCacheIndexEntry? indexEntryForUrl(String url) {
+    var id = url.split("/").last;
+    if(id.contains("?")) id = _removeQuery(id);
+    return _index[id];
   }
 
   List<PracticalMatch> allMatches() {

@@ -11,18 +11,22 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:shooting_sports_analyst/data/database/match_database.dart';
+import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 import 'package:shooting_sports_analyst/data/search_query_parser.dart';
 import 'package:shooting_sports_analyst/data/sort_mode.dart';
+import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/uspsa_utils/uspsa_fantasy_calculator.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/match/stage_stats_calculator.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/fantasy_scoring_calculator.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/route/broadcast_booth_page.dart';
 import 'package:shooting_sports_analyst/route/compare_shooter_results.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/about_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/score_list_settings_dialog.dart';
@@ -69,12 +73,20 @@ class _ResultPageState extends State<ResultPage> {
   ScrollController _horizontalScrollController = ScrollController();
 
   late BuildContext _innerContext;
+
+  /// widget.canonicalMatch is copied here, so we can save changes to the DB
+  /// after we refresh.
+  late ShootingMatch _canonicalMatch;
   late ShootingMatch _currentMatch;
   late MatchStatsCalculator _matchStats;
 
   bool _operationInProgress = false;
+
+  /// This uses widget.canonicalMatch instead of _canonicalMatch, because the
+  /// sport won't change during a refresh.
   Sport get sport => widget.canonicalMatch.sport;
   late FilterSet _filters;
+  Map<MatchEntry, FantasyScore>? _fantasyScores;
   List<RelativeMatchScore> _baseScores = [];
   List<RelativeMatchScore> _searchedScores = [];
   String _searchTerm = "";
@@ -90,6 +102,7 @@ class _ResultPageState extends State<ResultPage> {
     availablePointsCountPenalties: true,
     fixedTimeAvailablePointsFromDivisionMax: true,
     predictionMode: MatchPredictionMode.none,
+    showFantasyScores: false,
   ));
 
   int get _matchMaxPoints => _filteredStages.map((stage) => stage.maxPoints).sum;
@@ -112,28 +125,30 @@ class _ResultPageState extends State<ResultPage> {
   void initState() {
     super.initState();
 
+    _canonicalMatch = widget.canonicalMatch;
+
     Set<int> squads = {};
-    for(var s in widget.canonicalMatch.shooters) {
+    for(var s in _canonicalMatch.shooters) {
       if(s.squad != null) {
         squads.add(s.squad!);
       }
     }
 
     var squadList = squads.toList()..sort();
-    _filters = FilterSet(widget.canonicalMatch.sport, knownSquads: squadList);
+    _filters = FilterSet(sport, knownSquads: squadList);
     _sortMode = sport.resultSortModes.first;
 
     if(kIsWeb) {
       SystemChrome.setApplicationSwitcherDescription(
           ApplicationSwitcherDescription(
-            label: "Results: ${widget.canonicalMatch.name}",
+            label: "Results: ${_canonicalMatch.name}",
             primaryColor: 0x3f51b5, // Colors.indigo
           )
       );
     }
 
     _appFocus = FocusNode();
-    _currentMatch = widget.canonicalMatch.copy();
+    _currentMatch = _canonicalMatch.copy();
     _matchStats = MatchStatsCalculator(_currentMatch);
     _log.v(_matchStats);
     _filteredStages = []..addAll(_currentMatch.stages);
@@ -263,10 +278,7 @@ class _ResultPageState extends State<ResultPage> {
         break;
       case SortMode.rating:
         if(widget.ratings != null) {
-          //_baseScores.sortByRating(ratings: widget.ratings!, displayMode: _settings.value.ratingMode, match: _currentMatch!);
-
-          // TODO: restore when we can rate new matches
-          scores.sortByScore(stage: _stage);
+          scores.sortByRating(ratings: widget.ratings!, displayMode: _settings.value.ratingMode, match: _currentMatch, stage: _stage);
         }
         else {
           // We shouldn't hit this, because we hide rating sort if there aren't any ratings,
@@ -282,6 +294,9 @@ class _ResultPageState extends State<ResultPage> {
         break;
       case SortMode.idpaAccuracy:
         scores.sortByIdpaAccuracy(stage: _stage, scoring: sport.matchScoring);
+        break;
+      case SortMode.fantasyPoints:
+        scores.sortByFantasyPoints(fantasyScores: _fantasyScores);
         break;
       default:
         _log.e("Unknown sort type $s");
@@ -348,9 +363,82 @@ class _ResultPageState extends State<ResultPage> {
     _applySortMode(_sortMode);
   }
 
+  void _updateFantasyScores() {
+    _log.d("Updating fantasy scores: ${_settings.value.showFantasyScores}");
+    var fantasyScoringCalculator = _currentMatch.sport.fantasyScoresProvider;
+    if(fantasyScoringCalculator != null && _settings.value.showFantasyScores) {
+      setState(() {
+        _fantasyScores = fantasyScoringCalculator.calculateFantasyScores(_currentMatch);
+      });
+    }
+    else {
+      if(_sortMode == SortMode.fantasyPoints) {
+        _sortMode = SortMode.score;
+        _applySortMode(_sortMode);
+      }
+      setState(() {
+        _fantasyScores = null;
+      });
+    }
+  }
+
+  Future<void> _handleThreeDotClick(_MenuEntry item) async {
+    switch (item) {
+      case _MenuEntry.refresh:
+        _log.d("Refreshing match from source ${_canonicalMatch.sourceCode}");
+        var source = MatchSourceRegistry().getByCodeOrNull(_canonicalMatch.sourceCode);
+        if(source != null && _canonicalMatch.sourceIds.isNotEmpty) {
+          _log.d("Using source ${source.name}");
+          var matchRes = await source.getMatchFromId(_canonicalMatch.sourceIds.first);
+
+          if(matchRes.isOk()) {
+            var match = matchRes.unwrap();
+
+            if(match.level == null || match.level!.eventLevel.index < _canonicalMatch.level!.eventLevel.index) {
+              // In the case where we originally pulled a match from the old PractiScore CSV report parser,
+              // we might have match level data that doesn't come down through the new source, so keep the
+              // old data if it looks suspicious.
+              match.level = _canonicalMatch.level;
+            }
+            setState(() {
+              _canonicalMatch = match;
+              _currentMatch = match.copy();
+              _filteredStages = [..._currentMatch.stages];
+              // shooters and scores will be generated by applyFilters
+            });
+
+            _applyFilters(_filters);
+            _log.i("Refreshed match from source");
+          }
+          else {
+            _log.e("Error refreshing match from source: ${matchRes.unwrapErr()}");
+          }
+        }
+        else {
+          if(_canonicalMatch.sourceIds.isEmpty) {
+            _log.e("No source IDs for match ${_canonicalMatch.name}");
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("No source information available for match")));
+          }
+          else {
+            _log.e("Unknown source code ${_canonicalMatch.sourceCode}");
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unknown source ${_canonicalMatch.sourceCode} for match")));
+          }
+        }
+        break;
+      case _MenuEntry.broadcastBooth:
+        Navigator.of(context).pushReplacement(MaterialPageRoute(
+          builder: (context) => BroadcastBoothPage(match: _currentMatch),
+        ));
+        break;
+      case _MenuEntry.about:
+        var size = MediaQuery.of(context).size;
+        showAbout(_innerContext, size);
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    var size = MediaQuery.of(context).size;
 
     Widget sortWidget = FilterControls(
       sport: sport,
@@ -367,6 +455,7 @@ class _ResultPageState extends State<ResultPage> {
       onStageChanged: _applyStage,
       onStageSetChanged: _selectStages,
       onSearchChanged: _applySearchTerm,
+      hasFantasyScores: _fantasyScores != null,
     );
 
     Widget listWidget = ScoreList(
@@ -380,6 +469,7 @@ class _ResultPageState extends State<ResultPage> {
       verticalScrollController: _verticalScrollController,
       horizontalScrollController: _horizontalScrollController,
       minWidth: _MIN_WIDTH,
+      fantasyScores: _fantasyScores,
       onScoreEdited: (shooter, stage, wholeMatch) {
         if(wholeMatch) {
           for(var stage in _currentMatch!.stages) {
@@ -396,7 +486,7 @@ class _ResultPageState extends State<ResultPage> {
           }
         }
 
-        var scores = _currentMatch!.getScores(shooters: _filteredShooters);
+        var scores = _currentMatch.getScores(shooters: _filteredShooters);
 
         setState(() {
           _whatIfMode = true;
@@ -420,14 +510,14 @@ class _ResultPageState extends State<ResultPage> {
 
     List<Widget> actions = [];
 
-    if(_currentMatch != null && _whatIfMode && widget.allowWhatIf) {
+    if(_whatIfMode && widget.allowWhatIf) {
       actions.add(
           Tooltip(
               message: "Exit what-if mode, restoring the original match scores.",
               child: IconButton(
                   icon: Icon(Icons.undo),
                   onPressed: () async {
-                    _currentMatch = widget.canonicalMatch!.copy();
+                    _currentMatch = _canonicalMatch!.copy();
                     List<MatchEntry> filteredShooters = _filterShooters();
                     var scores = _currentMatch!.getScores(shooters: filteredShooters);
 
@@ -454,7 +544,7 @@ class _ResultPageState extends State<ResultPage> {
           )
       );
     }
-    else if(_currentMatch != null && !_whatIfMode && widget.allowWhatIf) {
+    else if(!_whatIfMode && widget.allowWhatIf) {
       actions.add(
         Tooltip(
             message: "Enter what-if mode, allowing you to edit stage scores.",
@@ -469,126 +559,142 @@ class _ResultPageState extends State<ResultPage> {
         )
       );
     }
-    if(_currentMatch != null) {
-      actions.add(
-          Tooltip(
-              message: "Save match results to CSV.",
-              child: IconButton(
-                icon: Icon(Icons.save_alt),
-                onPressed: () {
-                  var csv = _searchedScores.toCSV();
-                  HtmlOr.saveFile("match-results.csv", csv);
-                },
-              )
-          )
-      );
-      if(!kIsWeb) {
-        actions.add(
-          Tooltip(
-            message: "Save match to database.",
+    actions.add(
+        Tooltip(
+            message: "Save ${_stage == null ? "match" : "stage"} results to CSV.",
             child: IconButton(
-              icon: Icon(Icons.save),
-              onPressed: () async {
-                var result = await AnalystDatabase().save(widget.canonicalMatch);
-                if(result.isErr()) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text("Error saving match: $e")
-                  ));
+              icon: Icon(Icons.save_alt),
+              onPressed: () {
+                String csv = "";
+                if(_stage == null) {
+                  csv = _searchedScores.toCSV();
                 }
                 else {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text("Saved match to database"),
-                  ));
+                  csv = _searchedScores.toCSV(stage: _stage);
                 }
-              },
-            )
-          )
-        );
-      }
-      actions.add(
-        Tooltip(
-            message: "Display a match breakdown.",
-            child: IconButton(
-              icon: Icon(Icons.table_chart),
-              onPressed: () {
-                showDialog(context: context, builder: (context) {
-                  return MatchBreakdown(sport: sport, shooters: _currentMatch!.shooters);
-                });
+                HtmlOr.saveFile("${_stage == null ? "match" : "stage"}-results.csv", csv);
               },
             )
         )
-      );
-      // actions.add(
-      //   Tooltip(
-      //     message: "Display statistics about the currently-filtered scores.",
-      //     child: IconButton(
-      //       icon: Icon(Icons.show_chart),
-      //       onPressed: () {
-      //         showDialog(context: context, builder: (context) => ScoreStatsDialog(scores: []..addAll(_baseScores), stage: _stage));
-      //       },
-      //     )
-      //   )
-      // );
-      if(_stage != null) actions.add(
-        Tooltip(
-          message: "View stage hit statistics",
-          child: IconButton(
-            icon: Icon(Icons.bar_chart),
-            onPressed: () {
-              var stats = MatchStatsCalculator(_currentMatch!);
-              var stageStats = stats.stageStats[_stage!]!;
-              StageStatsDialog.show(context, stageStats);
-            }
-          )
-        )
-      );
+    );
+    if(!kIsWeb) {
       actions.add(
         Tooltip(
-          message: "Compare shooter results.",
+          message: "Save match to database.",
           child: IconButton(
-            icon: Icon(Icons.compare_arrows),
-            onPressed: () {
-              Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) => CompareShooterResultsPage(
-                  scores: _baseScores,
-                  initialShooters: [_filteredShooters.first],
-                )
-              ));
-            },
-          ),
-        )
-      );
-      actions.add(
-        Tooltip(
-          message: "Display settings.",
-          child: IconButton(
-            icon: Icon(Icons.settings),
+            icon: Icon(Icons.save),
             onPressed: () async {
-              var newSettings = await showDialog<ScoreDisplaySettings>(context: context, builder: (context) {
-                return ScoreListSettingsDialog(
-                  initialSettings: _settings.value, showRatingsSettings: widget.ratings != null
-                );
-              });
-
-              if(newSettings != null) {
-                var oldPredictionMode = _settings.value.predictionMode;
-                _settings.value = newSettings;
-                if(_settings.value.predictionMode != oldPredictionMode) {
-                  _updateHypotheticalScores();
-                }
+              var result = await AnalystDatabase().saveMatch(_canonicalMatch);
+              if(result.isErr()) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text("Error saving match: $e")
+                ));
+              }
+              else {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text("Saved match to database"),
+                ));
               }
             },
-          ),
-        ),
+          )
+        )
       );
     }
     actions.add(
-        IconButton(
-          icon: Icon(Icons.help),
+      Tooltip(
+          message: "Display a match breakdown.",
+          child: IconButton(
+            icon: Icon(Icons.table_chart),
+            onPressed: () {
+              showDialog(context: context, builder: (context) {
+                return MatchBreakdown(sport: sport, match: _currentMatch, shooters: _currentMatch!.shooters);
+              });
+            },
+          )
+      )
+    );
+    // actions.add(
+    //   Tooltip(
+    //     message: "Display statistics about the currently-filtered scores.",
+    //     child: IconButton(
+    //       icon: Icon(Icons.show_chart),
+    //       onPressed: () {
+    //         showDialog(context: context, builder: (context) => ScoreStatsDialog(scores: []..addAll(_baseScores), stage: _stage));
+    //       },
+    //     )
+    //   )
+    // );
+    if(_stage != null) actions.add(
+      Tooltip(
+        message: "View stage statistics.",
+        child: IconButton(
+          icon: Icon(Icons.bar_chart),
           onPressed: () {
-            showAbout(_innerContext, size);
-          },
+            var stats = MatchStatsCalculator(_currentMatch!);
+            var stageStats = stats.stageStats[_stage!]!;
+            StageStatsDialog.show(context, stageStats);
+          }
         )
+      )
+    );
+    actions.add(
+      Tooltip(
+        message: "Compare shooter results.",
+        child: IconButton(
+          icon: Icon(Icons.compare_arrows),
+          onPressed: () {
+            Navigator.of(context).push(MaterialPageRoute(
+              builder: (context) => CompareShooterResultsPage(
+                scores: _baseScores,
+                initialShooters: [_filteredShooters.first],
+              )
+            ));
+          },
+        ),
+      )
+    );
+    actions.add(
+      Tooltip(
+        message: "Display settings.",
+        child: IconButton(
+          icon: Icon(Icons.settings),
+          onPressed: () async {
+            var newSettings = await showDialog<ScoreDisplaySettings>(context: context, builder: (context) {
+              return ScoreListSettingsDialog(
+                initialSettings: _settings.value,
+                showRatingsSettings: widget.ratings != null,
+                showFantasySettings: sport.fantasyScoresProvider != null,
+              );
+            });
+
+            if(newSettings != null) {
+              var oldPredictionMode = _settings.value.predictionMode;
+              var oldShowFantasyPoints = _settings.value.showFantasyScores;
+              _settings.value = newSettings;
+              if(_settings.value.predictionMode != oldPredictionMode) {
+                _updateHypotheticalScores();
+              }
+              if(_settings.value.showFantasyScores != oldShowFantasyPoints) {
+                _updateFantasyScores();
+              }
+            }
+          },
+        ),
+      ),
+    );
+      actions.add(
+      PopupMenuButton<_MenuEntry>(
+        onSelected: (item) => _handleThreeDotClick(item),
+        itemBuilder: (context) {
+          List<PopupMenuEntry<_MenuEntry>> items = _MenuEntry.values.map((v) =>
+            PopupMenuItem(
+              child: Text(v.label),
+              value: v,
+            )
+          ).toList();
+          return items;
+        },
+      ),
     );
 
     return RawKeyboardListener(
@@ -690,18 +796,21 @@ class ScoreDisplaySettings {
   MatchPredictionMode predictionMode;
   bool availablePointsCountPenalties;
   bool fixedTimeAvailablePointsFromDivisionMax;
+  bool showFantasyScores;
 
   ScoreDisplaySettings({
     required this.ratingMode,
     required this.availablePointsCountPenalties,
     required this.fixedTimeAvailablePointsFromDivisionMax,
     required this.predictionMode,
+    required this.showFantasyScores,
   });
   ScoreDisplaySettings.copy(ScoreDisplaySettings other) :
       this.ratingMode = other.ratingMode,
       this.availablePointsCountPenalties = other.availablePointsCountPenalties,
       this.fixedTimeAvailablePointsFromDivisionMax = other.fixedTimeAvailablePointsFromDivisionMax,
-      this.predictionMode = other.predictionMode;
+      this.predictionMode = other.predictionMode,
+      this.showFantasyScores = other.showFantasyScores;
 }
 
 enum RatingDisplayMode {
@@ -752,3 +861,20 @@ enum MatchPredictionMode {
     eloAwareFull => "Elo-aware (all entrants)",
   };
 }
+
+  enum _MenuEntry {
+    refresh,
+    broadcastBooth,
+    about;
+
+    String get label {
+      switch (this) {
+        case _MenuEntry.about:
+          return "About";
+        case _MenuEntry.broadcastBooth:
+          return "Broadcast mode";
+        case _MenuEntry.refresh:
+          return "Refresh";
+      }
+    }
+  }

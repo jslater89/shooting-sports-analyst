@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:collection/collection.dart';
 import 'package:intl/intl.dart';
 
 final DateFormat programmerYmdFormat = DateFormat("yyyy-MM-dd");
@@ -55,6 +56,22 @@ class Result<T, E extends ResultErr> {
   Result.ok(T result) : this._result = result, this._error = null;
   Result.err(E error) : this._error = error, this._result = null;
   Result.errFrom(Result<Object?, E> other) : this._error = other.unwrapErr(), this._result = null;
+}
+
+extension ListStatistics<T extends Comparable> on List<T> {
+  T get median {
+    if(this.isEmpty) throw ArgumentError("empty list");
+
+    late List<T> sorted;
+    if(this.isSorted((a, b) => a.compareTo(b))) {
+      sorted = this;
+    }
+    else {
+      sorted = this.sorted((a, b) => a.compareTo(b));
+    }
+
+    return sorted[sorted.length ~/ 2];
+  }
 }
 
 List<int> mode(List<int> data) {
@@ -179,4 +196,8 @@ extension SanitizeFilename on String {
 
     return result.length > 255 ? result.substring(0, 255) : result;
   }
+}
+
+String yMdHm(DateTime date) {
+  return DateFormat.yMd().format(date) + " " + DateFormat.Hm().format(date);
 }

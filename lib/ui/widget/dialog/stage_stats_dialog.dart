@@ -20,7 +20,7 @@ class StageStatsDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("The average number of hits of each type on this stage, with the stage length normalized to 32 rounds."),
+            Text("The number of hits of each type on this stage, per 100 scoring events."),
             SizedBox(height: 10),
             ...stageStats.hitsToRows(),
           ],

@@ -82,8 +82,14 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
       Divider(height: 2, thickness: 1),
       Row(
         children: [
-          Expanded(flex: 4, child: Text("Average rating", style: Theme.of(context).textTheme.bodyMedium)),
-          Expanded(flex: 2, child: Text("${widget.statistics.averageRating.round()}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
+          Expanded(flex: 4, child: Text("Average/median rating", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(
+            flex: 2,
+            child: Text("${widget.statistics.averageRating.round()}/${widget.statistics.medianRating.round()}",
+                style: Theme.of(context).textTheme.bodyMedium,
+                textAlign: TextAlign.right
+            )
+          ),
         ],
       ),
       Divider(height: 2, thickness: 1),
@@ -96,8 +102,11 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
       Divider(height: 2, thickness: 1),
       Row(
         children: [
-          Expanded(flex: 4, child: Text("Average history length", style: Theme.of(context).textTheme.bodyMedium)),
-          Expanded(flex: 2, child: Text("${widget.statistics.averageHistory.toStringAsFixed(1)}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
+          Expanded(flex: 4, child: Text("Average/median history length", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(
+            flex: 2, 
+            child: Text("${widget.statistics.averageHistory.toStringAsFixed(1)}/${widget.statistics.medianHistory}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)
+          ),
         ],
       ),
       Divider(height: 2, thickness: 1),
@@ -227,6 +236,7 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
 
   Widget _boxPlot(BuildContext context) {
     Map<Classification, Widget> plots = {};
+    Map<Classification, String> tooltips = {};
 
     double maxOverall = double.negativeInfinity;
     double minOverall = double.infinity;
@@ -239,6 +249,14 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
 
       if(ratings.first < minOverall) minOverall = ratings.first;
       if(ratings.last > maxOverall) maxOverall = ratings.last;
+
+      tooltips[cls] = "${cls.name}:\n" +
+        "Quartile size: ${(len * 0.25).floor()}\n" +
+        "Min: ${ratings.first.round()}\n" +
+        "Q1: ${ratings[(len * .25).floor()].round()}\n" +
+        "Median: ${ratings[len ~/ 2].round()}\n" +
+        "Q3: ${ratings[min(len - 1, (len * .75).floor())].round()}\n" +
+        "Max: ${ratings.last.round()}";
 
       plots[cls] = BoxAndWhiskerPlot(
         direction: PlotDirection.vertical,
@@ -294,7 +312,10 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
                 Expanded(
                   child: Padding(
                     padding: EdgeInsets.all(8.0),
-                    child: plots[cls]!,
+                    child: Tooltip(
+                      message: tooltips[cls]!,
+                      child: plots[cls]!
+                    ),
                   ),
                 ),
                 Text(cls.displayString()),

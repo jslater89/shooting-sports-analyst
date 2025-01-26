@@ -4,9 +4,11 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
 import 'package:shooting_sports_analyst/data/match/practical_match.dart' as old;
 import 'package:shooting_sports_analyst/data/match/score.dart';
 import 'package:shooting_sports_analyst/data/match/shooter.dart' as oldS;
+import 'package:shooting_sports_analyst/data/source/practiscore_report.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
@@ -20,6 +22,10 @@ extension MatchTranslator on ShootingMatch {
   static ShootingMatch shootingMatchFrom(old.PracticalMatch match) {
     List<MatchStage> newStages = [];
     for(var oldStage in match.stages) {
+      if(oldStage.type != Scoring.chrono && oldStage.maxPoints == 0 && oldStage.minRounds == 0) {
+        _log.e("old stage has no max points or min rounds: ${oldStage.name}, substituting 100 points");
+        oldStage.maxPoints = 100;
+      }
       newStages.add(MatchStage(
         stageId: oldStage.internalId,
         name: oldStage.name,
@@ -59,7 +65,7 @@ extension MatchTranslator on ShootingMatch {
             if(oldScore.ns > 0) powerFactor.targetEvents.lookupByName("NS")!: oldScore.ns,
           },
           penaltyEvents: {
-            if(oldScore.penaltyCount > 0) powerFactor.penaltyEvents.lookupByName("Procedural")!: oldScore.penaltyCount,
+            if(oldScore.tenPointPenaltyCount > 0) powerFactor.penaltyEvents.lookupByName("Procedural")!: oldScore.tenPointPenaltyCount,
             if(oldScore.lateShot > 0) powerFactor.penaltyEvents.lookupByName("Overtime shot")!: oldScore.lateShot,
           }
         );
@@ -92,6 +98,7 @@ extension MatchTranslator on ShootingMatch {
       stages: newStages,
       shooters: newShooters,
       level: uspsaSport.eventLevels.lookupByName((match.level ?? old.MatchLevel.I).name)!,
+      sourceCode: PSv2MatchSource.psv2Code,
       sourceIds: [
         match.practiscoreId,
         if(match.practiscoreIdShort != null) match.practiscoreIdShort!,

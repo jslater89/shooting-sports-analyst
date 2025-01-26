@@ -33,7 +33,6 @@ import 'package:shooting_sports_analyst/ui/rater/rater_view.dart';
 import 'package:shooting_sports_analyst/ui/rater/rating_filter_dialog.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/associate_registrations.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_cache_chooser_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/member_number_collision_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/url_entry_dialog.dart';
@@ -109,6 +108,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   PracticalMatch? _selectedMatch;
   MatchCache _matchCache = MatchCache();
   late TabController _tabController;
+
+  DateTime? _changeSince;
 
   var _loadingScrollController = ScrollController();
 
@@ -391,6 +392,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                 rater: _history.raterFor(match, t),
                 currentMatch: match,
                 search: _searchTerm,
+                changeSince: _changeSince,
                 minRatings: _minRatings,
                 maxAge: maxAge,
                 sortMode: _sortMode,
@@ -659,6 +661,12 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
   Future<void> _handleClick(_MenuEntry item) async {
     switch(item) {
+      case _MenuEntry.setChangeSince:
+        var date = await showDatePicker(context: context, initialDate: _changeSince ?? DateTime.now(), firstDate: DateTime(2015, 1, 1), lastDate: DateTime.now());
+        setState(() {
+          _changeSince = date;
+        });
+        break;
 
       case _MenuEntry.csvExport:
         if(_selectedMatch != null) {
@@ -1125,14 +1133,16 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       matches: actualMatches,
       ongoingMatches: ongoingMatches,
       progressCallback: (currentSteps, totalSteps, eventName) async {
-        setState(() {
-          _currentProgress = currentSteps;
-          _totalProgress = totalSteps;
-          _loadingEventName = eventName;
-        });
+        if(mounted) {
+          setState(() {
+            _currentProgress = currentSteps;
+            _totalProgress = totalSteps;
+            _loadingEventName = eventName;
+          });
 
-        // print("Rating history progress: $_currentProgress/$_totalProgress $eventName");
-        await Future.delayed(Duration(milliseconds: 1));
+          // print("Rating history progress: $_currentProgress/$_totalProgress $eventName");
+          await Future.delayed(Duration(milliseconds: 1));
+        }
       }
     );
 
@@ -1290,11 +1300,14 @@ extension _Utilities on RaterGroup {
         return "IRONS";
       case RaterGroup.combined:
         return "COMBINED";
+      case RaterGroup.tenRounds:
+        return "10-ROUND";
     }
   }
 }
 
 enum _MenuEntry {
+  setChangeSince,
   csvExport,
   dataErrors,
   viewResults,
@@ -1302,6 +1315,8 @@ enum _MenuEntry {
 
   String get label {
     switch(this) {
+      case _MenuEntry.setChangeSince:
+        return "Set date for trend";
       case _MenuEntry.csvExport:
         return "Export ratings as CSV";
       case _MenuEntry.dataErrors:

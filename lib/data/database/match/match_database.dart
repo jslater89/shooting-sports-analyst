@@ -63,7 +63,7 @@ class AnalystDatabase {
     return finalQuery.findAll();
   }
 
-  Future<Result<DbShootingMatch, ResultErr>> save(ShootingMatch match) async {
+  Future<Result<DbShootingMatch, ResultErr>> saveMatch(ShootingMatch match) async {
     if(match.sourceIds.isEmpty) {
       throw ArgumentError("Match must have at least one source ID to be saved in the database");
     }
@@ -108,7 +108,7 @@ class AnalystDatabase {
     for(var ie in cache.allIndexEntries()) {
       var oldMatch = await cache.getByIndex(ie);
       var newMatch = MatchTranslator.shootingMatchFrom(oldMatch);
-      await save(newMatch);
+      await saveMatch(newMatch);
       i += 1;
       if(i % 10 == 0) {
         _log.v("Migration: saved $i of $matchCount to database");

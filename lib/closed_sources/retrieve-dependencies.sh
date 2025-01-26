@@ -1,4 +1,10 @@
 #!/bin/bash
 
-rm -rf psv2
-git clone git@github.com:jslater89/psv2_match_source psv2
+set +e
+rm psv2
+set -e
+
+ln -s ../../../shooting-sports-analyst-closed-sources/psv2_match_source psv2
+ls psv2
+head psv2/psv2_source.dart
+

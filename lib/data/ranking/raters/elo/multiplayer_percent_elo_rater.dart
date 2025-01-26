@@ -8,6 +8,7 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:normal/normal.dart';
 import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/gumbel.dart';
@@ -132,7 +133,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
         scores: scores,
         matchScores: matchScores
     );
-    if(Timings.enabled) timings.calcExpectedScore += (DateTime.now().difference(start).inMicroseconds).toDouble();
+    if(Timings.enabled) timings.calcExpectedScore += (DateTime.now().difference(start).inMicroseconds / 1000);
 
     if(params.usedScores == 1) {
       return {
@@ -248,7 +249,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     var changeFromPlace = effectiveK * (params.usedScores - 1) * (actualScore.placeComponent * placeWeight - (params.expectedScore * placeWeight));
 
     var change = changeFromPlace + changeFromPercent;
-    if(Timings.enabled) timings.updateRatings += (DateTime.now().difference(start).inMicroseconds).toDouble();
+    if(Timings.enabled) timings.updateRatings += (DateTime.now().difference(start).inMicroseconds / 1000);
 
     if(change.isNaN || change.isInfinite) {
       _log.w("### ${aRating.getName()} stats: ${actualScore.actualPercent} of ${params.usedScores} shooters for ${aScore.stage?.name}, SoS ${matchStrengthMultiplier.toStringAsFixed(3)}, placement $placementMultiplier, zero $zeroMultiplier (${params.zeroes})");
@@ -359,7 +360,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       ],
       if(doBackRating) "Back rating/error/steps/size: %00.0f/%00.1f/%d/%00.2f": [backRatingRaw, backRatingErr, steps, stepSize],
     };
-    if(Timings.enabled) timings.printInfo += (DateTime.now().difference(start).inMicroseconds).toDouble();
+    if(Timings.enabled) timings.printInfo += (DateTime.now().difference(start).inMicroseconds / 1000);
 
     return {
       aRating: RatingChange(change: {
@@ -518,7 +519,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   static const _trailPaddingFlex = 2;
 
   @override
-  Row buildRatingKey(BuildContext context) {
+  Row buildRatingKey(BuildContext context, {DateTime? trendDate}) {
     var errorText = "The error calculated by the rating system.";
     if(doBackRating) {
       errorText += " A negative number means the calculated rating\n"
@@ -550,7 +551,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
         Expanded(
           flex: _trendFlex,
           child: Tooltip(
-            message: "The change in the shooter's rating, over the last 30 rating events.",
+            message: trendDate != null ? "The change in the shooter's rating since ${DateFormat.yMd().format(trendDate)}." : "The change in the shooter's rating over the last 30 rating events.",
             child: Text("Trend", textAlign: TextAlign.end)
           )
         ),
@@ -575,10 +576,15 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   }
 
   @override
-  ScoreRow buildRatingRow({required BuildContext context, required int place, required ShooterRating rating}) {
+  ScoreRow buildRatingRow({required BuildContext context, required int place, required ShooterRating rating, DateTime? trendDate}) {
     rating as EloShooterRating;
 
     var trend = rating.trend.round();
+    if(trendDate != null) {
+      var forDate = rating.ratingForDate(trendDate);
+      trend = (rating.rating - forDate).round();
+      // _log.vv("rating: ${rating.rating}, date: $trendDate, forDate: $forDate, trend: $trend");
+    }
     var positivity = (rating.direction * 100).round();
     var error = rating.standardError;
     if(doBackRating) {
@@ -645,7 +651,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
       csv += "${s.originalMemberNumber},";
       csv += "${s.lastClassification.name},";
-      csv += "${s.getName(suffixes: false)},";
+      csv += "${s.getName(suffixes: false).replaceAll(RegExp(r'[",]', caseSensitive: false), "")},"; // sanitize for CSV
       csv += "${s.rating.round()},${lastMatchChange.round()},"
           "${error.toStringAsFixed(2)},"
           "${trend.toStringAsFixed(2)},"
