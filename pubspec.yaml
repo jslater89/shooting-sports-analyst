@@ -66,6 +66,7 @@ dependencies:
   fading_edge_scrollview: ^4.1.1
   audioplayers: ^5.2.1
   two_dimensional_scrollables: ^0.0.4
+  window_manager: ^0.4.3
 
 dev_dependencies:
   flutter_test:

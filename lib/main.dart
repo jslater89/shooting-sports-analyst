@@ -24,6 +24,7 @@ import 'package:shooting_sports_analyst/route/home_page.dart';
 import 'package:shooting_sports_analyst/route/practiscore_url.dart';
 import 'package:shooting_sports_analyst/route/ratings.dart';
 import 'package:shooting_sports_analyst/util.dart';
+import 'package:window_manager/window_manager.dart';
 import 'configure_nonweb.dart' if (dart.library.html) 'configure_web.dart';
 import 'package:fluro/fluro.dart' as fluro;
 
@@ -86,6 +87,16 @@ void main() async {
   configureApp();
 
   WidgetsFlutterBinding.ensureInitialized();
+
+  await windowManager.ensureInitialized();
+  var options = WindowOptions(
+    minimumSize: Size(1280, 720),
+    title: "Shooting Sports Analyst",
+  );
+  windowManager.waitUntilReadyToShow(options, () async {
+    await windowManager.show();
+    await windowManager.focus();
+  });
 
   await ConfigLoader().ready;
   initLogger();
