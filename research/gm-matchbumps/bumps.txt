@@ -1,44 +1,414 @@
+Eligible for GM bumps:
+Chris Snow at Double tap Championship 2023 in Open
+	Was Master at match
+	Is now Master with 1335 Elo
+	Beat these GMs over 90%:
+		James Lofton (A93372, 1579 Elo at match, 1464 Elo today)
+		Ken Yang (A83433, 1722 Elo at match, 1705 Elo today)
+		Nic Neel (TY55323, 1499 Elo at match, 1510 Elo today)
+		Mel Rodero ii (L5248, (unknown) Elo at match, (unrated) Elo today)
 
-Joe Farewell (TY76085 Limited Optics Master) (unrated) 2025 USPSA Florida State Championship by Hunter HD
-Mason Lane (n/a Production Unclassified) (unrated) 2023 US IPSC Nationals By Davinci Machining
-James Han (TY97341 Carry Optics Master) (1311) QPS Quantico Shooting Club January 2022 USPSA
-Chris Snow (TY107262 Open Master) (1335) Double tap Championship 2023
-Mohd Abualsayyed (L3746 Production Master) (1446) SnS  400 Indiana Section Championship
-Bo Wang (L3950 Carry Optics A) (1460) 2020 Northern Arizona Classic
-Stephen Van (A84775 Carry Optics Master) (1466) Shadow Hawk Defense USPSA - Jul
-Robert Powell (A74982 Open Master) (1467) The Space City Challenge 2018
-Brian Fabian (A92403 Production Master) (1471) 2020 Wisconsin Section Championship
-James Cantrell (L4837 Carry Optics Master) (1473) TCSC USPSA Level I November Club Match
-Renante David (A72319 PCC B) (1480) 2019 Northern Arizona Classic
-Tony Carr (TY104073 Open A) (1501) 2018 High Desert Classic - SPY HARD
-Jake DYER (A70998 PCC A) (1511) 2022 USPSA Oregon State Championship
-Anthony Zabonik (L5695 PCC Master) (1520) 2023 Battle for the North Coast
-Richard Banks (A107611 Limited Master) (1523) 2019 Carolina Classic Sponsored by The Blue Bullets
-Jack McKee (A128279 PCC A) (1538) PRIMARY ARMS Space City Challenge 2024
-Bryce Dupuy (A98844 Production Master) (1548) 2020 Great Plains Sectional Championship
-Joshua Espinosa (TY133889 Carry Optics Master) (1557) 2024 Cheely Custom Gunworks Michigan Sectional
-Justine Williams (A84390 Open Master) (1572) 2019 High Desert Classic - Get Your Game On
-Casey Ryan (FY82686 Carry Optics Master) (1580) 2022 Great Plains Section Championship
-Steven Collins (A125314 PCC B) (1582) 2024 Curated Arms Georgia State USPSA Championship sponsored by C&H Precision
-Michael Ennis (A81062 Limited Master) (1603) RHT Delaware State USPSA Championship
-Robert Ramirez jr (TY37520 PCC Master) (1632) 2020 Prescott Area 2 Championship
-Aaron Gomez (A130343 Carry Optics Master) (1644) 2022 Roadrunner Shootout presented by The Blue Bullets
-Austin Faulkner (A88990 Production A) (1657) Berrys 2018 Utah State USPSA Championship
-Scott Rader (A83744 Carry Optics B) (1689) 2020 EGW USPSA Area 8 Championship
-Rick Mace (L4342 PCC Master) (1697) 2022 Springfield Armory Desert Classic Area 2 Championship
-Chris Gelnett (TY104882 Open Master) (1705) 2021 Immortal Arms Virginia State USPSA  Championship
-Dominic Koh (TY69978 Open Master) (1719) North Texas Open - 2020
-Joseph Murray (A77316 PCC A) (1728) 2022 AZ State USPSA Championship presented by Ruger Firearms
-Joseph Murray (A77316 PCC A) (1728) 2023 Desert Classic Area 2 Championship
-Tom Castro (TY106150 Open Master) (1738) Florida Open 2022
-Caleb Smith (L3219 PCC Master) (1742) 2024 Excaliber Ammunition Ohio State Buckeye Blast
-Joon Kim (TY104547 Open Master) (1807) 2023 Northern Arizona Classic
-Simon Joseph Echavez Racaza (L3137 Carry Optics Unclassified) (1828) 2021 Blue Bullets PCC & Carry Optics Nationals
-Jaime Saldanha jr (TYF39910 Open Unclassified) (1855) 2018 Florida Open
-Jacob Hetherington (A69498 Carry Optics Master) (1861) 2021 Walther Arms Area 4 Championship
-Christian Sailer (L4698 Carry Optics Unclassified) (1888) 2023 Staccato Area 4 Championship
-Christian Sailer (L4698 Carry Optics Unclassified) (1888) 2023 SIG Sauer Carry Optics Nationals Presented by Federal
-Eric Grauffel (FYF38440 Carry Optics Unclassified) (1892) 2024 SIG Sauer Carry Optics Nationals Presented by Vortex Optics
-Shane Coley (A51938 Limited Unclassified) (1893) 2018 PTac-Jabs Alabama Sectional
-Christian Sailer (L4698 Limited Unclassified) (1937) 2021 Area 6 Championship
-Gianni Giordano (A84097 Limited Master) (2109) Idaho Sectional Championship Match 2018
+
+Mohd Abualsayyed at SnS  400 Indiana Section Championship in Production
+	Was Master at match
+	Is now Grandmaster with 1446 Elo
+	Beat these GMs over 90%:
+		Eric Kamps (FY89698, 1482 Elo at match, 1548 Elo today)
+		Stephen Lutman (A78694, 1631 Elo at match, 1808 Elo today)
+		Chase Harber (FY89356, 1445 Elo at match, 1493 Elo today)
+
+
+Bo Wang at 2020 Northern Arizona Classic in Carry Optics
+	Was A at match
+	Is now Grandmaster with 1460 Elo
+	Beat these GMs over 90%:
+		Travis Mccamish (FY90353, 1556 Elo at match, 1623 Elo today)
+		Hunter Constantine (FY114729, 1504 Elo at match, 1699 Elo today)
+		Seth Blair (TY89865, 1196 Elo at match, 1411 Elo today)
+
+
+Robert Powell at The Space City Challenge 2018 in Open
+	Was Master at match
+	Is now Master with 1467 Elo
+	Beat these GMs over 90%:
+		Roy Stedman (L3082, 1308 Elo at match, 1494 Elo today)
+		Mel Rodero (TY86283, 1315 Elo at match, 1481 Elo today)
+		Blake Liles (TY64204, 1301 Elo at match, 1281 Elo today)
+
+
+Brian Fabian at 2020 Wisconsin Section Championship in Production
+	Was Master at match
+	Is now Master with 1471 Elo
+	Beat these GMs over 90%:
+		Mike Boughton (TY85003, 1621 Elo at match, 1612 Elo today)
+		James Delambert (A71786, 1513 Elo at match, 1678 Elo today)
+		Eric Kamps (FY89698, 1592 Elo at match, 1548 Elo today)
+
+
+Renante David at 2019 Northern Arizona Classic in PCC
+	Was B at match
+	Is now Master with 1480 Elo
+	Beat these GMs over 90%:
+		Tim Smith (TY61938, 1612 Elo at match, 1623 Elo today)
+		Jim Adame (A80318, 1505 Elo at match, 1357 Elo today)
+		Ian Meyers (FY83588, 1659 Elo at match, 1577 Elo today)
+
+
+Tony Carr at 2018 High Desert Classic - SPY HARD in Open
+	Was A at match
+	Is now A with 1501 Elo
+	Beat these GMs over 90%:
+		Sean Jackson (L3364, 1310 Elo at match, 1304 Elo today)
+		Leighton Oosthuisen (L4092, 1477 Elo at match, 1485 Elo today)
+		Don Bednorz (L2570, 1424 Elo at match, 1145 Elo today)
+
+
+Jake DYER at 2022 USPSA Oregon State Championship in PCC
+	Was A at match
+	Is now Master with 1511 Elo
+	Beat these GMs over 90%:
+		Jack Lapham (A102894, 1549 Elo at match, 1643 Elo today)
+		Shaun Gardner (A108638, 1525 Elo at match, 1495 Elo today)
+		Norman Bright (TY47743, 1440 Elo at match, 1371 Elo today)
+
+
+Anthony Zabonik at 2023 Battle for the North Coast in PCC
+	Was Master at match
+	Is now Master with 1520 Elo
+	Beat these GMs over 90%:
+		Corey Scheel (TY92969, 1662 Elo at match, 1686 Elo today)
+		Aaron Sellers (A110754, 1557 Elo at match, 1516 Elo today)
+		Ryan Snyder (TY43465, 1315 Elo at match, 1383 Elo today)
+
+
+Richard Banks at 2019 Carolina Classic Sponsored by The Blue Bullets in Limited
+	Was Master at match
+	Is now Grandmaster with 1523 Elo
+	Beat these GMs over 90%:
+		Eddie Gammons (TY36459, 1315 Elo at match, 1502 Elo today)
+		Chad Thompson (L3329, 1439 Elo at match, 1548 Elo today)
+		David Beam (TY55299, 1480 Elo at match, 1477 Elo today)
+
+
+Jack McKee at PRIMARY ARMS Space City Challenge 2024 in PCC
+	Was A at match
+	Is now Master with 1538 Elo
+	Beat these GMs over 90%:
+		Brendan Souder (TY118547, 1511 Elo at match, 1500 Elo today)
+		Jeffrey Oviedo (TY135603, 1508 Elo at match, 1434 Elo today)
+		Daniel Jung (TY137091, 1492 Elo at match, 1473 Elo today)
+
+
+Bryce Dupuy at 2020 Great Plains Sectional Championship in Production
+	Was Master at match
+	Is now Master with 1548 Elo
+	Beat these GMs over 90%:
+		Joel Park (TY50841, 1576 Elo at match, 1499 Elo today)
+		Mike Boughton (TY85003, 1558 Elo at match, 1612 Elo today)
+		Eric Kamps (FY89698, 1575 Elo at match, 1548 Elo today)
+
+
+Joshua Espinosa at 2024 Cheely Custom Gunworks Michigan Sectional in Carry Optics
+	Was Master at match
+	Is now Master with 1557 Elo
+	Beat these GMs over 90%:
+		Skyler Davis (TY146835, 1550 Elo at match, 1586 Elo today)
+		Jake Walker (A119469, 1597 Elo at match, 1617 Elo today)
+		Darren Byers (A146534, 1341 Elo at match, 1417 Elo today)
+
+
+Joe Farewell at 2025 USPSA Florida State Championship by Hunter HD in Limited Optics
+	Was Master at match
+	Is now Master with 1559 Elo
+	Beat these GMs over 90%:
+		Kevin Gorospe (TY104682, 1550 Elo at match, 1601 Elo today)
+		Tanner Doenges (A137339, 1609 Elo at match, 1619 Elo today)
+		Brandon Alvarez (A113889, 1517 Elo at match, 1561 Elo today)
+
+
+Justine Williams at 2019 High Desert Classic - Get Your Game On in Open
+	Was Master at match
+	Is now Master with 1572 Elo
+	Beat these GMs over 90%:
+		Blake Liles (TY64204, 1625 Elo at match, 1281 Elo today)
+		Leighton Oosthuisen (L4092, 1604 Elo at match, 1485 Elo today)
+		Don Bednorz (L2570, 1370 Elo at match, 1145 Elo today)
+		Francis Livingston (TY3959, 1360 Elo at match, 1022 Elo today)
+
+
+Casey Ryan at 2022 Great Plains Section Championship in Carry Optics
+	Was Master at match
+	Is now Grandmaster with 1580 Elo
+	Beat these GMs over 90%:
+		Nick Walden (A104588, 1637 Elo at match, 1603 Elo today)
+		Lane Gries (TY98625, 1690 Elo at match, 1736 Elo today)
+		Timothy Dunderi (A116283, 1607 Elo at match, 1605 Elo today)
+		Daniel Bremner (A116443, 1556 Elo at match, 1539 Elo today)
+
+
+Steven Collins at 2024 Curated Arms Georgia State USPSA Championship sponsored by C&H Precision in PCC
+	Was B at match
+	Is now B with 1582 Elo
+	Beat these GMs over 90%:
+		Brett Nettelton (A82223, 1603 Elo at match, 1608 Elo today)
+		Jason Clark (A102109, 1635 Elo at match, 1585 Elo today)
+		Greg Robinson GM (FY150124, 1436 Elo at match, 1623 Elo today)
+
+
+Michael Ennis at RHT Delaware State USPSA Championship in Limited
+	Was Master at match
+	Is now Master with 1603 Elo
+	Beat these GMs over 90%:
+		Aj Stuart (L4449, 1663 Elo at match, 1710 Elo today)
+		David Beam (TY55299, 1485 Elo at match, 1477 Elo today)
+		Nick Reynolds (A94001, 1520 Elo at match, 1856 Elo today)
+
+
+Robert Ramirez jr at 2020 Prescott Area 2 Championship in PCC
+	Was Master at match
+	Is now Grandmaster with 1632 Elo
+	Beat these GMs over 90%:
+		Russel Curtis (A96151, 1524 Elo at match, 1627 Elo today)
+		Isaac Hansen (A125781, 1464 Elo at match, 1738 Elo today)
+		Ian Meyers (L4768, 1585 Elo at match, 1577 Elo today)
+		Marco Cabahug (TY101875, 1495 Elo at match, 1713 Elo today)
+
+
+Aaron Gomez at 2022 Roadrunner Shootout presented by The Blue Bullets in Carry Optics
+	Was Master at match
+	Is now Grandmaster with 1644 Elo
+	Beat these GMs over 90%:
+		Sean Kellejian (A111377, 1475 Elo at match, 1618 Elo today)
+		Jon Bautista (A88221, 1607 Elo at match, 1680 Elo today)
+		George Wayne (A127842, 1474 Elo at match, 1660 Elo today)
+		Bo Wang (L3950, 1403 Elo at match, 1460 Elo today)
+
+
+Austin Faulkner at Berrys 2018 Utah State USPSA Championship in Production
+	Was A at match
+	Is now A with 1657 Elo
+	Beat these GMs over 90%:
+		Justine Williams (A84390, 1506 Elo at match, 1680 Elo today)
+		Jon Bautista (A88221, 1430 Elo at match, 1596 Elo today)
+		Rossen Hristov (A91529, 1398 Elo at match, 1530 Elo today)
+
+
+Scott Rader at 2020 EGW USPSA Area 8 Championship in Carry Optics
+	Was B at match
+	Is now Grandmaster with 1689 Elo
+	Beat these GMs over 90%:
+		Joshua Shaw (A91022, 1286 Elo at match, 1559 Elo today)
+		Richard Banks (A107611, 1479 Elo at match, 1449 Elo today)
+		Matthew Hemple (A111073, 1572 Elo at match, 1684 Elo today)
+		Greg Smith (A58496, 1480 Elo at match, 1472 Elo today)
+		Jeff Emrich (A104471, 1587 Elo at match, 1720 Elo today)
+
+
+Rick Mace at 2022 Springfield Armory Desert Classic Area 2 Championship in PCC
+	Was Master at match
+	Is now Master with 1697 Elo
+	Beat these GMs over 90%:
+		Russel Curtis (TY96151, 1617 Elo at match, 1627 Elo today)
+		Naim Saiti (A49393, 1696 Elo at match, 1702 Elo today)
+		Justine Williams (TY84390, 1817 Elo at match, 1720 Elo today)
+		Nicco Punzalan (A111232, 1577 Elo at match, 1575 Elo today)
+		Robert Ramirez jr (L5021, 1646 Elo at match, 1632 Elo today)
+		Jim Adame (A80318, 1565 Elo at match, 1357 Elo today)
+
+
+Chris Gelnett at 2021 Immortal Arms Virginia State USPSA  Championship in Open
+	Was Master at match
+	Is now Grandmaster with 1705 Elo
+	Beat these GMs over 90%:
+		Kevin Gorospe (TY104682, 1617 Elo at match, 1783 Elo today)
+		David Wampler (TY88350, 1684 Elo at match, 1754 Elo today)
+		Mike Valentine (TY68347, 1462 Elo at match, 1412 Elo today)
+
+
+Dominic Koh at North Texas Open - 2020 in Open
+	Was Master at match
+	Is now Grandmaster with 1719 Elo
+	Beat these GMs over 90%:
+		Jj Racaza (L3137, 1942 Elo at match, 1928 Elo today)
+		Lee Neel (TY53799, 1491 Elo at match, 1457 Elo today)
+		Nic Neel (TY55323, 1547 Elo at match, 1510 Elo today)
+		Mel Rodero ii (TY86283, 1564 Elo at match, 1481 Elo today)
+		Blake Liles (TY64204, 1587 Elo at match, 1281 Elo today)
+
+
+Joseph Murray at 2022 AZ State USPSA Championship presented by Ruger Firearms in PCC
+	Was A at match
+	Is now Grandmaster with 1728 Elo
+	Beat these GMs over 90%:
+		Nicco Punzalan (A111232, 1487 Elo at match, 1575 Elo today)
+		Gabor Magony (TY84121, 1473 Elo at match, 1451 Elo today)
+		Ben Kreutzberg (L4851, 1260 Elo at match, 1209 Elo today)
+
+
+Joseph Murray at 2023 Desert Classic Area 2 Championship in PCC
+	Was A at match
+	Is now Grandmaster with 1728 Elo
+	Beat these GMs over 90%:
+		Zack Smith (A100612, 1782 Elo at match, 1771 Elo today)
+		Corey Scheel (TY92969, 1637 Elo at match, 1686 Elo today)
+		Brandon Higbee (L4331, 1581 Elo at match, 1551 Elo today)
+		Russel Curtis (TY96151, 1670 Elo at match, 1627 Elo today)
+		Kelly Neal (TY35327, 1460 Elo at match, 1580 Elo today)
+
+
+Tom Castro at Florida Open 2022 in Open
+	Was Master at match
+	Is now Grandmaster with 1738 Elo
+	Beat these GMs over 90%:
+		Lesgar Murdock (TY45606, 1900 Elo at match, 1817 Elo today)
+		Clemente Wagner (FYF98408, 1769 Elo at match, 1816 Elo today)
+		Aaron Eddins (A107282, 1801 Elo at match, 1899 Elo today)
+		Dexter Bradley (A65135, 1820 Elo at match, 1749 Elo today)
+		Chris TIlley (L3042, 1872 Elo at match, 1792 Elo today)
+
+
+Caleb Smith at 2024 Excaliber Ammunition Ohio State Buckeye Blast in PCC
+	Was Master at match
+	Is now Grandmaster with 1742 Elo
+	Beat these GMs over 90%:
+		Ike Starnes (TY90559, 1568 Elo at match, 1609 Elo today)
+		Isaac Hansen (TY125781, 1494 Elo at match, 1738 Elo today)
+		Corey Scheel (TY92969, 1687 Elo at match, 1686 Elo today)
+		Greg Robinson (FY150124, 1486 Elo at match, 1623 Elo today)
+		Nathanael Smith (L5567, 1519 Elo at match, 1257 Elo today)
+		Colin MacArthur (A115431, 1504 Elo at match, 1595 Elo today)
+
+
+Joon Kim at 2023 Northern Arizona Classic in Open
+	Was Master at match
+	Is now Grandmaster with 1807 Elo
+	Beat these GMs over 90%:
+		Eddie Garcia (A49035, 1692 Elo at match, 1725 Elo today)
+		Joe Bridgman (TY25586, 1708 Elo at match, 1686 Elo today)
+		Charlie Perez (L3320, 1601 Elo at match, 1638 Elo today)
+
+
+Simon Joseph Echavez Racaza at 2021 Blue Bullets PCC & Carry Optics Nationals in Carry Optics
+	Was Unclassified at match
+	Is now Grandmaster with 1828 Elo
+	Beat these GMs over 90%:
+		Dazhi Zhang (A93241, 1683 Elo at match, 1739 Elo today)
+		John Vlieger (TY79695, 1703 Elo at match, 1751 Elo today)
+		Max Michel (FY26022, 1998 Elo at match, 1814 Elo today)
+		Mason Lane (L4341, 1764 Elo at match, 1813 Elo today)
+		Nils Jonasson (L3837, 1814 Elo at match, 1806 Elo today)
+		Phil Strader (RD5, 1669 Elo at match, 1630 Elo today)
+		Garran Singleton (A95225, 1618 Elo at match, 1759 Elo today)
+		Brantley Merriam (A124472, 1672 Elo at match, 1802 Elo today)
+		Hwansik Kim (A86278, 1718 Elo at match, 1702 Elo today)
+		Matthew Hemple (A111073, 1707 Elo at match, 1684 Elo today)
+		Lane Gries (TY98625, 1628 Elo at match, 1736 Elo today)
+		Isaac Lockwood (TY106174, 1699 Elo at match, 1718 Elo today)
+		Shannon Smith (L3936, 1612 Elo at match, 1385 Elo today)
+		Tyler Northcutt (TY110604, 1610 Elo at match, 1680 Elo today)
+
+
+Jaime Saldanha jr at 2018 Florida Open in Open
+	Was Unclassified at match
+	Is now Unclassified with 1855 Elo
+	Beat these GMs over 90%:
+		Chris Tilley (L3042, 1324 Elo at match, 1792 Elo today)
+		Lesgar Murdock (TY45606, 1501 Elo at match, 1817 Elo today)
+		Cody Baker (A81837, 1319 Elo at match, 1877 Elo today)
+
+
+Jacob Hetherington at 2021 Walther Arms Area 4 Championship in Carry Optics
+	Was Master at match
+	Is now Grandmaster with 1861 Elo
+	Beat these GMs over 90%:
+		Mason Lane (L4341, 1694 Elo at match, 1813 Elo today)
+		Luke Cao (L4988, 1697 Elo at match, 1702 Elo today)
+		Dazhi Zhang (A93241, 1655 Elo at match, 1739 Elo today)
+
+
+Christian Sailer at 2023 SIG Sauer Carry Optics Nationals Presented by Federal in Carry Optics
+	Was Unclassified at match
+	Is now Grandmaster with 1888 Elo
+	Beat these GMs over 90%:
+		Nils Jonasson (L3837, 1830 Elo at match, 1806 Elo today)
+		Jacob Hetherington (TY69498, 1815 Elo at match, 1861 Elo today)
+		John Vlieger (TY79695, 1798 Elo at match, 1751 Elo today)
+		Garran Singleton (A95225, 1727 Elo at match, 1759 Elo today)
+		Trace Decker (A110330, 1709 Elo at match, 1770 Elo today)
+		Max Michel (L5373, 1878 Elo at match, 1814 Elo today)
+		Mason Lane (L4341, 1848 Elo at match, 1813 Elo today)
+		Dazhi Zhang (A93241, 1766 Elo at match, 1739 Elo today)
+		Jay Beal (L4721, 1775 Elo at match, 1832 Elo today)
+		Brantley Merriam (A124472, 1745 Elo at match, 1802 Elo today)
+		Jeremy Story (TY63002, 1727 Elo at match, 1673 Elo today)
+		Hwansik Kim (A86278, 1723 Elo at match, 1702 Elo today)
+		Simon Joseph Echavez Racaza (L3137, 1839 Elo at match, 1828 Elo today)
+		Lane Gries (TY98625, 1681 Elo at match, 1736 Elo today)
+		Sean Griffith (A109664, 1705 Elo at match, 1721 Elo today)
+
+
+Christian Sailer at 2023 Staccato Area 4 Championship in Carry Optics
+	Was Unclassified at match
+	Is now Grandmaster with 1888 Elo
+	Beat these GMs over 90%:
+		Nils Jonasson (L3837, 1846 Elo at match, 1806 Elo today)
+		Dazhi Zhang (A93241, 1746 Elo at match, 1739 Elo today)
+		Tom Castro (TY106150, 1728 Elo at match, 1690 Elo today)
+
+
+Eric Grauffel at 2024 SIG Sauer Carry Optics Nationals Presented by Vortex Optics in Carry Optics
+	Was Unclassified at match
+	Is now Unclassified with 1892 Elo
+	Beat these GMs over 90%:
+		Jacob Hetherington (L6353, 1849 Elo at match, 1861 Elo today)
+		Jay Beal (L4721, 1798 Elo at match, 1832 Elo today)
+		Christian Sailer (L4698, 1914 Elo at match, 1888 Elo today)
+		Brantley Merriam (A124472, 1766 Elo at match, 1802 Elo today)
+		jj Racaza (L3137, 1818 Elo at match, 1828 Elo today)
+		Mason Lane (L4341, 1816 Elo at match, 1813 Elo today)
+		Garran Singleton (A95225, 1769 Elo at match, 1759 Elo today)
+		Max Michel (L5373, 1751 Elo at match, 1814 Elo today)
+		Trace Decker (A110330, 1758 Elo at match, 1770 Elo today)
+		JOON KIM (TY104547, 1710 Elo at match, 1752 Elo today)
+		Shane Coley (L5387, 1695 Elo at match, 1730 Elo today)
+		Tyler Meisenheimer (A100099, 1714 Elo at match, 1667 Elo today)
+		Sal Luna (L4113, 1698 Elo at match, 1751 Elo today)
+		Nils Jonasson (L3837, 1839 Elo at match, 1806 Elo today)
+		Tom Castro (L5659, 1730 Elo at match, 1690 Elo today)
+		Luke Cao (L4988, 1672 Elo at match, 1702 Elo today)
+		Sean Griffith (A109664, 1679 Elo at match, 1721 Elo today)
+		Hwansik Kim (A86278, 1677 Elo at match, 1702 Elo today)
+		Hunter Constantine (BELT) (FY114729, 1698 Elo at match, 1699 Elo today)
+		John Vlieger (TY79695, 1755 Elo at match, 1751 Elo today)
+		Jedidiah Morgan (FY139407, 1705 Elo at match, 1697 Elo today)
+
+
+Shane Coley at 2018 PTac-Jabs Alabama Sectional in Limited
+	Was Unclassified at match
+	Is now Grandmaster with 1893 Elo
+	Beat these GMs over 90%:
+		Blake Miguez (B40, 1320 Elo at match, 1953 Elo today)
+		John Browning (L3119, 1666 Elo at match, 1897 Elo today)
+		Travis Tomasie (L1973, 1321 Elo at match, 1811 Elo today)
+		Steven Sanders (A77712, 1316 Elo at match, 1787 Elo today)
+
+
+Christian Sailer at 2021 Area 6 Championship in Limited
+	Was Unclassified at match
+	Is now Unclassified with 1937 Elo
+	Beat these GMs over 90%:
+		John Browning (L3119, 1969 Elo at match, 1897 Elo today)
+		Shane  Coley  (TY51938, 2025 Elo at match, 1893 Elo today)
+		Travis  Tomasie  (L1973, 1858 Elo at match, 1811 Elo today)
+
+
+Gianni Giordano at Idaho Sectional Championship Match 2018 in Limited
+	Was Master at match
+	Is now Grandmaster with 2109 Elo
+	Beat these GMs over 90%:
+		Kenny Terry (A51363, 1520 Elo at match, 1904 Elo today)
+		Leonard Deleon (FY68897, 1325 Elo at match, 1586 Elo today)
+		Kenny Platt (TY84532, 1554 Elo at match, 1628 Elo today)
+
+
+
