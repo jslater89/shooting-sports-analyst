@@ -78,7 +78,7 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
     required this.memberNumbersAppearing,
   });
 
-  DbShootingMatch.placeholder(this.id) :
+  DbShootingMatch.dbPlaceholder(this.id) :
     eventName = "(invalid)",
     rawDate = "(invalid)",
     date = DateTime.now(),
@@ -87,6 +87,22 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
     sportName = "(invalid)",
     sourceIds = [],
     sourceCode = "(invalid)",
+    stages = [],
+    shooters = [],
+    memberNumbersAppearing = [];
+
+  DbShootingMatch.sourcePlaceholder({
+    required Sport sport,
+    required this.sourceCode,
+    required this.sourceIds,
+  }) :
+    id = Isar.autoIncrement,
+    eventName = "(invalid)",
+    rawDate = "(invalid)",
+    date = DateTime.now(),
+    matchLevelName = "(invalid)",
+    matchEventLevel = EventLevel.local,
+    sportName = sport.name,
     stages = [],
     shooters = [],
     memberNumbersAppearing = [];

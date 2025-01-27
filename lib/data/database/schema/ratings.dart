@@ -8,6 +8,7 @@ import 'dart:convert';
 
 import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
+import 'package:json_annotation/json_annotation.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/connectivity.dart';
@@ -19,6 +20,7 @@ import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
+import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
@@ -45,6 +47,8 @@ mixin DbSportEntity {
   /// Do not set sportName directly. Instead, use [sport].
   set sportName(String value);
 
+  /// The sport associated with this entity.
+  @JsonKey(includeFromJson: false, includeToJson: false)
   @ignore
   Sport get sport => SportRegistry().lookup(sportName)!;
   set sport(Sport s) => sportName = s.name;
@@ -64,45 +68,46 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
 
   /// All of the matches this project includes.
   ///
-  /// See also [filteredMatches] and [lastUsedMatches].
-  final matches = IsarLinks<DbShootingMatch>();
+  /// See also [filteredMatchPointers] and [lastUsedMatches].
+  List<MatchPointer> matchPointers = [];
+
+  /// Retained for compatibility with old projects. Do not use.
+  final IsarLinks<DbShootingMatch> matches = IsarLinks();
 
   /// A subset of the matches from this project, which will actually be used to calculate
   /// the ratings.
   ///
   /// This allows e.g. the configure-ratings screen filters to generate ratings for a subset
   /// of the overall list of matches in a project.
-  final filteredMatches = IsarLinks<DbShootingMatch>();
+  List<MatchPointer> filteredMatchPointers = [];
+
+  /// Retained for compatibility with old projects. Do not use.
+  final IsarLinks<DbShootingMatch> filteredMatches = IsarLinks();
 
   /// A list of ongoing matches, which may be treated slightly differently by the rating
   /// algorithm.
-  final matchesInProgress = IsarLinks<DbShootingMatch>();
+  List<MatchPointer> matchInProgressPointers = [];
 
+  /// Retained for compatibility with old projects. Do not use.
+  final IsarLinks<DbShootingMatch> matchesInProgress = IsarLinks();
   /// True if a full calculation has been completed for this project (set by the project
   /// loader). A project with this flag set to false cannot have matches appended, and
   /// must complete a full calculation before it can be used.
   bool completedFullCalculation = false;
 
   /// The IsarLinks of matches to use for calculating ratings for this project. If
-  /// [filteredMatches] is not empty, it will be used. If it is empty, [matches] will
+  /// [filteredMatchPointers] is not empty, it will be used. If it is empty, [matchPointers] will
   /// be used instead.
   ///
   /// If [loadLinks] is true, the returned IsarLinks will be loaded.
-  Future<IsarLinks<DbShootingMatch>> matchesToUse({bool loadLinks = true}) async {
-    var filteredCount = await filteredMatches.count();
+  List<MatchPointer> matchesToUse() {
+    var filteredCount = filteredMatchPointers.length;
 
     if(filteredCount == 0) {
-      if(loadLinks && !matches.isLoaded) {
-        await matches.load();
-      }
-      return matches;
+      return matchPointers;
     }
     else {
-      if(loadLinks && !filteredMatches.isLoaded) {
-        await filteredMatches.load();
-      }
-
-      return filteredMatches;
+      return filteredMatchPointers;
     }
   }
 
@@ -126,7 +131,7 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   ///
   /// When this differs from [matchesToUse], match addition or recalculation
   /// is required.
-  final lastUsedMatches = IsarLinks<DbShootingMatch>();
+  final List<MatchPointer> lastUsedMatches = [];
 
   @ignore
   Map<String, dynamic> get jsonDecodedSettings => jsonDecode(encodedSettings);
@@ -231,7 +236,7 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
         eventCount += count;
       }
 
-      await lastUsedMatches.reset();
+      lastUsedMatches.clear();
       var count = await ratings.filter().deleteAll();
       await ratings.reset();
       _log.i("Cleared $count ratings and $eventCount events");
@@ -266,11 +271,7 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
 
   @override
   Future<DataSourceResult<List<int>>> getMatchDatabaseIds() async {
-    if(!matches.isLoaded) {
-      await matches.load();
-    }
-
-    return DataSourceResult.ok(matches.map((m) => m.id).toList());
+    return DataSourceResult.ok(matchPointers.map((m) => m.localDbId).whereNotNull().toList());
   }
 
   @override
@@ -285,21 +286,17 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
 
   @override
   Future<DataSourceResult<List<String>>> getMatchSourceIds() async {
-    if(!matches.isLoaded) {
-      await matches.load();
-    }
-
-    return DataSourceResult.ok(matches.map((m) => m.sourceIds.first).toList());
+    return DataSourceResult.ok(matchPointers.map((m) => m.sourceIds.first).toList());
   }
 
   @override
   Future<DataSourceResult<DbShootingMatch>> getLatestMatch() async {
-    var match = await matches.filter().sortByDateDesc().findFirst();
+    var match = matchPointers.sorted((a, b) => b.date!.compareTo(a.date!)).firstOrNull;
     if(match == null) {
       return DataSourceResult.err(DataSourceError.invalidRequest);
     }
     else {
-      return DataSourceResult.ok(match);
+      return match.getDbMatch(AnalystDatabase());
     }
   }
 
@@ -475,47 +472,16 @@ class RatingGroup with DbSportEntity {
   }
 }
 
+/// MatchPointer is a database record containing enough information
+/// to locate a match in the database, display in the UI, and sort
+/// by relevant fields like level, date, and sport.
+/// 
+/// [DbShootingMatch] is a heavyweight object, so we want to avoid
+/// using IsarLinks to it for the configure screen (it takes a long
+/// time to load).
 @embedded
-class DbRelativeScore {
-  /// The ordinal place represented by this score: 1 for 1st, 2 for 2nd, etc.
-  int place;
-  /// The ratio of this score to the winning score: 1.0 for the winner, 0.9 for a 90% finish,
-  /// 0.8 for an 80% finish, etc.
-  double ratio;
-  @ignore
-  /// A convenience getter for [ratio] * 100.
-  double get percentage => ratio * 100;
-
-  /// points holds the final score for this relative score, whether
-  /// calculated or simply repeated from an attached [RawScore].
-  ///
-  /// In a [RelativeStageFinishScoring] match, it's the number of stage
-  /// points or the total number of match points. In a [CumulativeScoring]
-  /// match, it's the final points or time per stage/match.
-  double points;
-
-  DbRelativeScore({
-    this.place = 0,
-    this.ratio = 0,
-    this.points = 0,
-  });
-
-  DbRelativeScore.fromHydrated(RelativeScore score) :
-      place = score.place,
-      ratio = score.ratio,
-      points = score.points;
-
-  DbRelativeScore copy() {
-    return DbRelativeScore(
-      place: place,
-      ratio: ratio,
-      points: points,
-    );
-  }
-}
-
-@embedded
-class DesiredMatch with DbSportEntity {
+@JsonSerializable()
+class MatchPointer with DbSportEntity implements SourceIdsProvider {
   String sportName;
 
   String name;
@@ -523,36 +489,108 @@ class DesiredMatch with DbSportEntity {
   /// Should never actually be null, but Isar can't handle
   /// required fields that don't have const constructors.
   DateTime? date;
+  /// The match source code for the source that originally downloaded this match.
+  String sourceCode;
+  /// Source IDs known by the source described by [sourceCode] for this match.
   List<String> sourceIds;
+  /// The name of the match level for this match.
   String? matchLevelName;
+  /// The match level for this match, looked up from [matchLevelName].
   @ignore
   MatchLevel? get level => sport.eventLevels.lookupByName(matchLevelName);
+  /// The database ID of this match in the local database.
+  @JsonKey(includeFromJson: false, includeToJson: false)
   int? localDbId;
 
-  DesiredMatch({
+  MatchPointer({
     this.sportName = "invalid",
     this.name = "(unknown)",
     this.date,
+    this.sourceCode = "",
     this.sourceIds = const [],
     this.matchLevelName,
     this.localDbId,
   });
 
-  DesiredMatch.fromMatch(ShootingMatch match) :
+  MatchPointer.fromMatch(ShootingMatch match) :
     sportName = match.sport.name,
     name = match.name,
     date = match.date,
+    sourceCode = match.sourceCode,
     sourceIds = match.sourceIds,
     matchLevelName = match.level?.name,
     localDbId = match.databaseId;
 
-  DesiredMatch.fromDbMatch(DbShootingMatch match) :
+  MatchPointer.fromDbMatch(DbShootingMatch match) :
     sportName = match.sportName,
     name = match.eventName,
     date = match.date,
+    sourceCode = match.sourceCode,
     sourceIds = match.sourceIds,
     localDbId = match.id 
   {
     matchLevelName = match.matchLevelName;
   }
+
+  /// Get the [DbShootingMatch] associated with this [MatchPointer].
+  ///
+  /// Returns [DataSourceError.invalidRequest] if [localDbId] is null or
+  /// [sourceCode] is not a valid source code and a download was requested.
+  /// Returns [DataSourceError.notFound] if the match is not found in the database,
+  /// or if [downloadIfMissing] is true and the match cannot be downloaded.
+  Future<DataSourceResult<DbShootingMatch>> getDbMatch(AnalystDatabase db, {bool downloadIfMissing = false}) async {
+    if(localDbId == null) {
+      return DataSourceResult.err(DataSourceError.invalidRequest);
+    }
+    var match = await db.getMatch(localDbId!);
+    if(match == null) {
+      if(downloadIfMissing) {
+        var source = MatchSourceRegistry().getByCodeOrNull(sourceCode);
+        if(source == null || !source.supportedSports.contains(sport.type)) {
+          return DataSourceResult.err(DataSourceError.invalidRequest);
+        }
+        
+        var result = await source.getMatchFromId(sourceIds.first, sport: sport);
+        
+        if(result.isErr()) {
+          return DataSourceResult.err(DataSourceError.database);
+        }
+        var dbMatch = await db.saveMatch(result.unwrap());
+        if(dbMatch.isErr()) {
+          return DataSourceResult.err(DataSourceError.database);
+        }
+        return DataSourceResult.ok(dbMatch.unwrap());
+      }
+      else {
+        return DataSourceResult.err(DataSourceError.notFound);
+      }
+    }
+    return DataSourceResult.ok(match);
+  }
+
+  DbShootingMatch intoSourcePlaceholder() {
+    return DbShootingMatch.sourcePlaceholder(
+      sport: sport,
+      sourceCode: sourceCode,
+      sourceIds: sourceIds,
+    );
+  }
+
+  factory MatchPointer.fromJson(Map<String, dynamic> json) => _$MatchPointerFromJson(json);
+  Map<String, dynamic> toJson() => _$MatchPointerToJson(this);
+
+  /// Two [MatchPointer]s are considered equal if they have the same [sourceCode]
+  /// and the same set of [sourceIds].
+  @override
+  operator ==(Object other) {
+    if(!(other is MatchPointer)) return false;
+
+    if(other.sourceCode != sourceCode) return false;
+    if(sourceIds.length != other.sourceIds.length) return false;
+    if(sourceIds.intersection(other.sourceIds).length != sourceIds.length) return false;
+    return true;
+  }
+
+  @override
+  int get hashCode => Object.hash(sourceCode, Object.hashAllUnordered(sourceIds));
 }

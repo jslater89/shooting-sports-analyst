@@ -13,14 +13,24 @@ import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 enum DataSourceError implements ResultErr {
+  /// Error in the transport layer, i.e. if a network request
+  /// fails.
   transport,
+  /// Error in the database layer, i.e. if a database operation
+  /// returns an error.
   database,
-  invalidRequest;
+  /// A request that cannot be fulfilled because it is invalid
+  /// in some user-visible way.
+  invalidRequest,
+  /// A request that cannot be fulfilled because the requested
+  /// information is not present in the data source.
+  notFound;
 
   String get message => switch(this) {
     transport => "Error downloading data",
     database => "Error retrieving data",
-    invalidRequest => "Request invalid"
+    invalidRequest => "Request invalid",
+    notFound => "Not found"
   };
 }
 

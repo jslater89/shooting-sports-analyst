@@ -87,10 +87,10 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   DbRatingProject? _loadedProject;
 
   bool matchCacheReady = false;
-  List<DbShootingMatch> projectMatches = [];
-  Map<DbShootingMatch, bool> ongoingMatches = {};
+  List<MatchPointer> projectMatches = [];
+  Map<MatchPointer, bool> ongoingMatches = {};
   MatchListFilters? filters = MatchListFilters();
-  List<DbShootingMatch>? filteredMatches;
+  List<MatchPointer>? filteredMatches;
   String? _lastProjectName;
 
   late RaterSettingsController _settingsController;
@@ -184,10 +184,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   Future<void> _loadProject(DbRatingProject project) async {
     _loadedProject = project;
     sport = project.sport;
-    if(!project.matches.isLoaded) {
-      await project.matches.load();
-    }
-    projectMatches = [...project.matches];
+    projectMatches = [...project.matchPointers];
     // groups getter loads dbGroups if not loaded
     _groups = [...project.groups];
     setState(() {
@@ -555,7 +552,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
                                     for(var entry in dbEntries) {
                                       if(!projectMatches.contains(entry)) {
-                                        projectMatches.add(entry);
+                                        projectMatches.add(MatchPointer.fromDbMatch(entry));
                                       }
                                     }
 
@@ -639,7 +636,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 controller: _matchScroll,
                                 itemCount: (filteredMatches ?? projectMatches).length,
                                 itemBuilder: (context, index) {
-                                  var match = (filteredMatches ?? projectMatches)[index];
+                                  var matchPointer = (filteredMatches ?? projectMatches)[index];
                                   return Row(
                                     mainAxisSize: MainAxisSize.max,
                                     children: [
@@ -647,39 +644,44 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                         child: MouseRegion(
                                           cursor: SystemMouseCursors.click,
                                           child: GestureDetector(
-                                            onTap: () {
+                                            onTap: () async {
+                                              var dbMatch = await matchPointer.getDbMatch(AnalystDatabase());
+                                              if(dbMatch.isErr()) {
+                                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to load match from database.")));
+                                                return;
+                                              }
                                               Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-                                                return ResultPage(canonicalMatch: match.hydrate().unwrap(), allowWhatIf: false);
+                                                return ResultPage(canonicalMatch: dbMatch.unwrap().hydrate().unwrap(), allowWhatIf: false);
                                               }));
                                             },
                                             child: Text(
-                                              match.eventName,
+                                              matchPointer.name,
                                               overflow: TextOverflow.fade
                                             ),
                                           ),
                                         )
                                       ),
                                       Tooltip(
-                                        message: (ongoingMatches[match] ?? false) ?
+                                        message: (ongoingMatches[matchPointer] ?? false) ?
                                             "This match is in progress. Click to toggle." :
                                             "This match is completed. Click to toggle.",
                                         child: IconButton(
                                           icon: Icon(
-                                            (ongoingMatches[match] ?? false) ?
+                                            (ongoingMatches[matchPointer] ?? false) ?
                                               Icons.calendar_today :
                                               Icons.event_available
                                           ),
-                                          color: (ongoingMatches[match] ?? false) ?
+                                          color: (ongoingMatches[matchPointer] ?? false) ?
                                               Theme.of(context).primaryColor :
                                               Colors.grey[350],
                                           onPressed: () {
-                                            if(ongoingMatches[match] ?? false) {
+                                            if(ongoingMatches[matchPointer] ?? false) {
                                               setState(() {
-                                                ongoingMatches.remove(match);
+                                                ongoingMatches.remove(matchPointer);
                                               });
                                             } else {
                                               setState(() {
-                                                ongoingMatches[match] = true;
+                                                ongoingMatches[matchPointer] = true;
                                               });
                                             }
                                           },
@@ -691,12 +693,14 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                           icon: Icon(Icons.refresh),
                                           color: Theme.of(context).primaryColor,
                                           onPressed: () async {
-                                            projectMatches.remove(match);
-                                            ongoingMatches.remove(match);
-                                            filteredMatches?.remove(match);
+                                            projectMatches.remove(matchPointer);
+                                            ongoingMatches.remove(matchPointer);
+                                            filteredMatches?.remove(matchPointer);
 
-                                            var result = await MatchSource.reloadMatch(match);
-                                            projectMatches.add(DbShootingMatch.from(result.unwrap()));
+                                            var result = await MatchSource.reloadMatch(matchPointer.intoSourcePlaceholder());
+                                            if(result.isOk()) {
+                                              projectMatches.add(MatchPointer.fromMatch(result.unwrap()));
+                                            }
                                           },
                                         ),
                                       ),
@@ -705,9 +709,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                         color: Theme.of(context).primaryColor,
                                         onPressed: () {
                                           setState(() {
-                                            projectMatches.remove(match);
-                                            ongoingMatches.remove(match);
-                                            filteredMatches?.remove(match);
+                                            projectMatches.remove(matchPointer);
+                                            ongoingMatches.remove(matchPointer);
+                                            filteredMatches?.remove(matchPointer);
                                           });
                                         },
                                       )
@@ -736,11 +740,11 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     projectMatches.sort((matchA, matchB) {
       // Sort remaining matches by date descending, then by name ascending
       if(!alphabetic) {
-        var dateSort = matchB.date.compareTo(matchA.date);
+        var dateSort = matchB.date!.compareTo(matchA.date!);
         if (dateSort != 0) return dateSort;
       }
 
-      return matchA.eventName.compareTo(matchB.eventName);
+      return matchA.name.compareTo(matchB.name);
     });
 
     updateMatches();
@@ -754,17 +758,17 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     var filteredByBefore = 0;
     var filteredByAfter = 0;
     filteredMatches!.addAll(projectMatches.where((match) {
-      if(!filters!.levels.contains(match.matchEventLevel)) {
+      if(!filters!.levels.contains(match.level)) {
         filteredByLevel += 1;
         return false;
       }
 
-      if(filters!.after != null && match.date.isBefore(filters!.after!)) {
+      if(filters!.after != null && match.date!.isBefore(filters!.after!)) {
         filteredByAfter += 1;
         return false;
       }
 
-      if(filters!.before != null && match.date.isAfter(filters!.before!)) {
+      if(filters!.before != null && match.date!.isAfter(filters!.before!)) {
         filteredByBefore += 1;
         return false;
       }
@@ -848,9 +852,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
     project.settings = settings;
     if(project.id != Isar.autoIncrement) {
-      project.matches.setContentsTo(AnalystDatabase().isar, projectMatches);
+      project.matchPointers = projectMatches;
       if(filteredMatches != null && filteredMatches!.isNotEmpty) {
-        project.filteredMatches.setContentsTo(AnalystDatabase().isar, filteredMatches!);
+        project.matchPointers = filteredMatches!;
       }
     }
 

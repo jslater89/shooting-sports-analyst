@@ -58,12 +58,29 @@ class CanceledError extends RatingProjectLoadError {
 class MatchLoadFailureError extends RatingProjectLoadError {
   final ResultErr underlying;
   final MatchLoadFailureCause cause;
-  final DbShootingMatch failedMatch;
+  final DbShootingMatch? failedMatch;
+  final MatchPointer? failedMatchPointer;
 
-  MatchLoadFailureError({required this.cause, required this.failedMatch, required this.underlying});
+  MatchLoadFailureError({required this.cause, this.failedMatch, this.failedMatchPointer, required this.underlying}) {
+    if(failedMatchPointer == null && failedMatch == null) {
+      throw ArgumentError("At least one of failedMatch or failedMatchPointer must be provided");
+    }
+  }
+
+  String get eventName {
+    if(failedMatch != null) {
+      return failedMatch!.eventName;
+    }
+    else if(failedMatchPointer != null) {
+      return failedMatchPointer!.name;
+    }
+    else {
+      return "(unknown)";
+    }
+  }
 
   @override
-  String get message => "${cause.message} for ${failedMatch.eventName} (${underlying.runtimeType}: ${underlying.message})";
+  String get message => "${cause.message} for $eventName (${underlying.runtimeType}: ${underlying.message})";
 }
 
 class DeduplicationError extends RatingProjectLoadError {
@@ -138,14 +155,14 @@ class RatingProjectLoader {
     var start = DateTime.now();
     await host.progressCallback(progress: -1, total: -1, state: LoadingState.readingMatches);
 
-    var matchesLink = await project.matchesToUse();
+    var matchPointers = project.matchesToUse();
 
     // We want to add matches in ascending order, from oldest to newest.
-    var matchesToAdd = await matchesLink.filter().sortByDate().findAll();
+    var matchesToAdd = matchPointers.sorted((a, b) => a.date!.compareTo(b.date!));
 
     // We're interested in the most recent match in addition to the full list,
     // so sort by descending date for convenience.
-    var lastUsed = await project.lastUsedMatches.filter().sortByDateDesc().findAll();
+    var lastUsed = project.lastUsedMatches.sorted((a, b) => b.date!.compareTo(a.date!));
     bool canAppend = false;
 
     // TODO: check consistency of project settings and reset if needed
@@ -167,12 +184,12 @@ class RatingProjectLoader {
       var missingMatches = matchesToAdd.where((m) =>
         lastUsed.none((l) =>
           l.sourceCode == m.sourceCode &&
-          l.sourceIds.any((id) => m.sourceIds.contains(id))
+          l.sourceIds.intersects(m.sourceIds)
         )
       ).toList();
       var mostRecentMatch = lastUsed.first;
       _log.i("Checking for append: cutoff date is ${mostRecentMatch.date}");
-      canAppend = project.completedFullCalculation && !fullRecalc && missingMatches.every((m) => m.date.isAfter(mostRecentMatch.date));
+      canAppend = project.completedFullCalculation && !fullRecalc && missingMatches.every((m) => m.date!.isAfter(mostRecentMatch.date!));
       if(canAppend) {
         matchesToAdd = missingMatches;
       }
@@ -220,9 +237,6 @@ class RatingProjectLoader {
     // If we're not appending, this will be all the matches, and
     // clearing the old list happens in the resetRatings call above.
     project.lastUsedMatches.addAll(matchesToAdd);
-    await AnalystDatabase().isar.writeTxn(() async {
-      await project.lastUsedMatches.save();
-    });
     await db.saveRatingProject(project, checkName: true);
 
     await host.progressCallback(
@@ -233,13 +247,22 @@ class RatingProjectLoader {
       subTotal: readMatchesSteps,
     );
     List<ShootingMatch> hydratedMatches = [];
-    for(var dbMatch in matchesToAdd) {
-      var matchRes = dbMatch.hydrate(useCache: true);
+    for(var matchPointer in matchesToAdd) {
+      var dbMatch = await matchPointer.getDbMatch(db, downloadIfMissing: true);
+      if(dbMatch.isErr()) {
+        return Result.err(MatchLoadFailureError(
+          cause: MatchLoadFailureCause.invalidData,
+          failedMatchPointer: matchPointer,
+          underlying: dbMatch.unwrapErr(),
+        ));
+      }
+      
+      var matchRes = dbMatch.unwrap().hydrate(useCache: true);
       if(matchRes.isErr()) {
         var err = matchRes.unwrapErr();
         return Result.err(MatchLoadFailureError(
           cause: MatchLoadFailureCause.invalidData,
-          failedMatch: dbMatch,
+          failedMatchPointer: matchPointer,
           underlying: err,
         ));
       }
@@ -1343,7 +1366,7 @@ class RatingProjectLoader {
         competitorCount = await db.countShooterRatings(project, group);
       }
       if(calc.requiredBaselineData.contains(ConnectivityRequiredData.matchCount)) {
-        matchCount = project.matches.length;
+        matchCount = project.matchPointers.length;
       }
 
       var baseline = calc.calculateConnectivityBaseline(
@@ -1597,7 +1620,7 @@ class RatingProjectLoader {
 
         var update = ratingSystem.updateShooterRatings(
           match: match,
-          isMatchOngoing: project.matchesInProgress.contains(match),
+          isMatchOngoing: project.matchInProgressPointers.contains(match),
           shooters: [aRating, bRating],
           scores: {
             aRating: aStageScore,
@@ -1626,7 +1649,7 @@ class RatingProjectLoader {
 
         var update = ratingSystem.updateShooterRatings(
           match: match,
-          isMatchOngoing: project.matchesInProgress.contains(match),
+          isMatchOngoing: project.matchInProgressPointers.contains(match),
           shooters: [aRating, bRating],
           scores: {
             aRating: aScore,

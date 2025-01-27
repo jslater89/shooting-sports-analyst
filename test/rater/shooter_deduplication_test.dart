@@ -952,7 +952,7 @@ void main() async {
 
 Future<List<DbShooterRating>> addMatchToTest(AnalystDatabase db, DbRatingProject project, String matchId) async {
   var dbMatch = await db.getMatchByAnySourceId([matchId]);
-  project.matches.add(dbMatch!);
+  project.matchPointers.add(MatchPointer.fromDbMatch(dbMatch!));
 
   await db.saveRatingProject(project);
   var match = dbMatch.hydrate().unwrap();

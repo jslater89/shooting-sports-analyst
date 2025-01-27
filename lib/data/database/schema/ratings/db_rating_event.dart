@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings/db_relative_score.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 
 part 'db_rating_event.g.dart';

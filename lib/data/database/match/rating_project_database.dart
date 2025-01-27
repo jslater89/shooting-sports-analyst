@@ -24,11 +24,32 @@ var _log = SSALogger("RatingProjectDatabase");
 
 extension RatingProjectDatabase on AnalystDatabase {
   Future<DbRatingProject?> getRatingProjectById(int id) async {
-    return isar.dbRatingProjects.where().idEqualTo(id).findFirst();
+    var project = await isar.dbRatingProjects.where().idEqualTo(id).findFirst();
+    // migrate from IsarLinks<Match> to List<MatchPointer> if necessary
+    if(project != null) {
+      await _migrateToMatchPointers(project);
+    }
+    return project;
+  }
+
+  Future<bool> _migrateToMatchPointers(DbRatingProject project) async {
+    if(project.matches.countSync() > project.matchPointers.length) {
+      var matchPointers = project.matches.map((m) => MatchPointer.fromDbMatch(m)).toList();
+      project.matchPointers = matchPointers;
+      await isar.writeTxn(() async {
+        await isar.dbRatingProjects.put(project);
+      });
+      return true;
+    }
+    return false;
   }
 
   Future<DbRatingProject?> getRatingProjectByName(String name) async {
-    return isar.dbRatingProjects.where().nameEqualTo(name).findFirst();
+    var project = await isar.dbRatingProjects.where().nameEqualTo(name).findFirst();
+    if(project != null) {
+      await _migrateToMatchPointers(project);
+    }
+    return project;
   }
 
   Future<DbRatingProject> saveRatingProject(DbRatingProject project, {bool checkName = true}) async {
@@ -42,9 +63,6 @@ extension RatingProjectDatabase on AnalystDatabase {
       await isar.dbRatingProjects.put(project);
       await project.dbGroups.save();
       await project.ratings.save();
-      await project.matches.save();
-      await project.filteredMatches.save();
-      await project.lastUsedMatches.save();
     });
     return project;
   }
@@ -215,7 +233,7 @@ extension RatingProjectDatabase on AnalystDatabase {
               if(cacheResult.isOk()) {
                 var m = cacheResult.unwrap();
                 if(m.databaseId != null) {
-                  DbShootingMatch placeholder = DbShootingMatch.placeholder(m.databaseId!);
+                  DbShootingMatch placeholder = DbShootingMatch.dbPlaceholder(m.databaseId!);
                   match = placeholder;
                 }
               }
@@ -383,7 +401,7 @@ extension RatingProjectDatabase on AnalystDatabase {
       }
     }
 
-    p.matches.addAll(matches);
+    p.matchPointers.addAll(matches.map((m) => MatchPointer.fromDbMatch(m)));
     // TODO: see if I can do this better
     p.dbGroups.addAll(p.sport.builtinRatingGroupsProvider?.defaultRatingGroups ?? []);
 

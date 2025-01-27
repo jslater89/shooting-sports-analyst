@@ -18,15 +18,16 @@ import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 
+/// A class that provides information about the match source used
+/// to download or create a match.
 abstract interface class SourceIdsProvider {
+  String get sourceCode;
   List<String> get sourceIds;
 }
 
 enum FilterMode {
   or, and,
 }
-
-
 
 /// A match in some shooting event.
 class ShootingMatch implements SourceIdsProvider {

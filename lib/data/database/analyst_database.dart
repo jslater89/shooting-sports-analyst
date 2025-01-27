@@ -208,6 +208,10 @@ class AnalystDatabase {
     return null;
   }
 
+  Future<DbShootingMatch?> getMatch(int id) async {
+    return await isar.dbShootingMatchs.get(id);
+  }
+
   Future<List<DbShootingMatch>> getMatchesByMemberNumbers(Iterable<String> memberNumbers) async {
     var matches = await isar.dbShootingMatchs
       .where()

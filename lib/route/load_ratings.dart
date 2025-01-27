@@ -209,8 +209,8 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    ...widget.project.matches.toList().reversed.map((match) {
-                      return Text("${match.eventName}");
+                    ...widget.project.matchPointers.toList().reversed.map((match) {
+                      return Text("${match.name}");
                     })
                   ],
                 ),
