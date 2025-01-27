@@ -5,6 +5,7 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:isar/isar.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
@@ -101,6 +102,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   bool _keepHistory = false;
 
   List<RatingGroup> _groups = [];
+  IsarLinksChange<RatingGroup>? _groupChange;
+  List<RatingGroup> get _currentGroups => _groupChange?.currentSelection ?? _groups;
+
   bool _checkDataEntryErrors = true;
 
   ScrollController _settingsScroll = ScrollController();
@@ -400,7 +404,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Tooltip(
-                                  message: "What divisions/groups to rate. Currently:\n${_groups.map((g) => g.uiLabel).join("\n")}",
+                                  message: "What divisions/groups to rate. Currently:\n${_currentGroups.map((g) => g.uiLabel).join("\n")}",
                                   child: Padding(
                                     padding: const EdgeInsets.only(left: 16),
                                     child: Text("Active rater groups", style: Theme.of(context).textTheme.subtitle1!),
@@ -409,18 +413,25 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 Padding(
                                   padding: const EdgeInsets.only(right: 12.0),
                                   child: Tooltip(
-                                    message: "What divisions/groups to rate. Currently:\n${_groups.map((g) => g.uiLabel).join("\n")}",
+                                    message: "What divisions/groups to rate. Currently:\n${_currentGroups.map((g) => g.uiLabel).join("\n")}",
                                     child: IconButton(
                                       icon: Icon(Icons.edit),
                                       onPressed: () async {
-                                        var groups = await showDialog(context: context, builder: (context) {
-                                          return RaterGroupsDialog(selectedGroups: _groups, groupProvider: sport.builtinRatingGroupsProvider);
+                                        var groupResult = await showDialog<IsarLinksChange<RatingGroup>>(context: context, builder: (context) {
+                                          return RatingGroupsDialog(selectedGroups: _currentGroups, groupProvider: sport.builtinRatingGroupsProvider);
                                         });
 
-                                        if(groups != null) {
-                                          setState(() {
-                                            _groups = groups;
-                                          });
+                                        if(groupResult != null) {
+                                          if(_groupChange != null) {
+                                            setState(() {
+                                              _groupChange = _groupChange!.append(groupResult);
+                                            });
+                                          }
+                                          else {
+                                            setState(() {
+                                              _groupChange = groupResult;
+                                            });
+                                          }
                                         }
                                       },
                                     ),
@@ -836,12 +847,16 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     }
 
     project.settings = settings;
-    project.matches.setContentsTo(projectMatches, ensureLoaded: true);
-    if(filteredMatches != null && filteredMatches!.isNotEmpty) {
-      project.filteredMatches.setContentsTo(filteredMatches!, ensureLoaded: true);
+    if(project.id != Isar.autoIncrement) {
+      project.matches.setContentsTo(AnalystDatabase().isar, projectMatches);
+      if(filteredMatches != null && filteredMatches!.isNotEmpty) {
+        project.filteredMatches.setContentsTo(AnalystDatabase().isar, filteredMatches!);
+      }
     }
 
-    project.dbGroups.setContentsTo(_groups, ensureLoaded: true);
+    if(_groupChange != null) {
+      project.dbGroups.apply(_groupChange!);
+    }
 
     await AnalystDatabase().saveRatingProject(project);
     prefs.setInt(Preferences.lastProjectId, project.id);

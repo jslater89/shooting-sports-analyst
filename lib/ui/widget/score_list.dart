@@ -321,7 +321,7 @@ class _ScoreListState extends State<ScoreList> {
                         text = r.toString();
                         break;
                       case RatingDisplayMode.change:
-                        var r = rating.changeForNewEvent(widget.match!, null);
+                        var r = rating.changeForEvent(widget.match!, null);
                         if(r != null) text = r.toStringAsFixed(1);
                         break;
                     }
@@ -510,7 +510,7 @@ class _ScoreListState extends State<ScoreList> {
                           text = r.toString();
                           break;
                         case RatingDisplayMode.change:
-                          var r = rating.changeForNewEvent(widget.match!, stage);
+                          var r = rating.changeForEvent(widget.match!, stage);
                           if(r != null) text = r.toStringAsFixed(1);
                           break;
                       }
@@ -597,7 +597,7 @@ extension LookupShooterRating on Map<OldRaterGroup, Rater> {
         var rating = this.lookupNew(match, shooter)?.ratingForEvent(match, null, beforeMatch: false);
         return rating;
       case RatingDisplayMode.change:
-        var rating = this.lookupNew(match, shooter)?.changeForNewEvent(match, stage);
+        var rating = this.lookupNew(match, shooter)?.changeForEvent(match, stage);
         return rating;
     }
   }

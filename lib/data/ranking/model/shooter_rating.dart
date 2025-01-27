@@ -216,20 +216,22 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
     else return events.map((e) => e.ratingChange).sum;
   }
 
+  double? ratingAtEvent(ShootingMatch match, MatchStage? stage) {
+    RatingEvent? latest;
 
-  double? changeForNewEvent(ShootingMatch match, MatchStage? stage) {
-    List<RatingEvent> events = [];
+    // TODO: this can be much faster with a DB query
+    // Add it to datasource, too, since we're gonna want it in eventual
+    // server mode, probably.
     for(var e in ratingEvents) {
-      if(stage == null && e.match.sourceIds.first == match.sourceIds.first) {
-        events.add(e);
+      if(stage == null && e.match.sourceIds.containsAny(match.sourceIds)) {
+        latest = e;
       }
-      else if(stage != null && e.match.sourceIds.first == match.sourceIds.first && e.stage?.name == stage.name) {
-        events.add(e);
+      else if(stage != null && e.match.sourceIds.containsAny(match.sourceIds) && e.stage?.name == stage.name) {
+        latest = e;
       }
     }
 
-    if(events.isEmpty) return null;
-    else return events.map((e) => e.ratingChange).sum;
+    return latest?.newRating;
   }
 
   @ignore
@@ -335,6 +337,7 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
         var division = e.match.shooters.firstWhereOrNull((element) => this.equalsShooter(element))?.division;
         if(division == null) {
           _log.w("Unable to match division for $this at ${e.match}");
+          lastMatch = e.match;
           continue;
         }
         history.add(MatchHistoryEntry(
@@ -394,19 +397,13 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
   @override
   bool equalsShooter(Shooter other) {
     if(super.equalsShooter(other)) return true;
-    var nameProcessor = sport.shooterDeduplicator?.processNumber ?? ShooterDeduplicator.normalizeNumberBasic;
+    var numberProcessor = sport.shooterDeduplicator?.processNumber ?? ShooterDeduplicator.normalizeNumberBasic;
 
     for(var number in knownMemberNumbers) {
-      var processed = nameProcessor(number);
-
-      if(other is ShooterRating) {
-        for(var otherNumber in other.knownMemberNumbers) {
-          var otherProcessed = nameProcessor(otherNumber);
-          if(processed == otherProcessed) return true;
-        }
-      }
-      else {
-        if (processed == other.memberNumber) return true;
+      var processed = numberProcessor(number);
+      for(var otherNumber in other.knownMemberNumbers) {
+        var otherProcessed = numberProcessor(otherNumber);
+        if(processed == otherProcessed) return true;
       }
     }
 

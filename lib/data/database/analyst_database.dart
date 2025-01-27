@@ -10,6 +10,7 @@ import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_query_element.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
@@ -207,9 +208,12 @@ class AnalystDatabase {
     return null;
   }
 
-  Future<List<DbShootingMatch>> getMatchesByMemberNumbers(List<String> memberNumbers) async {
-    var matches = await isar.dbShootingMatchs.getAllByIndex(AnalystDatabase.memberNumbersAppearingIndex, [memberNumbers]);
-    return matches.where((e) => e != null).toList().cast<DbShootingMatch>();
+  Future<List<DbShootingMatch>> getMatchesByMemberNumbers(Iterable<String> memberNumbers) async {
+    var matches = await isar.dbShootingMatchs
+      .where()
+      .anyOf(memberNumbers, (q, memberNumber) => q.memberNumbersAppearingElementEqualTo(memberNumber))
+      .findAll();
+    return matches;
   }
 
   Future<Result<bool, ResultErr>> deleteMatch(int id) async {

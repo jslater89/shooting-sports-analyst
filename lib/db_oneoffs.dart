@@ -14,6 +14,7 @@ import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart'
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
@@ -29,9 +30,89 @@ import 'package:intl/intl.dart';
 SSALogger _log = SSALogger("DbOneoffs");
 
 Future<void> oneoffDbAnalyses(AnalystDatabase db) async {
+  // await _howGoodIsTomCastro(db);
   // await _matchBumpGms(db);
   // await _addMemberNumbersToMatches(db);
   // await _doesMyQueryWork(db);
+}
+
+Future<void> _howGoodIsTomCastro(AnalystDatabase db) async {
+  var project = (await db.getRatingProjectByName("L2s Main"))!;
+  var pccGroup = await project.groupForDivision(uspsaPcc).unwrap();
+  var coGroup = await project.groupForDivision(uspsaCarryOptics).unwrap();
+  Set<String> memberNumbers = {};
+  var pccTom = await project.getRatingsByDeduplicatorName(pccGroup!, "tomcastro").unwrap();
+  var coTom = await project.getRatingsByDeduplicatorName(coGroup!, "tomcastro").unwrap();
+  memberNumbers.addAll(pccTom.map((e) => e.allPossibleMemberNumbers).flattened);
+  memberNumbers.addAll(coTom.map((e) => e.allPossibleMemberNumbers).flattened);
+  var tomMatches = await db.getMatchesByMemberNumbers(memberNumbers.toList());
+  print("Tom matches: ${tomMatches.length}");
+
+  List<int> tomPccFinishes = [];
+  List<int> tomCoFinishes = [];
+  List<String> matchNamesThatCount = [];
+  List<int> pccMatchSizes = [];
+  List<int> coMatchSizes = [];
+  for(var match in tomMatches) {
+    if(match.eventName.toLowerCase().contains("fipt") || match.eventName.toLowerCase().contains("f.i.p.t.")) continue;
+    if(match.eventName.toLowerCase().contains("side match")) continue;
+    if(match.eventName.toLowerCase().contains("richmond hotshots")) continue;
+    if(match.matchEventLevel == uspsaLevel1 
+      && !match.eventName.toLowerCase().contains("national") 
+      && !match.eventName.toLowerCase().contains("area") 
+      && !match.eventName.toLowerCase().contains("championship") 
+      && !match.eventName.toLowerCase().contains("sectional") 
+      && !match.eventName.toLowerCase().contains("ipsc")) continue;
+    for(var entry in match.shooters) {
+      if(memberNumbers.contains(entry.memberNumber)) {
+        var division = uspsaSport.divisions.lookupByName(entry.divisionName);
+        if(division == uspsaPcc) {
+          if(entry.precalculatedScore == null) {
+            tomPccFinishes.add(await _getTomPlace(match, entry));
+          }
+          else {
+            tomPccFinishes.add(entry.precalculatedScore!.place);
+          }
+          pccMatchSizes.add(match.shooters.where((e) => e.divisionName == entry.divisionName).length);
+          matchNamesThatCount.add(match.eventName);
+        }
+        else if(division == uspsaCarryOptics) {
+          if(entry.precalculatedScore == null) {
+            tomCoFinishes.add(await _getTomPlace(match, entry));
+          }
+          else {
+            tomCoFinishes.add(entry.precalculatedScore!.place);
+          }
+          matchNamesThatCount.add(match.eventName);
+          coMatchSizes.add(match.shooters.where((e) => e.divisionName == entry.divisionName).length);
+        }
+        else {
+          print("Tom competed in ${entry.divisionName}");
+        }
+      }
+    }
+  }
+
+  var pccWins = tomPccFinishes.where((e) => e == 1).length;
+  var coWins = tomCoFinishes.where((e) => e == 1).length;
+  print("Match names that count: \n${matchNamesThatCount.join("\n")}");
+  print("PCC wins: $pccWins/${tomPccFinishes.length}");
+  print("CO wins: $coWins/${tomCoFinishes.length}");
+  print("PCC average finish: ${tomPccFinishes.average.toStringAsFixed(2)}/${pccMatchSizes.average.toStringAsFixed(2)}");
+  print("CO average finish: ${tomCoFinishes.average.toStringAsFixed(2)}/${coMatchSizes.average.toStringAsFixed(2)}");
+}
+
+Future<int> _getTomPlace(DbShootingMatch match, DbMatchEntry entry) async {
+  var matchRes = await HydratedMatchCache().get(match);
+  if(matchRes.isErr()) {
+    throw ArgumentError();
+  }
+  var division = uspsaSport.divisions.lookupByName(entry.divisionName);
+  if(division == null) {
+    throw ArgumentError();
+  }
+  var scores = matchRes.unwrap().getScoresFromFilters(FilterSet(uspsaSport, divisions: [division]));
+  return scores.entries.firstWhere((e) => e.key.memberNumber == entry.memberNumber).value.place;
 }
 
 Future<void> _matchBumpGms(AnalystDatabase db) async {
@@ -43,6 +124,7 @@ Future<void> _matchBumpGms(AnalystDatabase db) async {
 
   Map<ShootingMatch, MatchEntry> gmBumpEligible = {};
   Map<MatchEntry, ShootingMatch> gmBumpMatches = {};
+  Map<MatchEntry, List<MatchEntry>> gmsBeat = {};
   for(var dbMatch in matches) {
     var matchRes = await HydratedMatchCache().get(dbMatch);
     if(matchRes.isErr()) {
@@ -62,7 +144,7 @@ Future<void> _matchBumpGms(AnalystDatabase db) async {
       );
 
       MatchEntry? winner;
-      int gmsOver90 = 0;
+      List<MatchEntry> gmsOver90 = [];
       for(var scoreEntry in scores.entries) {
         var entry = scoreEntry.key;
         var score = scoreEntry.value;
@@ -70,16 +152,17 @@ Future<void> _matchBumpGms(AnalystDatabase db) async {
           winner = entry;
         }
         else if(entry.classification == uspsaGM && score.percentage >= 90) {
-          gmsOver90 += 1;
+          gmsOver90.add(entry);
         }
         else if(score.percentage < 90) {
           break;
         }
       }
 
-      if(gmsOver90 >= 3 && winner != null && winner.classification != uspsaGM) {
+      if(gmsOver90.length >= 3 && winner != null && winner.classification != uspsaGM) {
         gmBumpEligible[match] = winner;
         gmBumpMatches[winner] = match;
+        gmsBeat[winner] = gmsOver90;
       }
     }
   }
@@ -89,10 +172,7 @@ Future<void> _matchBumpGms(AnalystDatabase db) async {
 
   await project.dbGroups.load();
 
-  for(var entry in gmBumpEligible.values) {
-    if(entry.memberNumber == "TY104882") {
-      print("break");
-    }
+  for(var entry in [...gmBumpEligible.values, ...gmsBeat.values.flattened]) {
     var group = await project.groupForDivision(entry.division).unwrap();
     if(group != null) {
       var rating = await project.lookupRating(group, entry.memberNumber, allPossibleMemberNumbers: true).unwrap();
@@ -126,8 +206,21 @@ Future<void> _matchBumpGms(AnalystDatabase db) async {
   for(var bumpEntry in bumpEligible) {
     var entry = bumpEntry;
     var match = gmBumpMatches[entry];
+    var over = gmsBeat[entry];
     var rating = ratings[entry];
-    print("${entry.name} (${entry.memberNumber} ${entry.division} ${entry.classification}) (${rating?.rating.round() ?? "unrated"} ${rating?.lastClassification}) ${match?.name}");
+    print("${entry.name} at ${match?.name} in ${entry.division}");
+    print("\tWas ${entry.classification} at match");
+    print("\tIs now ${rating?.lastClassification ?? "(unknown class)"} with ${rating?.rating.round() ?? "(unrated)"} Elo");
+    print("\tBeat these GMs over 90%:");
+    for(var gm in over!) {
+      var gmRating = ratings[gm];
+      double? eloAtMatch;
+      if(gmRating != null) {
+        eloAtMatch = EloShooterRating.wrapDbRating(gmRating!).ratingAtEvent(match!, null);
+      }
+      print("\t\t${gm.name} (${gm.memberNumber}, ${eloAtMatch?.round() ?? "(unknown)"} Elo at match, ${gmRating?.rating.round() ?? "(unrated)"} Elo today)");
+    }
+    print("\n");
   }
 }
 

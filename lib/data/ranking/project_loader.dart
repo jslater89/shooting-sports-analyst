@@ -106,6 +106,8 @@ class RatingProjectLoaderHost {
   RatingProjectLoaderHost({required this.progressCallback, required this.deduplicationCallback});
 }
 
+// TODO (a big one): track ratings and events added during an 'append' calculation
+// That way we can roll back on cancellation or error.
 class RatingProjectLoader {
   final DbRatingProject project;
   final RatingProjectLoaderHost host;
@@ -801,6 +803,7 @@ class RatingProjectLoader {
       // but there are a lot of competitors in USPSA sets with numbers like "A",
       // or "0", which we want to leave out to avoid cluttering blacklists.
       bool validCompetitor = processed.length > 1 && !s.reentry;
+      List<String> mappingSources = [];
       if(validCompetitor) {
         // If we have a member number after processing, we can use this competitor.
         s.memberNumber = processed;
@@ -836,7 +839,7 @@ class RatingProjectLoader {
             }
             if(correction.name == name) {
               s.memberNumber = correction.correctedNumber;
-              s.knownMemberNumbers.remove(correction.invalidNumber);
+              s.removeKnownMemberNumbers([correction.invalidNumber]);
               invalidMemberNumbers.add(correction.invalidNumber);
               previouslyVisitedNumbers.add(correction.correctedNumber);
               appliedCorrection = true;
@@ -898,6 +901,7 @@ class RatingProjectLoader {
           rating.lastName = s.lastName;
           // prefer to display newer member numbers
           rating.memberNumber = s.memberNumber;
+          rating.addKnownMemberNumbers(s.knownMemberNumbers);
 
           // TODO: only if better than last classification
           // may require some help from [sport]
@@ -1290,18 +1294,20 @@ class RatingProjectLoader {
 
         MatchWindow? oldestWindow;
         // While we have more than 4 match windows, remove the oldest one.
-        while(rating.matchWindows.length > (calc.matchWindowCount - 1)) {
-          for(var window in rating.matchWindows) {
+        var editableList = rating.matchWindows.toList();
+        while(editableList.length > (calc.matchWindowCount - 1)) {
+          for(var window in editableList) {
             if(oldestWindow == null || window.date.isBefore(oldestWindow.date)) {
               oldestWindow = window;
             }
           }
           if(oldestWindow != null) {
-            rating.matchWindows.remove(oldestWindow);
+            editableList.remove(oldestWindow);
             oldestWindow = null;
           }
         }
-        rating.matchWindows.add(window);
+        editableList.add(window);
+        rating.matchWindows = editableList;
 
         var newConnectivity = calc.calculateRatingConnectivity(rating);
         rating.connectivity = newConnectivity.connectivity;

@@ -8,9 +8,9 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
-
-class RaterGroupsDialog extends StatefulWidget {
-  const RaterGroupsDialog({Key? key, required this.selectedGroups, this.customGroups = const [], this.groupProvider}) : super(key: key);
+import 'package:shooting_sports_analyst/data/database/util.dart';
+class RatingGroupsDialog extends StatefulWidget {
+  const RatingGroupsDialog({Key? key, required this.selectedGroups, this.customGroups = const [], this.groupProvider}) : super(key: key);
 
   final RatingGroupsProvider? groupProvider;
   final List<RatingGroup> selectedGroups;
@@ -26,10 +26,10 @@ class RaterGroupsDialog extends StatefulWidget {
   }
 
   @override
-  State<RaterGroupsDialog> createState() => _RaterGroupsDialogState();
+  State<RatingGroupsDialog> createState() => _RatingGroupsDialogState();
 }
 
-class _RaterGroupsDialogState extends State<RaterGroupsDialog> {
+class _RatingGroupsDialogState extends State<RatingGroupsDialog> {
 
   Map<String, bool> uuidChecked = {};
 
@@ -114,7 +114,11 @@ class _RaterGroupsDialogState extends State<RaterGroupsDialog> {
                 TextButton(
                   child: Text("OK"),
                   onPressed: () {
-                    Navigator.of(context).pop(widget.allGroups.where((g) => uuidChecked[g.uuid] ?? false).toList());
+                    var result = IsarLinksChange(
+                      startingSelection: widget.selectedGroups,
+                      currentSelection: widget.allGroups.where((g) => (uuidChecked[g.uuid] ?? false)).toList(),
+                    );
+                    Navigator.of(context).pop(result);
                   },
                 )
               ],

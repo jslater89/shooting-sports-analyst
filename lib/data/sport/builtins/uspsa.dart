@@ -17,8 +17,8 @@ import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 
 const _uspsaPenalties = [
-  const ScoringEvent("Procedural", shortName: "P", pointChange: -10, alternateNames: ["Proc"]),
-  const ScoringEvent("Overtime shot", shortName: "OS", pointChange: -5),
+  const ScoringEvent("Procedural", shortName: "P", pointChange: -10, alternateNames: ["Proc"], sortOrder: 100),
+  const ScoringEvent("Overtime shot", shortName: "OS", pointChange: -5, sortOrder: 101),
 ];
 
 const uspsaOpen = Division(name: "Open", shortName: "OPEN", fallback: true);
@@ -39,27 +39,27 @@ const uspsaC = Classification(index: 4, name: "C", shortName: "C");
 const uspsaD = Classification(index: 5, name: "D", shortName: "D");
 const uspsaU = Classification(index: 6, name: "Unclassified", shortName: "U", fallback: true);
 
-const _level1 = MatchLevel(name: "Level I", shortName: "I", alternateNames: ["Local", "L1"], eventLevel: EventLevel.local);
-const _level2 = MatchLevel(name: "Level II", shortName: "II", alternateNames: ["Regional/State", "L2"], eventLevel: EventLevel.regional);
-const _level3 = MatchLevel(name: "Level III", shortName: "III", alternateNames: ["Area", "L3"], eventLevel: EventLevel.area);
-const _level4 = MatchLevel(name: "Nationals", shortName: "IV", alternateNames: ["National", "L4"], eventLevel: EventLevel.national);
+const uspsaLevel1 = MatchLevel(name: "Level I", shortName: "I", alternateNames: ["Local", "L1"], eventLevel: EventLevel.local);
+const uspsaLevel2 = MatchLevel(name: "Level II", shortName: "II", alternateNames: ["Regional/State", "L2"], eventLevel: EventLevel.regional);
+const uspsaLevel3 = MatchLevel(name: "Level III", shortName: "III", alternateNames: ["Area", "L3"], eventLevel: EventLevel.area);
+const uspsaLevel4 = MatchLevel(name: "Nationals", shortName: "IV", alternateNames: ["National", "L4"], eventLevel: EventLevel.national);
 
 const _matchLevels = [
-  _level1,
-  _level2,
-  _level3,
-  _level4,
+  uspsaLevel1,
+  uspsaLevel2,
+  uspsaLevel3,
+  uspsaLevel4,
 ];
 
 final uspsaMinorPF = PowerFactor("Minor",
   shortName: "min",
   targetEvents: [
-    const ScoringEvent("A", pointChange: 5),
-    const ScoringEvent("C", pointChange: 3, alternateNames: ["B"]),
-    const ScoringEvent("D", pointChange: 1),
-    const ScoringEvent("M", pointChange: -10),
-    const ScoringEvent("NS", pointChange: -10, alternateNames: ["NoShoot"]),
-    const ScoringEvent("NPM", pointChange: 0, displayInOverview: false),
+    const ScoringEvent("A", pointChange: 5, sortOrder: 0),
+    const ScoringEvent("C", pointChange: 3, alternateNames: ["B"], sortOrder: 1),
+    const ScoringEvent("D", pointChange: 1, sortOrder: 2),
+    const ScoringEvent("M", pointChange: -10, sortOrder: 3),
+    const ScoringEvent("NS", pointChange: -10, alternateNames: ["NoShoot"], sortOrder: 4),
+    const ScoringEvent("NPM", pointChange: 0, displayInOverview: false, sortOrder: 5),
   ],
   penaltyEvents: _uspsaPenalties,
 );
@@ -107,12 +107,12 @@ final uspsaSport = Sport(
     PowerFactor("Major",
       shortName: "Maj",
       targetEvents: [
-        const ScoringEvent("A", pointChange: 5),
-        const ScoringEvent("C", pointChange: 4, alternateNames: ["B"]),
-        const ScoringEvent("D", pointChange: 2),
-        const ScoringEvent("M", pointChange: -10),
-        const ScoringEvent("NS", pointChange: -10),
-        const ScoringEvent("NPM", pointChange: 0, displayInOverview: false),
+        const ScoringEvent("A", pointChange: 5, sortOrder: 0),
+        const ScoringEvent("C", pointChange: 4, alternateNames: ["B"], sortOrder: 1),
+        const ScoringEvent("D", pointChange: 2, sortOrder: 2),
+        const ScoringEvent("M", pointChange: -10, sortOrder: 3),
+        const ScoringEvent("NS", pointChange: -10, sortOrder: 4),
+        const ScoringEvent("NPM", pointChange: 0, displayInOverview: false, sortOrder: 5),
       ],
       penaltyEvents: _uspsaPenalties,
     ),
@@ -121,12 +121,12 @@ final uspsaSport = Sport(
       shortName: "sub",
       doesNotScore: true,
       targetEvents: [
-        const ScoringEvent("A", pointChange: 0),
-        const ScoringEvent("C", pointChange: 0, alternateNames: ["B"]),
-        const ScoringEvent("D", pointChange: 0),
-        const ScoringEvent("M", pointChange: 0),
-        const ScoringEvent("NS", pointChange: 0),
-        const ScoringEvent("NPM", pointChange: 0, displayInOverview: false),
+        const ScoringEvent("A", pointChange: 0, sortOrder: 0),
+        const ScoringEvent("C", pointChange: 0, alternateNames: ["B"], sortOrder: 1),
+        const ScoringEvent("D", pointChange: 0, sortOrder: 2),
+        const ScoringEvent("M", pointChange: 0, sortOrder: 3),
+        const ScoringEvent("NS", pointChange: 0, sortOrder: 4),
+        const ScoringEvent("NPM", pointChange: 0, displayInOverview: false, sortOrder: 5),
       ],
       fallback: true,
       penaltyEvents: _uspsaPenalties,
@@ -176,9 +176,9 @@ class _UspsaRatingStrengthProvider implements RatingStrengthProvider {
 
   @override
   double strengthBonusForMatchLevel(MatchLevel? level) {
-    if(level == _level1) return 1.0;
-    else if(level == _level2) return 1.15;
-    else if(level == _level3) return 1.3;
+    if(level == uspsaLevel1) return 1.0;
+    else if(level == uspsaLevel2) return 1.15;
+    else if(level == uspsaLevel3) return 1.3;
     else return 1.0;
   }
 }
@@ -297,22 +297,22 @@ final _builtinRaterGroups = <RatingGroup>[
     sortOrder: 6,
   ),
   RatingGroup.create(
-    uuid: "uspsa-limited10",
-    sportName: uspsaName,
-    name: "Limited 10",
-    displayName: "L10",
-    divisionNames: [
-      uspsaLimited10.name,
-    ],
-    sortOrder: 7,
-  ),
-  RatingGroup.create(
     uuid: "uspsa-revolver",
     sportName: uspsaName,
     name: "Revolver",
     displayName: "REVO",
     divisionNames: [
       uspsaRevolver.name,
+    ],
+    sortOrder: 7,
+  ),
+  RatingGroup.create(
+    uuid: "uspsa-limited10",
+    sportName: uspsaName,
+    name: "Limited 10",
+    displayName: "L10",
+    divisionNames: [
+      uspsaLimited10.name,
     ],
     sortOrder: 8,
   ),

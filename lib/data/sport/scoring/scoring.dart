@@ -1099,6 +1099,8 @@ class ScoringEvent extends NameLookupEntity {
   final double timeChange;
   final bool displayInOverview;
 
+  final int sortOrder;
+
   /// bonus indicates that this hit is a bonus/tiebreaker score with no other scoring implications:
   ///
   /// An ICORE stage with a time bonus for a X-ring hits is _not_ a bonus like this, because it scores
@@ -1109,7 +1111,17 @@ class ScoringEvent extends NameLookupEntity {
 
   bool get fallback => false;
 
-  const ScoringEvent(this.name, {this.displayInOverview = true, this.shortName = "", this.pointChange = 0, this.timeChange = 0, this.bonus = false, this.bonusLabel = "X", this.alternateNames = const []});
+  const ScoringEvent(
+    this.name, {
+    this.displayInOverview = true,
+    this.shortName = "",
+    this.pointChange = 0,
+    this.timeChange = 0,
+    this.bonus = false,
+    this.bonusLabel = "X",
+    this.alternateNames = const [],
+    this.sortOrder = 0,
+  });
 
   @override
   String toString() {

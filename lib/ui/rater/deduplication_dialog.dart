@@ -4,9 +4,11 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shooting_sports_analyst/config.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
@@ -76,6 +78,8 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
   /// The index of the collision that is currently selected.
   int? _selectedCollisionIndex;
 
+  AudioPlayer? player;
+
   DeduplicationCollision? get _selectedCollision => _selectedCollisionIndex != null ? _sortedCollisions[_selectedCollisionIndex!] : null;
 
   List<DeduplicationCollision> _sortedCollisions = [];
@@ -94,6 +98,11 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
     if(widget.collisions.isNotEmpty) {
       _selectedCollisionIndex = 0;
       _viewed[_selectedCollision!] = true;
+    }
+
+    if(ConfigLoader().config.playDeduplicationAlert) {
+      player = AudioPlayer();
+      player!.play(AssetSource("audio/update-bell.mp3"));
     }
   }
 

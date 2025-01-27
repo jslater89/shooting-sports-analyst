@@ -17,6 +17,8 @@ part 'config.g.dart';
 
 var _log = SSALogger("Config");
 
+/// ConfigLoader loads and saves the config.toml file, and notifies
+/// listeners when the configuration is reloaded.
 class ConfigLoader with ChangeNotifier {
   static ConfigLoader? _instance;
   factory ConfigLoader() {
@@ -66,17 +68,21 @@ class ConfigLoader with ChangeNotifier {
 class SerializedConfig {
   @JsonKey(defaultValue: Level.debug)
   Level logLevel;
+
+  @JsonKey(defaultValue: true)
+  bool playDeduplicationAlert;
   
   factory SerializedConfig.fromToml(Map<String, dynamic> json) => _$SerializedConfigFromJson(json);
   Map<String, dynamic> toToml() => _$SerializedConfigToJson(this);
 
-  SerializedConfig({required this.logLevel});
+  SerializedConfig({required this.logLevel, required this.playDeduplicationAlert});
 
   @override
   String toString() {
     var builder = StringBuffer();
     builder.writeln("Config:");
     builder.writeln("\tlogLevel = ${logLevel.name}");
+    builder.writeln("\tplayDeduplicationAlert = $playDeduplicationAlert");
     return builder.toString();
   }
 }

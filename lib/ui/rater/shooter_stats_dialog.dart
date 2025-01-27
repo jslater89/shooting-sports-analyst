@@ -11,8 +11,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rating_change.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:sprintf/sprintf.dart';
@@ -28,6 +30,8 @@ import 'package:shooting_sports_analyst/data/ranking/legacy_loader/rating_histor
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/util.dart';
+
+final _log = SSALogger("ShooterStatsDialog");
 
 final NumberFormat _separatedNumberFormat = NumberFormat("#,###");
 final NumberFormat _nf = NumberFormat("####");
@@ -55,10 +59,19 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   List<Widget>? _historyLines;
   bool showingEvents = true;
   Sport get sport => widget.match.sport;
+  List<RatingEvent> ratingEvents = [];
+  List<RatingEvent> combinedRatingEvents = [];
+
+  @override
+  void initState() {
+    super.initState();
+    combinedRatingEvents = widget.rating.ratingEvents;
+    ratingEvents = combinedRatingEvents.where((e) => e.ratingChange != 0).toList();
+    matchHistory = widget.rating.careerHistory();
+  }
 
   List<Widget> _buildEventLines() {
-    List<RatingEvent> events = widget.rating.ratingEvents;
-    _eventLines = events.reversed
+    _eventLines = ratingEvents
       .map((e) => Tooltip(
       message: e.info.keys.map((line) => sprintf(line, e.info[line])).join("\n"),
       child: Padding(
@@ -110,7 +123,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     String header = "Date,Match,StageNum,StageName,StageRounds,RatingBefore,RatingChange,RatingAfter\n";
     String content = "";
 
-    for(var event in widget.rating.ratingEvents) {
+    for(var event in ratingEvents) {
       content +=
           "${(event.match.date ?? DateTime(0,0,0)).toString()}"
           "${event.match.name ?? "(unnamed match)"}," +
@@ -128,8 +141,6 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   }
 
   List<Widget> _buildHistoryLines() {
-    var history = widget.rating.careerHistory();
-
     List<Widget> widgets = [];
     widgets.add(Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12.0),
@@ -148,7 +159,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       thickness: 1,
     ));
 
-    for(var entry in history.reversed) {
+    for(var entry in matchHistory.reversed) {
       widgets.add(Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12.0),
         child: Row(
@@ -189,14 +200,19 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
           MouseRegion(
             cursor: SystemMouseCursors.click,
             child: GestureDetector(
-              child: Text("Ratings for ${widget.rating.getName(suffixes: false)} ${widget.rating.originalMemberNumber} (${widget.rating.lastClassification?.displayName})"),
+              child: Text("Ratings for ${widget.rating.getName(suffixes: false)} ${widget.rating.memberNumber} (${widget.rating.lastClassification?.displayName})"),
               onTap: () {
-                HtmlOr.openLink("https://uspsa.org/classification/${widget.rating.originalMemberNumber}");
+                HtmlOr.openLink("https://uspsa.org/classification/${widget.rating.memberNumber}");
               },
             ),
           ),
           Row(
             children: [
+              Tooltip(
+                child: Icon(Icons.numbers),
+                message: "Known member numbers:\n${widget.rating.knownMemberNumbers.join("\n")}\n\n"
+                  "All possible member numbers:\n${widget.rating.allPossibleMemberNumbers.join("\n")}",
+              ),
               Tooltip(
                 message: "Export event-by-event ratings for this shooter",
                 child: IconButton(
@@ -315,7 +331,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     var size = MediaQuery.of(context).size;
 
     if(_series == null) {
-      _ratings = rating.ratingEvents.mapIndexed((i, e) {
+      _ratings = rating.ratingEvents.reversed.where((e) => e.newRating != 0).mapIndexed((i, e) {
         if(e.newRating < minRating) minRating = e.newRating;
         if(e.newRating > maxRating) maxRating = e.newRating;
 
@@ -487,10 +503,11 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   }
 
   bool get byStage {
-    if(widget.rating.ratingEvents.isEmpty) return true;
+    if(ratingEvents.isEmpty) return true;
 
-    return widget.rating.ratingEvents.last.stage != null;
+    return ratingEvents.last.stage != null;
   }
+  List<MatchHistoryEntry> matchHistory = [];
   RawScore? totalScore;
   double totalPoints = 0;
   Set<ShootingMatch> dqs = {};
@@ -517,24 +534,48 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     // scoring isn't important; we'll add to targetEvents/penaltyEvents later
     var total = RawScore(scoring: const HitFactorScoring(), targetEvents: {}, penaltyEvents: {});
 
-    for(var event in widget.rating.combinedRatingEvents) {
-      var score = event.score;
-
-      var eventScore;
+    Map<ShootingMatch, RelativeMatchScore> matchScores = {};
+    for(var event in combinedRatingEvents) {
+      var match = event.match;
+      var divisions = widget.rating.group.divisions;
+      RelativeScore eventScore;
+      RelativeMatchScore? matchScore;
+      if(matchScores.containsKey(match)) {
+        matchScore = matchScores[match]!;
+      }
+      else {
+        var scores = match.getScoresFromFilters(FilterSet(sport, divisions: divisions));
+        matchScore = scores.entries.firstWhereOrNull((element) => widget.rating.equalsShooter(element.key))?.value;
+        if(matchScore == null) {
+          _log.w("Shooter ${widget.rating.name} doesn't have a score for match ${match.name}");
+          continue;
+        }
+        matchScores[match] = matchScore;
+      }
       if(byStage) {
-        eventScore = event.scoreForStage.score;
-        var stage = event.stage!;
-        if(event.score.place == 1) {
+        var stage = match.stages.firstWhere((s) => s.stageId == event.stageNumber);
+        var stageScore = matchScore.stageScores[stage];
+        if(stageScore == null) {
+          _log.w("Shooter ${widget.rating.name} doesn't have a score for stage ${stage.name} in match ${match.name}");
+          continue;
+        }
+        eventScore = stageScore;
+        
+        if(eventScore.place == 1) {
           stageWins += 1;
         }
-        stageFinishes.add(event.score.place);
+        stageFinishes.add(eventScore.place);
 
-        var stageClassScores = event.match.getScores(stages: [stage], shooters: event.match.shooters.where(
-              (element) => event.score.shooter.division == element.division && event.score.shooter.classification == element.classification).toList()
+        var stageClassScores = match.getScores(
+          stages: [stage], 
+          shooters: match.shooters.where((element) => 
+            eventScore.shooter.division == element.division 
+            && eventScore.shooter.classification == element.classification
+          ).toList()
         );
-        var stageClassScore = stageClassScores.values.firstWhereOrNull((element) => widget.rating.equalsShooter(element.shooter));
+        var stageClassScore = stageClassScores.entries.firstWhereOrNull((element) => widget.rating.equalsShooter(element.key))?.value;
 
-        if(stageClassScore != null && event.score.shooter.classification != old.Classification.U) {
+        if(stageClassScore != null) {
           classStageFinishes.add(stageClassScore.place);
           if (stageClassScore.place == 1) {
             classStageWins += 1;
@@ -542,21 +583,22 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         }
       }
       else {
-        eventScore = event.scoreForMatch.total;
+        eventScore = matchScore;
       }
 
-      if(score is RelativeMatchScore) {
-        total += score.total;
+      if(eventScore is RelativeMatchScore) {
+        total += eventScore.total;
+        totalPoints += eventScore.total.points;
       }
-      else if(score is RelativeStageScore) {
-        total += score.score;
+      else if(eventScore is RelativeStageScore) {
+        total += eventScore.score;
+        totalPoints += eventScore.score.points;
       }
 
-      totalPoints += score.points;
-      if(score.shooter.dq) {
+      if(eventScore.shooter.dq) {
         dqs.add(event.match);
       }
-      if(widget.rating.ratingEvents.contains(event)) {
+      if(ratingEvents.contains(event)) {
         matchesWithRatingChanges.add(event.match);
       }
       if(!matches.contains(event.match) && event.match.level != null) {
@@ -564,24 +606,24 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         matchesByLevel[event.match.level!] = matchesByLevel[event.match.level ?? old.MatchLevel.I]! + 1;
       }
       matches.add(event.match);
-      if(event.score.shooter.classification != null) {
-        classesByMatch[event.match] = event.score.shooter.classification!;
+      if(eventScore.shooter.classification != null) {
+        classesByMatch[event.match] = eventScore.shooter.classification!;
       }
-      if(event.score.shooter.division != null) {
-        divisionsByMatch[event.match] = event.score.shooter.division!;
+      if(eventScore.shooter.division != null) {
+        divisionsByMatch[event.match] = eventScore.shooter.division!;
       }
 
-      switch(score.shooter.powerFactor) {
-        case old.PowerFactor.major:
-          majorEntries += 1;
-          break;
-        case old.PowerFactor.minor:
-          minorEntries += 1;
-          break;
-        default:
-          otherEntries += 1;
-          break;
-      }
+      // switch(score.shooter.powerFactor) {
+      //   case old.PowerFactor.major:
+      //     majorEntries += 1;
+      //     break;
+      //   case old.PowerFactor.minor:
+      //     minorEntries += 1;
+      //     break;
+      //   default:
+      //     otherEntries += 1;
+      //     break;
+      // }
     }
 
     totalScore = total;
@@ -617,12 +659,12 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   }
 
   List<Widget> _buildShooterStats(BuildContext context) {
-    if(widget.rating.ratingEvents.isEmpty) {
+    if(ratingEvents.isEmpty) {
       return [Text("No data available", style: Theme.of(context).textTheme.bodyMedium)];
     }
 
     var average = widget.rating.averageRating();
-    var lifetimeAverage = widget.rating.averageRating(window: widget.rating.ratingEvents.length);
+    var lifetimeAverage = widget.rating.averageRating(window: ratingEvents.length);
 
     if(totalScore == null) {
       calculateTotalScore();
@@ -669,13 +711,13 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         ],
       ),
       if(byStage) Divider(height: 2, thickness: 1),
-      if(byStage && widget.rating.ratingEvents.length != widget.rating.combinedRatingEvents.length) Row(
+      if(byStage && ratingEvents.length != widget.rating.combinedRatingEvents.length) Row(
         children: [
           Expanded(flex: 4, child: Text("Stages/matches with rating changes", style: Theme.of(context).textTheme.bodyMedium)),
-          Expanded(flex: 2, child: Text("${widget.rating.ratingEvents.length}/${matchesWithRatingChanges.length}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
+          Expanded(flex: 2, child: Text("${ratingEvents.length}/${matchesWithRatingChanges.length}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
-      if(byStage && widget.rating.ratingEvents.length != widget.rating.combinedRatingEvents.length) Divider(height: 2, thickness: 1),
+      if(byStage && ratingEvents.length != widget.rating.combinedRatingEvents.length) Divider(height: 2, thickness: 1),
       if(!byStage) Row(
         children: [
           Expanded(flex: 4, child: Text("Total matches", style: Theme.of(context).textTheme.bodyMedium)),
@@ -683,13 +725,13 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         ],
       ),
       if(!byStage) Divider(height: 2, thickness: 1),
-      if(!byStage && widget.rating.ratingEvents.length != widget.rating.combinedRatingEvents.length) Row(
+      if(!byStage && ratingEvents.length != widget.rating.combinedRatingEvents.length) Row(
         children: [
           Expanded(flex: 4, child: Text("Matches with rating changes", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 2, child: Text("${matchesWithRatingChanges.length}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
-      if(!byStage && widget.rating.ratingEvents.length != widget.rating.combinedRatingEvents.length) Divider(height: 2, thickness: 1),
+      if(!byStage && ratingEvents.length != widget.rating.combinedRatingEvents.length) Divider(height: 2, thickness: 1),
       Row(
         children: [
           Expanded(flex: 4, child: Text("Matches of level I/II/III", style: Theme.of(context).textTheme.bodyMedium)),
@@ -699,7 +741,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         ],
       ),
       Divider(height: 2, thickness: 1),
-      if(classMatchFinishes.length > 0) Row(
+      if(classMatchFinishes.isNotEmpty) Row(
         children: [
           Expanded(flex: 4, child: Text("Match wins/class wins", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 2, child: Text(
@@ -865,28 +907,23 @@ class _StatefulContainerState extends State<_StatefulContainer> {
 
 extension _HitPercentagesText on RawScore {
   String hitPercentages(Sport sport) {
-    var message = StringBuffer();
+    List<String> entries = [];
     var totalCount = this.targetEventCount;
-    for(var entry in this.targetEvents.entries) {
+    for(var entry in this.targetEvents.entries.sorted((a, b) => a.key.sortOrder.compareTo(b.key.sortOrder))) {
       var event = entry.key;
       var count = entry.value;
 
       if(event.displayInOverview) {
-        message.write("${(count / totalCount).asPercentage(decimals: 1)} ${event.shortDisplayName}, ");
+        entries.add("${(count / totalCount).asPercentage(decimals: 1)} ${event.shortDisplayName}");
       }
     }
 
-    var string = message.toString();
-    if(string.endsWith(", ")) {
-      string = string.substring(0, string.length - 3);
-    }
-
-    return string;
+    return entries.join(", ");
   }
 
   String scoringEventText(Sport sport) {
     var message = StringBuffer();
-    for(var entry in this.targetEvents.entries) {
+    for(var entry in this.targetEvents.entries.sorted((a, b) => a.key.sortOrder.compareTo(b.key.sortOrder))) {
       var event = entry.key;
       var count = entry.value;
 
