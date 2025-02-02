@@ -89,6 +89,9 @@ class USPSAFantasyScoringCalculator implements FantasyScoringCalculator<USPSAFan
 
       for(var stage in match.stages) {
         for(var score in scores.values) {
+          if(score.isDnf) {
+            continue;
+          }
           var stageScore = score.stageScores[stage];
           if(stageScore == null) {
             continue;

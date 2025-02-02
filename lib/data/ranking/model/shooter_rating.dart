@@ -136,7 +136,7 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
   /// above cases apply, returns the shooter's current rating.
   double ratingForEvent(ShootingMatch match, MatchStage? stage, {bool beforeMatch = false}) {
     RatingEvent? candidateEvent;
-    for(var e in ratingEvents.reversed) {
+    for(var e in ratingEvents) {
       if(e.match.sourceIds.containsAny(match.sourceIds) && (candidateEvent == null || beforeMatch)) {
         if(stage == null) {
           // Because we're going backward, this will get the last change from the
@@ -275,19 +275,6 @@ abstract class ShooterRating extends Shooter with DbSportEntity {
     else {
       return ratingEvents.sublist(ratingEvents.length - (window + offset), ratingEvents.length - offset);
     }
-  }
-
-  double averagePercentFinishes({int window = baseTrendWindow, int offset = 0}) {
-    double percentFinishes = 0.0;
-
-    var events = eventsWithWindow(window: window, offset: offset);
-    if(events.isEmpty) return 0;
-
-    for(var e in events) {
-      percentFinishes += e.score.ratio;
-    }
-
-    return percentFinishes / events.length;
   }
 
   double get connectivity => wrappedRating.connectivity;

@@ -70,6 +70,11 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     matchHistory = widget.rating.careerHistory();
   }
 
+  String _divisionName(RatingEvent e) {
+    var matchEntry = e.match.shooters.firstWhereOrNull((s) => s.entryId == e.wrappedEvent.entryId);
+    return matchEntry?.division?.displayName ?? "UNK";
+  }
+
   List<Widget> _buildEventLines() {
     _eventLines = ratingEvents
       .map((e) => Tooltip(
@@ -92,7 +97,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                     children: [
                       Expanded(
                         flex: 10,
-                        child: Text("${e.eventName}${widget.showDivisions ? " (${e.score.shooter.division?.shortDisplayName ?? " UNK"})" : ""}",
+                        child: Text("${e.eventName}${widget.showDivisions ? " (${_divisionName(e)})" : ""}",
                             style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).colorScheme.error : null)),
                       ),
                       Expanded(
@@ -355,7 +360,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         colorFn: (e, __) {
           if(!widget.showDivisions) return charts.MaterialPalette.blue.shadeDefault;
           
-          var division = e.baseEvent.score.shooter.division?.displayName;
+          var division = e.baseEvent.match.shooters.firstWhereOrNull((s) => s.entryId == e.baseEvent.wrappedEvent.entryId)?.division?.displayName;
           if(division == null) {
             return _colorOptions.first;
           }
@@ -465,10 +470,13 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
 
   void _launchScoreView(RatingEvent e) {
     var newMatch = e.match;
-    var division = newMatch.sport.divisions.lookupByName(e.score.shooter.division?.displayName ?? "Open")!;
+    var matchEntry = newMatch.shooters.firstWhereOrNull((s) => s.entryId == e.wrappedEvent.entryId);
+    var division = matchEntry?.division ?? newMatch.sport.divisions.fallback();
     var filters = FilterSet(newMatch.sport, empty: true)
       ..mode = FilterMode.or;
-    filters.divisions = FilterSet.divisionListToMap(sport, [division]);
+    if(division != null) {
+      filters.divisions = FilterSet.divisionListToMap(newMatch.sport, [division]);
+    }
     Navigator.of(context).push(MaterialPageRoute(builder: (context) {
       return ResultPage(
         canonicalMatch: newMatch,

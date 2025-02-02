@@ -503,6 +503,14 @@ class USPSADeduplicator extends ShooterDeduplicator {
           blacklisted = true;
         }
 
+        // If, additionally, we have exactly one member number left, then there are no
+        // mappings possible because of blacklists, and we can skip the rest of the checks.
+        if(autoMapFlatNumbers.length == 1) {
+          conflict.causes.add(FixedInSettings());
+          conflicts.add(conflict);
+          continue;
+        }
+
         if(!blacklisted) {
           // If we don't have any implicated user mappings, we can add an AutoMapping.
           // If we do have implicated user mappings, we should present it as a UserMapping
@@ -1091,6 +1099,8 @@ class USPSADeduplicator extends ShooterDeduplicator {
     if(number.startsWith(RegExp("L[0-9]")) || number.startsWith(RegExp("FL[0-9]"))) return MemberNumberType.life;
 
     // Intended to match: A, TY, FY, F, TYF, and FYF.
+    // Empirically, F, TYF, and FYF appear to be the analogues of A, TY, and FY,
+    // like FL above.
     if(number.startsWith(RegExp(r"[ATFY]{1,3}"))) return MemberNumberType.standard;
 
     // International competitors sometimes enter a pure-numeric IPSC regional member number,
@@ -1099,7 +1109,7 @@ class USPSADeduplicator extends ShooterDeduplicator {
     // enters their USPSA number without a prefix in a separate check, and treat it as a
     // data entry error.
     if(number.startsWith(RegExp(r"[0-9]"))) return MemberNumberType.international;
-    // Commonly observed in the wild.
+    // Commonly observed in the wild (Alberta?).
     if(number.startsWith("AB")) return MemberNumberType.international;
 
     return MemberNumberType.standard;

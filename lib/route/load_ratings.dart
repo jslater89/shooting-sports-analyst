@@ -59,6 +59,7 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
       progressCallback: callback,
       deduplicationCallback: deduplicationCallback,
       unableToAppendCallback: unableToAppendCallback,
+      fullRecalculationRequiredCallback: fullRecalculationRequiredCallback,
     );
 
     loader = RatingProjectLoader(widget.project, host);
@@ -79,6 +80,19 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
     }
   }
 
+  Future<bool> fullRecalculationRequiredCallback() async {
+    var shouldRecalculate = await ConfirmDialog.show(
+      context,
+      title: "Full recalculation required",
+      content: Text("The project must be recalculated in full. Do you want to proceed?"),
+      negativeButtonLabel: "CANCEL",
+      positiveButtonLabel: "RECALCULATE",
+      barrierDismissible: false,
+    ) ?? false;
+
+    return shouldRecalculate;
+  }
+
   Future<bool> unableToAppendCallback(List<MatchPointer> lastUsedMatches, List<MatchPointer> newMatches) async {
     var shouldRecalculate = await ConfirmDialog.show(
       context,
@@ -86,6 +100,7 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
       content: Text("The selected matches cannot be appended to the existing project. Do you want to start a full recalculation instead?"),
       negativeButtonLabel: "ADVANCE WITHOUT CALCULATING",
       positiveButtonLabel: "RECALCULATE",
+      barrierDismissible: false,
     ) ?? false;
 
     return shouldRecalculate;

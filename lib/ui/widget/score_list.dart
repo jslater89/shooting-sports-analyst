@@ -88,6 +88,10 @@ class _ScoreListState extends State<ScoreList> {
 
   @override
   Widget build(BuildContext context) {
+    if(widget.ratings != null && (ratingCache!.getSettings() == null || ratingCache!.getGroups() == null)) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     Widget keyWidget;
 
     int? displayMaxPoints = widget.maxPoints;
