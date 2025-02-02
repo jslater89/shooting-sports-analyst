@@ -9,27 +9,16 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
-import 'package:shooting_sports_analyst/data/database/match/match_query_element.dart';
-import 'package:shooting_sports_analyst/data/database/schema/match.dart';
-import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
-import 'package:shooting_sports_analyst/data/model.dart';
-import 'package:shooting_sports_analyst/data/results_file_parser.dart';
-import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
-import 'package:shooting_sports_analyst/data/source/source.dart';
-import 'package:shooting_sports_analyst/data/sport/model.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/logger.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/loading_dialog.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/match_source_chooser_dialog.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/url_entry_dialog.dart';
-import 'package:shooting_sports_analyst/util.dart';
 
 SSALogger _log = SSALogger("MatchDatabaseChooserDialog");
 
 /// Choose matches from the match database, or a list of matches.
-class MatchDatabaseChooserDialog extends StatefulWidget {
-  const MatchDatabaseChooserDialog({
+class MatchPointerChooserDialog extends StatefulWidget {
+  const MatchPointerChooserDialog({
     Key? key,
-    this.matches,
+    required this.matches,
     this.showStats = false,
     this.helpText,
     this.multiple = false,
@@ -38,32 +27,47 @@ class MatchDatabaseChooserDialog extends StatefulWidget {
 
   final bool showIds;
   final bool showStats;
-  final List<DbShootingMatch>? matches;
+  final List<MatchPointer> matches;
   final String? helpText;
   final bool multiple;
 
   @override
-  State<MatchDatabaseChooserDialog> createState() => _MatchDatabaseChooserDialogState();
+  State<MatchPointerChooserDialog> createState() => _MatchPointerChooserDialogState();
 
-  static Future<List<DbShootingMatch>?> show({
+  static Future<List<MatchPointer>?> showMultiple({
     required BuildContext context,
-    List<DbShootingMatch>? matches,
+    required List<MatchPointer> matches,
     bool showStats = false,
     String? helpText,
-    bool multiple = false,
     bool showIds = false,
   }) {
-    return showDialog(context: context, builder: (context) => MatchDatabaseChooserDialog(
+    return showDialog(context: context, builder: (context) => MatchPointerChooserDialog(
       showIds: showIds,
       showStats: showStats,
       matches: matches,
       helpText: helpText,
-      multiple: multiple,
+      multiple: true,
+    ), barrierDismissible: false);
+  }
+
+  static Future<MatchPointer?> showSingle({
+    required BuildContext context,
+    required List<MatchPointer> matches,
+    bool showStats = false,
+    String? helpText,
+    bool showIds = false,
+  }) {
+    return showDialog(context: context, builder: (context) => MatchPointerChooserDialog(
+      showIds: showIds,
+      showStats: showStats,
+      matches: matches,
+      helpText: helpText,
+      multiple: false,
     ), barrierDismissible: false);
   }
 }
 
-class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog> {
+class _MatchPointerChooserDialogState extends State<MatchPointerChooserDialog> {
   late AnalystDatabase db;
 
   int matchCacheCurrent = 0;
@@ -72,9 +76,9 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
   List<String> addedMatches = [];
   bool alphabeticSort = false;
 
-  List<DbShootingMatch> matches = [];
-  List<DbShootingMatch> searchedMatches = [];
-  Set<int> selectedMatches = {};
+  List<MatchPointer> matches = [];
+  List<MatchPointer> searchedMatches = [];
+  Set<MatchPointer> selectedMatches = {};
 
   TextEditingController searchController = TextEditingController();
 
@@ -96,41 +100,28 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
   }
 
   Future<void> _updateMatches() async {
-    if(widget.matches != null) {
-      setState(() {
-        matches = [...widget.matches!];
-      });
-      if(searchController.text.isNotEmpty) {
-        _applySearch();
-      }
-      else {
-        searchedMatches = [...matches];
-      }
-      if(alphabeticSort) {
-        matches.sort((a, b) => a.eventName.compareTo(b.eventName));
-      }
-      else {
-        matches.sort((a, b) => b.date.compareTo(a.date));
-      }
+    setState(() {
+      matches = [...widget.matches!];
+    });
+    if(searchController.text.isNotEmpty) {
+      _applySearch();
     }
     else {
-      matches = await db.queryMatches(
-        name: searchController.text.isNotEmpty ? searchController.text : null,
-        sort: alphabeticSort ? const NameSort() : const DateSort(),
-      );
       searchedMatches = [...matches];
     }
-
-    setState(() {
-
-    });
+    if(alphabeticSort) {
+      matches.sort((a, b) => a.name.compareTo(b.name));
+    }
+    else {
+      matches.sort((a, b) => b.date!.compareTo(a.date!));
+    }
   }
 
   void _applySearch() {
     if(widget.matches != null) {
       var search = searchController.text;
       searchedMatches = matches.where((m) =>
-          m.eventName.toLowerCase().contains(search.toLowerCase())).toList();
+          m.name.toLowerCase().contains(search.toLowerCase())).toList();
     }
     else {
       _updateMatches();
@@ -180,7 +171,7 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
                   child: Text("SELECT ALL"),
                   onPressed: () {
                     setState(() {
-                      selectedMatches.addAll(searchedMatches.map((m) => m.id));
+                      selectedMatches.addAll(searchedMatches);
                     });
                   },
                 ),
@@ -241,24 +232,6 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
                 controller: searchController,
               ),
             ),
-            if(widget.matches == null) IconButton(
-              icon: Icon(Icons.add),
-              onPressed: () async {
-                var match = await showDialog<ShootingMatch>(context: context, builder: (context) => MatchSourceChooserDialog(
-                  sources: MatchSourceRegistry().sources,
-                  descriptionText: "Enter a link to a Practiscore results page.",
-                  hintText: "https://practiscore.com/results/new/..."
-                ));
-
-                if(match != null) {
-                  var result = await db.saveMatch(match);
-                  if(result.isOk()) return;
-                  else {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.unwrapErr().message)));
-                  }
-                }
-              },
-            ),
             Tooltip(
               message: alphabeticSort ?
                   "Switch to date sort." :
@@ -281,7 +254,7 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
           child: ListView.separated(
             itemCount: searchedMatches.length,
             itemBuilder: (context, i) {
-              var name = searchedMatches[i].eventName;
+              var name = searchedMatches[i].name;
               if(name.isEmpty) name = "(match name not provided)";
               return ListTile(
                 title: Text(name, overflow: TextOverflow.ellipsis),
@@ -292,12 +265,12 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
                   if(widget.multiple) {
                     if(selectedMatches.contains(searchedMatches[i])) {
                       setState(() {
-                        selectedMatches.remove(searchedMatches[i].id);
+                        selectedMatches.remove(searchedMatches[i]);
                       });
                     }
                     else {
                       setState(() {
-                        selectedMatches.add(searchedMatches[i].id);
+                        selectedMatches.add(searchedMatches[i]);
                       });
                     }
                   }
@@ -305,48 +278,9 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
                     Navigator.of(context).pop(searchedMatches[i]);
                   }
                 },
-                leading: widget.multiple && selectedMatches.contains(searchedMatches[i].id) ? Icon(
+                leading: widget.multiple && selectedMatches.contains(searchedMatches[i]) ? Icon(
                   Icons.check,
                 ) : null,
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.refresh),
-                      onPressed: () async {
-                        var match = searchedMatches[i];
-                        var result = await LoadingDialog.show(
-                          context: context,
-                          waitOn: MatchSource.reloadMatch(match),
-                        );
-
-                        if(result.isOk()) {
-                          _log.i("Refreshed ${result.unwrap().name} (${result.unwrap().sourceIds})");
-                          if(mounted) setState(() {
-                            _updateMatches();
-                          });
-                        }
-                        else {
-                          _log.d("Unable to refresh match: ${result.unwrapErr()}");
-                        }
-                      },
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.delete),
-                      onPressed: () async {
-                        var match = searchedMatches[i];
-                        var deletedFuture = db.deleteMatch(match.id);
-
-                        var deleted = await showDialog<bool>(context: context, builder: (c) => LoadingDialog(title: "Deleting...", waitOn: deletedFuture));
-                        if(deleted ?? false) {
-                          setState(() {
-                            _updateMatches();
-                          });
-                        }
-                      },
-                    ),
-                  ],
-                ),
               );
             },
             separatorBuilder: (context, i) => Divider(),

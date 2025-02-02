@@ -290,6 +290,11 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   }
 
   @override
+  Future<DataSourceResult<List<MatchPointer>>> getMatchPointers() async {
+    return DataSourceResult.ok(matchPointers);
+  }
+
+  @override
   Future<DataSourceResult<DbShootingMatch>> getLatestMatch() async {
     var match = matchPointers.sorted((a, b) => b.date!.compareTo(a.date!)).firstOrNull;
     if(match == null) {

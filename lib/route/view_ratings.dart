@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttericon/rpg_awesome_icons.dart';
 import 'package:provider/provider.dart';
+import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
@@ -20,6 +21,7 @@ import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/legacy_loader/rating_history.dart';
 import 'package:shooting_sports_analyst/data/old_search_query_parser.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_statistics.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
@@ -28,9 +30,12 @@ import 'package:shooting_sports_analyst/ui/rater/member_number_correction_dialog
 import 'package:shooting_sports_analyst/ui/rater/member_number_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/prediction/prediction_view.dart';
 import 'package:shooting_sports_analyst/ui/rater/prediction/registration_parser.dart';
+import 'package:shooting_sports_analyst/ui/rater/rater_stats_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/rater_view.dart';
 import 'package:shooting_sports_analyst/ui/rater/rating_filter_dialog.dart';
+import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/associate_registrations.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/match_pointer_chooser_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/url_entry_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
@@ -470,12 +475,10 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
             icon: Icon(Icons.bar_chart),
             onPressed: () async {
               var tab = activeTabs[_tabController.index];
-              // TODO: restore
-              // var rater = _history.raterFor(_selectedMatch!, tab);
-              // var statistics = rater.getStatistics(ratings: _ratings);
-              // showDialog(context: context, builder: (context) {
-              //   return RaterStatsDialog(tab, statistics);
-              // });
+              var statistics = getRatingStatistics(sport: _sport, group: tab, ratings: _ratings);
+              showDialog(context: context, builder: (context) {
+                return RaterStatsDialog(sport: _sport, group: tab, statistics: statistics);
+              });
             },
           )
       ),
@@ -597,23 +600,15 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
 
       case _MenuEntry.viewResults:
-        // TODO: figure out how best to choose from DB when this loads again
-        // var indexEntry = await showDialog<MatchCacheIndexEntry>(
-        //     context: context,
-        //     builder: (context) => MatchCacheChooserDialog(matches: _history.allMatches)
-        // );
-        //
-        // if(indexEntry != null) {
-        //   var ratings = <RaterGroup, Rater>{};
-        //   for(var group in _history.groups) {
-        //     ratings[group] = _history.latestRaterFor(group);
-        //   }
-        //
-        //   var match = await MatchCache().getByIndex(indexEntry);
-        //   Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-        //     return ResultPage(canonicalMatch: ShootingMatch.fromOldMatch(match), allowWhatIf: false, ratings: ratings);
-        //   }));
-        // }
+        var pointers = await widget.dataSource.getMatchPointers();
+        var match = await MatchPointerChooserDialog.showSingle(context: context, matches: pointers.unwrap());
+        
+        if(match != null) {
+          var dbMatch = await match.getDbMatch(AnalystDatabase()).unwrap();
+          Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+            return ResultPage(canonicalMatch: dbMatch.hydrate(useCache: true).unwrap(), allowWhatIf: false, ratings: widget.dataSource);
+          }));
+        }
         break;
     }
   }

@@ -308,8 +308,9 @@ extension RatingProjectDatabase on AnalystDatabase {
     int offset = 0,
     DateTime? after,
     DateTime? before,
+    Order order = Order.descending,
   }) {
-    var query = _buildShooterEventQuery(rating, limit: limit, offset: offset, after: after, before: before);
+    var query = _buildShooterEventQuery(rating, limit: limit, offset: offset, after: after, before: before, order: order);
     return query.findAllSync();
   }
 

@@ -31,10 +31,16 @@ const uspsaSingleStack = Division(name: "Single Stack", shortName: "SS", alterna
 const uspsaRevolver = Division(name: "Revolver", shortName: "REV", alternateNames: ["REVO"]);
 const uspsaLimited10 = Division(name: "Limited 10", shortName: "L10", alternateNames: ["LIM10", "LTD10", "limited10"]);
 
-const uspsaGM = Classification(index: 0, name: "Grandmaster", shortName: "GM", alternateNames: ["G"]);
+const uspsaGM = Classification(
+  index: 0,
+  name: "Grandmaster",
+  shortName: "GM",
+  alternateNames: ["G"],
+);
 const uspsaM = Classification(index: 1, name: "Master", shortName: "M");
 const uspsaA = Classification(index: 2, name: "A", shortName: "A");
 const uspsaB = Classification(index: 3, name: "B", shortName: "B");
+
 const uspsaC = Classification(index: 4, name: "C", shortName: "C");
 const uspsaD = Classification(index: 5, name: "D", shortName: "D");
 const uspsaU = Classification(index: 6, name: "Unclassified", shortName: "U", fallback: true);

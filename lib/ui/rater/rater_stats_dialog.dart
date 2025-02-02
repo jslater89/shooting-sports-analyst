@@ -10,16 +10,17 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_charts/flutter_charts.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
-import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_statistics.dart';
+import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/box_and_whisker.dart';
 
 var _log = SSALogger("RaterStatsDialog");
 
 class RaterStatsDialog extends StatefulWidget {
-  const RaterStatsDialog(this.group, this.statistics, {Key? key}) : super(key: key);
+  const RaterStatsDialog({required this.sport, required this.group, required this.statistics, Key? key}) : super(key: key);
 
+  final Sport sport;
   final RatingGroup group;
   final RaterStatistics statistics;
 
@@ -43,16 +44,6 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
     super.initState();
 
     sortedYears = widget.statistics.yearOfEntryHistogram.keys.sorted((a, b) => a.compareTo(b));
-    _log.i("For rater group ${widget.group.uiLabel}:");
-    int first = sortedYears.first;
-    for(var y in sortedYears) {
-      if(y == first) {
-        _log.i("\t$y or before:\t${widget.statistics.yearOfEntryHistogram[y]!} shooters");
-      }
-      else {
-        _log.i("\t$y:\t\t\t${widget.statistics.yearOfEntryHistogram[y]!} shooters");
-      }
-    }
   }
 
   @override
@@ -125,20 +116,8 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
       if(classStats) ...[
         classKeyRow(context),
         Divider(height: 2, thickness: 1.5),
-        rowForClass(context, Classification.GM),
-        Divider(height: 2, thickness: 1),
-        rowForClass(context, Classification.M),
-        Divider(height: 2, thickness: 1),
-        rowForClass(context, Classification.A),
-        Divider(height: 2, thickness: 1),
-        rowForClass(context, Classification.B),
-        Divider(height: 2, thickness: 1),
-        rowForClass(context, Classification.C),
-        Divider(height: 2, thickness: 1),
-        rowForClass(context, Classification.D),
-        Divider(height: 2, thickness: 1),
-        rowForClass(context, Classification.U),
-        Divider(height: 2, thickness: 1),
+        for(var c in widget.sport.classifications.values)
+          ...[rowForClass(context, c), Divider(height: 2, thickness: 1)],
       ],
       if(!classStats) ...[
         entryDateKeyRow(context),
@@ -241,16 +220,14 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
     double maxOverall = double.negativeInfinity;
     double minOverall = double.infinity;
 
-    for(var cls in Classification.values.reversed) {
-      if(cls == Classification.unknown) continue;
-
+    for(var cls in widget.sport.classifications.values) {
       var ratings = widget.statistics.ratingsByClass[cls]!;
       var len = ratings.length;
 
       if(ratings.first < minOverall) minOverall = ratings.first;
       if(ratings.last > maxOverall) maxOverall = ratings.last;
 
-      tooltips[cls] = "${cls.name}:\n" +
+      tooltips[cls] = "${cls.displayName}:\n" +
         "Quartile size: ${(len * 0.25).floor()}\n" +
         "Min: ${ratings.first.round()}\n" +
         "Q1: ${ratings[(len * .25).floor()].round()}\n" +
@@ -293,11 +270,11 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(maxOverall.round().toString(), style: Theme.of(context).textTheme.caption!),
-                    Text(threeQuarters.round().toString(), style: Theme.of(context).textTheme.caption!),
-                    Text(average.round().toString(), style: Theme.of(context).textTheme.caption!),
-                    Text(oneQuarter.round().toString(), style: Theme.of(context).textTheme.caption!),
-                    Text(minOverall.round().toString(), style: Theme.of(context).textTheme.caption!),
+                    Text(maxOverall.round().toString(), style: Theme.of(context).textTheme.bodySmall!),
+                    Text(threeQuarters.round().toString(), style: Theme.of(context).textTheme.bodySmall!),
+                    Text(average.round().toString(), style: Theme.of(context).textTheme.bodySmall!),
+                    Text(oneQuarter.round().toString(), style: Theme.of(context).textTheme.bodySmall!),
+                    Text(minOverall.round().toString(), style: Theme.of(context).textTheme.bodySmall!),
                   ],
                 ),
               ),
@@ -318,7 +295,7 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
                     ),
                   ),
                 ),
-                Text(cls.displayString()),
+                Text(cls.shortDisplayName),
               ],
             ),
           );
@@ -354,9 +331,7 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
     var keys = widget.statistics.histogram.keys.toList();
     keys.sort();
 
-    for(var classification in Classification.values /*.reversed */) {
-      if(classification == Classification.unknown) continue;
-
+    for(var classification in widget.sport.classifications.values) {
       var classHist = widget.statistics.histogramsByClass[classification]!;
 
       List<double> data = [];
@@ -364,7 +339,7 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
         data.add(classHist[i]?.toDouble() ?? 0.0);
       }
 
-      legends.add(classification.name);
+      legends.add(classification.shortDisplayName);
       series.add(data);
     }
 
@@ -378,9 +353,8 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
       xUserLabels: labels,
       dataRowsLegends: legends,
       chartOptions: chartOptions,
-      dataRowsColors: Classification.values
+      dataRowsColors: widget.sport.classifications.values
           //.reversed
-          .where((c) => c != Classification.unknown)
           .map((c) => c.color
       ).toList(),
     );
@@ -400,23 +374,22 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
 
 extension _ChartColor on Classification {
   Color get color {
-    switch(this) {
-
-      case Classification.GM:
+    switch(this.name) {
+      case "Grandmaster":
         return Colors.red;
-      case Classification.M:
+      case "Master":
         return Colors.orange;
-      case Classification.A:
+      case "A":
         return Colors.yellow;
-      case Classification.B:
+      case "B":
         return Colors.green;
-      case Classification.C:
+      case "C":
         return Colors.blue;
-      case Classification.D:
+      case "D":
         return Color.fromARGB(0xff, 0x09, 0x1f, 0x92);
-      case Classification.U:
+      case "Unclassified":
         return Colors.deepPurple;
-      case Classification.unknown:
+      default:
         return Colors.deepPurple;
     }
   }

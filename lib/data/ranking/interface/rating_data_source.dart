@@ -51,6 +51,7 @@ abstract interface class RatingDataSource {
   Future<DataSourceResult<List<RatingGroup>>> getGroups();
   Future<DataSourceResult<RatingGroup?>> groupForDivision(Division? division);
   Future<DataSourceResult<List<int>>> getMatchDatabaseIds();
+  Future<DataSourceResult<List<MatchPointer>>> getMatchPointers();
   Future<DataSourceResult<List<String>>> getMatchSourceIds();
   Future<DataSourceResult<DbShootingMatch>> getLatestMatch();
 
