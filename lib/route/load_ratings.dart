@@ -58,6 +58,7 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
     RatingProjectLoaderHost host = RatingProjectLoaderHost(
       progressCallback: callback,
       deduplicationCallback: deduplicationCallback,
+      unableToAppendCallback: unableToAppendCallback,
     );
 
     loader = RatingProjectLoader(widget.project, host);
@@ -76,6 +77,18 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
       _log.e(error.message);
       widget.onError(error);
     }
+  }
+
+  Future<bool> unableToAppendCallback(List<MatchPointer> lastUsedMatches, List<MatchPointer> newMatches) async {
+    var shouldRecalculate = await ConfirmDialog.show(
+      context,
+      title: "Unable to append",
+      content: Text("The selected matches cannot be appended to the existing project. Do you want to start a full recalculation instead?"),
+      negativeButtonLabel: "ADVANCE WITHOUT CALCULATING",
+      positiveButtonLabel: "RECALCULATE",
+    ) ?? false;
+
+    return shouldRecalculate;
   }
 
   Future<Result<List<DeduplicationAction>, DeduplicationError>> deduplicationCallback(RatingGroup group,List<DeduplicationCollision> deduplicationResult) async {

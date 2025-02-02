@@ -103,6 +103,8 @@ typedef RatingProjectLoaderCallback = Future<void> Function({
 });
 typedef RatingProjectLoaderDeduplicationCallback = Future<Result<List<DeduplicationAction>, DeduplicationError>> Function(RatingGroup group, List<DeduplicationCollision> deduplicationResult);
 
+typedef RatingProjectLoaderUnableToAppendCallback = Future<bool> Function(List<MatchPointer> lastUsedMatches, List<MatchPointer> newMatches);
+
 /// RatingProjectLoaderHost contains a number of callbacks that the RatingProjectLoader
 /// will call as it progresses, both to update the UI and to allow for user interaction
 /// in cases where it is needed.
@@ -120,7 +122,12 @@ class RatingProjectLoaderHost {
   /// Result.err if project loading should stop.
   RatingProjectLoaderDeduplicationCallback deduplicationCallback;
 
-  RatingProjectLoaderHost({required this.progressCallback, required this.deduplicationCallback});
+  /// A callback called if the user requested to add new matches without a full recalculation, but they
+  /// cannot be appended. The callback should return true if the project should be recalculated anyway,
+  /// or false if the loader should return 'complete' without adding any matches.
+  RatingProjectLoaderUnableToAppendCallback unableToAppendCallback;
+
+  RatingProjectLoaderHost({required this.progressCallback, required this.deduplicationCallback, required this.unableToAppendCallback});
 }
 
 // TODO (a big one): track ratings and events added during an 'append' calculation
@@ -204,6 +211,17 @@ class RatingProjectLoader {
       host.progressCallback(progress: 0, total: 0, state: LoadingState.done);
       timings.add(TimingType.wallTime, DateTime.now().difference(wallStart).inMicroseconds);
       return Result.ok(null);
+    }
+
+    if(!canAppend && !fullRecalc) {
+      Timings().add(TimingType.wallTime, DateTime.now().difference(wallStart).inMicroseconds);
+      var recalculate = await host.unableToAppendCallback(lastUsed, matchesToAdd);
+      wallStart = DateTime.now();
+      if(!recalculate) {
+        _log.i("User canceled calculation, returning OK");
+        host.progressCallback(progress: 0, total: 0, state: LoadingState.done);
+        return Result.ok(null);
+      }
     }
 
     if(!canAppend) {
@@ -388,7 +406,9 @@ class RatingProjectLoader {
         conflicts.removeWhere((c) => c.causes.length == 1 && c.causes.first is FixedInSettings);
 
         if(conflicts.length > 0) {
+          Timings().add(TimingType.wallTime, DateTime.now().difference(wallStart).inMicroseconds);
           var userDedupResult = await host.deduplicationCallback(group, conflicts);
+          wallStart = DateTime.now();
           if(userDedupResult.isErr()) {
             return DeduplicationError.result(userDedupResult.unwrapErr().message);
           }
@@ -790,6 +810,10 @@ class RatingProjectLoader {
       // Apply data corrections, checking each subsequent target for corrections where
       // it is the source, until we find no more corrections.
       var name = ShooterDeduplicator.processName(s);
+
+      if((s.division!.name == "Carry Optics" && name == "davidphillips") || (name == "jourydiana" && processed.contains("11151"))) {
+        print("break");
+      }
 
       Set<String> invalidMemberNumbers = {};
       Set<String> previouslyVisitedNumbers = {processed};
