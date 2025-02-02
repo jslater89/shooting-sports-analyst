@@ -71,8 +71,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   }
 
   String _divisionName(RatingEvent e) {
-    var matchEntry = e.match.shooters.firstWhereOrNull((s) => s.entryId == e.wrappedEvent.entryId);
-    return matchEntry?.division?.displayName ?? "UNK";
+    return e.entry.division?.displayName ?? "UNK";
   }
 
   List<Widget> _buildEventLines() {
@@ -130,8 +129,8 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
 
     for(var event in ratingEvents) {
       content +=
-          "${(event.match.date ?? DateTime(0,0,0)).toString()}"
-          "${event.match.name ?? "(unnamed match)"}," +
+          "${(event.match.date).toString()}"
+          "${event.match.name}," +
           "${event.stage?.stageId ?? ""}," +
           "${event.stage?.name ?? ""}," +
           "${event.stage?.minRounds ?? ""}," +
@@ -169,7 +168,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         padding: const EdgeInsets.symmetric(horizontal: 12.0),
         child: Row(
           children: [
-            Expanded(flex: 4, child: Text(entry.match.name ?? "(unnamed match)", style: Theme.of(context).textTheme.bodyMedium)),
+            Expanded(flex: 4, child: Text(entry.match.name, style: Theme.of(context).textTheme.bodyMedium)),
             Expanded(flex: 1, child: Text("${entry.place}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
             Expanded(flex: 1, child: Text("${entry.competitors}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
             Expanded(flex: 1, child: Text(entry.percentFinish, style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
@@ -360,7 +359,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         colorFn: (e, __) {
           if(!widget.showDivisions) return charts.MaterialPalette.blue.shadeDefault;
           
-          var division = e.baseEvent.match.shooters.firstWhereOrNull((s) => s.entryId == e.baseEvent.wrappedEvent.entryId)?.division?.displayName;
+          var division = e.baseEvent.entry.division?.displayName;
           if(division == null) {
             return _colorOptions.first;
           }
@@ -469,18 +468,16 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   }
 
   void _launchScoreView(RatingEvent e) {
-    var newMatch = e.match;
-    var matchEntry = newMatch.shooters.firstWhereOrNull((s) => s.entryId == e.wrappedEvent.entryId);
-    var division = matchEntry?.division ?? newMatch.sport.divisions.fallback();
-    var filters = FilterSet(newMatch.sport, empty: true)
+    var division = e.entry.division;
+    var filters = FilterSet(e.match.sport, empty: true)
       ..mode = FilterMode.or;
     if(division != null) {
-      filters.divisions = FilterSet.divisionListToMap(newMatch.sport, [division]);
+      filters.divisions = FilterSet.divisionListToMap(e.match.sport, [division]);
     }
     Navigator.of(context).push(MaterialPageRoute(builder: (context) {
       return ResultPage(
-        canonicalMatch: newMatch,
-        initialStage: newMatch.lookupStageByName(e.stage?.name),
+        canonicalMatch: e.match,
+        initialStage: e.match.lookupStageByName(e.stage?.name),
         initialFilters: filters,
         allowWhatIf: false,
         ratings: widget.ratings,

@@ -11,6 +11,7 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 
 class RatingChange {
   final Map<String, double> change;
@@ -75,11 +76,32 @@ abstract class RatingEvent implements IRatingEvent {
   }
   int get stageNumber => wrappedEvent.stageNumber;
 
+  MatchEntry? _cachedEntry;
+  MatchEntry get entry {
+    if(_cachedEntry == null) {
+      _cachedEntry = match.shooters.firstWhere((s) => s.entryId == wrappedEvent.entryId);
+    }
+    return _cachedEntry!;
+  }
+
   bool get byStage => wrappedEvent.stageNumber >= 0;
 
-  // TODO: calculate/cache
-  // will probably need byStage in here too
-  late RelativeScore score;
+  RelativeScore? _cachedScore;
+  RelativeScore get score {
+    if(_cachedScore == null) {
+      if(!wrappedEvent.owner.isLoaded) {
+        wrappedEvent.owner.loadSync();
+      }
+      var owner = wrappedEvent.owner.value!;
+      if(!owner.group.isLoaded) {
+        owner.group.loadSync();
+      }
+      var filters = owner.group.value!.filters;
+      var scores = match.getScoresFromFilters(filters);
+      _cachedScore = scores[entry];
+    }
+    return _cachedScore!;
+  }
   RelativeStageScore get scoreForStage {
     if(byStage) return score as RelativeStageScore;
     else throw StateError("attempted to get stage score for match event");
@@ -107,5 +129,7 @@ abstract class RatingEvent implements IRatingEvent {
 
   RatingEvent.copy(RatingEvent other) :
         this.wrappedEvent = other.wrappedEvent.copy(),
-        this.score = other.score;
+        this._cachedScore = other._cachedScore,
+        this._cachedEntry = other._cachedEntry,
+        this._cachedMatch = other._cachedMatch;
 }

@@ -5,6 +5,7 @@
  */
 
 
+import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rating_change.dart';
@@ -15,7 +16,7 @@ enum _DoubleKeys {
   sigma,
 }
 
-class OpenskillRating extends ShooterRating {
+class OpenskillRating extends ShooterRating<OpenskillRatingEvent> {
   @override
   double get rating => ordinal;
 
@@ -27,7 +28,7 @@ class OpenskillRating extends ShooterRating {
 
   double get ordinal => mu - 2*sigma;
 
-  List<RatingEvent> get ratingEvents {
+  List<OpenskillRatingEvent> get ratingEvents {
     if(!wrappedRating.events.isLoaded) {
       wrappedRating.events.loadSync();
     }
@@ -37,7 +38,7 @@ class OpenskillRating extends ShooterRating {
     }
     return events;
   }
-  List<RatingEvent> emptyRatingEvents = [];
+  List<OpenskillRatingEvent> emptyRatingEvents = [];
 
   OpenskillRating(MatchEntry shooter, double mu, double sigma, {required super.sport, required DateTime date}) :
       super(shooter, date: date, doubleDataElements: 2, intDataElements: 0) {
@@ -95,10 +96,16 @@ class OpenskillRating extends ShooterRating {
   }
 
   @override
-  List<RatingEvent> get combinedRatingEvents => []..addAll(ratingEvents)..addAll(emptyRatingEvents);
+  List<OpenskillRatingEvent> get combinedRatingEvents => []..addAll(ratingEvents)..addAll(emptyRatingEvents);
   
   @override
   void ratingEventsChanged() {
     // no-op
   }
+
+  @override
+  OpenskillRatingEvent wrapEvent(DbRatingEvent e) {
+    return OpenskillRatingEvent.wrap(e);
+  }
+
 }

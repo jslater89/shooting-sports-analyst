@@ -10,6 +10,7 @@ import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 // import 'package:shooting_sports_analyst/data/db/object/rating/elo/db_elo_rating.dart';
 import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
@@ -28,7 +29,7 @@ enum _DoubleKeys {
   longDirection
 }
 
-class EloShooterRating extends ShooterRating {
+class EloShooterRating extends ShooterRating<EloRatingEvent> {
   static late double errorScale;
 
   double get variance => wrappedRating.doubleData[_DoubleKeys.variance.index];
@@ -79,22 +80,13 @@ class EloShooterRating extends ShooterRating {
   }
 
   List<RatingEvent> eventsForWindow({int window = ShooterRating.baseTrendWindow, int offset = 0}) {
-    List<RatingEvent> events;
-    if((window + offset) >= ratingEvents.length) {
-      if(offset < (ratingEvents.length)) events = ratingEvents.sublist(0, ratingEvents.length - offset);
-      else events = ratingEvents;
-    }
-    else {
-      events = ratingEvents.sublist(ratingEvents.length - (window + offset), ratingEvents.length - offset);
-    }
-
-    return events;
+    return AnalystDatabase().getRatingEventsForSync(wrappedRating, limit: window, offset: offset).map((e) => wrapEvent(e)).toList();
   }
 
   double meanSquaredErrorWithWindow({int window = ShooterRating.baseTrendWindow, int offset = 0}) {
     // With default settings, this yields a starting normalized error of 400,
     // which more or less jives with observation.
-    if(ratingEvents.isEmpty) return 0.5;
+    if(length == 0) return 0.5;
 
     var events = eventsForWindow(window: window, offset: offset);
 
@@ -139,7 +131,7 @@ class EloShooterRating extends ShooterRating {
   }
 
   double get normalizedError {
-    return normalizedErrorWithWindow(window: ratingEvents.length);
+    return normalizedErrorWithWindow(window: length);
   }
 
   double normalizedErrorWithWindow({int window = ShooterRating.baseTrendWindow, int offset = 0}) {
@@ -162,7 +154,7 @@ class EloShooterRating extends ShooterRating {
   double get decayingAverageRatingChangeError => decayingAverageRatingChangeErrorWithWindow(window: (ShooterRating.baseTrendWindow * 1.5).round());
 
   double averageRatingChangeErrorWithWindow({int window = ShooterRating.baseTrendWindow, int offset = 0}) {
-    if (ratingEvents.isEmpty) return 0.0;
+    if (length == 0) return 0.0;
     var events = eventsForWindow(window: window, offset: offset);
     return sqrt(events.map((e) => e.ratingChange * e.ratingChange).average);
   }
@@ -173,14 +165,14 @@ class EloShooterRating extends ShooterRating {
     int offset = 0,
     double decayAfterFull = 0.9,
   }) {
-    if (ratingEvents.isEmpty) return 0.0;
+    if (length == 0) return 0.0;
     var events = eventsForWindow(window: window, offset: offset);
     
     double currentDecay = 1.0;
     double weightedSum = 0.0;
     double totalWeight = 0.0;
     
-    var reversed = events.reversed.toList();
+    var reversed = events; // ordered desc from DB
     for (int i = 0; i < reversed.length; i++) {
       var e = reversed[i] as EloRatingEvent;
       if (i >= fullEffect) {
@@ -221,37 +213,11 @@ class EloShooterRating extends ShooterRating {
     // return sqrt(variance);
   }
 
-  List<RatingEvent>? _ratingEvents = null;
-
-  List<RatingEvent> get ratingEvents {
-    if(_ratingEvents == null) {
-      var events = AnalystDatabase().getRatingEventsForSync(wrappedRating);
-      _ratingEvents = events.map((e) => EloRatingEvent.wrap(e)).toList();
-    }
-
-    List<EloRatingEvent> newRatingEvents = [];
-    if(wrappedRating.newRatingEvents.isNotEmpty) {
-      var unpersistedEvents = wrappedRating.newRatingEvents.map((e) => EloRatingEvent.wrap(e));
-      newRatingEvents.addAll(unpersistedEvents);
-    }
-
-    var out = [..._ratingEvents!, ...newRatingEvents];
-    return out;
-  }
-
-  List<RatingEvent> emptyRatingEvents = [];
-
-  void clearRatingEventCache() {
-    _ratingEvents = null;
-  }
-
-  void ratingEventsChanged() {
-    clearRatingEventCache();
-  }
+  List<EloRatingEvent> emptyRatingEvents = [];
 
   // TODO: combine this in more intelligent fashion, preserving order where possible
   // TODO: ... like with database queries, maybe
-  List<RatingEvent> get combinedRatingEvents => []..addAll(ratingEvents)..addAll(emptyRatingEvents);
+  List<EloRatingEvent> get combinedRatingEvents => []..addAll(ratingEvents)..addAll(emptyRatingEvents);
 
   EloShooterRating(MatchEntry shooter, double initialRating, {required super.sport, required DateTime date}) :
       super(shooter,
@@ -342,26 +308,31 @@ class EloShooterRating extends ShooterRating {
   /// This is used in copy functions, and _does not_ save the link!
   /// The caller must persist it.
   void replaceAllRatingEvents(List<EloRatingEvent> events) {
-    clearRatingEventCache();
     wrappedRating.events.clear();
     wrappedRating.events.addAll(events.map((e) => e.wrappedEvent));
+    super.ratingEventsChanged();
   }
 
   void copyRatingFrom(EloShooterRating other) {
     super.copyRatingFrom(other);
     this.rating = other.rating;
     this.variance = other.variance;
-    this.replaceAllRatingEvents(other.ratingEvents.map((e) => EloRatingEvent.copy(e as EloRatingEvent)).toList());
+    this.replaceAllRatingEvents(other.ratingEvents.map((e) => EloRatingEvent.copy(e)).toList());
   }
 
   EloShooterRating.copy(EloShooterRating other) :
         super.copy(other) {
-    this.replaceAllRatingEvents(other.ratingEvents.map((e) => EloRatingEvent.copy(e as EloRatingEvent)).toList());
+    this.replaceAllRatingEvents(other.ratingEvents.map((e) => EloRatingEvent.copy(e)).toList());
     this.variance = other.variance;
   }
 
   @override
   String toString() {
     return "${getName(suffixes: false)} $memberNumber ${rating.round()} ($hashCode)";
+  }
+
+  @override
+  EloRatingEvent wrapEvent(DbRatingEvent e) {
+    return EloRatingEvent.wrap(e);
   }
 }

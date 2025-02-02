@@ -313,6 +313,21 @@ extension RatingProjectDatabase on AnalystDatabase {
     return query.findAllSync();
   }
 
+  List<DbRatingEvent> getRatingEventsByMatchIdsSync(DbShooterRating rating, {required List<String> matchIds}) {
+    if(matchIds.isEmpty) return [];
+
+    var query = rating.events.filter();
+    QueryBuilder<DbRatingEvent, DbRatingEvent, QAfterFilterCondition> finishedQuery;
+    if(matchIds.length > 1) {
+      finishedQuery = query.anyOf(matchIds, (q, id) => q.matchIdEqualTo(id));
+    }
+    else {
+      finishedQuery = query.matchIdEqualTo(matchIds.first);
+    }
+    
+    return finishedQuery.findAllSync();
+  }
+
   List<List<double>> getRatingEventDoubleDataForSync(DbShooterRating rating, {
     int limit = 0,
     int offset = 0,

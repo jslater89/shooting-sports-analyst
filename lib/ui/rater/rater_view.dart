@@ -161,7 +161,7 @@ class _RaterViewState extends State<RaterView> {
       hiddenShooters.add(ShooterDeduplicator.numberProcessor(widget.sport)(widget.hiddenShooters[i]));
     }
 
-    var sortedRatings = uniqueRatings.where((e) => e.ratingEvents.length >= widget.minRatings);
+    var sortedRatings = uniqueRatings.where((e) => e.length >= widget.minRatings);
     // var sortedRatings = widget.rater.uniqueShooters.where((e) => e.ratingEvents.length > widget.minRatings).sorted((a, b) {
     //   var bRating = b.averageRating(window: _ratingWindow);
     //   var aRating = a.averageRating(window: _ratingWindow);
@@ -352,7 +352,7 @@ extension SortFunctions on RatingSortMode {
           };
         }
       case RatingSortMode.stages:
-        return (a, b) => b.ratingEvents.length.compareTo(a.ratingEvents.length);
+        return (a, b) => b.length.compareTo(a.length);
       case RatingSortMode.firstName:
         return (a, b) => a.firstName.compareTo(b.firstName);
       case RatingSortMode.lastName:

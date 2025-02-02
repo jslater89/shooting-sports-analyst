@@ -166,6 +166,9 @@ class RatingProjectLoader {
     db.clearLoadedShooterRatingCache();
     timings.reset();
 
+    // Convert DB fixed-length list to editable list
+    project.automaticNumberMappings = [...project.automaticNumberMappings];
+
     var start = DateTime.now();
     await host.progressCallback(progress: -1, total: -1, state: LoadingState.readingMatches);
 
@@ -230,8 +233,7 @@ class RatingProjectLoader {
         return Result.err(CanceledError());
       }
     }
-
-    if(!canAppend && !fullRecalc) {
+    else if(!canAppend && !fullRecalc) {
       Timings().add(TimingType.wallTime, DateTime.now().difference(wallStart).inMicroseconds);
       var recalculate = await host.unableToAppendCallback(lastUsed, matchesToAdd);
       wallStart = DateTime.now();
@@ -346,8 +348,8 @@ class RatingProjectLoader {
     Map<String, bool> memberNumbersSeen = {};
     List<DbShooterRating> newRatings = [];
 
-    var subTotal = project.groups.length * matches.length;
-    var subProgress = startingProgress;
+    var subTotal = matches.length;
+    var subProgress = 0;
 
     for (var match in matches) {
       // 1. For each match, add shooters.

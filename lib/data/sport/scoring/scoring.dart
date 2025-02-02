@@ -943,9 +943,26 @@ class RawScore {
     return 0;
   }
   
-  int get points => _scoreMaps.points;
-  int get penaltyCount => penaltyEvents.values.sum;
+  int? _cachedPoints;
+  int? _cachedPenaltyCount;
+  int get points {
+    if(_cachedPoints == null) {
+      _cachedPoints = _scoreMaps.points;
+    }
+    return _cachedPoints!;
+  }
+  int get penaltyCount { 
+    if(_cachedPenaltyCount == null) {
+      _cachedPenaltyCount = penaltyEvents.values.sum;
+    }
+    return _cachedPenaltyCount!;  
+  }
   double get finalTime => rawTime + _scoreMaps.timeAdjustment;
+
+  void clearCache() {
+    _cachedPoints = null;
+    _cachedPenaltyCount = null;
+  }
 
   /// Get the sum of points for this score.
   /// 

@@ -8,6 +8,7 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rating_change.dart';
@@ -23,7 +24,7 @@ enum _IntKeys {
   matchesToCount,
 }
 
-class PointsRating extends ShooterRating {
+class PointsRating extends ShooterRating<PointsRatingEvent> {
   double get participationBonus => wrappedRating.doubleData[_DoubleKeys.participationBonus.index];
   set participationBonus(double v) => wrappedRating.doubleData[_DoubleKeys.participationBonus.index] = v;
 
@@ -33,10 +34,11 @@ class PointsRating extends ShooterRating {
   @override
   double get rating => wrappedRating.rating + participationBonus * length;
 
-  List<RatingEvent> get ratingEvents {
+  List<PointsRatingEvent> get ratingEvents {
     if(!wrappedRating.events.isLoaded) {
       wrappedRating.events.loadSync();
     }
+
     var events = <PointsRatingEvent>[];
     for(var e in wrappedRating.events) {
       events.add(PointsRatingEvent.wrap(e));
@@ -51,7 +53,7 @@ class PointsRating extends ShooterRating {
   void updateFromEvents(List<RatingEvent> events) {
     for(var event in events) {
       if(event.ratingChange.isNaN) {
-        this.emptyRatingEvents.add(event);
+        this.emptyRatingEvents.add(event as PointsRatingEvent);
       }
       else {
         this.events.add(event as PointsRatingEvent);
@@ -136,13 +138,20 @@ class PointsRating extends ShooterRating {
   };
 
   @override
-  List<RatingEvent> get combinedRatingEvents => []..addAll(ratingEvents)..addAll(emptyRatingEvents);
+  List<PointsRatingEvent> get combinedRatingEvents => []..addAll(ratingEvents)..addAll(emptyRatingEvents);
+
 
   @override
-  List<RatingEvent> emptyRatingEvents = [];
+  List<PointsRatingEvent> emptyRatingEvents = [];
   
+
   @override
   void ratingEventsChanged() {
     // no-op
+  }
+
+  @override
+  PointsRatingEvent wrapEvent(DbRatingEvent e) {
+    return PointsRatingEvent.wrap(e);
   }
 }

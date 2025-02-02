@@ -10,7 +10,6 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:intl/intl.dart';
-import 'package:normal/normal.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/gumbel.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
@@ -650,16 +649,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       var error = s.standardError;
 
       ShootingMatch? match;
-      double lastMatchChange = 0;
-      for(var event in s.ratingEvents.reversed) {
-        if(match == null) {
-          match = event.match;
-        }
-        else if(match != event.match) {
-          break;
-        }
-        lastMatchChange += event.ratingChange;
-      }
+      double lastMatchChange = s.lastMatchChange;
 
       csv += "${s.originalMemberNumber},";
       csv += "${s.lastClassification?.name ?? "?"},";
@@ -668,7 +658,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
           "${error.toStringAsFixed(2)},"
           "${trend.toStringAsFixed(2)},"
           "${s.direction.toStringAsFixed(2)},"
-          "${s.ratingEvents.length}\n";
+          "${s.length}\n";
     }
     return csv;
   }
