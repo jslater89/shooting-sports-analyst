@@ -33,9 +33,10 @@ class ConfirmDialog extends StatelessWidget {
     );
   }
 
-  static Future<bool?> show(BuildContext context, {String? title, Widget? content, String? positiveButtonLabel, String? negativeButtonLabel, double? width}) async {
+  static Future<bool?> show(BuildContext context, {String? title, Widget? content, String? positiveButtonLabel, String? negativeButtonLabel, double? width, bool barrierDismissible = true}) async {
     return showDialog<bool>(
       context: context,
+      barrierDismissible: barrierDismissible,
       builder: (context) => ConfirmDialog(title: title, content: content, positiveButtonLabel: positiveButtonLabel, negativeButtonLabel: negativeButtonLabel, width: width),
     );
   }

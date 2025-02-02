@@ -131,7 +131,7 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   ///
   /// When this differs from [matchesToUse], match addition or recalculation
   /// is required.
-  final List<MatchPointer> lastUsedMatches = [];
+  List<MatchPointer> lastUsedMatches = [];
 
   @ignore
   Map<String, dynamic> get jsonDecodedSettings => jsonDecode(encodedSettings);
@@ -236,7 +236,7 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
         eventCount += count;
       }
 
-      lastUsedMatches.clear();
+      lastUsedMatches = [];
       var count = await ratings.filter().deleteAll();
       await ratings.reset();
       _log.i("Cleared $count ratings and $eventCount events");

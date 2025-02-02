@@ -116,6 +116,7 @@ class EloShooterRating extends ShooterRating {
     List<double> dbRatingErrors = AnalystDatabase().getRatingEventDoubleDataForSync(
       wrappedRating,
       limit: dbWindow,
+      offset: offset,
       order: Order.descending,
     ).map((e) => EloRatingEvent.getErrorFromDoubleData(e)).toList();
 

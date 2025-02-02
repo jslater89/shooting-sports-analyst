@@ -331,7 +331,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     var size = MediaQuery.of(context).size;
 
     if(_series == null) {
-      _ratings = rating.ratingEvents.reversed.where((e) => e.newRating != 0).mapIndexed((i, e) {
+      _ratings = rating.ratingEvents.reversed.where((e) => e.newRating != 0 && e.ratingChange != 0).mapIndexed((i, e) {
         if(e.newRating < minRating) minRating = e.newRating;
         if(e.newRating > maxRating) maxRating = e.newRating;
 

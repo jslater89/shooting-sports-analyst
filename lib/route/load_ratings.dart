@@ -138,6 +138,7 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
             "may result in an inconsistent database state, and require a full recalculation."),
             negativeButtonLabel: "CONTINUE LOADING",
             positiveButtonLabel: "CANCEL LOADING",
+            barrierDismissible: false,
           );
 
           if(confirm ?? false) {

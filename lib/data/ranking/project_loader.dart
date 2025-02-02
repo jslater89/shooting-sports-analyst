@@ -623,8 +623,10 @@ class RatingProjectLoader {
         var fix = action as DataEntryFix;
         settings.memberNumberCorrections.add(fix.intoCorrection());
         
-        // If we enter e.g. FY115519, we also want to catch cases where the user enters A155519 or TY115519
+        // If we enter e.g. FY115519, we also want to catch cases where the user enters A155519 or TY115519,
+        // but we don't want to make a mapping that maps the same number to itself.
         var alternateForms = sport.shooterDeduplicator?.alternateForms(fix.sourceNumber) ?? [];
+        alternateForms.removeWhere((n) => n == fix.sourceNumber);
         for(var number in alternateForms) {
           var corrections = settings.memberNumberCorrections.getByName(fix.deduplicatorName);
           bool found = false;
@@ -797,13 +799,19 @@ class RatingProjectLoader {
         var corrections = _dataCorrections.getByInvalidNumber(processed);
         bool appliedCorrection = false;
         for(var correction in corrections) {
-          if(previouslyVisitedNumbers.contains(correction.correctedNumber)) {
-            dataEntryFixLoop = true;
-            break;
-          }
           if(correction.name == name) {
+            if(processed == correction.correctedNumber) {
+              // This is a no-op fix ("If johndoe enters A123456, use A123456"),
+              // which we should prompt the user to remove eventually, but for now,
+              // skip it.
+              break;
+            }
+            if(previouslyVisitedNumbers.contains(correction.correctedNumber)) {
+              dataEntryFixLoop = true;
+              break;
+            }
             invalidMemberNumbers.add(correction.invalidNumber);
-            s.removeKnownMemberNumbers([correction.invalidNumber]);
+            s.removeKnownMemberNumbers(_alternateForms(correction.invalidNumber));
             processed = correction.correctedNumber;
             previouslyVisitedNumbers.add(processed);
             appliedCorrection = true;
@@ -832,7 +840,7 @@ class RatingProjectLoader {
         s.memberNumber = processed;
 
         // Look for valid mappings (user first, then auto), and apply them if found.
-        var possibleNumbers = sport.shooterDeduplicator?.alternateForms(s.memberNumber) ?? [s.memberNumber];
+        var possibleNumbers = _alternateForms(s.memberNumber);
         String? mappingTarget;
         for(var number in possibleNumbers) {
           mappingTarget = settings.userMemberNumberMappings[number];
@@ -856,13 +864,19 @@ class RatingProjectLoader {
           var corrections = _dataCorrections.getByInvalidNumber(s.memberNumber);
           bool appliedCorrection = false;
           for(var correction in corrections) {
-            if(previouslyVisitedNumbers.contains(correction.correctedNumber)) {
-              dataEntryFixLoop = true;
+            if(processed == correction.correctedNumber) {
+              // This is a no-op fix ("If johndoe enters A123456, use A123456"),
+              // which we should prompt the user to remove eventually, but for now,
+              // skip it.
               break;
             }
             if(correction.name == name) {
+              if(previouslyVisitedNumbers.contains(correction.correctedNumber)) {
+                dataEntryFixLoop = true;
+                break;
+              }
               s.memberNumber = correction.correctedNumber;
-              s.removeKnownMemberNumbers([correction.invalidNumber]);
+              s.removeKnownMemberNumbers(_alternateForms(correction.invalidNumber));
               invalidMemberNumbers.add(correction.invalidNumber);
               previouslyVisitedNumbers.add(correction.correctedNumber);
               appliedCorrection = true;
@@ -1802,6 +1816,13 @@ class RatingProjectLoader {
     // if(mappedNum != null && mappedNum != num) {
     //   _memberNumbersEncountered.add(num);
     // }
+  }
+
+  List<String> _alternateForms(String num) {
+    if(sport.shooterDeduplicator != null) {
+      return sport.shooterDeduplicator!.alternateForms(num);
+    }
+    return [num];
   }
 }
 

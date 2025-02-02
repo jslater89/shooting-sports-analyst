@@ -1060,8 +1060,15 @@ class USPSADeduplicator extends ShooterDeduplicator {
   List<String> alternateForms(String number) {
     var type = classify(number);
     if(type == MemberNumberType.standard) {
+      // Is this a USPSA-issued foreign member number?
+      var pattern = RegExp(r"^TYF\d+|^FYF\d+|^F\d+");
       var numericComponent = number.replaceAll(RegExp(r"[^0-9]"), "");
-      return ["A$numericComponent", "TY$numericComponent", "FY$numericComponent"];
+      if(pattern.hasMatch(number)) {
+        return ["F$numericComponent", "TYF$numericComponent", "FYF$numericComponent"];
+      }
+      else {
+        return ["A$numericComponent", "TY$numericComponent", "FY$numericComponent"];
+      }
     }
     else if(type == MemberNumberType.international) {
       return [number, "INTL$number"];

@@ -88,6 +88,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
   bool matchCacheReady = false;
   List<MatchPointer> projectMatches = [];
+  List<MatchPointer> lastUsedMatches = [];
   Map<MatchPointer, bool> ongoingMatches = {};
   MatchListFilters? filters = MatchListFilters();
   List<MatchPointer>? filteredMatches;
@@ -185,6 +186,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     _loadedProject = project;
     sport = project.sport;
     projectMatches = [...project.matchPointers];
+    lastUsedMatches = [...project.lastUsedMatches];
     // groups getter loads dbGroups if not loaded
     _groups = [...project.groups];
     setState(() {
@@ -507,7 +509,10 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                         children: [
                           Row(
                             children: [
-                              Text("Matches (${filteredMatches?.length ?? projectMatches.length})", style: Theme.of(context).textTheme.labelLarge),
+                              Tooltip(
+                                message: "Used last calculation: ${lastUsedMatches.length}",
+                                child: Text("Matches (${filteredMatches?.length ?? projectMatches.length})", style: Theme.of(context).textTheme.labelLarge)
+                              ),
                               Tooltip(
                                 message: "Add match links parsed from PractiScore page source.",
                                 child: IconButton(
