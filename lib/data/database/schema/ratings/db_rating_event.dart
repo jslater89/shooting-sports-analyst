@@ -69,6 +69,7 @@ class DbRatingEvent implements IRatingEvent {
   /// Integer data used by specific kinds of rating events.
   List<int> intData;
 
+  // Lazily load info as much as possible, because we only care about it for display.
   @ignore
   Map<String, List<dynamic>>? _info;
   @ignore
@@ -113,7 +114,7 @@ class DbRatingEvent implements IRatingEvent {
   }) :
     intData = List.filled(intDataElements, 0, growable: true),
     doubleData = List.filled(doubleDataElements, 0.0, growable: true),
-    _info = info,
+    _info = info.isNotEmpty ? info : null,
     _infoAsJson = jsonEncode(info);
 
   DbRatingEvent copy() {

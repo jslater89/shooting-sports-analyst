@@ -96,5 +96,6 @@ class EloRatingEvent extends RatingEvent {
     effectiveK = change.change[MultiplayerPercentEloRater.effectiveKKey]!;
     if(MultiplayerPercentEloRater.doBackRating) backRatingError = change.change[MultiplayerPercentEloRater.backRatingErrorKey]!;
     extraData = change.extraData;
+    info = change.info;
   }
 }

@@ -381,11 +381,8 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
         effectiveKKey: effectiveK * (params.usedScores),
         backRatingErrorKey: backRatingErr,
       },
-      // extraData: {
-      //   matchScoreKey: aMatchScore,
-      // },
-      info: info),
-    };
+      info: info
+    )};
   }
 
   _ScoreParameters _calculateScoreParams({

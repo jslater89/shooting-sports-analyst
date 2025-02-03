@@ -1567,7 +1567,6 @@ class RatingProjectLoader {
         if (!changes[rating]!.containsKey(stageScore)) {
           changes[rating]![stageScore] = ratingSystem.newEvent(rating: rating, match: match, stage: stage, score: stageScore, matchScore: matchScore);
           changes[rating]![stageScore]!.apply(update[rating]!);
-          changes[rating]![stageScore]!.info = update[rating]!.info;
         }
       }
     }
@@ -1787,7 +1786,6 @@ class RatingProjectLoader {
         changes[rating.wrappedRating]![stageScore] =
             ratingSystem.newEvent(rating: rating, match: match, stage: stage, score: stageScore, matchScore: score);
         changes[rating.wrappedRating]![stageScore]!.apply(update[rating]!);
-        changes[rating.wrappedRating]![stageScore]!.info = update[rating]!.info;
       }
       if(Timings.enabled) timings.add(TimingType.changeMap, DateTime.now().difference(start).inMicroseconds);
     }
@@ -1813,7 +1811,7 @@ class RatingProjectLoader {
           info: update[rating]!.info,
         );
 
-        changes[rating]![score.total]!.apply(update[rating]!);
+        changes[rating]![score]!.apply(update[rating]!);
       }
     }
   }

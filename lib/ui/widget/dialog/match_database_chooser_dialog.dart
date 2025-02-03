@@ -198,8 +198,15 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
                 ),
                 if(widget.multiple) TextButton(
                   child: Text("CONFIRM"),
-                  onPressed: () {
-                    Navigator.of(context).pop(selectedMatches.toList());
+                  onPressed: () async {
+                    List<DbShootingMatch> selected = [];
+                    for(var id in selectedMatches) {
+                      var match = await AnalystDatabase().getMatch(id);
+                      if(match != null) {
+                        selected.add(match);
+                      }
+                    }
+                    Navigator.of(context).pop(selected);
                   },
                 )
               ],
@@ -290,7 +297,7 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
                 visualDensity: VisualDensity(vertical: -4),
                 onTap: () {
                   if(widget.multiple) {
-                    if(selectedMatches.contains(searchedMatches[i])) {
+                    if(selectedMatches.contains(searchedMatches[i].id)) {
                       setState(() {
                         selectedMatches.remove(searchedMatches[i].id);
                       });
