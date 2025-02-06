@@ -233,7 +233,7 @@ class _UspsaRatingGroupsProvider implements RatingGroupsProvider {
 }
 
 final _builtinRaterGroups = <RatingGroup>[
-  RatingGroup.create(
+  RatingGroup.newBuiltIn(
     uuid: "uspsa-open",
     sportName: uspsaName,
     name: "Open",
@@ -243,7 +243,7 @@ final _builtinRaterGroups = <RatingGroup>[
       uspsaOpen.name,
     ]
   ),
-  RatingGroup.create(
+  RatingGroup.newBuiltIn(
     uuid: "uspsa-limited",
     sportName: uspsaName,
     name: "Limited",
@@ -253,7 +253,7 @@ final _builtinRaterGroups = <RatingGroup>[
       uspsaLimited.name,
     ],
   ),
-  RatingGroup.create(
+  RatingGroup.newBuiltIn(
     uuid: "uspsa-pcc",
     sportName: uspsaName,
     name: "PCC",
@@ -262,7 +262,7 @@ final _builtinRaterGroups = <RatingGroup>[
     ],
     sortOrder: 2,
   ),
-  RatingGroup.create(
+  RatingGroup.newBuiltIn(
     uuid: "uspsa-limited-optics",
     sportName: uspsaName,
     name: "Limited Optics",
@@ -272,7 +272,7 @@ final _builtinRaterGroups = <RatingGroup>[
     ],
     sortOrder: 3,
   ),
-  RatingGroup.create(
+  RatingGroup.newBuiltIn(
     uuid: "uspsa-carryoptics",
     sportName: uspsaName,
     name: "Carry Optics",
@@ -282,7 +282,7 @@ final _builtinRaterGroups = <RatingGroup>[
     ],
     sortOrder: 4,
   ),
-  RatingGroup.create(
+  RatingGroup.newBuiltIn(
     uuid: "uspsa-production",
     sportName: uspsaName,
     name: "Production",
@@ -292,7 +292,7 @@ final _builtinRaterGroups = <RatingGroup>[
     ],
     sortOrder: 5,
   ),
-  RatingGroup.create(
+  RatingGroup.newBuiltIn(
     uuid: "uspsa-singlestack",
     sportName: uspsaName,
     name: "Single Stack",
@@ -302,7 +302,7 @@ final _builtinRaterGroups = <RatingGroup>[
     ],
     sortOrder: 6,
   ),
-  RatingGroup.create(
+  RatingGroup.newBuiltIn(
     uuid: "uspsa-revolver",
     sportName: uspsaName,
     name: "Revolver",
@@ -312,7 +312,7 @@ final _builtinRaterGroups = <RatingGroup>[
     ],
     sortOrder: 7,
   ),
-  RatingGroup.create(
+  RatingGroup.newBuiltIn(
     uuid: "uspsa-limited10",
     sportName: uspsaName,
     name: "Limited 10",
@@ -322,7 +322,7 @@ final _builtinRaterGroups = <RatingGroup>[
     ],
     sortOrder: 8,
   ),
-  RatingGroup.create(
+  RatingGroup.newBuiltIn(
     uuid: "uspsa-locap",
     sportName: uspsaName,
     name: "Locap",
@@ -334,7 +334,7 @@ final _builtinRaterGroups = <RatingGroup>[
     ],
     sortOrder: 9,
   ),
-  RatingGroup.create(
+  RatingGroup.newBuiltIn(
     uuid: "uspsa-optic-handguns",
     sportName: uspsaName,
     name: "Optic Handguns",
@@ -347,7 +347,7 @@ final _builtinRaterGroups = <RatingGroup>[
     ],
     sortOrder: 10,
   ),
-  RatingGroup.create(
+  RatingGroup.newBuiltIn(
     uuid: "uspsa-irons-handguns",
     sportName: uspsaName,
     name: "Irons Handguns",
@@ -360,7 +360,7 @@ final _builtinRaterGroups = <RatingGroup>[
     ],
     sortOrder: 11,
   ),
-  RatingGroup.create(
+  RatingGroup.newBuiltIn(
     uuid: "uspsa-open-pcc",
     sportName: uspsaName,
     name: "Open/PCC",
@@ -370,7 +370,7 @@ final _builtinRaterGroups = <RatingGroup>[
     ],
     sortOrder: 12,
   ),
-  RatingGroup.create(
+  RatingGroup.newBuiltIn(
     uuid: "uspsa-limited-co",
     sportName: uspsaName,
     name: "Limited/Carry Optics",
@@ -381,7 +381,7 @@ final _builtinRaterGroups = <RatingGroup>[
     ],
     sortOrder: 13,
   ),
-  RatingGroup.create(
+  RatingGroup.newBuiltIn(
     uuid: "uspsa-lo-co",
     sportName: uspsaName,
     name: "LO/CO",
@@ -391,7 +391,7 @@ final _builtinRaterGroups = <RatingGroup>[
     ],
     sortOrder: 14,
   ),
-  RatingGroup.create(
+  RatingGroup.newBuiltIn(
     uuid: "uspsa-lim-lo-co",
     sportName: uspsaName,
     name: "Limited/LO/CO",
@@ -403,7 +403,7 @@ final _builtinRaterGroups = <RatingGroup>[
     ],
     sortOrder: 15,
   ),
-  RatingGroup.create(
+  RatingGroup.newBuiltIn(
     uuid: "uspsa-limited-lo",
     sportName: uspsaName,
     name: "Limited/LO",
@@ -414,7 +414,7 @@ final _builtinRaterGroups = <RatingGroup>[
     ],
     sortOrder: 16,
   ),
-  RatingGroup.create(
+  RatingGroup.newBuiltIn(
     uuid: "uspsa-combined",
     sportName: uspsaName,
     name: "Combined",

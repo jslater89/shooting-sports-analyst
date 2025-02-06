@@ -71,9 +71,6 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   /// See also [filteredMatchPointers] and [lastUsedMatches].
   List<MatchPointer> matchPointers = [];
 
-  /// Retained for compatibility with old projects. Do not use.
-  final IsarLinks<DbShootingMatch> matches = IsarLinks();
-
   /// A subset of the matches from this project, which will actually be used to calculate
   /// the ratings.
   ///
@@ -81,15 +78,10 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   /// of the overall list of matches in a project.
   List<MatchPointer> filteredMatchPointers = [];
 
-  /// Retained for compatibility with old projects. Do not use.
-  final IsarLinks<DbShootingMatch> filteredMatches = IsarLinks();
-
   /// A list of ongoing matches, which may be treated slightly differently by the rating
   /// algorithm.
   List<MatchPointer> matchInProgressPointers = [];
 
-  /// Retained for compatibility with old projects. Do not use.
-  final IsarLinks<DbShootingMatch> matchesInProgress = IsarLinks();
   /// True if a full calculation has been completed for this project (set by the project
   /// loader). A project with this flag set to false cannot have matches appended, and
   /// must complete a full calculation before it can be used.
@@ -243,19 +235,6 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
     });
   }
 
-  // TODO: we can make these more efficient by querying the Ratings collection
-  // (since we can probably composite-index that by interesting queries)
-  Future<DataSourceResult<List<DbShooterRating>>> getRatings(RatingGroup group) async {
-    return DataSourceResult.ok(await ratings.filter().group((q) => q.idEqualTo(group.id)).findAll());
-  }
-
-  Future<DataSourceResult<List<DbShooterRating>>> getRatingsByDeduplicatorName(RatingGroup group, String deduplicatorName) async {
-    return DataSourceResult.ok(await ratings.filter()
-      .group((q) => q.idEqualTo(group.id))
-      .deduplicatorNameEqualTo(deduplicatorName)
-      .findAll());
-  }
-
   DbRatingProject({
     required this.name,
     required this.sportName,
@@ -267,6 +246,22 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
     if(settings != null) {
       this.settings = settings;
     }
+  }
+
+  // TODO: we can make these more efficient by querying the Ratings collection
+  // (since we can probably composite-index that by interesting queries)
+  @override
+  Future<DataSourceResult<List<DbShooterRating>>> getRatings(RatingGroup group) async {
+    return DataSourceResult.ok(await ratings.filter()
+      .group((q) => q.idEqualTo(group.id))
+      .findAll());
+  }
+
+  Future<DataSourceResult<List<DbShooterRating>>> getRatingsByDeduplicatorName(RatingGroup group, String deduplicatorName) async {
+    return DataSourceResult.ok(await ratings.filter()
+      .group((q) => q.idEqualTo(group.id))
+      .deduplicatorNameEqualTo(deduplicatorName)
+      .findAll());
   }
 
   @override
@@ -361,9 +356,53 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   Future<DataSourceResult<ShooterRating>> wrapDbRating(DbShooterRating rating) {
     return Future.value(DataSourceResult.ok(settings.algorithm.wrapDbRating(rating)));
   }
+
+  Map<String, dynamic> toJson() {
+    Map<String, dynamic> json = {};
+    json["name"] = name;
+    json["sportName"] = sportName;
+    json["encodedSettings"] = encodedSettings;
+    json["automaticNumberMappings"] = automaticNumberMappings.map((m) => m.toJson()).toList();
+    json["builtinGroups"] = groups.where((g) => g.builtin).map((g) => g.uuid).toList();
+    json["customGroups"] = groups.where((g) => !g.builtin).map((g) => g.toJson()).toList();
+    json["matchPointers"] = matchPointers.map((m) => m.toJson()).toList();
+    json["filteredMatchPointers"] = filteredMatchPointers.map((m) => m.toJson()).toList();
+    json["matchInProgressPointers"] = matchInProgressPointers.map((m) => m.toJson()).toList();
+    return json;
+  }
+
+  factory DbRatingProject.fromJson(Map<String, dynamic> json) {
+    var sport = SportRegistry().lookup(json["sportName"]);
+    if(sport == null) {
+      throw ArgumentError("Invalid sport name: ${json["sportName"]}");
+    }
+    var project = DbRatingProject(
+      name: json["name"],
+      sportName: json["sportName"],
+      encodedSettings: json["encodedSettings"],
+      automaticNumberMappings: json["automaticNumberMappings"].map((m) => DbMemberNumberMapping.fromJson(m)).toList(),
+    );
+    List<RatingGroup?> builtinGroups = json["builtinGroups"].map((uuid) => sport.builtinRatingGroupsProvider?.getGroup(uuid));
+    var customGroups = json["customGroups"].map((g) => RatingGroup.fromJson(g));
+
+    for(var group in customGroups) {
+      var isar = AnalystDatabase().isar;
+      isar.writeTxnSync(() {
+        isar.ratingGroups.putSync(group);
+      });
+    }
+
+    project.groups = [...builtinGroups.whereNotNull(), ...customGroups];
+
+    project.matchPointers = json["matchPointers"].map((m) => MatchPointer.fromJson(m)).toList();
+    project.filteredMatchPointers = json["filteredMatchPointers"].map((m) => MatchPointer.fromJson(m)).toList();
+    project.matchInProgressPointers = json["matchInProgressPointers"].map((m) => MatchPointer.fromJson(m)).toList();
+    return project;
+  }
 }
 
 @embedded
+@JsonSerializable()
 class DbMemberNumberMapping {
   String deduplicatorName;
   List<String> sourceNumbers;
@@ -389,6 +428,9 @@ class DbMemberNumberMapping {
 
   int get hashCode =>
     Object.hash(deduplicatorName, targetNumber, automatic, Object.hashAllUnordered(sourceNumbers));
+
+  Map<String, dynamic> toJson() => _$DbMemberNumberMappingToJson(this);
+  factory DbMemberNumberMapping.fromJson(Map<String, dynamic> json) => _$DbMemberNumberMappingFromJson(json);
 }
 
 /// A RatingGroup is a collection of competitors rated against one another.
@@ -396,6 +438,7 @@ class DbMemberNumberMapping {
 /// [uuid] is a unique identifier for the group. For hardcoded rating
 /// groups, specify an ID of the form 'sportName-groupName'.
 @collection
+@JsonSerializable()
 class RatingGroup with DbSportEntity {
   Id get id => uuid.stableHash;
 
@@ -418,6 +461,8 @@ class RatingGroup with DbSportEntity {
   List<String> divisionNames;
 
   int sortOrder;
+
+  bool builtin;
 
   @ignore
   List<Division> get divisions =>
@@ -450,17 +495,30 @@ class RatingGroup with DbSportEntity {
     this.sortOrder = 0,
     this.displayName,
     this.divisionNames = const [],
+    this.builtin = false,
   });
 
-  /// Constructor that will create a new UUID if a string ID is not provided.
-  RatingGroup.create({
+  /// Constructor for a built-in rating group that will create a new UUID
+  /// if a string ID is not provided.
+  RatingGroup.newBuiltIn({
+    String? uuid,
+    required this.sportName,
+    required this.name,
+    this.sortOrder = 0,
+    this.displayName,
+    required this.divisionNames,
+  }) : this.builtin = true, this.uuid = uuid ?? UuidV4().generate();
+
+  /// Constructor for a custom rating group that will create a new UUID
+  /// if a string ID is not provided.
+  RatingGroup.newCustom({
     String? uuid,
     required this.sportName,
     required this.name,
     this.sortOrder = 0,
     this.displayName,
     this.divisionNames = const [],
-  }) : this.uuid = uuid ?? UuidV4().generate();
+  }) : this.builtin = false, this.uuid = uuid ?? UuidV4().generate();
 
   @override
   String toString() {
@@ -475,6 +533,9 @@ class RatingGroup with DbSportEntity {
     if(!(other is RatingGroup)) return false;
     return other.uuid == uuid && other.sportName == sportName;
   }
+
+  Map<String, dynamic> toJson() => _$RatingGroupToJson(this);
+  factory RatingGroup.fromJson(Map<String, dynamic> json) => _$RatingGroupFromJson(json);
 }
 
 /// MatchPointer is a database record containing enough information

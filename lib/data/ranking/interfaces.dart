@@ -49,6 +49,8 @@ abstract interface class RatingGroupsProvider {
   List<RatingGroup> get builtinRatingGroups;
   List<RatingGroup> get divisionRatingGroups;
   List<RatingGroup> get defaultRatingGroups;
+
+  RatingGroup? getGroup(String uuid);
 }
 
 abstract interface class ConnectivityCalculator {

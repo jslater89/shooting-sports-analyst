@@ -23,33 +23,12 @@ import 'package:shooting_sports_analyst/util.dart';
 var _log = SSALogger("RatingProjectDatabase");
 
 extension RatingProjectDatabase on AnalystDatabase {
-  Future<DbRatingProject?> getRatingProjectById(int id) async {
-    var project = await isar.dbRatingProjects.where().idEqualTo(id).findFirst();
-    // migrate from IsarLinks<Match> to List<MatchPointer> if necessary
-    if(project != null) {
-      await _migrateToMatchPointers(project);
-    }
-    return project;
+  Future<DbRatingProject?> getRatingProjectById(int id) {
+    return isar.dbRatingProjects.where().idEqualTo(id).findFirst();
   }
 
-  Future<bool> _migrateToMatchPointers(DbRatingProject project) async {
-    if(project.matches.countSync() > project.matchPointers.length) {
-      var matchPointers = project.matches.map((m) => MatchPointer.fromDbMatch(m)).toList();
-      project.matchPointers = matchPointers;
-      await isar.writeTxn(() async {
-        await isar.dbRatingProjects.put(project);
-      });
-      return true;
-    }
-    return false;
-  }
-
-  Future<DbRatingProject?> getRatingProjectByName(String name) async {
-    var project = await isar.dbRatingProjects.where().nameEqualTo(name).findFirst();
-    if(project != null) {
-      await _migrateToMatchPointers(project);
-    }
-    return project;
+  Future<DbRatingProject?> getRatingProjectByName(String name) {
+    return isar.dbRatingProjects.where().nameEqualTo(name).findFirst();
   }
 
   Future<DbRatingProject> saveRatingProject(DbRatingProject project, {bool checkName = true}) async {
