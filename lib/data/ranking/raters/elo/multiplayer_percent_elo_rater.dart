@@ -8,6 +8,7 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:intl/intl.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/gumbel.dart';
@@ -353,25 +354,34 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       aScore as RelativeStageScore;
       rawScore = aScore.score;
     }
-    Map<String, List<dynamic>> info = {
-      "Actual/expected percent: %00.2f/%00.2f on %s": [
-        actualScore.percentComponent * params.totalPercent * 100, expectedPercent, rawScore.displayString,
-      ],
-      "Actual/expected place: %00.1f/%00.1f": [
-        actualScore.placeBlend, params.usedScores - (params.expectedScore * params.divisor)
-      ],
-      "Rating ± Change: %00.0f + %00.2f (%00.2f from pct, %00.2f from place)": [
-        aRating.rating, change, changeFromPercent, changeFromPlace
-      ],
-      "eff. K, multipliers: %00.2f, SoS %00.3f, IP %00.3f, Zero %00.3f": [
-        effectiveK, matchStrengthMultiplier, placementMultiplier, zeroMultiplier
-      ],
-      "Conn %00.3f, EW %00.3f, Err %00.3f, Dir %00.3f, Bomb %00.3f": [ // , Bomb %00.3f
-        connectednessMultiplier, eventWeightMultiplier, errMultiplier, directionMultiplier, bombProtectionMultiplier
-      ],
-      if(doBackRating) "Back rating/error/steps/size: %00.0f/%00.1f/%d/%00.2f": [backRatingRaw, backRatingErr, steps, stepSize],
-    };
-    if(Timings.enabled) timings.add(TimingType.printInfo, DateTime.now().difference(start).inMicroseconds);
+
+    List<String> infoLines = [
+      "Actual/expected percent: {{pcActual}}/{{pcExpected}} on {{stage}}",
+      "Actual/expected place: {{placeActual}}/{{placeExpected}}",
+      "Rating ± Change: {{rating}}/{{change}} ({{pctFromPct}}% from pct, {{pctFromPlace}}% from place)",
+      "eff. K, multipliers: {{effK}}, SoS {{sos}}, IP {{ip}}, Zero {{zero}}",
+      "Conn {{conn}}, EW {{ew}}, Err {{err}}, Dir {{dir}}, Bomb {{bomb}}",
+    ];
+    List<RatingEventInfoElement> infoData = [
+      RatingEventInfoElement.string(name: "stage", stringValue: rawScore.displayString),
+      RatingEventInfoElement.double(name: "pcActual", doubleValue: actualScore.percentComponent * params.totalPercent * 100, numberFormat: "%00.2f"),
+      RatingEventInfoElement.double(name: "pcExpected", doubleValue: expectedPercent, numberFormat: "%00.2f"),
+      RatingEventInfoElement.double(name: "placeActual", doubleValue: actualScore.placeBlend, numberFormat: "%00.1f"),
+      RatingEventInfoElement.double(name: "placeExpected", doubleValue: params.usedScores - (params.expectedScore * params.divisor), numberFormat: "%00.1f"),
+      RatingEventInfoElement.double(name: "rating", doubleValue: aRating.rating, numberFormat: "%00.0f"),
+      RatingEventInfoElement.double(name: "change", doubleValue: change, numberFormat: "%00.2f"),
+      RatingEventInfoElement.double(name: "pctFromPct", doubleValue: changeFromPercent, numberFormat: "%00.2f"),
+      RatingEventInfoElement.double(name: "pctFromPlace", doubleValue: changeFromPlace, numberFormat: "%00.2f"),
+      RatingEventInfoElement.double(name: "effK", doubleValue: effectiveK, numberFormat: "%00.2f"),
+      RatingEventInfoElement.double(name: "sos", doubleValue: matchStrengthMultiplier, numberFormat: "%00.3f"),
+      RatingEventInfoElement.double(name: "ip", doubleValue: placementMultiplier, numberFormat: "%00.3f"),
+      RatingEventInfoElement.double(name: "zero", doubleValue: zeroMultiplier, numberFormat: "%00.3f"),
+      RatingEventInfoElement.double(name: "conn", doubleValue: connectednessMultiplier, numberFormat: "%00.3f"),
+      RatingEventInfoElement.double(name: "ew", doubleValue: eventWeightMultiplier, numberFormat: "%00.3f"),
+      RatingEventInfoElement.double(name: "err", doubleValue: errMultiplier, numberFormat: "%00.3f"),
+      RatingEventInfoElement.double(name: "dir", doubleValue: directionMultiplier, numberFormat: "%00.3f"),
+      RatingEventInfoElement.double(name: "bomb", doubleValue: bombProtectionMultiplier, numberFormat: "%00.3f"),
+    ];
 
     return {
       aRating: RatingChange(change: {
@@ -381,7 +391,8 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
         effectiveKKey: effectiveK * (params.usedScores),
         backRatingErrorKey: backRatingErr,
       },
-      info: info
+      infoLines: infoLines,
+      infoData: infoData,
     )};
   }
 
@@ -673,7 +684,8 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     required ShooterRating rating,
     required RelativeScore score,
     required RelativeMatchScore matchScore,
-    Map<String, List<dynamic>> info = const {},
+    List<String> infoLines = const [],
+    List<RatingEventInfoElement> infoData = const [],
   }) {
     return EloRatingEvent(
       oldRating: rating.rating,
@@ -682,7 +694,8 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       score: score,
       matchScore: matchScore,
       ratingChange: 0,
-      info: info,
+      infoLines: infoLines,
+      infoData: infoData,
       baseK: 0,
       effectiveK: 0,
       backRatingError: 0

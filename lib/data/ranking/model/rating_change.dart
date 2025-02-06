@@ -16,13 +16,15 @@ import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 class RatingChange {
   final Map<String, double> change;
 
-  /// Arguments used as inputs to sprintf
-  final Map<String, List<dynamic>> info;
+  /// A list of strings, each representing a line of extra information about this rating.
+  final List<String> infoLines;
+  /// A list of info elements, each containing data that can be filled into infoLines.
+  final List<RatingEventInfoElement> infoData;
 
   /// Other data that can't be represented as an int or double
   final Map<String, dynamic> extraData;
 
-  RatingChange({required this.change, this.info = const {}, this.extraData = const {}});
+  RatingChange({required this.change, this.infoLines = const [], this.infoData = const [], this.extraData = const {}});
 
   @override
   String toString() {
@@ -39,11 +41,12 @@ abstract interface class IRatingEvent {
 abstract class RatingEvent implements IRatingEvent {
   String get eventName => "${match.name}" + (stage == null ? "" : " - ${stage!.name}");
 
-  Map<String, List<dynamic>> get info => wrappedEvent.info;
-  set info(Map<String, List<dynamic>> v) => wrappedEvent.info = v;
+  List<String> get infoLines => wrappedEvent.infoLines;
+  List<RatingEventInfoElement> get infoData => wrappedEvent.infoData;
+  set infoData(List<RatingEventInfoElement> v) => wrappedEvent.infoData = v;
+  set infoLines(List<String> v) => wrappedEvent.infoLines = v;
   Map<String, dynamic> get extraData => wrappedEvent.extraData;
   set extraData(Map<String, dynamic> v) => wrappedEvent.extraData = v;
-
   DbRatingEvent wrappedEvent;
 
   // The following properties ([match] through [scoreForMatch]) are used for calculating

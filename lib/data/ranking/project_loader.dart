@@ -1362,7 +1362,7 @@ class RatingProjectLoader {
       var calc = sport.connectivityCalculator!;
       Set<int> uniqueIds = {...shootersAtMatch.map((e) => e.id)};
       for(var rating in shootersAtMatch) {
-        var ids = {...uniqueIds.where((id) => id != rating.id)};
+        var ids = uniqueIds.where((id) => id != rating.id).toList();
         var window = MatchWindow.createFromHydratedMatch(
           match: match,
           uniqueOpponentIds: ids,
@@ -1612,7 +1612,8 @@ class RatingProjectLoader {
             match: match,
             score: score,
             matchScore: score as RelativeMatchScore,
-            info: update[rating]!.info,
+            infoLines: update[rating]!.infoLines,
+            infoData: update[rating]!.infoData,
           );
 
           changes[rating]![score]!.apply(update[rating]!);
@@ -1808,7 +1809,8 @@ class RatingProjectLoader {
           match: match,
           score: score,
           matchScore: score,
-          info: update[rating]!.info,
+          infoLines: update[rating]!.infoLines,
+          infoData: update[rating]!.infoData,
         );
 
         changes[rating]![score]!.apply(update[rating]!);

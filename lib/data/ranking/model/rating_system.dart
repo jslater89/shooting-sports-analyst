@@ -6,6 +6,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_mode.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
@@ -77,7 +78,8 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
     required ShooterRating rating,
     required RelativeScore score,
     required RelativeMatchScore matchScore,
-    Map<String, List<dynamic>> info = const {},
+    List<String> infoLines = const [],
+    List<RatingEventInfoElement> infoData = const [],
   });
 
   /// Return a string containing a CSV representation of the

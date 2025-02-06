@@ -181,43 +181,41 @@ typedef WrappedRatingGenerator = ShooterRating Function(DbShooterRating r);
 
 @embedded
 class MatchWindow {
+  /// The source ID of the match this data is from.
   String matchSourceId;
-  late DateTime date;
-  List<int> get dbUniqueOpponentIds => uniqueOpponentIds.toList();
-  set dbUniqueOpponentIds(List<int> value) => uniqueOpponentIds = value.toSet();
-  int totalOpponents;
 
-  @ignore
-  Set<int> uniqueOpponentIds;
+  /// The date of the match.
+  late DateTime date;
+
+  /// The database IDs corresponding to the competitors
+  /// at this match.
+  List<int> uniqueOpponentIds = [];
 
   MatchWindow({
     this.matchSourceId = "",
-    this.uniqueOpponentIds = const {},
-    this.totalOpponents = 0,
+    this.uniqueOpponentIds = const [],
   }) {
     this.date = DateTime.now();
   }
 
   MatchWindow.createFromDbMatch({
     required DbShootingMatch match,
-    required Set<int> uniqueOpponentIds,
+    required List<int> uniqueOpponentIds,
     required int totalOpponents,
   }) :  this.matchSourceId = match.sourceIds.first,
         this.date = match.date,
-        this.uniqueOpponentIds = uniqueOpponentIds,
-        this.totalOpponents = totalOpponents;
+        this.uniqueOpponentIds = uniqueOpponentIds;
 
   MatchWindow.createFromHydratedMatch({
     required ShootingMatch match,
-    required Set<int> uniqueOpponentIds,
+    required List<int> uniqueOpponentIds,
     required int totalOpponents,
   }) : this.matchSourceId = match.sourceIds.first,
         this.date = match.date,
-        this.uniqueOpponentIds = uniqueOpponentIds,
-        this.totalOpponents = totalOpponents;
+        this.uniqueOpponentIds = uniqueOpponentIds;
 
   @override
   String toString() {
-    return "MatchWindow(uniqueOpponentIds: ${uniqueOpponentIds.length}, totalOpponents: $totalOpponents, date: ${programmerYmdFormat.format(date)})";
+    return "MatchWindow(uniqueOpponentIds: ${uniqueOpponentIds.length}, date: ${programmerYmdFormat.format(date)})";
   }
 }

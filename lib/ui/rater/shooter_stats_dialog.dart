@@ -10,6 +10,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rating_change.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
@@ -77,7 +78,8 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   List<Widget> _buildEventLines() {
     _eventLines = ratingEvents
       .map((e) => Tooltip(
-      message: e.info.keys.map((line) => sprintf(line, e.info[line])).join("\n"),
+      waitDuration: Duration(milliseconds: 500),
+      message: e.infoLines.map((line) => line.apply(e.infoData)).join("\n"),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12.0),
         child: Column(
@@ -263,24 +265,24 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                 SizedBox(width: 10),
                 Expanded(
                   flex: 5,
-                  child: Scrollbar(
-                    controller: _rightController,
-                    thumbVisibility: true,
-                    child: Column(
-                      children: [
-                        MouseRegion(
-                            cursor: SystemMouseCursors.click,
-                            child: GestureDetector(
-                              child: Text(showingEvents ? "Event history" : "Match history",
-                                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).colorScheme.tertiary)),
-                              onTap: () {
-                                setState(() {
-                                  showingEvents = !showingEvents;
-                                });
-                              },
-                            )
-                        ),
-                        Expanded(
+                  child: Column(
+                    children: [
+                      MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                            child: Text(showingEvents ? "Event history" : "Match history",
+                                style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).colorScheme.tertiary)),
+                            onTap: () {
+                              setState(() {
+                                showingEvents = !showingEvents;
+                              });
+                            },
+                          )
+                      ),
+                      Expanded(
+                        child: Scrollbar(
+                          controller: _rightController,
+                          thumbVisibility: true,
                           child: SingleChildScrollView(
                             controller: _rightController,
                             child: Column(
@@ -292,8 +294,8 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   )
                 ),
               ],

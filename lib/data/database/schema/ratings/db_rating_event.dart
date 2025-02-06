@@ -1,10 +1,12 @@
 import 'dart:convert';
 
+import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_relative_score.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
+import 'package:sprintf/sprintf.dart';
 
 part 'db_rating_event.g.dart';
 
@@ -70,30 +72,20 @@ class DbRatingEvent implements IRatingEvent {
   List<int> intData;
 
   // Lazily load info as much as possible, because we only care about it for display.
-  @ignore
-  Map<String, List<dynamic>>? _info;
-  @ignore
-  Map<String, List<dynamic>> get info {
-    if(_info == null) {
-      var data = jsonDecode(_infoAsJson) as Map<String, dynamic>;
-      _info = data.cast<String, List<dynamic>>();
-    }
-    return _info!;
-  }
-  set info(Map<String, List<dynamic>> v) {
-    _info = v;
-  }
-
-  String _infoAsJson = "{}";
-  String get infoAsJson => _info == null ? _infoAsJson : jsonEncode(_info!);
-  set infoAsJson(String v) {
-    _infoAsJson = v;
-  }
+  
+  /// A list of strings, each representing a line of extra information about this rating
+  /// event, typically defined by the rating system.
+  /// 
+  /// Use [infoData] to fill in the data for each line: substrings like {{key}} will be
+  /// replaced with the relevant data from the element keyed by 'key' in [infoData].
+  List<String> infoLines;
+  /// A list of info elements, each containing data that can be filled into infoLines.
+  List<RatingEventInfoElement> infoData;
 
   @ignore
   Map<String, dynamic> extraData;
-  String get extraDataAsJson => jsonEncode(extraData);
-  set extraDataAsJson(String v) => extraData = jsonDecode(v);
+  String get extraDataAsJson => extraData.isEmpty ? "{}" : jsonEncode(extraData);
+  set extraDataAsJson(String v) => v == "{}" ? {} : extraData = jsonDecode(v);
   
   DbRelativeScore score;
   DbRelativeScore matchScore;
@@ -109,19 +101,24 @@ class DbRatingEvent implements IRatingEvent {
     required this.stageNumber,
     required this.entryId,
     required this.matchId,
+    this.infoData = const [],
+    this.infoLines = const [],
     int doubleDataElements = 0,
     int intDataElements = 0,
   }) :
     intData = List.filled(intDataElements, 0, growable: true),
-    doubleData = List.filled(doubleDataElements, 0.0, growable: true),
-    _info = info.isNotEmpty ? info : null,
-    _infoAsJson = jsonEncode(info);
+    doubleData = List.filled(doubleDataElements, 0.0, growable: true) {
+      if(info.isNotEmpty) {
+
+      }
+    }
 
   DbRatingEvent copy() {
     var event =  DbRatingEvent(
       ratingChange: this.ratingChange,
       oldRating: this.oldRating,
-      info: {}..addEntries(this.info.entries.map((e) => MapEntry(e.key, []..addAll(e.value)))),
+      infoLines: []..addAll(this.infoLines),
+      infoData: []..addAll(this.infoData),
       extraData: {}..addEntries(this.extraData.entries.map((e) => MapEntry(e.key, []..addAll(e.value)))),
       score: this.score.copy(),
       matchScore: this.matchScore.copy(),
@@ -136,4 +133,90 @@ class DbRatingEvent implements IRatingEvent {
 
     return event;
   }
+}
+
+extension RatingEventInfoElements on String {
+  static final _regex = RegExp(r"\{\{(\w+)\}\}");
+  String apply(List<RatingEventInfoElement> infoData) {
+    List<String> keys = [];
+    for(var match in _regex.allMatches(this)) {
+      keys.add(match.group(1)!);
+    }
+    var out = this;
+    for(var key in keys) {
+      var element = infoData.firstWhereOrNull((e) => e.name == key);
+      out = out.replaceFirst("{{$key}}", element.toString());
+    }
+    return out;
+  }
+}
+
+@embedded
+class RatingEventInfoElement {
+  String name;
+  int? intValue;
+  double? doubleValue;
+  String? numberFormat;
+  String? stringValue;
+  @enumerated
+  RatingEventInfoType type;
+
+  /// Constructor for DB use. Prefer one of the typed constructors
+  /// [DbRatingEventInfoElement.int], [DbRatingEventInfoElement.double],
+  /// or [DbRatingEventInfoElement.string].
+  RatingEventInfoElement({
+    this.name = "",
+    this.type = RatingEventInfoType.string,
+    this.stringValue = "",
+    this.intValue,
+    this.doubleValue,
+    this.numberFormat,
+  });
+
+  /// An info element holding an integer value.
+  RatingEventInfoElement.int({
+    required this.name,
+    required this.intValue,
+    this.numberFormat,
+  }) : type = RatingEventInfoType.int;
+
+  /// An info element holding a double value.
+  RatingEventInfoElement.double({
+    required this.name,
+    required this.doubleValue,
+    this.numberFormat,
+  }) : type = RatingEventInfoType.double;
+
+  /// An info element holding a string value.
+  RatingEventInfoElement.string({
+    required this.name,
+    required this.stringValue,
+  }) : type = RatingEventInfoType.string;
+
+  String toString() {
+    switch(type) {
+      case RatingEventInfoType.int:
+        if(numberFormat != null) {
+          return sprintf(numberFormat!, [intValue!]);
+        }
+        else {
+          return "$intValue!";
+        }
+      case RatingEventInfoType.double:
+        if(numberFormat != null) {
+          return sprintf(numberFormat!, [doubleValue!]);
+        }
+        else {
+          return "$doubleValue!";
+        }
+      case RatingEventInfoType.string:
+        return stringValue!;
+    }
+  }
+}
+
+enum RatingEventInfoType {
+  int,
+  double,
+  string,
 }

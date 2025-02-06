@@ -207,7 +207,7 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
     }
     return []..addAll(dbGroups.sorted((a, b) => a.sortOrder.compareTo(b.sortOrder)));
   }
-  set groups(List<RatingGroup> value) {
+  set groups(Iterable<RatingGroup> value) {
     dbGroups.clear();
     dbGroups.addAll(value.sorted((a, b) => a.sortOrder.compareTo(b.sortOrder)));
   }

@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/connectivity/sqrt_total_unique_product.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/uspsa_deduplicator.dart';
@@ -230,9 +231,15 @@ class _UspsaRatingGroupsProvider implements RatingGroupsProvider {
 
   @override
   List<RatingGroup> get divisionRatingGroups => _builtinRaterGroups.where((g) => g.divisionNames.length == 1).toList();
+
+  @override
+  RatingGroup? getGroup(String uuid) {
+    return _builtinRaterGroups.firstWhereOrNull((g) => g.uuid == uuid);
+  }
 }
 
 final _builtinRaterGroups = <RatingGroup>[
+
   RatingGroup.newBuiltIn(
     uuid: "uspsa-open",
     sportName: uspsaName,

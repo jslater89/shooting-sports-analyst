@@ -34,10 +34,12 @@ class OpenskillRatingEvent extends RatingEvent {
     MatchStage? stage,
     required RelativeScore score,
     required RelativeScore matchScore,
-    Map<String, List<dynamic>> info = const {}
+    List<String> infoLines = const [],
+    List<RatingEventInfoElement> infoData = const [],
   }) : super(wrappedEvent: DbRatingEvent(
     ratingChange: muChange,
     oldRating: initialMu,
+
     matchId: match.sourceIds.first,
     stageNumber: stage?.stageId ?? -1,
     score: DbRelativeScore.fromHydrated(score),
@@ -46,9 +48,11 @@ class OpenskillRatingEvent extends RatingEvent {
     date: match.date,
     intDataElements: 0,
     doubleDataElements: _DoubleKeys.values.length,
+    infoLines: infoLines,
+    infoData: infoData,
   )) {
-    this.info = info;
   }
+
 
   @override
   void apply(RatingChange change) {

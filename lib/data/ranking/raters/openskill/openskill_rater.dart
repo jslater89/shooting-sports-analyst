@@ -8,6 +8,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_mode.dart';
@@ -123,7 +124,9 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
     required ShooterRating rating,
     required RelativeMatchScore matchScore,
     required RelativeScore score,
-    Map<String, List<dynamic>> info = const {}
+    List<String> infoLines = const [],
+    List<RatingEventInfoElement> infoData = const [],
+
   }) {
     rating as OpenskillRating;
     return OpenskillRatingEvent(
@@ -134,9 +137,11 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
       stage: stage,
       score: score,
       matchScore: matchScore,
-      info: info
+      infoLines: infoLines,
+      infoData: infoData,
     );
   }
+
 
   @override
   OpenskillRating newShooterRating(MatchEntry shooter, {required DateTime date, required Sport sport}) {

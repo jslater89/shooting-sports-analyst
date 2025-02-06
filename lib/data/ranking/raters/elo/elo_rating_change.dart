@@ -45,7 +45,8 @@ class EloRatingEvent extends RatingEvent {
     MatchStage? stage,
     required RelativeScore score,
     required RelativeScore matchScore,
-    Map<String, List<dynamic>> info = const {},
+    List<String> infoLines = const [],
+    List<RatingEventInfoElement> infoData = const [],
     required double ratingChange,
     double error = 0,
     required double baseK,
@@ -63,7 +64,8 @@ class EloRatingEvent extends RatingEvent {
     intDataElements: 0,
     doubleDataElements: _DoubleKeys.values.length,
   )) {
-    this.info = info;
+    this.infoLines = infoLines;
+    this.infoData = infoData;
     wrappedEvent.setMatchId(match.sourceIds.first, load: false);
   }
 
@@ -96,6 +98,7 @@ class EloRatingEvent extends RatingEvent {
     effectiveK = change.change[MultiplayerPercentEloRater.effectiveKKey]!;
     if(MultiplayerPercentEloRater.doBackRating) backRatingError = change.change[MultiplayerPercentEloRater.backRatingErrorKey]!;
     extraData = change.extraData;
-    info = change.info;
+    infoLines = change.infoLines;
+    infoData = change.infoData;
   }
 }

@@ -19,10 +19,12 @@ class PointsRatingEvent extends RatingEvent {
     MatchStage? stage,
     required RelativeScore score,
     required RelativeScore matchScore,
-    Map<String, List<dynamic>> info = const {}
+    List<String> infoLines = const [],
+    List<RatingEventInfoElement> infoData = const [],
   }) : super(
     wrappedEvent: DbRatingEvent(
       ratingChange: ratingChange,
+
       oldRating: oldRating,
       matchId: match.sourceIds.first,
       date: match.date,
@@ -32,7 +34,10 @@ class PointsRatingEvent extends RatingEvent {
       matchScore: DbRelativeScore.fromHydrated(matchScore),
       intDataElements: 0,
       doubleDataElements: 0,
+      infoLines: infoLines,
+      infoData: infoData,
   ));
+
 
   PointsRatingEvent.copy(PointsRatingEvent other) :
       super.copy(other);

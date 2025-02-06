@@ -7,6 +7,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_mode.dart';
@@ -153,15 +154,18 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
     required ShooterRating rating,
     required RelativeScore score,
     required RelativeMatchScore matchScore,
-    Map<String, List<dynamic>> info = const {}
+    List<String> infoLines = const [],
+    List<RatingEventInfoElement> infoData = const [],
   }) {
     return PointsRatingEvent(
       oldRating: rating.rating,
+
       ratingChange: 0,
       match: match,
       score: score,
       matchScore: matchScore,
-      info: info
+      infoLines: infoLines,
+      infoData: infoData,
     );
   }
 
