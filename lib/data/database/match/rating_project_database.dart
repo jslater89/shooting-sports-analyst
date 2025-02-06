@@ -366,7 +366,7 @@ extension RatingProjectDatabase on AnalystDatabase {
     Order order = Order.descending,
     bool newRating = true,
   }) {
-    Query<double> query;
+    QueryBuilder<DbRatingEvent, double, QQueryOperations> query;
     if(newRating) {
       query = _buildShooterEventNewRatingQuery(rating, limit: limit, offset: offset, after: after, before: before, order: order);
     }
@@ -459,7 +459,7 @@ extension RatingProjectDatabase on AnalystDatabase {
   }
 }
 
-Query<List<double>> _buildShooterEventDoubleDataQuery(DbShooterRating rating, {
+QueryBuilder<DbRatingEvent, List<double>, QQueryOperations> _buildShooterEventDoubleDataQuery(DbShooterRating rating, {
   int limit = 0,
   int offset = 0,
   DateTime? after,
@@ -474,23 +474,23 @@ Query<List<double>> _buildShooterEventDoubleDataQuery(DbShooterRating rating, {
   else {
     builder = b1.sortByDateAndStageNumber();
   }
-  Query<List<double>> query;
+  QueryBuilder<DbRatingEvent, List<double>, QQueryOperations> query;
   if(limit > 0) {
     if(offset > 0) {
-      query = builder.offset(offset).limit(limit).doubleDataProperty().build();
+      query = builder.offset(offset).limit(limit).doubleDataProperty();
     }
     else {
-      query = builder.limit(limit).doubleDataProperty().build();
+      query = builder.limit(limit).doubleDataProperty();
     }
   }
   else {
-    query = builder.doubleDataProperty().build();
+    query = builder.doubleDataProperty();
   }
 
   return query;
 }
 
-Query<double> _buildShooterEventRatingChangeQuery(DbShooterRating rating, {
+QueryBuilder<DbRatingEvent, double, QQueryOperations> _buildShooterEventRatingChangeQuery(DbShooterRating rating, {
   int limit = 0,
   int offset = 0,
   DateTime? after,
@@ -505,23 +505,23 @@ Query<double> _buildShooterEventRatingChangeQuery(DbShooterRating rating, {
   else {
     builder = b1.sortByDateAndStageNumber();
   }
-  Query<double> query;
+  QueryBuilder<DbRatingEvent, double, QQueryOperations> query;
   if(limit > 0) {
     if(offset > 0) {
-      query = builder.offset(offset).limit(limit).ratingChangeProperty().build();
+      query = builder.offset(offset).limit(limit).ratingChangeProperty();
     }
     else {
-      query = builder.limit(limit).ratingChangeProperty().build();
+      query = builder.limit(limit).ratingChangeProperty();
     }
   }
   else {
-    query = builder.ratingChangeProperty().build();
+    query = builder.ratingChangeProperty();
   }
 
   return query;
 }
 
-Query<double> _buildShooterEventNewRatingQuery(DbShooterRating rating, {
+QueryBuilder<DbRatingEvent, double, QQueryOperations> _buildShooterEventNewRatingQuery(DbShooterRating rating, {
   int limit = 0,
   int offset = 0,
   DateTime? after,
@@ -536,23 +536,23 @@ Query<double> _buildShooterEventNewRatingQuery(DbShooterRating rating, {
   else {
     builder = b1.sortByDateAndStageNumber();
   }
-  Query<double> query;
+  QueryBuilder<DbRatingEvent, double, QQueryOperations> query;
   if(limit > 0) {
     if(offset > 0) {
-      query = builder.offset(offset).limit(limit).newRatingProperty().build();
+      query = builder.offset(offset).limit(limit).newRatingProperty();
     }
     else {
-      query = builder.limit(limit).newRatingProperty().build();
+      query = builder.limit(limit).newRatingProperty();
     }
   }
   else {
-    query = builder.newRatingProperty().build();
+    query = builder.newRatingProperty();
   }
 
   return query;
 }
 
-Query<double> _buildShooterEventOldRatingQuery(DbShooterRating rating, {
+QueryBuilder<DbRatingEvent, double, QQueryOperations> _buildShooterEventOldRatingQuery(DbShooterRating rating, {
   int limit = 0,
   int offset = 0,
   DateTime? after,
@@ -567,17 +567,17 @@ Query<double> _buildShooterEventOldRatingQuery(DbShooterRating rating, {
   else {
     builder = b1.sortByDateAndStageNumber();
   }
-  Query<double> query;
+  QueryBuilder<DbRatingEvent, double, QQueryOperations> query;
   if(limit > 0) {
     if(offset > 0) {
-      query = builder.offset(offset).limit(limit).oldRatingProperty().build();
+      query = builder.offset(offset).limit(limit).oldRatingProperty();
     }
     else {
-      query = builder.limit(limit).oldRatingProperty().build();
+      query = builder.limit(limit).oldRatingProperty();
     }
   }
   else {
-    query = builder.oldRatingProperty().build();
+    query = builder.oldRatingProperty();
   }
 
   return query;

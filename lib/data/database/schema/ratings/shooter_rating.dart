@@ -38,8 +38,11 @@ class DbShooterRating extends Shooter with DbSportEntity {
   List<String> get dbAllPossibleMemberNumbers => List<String>.from(allPossibleMemberNumbers);
   set dbAllPossibleMemberNumbers(List<String> values) => allPossibleMemberNumbers = {}..addAll(values);
 
+  @override
   @Index()
   String firstName;
+
+  @override
   @Index()
   String lastName;
 
@@ -96,7 +99,7 @@ class DbShooterRating extends Shooter with DbSportEntity {
   @Index()
   double connectivity;
 
-  /// Match windows contain competitor information 
+  /// Match windows contain competitor information used to calculate connectivity.
   List<MatchWindow> matchWindows = [];
 
   /// Use to store algorithm-specific double data.
