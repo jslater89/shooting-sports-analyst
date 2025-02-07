@@ -88,11 +88,9 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   /// must complete a full calculation before it can be used.
   bool completedFullCalculation = false;
 
-  /// The IsarLinks of matches to use for calculating ratings for this project. If
+  /// The list of matches to use for calculating ratings for this project. If
   /// [filteredMatchPointers] is not empty, it will be used. If it is empty, [matchPointers] will
   /// be used instead.
-  ///
-  /// If [loadLinks] is true, the returned IsarLinks will be loaded.
   List<MatchPointer> matchesToUse() {
     var filteredCount = filteredMatchPointers.length;
 
@@ -609,14 +607,22 @@ class MatchPointer with DbSportEntity implements SourceIdsProvider {
   /// Returns [DataSourceError.notFound] if the match is not found in the database,
   /// or if [downloadIfMissing] is true and the match cannot be downloaded.
   Future<DataSourceResult<DbShootingMatch>> getDbMatch(AnalystDatabase db, {bool downloadIfMissing = false}) async {
-    if(localDbId == null) {
-      return DataSourceResult.err(DataSourceError.invalidRequest);
+    DbShootingMatch? match;
+    if(localDbId != null) {
+      match = await db.getMatch(localDbId!);
+      if(match != null) {
+        return DataSourceResult.ok(match);
+      }
     }
-    var match = await db.getMatch(localDbId!);
     if(match == null) {
-      if(downloadIfMissing) {
+      match = await db.getMatchByAnySourceId(sourceIds);
+      if(match != null) {
+        return DataSourceResult.ok(match);
+      }
+      else if(downloadIfMissing) {
         var source = MatchSourceRegistry().getByCodeOrNull(sourceCode);
         if(source == null || !source.supportedSports.contains(sport.type)) {
+          _log.e("Unable to download missing match: source $sourceCode source supported sports${source?.supportedSports} match sport type ${sport.type}");
           return DataSourceResult.err(DataSourceError.invalidRequest);
         }
         
@@ -635,7 +641,7 @@ class MatchPointer with DbSportEntity implements SourceIdsProvider {
         return DataSourceResult.err(DataSourceError.notFound);
       }
     }
-    return DataSourceResult.ok(match);
+    return DataSourceResult.err(DataSourceError.notFound);
   }
 
   DbShootingMatch intoSourcePlaceholder() {

@@ -217,7 +217,7 @@ class RatingProjectLoader {
 
     // nothing to do
     if(matchesToAdd.isEmpty) {
-      _log.i("No new matches");
+      _log.i("No new matches, ${lastUsed.length} last used matches");
       host.progressCallback(progress: 0, total: 0, state: LoadingState.done);
       timings.add(TimingType.wallTime, DateTime.now().difference(wallStart).inMicroseconds);
       return Result.ok(null);
@@ -353,9 +353,7 @@ class RatingProjectLoader {
     var subProgress = 0;
 
     for (var match in matches) {
-      // 1. For each match, add shooters.
-      var (ratings, _) = await _addShootersFromMatch(group, match);
-
+      // update progress first so we show the correct match name
       subProgress += 1;
       _currentMatchStep += 1;
       if(subProgress % 2 == 0) {
@@ -369,6 +367,9 @@ class RatingProjectLoader {
           subTotal: subTotal,
         );
       }
+
+      // 1. For each match, add shooters.
+      var (ratings, _) = await _addShootersFromMatch(group, match);
 
       if(_canceled) {
         return Result.err(CanceledError());
