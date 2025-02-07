@@ -9,16 +9,12 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
-import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rating_change.dart';
-import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
-import 'package:sprintf/sprintf.dart';
 import 'package:shooting_sports_analyst/data/model.dart' as old;
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:charts_flutter/flutter.dart' as charts;
@@ -27,8 +23,6 @@ import 'package:charts_flutter/src/text_style.dart' as style;
 // ignore: implementation_imports
 import 'package:charts_flutter/src/text_element.dart' as element;
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_shooter_rating.dart';
-import 'package:shooting_sports_analyst/data/ranking/legacy_loader/rating_history.dart';
-import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/util.dart';
 

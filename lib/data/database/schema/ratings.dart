@@ -12,6 +12,7 @@ import 'package:json_annotation/json_annotation.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/connectivity.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_report.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
@@ -108,6 +109,9 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
 
   /// A list of reports generated since the last full recalculation.
   List<RatingReport> reports = [];
+
+  /// The number of rating events in this project.
+  int eventCount = 0;
 
   Future<void> resetMatches() async {
     // TODO

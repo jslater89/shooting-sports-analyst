@@ -245,6 +245,7 @@ class RatingProjectLoader {
     }
 
     if(!canAppend) {
+      project.eventCount = 0;
       project.reports = [];
       project.completedFullCalculation = false;
       if(fullRecalc) {
@@ -452,12 +453,14 @@ class RatingProjectLoader {
 
   int _totalMatchSteps = 0;
   int _currentMatchStep = 0;
-  Future<Result<void, RatingProjectLoadError>> _addMatchScoresToGroup(RatingGroup group, List<ShootingMatch> matches) async {
+  Future<Result<int, RatingProjectLoadError>> _addMatchScoresToGroup(RatingGroup group, List<ShootingMatch> matches) async {
     var subTotal = matches.length;
     var subProgress = 0;
 
     // At this point we have an accurate count of shooters so far, which we'll need for various maths.
     var shooterCount = await AnalystDatabase().countShooterRatings(project, group);
+
+    int changeCount = 0;
 
     var start = DateTime.now();
     for (var match in matches) {
@@ -502,7 +505,7 @@ class RatingProjectLoader {
         subProgress: subProgress,
         subTotal: subTotal,
       );
-      await _rankMatch(group, match);
+      changeCount += await _rankMatch(group, match);
     }
 
     var count = await db.countShooterRatings(project, group);
@@ -512,7 +515,7 @@ class RatingProjectLoader {
     // 3.2. DB-delete any shooters we added who recorded no scores in any matches in
     // this group.
 
-    return Result.ok(null);
+    return Result.ok(changeCount);
   }
 
   /// Applies a deduplication action to the project.
@@ -745,7 +748,8 @@ class RatingProjectLoader {
       groupStep += 1;
     }
 
-    List<Future<Result<void, RatingProjectLoadError>>> futures = [];
+    List<Future<Result<int, RatingProjectLoadError>>> futures = [];
+    int changeCount = 0;
     if(parallel) {
       for(var group in project.groups) {
         futures.add(_addMatchScoresToGroup(group, matches));
@@ -755,14 +759,18 @@ class RatingProjectLoader {
       var results = await Future.wait(futures);
       for(var result in results) {
         if(result.isErr()) return result;
+        changeCount += result.unwrap();
       }
     }
     else {
       for(var group in project.groups) {
         var result = await _addMatchScoresToGroup(group, matches);
         if(result.isErr()) return result;
+        changeCount += result.unwrap();
       }
     }
+
+    project.eventCount += changeCount;
 
     if(Timings.enabled) timings.matchCount += matches.length;
 
@@ -1093,7 +1101,9 @@ class RatingProjectLoader {
   }
 
   double get _centerStrength => sport.ratingStrengthProvider?.centerStrength ?? 1.0;
-  Future<void> _rankMatch(RatingGroup group, ShootingMatch match) async {
+
+  /// Returns the number of rating changes.
+  Future<int> _rankMatch(RatingGroup group, ShootingMatch match) async {
     late DateTime start;
     if(Timings.enabled) start = DateTime.now();
     var shooters = await _getShooters(group, match, verify: true);
@@ -1101,7 +1111,7 @@ class RatingProjectLoader {
 
     // Skip when a match has no shooters in a group
     if(shooters.length == 0 && scores.length == 0) {
-      return;
+      return 0;
     }
 
     if(Timings.enabled) timings.add(TimingType.getShootersAndScores, DateTime.now().difference(start).inMicroseconds);
@@ -1194,6 +1204,7 @@ class RatingProjectLoader {
 
     Map<DbShooterRating, Map<RelativeScore, RatingEvent>> changes = {};
     Set<DbShooterRating> shootersAtMatch = Set();
+    int changeCount = 0;
 
     if(Timings.enabled) start = DateTime.now();
     // Process ratings for each shooter.
@@ -1265,6 +1276,7 @@ class RatingProjectLoader {
         }
 
         var persistStart = DateTime.now();
+        changeCount += changes.length;
         for(var r in changes.keys) {
           var changeStart = DateTime.now();
           if(!r.events.isLoaded) await r.events.load();
@@ -1343,6 +1355,7 @@ class RatingProjectLoader {
         }
       }
 
+      changeCount += changes.length;
       for(var r in changes.keys) {
         var wrapped = ratingSystem.wrapDbRating(r);
         wrapped.updateFromEvents(changes[r]!.values.toList());
@@ -1436,6 +1449,8 @@ class RatingProjectLoader {
       // _log.vv("New baseline for ${group.name} after ${match.name}: ${baseline.toStringAsFixed(1)}");
     }
     if(Timings.enabled) timings.add(TimingType.updateConnectedness, DateTime.now().difference(start).inMicroseconds);
+
+    return changeCount;
   }
 
   (List<MatchEntry>, List<RelativeMatchScore>) _filterScores(List<MatchEntry> shooters, List<RelativeMatchScore> scores, MatchStage? stage) {

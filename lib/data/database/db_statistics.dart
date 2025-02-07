@@ -119,10 +119,7 @@ extension Statistics on AnalystDatabase {
 
     for(var project in projects) {
       ratingProjectRatingCounts[project] = await project.ratings.count();
-      ratingProjectEventCounts[project] = 0;
-      for(var r in project.ratings) {
-        ratingProjectEventCounts[project] = ratingProjectEventCounts[project]! + r.events.length;
-      }
+      ratingProjectEventCounts[project] = project.eventCount < 0 ? 0 : project.eventCount;
     }
 
     var estimatedProjectSizes = <DbRatingProject, int>{};
