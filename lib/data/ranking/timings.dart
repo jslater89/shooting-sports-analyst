@@ -35,8 +35,11 @@ class Timings {
     updateMillis = 0.0;
     updateConnectednessMillis = 0.0;
     removeUnseenShootersMillis = 0.0;
+    wallTimeMillis = 0;
+    ratingEventCount = 0;
   }
 
+  int ratingEventCount = 0;
   double addShootersMillis = 0.0;
   int shooterCount = 0;
   int matchEntryCount = 0;
@@ -70,6 +73,8 @@ class Timings {
 
   double get sum => addShootersMillis + dedupShootersMillis + rateMatchesMillis + removeUnseenShootersMillis;
 
+  int wallTimeMillis = 0;
+
   @override
   String toString() {
     var content = "TIMINGS:\n";
@@ -88,6 +93,7 @@ class Timings {
     content += "\t\t\tPrint info: ${printInfo.toStringAsFixed(3)} ms\n";
     content += "\tUpdate connectedness: ${updateConnectednessMillis.toStringAsFixed(3)} ms\n";
     content += "Remove unseen shooters: ${removeUnseenShootersMillis.toStringAsFixed(3)} ms\n";
+    content += "Wall time: ${(wallTimeMillis).toStringAsFixed(1)} ms, ${(wallTimeMillis / ratingEventCount).toStringAsFixed(6)} ms per rating event\n";
     content += "Total: ${sum.toStringAsFixed(3)} ms, ${(sum / matchEntryCount).toStringAsFixed(3)} ms per match entry";
 
     return content;

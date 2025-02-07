@@ -203,6 +203,8 @@ class Rater {
   Future<RatingResult> calculateInitialRatings() async {
     late DateTime start;
 
+    DateTime wallStart = DateTime.now();
+
     if(Timings.enabled) start = DateTime.now();
     for(PracticalMatch m in _matches) {
       _addShootersFromMatch(m);
@@ -292,12 +294,15 @@ class Rater {
     var stageRoundsMode = mode(stageRoundCounts);
     var matchRoundsMode = mode(matchRoundCounts);
 
+    if(Timings.enabled) timings.wallTimeMillis += DateTime.now().difference(wallStart).inMilliseconds;
+
     _log.i("Initial ratings complete for ${knownShooters.length} shooters in ${_matches.length} matches in ${filters.activeDivisions.toList()}");
     _log.i("Match length in stages (min/max/average/median/mode): ${matchLengths.min}/${matchLengths.max}/${matchLengths.average.toStringAsFixed(1)}/${matchLengths[matchLengths.length ~/ 2]}/$matchLengthMode");
     _log.i("Match length in rounds (average/median/mode): ${matchRoundCounts.min}/${matchRoundCounts.max}/${matchRoundCounts.average.toStringAsFixed(1)}/${matchRoundCounts[matchRoundCounts.length ~/ 2]}/$matchRoundsMode");
     _log.i("Stage length in rounds (average/median/mode): ${stageRoundCounts.min}/${stageRoundCounts.max}/${stageRoundCounts.average.toStringAsFixed(1)}/${stageRoundCounts[stageRoundCounts.length ~/ 2]}/$stageRoundsMode");
     _log.i("DQs per 100 shooters (average/median): ${dqsPer100.min.toStringAsFixed(3)}/${dqsPer100.max.toStringAsFixed(3)}/${dqsPer100.average.toStringAsFixed(3)}/${dqsPer100[dqsPer100.length ~/ 2].toStringAsFixed(3)}");
     // _log.i("Stage round counts: $stageRoundCounts");
+
     return RatingResult.ok();
   }
 
@@ -743,6 +748,7 @@ class Rater {
     if(Timings.enabled) timings.getShootersAndScoresMillis += (DateTime.now().difference(start).inMicroseconds / 1000);
 
 
+    int changeCount = 0;
     if(Timings.enabled) start = DateTime.now();
     // Based on strength of competition, vary rating gain between 25% and 150%.
     var matchStrength = 0.0;
@@ -877,6 +883,7 @@ class Rater {
           r.updateTrends(changes[r]!.values.toList());
           shootersAtMatch.add(r);
         }
+        changeCount += changes.length;
         changes.clear();
       }
     }
@@ -938,6 +945,7 @@ class Rater {
         r.updateTrends(changes[r]!.values.toList());
         shootersAtMatch.add(r);
       }
+      changeCount += changes.length;
       changes.clear();
     }
     if(Timings.enabled) timings.rateShootersMillis += (DateTime.now().difference(start).inMicroseconds / 1000);
@@ -970,6 +978,7 @@ class Rater {
       averageAfter /= encounteredList.length;
       // _log.d("Averages: ${averageBefore.toStringAsFixed(1)} -> ${averageAfter.toStringAsFixed(1)} vs. ${expectedConnectedness.toStringAsFixed(1)}");
     }
+    timings.ratingEventCount += changeCount;
     if(Timings.enabled) timings.updateConnectednessMillis += (DateTime.now().difference(start).inMicroseconds / 1000);
   }
 
