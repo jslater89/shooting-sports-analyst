@@ -67,7 +67,8 @@ sorted-elo-settings*.txt
 base.apk.cache/
 research/**/output.txt
 
-
+# Things shared with me under NDA that I can't put on Git
+private/
 
 # Closed sources for git status cleanliness
 # When adding a new closed-source thing, commit the stub, then

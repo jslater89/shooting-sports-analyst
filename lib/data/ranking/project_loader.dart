@@ -666,10 +666,28 @@ class RatingProjectLoader {
         // TODO: test for this case
         var fix = action as DataEntryFix;
         settings.memberNumberCorrections.add(fix.intoCorrection());
+
+        bool hasInternationalNumbers = false;
+        var sourceRating = await db.maybeKnownShooter(
+          project: project,
+          group: group,
+          memberNumber: fix.sourceNumber,
+          useCache: true,
+        );
+        if(sourceRating != null) {
+          hasInternationalNumbers = sourceRating.knownMemberNumbers.any((n) {
+            if(sport.shooterDeduplicator?.isInternationalNumber(n) ?? false) {
+              return true;
+            }
+
+            return false;
+          });
+        }
+
         
         // If we enter e.g. FY115519, we also want to catch cases where the user enters A155519 or TY115519,
         // but we don't want to make a mapping that maps the same number to itself.
-        var alternateForms = sport.shooterDeduplicator?.alternateForms(fix.sourceNumber) ?? [];
+        var alternateForms = sport.shooterDeduplicator?.alternateForms(fix.sourceNumber, includeInternationalVariants: hasInternationalNumbers) ?? [];
         alternateForms.removeWhere((n) => n == fix.sourceNumber);
         for(var number in alternateForms) {
           var corrections = settings.memberNumberCorrections.getByName(fix.deduplicatorName);
@@ -689,12 +707,6 @@ class RatingProjectLoader {
           }
         }
 
-        var sourceRating = await db.maybeKnownShooter(
-          project: project,
-          group: group,
-          memberNumber: fix.sourceNumber,
-          useCache: true,
-        );
         if(sourceRating != null && sourceRating.deduplicatorName == fix.deduplicatorName) {
           var targetRating = await db.maybeKnownShooter(
             project: project,

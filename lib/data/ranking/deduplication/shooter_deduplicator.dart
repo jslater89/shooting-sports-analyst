@@ -78,7 +78,18 @@ abstract class ShooterDeduplicator {
   /// In cases (like frickin' USPSA) where member 123456 may be prefixed in one of
   /// several ways without changing the numeric element (A, TY, FY) or the underlying
   /// member, we want to be able to save all of them to the database at once.
-  List<String> alternateForms(String number);
+  List<String> alternateForms(String number, {bool includeInternationalVariants = false});
+
+  /// Because of, once again, frickin' USPSA, which has US-only associate numbers but also
+  /// international associate numbers that are valid USPSA numbers but not valid international
+  /// member numbers, we need another stupid check to determine if a number is a real-deal international
+  /// number OR a USPSA-issued foreign associate number OR neither.
+  /// 
+  /// The default implementation returns the correct answer for any reasonable member numbering
+  /// system that correctly implements [classify].
+  bool isInternationalNumber(String number) {
+    return classify(number) == MemberNumberType.international;
+  }
 
   /// A normalized member number is a member number that has been processed for
   /// display purposes.

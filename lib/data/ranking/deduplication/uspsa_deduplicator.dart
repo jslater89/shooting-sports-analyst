@@ -1060,23 +1060,27 @@ class USPSADeduplicator extends ShooterDeduplicator {
     for(var number in numbers) {
       if(number.startsWith("FY")) fy = number;
       else if(number.startsWith("TY")) ty = number;
-      else if(number.startsWith("A")) a = number;
+      else if(number.startsWith("A") || number.startsWith("F")) a = number;
     }
     return fy ?? ty ?? a ?? numbers.first;
   }
 
-  List<String> alternateForms(String number) {
+  List<String> alternateForms(String number, {bool includeInternationalVariants = false}) {
     var type = classify(number);
     if(type == MemberNumberType.standard) {
       // Is this a USPSA-issued foreign member number?
-      var pattern = RegExp(r"^TYF\d+|^FYF\d+|^F\d+");
+      var internationalPattern = RegExp(r"^TYF\d+|^FYF\d+|^F\d+");
       var numericComponent = number.replaceAll(RegExp(r"[^0-9]"), "");
-      if(pattern.hasMatch(number)) {
-        return ["F$numericComponent", "TYF$numericComponent", "FYF$numericComponent"];
+      List<String> forms = [];
+      forms.add("A$numericComponent");
+      forms.add("TY$numericComponent");
+      forms.add("FY$numericComponent");
+      if(includeInternationalVariants || internationalPattern.hasMatch(number)) {
+        forms.add("F$numericComponent");
+        forms.add("TYF$numericComponent");
+        forms.add("FYF$numericComponent");
       }
-      else {
-        return ["A$numericComponent", "TY$numericComponent", "FY$numericComponent"];
-      }
+      return forms;
     }
     else if(type == MemberNumberType.international) {
       return [number, "INTL$number"];
@@ -1113,6 +1117,14 @@ class USPSADeduplicator extends ShooterDeduplicator {
     if(number.startsWith("AB")) return MemberNumberType.international;
 
     return MemberNumberType.standard;
+  }
+
+  bool isInternationalNumber(String number) {
+    if(number.startsWith("INTL")) return true;
+    if(classify(number) == MemberNumberType.international) return true;
+    var internationalPattern = RegExp(r"^TYF\d+|^FYF\d+|^F\d+");
+    if(internationalPattern.hasMatch(number)) return true;
+    return false;
   }
 
   List<String> targetNumber(Map<MemberNumberType, List<String>> numbers) {
