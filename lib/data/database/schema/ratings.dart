@@ -381,13 +381,13 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
       throw ArgumentError("Invalid sport name: ${json["sportName"]}");
     }
     var project = DbRatingProject(
-      name: json["name"],
-      sportName: json["sportName"],
-      encodedSettings: json["encodedSettings"],
-      automaticNumberMappings: json["automaticNumberMappings"].map((m) => DbMemberNumberMapping.fromJson(m)).toList(),
+      name: json["name"] as String,
+      sportName: json["sportName"] as String,
+      encodedSettings: json["encodedSettings"] as String,
+      automaticNumberMappings: (json["automaticNumberMappings"] as List<dynamic>).map((m) => DbMemberNumberMapping.fromJson(m as Map<String, dynamic>)).cast<DbMemberNumberMapping>().toList(),
     );
-    List<RatingGroup?> builtinGroups = json["builtinGroups"].map((uuid) => sport.builtinRatingGroupsProvider?.getGroup(uuid));
-    var customGroups = json["customGroups"].map((g) => RatingGroup.fromJson(g));
+    var builtinGroups = (json["builtinGroups"] as List<dynamic>).map((uuid) => sport.builtinRatingGroupsProvider?.getGroup(uuid as String));
+    var customGroups = (json["customGroups"] as List<dynamic>).map((g) => RatingGroup.fromJson(g as Map<String, dynamic>));
 
     for(var group in customGroups) {
       var isar = AnalystDatabase().isar;
@@ -398,9 +398,9 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
 
     project.groups = [...builtinGroups.whereNotNull(), ...customGroups];
 
-    project.matchPointers = json["matchPointers"].map((m) => MatchPointer.fromJson(m)).toList();
-    project.filteredMatchPointers = json["filteredMatchPointers"].map((m) => MatchPointer.fromJson(m)).toList();
-    project.matchInProgressPointers = json["matchInProgressPointers"].map((m) => MatchPointer.fromJson(m)).toList();
+    project.matchPointers = (json["matchPointers"] as List<dynamic>).map((m) => MatchPointer.fromJson(m as Map<String, dynamic>)).toList();
+    project.filteredMatchPointers = (json["filteredMatchPointers"] as List<dynamic>).map((m) => MatchPointer.fromJson(m as Map<String, dynamic>)).toList();
+    project.matchInProgressPointers = (json["matchInProgressPointers"] as List<dynamic>).map((m) => MatchPointer.fromJson(m as Map<String, dynamic>)).toList();
     return project;
   }
 }

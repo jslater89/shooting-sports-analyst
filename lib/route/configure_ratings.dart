@@ -4,6 +4,8 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
 import 'package:provider/provider.dart';
@@ -959,7 +961,10 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
               _lastProjectName = name;
             });
 
-            await _saveProject(name);
+            var p = await _saveProject(name);
+            setState(() {
+              _loadedProject = p;
+            });
           },
         ),
       ),
@@ -1021,44 +1026,59 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     switch(item) {
 
       case _MenuEntry.import:
-        // var imported = await RatingProjectManager().importFromFile();
-        //
-        // if(imported != null) {
-        //   if(RatingProjectManager().projectExists(imported.name)) {
-        //     var confirm = await showDialog<bool>(context: context, builder: (context) {
-        //       return ConfirmDialog(
-        //         content: Text("A project with that name already exists. Overwrite?"),
-        //         positiveButtonLabel: "OVERWRITE",
-        //       );
-        //     }, barrierDismissible: false);
-        //
-        //     if(confirm == null || !confirm) {
-        //       return;
-        //     }
-        //   }
-        //
-        //   _log.i("Imported ${imported.name}");
-        //
-        //   _loadProject(imported);
-        //   updateUrls();
-        // }
-        // else {
-        //   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unable to load file")));
-        // }
+        var importedRaw = await HtmlOr.pickAndReadFileNow();
+        if(importedRaw == null) {
+          _log.i("User cancelled import");
+          return;
+        }
+
+        var imported = jsonDecode(importedRaw);
+        if(imported is Map<String, dynamic>) {
+          DbRatingProject project;
+          try {
+            project = DbRatingProject.fromJson(imported);
+          }
+          catch(e, st) {
+            _log.e("Invalid project file, root is: ${imported.runtimeType}", error: e, stackTrace: st);
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Invalid project file (${e.toString()})")));
+            return;
+          }
+          var existingProject = await AnalystDatabase().getRatingProjectByName(project.name);
+          bool proceed = true;
+          bool overwrote = false;
+          if(existingProject != null) {
+            var confirm = await showDialog<bool>(context: context, builder: (context) => ConfirmDialog(
+              content: Text("A project with that name already exists. Overwrite?"),
+              positiveButtonLabel: "OVERWRITE",
+            ));
+
+            if(confirm != true) {
+              proceed = false;
+            }
+            else {
+              overwrote = true;
+            }
+          }
+
+          if(proceed) {
+            await AnalystDatabase().saveRatingProject(project);
+            _loadProject(project);
+            _log.i("Imported ${project.name} at ${project.id} ${overwrote ? "(overwrote existing project)" : ""}");
+          }
+        }
+        else {
+          _log.e("Invalid project file, root is: ${imported.runtimeType}");
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Invalid project file (JSON root is not a map)")));
+        }
         break;
       case _MenuEntry.export:
-        // var settings = _makeAndValidateSettings();
-        // if(settings == null) {
-        //   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("You must provide valid settings (including match URLs) to export.")));
-        //   return;
-        // }
-        //
-        // var project = DbRatingProject(
-        //   sportName: "USPSA", // todo
-        //   name: "${_lastProjectName ?? "Unnamed Project"}",
-        //   settings: settings,
-        // );
-        // await RatingProjectManager().exportToFile(project);
+        if(_loadedProject == null) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Save this project to the database before exporting.")));
+          return;
+        }
+
+        var json = jsonEncode(_loadedProject!.toJson());
+        HtmlOr.saveFile("${_loadedProject!.name.safeFilename()}.json", json);
         break;
 
 
