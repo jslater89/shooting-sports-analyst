@@ -910,12 +910,19 @@ extension _HitPercentagesText on RawScore {
   String hitPercentages(Sport sport) {
     List<String> entries = [];
     var totalCount = this.targetEventCount;
-    for(var entry in this.targetEvents.entries.sorted((a, b) => a.key.sortOrder.compareTo(b.key.sortOrder))) {
+    Map<String, int> eventCountsByName = {};
+    var sortedEvents = this.targetEvents.entries.sorted((a, b) => a.key.sortOrder.compareTo(b.key.sortOrder));
+    for(var entry in sortedEvents) {
       var event = entry.key;
       var count = entry.value;
+      eventCountsByName.incrementBy(event.name, count);
+    }
 
-      if(event.displayInOverview) {
-        entries.add("${(count / totalCount).asPercentage(decimals: 1)} ${event.shortDisplayName}");
+    var powerFactor = sport.defaultPowerFactor;
+    for(var entry in eventCountsByName.entries) {
+      var event = powerFactor.targetEvents.lookupByName(entry.key);
+      if(event != null && event.displayInOverview) {
+        entries.add("${(entry.value / totalCount).asPercentage(decimals: 1)} ${event.shortDisplayName}");
       }
     }
 
@@ -924,11 +931,19 @@ extension _HitPercentagesText on RawScore {
 
   String scoringEventText(Sport sport) {
     var message = StringBuffer();
-    for(var entry in this.targetEvents.entries.sorted((a, b) => a.key.sortOrder.compareTo(b.key.sortOrder))) {
+    Map<String, int> eventCountsByName = {};
+    var sortedEvents = this.targetEvents.entries.sorted((a, b) => a.key.sortOrder.compareTo(b.key.sortOrder));
+    for(var entry in sortedEvents) {
       var event = entry.key;
       var count = entry.value;
+      eventCountsByName.incrementBy(event.name, count);
+    }
 
-      if(event.displayInOverview) {
+    var powerFactor = sport.defaultPowerFactor;
+    for(var entry in eventCountsByName.entries) {
+      var event = powerFactor.targetEvents.lookupByName(entry.key);
+      var count = entry.value;
+      if(event != null && event.displayInOverview) {
         if(sport.displaySettings.eventNamesAsSuffix) {
           message.write("$count${event.shortDisplayName} ");
         }

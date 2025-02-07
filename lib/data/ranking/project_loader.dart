@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:io';
 import 'dart:math';
 
 import 'package:collection/collection.dart';
@@ -139,6 +140,11 @@ class RatingProjectLoaderHost {
 
 // TODO (a big one): track ratings and events added during an 'append' calculation
 // That way we can roll back on cancellation or error.
+// 2025-02-07: I don't think we actually need to track things, with all that we're
+// storing: we should be able to pick a match and roll back to it with the data we
+// have in events. This also suggests a mechanism we can use for live rating updates
+// in broadcast mode: apply partial/in-progress match for display, roll back to prior
+// state.
 class RatingProjectLoader {
   final DbRatingProject project;
   final RatingProjectLoaderHost host;
@@ -159,6 +165,8 @@ class RatingProjectLoader {
 
   bool parallel;
 
+  List<String> _matchConnectivityCsv = [];
+  bool dumpMatchConnectivities = false;
   Future<Result<void, RatingProjectLoadError>> calculateRatings({bool fullRecalc = false}) async {
     wallStart = DateTime.now();
 
@@ -334,6 +342,12 @@ class RatingProjectLoader {
 
     project.completedFullCalculation = true;
     await db.saveRatingProject(project, checkName: true);
+
+    if(dumpMatchConnectivities && _matchConnectivityCsv.isNotEmpty) {
+      var csv = _matchConnectivityCsv.join("\n");
+      var file = File("match_connectivity.csv");
+      await file.writeAsString(csv);
+    }
     return Result.ok(null);
   }
 
@@ -1192,6 +1206,10 @@ class RatingProjectLoader {
       if(connectivityScores.isNotEmpty) {
         var baseline = project.connectivityContainer.getConnectivity(group, defaultValue: sport.connectivityCalculator!.defaultBaselineConnectivity);
         var matchConnectivity = sport.connectivityCalculator!.calculateMatchConnectivity(connectivityScores);
+
+        if(dumpMatchConnectivities) {
+          _matchConnectivityCsv.add('Match,${group.name},"${match.name}",${matchConnectivity.toStringAsFixed(1)}');
+        }
         connectednessMod = sport.connectivityCalculator!.getScaleFactor(connectivity: matchConnectivity, baseline: baseline);
         // _log.vv("Connectivity/baseline/mod before match: ${matchConnectivity.toStringAsFixed(1)}/${baseline.toStringAsFixed(1)}/${connectednessMod.toStringAsFixed(3)}");
       }
@@ -1456,6 +1474,10 @@ class RatingProjectLoader {
         connectivitySum: connectivitySum,
         connectivityScores: connectivityScores,
       );
+
+      if(dumpMatchConnectivities) {
+        _matchConnectivityCsv.add('Baseline,${group.name},"${match.name}",${baseline.toStringAsFixed(1)}');
+      }
       project.connectivityContainer.add(BaselineConnectivity(
         groupUuid: group.uuid,
         connectivity: baseline,
