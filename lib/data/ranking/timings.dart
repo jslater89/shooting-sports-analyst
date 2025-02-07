@@ -70,6 +70,7 @@ class Timings {
       e.reset();
     }
 
+    ratingEventCount = 0;
     matchEntryCount = 0;
     shooterCount = 0;
     matchCount = 0;
@@ -86,6 +87,7 @@ class Timings {
   }
 
   double get sum => elements.fold(0.0, (previousValue, element) => previousValue + element.microseconds);
+  int ratingEventCount = 0;
   int matchEntryCount = 0;
   int shooterCount = 0;
   int matchCount = 0;
@@ -95,9 +97,9 @@ class Timings {
   String toString() {
     var content = "TIMINGS:\n";
     content += elements.map((e) => e.asString(0)).join("");
-    content += "Wall time: ${(wallTime / 1000).toStringAsFixed(1)} ms, ${((wallTime / 1000) / matchEntryCount).toStringAsFixed(3)} ms per match entry\n";
-    content += "vs. sum: ${(sum / 1000).toStringAsFixed(1)} ms, ${((sum / 1000) / matchEntryCount).toStringAsFixed(3)} ms per match entry\n";
-    content += "Total of $shooterCount shooters, $matchCount matches, and $matchEntryCount entries";
+    content += "Wall time: ${(wallTime / 1000).toStringAsFixed(1)} ms, ${((wallTime / 1000) / ratingEventCount).toStringAsFixed(3)} ms per rating event\n";
+    content += "vs. sum: ${(sum / 1000).toStringAsFixed(1)} ms, ${((sum / 1000) / ratingEventCount).toStringAsFixed(3)} ms per rating event\n";
+    content += "Total of $shooterCount shooters, $matchCount matches, $matchEntryCount match entries, and $ratingEventCount rating events";
 
     return content;
   }

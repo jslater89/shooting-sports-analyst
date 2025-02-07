@@ -1396,7 +1396,8 @@ class RatingProjectLoader {
         );
 
         MatchWindow? oldestWindow;
-        // While we have more than 4 match windows, remove the oldest one.
+        // While we have more than 4 match windows, remove the oldest one
+        // (so that the new one we add brings us to 5).
         var editableList = rating.matchWindows.toList();
         while(editableList.length > (calc.matchWindowCount - 1)) {
           for(var window in editableList) {
@@ -1463,6 +1464,7 @@ class RatingProjectLoader {
     }
     if(Timings.enabled) timings.add(TimingType.updateConnectedness, DateTime.now().difference(start).inMicroseconds);
 
+    timings.ratingEventCount += changeCount;
     return changeCount;
   }
 
