@@ -935,13 +935,22 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
             );
 
             if(confirm ?? false) {
-              setState(() {
-                _lastProjectName = controller.text.trim().isNotEmpty ? controller.text.trim() : "New Project";
-
-                projectMatches.clear();
-                filteredMatches?.clear();
-              });
               _restoreDefaults();
+              projectMatches.clear();
+              filteredMatches?.clear();
+              var settings = _makeAndValidateSettings();
+              var name = controller.text.trim().isNotEmpty ? controller.text.trim() : "New Project";
+              var groups = sport.builtinRatingGroupsProvider?.defaultRatingGroups ?? [];
+
+              var newProject = DbRatingProject(
+                sportName: sport.name,
+                name: name,
+                settings: settings,
+              );
+              newProject.groups = groups;
+
+              await AnalystDatabase().saveRatingProject(newProject);
+              _loadProject(newProject);
             }
           },
         ),
