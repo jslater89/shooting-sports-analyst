@@ -331,13 +331,14 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     var size = MediaQuery.of(context).size;
 
     if(_series == null) {
-      _ratings = rating.ratingEvents.reversed.where((e) => e.newRating != 0 && e.ratingChange != 0).mapIndexed((i, e) {
+      var eventsOfInterest = rating.ratingEvents.reversed.where((e) => e.newRating != 0 && e.ratingChange != 0);
+      _ratings = eventsOfInterest.mapIndexed((i, e) {
         if(e.newRating < minRating) minRating = e.newRating;
         if(e.newRating > maxRating) maxRating = e.newRating;
 
         double error = 0;
         if(rating is EloShooterRating) {
-          error = rating.standardErrorWithOffset(offset: rating.ratingEvents.length - (i + 1));
+          error = rating.standardErrorWithOffset(offset: eventsOfInterest.length - (i + 1));
 
           // print("Comparison: ${error.toStringAsFixed(2)} vs ${e2.toStringAsFixed(2)}");
         }
@@ -545,7 +546,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         matchScore = matchScores[match]!;
       }
       else {
-        var scores = match.getScoresFromFilters(FilterSet(sport, divisions: divisions));
+        var scores = match.getScoresFromFilters(FilterSet(sport, divisions: divisions, empty: true, mode: FilterMode.or));
         matchScore = scores.entries.firstWhereOrNull((element) => widget.rating.equalsShooter(element.key))?.value;
         if(matchScore == null) {
           _log.w("Shooter ${widget.rating.name} doesn't have a score for match ${match.name}");
