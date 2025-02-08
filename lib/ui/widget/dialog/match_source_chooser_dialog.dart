@@ -10,7 +10,7 @@ import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 
 class MatchSourceChooserDialog extends StatefulWidget {
-  const MatchSourceChooserDialog({Key? key, this.hintText, required this.sources, this.title, this.descriptionText}) : super(key: key);
+  const MatchSourceChooserDialog({Key? key, this.hintText, required this.sources, this.title, this.descriptionText, this.initialSearch}) : super(key: key);
 
   /// The title for the URL entry dialog.
   final String? title;
@@ -20,9 +20,25 @@ class MatchSourceChooserDialog extends StatefulWidget {
   final String? hintText;
   /// The list of match sources to allow.
   final List<MatchSource> sources;
+  /// Initial search text.
+  final String? initialSearch;
 
   @override
   State<MatchSourceChooserDialog> createState() => _MatchSourceChooserDialogState();
+
+  static Future<(MatchSource, ShootingMatch)?> show(
+    BuildContext context,
+    List<MatchSource> sources, {
+    String? title,
+    String? descriptionText,
+    String? hintText,
+    String? initialSearch,
+  }) {
+    return showDialog<(MatchSource, ShootingMatch)>(
+      context: context,
+      builder: (context) => MatchSourceChooserDialog(sources: sources, title: title, descriptionText: descriptionText, hintText: hintText, initialSearch: initialSearch),
+    );
+  }
 }
 
 class _MatchSourceChooserDialogState extends State<MatchSourceChooserDialog> {
@@ -63,9 +79,12 @@ class _MatchSourceChooserDialogState extends State<MatchSourceChooserDialog> {
                 value: source,
               ),
               Divider(),
-              Expanded(child: source.getDownloadMatchUI((match) {
-                submit(match);
-              })),
+              Expanded(child: source.getDownloadMatchUI(
+                onMatchSelected: (match) {
+                  submit(match);
+                },
+                initialSearch: widget.initialSearch,
+              )),
             ],
           ),
         ),

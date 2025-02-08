@@ -467,7 +467,7 @@ class PractiscoreHitFactorReportParser extends MatchSource {
   }
 
   @override
-  Widget getDownloadMatchUI(Function(ShootingMatch) onMatchSelected) {
+  Widget getDownloadMatchUI({required void Function(ShootingMatch) onMatchSelected, String? initialSearch}) {
     return Builder(builder: (context) {
       var onSubmitted = (String value) async {
         var matchId = await processMatchUrl(value);
@@ -488,7 +488,7 @@ class PractiscoreHitFactorReportParser extends MatchSource {
           );
         }
       };
-      var controller = TextEditingController();
+      var controller = TextEditingController(text: initialSearch);
       return Column(
         children: [
           Text("Enter a link to a match and press Enter."),

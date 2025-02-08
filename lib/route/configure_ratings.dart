@@ -15,8 +15,6 @@ import 'package:shooting_sports_analyst/data/database/match/rating_project_datab
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/util.dart';
-import 'package:shooting_sports_analyst/data/match/practical_match.dart';
-import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
 import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
@@ -28,17 +26,13 @@ import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_settings.dart';
-import 'package:shooting_sports_analyst/data/ranking/legacy_loader/rating_history.dart';
 import 'package:shooting_sports_analyst/data/ranking/shooter_aliases.dart';
-import 'package:shooting_sports_analyst/data/results_file_parser.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
-import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/preference_names.dart';
-import 'package:shooting_sports_analyst/ui/rater/enter_practiscore_source_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/match_list_filter_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_blacklist_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_correction_dialog.dart';
@@ -48,14 +42,10 @@ import 'package:shooting_sports_analyst/ui/rater/select_old_project_dialog.dart'
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/enter_name_dialog.dart';
-import 'package:shooting_sports_analyst/ui/rater/enter_urls_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/select_project_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/shooter_aliases_dialog.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/loading_dialog.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/match_cache_chooser_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_database_chooser_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/rater_groups_dialog.dart';
-import 'package:shooting_sports_analyst/ui/widget/match_cache_loading_indicator.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 var _log = SSALogger("ConfigureRatingsPage");
@@ -88,7 +78,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
   DbRatingProject? _loadedProject;
 
-  bool matchCacheReady = false;
   List<MatchPointer> projectMatches = [];
   List<MatchPointer> lastUsedMatches = [];
   Map<MatchPointer, bool> ongoingMatches = {};
@@ -126,10 +115,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     super.initState();
 
     prefs = Provider.of<SharedPreferences>(context, listen: false);
-    matchCacheReady = MatchCache.readyNow;
     sport = uspsaSport;
-
-    if(!matchCacheReady) _warmUpMatchCache();
 
     _loadAutosave();
   }
@@ -147,13 +133,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         filteredMatches = projectMatches;
       });
     }
-  }
-
-  Future<void> _warmUpMatchCache() async {
-    // we don't use it anymore
-    setStateIfMounted(() {
-      matchCacheReady = true;
-    });
   }
 
   Future<void> _loadAutosave() async {
@@ -242,7 +221,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         appBar: AppBar(
           title: Text(_lastProjectName == null ? "Shooter Rating Calculator" : "Project $_lastProjectName"),
           centerTitle: true,
-          actions: MatchCache.readyNow ? _generateActions() : null,
+          actions: _generateActions(),
           bottom: _operationInProgress ? PreferredSize(
             preferredSize: Size(double.infinity, 5),
             child: LinearProgressIndicator(value: null, backgroundColor: primaryColor, valueColor: animation),
@@ -293,21 +272,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   }
 
   Widget _body() {
-    var width = MediaQuery.of(context).size.width;
-    if(!matchCacheReady) {
-      return Padding(
-        padding: const EdgeInsets.all(0),
-        child: Column(
-          mainAxisSize: MainAxisSize.max,
-          children: [
-            SizedBox(height: 128, width: width),
-            MatchCacheLoadingIndicator(),
-          ],
-        ),
-      );
-    }
-
-    // Match cache is ready from here on down
     return Column(
       children: [
         Padding(
@@ -567,7 +531,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                       // matchUrls
                                     });
 
-                                    updateMatches();
+                                    // Calls updateMatches
+                                    _sortMatches(false);
                                   },
                                 ),
                               ),
@@ -741,9 +706,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   }
 
   void _sortMatches(bool alphabetic) async {
-    var cache = MatchCache();
-    await cache.ready;
-
     projectMatches.sort((matchA, matchB) {
       // Sort remaining matches by date descending, then by name ascending
       if(!alphabetic) {

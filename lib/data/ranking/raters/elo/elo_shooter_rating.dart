@@ -50,6 +50,7 @@ class EloShooterRating extends ShooterRating<EloRatingEvent> {
     late List<double> changes;
     if(preloadedChanges != null) {
       changes = preloadedChanges.getTailWindow(window);
+      if(changes.length == 0) return 0;
     }
     else {
       // This is in order from newest to oldest, but we don't need to switch it because direction doesn't
@@ -110,6 +111,7 @@ class EloShooterRating extends ShooterRating<EloRatingEvent> {
       limit: dbWindow,
       offset: offset,
       order: Order.descending,
+      nonzeroChange: true,
     ).map((e) => EloRatingEvent.getErrorFromDoubleData(e)).toList();
 
     // Get a list of errors in order from newest to oldest, including any new errors.
@@ -261,7 +263,9 @@ class EloShooterRating extends ShooterRating<EloRatingEvent> {
     var longTrendWindow = ShooterRating.baseTrendWindow * 2;
     var trendWindow = ShooterRating.baseTrendWindow;
 
-    var newEventContribution = changes.length;
+    var meaningfulChanges = changes.where((e) => e.ratingChange != 0.0).toList();
+
+    var newEventContribution = meaningfulChanges.length;
     var dbRequirement = longTrendWindow - newEventContribution;
 
     if(longTrendWindow == 0) {
@@ -272,16 +276,16 @@ class EloShooterRating extends ShooterRating<EloRatingEvent> {
     List<double> ratingValues = [];
 
     if(dbRequirement > 0) {
-      List<double> dbRatingChanges = AnalystDatabase().getRatingEventChangeForSync(wrappedRating, limit: dbRequirement, offset: 0, order: Order.descending);
-      List<double> dbRatingValues = AnalystDatabase().getRatingEventRatingForSync(wrappedRating, limit: dbRequirement, offset: 0, order: Order.descending);
+      List<double> dbRatingChanges = AnalystDatabase().getRatingEventChangeForSync(wrappedRating, limit: dbRequirement, offset: 0, order: Order.descending, nonzeroChange: true);
+      List<double> dbRatingValues = AnalystDatabase().getRatingEventRatingForSync(wrappedRating, limit: dbRequirement, offset: 0, order: Order.descending, nonzeroChange: true);
 
       // Put the list in order from oldest to newest.
       ratingChanges.addAll(dbRatingChanges.reversed);
       ratingValues.addAll(dbRatingValues.reversed);
     }
 
-    ratingChanges.addAll(changes.map((e) => e.ratingChange));
-    ratingValues.addAll(changes.map((e) => e.newRating));
+    ratingChanges.addAll(meaningfulChanges.map((e) => e.ratingChange));
+    ratingValues.addAll(meaningfulChanges.map((e) => e.newRating));
 
     var stdDevChanges = ratingChanges.getTailWindow(trendWindow);
     var stdDev = sqrt(stdDevChanges.map((e) => pow(e, 2)).sum / (stdDevChanges.length - 1));

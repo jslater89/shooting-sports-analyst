@@ -260,7 +260,7 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
 
   void updateFromEvents(List<RatingEvent> events);
 
-  AverageRating averageRating({int window = ShooterRating.baseTrendWindow, List<double>? preloadedRatings}) {
+  AverageRating averageRating({int window = ShooterRating.baseTrendWindow, List<double>? preloadedRatings, bool nonzeroChange = true}) {
     double lowestPoint = rating;
     double highestPoint = rating;
 
@@ -268,7 +268,7 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
     // We need to reverse the database query, because we need order.desc to get the N most recent,
     // but we want to iterate from oldest to newest.
     List<double> ratings = preloadedRatings 
-      ?? AnalystDatabase().getRatingEventRatingForSync(wrappedRating, limit: window, offset: 0, order: Order.descending, newRating: false).reversed.toList();
+      ?? AnalystDatabase().getRatingEventRatingForSync(wrappedRating, limit: window, offset: 0, order: Order.descending, newRating: false, nonzeroChange: nonzeroChange).reversed.toList();
     List<double> intermediateRatings = [];
 
     // Iterate from oldest to newest (although it doesn't really matter).

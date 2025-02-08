@@ -77,7 +77,7 @@ abstract class MatchSource<T extends InternalMatchType, S extends InternalMatchF
   /// than 500px). The enclosing UI will provide 'cancel' or 'back' functionality.
   ///
   /// Call [onMatchSelected] with a match if one is selected and downloaded.
-  Widget getDownloadMatchUI(void Function(ShootingMatch) onMatchSelected);
+  Widget getDownloadMatchUI({required void Function(ShootingMatch) onMatchSelected, String? initialSearch});
 
   static Future<Result<ShootingMatch, MatchSourceError>> reloadMatch(DbShootingMatch match) async {
     var source = MatchSourceRegistry().getByCodeOrNull(match.sourceCode);

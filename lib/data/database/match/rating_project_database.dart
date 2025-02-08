@@ -314,8 +314,9 @@ extension RatingProjectDatabase on AnalystDatabase {
     DateTime? after,
     DateTime? before,
     Order order = Order.ascending,
+    bool nonzeroChange = false,
   }) {
-    var query = _buildShooterEventDoubleDataQuery(rating, limit: limit, offset: offset, after: after, before: before, order: order);
+    var query = _buildShooterEventDoubleDataQuery(rating, limit: limit, offset: offset, after: after, before: before, order: order, nonzeroChange: nonzeroChange);
     return query.findAllSync();
   }
 
@@ -325,8 +326,9 @@ extension RatingProjectDatabase on AnalystDatabase {
     DateTime? after,
     DateTime? before,
     Order order = Order.descending,
+    bool nonzeroChange = false,
   }) {
-    var query = _buildShooterEventRatingChangeQuery(rating, limit: limit, offset: offset, after: after, before: before, order: order);
+    var query = _buildShooterEventRatingChangeQuery(rating, limit: limit, offset: offset, after: after, before: before, order: order, nonzeroChange: nonzeroChange);
     return query.findAllSync();
   }
 
@@ -344,13 +346,14 @@ extension RatingProjectDatabase on AnalystDatabase {
     DateTime? before,
     Order order = Order.descending,
     bool newRating = true,
+    bool nonzeroChange = false,
   }) {
     QueryBuilder<DbRatingEvent, double, QQueryOperations> query;
     if(newRating) {
-      query = _buildShooterEventNewRatingQuery(rating, limit: limit, offset: offset, after: after, before: before, order: order);
+      query = _buildShooterEventNewRatingQuery(rating, limit: limit, offset: offset, after: after, before: before, order: order, nonzeroChange: nonzeroChange);
     }
     else {
-      query = _buildShooterEventOldRatingQuery(rating, limit: limit, offset: offset, after: after, before: before, order: order);
+      query = _buildShooterEventOldRatingQuery(rating, limit: limit, offset: offset, after: after, before: before, order: order, nonzeroChange: nonzeroChange);
     }
     return query.findAllSync();
   }
@@ -412,8 +415,12 @@ extension RatingProjectDatabase on AnalystDatabase {
     DateTime? after,
     DateTime? before,
     Order order = Order.descending,
+    bool nonzeroChange = false,
   }) {
-    var b1 = rating.events.filter();
+    QueryBuilder<DbRatingEvent, DbRatingEvent, QAfterFilterCondition> b1 = rating.events.filter();
+    if(nonzeroChange) {
+      b1 = b1.not().ratingChangeEqualTo(0.0, epsilon: 0);
+    }
     QueryBuilder<DbRatingEvent, DbRatingEvent, QAfterSortBy> builder;
     if(order == Order.descending) {
       builder = b1.sortByDateAndStageNumberDesc();
@@ -444,8 +451,12 @@ QueryBuilder<DbRatingEvent, List<double>, QQueryOperations> _buildShooterEventDo
   DateTime? after,
   DateTime? before,
   Order order = Order.descending,
+  bool nonzeroChange = false,
 }) {
-  var b1 = rating.events.filter();
+  QueryBuilder<DbRatingEvent, DbRatingEvent, QAfterFilterCondition> b1 = rating.events.filter();
+  if(nonzeroChange) {
+    b1 = b1.not().ratingChangeEqualTo(0.0, epsilon: 0);
+  }
   QueryBuilder<DbRatingEvent, DbRatingEvent, QAfterSortBy> builder;
   if(order == Order.descending) {
     builder = b1.sortByDateAndStageNumberDesc();
@@ -475,8 +486,12 @@ QueryBuilder<DbRatingEvent, double, QQueryOperations> _buildShooterEventRatingCh
   DateTime? after,
   DateTime? before,
   Order order = Order.descending,
+  bool nonzeroChange = false,
 }) {
-  var b1 = rating.events.filter();
+  QueryBuilder<DbRatingEvent, DbRatingEvent, QAfterFilterCondition> b1 = rating.events.filter();
+  if(nonzeroChange) {
+    b1 = b1.not().ratingChangeEqualTo(0.0, epsilon: 0);
+  }
   QueryBuilder<DbRatingEvent, DbRatingEvent, QAfterSortBy> builder;
   if(order == Order.descending) {
     builder = b1.sortByDateAndStageNumberDesc();
@@ -506,8 +521,12 @@ QueryBuilder<DbRatingEvent, double, QQueryOperations> _buildShooterEventNewRatin
   DateTime? after,
   DateTime? before,
   Order order = Order.descending,
+  bool nonzeroChange = false,
 }) {
-  var b1 = rating.events.filter();
+  QueryBuilder<DbRatingEvent, DbRatingEvent, QAfterFilterCondition> b1 = rating.events.filter();
+  if(nonzeroChange) {
+    b1 = b1.not().ratingChangeEqualTo(0.0, epsilon: 0);
+  }
   QueryBuilder<DbRatingEvent, DbRatingEvent, QAfterSortBy> builder;
   if(order == Order.descending) {
     builder = b1.sortByDateAndStageNumberDesc();
@@ -537,8 +556,12 @@ QueryBuilder<DbRatingEvent, double, QQueryOperations> _buildShooterEventOldRatin
   DateTime? after,
   DateTime? before,
   Order order = Order.descending,
+  bool nonzeroChange = false,
 }) {
-  var b1 = rating.events.filter();
+  QueryBuilder<DbRatingEvent, DbRatingEvent, QAfterFilterCondition> b1 = rating.events.filter();
+  if(nonzeroChange) {
+    b1 = b1.not().ratingChangeEqualTo(0.0);
+  }
   QueryBuilder<DbRatingEvent, DbRatingEvent, QAfterSortBy> builder;
   if(order == Order.descending) {
     builder = b1.sortByDateAndStageNumberDesc();

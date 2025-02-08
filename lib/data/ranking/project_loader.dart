@@ -283,7 +283,7 @@ class RatingProjectLoader {
     // If we're appending, matchesToAdd will be only the new matches.
     // If we're not appending, this will be all the matches, and
     // clearing the old list happens in the resetRatings call above.
-    project.lastUsedMatches.addAll(matchesToAdd);
+    project.lastUsedMatches = [...project.lastUsedMatches, ...matchesToAdd];
     await db.saveRatingProject(project, checkName: true);
 
     await host.progressCallback(

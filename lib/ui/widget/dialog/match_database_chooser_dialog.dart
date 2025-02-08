@@ -251,19 +251,25 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
             if(widget.matches == null) IconButton(
               icon: Icon(Icons.add),
               onPressed: () async {
-                var match = await showDialog<ShootingMatch>(context: context, builder: (context) => MatchSourceChooserDialog(
-                  sources: MatchSourceRegistry().sources,
+                var result = await MatchSourceChooserDialog.show(
+                  context,
+                  MatchSourceRegistry().sources,
                   descriptionText: "Enter a link to a Practiscore results page.",
-                  hintText: "https://practiscore.com/results/new/..."
-                ));
+                  hintText: "https://practiscore.com/results/new/...",
+                  initialSearch: searchController.text,
+                );
+                if(result == null) return;
+                var (_, match) = result;
 
-                if(match != null) {
-                  var result = await db.saveMatch(match);
-                  if(result.isOk()) return;
-                  else {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.unwrapErr().message)));
-                  }
+                var saveResult = await db.saveMatch(match);
+                if(saveResult.isErr()) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(saveResult.unwrapErr().message)));
+                  return;
                 }
+                await _updateMatches();
+                setState(() {
+                  selectedMatches.add(saveResult.unwrap().id);
+                });
               },
             ),
             Tooltip(
