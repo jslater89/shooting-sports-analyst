@@ -271,6 +271,10 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
       ?? AnalystDatabase().getRatingEventRatingForSync(wrappedRating, limit: window, offset: 0, order: Order.descending, newRating: false, nonzeroChange: nonzeroChange).reversed.toList();
     List<double> intermediateRatings = [];
 
+    if(ratings.isEmpty) {
+      return AverageRating(firstRating: rating, minRating: rating, maxRating: rating, averageOfIntermediates: rating, window: window);
+    }
+
     // Iterate from oldest to newest (although it doesn't really matter).
     double firstRating = 0.0;
     if(ratings.isNotEmpty) {
