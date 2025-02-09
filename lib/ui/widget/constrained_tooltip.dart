@@ -23,7 +23,7 @@ class ConstrainedTooltip extends StatelessWidget {
         baseline: TextBaseline.alphabetic,
         child: Container(
           constraints: constraints,
-          child: Text(message, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white)),
+          child: Text(message, style: DefaultTextStyle.of(context).style.copyWith(color: Colors.white)),
         ),
       ),
       child: child,

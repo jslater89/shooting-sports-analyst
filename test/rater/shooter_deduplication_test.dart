@@ -444,7 +444,8 @@ void main() async {
     expect(deduplication.isOk(), isTrue);
     var results = deduplication.unwrap();
     expect(reason: "number of results", results, hasLength(1));
-    expect(reason: "number of causes", results[0].causes, isEmpty);
+    expect(reason: "number of causes", results[0].causes, hasLength(1));
+    expect(reason: "cause is AmbiguousMapping", results[0].causes.first, isA<FixedInSettings>());
     expect(reason: "number of proposed actions", results[0].proposedActions, isEmpty);
   });
 
