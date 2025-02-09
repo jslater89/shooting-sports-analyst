@@ -298,6 +298,24 @@ extension ListOverlap<T> on Iterable<T> {
   }
 }
 
+extension Interleave<T> on List<T> {
+  List<T> interleave(List<T> other) {
+    if(other.length != length && other.length != length - 1) {
+      throw ArgumentError("other must have the same length as this, or one less");
+    }
+
+    var result = <T>[];
+    for(var i = 0; i < length; i++) {
+      result.add(this[i]);
+      if(i < other.length) {
+        result.add(other[i]);
+      }
+    }
+
+    return result;
+  }
+}
+
 extension WindowedList<T> on List<T> {
   /// Get a windowed view into the list, optionally offset by [offset],
   /// starting at the head of the list.

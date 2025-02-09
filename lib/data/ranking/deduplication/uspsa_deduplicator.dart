@@ -1047,6 +1047,15 @@ class USPSADeduplicator extends ShooterDeduplicator {
   String _stripATYFY(String number) {
     if(_stripATYFYCache.containsKey(number)) return _stripATYFYCache[number]!;
     var n = number.replaceFirst(RegExp(r"[ATFY]{1,3}"), "");
+
+    // Any numbers remaining that aren't L, B, or RD are invalid.
+    // (Or any of the complimentary or charter numbers, but honestly,
+    // I've never seen one in the wild.)
+    // This is the Gib O'Neill rule, since he entered a TY number as TU,
+    // which led to an internal number of 'U133483', which tripped up
+    // the mapping.
+    n = n.replaceAll(RegExp(r"[^LBRD0-9]"), "");
+
     _stripATYFYCache[number] = n;
     return n;
   }
@@ -1102,10 +1111,8 @@ class USPSADeduplicator extends ShooterDeduplicator {
     // Intended to match: L<digit> and FL<digit>
     if(number.startsWith(RegExp("L[0-9]")) || number.startsWith(RegExp("FL[0-9]"))) return MemberNumberType.life;
 
-    // Intended to match: A, TY, FY, F, TYF, and FYF.
-    // Empirically, F, TYF, and FYF appear to be the analogues of A, TY, and FY,
-    // like FL above.
-    if(number.startsWith(RegExp(r"[ATFY]{1,3}"))) return MemberNumberType.standard;
+    // Intended to match: A, TY, FY, F, TYF, and FYF numbers.
+    if(number.startsWith(RegExp(r"A\d+|TY\d+|FY\d+|F\d+|TYF\d+|FYF\d+"))) return MemberNumberType.standard;
 
     // International competitors sometimes enter a pure-numeric IPSC regional member number,
     // and we don't want to add A/TY/FY to those in [alternateForms] to avoid overlapping with
