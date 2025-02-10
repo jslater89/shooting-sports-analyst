@@ -373,3 +373,11 @@ double lerpAroundCenter({
     return minOut + range * scale;
   }
 }
+
+extension Clamp on num {
+  num clamp(num min, num max) {
+    if(this < min) return min;
+    if(this > max) return max;
+    return this;
+  }
+}

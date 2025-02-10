@@ -86,7 +86,7 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
       ratingText = rating.rating.toStringAsFixed(1);
     }
 
-    var ppmText = (rating.rating / min(rating.length, settings.matchesToCount)).toStringAsFixed(1);
+    var ppmText = (rating.rating / rating.length.clamp(1, settings.matchesToCount)).toStringAsFixed(1);
 
     return ScoreRow(
       color: (place - 1) % 2 == 1 ? Colors.grey[200] : Colors.white,
