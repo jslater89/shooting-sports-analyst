@@ -23,6 +23,7 @@ import 'package:shooting_sports_analyst/route/local_upload.dart';
 import 'package:shooting_sports_analyst/route/home_page.dart';
 import 'package:shooting_sports_analyst/route/practiscore_url.dart';
 import 'package:shooting_sports_analyst/route/ratings.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_registry.dart';
 import 'package:shooting_sports_analyst/util.dart';
 import 'package:window_manager/window_manager.dart';
 import 'configure_nonweb.dart' if (dart.library.html) 'configure_web.dart';
@@ -104,7 +105,6 @@ void main() async {
   await AnalystDatabase().ready;
   _log.i("Database ready");
 
-
   if(!HtmlOr.isWeb) {
     var path = await getApplicationSupportDirectory();
     Hive.init(path.absolute.path);
@@ -115,11 +115,10 @@ void main() async {
     };
     MatchCache();
   }
+  _log.i("Hive cache ready");
 
   oneoffDbAnalyses(AnalystDatabase());
-
-
-  _log.i("Hive cache ready");
+  HelpTopicRegistry().initialize();
 
   runApp(MyApp());
 }

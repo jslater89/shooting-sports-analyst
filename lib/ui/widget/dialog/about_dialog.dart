@@ -5,28 +5,10 @@
  */
 
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/help/about.dart';
-import 'package:shooting_sports_analyst/html_or/html_or.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_renderer.dart';
-import 'package:shooting_sports_analyst/version.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
 
 void showAbout(BuildContext context, Size screenSize) {
-  showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-            title: Text("About"),
-            content: SizedBox(
-              width: screenSize.width * 0.5,
-              child: HelpRenderer(topic: helpAbout, onLinkTapped: (url) {
-                HtmlOr.openLink(url);
-              }),
-            )
-        );
-      }
-  );
+  HelpDialog.show(context, initialTopic: aboutHelpId);
 }
-
-// https://practiscore.com/support
