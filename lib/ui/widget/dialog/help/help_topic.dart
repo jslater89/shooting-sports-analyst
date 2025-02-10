@@ -2,6 +2,7 @@ import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_registry.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_renderer.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_token.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 SSALogger _log = SSALogger("HelpTopic");
@@ -9,8 +10,9 @@ SSALogger _log = SSALogger("HelpTopic");
 /// A help topic is an article that can be displayed to the user.
 /// 
 /// It can be formatted with a very small subset of Markdown,
-/// including # and ## headers, _italics_, *bold*, and
-/// [links](#help-topic-id).
+/// including # and ## headers, _italics_, *bold*, 
+/// [links](?help-topic-id) or [links](https://example.com),
+/// and * bullet lists.
 class HelpTopic {
   final String id;
   final String name;
@@ -115,15 +117,18 @@ class HelpTopic {
     var matches = _emphasisPattern.allMatches(line);
     var textParts = line.split(_emphasisPattern);
     List<String> parts = textParts.interleave(matches.map((e) => e.group(0)!).toList());
-    for(var part in parts) {
+    for(int i = 0; i < parts.length; i++) {
+      var part = parts[i];
+      var lineStart = i == 0;
+      var lineEnd = i == parts.length - 1;
       if(part.startsWith('_')) {
-        tokens.add(Emphasis(type: EmphasisType.italic, token: PlainText(part.substring(1, part.length - 1), link: link)));
+        tokens.add(Emphasis(type: EmphasisType.italic, token: PlainText(part.substring(1, part.length - 1), link: link, lineStart: lineStart, lineEnd: lineEnd)));
       }
       else if(part.startsWith('**')) {
-        tokens.add(Emphasis(type: EmphasisType.bold, token: PlainText(part.substring(2, part.length - 2), link: link)));
+        tokens.add(Emphasis(type: EmphasisType.bold, token: PlainText(part.substring(2, part.length - 2), link: link, lineStart: lineStart, lineEnd: lineEnd)));
       }
       else {
-        tokens.add(PlainText(part, link: link));
+        tokens.add(PlainText(part, link: link, lineStart: lineStart, lineEnd: lineEnd));
       }
     }
 

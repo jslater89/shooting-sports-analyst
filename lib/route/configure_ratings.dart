@@ -15,6 +15,10 @@ import 'package:shooting_sports_analyst/data/database/match/rating_project_datab
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/util.dart';
+import 'package:shooting_sports_analyst/data/help/elo_configuration_help.dart';
+import 'package:shooting_sports_analyst/data/help/elo_help.dart';
+import 'package:shooting_sports_analyst/data/help/openskill_help.dart';
+import 'package:shooting_sports_analyst/data/help/points_help.dart';
 import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
@@ -44,6 +48,7 @@ import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/enter_name_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/select_project_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/shooter_aliases_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_database_chooser_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/rater_groups_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -431,26 +436,38 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                   ),
                                 ),
                                 Padding(
-                                  padding: const EdgeInsets.only(right: 20),
-                                  child: Tooltip(
-                                    message: _currentRater?.tooltip,
-                                    child: DropdownButton<_ConfigurableRater>(
-                                      value: _currentRater,
-                                      onChanged: (v) {
-                                        if(v != null) {
-                                          confirmChangeRater(v);
-                                        }
-                                      },
-                                      items: _ConfigurableRater.values.map((r) =>
-                                          DropdownMenuItem<_ConfigurableRater>(
-                                            child: Tooltip(
-                                              message: r.tooltip,
-                                              child: Text(r.uiLabel)
-                                            ),
-                                            value: r,
-                                          )
-                                      ).toList(),
-                                    ),
+                                  padding: const EdgeInsets.only(right: 12),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      Tooltip(
+                                        message: _currentRater?.tooltip,
+                                        child: DropdownButton<_ConfigurableRater>(
+                                          value: _currentRater,
+                                          onChanged: (v) {
+                                            if(v != null) {
+                                              confirmChangeRater(v);
+                                            }
+                                          },
+                                          items: _ConfigurableRater.values.map((r) =>
+                                              DropdownMenuItem<_ConfigurableRater>(
+                                                child: Tooltip(
+                                                  message: r.tooltip,
+                                                  child: Text(r.uiLabel)
+                                                ),
+                                                value: r,
+                                              )
+                                          ).toList(),
+                                        ),
+                                      ),
+                                      if(_currentRater?.helpId != null) IconButton(
+                                        icon: Icon(Icons.help),
+                                        onPressed: () {
+                                          HelpDialog.show(context, initialTopic: _currentRater!.helpId);
+                                        },
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
@@ -1289,10 +1306,8 @@ enum _MenuEntry {
 enum _ConfigurableRater {
   multiplayerElo,
   openskill,
-  points,
-}
+  points;
 
-extension _ConfigurableRaterUtils on _ConfigurableRater {
   String get uiLabel {
     switch(this) {
       case _ConfigurableRater.multiplayerElo:
@@ -1316,4 +1331,16 @@ extension _ConfigurableRaterUtils on _ConfigurableRater {
           "It doesn't work as well as Elo, and depends heavily on large sample sizes.";
     }
   }
+
+  String get helpId => switch(this) {
+    _ConfigurableRater.multiplayerElo => eloHelpId,
+    _ConfigurableRater.openskill => openskillHelpId,
+    _ConfigurableRater.points => pointsHelpId,
+  };
+
+  String get configHelpId => switch(this) {
+    _ConfigurableRater.multiplayerElo => eloConfigHelpId,
+    _ConfigurableRater.openskill => openskillHelpId,
+    _ConfigurableRater.points => pointsHelpId,
+  };
 }

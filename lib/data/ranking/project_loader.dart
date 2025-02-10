@@ -1616,9 +1616,9 @@ class RatingProjectLoader {
           continue;
         }
 
-        if (!changes[rating]!.containsKey(stageScore)) {
-          changes[rating]![stageScore] = ratingSystem.newEvent(rating: rating, match: match, stage: stage, score: stageScore, matchScore: matchScore);
-          changes[rating]![stageScore]!.apply(update[rating]!);
+        if (!changes[rating.wrappedRating]!.containsKey(stageScore)) {
+          changes[rating.wrappedRating]![stageScore] = ratingSystem.newEvent(rating: rating, match: match, stage: stage, score: stageScore, matchScore: matchScore);
+          changes[rating.wrappedRating]![stageScore]!.apply(update[rating]!);
         }
       }
     }
@@ -1658,8 +1658,8 @@ class RatingProjectLoader {
       for(var rating in scoreMap.keys) {
         var score = scoreMap[rating]!;
         // You only get one rating change per match.
-        if (changes[rating]!.isEmpty) {
-          changes[rating]![score] ??= ratingSystem.newEvent(
+        if (changes[rating.wrappedRating]!.isEmpty) {
+          changes[rating.wrappedRating]![score] ??= ratingSystem.newEvent(
             rating: rating,
             match: match,
             score: score,
@@ -1668,7 +1668,7 @@ class RatingProjectLoader {
             infoData: update[rating]!.infoData,
           );
 
-          changes[rating]![score]!.apply(update[rating]!);
+          changes[rating.wrappedRating]![score]!.apply(update[rating]!);
         }
       }
     }
@@ -1855,8 +1855,8 @@ class RatingProjectLoader {
       );
 
       // You only get one rating change per match.
-      if(changes[rating]!.isEmpty) {
-        changes[rating]![score] = ratingSystem.newEvent(
+      if(changes[rating.wrappedRating]!.isEmpty) {
+        changes[rating.wrappedRating]![score] = ratingSystem.newEvent(
           rating: rating,
           match: match,
           score: score,
@@ -1865,7 +1865,7 @@ class RatingProjectLoader {
           infoData: update[rating]!.infoData,
         );
 
-        changes[rating]![score]!.apply(update[rating]!);
+        changes[rating.wrappedRating]![score]!.apply(update[rating]!);
       }
     }
   }

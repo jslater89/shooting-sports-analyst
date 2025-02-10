@@ -8,8 +8,10 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shooting_sports_analyst/data/help/elo_configuration_help.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settings.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
 
 class EloSettingsController extends RaterSettingsController<EloSettings> with ChangeNotifier {
   EloSettings _currentSettings;
@@ -421,6 +423,19 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
       mainAxisAlignment: MainAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
+        Divider(endIndent: 20),
+        Row(
+          children: [
+            Text("Elo configuration", style: Theme.of(context).textTheme.labelLarge!),
+            IconButton(
+              icon: Icon(Icons.help),
+              onPressed: () {
+                HelpDialog.show(context, initialTopic: eloConfigHelpId);
+              },
+            ),
+          ],
+
+        ),
         CheckboxListTile(
           title: Tooltip(
             child: Text("By stage?"),
@@ -435,7 +450,6 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
             }
           }
         ),
-        Divider(endIndent: 20),
         Row(
           mainAxisSize: MainAxisSize.max,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
