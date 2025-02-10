@@ -359,7 +359,17 @@ class AnalystDatabase {
   }
 }
 
+/// The order of a query.
+/// 
+/// Not all elements apply to all queries.
 enum Order {
+  /// Ascending order, by the most relevant quality of the data.
   ascending,
+  /// Descending order, by the most relevant quality of the data.
   descending,
+
+  /// Descending order by rating change.
+  /// 
+  /// Applies only to rating event queries.
+  descendingChange,
 }

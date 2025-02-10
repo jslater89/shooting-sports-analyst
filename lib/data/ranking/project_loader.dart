@@ -1386,15 +1386,26 @@ class RatingProjectLoader {
         }
       }
 
+      var persistStart = DateTime.now();
       changeCount += changes.length;
       for(var r in changes.keys) {
+        var changeStart = DateTime.now();
+        if(!r.events.isLoaded) await r.events.load();
+        if(Timings.enabled) timings.add(TimingType.loadEvents, DateTime.now().difference(changeStart).inMicroseconds);
+
+        changeStart = DateTime.now();
         var wrapped = ratingSystem.wrapDbRating(r);
         wrapped.updateFromEvents(changes[r]!.values.toList());
         wrapped.updateTrends(changes[r]!.values.toList());
         shootersAtMatch.add(r);
+        if(Timings.enabled) timings.add(TimingType.applyChanges, DateTime.now().difference(changeStart).inMicroseconds);
       }
 
-      AnalystDatabase().updateChangedRatings(changes.keys);
+      var updateStart = DateTime.now();
+      await AnalystDatabase().updateChangedRatings(changes.keys);
+      if(Timings.enabled) timings.add(TimingType.updateDbRatings, DateTime.now().difference(updateStart).inMicroseconds);
+      if(Timings.enabled) timings.add(TimingType.persistRatingChanges, DateTime.now().difference(persistStart).inMicroseconds);
+
       changes.clear();
     }
     if(Timings.enabled) timings.add(TimingType.rateShooters, DateTime.now().difference(start).inMicroseconds);

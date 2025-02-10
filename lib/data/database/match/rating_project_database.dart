@@ -514,8 +514,11 @@ QueryBuilder<DbRatingEvent, double, QQueryOperations> _buildShooterEventRatingCh
   if(order == Order.descending) {
     builder = b1.sortByDateAndStageNumberDesc();
   }
-  else {
+  else if (order == Order.ascending) {
     builder = b1.sortByDateAndStageNumber();
+  }
+  else {
+    builder = b1.sortByRatingChangeDesc();
   }
   QueryBuilder<DbRatingEvent, double, QQueryOperations> query;
   if(limit > 0) {

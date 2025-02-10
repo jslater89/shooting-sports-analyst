@@ -103,11 +103,11 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
   double get rating => wrappedRating.rating;
   set rating(double v) => wrappedRating.rating = v;
 
-  /// All of the meaningful rating events in this shooter's history, ordered
+  /// All of the rating events in this shooter's history, ordered
   /// from newest to oldest.
-  ///
-  /// A meaningful rating event is an event where the shooter competed against
-  /// at least one other person.
+  /// 
+  /// This returns all rating events, including zero-change events,
+  /// and returns a copied list.
   List<T> get ratingEvents {
     if(_ratingEvents == null) {
       var events = AnalystDatabase().getRatingEventsForSync(wrappedRating);
@@ -145,6 +145,16 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
   /// Provide a typed RatingEvent wrapper for a DbRatingEvent to allow for
   /// enhanced DB-based features without knowledge of the underlying types.
   T wrapEvent(DbRatingEvent e);
+
+  /// Replaces all rating events with a new set of rating events.
+  ///
+  /// This is used in copy functions, and _does not_ save the link!
+  /// The caller must persist it.
+  void replaceAllRatingEvents(List<T> events) {
+    wrappedRating.events.clear();
+    wrappedRating.events.addAll(events.map((e) => e.wrappedEvent));
+    ratingEventsChanged();
+  }
 
   /// Returns the shooter's rating after accounting for the given event.
   ///

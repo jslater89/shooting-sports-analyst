@@ -96,8 +96,8 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
           children: [
             Expanded(flex: _leadPaddingFlex, child: Text("")),
             Expanded(flex: _placeFlex, child: Text("$place")),
-            Expanded(flex: _memNumFlex, child: Text(rating.originalMemberNumber)),
-            Expanded(flex: _classFlex, child: Text(rating.lastClassification?.displayName ?? "(none)")),
+            Expanded(flex: _memNumFlex, child: Text(rating.memberNumber)),
+            Expanded(flex: _classFlex, child: Text(rating.lastClassification?.shortDisplayName ?? "(none)")),
             Expanded(flex: _nameFlex, child: Text(rating.getName(suffixes: false))),
             Expanded(flex: _ratingFlex, child: Text("$ratingText", textAlign: TextAlign.end)),
             Expanded(flex: _stagesFlex, child: Text("${rating.length}", textAlign: TextAlign.end)),

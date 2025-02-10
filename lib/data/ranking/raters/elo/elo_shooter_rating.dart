@@ -257,6 +257,7 @@ class EloShooterRating extends ShooterRating<EloRatingEvent> {
         rating += e.ratingChange;
       }
       wrappedRating.newRatingEvents.add(e.wrappedEvent);
+      lastSeen = e.wrappedEvent.date;
     }
 
     standardError = calculateStandardError();
@@ -310,16 +311,6 @@ class EloShooterRating extends ShooterRating<EloRatingEvent> {
     //   debugPrint("$totalVariance / $trendWindow = $variance");
     //   debugPrint("$totalTrend / $trendWindow = $trend");
     // }
-  }
-
-  /// Replaces all rating events with a new set of rating events.
-  ///
-  /// This is used in copy functions, and _does not_ save the link!
-  /// The caller must persist it.
-  void replaceAllRatingEvents(List<EloRatingEvent> events) {
-    wrappedRating.events.clear();
-    wrappedRating.events.addAll(events.map((e) => e.wrappedEvent));
-    super.ratingEventsChanged();
   }
 
   void copyRatingFrom(EloShooterRating other) {
