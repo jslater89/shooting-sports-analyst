@@ -9,6 +9,7 @@ import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -57,17 +58,22 @@ class RaterStatistics {
 
 // Map<int, RaterStatistics> _cachedStats = {};
 
-RaterStatistics getRatingStatistics({required Sport sport, required RatingGroup group, required List<ShooterRating> ratings}) {
-  return _calculateStats(sport, group, ratings);
+RaterStatistics getRatingStatistics({required Sport sport, required RatingSystem algorithm, required RatingGroup group, required List<ShooterRating> ratings}) {
+  return _calculateStats(sport, algorithm, group, ratings);
 }
 
-RaterStatistics _calculateStats(Sport sport, RatingGroup group, List<ShooterRating> ratings) {
-  var bucketSize = 100;
-
+RaterStatistics _calculateStats(Sport sport, RatingSystem algorithm, RatingGroup group, List<ShooterRating> ratings) {
   var count = ratings.length;
   var allRatings = ratings.map((r) => r.rating).toList()..sort();
   var allHistoryLengths = ratings.map((r) => r.length).toList()..sort(
     (a, b) => a.compareTo(b)
+  );
+
+  var ratingBucketSize = algorithm.histogramBucketSize(
+    shooterCount: count,
+    matchCount: allHistoryLengths.last, // the longest history works for this case
+    minRating: allRatings.first,
+    maxRating: allRatings.last,
   );
 
   var histogram = <int, int>{};
@@ -75,7 +81,7 @@ RaterStatistics _calculateStats(Sport sport, RatingGroup group, List<ShooterRati
 
   for(var rating in ratings) {
     // Buckets 100 wide
-    var bucket = (0 + (rating.rating / bucketSize).floor());
+    var bucket = (0 + (rating.rating / ratingBucketSize).floor());
 
     histogram.increment(bucket);
 
@@ -105,7 +111,7 @@ RaterStatistics _calculateStats(Sport sport, RatingGroup group, List<ShooterRati
     histogramsByClass[classification] = {};
     for(var rating in ratingsInClass) {
       // Buckets 100 wide
-      var bucket = (0 + (rating / bucketSize).floor());
+      var bucket = (0 + (rating / ratingBucketSize).floor());
 
       histogramsByClass[classification]!.increment(bucket);
     }
@@ -125,7 +131,7 @@ RaterStatistics _calculateStats(Sport sport, RatingGroup group, List<ShooterRati
     minByClass: minsByClass,
     maxByClass: maxesByClass,
     histogramsByClass: histogramsByClass,
-    histogramBucketSize: bucketSize,
+    histogramBucketSize: ratingBucketSize,
     ratingsByClass: ratingsByClass,
     yearOfEntryHistogram: yearOfEntryHistogram,
   );

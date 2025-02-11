@@ -86,6 +86,10 @@ class PointsRating extends ShooterRating<PointsRatingEvent> {
       intDataElements: _IntKeys.values.length,
       doubleDataElements: _DoubleKeys.values.length,
   ) {
+    this.participationBonus = participationBonus;
+    this.matchesToCount = matchesToCount;
+    if(date.isAfter(lastSeen)) lastSeen = date;
+    this.lastClassification = shooter.classification;
     this.wrappedRating.sportName = sportName;
     this.wrappedRating.firstName = firstName;
     this.wrappedRating.lastName = lastName;
@@ -100,13 +104,6 @@ class PointsRating extends ShooterRating<PointsRatingEvent> {
     this.wrappedRating.connectivity = 0.0;
     this.wrappedRating.firstSeen = firstSeen;
     this.wrappedRating.lastSeen = lastSeen;
-    this.participationBonus = participationBonus;
-    this.matchesToCount = matchesToCount;
-    if(date.isAfter(lastSeen)) lastSeen = date;
-    this.lastClassification = shooter.classification;
-
-
-
   }
 
   PointsRating.copy(PointsRating other) :

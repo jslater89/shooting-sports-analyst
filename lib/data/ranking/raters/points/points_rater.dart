@@ -124,13 +124,13 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
   }
 
   @override
-  int histogramBucketSize(int shooters, int matchCount) {
+  int histogramBucketSize({required int shooterCount, required int matchCount, required double minRating, required double maxRating}) {
     // About 10% of the maximum points available
     switch(settings.mode) {
       case PointsMode.f1:
         return (0.1 * 25 * matchCount).round();
       case PointsMode.inversePlace:
-        return (0.1 * 0.2 * shooters * matchCount).round();
+        return (0.1 * 0.2 * shooterCount * matchCount).round();
       case PointsMode.percentageFinish:
         return (0.1 * 100 * matchCount).round();
       case PointsMode.decayingPoints:

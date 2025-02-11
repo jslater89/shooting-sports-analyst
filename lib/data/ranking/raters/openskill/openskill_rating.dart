@@ -5,6 +5,8 @@
  */
 
 
+import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
@@ -23,41 +25,47 @@ class OpenskillRating extends ShooterRating<OpenskillRatingEvent> {
   double get mu => wrappedRating.doubleData[_DoubleKeys.mu.index];
   set mu(double v) => wrappedRating.doubleData[_DoubleKeys.mu.index] = v;
 
-  double get sigma => wrappedRating.doubleData[_DoubleKeys.sigma.index];
-  set sigma(double v) => wrappedRating.doubleData[_DoubleKeys.sigma.index] = v;
+  double get sigma => wrappedRating.error;
+  set sigma(double v) => wrappedRating.error = v;
 
   double get ordinal => mu - 2*sigma;
 
-  List<OpenskillRatingEvent> get ratingEvents {
-    if(!wrappedRating.events.isLoaded) {
-      wrappedRating.events.loadSync();
-    }
-    var events = <OpenskillRatingEvent>[];
-    for(var e in wrappedRating.events) {
-      events.add(OpenskillRatingEvent.wrap(e));
-    }
-    return events;
+  double sigmaWithOffset(int offset) {
+    List<double> dbRatingErrors = AnalystDatabase().getRatingEventDoubleDataForSync(
+      wrappedRating,
+      limit: 1,
+      offset: offset,
+      order: Order.descending,
+      nonzeroChange: true,
+    ).map((e) => OpenskillRatingEvent.getSigmaFromDoubleData(e)).toList();
+
+    return dbRatingErrors.firstOrNull ?? 0.0;
   }
-  List<OpenskillRatingEvent> emptyRatingEvents = [];
 
   OpenskillRating(MatchEntry shooter, double mu, double sigma, {required super.sport, required DateTime date}) :
       super(shooter, date: date, doubleDataElements: 2, intDataElements: 0) {
     this.mu = mu;
     this.sigma = sigma;
-  }
-
-  void replaceAllRatingEvents(List<OpenskillRatingEvent> events) {
-    wrappedRating.events.clear();
-    wrappedRating.events.addAll(events.map((e) => e.wrappedEvent));
+    this.wrappedRating.sportName = sportName;
+    this.wrappedRating.firstName = firstName;
+    this.wrappedRating.lastName = lastName;
+    this.wrappedRating.memberNumber = memberNumber;
+    this.wrappedRating.lastClassification = lastClassification;
+    this.wrappedRating.division = division;
+    this.wrappedRating.ageCategory = ageCategory;
+    this.wrappedRating.female = female;
+    this.wrappedRating.rating = 0.0;
+    this.wrappedRating.rawConnectivity = 0.0;
+    this.wrappedRating.connectivity = 0.0;
+    this.wrappedRating.firstSeen = firstSeen;
+    this.wrappedRating.lastSeen = lastSeen;
   }
 
   OpenskillRating.copy(OpenskillRating other) :
       super.copy(other) {
-    {
-      this.replaceAllRatingEvents(other.ratingEvents.map((e) => OpenskillRatingEvent.copy(e as OpenskillRatingEvent)).toList());
-      this.mu = mu;
-      this.sigma = sigma;
-    }
+    this.replaceAllRatingEvents(other.ratingEvents.map((e) => OpenskillRatingEvent.copy(e)).toList());
+    this.mu = other.mu;
+    this.sigma = other.sigma;
   }
 
   OpenskillRating.wrapDbRating(DbShooterRating rating) : super.wrapDbRating(rating);
@@ -66,15 +74,10 @@ class OpenskillRating extends ShooterRating<OpenskillRatingEvent> {
   void updateFromEvents(List<RatingEvent> events) {
     for(var event in events) {
       event as OpenskillRatingEvent;
+      wrappedRating.newRatingEvents.add(event.wrappedEvent);
 
-      if(event.muChange == 0 && event.sigmaChange == 0) {
-        emptyRatingEvents.add(event);
-      }
-      else {
-        mu += event.muChange;
-        sigma += event.sigmaChange;
-        ratingEvents.add(event);
-      }
+      mu += event.muChange;
+      sigma += event.sigmaChange;
     }
   }
 
@@ -107,5 +110,7 @@ class OpenskillRating extends ShooterRating<OpenskillRatingEvent> {
   OpenskillRatingEvent wrapEvent(DbRatingEvent e) {
     return OpenskillRatingEvent.wrap(e);
   }
-
+  
+  @override
+  List<OpenskillRatingEvent> get emptyRatingEvents => [];
 }

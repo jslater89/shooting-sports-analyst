@@ -118,10 +118,6 @@ class EloShooterRating extends ShooterRating<EloRatingEvent> {
     var newRatingErrors = wrappedRating.newRatingEvents.reversed.map((e) => EloRatingEvent.getError(e));
     List<double> ratingErrors = [...newRatingErrors, ...dbRatingErrors];
 
-    if(lastName == "Slater") {
-      print("break");
-    }
-
     double currentDecay = 1.0;
     double squaredSum = 0.0;
     double length = 0.0;

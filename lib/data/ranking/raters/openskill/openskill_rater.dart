@@ -131,6 +131,7 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
     rating as OpenskillRating;
     return OpenskillRatingEvent(
       initialMu: rating.mu,
+      initialSigma: rating.sigma,
       muChange: 0,
       sigmaChange: 0,
       match: match,
@@ -243,7 +244,9 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
   }
 
   @override
-  int histogramBucketSize(int shooters, int matchCount) => 10;
+  int histogramBucketSize({required int shooterCount, required int matchCount, required double minRating, required double maxRating}) {
+    return (settings.beta).round();
+  }
 
   @override
   OpenskillRating wrapDbRating(DbShooterRating rating) {

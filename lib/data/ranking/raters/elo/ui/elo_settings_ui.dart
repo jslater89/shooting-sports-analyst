@@ -427,12 +427,7 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
         Row(
           children: [
             Text("Elo configuration", style: Theme.of(context).textTheme.labelLarge!),
-            IconButton(
-              icon: Icon(Icons.help),
-              onPressed: () {
-                HelpDialog.show(context, initialTopic: eloConfigHelpId);
-              },
-            ),
+            HelpButton(helpTopicId: eloConfigHelpId),
           ],
 
         ),

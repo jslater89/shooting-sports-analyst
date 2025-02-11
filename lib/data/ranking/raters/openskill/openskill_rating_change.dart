@@ -13,12 +13,16 @@ import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 
 enum _DoubleKeys {
-  sigmaChange
+  sigmaChange,
+  initialSigma,
 }
 
 class OpenskillRatingEvent extends RatingEvent {
   double get sigmaChange => wrappedEvent.doubleData[_DoubleKeys.sigmaChange.index];
   set sigmaChange(double v) => wrappedEvent.doubleData[_DoubleKeys.sigmaChange.index] = v;
+
+  double get initialSigma => wrappedEvent.doubleData[_DoubleKeys.initialSigma.index];
+  set initialSigma(double v) => wrappedEvent.doubleData[_DoubleKeys.initialSigma.index] = v;
 
   double get initialMu => super.oldRating;
   set initialMu(double v) => super.oldRating = v;
@@ -26,9 +30,17 @@ class OpenskillRatingEvent extends RatingEvent {
   double get muChange => super.ratingChange;
   set muChange(double v) => super.ratingChange = v;
 
+  double get sigma => initialSigma + sigmaChange;
+  double get mu => initialMu + muChange;
+
+  static double getSigmaFromDoubleData(List<double> data) {
+    return data[_DoubleKeys.initialSigma.index] + data[_DoubleKeys.sigmaChange.index];
+  }
+
   OpenskillRatingEvent({
     required double initialMu,
     required double muChange,
+    required double initialSigma,
     required double sigmaChange,
     required ShootingMatch match,
     MatchStage? stage,
@@ -39,7 +51,6 @@ class OpenskillRatingEvent extends RatingEvent {
   }) : super(wrappedEvent: DbRatingEvent(
     ratingChange: muChange,
     oldRating: initialMu,
-
     matchId: match.sourceIds.first,
     stageNumber: stage?.stageId ?? -1,
     score: DbRelativeScore.fromHydrated(score),
@@ -51,6 +62,7 @@ class OpenskillRatingEvent extends RatingEvent {
     infoLines: infoLines,
     infoData: infoData,
   )) {
+    this.initialSigma = initialSigma;
   }
 
 

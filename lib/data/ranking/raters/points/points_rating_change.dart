@@ -36,7 +36,8 @@ class PointsRatingEvent extends RatingEvent {
       doubleDataElements: 0,
       infoLines: infoLines,
       infoData: infoData,
-  ));
+  )) {
+  }
 
 
   PointsRatingEvent.copy(PointsRatingEvent other) :

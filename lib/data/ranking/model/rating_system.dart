@@ -99,7 +99,9 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
   String nameForSort(RatingSortMode mode) {
     return mode.uiLabel;
   }
-  int histogramBucketSize(int shooters, int matchCount) {
+
+  /// The size of buckets in a shooter rating histogram for the given parameters.
+  int histogramBucketSize({required int shooterCount, required int matchCount, required double minRating, required double maxRating}) {
     return 100;
   }
 
