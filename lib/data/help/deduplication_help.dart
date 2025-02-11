@@ -1,3 +1,4 @@
+import "package:shooting_sports_analyst/data/help/uspsa_deduplicator_help.dart";
 import "package:shooting_sports_analyst/ui/widget/dialog/help/help_topic.dart";
 
 const deduplicationHelpId = "deduplication";
@@ -22,9 +23,9 @@ const _content =
 "* The member numbers involved\n"
 "* The type of action proposed (mapping, data fix, etc.)\n"
 "* A status icon:\n"
-"    * 🟢 Green check: likely ready to apply, but review is recommended\n"
-"    * 🟡 Yellow question mark: actions proposed, but review is required\n"
-"    * 🔴 Red warning: requires manual action\n"
+"    * Green check: likely ready to apply, but review is recommended\n"
+"    * Yellow question mark: actions proposed, but review and approval are required\n"
+"    * Red warning: actions may be proposed, but action edits are almost certainly required\n"
 "\n"
 "In the main panel, you will find more detail on the conflict (including its causes, and member numbers "
 "involved in each cause), a list of known member numbers sorted by their detected categories, and a list "
@@ -32,7 +33,9 @@ const _content =
 "the proposed resolution, to restore the original resolution, or to ignore the conflict.\n"
 "\n"
 "A conflict can only be approved if proposed actions cover every member number involved in the conflict. "
-"The IGNORE button, "
+"The IGNORE button may be used on yellow conflicts to ignore the conflict for now. It _will_ submit any proposed "
+"actions attached to the conflict.\n"
+"\n"
 "## Action Types\n"
 "\n"
 "### User Mappings\n"
@@ -54,7 +57,7 @@ const _content =
 "\n"
 "The application attempts to automatically detect duplicates using several methods:\n"
 "\n"
-"* Using domain knowledge  (e.g., A12345 and TY12345)\n"
+"* Using domain knowledge (e.g., knowing that A12345 and TY12345 represent the same competitor in [USPSA]($uspsaDeduplicatorHelpLink))\n"
 "* Single member numbers of each type for a competitor\n"
 "* Previously approved mappings from project settings\n"
 "\n"
