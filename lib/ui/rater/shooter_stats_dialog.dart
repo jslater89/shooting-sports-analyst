@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
@@ -342,6 +343,9 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
 
           // print("Comparison: ${error.toStringAsFixed(2)} vs ${e2.toStringAsFixed(2)}");
         }
+        else if(rating is OpenskillRating) {
+          error = rating.sigmaWithOffset(eventsOfInterest.length - (i + 1)) / 2;
+        }
 
         var plusError = e.newRating + error;
         var minusError = e.newRating - error;
@@ -375,13 +379,13 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         measureFn: (_AccumulatedRatingEvent e, _) => e.baseEvent.newRating,
         domainFn: (_, int? index) => index!,
         measureLowerBoundFn: (e, i) {
-          if(rating is EloShooterRating) {
+          if(rating is EloShooterRating || rating is OpenskillRating) {
             return e.baseEvent.newRating - e.errorAt;
           }
           return null;
         },
         measureUpperBoundFn: (e, i) {
-          if(rating is EloShooterRating) {
+          if(rating is EloShooterRating || rating is OpenskillRating) {
             return e.baseEvent.newRating + e.errorAt;
           }
           return null;

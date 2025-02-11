@@ -218,7 +218,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
     return WillPopScope(
       onWillPop: () async {
-        await _saveProject(RatingProjectManager.autosaveName);
+        if(_loadedProject != null) {
+          await _saveProject(_loadedProject!.name, onPop: true);
+        }
 
         return true;
       },
@@ -299,7 +301,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                     return;
                   }
 
-                  var project = await _saveProject(RatingProjectManager.autosaveName);
+                  var project = await _saveProject(_lastProjectName ?? RatingProjectManager.autosaveName);
 
                   if(project != null) {
                     widget.onSettingsReady(project, _forceRecalculate);
@@ -461,12 +463,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                           ).toList(),
                                         ),
                                       ),
-                                      if(_currentRater?.helpId != null) IconButton(
-                                        icon: Icon(Icons.help),
-                                        onPressed: () {
-                                          HelpDialog.show(context, initialTopic: _currentRater!.helpId);
-                                        },
-                                      ),
+                                      if(_currentRater?.helpId != null) HelpButton(helpTopicId: _currentRater!.helpId),
                                     ],
                                   ),
                                 ),
@@ -814,19 +811,26 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     throw UnsupportedError("Algorithm not yet supported");
   }
 
-  Future<DbRatingProject?> _saveProject(String name) async {
+  Future<DbRatingProject?> _saveProject(String name, {bool onPop = false}) async {
     var settings = _makeAndValidateSettings();
     if(settings == null || name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("You must provide valid settings (including match URLs) to save.")));
       return null;
     }
 
-    bool isAutosave = name == RatingProjectManager.autosaveName;
-    String mapName = isAutosave || _lastProjectName == null ? RatingProjectManager.autosaveName : _lastProjectName!;
-
+    bool savedAsNew = false;
     DbRatingProject project;
     if(_loadedProject != null) {
       project = _loadedProject!;
+      if(name != project.name) {
+        savedAsNew = true;
+        project = DbRatingProject(
+          sportName: sport.name,
+          name: name,
+          settings: settings,
+        );
+        project.dbGroups.addAll(_groups);
+      }
     }
     else {
       project = DbRatingProject(
@@ -834,14 +838,14 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         name: _lastProjectName ?? name,
         settings: settings,
       );
+      project.dbGroups.addAll(_groups);
+      savedAsNew = true;
     }
 
     project.settings = settings;
-    if(project.id != Isar.autoIncrement) {
-      project.matchPointers = projectMatches;
-      if(filteredMatches != null && filteredMatches!.isNotEmpty) {
-        project.matchPointers = filteredMatches!;
-      }
+    project.matchPointers = projectMatches;
+    if(filteredMatches != null && filteredMatches!.isNotEmpty) {
+      project.matchPointers = filteredMatches!;
     }
 
     if(_groupChange != null) {
@@ -849,18 +853,18 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     }
 
     await AnalystDatabase().saveRatingProject(project);
-    prefs.setInt(Preferences.lastProjectId, project.id);
-    _log.i("Saved ${project.name} to ${project.id}");
 
-    // debug
-    var savedProject = await AnalystDatabase().getRatingProjectById(project.id);
-    print("savedProject groups: ${savedProject?.groups.map((e) => e.name).join(", ")}");
-    // end debug
+    prefs.setInt(Preferences.lastProjectId, project.id);
+    _log.i("Saved project ${project.name} at ${project.id}; it will be autoloaded");
 
     if(mounted) {
       setState(() {
         _lastProjectName = project.name;
       });
+    }
+
+    if(savedAsNew && !onPop) {
+      _loadProject(project);
     }
 
     return project;

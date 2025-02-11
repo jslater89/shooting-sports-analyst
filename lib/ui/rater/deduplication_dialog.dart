@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/config.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/help/deduplication_help.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
@@ -22,6 +23,7 @@ import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/deduplication/blacklist.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/deduplication/data_entry_fix.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/deduplication/mapping.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/maybe_tooltip.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -199,7 +201,13 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
     return Provider.value(
       value: widget.sport,
       child: AlertDialog(
-        title: Text("Resolve Conflicts (${widget.group.name})"),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text("Resolve Conflicts (${widget.group.name})"),
+            HelpButton(helpTopicId: deduplicationHelpId),
+          ],
+        ),
         content: SizedBox(
           width: width,
           height: height,
