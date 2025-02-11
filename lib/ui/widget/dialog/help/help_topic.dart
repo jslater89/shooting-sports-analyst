@@ -1,4 +1,6 @@
 import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
+import 'package:shooting_sports_analyst/data/help/deduplication_help.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_registry.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_renderer.dart';
@@ -6,6 +8,8 @@ import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_token.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 SSALogger _log = SSALogger("HelpTopic");
+
+const _shouldDumpTokenTree = kDebugMode && true;
 
 /// A help topic is an article that can be displayed to the user.
 /// 
@@ -44,25 +48,62 @@ class HelpTopic {
     var lines = this.content.split(RegExp(r'(?=[\n])|(?<=[\n])'));
 
     for(var line in lines) {
-      if(line.startsWith(_headerPattern)) {
-        // headers are a special case, since they modify an
-        // entire line of text.
-        tokens.add(Header(line.length, _tokenizeHeaderLine(line)));
-      }
-      else if(_linkPattern.hasMatch(line)) {
-        tokens.addAll(_tokenizeLinkLine(line));
-      }
-      else {
-        tokens.addAll(_tokenizeText(line));
-      }
+      tokens.addAll(_tokenizeLine(line));
+    }
+
+    if(_shouldDumpTokenTree && id == deduplicationHelpId) {
+      _dumpTokenTree(tokens);
     }
 
     return tokens;
   }
 
+  static final _ParseState _parseState = _ParseState();
+
   static final _headerPattern = RegExp(r'^#+\s');
   static final _linkPattern = RegExp(r'\[(.*?)\]\((.*?)\)');
   static final _emphasisPattern = RegExp(r'_(.*?)_|\*\*(.*?)\*\*');
+  static final _listPattern = RegExp(r'^(\s*)(\*|\d+\.)\s');
+  static final _emptyLinePattern = RegExp(r'^(\s*)\n');
+
+  /// Tokenize some text. If [subline] is true, this is a recursive call from
+  /// within a line, and should not reset list state.
+  List<HelpToken> _tokenizeLine(String line, {bool subline = false}) {
+    List<HelpToken> tokens = [];
+    var listMatch = _listPattern.firstMatch(line);
+    // Don't reset parse state on whitespace-only lines
+    if(!subline && !_emptyLinePattern.hasMatch(line)) {
+      if(listMatch == null) {
+        _parseState.resetListState();
+      }
+    }
+
+    if(id == deduplicationHelpId) {
+      print("break");
+    }
+
+    if(line.startsWith(_headerPattern)) {
+      // headers are a special case, since they modify an
+      // entire line of text.
+      tokens.addAll(_tokenizeHeaderLine(line));
+    }
+    else if(listMatch != null) {
+      _parseState.inList = true;
+      _parseState.inOrderedList = listMatch.group(2)!.startsWith(RegExp(r"\d"));
+      var indent = listMatch.group(1)!.length ~/ 4;
+      _parseState.listIndicesByIndent.increment(indent);
+
+      tokens.addAll(_tokenizeListItem(line, ordered: _parseState.inOrderedList, indentDepth: indent, listIndex: _parseState.listIndicesByIndent[indent] ?? 1));
+    }
+    else if(_linkPattern.hasMatch(line)) {
+      tokens.addAll(_tokenizeLinkLine(line));
+    }
+    else {
+      tokens.addAll(_tokenizeText(line));
+    }
+    
+    return tokens;
+  }
 
   List<HelpToken> _tokenizeLinkLine(String line) {
     List<HelpToken> tokens = [];
@@ -133,5 +174,37 @@ class HelpTopic {
     }
 
     return tokens;
+  }
+
+  List<HelpToken> _tokenizeListItem(String line, {bool ordered = false, int indentDepth = 0, int listIndex = 0}) {
+    var listMatch = _listPattern.firstMatch(line);
+    if(listMatch == null) {
+      throw ArgumentError("line is not a list item: $line");
+    }
+
+    var listText = line.substring(listMatch.end);
+    // A list item can contain e.g. a link, so we need to run the full tokenizer on its contents
+    return [
+      ListItem(tokens: _tokenizeLine(listText, subline: true), ordered: ordered, indentDepth: indentDepth, listIndex: listIndex),
+    ];
+  }
+}
+
+void _dumpTokenTree(List<HelpToken> tokens, {int indent = 0}) {
+  for(var token in tokens) {
+    print("${"  " * indent}${token.toString()}");
+    _dumpTokenTree(token.children, indent: indent + 1);
+  }
+}
+
+class _ParseState {
+  Map<int, int> listIndicesByIndent = {};
+  bool inList = false;
+  bool inOrderedList = false;
+
+  void resetListState() {
+    listIndicesByIndent = {};
+    inList = false;
+    inOrderedList = false;
   }
 }

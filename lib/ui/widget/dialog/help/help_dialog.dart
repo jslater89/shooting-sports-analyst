@@ -27,3 +27,17 @@ class HelpDialog extends StatelessWidget {
     );
   }
 }
+
+class HelpButton extends StatelessWidget {
+  final String helpTopicId;
+
+  const HelpButton({super.key, required this.helpTopicId});
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      onPressed: () => HelpDialog.show(context, initialTopic: helpTopicId),
+      icon: const Icon(Icons.help_outline),
+    );
+  }
+}

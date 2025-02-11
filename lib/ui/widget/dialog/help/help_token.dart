@@ -16,8 +16,9 @@ sealed class HelpToken {
   bool lineStart;
   bool lineEnd;
 
-  List<TextSpan> intoSpans(BuildContext context, TextStyle baseStyle, {void Function(String)? onLinkTapped});
+  List<InlineSpan> intoSpans(BuildContext context, TextStyle baseStyle, {void Function(String)? onLinkTapped});
 
+  List<HelpToken> get children;
   String get asPlainText;
 }
 
@@ -31,16 +32,7 @@ abstract class LinkableHelpToken extends HelpToken {
 class PlainText extends LinkableHelpToken {
   String text;
 
-  PlainText(this.text, {super.link, super.lineStart = false, super.lineEnd = false}) {
-    // TODO: probably have to figure out how to tokenize these separate from PlainText
-    // sadly, that's going to require line-to-line state.
-    if(lineStart && text.startsWith("*")) {
-      text = text.replaceFirst("*", "•");
-    }
-    if(lineStart && text.startsWith("    *")) {
-      text = text.replaceFirst("    *", "    ∘");
-    }
-  }
+  PlainText(this.text, {super.link, super.lineStart = false, super.lineEnd = false});
 
   @override
   List<TextSpan> intoSpans(BuildContext context, TextStyle baseStyle, {void Function(String)? onLinkTapped}) {
@@ -54,7 +46,15 @@ class PlainText extends LinkableHelpToken {
   }
 
   @override
+  List<HelpToken> get children => [];
+
+  @override
   String get asPlainText => text;
+
+  @override
+  String toString() {
+    return "PlainText(${text.trim()})";
+  }
 }
 
 /// A header of some level.
@@ -65,7 +65,7 @@ class Header extends HelpToken {
   Header(this.level, this.tokens, {super.lineStart = false, super.lineEnd = false});
 
   @override
-  List<TextSpan> intoSpans(BuildContext context, TextStyle baseStyle, {void Function(String)? onLinkTapped}) {
+  List<InlineSpan> intoSpans(BuildContext context, TextStyle baseStyle, {void Function(String)? onLinkTapped}) {
     TextStyle style;
     if(level == 1) {
       style = Theme.of(context).textTheme.titleLarge!;
@@ -81,6 +81,14 @@ class Header extends HelpToken {
 
   @override
   String get asPlainText => tokens.map((e) => e.asPlainText).join();
+
+  @override
+  List<HelpToken> get children => tokens;
+
+  @override
+  String toString() {
+    return "Header($level)";
+  }
 }
 
 /// A link to another help topic or a URL.
@@ -97,19 +105,111 @@ class Link extends LinkableHelpToken {
   });
 
   @override
-  List<TextSpan> intoSpans(BuildContext context, TextStyle baseStyle, {void Function(String)? onLinkTapped}) {
+  List<InlineSpan> intoSpans(BuildContext context, TextStyle baseStyle, {void Function(String)? onLinkTapped}) {
     var style = baseStyle.copyWith(color: Theme.of(context).colorScheme.primary, decoration: TextDecoration.underline);
     return tokens.map((e) => e.intoSpans(context, style, onLinkTapped: onLinkTapped)).flattened.toList();
   }
 
   @override
   String get asPlainText => tokens.map((e) => e.asPlainText).join();
+
+  @override
+  List<HelpToken> get children => tokens;
+
+  @override
+  String toString() {
+    return "Link($id)";
+  }
 }
 
 /// A type of text emphasis.
 enum EmphasisType {
   italic,
   bold,
+}
+
+/// A list item is an element in an ordered or unordered list.
+/// 
+/// For the moment, ordered lists do not support indenting/nesting.
+class ListItem extends LinkableHelpToken {
+  final List<HelpToken> tokens;
+  final bool ordered;
+  final int indentDepth;
+  final int listIndex;
+
+  ListItem({
+    required this.tokens,
+    required this.ordered,
+    required this.indentDepth,
+    required this.listIndex,
+    super.link,
+  }) : super(lineStart: true, lineEnd: true);
+  
+  @override
+  String get asPlainText => tokens.map((e) => e.asPlainText).join();
+  
+  @override
+  List<InlineSpan> intoSpans(BuildContext context, TextStyle baseStyle, {void Function(String p1)? onLinkTapped}) {
+    var contentTokens = tokens.map((e) => e.intoSpans(context, baseStyle, onLinkTapped: onLinkTapped)).flattened.toList();
+    Widget bulletWidget;
+    if(ordered) {
+      // TODO: sequences
+      bulletWidget = Padding(
+        padding: EdgeInsets.only(left: (12 * indentDepth).toDouble()),
+        child: Text(
+          "$listIndex. ",
+          style: baseStyle,
+        ),
+      );
+    }
+    else {
+      var bullet = "•";
+      if(indentDepth % 4 == 1) {
+        bullet = "∘";
+      }
+      else if(indentDepth % 4 == 2) {
+        bullet = "▪";
+      }
+      else if(indentDepth % 4 == 3) {
+        bullet = "▫";
+      }
+      bulletWidget = Padding(
+        padding: EdgeInsets.only(left: (12 * indentDepth).toDouble(), right: 4),
+        child: Text(
+          bullet,
+          style: baseStyle,
+        ),
+      );
+    }
+
+    return [
+      WidgetSpan(
+        alignment: PlaceholderAlignment.baseline,
+        baseline: TextBaseline.alphabetic,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            bulletWidget,
+            Expanded(
+              child: RichText(
+                text: TextSpan(
+                  children: contentTokens,
+                ),
+              ),
+            )
+          ]
+        )
+      )
+    ];
+  }
+
+  @override
+  List<HelpToken> get children => tokens;
+
+  @override
+  String toString() {
+    return "ListItem($listIndex, ordered: $ordered, indentDepth: $indentDepth)";
+  }
 }
 
 /// A section of text that is emphasized in some way.
@@ -139,5 +239,13 @@ class Emphasis extends LinkableHelpToken {
   }
 
   @override
+  List<HelpToken> get children => [token];
+
+  @override
   String get asPlainText => token.asPlainText;
+
+  @override
+  String toString() {
+    return "Emphasis($type)";
+  }
 }
