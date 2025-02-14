@@ -13,6 +13,7 @@ import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/ui/widget/captioned_text.dart';
+import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/shooter_card.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_list.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -468,30 +469,25 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
   Widget _buildShooterLink(BuildContext context, MatchEntry shooter) {
     var children = <Widget>[];
     if(shooter.originalMemberNumber != "") {
-      children.add(MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: () {
-            HtmlOr.openLink("https://uspsa.org/classification/${shooter.originalMemberNumber}");
-          },
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                "${shooter.getName()} - ${shooter.division?.displayName ?? "NO DIVISION"} ${shooter.classification?.displayName}",
-                style: Theme.of(context).textTheme.headline6!.copyWith(
-                  color: Theme.of(context).primaryColor,
-                  decoration: TextDecoration.underline,
-                ),
+      children.add(ClickableLink(
+        url: Uri.parse("https://uspsa.org/classification/${shooter.originalMemberNumber}"),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "${shooter.getName()} - ${shooter.division?.displayName ?? "NO DIVISION"} ${shooter.classification?.displayName}",
+              style: Theme.of(context).textTheme.headline6!.copyWith(
+                color: Theme.of(context).primaryColor,
+                decoration: TextDecoration.underline,
               ),
-              IconButton(
-                icon: Icon(Icons.compare_arrows),
-                onPressed: () {
-                  Navigator.of(context).pop(ShooterDialogAction(launchComparison: true));
-                },
-              ),
-            ],
-          ),
+            ),
+            IconButton(
+              icon: Icon(Icons.compare_arrows),
+              onPressed: () {
+                Navigator.of(context).pop(ShooterDialogAction(launchComparison: true));
+              },
+            ),
+          ],
         ),
       ));
     }

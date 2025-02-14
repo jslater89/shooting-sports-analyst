@@ -13,6 +13,7 @@ import 'package:shooting_sports_analyst/data/ranking/evolution/elo_tuner.dart';
 import 'dart:ui' as ui show Color;
 
 import 'package:shooting_sports_analyst/ui/rater/evolution/pareto_front_chart.dart';
+import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 
 class SolutionSpaceCharts extends StatefulWidget {
   const SolutionSpaceCharts({Key? key, required this.tuner, this.highlight}) : super(key: key);
@@ -104,70 +105,58 @@ class _SolutionSpaceChartsState extends State<SolutionSpaceCharts> with TickerPr
           children: [
             Text("X:"),
             SizedBox(width: 5),
-            MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: GestureDetector(
-                child: Icon(Icons.chevron_left),
-                onTap: () {
-                  var idx = fnNames.indexOf(xName);
-                  idx -= 1;
-                  if(idx < 0) idx = fnNames.length - 1;
-                  setState(() {
-                    xName = fnNames[idx];
-                  });
-                },
-              ),
+            ClickableLink(
+              child: Icon(Icons.chevron_left),
+              onTap: () {
+                var idx = fnNames.indexOf(xName);
+                idx -= 1;
+                if(idx < 0) idx = fnNames.length - 1;
+                setState(() {
+                  xName = fnNames[idx];
+                });
+              },
             ),
             SizedBox(width: 5),
             SizedBox(width: 50, child: Text(xName, textAlign: TextAlign.center)),
             SizedBox(width: 5),
-            MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: GestureDetector(
-                child: Icon(Icons.chevron_right),
-                onTap: () {
-                  var idx = fnNames.indexOf(xName);
-                  idx += 1;
-                  idx = idx % fnNames.length;
-                  setState(() {
-                    xName = fnNames[idx];
-                  });
-                },
-              ),
+            ClickableLink(
+              child: Icon(Icons.chevron_right),
+              onTap: () {
+                var idx = fnNames.indexOf(xName);
+                idx += 1;
+                idx = idx % fnNames.length;
+                setState(() {
+                  xName = fnNames[idx];
+                });
+              },
             ),
             SizedBox(width: 10),
             Text("Y:"),
             SizedBox(width: 5),
-            MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: GestureDetector(
-                child: Icon(Icons.chevron_left),
-                onTap: () {
-                  var idx = fnNames.indexOf(yName);
-                  idx -= 1;
-                  if(idx < 0) idx = fnNames.length - 1;
-                  setState(() {
-                    yName = fnNames[idx];
-                  });
-                },
-              ),
+            ClickableLink(
+              child: Icon(Icons.chevron_left),
+              onTap: () {
+                var idx = fnNames.indexOf(yName);
+                idx -= 1;
+                if(idx < 0) idx = fnNames.length - 1;
+                setState(() {
+                  yName = fnNames[idx];
+                });
+              },
             ),
             SizedBox(width: 5),
             SizedBox(width: 50, child: Text(yName, textAlign: TextAlign.center)),
             SizedBox(width: 5),
-            MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: GestureDetector(
-                child: Icon(Icons.chevron_right),
-                onTap: () {
-                  var idx = fnNames.indexOf(yName);
-                  idx += 1;
-                  idx = idx % fnNames.length;
-                  setState(() {
-                    yName = fnNames[idx];
-                  });
-                },
-              ),
+            ClickableLink(
+              child: Icon(Icons.chevron_right),
+              onTap: () {
+                var idx = fnNames.indexOf(yName);
+                idx += 1;
+                idx = idx % fnNames.length;
+                setState(() {
+                  yName = fnNames[idx];
+                });
+              },
             ),
             SizedBox(width: 10),
           ],

@@ -20,6 +20,7 @@ import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/rater/evolution/predator_prey_view.dart';
 import 'package:shooting_sports_analyst/ui/rater/evolution/solution_space_chart.dart';
+import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/match_cache_loading_indicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/evolution/l2s_data.dart' as l2s;
@@ -455,104 +456,86 @@ class _EloTunerPageState extends State<EloTunerPage> {
       children: [
         Text("A:"),
         SizedBox(width: 5),
-        MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: GestureDetector(
-            child: Icon(Icons.chevron_left),
-            onTap: () {
-              var idx = fnNames.indexOf(firstSort);
-              idx -= 1;
-              if(idx < 0) idx = fnNames.length - 1;
-              setState(() {
-                firstSort = fnNames[idx];
-              });
-            },
-          ),
+        ClickableLink(
+          child: Icon(Icons.chevron_left),
+          onTap: () {
+            var idx = fnNames.indexOf(firstSort);
+            idx -= 1;
+            if(idx < 0) idx = fnNames.length - 1;
+            setState(() {
+              firstSort = fnNames[idx];
+            });
+          },
         ),
         SizedBox(width: 5),
         SizedBox(width: 50, child: Text(firstSort, textAlign: TextAlign.center)),
         SizedBox(width: 5),
-        MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: GestureDetector(
-            child: Icon(Icons.chevron_right),
-            onTap: () {
-              var idx = fnNames.indexOf(firstSort);
-              idx += 1;
-              idx = idx % fnNames.length;
-              setState(() {
-                firstSort = fnNames[idx];
-              });
-            },
-          ),
+        ClickableLink(
+          child: Icon(Icons.chevron_right),
+          onTap: () {
+            var idx = fnNames.indexOf(firstSort);
+            idx += 1;
+            idx = idx % fnNames.length;
+            setState(() {
+              firstSort = fnNames[idx];
+            });
+          },
         ),
         SizedBox(width: 10),
         Text("B:"),
         SizedBox(width: 5),
-        MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: GestureDetector(
-            child: Icon(Icons.chevron_left),
-            onTap: () {
-              var idx = fnNames.indexOf(secondSort);
-              idx -= 1;
-              if(idx < 0) idx = fnNames.length - 1;
-              setState(() {
-                secondSort = fnNames[idx];
-              });
-            },
-          ),
+        ClickableLink(
+          child: Icon(Icons.chevron_left),
+          onTap: () {
+            var idx = fnNames.indexOf(secondSort);
+            idx -= 1;
+            if(idx < 0) idx = fnNames.length - 1;
+            setState(() {
+              secondSort = fnNames[idx];
+            });
+          },
         ),
         SizedBox(width: 5),
         SizedBox(width: 50, child: Text(secondSort, textAlign: TextAlign.center)),
         SizedBox(width: 5),
-        MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: GestureDetector(
-            child: Icon(Icons.chevron_right),
-            onTap: () {
-              var idx = fnNames.indexOf(secondSort);
-              idx += 1;
-              idx = idx % fnNames.length;
-              setState(() {
-                secondSort = fnNames[idx];
-              });
-            },
-          ),
+        ClickableLink(
+          child: Icon(Icons.chevron_right),
+          onTap: () {
+            var idx = fnNames.indexOf(secondSort);
+            idx += 1;
+            idx = idx % fnNames.length;
+            setState(() {
+              secondSort = fnNames[idx];
+            });
+          },
         ),
         SizedBox(width: 10),
         Text("C:"),
         SizedBox(width: 5),
-        MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: GestureDetector(
-            child: Icon(Icons.chevron_left),
-            onTap: () {
-              var idx = fnNames.indexOf(thirdSort);
-              idx -= 1;
-              if(idx < 0) idx = fnNames.length - 1;
-              setState(() {
-                thirdSort = fnNames[idx];
-              });
-            },
-          ),
+        ClickableLink(
+          child: Icon(Icons.chevron_left),
+          onTap: () {
+            var idx = fnNames.indexOf(thirdSort);
+            idx -= 1;
+            if(idx < 0) idx = fnNames.length - 1;
+            setState(() {
+              thirdSort = fnNames[idx];
+            });
+          },
         ),
         SizedBox(width: 5),
         SizedBox(width: 50, child: Text(thirdSort, textAlign: TextAlign.center)),
         SizedBox(width: 5),
-        MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: GestureDetector(
-            child: Icon(Icons.chevron_right),
-            onTap: () {
-              var idx = fnNames.indexOf(thirdSort);
-              idx += 1;
-              idx = idx % fnNames.length;
-              setState(() {
-                thirdSort = fnNames[idx];
-              });
-            },
-          ),
+        ClickableLink(
+          child: Icon(Icons.chevron_right),
+          onTap: () {
+            var idx = fnNames.indexOf(thirdSort);
+            idx += 1;
+            idx = idx % fnNames.length;
+            setState(() {
+              thirdSort = fnNames[idx];
+            });
+          },
         ),
       ],
     );

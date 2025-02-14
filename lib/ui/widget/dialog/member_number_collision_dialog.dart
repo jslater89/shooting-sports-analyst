@@ -10,6 +10,7 @@ import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
@@ -162,68 +163,54 @@ class _MemberNumberCollisionDialogState extends State<MemberNumberCollisionDialo
     return Card(
       child: Column(
         children: [
-          MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: GestureDetector(
-              child: Text("${culprit.getName(suffixes: false)} - ${culprit.originalMemberNumber}", style: Theme.of(context).textTheme.headline6),
-              onTap: () {
-                if(culprit.length > 0) {
-                  showDialog(context: context, builder: (context) => ShooterStatsDialog(rating: culprit, match: culprit.ratingEvents.last.match));
-                }
-                else {
-                  launch("https://uspsa.org/classification/${culprit.originalMemberNumber}");
-                }
-              },
-            )
+          ClickableLink(
+            child: Text("${culprit.getName(suffixes: false)} - ${culprit.originalMemberNumber}", style: Theme.of(context).textTheme.headline6),
+            onTap: () {
+              if(culprit.length > 0) {
+                showDialog(context: context, builder: (context) => ShooterStatsDialog(rating: culprit, match: culprit.ratingEvents.last.match));
+              }
+              else {
+                launch("https://uspsa.org/classification/${culprit.originalMemberNumber}");
+              }
+            },
           ),
           Divider(),
           Text("Recent Matches", style: Theme.of(context).textTheme.subtitle1),
           for(var match in matches)
-            MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: GestureDetector(
-                child: Text(match.name),
-                onTap: () {
-                  Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-                    return ResultPage(
-                      canonicalMatch: match,
-                      allowWhatIf: false,
-                    );
-                  }));
-                },
-              ),
+            ClickableLink(
+              child: Text(match.name),
+              onTap: () {
+                Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+                  return ResultPage(
+                    canonicalMatch: match,
+                    allowWhatIf: false,
+                  );
+                }));
+              },
             ),
           Divider(),
           if(culprit.knownMemberNumbers.isNotEmpty)
             Text("Alternate Member Numbers", style: Theme.of(context).textTheme.subtitle1),
           if(culprit.knownMemberNumbers.isNotEmpty)
             for(var number in culprit.knownMemberNumbers)
-              MouseRegion(
-                cursor: SystemMouseCursors.click,
-                child: GestureDetector(
-                  child: Text(number),
-                  onTap: () {
-                    launch("https://uspsa.org/classification/$number");
-                  },
-                ),
+              ClickableLink(
+                child: Text(number),
+                url: Uri.parse("https://uspsa.org/classification/$number"),
               ),
           if(culprit.knownMemberNumbers.isNotEmpty)
             Divider(),
           Text("Related Shooters", style: Theme.of(context).textTheme.subtitle1),
           for(var shooter in accomplices)
-            MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: GestureDetector(
-                child: Text("${shooter.getName(suffixes: false)} - ${shooter.originalMemberNumber}"),
-                onTap: () {
-                  if(shooter.length > 0) {
-                    showDialog(context: context, builder: (context) => ShooterStatsDialog(rating: shooter, match: shooter.ratingEvents.last.match));
-                  }
-                  else {
-                    launchUrl(Uri.parse("https://uspsa.org/classification/${shooter.originalMemberNumber}"));
-                  }
-                },
-              )
+            ClickableLink(
+              child: Text("${shooter.getName(suffixes: false)} - ${shooter.originalMemberNumber}"),
+              onTap: () {
+                if(shooter.length > 0) {
+                  showDialog(context: context, builder: (context) => ShooterStatsDialog(rating: shooter, match: shooter.ratingEvents.last.match));
+                }
+                else {
+                  launchUrl(Uri.parse("https://uspsa.org/classification/${shooter.originalMemberNumber}"));
+                }
+              },
             ),
           // end for
         ],

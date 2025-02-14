@@ -255,17 +255,14 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                   flex: 5,
                   child: Column(
                     children: [
-                      MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: GestureDetector(
-                            child: Text(showingEvents ? "Event history" : "Match history",
-                                style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).colorScheme.tertiary)),
-                            onTap: () {
-                              setState(() {
-                                showingEvents = !showingEvents;
-                              });
-                            },
-                          )
+                      ClickableLink(
+                        child: Text(showingEvents ? "Event history" : "Match history",
+                            style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).colorScheme.tertiary)),
+                        onTap: () {
+                          setState(() {
+                            showingEvents = !showingEvents;
+                          });
+                        },
                       ),
                       Expanded(
                         child: Scrollbar(

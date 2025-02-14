@@ -10,15 +10,17 @@ import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/ui/widget/captioned_text.dart';
+import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_list.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 class ShooterResultCard extends StatelessWidget {
+  final Sport sport;
   final RelativeMatchScore? matchScore;
   final RelativeStageScore? stageScore;
   final bool scoreDQ;
 
-  const ShooterResultCard({Key? key, this.matchScore, this.stageScore, this.scoreDQ = true}) : super(key: key);
+  const ShooterResultCard({Key? key, required this.sport,this.matchScore, this.stageScore, this.scoreDQ = true}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -135,37 +137,41 @@ class ShooterResultCard extends StatelessWidget {
 
 
   Widget _buildShooterLink(BuildContext context, MatchEntry shooter) {
+    var shooterString = shooter.name;
+    if(sport.hasDivisions || sport.hasClassifications) {
+      shooterString += " -";
+      if(sport.hasDivisions) {
+        shooterString += " ${shooter.division?.name ?? "NO DIVISION"} ";
+      }
+      if(sport.hasClassifications) {
+        shooterString += " ${shooter.classification?.name ?? "NO CLASSIFICATION"}";
+      }
+    }
     if(shooter.originalMemberNumber != "") {
-      return MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: () {
-            HtmlOr.openLink("https://uspsa.org/classification/${shooter.originalMemberNumber}");
-          },
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                // TODO: handle division-free/classification-free sports
-                "${shooter.getName()} - ${shooter.division?.name ?? "NO DIVISION"} ${shooter.classification?.name ?? "NO CLASSIFICATION"}",
-                style: Theme.of(context).textTheme.headline6!.copyWith(
-                  color: Theme.of(context).primaryColor,
-                  decoration: TextDecoration.underline,
-                ),
+      return ClickableLink(
+        url: Uri.parse("https://uspsa.org/classification/${shooter.originalMemberNumber}"),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              shooterString,
+              style: Theme.of(context).textTheme.headline6!.copyWith(
+                color: Theme.of(context).primaryColor,
+                decoration: TextDecoration.underline,
               ),
-              IconButton(
-                icon: Icon(Icons.compare_arrows),
-                onPressed: () {
-                  Navigator.of(context).pop(ShooterDialogAction(launchComparison: true));
-                },
-              ),
-            ],
-          ),
+            ),
+            IconButton(
+              icon: Icon(Icons.compare_arrows),
+              onPressed: () {
+                Navigator.of(context).pop(ShooterDialogAction(launchComparison: true));
+              },
+            ),
+          ],
         ),
       );
     }
     return Text(
-      "${shooter.getName()} - ${shooter.division?.name ?? "NO DIVISION"} ${shooter.classification?.name ?? "NO CLASSIFICATION"}",
+      shooterString,
       style: Theme.of(context).textTheme.headline6,
     );
   }

@@ -14,6 +14,7 @@ import 'package:shooting_sports_analyst/data/ranking/rating_statistics.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/box_and_whisker.dart';
+import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 
 var _log = SSALogger("RaterStatsDialog");
 
@@ -103,14 +104,11 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
       Divider(height: 2, thickness: 1),
       Padding(
         padding: const EdgeInsets.only(top: 16.0, bottom: 8),
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: GestureDetector(
-            onTap: () => setState(() {
-              classStats = !classStats;
-            }),
-            child: Text(classStats ? "Class statistics" : "Date of first match", style: Theme.of(context).textTheme.bodyLarge!.copyWith(color: Theme.of(context).colorScheme.tertiary)),
-          )
+        child: ClickableLink(
+          onTap: () => setState(() {
+            classStats = !classStats;
+          }),
+          child: Text(classStats ? "Class statistics" : "Date of first match", style: Theme.of(context).textTheme.bodyLarge!.copyWith(color: Theme.of(context).colorScheme.tertiary)),
         ),
       ),
       if(classStats) ...[
@@ -126,14 +124,11 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
       ],
       Padding(
         padding: const EdgeInsets.only(top: 16.0, bottom: 8),
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: GestureDetector(
-            onTap: () => setState(() {
-              histogram = !histogram;
-            }),
-            child: Text(histogram ? "Histogram" : "Quartiles", style: Theme.of(context).textTheme.bodyLarge!.copyWith(color: Theme.of(context).colorScheme.tertiary)),
-          )
+        child: ClickableLink(
+          onTap: () => setState(() {
+            histogram = !histogram;
+          }),
+          child: Text(histogram ? "Histogram" : "Quartiles", style: Theme.of(context).textTheme.bodyLarge!.copyWith(color: Theme.of(context).colorScheme.tertiary)),
         ),
       ),
       SizedBox(

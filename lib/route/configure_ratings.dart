@@ -630,23 +630,20 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                     mainAxisSize: MainAxisSize.max,
                                     children: [
                                       Expanded(
-                                        child: MouseRegion(
-                                          cursor: SystemMouseCursors.click,
-                                          child: GestureDetector(
-                                            onTap: () async {
-                                              var dbMatch = await matchPointer.getDbMatch(AnalystDatabase());
-                                              if(dbMatch.isErr()) {
-                                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to load match from database.")));
-                                                return;
-                                              }
-                                              Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-                                                return ResultPage(canonicalMatch: dbMatch.unwrap().hydrate().unwrap(), allowWhatIf: false);
-                                              }));
-                                            },
-                                            child: Text(
-                                              matchPointer.name,
-                                              overflow: TextOverflow.fade
-                                            ),
+                                        child: ClickableLink(
+                                          onTap: () async {
+                                            var dbMatch = await matchPointer.getDbMatch(AnalystDatabase(), downloadIfMissing: true);
+                                            if(dbMatch.isErr()) {
+                                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to load match from database.")));
+                                              return;
+                                            }
+                                            Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+                                              return ResultPage(canonicalMatch: dbMatch.unwrap().hydrate().unwrap(), allowWhatIf: false);
+                                            }));
+                                          },
+                                          child: Text(
+                                            matchPointer.name,
+                                            overflow: TextOverflow.fade
                                           ),
                                         )
                                       ),
