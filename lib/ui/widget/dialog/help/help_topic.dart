@@ -15,8 +15,8 @@ import 'package:shooting_sports_analyst/util.dart';
 
 SSALogger _log = SSALogger("HelpTopic");
 
-const _shouldDumpTokenTree = kDebugMode && true;
-
+const _shouldDumpTokenTree = kDebugMode && false;
+const _shouldCacheTokenizedContent = !kDebugMode;
 /// A help topic is an article that can be displayed to the user.
 /// 
 /// It can be formatted with a very small subset of Markdown,
@@ -39,7 +39,8 @@ class HelpTopic {
 
     var buffer = StringBuffer();
     for(var token in tokens) {
-      buffer.write(token.asPlainText.replaceAll(RegExp(r"\n+"), " ").trim());
+      // preserve trailing spaces in case we have a paragraph break in the preview
+      buffer.write(token.asPlainText.replaceAll(RegExp(r"\n+"), " ").trimLeft());
       if(buffer.length > 100) {
         break;
       }
@@ -47,25 +48,97 @@ class HelpTopic {
     return buffer.toString();
   }
 
+  List<HelpToken>? _tokenizedContent;
+
   /// Convert the help topic into a list of HelpTokens.
   List<HelpToken> tokenize() {
-    var tokens = <HelpToken>[];
-
-    var lines = this.content.split(RegExp(r'(?=[\n])|(?<=[\n])'));
-
-    for(var line in lines) {
-      tokens.addAll(_tokenizeLine(line));
+    if(_shouldCacheTokenizedContent && _tokenizedContent != null) {
+      return _tokenizedContent!;
     }
 
+    var tokens = <HelpToken>[];
+    var currentParagraphTokens = <HelpToken>[];
+    
+    var processedContent = _processContent(this.content);
+    var lines = processedContent.split("\n");
+    
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      
+      // Skip empty lines, but use them to break paragraphs
+      if (line.isEmpty) {
+        if (currentParagraphTokens.isNotEmpty) {
+          tokens.add(Paragraph(currentParagraphTokens));
+          currentParagraphTokens = [];
+        }
+        continue;
+      }
+
+      var lineTokens = _tokenizeLine(line);
+      
+      // Headers always start a new paragraph
+      if (lineTokens.any((t) => t is Header)) {
+        if (currentParagraphTokens.isNotEmpty) {
+          tokens.add(Paragraph(currentParagraphTokens));
+          currentParagraphTokens = [];
+        }
+        tokens.addAll(lineTokens);
+      } else {
+        currentParagraphTokens.addAll(lineTokens);
+      }
+    }
+    
+    // Don't forget the last paragraph
+    if (currentParagraphTokens.isNotEmpty) {
+      tokens.add(Paragraph(currentParagraphTokens));
+    }
+    
     if(_shouldDumpTokenTree && id == deduplicationHelpId) {
       _dumpTokenTree(tokens);
     }
 
+    _tokenizedContent = tokens;
     return tokens;
+  }
+
+  /// Process the content of the help topic to prepare it for tokenization.
+  /// 
+  /// The main processing step is removing all single newlines that do not
+  /// precede a heading marker or a list marker.
+  String _processContent(String content) {
+    var lines = content.split("\n");
+    var processedLines = <String>[];
+    
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      if(!line.startsWith(_listPattern)) {
+        line = line.trim();
+      }
+      var nextLine = i < lines.length - 1 ? lines[i + 1] : "";
+      if(!nextLine.startsWith(_listPattern)) {
+        nextLine = nextLine.trim();
+      }
+      
+      // Keep the newline if:
+      // 1. Next line is empty (double newline = paragraph break)
+      // 2. Next line starts with header marker, or this line is a header
+      // 3. Next line starts with list marker
+      // 4. Current line is empty
+      bool keepNewline = nextLine.isEmpty ||
+          line.startsWith(_headerPattern) ||
+          nextLine.trimLeft().startsWith(_headerPattern) ||
+          nextLine.trimLeft().startsWith(_listPattern) ||
+          line.isEmpty;
+          
+      processedLines.add(line + (keepNewline ? "\n" : " "));
+    }
+    
+    return processedLines.join();
   }
 
   static final _ParseState _parseState = _ParseState();
 
+  static final _singleNewlinePattern = RegExp(r'^(.)\n(?![\n#*]|\d+\.)');
   static final _headerPattern = RegExp(r'^#+\s');
   static final _linkPattern = RegExp(r'\[(.*?)\]\((.*?)\)');
   static final _emphasisPattern = RegExp(r'_(.*?)_|\*\*(.*?)\*\*');
@@ -77,34 +150,28 @@ class HelpTopic {
   List<HelpToken> _tokenizeLine(String line, {bool subline = false}) {
     List<HelpToken> tokens = [];
     var listMatch = _listPattern.firstMatch(line);
-    // Don't reset parse state on whitespace-only lines
-    if(!subline && !_emptyLinePattern.hasMatch(line)) {
-      if(listMatch == null) {
+    
+    if (!subline && !_emptyLinePattern.hasMatch(line)) {
+      if (listMatch == null) {
         _parseState.resetListState();
       }
     }
 
-    if(id == deduplicationHelpId) {
-      print("break");
-    }
-
-    if(line.startsWith(_headerPattern)) {
-      // headers are a special case, since they modify an
-      // entire line of text.
+    if (line.startsWith(_headerPattern)) {
       tokens.addAll(_tokenizeHeaderLine(line));
-    }
-    else if(listMatch != null) {
+    } else if (listMatch != null) {
       _parseState.inList = true;
       _parseState.inOrderedList = listMatch.group(2)!.startsWith(RegExp(r"\d"));
       var indent = listMatch.group(1)!.length ~/ 4;
       _parseState.listIndicesByIndent.increment(indent);
 
-      tokens.addAll(_tokenizeListItem(line, ordered: _parseState.inOrderedList, indentDepth: indent, listIndex: _parseState.listIndicesByIndent[indent] ?? 1));
-    }
-    else if(_linkPattern.hasMatch(line)) {
+      tokens.addAll(_tokenizeListItem(line, 
+        ordered: _parseState.inOrderedList, 
+        indentDepth: indent, 
+        listIndex: _parseState.listIndicesByIndent[indent] ?? 1));
+    } else if (_linkPattern.hasMatch(line)) {
       tokens.addAll(_tokenizeLinkLine(line));
-    }
-    else {
+    } else {
       tokens.addAll(_tokenizeText(line));
     }
     
@@ -188,7 +255,7 @@ class HelpTopic {
       throw ArgumentError("line is not a list item: $line");
     }
 
-    var listText = line.substring(listMatch.end);
+    var listText = line.substring(listMatch.end).trimRight();
     // A list item can contain e.g. a link, so we need to run the full tokenizer on its contents
     return [
       ListItem(tokens: _tokenizeLine(listText, subline: true), ordered: ordered, indentDepth: indentDepth, listIndex: listIndex),

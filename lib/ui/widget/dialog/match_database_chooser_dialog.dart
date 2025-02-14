@@ -66,8 +66,7 @@ class MatchDatabaseChooserDialog extends StatefulWidget {
 class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog> {
   late AnalystDatabase db;
 
-  int matchCacheCurrent = 0;
-  int matchCacheTotal = 0;
+  int page = 0;
 
   List<String> addedMatches = [];
   bool alphabeticSort = false;
@@ -77,6 +76,7 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
   Set<int> selectedMatches = {};
 
   TextEditingController searchController = TextEditingController();
+  ScrollController _scrollController = ScrollController();
 
   Timer? _searchDebouncer;
   @override
@@ -93,6 +93,26 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
       });
     });
     _updateMatches();
+
+    _scrollController.addListener(() {
+      if(_scrollController.position.pixels == _scrollController.position.maxScrollExtent) {
+        var position = _scrollController.position;
+        if(position.hasContentDimensions && position.atEdge && position.pixels != 0) {
+          setState(() {
+            page += 1;
+          });
+          _updateMatches();
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    searchController.dispose();
+    _searchDebouncer?.cancel();
+    super.dispose();
   }
 
   Future<void> _updateMatches() async {
@@ -114,10 +134,20 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
       }
     }
     else {
-      matches = await db.queryMatches(
-        name: searchController.text.isNotEmpty ? searchController.text : null,
-        sort: alphabeticSort ? const NameSort() : const DateSort(),
-      );
+      if(page > 0) {
+        var newMatches = await db.queryMatches(
+          name: searchController.text.isNotEmpty ? searchController.text : null,
+          sort: alphabeticSort ? const NameSort() : const DateSort(),
+          page: page,
+        );
+        matches.addAll(newMatches);
+      }
+      else {
+        matches = await db.queryMatches(
+          name: searchController.text.isNotEmpty ? searchController.text : null,
+          sort: alphabeticSort ? const NameSort() : const DateSort(),
+        );
+      }
       searchedMatches = [...matches];
     }
 
@@ -133,8 +163,15 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
           m.eventName.toLowerCase().contains(search.toLowerCase())).toList();
     }
     else {
+      page = 0;
       _updateMatches();
     }
+
+    _scrollController.animateTo(
+      0,
+      duration: Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
   }
 
   @override
@@ -292,6 +329,7 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
         Expanded(child: SizedBox(
           width: max(MediaQuery.of(context).size.width * 0.8, 700),
           child: ListView.separated(
+            controller: _scrollController,
             itemCount: searchedMatches.length,
             itemBuilder: (context, i) {
               var name = searchedMatches[i].eventName;

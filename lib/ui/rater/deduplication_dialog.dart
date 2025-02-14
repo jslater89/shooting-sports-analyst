@@ -18,6 +18,7 @@ import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/text_styles.dart';
+import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/ui/widget/constrained_tooltip.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/deduplication/blacklist.dart';
@@ -910,14 +911,9 @@ class _USPSALink extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        child: Text(number, style: TextStyles.underlineBodyMedium(context).copyWith(color: collision.coversNumber(number) ? Colors.green.shade600 : Colors.grey.shade400)),
-        onTap: () {
-          launchUrl(Uri.parse("https://uspsa.org/classification/$number"));
-        },
-      ),
+    return ClickableLink(
+      url: Uri.parse("https://uspsa.org/classification/$number"),
+      child: Text(number, style: TextStyles.underlineBodyMedium(context).copyWith(color: collision.coversNumber(number) ? Colors.green.shade600 : Colors.grey.shade400)),
     );
   }
 }

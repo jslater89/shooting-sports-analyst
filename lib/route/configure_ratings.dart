@@ -44,6 +44,8 @@ import 'package:shooting_sports_analyst/ui/rater/member_number_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_map_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/select_old_project_dialog.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
+import 'package:shooting_sports_analyst/ui/text_styles.dart';
+import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/enter_name_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/select_project_dialog.dart';
@@ -67,6 +69,7 @@ class ConfigureRatingsPage extends StatefulWidget {
 class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   final bool _operationInProgress = false;
 
+  // TODO: sport 'supportsRatings' parameter, dropdown for supported sports
   Sport _sport = uspsaSport;
   Sport get sport => _sport;
   set sport(Sport v) {
@@ -829,6 +832,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
           name: name,
           settings: settings,
         );
+        project.automaticNumberMappings = [..._loadedProject!.automaticNumberMappings];
         project.dbGroups.addAll(_groups);
       }
     }
@@ -1106,7 +1110,50 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         if(request != null) {
           var result = await AnalystDatabase().migrateOldProject(request.project, nameOverride: request.nameOverride);
           if(result.isOk()) {
-            _loadProject(result.unwrap());
+            var migrationResult = result.unwrap();
+            if(migrationResult.failedMatchIds.isNotEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text("Failed to migrate ${migrationResult.failedMatchIds.length} matches from old project."),
+                  action: SnackBarAction(
+                    label: "SHOW",
+                    onPressed: () {
+                      showDialog(context: context, builder: (context) => 
+                        AlertDialog(
+                          title: Text("Failed to migrate matches"),
+                          content: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: 700,
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text("The following matches were not found in the database\nand could not be migrated:\n"),
+                                for(var id in migrationResult.failedMatchIds)
+                                  ClickableLink(
+                                    url: Uri.parse("https://practiscore.com/results/new/$id"),
+                                    child: Text("https://practiscore.com/results/new/$id", style: TextStyles.linkBodyMedium(context)),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                              child: Text("OK"),
+                            ),
+                          ],
+                        ),
+                        barrierDismissible: false
+                      );
+                    },
+                  ),
+                )
+              );
+            }
+            _loadProject(migrationResult.project);
           }
           else {
             var err = result.unwrapErr();

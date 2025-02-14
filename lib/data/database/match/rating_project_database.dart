@@ -7,6 +7,7 @@
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
+import 'package:shooting_sports_analyst/data/database/match/migration_result.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
@@ -66,7 +67,7 @@ extension RatingProjectDatabase on AnalystDatabase {
 
   Future<bool> _innerDeleteShooterRating(DbShooterRating rating) async {
       var deleted = await rating.events.filter().deleteAll();
-      _log.v("Deleted $deleted events while deleting rating");
+      // _log.v("Deleted $deleted events while deleting rating");
       return isar.dbShooterRatings.delete(rating.id);
   }
 
@@ -358,7 +359,13 @@ extension RatingProjectDatabase on AnalystDatabase {
     return query.findAllSync();
   }
 
-  Future<Result<DbRatingProject, ResultErr>> migrateOldProject(OldRatingProject project, {String? nameOverride}) async {
+  /// Migrate an old in-memory project to the new database format.
+  /// 
+  /// [nameOverride] allows the caller to specify a name for the new project.
+  /// If not provided, and the name of the old project is already in use, the migration will fail.
+  /// 
+  /// On success, the caller will receive a [ProjectMigrationResult] containing the new project and a list of match IDs that failed to migrate.
+  Future<Result<ProjectMigrationResult, ResultErr>> migrateOldProject(OldRatingProject project, {String? nameOverride}) async {
     var projectName = project.name;
     var existingProject = await getRatingProjectByName(projectName);
     if(existingProject != null) {
@@ -379,6 +386,7 @@ extension RatingProjectDatabase on AnalystDatabase {
       settings: RatingProjectSettings.fromOld(project),
     );
 
+    List<String> failedMatchIds = [];
     List<DbShootingMatch> matches = [];
     var shortIdRegex = RegExp(r"^[0-9]{4,8}$");
     for(var matchUrl in project.matchUrls) {
@@ -395,7 +403,8 @@ extension RatingProjectDatabase on AnalystDatabase {
         matches.add(match);
       }
       else {
-        _log.w("Failed to find match $id in database");
+        _log.w("Failed to find match $id (prefixed: $prefixedId) in database");
+        failedMatchIds.add(id);
       }
     }
 
@@ -406,7 +415,10 @@ extension RatingProjectDatabase on AnalystDatabase {
     _log.i("Migrated ${p.name} to DB ratings with ${matches.length} matches (vs. ${project.matchUrls.length} in old project)");
 
     await saveRatingProject(p, checkName: false);
-    return Result.ok(p);
+    return Result.ok(ProjectMigrationResult(
+      project: p,
+      failedMatchIds: failedMatchIds,
+    ));
   }
 
   Query<DbRatingEvent> _buildShooterEventQuery(DbShooterRating rating, {

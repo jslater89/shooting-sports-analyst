@@ -5,10 +5,13 @@
  */
 
 import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_topic.dart';
 
-class HelpRenderer extends StatelessWidget {
+const _shouldCacheRenderedSpans = !kDebugMode;
+
+class HelpRenderer extends StatefulWidget {
   const HelpRenderer({
     super.key,
     required this.topic,
@@ -19,9 +22,23 @@ class HelpRenderer extends StatelessWidget {
   final void Function(String id) onLinkTapped;
 
   @override
+  State<HelpRenderer> createState() => _HelpRendererState();
+}
+
+class _HelpRendererState extends State<HelpRenderer> {
+  final Map<String, List<InlineSpan>> _contentCache = {};
+
+  @override
   Widget build(BuildContext context) {
-    var tokens = topic.tokenize();
-    var spans = tokens.map((e) => e.intoSpans(context, Theme.of(context).textTheme.bodyMedium!, onLinkTapped: onLinkTapped)).flattened.toList();
+    var tokens = widget.topic.tokenize();
+    List<InlineSpan> spans;
+    if(_shouldCacheRenderedSpans && _contentCache[widget.topic.id] != null) {
+      spans = _contentCache[widget.topic.id]!;
+    }
+    else {
+      spans = tokens.map((e) => e.intoSpans(context, Theme.of(context).textTheme.bodyMedium!, onLinkTapped: widget.onLinkTapped)).flattened.toList();
+      _contentCache[widget.topic.id] = spans;
+    }
     return SingleChildScrollView(
       child: RichText(
         text: TextSpan(

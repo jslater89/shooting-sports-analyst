@@ -28,10 +28,48 @@ sealed class HelpToken {
   String get asPlainText;
 }
 
+/// A linkable help token is a token that is either a [Link] itself, or can be a child of a [Link].
 abstract class LinkableHelpToken extends HelpToken {
   final String? link;
 
   LinkableHelpToken({this.link, required super.lineStart, required super.lineEnd});
+}
+
+class Paragraph extends HelpToken {
+  final List<HelpToken> tokens;
+
+  Paragraph(this.tokens, {super.lineStart = false, super.lineEnd = false});
+
+  @override
+  List<InlineSpan> intoSpans(BuildContext context, TextStyle baseStyle, {void Function(String)? onLinkTapped}) {
+    var spans = tokens.map((e) => e.intoSpans(context, baseStyle, onLinkTapped: onLinkTapped)).flattened.toList();
+
+    return [
+      WidgetSpan(
+        alignment: PlaceholderAlignment.baseline,
+        baseline: TextBaseline.alphabetic,
+        child: Padding(
+          padding: EdgeInsets.only(bottom: 10),
+          child: RichText(
+            text: TextSpan(
+              children: spans,
+            ),
+          ),
+        )
+      )
+    ];
+  }
+
+  @override
+  String get asPlainText => tokens.map((e) => e.asPlainText).join(" ") + "\n\n";
+
+  @override
+  List<HelpToken> get children => tokens;
+
+  @override
+  String toString() {
+    return "Paragraph()";
+  }
 }
 
 /// A running string of plain text.
@@ -73,6 +111,7 @@ class Header extends HelpToken {
   @override
   List<InlineSpan> intoSpans(BuildContext context, TextStyle baseStyle, {void Function(String)? onLinkTapped}) {
     TextStyle style;
+    var renderLevel = level;
     if(level == 1) {
       style = Theme.of(context).textTheme.titleLarge!;
     }
@@ -80,9 +119,28 @@ class Header extends HelpToken {
       style = Theme.of(context).textTheme.titleMedium!.copyWith(decoration: TextDecoration.underline);
     }
     else {
+      renderLevel = 3;
       style = Theme.of(context).textTheme.titleSmall!.copyWith(decoration: TextDecoration.underline);
     }
-    return tokens.map((e) => e.intoSpans(context, style)).flattened.toList();
+    var spans = tokens.map((e) => e.intoSpans(context, style)).flattened.toList();
+    return [
+      WidgetSpan(
+        alignment: PlaceholderAlignment.baseline,
+        baseline: TextBaseline.alphabetic,
+        child: Row(
+          children: [
+            Padding(
+              padding: EdgeInsets.only(bottom: (6 * (4 - renderLevel)).toDouble()),
+              child: RichText(
+                text: TextSpan(
+                  children: spans,
+                ),
+              ),
+            ),
+          ],
+        ),
+      )
+    ];
   }
 
   @override
@@ -161,7 +219,7 @@ class ListItem extends LinkableHelpToken {
     if(ordered) {
       // TODO: sequences
       bulletWidget = Padding(
-        padding: EdgeInsets.only(left: (12 * indentDepth).toDouble()),
+        padding: EdgeInsets.only(left: (8 + 12 * indentDepth).toDouble()),
         child: Text(
           "$listIndex. ",
           style: baseStyle,
@@ -180,7 +238,7 @@ class ListItem extends LinkableHelpToken {
         bullet = "▫";
       }
       bulletWidget = Padding(
-        padding: EdgeInsets.only(left: (12 * indentDepth).toDouble(), right: 4),
+        padding: EdgeInsets.only(left: (8 + 12 * indentDepth).toDouble(), right: 4),
         child: Text(
           bullet,
           style: baseStyle,

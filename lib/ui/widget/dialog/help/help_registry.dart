@@ -25,12 +25,14 @@ class HelpTopicRegistry {
 
   final Map<String, HelpTopic> _topics = {};
   List<HelpTopic> _alphabetizedTopics = [];
+  Map<HelpTopic, int> _alphabeticalIndexes = {};
 
   void register(HelpTopic topic) {
     _log.v("Registered topic: ${topic.id}");
     _topics[topic.id] = topic;
     _alphabetizedTopics.add(topic);
     _alphabetizedTopics.sort((a, b) => a.name.compareTo(b.name));
+    _alphabeticalIndexes[topic] = _alphabetizedTopics.indexOf(topic);
   }
 
   HelpTopic? getTopic(String id) {
@@ -45,8 +47,13 @@ class HelpTopicRegistry {
     return _alphabetizedTopics[index];
   }
 
+  int alphabeticalIndex(HelpTopic topic) {
+    return _alphabeticalIndexes[topic]!;
+  }
+
   void initialize() {
     _alphabetizedTopics.clear();
+    _alphabeticalIndexes.clear();
     register(helpAbout);
     register(helpUspsaDeduplicator);
     register(helpDeduplication);

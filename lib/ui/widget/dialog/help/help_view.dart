@@ -14,7 +14,6 @@ import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_topic.dart';
 
 SSALogger _log = SSALogger("HelpView");
 
-/// HelpView displays the help system in 
 class HelpView extends StatefulWidget {
   const HelpView({super.key, this.startingTopic = aboutHelpId, this.twoColumn = true, this.width = 1000});
 
@@ -29,10 +28,18 @@ class HelpView extends StatefulWidget {
 class _HelpViewState extends State<HelpView> {
   late HelpTopic selectedTopic;
 
+  final HelpIndexController _indexController = HelpIndexController();
+
   @override
   void initState() {
     super.initState();
     selectedTopic = HelpTopicRegistry().getTopic(widget.startingTopic)!;
+  }
+
+  @override
+  void dispose() {
+    _indexController.dispose();
+    super.dispose();
   }
 
   @override
@@ -45,6 +52,7 @@ class _HelpViewState extends State<HelpView> {
           if(widget.twoColumn) SizedBox(
             width: 300,
             child: HelpIndex(
+              controller: _indexController,
               selectedTopic: selectedTopic,
               onTopicSelected: (topic) {
                 setState(() {
@@ -61,6 +69,8 @@ class _HelpViewState extends State<HelpView> {
                 setState(() {
                   selectedTopic = topic;
                 });
+                var index = HelpTopicRegistry().alphabeticalIndex(topic);
+                _indexController.scrollToTopic(topic, index);
               }
               else {
                 _log.w("Help topic $link not found");
@@ -76,24 +86,68 @@ class _HelpViewState extends State<HelpView> {
   }
 }
 
-class HelpIndex extends StatelessWidget {
-  const HelpIndex({super.key, required this.selectedTopic, required this.onTopicSelected});
+class HelpIndex extends StatefulWidget {
+  const HelpIndex({super.key, required this.selectedTopic, required this.onTopicSelected, this.controller});
 
   final HelpTopic selectedTopic;
   final void Function(HelpTopic topic) onTopicSelected;
+  final HelpIndexController? controller;
+
   @override
+  State<HelpIndex> createState() => _HelpIndexState();
+}
+
+class _HelpIndexState extends State<HelpIndex> {
+  static const _indexTileExtent = 65.0;
+
+  final ScrollController _scrollController = ScrollController();
+  int? _scrolledIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    if(widget.controller != null) {
+      widget.controller!.addListener(_scrollToTopic);
+    }
+  }
+
+  void _scrollToTopic() {
+    if(_scrolledIndex != widget.controller?._scrollIndex) {
+      _scrolledIndex = widget.controller?._scrollIndex;
+      _scrollController.animateTo(
+        _scrolledIndex! * _indexTileExtent,
+        duration: Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
   Widget build(BuildContext context) {
     return ListView.builder(
+      controller: _scrollController,
       itemBuilder: (context, index) {
         final topic = HelpTopicRegistry().alphabetical(index);
-        return ListTile(
-          title: Text(topic.name),
-          subtitle: Text(topic.contentPreview(), softWrap: false, overflow: TextOverflow.ellipsis),
-          onTap: () => onTopicSelected(topic),
-          selected: topic.id == selectedTopic.id,
+        return SizedBox(
+          height: _indexTileExtent,
+          child: ListTile(
+            title: Text(topic.name),
+            subtitle: Text(topic.contentPreview(), softWrap: false, overflow: TextOverflow.ellipsis),
+            onTap: () => widget.onTopicSelected(topic),
+            selected: topic.id == widget.selectedTopic.id,
+          ),
         );
       },
       itemCount: HelpTopicRegistry().length,
     );
+  }
+}
+
+class HelpIndexController with ChangeNotifier {
+  String? _scrollTopicId;
+  int? _scrollIndex;
+  void scrollToTopic(HelpTopic topic, int index) {
+    _scrollTopicId = topic.id;
+    _scrollIndex = index;
+    notifyListeners();
   }
 }

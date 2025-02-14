@@ -15,6 +15,7 @@ import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
+import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:shooting_sports_analyst/data/model.dart' as old;
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
@@ -80,32 +81,29 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: GestureDetector(
-                onTap: () {
-                  _launchScoreView(e);
-                },
-                child: _StatefulContainer(
-                  key: GlobalObjectKey(e.hashCode),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Expanded(
-                        flex: 10,
-                        child: Text("${e.eventName}${widget.showDivisions ? " (${_divisionName(e)})" : ""}",
-                            style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).colorScheme.error : null)),
-                      ),
-                      Expanded(
-                        flex: 2,
-                        child: Align(
-                            alignment: Alignment.centerRight,
-                            child: Text("${e.ratingChange.toStringAsFixed(2)}",
-                                style:
-                                Theme.of(context).textTheme.bodyMedium!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).colorScheme.error : null))),
-                      )
-                    ],
-                  ),
+            ClickableLink(
+              onTap: () {
+                _launchScoreView(e);
+              },
+              child: _StatefulContainer(
+                key: GlobalObjectKey(e.hashCode),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      flex: 10,
+                      child: Text("${e.eventName}${widget.showDivisions ? " (${_divisionName(e)})" : ""}",
+                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).colorScheme.error : null)),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Align(
+                          alignment: Alignment.centerRight,
+                          child: Text("${e.ratingChange.toStringAsFixed(2)}",
+                              style:
+                              Theme.of(context).textTheme.bodyMedium!.copyWith(color: e.ratingChange < 0 ? Theme.of(context).colorScheme.error : null))),
+                    )
+                  ],
                 ),
               ),
             ),
@@ -198,14 +196,9 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: GestureDetector(
-              child: Text("Ratings for ${widget.rating.getName(suffixes: false)} ${widget.rating.memberNumber} (${widget.rating.lastClassification?.displayName})"),
-              onTap: () {
-                HtmlOr.openLink("https://uspsa.org/classification/${widget.rating.memberNumber}");
-              },
-            ),
+          ClickableLink(
+            url: Uri.parse("https://uspsa.org/classification/${widget.rating.memberNumber}"),
+            child: Text("Ratings for ${widget.rating.getName(suffixes: false)} ${widget.rating.memberNumber} (${widget.rating.lastClassification?.displayName})"),
           ),
           Row(
             children: [
