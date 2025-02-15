@@ -8,6 +8,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shooting_sports_analyst/data/help/broadcast_help.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/booth/controller.dart';
@@ -17,6 +18,7 @@ import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_grid.dart';
 import 'package:shooting_sports_analyst/ui/booth/ticker.dart';
 import 'package:shooting_sports_analyst/ui/database/match/match_db_select_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 SSALogger _log = SSALogger("BroadcastBoothPage");
@@ -211,12 +213,7 @@ class _BroadcastBoothPageState extends State<BroadcastBoothPage> {
                     _openExistingProject();
                   },
                 ),
-                IconButton(
-                  icon: const Icon(Icons.help),
-                  onPressed: () {
-                    showDialog(context: context, builder: (context) => BoothHelpDialog());
-                  },
-                ),
+                HelpButton(helpTopicId: broadcastHelpId),
               ],
             ),
             body: Column(

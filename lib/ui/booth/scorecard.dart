@@ -457,8 +457,10 @@ class _BoothScorecardState extends State<BoothScorecard> {
       );
     }
     else {
+      // column - 2 because competitor and total are columns 0 and 1
       var stage = match.stages.where((s) => !(s.scoring is IgnoredScoring)).toList()[vicinity.column - 2];
       return Tooltip(
+        waitDuration: Duration(milliseconds: 500),
         message: "${stage.name} (${stage.maxPoints}pt)",
         child: Text(
           "Stage ${stage.stageId}",
@@ -496,16 +498,18 @@ class _BoothScorecardState extends State<BoothScorecard> {
         children: [
           Flexible(
             child: Tooltip(
+              waitDuration: Duration(milliseconds: 500),
               message: shooterTooltip,
               child: Text(
                 entry.getName(),
                 textAlign: TextAlign.right,
                 softWrap: true,
-                textScaleFactor: sc.tableTextSize.fontSizeFactor,
+                textScaler: TextScaler.linear(sc.tableTextSize.fontSizeFactor),
               ),
             ),
           ),
           if(score != null && score.isComplete) Tooltip(
+            waitDuration: Duration(milliseconds: 500),
             message: "All stages complete",
             child: Icon(Icons.lock, color: Colors.grey[600], size: 16)
           ),
@@ -544,7 +548,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
           "${score.percentage.toStringAsFixed(2)}%",
           textAlign: TextAlign.center,
           style: TextStyle(color: matchScoreColor),
-          textScaleFactor: sc.tableTextSize.fontSizeFactor,
+          textScaler: TextScaler.linear(sc.tableTextSize.fontSizeFactor),
         ),
         _wrapWithPointsChange(
           change,
@@ -552,7 +556,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
             "${score.points.toStringAsFixed(1)}pt",
             textAlign: TextAlign.center,
             style: TextStyle(color: matchScoreColor),
-            textScaleFactor: sc.tableTextSize.fontSizeFactor,
+            textScaler: TextScaler.linear(sc.tableTextSize.fontSizeFactor),
           )
         ),
       ],
@@ -570,7 +574,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
         child: Text(
           "-",
           textAlign: TextAlign.center,
-          textScaleFactor: sc.tableTextSize.fontSizeFactor,
+          textScaler: TextScaler.linear(sc.tableTextSize.fontSizeFactor),
         ),
       );
     }
@@ -587,21 +591,23 @@ class _BoothScorecardState extends State<BoothScorecard> {
           textScaleFactor: sc.tableTextSize.fontSizeFactor,
         ),
         Tooltip(
+          waitDuration: Duration(milliseconds: 500),
           message: "${stageScore.points.toStringAsFixed(1)}pt",
           child: Text(
             "${stageScore.percentage.toStringAsFixed(2)}%",
             textAlign: TextAlign.center,
             style: TextStyle(color: stageScoreColor),
-            textScaleFactor: sc.tableTextSize.fontSizeFactor,
+            textScaler: TextScaler.linear(sc.tableTextSize.fontSizeFactor),
           ),
         ),
         Tooltip(
+          waitDuration: Duration(milliseconds: 500),
           message: match.sport.displaySettings.formatTooltip(stageScore.score),
           child: Text(
             stageScore.score.displayString,
             textAlign: TextAlign.center,
             style: TextStyle(color: stageScoreColor),
-            textScaleFactor: sc.tableTextSize.fontSizeFactor,
+            textScaler: TextScaler.linear(sc.tableTextSize.fontSizeFactor),
           ),
         ),
       ],
@@ -664,7 +670,7 @@ class OrdinalPlaceText extends StatelessWidget {
       mainAxisAlignment: _textAlignToMainAxisAlign(textAlign),
       children: [
         if(prefix.isNotEmpty) Text(prefix, style: TextStyle(color: prefixColor)),
-        Text(place.ordinalPlace, style: TextStyle(color: color), textScaleFactor: textScaleFactor),
+        Text(place.ordinalPlace, style: TextStyle(color: color), textScaler: textScaleFactor != null ? TextScaler.linear(textScaleFactor!) : null),
       ]
     );
   }

@@ -1,4 +1,5 @@
 import 'package:shooting_sports_analyst/data/help/about_help.dart';
+import 'package:shooting_sports_analyst/data/help/broadcast_help.dart';
 import 'package:shooting_sports_analyst/data/help/configure_ratings_help.dart';
 import 'package:shooting_sports_analyst/data/help/deduplication_help.dart';
 import 'package:shooting_sports_analyst/data/help/elo_configuration_help.dart';
@@ -20,4 +21,5 @@ void registerHelpTopics() {
   r.register(helpPoints);
   r.register(helpRatingEvent);
   r.register(helpConfigureRatings);
+  r.register(helpBroadcastMode);
 }
