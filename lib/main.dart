@@ -15,6 +15,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shooting_sports_analyst/config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/help/all_helps.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
 import 'package:shooting_sports_analyst/db_oneoffs.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
@@ -24,7 +25,6 @@ import 'package:shooting_sports_analyst/route/home_page.dart';
 import 'package:shooting_sports_analyst/route/practiscore_url.dart';
 import 'package:shooting_sports_analyst/route/ratings.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_registry.dart';
-import 'package:shooting_sports_analyst/util.dart';
 import 'package:window_manager/window_manager.dart';
 import 'configure_nonweb.dart' if (dart.library.html) 'configure_web.dart';
 import 'package:fluro/fluro.dart' as fluro;
@@ -119,6 +119,7 @@ void main() async {
 
   oneoffDbAnalyses(AnalystDatabase());
   HelpTopicRegistry().initialize();
+  registerHelpTopics();
 
   runApp(MyApp());
 }

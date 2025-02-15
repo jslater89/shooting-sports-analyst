@@ -73,19 +73,38 @@ class Paragraph extends HelpToken {
 }
 
 /// A running string of plain text.
+/// 
+/// If the text ends with a backslash or a double space, it will be treated as a manual line break.
 class PlainText extends LinkableHelpToken {
   String text;
+  late bool hasManualBreak;
 
-  PlainText(this.text, {super.link, super.lineStart = false, super.lineEnd = false});
+  PlainText(this.text, {super.link, super.lineStart = false, super.lineEnd = false}) {
+    if(text.endsWith("\\")) {
+      hasManualBreak = true;
+      text = text.substring(0, text.length - 1);
+    }
+    else if(text.endsWith("  ")) {
+      hasManualBreak = true;
+      text = text.trimRight();
+    }
+    else {
+      hasManualBreak = false;
+    }
+  }
 
   @override
-  List<TextSpan> intoSpans(BuildContext context, TextStyle baseStyle, {void Function(String)? onLinkTapped}) {
+  List<InlineSpan> intoSpans(BuildContext context, TextStyle baseStyle, {void Function(String)? onLinkTapped}) {
     TapGestureRecognizer? recognizer;
     if(link != null) {
       recognizer = TapGestureRecognizer()..onTap = () => onLinkTapped?.call(link!);
     }
+    var out = text;
+    if(hasManualBreak) {
+      out = out + "\n";
+    }
     return [
-      TextSpan(text: text, style: baseStyle, recognizer: recognizer),
+      TextSpan(text: out, style: baseStyle, recognizer: recognizer),
     ];
   }
 
@@ -290,7 +309,7 @@ class Emphasis extends LinkableHelpToken {
   });
 
   @override
-  List<TextSpan> intoSpans(BuildContext context, TextStyle baseStyle, {void Function(String)? onLinkTapped}) {
+  List<InlineSpan> intoSpans(BuildContext context, TextStyle baseStyle, {void Function(String)? onLinkTapped}) {
     TextStyle style;
     if(type == EmphasisType.italic) {
       style = baseStyle.copyWith(fontStyle: FontStyle.italic);

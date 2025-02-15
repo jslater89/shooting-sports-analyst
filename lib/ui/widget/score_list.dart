@@ -283,7 +283,7 @@ class _ScoreListState extends State<ScoreList> {
         }
         else {
           var action = await showDialog<ShooterDialogAction>(context: context, builder: (context) {
-            return ShooterResultCard(matchScore: score, scoreDQ: widget.scoreDQ,);
+            return ShooterResultCard(sport: widget.match!.sport, matchScore: score, scoreDQ: widget.scoreDQ,);
           });
 
           if(action != null && action.launchComparison) {
@@ -472,7 +472,7 @@ class _ScoreListState extends State<ScoreList> {
         }
         else {
           var action = await showDialog<ShooterDialogAction>(context: context, builder: (context) {
-            return ShooterResultCard(stageScore: stageScore, scoreDQ: widget.scoreDQ,);
+            return ShooterResultCard(sport: widget.match!.sport, stageScore: stageScore, scoreDQ: widget.scoreDQ,);
           });
 
           if(action != null && action.launchComparison) {

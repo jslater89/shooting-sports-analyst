@@ -25,7 +25,7 @@ class HelpDialog extends StatelessWidget {
 
   static Future<void> show(BuildContext context, {String initialTopic = aboutHelpId}) {
     if(kDebugMode) {
-      HelpTopicRegistry().initialize();
+      HelpTopicRegistry().reload();
     }
     return showDialog(
       context: context,

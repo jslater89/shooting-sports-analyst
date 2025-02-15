@@ -7,6 +7,7 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_parser.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_topic.dart';
 
 const _shouldCacheRenderedSpans = !kDebugMode;
@@ -30,7 +31,7 @@ class _HelpRendererState extends State<HelpRenderer> {
 
   @override
   Widget build(BuildContext context) {
-    var tokens = widget.topic.tokenize();
+    var tokens = HelpParser.tokenize(widget.topic);
     List<InlineSpan> spans;
     if(_shouldCacheRenderedSpans && _contentCache[widget.topic.id] != null) {
       spans = _contentCache[widget.topic.id]!;
