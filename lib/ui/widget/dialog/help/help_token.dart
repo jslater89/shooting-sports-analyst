@@ -17,28 +17,54 @@ import 'package:flutter/material.dart';
 /// 
 /// Headers and links are evaluated first, and their content will be
 sealed class HelpToken {
-  HelpToken({required this.lineStart, required this.lineEnd});
+  HelpToken({required this.parent, required this.lineStart, required this.lineEnd});
 
+  final HelpToken? parent;
   bool lineStart;
   bool lineEnd;
 
   List<InlineSpan> intoSpans(BuildContext context, TextStyle baseStyle, {void Function(String)? onLinkTapped});
 
+  /// Get all direct children of this token.
   List<HelpToken> get children;
   String get asPlainText;
+
+  /// Get the last child leaf of this token.
+  HelpToken get lastChild {
+    if(children.isEmpty) {
+      return this;
+    }
+    return children.last.lastChild;
+  }
+
+  /// Get all the leaf nodes of this token.
+  Iterable<HelpToken> get leaves {
+    if(children.isEmpty) {
+      return [this];
+    }
+    return children.expand((e) => e.leaves);
+  }
+
+  /// Get this token and all of its subnodes.
+  Iterable<HelpToken> get subnodes {
+    if(children.isEmpty) {
+      return [this];
+    }
+    return [this, ...children.expand((e) => [...e.subnodes])];
+  }
 }
 
 /// A linkable help token is a token that is either a [Link] itself, or can be a child of a [Link].
 abstract class LinkableHelpToken extends HelpToken {
   final String? link;
 
-  LinkableHelpToken({this.link, required super.lineStart, required super.lineEnd});
+  LinkableHelpToken({this.link, required super.parent, required super.lineStart, required super.lineEnd});
 }
 
 class Paragraph extends HelpToken {
   final List<HelpToken> tokens;
 
-  Paragraph(this.tokens, {super.lineStart = false, super.lineEnd = false});
+  Paragraph(this.tokens, {super.parent, super.lineStart = false, super.lineEnd = false});
 
   @override
   List<InlineSpan> intoSpans(BuildContext context, TextStyle baseStyle, {void Function(String)? onLinkTapped}) {
@@ -79,7 +105,7 @@ class PlainText extends LinkableHelpToken {
   String text;
   late bool hasManualBreak;
 
-  PlainText(this.text, {super.link, super.lineStart = false, super.lineEnd = false}) {
+  PlainText(this.text, {super.link, required super.parent, super.lineStart = false, super.lineEnd = false}) {
     if(text.endsWith("\\")) {
       hasManualBreak = true;
       text = text.substring(0, text.length - 1);
@@ -125,7 +151,7 @@ class Header extends HelpToken {
   final List<HelpToken> tokens;
   final int level;
 
-  Header(this.level, this.tokens, {super.lineStart = false, super.lineEnd = false});
+  Header(this.level, this.tokens, {super.parent, super.lineStart = false, super.lineEnd = false});
 
   @override
   List<InlineSpan> intoSpans(BuildContext context, TextStyle baseStyle, {void Function(String)? onLinkTapped}) {
@@ -183,6 +209,7 @@ class Link extends LinkableHelpToken {
     required this.tokens,
     required this.id,
     super.link,
+    required super.parent,
     super.lineStart = false,
     super.lineEnd = false,
   });
@@ -226,6 +253,7 @@ class ListItem extends LinkableHelpToken {
     required this.indentDepth,
     required this.listIndex,
     super.link,
+    required super.parent,
   }) : super(lineStart: true, lineEnd: true);
   
   @override
@@ -298,7 +326,7 @@ class ListItem extends LinkableHelpToken {
 /// A section of text that is emphasized in some way.
 class Emphasis extends LinkableHelpToken {
   final EmphasisType type;
-  final PlainText token;
+  PlainText token;
 
   Emphasis({
     required this.type,
@@ -306,6 +334,7 @@ class Emphasis extends LinkableHelpToken {
     super.link,
     super.lineStart = false,
     super.lineEnd = false,
+    required super.parent,
   });
 
   @override
@@ -330,5 +359,25 @@ class Emphasis extends LinkableHelpToken {
   @override
   String toString() {
     return "Emphasis($type)";
+  }
+}
+
+class PlaceholderToken extends PlainText {
+  PlaceholderToken() : super("",parent: null, lineStart: false, lineEnd: false);
+
+  @override
+  List<InlineSpan> intoSpans(BuildContext context, TextStyle baseStyle, {void Function(String)? onLinkTapped}) {
+    throw StateError("PlaceholderToken cannot be rendered");
+  }
+
+  @override
+  String get asPlainText => "";
+
+  @override
+  List<HelpToken> get children => [];
+
+  @override
+  String toString() {
+    return "PlaceholderToken()";
   }
 }

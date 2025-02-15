@@ -5,6 +5,7 @@
  */
 
 import 'package:flutter/foundation.dart';
+import 'package:shooting_sports_analyst/data/help/about.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_token.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_topic.dart';
@@ -25,7 +26,7 @@ class HelpParser {
     }
 
     var tokens = <HelpToken>[];
-    var currentParagraphTokens = <HelpToken>[];
+    var currentParagraph = Paragraph([]);
     
     var processedContent = _processContent(topic.content);
     var lines = processedContent.split("\n");
@@ -35,30 +36,60 @@ class HelpParser {
       
       // Skip empty lines, but use them to break paragraphs
       if (line.isEmpty) {
-        if (currentParagraphTokens.isNotEmpty) {
-          tokens.add(Paragraph(currentParagraphTokens));
-          currentParagraphTokens = [];
+        if (currentParagraph.tokens.isNotEmpty) {
+          tokens.add(currentParagraph);
+          currentParagraph = Paragraph([]);
         }
         continue;
       }
 
-      var lineTokens = _tokenizeLine(line);
+      HelpToken? lastToken;
+      if(currentParagraph.tokens.isNotEmpty) {
+        lastToken = currentParagraph.tokens.last.lastChild;
+      }
+      else if(tokens.isNotEmpty) {
+        lastToken = tokens.last.lastChild;
+      }
+      ListItem? lastListToken;
+      for(var token in currentParagraph.tokens.reversed) {
+        // We're iterating through the tokens in reverse order, but
+        // we're iterating through the subnodes in forward order, so
+        // we have to search to the end of the subnode list.
+        for(var child in token.subnodes) {
+          if(child is ListItem) {
+            lastListToken = child;
+          }
+        }
+      }
+      if(lastListToken == null) {
+        // If we didn't find a list item in the current paragraph, we have to
+        // search through all the tokens in the entire document. Same note as
+        // above on subndoe order vs token order.
+        for(var token in tokens.reversed) {
+          for(var child in token.subnodes) {
+            if(child is ListItem) {
+              lastListToken = child;
+            }
+          }
+        }
+      }
+      var lineTokens = _tokenizeLine(line, lastToken: lastToken, parent: currentParagraph);
       
       // Headers always start a new paragraph
       if (lineTokens.any((t) => t is Header)) {
-        if (currentParagraphTokens.isNotEmpty) {
-          tokens.add(Paragraph(currentParagraphTokens));
-          currentParagraphTokens = [];
+        if (currentParagraph.tokens.isNotEmpty) {
+          tokens.add(currentParagraph);
+          currentParagraph = Paragraph([]);
         }
         tokens.addAll(lineTokens);
       } else {
-        currentParagraphTokens.addAll(lineTokens);
+        currentParagraph.tokens.addAll(lineTokens);
       }
     }
     
     // Don't forget the last paragraph
-    if (currentParagraphTokens.isNotEmpty) {
-      tokens.add(Paragraph(currentParagraphTokens));
+    if (currentParagraph.tokens.isNotEmpty) {
+      tokens.add(currentParagraph);
     }
     
     if(_shouldDumpTokenTree) {
@@ -114,10 +145,6 @@ class HelpParser {
           
       var finalLine = line + (keepNewline ? "\n" : " ");
       processedLines.add(finalLine);
-
-      if(manualNewline) {
-        print("break");
-      }
     }
     
     return processedLines.join();
@@ -134,38 +161,62 @@ class HelpParser {
 
   /// Tokenize some text. If [subline] is true, this is a recursive call from
   /// within a line, and should not reset list state.
-  static List<HelpToken> _tokenizeLine(String line, {bool subline = false}) {
+  static List<HelpToken> _tokenizeLine(String line, {HelpToken? parent, HelpToken? lastToken, bool subline = false}) {
     List<HelpToken> tokens = [];
     var listMatch = _listPattern.firstMatch(line);
+
+    var lastTokenHasManualBreak = false;
+    if(lastToken is PlainText && lastToken.hasManualBreak) {
+      lastTokenHasManualBreak = true;
+    }
     
-    if (!subline && !_emptyLinePattern.hasMatch(line)) {
-      if (listMatch == null) {
+    if(_parseState.inList && !subline && !_emptyLinePattern.hasMatch(line)) {
+      // We get to here when we encounter a line that does not start with a list marker
+      // after we've already started a list.
+      //
+      // If the last token was a manual break, we want to stay in the list. Otherwise we want
+      // to cancel the list.
+      // e.g.:
+      // * This is a list\
+      //   with a manual break
+      // * This is another item in the same list
+      if(!lastTokenHasManualBreak && listMatch == null) {
         _parseState.resetListState();
       }
     }
 
-    if (line.startsWith(_headerPattern)) {
-      tokens.addAll(_tokenizeHeaderLine(line));
-    } else if (listMatch != null) {
+    if(line.startsWith(_headerPattern)) {
+      tokens.addAll(_tokenizeHeaderLine(line, parent: parent));
+    } 
+    else if(listMatch != null) {
       _parseState.inList = true;
       _parseState.inOrderedList = listMatch.group(2)!.startsWith(RegExp(r"\d"));
       var indent = listMatch.group(1)!.length ~/ 4;
       _parseState.listIndicesByIndent.increment(indent);
 
-      tokens.addAll(_tokenizeListItem(line, 
+      tokens.addAll(_tokenizeListItem(line,
+        lastToken: lastToken,
         ordered: _parseState.inOrderedList, 
         indentDepth: indent, 
         listIndex: _parseState.listIndicesByIndent[indent] ?? 1));
-    } else if (_linkPattern.hasMatch(line)) {
-      tokens.addAll(_tokenizeLinkLine(line));
-    } else {
-      tokens.addAll(_tokenizeText(line));
+    } 
+    else if(_linkPattern.hasMatch(line)) {
+      tokens.addAll(_tokenizeLinkLine(line, parent: parent));
+    } 
+    else {
+      if(lastTokenHasManualBreak && lastToken?.parent is ListItem) {
+        var parent = lastToken!.parent! as ListItem;
+        parent.tokens.addAll(_tokenizeText(line, parent: parent));
+      }
+      else {
+        tokens.addAll(_tokenizeText(line, parent: parent));
+      }
     }
     
     return tokens;
   }
 
-  static List<HelpToken> _tokenizeLinkLine(String line) {
+  static List<HelpToken> _tokenizeLinkLine(String line, {HelpToken? parent}) {
     List<HelpToken> tokens = [];
     // save the matches in order, split around the links, and return
     // a list of plain text-link-plain text-link-plain text... as needed.
@@ -174,17 +225,17 @@ class HelpParser {
     List<String> parts = textParts.interleave(matches.map((e) => e.group(0)!).toList());
     for(var part in parts) {
       if(part.startsWith('[')) {
-        tokens.addAll(_tokenizeLink(part));
+        tokens.addAll(_tokenizeLink(part, parent: parent));
       }
       else {
-        tokens.add(PlainText(part));
+        tokens.add(PlainText(part, parent: parent));
       }
     }
 
     return tokens;
   }
 
-  static List<HelpToken> _tokenizeHeaderLine(String line) {
+  static List<HelpToken> _tokenizeHeaderLine(String line, {HelpToken? parent}) {
     var headerMarker = _headerPattern.firstMatch(line);
     if(headerMarker == null) {
       throw ArgumentError("line is not a header: $line");
@@ -195,11 +246,11 @@ class HelpParser {
 
     var _tokenizedText = _tokenizeText(headerText);
     return [
-      Header(headerLevel, _tokenizedText),
+      Header(headerLevel, _tokenizedText, parent: parent),
     ];
   }
 
-  static List<HelpToken> _tokenizeLink(String linkElement) {
+  static List<HelpToken> _tokenizeLink(String linkElement, {HelpToken? parent}) {
     var match = _linkPattern.firstMatch(linkElement);
     if(match == null) {
       throw ArgumentError("linkElement is not a link: $linkElement");
@@ -209,11 +260,11 @@ class HelpParser {
     var linkId = match.group(2)!;
 
     return [
-      Link(tokens: _tokenizeText(linkText, link: linkId), id: linkId),
+      Link(tokens: _tokenizeText(linkText, link: linkId), id: linkId, parent: parent),
     ];
   }
 
-  static List<HelpToken> _tokenizeText(String line, {String? link}) {
+  static List<HelpToken> _tokenizeText(String line, {String? link, HelpToken? parent}) {
     List<HelpToken> tokens = [];
     var matches = _emphasisPattern.allMatches(line);
     var textParts = line.split(_emphasisPattern);
@@ -223,20 +274,26 @@ class HelpParser {
       var lineStart = i == 0;
       var lineEnd = i == parts.length - 1;
       if(part.startsWith('_')) {
-        tokens.add(Emphasis(type: EmphasisType.italic, token: PlainText(part.substring(1, part.length - 1), link: link, lineStart: lineStart, lineEnd: lineEnd)));
+        var token = Emphasis(type: EmphasisType.italic, token: PlaceholderToken(), parent: parent);
+        var text = PlainText(part.substring(1, part.length - 1), link: link, lineStart: lineStart, lineEnd: lineEnd, parent: token);
+        token.token = text;
+        tokens.add(token);
       }
       else if(part.startsWith('**')) {
-        tokens.add(Emphasis(type: EmphasisType.bold, token: PlainText(part.substring(2, part.length - 2), link: link, lineStart: lineStart, lineEnd: lineEnd)));
+        var token = Emphasis(type: EmphasisType.bold, token: PlaceholderToken(), parent: parent);
+        var text = PlainText(part.substring(2, part.length - 2), link: link, lineStart: lineStart, lineEnd: lineEnd, parent: token);
+        token.token = text;
+        tokens.add(token);
       }
       else {
-        tokens.add(PlainText(part, link: link, lineStart: lineStart, lineEnd: lineEnd));
+        tokens.add(PlainText(part, link: link, lineStart: lineStart, lineEnd: lineEnd, parent: parent));
       }
     }
 
     return tokens;
   }
 
-  static List<HelpToken> _tokenizeListItem(String line, {bool ordered = false, int indentDepth = 0, int listIndex = 0}) {
+  static List<HelpToken> _tokenizeListItem(String line, {bool ordered = false, int indentDepth = 0, int listIndex = 0, HelpToken? lastToken, HelpToken? parent}) {
     var listMatch = _listPattern.firstMatch(line);
     if(listMatch == null) {
       throw ArgumentError("line is not a list item: $line");
@@ -244,9 +301,9 @@ class HelpParser {
 
     var listText = line.substring(listMatch.end).trimRight();
     // A list item can contain e.g. a link, so we need to run the full tokenizer on its contents
-    return [
-      ListItem(tokens: _tokenizeLine(listText, subline: true), ordered: ordered, indentDepth: indentDepth, listIndex: listIndex),
-    ];
+    var listItem = ListItem(tokens: [], ordered: ordered, indentDepth: indentDepth, listIndex: listIndex, parent: parent);
+    listItem.tokens.addAll(_tokenizeLine(listText, subline: true, lastToken: lastToken, parent: listItem));
+    return [listItem];
   }
 }
 
