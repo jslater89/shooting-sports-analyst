@@ -12,7 +12,6 @@ import 'package:shooting_sports_analyst/data/help/broadcast_help.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/booth/controller.dart';
-import 'package:shooting_sports_analyst/ui/booth/help_dialog.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_grid.dart';
