@@ -8,7 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_registry.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_view.dart';
-import 'package:shooting_sports_analyst/data/help/about.dart';
+import 'package:shooting_sports_analyst/data/help/about_help.dart';
 class HelpDialog extends StatelessWidget {
   final String initialTopic;
   final String title;

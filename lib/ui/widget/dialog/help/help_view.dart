@@ -5,7 +5,7 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:shooting_sports_analyst/data/help/about.dart';
+import 'package:shooting_sports_analyst/data/help/about_help.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_registry.dart';
@@ -29,7 +29,7 @@ class _HelpViewState extends State<HelpView> {
   late HelpTopic selectedTopic;
 
   final HelpIndexController _indexController = HelpIndexController();
-
+  final HelpRendererController _rendererController = HelpRendererController();
   @override
   void initState() {
     super.initState();
@@ -39,6 +39,7 @@ class _HelpViewState extends State<HelpView> {
   @override
   void dispose() {
     _indexController.dispose();
+    _rendererController.dispose();
     super.dispose();
   }
 
@@ -62,24 +63,31 @@ class _HelpViewState extends State<HelpView> {
             ),
           ),
           if(widget.twoColumn) VerticalDivider(),
-          Expanded(child: HelpRenderer(topic: selectedTopic, onLinkTapped: (link) {
-            if(link.startsWith("?")) {
-              final topic = HelpTopicRegistry().getTopic(link.substring(1));
-              if(topic != null) {
-                setState(() {
-                  selectedTopic = topic;
-                });
-                var index = HelpTopicRegistry().alphabeticalIndex(topic);
-                _indexController.scrollToTopic(topic, index);
+          Expanded(child: 
+            HelpRenderer(
+              topic: selectedTopic,
+              controller: _rendererController,
+              onLinkTapped: (link) {
+                if(link.startsWith("?")) {
+                  final topic = HelpTopicRegistry().getTopic(link.substring(1));
+                  if(topic != null) {
+                  setState(() {
+                    selectedTopic = topic;
+                  });
+                  var index = HelpTopicRegistry().alphabeticalIndex(topic);
+                  _indexController.scrollToTopic(topic, index);
+                  _rendererController.scrollToTop();
+                }
+                else {
+                  _log.w("Help topic $link not found");
+                }
               }
               else {
-                _log.w("Help topic $link not found");
+                  HtmlOr.openLink(link);
+                }
               }
-            }
-            else {
-              HtmlOr.openLink(link);
-            }
-          })),
+            )
+          ),
         ]
       )
     );

@@ -1,4 +1,4 @@
-import 'package:shooting_sports_analyst/data/help/about.dart';
+import 'package:shooting_sports_analyst/data/help/about_help.dart';
 import 'package:shooting_sports_analyst/data/help/configure_ratings_help.dart';
 import 'package:shooting_sports_analyst/data/help/deduplication_help.dart';
 import 'package:shooting_sports_analyst/data/help/elo_configuration_help.dart';

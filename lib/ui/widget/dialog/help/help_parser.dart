@@ -5,7 +5,7 @@
  */
 
 import 'package:flutter/foundation.dart';
-import 'package:shooting_sports_analyst/data/help/about.dart';
+import 'package:shooting_sports_analyst/data/help/about_help.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_token.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_topic.dart';
