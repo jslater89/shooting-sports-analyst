@@ -28,12 +28,16 @@ class HelpView extends StatefulWidget {
 class _HelpViewState extends State<HelpView> {
   late HelpTopic selectedTopic;
 
+  int backStackIndex = 0;
+  List<HelpTopic> backStack = [];
+
   final HelpIndexController _indexController = HelpIndexController();
   final HelpRendererController _rendererController = HelpRendererController();
   @override
   void initState() {
     super.initState();
     selectedTopic = HelpTopicRegistry().getTopic(widget.startingTopic)!;
+    backStack.add(selectedTopic);
   }
 
   @override
@@ -41,6 +45,46 @@ class _HelpViewState extends State<HelpView> {
     _indexController.dispose();
     _rendererController.dispose();
     super.dispose();
+  }
+
+  /// When navigating by link, the new topic gets pushed onto the back stack,
+  /// and any topics above it in the stack are removed—i.e., going back and then
+  /// forward will go to [topic] rather than the previous topic.
+  void navigateByLink(HelpTopic topic) {
+    if(backStackIndex < backStack.length - 1) {
+      backStack.removeRange(backStackIndex + 1, backStack.length);
+    }
+    backStack.add(topic);
+    backStackIndex++;
+
+    setTopic(topic);
+  }
+
+  void setTopic(HelpTopic topic) {
+    setState(() {
+      selectedTopic = topic;
+    });
+
+    _indexController.scrollToTopic(topic);
+    _rendererController.scrollToTop();
+  }
+
+  bool get canNavigateBack => backStackIndex > 0;
+
+  void navigateBack() {
+    if(backStackIndex > 0) {
+      backStackIndex--;
+      setTopic(backStack[backStackIndex]);
+    }
+  }
+
+  bool get canNavigateForward => backStackIndex < backStack.length - 1;
+
+  void navigateForward() {
+    if(backStackIndex < backStack.length - 1) {
+      backStackIndex++;
+      setTopic(backStack[backStackIndex]);
+    }
   }
 
   @override
@@ -52,37 +96,50 @@ class _HelpViewState extends State<HelpView> {
         children: [
           if(widget.twoColumn) SizedBox(
             width: 300,
-            child: HelpIndex(
-              controller: _indexController,
-              selectedTopic: selectedTopic,
-              onTopicSelected: (topic) {
-                setState(() {
-                  selectedTopic = topic;
-                });
-              },
+            child: Column(
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.max,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.arrow_back),
+                      onPressed: canNavigateBack ? navigateBack : null,
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.arrow_forward),
+                      onPressed: canNavigateForward ? navigateForward : null,
+                    ),
+                  ],
+                ),
+                Expanded(
+                  child: HelpIndex(
+                    controller: _indexController,
+                    selectedTopic: selectedTopic,
+                    onTopicSelected: (topic) {
+                      navigateByLink(topic);
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
           if(widget.twoColumn) VerticalDivider(),
-          Expanded(child: 
-            HelpRenderer(
+          Expanded(
+            child: HelpRenderer(
               topic: selectedTopic,
               controller: _rendererController,
               onLinkTapped: (link) {
                 if(link.startsWith("?")) {
                   final topic = HelpTopicRegistry().getTopic(link.substring(1));
                   if(topic != null) {
-                  setState(() {
-                    selectedTopic = topic;
-                  });
-                  var index = HelpTopicRegistry().alphabeticalIndex(topic);
-                  _indexController.scrollToTopic(topic, index);
-                  _rendererController.scrollToTop();
+                    navigateByLink(topic);
+                  }
+                  else {
+                    _log.w("Help topic $link not found");
+                  }
                 }
                 else {
-                  _log.w("Help topic $link not found");
-                }
-              }
-              else {
                   HtmlOr.openLink(link);
                 }
               }
@@ -109,7 +166,7 @@ class _HelpIndexState extends State<HelpIndex> {
   static const _indexTileExtent = 65.0;
 
   final ScrollController _scrollController = ScrollController();
-  int? _scrolledIndex;
+  HelpTopic? _scrolledTopic;
 
   @override
   void initState() {
@@ -120,10 +177,12 @@ class _HelpIndexState extends State<HelpIndex> {
   }
 
   void _scrollToTopic() {
-    if(_scrolledIndex != widget.controller?._scrollIndex) {
-      _scrolledIndex = widget.controller?._scrollIndex;
+    var targetTopic = widget.controller?._scrollTopic;
+    if(targetTopic != null && targetTopic != _scrolledTopic) {
+      _scrolledTopic = targetTopic;
+      var index = HelpTopicRegistry().alphabeticalIndex(targetTopic);
       _scrollController.animateTo(
-        _scrolledIndex! * _indexTileExtent,
+        index * _indexTileExtent,
         duration: Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
@@ -151,11 +210,9 @@ class _HelpIndexState extends State<HelpIndex> {
 }
 
 class HelpIndexController with ChangeNotifier {
-  String? _scrollTopicId;
-  int? _scrollIndex;
-  void scrollToTopic(HelpTopic topic, int index) {
-    _scrollTopicId = topic.id;
-    _scrollIndex = index;
+  HelpTopic? _scrollTopic;
+  void scrollToTopic(HelpTopic topic) {
+    _scrollTopic = topic;
     notifyListeners();
   }
 }
