@@ -5,7 +5,6 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_report.dart';
 import 'package:shooting_sports_analyst/data/help/rating_reports_help.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
