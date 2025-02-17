@@ -20,7 +20,8 @@ const _content =
 
 Shooting Sports Analyst is a desktop application for viewing, analyzing, and predicting USPSA match results.
 Visit the repository at [https://github.com/jslater89/shooting-sports-analyst](https://github.com/jslater89/shooting-sports-analyst)
-for more information.
+for more information, and visit [https://patreon.com/ShootingSportsAnalyst](https://patreon.com/ShootingSportsAnalyst)
+to support the ongoing development of this software.
 
 USPSA, IDPA, PCSL, PractiScore, and other trade names or trademarks are used solely for descriptive or
 nominative purposes, and their use does not imply endorsement by their respective rights-holders, or affiliation

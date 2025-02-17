@@ -8,6 +8,9 @@ import 'dart:convert';
 // ignore: avoid_web_libraries_in_flutter
 import 'package:flutter/foundation.dart';
 import 'package:fluttericon/rpg_awesome_icons.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shooting_sports_analyst/data/help/welcome_80_help.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
 import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
@@ -19,12 +22,14 @@ import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/practiscore_parser.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/main.dart';
+import 'package:shooting_sports_analyst/preference_names.dart';
 import 'package:shooting_sports_analyst/route/broadcast_booth_page.dart';
 import 'package:shooting_sports_analyst/route/elo_tuner_page.dart';
 import 'package:shooting_sports_analyst/route/match_database_manager.dart';
 import 'package:shooting_sports_analyst/route/practiscore_url.dart';
 import 'package:shooting_sports_analyst/ui/empty_scaffold.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_cache_chooser_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_source_chooser_dialog.dart';
 
@@ -55,6 +60,17 @@ class _HomePageState extends State<HomePage> {
       _launchingFromParam = true;
       _launchNonPractiscoreFile(url: globals.resultsFileUrl!);
     }
+
+
+    Future.delayed(Duration.zero, () {
+      var prefs = context.read<SharedPreferences>();
+      var welcomeShown = prefs.getBool(Preferences.welcome80Shown) ?? false;
+      if(!welcomeShown) {
+        _log.i("Showing 8.0 welcome dialog");
+        prefs.setBool(Preferences.welcome80Shown, true);
+        HelpDialog.show(context, initialTopic: welcome80HelpId);
+      }
+    });
   }
 
   void _launchPresetPractiscore({String? url}) async {

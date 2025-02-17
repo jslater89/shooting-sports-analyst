@@ -59,9 +59,12 @@ from being combined.
 
 The application attempts to automatically detect duplicates using several methods:
 
-* Using domain knowledge (e.g., knowing that A12345 and TY12345 represent the same competitor in [USPSA]($uspsaDeduplicatorHelpLink))
-* Single member numbers of each type for a competitor
-* Previously approved mappings from project settings
+* Domain knowledge (e.g., knowing that A12345 and TY12345 represent the same competitor in [USPSA]($uspsaDeduplicatorHelpLink))
+* Name matching when member number categories change if relevant for the sport (e.g., knowing that if the name John Jaroszewski
+appears alongside the member numbers A123456 and L1234, they likely refer to the same person)
+* String similarity measures applied to entered member numbers (e.g., knowing that if John Jaroszewski appears alongside A123456
+and A123465, the numbers probably refer to one person, but John Jaroszewski A123456 and John Jaroszewski A88471 are probably
+distinct individuals)
 
 Some conflicts require manual review, most commonly in scenarios where the system cannot make a confident guess as to the correct 
 solution. Imagine that, for competitor name John Doe, there are four USPSA member numbers: A123456, A654321, L1234, and L4321. The most 
@@ -83,7 +86,11 @@ changes if the automatic detection appears correct.
 
 * Member numbers in green have been addressed by one or more actions
 * Click member numbers to view the competitor's classification page (USPSA only)
+    * Classification pages will always display a user's highest-priority member number by [USPSA rules]($uspsaDeduplicatorHelpLink),
+      and also shows join dates and club information in the classifier scores section,
+      which helps to distinguish between one person committing typos and two people with the 
+      same name.
 * Use the edit button in proposed actions to modify the deduplicator's proposed actions
-* Use the swap button (↔️) in proposed actions to quickly switch source and target numbers
+* Use the swap button (↔️) when editing proposed actions to quickly switch source and target numbers
 * The RESTORE ORIGINAL ACTIONS button will undo any changes to the current duplicate
 * Use IGNORE sparingly; it should be used primarily to work around deduplicator bugs""";

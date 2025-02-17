@@ -6,4 +6,6 @@
 
 class Preferences {
   static const lastProjectId = "lastProjectId";
+
+  static const welcome80Shown = "welcome80Shown";
 }

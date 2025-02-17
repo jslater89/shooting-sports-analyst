@@ -29,7 +29,7 @@ class _HelpViewState extends State<HelpView> {
   late HelpTopic selectedTopic;
 
   int backStackIndex = 0;
-  List<HelpTopic> backStack = [];
+  List<BackStackEntry> backStack = [];
 
   final HelpIndexController _indexController = HelpIndexController();
   final HelpRendererController _rendererController = HelpRendererController();
@@ -37,7 +37,7 @@ class _HelpViewState extends State<HelpView> {
   void initState() {
     super.initState();
     selectedTopic = HelpTopicRegistry().getTopic(widget.startingTopic)!;
-    backStack.add(selectedTopic);
+    backStack.add(BackStackEntry(topic: selectedTopic));
     _indexController.scrollToTopic(selectedTopic);
   }
 
@@ -52,32 +52,33 @@ class _HelpViewState extends State<HelpView> {
   /// and any topics above it in the stack are removed—i.e., going back and then
   /// forward will go to [topic] rather than the previous topic.
   void navigateByLink(HelpTopic topic) {
-    if(backStackIndex < backStack.length - 1) {
-      backStack.removeRange(backStackIndex + 1, backStack.length);
+    if(topic.id == selectedTopic.id) {
+      return;
     }
-    if(backStack.isEmpty || backStack.last.id != topic.id) {
-      backStack.add(topic);
-      backStackIndex++;
-    }
+    // When leaving a page, add a new back stack entry for it with the current scroll position,
+    _log.d("Adding back stack entry for topic ${selectedTopic.id} at scroll position ${_rendererController.scrollPosition}");
+    backStack.add(BackStackEntry(topic: selectedTopic, scrollPosition: _rendererController.scrollPosition));
+    backStackIndex++;
 
     setTopic(topic);
   }
 
-  void setTopic(HelpTopic topic) {
+  void setTopic(HelpTopic topic, {double rendererScrollPosition = 0}) {
     setState(() {
       selectedTopic = topic;
     });
 
     _indexController.scrollToTopic(topic);
-    _rendererController.scrollToTop();
+    _rendererController.scrollToPosition(rendererScrollPosition);
   }
 
   bool get canNavigateBack => backStackIndex > 0;
 
   void navigateBack() {
     if(backStackIndex > 0) {
+      var stackEntry = backStack[backStackIndex];
+      setTopic(stackEntry.topic, rendererScrollPosition: stackEntry.scrollPosition);
       backStackIndex--;
-      setTopic(backStack[backStackIndex]);
     }
   }
 
@@ -85,8 +86,9 @@ class _HelpViewState extends State<HelpView> {
 
   void navigateForward() {
     if(backStackIndex < backStack.length - 1) {
+      var stackEntry = backStack[backStackIndex];
+      setTopic(stackEntry.topic, rendererScrollPosition: stackEntry.scrollPosition);
       backStackIndex++;
-      setTopic(backStack[backStackIndex]);
     }
   }
 
@@ -152,6 +154,24 @@ class _HelpViewState extends State<HelpView> {
       )
     );
   }
+}
+
+class BackStackEntry {
+  final HelpTopic topic;
+  final double scrollPosition;
+
+  BackStackEntry({required this.topic, this.scrollPosition = 0});
+
+  @override
+  bool operator ==(Object other) {
+    if(other is BackStackEntry) {
+      return topic.id == other.topic.id;
+    }
+    return false;
+  }
+
+  @override
+  int get hashCode => topic.id.hashCode;
 }
 
 class HelpIndex extends StatefulWidget {

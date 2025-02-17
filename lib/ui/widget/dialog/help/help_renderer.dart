@@ -7,10 +7,13 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_parser.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_topic.dart';
 
 const _shouldCacheRenderedSpans = !kDebugMode;
+
+var _log = SSALogger("HelpRenderer");
 
 class HelpRenderer extends StatefulWidget {
   const HelpRenderer({
@@ -36,6 +39,7 @@ class _HelpRendererState extends State<HelpRenderer> {
   void initState() {
     super.initState();
     widget.controller?.addListener(_handleControllerNotify);
+    widget.controller?._scrollController = _scrollController;
   }
 
   @override
@@ -48,16 +52,23 @@ class _HelpRendererState extends State<HelpRenderer> {
     var controller = widget.controller!;
     if(controller._shouldScrollToTop && !controller._isScrolling) {
       controller._isScrolling = true;
-      await _scrollToTop();
+      await _scrollToPosition(0);
       controller._isScrolling = false;
       controller._shouldScrollToTop = false;
     }
+    else if(controller._shouldScrollToPosition != null && !controller._isScrolling) {
+      var position = controller._shouldScrollToPosition!;
+      controller._isScrolling = true;
+      await _scrollToPosition(position);
+      controller._isScrolling = false;
+      controller._shouldScrollToPosition = null;
+    }
   }
 
-  Future<void> _scrollToTop() async {
+  Future<void> _scrollToPosition(double position) async {
     await Future.delayed(Duration(milliseconds: 300));
     _scrollController.animateTo(
-      0,
+      position,
       duration: Duration(milliseconds: 300),
       curve: Curves.easeInOut,
     );
@@ -87,10 +98,22 @@ class _HelpRendererState extends State<HelpRenderer> {
 
 class HelpRendererController extends ChangeNotifier {
   bool _shouldScrollToTop = false;
+  double? _shouldScrollToPosition;
   bool _isScrolling = false;
+
+  double get scrollPosition => _scrollController?.position.pixels ?? 0;
+  double get scrollMax => _scrollController?.position.maxScrollExtent ?? 0;
+
+  ScrollController? _scrollController;
 
   void scrollToTop() {
     _shouldScrollToTop = true;
+    notifyListeners();
+  }
+
+  void scrollToPosition(double position) {
+    _log.v("Requested scroll to position $position");
+    _shouldScrollToPosition = position;
     notifyListeners();
   }
 }

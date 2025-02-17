@@ -15,6 +15,7 @@ import 'package:shooting_sports_analyst/data/help/points_help.dart';
 import 'package:shooting_sports_analyst/data/help/rating_event.dart';
 import 'package:shooting_sports_analyst/data/help/rating_reports_help.dart';
 import 'package:shooting_sports_analyst/data/help/uspsa_deduplicator_help.dart';
+import 'package:shooting_sports_analyst/data/help/welcome_80_help.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_registry.dart';
 
 void registerHelpTopics() {
@@ -30,4 +31,5 @@ void registerHelpTopics() {
   r.register(helpConfigureRatings);
   r.register(helpBroadcastMode);
   r.register(helpRatingReports);
+  r.register(helpWelcome80);
 }
