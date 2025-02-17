@@ -37,10 +37,14 @@ class AutoNumberMapDialog extends StatefulWidget {
 
 class _AutoNumberMapDialogState extends State<AutoNumberMapDialog> {
   List<DbMemberNumberMapping> mappings = [];
+  List<DbMemberNumberMapping> filteredMappings = [];
   String errorText = "";
 
   var sourceController = TextEditingController();
   var targetController = TextEditingController();
+
+  var sourceFilterController = TextEditingController();
+  var targetFilterController = TextEditingController();
 
   var targetFocusNode = FocusNode();
 
@@ -50,8 +54,27 @@ class _AutoNumberMapDialogState extends State<AutoNumberMapDialog> {
 
     mappings.addAll(widget.initialMappings);
     mappings.sort((a, b) => a.targetNumber.compareTo(b.targetNumber));
+    filteredMappings = mappings;
+    sourceFilterController.addListener(_applyFilters);
+    targetFilterController.addListener(_applyFilters);
   }
 
+  void _applyFilters() {
+    if(sourceFilterController.text.isEmpty && targetFilterController.text.isEmpty) {
+      setState(() {
+        filteredMappings = mappings;
+      });
+    }
+    else {
+      setState(() {
+        filteredMappings = mappings.where((mapping) {
+          bool sourceMatches = sourceFilterController.text.isEmpty || mapping.sourceNumbers.any((source) => source.contains(sourceFilterController.text));
+          bool targetMatches = targetFilterController.text.isEmpty || mapping.targetNumber.contains(targetFilterController.text);
+          return sourceMatches && targetMatches;
+        }).toList();
+      });
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -65,7 +88,45 @@ class _AutoNumberMapDialogState extends State<AutoNumberMapDialog> {
             if(widget.helpText != null) Text(widget.helpText!),
             Text(errorText, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).errorColor)),
             SizedBox(height: 8),
-            for(var mapping in mappings) SizedBox(
+            SizedBox(
+              width: widget.width / 1.5,
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text("Filter by...", style: Theme.of(context).textTheme.bodySmall),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: targetFilterController,
+                              decoration: InputDecoration(
+                                hintText: "Target",  
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            width: 5,
+                          ),
+                          Expanded(
+                            child: TextField(
+                              controller: sourceFilterController,
+                              decoration: InputDecoration(
+                                hintText: "Source",  
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: 8),
+            for(var mapping in filteredMappings) SizedBox(
               width: widget.width / 1.5,
               child: Column(
                 children: [

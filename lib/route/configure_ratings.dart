@@ -7,7 +7,6 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:isar/isar.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
@@ -1225,7 +1224,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
             sport: sport,
             title: "Automatic member number mappings",
             helpText: "If the automatic member number mapper incorrectly associates two member numbers "
-                "belonging to the different shooters, you can remove them here.",
+                "belonging to different shooters, you can remove them here. Use the 'manage user "
+                "number mapping' dialog to add manual mappings.",
             initialMappings: _loadedProject!.automaticNumberMappings.map((e) => e.copy()).toList(),
           );
         });
