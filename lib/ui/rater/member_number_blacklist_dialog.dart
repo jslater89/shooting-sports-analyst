@@ -36,6 +36,7 @@ class MemberNumberBlacklistDialog extends StatefulWidget {
 
 class _MemberNumberBlacklistDialogState extends State<MemberNumberBlacklistDialog> {
   Map<String, List<String>> mappings = {};
+  List<String> sortedKeys = [];
   String errorText = "";
 
   var sourceController = TextEditingController();
@@ -48,6 +49,7 @@ class _MemberNumberBlacklistDialogState extends State<MemberNumberBlacklistDialo
     super.initState();
 
     mappings.addAll(widget.initialMap);
+    sortedKeys = mappings.keys.toList()..sort();
   }
 
   @override
@@ -108,22 +110,54 @@ class _MemberNumberBlacklistDialogState extends State<MemberNumberBlacklistDialo
               ),
             ),
             SizedBox(height: 8),
-            for(var source in mappings.keys) SizedBox(
+            for(var source in sortedKeys) SizedBox(
               width: widget.width / 1.5,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                mainAxisSize: MainAxisSize.max,
+              child: Column(
                 children: [
-                  Text("$source to ${mappings[source]!}"),
-                  SizedBox(width: 10),
-                  IconButton(
-                    icon: Icon(Icons.remove),
-                    onPressed: () {
-                      setState(() {
-                        mappings.remove(source);
-                      });
-                    },
-                  )
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisSize: MainAxisSize.max,
+                    children: [
+                      Text("$source"),
+                      Tooltip(
+                        message: "Remove all blacklist entries for $source",
+                        child: IconButton(
+                          icon: Icon(Icons.remove),
+                          onPressed: () {
+                            setState(() {
+                              mappings.remove(source);
+                            });
+                          },
+                        ),
+                      )
+                    ],
+                  ),
+                  for(var target in mappings[source]!)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 24),
+                      child: Row(
+                        children: [
+                          Tooltip(
+                            message: "Remove the blacklist entry from $source to $target",
+                            child: IconButton(
+                              icon: Icon(Icons.remove),
+                              onPressed: () {
+                                setState(() {
+                                  var removed = mappings.removeFromList(source, target);
+                                  if(removed) {
+                                    if(mappings[source]!.isEmpty) {
+                                      mappings.remove(source);
+                                    }
+                                  }
+                                });
+                              },
+                            ),
+                          ),
+                          Text(target),
+
+                        ],
+                      ),
+                    )
                 ],
               ),
             )
@@ -176,12 +210,13 @@ class _MemberNumberBlacklistDialogState extends State<MemberNumberBlacklistDialo
     }
 
     setState(() {
-      mappings.addToList(source, target);
+      mappings.addToListIfMissing(source, target);
       sourceController.clear();
       targetController.clear();
     });
   }
 
+  /// TODO: will need to relax this constraint for at minimum ICORE, which allows totally alphabetic numbers
   bool validate(String input) {
     if(!input.contains(RegExp(r"[0-9]+"))) {
       setState(() {

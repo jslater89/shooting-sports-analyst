@@ -37,6 +37,7 @@ import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/preference_names.dart';
+import 'package:shooting_sports_analyst/ui/rater/auto_number_map_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/match_list_filter_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_blacklist_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_correction_dialog.dart';
@@ -1212,6 +1213,28 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         }
         break;
 
+      case _MenuEntry.autoMappings:
+        var mappings = await showDialog<List<DbMemberNumberMapping>>(context: context, builder: (context) {
+          if(_loadedProject == null) {
+            return AlertDialog(
+              title: Text("Save project first"),
+              content: Text("You must save the project before managing automatic number mappings."),
+            );
+          }
+          return AutoNumberMapDialog(
+            sport: sport,
+            title: "Automatic member number mappings",
+            helpText: "If the automatic member number mapper incorrectly associates two member numbers "
+                "belonging to the different shooters, you can remove them here.",
+            initialMappings: _loadedProject!.automaticNumberMappings.map((e) => e.copy()).toList(),
+          );
+        });
+
+        if(mappings != null) {
+          _loadedProject!.automaticNumberMappings = mappings;
+        }
+        break;
+
       case _MenuEntry.numberMappingBlacklist:
         var mappings = await showDialog<Map<String, List<String>>>(context: context, builder: (context) {
           return MemberNumberBlacklistDialog(
@@ -1300,6 +1323,7 @@ enum _MenuEntry {
   hiddenShooters,
   dataEntryErrors,
   numberMappings,
+  autoMappings,
   numberMappingBlacklist,
   numberWhitelist,
   shooterAliases,
@@ -1312,6 +1336,7 @@ enum _MenuEntry {
     hiddenShooters,
     dataEntryErrors,
     numberMappings,
+    autoMappings,
     numberMappingBlacklist,
     numberWhitelist,
     shooterAliases,
@@ -1332,7 +1357,9 @@ enum _MenuEntry {
       case _MenuEntry.dataEntryErrors:
         return "Fix data entry errors";
       case _MenuEntry.numberMappings:
-        return "Map member numbers";
+        return "Manage user number mappings";
+      case _MenuEntry.autoMappings:
+        return "Manage automatic number mappings";
       case _MenuEntry.numberMappingBlacklist:
         return "Number mapping blacklist";
       case _MenuEntry.numberWhitelist:

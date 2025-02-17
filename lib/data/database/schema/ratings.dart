@@ -107,6 +107,35 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
 
   /// A list of reports generated since the last full recalculation.
   List<RatingReport> reports = [];
+  Future<DataSourceResult<List<RatingReport>>> getAllReports() {
+    return Future.value(DataSourceResult.ok(reports));
+  }
+
+  /// A list of reports generated during the last calculation, full or not.
+  List<RatingReport> recentReports = [];
+  Future<DataSourceResult<List<RatingReport>>> getRecentReports() {
+    return Future.value(DataSourceResult.ok(recentReports));
+  }
+
+  void addReport(RatingReport report) {
+    var dup = false;
+    if(!recentReports.contains(report)) {
+      recentReports.add(report);
+    }
+    else {
+      dup = true;
+    }
+    if(!reports.contains(report)) {
+      reports.add(report);
+    }
+
+    if(dup) {
+      _log.i("Duplicate report: ${report.toString()}");
+    }
+    else {
+      _log.i("Added report: ${report.toString()}");
+    }
+  }
 
   /// The number of rating events in this project.
   int eventCount = 0;
@@ -433,6 +462,15 @@ class DbMemberNumberMapping {
 
   Map<String, dynamic> toJson() => _$DbMemberNumberMappingToJson(this);
   factory DbMemberNumberMapping.fromJson(Map<String, dynamic> json) => _$DbMemberNumberMappingFromJson(json);
+
+  DbMemberNumberMapping copy() {
+    return DbMemberNumberMapping(
+      deduplicatorName: deduplicatorName,
+      sourceNumbers: sourceNumbers.toList(),
+      targetNumber: targetNumber,
+      automatic: automatic,
+    );
+  }
 }
 
 /// A RatingGroup is a collection of competitors rated against one another.

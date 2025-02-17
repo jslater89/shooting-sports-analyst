@@ -396,6 +396,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     )};
   }
 
+  // TODO: investigate softmax for scaling expected scores
   _ScoreParameters _calculateScoreParams({
     ShootingMatch? match,
     required ShooterRating aRating,

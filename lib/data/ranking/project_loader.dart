@@ -255,6 +255,7 @@ class RatingProjectLoader {
     if(!canAppend) {
       project.eventCount = 0;
       project.reports = [];
+      project.recentReports = [];
       project.completedFullCalculation = false;
       if(fullRecalc) {
         _log.i("Unable to append: full recalculation requested");
@@ -270,6 +271,7 @@ class RatingProjectLoader {
     else {
       // Fixed-length list on DB load
       project.reports = [...project.reports];
+      project.recentReports = [];
       _log.i("Appending ${matchesToAdd.length} matches to ratings");
     }
 
@@ -547,13 +549,41 @@ class RatingProjectLoader {
       case UserMapping || AutoMapping:
         // Update the project settings for this mapping
         var mapping = action as Mapping;
+        var blacklisted = false;
+        for(var sourceNumber in mapping.sourceNumbers) {
+          var blacklist = settings.memberNumberMappingBlacklist[sourceNumber];
+          if(blacklist?.contains(mapping.targetNumber) ?? false) {
+            blacklisted = true;
+            break;
+          }
+        }
+        if(blacklisted) {
+          project.addReport(RatingReport(
+            type: RatingReportType.blacklistedMapping,
+            severity: RatingReportSeverity.warning,
+            data: BlacklistedMapping(
+              sourceNumber: mapping.sourceNumbers.first,
+              targetNumber: mapping.targetNumber,
+              ratingGroupUuid: group.uuid,
+              ratingGroupName: group.name,
+              autoMapping: mapping is AutoMapping,
+            ),
+          ));
+        }
         if(mapping is UserMapping) {
           for(var sourceNumber in mapping.sourceNumbers) {
-            var existingMapping = settings.userMemberNumberMappings[sourceNumber];
-            settings.userMemberNumberMappings[sourceNumber] = mapping.targetNumber;
-            if(existingMapping != null) {
-              settings.userMemberNumberMappings[existingMapping] = mapping.targetNumber;
-              mapping.sourceNumbers.add(existingMapping);
+            var duplicate = settings.addUserMapping(sourceNumber, mapping.targetNumber);
+            if(duplicate) {
+              project.addReport(RatingReport(
+                type: RatingReportType.duplicateUserMapping,
+                severity: RatingReportSeverity.warning,
+                data: DuplicateUserMapping(
+                  sourceNumber: sourceNumber,
+                  targetNumber: mapping.targetNumber,
+                  ratingGroupUuid: group.uuid,
+                  ratingGroupName: group.name,
+                ),
+              ));
             }
           }
 
@@ -567,6 +597,22 @@ class RatingProjectLoader {
             var existingMapping = project.lookupAutomaticNumberMapping(sourceNumber);
             if(existingMapping != null) {
               mappings.add(existingMapping);
+            }
+          }
+
+          if(mappings.length == 1) {
+            var existingMapping = mappings.first;
+            if(existingMapping.targetNumber == mapping.targetNumber && existingMapping.sourceNumbers.containsOnly(mapping.sourceNumbers)) {
+              project.addReport(RatingReport(
+                type: RatingReportType.duplicateAutoMapping,
+                severity: RatingReportSeverity.warning,
+                data: DuplicateAutoMapping(
+                  sourceNumbers: existingMapping.sourceNumbers.toList(),
+                  targetNumber: mapping.targetNumber,
+                  ratingGroupUuid: group.uuid,
+                  ratingGroupName: group.name,
+                ),
+              ));
             }
           }
 
@@ -641,13 +687,15 @@ class RatingProjectLoader {
         if(ratingsWithHistory.length > 1) {
           var report = RatingReport(
             type: RatingReportType.ratingMergeWithDualHistory,
-            severity: RatingReportSeverity.warning,
+            severity: RatingReportSeverity.severe,
             data: RatingMergeWithDualHistory(
               ratingIds: ratingsWithHistory.map((r) => r.id).toList(),
+              memberNumbers: ratingsWithHistory.map((r) => r.memberNumber).toSet().toList(),
               ratingGroupUuid: group.uuid,
+              ratingGroupName: group.name,
             ),
           );
-          project.reports.add(report);
+          project.addReport(report);
         }
 
         await db.upsertDbShooterRating(targetRating, linksChanged: false);
@@ -663,9 +711,33 @@ class RatingProjectLoader {
         // Only I'm not actually sure how we pick the right one, or what we show to the user.
         var blacklist = action as Blacklist;
 
-        settings.memberNumberMappingBlacklist.addToListIfMissing(blacklist.sourceNumber, blacklist.targetNumber);
+        var duplicate = settings.addBlacklistEntry(blacklist.sourceNumber, blacklist.targetNumber);
+        if(duplicate) {
+          project.addReport(RatingReport(
+            type: RatingReportType.duplicateBlacklistEntry,
+            severity: RatingReportSeverity.warning,
+            data: DuplicateBlacklistEntry(
+              sourceNumber: blacklist.sourceNumber,
+              targetNumber: blacklist.targetNumber,
+              ratingGroupUuid: group.uuid,
+              ratingGroupName: group.name,
+            ),
+          ));
+        }
         if(blacklist.bidirectional) {
-          settings.memberNumberMappingBlacklist.addToListIfMissing(blacklist.targetNumber, blacklist.sourceNumber);
+          duplicate = settings.addBlacklistEntry(blacklist.targetNumber, blacklist.sourceNumber);
+          if(duplicate) {
+            project.addReport(RatingReport(
+              type: RatingReportType.duplicateBlacklistEntry,
+              severity: RatingReportSeverity.warning,
+              data: DuplicateBlacklistEntry(
+                sourceNumber: blacklist.targetNumber,
+                targetNumber: blacklist.sourceNumber,
+                ratingGroupUuid: group.uuid,
+                ratingGroupName: group.name,
+              ),
+            ));
+          }
         }
         break;
       case DataEntryFix:
@@ -679,7 +751,20 @@ class RatingProjectLoader {
         // 'fixing' a valid mapping for a different competitor.
         // TODO: test for this case
         var fix = action as DataEntryFix;
-        settings.memberNumberCorrections.add(fix.intoCorrection());
+        var duplicate = settings.memberNumberCorrections.add(fix.intoCorrection());
+        if(duplicate) {
+          project.addReport(RatingReport(
+            type: RatingReportType.duplicateDataEntryFix,
+            severity: RatingReportSeverity.warning,
+            data: DuplicateDataEntryFix(
+              sourceNumber: fix.sourceNumber,
+              targetNumber: fix.targetNumber,
+              deduplicatorName: fix.deduplicatorName,
+              ratingGroupUuid: group.uuid,
+              ratingGroupName: group.name,
+            ),
+          ));
+        }
 
         bool hasInternationalNumbers = false;
         var sourceRating = await db.maybeKnownShooter(
@@ -909,7 +994,6 @@ class RatingProjectLoader {
       // but there are a lot of competitors in USPSA sets with numbers like "A",
       // or "0", which we want to leave out to avoid cluttering blacklists.
       bool validCompetitor = processed.length > 1 && !s.reentry;
-      List<String> mappingSources = [];
       if(validCompetitor) {
         // If we have a member number after processing, we can use this competitor.
         s.memberNumber = processed;
@@ -917,6 +1001,7 @@ class RatingProjectLoader {
         // Look for valid mappings (user first, then auto), and apply them if found.
         var possibleNumbers = _alternateForms(s.memberNumber);
         String? mappingTarget;
+        bool autoMapping = false;
         for(var number in possibleNumbers) {
           mappingTarget = settings.userMemberNumberMappings[number];
           if(mappingTarget != null) {
@@ -926,11 +1011,29 @@ class RatingProjectLoader {
           var automaticMapping = project.lookupAutomaticNumberMapping(number);
           if(automaticMapping != null) {
             mappingTarget = automaticMapping.targetNumber;
+            autoMapping = true;
             break;
           }
         }
+
         if(mappingTarget != null) {
-          s.memberNumber = mappingTarget;
+          var blacklist = settings.memberNumberMappingBlacklist[s.memberNumber];
+          if(blacklist?.contains(mappingTarget) ?? false) {
+            project.addReport(RatingReport(
+              type: RatingReportType.blacklistedMapping,
+              severity: RatingReportSeverity.warning,
+              data: BlacklistedMapping(
+                sourceNumber: s.memberNumber,
+                targetNumber: mappingTarget,
+                ratingGroupUuid: group.uuid,
+                ratingGroupName: group.name,
+                autoMapping: autoMapping,
+              ),
+            ));
+          }
+          else {
+            s.memberNumber = mappingTarget;
+          }
         }
 
         while(true) {
@@ -966,9 +1069,9 @@ class RatingProjectLoader {
           var report = RatingReport(
             type: RatingReportType.dataEntryFixLoop,
             severity: RatingReportSeverity.severe,
-            data: DataEntryFixLoop(numbers: previouslyVisitedNumbers.toList()),
+            data: DataEntryFixLoop(numbers: previouslyVisitedNumbers.toList(), ratingGroupUuid: group.uuid, ratingGroupName: group.name),
           );
-          project.reports.add(report);
+          project.addReport(report);
         }
 
         var rating = await db.maybeKnownShooter(
@@ -1003,9 +1106,10 @@ class RatingProjectLoader {
                 names: [rating.deduplicatorName, sName],
                 number: s.memberNumber,
                 ratingGroupUuid: group.uuid,
+                ratingGroupName: group.name,
               ),
             );
-            project.reports.add(report);
+            project.addReport(report);
           }
 
           // Update names for existing shooters on add, to eliminate the Mel Rodero -> Mel Rodero II problem in the L2+ set

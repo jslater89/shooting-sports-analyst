@@ -38,6 +38,7 @@ class _HelpViewState extends State<HelpView> {
     super.initState();
     selectedTopic = HelpTopicRegistry().getTopic(widget.startingTopic)!;
     backStack.add(selectedTopic);
+    _indexController.scrollToTopic(selectedTopic);
   }
 
   @override
@@ -54,8 +55,10 @@ class _HelpViewState extends State<HelpView> {
     if(backStackIndex < backStack.length - 1) {
       backStack.removeRange(backStackIndex + 1, backStack.length);
     }
-    backStack.add(topic);
-    backStackIndex++;
+    if(backStack.isEmpty || backStack.last.id != topic.id) {
+      backStack.add(topic);
+      backStackIndex++;
+    }
 
     setTopic(topic);
   }
@@ -172,21 +175,32 @@ class _HelpIndexState extends State<HelpIndex> {
   void initState() {
     super.initState();
     if(widget.controller != null) {
-      widget.controller!.addListener(_scrollToTopic);
+      widget.controller!.addListener(_handleControllerNotification);
     }
+
+    // Scroll to initial topic after build
+    Future.delayed(Duration.zero, () {
+      _scrollToTopic(widget.selectedTopic);
+    });
   }
 
-  void _scrollToTopic() {
+  void _handleControllerNotification() {
     var targetTopic = widget.controller?._scrollTopic;
     if(targetTopic != null && targetTopic != _scrolledTopic) {
       _scrolledTopic = targetTopic;
-      var index = HelpTopicRegistry().alphabeticalIndex(targetTopic);
-      _scrollController.animateTo(
-        index * _indexTileExtent,
-        duration: Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+      _scrollToTopic(targetTopic);
     }
+  }
+
+  void _scrollToTopic(HelpTopic topic) {
+    var index = HelpTopicRegistry().alphabeticalIndex(topic);
+    var scrollTarget = index * _indexTileExtent;
+    _log.vv("Index: $index Scroll target: $scrollTarget/${_scrollController.position.maxScrollExtent}");
+    _scrollController.animateTo(
+      scrollTarget,
+      duration: Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
   }
 
   Widget build(BuildContext context) {

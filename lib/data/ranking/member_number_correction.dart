@@ -38,10 +38,15 @@ class MemberNumberCorrectionContainer {
   Map<String, List<MemberNumberCorrection>> _byName = {};
   Map<String, List<MemberNumberCorrection>> _byInvalidNumber = {};
 
-  void add(MemberNumberCorrection correction) {
+  /// Add a correction to the container. Returns true if the correction was added, or false if it already exists.
+  bool add(MemberNumberCorrection correction) {
+    bool existed = false;
     _byName[correction.name] ??= [];
     if(!_byName[correction.name]!.contains(correction)) {
       _byName[correction.name]!.add(correction);
+    }
+    else {
+      existed = true;
     }
 
     if(correction.invalidNumber.isNotEmpty) {
@@ -50,6 +55,8 @@ class MemberNumberCorrectionContainer {
         _byInvalidNumber[correction.invalidNumber]!.add(correction);
       }
     }
+
+    return !existed;
   }
 
   void remove(MemberNumberCorrection correction) {

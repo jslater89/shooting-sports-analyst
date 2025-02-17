@@ -33,6 +33,8 @@ import 'package:shooting_sports_analyst/ui/rater/prediction/registration_parser.
 import 'package:shooting_sports_analyst/ui/rater/rater_stats_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/rater_view.dart';
 import 'package:shooting_sports_analyst/ui/rater/rating_filter_dialog.dart';
+import 'package:shooting_sports_analyst/ui/rater/reports/report_dialog.dart';
+import 'package:shooting_sports_analyst/ui/rater/reports/report_view.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/associate_registrations.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_pointer_chooser_dialog.dart';
@@ -176,8 +178,35 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     setState(() {
       initialized = true;
     });
-  }
 
+    var latestReports = await widget.dataSource.getRecentReports();
+    if(latestReports.isOk() && latestReports.unwrap().isNotEmpty) {
+      var reportLength = latestReports.unwrap().length;
+      String reportText;
+      if(reportLength == 1) {
+        reportText = "Latest calculation produced 1 report.";
+      }
+      else {
+        reportText = "Latest calculation produced $reportLength reports.";
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(reportText),
+          action: SnackBarAction(
+            label: "VIEW",
+            onPressed: () {
+              ReportDialog.show(context, widget.dataSource);
+            }
+          ),
+        )
+      );
+
+      // _log.vv("Reports");
+      // for(var report in latestReports.unwrap()) {
+      //   _log.vv("Report: $report");
+      // }
+    }
+  }
   String _searchTerm = "";
   // void _updateSearch() {
   //   setState(() {
@@ -195,46 +224,22 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     List<Widget> actions = _generateActions();
 
     var title = _projectName;
-    return WillPopScope(
-      onWillPop: () async {
-        var message = "If you leave this page, you will need to recalculate ratings to view it again.";
-
-        return await showDialog<bool>(context: context, builder: (context) => AlertDialog(
-          title: Text("Return to main menu?"),
-          content: Text(message),
-          actions: [
-            TextButton(
-              child: Text("STAY HERE"),
-              onPressed: () {
-                Navigator.of(context).pop(false);
-              },
-            ),
-            TextButton(
-              child: Text("LEAVE"),
-              onPressed: () {
-                Navigator.of(context).pop(true);
-              },
-            ),
-          ],
-        )) ?? false;
+    return ChangeNotifierProvider<ChangeNotifierRatingDataSource>(
+      create: (_) => ChangeNotifierRatingDataSource(widget.dataSource),
+      builder: (context, _) {
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(title),
+            centerTitle: true,
+            actions: actions,
+            bottom: _operationInProgress ? PreferredSize(
+              preferredSize: Size(double.infinity, 5),
+              child: LinearProgressIndicator(value: null, backgroundColor: primaryColor, valueColor: animation),
+            ) : null,
+          ),
+          body: _ratingView(),
+        );
       },
-      child: ChangeNotifierProvider<ChangeNotifierRatingDataSource>(
-        create: (_) => ChangeNotifierRatingDataSource(widget.dataSource),
-        builder: (context, _) {
-          return Scaffold(
-            appBar: AppBar(
-              title: Text(title),
-              centerTitle: true,
-              actions: actions,
-              bottom: _operationInProgress ? PreferredSize(
-                preferredSize: Size(double.infinity, 5),
-                child: LinearProgressIndicator(value: null, backgroundColor: primaryColor, valueColor: animation),
-              ) : null,
-            ),
-            body: _ratingView(),
-          );
-        },
-      ),
     );
   }
 
@@ -504,6 +509,15 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                 _settingsChanged = true;
               });
             }
+          },
+        )
+      ),
+      Tooltip(
+        message: "View information, warnings, and potential errors raised by the calculation process",
+        child: IconButton(
+          icon: Icon(Icons.info_outline),
+          onPressed: () {
+            ReportDialog.show(context, widget.dataSource);
           },
         )
       ),

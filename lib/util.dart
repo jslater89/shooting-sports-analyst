@@ -80,21 +80,25 @@ class Result<T, E extends ResultErr> {
 }
 
 extension AsyncResult<T, E extends ResultErr> on Future<Result<T, E>> {
+  /// Await this Future<Result> and check if it is ok.
   Future<bool> isOk() async {
     var res = await this;
     return res.isOk();
   }
 
+  /// Await this Future<Result> and check if it is an error.
   Future<bool> isErr() async {
     var res = await this;
     return res.isErr();
   }
 
+  /// Await this Future<Result> and unwrap the result.
   Future<T> unwrap() async {
     var res = await this;
     return res.unwrap();
   }
 
+  /// Await this Future<Result> and unwrap the error.
   Future<E> unwrapErr() async {
     var res = await this;
     return res.unwrapErr();
@@ -164,12 +168,22 @@ extension ListMap<K, V> on Map<K, List<V>> {
 
   /// Add [value] to the list at [key], creating the list if it doesn't exist,
   /// but only if [value] is not already in the list.
+  /// 
+  /// Returns true if the value was added, or false if it was already in the list.
   bool addToListIfMissing(K key, V value) {
     if(this[key]?.contains(value) ?? false) {
       return false;
     }
     addToList(key, value);
     return true;
+  }
+
+  bool removeFromList(K key, V value) {
+    var list = this[key];
+    if(list == null) {
+      return false;
+    }
+    return list.remove(value);
   }
 }
 
@@ -291,6 +305,11 @@ extension ListOverlap<T> on Iterable<T> {
 
   bool containsAll(Iterable<T> other) {
     return other.every((e) => this.contains(e));
+  }
+
+  bool containsOnly(Iterable<T> other) {
+    var intersectionLength = this.intersection(other).length;
+    return intersectionLength == this.length && intersectionLength == other.length;
   }
 
   Iterable<T> union(Iterable<T> other) {

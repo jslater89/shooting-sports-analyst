@@ -14,6 +14,7 @@ import 'package:shooting_sports_analyst/data/ranking/shooter_aliases.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/member_number_collision_dialog.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 const _keepHistoryKey = "keepHistory";
 const _whitelistKey = "memNumWhitelist";
@@ -165,29 +166,31 @@ class RatingProjectSettings {
     );
   }
 
-  // TODO: remove this, or update it to use the new correction system
-  void applyFix(CollisionFix fix) {
-    switch(fix.action) {
-      case CollisionFixAction.mapping:
-        userMemberNumberMappings[fix.memberNumber1] = fix.memberNumber2;
-        break;
-      case CollisionFixAction.blacklist:
-        memberNumberMappingBlacklist[fix.memberNumber1] ??= [];
-        memberNumberMappingBlacklist[fix.memberNumber1]!.add(fix.memberNumber2);
-        break;
-      case CollisionFixAction.dataFix:
-        memberNumberCorrections.add(MemberNumberCorrection(
-            name: fix.name1!,
-            invalidNumber: fix.memberNumber1,
-            correctedNumber: fix.memberNumber2
-        ));
-        break;
-      case CollisionFixAction.abort:
-        throw StateError("can't apply 'abort'");
-      case CollisionFixAction.skipRemainingDataErrors:
-        transientDataEntryErrorSkip = true;
-        break;
+  /// Add a user-specified member number mapping, or update an existing mapping.
+  /// 
+  /// If the source number already has a mapping, it, as well as its preexisting
+  /// target number, will be updated to point to the new target number.
+  /// 
+  /// Returns true if the mapping was added or updated, or false if the requested
+  /// mapping already exists.
+  bool addUserMapping(String sourceNumber, String targetNumber) {
+    var existingTarget = userMemberNumberMappings[sourceNumber];
+    if(existingTarget == targetNumber) {
+      return false;
     }
+    userMemberNumberMappings[sourceNumber] = targetNumber;
+    if(existingTarget != null) {
+      userMemberNumberMappings[existingTarget] = targetNumber;
+    }
+    return true;
+  }
+
+  /// Add a member number mapping blacklist entry from source to target.
+  /// 
+  /// Returns true if the entry was added, or false the blacklist already
+  /// contains an entry from source to target.
+  bool addBlacklistEntry(String sourceNumber, String targetNumber) {
+    return memberNumberMappingBlacklist.addToListIfMissing(sourceNumber, targetNumber);
   }
 }
 

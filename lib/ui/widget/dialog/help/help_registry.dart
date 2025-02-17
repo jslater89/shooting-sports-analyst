@@ -24,7 +24,9 @@ class HelpTopicRegistry {
     _topics[topic.id] = topic;
     _alphabetizedTopics.add(topic);
     _alphabetizedTopics.sort((a, b) => a.name.compareTo(b.name));
-    _alphabeticalIndexes[topic] = _alphabetizedTopics.indexOf(topic);
+    for(int i = 0; i < _alphabetizedTopics.length; i++) {
+      _alphabeticalIndexes[_alphabetizedTopics[i]] = i;
+    }
   }
 
   HelpTopic? getTopic(String id) {

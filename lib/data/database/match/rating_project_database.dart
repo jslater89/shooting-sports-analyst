@@ -32,7 +32,7 @@ extension RatingProjectDatabase on AnalystDatabase {
     return isar.dbRatingProjects.where().nameEqualTo(name).findFirst();
   }
 
-  Future<DbRatingProject> saveRatingProject(DbRatingProject project, {bool checkName = true}) async {
+  Future<DbRatingProject> saveRatingProject(DbRatingProject project, {bool checkName = true, bool saveLinks = true}) async {
     if(checkName) {
       var existingProject = await getRatingProjectByName(project.name);
       if(existingProject != null) {
@@ -42,7 +42,9 @@ extension RatingProjectDatabase on AnalystDatabase {
     await isar.writeTxn(() async {
       await isar.dbRatingProjects.put(project);
       await project.dbGroups.save();
-      await project.ratings.save();
+      if(saveLinks) {
+        await project.ratings.save();
+      }
     });
     return project;
   }
