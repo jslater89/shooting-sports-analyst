@@ -87,6 +87,7 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
 
   List<DeduplicationCollision> _sortedCollisions = [];
   int get _totalCount => _sortedCollisions.length;
+  ScrollController _sidebarScrollController = ScrollController();
 
   @override
   void initState() {
@@ -256,7 +257,8 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
                             }),
                           );
                         },
-                        itemCount: _sortedCollisions.length,        
+                        itemCount: _sortedCollisions.length,   
+                        controller: _sidebarScrollController,     
                       ),
                     ),
                   ],
@@ -278,12 +280,15 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
                         onApprove: () => setState(() {
                           _approved[_selectedCollision!] = true;
                           if(_selectedCollisionIndex! < _sortedCollisions.length - 1) {
+                            // observed extent is 64 pixels per row
                             _selectedCollisionIndex = _selectedCollisionIndex! + 1;
                             _viewed[_selectedCollision!] = true;
+                            _sidebarScrollController.animateTo(_selectedCollisionIndex! * 64, duration: const Duration(milliseconds: 200), curve: Curves.easeInOut);
                           }
                           else {
                             _selectedCollisionIndex = 0;
                             _viewed[_selectedCollision!] = true;
+                            _sidebarScrollController.animateTo(0, duration: const Duration(milliseconds: 200), curve: Curves.easeInOut);
                           }
                         }),
                         onRestore: () => setState(() {
@@ -535,7 +540,7 @@ class _ConflictDetailsState extends State<ConflictDetails> {
                       Text("Member Numbers", style: Theme.of(context).textTheme.titleMedium),
                       ConstrainedTooltip(
                         waitDuration: const Duration(milliseconds: 250),
-                        message: "Member numbers in this conflict arranged by type. Numbers that apear in the proposed fixes " +
+                        message: "Member numbers in this conflict arranged by type. Numbers that appear in the proposed fixes " +
                           "are highlighted in green. All numbers must appear in green before the conflict can be resolved.",
                         constraints: const BoxConstraints(maxWidth: 300),
                         child: Padding(
@@ -755,6 +760,30 @@ class _ConflictDetailsState extends State<ConflictDetails> {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
+              if(c.uncoveredNumbers.isNotEmpty) Tooltip(
+                message: "Blacklist all remaining uncovered numbers to every involved number.",
+                child: TextButton(child: const Text("BLACKLIST REMAINING"), onPressed: () {
+                  setState(() {
+                    var uncovered = c.uncoveredNumbersList;
+                    var covered = c.coveredNumbersList;
+
+                    // first, add blacklist entries for all uncovered numbers to the
+                    // other uncovered numbers.
+                    for(int i = 0; i < uncovered.length; i++) {
+                      for(int j = i + 1; j < uncovered.length; j++) {
+                        c.proposedActions.add(Blacklist(sourceNumber: uncovered[i], targetNumber: uncovered[j], bidirectional: true));
+                      }
+                    }
+                    
+                    // next, add blacklist entries for each uncovered number to every covered number.
+                    for(var number in uncovered) {
+                      for(var coveredNumber in covered) {
+                        c.proposedActions.add(Blacklist(sourceNumber: number, targetNumber: coveredNumber, bidirectional: false));
+                      }
+                    }
+                  });
+                }),
+              ),
               TextButton(child: const Text("RESTORE ORIGINAL ACTIONS"), onPressed: () {
                  setState(() {
                   c.proposedActions = [...widget.originalActions];
@@ -768,7 +797,7 @@ class _ConflictDetailsState extends State<ConflictDetails> {
                     context,
                     title: "Ignore conflict",
                     content: const Text(
-                      "Ignoring this conflict will result in all member numbers being treated as unique competitors. " +
+                      "Ignoring this conflict will result in the proposed actions being applied as-is. " +
                       "This conflict will be raised again on the next full recalculation. Do you want to ignore it?"
                     ),
                     positiveButtonLabel: "IGNORE",

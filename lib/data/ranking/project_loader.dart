@@ -649,15 +649,36 @@ class RatingProjectLoader {
         }
         var ratings = (await Future.wait(futures)).whereNotNull().toList();
 
-        // knownShooter here, because the target number came from the set of ratings known to the
-        // deduplicator.
-        var targetRating = await db.knownShooter(
+        // We can't necessarily use knownShooter here, because it's possible that the target number
+        // was user-entered based on outside knowledge.
+        var targetRating = await db.maybeKnownShooter(
           project: project,
           group: group,
           memberNumber: mapping.targetNumber,
           usePossibleMemberNumbers: true,
           useCache: true,
         );
+        // If we're in that scenario, start by checking a source rating with history, and copy the
+        // mapping target number to that one.
+        if(targetRating == null) {
+          for(var r in ratings) {
+            if(r.length > 0) {
+              targetRating = r;
+              break;
+            }
+          }
+        }
+        // If we still don't have a target rating, create one and copy biographical information.
+        if(targetRating == null) {
+          targetRating = DbShooterRating.empty(
+            sport: sport,
+            memberNumber: mapping.targetNumber,
+          );
+          if(ratings.isNotEmpty) {
+            targetRating.copyVitalsFrom(ratings.first);
+          }
+          await db.upsertDbShooterRating(targetRating);
+        }
         
         // Add all of the source numbers to the target's known list
         targetRating.addKnownMemberNumbers(mapping.sourceNumbers);
@@ -711,8 +732,8 @@ class RatingProjectLoader {
         // Only I'm not actually sure how we pick the right one, or what we show to the user.
         var blacklist = action as Blacklist;
 
-        var duplicate = settings.addBlacklistEntry(blacklist.sourceNumber, blacklist.targetNumber);
-        if(duplicate) {
+        var existed = !settings.addBlacklistEntry(blacklist.sourceNumber, blacklist.targetNumber);
+        if(existed) {
           project.addReport(RatingReport(
             type: RatingReportType.duplicateBlacklistEntry,
             severity: RatingReportSeverity.warning,
@@ -725,8 +746,8 @@ class RatingProjectLoader {
           ));
         }
         if(blacklist.bidirectional) {
-          duplicate = settings.addBlacklistEntry(blacklist.targetNumber, blacklist.sourceNumber);
-          if(duplicate) {
+          existed = !settings.addBlacklistEntry(blacklist.targetNumber, blacklist.sourceNumber);
+          if(existed) {
             project.addReport(RatingReport(
               type: RatingReportType.duplicateBlacklistEntry,
               severity: RatingReportSeverity.warning,
@@ -751,8 +772,8 @@ class RatingProjectLoader {
         // 'fixing' a valid mapping for a different competitor.
         // TODO: test for this case
         var fix = action as DataEntryFix;
-        var duplicate = settings.memberNumberCorrections.add(fix.intoCorrection());
-        if(duplicate) {
+        var existed = !settings.memberNumberCorrections.add(fix.intoCorrection());
+        if(existed) {
           project.addReport(RatingReport(
             type: RatingReportType.duplicateDataEntryFix,
             severity: RatingReportSeverity.warning,

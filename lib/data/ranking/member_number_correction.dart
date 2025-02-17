@@ -31,6 +31,19 @@ class MemberNumberCorrection {
       correctedNumber: json["correctNo"] as String,
     );
   }
+
+  @override
+  operator ==(Object other) {
+    if(other is MemberNumberCorrection) {
+      return name == other.name && invalidNumber == other.invalidNumber && correctedNumber == other.correctedNumber;
+    }
+    return false;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(name, invalidNumber, correctedNumber);
+  }
 }
 
 class MemberNumberCorrectionContainer {
@@ -42,11 +55,11 @@ class MemberNumberCorrectionContainer {
   bool add(MemberNumberCorrection correction) {
     bool existed = false;
     _byName[correction.name] ??= [];
-    if(!_byName[correction.name]!.contains(correction)) {
-      _byName[correction.name]!.add(correction);
+    if(_byName[correction.name]!.contains(correction)) {
+      existed = true;
     }
     else {
-      existed = true;
+      _byName[correction.name]!.add(correction);
     }
 
     if(correction.invalidNumber.isNotEmpty) {

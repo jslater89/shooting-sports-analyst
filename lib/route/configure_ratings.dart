@@ -361,20 +361,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                             SizedBox(height: 10),
                             Text("Settings", style: Theme.of(context).textTheme.labelLarge),
                             SizedBox(height: 10),
-                            CheckboxListTile(
-                              title: Tooltip(
-                                child: Text("Keep full history?"),
-                                message: "Keep intermediate ratings after each match if checked, or keep only final ratings if unchecked.",
-                              ),
-                              value: _keepHistory,
-                              onChanged: (value) {
-                                if(value != null) {
-                                  setState(() {
-                                    _keepHistory = value;
-                                  });
-                                }
-                              }
-                            ),
                             Row(
                               mainAxisSize: MainAxisSize.max,
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -414,20 +400,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                   ),
                                 )
                               ],
-                            ),
-                            CheckboxListTile(
-                              title: Tooltip(
-                                child: Text("Check data entry errors?"),
-                                message: "Look for likely member number typos in the dataset if checked, and show a prompt with options to fix them.",
-                              ),
-                              value: _checkDataEntryErrors,
-                              onChanged: (value) {
-                                if(value != null) {
-                                  setState(() {
-                                    _checkDataEntryErrors = value;
-                                  });
-                                }
-                              }
                             ),
                             Row(
                               mainAxisSize: MainAxisSize.max,

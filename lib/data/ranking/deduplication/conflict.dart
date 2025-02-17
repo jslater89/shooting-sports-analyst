@@ -47,6 +47,14 @@ class DeduplicationCollision {
     return coversNumbers(memberNumbers.values.flattened);
   }
 
+  Iterable<String> get coveredNumbers => proposedActions.expand((a) => a.coveredNumbers);
+  List<String> get coveredNumbersList => coveredNumbers.toList();
+  Iterable<String> get uncoveredNumbers {
+    var coveredList = coveredNumbersList;
+    return memberNumbers.values.flattened.where((n) => !coveredList.contains(n));
+  }
+  List<String> get uncoveredNumbersList => uncoveredNumbers.toList();
+
   DeduplicationCollision({
     required this.deduplicatorName,
     required this.memberNumbers,

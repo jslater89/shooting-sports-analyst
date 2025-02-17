@@ -20,6 +20,9 @@ const _content = """# Deduplication
 Deduplication is the process of combining match results for competitors who appear under different member numbers. When loading match 
 results, the application automatically detects potential duplicates and presents them for review.
 
+The top-line summary of this article is that _if you do not take manual action, your ratings will be inaccurate_. Even conflicts for
+which the deduplicator makes a confident suggestion should be reviewed to ensure that the suggested actions are correct.
+
 ## The Deduplication Dialog
 
 The deduplication dialog shows a list of potential duplicates on the left side. Each entry shows:
@@ -54,6 +57,8 @@ fix will correct this automatically in future imports.
 Blacklist entries prevent automatic association between member numbers that belong to different competitors who happen to share the same 
 name. For example, if there are two competitors named John Smith with different member numbers, a blacklist entry prevents their results 
 from being combined.
+
+More broadly, blacklist entries indicate to the rating engine that two member numbers should not be associated with one another.
 
 ## Automatic Detection and Manual Review
 
@@ -93,4 +98,7 @@ changes if the automatic detection appears correct.
 * Use the edit button in proposed actions to modify the deduplicator's proposed actions
 * Use the swap button (↔️) when editing proposed actions to quickly switch source and target numbers
 * The RESTORE ORIGINAL ACTIONS button will undo any changes to the current duplicate
+* Use the BLACKLIST REMAINING button if you have specified all the necessary actions but there are still uncovered numbers
+    * It adds blacklist entries for all remaining uncovered numbers to all other numbers, indicating
+      to the rating engine that the blacklisted numbers are all distinct competitors
 * Use IGNORE sparingly; it should be used primarily to work around deduplicator bugs""";

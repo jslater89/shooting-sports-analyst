@@ -86,7 +86,7 @@ class RatingReport {
   set data(RatingReportData value) {
     _data = value;
     jsonEncodedData = jsonEncode(value);
-    _log.vv("json data: $jsonEncodedData");
+    // _log.vv("json data: $jsonEncodedData");
   }
 
   @ignore
@@ -193,7 +193,9 @@ enum RatingReportType {
             "The following names appear in the dataset for ${typedData.number} and have high string difference, which may indicate "
             "that they are different competitors. If they are, and you can identify an additional member number belonging to one "
             "of them, you can correct this issue by adding a data entry fix. If they are not distinct individuals, no action is "
-            "required, but you can use a competitor name alias to resolve this report on the next full calculation."
+            "required, but you can use a competitor name alias to resolve this report on the next full calculation.\n\n"
+            "Note that this check occurs before competitor deduplication, so reports of this type may include entries that "
+            "were fixed during deduplication on this calculation run."
           ),
           SizedBox(height: 8),
           ...typedData.names.map((name) => Text(" • $name")),

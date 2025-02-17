@@ -29,16 +29,6 @@ This help page provides a brief tour of the new features, including notes on any
 breaking changes from the 6.0 and 7.0 series of releases. You will only see it automatically
 once, but I will attempt to keep it up to date as the alpha process progresses.
 
-## This Help System
-
-Instead of writing documentation in various READMEs and blog posts, I decided to build
-a help system directly into the application. The index to the left lists all available
-topics, and where relevant help topics exist, 'help' icons in the application will link
-to them, launching this window on the correct page.
-
-Analyst is a very complicated tool, and I expect the help system will continue to grow
-as the 8.0 release cycle proceeds.
-
 ## Known Issues
 
 Among others, the following issues are known:
@@ -50,9 +40,22 @@ Among others, the following issues are known:
 * Member number mappings, data entry fixes, and blacklist entries migrated from old
   rating projects may not work as expected.
 * Match score viewing for IDPA and PCSL may have some flaws in some cases.
+* Rating project reports may include a large number of notifications about duplicated
+  actions.
+* 
 
 Please report other issues via [Discord](https://discord.gg/rqHh7PVMNA) or
 [GitHub](https://github.com/jslater89/shooting-sports-analyst/issues).
+
+## This Help System
+e
+Instead of writing documentation in various READMEs and blog posts, I decided to build
+a help system directly into the application. The index to the left lists all available
+topics, and where relevant help topics exist, 'help' icons in the application will link
+to them, launching this window on the correct page.
+
+Analyst is a very complicated tool, and I expect the help system will continue to grow
+as the 8.0 release cycle proceeds.
 
 ## Database Storage
 

@@ -35,15 +35,20 @@ class USPSAMemberNumber {
   /// any alphabetic characters.
   final String numericComponent;
 
+  late final int numericComponentAsInt;
+
   /// Construct a USPSA member number from a raw member number string.
   USPSAMemberNumber(String memberNumber) :
     type = USPSADeduplicator().classify(memberNumber),
     normalizedNumber = USPSADeduplicator().processNumber(memberNumber),
     internalNumber = USPSADeduplicator()._stripATYFY(memberNumber),
-    numericComponent = memberNumber.replaceAll(RegExp(r'[^0-9]'), "");
+    numericComponent = memberNumber.replaceAll(RegExp(r'[^0-9]'), "")
+  {
+    numericComponentAsInt = int.tryParse(numericComponent) ?? 0;
+  }
 
   /// Construct a USPSA member number, providing all of the values directly.
-  USPSAMemberNumber.unsafe({required this.type, required this.normalizedNumber, required this.internalNumber, required this.numericComponent});
+  USPSAMemberNumber.unsafe({required this.type, required this.normalizedNumber, required this.internalNumber, required this.numericComponent, required this.numericComponentAsInt});
 
   @override
   operator ==(Object other) {
@@ -979,7 +984,13 @@ class USPSADeduplicator extends ShooterDeduplicator {
     // If the number is too long or too short for its type, it isn't
     // a valid target.
     var n = USPSAMemberNumber(number);
-    if(n.type == MemberNumberType.standard && (n.internalNumber.length < 5 || n.internalNumber.length > 6)) {
+    if(n.type == MemberNumberType.standard 
+        && (
+          n.internalNumber.length < 5 
+          || n.internalNumber.length > 6 
+          || n.numericComponentAsInt > 300000
+          || n.numericComponentAsInt < 1000
+        )) {
       return true;
     }
 
