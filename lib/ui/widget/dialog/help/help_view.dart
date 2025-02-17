@@ -28,7 +28,10 @@ class HelpView extends StatefulWidget {
 class _HelpViewState extends State<HelpView> {
   late HelpTopic selectedTopic;
 
+  /// The index of the current back stack entry.
   int backStackIndex = 0;
+  /// The back stack contains a list of navigation history (help ID and scroll position).
+  /// The back stack contains the current topic.
   List<BackStackEntry> backStack = [];
 
   final HelpIndexController _indexController = HelpIndexController();
@@ -37,7 +40,7 @@ class _HelpViewState extends State<HelpView> {
   void initState() {
     super.initState();
     selectedTopic = HelpTopicRegistry().getTopic(widget.startingTopic)!;
-    backStack.add(BackStackEntry(topic: selectedTopic));
+    backStack.add(BackStackEntry(topic: selectedTopic, scrollPosition: 0));
     _indexController.scrollToTopic(selectedTopic);
   }
 
@@ -48,18 +51,28 @@ class _HelpViewState extends State<HelpView> {
     super.dispose();
   }
 
-  /// When navigating by link, the new topic gets pushed onto the back stack,
-  /// and any topics above it in the stack are removed—i.e., going back and then
-  /// forward will go to [topic] rather than the previous topic.
+  /// When leaving a page by link or index click, we remove all back stack entries above
+  /// the currently-shown topic, update the currently-shown topic's scroll position,
+  /// and push a new back stack entry for the destination topic at scroll position 0.
   void navigateByLink(HelpTopic topic) {
+    // topic is our destination, and selectedTopic is the currently-displayed topic.
     if(topic.id == selectedTopic.id) {
       return;
     }
-    // When leaving a page, add a new back stack entry for it with the current scroll position,
-    _log.d("Adding back stack entry for topic ${selectedTopic.id} at scroll position ${_rendererController.scrollPosition}");
-    backStack.add(BackStackEntry(topic: selectedTopic, scrollPosition: _rendererController.scrollPosition));
+
+    // Remove all back stack entries above the currently-shown topic, if there are any.
+    if(backStackIndex < backStack.length - 1) {
+      backStack = backStack.sublist(0, backStackIndex + 1);
+    }
+
+    // Update the currently-shown topic's scroll position.
+    backStack[backStackIndex].scrollPosition = _rendererController.scrollPosition;
+
+    // Push a new back stack entry for the destination topic at scroll position 0.
+    backStack.add(BackStackEntry(topic: topic, scrollPosition: 0));
     backStackIndex++;
 
+    // Display the destination topic.
     setTopic(topic);
   }
 
@@ -76,9 +89,10 @@ class _HelpViewState extends State<HelpView> {
 
   void navigateBack() {
     if(backStackIndex > 0) {
+      backStackIndex--;
       var stackEntry = backStack[backStackIndex];
       setTopic(stackEntry.topic, rendererScrollPosition: stackEntry.scrollPosition);
-      backStackIndex--;
+      _log.v("Back navigation: back stack index is now $backStackIndex/${backStack.length - 1}");
     }
   }
 
@@ -86,9 +100,10 @@ class _HelpViewState extends State<HelpView> {
 
   void navigateForward() {
     if(backStackIndex < backStack.length - 1) {
+      backStackIndex++;
       var stackEntry = backStack[backStackIndex];
       setTopic(stackEntry.topic, rendererScrollPosition: stackEntry.scrollPosition);
-      backStackIndex++;
+      _log.v("Forward navigation: back stack index is now $backStackIndex/${backStack.length - 1}");
     }
   }
 
@@ -109,10 +124,12 @@ class _HelpViewState extends State<HelpView> {
                   children: [
                     IconButton(
                       icon: Icon(Icons.arrow_back),
+                      color: Theme.of(context).colorScheme.primary,
                       onPressed: canNavigateBack ? navigateBack : null,
                     ),
                     IconButton(
                       icon: Icon(Icons.arrow_forward),
+                      color: Theme.of(context).colorScheme.primary,
                       onPressed: canNavigateForward ? navigateForward : null,
                     ),
                   ],
@@ -158,7 +175,7 @@ class _HelpViewState extends State<HelpView> {
 
 class BackStackEntry {
   final HelpTopic topic;
-  final double scrollPosition;
+  double scrollPosition;
 
   BackStackEntry({required this.topic, this.scrollPosition = 0});
 
@@ -172,6 +189,11 @@ class BackStackEntry {
 
   @override
   int get hashCode => topic.id.hashCode;
+
+  @override
+  String toString() {
+    return "${topic.id}@$scrollPosition";
+  }
 }
 
 class HelpIndex extends StatefulWidget {

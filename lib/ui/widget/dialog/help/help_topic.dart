@@ -32,7 +32,7 @@ class HelpTopic {
   });
 
   String contentPreview() {
-    var tokens = HelpParser.tokenize(this).whereNot((element) => element is Header);
+    var tokens = HelpParser.tokenize(this).whereNot((element) => element is Heading);
 
     var buffer = StringBuffer();
     for(var token in tokens) {

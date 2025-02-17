@@ -76,7 +76,7 @@ class HelpParser {
       var lineTokens = _tokenizeLine(line, lastToken: lastToken, parent: currentParagraph);
       
       // Headers always start a new paragraph
-      if (lineTokens.any((t) => t is Header)) {
+      if (lineTokens.any((t) => t is Heading)) {
         if (currentParagraph.tokens.isNotEmpty) {
           tokens.add(currentParagraph);
           currentParagraph = Paragraph([]);
@@ -246,7 +246,7 @@ class HelpParser {
 
     var _tokenizedText = _tokenizeText(headerText);
     return [
-      Header(headerLevel, _tokenizedText, parent: parent),
+      Heading(headerLevel, _tokenizedText, parent: parent),
     ];
   }
 

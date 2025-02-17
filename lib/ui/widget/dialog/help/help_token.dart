@@ -147,11 +147,11 @@ class PlainText extends LinkableHelpToken {
 }
 
 /// A header of some level.
-class Header extends HelpToken {
+class Heading extends HelpToken {
   final List<HelpToken> tokens;
   final int level;
 
-  Header(this.level, this.tokens, {super.parent, super.lineStart = false, super.lineEnd = false});
+  Heading(this.level, this.tokens, {super.parent, super.lineStart = false, super.lineEnd = false});
 
   @override
   List<InlineSpan> intoSpans(BuildContext context, TextStyle baseStyle, {void Function(String)? onLinkTapped}) {
@@ -161,7 +161,7 @@ class Header extends HelpToken {
       style = Theme.of(context).textTheme.titleLarge!;
     }
     else if(level == 2) {
-      style = Theme.of(context).textTheme.titleMedium!.copyWith(decoration: TextDecoration.underline);
+      style = Theme.of(context).textTheme.titleMedium!;
     }
     else {
       renderLevel = 3;

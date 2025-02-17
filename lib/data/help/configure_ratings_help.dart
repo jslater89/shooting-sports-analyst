@@ -19,9 +19,9 @@ final helpConfigureRatings = HelpTopic(
 
 const _content = """# Configuring Ratings
 
-The ratings configuration page allows you to set up how ratings are calculated and manage shooter data. Tap the 'Advance'
-button at the top of the page to proceed to the ratings view. If the application detects that it is necessary, you will
-be prompted to perform a full recalculation.
+The ratings configuration page allows you to set up how ratings are calculated and manage match and project settings.
+Tap the 'Advance' button at the top of the page to proceed to the ratings view. If the application detects that it is
+necessary, you will be prompted to perform a full recalculation.
 
 ## Projects
 

@@ -34,7 +34,7 @@ class _DbStatisticsDialogState extends State<DbStatisticsDialog> {
             SizedBox(height: 10),
             Table(
               columnWidths: const {
-                0: FixedColumnWidth(150),
+                0: FixedColumnWidth(200),
                 1: FixedColumnWidth(100),
                 2: FixedColumnWidth(100),
                 3: FixedColumnWidth(100),
@@ -154,7 +154,11 @@ class _DbStatisticsDialogState extends State<DbStatisticsDialog> {
           border: Border(bottom: BorderSide())
         ),
         children: [
-          Text(project.name, style: Theme.of(context).textTheme.bodyLarge, softWrap: false, overflow: TextOverflow.ellipsis),
+          Tooltip(
+            message: project.name,
+            waitDuration: Duration(milliseconds: 1000),
+            child: Text(project.name, style: Theme.of(context).textTheme.bodyLarge, softWrap: false, overflow: TextOverflow.ellipsis)
+          ),
           Text("\t${widget.stats.ratingProjectRatingCounts[project]}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right),
           Text("\t${widget.stats.ratingProjectEventCounts[project]}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right),
           Text("\t${_formatBytes(widget.stats.estimatedProjectSizes[project]!)}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right),
@@ -166,7 +170,7 @@ class _DbStatisticsDialogState extends State<DbStatisticsDialog> {
       SizedBox(height: 10),
       Table(
         columnWidths: const {
-          0: FixedColumnWidth(150),
+          0: FixedColumnWidth(200),
           1: FixedColumnWidth(100),
           2: FixedColumnWidth(100),
           3: FixedColumnWidth(100),

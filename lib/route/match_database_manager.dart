@@ -8,8 +8,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/db_statistics.dart';
+import 'package:shooting_sports_analyst/data/help/match_database_manager_help.dart';
 import 'package:shooting_sports_analyst/ui/database/match/match_db_list_view.dart';
 import 'package:shooting_sports_analyst/ui/database/stats/db_statistics_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/loading_dialog.dart';
 
 class MatchDatabaseManagerPage extends StatefulWidget {
@@ -83,6 +85,7 @@ class _MatchDatabaseManagerPageState extends State<MatchDatabaseManagerPage> {
                   },
                 ),
               ),
+              HelpButton(helpTopicId: matchDatabaseManagerHelpId),
             ],
           ),
           body: MatchDatabaseListView(),
