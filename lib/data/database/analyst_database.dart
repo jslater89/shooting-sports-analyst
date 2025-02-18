@@ -58,7 +58,7 @@ class AnalystDatabase {
   late Isar isar;
 
   Future<void> _init({bool test = false}) async {
-    var db = File("db/");
+    var db = Directory("db/");
     if(!db.existsSync()) {
       db.createSync(recursive: true);
     }
