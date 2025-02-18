@@ -5,6 +5,7 @@
  */
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_query_element.dart';
@@ -57,6 +58,10 @@ class AnalystDatabase {
   late Isar isar;
 
   Future<void> _init({bool test = false}) async {
+    var db = File("db/");
+    if(!db.existsSync()) {
+      db.createSync(recursive: true);
+    }
     isar = await Isar.open(
       [
         DbShootingMatchSchema,
