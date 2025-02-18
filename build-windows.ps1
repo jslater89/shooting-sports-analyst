@@ -10,7 +10,7 @@ If(-not $Env:AppVeyor) {
 fvm flutter build windows
 
 $Root = Get-Location
-cd .\build\windows\runner
+cd .\build\windows\x64\runner
 
 If(Test-Path shooting-sports-analyst) {
     rm -r -Force shooting-sports-analyst
@@ -46,8 +46,8 @@ if(Test-Path shooting-sports-analyst.zip) {
 Compress-Archive -Path .\shooting-sports-analyst -DestinationPath shooting-sports-analyst.zip -Force
 cd $Root
 If($Env:AppVeyor) {
-    cp -Force .\build\windows\runner\shooting-sports-analyst.zip shooting-sports-analyst-ci.$Env:APPVEYOR_BUILD_NUMBER-windows.zip
+    cp -Force .\build\windows\x64\runner\shooting-sports-analyst.zip shooting-sports-analyst-ci.$Env:APPVEYOR_BUILD_NUMBER-windows.zip
 }
 Else {
-    cp -Force .\build\windows\runner\shooting-sports-analyst.zip shooting-sports-analyst-$version-windows.zip
+    cp -Force .\build\windows\x64\runner\shooting-sports-analyst.zip shooting-sports-analyst-$version-windows.zip
 }
