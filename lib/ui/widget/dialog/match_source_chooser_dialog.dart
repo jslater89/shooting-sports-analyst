@@ -64,7 +64,7 @@ class _MatchSourceChooserDialogState extends State<MatchSourceChooserDialog> {
                 value: source,
               ),
               Divider(),
-              Expanded(child: source.getDownloadMatchUI((match) {
+              Expanded(child: source.getDownloadMatchUI(onMatchSelected: (match) {
                 submit(match);
               })),
             ],

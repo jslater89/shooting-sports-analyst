@@ -5,6 +5,7 @@
  */
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
@@ -40,9 +41,18 @@ class AnalystDatabase {
   late Isar matchDb;
 
   Future<void> _init() async {
-    matchDb = await Isar.open([
-      DbShootingMatchSchema,
-    ], directory: ".");
+    var dir = Directory("db");
+    if(!dir.existsSync()) {
+      dir.createSync(recursive: true);
+    }
+    matchDb = await Isar.open(
+      [
+        DbShootingMatchSchema,
+      ],
+      name: "matches",
+      maxSizeMiB: 1024 * 32,
+      directory: dir.path,
+    );
     _readyCompleter.complete();
   }
 

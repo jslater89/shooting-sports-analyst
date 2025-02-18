@@ -137,6 +137,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Match Results Viewer',
       theme: ThemeData(
+        useMaterial3: false,
         primarySwatch: Colors.indigo,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
