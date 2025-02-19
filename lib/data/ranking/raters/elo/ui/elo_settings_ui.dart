@@ -429,7 +429,6 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
             Text("Elo configuration", style: Theme.of(context).textTheme.labelLarge!),
             HelpButton(helpTopicId: eloConfigHelpId),
           ],
-
         ),
         CheckboxListTile(
           title: Tooltip(

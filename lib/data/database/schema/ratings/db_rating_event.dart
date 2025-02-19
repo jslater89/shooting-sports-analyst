@@ -206,14 +206,14 @@ class RatingEventInfoElement {
           return sprintf(numberFormat!, [intValue!]);
         }
         else {
-          return "$intValue!";
+          return "$intValue";
         }
       case RatingEventInfoType.double:
         if(numberFormat != null) {
           return sprintf(numberFormat!, [doubleValue!]);
         }
         else {
-          return "$doubleValue!";
+          return "$doubleValue";
         }
       case RatingEventInfoType.string:
         return stringValue!;

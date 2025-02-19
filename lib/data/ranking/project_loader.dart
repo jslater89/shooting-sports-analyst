@@ -164,6 +164,7 @@ class RatingProjectLoader {
   DateTime wallStart = DateTime.now();
 
   bool parallel;
+  bool inFullRecalc = false;
 
   List<String> _matchConnectivityCsv = [];
   bool dumpMatchConnectivities = false;
@@ -253,6 +254,7 @@ class RatingProjectLoader {
     }
 
     if(!canAppend) {
+      inFullRecalc = true;
       project.eventCount = 0;
       project.reports = [];
       project.recentReports = [];
@@ -273,6 +275,7 @@ class RatingProjectLoader {
       project.reports = [...project.reports];
       project.recentReports = [];
       _log.i("Appending ${matchesToAdd.length} matches to ratings");
+      inFullRecalc = false;
     }
 
     var readMatchesSteps = matchesToAdd.length;
@@ -962,6 +965,7 @@ class RatingProjectLoader {
     int added = 0;
     int updated = 0;
     var shooters = await _getShooters(group, match);
+    List<Future<DbShooterRating>> saveFutures = [];
     List<DbShooterRating> newRatings = [];
     for(MatchEntry s in shooters) {
       // Process the member number:
@@ -1095,12 +1099,16 @@ class RatingProjectLoader {
           project.addReport(report);
         }
 
+        // If doing a full recalculation, we know everyone is in the cache because we added them in previous
+        // iterations of this function. In that case, we ask for 'cache only' and skip the DB query. (Time savings
+        // potentially quite big?)
         var rating = await db.maybeKnownShooter(
           project: project,
           group: group,
           memberNumber: s.memberNumber,
           usePossibleMemberNumbers: true,
           useCache: true,
+          onlyCache: inFullRecalc,
         );
 
         if(rating == null) {
@@ -1157,7 +1165,9 @@ class RatingProjectLoader {
             rating.knownMemberNumbers.add(s.memberNumber);
           }
 
-          await db.upsertDbShooterRating(rating);
+          // We don't need to wait on this yet, because a) it goes into the cache synchronously,
+          // and b) if we need to get the same competitor from the DB, we will fetch it from the cache.
+          saveFutures.add(db.upsertDbShooterRating(rating));
         }
       }
     }
@@ -1167,6 +1177,8 @@ class RatingProjectLoader {
       timings.shooterCount += added;
       timings.matchEntryCount += shooters.length;
     }
+
+    await Future.wait(saveFutures);
 
     return (newRatings, added + updated);
   }

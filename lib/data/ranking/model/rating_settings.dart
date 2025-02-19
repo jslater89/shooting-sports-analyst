@@ -7,8 +7,8 @@
 import 'package:flutter/widgets.dart';
 
 abstract class RaterSettings {
-  loadFromJson(Map<String, dynamic> json);
-  encodeToJson(Map<String, dynamic> json);
+  void loadFromJson(Map<String, dynamic> json);
+  void encodeToJson(Map<String, dynamic> json);
 }
 
 abstract class RaterSettingsController<T extends RaterSettings> implements ChangeNotifier {

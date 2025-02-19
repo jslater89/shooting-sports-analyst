@@ -13,6 +13,7 @@ import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart'
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rater.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
@@ -38,7 +39,8 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
   ///
   /// [shooter] is the shooter or shooters whose ratings should change. [scores]
   /// is a list of scores for the rating event in question. [matchScores] is a list
-  /// of match totals, which is identical to [scores] if byStage is true.
+  /// of match totals, which is identical to [scores] if byStage is false. The scores
+  /// maps are sorted by finish order.
   ///
   /// If [mode] is [RatingMode.roundRobin], [shooters] and [scores] both contain
   /// two elements, for the pair of shooters being compared.
@@ -177,6 +179,7 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
   static const _multiplayerEloValue = "multiElo";
   static const _openskillValue = "openskill";
   static const _pointsValue = "points";
+  static const _marblesValue = "marbles";
 
   static RatingSystem algorithmForName(String name, Map<String, dynamic> encodedProject) {
     switch(name) {
@@ -186,6 +189,8 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
         return PointsRater.fromJson(encodedProject);
       case _openskillValue:
         return OpenskillRater.fromJson(encodedProject);
+      case _marblesValue:
+        return MarbleRater.fromJson(encodedProject);
       default:
         throw ArgumentError();
     }

@@ -43,13 +43,25 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
   String get lastName => wrappedRating.lastName;
   set lastName(String n) => wrappedRating.lastName = n;
 
+  AgeCategory? get ageCategory => wrappedRating.ageCategory;
+  set ageCategory(AgeCategory? c) => wrappedRating.ageCategory = c;
+
+  bool get female => wrappedRating.female;
+  set female(bool f) => wrappedRating.female = f;
+
   set memberNumber(String m) {
     super.memberNumber = m;
+    this.wrappedRating.memberNumber = m;
     var deduplicator = sport.shooterDeduplicator;
     if(deduplicator != null) {
       allPossibleMemberNumbers.addAll(deduplicator.alternateForms(m));
     }
   }
+
+  @override
+  Set<String> get knownMemberNumbers => wrappedRating.knownMemberNumbers;
+  @override
+  set knownMemberNumbers(Set<String> s) => wrappedRating.knownMemberNumbers = s;
 
   @override
   Set<String> get allPossibleMemberNumbers => wrappedRating.allPossibleMemberNumbers;
@@ -386,10 +398,15 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
         doubleDataLength: doubleDataElements,
       ),
       this.sportName = sport.name,
-      super(firstName: shooter.firstName, lastName: shooter.lastName) {
+      super(firstName: shooter.firstName, lastName: shooter.lastName) 
+  {
+    this.memberNumber = shooter.memberNumber;
     this.lastClassification = shooter.classification ?? sport.classifications.fallback();
+    this.division = shooter.division;
     this.firstSeen = date;
     this.lastSeen = date;
+    this.rawConnectivity = 0.0;
+    this.connectivity = 0.0;
     super.copyVitalsFrom(shooter);
   }
 

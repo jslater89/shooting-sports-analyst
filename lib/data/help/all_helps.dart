@@ -10,6 +10,8 @@ import 'package:shooting_sports_analyst/data/help/configure_ratings_help.dart';
 import 'package:shooting_sports_analyst/data/help/deduplication_help.dart';
 import 'package:shooting_sports_analyst/data/help/elo_configuration_help.dart';
 import 'package:shooting_sports_analyst/data/help/elo_help.dart';
+import 'package:shooting_sports_analyst/data/help/marbles_configuration_help.dart';
+import 'package:shooting_sports_analyst/data/help/marbles_help.dart';
 import 'package:shooting_sports_analyst/data/help/match_database_manager_help.dart';
 import 'package:shooting_sports_analyst/data/help/openskill_help.dart';
 import 'package:shooting_sports_analyst/data/help/points_help.dart';
@@ -34,4 +36,6 @@ void registerHelpTopics() {
   r.register(helpRatingReports);
   r.register(helpWelcome80);
   r.register(helpMatchDatabaseManager);
+  r.register(helpMarbles);
+  r.register(helpMarblesConfiguration);
 }

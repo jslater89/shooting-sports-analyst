@@ -17,6 +17,7 @@ import 'package:shooting_sports_analyst/data/database/util.dart';
 import 'package:shooting_sports_analyst/data/help/configure_ratings_help.dart';
 import 'package:shooting_sports_analyst/data/help/elo_configuration_help.dart';
 import 'package:shooting_sports_analyst/data/help/elo_help.dart';
+import 'package:shooting_sports_analyst/data/help/marbles_help.dart';
 import 'package:shooting_sports_analyst/data/help/openskill_help.dart';
 import 'package:shooting_sports_analyst/data/help/points_help.dart';
 import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
@@ -26,6 +27,8 @@ import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manag
 import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rater.dart';
@@ -766,6 +769,11 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
           _ratingSystem = OpenskillRater(settings: settings as OpenskillSettings);
           _settingsController = _ratingSystem.newSettingsController();
           break;
+        case _ConfigurableRater.marbles:
+          settings = MarbleSettings();
+          _ratingSystem = MarbleRater(settings: settings as MarbleSettings);
+          _settingsController = _ratingSystem.newSettingsController();
+          break;
       }
 
       setState(() {
@@ -780,6 +788,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     if(algorithm is MultiplayerPercentEloRater) return _ConfigurableRater.multiplayerElo;
     if(algorithm is PointsRater) return _ConfigurableRater.points;
     if(algorithm is OpenskillRater) return _ConfigurableRater.openskill;
+    if(algorithm is MarbleRater) return _ConfigurableRater.marbles;
 
     throw UnsupportedError("Algorithm not yet supported");
   }
@@ -855,12 +864,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       _keepHistory = false;
       _groups = groups;
       _validationError = "";
-      _shooterAliases = defaultShooterAliases;
-      _memNumWhitelist = [];
-      _memNumMappingBlacklist = {};
-      _memNumMappings = {};
       _hiddenShooters = [];
-      _memNumCorrections = MemberNumberCorrectionContainer();
     });
   }
 
@@ -1355,7 +1359,8 @@ enum _MenuEntry {
 enum _ConfigurableRater {
   multiplayerElo,
   openskill,
-  points;
+  points,
+  marbles;
 
   String get uiLabel {
     switch(this) {
@@ -1365,6 +1370,8 @@ enum _ConfigurableRater {
         return "Points series";
       case _ConfigurableRater.openskill:
         return "OpenSkill";
+      case _ConfigurableRater.marbles:
+        return "Marble game";
     }
   }
 
@@ -1378,6 +1385,8 @@ enum _ConfigurableRater {
         return
           "OpenSkill, a Bayesian online rating system similar to Microsoft TrueSkill.\n\n"
           "It doesn't work as well as Elo, and depends heavily on large sample sizes.";
+      case _ConfigurableRater.marbles:
+        return "A system where competitors stake marbes to enter matches and win them by placing highly.";
     }
   }
 
@@ -1385,11 +1394,13 @@ enum _ConfigurableRater {
     _ConfigurableRater.multiplayerElo => eloHelpId,
     _ConfigurableRater.openskill => openskillHelpId,
     _ConfigurableRater.points => pointsHelpId,
+    _ConfigurableRater.marbles => marblesHelpId,
   };
 
   String get configHelpId => switch(this) {
     _ConfigurableRater.multiplayerElo => eloConfigHelpId,
     _ConfigurableRater.openskill => openskillHelpId,
     _ConfigurableRater.points => pointsHelpId,
+    _ConfigurableRater.marbles => marblesHelpLink,
   };
 }

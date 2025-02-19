@@ -166,7 +166,7 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
       csv += "${s.ordinal.toStringAsFixed(2)},";
       csv += "${s.mu.toStringAsFixed(2)}";
       csv += "${s.sigma.toStringAsFixed(2)}";
-      csv += "${s.ratingEvents.length}\n";
+      csv += "${s.length}\n";
     }
     return csv;
   }

@@ -5,6 +5,7 @@
  */
 
 import "package:shooting_sports_analyst/data/help/elo_help.dart";
+import "package:shooting_sports_analyst/data/help/marbles_help.dart";
 import "package:shooting_sports_analyst/data/help/openskill_help.dart";
 import "package:shooting_sports_analyst/data/help/points_help.dart";
 import "package:shooting_sports_analyst/ui/widget/dialog/help/help_topic.dart";
@@ -56,6 +57,8 @@ It is slow to converge on the true skill level of competitors, and therefore und
 application.
 * [**Points series**]($pointsHelpLink) - A cumulative rating system that assigns points to competitors based on match
 results, optionally choosing the best N matches of those a competitor has participated in.
+* [**Marble game**]($marblesHelpLink) - A rating system that distributes rating points ('marbles', because you're playing
+for all the marbles) based on match results, according to a variety of distribution models.
 
 Information about each algorithm is available in the help topics linked above.
 

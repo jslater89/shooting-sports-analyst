@@ -105,6 +105,7 @@ extension RatingProjectDatabase on AnalystDatabase {
     required String memberNumber,
     bool usePossibleMemberNumbers = false,
     bool useCache = false,
+    bool onlyCache = false,
     bool saveToCache = true,
   }) async {
     if(useCache) {
@@ -112,6 +113,9 @@ extension RatingProjectDatabase on AnalystDatabase {
       if(cachedRating != null) {
         loadedShooterRatingCacheHits++;
         return cachedRating;
+      }
+      if(onlyCache) {
+        return null;
       }
     }
     if(usePossibleMemberNumbers) {

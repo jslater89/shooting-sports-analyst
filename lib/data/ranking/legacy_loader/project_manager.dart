@@ -197,11 +197,13 @@ const _groupsKey = "groups";
 // Values for the multiplayer percent elo rater.
 
 class OldRatingProject {
+  // TODO: move these somewhere newer
   static const byStageKey = "byStage";
   static const algorithmKey = "algo";
   static const multiplayerEloValue = "multiElo";
   static const openskillValue = "openskill";
   static const pointsValue = "points";
+  static const marbleValue = "marbles";
 
   String name;
   OldRatingProjectSettings settings;

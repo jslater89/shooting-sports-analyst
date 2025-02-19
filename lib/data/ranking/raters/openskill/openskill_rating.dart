@@ -100,11 +100,6 @@ class OpenskillRating extends ShooterRating<OpenskillRatingEvent> {
 
   @override
   List<OpenskillRatingEvent> get combinedRatingEvents => []..addAll(ratingEvents)..addAll(emptyRatingEvents);
-  
-  @override
-  void ratingEventsChanged() {
-    // no-op
-  }
 
   @override
   OpenskillRatingEvent wrapEvent(DbRatingEvent e) {

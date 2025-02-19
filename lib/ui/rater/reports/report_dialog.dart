@@ -26,7 +26,7 @@ class ReportDialog extends StatefulWidget {
   static Future<void> show(BuildContext context, RatingDataSource dataSource) {
     return showDialog<void>(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: true,
       builder: (context) => ReportDialog(dataSource: dataSource),
     );
   }
