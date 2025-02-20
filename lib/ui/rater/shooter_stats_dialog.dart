@@ -853,6 +853,10 @@ class _EloTooltipRenderer extends charts.CircleSymbolRenderer {
     var proportion = index.toDouble() / (indexTotal.toDouble() - 1);
     var leftOffset = -(proportion * 60) + 10;
 
+    if(leftOffset.isNaN) {
+      return;
+    }
+
     var ratingText = "${rating.round()}";
     if(error != 0) {
       ratingText += "±${error.round()}";
