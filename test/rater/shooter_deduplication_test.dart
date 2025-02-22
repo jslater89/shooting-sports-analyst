@@ -937,7 +937,7 @@ void main() async {
     var result = results.first;
     expect(reason: "number of causes", result.causes, hasLength(1));
     var cause = result.causes.first;
-    expect(reason: "cause is MultipleNumbersOfType", cause is MultipleNumbersOfType, isTrue);
+    expect(reason: "cause is MultipleNumbersOfType", cause, isA<MultipleNumbersOfType>());
     var multipleNumbersOfType = cause as MultipleNumbersOfType;
     expect(reason: "member number type", multipleNumbersOfType.memberNumberType, equals(MemberNumberType.standard));
     expect(reason: "detected ABCD invalid", multipleNumbersOfType.probablyInvalidNumbers, equals(["ABCD"]));
@@ -946,6 +946,40 @@ void main() async {
     var dataEntryFix = result.proposedActions.firstWhereOrNull((e) => e is DataEntryFix) as DataEntryFix;
     expect(reason: "data entry fix source number", dataEntryFix.sourceNumber, equals("ABCD"));
     expect(reason: "data entry fix target number", dataEntryFix.targetNumber, equals("A123456"));
+  });
+
+  test("Corrected Ambiguous Mapping", () async {
+    var project = DbRatingProject(
+      name: "Corrected Ambiguous Mapping",
+      sportName: uspsaSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+        userMemberNumberMappings: {
+          "FY88787": "L6166",
+        },
+        memberNumberMappingBlacklist: {
+          "TY7057": ["FY88787", "L6166"],
+          "L6166": ["TY7057"],
+          "FY88787": ["TY7057"],
+        }
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "corrected-ambiguous-mapping");
+    var deduplicator = USPSADeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      checkDataEntryErrors: true,
+      group: ratingGroup,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    var result = results.first;
+    expect(reason: "number of causes", result.causes, hasLength(1));
+    expect(reason: "cause is FixedInSettings", result.causes.first, isA<FixedInSettings>());
   });
 
   // #endregion
@@ -1156,6 +1190,13 @@ Future<void> setupTestDb(AnalystDatabase db) async {
     matchId: "invalid-number-data-entry-fix-2",
   );
 
+  var markMillerMatch = generateMatch(
+    shooters: [competitorMap["FY88787"]!, competitorMap["TY7057"]!, competitorMap["L6166"]!],
+    date: DateTime(2024, 5, 21),
+    matchName: "Corrected Ambiguous Mapping",
+    matchId: "corrected-ambiguous-mapping",
+  );
+
   var futures = [
     db.saveMatch(simpleDataEntryMatch),
     db.saveMatch(simpleBlacklistMatch),
@@ -1181,6 +1222,7 @@ Future<void> setupTestDb(AnalystDatabase db) async {
     db.saveMatch(dataEntryFixBadBenefactorMatch),
     db.saveMatch(invalidNumberDataEntryFixMatch),
     db.saveMatch(invalidNumberDataEntryFixMatch2),
+    db.saveMatch(markMillerMatch),
   ];
   await Future.wait(futures);
 }
@@ -1292,6 +1334,23 @@ Map<String, Shooter> generateCompetitors() {
     firstName: "Vaughn",
     lastName: "Deduplicator",
     memberNumber: "A124456",
+  );
+
+  // Mark Millers
+  competitors["FY88787"] = Shooter(
+    firstName: "Mark",
+    lastName: "Miller",
+    memberNumber: "FY88787",
+  );
+  competitors["TY7057"] = Shooter(
+    firstName: "Mark",
+    lastName: "Miller",
+    memberNumber: "TY7057",
+  );
+  competitors["L6166"] = Shooter(
+    firstName: "Mark",
+    lastName: "Miller",
+    memberNumber: "L6166",
   );
 
   return competitors;

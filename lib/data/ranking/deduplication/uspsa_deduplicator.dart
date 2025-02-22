@@ -430,9 +430,33 @@ class USPSADeduplicator extends ShooterDeduplicator {
       if(preexistingMappingActions.isNotEmpty) {
         conflict.proposedActions.addAll(preexistingMappingActions);
 
-        // If the detected preexisting mappings cover all of the member numbers,
-        // we can skip the rest of the checks.
-        if(conflict.coversNumbers(numbers.values.flattened)) {
+        // If the detected preexisting mappings covers all of the member numbers, or
+        // if all uncovered numbers are blacklisted to one or more of the preexisting
+        // mapping targets, this conflict was fully resolved in settings, and we can
+        // skip the remaining checks.
+        bool fullyResolved = conflict.coversNumbers(numbers.values.flattened);
+        if(!fullyResolved) {
+          var uncoveredNumbers = conflict.uncoveredNumbersList;
+          if(uncoveredNumbers.isNotEmpty) {
+            var targetNumbers = preexistingMappingActions.map((e) => e.targetNumber).toList();
+            bool allBlacklisted = true;
+            for(var number in uncoveredNumbers) {
+              var numberBlacklist = blacklist[number] ?? [];
+              // If no target numbers are contained in this unresolved number's blacklist,
+              // then this unresolved number is not covered by blacklists, and settings
+              // don't fully resolve the conflict.
+              if(targetNumbers.none((e) => numberBlacklist.contains(e))) {
+                allBlacklisted = false;
+                break;
+              }
+            }
+            if(allBlacklisted) {
+              fullyResolved = true;
+            }
+          }
+        }
+
+        if(fullyResolved) {
           conflict.causes.add(FixedInSettings());
           conflicts.add(conflict);
           continue;
