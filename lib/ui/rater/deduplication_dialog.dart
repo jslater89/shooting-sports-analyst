@@ -105,8 +105,8 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
     }
 
     if(ConfigLoader().config.playDeduplicationAlert) {
-      player = AudioPlayer();
-      player!.play(AssetSource("audio/update-bell.mp3"));
+      //player = AudioPlayer();
+      player?.play(AssetSource("audio/update-bell.mp3"));
     }
   }
 

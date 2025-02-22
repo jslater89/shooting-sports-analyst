@@ -194,6 +194,40 @@ class USPSADeduplicator extends ShooterDeduplicator {
         continue;
       }
 
+      // If all ratings are blacklisted to each other, we can skip the rest of the process.
+      Map<DbShooterRating, List<DbShooterRating>> allowedTargets = {};
+      for(var rating in ratings) {
+        allowedTargets[rating] = [];
+        for(var otherRating in ratings) {
+          if(rating == otherRating) continue;
+          var isAllowed = true;
+          for(var number in rating.knownMemberNumbers) {
+            for(var otherNumber in otherRating.knownMemberNumbers) {
+              if(blacklist[number]?.contains(otherNumber) ?? false) {
+                isAllowed = false;
+                break;
+              }
+            }
+            if(!isAllowed) break;
+          }
+          if(isAllowed) {
+            allowedTargets[rating]!.add(otherRating);
+          }
+        }
+      }
+
+      bool ratingsAllBlacklisted = true;
+      for(var rating in ratings) {
+        if(allowedTargets[rating]!.isNotEmpty) {
+          ratingsAllBlacklisted = false;
+          break;
+        }
+      }
+
+      if(ratingsAllBlacklisted) {
+        continue;
+      }
+
       // Classify the member numbers by type.
       Map<MemberNumberType, List<String>> numbers = {};
       Map<String, DbShooterRating> numbersToRatings = {};

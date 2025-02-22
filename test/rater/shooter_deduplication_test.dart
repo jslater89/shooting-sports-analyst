@@ -1041,6 +1041,38 @@ void main() async {
     var results = deduplication.unwrap();
     expect(reason: "number of results", results, isEmpty);
   });
+
+  test("Mark Miller Already Added Ambiguous Mapping", () async {
+    var project = DbRatingProject(
+      name: "Mark Miller Already Added Ambiguous Mapping",
+      sportName: uspsaSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+        userMemberNumberMappings: {
+          "FY88788": "L6166",
+        },
+        memberNumberMappingBlacklist: {
+          "TY7057": ["FY88788", "L6166"],
+          "L6166": ["TY7057"],
+          "FY88788": ["TY7057"],
+        }
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "mark-miller-already-added-ambiguous-mapping");
+    var deduplicator = USPSADeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      checkDataEntryErrors: true,
+      group: ratingGroup,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, isEmpty);
+  });
+
   // #endregion
 }
 
@@ -1270,6 +1302,13 @@ Future<void> setupTestDb(AnalystDatabase db) async {
     matchId: "multiple-international-standard-numbers",
   );
 
+  var markMillerAlreadyAddedAmbiguousMappingMatch = generateMatch(
+    shooters: [competitorMap["FY88788"]!, competitorMap["TY7057"]!],
+    date: DateTime(2024, 6, 7),
+    matchName: "Mark Miller Already Added Ambiguous Mapping",
+    matchId: "mark-miller-already-added-ambiguous-mapping",
+  );
+
   var futures = [
     db.saveMatch(simpleDataEntryMatch),
     db.saveMatch(simpleBlacklistMatch),
@@ -1298,6 +1337,7 @@ Future<void> setupTestDb(AnalystDatabase db) async {
     db.saveMatch(markMillerMatch),
     db.saveMatch(notAMemberNumberMatch),
     db.saveMatch(multipleInternationalStandardNumbersMatch),
+    db.saveMatch(markMillerAlreadyAddedAmbiguousMappingMatch),
   ];
   await Future.wait(futures);
 }
@@ -1441,6 +1481,20 @@ Map<String, Shooter> generateCompetitors() {
     firstName: "Mark",
     lastName: "Miller",
     memberNumber: "L6166",
+  );
+
+  // Mark Millers (mapping applied at shooter add)
+  competitors["FY88788"] = Shooter(
+    firstName: "Mark",
+    lastName: "Miller",
+    memberNumber: "FY88788",
+  );
+  competitors["FY88788"]!.memberNumber = "L6166";
+
+  competitors["TY7058"] = Shooter(
+    firstName: "Mark",
+    lastName: "Miller",
+    memberNumber: "TY7058",
   );
 
   return competitors;
