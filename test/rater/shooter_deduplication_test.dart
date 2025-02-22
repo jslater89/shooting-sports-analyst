@@ -16,6 +16,7 @@ import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/uspsa_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
+import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
@@ -982,6 +983,64 @@ void main() async {
     expect(reason: "cause is FixedInSettings", result.causes.first, isA<FixedInSettings>());
   });
 
+
+    test("Literal NOTAMEMBER -> Associate", () async {
+    var project = DbRatingProject(
+      name: "Literal NOTAMEMBER -> Associate",
+      sportName: uspsaSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "notamember-to-associate");
+    var deduplicator = USPSADeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      checkDataEntryErrors: true,
+      group: ratingGroup,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    var result = results.first;
+    expect(reason: "number of causes", result.causes, hasLength(1));
+    expect(reason: "cause is MultipleNumbersOfType", result.causes.first, isA<MultipleNumbersOfType>());
+    var multipleNumbersOfType = result.causes.first as MultipleNumbersOfType;
+    expect(reason: "member number type", multipleNumbersOfType.memberNumberType, equals(MemberNumberType.standard));
+    expect(reason: "detected NOTAMEMBER invalid", multipleNumbersOfType.probablyInvalidNumbers, equals(["NOTAMEMBER"]));
+    expect(reason: "can resolve automatically", multipleNumbersOfType.canResolveAutomatically, isTrue);
+    expect(reason: "number of proposed actions", result.proposedActions, hasLength(1));
+    expect(reason: "proposed action is DataEntryFix", result.proposedActions.first, isA<DataEntryFix>());
+    var dataEntryFix = result.proposedActions.first as DataEntryFix;
+    expect(reason: "data entry fix source number", dataEntryFix.sourceNumber, equals("NOTAMEMBER"));
+    expect(reason: "data entry fix target number", dataEntryFix.targetNumber, equals("A123456"));
+  });
+
+  test("Multiple International Standard Numbers", () async {
+    var project = DbRatingProject(
+      name: "Multiple International Standard Numbers",
+      sportName: uspsaSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "multiple-international-standard-numbers");
+    var deduplicator = USPSADeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      checkDataEntryErrors: true,
+      group: ratingGroup,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, isEmpty);
+  });
   // #endregion
 }
 
@@ -1197,6 +1256,20 @@ Future<void> setupTestDb(AnalystDatabase db) async {
     matchId: "corrected-ambiguous-mapping",
   );
 
+  var notAMemberNumberMatch = generateMatch(
+    shooters: [competitorMap["NOTAMEMBER"]!, competitorMap["A123456"]!],
+    date: DateTime(2024, 5, 28),
+    matchName: "Literal NOTAMEMBER -> Associate",
+    matchId: "notamember-to-associate",
+  );
+
+  var multipleInternationalStandardNumbersMatch = generateMatch(
+    shooters: [competitorMap["F97321"]!, competitorMap["TYF97321"]!],
+    date: DateTime(2024, 6, 1),
+    matchName: "Multiple International Standard Numbers",
+    matchId: "multiple-international-standard-numbers",
+  );
+
   var futures = [
     db.saveMatch(simpleDataEntryMatch),
     db.saveMatch(simpleBlacklistMatch),
@@ -1223,6 +1296,8 @@ Future<void> setupTestDb(AnalystDatabase db) async {
     db.saveMatch(invalidNumberDataEntryFixMatch),
     db.saveMatch(invalidNumberDataEntryFixMatch2),
     db.saveMatch(markMillerMatch),
+    db.saveMatch(notAMemberNumberMatch),
+    db.saveMatch(multipleInternationalStandardNumbersMatch),
   ];
   await Future.wait(futures);
 }
@@ -1257,6 +1332,11 @@ Map<String, Shooter> generateCompetitors() {
     firstName: "John",
     lastName: "Deduplicator",
     memberNumber: "ABCD",
+  );
+  competitors["NOTAMEMBER"] = Shooter(
+    firstName: "John",
+    lastName: "Deduplicator",
+    memberNumber: "NOTAMEMBER",
   );
   competitors["TY1234"] = Shooter(
     firstName: "John",
@@ -1334,6 +1414,16 @@ Map<String, Shooter> generateCompetitors() {
     firstName: "Vaughn",
     lastName: "Deduplicator",
     memberNumber: "A124456",
+  );
+  competitors["F97321"] = Shooter(
+    firstName: "Vaughn",
+    lastName: "Deduplicator",
+    memberNumber: "F97321",
+  );
+  competitors["TYF97321"] = Shooter(
+    firstName: "Vaughn",
+    lastName: "Deduplicator",
+    memberNumber: "TYF97321",
   );
 
   // Mark Millers

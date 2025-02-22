@@ -247,9 +247,11 @@ class USPSADeduplicator extends ShooterDeduplicator {
           distinctRatings[r] = true;
         }
         if(distinctRatings.length != 1) {
-          // This log message is expected during tests.
-          // TODO: this shows up outside of tests too, for reasons I'm not totally sure about.
-          // Come back to it with the debugger at some point.
+          // We might end up with distinct rating objects here because of the coalesce
+          // associate member number operation above.
+          // TODO: investigate actual outputs to see if we have duplicated competitors
+          // If we don't, we can remove this log message. Otherwise, we need to inform
+          // ProjectLoader about the identity thing and make sure they get correctly merged.
           _log.w("${distinctRatings.length} rating objects for $name, but only one member number: ${conflict.flattenedMemberNumbers.first}");
         }
         continue;
@@ -1095,7 +1097,7 @@ class USPSADeduplicator extends ShooterDeduplicator {
     return n;
   }
 
-  /// Return the best (i.e. longest) associate number from a list of numbers.
+  /// Return the best (i.e. longest-duration) associate number from a list of numbers.
   String _bestAssociateNumber(List<String> numbers) {
     String? fy;
     String? ty;

@@ -1,0 +1,1546 @@
+
+Marble Distribution (each █ = 1 competitors):
+Marbles | Count
+--------------------------------------------------
+    100 | ████ (3)
+    120 | ███████ (5)
+    140 | ███████ (5)
+    160 | ███████████████████ (14)
+    180 | ████████████████████████ (18)
+    200 | ████████████████████████████████████████ (30)
+    220 | ███████████ (8)
+    240 | ███████████ (8)
+    260 | █████████ (7)
+    280 | █ (1)
+    300 | █ (1)
+1-th competitor: Competitor(id: 63, mu: 1.54, sigma: 0.15, ordinalMu: 1.39, marbles: 303, score: 121.00)
+place: 4/48, score: 0.94, marbles won/staked/available: 72/40/1920, rating score: 45.00
+place: 1/44, score: 1.00, marbles won/staked/available: 79/50/1766, rating score: 44.00
+place: 2/33, score: 0.99, marbles won/staked/available: 80/56/1301, rating score: 32.00
+place: 4/32, score: 0.92, marbles won/staked/available: 64/46/1278, rating score: 29.00
+
+
+
+2-th competitor: Competitor(id: 48, mu: 1.36, sigma: 0.08, ordinalMu: 1.28, marbles: 281, score: 111.00)
+place: 7/48, score: 0.84, marbles won/staked/available: 64/40/1920, rating score: 42.00
+place: 3/40, score: 0.84, marbles won/staked/available: 73/49/1600, rating score: 38.00
+place: 2/32, score: 0.96, marbles won/staked/available: 66/45/1278, rating score: 31.00
+place: 3/27, score: 0.97, marbles won/staked/available: 66/54/1065, rating score: 25.00
+
+
+
+3-th competitor: Competitor(id: 42, mu: 1.24, sigma: 0.17, ordinalMu: 1.06, marbles: 277, score: 110.00)
+place: 3/44, score: 0.86, marbles won/staked/available: 67/46/1766, rating score: 42.00
+place: 9/48, score: 0.78, marbles won/staked/available: 60/40/1920, rating score: 40.00
+place: 5/32, score: 0.82, marbles won/staked/available: 56/44/1278, rating score: 28.00
+place: 3/28, score: 0.91, marbles won/staked/available: 75/51/1135, rating score: 26.00
+
+
+
+4-th competitor: Competitor(id: 90, mu: 1.35, sigma: 0.08, ordinalMu: 1.28, marbles: 269, score: 120.00)
+place: 5/48, score: 0.90, marbles won/staked/available: 69/40/1920, rating score: 44.00
+place: 5/44, score: 0.81, marbles won/staked/available: 64/46/1766, rating score: 40.00
+place: 5/40, score: 0.81, marbles won/staked/available: 71/49/1600, rating score: 36.00
+
+
+
+5-th competitor: Competitor(id: 87, mu: 1.16, sigma: 0.15, ordinalMu: 1.01, marbles: 269, score: 115.00)
+place: 2/48, score: 1.00, marbles won/staked/available: 77/40/1920, rating score: 47.00
+place: 6/40, score: 0.76, marbles won/staked/available: 66/49/1600, rating score: 35.00
+place: 12/44, score: 0.67, marbles won/staked/available: 53/47/1766, rating score: 33.00
+place: 4/27, score: 0.90, marbles won/staked/available: 61/52/1065, rating score: 24.00
+
+
+
+Middle competitor: Competitor(id: 27, mu: 0.91, sigma: 0.16, ordinalMu: 0.76, marbles: 201, score: 26.00)
+place: 23/48, score: 0.53, marbles won/staked/available: 41/40/1920, rating score: 26.00
+
+
+
+
+Top Competitors By Category:
+Rank  By Marbles                             By Score                               By Mu
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+1.    ID 63   Ma:303  S:121.0 Mu:1.54        ID 63   Ma:303  S:121.0 Mu:1.54        ID 35   Ma:267  S:81.0 Mu:1.49
+       MuR: 2, SR: 1, oMu:1.39, σ:0.15        MuR: 2, MaR: 1, oMu:1.39, σ:0.15       MaR: 6, SR:16, oMu:1.43, σ:0.06
+2.    ID 48   Ma:281  S:111.0 Mu:1.36        ID 90   Ma:269  S:120.0 Mu:1.35        ID 63   Ma:303  S:121.0 Mu:1.54
+       MuR: 3, SR: 5, oMu:1.28, σ:0.08        MuR: 4, MaR: 4, oMu:1.28, σ:0.08       MaR: 1, SR: 1, oMu:1.39, σ:0.15
+3.    ID 42   Ma:277  S:110.0 Mu:1.24        ID 87   Ma:269  S:115.0 Mu:1.16        ID 48   Ma:281  S:111.0 Mu:1.36
+       MuR:18, SR: 6, oMu:1.06, σ:0.17        MuR:24, MaR: 5, oMu:1.01, σ:0.15       MaR: 2, SR: 5, oMu:1.28, σ:0.08
+4.    ID 90   Ma:269  S:120.0 Mu:1.35        ID 99   Ma:261  S:114.0 Mu:1.22        ID 90   Ma:269  S:120.0 Mu:1.35
+       MuR: 4, SR: 2, oMu:1.28, σ:0.08        MuR:12, MaR: 9, oMu:1.14, σ:0.07       MaR: 4, SR: 2, oMu:1.28, σ:0.08
+5.    ID 87   Ma:269  S:115.0 Mu:1.16        ID 48   Ma:281  S:111.0 Mu:1.36        ID 15   Ma:265  S:85.0 Mu:1.39
+       MuR:24, SR: 3, oMu:1.01, σ:0.15        MuR: 3, MaR: 2, oMu:1.28, σ:0.08       MaR: 7, SR:14, oMu:1.27, σ:0.13
+
+Correlation between mu and marbles: 0.900
+
+Correlation between mu and score: 0.659
+
+Marble Distribution (each █ = 1 competitors):
+Marbles | Count
+--------------------------------------------------
+    120 | ███████████ (6)
+    140 | ████████████████ (9)
+    160 | ███████████████████████████ (15)
+    180 | ██████████████████████████████████████ (21)
+    200 | ████████████████████████████████████████ (22)
+    220 | █████████████████████████ (14)
+    240 | ███████ (4)
+    260 | █████████ (5)
+    280 | █████ (3)
+    300 | ██ (1)
+1-th competitor: Competitor(id: 84, mu: 1.65, sigma: 0.20, ordinalMu: 1.45, marbles: 314, score: 106.00)
+place: 5/42, score: 0.84, marbles won/staked/available: 64/40/1680, rating score: 38.00
+place: 1/35, score: 1.00, marbles won/staked/available: 98/54/1410, rating score: 35.00
+place: 1/33, score: 1.00, marbles won/staked/available: 91/45/1376, rating score: 33.00
+
+
+
+2-th competitor: Competitor(id: 96, mu: 1.39, sigma: 0.16, ordinalMu: 1.23, marbles: 292, score: 106.00)
+place: 2/42, score: 0.99, marbles won/staked/available: 76/49/1680, rating score: 41.00
+place: 1/33, score: 1.00, marbles won/staked/available: 84/40/1320, rating score: 33.00
+place: 7/38, score: 0.87, marbles won/staked/available: 61/54/1543, rating score: 32.00
+place: 1/31, score: 1.00, marbles won/staked/available: 70/56/1278, rating score: 31.00
+
+
+
+3-th competitor: Competitor(id: 5, mu: 1.30, sigma: 0.11, ordinalMu: 1.19, marbles: 286, score: 113.00)
+place: 2/46, score: 0.88, marbles won/staked/available: 62/47/1844, rating score: 45.00
+place: 5/38, score: 0.90, marbles won/staked/available: 63/43/1543, rating score: 34.00
+place: 2/35, score: 0.82, marbles won/staked/available: 80/51/1410, rating score: 34.00
+place: 7/33, score: 0.65, marbles won/staked/available: 59/50/1376, rating score: 27.00
+place: 10/33, score: 0.63, marbles won/staked/available: 53/40/1320, rating score: 24.00
+
+
+
+4-th competitor: Competitor(id: 30, mu: 1.33, sigma: 0.17, ordinalMu: 1.16, marbles: 280, score: 112.00)
+place: 5/46, score: 0.85, marbles won/staked/available: 60/51/1844, rating score: 42.00
+place: 3/42, score: 0.95, marbles won/staked/available: 73/45/1680, rating score: 40.00
+place: 4/33, score: 0.79, marbles won/staked/available: 66/40/1320, rating score: 30.00
+place: 3/31, score: 0.91, marbles won/staked/available: 64/54/1278, rating score: 29.00
+place: 6/33, score: 0.66, marbles won/staked/available: 60/53/1376, rating score: 28.00
+
+
+
+5-th competitor: Competitor(id: 61, mu: 1.39, sigma: 0.07, ordinalMu: 1.32, marbles: 274, score: 110.00)
+place: 6/46, score: 0.83, marbles won/staked/available: 59/46/1844, rating score: 41.00
+place: 2/38, score: 0.98, marbles won/staked/available: 68/40/1543, rating score: 37.00
+place: 2/33, score: 0.78, marbles won/staked/available: 71/48/1376, rating score: 32.00
+place: 4/31, score: 0.91, marbles won/staked/available: 63/53/1278, rating score: 28.00
+
+
+
+Middle competitor: Competitor(id: 88, mu: 0.92, sigma: 0.08, ordinalMu: 0.84, marbles: 197, score: 51.00)
+place: 15/35, score: 0.44, marbles won/staked/available: 43/39/1410, rating score: 21.00
+place: 22/38, score: 0.56, marbles won/staked/available: 39/39/1543, rating score: 17.00
+place: 21/33, score: 0.39, marbles won/staked/available: 33/40/1320, rating score: 13.00
+
+
+
+
+Top Competitors By Category:
+Rank  By Marbles                             By Score                               By Mu
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+1.    ID 84   Ma:314  S:106.0 Mu:1.65        ID 5    Ma:286  S:113.0 Mu:1.30        ID 84   Ma:314  S:106.0 Mu:1.65
+       MuR: 1, SR: 6, oMu:1.45, σ:0.20        MuR: 6, MaR: 3, oMu:1.19, σ:0.11       MaR: 1, SR: 6, oMu:1.45, σ:0.20
+2.    ID 96   Ma:292  S:106.0 Mu:1.39        ID 30   Ma:280  S:112.0 Mu:1.33        ID 61   Ma:274  S:110.0 Mu:1.39
+       MuR: 3, SR: 5, oMu:1.23, σ:0.16        MuR:10, MaR: 4, oMu:1.16, σ:0.17       MaR: 5, SR: 3, oMu:1.32, σ:0.07
+3.    ID 5    Ma:286  S:113.0 Mu:1.30        ID 61   Ma:274  S:110.0 Mu:1.39        ID 96   Ma:292  S:106.0 Mu:1.39
+       MuR: 6, SR: 1, oMu:1.19, σ:0.11        MuR: 2, MaR: 5, oMu:1.32, σ:0.07       MaR: 2, SR: 5, oMu:1.23, σ:0.16
+4.    ID 30   Ma:280  S:112.0 Mu:1.33        ID 35   Ma:268  S:109.0 Mu:1.11        ID 79   Ma:263  S:99.0 Mu:1.37
+       MuR:10, SR: 2, oMu:1.16, σ:0.17        MuR:35, MaR: 7, oMu:0.94, σ:0.18       MaR: 8, SR: 8, oMu:1.21, σ:0.16
+5.    ID 61   Ma:274  S:110.0 Mu:1.39        ID 96   Ma:292  S:106.0 Mu:1.39        ID 94   Ma:260  S:95.0 Mu:1.30
+       MuR: 2, SR: 3, oMu:1.32, σ:0.07        MuR: 3, MaR: 2, oMu:1.23, σ:0.16       MaR: 9, SR:10, oMu:1.21, σ:0.08
+
+Correlation between mu and marbles: 0.895
+
+Correlation between mu and score: 0.752
+
+Marble Distribution (each █ = 1 competitors):
+Marbles | Count
+--------------------------------------------------
+    100 | ███ (2)
+    120 | ███████████ (8)
+    140 | ███████ (5)
+    160 | ██████████████ (10)
+    180 | ███████████████████████ (16)
+    200 | ████████████████████████████████████████ (28)
+    220 | ██████████████████████████ (18)
+    240 | ███████████ (8)
+    260 | ██████ (4)
+    280 | █ (1)
+1-th competitor: Competitor(id: 69, mu: 1.35, sigma: 0.19, ordinalMu: 1.15, marbles: 289, score: 97.00)
+place: 2/35, score: 0.99, marbles won/staked/available: 76/47/1359, rating score: 34.00
+place: 1/32, score: 1.00, marbles won/staked/available: 74/40/1294, rating score: 32.00
+place: 2/32, score: 0.96, marbles won/staked/available: 79/53/1308, rating score: 31.00
+
+
+
+2-th competitor: Competitor(id: 81, mu: 1.31, sigma: 0.08, ordinalMu: 1.23, marbles: 279, score: 104.00)
+place: 3/44, score: 0.90, marbles won/staked/available: 73/45/1754, rating score: 42.00
+place: 3/34, score: 0.77, marbles won/staked/available: 63/40/1360, rating score: 32.00
+place: 3/32, score: 0.95, marbles won/staked/available: 78/50/1308, rating score: 30.00
+
+
+
+3-th competitor: Competitor(id: 62, mu: 1.26, sigma: 0.19, ordinalMu: 1.07, marbles: 267, score: 90.00)
+place: 1/34, score: 1.00, marbles won/staked/available: 82/40/1360, rating score: 34.00
+place: 3/32, score: 0.93, marbles won/staked/available: 69/48/1294, rating score: 30.00
+place: 6/31, score: 0.78, marbles won/staked/available: 51/53/1276, rating score: 26.00
+place: 8/32, score: 0.70, marbles won/staked/available: 58/52/1308, rating score: 25.00
+
+
+
+4-th competitor: Competitor(id: 43, mu: 1.24, sigma: 0.15, ordinalMu: 1.09, marbles: 261, score: 100.00)
+place: 2/44, score: 0.94, marbles won/staked/available: 76/40/1754, rating score: 43.00
+place: 1/35, score: 1.00, marbles won/staked/available: 77/47/1359, rating score: 35.00
+place: 10/31, score: 0.75, marbles won/staked/available: 48/53/1276, rating score: 22.00
+
+
+
+5-th competitor: Competitor(id: 44, mu: 1.21, sigma: 0.20, ordinalMu: 1.01, marbles: 260, score: 61.00)
+place: 1/32, score: 1.00, marbles won/staked/available: 83/44/1308, rating score: 32.00
+place: 7/35, score: 0.79, marbles won/staked/available: 61/40/1359, rating score: 29.00
+
+
+
+Middle competitor: Competitor(id: 49, mu: 0.70, sigma: 0.11, ordinalMu: 0.59, marbles: 200, score: 0.00)
+
+
+
+
+
+Top Competitors By Category:
+Rank  By Marbles                             By Score                               By Mu
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+1.    ID 69   Ma:289  S:97.0 Mu:1.35        ID 81   Ma:279  S:104.0 Mu:1.31        ID 86   Ma:231  S:31.0 Mu:1.49
+       MuR:10, SR: 3, oMu:1.15, σ:0.19        MuR: 4, MaR: 2, oMu:1.23, σ:0.08       MaR:20, SR:58, oMu:1.40, σ:0.08
+2.    ID 81   Ma:279  S:104.0 Mu:1.31        ID 43   Ma:261  S:100.0 Mu:1.24        ID 3    Ma:247  S:64.0 Mu:1.43
+       MuR: 4, SR: 1, oMu:1.23, σ:0.08        MuR:12, MaR: 4, oMu:1.09, σ:0.15       MaR:12, SR:25, oMu:1.35, σ:0.08
+3.    ID 62   Ma:267  S:90.0 Mu:1.26        ID 69   Ma:289  S:97.0 Mu:1.35        ID 84   Ma:224  S:38.0 Mu:1.42
+       MuR:14, SR: 5, oMu:1.07, σ:0.19        MuR:10, MaR: 1, oMu:1.15, σ:0.19       MaR:26, SR:48, oMu:1.29, σ:0.13
+4.    ID 43   Ma:261  S:100.0 Mu:1.24        ID 15   Ma:250  S:93.0 Mu:1.16        ID 81   Ma:279  S:104.0 Mu:1.31
+       MuR:12, SR: 2, oMu:1.09, σ:0.15        MuR:20, MaR:10, oMu:1.02, σ:0.14       MaR: 2, SR: 1, oMu:1.23, σ:0.08
+5.    ID 44   Ma:260  S:61.0 Mu:1.21        ID 62   Ma:267  S:90.0 Mu:1.26        ID 13   Ma:218  S:29.0 Mu:1.38
+       MuR:21, SR:28, oMu:1.01, σ:0.20        MuR:14, MaR: 3, oMu:1.07, σ:0.19       MaR:34, SR:60, oMu:1.23, σ:0.15
+
+Correlation between mu and marbles: 0.870
+
+Correlation between mu and score: 0.703
+
+Marble Distribution (each █ = 1 competitors):
+Marbles | Count
+--------------------------------------------------
+    100 | ████ (2)
+    120 | ██████ (3)
+    140 | ███████████████ (8)
+    160 | ██████████████████████████████████████ (20)
+    180 | ████████████████████████████████ (17)
+    200 | ████████████████████████████████████████ (21)
+    220 | ███████████████████████████ (14)
+    240 | ███████████ (6)
+    260 | █████████████ (7)
+    280 | ██ (1)
+    300 | ██ (1)
+1-th competitor: Competitor(id: 21, mu: 1.25, sigma: 0.20, ordinalMu: 1.05, marbles: 300, score: 103.00)
+place: 7/48, score: 0.88, marbles won/staked/available: 63/40/1920, rating score: 42.00
+place: 7/37, score: 0.78, marbles won/staked/available: 65/45/1415, rating score: 31.00
+place: 1/30, score: 1.00, marbles won/staked/available: 101/50/1198, rating score: 30.00
+place: 6/31, score: 0.87, marbles won/staked/available: 55/49/1234, rating score: 26.00
+place: 16/38, score: 0.55, marbles won/staked/available: 45/45/1538, rating score: 23.00
+
+
+
+2-th competitor: Competitor(id: 68, mu: 1.34, sigma: 0.09, ordinalMu: 1.25, marbles: 287, score: 113.00)
+place: 1/48, score: 1.00, marbles won/staked/available: 71/40/1920, rating score: 48.00
+place: 4/37, score: 0.90, marbles won/staked/available: 76/51/1415, rating score: 34.00
+place: 8/38, score: 0.79, marbles won/staked/available: 65/48/1538, rating score: 31.00
+place: 1/31, score: 1.00, marbles won/staked/available: 62/56/1234, rating score: 31.00
+place: 5/25, score: 0.78, marbles won/staked/available: 54/46/1003, rating score: 21.00
+
+
+
+3-th competitor: Competitor(id: 19, mu: 1.24, sigma: 0.10, ordinalMu: 1.14, marbles: 279, score: 109.00)
+place: 6/48, score: 0.89, marbles won/staked/available: 63/40/1920, rating score: 43.00
+place: 1/33, score: 1.00, marbles won/staked/available: 81/45/1337, rating score: 33.00
+place: 6/38, score: 0.83, marbles won/staked/available: 68/52/1538, rating score: 33.00
+place: 2/31, score: 0.95, marbles won/staked/available: 59/55/1234, rating score: 30.00
+
+
+
+4-th competitor: Competitor(id: 93, mu: 1.44, sigma: 0.08, ordinalMu: 1.36, marbles: 275, score: 75.00)
+place: 3/48, score: 0.98, marbles won/staked/available: 70/40/1920, rating score: 46.00
+place: 2/30, score: 0.89, marbles won/staked/available: 91/46/1198, rating score: 29.00
+
+
+
+5-th competitor: Competitor(id: 15, mu: 1.31, sigma: 0.08, ordinalMu: 1.23, marbles: 275, score: 86.00)
+place: 2/37, score: 0.96, marbles won/staked/available: 81/45/1415, rating score: 36.00
+place: 5/30, score: 0.66, marbles won/staked/available: 67/52/1198, rating score: 26.00
+place: 2/25, score: 0.91, marbles won/staked/available: 64/40/1003, rating score: 24.00
+
+
+
+Middle competitor: Competitor(id: 86, mu: 0.73, sigma: 0.05, ordinalMu: 0.68, marbles: 199, score: 23.00)
+place: 15/37, score: 0.47, marbles won/staked/available: 39/40/1415, rating score: 23.00
+
+
+
+
+Top Competitors By Category:
+Rank  By Marbles                             By Score                               By Mu
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+1.    ID 21   Ma:300  S:103.0 Mu:1.25        ID 68   Ma:287  S:113.0 Mu:1.34        ID 47   Ma:274  S:100.0 Mu:1.45
+       MuR:11, SR: 4, oMu:1.05, σ:0.20        MuR: 4, MaR: 2, oMu:1.25, σ:0.09       MaR: 6, SR: 5, oMu:1.37, σ:0.08
+2.    ID 68   Ma:287  S:113.0 Mu:1.34        ID 19   Ma:279  S:109.0 Mu:1.24        ID 93   Ma:275  S:75.0 Mu:1.44
+       MuR: 4, SR: 1, oMu:1.25, σ:0.09        MuR: 8, MaR: 3, oMu:1.14, σ:0.10       MaR: 4, SR:14, oMu:1.36, σ:0.08
+3.    ID 19   Ma:279  S:109.0 Mu:1.24        ID 57   Ma:262  S:103.0 Mu:1.12        ID 65   Ma:236  S:36.0 Mu:1.47
+       MuR: 8, SR: 2, oMu:1.14, σ:0.10        MuR:20, MaR: 9, oMu:1.01, σ:0.11       MaR:16, SR:54, oMu:1.36, σ:0.11
+4.    ID 93   Ma:275  S:75.0 Mu:1.44        ID 21   Ma:300  S:103.0 Mu:1.25        ID 68   Ma:287  S:113.0 Mu:1.34
+       MuR: 2, SR:14, oMu:1.36, σ:0.08        MuR:11, MaR: 1, oMu:1.05, σ:0.20       MaR: 2, SR: 1, oMu:1.25, σ:0.09
+5.    ID 15   Ma:275  S:86.0 Mu:1.31        ID 47   Ma:274  S:100.0 Mu:1.45        ID 15   Ma:275  S:86.0 Mu:1.31
+       MuR: 5, SR: 9, oMu:1.23, σ:0.08        MuR: 1, MaR: 6, oMu:1.37, σ:0.08       MaR: 5, SR: 9, oMu:1.23, σ:0.08
+
+Correlation between mu and marbles: 0.892
+
+Correlation between mu and score: 0.585
+
+Marble Distribution (each █ = 1 competitors):
+Marbles | Count
+--------------------------------------------------
+     80 | ██ (1)
+    100 | ██████████ (5)
+    120 | ██████ (3)
+    140 | ██████████████████████ (11)
+    160 | ██████████████████████████ (13)
+    180 | ████████████████████████ (12)
+    200 | ████████████████████████████████████████ (20)
+    220 | ████████████████████████ (12)
+    240 | ████████████████████ (10)
+    260 | ██████████████████████ (11)
+    280 | ████ (2)
+1-th competitor: Competitor(id: 0, mu: 1.33, sigma: 0.10, ordinalMu: 1.23, marbles: 288, score: 94.00)
+place: 8/41, score: 0.79, marbles won/staked/available: 67/40/1640, rating score: 34.00
+place: 9/39, score: 0.72, marbles won/staked/available: 61/45/1564, rating score: 31.00
+place: 5/33, score: 0.86, marbles won/staked/available: 69/55/1333, rating score: 29.00
+place: 2/26, score: 0.92, marbles won/staked/available: 80/49/1015, rating score: 25.00
+
+
+
+2-th competitor: Competitor(id: 99, mu: 1.33, sigma: 0.17, ordinalMu: 1.15, marbles: 288, score: 76.00)
+place: 1/30, score: 1.00, marbles won/staked/available: 102/40/1215, rating score: 30.00
+place: 1/26, score: 1.00, marbles won/staked/available: 87/52/1015, rating score: 26.00
+place: 14/33, score: 0.62, marbles won/staked/available: 50/59/1333, rating score: 20.00
+
+
+
+3-th competitor: Competitor(id: 2, mu: 1.43, sigma: 0.11, ordinalMu: 1.32, marbles: 275, score: 91.00)
+place: 1/41, score: 1.00, marbles won/staked/available: 84/40/1640, rating score: 41.00
+place: 6/30, score: 0.65, marbles won/staked/available: 66/49/1215, rating score: 25.00
+place: 2/26, score: 0.96, marbles won/staked/available: 66/52/1066, rating score: 25.00
+
+
+
+4-th competitor: Competitor(id: 49, mu: 1.45, sigma: 0.10, ordinalMu: 1.35, marbles: 270, score: 77.00)
+place: 2/41, score: 0.96, marbles won/staked/available: 81/40/1640, rating score: 40.00
+place: 3/39, score: 0.91, marbles won/staked/available: 77/48/1564, rating score: 37.00
+
+
+
+5-th competitor: Competitor(id: 67, mu: 1.25, sigma: 0.18, ordinalMu: 1.07, marbles: 270, score: 73.00)
+place: 2/33, score: 0.99, marbles won/staked/available: 80/47/1333, rating score: 32.00
+place: 9/31, score: 0.74, marbles won/staked/available: 57/40/1197, rating score: 23.00
+place: 9/26, score: 0.72, marbles won/staked/available: 63/43/1015, rating score: 18.00
+
+
+
+Middle competitor: Competitor(id: 30, mu: 0.86, sigma: 0.11, ordinalMu: 0.75, marbles: 200, score: 0.00)
+
+
+
+
+
+Top Competitors By Category:
+Rank  By Marbles                             By Score                               By Mu
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+1.    ID 0    Ma:288  S:94.0 Mu:1.33        ID 0    Ma:288  S:94.0 Mu:1.33        ID 48   Ma:229  S:26.0 Mu:1.48
+       MuR: 7, SR: 1, oMu:1.23, σ:0.10        MuR: 7, MaR: 1, oMu:1.23, σ:0.10       MaR:28, SR:55, oMu:1.41, σ:0.07
+2.    ID 99   Ma:288  S:76.0 Mu:1.33        ID 2    Ma:275  S:91.0 Mu:1.43        ID 49   Ma:270  S:77.0 Mu:1.45
+       MuR:10, SR:14, oMu:1.15, σ:0.17        MuR: 3, MaR: 3, oMu:1.32, σ:0.11       MaR: 4, SR:11, oMu:1.35, σ:0.10
+3.    ID 2    Ma:275  S:91.0 Mu:1.43        ID 32   Ma:253  S:91.0 Mu:1.14        ID 2    Ma:275  S:91.0 Mu:1.43
+       MuR: 3, SR: 2, oMu:1.32, σ:0.11        MuR:28, MaR:16, oMu:0.99, σ:0.15       MaR: 3, SR: 2, oMu:1.32, σ:0.11
+4.    ID 49   Ma:270  S:77.0 Mu:1.45        ID 72   Ma:264  S:90.0 Mu:1.23        ID 1    Ma:262  S:89.0 Mu:1.34
+       MuR: 2, SR:11, oMu:1.35, σ:0.10        MuR:16, MaR: 7, oMu:1.09, σ:0.14       MaR: 9, SR: 5, oMu:1.25, σ:0.09
+5.    ID 67   Ma:270  S:73.0 Mu:1.25        ID 1    Ma:262  S:89.0 Mu:1.34        ID 84   Ma:262  S:77.0 Mu:1.31
+       MuR:18, SR:15, oMu:1.07, σ:0.18        MuR: 4, MaR: 9, oMu:1.25, σ:0.09       MaR:10, SR:13, oMu:1.25, σ:0.06
+
+Correlation between mu and marbles: 0.928
+
+Correlation between mu and score: 0.658
+
+Marble Distribution (each █ = 1 competitors):
+Marbles | Count
+--------------------------------------------------
+    100 | █████ (3)
+    120 | ███ (2)
+    140 | ██████████████ (9)
+    160 | █████████████████████ (13)
+    180 | ██████████████████████████████ (19)
+    200 | ████████████████████████████████████████ (25)
+    220 | ███████████████████████████ (17)
+    240 | █████████████ (8)
+    280 | ███ (2)
+    300 | ███ (2)
+1-th competitor: Competitor(id: 70, mu: 1.39, sigma: 0.17, ordinalMu: 1.22, marbles: 307, score: 134.00)
+place: 3/48, score: 0.93, marbles won/staked/available: 68/60/1946, rating score: 46.00
+place: 2/45, score: 0.93, marbles won/staked/available: 75/40/1799, rating score: 44.00
+place: 2/45, score: 1.00, marbles won/staked/available: 73/47/1800, rating score: 44.00
+place: 1/28, score: 1.00, marbles won/staked/available: 90/52/1155, rating score: 28.00
+
+
+
+2-th competitor: Competitor(id: 77, mu: 1.52, sigma: 0.15, ordinalMu: 1.37, marbles: 304, score: 121.00)
+place: 1/45, score: 1.00, marbles won/staked/available: 81/40/1799, rating score: 45.00
+place: 4/45, score: 0.91, marbles won/staked/available: 67/48/1800, rating score: 42.00
+place: 1/34, score: 1.00, marbles won/staked/available: 78/56/1349, rating score: 34.00
+place: 2/28, score: 0.82, marbles won/staked/available: 74/52/1155, rating score: 27.00
+
+
+
+3-th competitor: Competitor(id: 90, mu: 1.36, sigma: 0.05, ordinalMu: 1.31, marbles: 289, score: 118.00)
+place: 5/48, score: 0.92, marbles won/staked/available: 67/56/1946, rating score: 44.00
+place: 5/45, score: 0.89, marbles won/staked/available: 65/40/1800, rating score: 41.00
+place: 2/34, score: 0.88, marbles won/staked/available: 68/52/1349, rating score: 33.00
+place: 2/32, score: 0.92, marbles won/staked/available: 82/45/1286, rating score: 31.00
+
+
+
+4-th competitor: Competitor(id: 63, mu: 1.35, sigma: 0.13, ordinalMu: 1.22, marbles: 282, score: 99.00)
+place: 3/45, score: 0.83, marbles won/staked/available: 67/40/1799, rating score: 43.00
+place: 1/32, score: 1.00, marbles won/staked/available: 88/48/1286, rating score: 32.00
+place: 5/28, score: 0.67, marbles won/staked/available: 60/45/1155, rating score: 24.00
+
+
+
+5-th competitor: Competitor(id: 18, mu: 1.19, sigma: 0.18, ordinalMu: 1.01, marbles: 256, score: 96.00)
+place: 1/45, score: 1.00, marbles won/staked/available: 74/44/1800, rating score: 45.00
+place: 18/45, score: 0.53, marbles won/staked/available: 43/44/1799, rating score: 28.00
+place: 6/28, score: 0.65, marbles won/staked/available: 58/50/1155, rating score: 23.00
+place: 6/26, score: 0.69, marbles won/staked/available: 59/40/1040, rating score: 21.00
+
+
+
+Middle competitor: Competitor(id: 17, mu: 0.90, sigma: 0.18, ordinalMu: 0.72, marbles: 203, score: 74.00)
+place: 14/45, score: 0.61, marbles won/staked/available: 49/40/1799, rating score: 32.00
+place: 20/45, score: 0.62, marbles won/staked/available: 45/42/1800, rating score: 26.00
+place: 33/48, score: 0.45, marbles won/staked/available: 33/42/1946, rating score: 16.00
+
+
+
+
+Top Competitors By Category:
+Rank  By Marbles                             By Score                               By Mu
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+1.    ID 70   Ma:307  S:134.0 Mu:1.39        ID 70   Ma:307  S:134.0 Mu:1.39        ID 19   Ma:233  S:48.0 Mu:1.48
+       MuR: 5, SR: 1, oMu:1.22, σ:0.17        MuR: 5, MaR: 1, oMu:1.22, σ:0.17       MaR:17, SR:44, oMu:1.39, σ:0.09
+2.    ID 77   Ma:304  S:121.0 Mu:1.52        ID 77   Ma:304  S:121.0 Mu:1.52        ID 77   Ma:304  S:121.0 Mu:1.52
+       MuR: 2, SR: 2, oMu:1.37, σ:0.15        MuR: 2, MaR: 2, oMu:1.37, σ:0.15       MaR: 2, SR: 2, oMu:1.37, σ:0.15
+3.    ID 90   Ma:289  S:118.0 Mu:1.36        ID 90   Ma:289  S:118.0 Mu:1.36        ID 90   Ma:289  S:118.0 Mu:1.36
+       MuR: 3, SR: 3, oMu:1.31, σ:0.05        MuR: 3, MaR: 3, oMu:1.31, σ:0.05       MaR: 3, SR: 3, oMu:1.31, σ:0.05
+4.    ID 63   Ma:282  S:99.0 Mu:1.35        ID 3    Ma:253  S:108.0 Mu:1.16        ID 43   Ma:249  S:77.0 Mu:1.37
+       MuR: 6, SR: 7, oMu:1.22, σ:0.13        MuR:14, MaR: 7, oMu:1.08, σ:0.08       MaR:10, SR:19, oMu:1.26, σ:0.11
+5.    ID 18   Ma:256  S:96.0 Mu:1.19        ID 14   Ma:249  S:106.0 Mu:1.26        ID 70   Ma:307  S:134.0 Mu:1.39
+       MuR:16, SR: 9, oMu:1.01, σ:0.18        MuR:13, MaR: 9, oMu:1.10, σ:0.16       MaR: 1, SR: 1, oMu:1.22, σ:0.17
+
+Correlation between mu and marbles: 0.895
+
+Correlation between mu and score: 0.739
+
+Marble Distribution (each █ = 1 competitors):
+Marbles | Count
+--------------------------------------------------
+     80 | ██ (1)
+    100 | ██ (1)
+    120 | ███████ (4)
+    140 | █████████████████ (10)
+    160 | ██████████████████████████████ (17)
+    180 | ████████████████████████████████████████ (23)
+    200 | ████████████████████████ (14)
+    220 | ███████████████████ (11)
+    240 | ████████████████ (9)
+    260 | █████████ (5)
+    280 | █████ (3)
+    300 | ██ (1)
+    320 | ██ (1)
+1-th competitor: Competitor(id: 36, mu: 1.53, sigma: 0.13, ordinalMu: 1.40, marbles: 331, score: 126.00)
+place: 1/47, score: 1.00, marbles won/staked/available: 82/50/1901, rating score: 47.00
+place: 1/40, score: 1.00, marbles won/staked/available: 89/61/1672, rating score: 40.00
+place: 2/40, score: 0.99, marbles won/staked/available: 77/56/1626, rating score: 39.00
+place: 2/25, score: 0.99, marbles won/staked/available: 90/40/1000, rating score: 24.00
+
+
+
+2-th competitor: Competitor(id: 55, mu: 1.16, sigma: 0.19, ordinalMu: 0.97, marbles: 307, score: 128.00)
+place: 2/47, score: 0.90, marbles won/staked/available: 74/59/1901, rating score: 46.00
+place: 1/43, score: 1.00, marbles won/staked/available: 96/50/1716, rating score: 43.00
+place: 11/49, score: 0.70, marbles won/staked/available: 54/63/1972, rating score: 39.00
+place: 8/40, score: 0.74, marbles won/staked/available: 66/62/1672, rating score: 33.00
+place: 1/25, score: 1.00, marbles won/staked/available: 91/40/1000, rating score: 25.00
+
+
+
+3-th competitor: Competitor(id: 26, mu: 1.26, sigma: 0.11, ordinalMu: 1.15, marbles: 292, score: 117.00)
+place: 2/43, score: 0.98, marbles won/staked/available: 94/44/1716, rating score: 42.00
+place: 7/47, score: 0.78, marbles won/staked/available: 64/54/1901, rating score: 41.00
+place: 7/40, score: 0.76, marbles won/staked/available: 68/56/1672, rating score: 34.00
+place: 6/32, score: 0.77, marbles won/staked/available: 60/40/1265, rating score: 27.00
+
+
+
+4-th competitor: Competitor(id: 86, mu: 1.34, sigma: 0.05, ordinalMu: 1.29, marbles: 291, score: 125.00)
+place: 4/49, score: 0.88, marbles won/staked/available: 68/56/1972, rating score: 46.00
+place: 6/47, score: 0.79, marbles won/staked/available: 65/48/1901, rating score: 42.00
+place: 4/40, score: 0.84, marbles won/staked/available: 74/51/1672, rating score: 37.00
+place: 1/32, score: 1.00, marbles won/staked/available: 79/40/1265, rating score: 32.00
+
+
+
+5-th competitor: Competitor(id: 14, mu: 1.14, sigma: 0.17, ordinalMu: 0.97, marbles: 284, score: 115.00)
+place: 1/49, score: 1.00, marbles won/staked/available: 78/51/1972, rating score: 49.00
+place: 5/40, score: 0.76, marbles won/staked/available: 68/47/1672, rating score: 36.00
+place: 11/40, score: 0.64, marbles won/staked/available: 50/47/1626, rating score: 30.00
+place: 5/25, score: 0.80, marbles won/staked/available: 73/40/1000, rating score: 21.00
+
+
+
+Middle competitor: Competitor(id: 51, mu: 0.91, sigma: 0.10, ordinalMu: 0.82, marbles: 195, score: 45.00)
+place: 25/47, score: 0.44, marbles won/staked/available: 37/39/1901, rating score: 23.00
+place: 22/43, score: 0.38, marbles won/staked/available: 37/40/1716, rating score: 22.00
+
+
+
+
+Top Competitors By Category:
+Rank  By Marbles                             By Score                               By Mu
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+1.    ID 36   Ma:331  S:126.0 Mu:1.53        ID 55   Ma:307  S:128.0 Mu:1.16        ID 36   Ma:331  S:126.0 Mu:1.53
+       MuR: 1, SR: 2, oMu:1.40, σ:0.13        MuR:24, MaR: 2, oMu:0.97, σ:0.19       MaR: 1, SR: 2, oMu:1.40, σ:0.13
+2.    ID 55   Ma:307  S:128.0 Mu:1.16        ID 36   Ma:331  S:126.0 Mu:1.53        ID 57   Ma:252  S:92.0 Mu:1.39
+       MuR:24, SR: 1, oMu:0.97, σ:0.19        MuR: 1, MaR: 1, oMu:1.40, σ:0.13       MaR:12, SR:16, oMu:1.33, σ:0.07
+3.    ID 26   Ma:292  S:117.0 Mu:1.26        ID 86   Ma:291  S:125.0 Mu:1.34        ID 86   Ma:291  S:125.0 Mu:1.34
+       MuR: 6, SR: 5, oMu:1.15, σ:0.11        MuR: 3, MaR: 4, oMu:1.29, σ:0.05       MaR: 4, SR: 3, oMu:1.29, σ:0.05
+4.    ID 86   Ma:291  S:125.0 Mu:1.34        ID 52   Ma:277  S:122.0 Mu:1.27        ID 85   Ma:266  S:86.0 Mu:1.28
+       MuR: 3, SR: 3, oMu:1.29, σ:0.05        MuR: 7, MaR: 6, oMu:1.13, σ:0.13       MaR: 8, SR:19, oMu:1.19, σ:0.09
+5.    ID 14   Ma:284  S:115.0 Mu:1.14        ID 26   Ma:292  S:117.0 Mu:1.26        ID 98   Ma:258  S:77.0 Mu:1.27
+       MuR:23, SR: 6, oMu:0.97, σ:0.17        MuR: 6, MaR: 3, oMu:1.15, σ:0.11       MaR:11, SR:25, oMu:1.16, σ:0.12
+
+Correlation between mu and marbles: 0.902
+
+Correlation between mu and score: 0.815
+
+Marble Distribution (each █ = 1 competitors):
+Marbles | Count
+--------------------------------------------------
+     60 | █ (1)
+    100 | █ (1)
+    120 | ██████ (4)
+    140 | ███ (2)
+    160 | ██████████████████████ (16)
+    180 | █████████████████████████████ (21)
+    200 | ████████████████████████████████████████ (29)
+    220 | ██████████████████████ (16)
+    240 | ██████████ (7)
+    260 | ███ (2)
+    280 | █ (1)
+1-th competitor: Competitor(id: 24, mu: 1.39, sigma: 0.16, ordinalMu: 1.24, marbles: 294, score: 126.00)
+place: 2/44, score: 1.00, marbles won/staked/available: 68/52/1760, rating score: 43.00
+place: 2/44, score: 1.00, marbles won/staked/available: 72/56/1777, rating score: 43.00
+place: 1/40, score: 1.00, marbles won/staked/available: 63/50/1554, rating score: 40.00
+place: 1/31, score: 1.00, marbles won/staked/available: 89/40/1248, rating score: 31.00
+
+
+
+2-th competitor: Competitor(id: 0, mu: 1.28, sigma: 0.20, ordinalMu: 1.08, marbles: 274, score: 113.00)
+place: 9/49, score: 0.89, marbles won/staked/available: 56/46/1971, rating score: 41.00
+place: 5/44, score: 0.88, marbles won/staked/available: 63/53/1777, rating score: 40.00
+place: 1/32, score: 1.00, marbles won/staked/available: 71/48/1296, rating score: 32.00
+place: 3/31, score: 0.79, marbles won/staked/available: 71/40/1248, rating score: 29.00
+
+
+
+3-th competitor: Competitor(id: 3, mu: 1.32, sigma: 0.10, ordinalMu: 1.22, marbles: 261, score: 103.00)
+place: 6/49, score: 0.91, marbles won/staked/available: 58/48/1971, rating score: 44.00
+place: 2/31, score: 0.88, marbles won/staked/available: 78/40/1248, rating score: 30.00
+place: 4/32, score: 0.89, marbles won/staked/available: 63/50/1296, rating score: 29.00
+
+
+
+4-th competitor: Competitor(id: 70, mu: 1.19, sigma: 0.10, ordinalMu: 1.09, marbles: 257, score: 106.00)
+place: 3/44, score: 0.98, marbles won/staked/available: 67/41/1760, rating score: 42.00
+place: 3/44, score: 0.99, marbles won/staked/available: 71/47/1777, rating score: 42.00
+place: 10/31, score: 0.76, marbles won/staked/available: 47/40/1240, rating score: 22.00
+
+
+
+5-th competitor: Competitor(id: 71, mu: 1.36, sigma: 0.19, ordinalMu: 1.17, marbles: 255, score: 118.00)
+place: 1/49, score: 1.00, marbles won/staked/available: 63/44/1971, rating score: 49.00
+place: 7/44, score: 0.86, marbles won/staked/available: 62/48/1777, rating score: 38.00
+place: 1/31, score: 1.00, marbles won/staked/available: 62/40/1240, rating score: 31.00
+
+
+
+Middle competitor: Competitor(id: 66, mu: 0.91, sigma: 0.18, ordinalMu: 0.73, marbles: 202, score: 20.00)
+place: 25/44, score: 0.62, marbles won/staked/available: 42/40/1760, rating score: 20.00
+
+
+
+
+Top Competitors By Category:
+Rank  By Marbles                             By Score                               By Mu
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+1.    ID 24   Ma:294  S:126.0 Mu:1.39        ID 24   Ma:294  S:126.0 Mu:1.39        ID 76   Ma:232  S:82.0 Mu:1.39
+       MuR: 5, SR: 1, oMu:1.24, σ:0.16        MuR: 5, MaR: 1, oMu:1.24, σ:0.16       MaR:15, SR:23, oMu:1.31, σ:0.08
+2.    ID 0    Ma:274  S:113.0 Mu:1.28        ID 71   Ma:255  S:118.0 Mu:1.36        ID 96   Ma:254  S:103.0 Mu:1.36
+       MuR:11, SR: 4, oMu:1.08, σ:0.20        MuR: 7, MaR: 5, oMu:1.17, σ:0.19       MaR: 6, SR: 7, oMu:1.26, σ:0.11
+3.    ID 3    Ma:261  S:103.0 Mu:1.32        ID 43   Ma:243  S:116.0 Mu:1.11        ID 67   Ma:200  S:0.0  Mu:1.38
+       MuR: 6, SR: 6, oMu:1.22, σ:0.10        MuR:26, MaR:10, oMu:0.94, σ:0.17       MaR:55, SR:99, oMu:1.26, σ:0.13
+4.    ID 70   Ma:257  S:106.0 Mu:1.19        ID 0    Ma:274  S:113.0 Mu:1.28        ID 12   Ma:245  S:88.0 Mu:1.39
+       MuR:10, SR: 5, oMu:1.09, σ:0.10        MuR:11, MaR: 2, oMu:1.08, σ:0.20       MaR: 8, SR:19, oMu:1.25, σ:0.14
+5.    ID 71   Ma:255  S:118.0 Mu:1.36        ID 70   Ma:257  S:106.0 Mu:1.19        ID 24   Ma:294  S:126.0 Mu:1.39
+       MuR: 7, SR: 2, oMu:1.17, σ:0.19        MuR:10, MaR: 4, oMu:1.09, σ:0.10       MaR: 1, SR: 1, oMu:1.24, σ:0.16
+
+Correlation between mu and marbles: 0.877
+
+Correlation between mu and score: 0.715
+
+Marble Distribution (each █ = 1 competitors):
+Marbles | Count
+--------------------------------------------------
+    100 | █████ (4)
+    120 | ████ (3)
+    140 | ██████ (5)
+    160 | ████████████████████ (16)
+    180 | ████████████████████████ (19)
+    200 | ████████████████████████████████████████ (32)
+    220 | █████████ (7)
+    240 | ████████ (6)
+    260 | █████ (4)
+    280 | ███ (2)
+    300 | ███ (2)
+1-th competitor: Competitor(id: 48, mu: 1.40, sigma: 0.12, ordinalMu: 1.28, marbles: 308, score: 131.00)
+place: 1/46, score: 1.00, marbles won/staked/available: 66/55/1834, rating score: 46.00
+place: 1/44, score: 1.00, marbles won/staked/available: 91/46/1752, rating score: 44.00
+place: 2/42, score: 0.84, marbles won/staked/available: 68/40/1680, rating score: 41.00
+place: 1/32, score: 1.00, marbles won/staked/available: 78/57/1293, rating score: 32.00
+place: 11/37, score: 0.68, marbles won/staked/available: 58/55/1527, rating score: 27.00
+
+
+
+2-th competitor: Competitor(id: 11, mu: 1.44, sigma: 0.14, ordinalMu: 1.30, marbles: 301, score: 129.00)
+place: 5/49, score: 0.80, marbles won/staked/available: 65/49/1962, rating score: 45.00
+place: 2/44, score: 0.94, marbles won/staked/available: 85/40/1752, rating score: 43.00
+place: 3/43, score: 0.82, marbles won/staked/available: 65/59/1802, rating score: 41.00
+place: 1/37, score: 1.00, marbles won/staked/available: 86/52/1527, rating score: 37.00
+
+
+
+3-th competitor: Competitor(id: 87, mu: 1.32, sigma: 0.14, ordinalMu: 1.18, marbles: 291, score: 127.00)
+place: 4/49, score: 0.81, marbles won/staked/available: 65/53/1962, rating score: 46.00
+place: 3/44, score: 0.93, marbles won/staked/available: 85/45/1752, rating score: 42.00
+place: 4/42, score: 0.78, marbles won/staked/available: 64/40/1680, rating score: 39.00
+place: 5/37, score: 0.81, marbles won/staked/available: 70/55/1527, rating score: 33.00
+
+
+
+4-th competitor: Competitor(id: 65, mu: 1.37, sigma: 0.20, ordinalMu: 1.17, marbles: 286, score: 130.00)
+place: 1/49, score: 1.00, marbles won/staked/available: 81/44/1962, rating score: 49.00
+place: 1/43, score: 1.00, marbles won/staked/available: 80/51/1802, rating score: 43.00
+place: 5/42, score: 0.74, marbles won/staked/available: 60/40/1680, rating score: 38.00
+
+
+
+5-th competitor: Competitor(id: 22, mu: 1.26, sigma: 0.12, ordinalMu: 1.14, marbles: 273, score: 116.00)
+place: 3/49, score: 0.85, marbles won/staked/available: 68/43/1962, rating score: 47.00
+place: 7/42, score: 0.70, marbles won/staked/available: 57/40/1680, rating score: 36.00
+place: 11/43, score: 0.66, marbles won/staked/available: 53/51/1802, rating score: 33.00
+place: 2/32, score: 0.88, marbles won/staked/available: 69/51/1293, rating score: 31.00
+place: 10/37, score: 0.68, marbles won/staked/available: 59/48/1527, rating score: 28.00
+
+
+
+Middle competitor: Competitor(id: 37, mu: 0.98, sigma: 0.11, ordinalMu: 0.88, marbles: 200, score: 33.00)
+place: 16/32, score: 0.52, marbles won/staked/available: 41/40/1293, rating score: 17.00
+place: 28/43, score: 0.48, marbles won/staked/available: 39/40/1802, rating score: 16.00
+
+
+
+
+Top Competitors By Category:
+Rank  By Marbles                             By Score                               By Mu
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+1.    ID 48   Ma:308  S:131.0 Mu:1.40        ID 48   Ma:308  S:131.0 Mu:1.40        ID 53   Ma:259  S:125.0 Mu:1.37
+       MuR: 3, SR: 1, oMu:1.28, σ:0.12        MuR: 3, MaR: 1, oMu:1.28, σ:0.12       MaR: 9, SR: 5, oMu:1.30, σ:0.07
+2.    ID 11   Ma:301  S:129.0 Mu:1.44        ID 65   Ma:286  S:130.0 Mu:1.37        ID 11   Ma:301  S:129.0 Mu:1.44
+       MuR: 2, SR: 3, oMu:1.30, σ:0.14        MuR: 7, MaR: 4, oMu:1.17, σ:0.20       MaR: 2, SR: 3, oMu:1.30, σ:0.14
+3.    ID 87   Ma:291  S:127.0 Mu:1.32        ID 11   Ma:301  S:129.0 Mu:1.44        ID 48   Ma:308  S:131.0 Mu:1.40
+       MuR: 5, SR: 4, oMu:1.18, σ:0.14        MuR: 2, MaR: 2, oMu:1.30, σ:0.14       MaR: 1, SR: 1, oMu:1.28, σ:0.12
+4.    ID 65   Ma:286  S:130.0 Mu:1.37        ID 87   Ma:291  S:127.0 Mu:1.32        ID 66   Ma:258  S:119.0 Mu:1.26
+       MuR: 7, SR: 2, oMu:1.17, σ:0.20        MuR: 5, MaR: 3, oMu:1.18, σ:0.14       MaR:10, SR: 8, oMu:1.20, σ:0.06
+5.    ID 22   Ma:273  S:116.0 Mu:1.26        ID 53   Ma:259  S:125.0 Mu:1.37        ID 87   Ma:291  S:127.0 Mu:1.32
+       MuR:12, SR: 9, oMu:1.14, σ:0.12        MuR: 1, MaR: 9, oMu:1.30, σ:0.07       MaR: 3, SR: 4, oMu:1.18, σ:0.14
+
+Correlation between mu and marbles: 0.916
+
+Correlation between mu and score: 0.792
+
+Marble Distribution (each █ = 1 competitors):
+Marbles | Count
+--------------------------------------------------
+    100 | ███ (2)
+    120 | █████████ (6)
+    140 | ████████████ (8)
+    160 | █████████████████████████ (17)
+    180 | ███████████████████ (13)
+    200 | ████████████████████████████████████████ (27)
+    220 | ██████████████████ (12)
+    240 | █████████ (6)
+    260 | ████ (3)
+    280 | ██████ (4)
+    320 | █ (1)
+    360 | █ (1)
+1-th competitor: Competitor(id: 88, mu: 1.67, sigma: 0.08, ordinalMu: 1.59, marbles: 363, score: 110.00)
+place: 1/42, score: 1.00, marbles won/staked/available: 109/40/1690, rating score: 42.00
+place: 1/35, score: 1.00, marbles won/staked/available: 75/72/1441, rating score: 35.00
+place: 1/33, score: 1.00, marbles won/staked/available: 99/54/1302, rating score: 33.00
+place: 1/33, score: 1.00, marbles won/staked/available: 109/63/1335, rating score: 33.00
+
+
+
+2-th competitor: Competitor(id: 99, mu: 1.30, sigma: 0.18, ordinalMu: 1.11, marbles: 327, score: 117.00)
+place: 1/47, score: 1.00, marbles won/staked/available: 73/63/1907, rating score: 47.00
+place: 5/42, score: 0.69, marbles won/staked/available: 75/40/1690, rating score: 38.00
+place: 2/33, score: 0.87, marbles won/staked/available: 96/55/1335, rating score: 32.00
+place: 3/33, score: 0.73, marbles won/staked/available: 72/47/1302, rating score: 31.00
+place: 4/29, score: 0.87, marbles won/staked/available: 68/52/1163, rating score: 26.00
+
+
+
+3-th competitor: Competitor(id: 11, mu: 1.36, sigma: 0.05, ordinalMu: 1.31, marbles: 296, score: 105.00)
+place: 5/47, score: 0.91, marbles won/staked/available: 66/58/1907, rating score: 43.00
+place: 2/33, score: 0.80, marbles won/staked/available: 79/46/1302, rating score: 32.00
+place: 4/33, score: 0.80, marbles won/staked/available: 72/40/1320, rating score: 30.00
+place: 5/33, score: 0.70, marbles won/staked/available: 76/53/1335, rating score: 29.00
+
+
+
+4-th competitor: Competitor(id: 31, mu: 1.34, sigma: 0.09, ordinalMu: 1.25, marbles: 295, score: 105.00)
+place: 3/42, score: 0.75, marbles won/staked/available: 82/47/1690, rating score: 40.00
+place: 2/35, score: 0.80, marbles won/staked/available: 60/59/1441, rating score: 34.00
+place: 3/33, score: 0.85, marbles won/staked/available: 76/40/1320, rating score: 31.00
+place: 4/33, score: 0.70, marbles won/staked/available: 77/54/1335, rating score: 30.00
+
+
+
+5-th competitor: Competitor(id: 20, mu: 1.36, sigma: 0.09, ordinalMu: 1.27, marbles: 281, score: 102.00)
+place: 6/47, score: 0.88, marbles won/staked/available: 64/54/1907, rating score: 42.00
+place: 3/33, score: 0.74, marbles won/staked/available: 81/48/1335, rating score: 31.00
+place: 1/29, score: 1.00, marbles won/staked/available: 78/40/1163, rating score: 29.00
+
+
+
+Middle competitor: Competitor(id: 29, mu: 0.88, sigma: 0.19, ordinalMu: 0.69, marbles: 200, score: 0.00)
+
+
+
+
+
+Top Competitors By Category:
+Rank  By Marbles                             By Score                               By Mu
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+1.    ID 88   Ma:363  S:110.0 Mu:1.67        ID 99   Ma:327  S:117.0 Mu:1.30        ID 88   Ma:363  S:110.0 Mu:1.67
+       MuR: 1, SR: 2, oMu:1.59, σ:0.08        MuR: 9, MaR: 2, oMu:1.11, σ:0.18       MaR: 1, SR: 2, oMu:1.59, σ:0.08
+2.    ID 99   Ma:327  S:117.0 Mu:1.30        ID 88   Ma:363  S:110.0 Mu:1.67        ID 17   Ma:271  S:60.0 Mu:1.44
+       MuR: 9, SR: 1, oMu:1.11, σ:0.18        MuR: 1, MaR: 1, oMu:1.59, σ:0.08       MaR: 7, SR:29, oMu:1.37, σ:0.07
+3.    ID 11   Ma:296  S:105.0 Mu:1.36        ID 42   Ma:269  S:107.0 Mu:1.10        ID 77   Ma:264  S:66.0 Mu:1.43
+       MuR: 5, SR: 4, oMu:1.31, σ:0.05        MuR:32, MaR: 8, oMu:0.91, σ:0.19       MaR: 9, SR:24, oMu:1.36, σ:0.07
+4.    ID 31   Ma:295  S:105.0 Mu:1.34        ID 11   Ma:296  S:105.0 Mu:1.36        ID 94   Ma:200  S:0.0  Mu:1.44
+       MuR: 7, SR: 5, oMu:1.25, σ:0.09        MuR: 5, MaR: 3, oMu:1.31, σ:0.05       MaR:50, SR:100, oMu:1.36, σ:0.09
+5.    ID 20   Ma:281  S:102.0 Mu:1.36        ID 31   Ma:295  S:105.0 Mu:1.34        ID 11   Ma:296  S:105.0 Mu:1.36
+       MuR: 6, SR: 7, oMu:1.27, σ:0.09        MuR: 7, MaR: 4, oMu:1.25, σ:0.09       MaR: 3, SR: 4, oMu:1.31, σ:0.05
+
+Correlation between mu and marbles: 0.894
+
+Correlation between mu and score: 0.669
+
+Marble Distribution (each █ = 1 competitors):
+Marbles | Count
+--------------------------------------------------
+    100 | ████ (3)
+    120 | █ (1)
+    140 | ██████████ (8)
+    160 | ███████████████ (12)
+    180 | ███████████████████████ (18)
+    200 | ████████████████████████████████████████ (31)
+    220 | ███████████████████ (15)
+    240 | ████████████ (9)
+    260 | ████ (3)
+1-th competitor: Competitor(id: 70, mu: 1.33, sigma: 0.05, ordinalMu: 1.28, marbles: 279, score: 137.75)
+place: 2/31, score: 0.95, marbles won/staked/available: 69/53/1239, rating score: 47.50
+place: 3/48, score: 0.88, marbles won/staked/available: 63/40/1920, rating score: 45.13
+place: 3/43, score: 0.82, marbles won/staked/available: 60/45/1722, rating score: 45.13
+place: 3/34, score: 0.94, marbles won/staked/available: 73/48/1366, rating score: 45.13
+
+
+
+2-th competitor: Competitor(id: 55, mu: 1.29, sigma: 0.06, ordinalMu: 1.23, marbles: 275, score: 142.87)
+place: 1/34, score: 1.00, marbles won/staked/available: 78/45/1366, rating score: 50.00
+place: 1/33, score: 1.00, marbles won/staked/available: 61/52/1315, rating score: 50.00
+place: 4/42, score: 0.92, marbles won/staked/available: 60/54/1704, rating score: 42.87
+place: 5/48, score: 0.80, marbles won/staked/available: 58/40/1920, rating score: 40.73
+place: 7/28, score: 0.88, marbles won/staked/available: 55/55/1165, rating score: 36.75
+place: 10/43, score: 0.72, marbles won/staked/available: 53/44/1722, rating score: 31.51
+
+
+
+3-th competitor: Competitor(id: 81, mu: 1.36, sigma: 0.06, ordinalMu: 1.30, marbles: 260, score: 134.25)
+place: 1/31, score: 1.00, marbles won/staked/available: 73/47/1239, rating score: 50.00
+place: 2/28, score: 0.97, marbles won/staked/available: 61/43/1165, rating score: 47.50
+place: 7/33, score: 0.91, marbles won/staked/available: 56/40/1315, rating score: 36.75
+
+
+
+4-th competitor: Competitor(id: 23, mu: 1.41, sigma: 0.10, ordinalMu: 1.31, marbles: 257, score: 137.99)
+place: 1/48, score: 1.00, marbles won/staked/available: 72/40/1920, rating score: 50.00
+place: 3/42, score: 0.97, marbles won/staked/available: 63/46/1704, rating score: 45.13
+place: 4/28, score: 0.93, marbles won/staked/available: 58/50/1165, rating score: 42.87
+
+
+
+5-th competitor: Competitor(id: 29, mu: 1.25, sigma: 0.09, ordinalMu: 1.16, marbles: 257, score: 126.91)
+place: 2/42, score: 0.99, marbles won/staked/available: 65/43/1704, rating score: 47.50
+place: 5/31, score: 0.84, marbles won/staked/available: 61/49/1239, rating score: 40.73
+place: 6/33, score: 0.92, marbles won/staked/available: 56/40/1315, rating score: 38.69
+place: 8/28, score: 0.88, marbles won/staked/available: 55/48/1165, rating score: 34.92
+
+
+
+Middle competitor: Competitor(id: 43, mu: 1.21, sigma: 0.15, ordinalMu: 1.06, marbles: 201, score: 41.62)
+place: 13/28, score: 0.68, marbles won/staked/available: 43/39/1165, rating score: 27.02
+place: 25/43, score: 0.50, marbles won/staked/available: 37/40/1722, rating score: 14.60
+
+
+
+
+Top Competitors By Category:
+Rank  By Marbles                             By Score                               By Mu
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+1.    ID 70   Ma:279  S:137.8 Mu:1.33        ID 55   Ma:275  S:142.9 Mu:1.29        ID 91   Ma:200  S:0.0  Mu:1.42
+       MuR: 6, SR: 4, oMu:1.28, σ:0.05        MuR: 8, MaR: 2, oMu:1.23, σ:0.06       MaR:58, SR:97, oMu:1.36, σ:0.05
+2.    ID 55   Ma:275  S:142.9 Mu:1.29        ID 57   Ma:253  S:142.6 Mu:1.22        ID 82   Ma:226  S:50.0 Mu:1.45
+       MuR: 8, SR: 1, oMu:1.23, σ:0.06        MuR:21, MaR: 7, oMu:1.05, σ:0.17       MaR:22, SR:42, oMu:1.36, σ:0.08
+3.    ID 81   Ma:260  S:134.3 Mu:1.36        ID 23   Ma:257  S:138.0 Mu:1.41        ID 80   Ma:226  S:47.5 Mu:1.48
+       MuR: 5, SR: 5, oMu:1.30, σ:0.06        MuR: 4, MaR: 4, oMu:1.31, σ:0.10       MaR:21, SR:45, oMu:1.34, σ:0.15
+4.    ID 23   Ma:257  S:138.0 Mu:1.41        ID 70   Ma:279  S:137.8 Mu:1.33        ID 23   Ma:257  S:138.0 Mu:1.41
+       MuR: 4, SR: 3, oMu:1.31, σ:0.10        MuR: 6, MaR: 1, oMu:1.28, σ:0.05       MaR: 4, SR: 3, oMu:1.31, σ:0.10
+5.    ID 29   Ma:257  S:126.9 Mu:1.25        ID 81   Ma:260  S:134.3 Mu:1.36        ID 81   Ma:260  S:134.3 Mu:1.36
+       MuR:10, SR: 6, oMu:1.16, σ:0.09        MuR: 5, MaR: 3, oMu:1.30, σ:0.06       MaR: 3, SR: 5, oMu:1.30, σ:0.06
+
+Correlation between mu and marbles: 0.860
+
+Correlation between mu and score: 0.606
+
+Marble Distribution (each █ = 1 competitors):
+Marbles | Count
+--------------------------------------------------
+     60 | ██ (1)
+     80 | ██ (1)
+    100 | ███████ (4)
+    120 | █████ (3)
+    140 | ███████████ (6)
+    160 | ███████████████████████████████ (17)
+    180 | ████████████████████ (11)
+    200 | ████████████████████████████████████████ (22)
+    220 | █████████████████████████████████ (18)
+    240 | ██████████████████ (10)
+    260 | ████ (2)
+    280 | ███████ (4)
+    300 | ██ (1)
+1-th competitor: Competitor(id: 36, mu: 1.54, sigma: 0.17, ordinalMu: 1.37, marbles: 307, score: 145.13)
+place: 1/34, score: 1.00, marbles won/staked/available: 94/40/1342, rating score: 50.00
+place: 1/46, score: 1.00, marbles won/staked/available: 90/54/1801, rating score: 50.00
+place: 3/46, score: 0.87, marbles won/staked/available: 68/51/1812, rating score: 45.13
+
+
+
+2-th competitor: Competitor(id: 58, mu: 1.33, sigma: 0.06, ordinalMu: 1.27, marbles: 295, score: 142.50)
+place: 2/41, score: 0.94, marbles won/staked/available: 78/40/1640, rating score: 47.50
+place: 2/46, score: 0.96, marbles won/staked/available: 75/48/1812, rating score: 47.50
+place: 2/46, score: 0.92, marbles won/staked/available: 83/53/1801, rating score: 47.50
+
+
+
+3-th competitor: Competitor(id: 25, mu: 1.40, sigma: 0.20, ordinalMu: 1.20, marbles: 287, score: 145.00)
+place: 1/41, score: 1.00, marbles won/staked/available: 83/43/1615, rating score: 50.00
+place: 2/48, score: 0.95, marbles won/staked/available: 72/51/1909, rating score: 47.50
+place: 2/27, score: 0.90, marbles won/staked/available: 67/55/1069, rating score: 47.50
+place: 7/34, score: 0.58, marbles won/staked/available: 54/40/1342, rating score: 36.75
+
+
+
+4-th competitor: Competitor(id: 72, mu: 1.13, sigma: 0.14, ordinalMu: 0.99, marbles: 282, score: 127.38)
+place: 1/48, score: 1.00, marbles won/staked/available: 76/51/1909, rating score: 50.00
+place: 6/41, score: 0.73, marbles won/staked/available: 60/40/1640, rating score: 38.69
+place: 6/41, score: 0.91, marbles won/staked/available: 75/44/1615, rating score: 38.69
+place: 12/46, score: 0.71, marbles won/staked/available: 56/50/1812, rating score: 28.44
+
+
+
+5-th competitor: Competitor(id: 3, mu: 1.23, sigma: 0.16, ordinalMu: 1.08, marbles: 280, score: 137.75)
+place: 2/34, score: 0.71, marbles won/staked/available: 67/40/1342, rating score: 47.50
+place: 3/27, score: 0.86, marbles won/staked/available: 64/46/1069, rating score: 45.13
+place: 3/46, score: 0.90, marbles won/staked/available: 81/50/1801, rating score: 45.13
+place: 14/48, score: 0.65, marbles won/staked/available: 49/45/1909, rating score: 25.67
+
+
+
+Middle competitor: Competitor(id: 54, mu: 0.91, sigma: 0.09, ordinalMu: 0.82, marbles: 204, score: 63.36)
+place: 16/34, score: 0.45, marbles won/staked/available: 42/39/1342, rating score: 23.16
+place: 16/46, score: 0.51, marbles won/staked/available: 46/39/1801, rating score: 23.16
+place: 22/41, score: 0.45, marbles won/staked/available: 37/40/1615, rating score: 17.03
+place: 23/41, score: 0.43, marbles won/staked/available: 36/40/1640, rating score: 16.18
+place: 27/48, score: 0.53, marbles won/staked/available: 40/39/1909, rating score: 13.18
+
+
+
+
+Top Competitors By Category:
+Rank  By Marbles                             By Score                               By Mu
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+1.    ID 36   Ma:307  S:145.1 Mu:1.54        ID 36   Ma:307  S:145.1 Mu:1.54        ID 36   Ma:307  S:145.1 Mu:1.54
+       MuR: 1, SR: 1, oMu:1.37, σ:0.17        MuR: 1, MaR: 1, oMu:1.37, σ:0.17       MaR: 1, SR: 1, oMu:1.37, σ:0.17
+2.    ID 58   Ma:295  S:142.5 Mu:1.33        ID 25   Ma:287  S:145.0 Mu:1.40        ID 58   Ma:295  S:142.5 Mu:1.33
+       MuR: 2, SR: 3, oMu:1.27, σ:0.06        MuR: 5, MaR: 3, oMu:1.20, σ:0.20       MaR: 2, SR: 3, oMu:1.27, σ:0.06
+3.    ID 25   Ma:287  S:145.0 Mu:1.40        ID 58   Ma:295  S:142.5 Mu:1.33        ID 20   Ma:258  S:84.3 Mu:1.38
+       MuR: 5, SR: 2, oMu:1.20, σ:0.20        MuR: 2, MaR: 2, oMu:1.27, σ:0.06       MaR: 9, SR:21, oMu:1.25, σ:0.13
+4.    ID 72   Ma:282  S:127.4 Mu:1.13        ID 3    Ma:280  S:137.8 Mu:1.23        ID 51   Ma:232  S:42.9 Mu:1.30
+       MuR:22, SR: 5, oMu:0.99, σ:0.14        MuR:15, MaR: 5, oMu:1.08, σ:0.16       MaR:23, SR:57, oMu:1.24, σ:0.06
+5.    ID 3    Ma:280  S:137.8 Mu:1.23        ID 72   Ma:282  S:127.4 Mu:1.13        ID 25   Ma:287  S:145.0 Mu:1.40
+       MuR:15, SR: 4, oMu:1.08, σ:0.16        MuR:22, MaR: 4, oMu:0.99, σ:0.14       MaR: 3, SR: 2, oMu:1.20, σ:0.20
+
+Correlation between mu and marbles: 0.893
+
+Correlation between mu and score: 0.658
+
+Marble Distribution (each █ = 1 competitors):
+Marbles | Count
+--------------------------------------------------
+     80 | █ (1)
+    100 | ████ (3)
+    120 | ███ (2)
+    140 | ████████████ (9)
+    160 | ███████████████ (11)
+    180 | ████████████████████████ (18)
+    200 | ████████████████████████████████████████ (30)
+    220 | ████████████████ (12)
+    240 | ████████████ (9)
+    260 | ███ (2)
+    280 | ███ (2)
+    300 | █ (1)
+1-th competitor: Competitor(id: 8, mu: 1.50, sigma: 0.12, ordinalMu: 1.38, marbles: 300, score: 138.69)
+place: 1/30, score: 1.00, marbles won/staked/available: 96/44/1187, rating score: 50.00
+place: 1/43, score: 1.00, marbles won/staked/available: 84/54/1723, rating score: 50.00
+place: 6/43, score: 0.79, marbles won/staked/available: 58/40/1734, rating score: 38.69
+
+
+
+2-th competitor: Competitor(id: 79, mu: 1.45, sigma: 0.14, ordinalMu: 1.30, marbles: 297, score: 147.50)
+place: 1/28, score: 1.00, marbles won/staked/available: 84/40/1119, rating score: 50.00
+place: 1/42, score: 1.00, marbles won/staked/available: 79/49/1699, rating score: 50.00
+place: 2/43, score: 0.86, marbles won/staked/available: 72/55/1723, rating score: 47.50
+place: 4/42, score: 0.98, marbles won/staked/available: 64/58/1665, rating score: 42.87
+
+
+
+3-th competitor: Competitor(id: 77, mu: 1.27, sigma: 0.07, ordinalMu: 1.19, marbles: 281, score: 135.49)
+place: 2/30, score: 0.81, marbles won/staked/available: 78/44/1187, rating score: 47.50
+place: 3/28, score: 0.74, marbles won/staked/available: 62/40/1119, rating score: 45.13
+place: 4/43, score: 0.82, marbles won/staked/available: 68/51/1723, rating score: 42.87
+place: 5/42, score: 0.96, marbles won/staked/available: 63/55/1665, rating score: 40.73
+
+
+
+4-th competitor: Competitor(id: 33, mu: 1.12, sigma: 0.17, ordinalMu: 0.95, marbles: 274, score: 135.85)
+place: 1/43, score: 1.00, marbles won/staked/available: 73/42/1734, rating score: 50.00
+place: 3/30, score: 0.75, marbles won/staked/available: 73/48/1187, rating score: 45.13
+place: 5/42, score: 0.80, marbles won/staked/available: 63/53/1699, rating score: 40.73
+place: 13/31, score: 0.76, marbles won/staked/available: 48/40/1240, rating score: 27.02
+
+
+
+5-th competitor: Competitor(id: 18, mu: 1.15, sigma: 0.17, ordinalMu: 0.99, marbles: 264, score: 140.37)
+place: 1/42, score: 1.00, marbles won/staked/available: 66/50/1665, rating score: 50.00
+place: 2/43, score: 0.95, marbles won/staked/available: 69/40/1734, rating score: 47.50
+place: 4/28, score: 0.74, marbles won/staked/available: 62/46/1119, rating score: 42.87
+place: 6/42, score: 0.80, marbles won/staked/available: 63/49/1699, rating score: 38.69
+place: 17/43, score: 0.50, marbles won/staked/available: 41/52/1723, rating score: 22.01
+
+
+
+Middle competitor: Competitor(id: 50, mu: 0.76, sigma: 0.15, ordinalMu: 0.60, marbles: 200, score: 25.67)
+place: 14/30, score: 0.42, marbles won/staked/available: 40/40/1187, rating score: 25.67
+
+
+
+
+Top Competitors By Category:
+Rank  By Marbles                             By Score                               By Mu
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+1.    ID 8    Ma:300  S:138.7 Mu:1.50        ID 79   Ma:297  S:147.5 Mu:1.45        ID 8    Ma:300  S:138.7 Mu:1.50
+       MuR: 1, SR: 3, oMu:1.38, σ:0.12        MuR: 2, MaR: 2, oMu:1.30, σ:0.14       MaR: 1, SR: 3, oMu:1.38, σ:0.12
+2.    ID 79   Ma:297  S:147.5 Mu:1.45        ID 18   Ma:264  S:140.4 Mu:1.15        ID 79   Ma:297  S:147.5 Mu:1.45
+       MuR: 2, SR: 1, oMu:1.30, σ:0.14        MuR:18, MaR: 5, oMu:0.99, σ:0.17       MaR: 2, SR: 1, oMu:1.30, σ:0.14
+3.    ID 77   Ma:281  S:135.5 Mu:1.27        ID 8    Ma:300  S:138.7 Mu:1.50        ID 77   Ma:281  S:135.5 Mu:1.27
+       MuR: 3, SR: 6, oMu:1.19, σ:0.07        MuR: 1, MaR: 1, oMu:1.38, σ:0.12       MaR: 3, SR: 6, oMu:1.19, σ:0.07
+4.    ID 33   Ma:274  S:135.9 Mu:1.12        ID 72   Ma:259  S:138.2 Mu:1.14        ID 37   Ma:246  S:85.9 Mu:1.20
+       MuR:23, SR: 5, oMu:0.95, σ:0.17        MuR: 9, MaR: 6, oMu:1.04, σ:0.09       MaR:11, SR:19, oMu:1.12, σ:0.08
+5.    ID 18   Ma:264  S:140.4 Mu:1.15        ID 33   Ma:274  S:135.9 Mu:1.12        ID 95   Ma:211  S:36.8 Mu:1.21
+       MuR:18, SR: 2, oMu:0.99, σ:0.17        MuR:23, MaR: 4, oMu:0.95, σ:0.17       MaR:38, SR:62, oMu:1.08, σ:0.13
+
+Correlation between mu and marbles: 0.873
+
+Correlation between mu and score: 0.717
+
+Marble Distribution (each █ = 1 competitors):
+Marbles | Count
+--------------------------------------------------
+    100 | ██████████ (5)
+    120 | ████████ (4)
+    140 | ██████████████ (7)
+    160 | ████████████████████████████ (14)
+    180 | ████████████████████████████████████ (18)
+    200 | ████████████████████████████████████████ (20)
+    220 | ██████████████████████████████████ (17)
+    240 | ████████████████ (8)
+    260 | ██████ (3)
+    280 | ██████ (3)
+    300 | ██ (1)
+1-th competitor: Competitor(id: 48, mu: 1.43, sigma: 0.13, ordinalMu: 1.31, marbles: 318, score: 145.13)
+place: 1/38, score: 1.00, marbles won/staked/available: 87/45/1484, rating score: 50.00
+place: 1/27, score: 1.00, marbles won/staked/available: 88/57/1100, rating score: 50.00
+place: 3/45, score: 0.97, marbles won/staked/available: 62/56/1771, rating score: 45.13
+place: 4/42, score: 0.85, marbles won/staked/available: 63/40/1688, rating score: 42.87
+place: 6/46, score: 0.81, marbles won/staked/available: 69/53/1855, rating score: 38.69
+
+
+
+2-th competitor: Competitor(id: 87, mu: 1.65, sigma: 0.06, ordinalMu: 1.59, marbles: 298, score: 142.63)
+place: 1/46, score: 1.00, marbles won/staked/available: 85/47/1855, rating score: 50.00
+place: 2/27, score: 0.91, marbles won/staked/available: 80/54/1100, rating score: 47.50
+place: 3/38, score: 0.85, marbles won/staked/available: 74/40/1484, rating score: 45.13
+
+
+
+3-th competitor: Competitor(id: 42, mu: 1.53, sigma: 0.16, ordinalMu: 1.38, marbles: 286, score: 140.13)
+place: 2/38, score: 0.88, marbles won/staked/available: 76/46/1484, rating score: 47.50
+place: 2/46, score: 0.93, marbles won/staked/available: 79/52/1855, rating score: 47.50
+place: 3/43, score: 0.93, marbles won/staked/available: 69/40/1720, rating score: 45.13
+
+
+
+4-th competitor: Competitor(id: 52, mu: 1.47, sigma: 0.15, ordinalMu: 1.32, marbles: 284, score: 133.24)
+place: 2/43, score: 0.97, marbles won/staked/available: 72/40/1720, rating score: 47.50
+place: 4/46, score: 0.88, marbles won/staked/available: 74/50/1855, rating score: 42.87
+place: 4/45, score: 0.97, marbles won/staked/available: 62/54/1771, rating score: 42.87
+place: 5/27, score: 0.68, marbles won/staked/available: 60/56/1100, rating score: 40.73
+place: 6/38, score: 0.71, marbles won/staked/available: 62/46/1484, rating score: 38.69
+
+
+
+5-th competitor: Competitor(id: 16, mu: 1.35, sigma: 0.13, ordinalMu: 1.22, marbles: 275, score: 120.57)
+place: 3/46, score: 0.88, marbles won/staked/available: 75/50/1855, rating score: 45.13
+place: 6/43, score: 0.91, marbles won/staked/available: 68/40/1720, rating score: 38.69
+place: 7/42, score: 0.76, marbles won/staked/available: 57/46/1688, rating score: 36.75
+place: 7/38, score: 0.69, marbles won/staked/available: 59/48/1484, rating score: 36.75
+
+
+
+Middle competitor: Competitor(id: 97, mu: 1.13, sigma: 0.16, ordinalMu: 0.97, marbles: 202, score: 48.09)
+place: 8/28, score: 0.68, marbles won/staked/available: 48/39/1098, rating score: 34.92
+place: 27/43, score: 0.44, marbles won/staked/available: 33/40/1720, rating score: 13.18
+
+
+
+
+Top Competitors By Category:
+Rank  By Marbles                             By Score                               By Mu
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+1.    ID 48   Ma:318  S:145.1 Mu:1.43        ID 48   Ma:318  S:145.1 Mu:1.43        ID 87   Ma:298  S:142.6 Mu:1.65
+       MuR: 7, SR: 1, oMu:1.31, σ:0.13        MuR: 7, MaR: 1, oMu:1.31, σ:0.13       MaR: 2, SR: 2, oMu:1.59, σ:0.06
+2.    ID 87   Ma:298  S:142.6 Mu:1.65        ID 87   Ma:298  S:142.6 Mu:1.65        ID 3    Ma:237  S:85.9 Mu:1.45
+       MuR: 1, SR: 2, oMu:1.59, σ:0.06        MuR: 1, MaR: 2, oMu:1.59, σ:0.06       MaR:17, SR:20, oMu:1.38, σ:0.07
+3.    ID 42   Ma:286  S:140.1 Mu:1.53        ID 42   Ma:286  S:140.1 Mu:1.53        ID 42   Ma:286  S:140.1 Mu:1.53
+       MuR: 3, SR: 3, oMu:1.38, σ:0.16        MuR: 3, MaR: 3, oMu:1.38, σ:0.16       MaR: 3, SR: 3, oMu:1.38, σ:0.16
+4.    ID 52   Ma:284  S:133.2 Mu:1.47        ID 52   Ma:284  S:133.2 Mu:1.47        ID 60   Ma:258  S:100.0 Mu:1.44
+       MuR: 6, SR: 4, oMu:1.32, σ:0.15        MuR: 6, MaR: 4, oMu:1.32, σ:0.15       MaR: 8, SR:13, oMu:1.35, σ:0.09
+5.    ID 16   Ma:275  S:120.6 Mu:1.35        ID 16   Ma:275  S:120.6 Mu:1.35        ID 1    Ma:251  S:97.5 Mu:1.43
+       MuR:13, SR: 5, oMu:1.22, σ:0.13        MuR:13, MaR: 5, oMu:1.22, σ:0.13       MaR:10, SR:14, oMu:1.34, σ:0.09
+
+Correlation between mu and marbles: 0.940
+
+Correlation between mu and score: 0.747
+
+Marble Distribution (each █ = 1 competitors):
+Marbles | Count
+--------------------------------------------------
+    100 | █████ (4)
+    120 | █████ (4)
+    140 | ██████ (5)
+    160 | ██████████████ (11)
+    180 | ████████████████████████████████████████ (32)
+    200 | ████████████████████ (16)
+    220 | ████████████████ (13)
+    240 | ██████████ (8)
+    260 | ████ (3)
+    280 | ███ (2)
+    300 | █ (1)
+    320 | █ (1)
+1-th competitor: Competitor(id: 12, mu: 1.52, sigma: 0.08, ordinalMu: 1.44, marbles: 329, score: 150.00)
+place: 1/47, score: 1.00, marbles won/staked/available: 77/50/1885, rating score: 50.00
+place: 1/33, score: 1.00, marbles won/staked/available: 86/57/1306, rating score: 50.00
+place: 1/37, score: 1.00, marbles won/staked/available: 79/63/1502, rating score: 50.00
+place: 2/48, score: 0.92, marbles won/staked/available: 64/55/1953, rating score: 47.50
+place: 3/47, score: 0.91, marbles won/staked/available: 88/40/1880, rating score: 45.13
+
+
+
+2-th competitor: Competitor(id: 19, mu: 1.52, sigma: 0.10, ordinalMu: 1.42, marbles: 315, score: 145.13)
+place: 1/47, score: 1.00, marbles won/staked/available: 97/40/1880, rating score: 50.00
+place: 1/32, score: 1.00, marbles won/staked/available: 90/56/1258, rating score: 50.00
+place: 3/47, score: 0.97, marbles won/staked/available: 75/51/1885, rating score: 45.13
+
+
+
+3-th competitor: Competitor(id: 28, mu: 1.22, sigma: 0.13, ordinalMu: 1.09, marbles: 285, score: 131.45)
+place: 1/44, score: 1.00, marbles won/staked/available: 81/48/1754, rating score: 50.00
+place: 5/47, score: 0.87, marbles won/staked/available: 67/43/1885, rating score: 40.73
+place: 5/32, score: 0.70, marbles won/staked/available: 63/55/1258, rating score: 40.73
+place: 7/37, score: 0.75, marbles won/staked/available: 59/54/1502, rating score: 36.75
+place: 9/47, score: 0.57, marbles won/staked/available: 55/40/1880, rating score: 33.17
+
+
+
+4-th competitor: Competitor(id: 35, mu: 1.29, sigma: 0.14, ordinalMu: 1.16, marbles: 283, score: 137.87)
+place: 2/47, score: 0.99, marbles won/staked/available: 77/40/1885, rating score: 47.50
+place: 2/32, score: 0.82, marbles won/staked/available: 73/52/1258, rating score: 47.50
+place: 4/48, score: 0.91, marbles won/staked/available: 64/47/1953, rating score: 42.87
+place: 8/37, score: 0.75, marbles won/staked/available: 59/51/1502, rating score: 34.92
+
+
+
+5-th competitor: Competitor(id: 22, mu: 1.38, sigma: 0.07, ordinalMu: 1.31, marbles: 279, score: 135.49)
+place: 2/33, score: 0.92, marbles won/staked/available: 79/47/1306, rating score: 47.50
+place: 3/44, score: 0.94, marbles won/staked/available: 76/40/1754, rating score: 45.13
+place: 4/32, score: 0.72, marbles won/staked/available: 65/54/1258, rating score: 42.87
+
+
+
+Middle competitor: Competitor(id: 48, mu: 0.79, sigma: 0.17, ordinalMu: 0.62, marbles: 197, score: 49.45)
+place: 18/37, score: 0.51, marbles won/staked/available: 40/39/1502, rating score: 20.91
+place: 24/47, score: 0.41, marbles won/staked/available: 40/40/1880, rating score: 15.37
+place: 27/47, score: 0.47, marbles won/staked/available: 36/40/1885, rating score: 13.18
+
+
+
+
+Top Competitors By Category:
+Rank  By Marbles                             By Score                               By Mu
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+1.    ID 12   Ma:329  S:150.0 Mu:1.52        ID 12   Ma:329  S:150.0 Mu:1.52        ID 12   Ma:329  S:150.0 Mu:1.52
+       MuR: 1, SR: 1, oMu:1.44, σ:0.08        MuR: 1, MaR: 1, oMu:1.44, σ:0.08       MaR: 1, SR: 1, oMu:1.44, σ:0.08
+2.    ID 19   Ma:315  S:145.1 Mu:1.52        ID 19   Ma:315  S:145.1 Mu:1.52        ID 19   Ma:315  S:145.1 Mu:1.52
+       MuR: 2, SR: 2, oMu:1.42, σ:0.10        MuR: 2, MaR: 2, oMu:1.42, σ:0.10       MaR: 2, SR: 2, oMu:1.42, σ:0.10
+3.    ID 28   Ma:285  S:131.5 Mu:1.22        ID 35   Ma:283  S:137.9 Mu:1.29        ID 22   Ma:279  S:135.5 Mu:1.38
+       MuR:11, SR: 5, oMu:1.09, σ:0.13        MuR: 5, MaR: 4, oMu:1.16, σ:0.14       MaR: 5, SR: 4, oMu:1.31, σ:0.07
+4.    ID 35   Ma:283  S:137.9 Mu:1.29        ID 22   Ma:279  S:135.5 Mu:1.38        ID 73   Ma:275  S:131.1 Mu:1.44
+       MuR: 5, SR: 3, oMu:1.16, σ:0.14        MuR: 3, MaR: 5, oMu:1.31, σ:0.07       MaR: 7, SR: 7, oMu:1.28, σ:0.16
+5.    ID 22   Ma:279  S:135.5 Mu:1.38        ID 28   Ma:285  S:131.5 Mu:1.22        ID 35   Ma:283  S:137.9 Mu:1.29
+       MuR: 3, SR: 4, oMu:1.31, σ:0.07        MuR:11, MaR: 3, oMu:1.09, σ:0.13       MaR: 4, SR: 3, oMu:1.16, σ:0.14
+
+Correlation between mu and marbles: 0.925
+
+Correlation between mu and score: 0.742
+
+Marble Distribution (each █ = 1 competitors):
+Marbles | Count
+--------------------------------------------------
+    100 | ██ (1)
+    120 | ███████████ (7)
+    140 | ████████████ (8)
+    160 | ██████████████████████ (14)
+    180 | ██████████████████████████ (17)
+    200 | ████████████████████████████████████████ (26)
+    220 | ██████████████████████ (14)
+    240 | ████████ (5)
+    260 | ██████ (4)
+    280 | ███ (2)
+    300 | ███ (2)
+1-th competitor: Competitor(id: 17, mu: 1.45, sigma: 0.10, ordinalMu: 1.35, marbles: 319, score: 150.00)
+place: 1/35, score: 1.00, marbles won/staked/available: 93/40/1400, rating score: 50.00
+place: 1/32, score: 1.00, marbles won/staked/available: 76/51/1269, rating score: 50.00
+place: 1/48, score: 1.00, marbles won/staked/available: 73/56/1853, rating score: 50.00
+place: 2/34, score: 0.83, marbles won/staked/available: 83/59/1364, rating score: 47.50
+
+
+
+2-th competitor: Competitor(id: 28, mu: 1.45, sigma: 0.09, ordinalMu: 1.36, marbles: 318, score: 147.50)
+place: 1/43, score: 1.00, marbles won/staked/available: 80/48/1720, rating score: 50.00
+place: 1/34, score: 1.00, marbles won/staked/available: 100/55/1364, rating score: 50.00
+place: 2/35, score: 0.87, marbles won/staked/available: 81/40/1400, rating score: 47.50
+
+
+
+3-th competitor: Competitor(id: 19, mu: 1.47, sigma: 0.20, ordinalMu: 1.27, marbles: 298, score: 97.50)
+place: 1/26, score: 1.00, marbles won/staked/available: 114/40/1037, rating score: 50.00
+place: 2/43, score: 0.99, marbles won/staked/available: 79/55/1720, rating score: 47.50
+
+
+
+4-th competitor: Competitor(id: 96, mu: 1.34, sigma: 0.11, ordinalMu: 1.22, marbles: 281, score: 142.63)
+place: 1/28, score: 1.00, marbles won/staked/available: 72/40/1106, rating score: 50.00
+place: 2/48, score: 0.96, marbles won/staked/available: 70/53/1853, rating score: 47.50
+place: 3/43, score: 0.97, marbles won/staked/available: 78/46/1720, rating score: 45.13
+
+
+
+5-th competitor: Competitor(id: 2, mu: 1.36, sigma: 0.08, ordinalMu: 1.28, marbles: 277, score: 126.58)
+place: 3/28, score: 0.89, marbles won/staked/available: 64/47/1106, rating score: 45.13
+place: 5/35, score: 0.78, marbles won/staked/available: 73/40/1400, rating score: 40.73
+place: 5/48, score: 0.88, marbles won/staked/available: 64/53/1853, rating score: 40.73
+place: 8/43, score: 0.83, marbles won/staked/available: 66/50/1720, rating score: 34.92
+
+
+
+Middle competitor: Competitor(id: 73, mu: 0.81, sigma: 0.19, ordinalMu: 0.62, marbles: 200, score: 0.00)
+
+
+
+
+
+Top Competitors By Category:
+Rank  By Marbles                             By Score                               By Mu
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+1.    ID 17   Ma:319  S:150.0 Mu:1.45        ID 17   Ma:319  S:150.0 Mu:1.45        ID 28   Ma:318  S:147.5 Mu:1.45
+       MuR: 2, SR: 1, oMu:1.35, σ:0.10        MuR: 2, MaR: 1, oMu:1.35, σ:0.10       MaR: 2, SR: 2, oMu:1.36, σ:0.09
+2.    ID 28   Ma:318  S:147.5 Mu:1.45        ID 28   Ma:318  S:147.5 Mu:1.45        ID 17   Ma:319  S:150.0 Mu:1.45
+       MuR: 1, SR: 2, oMu:1.36, σ:0.09        MuR: 1, MaR: 2, oMu:1.36, σ:0.09       MaR: 1, SR: 1, oMu:1.35, σ:0.10
+3.    ID 19   Ma:298  S:97.5 Mu:1.47        ID 96   Ma:281  S:142.6 Mu:1.34        ID 0    Ma:252  S:92.6 Mu:1.38
+       MuR: 6, SR:14, oMu:1.27, σ:0.20        MuR: 7, MaR: 4, oMu:1.22, σ:0.11       MaR:10, SR:17, oMu:1.32, σ:0.07
+4.    ID 96   Ma:281  S:142.6 Mu:1.34        ID 48   Ma:271  S:127.5 Mu:1.16        ID 36   Ma:229  S:45.1 Mu:1.45
+       MuR: 7, SR: 3, oMu:1.22, σ:0.11        MuR:18, MaR: 6, oMu:1.05, σ:0.11       MaR:19, SR:51, oMu:1.30, σ:0.16
+5.    ID 2    Ma:277  S:126.6 Mu:1.36        ID 2    Ma:277  S:126.6 Mu:1.36        ID 2    Ma:277  S:126.6 Mu:1.36
+       MuR: 5, SR: 5, oMu:1.28, σ:0.08        MuR: 5, MaR: 5, oMu:1.28, σ:0.08       MaR: 5, SR: 5, oMu:1.28, σ:0.08
+
+Correlation between mu and marbles: 0.883
+
+Correlation between mu and score: 0.640
+
+Marble Distribution (each █ = 1 competitors):
+Marbles | Count
+--------------------------------------------------
+    100 | ████ (3)
+    120 | ███ (2)
+    140 | ████ (3)
+    160 | ████████████████ (12)
+    180 | ███████████████████████████████████ (26)
+    200 | ████████████████████████████████████████ (30)
+    220 | ███████████████████ (14)
+    240 | ████████ (6)
+    260 | ████ (3)
+    280 | █ (1)
+1-th competitor: Competitor(id: 83, mu: 1.36, sigma: 0.18, ordinalMu: 1.18, marbles: 292, score: 142.63)
+place: 1/42, score: 1.00, marbles won/staked/available: 90/40/1680, rating score: 50.00
+place: 2/29, score: 0.93, marbles won/staked/available: 77/54/1158, rating score: 47.50
+place: 3/38, score: 0.88, marbles won/staked/available: 69/50/1522, rating score: 45.13
+
+
+
+2-th competitor: Competitor(id: 22, mu: 1.47, sigma: 0.20, ordinalMu: 1.28, marbles: 268, score: 135.85)
+place: 1/38, score: 1.00, marbles won/staked/available: 78/46/1522, rating score: 50.00
+place: 3/42, score: 0.77, marbles won/staked/available: 69/40/1680, rating score: 45.13
+place: 5/40, score: 0.89, marbles won/staked/available: 59/52/1572, rating score: 40.73
+
+
+
+3-th competitor: Competitor(id: 28, mu: 1.33, sigma: 0.17, ordinalMu: 1.15, marbles: 264, score: 131.56)
+place: 1/45, score: 1.00, marbles won/staked/available: 64/50/1763, rating score: 50.00
+place: 4/38, score: 0.87, marbles won/staked/available: 68/45/1522, rating score: 42.87
+place: 6/42, score: 0.74, marbles won/staked/available: 67/40/1680, rating score: 38.69
+
+
+
+4-th competitor: Competitor(id: 66, mu: 1.54, sigma: 0.20, ordinalMu: 1.34, marbles: 260, score: 97.50)
+place: 1/29, score: 1.00, marbles won/staked/available: 82/44/1158, rating score: 50.00
+place: 2/45, score: 0.98, marbles won/staked/available: 62/40/1763, rating score: 47.50
+
+
+
+5-th competitor: Competitor(id: 48, mu: 1.49, sigma: 0.12, ordinalMu: 1.36, marbles: 259, score: 133.35)
+place: 2/38, score: 0.90, marbles won/staked/available: 70/45/1522, rating score: 47.50
+place: 3/35, score: 0.93, marbles won/staked/available: 57/50/1381, rating score: 45.13
+place: 5/42, score: 0.74, marbles won/staked/available: 67/40/1680, rating score: 40.73
+
+
+
+Middle competitor: Competitor(id: 93, mu: 0.73, sigma: 0.15, ordinalMu: 0.58, marbles: 200, score: 0.00)
+
+
+
+
+
+Top Competitors By Category:
+Rank  By Marbles                             By Score                               By Mu
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+1.    ID 83   Ma:292  S:142.6 Mu:1.36        ID 83   Ma:292  S:142.6 Mu:1.36        ID 48   Ma:259  S:133.4 Mu:1.49
+       MuR:13, SR: 1, oMu:1.18, σ:0.18        MuR:13, MaR: 1, oMu:1.18, σ:0.18       MaR: 5, SR: 3, oMu:1.36, σ:0.12
+2.    ID 22   Ma:268  S:135.9 Mu:1.47        ID 22   Ma:268  S:135.9 Mu:1.47        ID 88   Ma:226  S:50.0 Mu:1.48
+       MuR: 5, SR: 2, oMu:1.28, σ:0.20        MuR: 5, MaR: 2, oMu:1.28, σ:0.20       MaR:18, SR:45, oMu:1.35, σ:0.14
+3.    ID 28   Ma:264  S:131.6 Mu:1.33        ID 48   Ma:259  S:133.4 Mu:1.49        ID 66   Ma:260  S:97.5 Mu:1.54
+       MuR:15, SR: 4, oMu:1.15, σ:0.17        MuR: 1, MaR: 5, oMu:1.36, σ:0.12       MaR: 4, SR:13, oMu:1.34, σ:0.20
+4.    ID 66   Ma:260  S:97.5 Mu:1.54        ID 28   Ma:264  S:131.6 Mu:1.33        ID 20   Ma:214  S:40.7 Mu:1.33
+       MuR: 3, SR:13, oMu:1.34, σ:0.20        MuR:15, MaR: 3, oMu:1.15, σ:0.17       MaR:31, SR:65, oMu:1.28, σ:0.05
+5.    ID 48   Ma:259  S:133.4 Mu:1.49        ID 23   Ma:246  S:131.1 Mu:1.32        ID 22   Ma:268  S:135.9 Mu:1.47
+       MuR: 1, SR: 3, oMu:1.36, σ:0.12        MuR: 7, MaR:10, oMu:1.26, σ:0.06       MaR: 2, SR: 2, oMu:1.28, σ:0.20
+
+Correlation between mu and marbles: 0.889
+
+Correlation between mu and score: 0.667
+
+Marble Distribution (each █ = 1 competitors):
+Marbles | Count
+--------------------------------------------------
+     80 | █ (1)
+    100 | █ (1)
+    120 | ███████ (5)
+    140 | ███████ (5)
+    160 | ███████████████████ (13)
+    180 | ██████████████████████████ (18)
+    200 | ████████████████████████████████████████ (28)
+    220 | ██████████████████████████ (18)
+    240 | ██████████ (7)
+    260 | ████ (3)
+    280 | █ (1)
+1-th competitor: Competitor(id: 77, mu: 1.34, sigma: 0.07, ordinalMu: 1.27, marbles: 288, score: 142.87)
+place: 1/25, score: 1.00, marbles won/staked/available: 80/44/997, rating score: 50.00
+place: 1/32, score: 1.00, marbles won/staked/available: 70/51/1316, rating score: 50.00
+place: 4/31, score: 0.86, marbles won/staked/available: 70/55/1248, rating score: 42.87
+place: 6/41, score: 0.86, marbles won/staked/available: 58/40/1640, rating score: 38.69
+
+
+
+2-th competitor: Competitor(id: 67, mu: 1.12, sigma: 0.16, ordinalMu: 0.96, marbles: 274, score: 145.00)
+place: 1/31, score: 1.00, marbles won/staked/available: 81/48/1248, rating score: 50.00
+place: 2/41, score: 0.95, marbles won/staked/available: 63/40/1640, rating score: 47.50
+place: 2/32, score: 0.90, marbles won/staked/available: 63/45/1316, rating score: 47.50
+
+
+
+3-th competitor: Competitor(id: 86, mu: 1.23, sigma: 0.05, ordinalMu: 1.17, marbles: 265, score: 120.25)
+place: 4/44, score: 0.83, marbles won/staked/available: 57/42/1747, rating score: 42.87
+place: 6/31, score: 0.82, marbles won/staked/available: 67/47/1248, rating score: 38.69
+place: 6/46, score: 0.75, marbles won/staked/available: 60/51/1848, rating score: 38.69
+place: 7/32, score: 0.80, marbles won/staked/available: 56/45/1316, rating score: 36.75
+place: 15/41, score: 0.75, marbles won/staked/available: 50/40/1640, rating score: 24.38
+
+
+
+4-th competitor: Competitor(id: 19, mu: 1.28, sigma: 0.14, ordinalMu: 1.13, marbles: 261, score: 127.12)
+place: 2/31, score: 0.95, marbles won/staked/available: 77/43/1248, rating score: 47.50
+place: 4/31, score: 0.87, marbles won/staked/available: 55/50/1221, rating score: 42.87
+place: 7/44, score: 0.81, marbles won/staked/available: 56/40/1747, rating score: 36.75
+place: 8/46, score: 0.71, marbles won/staked/available: 57/51/1848, rating score: 34.92
+
+
+
+5-th competitor: Competitor(id: 72, mu: 1.21, sigma: 0.13, ordinalMu: 1.09, marbles: 259, score: 119.02)
+place: 3/31, score: 0.88, marbles won/staked/available: 72/43/1248, rating score: 45.13
+place: 5/46, score: 0.80, marbles won/staked/available: 64/49/1848, rating score: 40.73
+place: 9/41, score: 0.82, marbles won/staked/available: 55/40/1640, rating score: 33.17
+
+
+
+Middle competitor: Competitor(id: 82, mu: 0.93, sigma: 0.10, ordinalMu: 0.83, marbles: 200, score: 50.28)
+place: 16/44, score: 0.66, marbles won/staked/available: 45/39/1747, rating score: 23.16
+place: 25/41, score: 0.56, marbles won/staked/available: 37/40/1640, rating score: 14.60
+place: 28/46, score: 0.47, marbles won/staked/available: 38/41/1848, rating score: 12.52
+
+
+
+
+Top Competitors By Category:
+Rank  By Marbles                             By Score                               By Mu
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+1.    ID 77   Ma:288  S:142.9 Mu:1.34        ID 67   Ma:274  S:145.0 Mu:1.12        ID 74   Ma:257  S:95.1 Mu:1.41
+       MuR: 2, SR: 2, oMu:1.27, σ:0.07        MuR:25, MaR: 2, oMu:0.96, σ:0.16       MaR: 7, SR:16, oMu:1.36, σ:0.05
+2.    ID 67   Ma:274  S:145.0 Mu:1.12        ID 77   Ma:288  S:142.9 Mu:1.34        ID 77   Ma:288  S:142.9 Mu:1.34
+       MuR:25, SR: 1, oMu:0.96, σ:0.16        MuR: 2, MaR: 1, oMu:1.27, σ:0.07       MaR: 1, SR: 2, oMu:1.27, σ:0.07
+3.    ID 86   Ma:265  S:120.2 Mu:1.23        ID 9    Ma:258  S:135.7 Mu:1.26        ID 86   Ma:265  S:120.2 Mu:1.23
+       MuR: 3, SR: 6, oMu:1.17, σ:0.05        MuR: 4, MaR: 6, oMu:1.17, σ:0.08       MaR: 3, SR: 6, oMu:1.17, σ:0.05
+4.    ID 19   Ma:261  S:127.1 Mu:1.28        ID 19   Ma:261  S:127.1 Mu:1.28        ID 9    Ma:258  S:135.7 Mu:1.26
+       MuR: 6, SR: 4, oMu:1.13, σ:0.14        MuR: 6, MaR: 4, oMu:1.13, σ:0.14       MaR: 6, SR: 3, oMu:1.17, σ:0.08
+5.    ID 72   Ma:259  S:119.0 Mu:1.21        ID 59   Ma:250  S:120.8 Mu:1.04        ID 92   Ma:241  S:118.3 Mu:1.34
+       MuR:13, SR: 7, oMu:1.09, σ:0.13        MuR:38, MaR: 8, oMu:0.88, σ:0.16       MaR:11, SR: 8, oMu:1.16, σ:0.18
+
+Correlation between mu and marbles: 0.858
+
+Correlation between mu and score: 0.691
+
+Marble Distribution (each █ = 1 competitors):
+Marbles | Count
+--------------------------------------------------
+    100 | ███ (2)
+    120 | ████████ (6)
+    140 | ████████ (6)
+    160 | ███████████████████ (14)
+    180 | ██████████████████████████ (19)
+    200 | ████████████████████████████████████████ (29)
+    220 | ████████████ (9)
+    240 | ███████████ (8)
+    260 | ████ (3)
+    280 | ████ (3)
+    300 | █ (1)
+1-th competitor: Competitor(id: 6, mu: 1.38, sigma: 0.11, ordinalMu: 1.27, marbles: 311, score: 147.50)
+place: 1/37, score: 1.00, marbles won/staked/available: 80/51/1458, rating score: 50.00
+place: 1/42, score: 1.00, marbles won/staked/available: 82/57/1617, rating score: 50.00
+place: 2/34, score: 1.00, marbles won/staked/available: 73/40/1371, rating score: 47.50
+place: 7/43, score: 0.78, marbles won/staked/available: 71/47/1741, rating score: 36.75
+
+
+
+2-th competitor: Competitor(id: 48, mu: 1.28, sigma: 0.05, ordinalMu: 1.23, marbles: 295, score: 130.86)
+place: 3/35, score: 0.79, marbles won/staked/available: 66/46/1372, rating score: 45.13
+place: 4/39, score: 0.69, marbles won/staked/available: 70/40/1560, rating score: 42.87
+place: 4/34, score: 0.88, marbles won/staked/available: 65/50/1371, rating score: 42.87
+place: 4/37, score: 0.78, marbles won/staked/available: 63/57/1458, rating score: 42.87
+place: 4/26, score: 0.91, marbles won/staked/available: 61/58/1067, rating score: 42.87
+place: 5/43, score: 0.81, marbles won/staked/available: 74/53/1741, rating score: 40.73
+
+
+
+3-th competitor: Competitor(id: 39, mu: 1.27, sigma: 0.18, ordinalMu: 1.08, marbles: 293, score: 142.63)
+place: 1/43, score: 1.00, marbles won/staked/available: 91/50/1741, rating score: 50.00
+place: 2/35, score: 0.87, marbles won/staked/available: 72/40/1372, rating score: 47.50
+place: 3/34, score: 0.89, marbles won/staked/available: 66/46/1371, rating score: 45.13
+
+
+
+4-th competitor: Competitor(id: 46, mu: 1.43, sigma: 0.15, ordinalMu: 1.28, marbles: 291, score: 142.87)
+place: 1/35, score: 1.00, marbles won/staked/available: 83/40/1372, rating score: 50.00
+place: 1/34, score: 1.00, marbles won/staked/available: 74/49/1371, rating score: 50.00
+place: 4/43, score: 0.94, marbles won/staked/available: 85/54/1741, rating score: 42.87
+place: 10/37, score: 0.65, marbles won/staked/available: 52/60/1458, rating score: 31.51
+
+
+
+5-th competitor: Competitor(id: 98, mu: 1.35, sigma: 0.08, ordinalMu: 1.27, marbles: 279, score: 135.73)
+place: 2/43, score: 0.96, marbles won/staked/available: 87/45/1741, rating score: 47.50
+place: 2/26, score: 0.97, marbles won/staked/available: 65/53/1067, rating score: 47.50
+place: 5/34, score: 0.88, marbles won/staked/available: 65/40/1371, rating score: 40.73
+
+
+
+Middle competitor: Competitor(id: 47, mu: 0.89, sigma: 0.08, ordinalMu: 0.82, marbles: 200, score: 0.00)
+
+
+
+
+
+Top Competitors By Category:
+Rank  By Marbles                             By Score                               By Mu
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+1.    ID 6    Ma:311  S:147.5 Mu:1.38        ID 6    Ma:311  S:147.5 Mu:1.38        ID 46   Ma:291  S:142.9 Mu:1.43
+       MuR: 4, SR: 1, oMu:1.27, σ:0.11        MuR: 4, MaR: 1, oMu:1.27, σ:0.11       MaR: 4, SR: 2, oMu:1.28, σ:0.15
+2.    ID 48   Ma:295  S:130.9 Mu:1.28        ID 46   Ma:291  S:142.9 Mu:1.43        ID 9    Ma:217  S:36.8 Mu:1.43
+       MuR: 6, SR: 6, oMu:1.23, σ:0.05        MuR: 1, MaR: 4, oMu:1.28, σ:0.15       MaR:27, SR:62, oMu:1.28, σ:0.16
+3.    ID 39   Ma:293  S:142.6 Mu:1.27        ID 39   Ma:293  S:142.6 Mu:1.27        ID 98   Ma:279  S:135.7 Mu:1.35
+       MuR:13, SR: 3, oMu:1.08, σ:0.18        MuR:13, MaR: 3, oMu:1.08, σ:0.18       MaR: 5, SR: 4, oMu:1.27, σ:0.08
+4.    ID 46   Ma:291  S:142.9 Mu:1.43        ID 98   Ma:279  S:135.7 Mu:1.35        ID 6    Ma:311  S:147.5 Mu:1.38
+       MuR: 1, SR: 2, oMu:1.28, σ:0.15        MuR: 3, MaR: 5, oMu:1.27, σ:0.08       MaR: 1, SR: 1, oMu:1.27, σ:0.11
+5.    ID 98   Ma:279  S:135.7 Mu:1.35        ID 62   Ma:266  S:134.3 Mu:1.17        ID 57   Ma:272  S:122.5 Mu:1.35
+       MuR: 3, SR: 4, oMu:1.27, σ:0.08        MuR:14, MaR: 7, oMu:1.05, σ:0.12       MaR: 6, SR: 7, oMu:1.25, σ:0.10
+
+Correlation between mu and marbles: 0.859
+
+Correlation between mu and score: 0.664
+
+Marble Distribution (each █ = 1 competitors):
+Marbles | Count
+--------------------------------------------------
+    100 | █████ (3)
+    120 | ████████ (5)
+    140 | ████████████ (7)
+    160 | ██████████████████████ (13)
+    180 | ██████████████████████████████ (18)
+    200 | ████████████████████████████████████████ (24)
+    220 | ███████████████████████████ (16)
+    240 | ████████████ (7)
+    260 | ███████ (4)
+    280 | █████ (3)
+1-th competitor: Competitor(id: 18, mu: 1.36, sigma: 0.11, ordinalMu: 1.25, marbles: 289, score: 135.85)
+place: 1/39, score: 1.00, marbles won/staked/available: 85/46/1572, rating score: 50.00
+place: 3/46, score: 0.78, marbles won/staked/available: 71/40/1840, rating score: 45.13
+place: 5/33, score: 0.91, marbles won/staked/available: 73/54/1322, rating score: 40.73
+
+
+
+2-th competitor: Competitor(id: 12, mu: 1.25, sigma: 0.11, ordinalMu: 1.14, marbles: 287, score: 145.00)
+place: 1/48, score: 1.00, marbles won/staked/available: 66/52/1928, rating score: 50.00
+place: 2/39, score: 0.88, marbles won/staked/available: 76/46/1572, rating score: 47.50
+place: 2/29, score: 0.95, marbles won/staked/available: 69/55/1176, rating score: 47.50
+place: 4/46, score: 0.76, marbles won/staked/available: 69/40/1840, rating score: 42.87
+
+
+
+3-th competitor: Competitor(id: 68, mu: 1.14, sigma: 0.19, ordinalMu: 0.95, marbles: 285, score: 135.85)
+place: 1/33, score: 1.00, marbles won/staked/available: 94/45/1333, rating score: 50.00
+place: 3/48, score: 0.96, marbles won/staked/available: 64/55/1928, rating score: 45.13
+place: 5/46, score: 0.73, marbles won/staked/available: 67/40/1840, rating score: 40.73
+
+
+
+4-th competitor: Competitor(id: 29, mu: 1.21, sigma: 0.19, ordinalMu: 1.01, marbles: 278, score: 121.67)
+place: 1/46, score: 1.00, marbles won/staked/available: 91/40/1840, rating score: 50.00
+place: 7/39, score: 0.71, marbles won/staked/available: 60/50/1572, rating score: 36.75
+place: 8/33, score: 0.86, marbles won/staked/available: 69/52/1322, rating score: 34.92
+
+
+
+5-th competitor: Competitor(id: 56, mu: 1.33, sigma: 0.10, ordinalMu: 1.23, marbles: 271, score: 137.75)
+place: 2/48, score: 0.97, marbles won/staked/available: 64/52/1928, rating score: 47.50
+place: 3/39, score: 0.82, marbles won/staked/available: 70/40/1572, rating score: 45.13
+place: 3/33, score: 0.94, marbles won/staked/available: 75/46/1322, rating score: 45.13
+
+
+
+Middle competitor: Competitor(id: 11, mu: 0.83, sigma: 0.17, ordinalMu: 0.65, marbles: 200, score: 0.00)
+
+
+
+
+
+Top Competitors By Category:
+Rank  By Marbles                             By Score                               By Mu
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+1.    ID 18   Ma:289  S:135.9 Mu:1.36        ID 12   Ma:287  S:145.0 Mu:1.25        ID 34   Ma:256  S:92.6 Mu:1.41
+       MuR: 2, SR: 4, oMu:1.25, σ:0.11        MuR:10, MaR: 2, oMu:1.14, σ:0.11       MaR:11, SR:17, oMu:1.29, σ:0.13
+2.    ID 12   Ma:287  S:145.0 Mu:1.25        ID 56   Ma:271  S:137.8 Mu:1.33        ID 18   Ma:289  S:135.9 Mu:1.36
+       MuR:10, SR: 1, oMu:1.14, σ:0.11        MuR: 3, MaR: 5, oMu:1.23, σ:0.10       MaR: 1, SR: 4, oMu:1.25, σ:0.11
+3.    ID 68   Ma:285  S:135.9 Mu:1.14        ID 68   Ma:285  S:135.9 Mu:1.14        ID 56   Ma:271  S:137.8 Mu:1.33
+       MuR:29, SR: 3, oMu:0.95, σ:0.19        MuR:29, MaR: 3, oMu:0.95, σ:0.19       MaR: 5, SR: 2, oMu:1.23, σ:0.10
+4.    ID 29   Ma:278  S:121.7 Mu:1.21        ID 18   Ma:289  S:135.9 Mu:1.36        ID 53   Ma:221  S:38.7 Mu:1.32
+       MuR:21, SR: 9, oMu:1.01, σ:0.19        MuR: 2, MaR: 1, oMu:1.25, σ:0.11       MaR:28, SR:60, oMu:1.20, σ:0.12
+5.    ID 56   Ma:271  S:137.8 Mu:1.33        ID 6    Ma:262  S:131.1 Mu:1.25        ID 40   Ma:240  S:50.0 Mu:1.34
+       MuR: 3, SR: 2, oMu:1.23, σ:0.10        MuR: 7, MaR: 7, oMu:1.16, σ:0.09       MaR:14, SR:43, oMu:1.18, σ:0.16
+
+Correlation between mu and marbles: 0.882
+
+Correlation between mu and score: 0.662

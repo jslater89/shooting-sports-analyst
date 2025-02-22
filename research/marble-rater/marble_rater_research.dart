@@ -11,11 +11,11 @@ import 'package:collection/collection.dart';
 final rng = Random();
 
 void main() {
-  int currentId = 1000;
-  final competitors = generateCompetitors(200, startingId: 0);
+  int currentId = 100;
+  final competitors = generateCompetitors(currentId, startingId: 0);
 
-  for(int i = 0; i < 4; i++) {
-    int matchSize = rng.nextInt(75) + 125;
+  for(int i = 0; i < 7; i++) {
+    int matchSize = rng.nextInt(25) + 25;
     var matchCompetitors = competitors.sample(matchSize);
     var match = Match(matchCompetitors, model: PowerLawModel(power: 1));
     match.calculateResults();
@@ -28,7 +28,7 @@ void main() {
 
   competitors.sort((a, b) => b.marbles.compareTo(a.marbles));
 
-  var scoring = InversePlaceScoring();
+  var scoring = DecayingPointsScoring();
   for(var competitor in competitors) {
     if(competitor.outcomes.isEmpty) {
       continue;
