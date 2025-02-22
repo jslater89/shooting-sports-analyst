@@ -11,13 +11,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
 import 'package:shooting_sports_analyst/data/search_query_parser.dart';
 import 'package:shooting_sports_analyst/data/sort_mode.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
-import 'package:shooting_sports_analyst/data/sport/builtins/uspsa_utils/uspsa_fantasy_calculator.dart';
+import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/match/stage_stats_calculator.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/fantasy_scoring_calculator.dart';
@@ -355,7 +356,7 @@ class _ResultPageState extends State<ResultPage> {
     );
 
     setState(() {
-      _whatIfMode = true;
+      // _whatIfMode = true;
       _baseScores = scores.values.toList();
       _searchedScores = []..addAll(scores.values);
     });
@@ -388,8 +389,14 @@ class _ResultPageState extends State<ResultPage> {
         _log.d("Refreshing match from source ${_canonicalMatch.sourceCode}");
         var source = MatchSourceRegistry().getByCodeOrNull(_canonicalMatch.sourceCode);
         if(source != null && _canonicalMatch.sourceIds.isNotEmpty) {
+          InternalMatchFetchOptions? options;
+          if(source is PSv2MatchSource) {
+            options = PSv2MatchFetchOptions(
+              downloadScoreLogs: true,
+            );
+          }
           _log.d("Using source ${source.name}");
-          var matchRes = await source.getMatchFromId(_canonicalMatch.sourceIds.first);
+          var matchRes = await source.getMatchFromId(_canonicalMatch.sourceIds.first, options: options);
 
           if(matchRes.isOk()) {
             var match = matchRes.unwrap();

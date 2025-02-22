@@ -12,6 +12,7 @@ import 'package:flutter/foundation.dart';
 import 'package:mutex/mutex.dart';
 import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
+import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/ui/booth/global_card_settings_dialog.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
@@ -47,9 +48,13 @@ class BroadcastBoothController {
     if(source == null) {
       return false;
     }
-    var matchRes = await source.getMatchFromId(model.matchId, options: PSv2MatchFetchOptions(
-      downloadScoreLogs: true,
-    ));
+    InternalMatchFetchOptions? options;
+    if(source is PSv2MatchSource) {
+      options = PSv2MatchFetchOptions(
+        downloadScoreLogs: true,
+      );
+    }
+    var matchRes = await source.getMatchFromId(model.matchId, options: options);
     if(matchRes.isErr()) {
       _log.e("unable to refresh match: ${matchRes.unwrapErr()}");
       return false;
