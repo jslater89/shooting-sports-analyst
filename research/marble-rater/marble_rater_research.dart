@@ -563,3 +563,17 @@ class F1Scoring extends CumulativeScoring {
     }
   }
 }
+
+class DecayingPointsScoring extends CumulativeScoring {
+  final double decayRate;
+  final double initialPoints;
+
+  DecayingPointsScoring({this.decayRate = 0.95, this.initialPoints = 50});
+
+  @override
+  void calculatePoints(List<CompetitorOutcome> outcomes) {
+    for(var outcome in outcomes) {
+      outcome.ratingScore = initialPoints * pow(decayRate, outcome.place - 1).toDouble();
+    }
+  }
+}
