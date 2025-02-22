@@ -47,6 +47,7 @@ class PointsRating extends ShooterRating<PointsRatingEvent> {
 
   @override
   void updateFromEvents(List<RatingEvent> events) {
+    super.updateFromEvents(events);
     _cachedSortedEvents = null;
     for(var event in events) {
       wrappedRating.newRatingEvents.add(event.wrappedEvent);

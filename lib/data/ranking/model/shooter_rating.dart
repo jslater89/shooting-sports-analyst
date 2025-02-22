@@ -7,6 +7,7 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart';
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
@@ -143,7 +144,6 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
   void ratingEventsChanged() {
     _ratingEvents = null;
     _lastMatchChange = null;
-    _length = null;
   }
 
   /// All of the empty rating events in this shooter's history where the
@@ -271,16 +271,13 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
     return latest?.newRating;
   }
 
-  @ignore 
-  int? _length = null;
   @ignore
-  int get length {
-    if(_length != null) return _length!;
-    _length = wrappedRating.length;
-    return _length!;
-  }
+  int get length => wrappedRating.length;
 
-  void updateFromEvents(List<RatingEvent> events);
+  @mustCallSuper
+  void updateFromEvents(List<RatingEvent> events) {
+    wrappedRating.cachedLength += events.length;
+  }
 
   AverageRating averageRating({int window = ShooterRating.baseTrendWindow, List<double>? preloadedRatings, bool nonzeroChange = true}) {
     double lowestPoint = rating;

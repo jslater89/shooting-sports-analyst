@@ -247,6 +247,7 @@ class EloShooterRating extends ShooterRating<EloRatingEvent> {
   EloShooterRating.wrapDbRating(DbShooterRating rating) : super.wrapDbRating(rating);
 
   void updateFromEvents(List<RatingEvent> events) {
+    super.updateFromEvents(events);
     for(var e in events) {
       e as EloRatingEvent;
       if(e.baseK != 0) {

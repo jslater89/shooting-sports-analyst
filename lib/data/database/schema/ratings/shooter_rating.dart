@@ -82,11 +82,25 @@ class DbShooterRating extends Shooter with DbSportEntity {
   /// All events belonging to this rating.
   final events = IsarLinks<DbRatingEvent>();
 
+  /// Events added to this rating during rating calculation, but not yet persisted
+  /// to the database.
   @ignore
   List<DbRatingEvent> newRatingEvents = [];
 
+  /// The number of rating events added to this rating.
+  ///
+  /// Equivalent to [events.count] plus [newRatingEvents.length].
+  /// Updated in the [ShooterRating.updateFromEvents] method, which
+  /// is marked mustCallSuper for all of the wrapped rating subtypes.
+  ///
+  /// The value of this property is accurate as soon as [ShooterRating.updateFromEvents]
+  /// is called, but does not reflect the actual number of rating events until
+  /// the subclass implementation of [updateFromEvents] finishes adding events
+  /// to the [newRatingEvents] list.
+  int cachedLength = 0;
+
   @ignore
-  int get length => events.countSync() + newRatingEvents.length;
+  int get length => cachedLength;
 
   // TODO: move rating events getters from elo_shooter_rating to here
 

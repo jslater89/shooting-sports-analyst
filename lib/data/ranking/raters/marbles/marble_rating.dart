@@ -60,6 +60,7 @@ class MarbleRating extends ShooterRating<MarbleRatingEvent> {
 
   @override
   void updateFromEvents(List<RatingEvent> events) {
+    super.updateFromEvents(events);
     for(var event in events) {
       event as MarbleRatingEvent;
       wrappedRating.newRatingEvents.add(event.wrappedEvent);
