@@ -1,6 +1,6 @@
 VERSION=$1
 if [ -z "$VERSION" ]; then
-    VERSION=$(grep 'version:' pubspec.yaml | sed -r 's/version: ([0-9.]*)\+[0-9]+/\1/')
+    VERSION=$(grep -m1 'version:' pubspec.yaml | sed -r 's/version: ([0-9.]*)\+[0-9]+/\1/')
 fi
 
 PROJ_ROOT=$(pwd)
