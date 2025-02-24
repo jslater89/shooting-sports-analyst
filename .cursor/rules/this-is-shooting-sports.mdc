@@ -1,0 +1,24 @@
+---
+description: General information about practical shooting sports and scoring
+globs: research/**
+---
+
+# Practical Shooting Sports Scoring
+'Practical shooting' is a genre of shooting sports competition that is scored on both time and accuracy, and often (but not necessarily) involves movement through a shooting area. USPSA is an example of a practical shooting sport.
+
+## Match Structure
+A match usually comprises several stages or courses of fire. A competitor's match score is typically the sum of their stage scores, in some way or another.
+
+## Hit Factor Scoring
+Hit factor scoring is one of the main flavors of practical shooting scoring. A competitor's raw stage score is their hit factor: their points as scored on targets divided by their time.
+
+Hit factor scoring almost always gets paired with relative stage finish scoring for the match. A stage is worth a certain number of points. (In USPSA, this is the maximum scoring value of all targets: 5 × (required # hits).) The winner gets 100% of the points. Everyone else gets a percentage of the points in proportion to their finish percentage. (On a 100 point stage, you get 95 points if you finish at 95%.)
+
+Among others, USPSA, IPSC, and PCSL are hit factor sports with relative stage finish scoring.
+
+## Time Plus Scoring
+Time plus (or time plus points down, or points down) is the other major kind of scoring: a competitor's score is their raw time, plus penalties for hitting outside the central scoring zones on a target.
+
+Match scoring in time plus is almost always cumulative: your match score is simply the sum of your stage scores. ICORE and IDPA use cumulative time plus scoring.
+
+Some multigun sports use relative stage finish match scoring, along with time plus stage scoring. To calculate percentages, divide the final time in question by the winner's final time. (A 40-second time is 75% of a 30-second time.)
