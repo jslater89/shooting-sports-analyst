@@ -4,20 +4,80 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:io';
 import 'dart:math';
 
 import 'package:collection/collection.dart';
 
 final rng = Random();
 
+class Settings {
+  final int competitorPool;
+  final int matches;
+  final int scoredMatches;
+  final int matchSizeRand;
+  final int matchSizeMin;
+
+  const Settings({
+    required this.competitorPool,
+    required this.matches,
+    required this.scoredMatches,
+    required this.matchSizeRand,
+    required this.matchSizeMin,
+  });
+}
+
+class ScoringSettings {
+  final MarbleModel marbles;
+  final CumulativeScoring score;
+
+  const ScoringSettings({
+    required this.marbles,
+    required this.score,
+  });
+}
+
+const _worldShootSettings = Settings(
+  competitorPool: 200,
+  matches: 4,
+  scoredMatches: 3,
+  matchSizeRand: 75,
+  matchSizeMin: 125,
+);
+
+const _clubSeriesSettings = Settings(
+  competitorPool: 100,
+  matches: 7,
+  scoredMatches: 5,
+  matchSizeRand: 25,
+  matchSizeMin: 25,
+);
+
+const _powerAndPercent = ScoringSettings(
+  marbles: PowerLawModel(power: 1),
+  score: PercentFinishScoring(),
+);
+
+const _ordinalAndInversePlace = ScoringSettings(
+  marbles: OrdinalPowerModel(power: 1),
+  score: InversePlaceScoring(),
+);
+
+const _powerAndInversePlace = ScoringSettings(
+  marbles: PowerLawModel(power: 1),
+  score: InversePlaceScoring(),
+);
+
 void main() {
-  int currentId = 100;
+  final settings = _clubSeriesSettings;
+  final scoring =  _powerAndInversePlace;
+  int currentId = settings.competitorPool;
   final competitors = generateCompetitors(currentId, startingId: 0);
 
-  for(int i = 0; i < 7; i++) {
-    int matchSize = rng.nextInt(25) + 25;
+  for(int i = 0; i < settings.matches; i++) {
+    int matchSize = rng.nextInt(settings.matchSizeRand) + settings.matchSizeMin;
     var matchCompetitors = competitors.sample(matchSize);
-    var match = Match(matchCompetitors, model: PowerLawModel(power: 1));
+    var match = Match(matchCompetitors, model: scoring.marbles);
     match.calculateResults();
     match.distributeMarbles();
 
@@ -28,18 +88,26 @@ void main() {
 
   competitors.sort((a, b) => b.marbles.compareTo(a.marbles));
 
-  var scoring = DecayingPointsScoring();
   for(var competitor in competitors) {
     if(competitor.outcomes.isEmpty) {
       continue;
     }
-    scoring.calculatePoints(competitor.outcomes);
-    var bestScores = scoring.getBestScores(competitor.outcomes, 3).map((e) => e.ratingScore);
+    scoring.score.calculatePoints(competitor.outcomes);
+    var bestScores = scoring.score.getBestScores(competitor.outcomes, settings.scoredMatches).map((e) => e.ratingScore);
     competitor.score = bestScores.sum;
   }
 
   var competitorsByScore = competitors.sorted((a, b) => b.score.compareTo(a.score));
   var competitorsByOrdinalMu = competitors.sorted((a, b) => (b.ordinalMu).compareTo(a.ordinalMu));
+
+  // Dump to CSV
+
+  var csv = StringBuffer();
+  csv.writeln("id,ordinalMu,score,marbles,events");
+  for(var competitor in competitorsByOrdinalMu) {
+    csv.writeln("${competitor.id},${competitor.ordinalMu},${competitor.score},${competitor.marbles},${competitor.outcomes.length}");
+  }
+  File("competitors.csv").writeAsStringSync(csv.toString());
 
   // Draw distribution
   const int bucketSize = 20; // marbles per bucket
@@ -530,10 +598,14 @@ abstract class CumulativeScoring {
     outcomes.sort((a, b) => b.ratingScore.compareTo(a.ratingScore));
     return outcomes.take(n).toList();
   }
+
+  const CumulativeScoring();
 }
 
 /// Points based on percentage finish (100% for 1st, down to 0%)
 class PercentFinishScoring extends CumulativeScoring {
+  const PercentFinishScoring();
+
   @override
   void calculatePoints(List<CompetitorOutcome> outcomes) {
     for(var outcome in outcomes) {
@@ -544,6 +616,8 @@ class PercentFinishScoring extends CumulativeScoring {
 
 /// Points based on number of competitors beaten
 class InversePlaceScoring extends CumulativeScoring {
+  const InversePlaceScoring();
+
   @override
   void calculatePoints(List<CompetitorOutcome> outcomes) {
     for(var outcome in outcomes) {
@@ -554,6 +628,7 @@ class InversePlaceScoring extends CumulativeScoring {
 
 /// F1-style points system (25, 18, 15, 12, 10, 8, 6, 4, 2, 1)
 class F1Scoring extends CumulativeScoring {
+  const F1Scoring();
   static const points = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
   
   @override
@@ -568,7 +643,7 @@ class DecayingPointsScoring extends CumulativeScoring {
   final double decayRate;
   final double initialPoints;
 
-  DecayingPointsScoring({this.decayRate = 0.95, this.initialPoints = 50});
+  const DecayingPointsScoring({this.decayRate = 0.95, this.initialPoints = 50});
 
   @override
   void calculatePoints(List<CompetitorOutcome> outcomes) {
