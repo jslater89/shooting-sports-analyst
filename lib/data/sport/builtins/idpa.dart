@@ -6,6 +6,7 @@
 
 import 'package:shooting_sports_analyst/data/sort_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/stage_scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 
 final _idpaPenalties = [

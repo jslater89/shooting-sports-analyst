@@ -29,6 +29,7 @@ import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
 import 'package:shooting_sports_analyst/data/ranking/timings.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/stage_scoring.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';

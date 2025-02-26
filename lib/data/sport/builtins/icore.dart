@@ -6,7 +6,13 @@
 
 import 'package:shooting_sports_analyst/data/sort_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/stage_scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
+
+const icorePenalties = [
+  const ScoringEvent("Procedural", shortName: "P", timeChange: 5, sortOrder: 100),
+
+];
 
 final icoreSport = Sport(
     "ICORE",
@@ -31,31 +37,32 @@ final icoreSport = Sport(
       const Classification(index: 6, name: "Unclassified", shortName: "U"),
     ],
     divisions: [
-      const Division(name: "Open", shortName: "OPEN"),
-      const Division(name: "Limited", shortName: "LIM"),
-      const Division(name: "Limited 6", shortName: "LIM6"),
-      const Division(name: "Classic", shortName: "CLS"),
+      const Division(name: "Open", shortName: "OPEN", alternateNames: ["O"]),
+      const Division(name: "Limited", shortName: "LIM", alternateNames: ["L"]),
+      const Division(name: "Limited 6", shortName: "LIM6", alternateNames: ["L6"]),
+      const Division(name: "Classic", shortName: "CLS", alternateNames: ["CLC", "C"]),
+      const Division(name: "Big 6", shortName: "B6", alternateNames: ["BIG6"])
     ],
     powerFactors: [
       PowerFactor("Standard",
         targetEvents: [
-          const ScoringEvent("X", timeChange: -1),
-          const ScoringEvent("A", timeChange: 0),
-          const ScoringEvent("B", timeChange: 1),
-          const ScoringEvent("C", timeChange: 2),
-          const ScoringEvent("M", timeChange: 5),
-          const ScoringEvent("NS", timeChange: 5),
+          const ScoringEvent("X", timeChange: -1, sortOrder: 1),
+          const ScoringEvent("A", timeChange: 0, sortOrder: 2),
+          const ScoringEvent("B", timeChange: 1, sortOrder: 3),
+          const ScoringEvent("C", timeChange: 2, sortOrder: 4),
+          const ScoringEvent("M", timeChange: 5, sortOrder: 5),
+          const ScoringEvent("NS", timeChange: 5, sortOrder: 6),
         ],
         fallback: true,
       ),
-      PowerFactor("Heavy Metal",
+      PowerFactor("Big 6",
         targetEvents: [
-          const ScoringEvent("X", timeChange: -1),
-          const ScoringEvent("A", timeChange: 0),
-          const ScoringEvent("B", timeChange: 0),
-          const ScoringEvent("C", timeChange: 2),
-          const ScoringEvent("M", timeChange: 5),
-          const ScoringEvent("NS", timeChange: 5),
+          const ScoringEvent("X", timeChange: -1, sortOrder: 1),
+          const ScoringEvent("A", timeChange: 0, sortOrder: 2),
+          const ScoringEvent("B", timeChange: 0, sortOrder: 3),
+          const ScoringEvent("C", timeChange: 2, sortOrder: 4),
+          const ScoringEvent("M", timeChange: 5, sortOrder: 5),
+          const ScoringEvent("NS", timeChange: 5, sortOrder: 6),
         ],
       ),
     ]

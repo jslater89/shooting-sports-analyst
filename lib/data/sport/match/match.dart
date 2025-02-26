@@ -13,6 +13,7 @@ import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_sourc
 import 'package:shooting_sports_analyst/data/ranking/legacy_loader/rating_history.dart';
 import 'package:shooting_sports_analyst/data/sport/match/translator.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/stage_scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
@@ -311,6 +312,16 @@ class MatchStage {
   String classifierNumber;
   StageScoring scoring;
 
+  /// A map of scoring events to their overrides for this stage.
+  /// 
+  /// For instance, in ICORE, an X-ring hit might be a -1s bonus on one stage, but a -0.5s bonus
+  /// on another. This map contains the data necessary for the scoring system to apply the correct
+  /// value when scoring this stage.
+  /// 
+  /// Scoring event overrides are only considered if the scoring event
+  /// has [ScoringEvent.variesByStage] set to true.
+  Map<ScoringEvent, ScoringEventOverride> scoringOverrides;
+
   /// An optional source-specific identifier for this stage.
   String? sourceId;
 
@@ -323,6 +334,7 @@ class MatchStage {
     this.classifier = false,
     this.classifierNumber = "",
     this.sourceId,
+    this.scoringOverrides = const {},
   });
 
   MatchStage copy() {
@@ -334,6 +346,7 @@ class MatchStage {
       maxPoints: maxPoints,
       classifier: classifier,
       classifierNumber: classifierNumber,
+      scoringOverrides: scoringOverrides,
     );
   }
 

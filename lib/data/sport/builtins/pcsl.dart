@@ -7,6 +7,7 @@
 import 'package:shooting_sports_analyst/data/sport/builtins/sorts.dart';
 import 'package:shooting_sports_analyst/data/sport/display_settings.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/stage_scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 
 const _pcslProcedural = ScoringEvent("Procedural", shortName: "P", pointChange: -10);
