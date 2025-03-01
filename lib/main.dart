@@ -6,6 +6,7 @@
 
 // ignore: avoid_web_libraries_in_flutter
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -121,7 +122,11 @@ void main() async {
   HelpTopicRegistry().initialize();
   registerHelpTopics();
 
-  runApp(MyApp());
+  runZonedGuarded(() {
+    runApp(MyApp());
+  }, (error, stack) {
+    _log.e("Uncaught error", error: error, stackTrace: stack);
+  });
 }
 
 class MyApp extends StatefulWidget {

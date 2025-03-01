@@ -434,6 +434,8 @@ class DbRawScore {
 class DbScoringEventCount {
   String name;
   int count;
+  int? pointsOverride;
+  double? timeOverride;
 
   DbScoringEventCount({
     this.name = "(invalid)",

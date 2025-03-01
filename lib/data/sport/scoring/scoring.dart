@@ -188,6 +188,9 @@ class RawScore {
   /// actions or failures to act outside of hits or misses on targets.
   Map<ScoringEvent, int> penaltyEvents;
 
+  /// Scoring event overrides for this score.
+  Map<ScoringEvent, ScoringEventOverride> scoringOverrides;
+
   /// Whether this score resulted in a DQ.
   bool dq;
 
@@ -219,18 +222,32 @@ class RawScore {
   int? _cachedPoints;
   int? _cachedPenaltyCount;
   int get points {
-    if(_cachedPoints == null) {
+    if(_cachedPoints == null && scoringOverrides.isEmpty) {
       _cachedPoints = _scoreMaps.points;
+    }
+    else if(_cachedPoints == null) {
+      _cachedPoints = _scoreMaps.pointsWithOverrides(scoringOverrides);
     }
     return _cachedPoints!;
   }
+
   int get penaltyCount { 
     if(_cachedPenaltyCount == null) {
       _cachedPenaltyCount = penaltyEvents.values.sum;
     }
     return _cachedPenaltyCount!;  
   }
-  double get finalTime => rawTime + _scoreMaps.timeAdjustment;
+  
+  double? _cachedTimeAdjustment;
+  double get finalTime {
+    if(_cachedTimeAdjustment == null && scoringOverrides.isEmpty) {
+      _cachedTimeAdjustment = _scoreMaps.timeAdjustment;
+    }
+    else if(_cachedTimeAdjustment == null) {
+      _cachedTimeAdjustment = _scoreMaps.timeAdjustmentWithOverrides(scoringOverrides);
+    }
+    return rawTime + _cachedTimeAdjustment!;
+  }
 
   void clearCache() {
     _cachedPoints = null;
@@ -277,6 +294,7 @@ class RawScore {
     required this.targetEvents,
     this.penaltyEvents = const {},
     this.stringTimes = const [],
+    this.scoringOverrides = const {},
     this.modified,
     this.dq = false,
   });
@@ -389,13 +407,15 @@ class ScoringEvent extends NameLookupEntity {
   final double timeChange;
   final bool displayInOverview;
 
-  /// If true, this scoring event's point or time change may vary by stage.
+  /// If true, this scoring event's point or time change may vary. This event
+  /// should be coalesced with other events of the same name to determine the
+  /// number of hits of the event of that name.
   /// 
-  /// For example, in ICORE, an X-ring hit might be a -1s bonus on one stage, but a -0.5s bonus
-  /// on another.
-  /// 
-  /// 
-  final bool variesByStage;
+  /// This is necessary for ICORE: X-ring hits can vary not only across stages,
+  /// but even on an individual stage, which is stupid and I hate it, because
+  /// it's massively untidy to handle given the architecture I wrote for storing
+  /// scores, which I *thought* was generic enough to handle anything.
+  final bool variableValue;
 
   final int sortOrder;
 
@@ -415,7 +435,7 @@ class ScoringEvent extends NameLookupEntity {
     this.shortName = "",
     this.pointChange = 0,
     this.timeChange = 0,
-    this.variesByStage = false,
+    this.variableValue = false,
     this.bonus = false,
     this.bonusLabel = "X",
     this.alternateNames = const [],
@@ -426,20 +446,44 @@ class ScoringEvent extends NameLookupEntity {
   String toString() {
     return name;
   }
+
+  ScoringEvent copyWith({
+    int? pointChange,
+    double? timeChange,
+  }) {
+    return ScoringEvent(name,
+      pointChange: pointChange ?? this.pointChange,
+      timeChange: timeChange ?? this.timeChange,
+    );
+  }
+
+  operator ==(Object other) {
+    if(other is ScoringEvent) {
+      return name == other.name && this.timeChange == other.timeChange && this.pointChange == other.pointChange;
+    }
+    return false;
+  }
+
+  int get hashCode => Object.hash(name, timeChange, pointChange);
 }
 
+/// Different values for scoring events for a particular score. This can come up
+/// in ICORE, where X-ring time bonuses (when given in a stage brief) are not required
+/// to be some particular value: 
 class ScoringEventOverride {
-  final int pointChangeOverride;
-  final double timeChangeOverride;
+  final int? pointChangeOverride;
+  final double? timeChangeOverride;
 
-  ScoringEventOverride({
-    this.pointChangeOverride = 0,
-    this.timeChangeOverride = 0,
-  }) {
-    if(pointChangeOverride == 0 && timeChangeOverride == 0) {
-      throw ArgumentError("pointChangeOverride and timeChangeOverride cannot both be 0");
-    }
-  }
+  int get points => pointChangeOverride ?? 0;
+  double get time => timeChangeOverride ?? 0;
+
+  const ScoringEventOverride({
+    this.pointChangeOverride,
+    this.timeChangeOverride,
+  });
+
+  ScoringEventOverride.time(this.timeChangeOverride) : pointChangeOverride = 0;
+  ScoringEventOverride.points(this.pointChangeOverride) : timeChangeOverride = 0;
 }
 
 extension ScoreUtilities on Map<ScoringEvent, int> {
@@ -460,6 +504,36 @@ extension ScoreUtilities on Map<ScoringEvent, int> {
     }
     return total;
   }
+
+  int pointsWithOverrides(Map<ScoringEvent, ScoringEventOverride> overrides) {
+    int total = 0;
+    for(var s in keys) {
+      int occurrences = this[s]!;
+      var override = overrides[s];
+      if(override != null) {
+        total += override.points * occurrences;
+      }
+      else {
+        total += s.pointChange * occurrences;
+      }
+    }
+    return total;
+  }
+
+  double timeAdjustmentWithOverrides(Map<ScoringEvent, ScoringEventOverride> overrides) {
+    double total = 0;
+    for(var s in keys) {
+      int occurrences = this[s]!;
+      var override = overrides[s];
+      if(override != null) {
+        total += override.time * occurrences;
+      }
+      else {
+        total += s.timeChange * occurrences;
+      }
+    }
+    return total;
+  }
 }
 
 extension ScoreMapUtilities on List<Map<ScoringEvent, int>> {
@@ -468,6 +542,13 @@ extension ScoreMapUtilities on List<Map<ScoringEvent, int>> {
   }
   double get timeAdjustment {
     return this.map((m) => m.timeAdjustment).sum;
+  }
+
+  int pointsWithOverrides(Map<ScoringEvent, ScoringEventOverride> overrides) {
+    return this.map((m) => m.pointsWithOverrides(overrides)).sum;
+  }
+  double timeAdjustmentWithOverrides(Map<ScoringEvent, ScoringEventOverride> overrides) {
+    return this.map((m) => m.timeAdjustmentWithOverrides(overrides)).sum;
   }
 }
 

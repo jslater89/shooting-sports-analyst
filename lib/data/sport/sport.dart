@@ -127,6 +127,11 @@ class Sport {
     /// The power factor to use when generating default display settings.
     /// No effect if [displaySettings] is provided.
     PowerFactor? displaySettingsPowerFactor,
+    /// If present, the caller does not want the default display settings, but
+    /// cannot provide them as a constructor argument (e.g. because the display
+    /// settings require knowledge of the sport). This will be called by [Sport]'s
+    /// constructor body to retrieve display settings, if present.
+    SportDisplaySettings Function(Sport)? displaySettingsBuilder,
     this.shooterDeduplicator,
     this.initialEloRatings = const {},
     this.initialOpenskillRatings = const {},
@@ -143,6 +148,9 @@ class Sport {
         ageCategories = Map.fromEntries(ageCategories.map((e) => MapEntry(e.name, e))) {
     if(displaySettings != null) {
       this.displaySettings = displaySettings;
+    }
+    else if(displaySettingsBuilder != null) {
+      this.displaySettings = displaySettingsBuilder(this);
     }
     else {
       this.displaySettings = SportDisplaySettings.defaultForSport(this, powerFactor: displaySettingsPowerFactor);
@@ -164,6 +172,8 @@ class PowerFactor extends NameLookupEntity {
   ///
   /// e.g. "Procedural" -> ScoringEvent("Procedural", pointChange: -10)
   final Map<String, ScoringEvent> penaltyEvents;
+
+  Map<String, ScoringEvent> get allEvents => {...targetEvents, ...penaltyEvents};
 
   final List<String> alternateNames;
 
@@ -189,6 +199,15 @@ class PowerFactor extends NameLookupEntity {
     targetEvents = Map.fromEntries(targetEvents.map((e) => MapEntry(e.name, e))),
     penaltyEvents = Map.fromEntries(penaltyEvents.map((e) => MapEntry(e.name, e)));
 
+  const PowerFactor.constant(this.name, {
+    this.shortName = "",
+    this.alternateNames = const [],
+    this.fallback = false,
+    this.doesNotScore = false,
+    required this.targetEvents,
+    this.penaltyEvents = const {},
+  });
+
   @override
   String toString() {
     return displayName;
@@ -210,6 +229,9 @@ class Division extends NameLookupEntity {
   String get displayName => name;
   String get shortDisplayName => shortName.isNotEmpty ? shortName : name;
 
+  /// If non-null, this division uses the specified power factor for scoring.
+  final PowerFactor? powerFactorOverride;
+
   final bool fallback;
 
   const Division({
@@ -217,6 +239,7 @@ class Division extends NameLookupEntity {
     required this.shortName,
     this.alternateNames = const [],
     this.fallback = false,
+    this.powerFactorOverride,
     String? longName
   }) : _longName = longName;
 

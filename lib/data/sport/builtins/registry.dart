@@ -20,8 +20,8 @@ class SportRegistry {
       uspsaSport,
       ipscSport,
       pcslSport,
-      idpaSport,
-      // icoreSport,
+      idpaSport,  
+      icoreSport,
     ]);
     return _instance!;
   }

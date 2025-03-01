@@ -191,7 +191,7 @@ class _ScoreListState extends State<ScoreList> {
                 ),
                 if(sport.hasClassifications && sport.displaySettings.showClassification) Expanded(flex: 1, child: Text("Class")),
                 if(sport.hasDivisions) Expanded(flex: 2, child: Text("Division")),
-                if(sport.hasPowerFactors) Expanded(flex: 1, child: Text("PF")),
+                if(sport.hasPowerFactors && sport.displaySettings.showPowerFactor) Expanded(flex: 1, child: Text("PF")),
                 Expanded(flex: 2, child: Text("Match %")),
                 if(sport.matchScoring is CumulativeScoring && sport.type.isTimePlus) Expanded(flex: 2, child: Text("Final Time"))
                 else Expanded(flex: 2, child: Text("Match Pts.")),
@@ -335,7 +335,7 @@ class _ScoreListState extends State<ScoreList> {
               ),
               if(sport.hasClassifications && sport.displaySettings.showClassification) Expanded(flex: 1, child: Text(score.shooter.classification?.shortName ?? "UNK")),
               if(sport.hasDivisions) Expanded(flex: 2, child: Text(score.shooter.division?.displayName ?? "NO DIVISION")),
-              if(sport.hasPowerFactors) Expanded(flex: 1, child: Text(score.shooter.powerFactor.shortName)),
+              if(sport.hasPowerFactors && sport.displaySettings.showPowerFactor) Expanded(flex: 1, child: Text(score.shooter.powerFactor.shortName)),
               Expanded(flex: 2, child: Text("${score.ratio.asPercentage()}%")),
               Expanded(flex: 2, child: Text(score.points.toStringAsFixed(2))),
               if(widget.match?.inProgress ?? false) Expanded(flex: 1, child: Text("$stagesComplete", textAlign: TextAlign.end)),

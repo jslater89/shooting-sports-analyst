@@ -8,10 +8,15 @@ import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
+/// Settings for how a sport's match results should be displayed.
+/// 
+/// [SportDisplaySettings.defaultForSport] creates a passably sensible
+/// default.
 class SportDisplaySettings {
   /// Whether to display classification in overviews etc.
   bool showClassification;
   bool showTime;
+  bool showPowerFactor;
 
   /// The columns to display
   List<ColumnGroup> scoreColumns;
@@ -27,9 +32,13 @@ class SportDisplaySettings {
     this.showClassification = true,
     this.eventNamesAsSuffix = true,
     this.showTime = true,
+    this.showPowerFactor = true,
   });
 
-  factory SportDisplaySettings.defaultForSport(Sport sport, {PowerFactor? powerFactor}) {
+  factory SportDisplaySettings.defaultForSport(Sport sport, {
+    PowerFactor? powerFactor,
+    bool showPowerFactor = true,
+  }) {
     if(powerFactor == null) powerFactor = sport.defaultPowerFactor;
 
     if(sport.type.uspsaStyleDisplay) {
@@ -37,7 +46,7 @@ class SportDisplaySettings {
       List<ScoringEvent> neutralEvents = [];
       Map<int, List<ScoringEvent>> negativeEvents = {};
       for(var e in powerFactor.targetEvents.values) {
-        if (e.pointChange != 0) {
+        if (e.pointChange != 0 || sport.type.isTimePlus) { // display all target events for time plus
           positiveGroups.add(ScoringEventGroup.single(e));
         }
         else {
@@ -133,6 +142,7 @@ class SportDisplaySettings {
       
       return SportDisplaySettings(
         scoreColumns: groups,
+        showPowerFactor: showPowerFactor,
       );
     }
   }
