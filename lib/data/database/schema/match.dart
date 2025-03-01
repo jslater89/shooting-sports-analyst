@@ -407,8 +407,18 @@ class DbRawScore {
     scoringType = score.scoring.dbString,
     rawTime = score.rawTime,
     stringTimes = []..addAll(score.stringTimes),
-    scoringEvents = score.targetEvents.keys.map((event) => DbScoringEventCount(name: event.name, count: score.targetEvents[event]!)).toList(),
-    penaltyEvents = score.penaltyEvents.keys.map((event) => DbScoringEventCount(name: event.name, count: score.penaltyEvents[event]!)).toList(),
+    scoringEvents = score.targetEvents.keys.map((event) {
+      if(event.nondefaultPoints || event.nondefaultTime) {
+        return DbScoringEventCount.fromNondefault(event, count: score.targetEvents[event]!);
+      }
+      return DbScoringEventCount(name: event.name, count: score.targetEvents[event]!);
+    }).toList(),
+    penaltyEvents = score.penaltyEvents.keys.map((event) {
+      if(event.nondefaultPoints || event.nondefaultTime) {
+        return DbScoringEventCount.fromNondefault(event, count: score.penaltyEvents[event]!);
+      }
+      return DbScoringEventCount(name: event.name, count: score.penaltyEvents[event]!);
+    }).toList(),
     modified = score.modified;
 
   Result<RawScore, ResultErr> hydrate(PowerFactor pf) {
@@ -423,8 +433,22 @@ class DbRawScore {
       scoring: StageScoring.fromDbString(scoringType),
       rawTime: rawTime,
       stringTimes: []..addAll(stringTimes),
-      targetEvents: Map.fromEntries(scoringEvents.map((event) => MapEntry(pf.targetEvents.lookupByName(event.name)!, event.count))),
-      penaltyEvents: Map.fromEntries(penaltyEvents.map((event) => MapEntry(pf.penaltyEvents.lookupByName(event.name)!, event.count))),
+      targetEvents: Map.fromEntries(scoringEvents.map((event) {
+        var targetEvent = pf.targetEvents.lookupByName(event.name)!;
+        if(event.nondefaultValues) {
+          var adHocEvent = targetEvent.copyWith(pointChange: event.pointsOverride, timeChange: event.timeOverride);
+          return MapEntry(adHocEvent, event.count);
+        }
+        return MapEntry(targetEvent, event.count);
+      }).whereType<MapEntry<ScoringEvent, int>>()),
+      penaltyEvents: Map.fromEntries(penaltyEvents.map((event) {
+        var targetEvent = pf.penaltyEvents.lookupByName(event.name)!;
+        if(event.nondefaultValues) {
+          var adHocEvent = targetEvent.copyWith(pointChange: event.pointsOverride, timeChange: event.timeOverride);
+          return MapEntry(adHocEvent, event.count);
+        }
+        return MapEntry(targetEvent, event.count);
+      }).whereType<MapEntry<ScoringEvent, int>>()),
       modified: modified,
     ));
   }
@@ -437,10 +461,20 @@ class DbScoringEventCount {
   int? pointsOverride;
   double? timeOverride;
 
+  @ignore
+  bool get nondefaultValues => pointsOverride != null || timeOverride != null;
+
   DbScoringEventCount({
     this.name = "(invalid)",
     this.count = -1,
   });
+
+  DbScoringEventCount.fromNondefault(ScoringEvent event, {
+    required this.count
+  }) :
+    name = event.name,
+    pointsOverride = event.nondefaultPoints ? event.pointChange : null,
+    timeOverride = event.nondefaultTime ? event.timeChange : null;
 }
 
 @embedded 

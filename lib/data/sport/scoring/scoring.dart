@@ -417,6 +417,14 @@ class ScoringEvent extends NameLookupEntity {
   /// scores, which I *thought* was generic enough to handle anything.
   final bool variableValue;
 
+  /// If this and variableValue are true, this scoring event is not the default
+  /// points value for its name.
+  final bool nondefaultPoints;
+
+  /// If this and variableValue are true, this scoring event is not the default
+  /// time value for its name.
+  final bool nondefaultTime;
+
   final int sortOrder;
 
   /// bonus indicates that this hit is a bonus/tiebreaker score with no other scoring implications:
@@ -436,6 +444,8 @@ class ScoringEvent extends NameLookupEntity {
     this.pointChange = 0,
     this.timeChange = 0,
     this.variableValue = false,
+    this.nondefaultPoints = false,
+    this.nondefaultTime = false,
     this.bonus = false,
     this.bonusLabel = "X",
     this.alternateNames = const [],
@@ -451,9 +461,26 @@ class ScoringEvent extends NameLookupEntity {
     int? pointChange,
     double? timeChange,
   }) {
+    var pointsChanged = this.nondefaultPoints;
+    var timeChanged = this.nondefaultTime;
+    if(pointChange != null) {
+      pointsChanged = true;
+    }
+    if(timeChange != null) {
+      timeChanged = true;
+    }
     return ScoringEvent(name,
+      displayInOverview: displayInOverview,
+      shortName: shortName,
       pointChange: pointChange ?? this.pointChange,
       timeChange: timeChange ?? this.timeChange,
+      variableValue: variableValue,
+      nondefaultPoints: pointsChanged,
+      nondefaultTime: timeChanged,
+      bonus: bonus,
+      bonusLabel: bonusLabel,
+      alternateNames: alternateNames,
+      sortOrder: sortOrder,
     );
   }
 

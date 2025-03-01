@@ -322,6 +322,21 @@ class MatchStage {
   /// has [ScoringEvent.variesByStage] set to true.
   Map<ScoringEvent, ScoringEventOverride> scoringOverrides;
 
+  /// A map of event names to a list of events of variable value for that event.
+  ///
+  /// This is only used in the event that a scoring event by a single name has multiple possible
+  /// values on a stage. For instance, ICORE does not restrict X-ring hits to a single bonus value
+  /// even within one stage, so in the event that a stage has more than one distinct value for X
+  /// hits, this map will contain X: <list of differently-valued X events>.
+  ///
+  /// [variableEvents] is only considered if both [ScoringEvent.variableValue] is true for scoring
+  /// events whose names are contained in the map, and [scoringOverrides] does not contain an
+  /// override for the scoring event.
+  ///
+  /// This is a super-annoying feature to support, and [scoringOverrides] should be preferred when
+  /// at all possible.
+  Map<String, List<ScoringEvent>> variableEvents;
+
   /// An optional source-specific identifier for this stage.
   String? sourceId;
 
@@ -335,6 +350,7 @@ class MatchStage {
     this.classifierNumber = "",
     this.sourceId,
     this.scoringOverrides = const {},
+    this.variableEvents = const {},
   });
 
   MatchStage copy() {
@@ -347,6 +363,7 @@ class MatchStage {
       classifier: classifier,
       classifierNumber: classifierNumber,
       scoringOverrides: scoringOverrides,
+      variableEvents: variableEvents,
     );
   }
 

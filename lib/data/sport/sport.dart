@@ -296,27 +296,7 @@ abstract class NameLookupEntity {
 extension LookupNameInList<T extends NameLookupEntity> on Iterable<T> {
   T? lookupByName(String name, {bool fallback = true}) {
     name = name.toLowerCase();
-    T? found = this.firstWhereOrNull((entity) {
-      // Put short name first, because it's more likely to show up in
-      // encodings
-      if(entity.shortName.toLowerCase() == name) {
-        return true;
-      }
-
-      if(entity.name.toLowerCase() == name) {
-        return true;
-      }
-
-      if(entity.longName.toLowerCase() == name) {
-        return true;
-      }
-
-      if(entity.alternateNames.any((alternateName) => alternateName.toLowerCase() == name)) {
-        return true;
-      }
-
-      return false;
-    });
+    T? found = this.firstWhereOrNull((entity) => _matches(entity, name));
 
     if(found != null) {
       return found;
@@ -327,6 +307,46 @@ extension LookupNameInList<T extends NameLookupEntity> on Iterable<T> {
     else {
       return null;
     }
+  }
+
+  List<T> lookupAllByName(String name, {bool fallback = true}) {
+    name = name.toLowerCase();
+    var found = this.where((entity) => _matches(entity, name)).toList();
+
+    if(found.isNotEmpty) {
+      return found;
+    }
+    else if(fallback) {
+      var fallback = this.fallback();
+      if(fallback != null) {
+        return [fallback];
+      }
+    }
+
+    return [];
+  }
+
+  bool _matches(T entity, String query) {
+    query = query.toLowerCase();
+    // Put short name first, because it's more likely to show up in
+    // encodings
+    if(entity.shortName.toLowerCase() == query) {
+        return true;
+      }
+
+    if(entity.name.toLowerCase() == query) {
+      return true;
+    }
+
+    if(entity.longName.toLowerCase() == query) {
+      return true;
+    }
+
+    if(entity.alternateNames.any((alternateName) => alternateName.toLowerCase() == query)) {
+      return true;
+    }
+
+    return false;
   }
 
   bool containsAll(List<String> values) {

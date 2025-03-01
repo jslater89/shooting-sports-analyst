@@ -226,23 +226,36 @@ class ScoringEventGroup {
     int pointValue = 0;
 
     for(var eventPrototype in events) {
-      var tEvent = score.targetEvents.keys.lookupByName(eventPrototype.name);
-      var pEvent = score.penaltyEvents.keys.lookupByName(eventPrototype.name);
-      ScoringEvent? foundEvent;
-
-      int innerCount = 0;
-      if(tEvent != null) {
-        innerCount += score.targetEvents[tEvent] ?? 0;
-        foundEvent = tEvent;
+      List<ScoringEvent> foundEvents = [];
+      var variableEvent = eventPrototype.variableValue;
+      if(variableEvent) {
+        var targetEvents = score.targetEvents.keys.lookupAllByName(eventPrototype.name);
+        var penaltyEvents = score.penaltyEvents.keys.lookupAllByName(eventPrototype.name);
+        if(targetEvents.isNotEmpty) {
+          foundEvents.addAll(targetEvents);
+        }
+        else {
+          foundEvents.addAll(penaltyEvents);
+        }
       }
-      else if(pEvent != null) {
-        innerCount += score.penaltyEvents[pEvent] ?? 0;
-        foundEvent = pEvent;
+      else {
+        var tEvent = score.targetEvents.keys.lookupByName(eventPrototype.name);
+        var pEvent = score.penaltyEvents.keys.lookupByName(eventPrototype.name);
+        if(tEvent != null) {
+          foundEvents.add(tEvent);
+        }
+        else if(pEvent != null) {
+          foundEvents.add(pEvent);
+        }
       }
 
-      if(foundEvent != null) {
-        timeValue += foundEvent.timeChange * innerCount;
-        pointValue += foundEvent.pointChange * innerCount;
+      for(var event in foundEvents) {
+        int innerCount = 0;
+        innerCount += score.targetEvents[event] ?? 0;
+        innerCount += score.penaltyEvents[event] ?? 0;
+
+        timeValue += event.timeChange * innerCount;
+        pointValue += event.pointChange * innerCount;
         count += innerCount;
       }
     }
