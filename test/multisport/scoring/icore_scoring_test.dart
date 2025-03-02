@@ -19,7 +19,7 @@ void main() {
     MatchStage stage2 = MatchStage(
         stageId: 2, name: "Stage 2", minRounds: 5, maxPoints: 25, scoring: const TimePlusScoring(),
         scoringOverrides: {
-          icoreX: ScoringEventOverride.time(-0.5),
+          icoreX.name: ScoringEventOverride.time(icoreX.name, -0.5),
         }
     );
 
@@ -42,7 +42,7 @@ void main() {
           rawTime: 10,
           scoring: const TimePlusScoring(),
           targetEvents: {icoreA: 10, icoreBig6B: 1, icoreC: 1, icoreX: 1},
-          scoringOverrides: {icoreX: ScoringEventOverride.time(-0.5)},
+          scoringOverrides: {icoreX.name: ScoringEventOverride.time(icoreX.name, -0.5)},
         ),
       }
     );
@@ -66,7 +66,7 @@ void main() {
           rawTime: 10,
           scoring: const TimePlusScoring(),
           targetEvents: {icoreA: 10, icoreB: 1, icoreC: 1, icoreX: 1},
-          scoringOverrides: {icoreX: ScoringEventOverride.time(-0.5)},
+          scoringOverrides: {icoreX.name: ScoringEventOverride.time(icoreX.name, -0.5)},
         ),
       },
     );

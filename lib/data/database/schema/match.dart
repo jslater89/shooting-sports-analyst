@@ -180,7 +180,7 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
       matchLevel = sport.eventLevels.lookupByName(matchLevelName!);
     }
 
-    List<MatchStage> hydratedStages = stages.map((s) => s.hydrate()).toList();
+    List<MatchStage> hydratedStages = stages.map((s) => s.hydrate(sport)).toList();
     Map<int, MatchStage> stagesById = Map.fromEntries(hydratedStages.map((e) => MapEntry(e.stageId, e)));
     List<Result<MatchEntry, ResultErr>> hydratedShooters = shooters.map((s) => s.hydrate(sport, stagesById)).toList();
     var firstError = hydratedShooters.firstWhereOrNull((e) => e.isErr());
@@ -224,6 +224,8 @@ class DbMatchStage {
   String classifierNumber;
   String scoringType;
   String? sourceId;
+  List<DbScoringEventOverride> scoringOverrides;
+  List<DbScoringEventOverride> variableEvents;
 
   DbMatchStage({
     this.name = "(invalid name)",
@@ -234,6 +236,8 @@ class DbMatchStage {
     this.classifierNumber = "",
     this.scoringType = "(invalid)",
     this.sourceId,
+    this.scoringOverrides = const [],
+    this.variableEvents = const [],
   });
 
   DbMatchStage.from(MatchStage stage) :
@@ -244,9 +248,25 @@ class DbMatchStage {
     classifier = stage.classifier,
     classifierNumber = stage.classifierNumber,
     scoringType = stage.scoring.dbString,
-    sourceId = stage.sourceId;
+    sourceId = stage.sourceId,
+    scoringOverrides = stage.scoringOverrides.values.map((e) => DbScoringEventOverride.from(e.name, e)).toList(),
+    variableEvents = stage.variableEvents.values.map((eventList) => eventList.map((e) => DbScoringEventOverride.fromVariableEvent(e.name, e)).toList()).flattened.toList();
 
-  MatchStage hydrate() {
+  MatchStage hydrate(Sport sport) {
+    Map<String, ScoringEventOverride> overrides = {};
+    for(var override in scoringOverrides) {
+      overrides[override.name] = override.hydrate();
+    }
+    Map<String, List<ScoringEvent>> varEventsMap = {};
+    for(var override in variableEvents) {
+      var actualEvent = sport.defaultPowerFactor.allEvents.lookupByName(override.name);
+      if(actualEvent == null) {
+        _log.w("base event not found for variable event ${override.name}, skipping");
+      }
+      else {
+        varEventsMap.addToListIfMissing(override.name, actualEvent);
+      }
+    }
     return MatchStage(
       name: name,
       stageId: stageId,
@@ -256,11 +276,50 @@ class DbMatchStage {
       classifierNumber: classifierNumber,
       scoring: StageScoring.fromDbString(scoringType),
       sourceId: sourceId,
+      scoringOverrides: overrides,
+      variableEvents: varEventsMap,
     );
   }
 }
 
-// TODO: add age categories here
+@embedded
+class DbScoringEventOverride {
+  String name;
+  int? pointChangeOverride;
+  double? timeChangeOverride;
+
+  int get points => pointChangeOverride ?? 0;
+  double get time => timeChangeOverride ?? 0;
+
+  DbScoringEventOverride({
+    this.name = "(invalid)",
+    this.pointChangeOverride,
+    this.timeChangeOverride,
+  });
+
+  DbScoringEventOverride.from(String name, ScoringEventOverride override) :
+    name = name,
+    pointChangeOverride = override.pointChangeOverride,
+    timeChangeOverride = override.timeChangeOverride;
+
+  DbScoringEventOverride.fromVariableEvent(String name, ScoringEvent event) :
+    name = name,
+    pointChangeOverride = event.pointChange,
+    timeChangeOverride = event.timeChange {
+      if(!event.variableValue) {
+        throw ArgumentError("event $name is not a variable event");
+      }
+    }
+
+  ScoringEventOverride hydrate() {
+    return ScoringEventOverride(
+      name: name,
+      pointChangeOverride: pointChangeOverride,
+      timeChangeOverride: timeChangeOverride,
+    );
+  }
+}
+
 @embedded
 class DbMatchEntry {
   int entryId;

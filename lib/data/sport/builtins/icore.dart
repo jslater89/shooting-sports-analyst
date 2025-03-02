@@ -76,7 +76,7 @@ const icoreBig6PowerFactor = PowerFactor.constant(_icoreBig6Name,
 
 /// An X-ring bonus hit. Defaults to -1 second, but may be overridden
 /// on certain stages/scores.
-const icoreX = ScoringEvent(_icoreXName, timeChange: -1, sortOrder: 1);
+const icoreX = ScoringEvent(_icoreXName, timeChange: -1, sortOrder: 1, variableValue: true);
 const icoreA = ScoringEvent(_icoreAName, timeChange: 0, sortOrder: 2);
 const icoreB = ScoringEvent(_icoreBName, timeChange: 1, sortOrder: 3);
 const icoreBig6B = ScoringEvent(_icoreBig6BName, timeChange: 0, sortOrder: 3);

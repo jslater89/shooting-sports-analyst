@@ -354,8 +354,7 @@ class _ScoreListState extends State<ScoreList> {
                   if(model.value.fixedTimeAvailablePointsFromDivisionMax) {
                     Map<MatchStage, int> stageMax = {};
                     for(var s in score.stageScores.keys) {
-                      // TODO: 'and this is a USPSA-style fixed time stage' via match.sport.matchScoring
-                      if(s.scoring is PointsScoring) {
+                      if(s.scoring is PointsScoring && widget.match!.sport.type.isHitFactor) {
                         var bestPoints = 0;
                         for(var score in widget.baseScores) {
                           if(score.stageScores[s] != null && score.stageScores[s]!.score.points > bestPoints) {

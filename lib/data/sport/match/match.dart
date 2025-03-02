@@ -312,7 +312,7 @@ class MatchStage {
   String classifierNumber;
   StageScoring scoring;
 
-  /// A map of scoring events to their overrides for this stage.
+  /// A map of scoring event names to their overrides for this stage.
   /// 
   /// For instance, in ICORE, an X-ring hit might be a -1s bonus on one stage, but a -0.5s bonus
   /// on another. This map contains the data necessary for the scoring system to apply the correct
@@ -320,19 +320,25 @@ class MatchStage {
   /// 
   /// Scoring event overrides are only considered if the scoring event
   /// has [ScoringEvent.variesByStage] set to true.
-  Map<ScoringEvent, ScoringEventOverride> scoringOverrides;
+  Map<String, ScoringEventOverride> scoringOverrides;
 
   /// A map of event names to a list of events of variable value for that event.
-  ///
+  /// 
   /// This is only used in the event that a scoring event by a single name has multiple possible
   /// values on a stage. For instance, ICORE does not restrict X-ring hits to a single bonus value
   /// even within one stage, so in the event that a stage has more than one distinct value for X
   /// hits, this map will contain X: <list of differently-valued X events>.
-  ///
+  /// 
+  /// This matching is done by name, and will apply to all power factors equally—that is, multiple
+  /// sets of different scoring values for different power factors for events with the same name
+  /// on the same stage will not be supported. Please, please, please do not write any shooting
+  /// sports rules that require this. The base event from the default power factor will be used
+  /// when loading matches with variable events from the database.
+  /// 
   /// [variableEvents] is only considered if both [ScoringEvent.variableValue] is true for scoring
   /// events whose names are contained in the map, and [scoringOverrides] does not contain an
   /// override for the scoring event.
-  ///
+  /// 
   /// This is a super-annoying feature to support, and [scoringOverrides] should be preferred when
   /// at all possible.
   Map<String, List<ScoringEvent>> variableEvents;

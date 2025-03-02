@@ -189,7 +189,7 @@ class RawScore {
   Map<ScoringEvent, int> penaltyEvents;
 
   /// Scoring event overrides for this score.
-  Map<ScoringEvent, ScoringEventOverride> scoringOverrides;
+  Map<String, ScoringEventOverride> scoringOverrides;
 
   /// Whether this score resulted in a DQ.
   bool dq;
@@ -331,9 +331,10 @@ class RawScore {
       scoring: scoring,
       stringTimes: []..addAll(stringTimes),
       rawTime: rawTime,
-      targetEvents: {}..addAll(targetEvents),
-      penaltyEvents: {}..addAll(penaltyEvents),
+      targetEvents: {...targetEvents},
+      penaltyEvents: {...penaltyEvents},
       modified: modified,
+      scoringOverrides: {...scoringOverrides},
     );
   }
 
@@ -484,20 +485,30 @@ class ScoringEvent extends NameLookupEntity {
     );
   }
 
-  operator ==(Object other) {
+  /// Two scoring events are equal if their base name is the same (not considering alternates!),
+  /// their point and time changes are the same, and they both have the same default/non-default
+  /// status.
+  @override
+  bool operator ==(Object other) {
     if(other is ScoringEvent) {
-      return name == other.name && this.timeChange == other.timeChange && this.pointChange == other.pointChange;
+      return name == other.name 
+        && this.timeChange == other.timeChange
+        && this.pointChange == other.pointChange
+        && this.nondefaultPoints == other.nondefaultPoints
+        && this.nondefaultTime == other.nondefaultTime;
     }
     return false;
   }
 
-  int get hashCode => Object.hash(name, timeChange, pointChange);
+  @override
+  int get hashCode => Object.hash(name, timeChange, pointChange, nondefaultPoints, nondefaultTime);
 }
 
 /// Different values for scoring events for a particular score. This can come up
 /// in ICORE, where X-ring time bonuses (when given in a stage brief) are not required
 /// to be some particular value: 
 class ScoringEventOverride {
+  final String name;
   final int? pointChangeOverride;
   final double? timeChangeOverride;
 
@@ -505,12 +516,13 @@ class ScoringEventOverride {
   double get time => timeChangeOverride ?? 0;
 
   const ScoringEventOverride({
+    required this.name,
     this.pointChangeOverride,
     this.timeChangeOverride,
   });
 
-  ScoringEventOverride.time(this.timeChangeOverride) : pointChangeOverride = 0;
-  ScoringEventOverride.points(this.pointChangeOverride) : timeChangeOverride = 0;
+  ScoringEventOverride.time(this.name, this.timeChangeOverride) : pointChangeOverride = 0;
+  ScoringEventOverride.points(this.name, this.pointChangeOverride) : timeChangeOverride = 0;
 }
 
 extension ScoreUtilities on Map<ScoringEvent, int> {
@@ -532,11 +544,11 @@ extension ScoreUtilities on Map<ScoringEvent, int> {
     return total;
   }
 
-  int pointsWithOverrides(Map<ScoringEvent, ScoringEventOverride> overrides) {
+  int pointsWithOverrides(Map<String, ScoringEventOverride> overrides) {
     int total = 0;
     for(var s in keys) {
       int occurrences = this[s]!;
-      var override = overrides[s];
+      var override = overrides[s.name];
       if(override != null) {
         total += override.points * occurrences;
       }
@@ -547,11 +559,11 @@ extension ScoreUtilities on Map<ScoringEvent, int> {
     return total;
   }
 
-  double timeAdjustmentWithOverrides(Map<ScoringEvent, ScoringEventOverride> overrides) {
+  double timeAdjustmentWithOverrides(Map<String, ScoringEventOverride> overrides) {
     double total = 0;
     for(var s in keys) {
       int occurrences = this[s]!;
-      var override = overrides[s];
+      var override = overrides[s.name];
       if(override != null) {
         total += override.time * occurrences;
       }
@@ -571,10 +583,10 @@ extension ScoreMapUtilities on List<Map<ScoringEvent, int>> {
     return this.map((m) => m.timeAdjustment).sum;
   }
 
-  int pointsWithOverrides(Map<ScoringEvent, ScoringEventOverride> overrides) {
+  int pointsWithOverrides(Map<String, ScoringEventOverride> overrides) {
     return this.map((m) => m.pointsWithOverrides(overrides)).sum;
   }
-  double timeAdjustmentWithOverrides(Map<ScoringEvent, ScoringEventOverride> overrides) {
+  double timeAdjustmentWithOverrides(Map<String, ScoringEventOverride> overrides) {
     return this.map((m) => m.timeAdjustmentWithOverrides(overrides)).sum;
   }
 }
@@ -589,13 +601,25 @@ extension ScoreListUtilities on Iterable<RawScore> {
     for(var s in this) {
       scoring = s.scoring;
       for(var e in s.targetEvents.keys) {
-        scoringEvents[e] ??= 0;
-        scoringEvents.incrementBy(e, s.targetEvents[e]!);
+        var event = e;
+
+        // We don't do this anywhere else, but we need to do it here so that
+        // the sum of the changes is correct.
+        if(s.scoringOverrides.containsKey(e.name)) {
+          var override = s.scoringOverrides[e.name]!;
+          event = e.copyWith(pointChange: override.pointChangeOverride, timeChange: override.timeChangeOverride);
+        }
+        scoringEvents.incrementBy(event, s.targetEvents[e]!);
       }
 
       for(var e in s.penaltyEvents.keys) {
-        penaltyEvents[e] ??= 0;
-        penaltyEvents.incrementBy(e, s.penaltyEvents[e]!);
+        var event = e;
+
+        if(s.scoringOverrides.containsKey(e.name)) {
+          var override = s.scoringOverrides[e.name]!;
+          event = e.copyWith(pointChange: override.pointChangeOverride, timeChange: override.timeChangeOverride);
+        }
+        penaltyEvents.incrementBy(event, s.penaltyEvents[e]!);
       }
 
       rawTime += s.rawTime;

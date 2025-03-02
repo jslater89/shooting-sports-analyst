@@ -166,8 +166,8 @@ extension ListMap<K, V> on Map<K, List<V>> {
     list.add(value);
   }
 
-  /// Add [value] to the list at [key], creating the list if it doesn't exist,
-  /// but only if [value] is not already in the list.
+  /// Add [value] to the list at [key], but only if it is not already in the list,
+  /// creating the list if the list does not exist.
   /// 
   /// Returns true if the value was added, or false if it was already in the list.
   bool addToListIfMissing(K key, V value) {
