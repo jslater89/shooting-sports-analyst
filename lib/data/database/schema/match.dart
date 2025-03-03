@@ -10,10 +10,10 @@ import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/database/schema/scoring_events.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
-import 'package:shooting_sports_analyst/data/sport/scoring/stage_scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
@@ -60,6 +60,9 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
   List<DbMatchStage> stages;
   List<DbMatchEntry> shooters;
 
+  List<DbScoringEvent> localBonusEvents;
+  List<DbScoringEvent> localPenaltyEvents;
+
   @Index(name: AnalystDatabase.memberNumbersAppearingIndex, type: IndexType.value)
   /// A list of member numbers that appear in this match, for quick filtering by competitor.
   List<String> memberNumbersAppearing;
@@ -77,6 +80,8 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
     required this.stages,
     required this.shooters,
     required this.memberNumbersAppearing,
+    required this.localBonusEvents,
+    required this.localPenaltyEvents,
   });
 
   DbShootingMatch.dbPlaceholder(this.id) :
@@ -90,7 +95,9 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
     sourceCode = "(invalid)",
     stages = [],
     shooters = [],
-    memberNumbersAppearing = [];
+    memberNumbersAppearing = [],
+    localBonusEvents = [],
+    localPenaltyEvents = [];
 
   DbShootingMatch.sourcePlaceholder({
     required Sport sport,
@@ -106,7 +113,9 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
     sportName = sport.name,
     stages = [],
     shooters = [],
-    memberNumbersAppearing = [];
+    memberNumbersAppearing = [],
+    localBonusEvents = [],
+    localPenaltyEvents = [];
 
   factory DbShootingMatch.from(ShootingMatch match) {
     Set<Division> divisionsAppearing = {};
@@ -161,6 +170,8 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
       shooters: dbEntries,
       stages: []..addAll(match.stages.map((s) => DbMatchStage.from(s))),
       memberNumbersAppearing: memberNumbersAppearing.toList(),
+      localBonusEvents: match.localBonusEvents.map((e) => DbScoringEvent.fromScoringEvent(e)).toList(),
+      localPenaltyEvents: match.localPenaltyEvents.map((e) => DbScoringEvent.fromScoringEvent(e)).toList(),
     );
   }
 
@@ -180,9 +191,13 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
       matchLevel = sport.eventLevels.lookupByName(matchLevelName!);
     }
 
+    List<ScoringEvent> localBonusEvents = this.localBonusEvents.map((e) => e.toScoringEvent()).toList();
+    List<ScoringEvent> localPenaltyEvents = this.localPenaltyEvents.map((e) => e.toScoringEvent()).toList();
+
     List<MatchStage> hydratedStages = stages.map((s) => s.hydrate(sport)).toList();
     Map<int, MatchStage> stagesById = Map.fromEntries(hydratedStages.map((e) => MapEntry(e.stageId, e)));
-    List<Result<MatchEntry, ResultErr>> hydratedShooters = shooters.map((s) => s.hydrate(sport, stagesById)).toList();
+    List<Result<MatchEntry, ResultErr>> hydratedShooters = shooters.map((s) =>
+      s.hydrate(sport, stagesById, localBonusEvents, localPenaltyEvents)).toList();
     var firstError = hydratedShooters.firstWhereOrNull((e) => e.isErr());
     if(firstError != null) return Result.err(firstError.unwrapErr());
 
@@ -197,6 +212,8 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
       level: matchLevel,
       sourceCode: this.sourceCode,
       sourceIds: []..addAll(this.sourceIds),
+      localBonusEvents: localBonusEvents,
+      localPenaltyEvents: localPenaltyEvents,
     ));
   }
 
@@ -267,6 +284,7 @@ class DbMatchStage {
         varEventsMap.addToListIfMissing(override.name, actualEvent);
       }
     }
+    var stageScoring = StageScoring.fromDbString(scoringType);
     return MatchStage(
       name: name,
       stageId: stageId,
@@ -274,7 +292,7 @@ class DbMatchStage {
       maxPoints: maxPoints,
       classifier: classifier,
       classifierNumber: classifierNumber,
-      scoring: StageScoring.fromDbString(scoringType),
+      scoring: stageScoring,
       sourceId: sourceId,
       scoringOverrides: overrides,
       variableEvents: varEventsMap,
@@ -394,7 +412,7 @@ class DbMatchEntry {
     );
   }
 
-  Result<MatchEntry, ResultErr> hydrate(Sport sport, Map<int, MatchStage> stagesById) {
+  Result<MatchEntry, ResultErr> hydrate(Sport sport, Map<int, MatchStage> stagesById, List<ScoringEvent> localBonusEvents, List<ScoringEvent> localPenaltyEvents) {
     Division? division = null;
     if(sport.hasDivisions) {
       if(divisionName == null && !sport.hasDivisionFallback) return Result.err(StringError("bad division: $firstName $lastName $divisionName"));
@@ -426,7 +444,7 @@ class DbMatchEntry {
     }
 
     Map<MatchStage, Result<RawScore, ResultErr>> hydratedScores = Map.fromEntries(scores.map((dbScore) => 
-      MapEntry(stagesById[dbScore.stageId]!, dbScore.hydrate(stagesById[dbScore.stageId]!, pf))));
+      MapEntry(stagesById[dbScore.stageId]!, dbScore.hydrate(stagesById[dbScore.stageId]!, pf, localBonusEvents, localPenaltyEvents))));
     var firstError = hydratedScores.values.firstWhereOrNull((element) => element.isErr());
     if(firstError != null) return Result.err(firstError.unwrapErr());
 
@@ -496,21 +514,25 @@ class DbRawScore {
     }).toList(),
     modified = score.modified;
 
-  Result<RawScore, ResultErr> hydrate(MatchStage stage, PowerFactor pf) {
-    for(var event in scoringEvents) {
-      if(pf.targetEvents.lookupByName(event.name) == null) return Result.err(StringError("invalid scoring event ${event.name}"));
-    }
-    for(var event in penaltyEvents) {
-      if(pf.penaltyEvents.lookupByName(event.name) == null) return Result.err(StringError("invalid penalty event ${event.name}"));
-    }
-
+  Result<RawScore, ResultErr> hydrate(MatchStage stage, PowerFactor pf, List<ScoringEvent> localBonusEvents, List<ScoringEvent> localPenaltyEvents) {
     return Result.ok(RawScore(
       scoring: StageScoring.fromDbString(scoringType),
       rawTime: rawTime,
       stringTimes: []..addAll(stringTimes),
       scoringOverrides: stage.scoringOverrides,
       targetEvents: Map.fromEntries(scoringEvents.map((event) {
-        var targetEvent = pf.targetEvents.lookupByName(event.name)!;
+        var targetEvent = pf.targetEvents.lookupByName(event.name);
+        if(targetEvent == null) {
+          if(localBonusEvents.lookupByName(event.name) != null) {
+            targetEvent = localBonusEvents.lookupByName(event.name);
+          }
+          else if(localPenaltyEvents.lookupByName(event.name) != null) {
+            targetEvent = localPenaltyEvents.lookupByName(event.name);
+          }
+        }
+        if(targetEvent == null) {
+          return Result.err(StringError("unknown target event ${event.name}"));
+        }
         if(event.nondefaultValues) {
           var adHocEvent = targetEvent.copyWith(pointChange: event.pointsOverride, timeChange: event.timeOverride);
           return MapEntry(adHocEvent, event.count);
@@ -518,7 +540,18 @@ class DbRawScore {
         return MapEntry(targetEvent, event.count);
       }).whereType<MapEntry<ScoringEvent, int>>()),
       penaltyEvents: Map.fromEntries(penaltyEvents.map((event) {
-        var targetEvent = pf.penaltyEvents.lookupByName(event.name)!;
+        var targetEvent = pf.penaltyEvents.lookupByName(event.name);
+        if(targetEvent == null) {
+          if(localBonusEvents.lookupByName(event.name) != null) {
+            targetEvent = localBonusEvents.lookupByName(event.name);
+          }
+          else if(localPenaltyEvents.lookupByName(event.name) != null) {
+            targetEvent = localPenaltyEvents.lookupByName(event.name);
+          }
+        }
+        if(targetEvent == null) {
+          return Result.err(StringError("unknown penalty event ${event.name}"));
+        }
         if(event.nondefaultValues) {
           var adHocEvent = targetEvent.copyWith(pointChange: event.pointsOverride, timeChange: event.timeOverride);
           return MapEntry(adHocEvent, event.count);

@@ -921,7 +921,7 @@ class RatingProjectLoader {
       var totalRounds = 0;
       var stages = 0;
       for(var s in m.stages) {
-        if(s.scoring is IgnoredScoring) continue;
+        if(!s.scoring.countsInRatings) continue;
 
         stages += 1;
         totalRounds += s.minRounds;

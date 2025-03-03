@@ -21,6 +21,7 @@ class IcoreDisplaySettings {
     ColumnGroup timeBonusColumn = ColumnGroup(
       headerLabel: "Bonus",
       mode: ColumnMode.totalTime,
+      dynamicEventMode: DynamicEventMode.includePositive,
       eventGroups: [
         ScoringEventGroup(events: timeBonusEvents, label: ""),
       ],
@@ -37,13 +38,15 @@ class IcoreDisplaySettings {
     ColumnGroup otherPenaltyColumn = ColumnGroup(
       headerLabel: "Penalty",
       mode: ColumnMode.totalTime,
+      dynamicEventMode: DynamicEventMode.includeNegativeExcept,
+      excludeEvents: accuracyPenaltyEvents,
       eventGroups: [
         ScoringEventGroup(events: otherPenaltyEvents, label: ""),
       ],
     );
 
     List<ScoringEventGroup> hitGroups = [];
-    // always show A/B/C/M/NS. Show X and SB only if they have events.
+    // always show A/B/C/M/NS. Show X only if they have events.
     if(pf.targetEvents.lookupByName("X") != null) {
       hitGroups.add(ScoringEventGroup.single(pf.targetEvents.lookupByName("X")!, displayIfNoEvents: false));
     }
@@ -61,9 +64,6 @@ class IcoreDisplaySettings {
     }
     if(pf.targetEvents.lookupByName("NS") != null) {
       hitGroups.add(ScoringEventGroup.single(pf.targetEvents.lookupByName("NS")!));
-    }
-    if(pf.targetEvents.lookupByName("SB") != null) {
-      hitGroups.add(ScoringEventGroup.single(pf.targetEvents.lookupByName("SB")!, displayIfNoEvents: false));
     }
     if(pf.targetEvents.lookupByName("NPM") != null) {
       hitGroups.add(ScoringEventGroup.single(pf.targetEvents.lookupByName("NPM")!, displayIfNoEvents: false));

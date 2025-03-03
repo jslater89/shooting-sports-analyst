@@ -22,6 +22,9 @@ sealed class StageScoring {
 
   String get dbString => this.runtimeType.toString();
 
+  /// Whether stages with this scoring system should be used in ratings.
+  bool get countsInRatings => true;
+
   /// A label to use in the UI adjacent to a score value.
   String displayLabel(RawScore score) {
     switch(this) {
@@ -97,7 +100,24 @@ sealed class StageScoring {
       result = interpret(score) / interpret(comparedTo);
     }
     else {
-      result = interpret(comparedTo) / interpret(score);
+      // In time-plus with time bonuses, subzero times are not
+      // impossible. To calculate a meaningful ratio for them,
+      // we need to normalize so that the dividend is greater than
+      // zero.
+      var dividend = interpret(comparedTo);
+      var divisor = interpret(score);
+      double adjustment = 0.0;
+      if(dividend < 0) {
+        adjustment = 0 - dividend + 1.0;
+        dividend += adjustment;
+        divisor += adjustment;
+      }
+      if(divisor == 0.0) {
+        adjustment = 0.01;
+        dividend += adjustment;
+        divisor += adjustment;
+      }
+      result = dividend / divisor;
     }
 
     if(result.isNaN) {
@@ -143,7 +163,12 @@ sealed class StageScoring {
         return const PointsScoring(highScoreBest: false, allowDecimal: false);
       }
     }
-    else return const IgnoredScoring();
+    else if(string.startsWith(const TimePlusChronoScoring().dbString)) {
+      return const TimePlusChronoScoring();
+    }
+    else {
+      return const IgnoredScoring();
+    }
   }
 }
 
@@ -193,6 +218,7 @@ class PointsScoring extends StageScoring {
 class IgnoredScoring extends StageScoring {
   num interpret(RawScore score) => 0;
   bool get highScoreBest => true;
+  bool get countsInRatings => false;
 
   const IgnoredScoring();
 }
@@ -211,6 +237,7 @@ class IgnoredScoring extends StageScoring {
 class TimePlusChronoScoring extends StageScoring {
   num interpret(RawScore score) => score.finalTime;
   bool get highScoreBest => false;
+  bool get countsInRatings => false;
 
   const TimePlusChronoScoring();
 }

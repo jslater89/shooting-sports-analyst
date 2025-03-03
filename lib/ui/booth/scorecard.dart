@@ -602,7 +602,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
         ),
         Tooltip(
           waitDuration: Duration(milliseconds: 500),
-          message: match.sport.displaySettings.formatTooltip(stageScore.score),
+          message: match.sport.displaySettings.formatTooltip(match.sport, stageScore.score),
           child: Text(
             stageScore.score.displayString,
             textAlign: TextAlign.center,

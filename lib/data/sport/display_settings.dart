@@ -147,10 +147,10 @@ class SportDisplaySettings {
     }
   }
 
-  String formatTooltip(RawScore score) {
+  String formatTooltip(Sport sport, RawScore score) {
     List<String> scoreComponents = [];
     for(var column in scoreColumns) {
-      scoreComponents.add(column.format(score));
+      scoreComponents.add(column.format(sport, score));
     }
 
     if(showTime) {
@@ -161,10 +161,54 @@ class SportDisplaySettings {
   }
 }
 
+/// What a ColumnGroup should display for its ScoringEventGroups.
 enum ColumnMode {
+  /// Display the count of events in each subordinate group.
   count,
+  /// Display the total points for each subordinate group.
   totalPoints,
+  /// Display the total time for each subordinate group.
   totalTime,
+}
+
+/// What a ColumnGroup should do with dynamic score events, i.e. those
+/// that aren't listed in the sport's definition.
+enum DynamicEventMode {
+  /// Hide unknown events.
+  hideUnknown,
+  /// Include positive events.
+  includePositive,
+  /// Include negative events.
+  includeNegative,
+  /// Include all events.
+  includeAll,
+  /// Include all events except the given events.
+  includeAllExcept,
+  /// Include all positive events except the given events.
+  includePositiveExcept,
+  /// Include all negative events except the given events.
+  includeNegativeExcept;
+
+  bool get inclusive => this != hideUnknown;
+
+  bool shouldInclude(Sport sport, ScoringEvent event, {List<ScoringEvent> excluded = const []}) {
+    switch(this) {
+      case DynamicEventMode.hideUnknown:
+        return false;
+      case DynamicEventMode.includePositive:
+        return event.isPositive(sport);
+      case DynamicEventMode.includeNegative:
+        return !event.isPositive(sport);
+      case DynamicEventMode.includeAll:
+        return true;
+      case DynamicEventMode.includeAllExcept:
+        return !excluded.contains(event);
+      case DynamicEventMode.includePositiveExcept:
+        return event.isPositive(sport) && !excluded.contains(event);
+      case DynamicEventMode.includeNegativeExcept:
+        return !event.isPositive(sport) && !excluded.contains(event);
+    }
+  }
 }
 
 /// A ColumnGroup combines multiple scoring events into one column in the
@@ -181,6 +225,8 @@ class ColumnGroup {
   String? headerTooltip;
 
   ColumnMode mode;
+  DynamicEventMode dynamicEventMode;
+  List<ScoringEvent> excludeEvents;
 
   /// If true, events will be displayed in standard USPSA style: "3A"
   /// If false, event names will prefix the display output: "-3: 15s"
@@ -191,10 +237,25 @@ class ColumnGroup {
   /// The scoring event groups to display in this column.
   List<ScoringEventGroup> eventGroups;
 
-  ColumnGroup({required this.headerLabel, required this.eventGroups, this.mode = ColumnMode.count, this.labelAsSuffix = true, this.headerTooltip});
+  ColumnGroup({
+    required this.headerLabel,
+    required this.eventGroups,
+    this.mode = ColumnMode.count,
+    this.dynamicEventMode = DynamicEventMode.hideUnknown,
+    this.excludeEvents = const [],
+    this.labelAsSuffix = true,
+    this.headerTooltip,
+  });
 
-  String format(RawScore score) {
-    var strings = eventGroups.map((e) => e.format(score, mode, labelAsSuffix)).toList();
+  String format(Sport sport, RawScore score) {
+    var strings = eventGroups.map((e) => e.format(
+      sport: sport,
+      score: score,
+      mode: mode,
+      labelAsSuffix: labelAsSuffix,
+      dynamicEventMode: dynamicEventMode,
+      excludeEvents: excludeEvents,
+    )).toList();
     strings.removeWhere((element) => element.isEmpty);
     return strings.join(" ");
   }
@@ -220,12 +281,38 @@ class ScoringEventGroup {
       this.events = [event],
       this._label = label;
 
-  String format(RawScore score, ColumnMode mode, bool labelAsSuffix) {
+  String format({
+    required Sport sport,
+    required RawScore score,
+    required ColumnMode mode,
+    required bool labelAsSuffix,
+    required DynamicEventMode dynamicEventMode,
+    required List<ScoringEvent> excludeEvents,
+  }) {
     int count = 0;
     double timeValue = 0.0;
     int pointValue = 0;
 
-    for(var eventPrototype in events) {
+    Set<ScoringEvent> usedEvents = events.toSet();
+    if(dynamicEventMode.inclusive) {
+      for(var e in score.targetEvents.keys) {
+        if(!sport.defaultPowerFactor.targetEvents.containsKey(e)) {
+          if(dynamicEventMode.shouldInclude(sport, e, excluded: excludeEvents)) {
+            usedEvents.add(e);
+          }
+        }
+      }
+
+      for(var e in score.penaltyEvents.keys) {
+        if(!sport.defaultPowerFactor.penaltyEvents.containsKey(e)) {
+          if(dynamicEventMode.shouldInclude(sport, e, excluded: excludeEvents)) {
+            usedEvents.add(e);
+          }
+        }
+      }
+    }
+
+    for(var eventPrototype in usedEvents) {
       List<ScoringEvent> foundEvents = [];
       var variableEvent = eventPrototype.variableValue;
       if(variableEvent) {

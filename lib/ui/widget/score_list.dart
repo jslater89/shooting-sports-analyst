@@ -244,7 +244,7 @@ class _ScoreListState extends State<ScoreList> {
 
       String text = "";
       if(score != null) {
-        text = column.format(score);
+        text = column.format(sport, score);
       }
       columns.add(Expanded(flex: flex, child: Text(text)));
     }
@@ -423,7 +423,7 @@ class _ScoreListState extends State<ScoreList> {
                 ),
                 if(sport.hasClassifications && sport.displaySettings.showClassification) Expanded(flex: 1, child: Text("Class")),
                 if(sport.hasDivisions) Expanded(flex: 2, child: Text("Division")),
-                if(sport.hasPowerFactors) Expanded(flex: 1, child: Text("PF")),
+                if(sport.hasPowerFactors && sport.displaySettings.showPowerFactor) Expanded(flex: 1, child: Text("PF")),
                 if(sport.type.isHitFactor) Expanded(flex: 3, child: Tooltip(
                     message: "The number of points out of the maximum possible for this stage.",
                     child: Text("Points/${widget.stage!.maxPoints}"))
@@ -523,7 +523,7 @@ class _ScoreListState extends State<ScoreList> {
               ),
               if(sport.hasClassifications && sport.displaySettings.showClassification) Expanded(flex: 1, child: Text(matchScore.shooter.classification?.shortName ?? "?")),
               if(sport.hasDivisions) Expanded(flex: 2, child: Text(matchScore.shooter.division?.displayName ?? "NO DIVISION")),
-              if(sport.hasPowerFactors) Expanded(flex: 1, child: Text(matchScore.shooter.powerFactor.shortName)),
+              if(sport.hasPowerFactors && sport.displaySettings.showPowerFactor) Expanded(flex: 1, child: Text(matchScore.shooter.powerFactor.shortName)),
               if(sport.type.isHitFactor) Consumer<ScoreDisplaySettingsModel>(
                 builder: (context, model, _) {
                   var matchScoring = widget.match!.sport.matchScoring;

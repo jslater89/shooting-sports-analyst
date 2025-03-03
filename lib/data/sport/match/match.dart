@@ -66,6 +66,24 @@ class ShootingMatch implements SourceIdsProvider {
   /// Shooters in this match.
   List<MatchEntry> shooters;
 
+  /// A map of IDs to bonus scoring events local to this match, which
+  /// are not part of the sport's default set of scoring events.
+  /// 
+  /// The IDs are synthetic, and are not guaranteed to correspond to
+  /// the ordering (if any) of match-local bonuses from a match source.
+  /// 
+  /// In [RawScore] objects, these will be included in [targetEvents].
+  List<ScoringEvent> localBonusEvents = [];
+
+  /// A map of IDs to penalty scoring events local to this match, which
+  /// are not part of the sport's default set of scoring events.
+  /// 
+  /// The IDs are synthetic, and are not guaranteed to correspond to
+  /// the ordering (if any) of match-local penalties from a match source.
+  /// 
+  /// In [RawScore] objects, these will be included in [penaltyEvents].
+  List<ScoringEvent> localPenaltyEvents = [];
+
   Set<int> squadNumbers = {};
   List<int> get sortedSquadNumbers => squadNumbers.toList()..sort();
 
@@ -84,6 +102,8 @@ class ShootingMatch implements SourceIdsProvider {
     required this.sport,
     required this.stages,
     required this.shooters,
+    this.localBonusEvents = const [],
+    this.localPenaltyEvents = const [],
   }) {
     updateSquadNumbers();
   }
@@ -277,11 +297,13 @@ class ShootingMatch implements SourceIdsProvider {
       rawDate: rawDate,
       date: date,
       sourceCode: sourceCode,
-      sourceIds: []..addAll(sourceIds),
+      sourceIds: [...sourceIds],
       level: level,
       databaseId: databaseId,
-      shooters: []..addAll(shooters.map((s) => s.copy(stageCopies))),
-      stages: []..addAll(stageCopies),
+      shooters: [...shooters.map((s) => s.copy(stageCopies))],
+      stages: [...stageCopies],
+      localBonusEvents: [...localBonusEvents],
+      localPenaltyEvents: [...localPenaltyEvents],
     );
   }
 }
@@ -343,6 +365,12 @@ class MatchStage {
   /// at all possible.
   Map<String, List<ScoringEvent>> variableEvents;
 
+  /// A list of match-local bonuses that are available for this stage.
+  List<ScoringEvent> availableMatchBonuses = [];
+
+  /// A list of match-local penalties that are available for this stage.
+  List<ScoringEvent> availableMatchPenalties = [];
+
   /// An optional source-specific identifier for this stage.
   String? sourceId;
 
@@ -357,6 +385,8 @@ class MatchStage {
     this.sourceId,
     this.scoringOverrides = const {},
     this.variableEvents = const {},
+    this.availableMatchBonuses = const [],
+    this.availableMatchPenalties = const [],
   });
 
   MatchStage copy() {
@@ -370,6 +400,8 @@ class MatchStage {
       classifierNumber: classifierNumber,
       scoringOverrides: scoringOverrides,
       variableEvents: variableEvents,
+      availableMatchBonuses: []..addAll(availableMatchBonuses),
+      availableMatchPenalties: []..addAll(availableMatchPenalties),
     );
   }
 

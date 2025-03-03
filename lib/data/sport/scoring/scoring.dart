@@ -440,6 +440,37 @@ class ScoringEvent extends NameLookupEntity {
 
   bool get fallback => false;
 
+  /// If true, this is a dynamic event, i.e., one created by a match parser or other source, rather than
+  /// a predefined event from a Sport definition.
+  final bool dynamic;
+
+  /// Returns true if this scoring event is positive, i.e., desirable,
+  /// under the scoring rules of [sport].
+  bool isPositive(Sport sport) {
+    if(sport.matchScoring is RelativeStageFinishScoring) {
+      if(sport.defaultStageScoring is HitFactorScoring) {
+        return pointChange > 0 || timeChange < 0;
+      }
+      else if(sport.defaultStageScoring is TimePlusScoring) {
+        return timeChange < 0;
+      }
+      else {
+        return pointChange > 0;
+      }
+    }
+    if(sport.matchScoring is CumulativeScoring) {
+      if((sport.matchScoring as CumulativeScoring).lowScoreWins) {
+        return pointChange < 0 || timeChange < 0;
+      }
+      else {
+        return pointChange > 0 || timeChange > 0;
+      }
+    }
+    else {
+      return pointChange > 0 || timeChange < 0;
+    }
+  }
+
   const ScoringEvent(
     this.name, {
     this.displayInOverview = true,
@@ -453,6 +484,7 @@ class ScoringEvent extends NameLookupEntity {
     this.bonusLabel = "X",
     this.alternateNames = const [],
     this.sortOrder = 0,
+    this.dynamic = false,
   });
 
   @override

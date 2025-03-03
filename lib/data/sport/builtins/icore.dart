@@ -50,7 +50,6 @@ const _icoreCName = "C";
 const _icoreMName = "M";
 const _icoreNSName = "NS";
 const _icoreNPMName = "NPM";
-const _icoreBonusSteelName = "Bonus Steel";
 const _icoreBig6Name = "Big 6";
 
 const icoreBig6PowerFactor = PowerFactor.constant(_icoreBig6Name,
@@ -62,7 +61,6 @@ const icoreBig6PowerFactor = PowerFactor.constant(_icoreBig6Name,
     _icoreMName: icoreM,
     _icoreNSName: icoreNS,
     _icoreNPMName: icoreNPM,
-    _icoreBonusSteelName: icoreBonusSteel,
   },
   penaltyEvents: {
     _icoreProceduralName: icoreProcedural,
@@ -106,7 +104,7 @@ const icoreNPM = ScoringEvent(_icoreNPMName, timeChange: 0, sortOrder: 7);
 /// on certain stages/scores.
 
 /// TODO: there is no standard for this, so we need to handle dynamic creation of bonuses per match.
-const icoreBonusSteel = ScoringEvent(_icoreBonusSteelName, shortName: "SB", alternateNames: ["BS", "Steel Bonus", "Bonus Plate"], timeChange: -3, sortOrder: 7);
+// const icoreBonusSteel = ScoringEvent(_icoreBonusSteelName, shortName: "SB", alternateNames: ["BS", "Steel Bonus", "Bonus Plate"], timeChange: -3, sortOrder: 7);
 const icoreSportName = "ICORE";
 
 final icoreSport = Sport(
@@ -143,7 +141,6 @@ final icoreSport = Sport(
           icoreM,
           icoreNS,
           icoreNPM,
-          icoreBonusSteel,
         ],
         fallback: true,
         penaltyEvents: icorePenalties,
