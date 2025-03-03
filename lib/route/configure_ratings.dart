@@ -35,6 +35,7 @@ import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rater.
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/shooter_aliases.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
@@ -73,7 +74,6 @@ class ConfigureRatingsPage extends StatefulWidget {
 class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   final bool _operationInProgress = false;
 
-  // TODO: sport 'supportsRatings' parameter, dropdown for supported sports
   Sport _sport = uspsaSport;
   Sport get sport => _sport;
   set sport(Sport v) {
@@ -86,6 +86,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       }
     }
     _sport = v;
+    _sportNameController.text = v.name;
   }
 
   DbRatingProject? _loadedProject;
@@ -121,6 +122,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   MemberNumberCorrectionContainer _memNumCorrections = MemberNumberCorrectionContainer();
   List<String> _hiddenShooters = [];
   String _validationError = "";
+  TextEditingController _sportNameController = TextEditingController();
 
   @override
   void initState() {
@@ -128,7 +130,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
     prefs = Provider.of<SharedPreferences>(context, listen: false);
     sport = uspsaSport;
-
+    _sportNameController.text = sport.name;
     _loadAutosave();
   }
 
@@ -219,7 +221,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).primaryColor;
-    final backgroundColor = Theme.of(context).backgroundColor;
+    final backgroundColor = Theme.of(context).colorScheme.background;
     var animation = (_operationInProgress) ?
       AlwaysStoppedAnimation<Color>(backgroundColor) : AlwaysStoppedAnimation<Color>(primaryColor);
 
@@ -364,6 +366,52 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                             SizedBox(height: 10),
                             Text("Settings", style: Theme.of(context).textTheme.labelLarge),
                             SizedBox(height: 10),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.max,
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text("Sport", style: Theme.of(context).textTheme.subtitle1!),
+                                  SizedBox(
+                                    width: 150,
+                                    child: Focus(
+                                      onFocusChange: (hasFocus) {
+                                        if(!hasFocus) {
+                                          _sportNameController.text = sport.name;
+                                        }
+                                      },
+                                      child: DropdownMenu<Sport>(
+                                        controller: _sportNameController,
+                                        dropdownMenuEntries: SportRegistry().availableSports.map((s) => 
+                                          DropdownMenuEntry(value: s, label: s.name)).toList(),
+                                        onSelected: (v) async {
+                                          var confirmed = await ConfirmDialog.show(
+                                            context,
+                                            title: "Change sport",
+                                            content: Text(
+                                              "Changing the sport will reset rating groups and matches, "
+                                              "requiring a full recalculation. Continue?"
+                                            ),
+                                            positiveButtonLabel: "CONTINUE",
+                                            negativeButtonLabel: "CANCEL",
+                                          );
+                                          if((confirmed ?? false) && v != null) {
+                                            setState(() {
+                                              sport = v;
+                                            });
+                                          }
+                                          else {
+                                            // restore original name on cancel
+                                            _sportNameController.text = sport.name;
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  )
+                                ],
+                              ),
+                            ),
                             Row(
                               mainAxisSize: MainAxisSize.max,
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -825,6 +873,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
       savedAsNew = true;
     }
 
+    project.sport = sport;
     project.settings = settings;
     project.matchPointers = projectMatches;
     if(filteredMatches != null && filteredMatches!.isNotEmpty) {

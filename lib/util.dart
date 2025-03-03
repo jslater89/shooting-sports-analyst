@@ -77,6 +77,14 @@ class Result<T, E extends ResultErr> {
   Result.ok(T result) : this._result = result, this._error = null, this._ok = true;
   Result.err(E error) : this._error = error, this._result = null, this._ok = false;
   Result.errFrom(Result<Object?, E> other) : this._error = other.unwrapErr(), this._result = null, this._ok = false;
+
+  @override
+  String toString() {
+    if(isOk()) {
+      return "Ok(${unwrap().toString()})";
+    }
+    return "Err(${unwrapErr().toString()})";
+  }
 }
 
 extension AsyncResult<T, E extends ResultErr> on Future<Result<T, E>> {

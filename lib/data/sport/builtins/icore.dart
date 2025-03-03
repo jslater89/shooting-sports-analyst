@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
 import 'package:shooting_sports_analyst/data/sort_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/icore_utils/icore_display_settings.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
@@ -20,14 +21,14 @@ const _icoreStopPlateFailureName = "Missed Stop Plate";
 const _icoreChronoFailureName = "Failing to Make Chrono";
 
 const icoreProcedural = ScoringEvent(_icoreProceduralName, shortName: "P", timeChange: 5, sortOrder: 100);
-const icorePrematureStart = ScoringEvent(_icorePrematureStartName, shortName: "PS", timeChange: -1, sortOrder: 101);
-const icoreFootFault = ScoringEvent(_icoreFootFaultName, shortName: "FF", timeChange: -1, sortOrder: 102);
-const icoreFailureToEngage = ScoringEvent(_icoreFailureToEngageName, shortName: "FTE", timeChange: -1, sortOrder: 103);
-const icoreExtraShot = ScoringEvent(_icoreExtraShotName, shortName: "ES", timeChange: 1, sortOrder: 104);
-const icoreExtraHit = ScoringEvent(_icoreExtraHitName, shortName: "EH", timeChange: 1, sortOrder: 105);
-const icoreOvertimeShot = ScoringEvent(_icoreOvertimeShotName, shortName: "OT", timeChange: 1, sortOrder: 106);
-const icoreStopPlateFailure = ScoringEvent(_icoreStopPlateFailureName, shortName: "SP", timeChange: -1, sortOrder: 107);
-const icoreChronoFailure = ScoringEvent(_icoreChronoFailureName, shortName: "FMC", timeChange: -1, sortOrder: 108);
+const icorePrematureStart = ScoringEvent(_icorePrematureStartName, shortName: "PS", timeChange: 5, sortOrder: 101);
+const icoreFootFault = ScoringEvent(_icoreFootFaultName, shortName: "FF", timeChange: 5, sortOrder: 102);
+const icoreFailureToEngage = ScoringEvent(_icoreFailureToEngageName, shortName: "FTE", timeChange: 5, sortOrder: 103);
+const icoreExtraShot = ScoringEvent(_icoreExtraShotName, shortName: "ES", timeChange: 5, sortOrder: 104);
+const icoreExtraHit = ScoringEvent(_icoreExtraHitName, shortName: "EH", timeChange: 5, sortOrder: 105);
+const icoreOvertimeShot = ScoringEvent(_icoreOvertimeShotName, shortName: "OT", timeChange: 10, sortOrder: 106);
+const icoreStopPlateFailure = ScoringEvent(_icoreStopPlateFailureName, shortName: "SP", timeChange: 30, sortOrder: 107);
+const icoreChronoFailure = ScoringEvent(_icoreChronoFailureName, shortName: "FMC", timeChange: 360, sortOrder: 108);
 
 const icorePenalties = [
   icoreProcedural,
@@ -48,6 +49,7 @@ const _icoreBig6BName = "B";
 const _icoreCName = "C";
 const _icoreMName = "M";
 const _icoreNSName = "NS";
+const _icoreNPMName = "NPM";
 const _icoreBonusSteelName = "Bonus Steel";
 const _icoreBig6Name = "Big 6";
 
@@ -59,6 +61,7 @@ const icoreBig6PowerFactor = PowerFactor.constant(_icoreBig6Name,
     _icoreCName: icoreC,
     _icoreMName: icoreM,
     _icoreNSName: icoreNS,
+    _icoreNPMName: icoreNPM,
     _icoreBonusSteelName: icoreBonusSteel,
   },
   penaltyEvents: {
@@ -74,6 +77,19 @@ const icoreBig6PowerFactor = PowerFactor.constant(_icoreBig6Name,
   }
 );
 
+const icoreDivisions = [
+  const Division(name: "Open", shortName: "OPEN", alternateNames: ["O"]),
+  const Division(name: "Limited", shortName: "LIM", alternateNames: ["L"]),
+  const Division(name: "Limited 6", shortName: "LIM6", alternateNames: ["L6"]),
+  const Division(name: "Classic", shortName: "CLS", alternateNames: ["CLC", "C"]),
+  const Division(
+    name: "Big 6",
+    shortName: "BIG6",
+    alternateNames: ["B6", "Heavy Metal", "HM"],
+    powerFactorOverride: icoreBig6PowerFactor,
+  )
+];
+
 /// An X-ring bonus hit. Defaults to -1 second, but may be overridden
 /// on certain stages/scores.
 const icoreX = ScoringEvent(_icoreXName, timeChange: -1, sortOrder: 1, variableValue: true);
@@ -83,17 +99,22 @@ const icoreBig6B = ScoringEvent(_icoreBig6BName, timeChange: 0, sortOrder: 3);
 const icoreC = ScoringEvent(_icoreCName, timeChange: 2, sortOrder: 4);
 const icoreM = ScoringEvent(_icoreMName, timeChange: 5, sortOrder: 5);
 const icoreNS = ScoringEvent(_icoreNSName, timeChange: 5, sortOrder: 6);
+const icoreNPM = ScoringEvent(_icoreNPMName, timeChange: 0, sortOrder: 7);
+
 // TODO: this may be better in penalty events, since it's only kind of a target event
 /// A bonus hit on steel. Defaults to -3 seconds, but may be overridden
 /// on certain stages/scores.
+
+/// TODO: there is no standard for this, so we need to handle dynamic creation of bonuses per match.
 const icoreBonusSteel = ScoringEvent(_icoreBonusSteelName, shortName: "SB", alternateNames: ["BS", "Steel Bonus", "Bonus Plate"], timeChange: -3, sortOrder: 7);
+const icoreSportName = "ICORE";
 
 final icoreSport = Sport(
-    "ICORE",
+    icoreSportName,
     type: SportType.icore,
     displaySettingsBuilder: (sport) => IcoreDisplaySettings.create(sport),
     matchScoring: CumulativeScoring(highScoreWins: false),
-    defaultStageScoring: const TimePlusScoring(),
+    defaultStageScoring: const TimePlusScoring(rawZeroWithEventsIsNonDnf: true),
     hasStages: true,
     resultSortModes: [
       SortMode.time,
@@ -109,20 +130,9 @@ final icoreSport = Sport(
       const Classification(index: 3, name: "B", shortName: "B"),
       const Classification(index: 4, name: "C", shortName: "C"),
       const Classification(index: 5, name: "D", shortName: "D"),
-      const Classification(index: 6, name: "Unclassified", shortName: "U"),
+      const Classification(index: 6, name: "Unclassified", shortName: "U", fallback: true),
     ],
-    divisions: [
-      const Division(name: "Open", shortName: "OPEN", alternateNames: ["O"]),
-      const Division(name: "Limited", shortName: "LIM", alternateNames: ["L"]),
-      const Division(name: "Limited 6", shortName: "LIM6", alternateNames: ["L6"]),
-      const Division(name: "Classic", shortName: "CLS", alternateNames: ["CLC", "C"]),
-      const Division(
-        name: "Big 6",
-        shortName: "B6",
-        alternateNames: ["BIG6", "Heavy Metal", "HM"],
-        powerFactorOverride: icoreBig6PowerFactor,
-      )
-    ],
+    divisions: icoreDivisions,
     powerFactors: [
       PowerFactor("Standard",
         targetEvents: [
@@ -132,9 +142,11 @@ final icoreSport = Sport(
           icoreC,
           icoreM,
           icoreNS,
+          icoreNPM,
           icoreBonusSteel,
         ],
         fallback: true,
+        penaltyEvents: icorePenalties,
       ),
       icoreBig6PowerFactor,
     ],
@@ -143,5 +155,6 @@ final icoreSport = Sport(
       const AgeCategory(name: "Senior"),
       const AgeCategory(name: "Super Senior"),
       const AgeCategory(name: "Grand Senior"),
-    ]
+    ],
+    builtinRatingGroupsProvider: DivisionRatingGroupProvider(icoreSportName, icoreDivisions)
 );

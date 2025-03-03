@@ -301,8 +301,10 @@ class RawScore {
 
   bool get dnf =>
       (this.scoring is HitFactorScoring && targetEvents.length == 0 && rawTime == 0.0)
-      || (this.scoring is TimePlusScoring && rawTime == 0.0)
+      || (this.scoring is TimePlusScoring && (this.scoring as TimePlusScoring).rawZeroWithEventsIsNonDnf && targetEvents.isEmpty && rawTime == 0.0)
+      || (this.scoring is TimePlusScoring && !((this.scoring as TimePlusScoring).rawZeroWithEventsIsNonDnf) && rawTime == 0.0)
       || (this.scoring is PointsScoring && points == 0);
+      // IgnoredScoring and TimePlusChronoScoring are never DNFs.
 
   /// The hit factor represented by this score.
   ///

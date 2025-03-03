@@ -229,199 +229,202 @@ class _MarbleSettingsWidgetState extends State<MarbleSettingsWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Divider(endIndent: 20),
-        Row(
-          children: [
-            Text("Marble game configuration", style: Theme.of(context).textTheme.labelLarge!),
-            HelpButton(helpTopicId: marblesConfigHelpId),
-          ],
-        ),
-        Row(
-          mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Tooltip(
-              message: "The number of marbles each competitor begins with",
-              child: Padding(
-                padding: const EdgeInsets.only(left: 16),
-                child: Text("Starting marbles", style: Theme.of(context).textTheme.titleMedium),
-              ),
-            ),
-            SizedBox(
-              width: 100,
-              child: TextFormField(
-                controller: _startingMarblesController,
-                textAlign: TextAlign.end,
-                keyboardType: TextInputType.numberWithOptions(decimal: false, signed: false),
-                inputFormatters: [
-                  FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
-                ],
-              ),
-            )
-          ]
-        ),
-        Row(
-          mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Tooltip(
-              message: "The fraction of their marbles a competitor pays to enter a match",
-              child: Padding(
-                padding: const EdgeInsets.only(left: 16),
-                child: Text("Match ante", style: Theme.of(context).textTheme.titleMedium),
-              ),
-            ),
-            SizedBox(
-              width: 100,
-              child: TextFormField(
-                controller: _anteController,
-                textAlign: TextAlign.end,
-                keyboardType: TextInputType.numberWithOptions(decimal: true, signed: false),
-                inputFormatters: [
-                  FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
-                ],
-              ),
-            )
-          ]
-        ),
-        Row(
-          mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Tooltip(
-              message: "The model to use for distributing marbles",
-              child: Padding(
-                padding: const EdgeInsets.only(left: 16),
-                child: Text("Model", style: Theme.of(context).textTheme.titleMedium),
-              ),
-            ),
-            SizedBox(
-              width: 160,
-              child: InputDecorator(
-                decoration: InputDecoration(
-                  isDense: true,
+    return Padding(
+      padding: const EdgeInsets.only(right: 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Divider(),
+          Row(
+            children: [
+              Text("Marble game configuration", style: Theme.of(context).textTheme.labelLarge!),
+              HelpButton(helpTopicId: marblesConfigHelpId),
+            ],
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Tooltip(
+                message: "The number of marbles each competitor begins with",
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: Text("Starting marbles", style: Theme.of(context).textTheme.titleMedium),
                 ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<MarbleModels>(
-                    value: MarbleModels.fromSettings(settings),
-                    items: MarbleModels.values.map((e) => DropdownMenuItem(value: e, child: Text(e.displayName))).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        settings.model = MarbleModel.fromName(value!.modelName, settings: settings);
-                      });
-                    },
+              ),
+              SizedBox(
+                width: 100,
+                child: TextFormField(
+                  controller: _startingMarblesController,
+                  textAlign: TextAlign.end,
+                  keyboardType: TextInputType.numberWithOptions(decimal: false, signed: false),
+                  inputFormatters: [
+                    FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
+                  ],
+                ),
+              )
+            ]
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Tooltip(
+                message: "The fraction of their marbles a competitor pays to enter a match",
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: Text("Match ante", style: Theme.of(context).textTheme.titleMedium),
+                ),
+              ),
+              SizedBox(
+                width: 100,
+                child: TextFormField(
+                  controller: _anteController,
+                  textAlign: TextAlign.end,
+                  keyboardType: TextInputType.numberWithOptions(decimal: true, signed: false),
+                  inputFormatters: [
+                    FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
+                  ],
+                ),
+              )
+            ]
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Tooltip(
+                message: "The model to use for distributing marbles",
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: Text("Model", style: Theme.of(context).textTheme.titleMedium),
+                ),
+              ),
+              SizedBox(
+                width: 160,
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    isDense: true,
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<MarbleModels>(
+                      value: MarbleModels.fromSettings(settings),
+                      items: MarbleModels.values.map((e) => DropdownMenuItem(value: e, child: Text(e.displayName))).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          settings.model = MarbleModel.fromName(value!.modelName, settings: settings);
+                        });
+                      },
+                    ),
                   ),
                 ),
+              )
+            ],
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Tooltip(
+                message: "The term for the marble curve; higher gives more marbles to winners",
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: Text("Power term", style: Theme.of(context).textTheme.titleMedium),
+                ),
               ),
-            )
-          ],
-        ),
-        Row(
-          mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Tooltip(
-              message: "The term for the marble curve; higher gives more marbles to winners",
-              child: Padding(
-                padding: const EdgeInsets.only(left: 16),
-                child: Text("Power term", style: Theme.of(context).textTheme.titleMedium),
+              SizedBox(
+                width: 100,
+                child: TextFormField(
+                  enabled: settings.model.name == PowerLawModel.modelName,
+                  controller: _powerController,
+                  textAlign: TextAlign.end,
+                  keyboardType: TextInputType.numberWithOptions(decimal: true, signed: false),
+                  inputFormatters: [
+                    FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
+                  ],
+                ),
+              )
+            ]
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Tooltip(
+                message: "The steepness of the sigmoid curve.\n\n"
+                  "Higher values separate cluster top and bottom competitors but separate mid-pack competitors more.\n"
+                  "Lower values spread competitors more evenly.",
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: Text("Steepness", style: Theme.of(context).textTheme.titleMedium),
+                ),
               ),
-            ),
-            SizedBox(
-              width: 100,
-              child: TextFormField(
-                enabled: settings.model.name == PowerLawModel.modelName,
-                controller: _powerController,
-                textAlign: TextAlign.end,
-                keyboardType: TextInputType.numberWithOptions(decimal: true, signed: false),
-                inputFormatters: [
-                  FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
-                ],
+              SizedBox(
+                width: 100,
+                child: TextFormField(
+                  enabled: settings.model.name == SigmoidModel.modelName,
+                  controller: _steepnessController,
+                  textAlign: TextAlign.end,
+                  keyboardType: TextInputType.numberWithOptions(decimal: true, signed: false),
+                  inputFormatters: [
+                    FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
+                  ],
+                ),
+              )
+            ]
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Tooltip(
+                message: "The midpoint of the sigmoid curve, controlling what score falls on its midpoint.",
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: Text("Midpoint", style: Theme.of(context).textTheme.titleMedium),
+                ),
               ),
-            )
-          ]
-        ),
-        Row(
-          mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Tooltip(
-              message: "The steepness of the sigmoid curve.\n\n"
-                "Higher values separate cluster top and bottom competitors but separate mid-pack competitors more.\n"
-                "Lower values spread competitors more evenly.",
-              child: Padding(
-                padding: const EdgeInsets.only(left: 16),
-                child: Text("Steepness", style: Theme.of(context).textTheme.titleMedium),
+              SizedBox(
+                width: 100,
+                child: TextFormField(
+                  enabled: settings.model.name == SigmoidModel.modelName,
+                  controller: _midpointController,
+                  textAlign: TextAlign.end,
+                  keyboardType: TextInputType.numberWithOptions(decimal: true, signed: false),
+                  inputFormatters: [
+                    FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
+                  ],
+                ),
+              )
+            ]
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Tooltip(
+                message: "The term for the ordinal power law curve; higher gives more marbles to winners",
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: Text("Ordinal power", style: Theme.of(context).textTheme.titleMedium),
+                ),
               ),
-            ),
-            SizedBox(
-              width: 100,
-              child: TextFormField(
-                enabled: settings.model.name == SigmoidModel.modelName,
-                controller: _steepnessController,
-                textAlign: TextAlign.end,
-                keyboardType: TextInputType.numberWithOptions(decimal: true, signed: false),
-                inputFormatters: [
-                  FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
-                ],
-              ),
-            )
-          ]
-        ),
-        Row(
-          mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Tooltip(
-              message: "The midpoint of the sigmoid curve, controlling what score falls on its midpoint.",
-              child: Padding(
-                padding: const EdgeInsets.only(left: 16),
-                child: Text("Midpoint", style: Theme.of(context).textTheme.titleMedium),
-              ),
-            ),
-            SizedBox(
-              width: 100,
-              child: TextFormField(
-                enabled: settings.model.name == SigmoidModel.modelName,
-                controller: _midpointController,
-                textAlign: TextAlign.end,
-                keyboardType: TextInputType.numberWithOptions(decimal: true, signed: false),
-                inputFormatters: [
-                  FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
-                ],
-              ),
-            )
-          ]
-        ),
-        Row(
-          mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Tooltip(
-              message: "The term for the ordinal power law curve; higher gives more marbles to winners",
-              child: Padding(
-                padding: const EdgeInsets.only(left: 16),
-                child: Text("Ordinal power", style: Theme.of(context).textTheme.titleMedium),
-              ),
-            ),
-            SizedBox(
-              width: 100,
-              child: TextFormField(
-                enabled: settings.model.name == OrdinalPowerLawModel.modelName,
-                controller: _ordinalPowerController,
-                textAlign: TextAlign.end,
-                keyboardType: TextInputType.numberWithOptions(decimal: true, signed: false),
-                inputFormatters: [
-                  FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
-                ],
-              ),
-            )
-          ]
-        )
-      ]
+              SizedBox(
+                width: 100,
+                child: TextFormField(
+                  enabled: settings.model.name == OrdinalPowerLawModel.modelName,
+                  controller: _ordinalPowerController,
+                  textAlign: TextAlign.end,
+                  keyboardType: TextInputType.numberWithOptions(decimal: true, signed: false),
+                  inputFormatters: [
+                    FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
+                  ],
+                ),
+              )
+            ]
+          )
+        ]
+      ),
     );
   }
 }

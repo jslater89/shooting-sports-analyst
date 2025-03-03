@@ -33,6 +33,8 @@ sealed class StageScoring {
         return "Points";
       case IgnoredScoring():
         return "-";
+      case TimePlusChronoScoring():
+        return "Time";
     }
   }
 
@@ -52,6 +54,8 @@ sealed class StageScoring {
         }
       case IgnoredScoring():
         return "-";
+      case TimePlusChronoScoring():
+        return "${interpret(score).toStringAsFixed(2)}s";
     }
   }
 
@@ -108,8 +112,15 @@ sealed class StageScoring {
 
   static StageScoring fromDbString(String string) {
     if(string.startsWith(const HitFactorScoring().dbString)) return const HitFactorScoring();
-    else if(string.startsWith(const TimePlusScoring().dbString)) return TimePlusScoring();
-    else if(string.startsWith(const PointsScoring(highScoreBest: true).dbString)) {
+    else if(string.startsWith(const TimePlusScoring().dbPrefix)) {
+      var options = string.split("|");
+      var rawZeroWithEventsIsNonDnf = false;
+      if(options.length >= 2) {
+        rawZeroWithEventsIsNonDnf = options[1] == "true";
+      }
+      return TimePlusScoring(rawZeroWithEventsIsNonDnf: rawZeroWithEventsIsNonDnf);
+    }
+    else if(string.startsWith(const PointsScoring(highScoreBest: true).dbPrefix)) {
       var options = string.split("|");
       var highScoreBest = options[1] == "true";
 
@@ -146,8 +157,15 @@ class HitFactorScoring extends StageScoring {
 class TimePlusScoring extends StageScoring {
   num interpret(RawScore score) => score.finalTime;
   bool get highScoreBest => false;
+  
+  /// If true, a score with a zero raw time is not a DNF if it has
+  /// target events.
+  final bool rawZeroWithEventsIsNonDnf;
 
-  const TimePlusScoring();
+  String get dbPrefix => "${this.runtimeType.toString()}";
+  String get dbString => "$dbPrefix|$rawZeroWithEventsIsNonDnf";
+
+  const TimePlusScoring({this.rawZeroWithEventsIsNonDnf = false});
 }
 
 class PointsScoring extends StageScoring {
@@ -155,7 +173,8 @@ class PointsScoring extends StageScoring {
   final bool highScoreBest;
   final bool allowDecimal;
 
-  String get dbString => "${this.runtimeType.toString()}|$highScoreBest|$allowDecimal";
+  String get dbPrefix => "${this.runtimeType.toString()}";
+  String get dbString => "$dbPrefix|$highScoreBest|$allowDecimal";
 
   const PointsScoring({this.highScoreBest = true, this.allowDecimal = false});
 
@@ -176,4 +195,22 @@ class IgnoredScoring extends StageScoring {
   bool get highScoreBest => true;
 
   const IgnoredScoring();
+}
+
+/// In (at minimum) ICORE, stages with the 'chrono' scoring type have zero
+/// time (and would thus appear as a DNF in [TimePlusScoring]), but are
+/// not a DNF—chrono is either a 0.0 time, or a 360-second failure to
+/// make chrono penalty.
+///
+/// This scoring type is used to represent that case, mainly by never counting
+/// for a match/stage DNF.
+/// 
+/// Some ICORE matches (older templates?) use a normal stage template for
+/// chrono, and use a 0.01 time for success, plus the penalty for failure,
+/// which is handled correctly by [TimePlusScoring].
+class TimePlusChronoScoring extends StageScoring {
+  num interpret(RawScore score) => score.finalTime;
+  bool get highScoreBest => false;
+
+  const TimePlusChronoScoring();
 }

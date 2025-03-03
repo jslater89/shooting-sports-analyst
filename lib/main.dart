@@ -55,74 +55,73 @@ GlobalData globals = GlobalData();
 void main() async {
   // dumpRatings();
 
-  _log.i("=== App start ===");
-
-  globals.router.define('/', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
-    handlerFunc: (context, params) {
-      _log.d("/ route params: $params");
-      return HomePage();
-    }
-  ));
-  globals.router.define('/local', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
-    handlerFunc: (context, params) {
-      return UploadedResultPage();
-    }
-  ));
-  globals.router.define('/rater', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
-    handlerFunc: (context, params) {
-      return RatingsContainerPage();
-    }
-  ));
-  globals.router.define('/web/:sourceId/:matchId', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
-    handlerFunc: (context, params) {
-      return PractiscoreResultPage(matchId: params['matchId']![0], sourceId: params['sourceId']![0]);
-    }
-  ));
-
-  // resultUrl is base64-encoded
-  globals.router.define('/webfile/:sourceId/:resultUrl', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
+  runZonedGuarded(() async {
+    _log.i("=== App start ===");
+    globals.router.define('/', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
       handlerFunc: (context, params) {
-        var urlString = String.fromCharCodes(Base64Codec.urlSafe().decode(params['resultUrl']![0]));
-        return PractiscoreResultPage(resultUrl: urlString, sourceId: params['sourceId']![0]);
+        _log.d("/ route params: $params");
+        return HomePage();
       }
-  ));
-  configureApp();
+    ));
+    globals.router.define('/local', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
+      handlerFunc: (context, params) {
+        return UploadedResultPage();
+      }
+    ));
+    globals.router.define('/rater', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
+      handlerFunc: (context, params) {
+        return RatingsContainerPage();
+      }
+    ));
+    globals.router.define('/web/:sourceId/:matchId', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
+      handlerFunc: (context, params) {
+        return PractiscoreResultPage(matchId: params['matchId']![0], sourceId: params['sourceId']![0]);
+      }
+    ));
 
-  WidgetsFlutterBinding.ensureInitialized();
+    // resultUrl is base64-encoded
+    globals.router.define('/webfile/:sourceId/:resultUrl', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
+        handlerFunc: (context, params) {
+          var urlString = String.fromCharCodes(Base64Codec.urlSafe().decode(params['resultUrl']![0]));
+          return PractiscoreResultPage(resultUrl: urlString, sourceId: params['sourceId']![0]);
+        }
+    ));
+    configureApp();
 
-  await windowManager.ensureInitialized();
-  var options = WindowOptions(
-    minimumSize: Size(1280, 720),
-    title: "Shooting Sports Analyst",
-  );
-  windowManager.waitUntilReadyToShow(options, () async {
-    await windowManager.show();
-    await windowManager.focus();
-  });
+    WidgetsFlutterBinding.ensureInitialized();
 
-  await ConfigLoader().ready;
-  initLogger();
+    await windowManager.ensureInitialized();
+    var options = WindowOptions(
+      minimumSize: Size(1280, 720),
+      title: "Shooting Sports Analyst",
+    );
+    windowManager.waitUntilReadyToShow(options, () async {
+      await windowManager.show();
+      await windowManager.focus();
+    });
 
-  await AnalystDatabase().ready;
-  _log.i("Database ready");
+    await ConfigLoader().ready;
+    initLogger();
 
-  if(!HtmlOr.isWeb) {
-    var path = await getApplicationSupportDirectory();
-    Hive.init(path.absolute.path);
+    await AnalystDatabase().ready;
+    _log.i("Database ready");
 
-    // Start warming up the match cache immediately, since we're almost always going to want it
-    matchCacheProgressCallback = (_1, _2) async {
-      await Future.delayed(Duration(microseconds: 1));
-    };
-    MatchCache();
-  }
-  _log.i("Hive cache ready");
+    if(!HtmlOr.isWeb) {
+      var path = await getApplicationSupportDirectory();
+      Hive.init(path.absolute.path);
 
-  oneoffDbAnalyses(AnalystDatabase());
-  HelpTopicRegistry().initialize();
-  registerHelpTopics();
+      // Start warming up the match cache immediately, since we're almost always going to want it
+      matchCacheProgressCallback = (_1, _2) async {
+        await Future.delayed(Duration(microseconds: 1));
+      };
+      MatchCache();
+    }
+    _log.i("Hive cache ready");
 
-  runZonedGuarded(() {
+    oneoffDbAnalyses(AnalystDatabase());
+    HelpTopicRegistry().initialize();
+    registerHelpTopics();
+
     runApp(MyApp());
   }, (error, stack) {
     _log.e("Uncaught error", error: error, stackTrace: stack);

@@ -505,7 +505,7 @@ final class CumulativeScoring extends MatchScoring {
         throw StateError("shooter has no stage scores");
       }
 
-      var totalScore = shooterStageScores.values.map((e) => e.points!).sum;
+      var totalScore = shooterStageScores.values.map((e) => e.points).sum;
       stageScoreTotals[s] = totalScore;
       if(lowScoreWins) {
         // Match DNFs can't be the best total score.

@@ -11,7 +11,6 @@ class IcoreDisplaySettings {
   static SportDisplaySettings create(Sport sport, {
     PowerFactor? powerFactor,
   }) {
-    List<ColumnGroup> scoreColumns = [];
 
     var pf = powerFactor ?? sport.defaultPowerFactor;
 
@@ -65,6 +64,9 @@ class IcoreDisplaySettings {
     }
     if(pf.targetEvents.lookupByName("SB") != null) {
       hitGroups.add(ScoringEventGroup.single(pf.targetEvents.lookupByName("SB")!, displayIfNoEvents: false));
+    }
+    if(pf.targetEvents.lookupByName("NPM") != null) {
+      hitGroups.add(ScoringEventGroup.single(pf.targetEvents.lookupByName("NPM")!, displayIfNoEvents: false));
     }
     ColumnGroup hitsColumn = ColumnGroup(
       headerLabel: "Hits",

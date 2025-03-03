@@ -280,6 +280,11 @@ class DbMatchStage {
       variableEvents: varEventsMap,
     );
   }
+
+  @override
+  String toString() {
+    return "$stageId - $name";
+  }
 }
 
 @embedded
@@ -317,6 +322,11 @@ class DbScoringEventOverride {
       pointChangeOverride: pointChangeOverride,
       timeChangeOverride: timeChangeOverride,
     );
+  }
+
+  @override
+  String toString() {
+    return "$name (pts: $pointChangeOverride, time: $timeChangeOverride)";
   }
 }
 
@@ -415,7 +425,8 @@ class DbMatchEntry {
       pf = foundPf;
     }
 
-    Map<MatchStage, Result<RawScore, ResultErr>> hydratedScores = Map.fromEntries(scores.map((dbScore) => MapEntry(stagesById[dbScore.stageId]!, dbScore.hydrate(pf))));
+    Map<MatchStage, Result<RawScore, ResultErr>> hydratedScores = Map.fromEntries(scores.map((dbScore) => 
+      MapEntry(stagesById[dbScore.stageId]!, dbScore.hydrate(stagesById[dbScore.stageId]!, pf))));
     var firstError = hydratedScores.values.firstWhereOrNull((element) => element.isErr());
     if(firstError != null) return Result.err(firstError.unwrapErr());
 
@@ -438,6 +449,11 @@ class DbMatchEntry {
         ..originalMemberNumber = originalMemberNumber
         ..knownMemberNumbers = ({}..addAll(knownMemberNumbers))
     );
+  }
+
+  @override
+  String toString() {
+    return "$entryId - $firstName $lastName";
   }
 }
 
@@ -480,7 +496,7 @@ class DbRawScore {
     }).toList(),
     modified = score.modified;
 
-  Result<RawScore, ResultErr> hydrate(PowerFactor pf) {
+  Result<RawScore, ResultErr> hydrate(MatchStage stage, PowerFactor pf) {
     for(var event in scoringEvents) {
       if(pf.targetEvents.lookupByName(event.name) == null) return Result.err(StringError("invalid scoring event ${event.name}"));
     }
@@ -492,6 +508,7 @@ class DbRawScore {
       scoring: StageScoring.fromDbString(scoringType),
       rawTime: rawTime,
       stringTimes: []..addAll(stringTimes),
+      scoringOverrides: stage.scoringOverrides,
       targetEvents: Map.fromEntries(scoringEvents.map((event) {
         var targetEvent = pf.targetEvents.lookupByName(event.name)!;
         if(event.nondefaultValues) {
@@ -510,6 +527,11 @@ class DbRawScore {
       }).whereType<MapEntry<ScoringEvent, int>>()),
       modified: modified,
     ));
+  }
+
+  @override
+  String toString() {
+    return "$stageId - $rawTime";
   }
 }
 
@@ -534,6 +556,20 @@ class DbScoringEventCount {
     name = event.name,
     pointsOverride = event.nondefaultPoints ? event.pointChange : null,
     timeOverride = event.nondefaultTime ? event.timeChange : null;
+
+  @override
+  String toString() {
+    var overrideString = "";
+    if(nondefaultValues) {
+      overrideString = " (";
+      List<String> overrides = [];
+      if(pointsOverride != null) overrides.add("pts: $pointsOverride");
+      if(timeOverride != null) overrides.add("time: $timeOverride");
+      overrideString += overrides.join(", ");
+      overrideString += ")";
+    }
+    return "$count $name ($overrideString)";
+  }
 }
 
 @embedded 

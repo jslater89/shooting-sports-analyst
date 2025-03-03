@@ -408,7 +408,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     bool matchInProgress = match?.inProgress ?? false;
 
     double expectedScore = 0;
-    var highOpponentScore = 0.0;
+    double highOpponentRatio = 0.0;
 
     // our own score
     int usedScores = 1;
@@ -422,6 +422,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       totalPercent = (aScore.ratio * stageBlend) + (aMatchScore.ratio * matchBlend);
     }
 
+    /// TODO: turn off for time plus?
     int zeroes = aScore.points < 0.1 ? 1 : 0;
 
     for(var bRating in scores.keys) {
@@ -431,8 +432,8 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       // No credit against ourselves
       if(opponentScore == aScore) continue;
 
-      if (opponentScore.points > highOpponentScore) {
-        highOpponentScore = opponentScore.points;
+      if (opponentScore.ratio > highOpponentRatio) {
+        highOpponentRatio = opponentScore.ratio;
       }
 
       if(opponentScore.points < 0.1) {
@@ -462,7 +463,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     var divisor = ((usedScores * (usedScores - 1)) / 2);
     return _ScoreParameters(
       expectedScore: expectedScore / divisor,
-      highOpponentScore: highOpponentScore,
+      highOpponentRatio: highOpponentRatio,
       totalPercent: totalPercent,
       divisor: divisor,
       usedScores: usedScores,
@@ -483,7 +484,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   }) {
     bool matchInProgress = match?.inProgress ?? false;
 
-    var actualPercent;
+    double actualPercent;
     if(_disableMatchBlend(matchInProgress, score.shooter.dq, isDnf)) {
       // Give DQed shooters a break by not blending in the match score
       actualPercent = score.ratio;
@@ -492,8 +493,8 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       actualPercent = (score.ratio * stageBlend) + (matchScore.ratio * matchBlend);
     }
 
-    if(score.ratio == 1.0 && params.highOpponentScore > 0.1) {
-      actualPercent = score.points / params.highOpponentScore;
+    if(score.ratio == 1.0 && params.highOpponentRatio > 0.1) {
+      actualPercent = score.ratio / params.highOpponentRatio;
       params.totalPercent += (actualPercent - 1.0);
     }
 
@@ -907,7 +908,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
 class _ScoreParameters {
   double expectedScore;
-  double highOpponentScore;
+  double highOpponentRatio;
   double totalPercent;
   double divisor;
   int usedScores;
@@ -915,7 +916,7 @@ class _ScoreParameters {
 
   _ScoreParameters({
     required this.expectedScore,
-    required this.highOpponentScore,
+    required this.highOpponentRatio,
     required this.totalPercent,
     required this.divisor,
     required this.usedScores,

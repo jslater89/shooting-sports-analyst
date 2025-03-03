@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
@@ -51,6 +52,38 @@ abstract interface class RatingGroupsProvider {
   List<RatingGroup> get defaultRatingGroups;
 
   RatingGroup? getGroup(String uuid);
+}
+
+class DivisionRatingGroupProvider implements RatingGroupsProvider {
+  final List<Division> divisions;
+
+  DivisionRatingGroupProvider(String sportName,this.divisions) :
+    divisionRatingGroups = divisions.mapIndexed((index, d) => RatingGroup(
+      uuid: "icore-${d.name.toLowerCase().replaceAll(" ", "-")}",
+      sortOrder: index,
+      sportName: sportName,
+      name: d.name,
+      displayName: d.shortDisplayName,
+      divisionNames: [d.name],
+    )).toList() 
+  {
+    builtinRatingGroups = divisionRatingGroups;
+    defaultRatingGroups = divisionRatingGroups;
+  }
+
+  @override
+  final List<RatingGroup> divisionRatingGroups;
+
+  @override
+  late final List<RatingGroup> builtinRatingGroups;
+
+  @override
+  late final List<RatingGroup> defaultRatingGroups;
+  
+  @override
+  RatingGroup? getGroup(String uuid) {
+    return divisionRatingGroups.firstWhereOrNull((d) => d.uuid == uuid);
+  }
 }
 
 abstract interface class ConnectivityCalculator {

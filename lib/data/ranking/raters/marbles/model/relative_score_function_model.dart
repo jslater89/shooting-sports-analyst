@@ -38,6 +38,9 @@ abstract class RelativeScoreFunctionModel implements MarbleModel {
     for(var s in results.keys) {
       var score = results[s]!;
       var relativeShare = shares[s]! / sumShares;
+      if(relativeShare.isNaN || relativeShare.isInfinite) {
+        print("break");
+      }
       var marblesWon = (totalStake * relativeShare).round();
       changes[s]!.change[MarbleRater.marblesWonKey] = marblesWon.toDouble();
       changes[s]!.change[MarbleRater.matchStakeKey] = totalStake.toDouble();
