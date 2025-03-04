@@ -1470,6 +1470,23 @@ class RatingProjectLoader {
     else { // by match
       var (filteredShooters, filteredScores) = _filterScores(shooters, scores.values.toList(), null);
 
+      if(filteredShooters.length < shooters.length * 0.5) {
+        var dnfs = shooters.length - filteredShooters.length;
+        project.addReport(RatingReport(
+          type: RatingReportType.fiftyPercentDnfs,
+          severity: shooters.length <= 5 ? RatingReportSeverity.info : RatingReportSeverity.warning,
+          data: FiftyPercentDnfs(
+            matchDbId: match.databaseId ?? -1,
+            matchName: match.name,
+            ratingGroupUuid: group.uuid,
+            ratingGroupName: group.name,
+            dnfRatio: dnfs / shooters.length,
+            dnfCount: dnfs,
+            competitorCount: shooters.length,
+          ),
+        ));
+      }
+
       Map<ShooterRating, RelativeMatchScore> matchScoreMap = {};
 
       for(var score in filteredScores) {
@@ -1693,7 +1710,11 @@ class RatingProjectLoader {
     }
 
     for(var stageScore in score.stageScores.values) {
-      if(!(stageScore.stage.scoring is IgnoredScoring) && stageScore.score.rawTime <= 0.01 && stageScore.score.targetEventCount == 0) {
+      if(!stageScore.stage.scoring.countsInRatings) {
+        // skip e.g. IgnoredScoring or TimePlusChronoScoring; they can never cause a match DNF
+        continue;
+      }
+      if(stageScore.score.rawTime <= 0.01 && stageScore.score.targetEventCount == 0 && stageScore.score.penaltyEventCount == 0) {
         return true;
       }
     }

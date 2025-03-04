@@ -113,6 +113,18 @@ extension AsyncResult<T, E extends ResultErr> on Future<Result<T, E>> {
   }
 }
 
+extension AddIfMissing<T> on List<T> {
+  void addIfMissing(T value) {
+    if(!this.contains(value)) {
+      this.add(value);
+    }
+  }
+
+  List<T> removeDuplicates() {
+    return this.toSet().toList();
+  }
+}
+
 extension ListStatistics<T extends Comparable> on List<T> {
   T get median {
     if(this.isEmpty) throw ArgumentError("empty list");
@@ -239,6 +251,9 @@ int combineHashes(int hash, int value) {
 
 extension AsPercentage on double {
   String asPercentage({int decimals = 2}) {
+    if(decimals == 0) {
+      return "${(this * 100).round()}%";
+    }
     return (this * 100).toStringAsFixed(decimals);
   }
 }

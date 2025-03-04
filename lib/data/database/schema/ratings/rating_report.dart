@@ -79,6 +79,9 @@ class RatingReport {
         case RatingReportType.blacklistedMapping:
           _data = BlacklistedMapping.fromJson(jsonDecode(jsonEncodedData));
           break;
+        case RatingReportType.fiftyPercentDnfs:
+          _data = FiftyPercentDnfs.fromJson(jsonDecode(jsonEncodedData));
+          break;
       }
     }
     return _data!;
@@ -119,7 +122,8 @@ enum RatingReportType {
   duplicateBlacklistEntry,
   duplicateUserMapping,
   duplicateAutoMapping,
-  blacklistedMapping;
+  blacklistedMapping,
+  fiftyPercentDnfs;
 
   String get dropdownName => switch(this) {
     RatingReportType.stringDifferenceNameForSameNumber => "Possibly-distinct names",
@@ -130,6 +134,7 @@ enum RatingReportType {
     RatingReportType.duplicateUserMapping => "Duplicate user mapping",
     RatingReportType.duplicateAutoMapping => "Duplicate auto mapping",
     RatingReportType.blacklistedMapping => "Blacklisted mapping",
+    RatingReportType.fiftyPercentDnfs => "High DNF rate at match",
   };
 
   String listItemTitle(RatingReportData data) {
@@ -152,6 +157,8 @@ enum RatingReportType {
         return "Duplicate auto mapping in ${data.ratingGroupName}";
       case RatingReportType.blacklistedMapping:
         return "Blacklisted mapping in ${data.ratingGroupName}";
+      case RatingReportType.fiftyPercentDnfs:
+        return "High DNF rate at match in ${data.ratingGroupName}";
     }
   }
 
@@ -181,6 +188,9 @@ enum RatingReportType {
       case RatingReportType.blacklistedMapping:
         var typedData = data as BlacklistedMapping;
         return "${typedData.sourceNumber} → ${typedData.targetNumber}";
+      case RatingReportType.fiftyPercentDnfs:
+        var typedData = data as FiftyPercentDnfs;
+        return "Match: ${typedData.matchName}";
     }
   }
 
@@ -281,6 +291,16 @@ enum RatingReportType {
           SizedBox(height: 8),
           Text("Source number: ${typedData.sourceNumber}"),
           Text("Target number: ${typedData.targetNumber}"),
+        ];
+      case RatingReportType.fiftyPercentDnfs:
+        var typedData = data as FiftyPercentDnfs;
+        return [
+          Text(
+            "The match ${typedData.matchName} has a DNF rate of ${typedData.dnfRatio.asPercentage(decimals: 0)} "
+            "(${typedData.dnfCount}/${typedData.competitorCount}) in ${typedData.ratingGroupName}. This may indicate "
+            "either a bug with the scoring system, an issue with the match data, or simply a low-participation "
+            "division with some no-shows."
+          ),
         ];
     }
   }
@@ -565,5 +585,42 @@ class BlacklistedMapping extends RatingReportData {
   @override
   String toString() {
     return "BlacklistedMapping(sourceNumber: $sourceNumber, targetNumber: $targetNumber, ratingGroupUuid: $ratingGroupUuid, ratingGroupName: $ratingGroupName, autoMapping: $autoMapping)";
+  }
+}
+
+@JsonSerializable()
+class FiftyPercentDnfs extends RatingReportData {
+  FiftyPercentDnfs({
+    required this.matchDbId,
+    required this.matchName,
+    required this.ratingGroupUuid,
+    required this.ratingGroupName,
+    required this.dnfRatio,
+    required this.dnfCount,
+    required this.competitorCount,
+  });
+
+  int matchDbId;
+  String matchName;
+  String ratingGroupUuid;
+  String ratingGroupName;
+  double dnfRatio;
+  int dnfCount;
+  int competitorCount;
+
+  factory FiftyPercentDnfs.fromJson(Map<String, dynamic> json) => _$FiftyPercentDnfsFromJson(json);
+  Map<String, dynamic> toJson() => _$FiftyPercentDnfsToJson(this);
+
+  @override
+  bool operator==(Object other) {
+    if(other is! FiftyPercentDnfs) {
+      return false;
+    }
+    return matchDbId == other.matchDbId && ratingGroupUuid == other.ratingGroupUuid;
+  }
+
+  @override
+  String toString() {
+    return "FiftyPercentDnfs(matchDbId: $matchDbId, matchName: $matchName, ratingGroupUuid: $ratingGroupUuid, ratingGroupName: $ratingGroupName)";
   }
 }

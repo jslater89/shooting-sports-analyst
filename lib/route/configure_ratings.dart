@@ -139,6 +139,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   /// Checks the match cache for URL names, and starts downloading any
   /// matches that aren't in the cache.
   Future<void> updateMatches() async {
+    projectMatches = projectMatches.removeDuplicates();
     if(filters != null) {
       _filterMatches();
     }
@@ -563,9 +564,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                     if(dbEntries == null) return;
 
                                     for(var entry in dbEntries) {
-                                      if(!projectMatches.contains(entry)) {
-                                        projectMatches.add(MatchPointer.fromDbMatch(entry));
-                                      }
+                                      projectMatches.addIfMissing(MatchPointer.fromDbMatch(entry));
                                     }
 
                                     setState(() {
@@ -709,7 +708,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
                                             var result = await MatchSource.reloadMatch(matchPointer.intoSourcePlaceholder());
                                             if(result.isOk()) {
-                                              projectMatches.add(MatchPointer.fromMatch(result.unwrap()));
+                                              projectMatches.addIfMissing(MatchPointer.fromMatch(result.unwrap()));
+                                              _sortMatches(false);
                                             }
                                           },
                                         ),
