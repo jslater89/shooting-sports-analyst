@@ -101,7 +101,11 @@ abstract class ShooterDeduplicator {
   }
 
   /// A processed member number is a member number that has been processed to
-  /// meet the condition that
+  /// some greater standard than normalization, if relevant.
+  /// 
+  /// Originally, this was intended to process a member number down to a
+  /// form where string equality was equivalent to competitor equality,
+  /// but the implementations so far do not hold to this.
   /// 
   /// The default implementation returns the normalized number.
   String processNumber(String number) {
@@ -214,4 +218,20 @@ enum MemberNumberType {
 class DeduplicationResult extends Result<List<DeduplicationCollision>, RatingError> {
   DeduplicationResult.ok(super.value) : super.ok();
   DeduplicationResult.err(super.error) : super.err();
+}
+
+extension DeepCopyMemberNumberMap<T, U> on Map<T, List<U>> {
+  Map<T, List<U>> deepCopy() {
+    return {
+      for(var type in keys) 
+        type: [...this[type]!]
+    };
+  }
+
+  bool deepEmpty() {
+    for(var value in values) {
+      if(value.isNotEmpty) return false;
+    }
+    return true;
+  }
 }

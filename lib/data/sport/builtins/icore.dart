@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:shooting_sports_analyst/data/ranking/connectivity/sqrt_total_unique_product.dart';
 import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
 import 'package:shooting_sports_analyst/data/sort_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/icore_utils/icore_display_settings.dart';
@@ -99,6 +100,14 @@ const icoreM = ScoringEvent(_icoreMName, timeChange: 5, sortOrder: 5);
 const icoreNS = ScoringEvent(_icoreNSName, timeChange: 5, sortOrder: 6);
 const icoreNPM = ScoringEvent(_icoreNPMName, timeChange: 0, sortOrder: 7);
 
+const icoreGrandmaster = Classification(index: 0, name: "Grandmaster", shortName: "GM");
+const icoreMaster = Classification(index: 1, name: "Master", shortName: "M");
+const icoreAClass = Classification(index: 2, name: "A", shortName: "A");
+const icoreBClass = Classification(index: 3, name: "B", shortName: "B");
+const icoreCClass = Classification(index: 4, name: "C", shortName: "C");
+const icoreDClass = Classification(index: 5, name: "D", shortName: "D");
+const icoreUnclassified = Classification(index: 6, name: "Unclassified", shortName: "U", fallback: true);
+
 // TODO: this may be better in penalty events, since it's only kind of a target event
 /// A bonus hit on steel. Defaults to -3 seconds, but may be overridden
 /// on certain stages/scores.
@@ -122,13 +131,13 @@ final icoreSport = Sport(
       SortMode.classification,
     ],
     classifications: [
-      const Classification(index: 0, name: "Grandmaster", shortName: "GM"),
-      const Classification(index: 1, name: "Master", shortName: "M"),
-      const Classification(index: 2, name: "A", shortName: "A"),
-      const Classification(index: 3, name: "B", shortName: "B"),
-      const Classification(index: 4, name: "C", shortName: "C"),
-      const Classification(index: 5, name: "D", shortName: "D"),
-      const Classification(index: 6, name: "Unclassified", shortName: "U", fallback: true),
+      icoreGrandmaster,
+      icoreMaster,
+      icoreAClass,
+      icoreBClass,
+      icoreCClass,
+      icoreDClass,
+      icoreUnclassified,
     ],
     divisions: icoreDivisions,
     powerFactors: [
@@ -153,5 +162,15 @@ final icoreSport = Sport(
       const AgeCategory(name: "Super Senior"),
       const AgeCategory(name: "Grand Senior"),
     ],
+    connectivityCalculator: SqrtTotalUniqueProductCalculator(),
+    initialEloRatings: {
+      icoreGrandmaster: 1400.0,
+      icoreMaster: 1200.0,
+      icoreAClass: 1000.0,
+      icoreBClass: 900.0,
+      icoreCClass: 800.0,
+      icoreDClass: 700.0,
+      icoreUnclassified: 850.0,
+    },
     builtinRatingGroupsProvider: DivisionRatingGroupProvider(icoreSportName, icoreDivisions)
 );
