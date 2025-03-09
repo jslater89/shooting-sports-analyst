@@ -209,6 +209,31 @@ class RawScore {
   int get targetEventCount => targetEvents.values.sum;
   int get penaltyEventCount => penaltyEvents.values.sum;
 
+  Map<ScoringEvent, int> mapForEvent(ScoringEvent event) {
+    if(targetEvents.containsKey(event)) {
+      return targetEvents;
+    }
+    else {
+      return penaltyEvents;
+    }
+  }
+
+  bool updateEventCount(ScoringEvent event, int count) {
+    var changed = false;
+    if(targetEvents.containsKey(event)) {
+      targetEvents[event] = count;
+      changed = true;
+    }
+    else if(penaltyEvents.containsKey(event)) {
+      penaltyEvents[event] = count;
+      changed = true;
+    }
+    if(changed) {
+      clearCache();
+    }
+    return changed;
+  }
+
   int countForEvent(ScoringEvent event) {
     var fromTarget = targetEvents[event];
     if(fromTarget != null) return fromTarget;
@@ -252,6 +277,7 @@ class RawScore {
   void clearCache() {
     _cachedPoints = null;
     _cachedPenaltyCount = null;
+    _cachedTimeAdjustment = null;
   }
 
   /// Get the sum of points for this score.

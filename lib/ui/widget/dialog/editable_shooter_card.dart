@@ -416,13 +416,13 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
     for(var event in _targetControllers.keys) {
       var text = _targetControllers[event]!.text;
       if(text.isEmpty) text = "0";
-      score.targetEvents[event] = int.parse(text);
+      score.updateEventCount(event, int.parse(text));
     }
 
     for(var event in _penaltyControllers.keys) {
       var text = _penaltyControllers[event]!.text;
       if(text.isEmpty) text = "0";
-      score.penaltyEvents[event] = int.parse(text);
+      score.updateEventCount(event, int.parse(text));
     }
   }
 
@@ -432,7 +432,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
 
     var sum = 0;
     for(var event in s.targetEvents.keys) {
-      if(event.pointChange > 0) {
+      if(event.pointChange != 0) {
         sum += s.targetEvents[event]!;
       }
     }
