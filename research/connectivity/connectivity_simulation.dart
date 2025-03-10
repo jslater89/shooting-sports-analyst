@@ -25,7 +25,7 @@ void main() {
     connectivityTracker.processMatch(match, matchWindow, matchCompetitors, competitors);
     i++;
 
-    // Maintain a window of the last 30 matches
+    // Maintain a window of the last matchWindowSize matches
     while(matchWindow.length >= matchWindowSize) {
       matchWindow.removeAt(0);
     }
@@ -304,6 +304,11 @@ class Match {
   double matchGlobalAverageConnectivityScore = 0;
   double matchGlobalMedianConnectivityScore = 0;
 
+  double maxConnectivityScore = 0;
+  double weightedMatchConnectivity = 0;
+  double competitorGlobal75thPercentileScore = 0;
+  double weightedGlobalConnectivity = 0;
+
   List<int> competitorIds = [];
 }
 
@@ -345,6 +350,33 @@ class ConnectivityTracker {
 
     // Recalculate scores for all participants
     _updateScores(matchCompetitors.values.where((c) => c.matchCount > 0), allCompetitors, maxRawConnectivity);
+
+    // Calculate match statistics
+    var competitorScores = matchCompetitors.values.map((c) => c.connectivityScore).toList()..sort();
+    match.medianConnectivityScore = competitorScores[competitorScores.length ~/ 2];
+    match.maxConnectivityScore = competitorScores.last;
+    
+    // Weighted average of median and max (e.g., 0.7 * median + 0.3 * max)
+    match.weightedMatchConnectivity = (match.medianConnectivityScore * 0.7) + 
+                                    (match.maxConnectivityScore * 0.3);
+
+    // Calculate global statistics from active competitors
+    List<double> globalScores = [];
+    for(var competitor in allCompetitors.values) {
+      if(competitor.windows.isNotEmpty && 
+         competitor.windows.last.date.isAfter(match.start.subtract(Duration(days: 730)))) {
+        globalScores.add(competitor.connectivityScore);
+      }
+    }
+    globalScores.sort();
+    
+    // Calculate median and 75th percentile
+    match.competitorGlobalMedianConnectivityScore = globalScores[globalScores.length ~/ 2];
+    match.competitorGlobal75thPercentileScore = globalScores[(globalScores.length * 3) ~/ 4];
+    
+    // Weighted average of median and 75th percentile (e.g., 0.6 * median + 0.4 * 75th)
+    match.weightedGlobalConnectivity = (match.competitorGlobalMedianConnectivityScore * 0.6) +
+                                     (match.competitorGlobal75thPercentileScore * 0.4);
   }
   
   void _updateScores(Iterable<Competitor> activeCompetitors, Map<int, Competitor> allCompetitors, double maxExistingConnectivity) {
@@ -980,6 +1012,96 @@ void analyzeConnectivity(
     integral: true,
     entityName: "high-activity"
   ));
+
+  print("\nWeighted Connectivity Analysis:");
+  
+  var matchWeights = matches.values.map((m) => {
+    "weightedMatch": m.weightedMatchConnectivity,
+    "weightedGlobal": m.weightedGlobalConnectivity,
+    "difference": m.weightedMatchConnectivity - m.weightedGlobalConnectivity,
+    "date": m.start,
+    "size": m.competitorIds.length
+  }).toList();
+
+  print("\nWeighted Match Connectivity Distribution:");
+  print(_createHistogram(
+    matchWeights.map((m) => m["weightedMatch"] as double).toList(),
+    buckets: 20,
+    width: 60,
+    entityName: "matches"
+  ));
+
+  print("\nWeighted Global Connectivity Distribution:");
+  print(_createHistogram(
+    matchWeights.map((m) => m["weightedGlobal"] as double).toList(),
+    buckets: 20,
+    width: 60,
+    entityName: "matches"
+  ));
+
+  print("\nWeighted Difference Distribution:");
+  var differences = matchWeights.map((m) => m["difference"] as double).toList();
+  print(_createHistogram(
+    differences,
+    buckets: 40,
+    width: 60,
+    entityName: "matches"
+  ));
+
+  // Basic statistics for differences
+  differences.sort();
+  var diffMean = differences.average;
+  var diffStdDev = _calculateStdDev(differences);
+  var diffMedian = _calculateMedian(differences);
+  diffQuartiles = _calculateQuartiles(differences);
+
+  print("\nDifference Statistics:");
+  print("Mean: ${diffMean.toStringAsFixed(2)}");
+  print("Median: ${diffMedian.toStringAsFixed(2)}");
+  print("Std Dev: ${diffStdDev.toStringAsFixed(2)}");
+  print("Q1: ${diffQuartiles.q1.toStringAsFixed(2)}");
+  print("Q3: ${diffQuartiles.q3.toStringAsFixed(2)}");
+  print("Min: ${differences.first.toStringAsFixed(2)}");
+  print("Max: ${differences.last.toStringAsFixed(2)}");
+
+  // Correlation with match size
+  correlation = _calculateCorrelation(
+    matchWeights.map((m) => m["size"] as int).toList(),
+    matchWeights.map((m) => m["difference"] as double).toList()
+  );
+  print("\nCorrelation with Match Size: ${correlation.toStringAsFixed(3)}");
+
+  // Time series analysis - group by month
+  var monthlyStats = <DateTime, List<double>>{};
+  for (var match in matchWeights) {
+    var date = match["date"] as DateTime;
+    var monthKey = DateTime(date.year, date.month);
+    monthlyStats.putIfAbsent(monthKey, () => []).add(match["difference"] as double);
+  }
+
+  print("\nMonthly Trends (■ = weighted difference):");
+  var maxDiff = monthlyStats.values
+    .expand((m) => [m.average])
+    .map((d) => d.abs())
+    .max;
+  scale = 30 / maxDiff;  // Scale to fit in 60 chars
+
+  for (var entry in monthlyStats.entries.toList()..sort((a, b) => a.key.compareTo(b.key))) {
+    var month = entry.key;
+    var diffs = entry.value;
+    var avgDiff = diffs.average;
+    var centerPos = 30;
+    var pos = (centerPos + (avgDiff * scale)).round().clamp(0, 59);
+    
+    var line = List.filled(60, ' ');
+    line[centerPos] = '|';
+    line[pos] = '■';
+    
+    print("${month.toString().substring(0, 7)}: "
+          "${line.join('')} "
+          "avg_diff: ${avgDiff.toStringAsFixed(2).padLeft(6)}, "
+          "matches: ${diffs.length}");
+  }
 }
 
 void _printCompetitorDetail(Competitor competitor, Map<int, Match> matches) {

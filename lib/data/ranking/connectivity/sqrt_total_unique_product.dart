@@ -36,7 +36,8 @@ class SqrtTotalUniqueProductCalculator implements ConnectivityCalculator {
     double? connectivitySum, 
     List<double>? connectivityScores,
   }) {
-    connectivityScores!.sort();
+    if(connectivityScores!.isEmpty) return defaultBaselineConnectivity;
+    connectivityScores.sort();
     double median = 0.0;
     if(connectivityScores.length.isOdd) {
       median = connectivityScores[connectivityScores.length ~/ 2];
@@ -45,9 +46,17 @@ class SqrtTotalUniqueProductCalculator implements ConnectivityCalculator {
       median = (connectivityScores[connectivityScores.length ~/ 2] + connectivityScores[connectivityScores.length ~/ 2 - 1]) / 2;
     }
 
-    // For immature rating sets, use the average instead of the median so we have some reference.
-    if(median == 0) return connectivityScores.average * 0.75;
-    else return median * 0.75;
+    // Calculate the 75th percentile
+    double percentile75 = connectivityScores[connectivityScores.length * 3 ~/ 4];
+
+    // For immature rating sets, use the raw 75th percentile, or the average of nonzero scores if the 75th percentile is 0.
+    if(percentile75 == 0) {
+      var nonzeroScores = connectivityScores.where((score) => score != 0);
+      if(nonzeroScores.isEmpty) return defaultBaselineConnectivity;
+      return nonzeroScores.average;
+    }
+    else if(median == 0) return percentile75;
+    else return median * 0.6 + percentile75 * 0.4;
   }
 
   @override
@@ -65,13 +74,19 @@ class SqrtTotalUniqueProductCalculator implements ConnectivityCalculator {
   int get matchWindowCount => 5;
 
   @override
+  int get baselineMatchWindowCount => 100;
+
+  @override
   List<ConnectivityRequiredData> get requiredBaselineData => [
     ConnectivityRequiredData.connectivityScores,
   ];
   
   @override
   double calculateMatchConnectivity(List<double> connectivityScores) {
-    return connectivityScores.average;
+    if(connectivityScores.isEmpty) return 0;
+    var median = connectivityScores[connectivityScores.length ~/ 2];
+    var max = connectivityScores.last;
+    return median * 0.7 + max * 0.3;
   }
 
   @override
