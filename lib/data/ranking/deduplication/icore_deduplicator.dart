@@ -11,9 +11,11 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rat
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
+import 'package:shooting_sports_analyst/data/ranking/deduplication/standard_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/uspsa_deduplicator.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
+import 'package:fuzzywuzzy/fuzzywuzzy.dart' as fuzzywuzzy;
 
 var _log = SSALogger("IcoreDeduplicator");
 
@@ -29,6 +31,10 @@ var _log = SSALogger("IcoreDeduplicator");
 /// custom alphanumeric string. This final element is the unique identifier.
 class IcoreMemberNumber {
   late final MemberNumberType type;
+
+  /// The original number as provided by the user, which may or may not have been
+  /// normalized by other processes.
+  late final String originalNumber;
 
   /// The normalized number, rendered in all-caps alphanumeric characters.
   late final String normalizedNumber;
@@ -47,11 +53,13 @@ class IcoreMemberNumber {
   /// that it is not a simple numeric ID.
   /// 
   /// Some vanity IDs are entirely numeric, but we treat those as non-vanity IDs.
-  bool get isVanity {
-    return !RegExp(r'^[0-9]+$').hasMatch(uniqueIdentifier);
-  }
+  late final bool isVanity;
+
+  /// The non-life component of this member number: the geocode and unique identifier.
+  String get nonLifeNumber => "$geoCode$uniqueIdentifier";
 
   IcoreMemberNumber(String number) {
+    originalNumber = number;
     normalizedNumber = IcoreDeduplicator.instance.normalizeNumber(number);
     var match = _icoreNumberRegex.firstMatch(normalizedNumber);
     if(match == null) {
@@ -60,20 +68,33 @@ class IcoreMemberNumber {
     lifeMember = match.group(1) == "L";
     geoCode = match.group(2)!;
     uniqueIdentifier = match.group(3)!;
+    isVanity = !RegExp(r'^[0-9]+$').hasMatch(uniqueIdentifier);
+    
+    if(lifeMember && isVanity) {
+      type = MemberNumberType.benefactor;
+    }
+    else if(lifeMember) {
+      type = MemberNumberType.life;
+    }
+    else {
+      type = MemberNumberType.standard;
+    }
   }
 
-  /// Whether this member number is the same as another member number.
+  /// Whether this member number is the same as another member number across
+  /// all three components: life/standard status, geo code, and unique identifier.
   /// 
-  /// This is true across lifetime memeber number upgrades, but not across
-  /// vanity member number changes.
+  /// Calls [sameMember] to check equality. Can be called on either another
+  /// [IcoreMemberNumber] or a [String], in which case the string will be 
+  /// converted to an [IcoreMemberNumber] for comparison.
   @override
   operator ==(Object other) {
     if(other is IcoreMemberNumber) {
-      return sameMember(other);
+      return sameMember(other, ignoreLifeDifference: false);
     }
     else if(other is String) {
       var otherNumber = IcoreMemberNumber(other);
-      return sameMember(otherNumber);
+      return sameMember(otherNumber, ignoreLifeDifference: false);
     }
     return false;
   }
@@ -81,8 +102,24 @@ class IcoreMemberNumber {
   @override
   int get hashCode => Object.hash(geoCode, uniqueIdentifier);
 
-  bool sameMember(IcoreMemberNumber other) {
-    return geoCode == other.geoCode && uniqueIdentifier == other.uniqueIdentifier;
+  /// Whether this member number definitely represents the same member as another
+  /// member number.
+  /// 
+  /// If [ignoreLifeDifference] is true (the default), then a life number and a
+  /// standard number with the same geocode and unique identifier will be considered
+  /// the same member. Otherwise, the life/standard status must also match.
+  bool sameMember(IcoreMemberNumber other, {bool ignoreLifeDifference = true}) {
+    if(ignoreLifeDifference) {
+      return geoCode == other.geoCode && uniqueIdentifier == other.uniqueIdentifier;
+    }
+    else {
+      return geoCode == other.geoCode && uniqueIdentifier == other.uniqueIdentifier && lifeMember == other.lifeMember;
+    }
+  }
+
+  @override
+  String toString() {
+    return "$lifeMember$geoCode$uniqueIdentifier";
   }
 }
 
@@ -96,7 +133,7 @@ class IcoreMemberNumber {
 final _icoreNumberRegex = RegExp(r'^(L?)(' + "$_countryCodes|$_stateCodes" + r')([^\s]{1,12})$');
 
 
-class IcoreDeduplicator extends ShooterDeduplicator {
+class IcoreDeduplicator extends StandardDeduplicator {
   IcoreDeduplicator._();
 
   static final _instance = IcoreDeduplicator._();
@@ -115,367 +152,26 @@ class IcoreDeduplicator extends ShooterDeduplicator {
     }
   }
 
+  /// In ICORE, member numbers are one of three types:
+  /// 
+  /// - [MemberNumberType.standard]: an ordinary member number of the form PA1234.
+  /// - [MemberNumberType.life]: a life member number of the form LPA1234.
+  /// - [MemberNumberType.benefactor]: a member number with a vanity identifier, like LINREVOSHTR.
   @override
   MemberNumberType classify(String number) {
     if(number.toLowerCase().startsWith("xxx")) {
       return MemberNumberType.invalid;
     }
     var member = IcoreMemberNumber(number);
-    if(member.lifeMember) {
+    if(member.lifeMember && !member.isVanity) {
       return MemberNumberType.life;
+    }
+    else if(member.lifeMember && member.isVanity) {
+      return MemberNumberType.benefactor;
     }
     else {
       return MemberNumberType.standard;
     }
-  }
-
-  @override
-  Future<DeduplicationResult> deduplicateShooters({
-    required DbRatingProject ratingProject,
-    required RatingGroup group,
-    required List<DbShooterRating> newRatings,
-    DeduplicatorProgressCallback? progressCallback,
-    bool checkDataEntryErrors = true,
-    bool verbose = false}) async
-  {
-    var userMappings = ratingProject.settings.userMemberNumberMappings;
-    var autoMappings = ratingProject.automaticNumberMappings;
-
-    await progressCallback?.call(0, 2, "Preparing data");
-
-    // All known mappings, user and automatic. User-specified mappings will override
-    // previously-detected automatic mappings.
-    Map<String, String> allMappings = {};
-    for(var mapping in autoMappings) {
-      for(var sourceNumber in mapping.sourceNumbers) {
-        allMappings[sourceNumber] = mapping.targetNumber;
-      }
-    }
-    for(var mapping in userMappings.entries) {
-      allMappings[mapping.key] = mapping.value;
-    }
-
-    await progressCallback?.call(1, 2, "Preparing data");
-
-    // The blacklist operates in subtly different ways for different
-    // kinds of conflicts.
-    // When checking if we can auto-map, we want to be as permissive as
-    // possible—if the target of a blacklist is also the target of the
-    // proposed automapping, prefer to remove the source of the blacklist
-    // rather than the target.
-    // We make a copy of this because it is modified in some cases below
-    // to track the impact of proposed changes.
-    Map<String, List<String>> blacklist = ratingProject.settings.memberNumberMappingBlacklist.deepCopy();
-
-    Set<String> deduplicatorNames = {};
-
-    Map<String, List<DbShooterRating>> ratingsByName = {};
-
-    /// The overall list of conflicts.
-    List<DeduplicationCollision> conflicts = [];
-
-    // Retrieve deduplicator names from the new ratings.
-    // The only names that can cause conflicts are those
-    // that we just added, since we do this every time we
-    // add ratings.
-    for(var rating in newRatings) {
-      deduplicatorNames.add(rating.deduplicatorName);
-      ratingsByName[rating.deduplicatorName] ??= [];
-      ratingsByName[rating.deduplicatorName]!.add(rating);
-    }
-
-    await progressCallback?.call(0, deduplicatorNames.length, "Detecting conflicts");
-    int step = 0;
-
-    // Detect conflicts for each name.
-    for(var name in deduplicatorNames) {
-      Map<String, String> detectedMappings = {};
-      Map<String, String> detectedUserMappings = {};
-
-      var ratingsRes = await ratingProject.getRatingsByDeduplicatorName(group, name);
-
-      if(ratingsRes.isErr()) {
-        _log.w("Failed to retrieve ratings for deduplicator name $name", error: ratingsRes.unwrapErr());
-        continue;
-      }
-
-      step += 1;
-      await progressCallback?.call(step, deduplicatorNames.length, "Detecting conflicts: $name");
-
-      List<DbShooterRating> ratings = [];
-      Map<int, bool> dbIdsSeen = {};
-      for(var rating in ratingsByName[name]!) {
-        if(dbIdsSeen[rating.id] != true) {
-          ratings.add(rating);
-        }
-        if(rating.id != 0 && rating.id != Isar.autoIncrement) {
-          dbIdsSeen[rating.id] = true;
-        }
-      }
-      for(var rating in ratingsRes.unwrap()) {
-        if(dbIdsSeen[rating.id] != true) {
-          ratings.add(rating);
-        }
-        if(rating.id != 0 && rating.id != Isar.autoIncrement) {
-          dbIdsSeen[rating.id] = true;
-        }
-      }
-
-      // One rating doesn't need to be deduplicated.
-      if(ratings.length <= 1) {
-        continue;
-      }
-
-      // If all ratings are blacklisted to each other, we can skip the rest of the process.
-      Map<DbShooterRating, List<DbShooterRating>> allowedTargets = {};
-      for(var rating in ratings) {
-        allowedTargets[rating] = [];
-        for(var otherRating in ratings) {
-          if(rating == otherRating) continue;
-          var isAllowed = true;
-          for(var number in rating.knownMemberNumbers) {
-            for(var otherNumber in otherRating.knownMemberNumbers) {
-              if(blacklist[number]?.contains(otherNumber) ?? false) {
-                isAllowed = false;
-                break;
-              }
-            }
-            if(!isAllowed) break;
-          }
-          if(isAllowed) {
-            allowedTargets[rating]!.add(otherRating);
-          }
-        }
-      }
-
-      bool ratingsAllBlacklisted = true;
-      for(var rating in ratings) {
-        if(allowedTargets[rating]!.isNotEmpty) {
-          ratingsAllBlacklisted = false;
-          break;
-        }
-      }
-
-      if(ratingsAllBlacklisted) {
-        continue;
-      }
-
-      // Classify the member numbers by type.
-      Map<MemberNumberType, List<String>> numbers = {};
-      Map<String, DbShooterRating> numbersToRatings = {};
-      for(var rating in ratings) {
-        // 2025-01-03: I think we can use the plain memberNumber property
-        // (i.e., the most recent member number) in this scenario, even
-        // though most of these will have multiple entries in allPossibleMemberNumbers.
-        // 2025-01-05: during the thinking aloud segment below, I think we might actually
-        // need to use knownMemberNumbers here, to handle the (relatively rare but not impossible)
-        // case where we're adding an additional member number that ought to map to a
-        // non-primary member number.
-        for(var number in rating.knownMemberNumbers) {
-          var type = classify(number);
-          numbers.addToList(type, number);
-          numbersToRatings[number] = rating;
-        }
-      }
-
-      var conflict = DeduplicationCollision(
-        deduplicatorName: name,
-        memberNumbers: numbers.deepCopy(),
-        shooterRatings: numbersToRatings,
-        matches: {},
-        causes: [],
-        proposedActions: [],
-      );
-
-      // Check if any user mappings apply to the list of ratings, and if they haven't been
-      // previously applied. This can happen if we're doing a full recalculation.
-      // First, find all of the mappings that apply to this rating.
-      List<PreexistingMapping> preexistingMappingActions = [];
-      List<AmbiguousMapping> ambiguousMappings = [];
-      Map<String, String> possibleMappings = {};
-      Map<String, String> possibleUserMappings = {};
-      for(var rating in ratings) {
-        for(var number in rating.knownMemberNumbers) {
-          var userTarget = userMappings[number];
-          var autoTarget = allMappings[number];
-          if(userTarget != null && !rating.knownMemberNumbers.contains(userTarget)) {
-            possibleUserMappings[number] = userTarget;
-            possibleMappings[number] = userTarget;
-          }
-          if(autoTarget != null && !rating.knownMemberNumbers.contains(autoTarget)) {
-            // If there's already a user mapping for this number, don't override it.
-            // TODO: mark this for deletion in some way.
-            if(!possibleMappings.containsKey(number)) {
-              possibleMappings[number] = autoTarget;
-            }
-          }
-        }
-      }
-
-      // Possible mappings contains all of the mappings that apply to the given ratings
-      // that are not already applied. We need to verify that they all point to the same
-      // target, and if they do, we can add PreexistingMapping actions for the source
-      // numbers.
-      Set<String> possibleTargetNumbers = {};
-      Set<String> possibleUserTargetNumbers = {};
-      for(var target in possibleUserMappings.values) {
-        possibleTargetNumbers.add(target);
-        possibleUserTargetNumbers.add(target);
-      }
-      for(var target in possibleMappings.values) {
-        possibleTargetNumbers.add(target);
-      }
-
-      // If all of the target numbers are the same, the mappings are consistent,
-      // and we can add them to preexistingMappingActions.
-      if(possibleTargetNumbers.length == 1) {
-        for(var source in possibleUserMappings.keys) {
-          preexistingMappingActions.add(PreexistingMapping(
-            sourceNumber: source,
-            targetNumber: possibleTargetNumbers.first,
-            automatic: false,
-          ));
-          detectedUserMappings[source] = possibleTargetNumbers.first;
-          detectedMappings[source] = possibleTargetNumbers.first;
-        }
-        for(var source in possibleMappings.keys) {
-          if(!detectedMappings.containsKey(source)) {
-            preexistingMappingActions.add(PreexistingMapping(
-              sourceNumber: source,
-              targetNumber: possibleTargetNumbers.first,
-              automatic: true,
-            ));
-            detectedMappings[source] = possibleTargetNumbers.first;
-          }
-        }
-      }
-      else if(possibleTargetNumbers.length > 1){
-        // If there are multiple target numbers, we have a cross mapping. We might
-        // be able to resolve it automatically if there's a single best target number.
-        // It's only a potential cross mapping because if we have A123456 -> L1234 and
-        // L1234 -> B123, we can correct that by mapping everything to the best target.
-        _log.w("Potential cross mapping for name $name\n    User mappings: $possibleUserMappings\n    All mappings: $possibleMappings");
-        Map<MemberNumberType, List<String>> classifiedTargetNumbers = {};
-        for(var target in possibleTargetNumbers) {
-          var type = classify(target);
-          classifiedTargetNumbers[type] ??= [];
-          classifiedTargetNumbers[type]!.add(target);
-        }
-        var finalTargets = targetNumber(classifiedTargetNumbers);
-        if(finalTargets.length == 1) {
-          var finalTarget = finalTargets.first;
-          for(var source in possibleUserMappings.keys) {
-            preexistingMappingActions.add(PreexistingMapping(
-              sourceNumber: source,
-              targetNumber: finalTarget,
-              automatic: false,
-            ));
-            detectedUserMappings[source] = finalTarget;
-            detectedMappings[source] = finalTarget;
-          }
-          for(var source in possibleMappings.keys) {
-            if(!detectedMappings.containsKey(source)) {
-              preexistingMappingActions.add(PreexistingMapping(
-                sourceNumber: source,
-                targetNumber: finalTarget,
-                automatic: true,
-              ));
-              detectedMappings[source] = finalTarget;
-            }
-          }
-
-          conflict.causes.add(AmbiguousMapping(
-            deduplicatorName: name,
-            sourceNumbers: possibleMappings.keys.toList(),
-            targetNumbers: possibleTargetNumbers.toList(),
-            sourceConflicts: possibleMappings.length > 1,
-            targetConflicts: possibleTargetNumbers.length > 1,
-            conflictingTypes: classifiedTargetNumbers.keys.toList(),
-            relevantBlacklistEntries: {},
-            crossMapping: true,
-          ));
-        }
-        else {
-          _log.e("Unable to resolve cross mapping");
-          var targetTypes = classifiedTargetNumbers.keys.toList();
-          ambiguousMappings.add(AmbiguousMapping(
-            deduplicatorName: name,
-            sourceNumbers: possibleMappings.keys.toList(),
-            targetNumbers: possibleTargetNumbers.toList(),
-            sourceConflicts: possibleMappings.length > 1,
-            targetConflicts: possibleTargetNumbers.length > 1,
-            conflictingTypes: targetTypes,
-            relevantBlacklistEntries: {},
-            crossMapping: true,
-          ));
-        }
-      }
-    
-
-      // If we have any entries in the ambiguousMappings list, this is a cross mapping, and
-      // we need the user to tell us what to do.
-      if(ambiguousMappings.isNotEmpty) {
-        conflict.causes.addAll(ambiguousMappings);
-        conflicts.add(conflict);
-        continue;
-      }
-
-      // Otherwise, if we have preexisting mapping actions, add a 'conflict' so that the
-      // resolution system knows to apply them to the DB objects.
-      if(preexistingMappingActions.isNotEmpty) {
-        conflict.proposedActions.addAll(preexistingMappingActions);
-
-        // If the detected preexisting mappings covers all of the member numbers, or
-        // if all uncovered numbers are blacklisted to one or more of the preexisting
-        // mapping targets, this conflict was fully resolved in settings, and we can
-        // skip the remaining checks.
-        bool fullyResolved = conflict.coversNumbers(numbers.values.flattened);
-        if(!fullyResolved) {
-          var uncoveredNumbers = conflict.uncoveredNumbersList;
-          if(uncoveredNumbers.isNotEmpty) {
-            var targetNumbers = preexistingMappingActions.map((e) => e.targetNumber).toList();
-            bool allBlacklisted = true;
-            for(var number in uncoveredNumbers) {
-              var numberBlacklist = blacklist[number] ?? [];
-              // If no target numbers are contained in this unresolved number's blacklist,
-              // then this unresolved number is not covered by blacklists, and settings
-              // don't fully resolve the conflict.
-              if(targetNumbers.none((e) => numberBlacklist.contains(e))) {
-                allBlacklisted = false;
-                break;
-              }
-            }
-            if(allBlacklisted) {
-              fullyResolved = true;
-            }
-          }
-        }
-
-        if(fullyResolved) {
-          conflict.causes.add(FixedInSettings());
-          conflicts.add(conflict);
-          continue;
-        }
-      }
-
-      // At this point, we've exhausted what we have in common with USPSA.
-      // Now we're doing the ICORE-specific detection.
-
-      // Since ICORE is way (_way_) simpler than USPSA in terms of member numbers, we
-      // only have a few cases to consider.
-
-      // Case 1: multiple member numbers of either standard or life type, in which case
-      // we propose either data fixes or blacklists.
-
-      // Case 2: standard and life numbers in a combination that we can make reasonable
-      // proposals for. Standard -> life -> life-vanity is the archetypal case.
-
-      // Case 3: ambiguous mappings, where we may be able to propose actions, but need
-      // user input to fully resolve. Typically, though, those proposed actions will be
-      // hanging around from earlier stages that failed to fully resolve the conflict.
-    }
-
-    return DeduplicationResult.ok(conflicts);
   }
 
   @override
@@ -497,13 +193,311 @@ class IcoreDeduplicator extends ShooterDeduplicator {
       throw ArgumentError("Empty map provided");
     }
   }
+
+  static const similarityThreshold = 65;
+  
+  @override
+  DeduplicationCollision? detectConflicts({
+    required DeduplicationCollision conflict,
+    required String name,
+    required List<DbShooterRating> ratings,
+    required Map<MemberNumberType, List<String>> numbers,
+    required Map<String, DbShooterRating> numbersToRatings,
+    required Map<String, String> userMappings,
+    required Map<String, String> detectedUserMappings,
+    required Map<String, String> allMappings,
+    required Map<String, String> detectedMappings,
+    required Map<String, List<String>> blacklist,
+  }) {
+    // Since ICORE is way (_way_) simpler than USPSA in terms of member numbers, we
+    // only have a few cases to consider.
+
+    // Case 0: the trivial case, where we have two records, and they only differ by
+    // life/standard status.
+
+    // Case 1: multiple member numbers of either standard or life type, in which case
+    // we propose either data fixes or blacklists.
+
+    // Case 2: standard and life numbers in a combination that we can make reasonable
+    // proposals for. Standard -> life -> life-vanity is the archetypal case.
+
+    // Case 3: ambiguous mappings, where we may be able to propose actions, but need
+    // user input to fully resolve. Typically, though, those proposed actions will be
+    // hanging around from earlier stages that failed to fully resolve the conflict.
+
+    // We lean heavily on the geocode/identifier/lifetime parameters of IcoreMemberNumber
+    // to resolve conflicts, so let's precalculate those for everything.
+    Map<String, IcoreMemberNumber> icoreNumbers = {};
+    for(var number in numbers.values.flattened) {
+      var member = IcoreMemberNumber(number);
+      icoreNumbers[number] = member;
+
+      // If we come across any cases where a member's original number is not the same
+      // as the normalized number, add a DataEntryFix so that we can work with normalized
+      // numbers for the rest of the process.
+      if(member.originalNumber != member.normalizedNumber) {
+        conflict.proposedActions.add(DataEntryFix(
+          deduplicatorName: name,
+          sourceNumber: member.originalNumber,
+          targetNumber: member.normalizedNumber,
+        ));
+      }
+    }
+
+    var originalNumbers = numbers;
+    var ongoingNumbers = numbers.deepCopy();
+
+    // Case: -1: fix typos/add blacklists in all categories, so we can remove typos from
+    // the source/target lists.
+    for(var type in numbers.keys) {
+      var numbersOfType = numbers[type] ?? [];
+      // Compare numbers pairwise, add either fixes or blacklists as appropriate (if not
+      // already blacklisted).
+      for(var i = 0; i < numbersOfType.length; i++) {
+        for(var j = i + 1; j < numbersOfType.length; j++) {
+          var number1 = numbersOfType[i];
+          var number2 = numbersOfType[j];
+          var member1 = icoreNumbers[number1]!;
+          var member2 = icoreNumbers[number2]!;
+          var similarity = fuzzywuzzy.weightedRatio(member1.nonLifeNumber, member2.nonLifeNumber);
+
+          // If the numbers are highly similar, propose a data entry fix from the second
+          // number appearing to the first. Otherwise, add a blacklist entry.
+          if(similarity > similarityThreshold) {
+            conflict.proposedActions.add(DataEntryFix(
+              deduplicatorName: name,
+              sourceNumber: number2,
+              targetNumber: number1,
+            ));
+
+            // Remove the data fix source number from the list.
+            ongoingNumbers[type]!.remove(number2);
+          }
+          else if(!blacklist.isBlacklisted(number1, number2, bidirectional: true)) {
+            conflict.proposedActions.add(Blacklist(
+              sourceNumber: number1,
+              targetNumber: number2,
+              bidirectional: true,
+            ));
+          }
+        }
+      }
+    }
+
+    numbers = ongoingNumbers.deepCopy();
+
+    bool singleNumberOfMultipleTypes = numbers.length > 1;
+    for(var type in numbers.keys) {
+      if(numbers[type]!.length != 1) {
+        singleNumberOfMultipleTypes = false;
+      }
+    }
+
+    // Handle various standard -> life mapping cases.
+    // If we have at most one number of each type, we can do some tricks.
+    if(singleNumberOfMultipleTypes) {
+      IcoreMemberNumber? standard;
+      IcoreMemberNumber? life;
+      IcoreMemberNumber? vanity;
+      if(numbers.containsKey(MemberNumberType.standard)) {
+        standard = icoreNumbers[numbers[MemberNumberType.standard]!.first]!;
+      }
+      if(numbers.containsKey(MemberNumberType.life)) {
+        life = icoreNumbers[numbers[MemberNumberType.life]!.first]!; 
+      }
+      if(numbers.containsKey(MemberNumberType.benefactor)) {
+        vanity = icoreNumbers[numbers[MemberNumberType.benefactor]!.first]!;
+      }
+
+      // Standard can't be the best type, because we have a single number of at least
+      // two types.
+      // We have one of four situations:
+      // 1. Standard -> Life
+      // 2. Standard -> Vanity
+      // 3. Life -> Vanity
+      // 4. Standard -> Life -> Vanity
+      var bestType = vanity != null ? MemberNumberType.benefactor : MemberNumberType.life;
+      var bestMember = vanity ?? life!;
+
+      // We'll handle each of the four situations in turn, individually, and combine them into
+      // the final mapping.
+      Mapping finalMapping = AutoMapping(
+        sourceNumbers: [],
+        targetNumber: bestMember.normalizedNumber,
+      );
+
+      if(standard != null && life != null) {
+        if(standard.sameMember(life)) {
+          // If the standard and life numbers are the same, map standard to life. 
+          // There's no need to check for blacklisting here, because
+          // blacklisting PA1234 to LPA1234 is not a valid operation.
+          if(!alreadyMapped(standard.normalizedNumber, life.normalizedNumber, detectedUserMappings)) {
+            finalMapping.sourceNumbers.addIfMissing(standard.normalizedNumber);
+          }
+        }
+        else if(
+          standard.geoCode == life.geoCode 
+          && fuzzywuzzy.weightedRatio(standard.nonLifeNumber, life.nonLifeNumber) > similarityThreshold
+          && !blacklist.isBlacklisted(standard.normalizedNumber, life.normalizedNumber)
+        ) {
+          // If the standard and life numbers are similar, add a data entry fix from
+          // the standard (presumed typo) to the life's non-life component, and map from
+          // the corrected standard number to the life number, provided that the data entry
+          // fix is not blacklisted.
+          conflict.proposedActions.add(DataEntryFix(
+            deduplicatorName: name,
+            sourceNumber: standard.normalizedNumber,
+            targetNumber: life.nonLifeNumber,
+          ));
+          finalMapping.sourceNumbers.addIfMissing(life.nonLifeNumber);
+        }
+        else {
+          // If we can't determine a valid potential standard -> life mapping, blacklist
+          // the standard number from the life number if not already blacklisted.
+          if(!blacklist.isBlacklisted(standard.normalizedNumber, life.normalizedNumber)) {
+            conflict.proposedActions.add(Blacklist(
+              sourceNumber: standard.normalizedNumber,
+              targetNumber: life.normalizedNumber,
+              bidirectional: true,
+            ));
+          }
+        }
+      }
+
+      if(standard != null && vanity != null) {
+        if(standard.geoCode == vanity.geoCode) {
+          // If the standard and vanity numbers have the same geocode, and are not blacklisted,
+          // map from the standard number to the vanity number.
+          if(!blacklist.isBlacklisted(standard.normalizedNumber, vanity.normalizedNumber)) {
+            var preexistingMapping = detectedMappings[standard.normalizedNumber];
+            if(preexistingMapping != null) {
+              var preexistingType = classify(preexistingMapping);
+              if(preexistingType == MemberNumberType.benefactor && preexistingMapping != vanity.normalizedNumber) {
+                // If the preexisting mapping maps to a benefactor/vanity number, and that number
+                // is not this number, then we have a cross mapping and need to tell the user.
+                conflict.causes.add(
+                  AmbiguousMapping(
+                    deduplicatorName: name,
+                    conflictingTypes: [MemberNumberType.benefactor],
+                    sourceNumbers: [
+                      standard.normalizedNumber,
+                      if(life != null) life.normalizedNumber,
+                    ],
+                    targetNumbers: [vanity.normalizedNumber],
+                    sourceConflicts: false,
+                    targetConflicts: true,
+                    relevantBlacklistEntries: {},
+                    relevantMappings: {
+                      standard.normalizedNumber: preexistingMapping,
+                    },
+                    crossMapping: true,
+                  )
+                );
+                if(finalMapping.sourceNumbers.isNotEmpty) {
+                  conflict.proposedActions.add(finalMapping);
+                }
+                // Not much point in proceeding past this.
+                return conflict;
+              }
+              else {
+                // Otherwise, the mapping is from standard to life, or from standard to this vanity,
+                // and we don't need to add anything else here.
+              }
+            }
+            else {
+              finalMapping.sourceNumbers.addIfMissing(standard.normalizedNumber);
+              conflict.causes.addIfMissing(
+                const ManualReviewRecommended()
+              );
+            }
+          }
+        }
+      }
+
+      // We're doing the same exact thing for life->vanity as we did for standard->vanity.
+      if(life != null && vanity != null) {
+        if(life.geoCode == vanity.geoCode) {
+          // If the life and vanity numbers have the same geocode, and are not blacklisted,
+          // map from the life number to the vanity number.
+          if(!blacklist.isBlacklisted(life.normalizedNumber, vanity.normalizedNumber)) {
+            var preexistingMapping = detectedMappings[life.normalizedNumber];
+            if(preexistingMapping != null) {
+              var preexistingType = classify(preexistingMapping);
+              if(preexistingType == MemberNumberType.benefactor && preexistingMapping != vanity.normalizedNumber) {
+                // If the preexisting mapping maps to a benefactor/vanity number, and that number
+                // is not this number, then we have a cross mapping and need to tell the user.
+                conflict.causes.add(
+                  AmbiguousMapping(
+                    deduplicatorName: name,
+                    conflictingTypes: [MemberNumberType.benefactor],
+                    sourceNumbers: [
+                      life.normalizedNumber,
+                      if(standard != null) standard.normalizedNumber,
+                    ],
+                    targetNumbers: [vanity.normalizedNumber],
+                    sourceConflicts: false,
+                    targetConflicts: true,
+                    relevantBlacklistEntries: {},
+                    relevantMappings: {
+                      life.normalizedNumber: preexistingMapping,
+                    },
+                    crossMapping: true,
+                  )
+                );
+                if(finalMapping.sourceNumbers.isNotEmpty) {
+                  conflict.proposedActions.add(finalMapping);
+                }
+                // Not much point in proceeding past this.
+                return conflict;
+              }
+              else {
+                // Otherwise, the mapping is from standard to life, and we'll handle that in
+                // the life->vanity step.
+              }
+            }
+            else {
+              finalMapping.sourceNumbers.addIfMissing(life.normalizedNumber);
+              conflict.causes.addIfMissing(
+                const ManualReviewRecommended()
+              );
+            }
+          }
+        }
+      }
+
+      if(finalMapping.sourceNumbers.isNotEmpty) {
+        conflict.proposedActions.add(finalMapping);
+        if(conflict.proposedActionsResolveConflict()) {
+          return conflict;
+        }
+      }
+    }
+
+    return conflict;
+  }
+
+  /// Two member numbers are already mapped if source is already mapped to target, or
+  /// if both source and target are mapped to the same third number.
+  bool alreadyMapped(String source, String target, Map<String, String> mappings) {
+    if(mappings.containsKey(source) && mappings[source] == target) {
+      return true;
+    }
+
+    var sourceMapping = mappings[source];
+    var targetMapping = mappings[target];
+    if(sourceMapping != null && targetMapping != null && sourceMapping == targetMapping) {
+      return true;
+    }
+
+    return false;
+  }
 }
 
 /// State codes as used in ICORE numbers: the 2-letter US postal service codes.
 const _stateCodes = r"AZ|CA|CO|CT|DE|FL|GA|HI|IA|ID|IL|IN|KS|KY|MA|MD|ME|MI|MN|MO|MS|MT|NC"
 r"|ND|NE|NH|NJ|NM|NV|NY|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VA|WA|WI|WV|WY";
 
-/// Country codes as used in ICORE numbers, including the incorrect 'DEN' for Denmark in addition
+/// Country codes as used in ICORE numbers, including the invalid 'DEN' for Denmark in addition
 /// to the official ISO-3166-1 codes in [_officialCountryCodes].
 const _countryCodes = "DEN|$_officialCountryCodes";
 

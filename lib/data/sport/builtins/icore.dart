@@ -51,7 +51,9 @@ const _icoreCName = "C";
 const _icoreMName = "M";
 const _icoreNSName = "NS";
 const _icoreNPMName = "NPM";
+
 const _icoreBig6Name = "Big 6";
+const _icoreStandardName = "Standard";
 
 const icoreBig6PowerFactor = PowerFactor.constant(_icoreBig6Name,
   targetEvents: {
@@ -76,17 +78,47 @@ const icoreBig6PowerFactor = PowerFactor.constant(_icoreBig6Name,
   }
 );
 
+const icoreStandardPowerFactor = PowerFactor.constant(_icoreStandardName,
+  targetEvents: {
+    _icoreXName: icoreX,
+    _icoreAName: icoreA,
+    _icoreBName: icoreB,
+    _icoreCName: icoreC,
+    _icoreMName: icoreM,
+    _icoreNSName: icoreNS,
+    _icoreNPMName: icoreNPM,
+  },
+  fallback: true,
+  penaltyEvents: {
+    _icoreProceduralName: icoreProcedural,
+    _icorePrematureStartName: icorePrematureStart,
+    _icoreFootFaultName: icoreFootFault,
+    _icoreFailureToEngageName: icoreFailureToEngage,
+    _icoreExtraShotName: icoreExtraShot,
+    _icoreExtraHitName: icoreExtraHit,
+    _icoreOvertimeShotName: icoreOvertimeShot,
+    _icoreStopPlateFailureName: icoreStopPlateFailure,
+    _icoreChronoFailureName: icoreChronoFailure,
+  },
+);
+
+const icoreOpen = Division(name: "Open", shortName: "OPEN", alternateNames: ["O"]);
+const icoreLimited = Division(name: "Limited", shortName: "LIM", alternateNames: ["L"]);
+const icoreLimited6 = Division(name: "Limited 6", shortName: "LIM6", alternateNames: ["L6"]);
+const icoreClassic = Division(name: "Classic", shortName: "CLS", alternateNames: ["CLC", "C"]);
+const icoreBig6 = Division(
+  name: "Big 6",
+  shortName: "BIG6",
+  alternateNames: ["B6", "Heavy Metal", "HM"],
+  powerFactorOverride: icoreBig6PowerFactor,
+);
+
 const icoreDivisions = [
-  const Division(name: "Open", shortName: "OPEN", alternateNames: ["O"]),
-  const Division(name: "Limited", shortName: "LIM", alternateNames: ["L"]),
-  const Division(name: "Limited 6", shortName: "LIM6", alternateNames: ["L6"]),
-  const Division(name: "Classic", shortName: "CLS", alternateNames: ["CLC", "C"]),
-  const Division(
-    name: "Big 6",
-    shortName: "BIG6",
-    alternateNames: ["B6", "Heavy Metal", "HM"],
-    powerFactorOverride: icoreBig6PowerFactor,
-  )
+  icoreOpen,
+  icoreLimited,
+  icoreLimited6,
+  icoreClassic,
+  icoreBig6,
 ];
 
 /// An X-ring bonus hit. Defaults to -1 second, but may be overridden
@@ -141,19 +173,7 @@ final icoreSport = Sport(
     ],
     divisions: icoreDivisions,
     powerFactors: [
-      PowerFactor("Standard",
-        targetEvents: [
-          icoreX,
-          icoreA,
-          icoreB,
-          icoreC,
-          icoreM,
-          icoreNS,
-          icoreNPM,
-        ],
-        fallback: true,
-        penaltyEvents: icorePenalties,
-      ),
+      icoreStandardPowerFactor,
       icoreBig6PowerFactor,
     ],
     ageCategories: [

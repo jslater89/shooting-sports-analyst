@@ -231,7 +231,7 @@ class Division extends NameLookupEntity {
   /// The short or abbreviated display name for this division.
   String get shortDisplayName => shortName.isNotEmpty ? shortName : name;
 
-  /// If non-null, this division uses the specified power factor for scoring.
+  /// If non-null, this division always uses the specified power factor for scoring.
   final PowerFactor? powerFactorOverride;
 
   final bool fallback;

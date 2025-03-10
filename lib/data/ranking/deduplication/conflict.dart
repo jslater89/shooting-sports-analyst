@@ -84,6 +84,18 @@ class FixedInSettings extends ConflictType {
   const FixedInSettings();
 }
 
+/// An automatic mapping or data entry fix has been proposed, but the user should review
+/// the proposed actions before applying them, because heuristic detection may be
+/// unreliable.
+/// 
+/// A conflict with this type should always be presented to the user in a 'review this'
+/// fashion.
+class ManualReviewRecommended extends ConflictType {
+  bool get canResolveAutomatically => false;
+
+  const ManualReviewRecommended();
+}
+
 /// In multiple-numbers-of-type conflicts, one deduplicator name has
 /// multiple member numbers of the same type ([memberNumberType]).
 /// 
@@ -181,6 +193,7 @@ class AmbiguousMapping extends ConflictType {
   final bool targetConflicts;
   final bool crossMapping;
   final Map<String, List<String>> relevantBlacklistEntries;
+  final Map<String, String> relevantMappings;
 
   final List<MemberNumberType> conflictingTypes;
 
@@ -192,6 +205,7 @@ class AmbiguousMapping extends ConflictType {
     required this.targetConflicts,
     required this.conflictingTypes,
     required this.relevantBlacklistEntries,
+    required this.relevantMappings,
     this.crossMapping = false,
   });
 }

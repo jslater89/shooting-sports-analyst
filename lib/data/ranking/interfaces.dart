@@ -104,8 +104,11 @@ abstract interface class ConnectivityCalculator {
     List<double>? connectivityScores,
   });
 
-  /// The number of matches to use for the connectivity calculation.
+  /// The number of matches to use for the competitor connectivity calculation.
   int get matchWindowCount;
+
+  /// The number of matches to use for the baseline connectivity calculation.
+  int get baselineMatchWindowCount;
 
   /// Calculate the connectivity score for a shooter.
   NewConnectivity calculateRatingConnectivity(DbShooterRating rating);
@@ -113,6 +116,7 @@ abstract interface class ConnectivityCalculator {
   /// Calculate the connectivity score for a match, given a list of
   /// connectivity scores.
   double calculateMatchConnectivity(List<double> connectivityScores);
+
   /// Calculate the scale factor for a given match connectivity vs. a baseline.
   /// 
   /// Clamp to [minScale] and [maxScale] if they are provided.

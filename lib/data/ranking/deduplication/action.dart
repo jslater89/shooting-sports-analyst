@@ -132,6 +132,16 @@ abstract class Mapping extends DeduplicationAction {
   Iterable<String> get coveredNumbers => [...sourceNumbers, targetNumber];
 
   const Mapping();
+
+  UserMapping intoUserMapping() => UserMapping(
+    sourceNumbers: sourceNumbers,
+    targetNumber: targetNumber,
+  );
+
+  AutoMapping intoAutoMapping() => AutoMapping(
+    sourceNumbers: sourceNumbers,
+    targetNumber: targetNumber,
+  );
 }
 
 /// UserMapping manually maps a list of source numbers

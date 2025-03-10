@@ -615,6 +615,7 @@ class USPSADeduplicator extends StandardDeduplicator {
             targetConflicts: false,
             conflictingTypes: [],
             relevantBlacklistEntries: {},
+            relevantMappings: {},
           ));
           conflict.proposedActions.add(AutoMapping(
             sourceNumbers: sources,
@@ -667,6 +668,7 @@ class USPSADeduplicator extends StandardDeduplicator {
       targetConflicts: targetConflicts,
       conflictingTypes: conflictingTypes,
       relevantBlacklistEntries: relevantBlacklistEntries,
+      relevantMappings: detectedMappings,
     ));
     return conflict;
   }

@@ -381,12 +381,23 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
 }
 
 bool _conflictIsGreen(DeduplicationCollision collision, bool approved, {bool edited = false}) {
-  // Show the green indicator if the collision can be automatically resolved, unless it contains an international
-  // number...
-  bool autoResolve = edited != true &&collision.causes.every((e) => e.canResolveAutomatically) && collision.memberNumbers[MemberNumberType.international] == null;
-  // Or the proposed actions cover the conflict and the user has approved the changes.
+  // A collision is green if it is not flagged for manual review, and it either can be automatically resolved
+  // or has been user-approved.
+
+  //A collision can be automatically resolved if it hasn't been edited, all proposed actions can be autoresolved,
+  // and it doesn't contain an international number.
+  bool autoResolve = 
+    !edited 
+    && collision.causes.every((e) => e.canResolveAutomatically) 
+    && collision.memberNumbers[MemberNumberType.international] == null;
+
+  // A collision requires manual review if it has not been approved, and it has a ManualReviewRecommended cause.
+  bool manualReviewRequired = !approved && collision.causes.any((e) => e is ManualReviewRecommended);
+
+  // A collision is user-approved the 'approve' button has been clicked and the proposed actions cover the conflict.
   bool userApproved = approved && collision.proposedActionsResolveConflict();
-  return autoResolve || userApproved;
+
+  return !manualReviewRequired && (autoResolve || userApproved);
 }
 
 bool _conflictIsRed(DeduplicationCollision collision, bool approved) {
@@ -852,6 +863,7 @@ class IssueDescription extends StatelessWidget {
       MultipleNumbersOfType() => _buildMultipleNumbersOfType(context, sport, issue as MultipleNumbersOfType),
       FixedInSettings() => Text("• Fixed in settings (should never appear)", style: Theme.of(context).textTheme.bodyMedium),
       AmbiguousMapping() => _buildAmbiguousMapping(context, sport, issue as AmbiguousMapping),
+      ManualReviewRecommended() => Text("• Deduplication engine recommends manual review")
     };
   }
 

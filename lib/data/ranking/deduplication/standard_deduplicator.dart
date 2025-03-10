@@ -294,6 +294,7 @@ abstract class StandardDeduplicator extends ShooterDeduplicator {
             targetConflicts: possibleTargetNumbers.length > 1,
             conflictingTypes: classifiedTargetNumbers.keys.toList(),
             relevantBlacklistEntries: {},
+            relevantMappings: possibleMappings,
             crossMapping: true,
           ));
         }
@@ -308,6 +309,7 @@ abstract class StandardDeduplicator extends ShooterDeduplicator {
             targetConflicts: possibleTargetNumbers.length > 1,
             conflictingTypes: targetTypes,
             relevantBlacklistEntries: {},
+            relevantMappings: possibleMappings,
             crossMapping: true,
           ));
         }
@@ -432,5 +434,24 @@ abstract class StandardDeduplicator extends ShooterDeduplicator {
   /// implementation returns the input map unchanged.
   Map<MemberNumberType, List<String>> condenseMemberNumbers(Map<MemberNumberType, List<String>> numbers) {
     return numbers;
+  }
+}
+
+extension BlacklistCheck on Map<String, List<String>> {
+  /// Check if [number]'s blacklist contains [target]. If [bidirectional] is true,
+  /// check if either number is blacklisted to the other.
+  bool isBlacklisted(String number, String target, {bool bidirectional = false}) {
+    var blacklist = this[number];
+
+    if(bidirectional) {
+      var reverseBlacklist = this[target];
+      var blacklisted = blacklist?.contains(target) ?? false;
+      var reverseBlacklisted = reverseBlacklist?.contains(number) ?? false;
+      return blacklisted || reverseBlacklisted;
+    }
+    else {
+      if(blacklist == null) return false;
+      return blacklist.contains(target);
+    }
   }
 }
