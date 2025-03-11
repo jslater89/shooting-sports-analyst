@@ -472,28 +472,30 @@ class ScoringEvent extends NameLookupEntity {
 
   /// Returns true if this scoring event is positive, i.e., desirable,
   /// under the scoring rules of [sport].
+  /// 
+  /// Neutral events (e.g. USPSA NPM or IDPA -0) are considered positive.
   bool isPositive(Sport sport) {
     if(sport.matchScoring is RelativeStageFinishScoring) {
       if(sport.defaultStageScoring is HitFactorScoring) {
-        return pointChange > 0 || timeChange < 0;
+        return pointChange >= 0 || timeChange <= 0;
       }
       else if(sport.defaultStageScoring is TimePlusScoring) {
-        return timeChange < 0;
+        return timeChange <= 0;
       }
       else {
-        return pointChange > 0;
+        return pointChange >= 0;
       }
     }
-    if(sport.matchScoring is CumulativeScoring) {
+    else if(sport.matchScoring is CumulativeScoring) {
       if((sport.matchScoring as CumulativeScoring).lowScoreWins) {
-        return pointChange < 0 || timeChange < 0;
+        return pointChange <= 0 || timeChange <= 0;
       }
       else {
-        return pointChange > 0 || timeChange > 0;
+        return pointChange >= 0 || timeChange >= 0;
       }
     }
     else {
-      return pointChange > 0 || timeChange < 0;
+      return pointChange >= 0 || timeChange <= 0;
     }
   }
 

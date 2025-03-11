@@ -21,9 +21,12 @@ class IcoreDisplaySettings {
     ColumnGroup timeBonusColumn = ColumnGroup(
       headerLabel: "Bonus",
       mode: ColumnMode.totalTime,
-      dynamicEventMode: DynamicEventMode.includePositive,
       eventGroups: [
-        ScoringEventGroup(events: timeBonusEvents, label: ""),
+        ScoringEventGroup(
+          events: timeBonusEvents,
+          label: "",
+          dynamicEventMode: DynamicEventMode.includePositive,
+        ),
       ],
     );
 
@@ -38,10 +41,13 @@ class IcoreDisplaySettings {
     ColumnGroup otherPenaltyColumn = ColumnGroup(
       headerLabel: "Penalty",
       mode: ColumnMode.totalTime,
-      dynamicEventMode: DynamicEventMode.includeNegativeExcept,
-      excludeEvents: accuracyPenaltyEvents,
       eventGroups: [
-        ScoringEventGroup(events: otherPenaltyEvents, label: ""),
+        ScoringEventGroup(
+          events: otherPenaltyEvents,
+          label: "",
+          dynamicEventMode: DynamicEventMode.includeNegativeExcept,
+          excludeEvents: accuracyPenaltyEvents,
+        ),
       ],
     );
 

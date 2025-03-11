@@ -195,6 +195,7 @@ enum DynamicEventMode {
   /// Include all negative events except the given events.
   includeNegativeExcept;
 
+  /// Whether this mode can include dynamic events.
   bool get inclusive => this != hideUnknown;
 
   bool shouldInclude(Sport sport, ScoringEvent event, {List<ScoringEvent> excluded = const []}) {
@@ -231,8 +232,6 @@ class ColumnGroup {
   String? headerTooltip;
 
   ColumnMode mode;
-  DynamicEventMode dynamicEventMode;
-  List<ScoringEvent> excludeEvents;
 
   /// If true, events will be displayed in standard USPSA style: "3A"
   /// If false, event names will prefix the display output: "-3: 15s"
@@ -247,8 +246,6 @@ class ColumnGroup {
     required this.headerLabel,
     required this.eventGroups,
     this.mode = ColumnMode.count,
-    this.dynamicEventMode = DynamicEventMode.hideUnknown,
-    this.excludeEvents = const [],
     this.labelAsSuffix = true,
     this.headerTooltip,
   });
@@ -259,8 +256,6 @@ class ColumnGroup {
       score: score,
       mode: mode,
       labelAsSuffix: labelAsSuffix,
-      dynamicEventMode: dynamicEventMode,
-      excludeEvents: excludeEvents,
     )).toList();
     strings.removeWhere((element) => element.isEmpty);
     return strings.join(" ");
@@ -280,10 +275,27 @@ class ScoringEventGroup {
 
   bool displayIfNoEvents;
 
-  ScoringEventGroup({required this.events, this.displayIfNoEvents = true, String? label}) : this._label = label;
+  DynamicEventMode dynamicEventMode;
+  List<ScoringEvent> excludeEvents;
+
+  ScoringEventGroup({
+    required this.events,
+    this.displayIfNoEvents = true,
+    String? label,
+    this.dynamicEventMode = DynamicEventMode.hideUnknown,
+      this.excludeEvents = const [],
+  }) : this._label = label;
 
   /// Construct a ScoringEventGroup for a single event.
-  ScoringEventGroup.single(ScoringEvent event, {this.displayIfNoEvents = true, String? label}) :
+  ScoringEventGroup.single(
+    ScoringEvent event,
+    {
+      this.displayIfNoEvents = true,
+      String? label,
+      this.dynamicEventMode = DynamicEventMode.hideUnknown,
+      this.excludeEvents = const [],
+    }
+  ) :
       this.events = [event],
       this._label = label;
 
@@ -292,8 +304,6 @@ class ScoringEventGroup {
     required RawScore score,
     required ColumnMode mode,
     required bool labelAsSuffix,
-    required DynamicEventMode dynamicEventMode,
-    required List<ScoringEvent> excludeEvents,
   }) {
     int count = 0;
     double timeValue = 0.0;
@@ -302,7 +312,7 @@ class ScoringEventGroup {
     Set<ScoringEvent> usedEvents = events.toSet();
     if(dynamicEventMode.inclusive) {
       for(var e in score.targetEvents.keys) {
-        if(!sport.defaultPowerFactor.targetEvents.containsKey(e)) {
+        if(!sport.defaultPowerFactor.targetEvents.containsValue(e)) {
           if(dynamicEventMode.shouldInclude(sport, e, excluded: excludeEvents)) {
             usedEvents.add(e);
           }
@@ -310,7 +320,7 @@ class ScoringEventGroup {
       }
 
       for(var e in score.penaltyEvents.keys) {
-        if(!sport.defaultPowerFactor.penaltyEvents.containsKey(e)) {
+        if(!sport.defaultPowerFactor.penaltyEvents.containsValue(e)) {
           if(dynamicEventMode.shouldInclude(sport, e, excluded: excludeEvents)) {
             usedEvents.add(e);
           }
@@ -318,10 +328,20 @@ class ScoringEventGroup {
       }
     }
 
+    Set<String> processedVariableValueEvents = {};
+
     for(var eventPrototype in usedEvents) {
       List<ScoringEvent> foundEvents = [];
       var variableEvent = eventPrototype.variableValue;
       if(variableEvent) {
+        // Variable events are processed by name rathern than specifically
+        // event, so to avoid double-counting, track which names have been
+        // processed.
+        if(processedVariableValueEvents.contains(eventPrototype.name)) {
+          continue;
+        }
+        processedVariableValueEvents.add(eventPrototype.name);
+
         var targetEvents = score.targetEvents.keys.lookupAllByName(eventPrototype.name);
         var penaltyEvents = score.penaltyEvents.keys.lookupAllByName(eventPrototype.name);
         if(targetEvents.isNotEmpty) {
