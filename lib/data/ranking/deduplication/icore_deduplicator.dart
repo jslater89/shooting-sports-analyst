@@ -55,6 +55,9 @@ class IcoreMemberNumber {
   /// Some vanity IDs are entirely numeric, but we treat those as non-vanity IDs.
   late final bool isVanity;
 
+  /// Whether the member number is valid.
+  late final bool valid;
+
   /// The non-life component of this member number: the geocode and unique identifier.
   String get nonLifeNumber => "$geoCode$uniqueIdentifier";
 
@@ -63,12 +66,20 @@ class IcoreMemberNumber {
     normalizedNumber = IcoreDeduplicator.instance.normalizeNumber(number);
     var match = _icoreNumberRegex.firstMatch(normalizedNumber);
     if(match == null) {
-      throw ArgumentError("Invalid ICORE number: $number");
+      _log.w("Invalid ICORE number: $number");
+      lifeMember = false;
+      geoCode = "";
+      uniqueIdentifier = number;
+      isVanity = false;
+      valid = false;
     }
-    lifeMember = match.group(1) == "L";
-    geoCode = match.group(2)!;
-    uniqueIdentifier = match.group(3)!;
-    isVanity = !RegExp(r'^[0-9]+$').hasMatch(uniqueIdentifier);
+    else {
+      lifeMember = match.group(1) == "L";
+      geoCode = match.group(2)!;
+      uniqueIdentifier = match.group(3)!;
+      isVanity = !RegExp(r'^[0-9]+$').hasMatch(uniqueIdentifier);
+      valid = true;
+    }
     
     if(lifeMember && isVanity) {
       type = MemberNumberType.benefactor;
@@ -263,11 +274,19 @@ class IcoreDeduplicator extends StandardDeduplicator {
 
           // If the numbers are highly similar, propose a data entry fix from the second
           // number appearing to the first. Otherwise, add a blacklist entry.
-          if(similarity > similarityThreshold) {
+
+          bool invalidNumbers = !member1.valid || !member2.valid;
+          if(similarity > similarityThreshold || invalidNumbers) {
+            var probableTarget = number1;
+            var probableSource = number2;
+            if(!member1.valid) {
+              probableTarget = number2;
+              probableSource = number1;
+            }
             conflict.proposedActions.add(DataEntryFix(
               deduplicatorName: name,
-              sourceNumber: number2,
-              targetNumber: number1,
+              sourceNumber: probableSource,
+              targetNumber: probableTarget,
             ));
 
             // Remove the data fix source number from the list.
@@ -325,6 +344,7 @@ class IcoreDeduplicator extends StandardDeduplicator {
         sourceNumbers: [],
         targetNumber: bestMember.normalizedNumber,
       );
+      bool finalMappingIsUserMapping = false;
 
       if(standard != null && life != null) {
         if(standard.sameMember(life)) {
@@ -475,27 +495,11 @@ class IcoreDeduplicator extends StandardDeduplicator {
 
     return conflict;
   }
-
-  /// Two member numbers are already mapped if source is already mapped to target, or
-  /// if both source and target are mapped to the same third number.
-  bool alreadyMapped(String source, String target, Map<String, String> mappings) {
-    if(mappings.containsKey(source) && mappings[source] == target) {
-      return true;
-    }
-
-    var sourceMapping = mappings[source];
-    var targetMapping = mappings[target];
-    if(sourceMapping != null && targetMapping != null && sourceMapping == targetMapping) {
-      return true;
-    }
-
-    return false;
-  }
 }
 
 /// State codes as used in ICORE numbers: the 2-letter US postal service codes.
-const _stateCodes = r"AZ|CA|CO|CT|DE|FL|GA|HI|IA|ID|IL|IN|KS|KY|MA|MD|ME|MI|MN|MO|MS|MT|NC"
-r"|ND|NE|NH|NJ|NM|NV|NY|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VA|WA|WI|WV|WY";
+const _stateCodes = r"AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|IA|ID|IL|IN|KS|KY|LA|MA|MD|ME|MI|MN|MO|MS|MT|NC"
+r"|ND|NE|NH|NJ|NM|NV|NY|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VA|VT|WA|WI|WV|WY";
 
 /// Country codes as used in ICORE numbers, including the invalid 'DEN' for Denmark in addition
 /// to the official ISO-3166-1 codes in [_officialCountryCodes].

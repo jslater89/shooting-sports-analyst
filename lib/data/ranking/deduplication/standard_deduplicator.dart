@@ -435,6 +435,22 @@ abstract class StandardDeduplicator extends ShooterDeduplicator {
   Map<MemberNumberType, List<String>> condenseMemberNumbers(Map<MemberNumberType, List<String>> numbers) {
     return numbers;
   }
+
+  /// Two member numbers are already mapped if source is already mapped to target, or
+  /// if both source and target are mapped to the same third number.
+  bool alreadyMapped(String source, String target, Map<String, String> mappings) {
+    if(mappings.containsKey(source) && mappings[source] == target) {
+      return true;
+    }
+
+    var sourceMapping = mappings[source];
+    var targetMapping = mappings[target];
+    if(sourceMapping != null && targetMapping != null && sourceMapping == targetMapping) {
+      return true;
+    }
+
+    return false;
+  }
 }
 
 extension BlacklistCheck on Map<String, List<String>> {

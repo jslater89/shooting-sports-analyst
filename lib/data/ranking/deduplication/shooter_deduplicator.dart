@@ -9,6 +9,7 @@ import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/ui/text_styles.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 typedef DeduplicatorProgressCallback = Future<void> Function(int current, int total, String description);
@@ -135,6 +136,8 @@ abstract class ShooterDeduplicator {
     TextStyle? runningStyle,
     TextStyle? linkStyle,
   }) {
+    runningStyle ??= TextStyles.bodyMedium(context);
+
     return TextSpan(
       text: text,
       style: runningStyle,

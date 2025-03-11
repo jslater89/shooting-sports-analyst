@@ -5,6 +5,7 @@
  */
 
 import 'package:shooting_sports_analyst/data/ranking/connectivity/sqrt_total_unique_product.dart';
+import 'package:shooting_sports_analyst/data/ranking/deduplication/icore_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
 import 'package:shooting_sports_analyst/data/sort_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/icore_utils/icore_display_settings.dart';
@@ -140,12 +141,6 @@ const icoreCClass = Classification(index: 4, name: "C", shortName: "C");
 const icoreDClass = Classification(index: 5, name: "D", shortName: "D");
 const icoreUnclassified = Classification(index: 6, name: "Unclassified", shortName: "U", fallback: true);
 
-// TODO: this may be better in penalty events, since it's only kind of a target event
-/// A bonus hit on steel. Defaults to -3 seconds, but may be overridden
-/// on certain stages/scores.
-
-/// TODO: there is no standard for this, so we need to handle dynamic creation of bonuses per match.
-// const icoreBonusSteel = ScoringEvent(_icoreBonusSteelName, shortName: "SB", alternateNames: ["BS", "Steel Bonus", "Bonus Plate"], timeChange: -3, sortOrder: 7);
 const icoreSportName = "ICORE";
 
 final icoreSport = Sport(
@@ -192,5 +187,6 @@ final icoreSport = Sport(
       icoreDClass: 700.0,
       icoreUnclassified: 850.0,
     },
+    shooterDeduplicator: IcoreDeduplicator(),
     builtinRatingGroupsProvider: DivisionRatingGroupProvider(icoreSportName, icoreDivisions)
 );
