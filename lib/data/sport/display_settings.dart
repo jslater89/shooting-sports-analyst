@@ -362,10 +362,6 @@ class ScoringEventGroup {
         }
       }
 
-      if(eventPrototype.name == "X") {
-        print("break");
-      }
-
       for(var event in foundEvents) {
         int innerCount = 0;
         innerCount += score.targetEvents[event] ?? 0;
