@@ -22,9 +22,6 @@ class OrdinalPowerLawModel extends OrdinalPlaceFunctionModel {
   @override
   double shareForOrdinalPlace(int place, int competitors) {
     var share = pow(competitors - place + 1, power).toDouble();
-    if(share.isNaN) {
-      print("break");
-    }
     return share;
   }
 

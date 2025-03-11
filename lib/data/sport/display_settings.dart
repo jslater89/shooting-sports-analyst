@@ -174,11 +174,17 @@ enum ColumnMode {
 /// What a ColumnGroup should do with dynamic score events, i.e. those
 /// that aren't listed in the sport's definition.
 enum DynamicEventMode {
-  /// Hide unknown events.
+  /// Hide all dynamic events.
   hideUnknown,
   /// Include positive events.
+  /// 
+  /// Positive means 'good', not necessarily 'numerically positive'. A time bonus
+  /// in a time-plus sport is a positive event with a negative time change.
   includePositive,
   /// Include negative events.
+  /// 
+  /// Negative means 'bad', not necessarily 'numerically negative'. A penalty
+  /// in a time-plus sport is a negative event with a positive time change.
   includeNegative,
   /// Include all events.
   includeAll,
