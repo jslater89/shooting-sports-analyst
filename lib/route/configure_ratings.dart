@@ -702,12 +702,12 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                           icon: Icon(Icons.refresh),
                                           color: Theme.of(context).primaryColor,
                                           onPressed: () async {
-                                            projectMatches.remove(matchPointer);
-                                            ongoingMatches.remove(matchPointer);
-                                            filteredMatches?.remove(matchPointer);
-
                                             var result = await MatchSource.reloadMatch(matchPointer.intoSourcePlaceholder());
                                             if(result.isOk()) {
+                                              projectMatches.remove(matchPointer);
+                                              ongoingMatches.remove(matchPointer);
+                                              filteredMatches?.remove(matchPointer);
+
                                               projectMatches.addIfMissing(MatchPointer.fromMatch(result.unwrap()));
                                               _sortMatches(false);
                                             }
