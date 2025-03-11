@@ -9,7 +9,7 @@ import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 /// Settings for how a sport's match results should be displayed.
-/// 
+///
 /// [SportDisplaySettings.defaultForSport] creates a passably sensible
 /// default.
 class SportDisplaySettings {
@@ -114,7 +114,7 @@ class SportDisplaySettings {
         for(var e in powerFactor.targetEvents.values) {
           groupedEvents.add(e);
         }
-        
+
         var eventGroup = ScoringEventGroup(
           events: groupedEvents,
           displayIfNoEvents: true,
@@ -139,7 +139,7 @@ class SportDisplaySettings {
           mode: mode,
         ));
       }
-      
+
       return SportDisplaySettings(
         scoreColumns: groups,
         showPowerFactor: showPowerFactor,
@@ -177,12 +177,12 @@ enum DynamicEventMode {
   /// Hide all dynamic events.
   hideUnknown,
   /// Include positive events.
-  /// 
+  ///
   /// Positive means 'good', not necessarily 'numerically positive'. A time bonus
   /// in a time-plus sport is a positive event with a negative time change.
   includePositive,
   /// Include negative events.
-  /// 
+  ///
   /// Negative means 'bad', not necessarily 'numerically negative'. A penalty
   /// in a time-plus sport is a negative event with a positive time change.
   includeNegative,
@@ -362,13 +362,25 @@ class ScoringEventGroup {
         }
       }
 
+      if(eventPrototype.name == "X") {
+        print("break");
+      }
+
       for(var event in foundEvents) {
         int innerCount = 0;
         innerCount += score.targetEvents[event] ?? 0;
         innerCount += score.penaltyEvents[event] ?? 0;
 
-        timeValue += event.timeChange * innerCount;
-        pointValue += event.pointChange * innerCount;
+        var timeChange = event.timeChange;
+        var pointChange = event.pointChange;
+        if(score.scoringOverrides.containsKey(event.name)) {
+          var override = score.scoringOverrides[event.name]!;
+          timeChange = override.timeChangeOverride ?? timeChange;
+          pointChange = override.pointChangeOverride ?? pointChange;
+        }
+
+        timeValue += timeChange * innerCount;
+        pointValue += pointChange * innerCount;
         count += innerCount;
       }
     }
