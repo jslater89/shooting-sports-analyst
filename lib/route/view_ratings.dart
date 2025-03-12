@@ -26,15 +26,14 @@ import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/rater/display_settings.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_correction_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_dialog.dart';
-import 'package:shooting_sports_analyst/ui/rater/prediction/prediction_view.dart';
-import 'package:shooting_sports_analyst/ui/rater/prediction/registration_parser.dart';
 import 'package:shooting_sports_analyst/ui/rater/rater_stats_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/rater_view.dart';
+import 'package:shooting_sports_analyst/ui/rater/rater_view_other_settings_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/rating_filter_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/reports/report_dialog.dart';
-import 'package:shooting_sports_analyst/ui/rater/reports/report_view.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/associate_registrations.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_pointer_chooser_dialog.dart';
@@ -45,7 +44,7 @@ var _log = SSALogger("RatingsViewPage");
 
 class RatingsViewPage extends StatefulWidget {
   const RatingsViewPage({
-    Key? key, 
+    Key? key,
     required this.dataSource,
   }) : super(key: key);
 
@@ -221,22 +220,29 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     var animation = (_operationInProgress) ?
       AlwaysStoppedAnimation<Color>(backgroundColor) : AlwaysStoppedAnimation<Color>(primaryColor);
 
-    List<Widget> actions = _generateActions();
 
     var title = _projectName;
-    return ChangeNotifierProvider<ChangeNotifierRatingDataSource>(
-      create: (_) => ChangeNotifierRatingDataSource(widget.dataSource),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<ChangeNotifierRatingDataSource>(
+          create: (_) => ChangeNotifierRatingDataSource(widget.dataSource),
+        ),
+        ChangeNotifierProvider<RaterViewDisplayModel>(
+          create: (_) => RaterViewDisplayModel(),
+        ),
+      ],
       builder: (context, _) {
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(title),
-            centerTitle: true,
-            actions: actions,
-            bottom: _operationInProgress ? PreferredSize(
-              preferredSize: Size(double.infinity, 5),
-              child: LinearProgressIndicator(value: null, backgroundColor: primaryColor, valueColor: animation),
-            ) : null,
-          ),
+          List<Widget> actions = _generateActions(context);
+          return Scaffold(
+            appBar: AppBar(
+              title: Text(title),
+              centerTitle: true,
+              actions: actions,
+              bottom: _operationInProgress ? PreferredSize(
+                preferredSize: Size(double.infinity, 5),
+                child: LinearProgressIndicator(value: null, backgroundColor: primaryColor, valueColor: animation),
+              ) : null,
+            ),
           body: _ratingView(),
         );
       },
@@ -453,7 +459,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     ];
   }
 
-  List<Widget> _generateActions() {
+  List<Widget> _generateActions(BuildContext context) {
     if(!initialized) return [];
 
     // These are replicated in actions below, because generateActions is only
@@ -522,13 +528,13 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         )
       ),
       PopupMenuButton<_MenuEntry>(
-        onSelected: (item) => _handleClick(item),
+        onSelected: (item) => _handleClick(item, context),
         itemBuilder: (context) {
           List<PopupMenuEntry<_MenuEntry>> items = _MenuEntry.values.map((v) =>
-              PopupMenuItem(
-                child: Text(v.label),
-                value: v,
-              )
+            PopupMenuItem(
+              child: Text(v.label),
+              value: v,
+            )
           ).toList();
           return items;
         },
@@ -536,7 +542,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     ];
   }
 
-  Future<void> _handleClick(_MenuEntry item) async {
+  Future<void> _handleClick(_MenuEntry item, BuildContext context) async {
     switch(item) {
       case _MenuEntry.setChangeSince:
         var date = await showDatePicker(context: context, initialDate: _changeSince ?? DateTime.now(), firstDate: DateTime(2015, 1, 1), lastDate: DateTime.now());
@@ -616,13 +622,18 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       case _MenuEntry.viewResults:
         var pointers = await widget.dataSource.getMatchPointers();
         var match = await MatchPointerChooserDialog.showSingle(context: context, matches: pointers.unwrap());
-        
+
         if(match != null) {
           var dbMatch = await match.getDbMatch(AnalystDatabase()).unwrap();
           Navigator.of(context).push(MaterialPageRoute(builder: (context) {
             return ResultPage(canonicalMatch: dbMatch.hydrate(useCache: true).unwrap(), allowWhatIf: false, ratings: widget.dataSource);
           }));
         }
+        break;
+
+      case _MenuEntry.otherSettings:
+        var displayModel = Provider.of<RaterViewDisplayModel>(context, listen: false);
+        RaterViewOtherSettingsDialog.show(context, displayModel);
         break;
     }
   }
@@ -711,7 +722,8 @@ enum _MenuEntry {
   setChangeSince,
   csvExport,
   dataErrors,
-  viewResults;
+  viewResults,
+  otherSettings;
 
   String get label {
     switch(this) {
@@ -723,6 +735,8 @@ enum _MenuEntry {
         return "Fix data entry errors";
       case _MenuEntry.viewResults:
         return "View match results";
+      case _MenuEntry.otherSettings:
+        return "Miscellaneous settings";
     }
   }
 }

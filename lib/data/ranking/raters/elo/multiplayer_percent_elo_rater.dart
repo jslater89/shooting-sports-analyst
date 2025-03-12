@@ -19,6 +19,7 @@ import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settin
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/ui/elo_settings_ui.dart';
+import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 import 'package:shooting_sports_analyst/data/ranking/timings.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/logger.dart';
@@ -474,7 +475,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   bool _disableMatchBlend(bool matchInProgress, bool isDq, bool matchDnf) {
     return matchInProgress || (byStage && isDq) || (byStage && matchDnf);
   }
-  
+
   _ActualScore _calculateActualScore({
     ShootingMatch? match,
     required RelativeScore score,
@@ -597,7 +598,13 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   }
 
   @override
-  ScoreRow buildRatingRow({required BuildContext context, required int place, required ShooterRating rating, DateTime? trendDate}) {
+  ScoreRow buildRatingRow({
+    required BuildContext context,
+    required int place,
+    required ShooterRating rating,
+    DateTime? trendDate,
+    RatingScaler? scaler,
+  }) {
     rating as EloShooterRating;
 
     var trend = rating.trend.round();
@@ -613,6 +620,23 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     }
     var lastMatchChange = rating.lastMatchChange;
 
+    var ratingNumber = rating.rating.round();
+    if(scaler != null) {
+      ratingNumber = scaler.scaleRating(rating.rating).round();
+    }
+
+    if(scaler != null) {
+      error = scaler.scaleNumber(error, originalRating: rating.rating);
+    }
+
+    if(scaler != null) {
+      lastMatchChange = scaler.scaleNumber(lastMatchChange, originalRating: rating.rating);
+    }
+
+    if(scaler != null) {
+      trend = scaler.scaleNumber(rating.trend, originalRating: rating.rating).round();
+    }
+
     return ScoreRow(
       color: (place - 1) % 2 == 1 ? Colors.grey[200] : Colors.white,
       child: Padding(
@@ -624,7 +648,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
               Expanded(flex: _memNumFlex, child: Text(rating.memberNumber)),
               Expanded(flex: _classFlex, child: Text(rating.lastClassification?.shortDisplayName ?? "?")),
               Expanded(flex: _nameFlex, child: Text(rating.getName(suffixes: false))),
-              Expanded(flex: _ratingFlex, child: Text("${rating.rating.round()}", textAlign: TextAlign.end)),
+              Expanded(flex: _ratingFlex, child: Text("$ratingNumber", textAlign: TextAlign.end)),
               Expanded(flex: _errorFlex, child: Text("${error.toStringAsFixed(1)}", textAlign: TextAlign.end)),
               Expanded(flex: _matchChangeFlex, child: Text("${lastMatchChange.round()}", textAlign: TextAlign.end)),
               Expanded(flex: _trendFlex, child: Text("$trend", textAlign: TextAlign.end)),

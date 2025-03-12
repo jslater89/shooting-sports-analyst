@@ -5,10 +5,11 @@
  */
 
 import 'package:collection/collection.dart';
+import 'package:data/stats.dart' show WeibullDistribution;
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
-import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
+import 'package:shooting_sports_analyst/data/math/weibull/weibull_estimator.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
@@ -36,6 +37,8 @@ class RaterStatistics {
 
   Map<int, int> yearOfEntryHistogram;
 
+  WeibullDistribution ratingDistribution;
+
   RaterStatistics({
     required this.shooters,
     required this.averageRating,
@@ -53,6 +56,7 @@ class RaterStatistics {
     required this.histogramsByClass,
     required this.ratingsByClass,
     required this.yearOfEntryHistogram,
+    required this.ratingDistribution,
   });
 }
 
@@ -65,6 +69,8 @@ RaterStatistics getRatingStatistics({required Sport sport, required RatingSystem
 RaterStatistics _calculateStats(Sport sport, RatingSystem algorithm, RatingGroup group, List<ShooterRating> ratings) {
   var count = ratings.length;
   var allRatings = ratings.map((r) => r.rating).toList()..sort();
+  var ratingDistribution = WeibullEstimator().estimate(allRatings);
+
   var allHistoryLengths = ratings.map((r) => r.length).toList()..sort(
     (a, b) => a.compareTo(b)
   );
@@ -134,5 +140,6 @@ RaterStatistics _calculateStats(Sport sport, RatingSystem algorithm, RatingGroup
     histogramBucketSize: ratingBucketSize,
     ratingsByClass: ratingsByClass,
     yearOfEntryHistogram: yearOfEntryHistogram,
+    ratingDistribution: ratingDistribution,
   );
 }

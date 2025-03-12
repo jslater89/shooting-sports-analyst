@@ -22,6 +22,7 @@ import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rating
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/ui/points_settings_ui.dart';
+import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
@@ -75,7 +76,13 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
   }
 
   @override
-  ScoreRow buildRatingRow({required BuildContext context, required int place, required ShooterRating rating, DateTime? trendDate}) {
+  ScoreRow buildRatingRow({
+    required BuildContext context,
+    required int place,
+    required ShooterRating rating,
+    DateTime? trendDate,
+    RatingScaler? scaler,
+  }) {
     rating as PointsRating;
 
     var ratingText = "";

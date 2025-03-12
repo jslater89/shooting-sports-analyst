@@ -6,23 +6,25 @@
 
 import 'dart:math';
 
-import 'package:collection/collection.dart';
+import 'package:collection/collection.dart' hide IterableNumberExtension;
+import 'package:data/data.dart' show IterableNumExtension, WeibullDistribution;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/math/weibull/weibull_estimator.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/synchronous_rating_data_source.dart';
-import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rating.dart';
-import 'package:shooting_sports_analyst/data/ranking/legacy_loader/rating_history.dart';
+import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/data/old_search_query_parser.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/rater/display_settings.dart';
 import 'package:shooting_sports_analyst/ui/rater/rating_filter_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/shooter_stats_dialog.dart';
 
@@ -75,12 +77,23 @@ class _RaterViewState extends State<RaterView> {
   late RatingProjectSettings settings;
   late List<RatingGroup> groups;
   late List<ShooterRating> uniqueRatings;
+  List<double> allRatings = [];
+
+  WeibullDistribution? ratingDistribution;
+  ShooterRating? minRating;
+  ShooterRating? maxRating;
+  double? top2PercentAverage;
+  double? ratingMean;
+  double? ratingStdDev;
 
   bool initialized = false;
 
   @override
   Widget build(BuildContext context) {
     var cachedSource = Provider.of<ChangeNotifierRatingDataSource>(context);
+
+    var scaler = Provider.of<RaterViewDisplayModel>(context).scaler;
+    var scaleRatings = scaler != null;
 
     var s = cachedSource.getSettings();
     var g = cachedSource.getGroups();
@@ -95,26 +108,42 @@ class _RaterViewState extends State<RaterView> {
         _log.i("Loading cached ratings for ${widget.group}");
         settings = s;
         groups = g;
-        uniqueRatings = ratings.map((e) => settings.algorithm.wrapDbRating(e)).toList();
+        if(scaleRatings) {
+          _log.i("Generating scaled rating data");
+          uniqueRatings = ratings.map((e) => settings.algorithm.wrapDbRating(e)).sorted((a, b) => b.rating.compareTo(a.rating));
+          allRatings = uniqueRatings.map((e) => e.rating).toList();
+          ratingDistribution = WeibullEstimator().estimate(allRatings);
+          minRating = uniqueRatings.last;
+          maxRating = uniqueRatings.first;
+          var top2PercentRatings = allRatings.take(min(allRatings.length, max(5, (allRatings.length * 0.02).round()))).toList();
+          top2PercentAverage = top2PercentRatings.average();
+          ratingMean = allRatings.average();
+          ratingStdDev = allRatings.standardDeviation();
+
+          _log.v("Weibull parameters: k = ${ratingDistribution!.shape}, lambda = ${ratingDistribution!.scale}, P99.5 = ${ratingDistribution!.inverseCumulativeProbability(0.995)}");
+          _log.v("Min rating: ${minRating!.rating}, max rating: ${maxRating!.rating}, top 2% average: $top2PercentAverage");
+        }
+        else {
+          uniqueRatings = ratings.map((e) => settings.algorithm.wrapDbRating(e)).toList();
+        }
         initialized = true;
       }
-      settings = s;
-      groups = g;
-      var wrappedRatings = [
-        for(var r in ratings)
-          settings.algorithm.wrapDbRating(r)
-      ];
+      // settings = s;
+      // groups = g;
+      // var wrappedRatings = [
+      //   for(var r in ratings)
+      //     settings.algorithm.wrapDbRating(r)
+      // ];
       setState(() {
         settings = s;
         groups = g;
-        uniqueRatings = wrappedRatings;
       });
     }
 
     return Column(
       children: [
         ..._buildRatingKey(),
-        ..._buildRatingRows(),
+        ..._buildRatingRows(scaler),
       ]
     );
   }
@@ -154,7 +183,7 @@ class _RaterViewState extends State<RaterView> {
   }
 
   int _ratingWindow = 12;
-  List<Widget> _buildRatingRows() {
+  List<Widget> _buildRatingRows(RatingScaler? scaler) {
     // TODO: turn this into a Provider and a model, since we need it both in the parent and here
     var hiddenShooters = [];
     for(int i = 0; i < widget.hiddenShooters.length; i++) {
@@ -208,11 +237,24 @@ class _RaterViewState extends State<RaterView> {
       sortedRatings = sortedRatings.where((r) => !hiddenShooters.contains(r.memberNumber));
     }
 
-    var comparator = settings.algorithm.comparatorFor(widget.sortMode, changeSince: widget.changeSince) 
+    var comparator = settings.algorithm.comparatorFor(widget.sortMode, changeSince: widget.changeSince)
         ?? widget.sortMode.comparator(changeSince: widget.changeSince);
     var asList = sortedRatings.sorted(comparator);
-    
+
     widget.onRatingsFiltered?.call(asList);
+
+    RatingScalerInfo? info;
+    if(scaler != null) {
+      info = RatingScalerInfo(
+        minRating: minRating!.rating,
+        maxRating: maxRating!.rating,
+        top2PercentAverage: top2PercentAverage!,
+        ratingDistribution: ratingDistribution!,
+        ratingMean: ratingMean!,
+        ratingStdDev: ratingStdDev!,
+      );
+      scaler.info = info;
+    }
 
     return [
       Expanded(
@@ -221,18 +263,20 @@ class _RaterViewState extends State<RaterView> {
           thumbVisibility: true,
           child: ListView.builder(
             itemBuilder: (context, i) {
+              var rating = asList[i];
               return GestureDetector(
-                key: Key(asList[i].memberNumber),
+                key: Key(rating.memberNumber),
                 onTap: () {
                   showDialog(context: context, builder: (context) {
-                    return ShooterStatsDialog(rating: asList[i], match: widget.currentMatch, ratings: widget.dataSource, showDivisions: widget.group.divisions.length > 1);
+                    return ShooterStatsDialog(rating: rating, match: widget.currentMatch, ratings: widget.dataSource, showDivisions: widget.group.divisions.length > 1);
                   });
                 },
                 child: settings.algorithm.buildRatingRow(
                   context: context,
                   place: i + 1,
-                  rating: asList[i],
+                  rating: rating,
                   trendDate: widget.changeSince,
+                  scaler: scaler,
                 )
               );
             },

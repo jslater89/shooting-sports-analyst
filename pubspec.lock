@@ -177,24 +177,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.3.0"
-  charts_common:
-    dependency: transitive
-    description:
-      path: charts_common
-      ref: master
-      resolved-ref: fbcbc17bd3d48fae30d2462e44998bc106ecbca5
-      url: "https://github.com/jslater89/charts_flutter"
-    source: git
-    version: "0.12.0"
-  charts_flutter:
-    dependency: "direct main"
-    description:
-      path: charts_flutter
-      ref: master
-      resolved-ref: fbcbc17bd3d48fae30d2462e44998bc106ecbca5
-      url: "https://github.com/jslater89/charts_flutter"
-    source: git
-    version: "0.12.0"
   checked_yaml:
     dependency: transitive
     description:
@@ -235,6 +217,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.18.0"
+  community_charts_common:
+    dependency: transitive
+    description:
+      name: community_charts_common
+      sha256: d997ade57f15490346de46efbe23805d378a672aafbf5e47e19517964b671009
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.4"
+  community_charts_flutter:
+    dependency: "direct main"
+    description:
+      name: community_charts_flutter
+      sha256: "4614846b99782ab79b613687704865e5468ecada3f0ad1afe1cdc3ff5b727f72"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.4"
   convert:
     dependency: transitive
     description:
@@ -267,6 +265,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.2.0"
+  data:
+    dependency: "direct main"
+    description:
+      name: data
+      sha256: "31df76adc44c6259d11c94d22bab946cbbb02e394972afadd3aa108d92465927"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.12.0"
   decimal:
     dependency: transitive
     description:
@@ -666,6 +672,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.6"
+  more:
+    dependency: transitive
+    description:
+      name: more
+      sha256: b9372ef11909cb88a7a29e221d96fbe17eb04394f022e374a4299a6c72946108
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.2.0"
   mutex:
     dependency: "direct main"
     description:

@@ -22,6 +22,7 @@ import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_ratin
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/ui/marble_settings_ui.dart';
+import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 import 'package:shooting_sports_analyst/data/ranking/timings.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
@@ -84,7 +85,13 @@ class MarbleRater extends RatingSystem<MarbleRating, MarbleSettings, MarbleSetti
   }
 
   @override
-  ScoreRow buildRatingRow({required BuildContext context, required int place, required ShooterRating<RatingEvent> rating, DateTime? trendDate}) {
+  ScoreRow buildRatingRow({
+    required BuildContext context,
+    required int place,
+    required ShooterRating<RatingEvent> rating,
+    DateTime? trendDate,
+    RatingScaler? scaler,
+  }) {
     rating as MarbleRating;
     var lastChange = rating.lastMatchChange;
     int trend = 0;
@@ -100,7 +107,7 @@ class MarbleRater extends RatingSystem<MarbleRating, MarbleSettings, MarbleSetti
         trend = rating.trend3.round();
       }
     }
-    
+
     return ScoreRow(
       color: (place - 1) % 2 == 1 ? Colors.grey[200] : Colors.white,
       child: Padding(

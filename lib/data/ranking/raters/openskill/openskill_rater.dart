@@ -20,6 +20,7 @@ import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/ui/openskill_settings_ui.dart';
+import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 
@@ -64,7 +65,13 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
   }
 
   @override
-  ScoreRow buildRatingRow({required BuildContext context, required int place, required ShooterRating rating, DateTime? trendDate}) {
+  ScoreRow buildRatingRow({
+    required BuildContext context,
+    required int place,
+    required ShooterRating rating,
+    DateTime? trendDate,
+    RatingScaler? scaler,
+  }) {
     var trend = rating.rating - rating.averageRating().firstRating;
     if(trendDate != null) {
       trend = rating.rating - rating.ratingForDate(trendDate);

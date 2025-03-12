@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:charts_flutter/flutter.dart' as charts;
+import 'package:community_charts_flutter/community_charts_flutter.dart' as charts;
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_charts/flutter_charts.dart';
@@ -17,7 +17,7 @@ import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 
 class SolutionSpaceCharts extends StatefulWidget {
   const SolutionSpaceCharts({Key? key, required this.tuner, this.highlight}) : super(key: key);
-  
+
   final EloTuner tuner;
   final EloEvaluator? highlight;
 

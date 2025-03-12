@@ -16,6 +16,7 @@ import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_perc
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
@@ -127,7 +128,15 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
   ///
   /// If [trendDate] is provided, the rating change since that date should be displayed in
   /// place of the last-30-events trend.
-  ScoreRow buildRatingRow({required BuildContext context, required int place, required ShooterRating rating, DateTime? trendDate});
+  ///
+  /// If [scaleFactor] is provided, the rating should be scaled by the given factor for display.
+  ScoreRow buildRatingRow({
+    required BuildContext context,
+    required int place,
+    required ShooterRating rating,
+    DateTime? trendDate,
+    RatingScaler? scaler,
+  });
 
   /// Return ShooterPredictions for the list of shooters.
   ///

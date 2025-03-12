@@ -19,11 +19,11 @@ import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:shooting_sports_analyst/data/model.dart' as old;
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
-import 'package:charts_flutter/flutter.dart' as charts;
+import 'package:community_charts_flutter/community_charts_flutter.dart' as charts;
 // ignore: implementation_imports
-import 'package:charts_flutter/src/text_style.dart' as style;
+import 'package:community_charts_flutter/src/text_style.dart' as style;
 // ignore: implementation_imports
-import 'package:charts_flutter/src/text_element.dart' as element;
+import 'package:community_charts_flutter/src/text_element.dart' as element;
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -344,12 +344,12 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
 
         return _AccumulatedRatingEvent(e, accumulator += e.ratingChange, error);
       }).toList();
-      
+
       _series = charts.Series<_AccumulatedRatingEvent, int>(
         id: 'Results',
         colorFn: (e, __) {
           if(!widget.showDivisions) return charts.MaterialPalette.blue.shadeDefault;
-          
+
           var division = e.baseEvent.entry.division?.displayName;
           if(division == null) {
             return _colorOptions.first;
@@ -556,16 +556,16 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
           continue;
         }
         eventScore = stageScore;
-        
+
         if(eventScore.place == 1) {
           stageWins += 1;
         }
         stageFinishes.add(eventScore.place);
 
         var stageClassScores = match.getScores(
-          stages: [stage], 
-          shooters: match.shooters.where((element) => 
-            eventScore.shooter.division == element.division 
+          stages: [stage],
+          shooters: match.shooters.where((element) =>
+            eventScore.shooter.division == element.division
             && eventScore.shooter.classification == element.classification
           ).toList()
         );
