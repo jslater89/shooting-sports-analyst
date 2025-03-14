@@ -492,9 +492,19 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
       ));
     }
     else {
-      children.add(Text(
-        "${shooter.getName()} - ${shooter.division?.displayName ?? "NO DIVISION"} ${shooter.classification?.displayName ?? "NO CLASSIFICATION"}",
-        style: Theme.of(context).textTheme.headline6,
+      children.add(Row(
+        children: [
+          Text(
+            "${shooter.getName()} - ${shooter.division?.displayName ?? "NO DIVISION"} ${shooter.classification?.displayName ?? "NO CLASSIFICATION"}",
+            style: Theme.of(context).textTheme.headline6,
+          ),
+          IconButton(
+            icon: Icon(Icons.compare_arrows),
+            onPressed: () {
+              Navigator.of(context).pop(ShooterDialogAction(launchComparison: true));
+            },
+          ),
+        ],
       ));
     }
 

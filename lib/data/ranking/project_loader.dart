@@ -96,9 +96,9 @@ class DeduplicationError extends RatingProjectLoadError {
 
 typedef RatingProjectLoaderCallback = Future<void> Function({
   required int progress,
-  required int total, 
-  required LoadingState state, 
-  String? eventName, 
+  required int total,
+  required LoadingState state,
+  String? eventName,
   String? groupName,
   int? subProgress,
   int? subTotal,
@@ -121,7 +121,7 @@ class RatingProjectLoaderHost {
   /// A callback for when shooter deduplication is complete, and there are conflicts for the user to
   /// resolve. [deduplicationResult] is the list of detected, unresolved conflicts. The callback will be
   /// awaited by the project loader, and should return a list of actions to take to resolve the conflicts.
-  /// 
+  ///
   /// Return Result.ok if the conflicts are resolved and/or project loading should continue. Return
   /// Result.err if project loading should stop.
   RatingProjectLoaderDeduplicationCallback deduplicationCallback;
@@ -293,8 +293,8 @@ class RatingProjectLoader {
     await db.saveRatingProject(project, checkName: true);
 
     await host.progressCallback(
-      progress: 0, 
-      total: _totalMatchSteps, 
+      progress: 0,
+      total: _totalMatchSteps,
       state: LoadingState.readingMatches,
       subProgress: 0,
       subTotal: readMatchesSteps,
@@ -309,7 +309,7 @@ class RatingProjectLoader {
           underlying: dbMatch.unwrapErr(),
         ));
       }
-      
+
       var matchRes = dbMatch.unwrap().hydrate(useCache: true);
       if(matchRes.isErr()) {
         var err = matchRes.unwrapErr();
@@ -324,8 +324,8 @@ class RatingProjectLoader {
         hydratedMatches.add(match);
         _currentMatchStep += 1;
         await host.progressCallback(
-          progress: _currentMatchStep, 
-          total: _totalMatchSteps, 
+          progress: _currentMatchStep,
+          total: _totalMatchSteps,
           state: LoadingState.readingMatches,
           eventName: match.name,
           subProgress: hydratedMatches.length,
@@ -478,9 +478,6 @@ class RatingProjectLoader {
     var subTotal = matches.length;
     var subProgress = 0;
 
-    // At this point we have an accurate count of shooters so far, which we'll need for various maths.
-    var shooterCount = await AnalystDatabase().countShooterRatings(project, group);
-
     int changeCount = 0;
 
     var start = DateTime.now();
@@ -540,10 +537,10 @@ class RatingProjectLoader {
   }
 
   /// Applies a deduplication action to the project.
-  /// 
+  ///
   /// UNLIKE the pre-DB code, this function is responsible for handling any competitor
   /// merges required by the action, IN ADDITION TO updating the project settings.
-  /// 
+  ///
   /// (Since we've already added new ratings, we need to delete any redundant ones and make
   /// sure any new ones are updated before we advance to calculating ratings.)
   Future<void> _applyDeduplicationAction(RatingGroup group, DeduplicationAction action) async {
@@ -683,7 +680,7 @@ class RatingProjectLoader {
           }
           await db.upsertDbShooterRating(targetRating);
         }
-        
+
         // Add all of the source numbers to the target's known list
         targetRating.addKnownMemberNumbers(mapping.sourceNumbers);
 
@@ -808,7 +805,7 @@ class RatingProjectLoader {
           });
         }
 
-        
+
         // If we enter e.g. FY115519, we also want to catch cases where the user enters A155519 or TY115519,
         // but we don't want to make a mapping that maps the same number to itself.
         var alternateForms = sport.shooterDeduplicator?.alternateForms(fix.sourceNumber, includeInternationalVariants: hasInternationalNumbers) ?? [];
@@ -1159,7 +1156,7 @@ class RatingProjectLoader {
             rating.lastSeen = match.date;
           }
           updated += 1;
-          
+
           // We asked for allPossibleMemberNumbers, so if this member number isn't
           // in the knownMemberNumbers list, add it.
           if(!rating.knownMemberNumbers.contains(s.memberNumber)) {
@@ -1340,7 +1337,7 @@ class RatingProjectLoader {
           wrappedRatings[shooter.memberNumber] = ratingSystem.wrapDbRating(rating);
         }
       }
-      
+
       if(connectivityScores.isNotEmpty) {
         var baseline = project.connectivityContainer.getConnectivity(group, defaultValue: sport.connectivityCalculator!.defaultBaselineConnectivity);
         var matchConnectivity = sport.connectivityCalculator!.calculateMatchConnectivity(connectivityScores);
@@ -1368,7 +1365,7 @@ class RatingProjectLoader {
         }
       }
     }
-    
+
     if(Timings.enabled) timings.add(TimingType.calcConnectedness, DateTime.now().difference(start).inMicroseconds);
 
     Map<DbShooterRating, Map<RelativeScore, RatingEvent>> changes = {};
@@ -1605,7 +1602,7 @@ class RatingProjectLoader {
       }
 
       // Wait for shooter updates to finish
-      if(futures.isNotEmpty) { 
+      if(futures.isNotEmpty) {
         await Future.wait(futures);
       }
 

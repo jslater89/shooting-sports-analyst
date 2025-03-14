@@ -59,6 +59,7 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
   TextEditingController _participationController = TextEditingController(text: "${PointsSettings.defaultParticipationBonus}");
   TextEditingController _decayStartController = TextEditingController(text: "${PointsSettings.defaultDecayingPointsStart}");
   TextEditingController _decayFactorController = TextEditingController(text: "${PointsSettings.defaultDecayingPointsFactor}");
+  TextEditingController _stagesRequiredController = TextEditingController(text: "${PointsSettings.defaultStagesRequiredPerMatch}");
 
   @override
   void initState() {
@@ -70,7 +71,7 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
     _participationController.text = "${settings.participationBonus}";
     _decayStartController.text = "${settings.decayingPointsStart}";
     _decayFactorController.text = "${settings.decayingPointsFactor}";
-
+    _stagesRequiredController.text = "${settings.stagesRequiredPerMatch}";
     _matchCountController.addListener(() {
       var newCount = int.tryParse(_matchCountController.text);
       if(newCount != null) _validateText();
@@ -104,6 +105,11 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
       }
     });
 
+    _stagesRequiredController.addListener(() {
+      var newStages = int.tryParse(_stagesRequiredController.text);
+      if(newStages != null) _validateText();
+    });
+
     widget.controller.addListener(() {
       if(widget.controller._restoreDefaults) {
         setState(() {
@@ -119,6 +125,7 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
     double? participationBonus = double.tryParse(_participationController.text);
     double? decayStart = double.tryParse(_decayStartController.text);
     double? decayFactor = double.tryParse(_decayFactorController.text);
+    int? stagesRequired = int.tryParse(_stagesRequiredController.text);
 
     if(matchesToCount == null) {
       widget.controller.lastError = "Matches to count incorrectly formatted";
@@ -140,10 +147,16 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
       return;
     }
 
+    if(stagesRequired == null || stagesRequired < 0) {
+      widget.controller.lastError = "Stages required incorrectly formatted or out of range";
+      return;
+    }
+
     settings.matchesToCount = matchesToCount;
     settings.participationBonus = participationBonus;
     settings.decayingPointsStart = decayStart;
     settings.decayingPointsFactor = decayFactor;
+    settings.stagesRequiredPerMatch = stagesRequired;
     widget.controller.lastError = null;
   }
 
@@ -292,6 +305,35 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
                   keyboardType: TextInputType.numberWithOptions(signed: false, decimal: true),
                   inputFormatters: [
                     FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
+                  ],
+                ),
+              ),
+            )
+          ],
+        ),
+        Row( // decay factor
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Tooltip(
+                message: "For inverse place mode, the number of attempted/non-DNF stages required for a match entry to count as a\n"
+                "valid opponent. Enter 0 to count all match entries, or -1 to count only those with scores on all stages.",
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: Text("Stages required per match", style: Theme.of(context).textTheme.subtitle1!),
+                )
+            ),
+            SizedBox(
+              width: 100,
+              child: Padding(
+                padding: EdgeInsets.only(right: 20),
+                child: TextFormField(
+                  enabled: settings.mode == PointsMode.inversePlace,
+                  controller: _stagesRequiredController,
+                  textAlign: TextAlign.end,
+                  keyboardType: TextInputType.numberWithOptions(signed: true, decimal: false),
+                  inputFormatters: [
+                    FilteringTextInputFormatter(RegExp(r"[0-9\-]*"), allow: true),
                   ],
                 ),
               ),

@@ -62,6 +62,8 @@ abstract class RelativeScore extends BareRelativeScore {
   /// The shooter to whom this score belongs.
   final MatchEntry shooter;
 
+  bool get isDnf;
+
   const RelativeScore({
     required this.shooter,
     required super.place,
@@ -115,7 +117,10 @@ class RelativeMatchScore extends RelativeScore {
     return max;
   }
 
+  int get stagesAttempted => stageScores.values.where((s) => !s.score.dnf).length;
+
   bool? _isDnf;
+  @override
   bool get isDnf {
     if(_isDnf == null) {
       _isDnf = stageScores.values.any((s) => s.isDnf);
@@ -124,23 +129,16 @@ class RelativeMatchScore extends RelativeScore {
   }
 
   bool get hasResults {
-    for(var s in stageScores.values) {
-      if(!s.score.dnf) {
-        return true;
-      }
-    }
-
-    return false;
+    return stageScores.values.any((s) => !s.score.dnf);
   }
 
   bool get isComplete {
-    for(var s in stageScores.values) {
-      if(s.score.dnf) {
-        return false;
-      }
-    }
+    return stageScores.values.none((s) => s.score.dnf);
+  }
 
-    return true;
+  @override
+  String toString() {
+    return "RelativeMatchScore($place, $ratio)";
   }
 }
 
@@ -163,11 +161,17 @@ class RelativeStageScore extends RelativeScore {
   }
 
   bool? _isDnf;
+  @override
   bool get isDnf {
     if(_isDnf == null) {
       _isDnf = score.dnf;
     }
     return _isDnf!;
+  }
+
+  @override
+  String toString() {
+    return "RelativeStageScore($place, $ratio)";
   }
 }
 
@@ -201,7 +205,7 @@ class RawScore {
 
   /// The time this score was last modified.
   DateTime? modified;
-  
+
   List<Map<ScoringEvent, int>> get _scoreMaps => [targetEvents, penaltyEvents];
 
   int get scoringEventCount => targetEventCount + penaltyEventCount;
@@ -243,7 +247,7 @@ class RawScore {
 
     return 0;
   }
-  
+
   int? _cachedPoints;
   int? _cachedPenaltyCount;
   int get points {
@@ -256,13 +260,13 @@ class RawScore {
     return _cachedPoints!;
   }
 
-  int get penaltyCount { 
+  int get penaltyCount {
     if(_cachedPenaltyCount == null) {
       _cachedPenaltyCount = penaltyEvents.values.sum;
     }
-    return _cachedPenaltyCount!;  
+    return _cachedPenaltyCount!;
   }
-  
+
   double? _cachedTimeAdjustment;
   double get finalTime {
     if(_cachedTimeAdjustment == null && scoringOverrides.isEmpty) {
@@ -281,11 +285,11 @@ class RawScore {
   }
 
   /// Get the sum of points for this score.
-  /// 
+  ///
   /// If [countPenalties] is true, all penalties are counted, including e.g. procedurals and other non-target penalties.
-  /// 
+  ///
   /// If [allowNegative] is true, the total may go below zero.
-  /// 
+  ///
   /// If [includeTargetPenalties] is true, penalties resulting from hits or lack of hits on targets (M, NS, etc.) are
   /// included in the total. For example, in a USPSA match, includeTargetPenalties = false would include only A, C, and
   /// D hits.
@@ -392,9 +396,9 @@ class RawScore {
 
     return s;
   }
-  
+
   /// Returns true if this score differs from the other score.
-  /// 
+  ///
   /// Differs means 'has different times or hits'.
   bool equivalentTo(RawScore? other) {
     if(other == null) return false;
@@ -439,7 +443,7 @@ class ScoringEvent extends NameLookupEntity {
   /// If true, this scoring event's point or time change may vary. This event
   /// should be coalesced with other events of the same name to determine the
   /// number of hits of the event of that name.
-  /// 
+  ///
   /// This is necessary for ICORE: X-ring hits can vary not only across stages,
   /// but even on an individual stage, which is stupid and I hate it, because
   /// it's massively untidy to handle given the architecture I wrote for storing
@@ -472,7 +476,7 @@ class ScoringEvent extends NameLookupEntity {
 
   /// Returns true if this scoring event is positive, i.e., desirable,
   /// under the scoring rules of [sport].
-  /// 
+  ///
   /// Neutral events (e.g. USPSA NPM or IDPA -0) are considered positive.
   bool isPositive(Sport sport) {
     if(sport.matchScoring is RelativeStageFinishScoring) {
@@ -553,7 +557,7 @@ class ScoringEvent extends NameLookupEntity {
   @override
   bool operator ==(Object other) {
     if(other is ScoringEvent) {
-      return name == other.name 
+      return name == other.name
         && this.timeChange == other.timeChange
         && this.pointChange == other.pointChange
         && this.nondefaultPoints == other.nondefaultPoints
@@ -568,7 +572,7 @@ class ScoringEvent extends NameLookupEntity {
 
 /// Different values for scoring events for a particular score. This can come up
 /// in ICORE, where X-ring time bonuses (when given in a stage brief) are not required
-/// to be some particular value: 
+/// to be some particular value:
 class ScoringEventOverride {
   final String name;
   final int? pointChangeOverride;
@@ -596,7 +600,7 @@ extension ScoreUtilities on Map<ScoringEvent, int> {
     }
     return total;
   }
-  
+
   double get timeAdjustment {
     double total = 0;
     for(var s in keys) {
@@ -1014,7 +1018,7 @@ extension Sorting on List<RelativeMatchScore> {
       var bRating = ratings.lookupRatingSync(bGroup, b.shooter.memberNumber);
 
       if(aRating == null || bRating == null) return b.ratio.compareTo(a.ratio);
-      
+
       var settings = ratings.getSettingsSync();
       var aRatingWrapped = settings.algorithm.wrapDbRating(aRating);
       var bRatingWrapped = settings.algorithm.wrapDbRating(bRating);

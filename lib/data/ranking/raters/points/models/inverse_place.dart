@@ -14,8 +14,6 @@ import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 class InversePlace extends PointsModel {
   InversePlace(PointsSettings settings) : super(settings);
 
-  int count = 0;
-
   @override
   Map<ShooterRating, RatingChange> apply(Map<ShooterRating, RelativeScore> scores) {
     if(scores.isEmpty) return {};
@@ -27,7 +25,30 @@ class InversePlace extends PointsModel {
       };
     }
 
-    var sortedEntries = scores.entries.sorted((e1, e2) => e2.value.ratio.compareTo(e1.value.ratio));
+    int count = 0;
+
+    var sortedEntries = scores.entries
+      .where((e) {
+        var score = e.value;
+        if(settings.stagesRequiredPerMatch == PointsSettings.allStagesRequired) {
+          return !score.isDnf;
+        }
+        else if(settings.stagesRequiredPerMatch == PointsSettings.noStagesRequired) {
+          return true;
+        }
+        else if(score is RelativeMatchScore) {
+          return score.stagesAttempted >= settings.stagesRequiredPerMatch;
+        }
+        else if(score is RelativeStageScore) {
+          return !score.isDnf;
+        }
+        else {
+          // Unreachable (RelativeMatchScore and RelativeStageScore are the only
+          // subtypes of RelativeScore)
+          return true;
+        }
+      })
+      .sorted((e1, e2) => e2.value.ratio.compareTo(e1.value.ratio));
 
     count = sortedEntries.length;
 

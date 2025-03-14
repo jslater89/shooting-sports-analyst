@@ -11,6 +11,8 @@ const _pointsModeKey = "ptsMode";
 const _decayingPointsStartKey = "ptsDecayStart";
 const _decayingPointsFactorKey = "ptsDecayFtr";
 const _participationBonusKey = "ptsParticipationBonus";
+const _stagesRequiredPerMatchKey = "ptsStagesRequiredPerMatch";
+
 
 class PointsSettings extends RaterSettings {
   final bool byStage = false;
@@ -21,6 +23,10 @@ class PointsSettings extends RaterSettings {
   static const defaultDecayingPointsStart = 30.0;
   static const defaultDecayingPointsFactor = 0.8;
   static const defaultParticipationBonus = 1.0;
+  static const defaultStagesRequiredPerMatch = 0;
+
+  static const noStagesRequired = 0;
+  static const allStagesRequired = -1;
 
   /// How many matches to count.
   ///
@@ -37,6 +43,14 @@ class PointsSettings extends RaterSettings {
   /// The percentage of first place to award all participants in a match.
   double participationBonus;
 
+  /// The number of stages required for a match entry to count as a non-DNF.
+  ///
+  /// If [allStagesRequired], a competitor must enter a score on all stages.
+  ///
+  /// If [noStagesRequired], all match entries will count regardless of
+  /// whether they completed any stages at all.
+  int stagesRequiredPerMatch;
+
   double decayingPointsStart;
   double decayingPointsFactor;
 
@@ -46,6 +60,7 @@ class PointsSettings extends RaterSettings {
     this.decayingPointsFactor = defaultDecayingPointsFactor,
     this.decayingPointsStart = defaultDecayingPointsStart,
     this.participationBonus = defaultParticipationBonus,
+    this.stagesRequiredPerMatch = defaultStagesRequiredPerMatch,
   });
 
   @override
@@ -55,6 +70,7 @@ class PointsSettings extends RaterSettings {
     json[_participationBonusKey] = participationBonus;
     json[_decayingPointsStartKey] = decayingPointsStart;
     json[_decayingPointsFactorKey] = decayingPointsFactor;
+    json[_stagesRequiredPerMatchKey] = stagesRequiredPerMatch;
   }
 
   @override
@@ -64,6 +80,7 @@ class PointsSettings extends RaterSettings {
     participationBonus = (json[_participationBonusKey] ?? defaultParticipationBonus) as double;
     decayingPointsStart = (json[_decayingPointsStartKey] ?? defaultDecayingPointsStart) as double;
     decayingPointsFactor = (json[_decayingPointsFactorKey] ?? defaultDecayingPointsFactor) as double;
+    stagesRequiredPerMatch = (json[_stagesRequiredPerMatchKey] ?? defaultStagesRequiredPerMatch) as int;
   }
 
   _parsePointsMode(String? name) {

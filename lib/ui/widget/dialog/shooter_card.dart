@@ -170,9 +170,20 @@ class ShooterResultCard extends StatelessWidget {
         ),
       );
     }
-    return Text(
-      shooterString,
-      style: Theme.of(context).textTheme.headline6,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          shooterString,
+          style: Theme.of(context).textTheme.headline6,
+        ),
+        IconButton(
+          icon: Icon(Icons.compare_arrows),
+          onPressed: () {
+            Navigator.of(context).pop(ShooterDialogAction(launchComparison: true));
+          },
+        ),
+      ],
     );
   }
 }

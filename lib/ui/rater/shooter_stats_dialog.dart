@@ -12,6 +12,7 @@ import 'package:intl/intl.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
@@ -828,6 +829,24 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         ],
       ),
       Divider(height: 2, thickness: 1),
+      if(widget.rating is PointsRating) Row(
+        children: [
+          Expanded(flex: 4, child: Text("Points from scores", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(flex: 4, child: Text(
+              "${(widget.rating as PointsRating).ratingFromScores.toStringAsFixed(1)}",
+              style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
+        ],
+      ),
+      if(widget.rating is PointsRating) Divider(height: 2, thickness: 1),
+      if(widget.rating is PointsRating) Row(
+        children: [
+          Expanded(flex: 4, child: Text("Points from participation", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(flex: 4, child: Text(
+              "${(widget.rating as PointsRating).ratingFromParticipation.toStringAsFixed(1)}",
+              style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
+        ],
+      ),
+      if(widget.rating is PointsRating) Divider(height: 2, thickness: 1),
     ];
   }
 }

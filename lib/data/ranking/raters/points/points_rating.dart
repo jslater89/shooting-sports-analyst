@@ -30,8 +30,11 @@ class PointsRating extends ShooterRating<PointsRatingEvent> {
   int get matchesToCount => wrappedRating.intData[_IntKeys.matchesToCount.index];
   set matchesToCount(int v) => wrappedRating.intData[_IntKeys.matchesToCount.index] = v;
 
+  double get ratingFromScores => wrappedRating.rating;
+  double get ratingFromParticipation => participationBonus * length;
+
   @override
-  double get rating => wrappedRating.rating + participationBonus * length;
+  double get rating => ratingFromScores + ratingFromParticipation;
 
   List<PointsRatingEvent>? _cachedSortedEvents;
   /// All events, sorted high to low
@@ -123,11 +126,16 @@ class PointsRating extends ShooterRating<PointsRatingEvent> {
   PointsRatingEvent wrapEvent(DbRatingEvent e) {
     return PointsRatingEvent.wrap(e);
   }
-  
-  
+
+
   List<PointsRatingEvent> emptyRatingEvents = [];
 
   // TODO: combine this in more intelligent fashion, preserving order where possible
   // TODO: ... like with database queries, maybe
   List<PointsRatingEvent> get combinedRatingEvents => []..addAll(ratingEvents)..addAll(emptyRatingEvents);
+
+  @override
+  String toString() {
+    return "PointsRating($name, scores: ${ratingFromScores.toStringAsFixed(1)}, participation: ${ratingFromParticipation.toStringAsFixed(1)})";
+  }
 }
