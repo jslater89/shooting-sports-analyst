@@ -5,15 +5,21 @@
  */
 
 import 'package:collection/collection.dart';
-import 'package:data/stats.dart' show WeibullDistribution;
+import 'package:data/stats.dart' show ContinuousDistribution;
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/math/distribution_tools.dart';
+import 'package:shooting_sports_analyst/data/math/gamma/gamma_estimator.dart';
+import 'package:shooting_sports_analyst/data/math/lognormal/lognormal_estimator.dart';
 import 'package:shooting_sports_analyst/data/math/weibull/weibull_estimator.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
+
+var _log = SSALogger("RaterStatistics");
 
 class RaterStatistics {
   int shooters;
@@ -25,6 +31,8 @@ class RaterStatistics {
   int medianHistory;
 
   int histogramBucketSize;
+
+  /// Map of bucket-start to count.
   Map<int, int> histogram;
 
   Map<Classification, int> countByClass;
@@ -32,12 +40,15 @@ class RaterStatistics {
   Map<Classification, double> minByClass;
   Map<Classification, double> maxByClass;
 
+  /// Map of classifications to a map of bucket-start to count.
   Map<Classification, Map<int, int>> histogramsByClass;
+
+  /// Map of classifications to a list of ratings.
   Map<Classification, List<double>> ratingsByClass;
 
   Map<int, int> yearOfEntryHistogram;
 
-  WeibullDistribution ratingDistribution;
+  ContinuousDistribution ratingDistribution;
 
   RaterStatistics({
     required this.shooters,
@@ -62,14 +73,29 @@ class RaterStatistics {
 
 // Map<int, RaterStatistics> _cachedStats = {};
 
-RaterStatistics getRatingStatistics({required Sport sport, required RatingSystem algorithm, required RatingGroup group, required List<ShooterRating> ratings}) {
-  return _calculateStats(sport, algorithm, group, ratings);
+RaterStatistics getRatingStatistics({
+  required Sport sport,
+  required RatingSystem algorithm,
+  required RatingGroup group,
+  required List<ShooterRating> ratings,
+  ContinuousDistributionEstimator? estimator,
+}) {
+  var e = estimator ?? GammaEstimator();
+  return _calculateStats(sport, algorithm, group, ratings, e);
 }
 
-RaterStatistics _calculateStats(Sport sport, RatingSystem algorithm, RatingGroup group, List<ShooterRating> ratings) {
+RaterStatistics _calculateStats(Sport sport, RatingSystem algorithm, RatingGroup group, List<ShooterRating> ratings, ContinuousDistributionEstimator estimator) {
   var count = ratings.length;
   var allRatings = ratings.map((r) => r.rating).toList()..sort();
-  var ratingDistribution = WeibullEstimator().estimate(allRatings);
+
+  var ratingDistribution = estimator.estimate(allRatings);
+  _log.v("${estimator.runtimeType}: $ratingDistribution");
+
+  _log.v("Fit tests:");
+  _log.v("\tLog likelihood: ${ratingDistribution.logLikelihood(allRatings)}");
+  _log.v("\tKolmogorov-Smirnov: ${ratingDistribution.kolmogorovSmirnovTest(allRatings)}");
+  _log.v("\tChi-square: ${ratingDistribution.chiSquareTest(allRatings)}");
+  _log.v("\tAnderson-Darling: ${ratingDistribution.andersonDarlingTest(allRatings)}");
 
   var allHistoryLengths = ratings.map((r) => r.length).toList()..sort(
     (a, b) => a.compareTo(b)
@@ -91,10 +117,8 @@ RaterStatistics _calculateStats(Sport sport, RatingSystem algorithm, RatingGroup
 
     histogram.increment(bucket);
 
-    var firstEvent = AnalystDatabase().getRatingEventsForSync(rating.wrappedRating, limit: 1, order: Order.ascending).firstOrNull;
-    if(firstEvent != null) {
-      yearOfEntryHistogram.increment(firstEvent.date.year);
-    }
+    var firstEvent = rating.firstSeen;
+    yearOfEntryHistogram.increment(firstEvent.year);
   }
 
   var averagesByClass = <Classification, double>{};

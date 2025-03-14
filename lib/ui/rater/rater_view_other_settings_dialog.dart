@@ -7,6 +7,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shooting_sports_analyst/data/math/distribution_tools.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/standardized_maximum_scaler.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/top_2pct_average_scaler.dart';
@@ -57,12 +58,23 @@ class _RaterViewOtherSettingsDialogState extends State<RaterViewOtherSettingsDia
               },
               dropdownMenuEntries: RatingScalerType.values.map((e) => DropdownMenuEntry(value: e, label: e.name)).toList(),
             ),
+            const SizedBox(height: 15),
+            DropdownMenu<AvailableEstimators>(
+              label: const Text("Rating distribution"),
+              initialSelection: AvailableEstimators.fromEstimator(_displayModel.estimator),
+              onSelected: (value) {
+                if(value != null) {
+                  _displayModel.estimator = value.estimator;
+                }
+              },
+              dropdownMenuEntries: AvailableEstimators.values.map((e) => DropdownMenuEntry(value: e, label: e.name)).toList(),
+            ),
           ],
         ),
       ),
       actions: [
         TextButton(onPressed: () {
-          widget.displayModel.scaler = _displayModel.scaler;
+          widget.displayModel.copyFrom(_displayModel);
           Navigator.of(context).pop();
         }, child: const Text("SAVE")),
       ],
@@ -76,9 +88,9 @@ enum RatingScalerType {
   top2PercentAverage,
   zScore,
   zScoreEloScale,
-  weibullPercentile,
-  weibullZScore,
-  weibullZScoreEloScale;
+  distributionPercentile,
+  distributionZScore,
+  distributionZScoreEloScale;
 
   static fromScaler(RatingScaler scaler) {
     if (scaler is StandardizedMaximumScaler) {
@@ -88,7 +100,7 @@ enum RatingScalerType {
       return RatingScalerType.top2PercentAverage;
     }
     else if(scaler is WeibullScaler) {
-      return RatingScalerType.weibullPercentile;
+      return RatingScalerType.distributionPercentile;
     }
     else if(scaler is ZScoreScaler && scaler.scaleFactor == 100) {
       return RatingScalerType.zScore;
@@ -97,10 +109,10 @@ enum RatingScalerType {
       return RatingScalerType.zScoreEloScale;
     }
     else if(scaler is WeibullZScoreScaler && scaler.scaleFactor == 100) {
-      return RatingScalerType.weibullZScore;
+      return RatingScalerType.distributionZScore;
     }
     else if(scaler is WeibullZScoreScaler) {
-      return RatingScalerType.weibullZScoreEloScale;
+      return RatingScalerType.distributionZScoreEloScale;
     }
     return RatingScalerType.none;
   }
@@ -111,15 +123,15 @@ enum RatingScalerType {
         return StandardizedMaximumScaler(info: RatingScalerInfo.empty());
       case RatingScalerType.top2PercentAverage:
         return Top2PercentAverageScaler(info: RatingScalerInfo.empty());
-      case RatingScalerType.weibullPercentile:
+      case RatingScalerType.distributionPercentile:
         return WeibullScaler(info: RatingScalerInfo.empty(), percentiles: [0.995, 0.95, 0.85], percentileRatings: [1920, 1610, 1410]);
       case RatingScalerType.zScore:
         return ZScoreScaler(info: RatingScalerInfo.empty(), scaleFactor: 100, scaleOffset: 0);
       case RatingScalerType.zScoreEloScale:
         return ZScoreScaler(info: RatingScalerInfo.empty());
-      case RatingScalerType.weibullZScore:
+      case RatingScalerType.distributionZScore:
         return WeibullZScoreScaler(info: RatingScalerInfo.empty(), scaleFactor: 100, scaleOffset: 0);
-      case RatingScalerType.weibullZScoreEloScale:
+      case RatingScalerType.distributionZScoreEloScale:
         return WeibullZScoreScaler(info: RatingScalerInfo.empty());
       case RatingScalerType.none:
         return null;

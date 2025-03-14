@@ -7,10 +7,11 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart' hide IterableNumberExtension;
-import 'package:data/data.dart' show IterableNumExtension, WeibullDistribution;
+import 'package:data/data.dart' show IterableNumExtension, ContinuousDistribution;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/math/gamma/gamma_estimator.dart';
 import 'package:shooting_sports_analyst/data/math/weibull/weibull_estimator.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
@@ -79,7 +80,7 @@ class _RaterViewState extends State<RaterView> {
   late List<ShooterRating> uniqueRatings;
   List<double> allRatings = [];
 
-  WeibullDistribution? ratingDistribution;
+  ContinuousDistribution? ratingDistribution;
   ShooterRating? minRating;
   ShooterRating? maxRating;
   double? top2PercentAverage;
@@ -93,6 +94,7 @@ class _RaterViewState extends State<RaterView> {
     var cachedSource = Provider.of<ChangeNotifierRatingDataSource>(context);
 
     var scaler = Provider.of<RaterViewDisplayModel>(context).scaler;
+    var estimator = Provider.of<RaterViewDisplayModel>(context).estimator;
     var scaleRatings = scaler != null;
 
     var s = cachedSource.getSettings();
@@ -109,24 +111,27 @@ class _RaterViewState extends State<RaterView> {
         settings = s;
         groups = g;
         if(scaleRatings) {
-          _log.i("Generating scaled rating data");
           uniqueRatings = ratings.map((e) => settings.algorithm.wrapDbRating(e)).sorted((a, b) => b.rating.compareTo(a.rating));
           allRatings = uniqueRatings.map((e) => e.rating).toList();
-          ratingDistribution = WeibullEstimator().estimate(allRatings);
-          minRating = uniqueRatings.last;
-          maxRating = uniqueRatings.first;
-          var top2PercentRatings = allRatings.take(min(allRatings.length, max(5, (allRatings.length * 0.02).round()))).toList();
-          top2PercentAverage = top2PercentRatings.average();
-          ratingMean = allRatings.average();
-          ratingStdDev = allRatings.standardDeviation();
-
-          _log.v("Weibull parameters: k = ${ratingDistribution!.shape}, lambda = ${ratingDistribution!.scale}, P99.5 = ${ratingDistribution!.inverseCumulativeProbability(0.995)}");
-          _log.v("Min rating: ${minRating!.rating}, max rating: ${maxRating!.rating}, top 2% average: $top2PercentAverage");
         }
         else {
           uniqueRatings = ratings.map((e) => settings.algorithm.wrapDbRating(e)).toList();
         }
         initialized = true;
+      }
+
+      if(scaleRatings && minRating == null) {
+        ratingDistribution = estimator.estimate(allRatings);
+        _log.i("Generating scaled rating data");
+        minRating = uniqueRatings.last;
+        maxRating = uniqueRatings.first;
+        var top2PercentRatings = allRatings.take(min(allRatings.length, max(5, (allRatings.length * 0.02).round()))).toList();
+        top2PercentAverage = top2PercentRatings.average();
+        ratingMean = allRatings.average();
+        ratingStdDev = allRatings.standardDeviation();
+
+        _log.v("$ratingDistribution");
+        _log.v("Min rating: ${minRating!.rating}, max rating: ${maxRating!.rating}, top 2% average: $top2PercentAverage");
       }
       // settings = s;
       // groups = g;
@@ -244,7 +249,7 @@ class _RaterViewState extends State<RaterView> {
     widget.onRatingsFiltered?.call(asList);
 
     RatingScalerInfo? info;
-    if(scaler != null) {
+    if(initialized && scaler != null) {
       info = RatingScalerInfo(
         minRating: minRating!.rating,
         maxRating: maxRating!.rating,

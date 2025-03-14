@@ -486,7 +486,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
             icon: Icon(Icons.bar_chart),
             onPressed: () async {
               var tab = activeTabs[_tabController.index];
-              var statistics = getRatingStatistics(sport: _sport, algorithm: _settings.algorithm, group: tab, ratings: _ratings);
+              var estimator = Provider.of<RaterViewDisplayModel>(context, listen: false).estimator;
+              var statistics = getRatingStatistics(sport: _sport, algorithm: _settings.algorithm, group: tab, ratings: _ratings, estimator: estimator);
               showDialog(context: context, builder: (context) {
                 return RaterStatsDialog(sport: _sport, group: tab, statistics: statistics);
               });

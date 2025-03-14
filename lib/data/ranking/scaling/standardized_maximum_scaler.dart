@@ -25,7 +25,7 @@ class StandardizedMaximumScaler extends RatingScaler {
 
   @override
   double scaleNumber(double number, {required double originalRating}) {
-    return ((number - info.minRating) / (info.maxRating - info.minRating)) * (scaleMax - scaleMin);
+    return ((originalRating - info.minRating) / (info.maxRating - info.minRating)) * number;
   }
 
   @override

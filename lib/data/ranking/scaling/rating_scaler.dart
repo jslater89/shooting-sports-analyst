@@ -5,7 +5,7 @@
  */
 
 
-import 'package:data/stats.dart';
+import 'package:data/data.dart' show ContinuousDistribution, WeibullDistribution;
 
 /// Rating scalers scale ratings, either clamping/stretching to a new range,
 /// or scaling by a factor, or offsetting by a value.
@@ -32,7 +32,7 @@ class RatingScalerInfo {
   final double minRating;
   final double maxRating;
   final double top2PercentAverage;
-  final WeibullDistribution ratingDistribution;
+  final ContinuousDistribution ratingDistribution;
   final double ratingMean;
   final double ratingStdDev;
 

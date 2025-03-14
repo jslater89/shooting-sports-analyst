@@ -5,10 +5,19 @@
  */
 
 import 'package:flutter/foundation.dart';
+import 'package:shooting_sports_analyst/data/math/distribution_tools.dart';
+import 'package:shooting_sports_analyst/data/math/gamma/gamma_estimator.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 
 class RaterViewDisplayModel with ChangeNotifier {
   // TODO: bring in other stuff from RaterView.
+
+  late ContinuousDistributionEstimator _estimator;
+  ContinuousDistributionEstimator get estimator => _estimator;
+  set estimator(ContinuousDistributionEstimator value) {
+    _estimator = value;
+    notifyListeners();
+  }
 
   RatingScaler? _scaler;
   RatingScaler? get scaler => _scaler;
@@ -19,13 +28,22 @@ class RaterViewDisplayModel with ChangeNotifier {
 
   RaterViewDisplayModel({
     RatingScaler? scaler,
+    ContinuousDistributionEstimator? estimator,
   }) {
     _scaler = scaler;
+    _estimator = estimator ?? GammaEstimator();
   }
 
   RaterViewDisplayModel copy() {
     return RaterViewDisplayModel(
       scaler: scaler?.copy(),
+      estimator: estimator,
     );
+  }
+
+  void copyFrom(RaterViewDisplayModel other) {
+    _scaler = other.scaler;
+    _estimator = other.estimator;
+    notifyListeners();
   }
 }

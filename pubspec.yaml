@@ -34,7 +34,11 @@ dependencies:
   sprintf: ^7.0.0
   intl: ^0.17.0
   flutter_charts: ^0.5.0
-  community_charts_flutter: ^1.0.4
+  community_charts_flutter:
+    git:
+      url: https://github.com/jslater89/community_charts.git
+      ref: master
+      path: community_charts_flutter
   shared_preferences:
   path_provider: ^2.0.15
   sanitize_filename: ^1.0.4
@@ -63,6 +67,8 @@ dependencies:
   two_dimensional_scrollables: ^0.0.4
   window_manager: ^0.4.3
   data: ^0.12.0
+  color_models: ^1.3.3
+  dart_numerics: ^0.0.6
 
 dev_dependencies:
   flutter_test:

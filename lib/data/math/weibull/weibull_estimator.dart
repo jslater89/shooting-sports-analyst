@@ -6,9 +6,10 @@
 
 import 'dart:math';
 import 'package:data/data.dart';
+import 'package:shooting_sports_analyst/data/math/distribution_tools.dart';
 
 /// Estimates Weibull distribution parameters from a dataset using Maximum Likelihood Estimation
-class WeibullEstimator {
+class WeibullEstimator implements ContinuousDistributionEstimator {
   /// Maximum number of iterations for the Newton-Raphson method
   static const int _maxIterations = 100;
 

@@ -13,6 +13,7 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_statistics.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/rater/stacked_distribution_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/box_and_whisker.dart';
 import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 
@@ -96,7 +97,7 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
         children: [
           Expanded(flex: 4, child: Text("Average/median history length", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(
-            flex: 2, 
+            flex: 2,
             child: Text("${widget.statistics.averageHistory.toStringAsFixed(1)}/${widget.statistics.medianHistory}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)
           ),
         ],
@@ -124,11 +125,23 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
       ],
       Padding(
         padding: const EdgeInsets.only(top: 16.0, bottom: 8),
-        child: ClickableLink(
-          onTap: () => setState(() {
-            histogram = !histogram;
-          }),
-          child: Text(histogram ? "Histogram" : "Quartiles", style: Theme.of(context).textTheme.bodyLarge!.copyWith(color: Theme.of(context).colorScheme.tertiary)),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ClickableLink(
+              onTap: () => setState(() {
+                histogram = !histogram;
+              }),
+              child: Text(histogram ? "Histogram" : "Quartiles", style: Theme.of(context).textTheme.bodyLarge!.copyWith(color: Theme.of(context).colorScheme.tertiary)),
+            ),
+            const SizedBox(width: 16),
+            ClickableLink(
+              onTap: () {
+                showDialog(context: context, builder: (context) => StackedDistributionDialog(sport: widget.sport, group: widget.group, statistics: widget.statistics));
+              },
+              child: Text("Distribution", style: Theme.of(context).textTheme.bodyLarge!.copyWith(color: Theme.of(context).colorScheme.tertiary)),
+            )
+          ],
         ),
       ),
       SizedBox(
@@ -329,13 +342,13 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
     for(var classification in widget.sport.classifications.values) {
       var classHist = widget.statistics.histogramsByClass[classification]!;
 
-      List<double> data = [];
+      List<double> histogramHeight = [];
       for(int i = minKey; i < maxKey + 1; i += 1) {
-        data.add(classHist[i]?.toDouble() ?? 0.0);
+        histogramHeight.add(classHist[i]?.toDouble() ?? 0.0);
       }
 
       legends.add(classification.shortDisplayName);
-      series.add(data);
+      series.add(histogramHeight);
     }
 
     var labels = <String>[];
@@ -367,7 +380,7 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
   }
 }
 
-extension _ChartColor on Classification {
+extension ChartColor on Classification {
   Color get color {
     switch(this.name) {
       case "Grandmaster":
