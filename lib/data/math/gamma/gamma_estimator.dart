@@ -31,8 +31,8 @@ class GammaEstimator implements ContinuousDistributionEstimator {
 
     // Calculate necessary statistics
     final n = data.length;
-    final mean = data.reduce((a, b) => a + b) / n;
-    final logMean = data.map(log).reduce((a, b) => a + b) / n;
+    final mean = data.average();
+    final logMean = data.map(log).average();
     final s = log(mean) - logMean;
 
     // Initial guess for shape parameter (k)

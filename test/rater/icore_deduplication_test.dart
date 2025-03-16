@@ -180,8 +180,10 @@ void main() async {
     expect(deduplication.isOk(), isTrue);
     var results = deduplication.unwrap();
     expect(reason: "number of results", results, hasLength(1));
-    expect(reason: "number of causes", results[0].causes, hasLength(1));
-    expect(reason: "cause is ManualReviewRecommended", results[0].causes.first, isA<ManualReviewRecommended>());
+    expect(reason: "number of causes", results[0].causes, hasLength(3));
+    expect(reason: "cause 1 is MultipleNumbersOfType", results[0].causes.first, isA<MultipleNumbersOfType>());
+    expect(reason: "cause 2 is MultipleNumbersOfType", results[0].causes[1], isA<MultipleNumbersOfType>());
+    expect(reason: "cause 3 is ManualReviewRecommended", results[0].causes.last, isA<ManualReviewRecommended>());
     expect(reason: "number of proposed actions", results[0].proposedActions, hasLength(3));
     expect(reason: "proposed action 1 is DataEntryFix", results[0].proposedActions.first, isA<DataEntryFix>());
     expect(reason: "proposed action 2 is DataEntryFix", results[0].proposedActions[1], isA<DataEntryFix>());
@@ -226,7 +228,130 @@ void main() async {
     expect(reason: "target number", mapping.targetNumber, equals("LPASTATSGEEK"));
     expect(reason: "source numbers", mapping.sourceNumbers, equals(["PA4532", "LPA4532"]));
   });
-  
+
+  test("Nonambiguous Multiples of Type", () async {
+    var project = DbRatingProject(
+      name: "Nonambiguous Multiples of Type",
+      sportName: icoreSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "nonambiguous-multiples-of-type");
+    var deduplicator = IcoreDeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      group: ratingGroup,
+      checkDataEntryErrors: true,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    expect(reason: "number of causes", results[0].causes, hasLength(2));
+    expect(reason: "cause 1 is MultipleNumbersOfType", results[0].causes.first, isA<MultipleNumbersOfType>());
+    expect(reason: "cause 2 is MultipleNumbersOfType", results[0].causes.last, isA<MultipleNumbersOfType>());
+    expect(reason: "number of proposed actions", results[0].proposedActions, hasLength(4));
+    // Two blacklists (standard to standard, life to life)
+    var action1 = results[0].proposedActions[0];
+    expect(reason: "action 1 is Blacklist", action1, isA<Blacklist>());
+    var blacklist1 = action1 as Blacklist;
+    var action2 = results[0].proposedActions[1];
+    expect(reason: "action 2 is Blacklist", action2, isA<Blacklist>());
+    var blacklist2 = action2 as Blacklist;
+    bool standardBlacklistFound = false;
+    bool lifeBlacklistFound = false;
+    for(var b in [blacklist1, blacklist2]) {
+      if(b.sourceNumber == "PA4532" && b.targetNumber == "AZ2512") {
+        standardBlacklistFound = true;
+      }
+      else if(b.sourceNumber == "LPA4532" && b.targetNumber == "LAZ2512") {
+        lifeBlacklistFound = true;
+      }
+    }
+    expect(reason: "standard blacklist found", standardBlacklistFound, isTrue);
+    expect(reason: "life blacklist found", lifeBlacklistFound, isTrue);
+
+    // Two auto-mappings (PA4532 to LPA4532, AZ2512 to LAZ2512)
+    var action3 = results[0].proposedActions[2];
+    expect(reason: "action 3 is AutoMapping", action3, isA<AutoMapping>());
+    var mapping3 = action3 as AutoMapping;
+    expect(reason: "target number", mapping3.targetNumber, equals("LPA4532"));
+    expect(reason: "source numbers", mapping3.sourceNumbers, equals(["PA4532"]));
+    var action4 = results[0].proposedActions[3];
+    expect(reason: "action 4 is AutoMapping", action4, isA<AutoMapping>());
+    var mapping4 = action4 as AutoMapping;
+    expect(reason: "target number", mapping4.targetNumber, equals("LAZ2512"));
+    expect(reason: "source numbers", mapping4.sourceNumbers, equals(["AZ2512"]));
+  });
+
+  test("Ambiguous Multiples of Type", () async {
+    var project = DbRatingProject(
+      name: "Ambiguous Multiples of Type",
+      sportName: icoreSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "ambiguous-multiples-of-type");
+    var deduplicator = IcoreDeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      group: ratingGroup,
+      checkDataEntryErrors: true,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    expect(reason: "number of causes", results[0].causes, hasLength(3));
+    expect(reason: "cause 1 is MultipleNumbersOfType", results[0].causes[0], isA<MultipleNumbersOfType>());
+    expect(reason: "cause 2 is MultipleNumbersOfType", results[0].causes[1], isA<MultipleNumbersOfType>());
+    expect(reason: "cause 3 is AmbiguousMapping", results[0].causes[2], isA<AmbiguousMapping>());
+
+    var ambiguousMapping = results[0].causes[2] as AmbiguousMapping;
+    expect(reason: "conflicting types are standard and life", ambiguousMapping.conflictingTypes, unorderedEquals([MemberNumberType.standard, MemberNumberType.life]));
+    expect(reason: "target is benefactor", ambiguousMapping.targetNumbers, equals(["LPASTATSGEEK"]));
+    expect(reason: "source numbers", ambiguousMapping.sourceNumbers, unorderedEquals(["PA4532", "LPA4532", "AZ2512", "LAZ2512"]));
+
+    expect(reason: "number of proposed actions", results[0].proposedActions, hasLength(4));
+    // Two blacklists (standard to standard, life to life)
+    var action1 = results[0].proposedActions[0];
+    expect(reason: "action 1 is Blacklist", action1, isA<Blacklist>());
+    var blacklist1 = action1 as Blacklist;
+    var action2 = results[0].proposedActions[1];
+    expect(reason: "action 2 is Blacklist", action2, isA<Blacklist>());
+    var blacklist2 = action2 as Blacklist;
+    bool standardBlacklistFound = false;
+    bool lifeBlacklistFound = false;
+    for(var b in [blacklist1, blacklist2]) {
+      if(b.sourceNumber == "PA4532" && b.targetNumber == "AZ2512") {
+        standardBlacklistFound = true;
+      }
+      else if(b.sourceNumber == "LPA4532" && b.targetNumber == "LAZ2512") {
+        lifeBlacklistFound = true;
+      }
+    }
+    expect(reason: "standard blacklist found", standardBlacklistFound, isTrue);
+    expect(reason: "life blacklist found", lifeBlacklistFound, isTrue);
+
+    // Two auto-mappings (PA4532 to LPA4532, AZ2512 to LAZ2512)
+    var action3 = results[0].proposedActions[2];
+    expect(reason: "action 3 is AutoMapping", action3, isA<AutoMapping>());
+    var mapping3 = action3 as AutoMapping;
+    expect(reason: "target number", mapping3.targetNumber, equals("LPA4532"));
+    expect(reason: "source numbers", mapping3.sourceNumbers, equals(["PA4532"]));
+    var action4 = results[0].proposedActions[3];
+    expect(reason: "action 4 is AutoMapping", action4, isA<AutoMapping>());
+    var mapping4 = action4 as AutoMapping;
+    expect(reason: "target number", mapping4.targetNumber, equals("LAZ2512"));
+    expect(reason: "source numbers", mapping4.sourceNumbers, equals(["AZ2512"]));
+  });
+
 
   // #endregion
 }
@@ -317,6 +442,20 @@ Future<void> setupTestDb(AnalystDatabase db) async {
     matchId: "typo-removal-standard-to-vanity",
   );
 
+  var nonambiguousMultiplesOfType = generateMatch(
+    shooters: [competitorMap["PA4532"]!, competitorMap["LPA4532"]!, competitorMap["AZ2512"]!, competitorMap["LAZ2512"]!],
+    date: DateTime(2024, 1, 8),
+    matchName: "Nonambiguous Multiples of Type",
+    matchId: "nonambiguous-multiples-of-type",
+  );
+
+  var ambiguousMultiplesOfType = generateMatch(
+    shooters: [competitorMap["PA4532"]!, competitorMap["LPA4532"]!, competitorMap["AZ2512"]!, competitorMap["LAZ2512"]!, competitorMap["LPASTATSGEEK"]!],
+    date: DateTime(2024, 1, 9),
+    matchName: "Ambiguous Multiples of Type",
+    matchId: "ambiguous-multiples-of-type",
+  );
+
   var futures = [
     db.saveMatch(standardToLife),
     db.saveMatch(standardToVanityLife),
@@ -325,6 +464,8 @@ Future<void> setupTestDb(AnalystDatabase db) async {
     db.saveMatch(standardToLifeTypo),
     db.saveMatch(reversedStandardToLifeTypo),
     db.saveMatch(typoRemovalStandardToVanity),
+    db.saveMatch(nonambiguousMultiplesOfType),
+    db.saveMatch(ambiguousMultiplesOfType),
   ];
   await Future.wait(futures);
 }
@@ -380,6 +521,13 @@ Map<String, Shooter> generateCompetitors() {
     firstName: "Jay",
     lastName: "Slater",
     memberNumber: "AZ2512",
+  );
+
+  /// A lifetime imitator.
+  competitors["LAZ2512"] = Shooter(
+    firstName: "Jay",
+    lastName: "Slater",
+    memberNumber: "LAZ2512",
   );
 
   return competitors;

@@ -20,11 +20,11 @@ import 'package:fuzzywuzzy/fuzzywuzzy.dart' as fuzzywuzzy;
 var _log = SSALogger("IcoreDeduplicator");
 
 /// Wraps ICORE numbers, providing some normalized accessors and an equality test.
-/// 
+///
 /// ICORE numbers are relatively straightforward: they consist of a prefix of 2-4 letters,
 /// in the form:
 ///  [L]<2-digit-state-code>|<3-digit-country-code><1-n-digit-number|custom-alphanumeric-string-life-only>
-/// 
+///
 /// The L is a literal L, which indicates a life member if present.
 /// The next element is a 2-digit US state code or a 3-digit ISO country code.
 /// The final element is either a numeric ID, or in some rare cases for life members only, a
@@ -51,7 +51,7 @@ class IcoreMemberNumber {
 
   /// Whether the member number is a vanity member number, which for our purposes means
   /// that it is not a simple numeric ID.
-  /// 
+  ///
   /// Some vanity IDs are entirely numeric, but we treat those as non-vanity IDs.
   late final bool isVanity;
 
@@ -80,7 +80,7 @@ class IcoreMemberNumber {
       isVanity = !RegExp(r'^[0-9]+$').hasMatch(uniqueIdentifier);
       valid = true;
     }
-    
+
     if(lifeMember && isVanity) {
       type = MemberNumberType.benefactor;
     }
@@ -94,9 +94,9 @@ class IcoreMemberNumber {
 
   /// Whether this member number is the same as another member number across
   /// all three components: life/standard status, geo code, and unique identifier.
-  /// 
+  ///
   /// Calls [sameMember] to check equality. Can be called on either another
-  /// [IcoreMemberNumber] or a [String], in which case the string will be 
+  /// [IcoreMemberNumber] or a [String], in which case the string will be
   /// converted to an [IcoreMemberNumber] for comparison.
   @override
   operator ==(Object other) {
@@ -115,16 +115,21 @@ class IcoreMemberNumber {
 
   /// Whether this member number definitely represents the same member as another
   /// member number.
-  /// 
+  ///
   /// If [ignoreLifeDifference] is true (the default), then a life number and a
   /// standard number with the same geocode and unique identifier will be considered
   /// the same member. Otherwise, the life/standard status must also match.
-  bool sameMember(IcoreMemberNumber other, {bool ignoreLifeDifference = true}) {
+  ///
+  /// If [ignoreGeoCode] is true, then the geocode is not considered when determining
+  /// whether two member numbers are the same.
+  bool sameMember(IcoreMemberNumber other, {bool ignoreLifeDifference = true, bool ignoreGeoCode = false}) {
+    var geoCodeMatches = ignoreGeoCode ? true : geoCode == other.geoCode;
+    var identifierMatches = uniqueIdentifier == other.uniqueIdentifier;
     if(ignoreLifeDifference) {
-      return geoCode == other.geoCode && uniqueIdentifier == other.uniqueIdentifier;
+      return geoCodeMatches && identifierMatches;
     }
     else {
-      return geoCode == other.geoCode && uniqueIdentifier == other.uniqueIdentifier && lifeMember == other.lifeMember;
+      return geoCodeMatches && identifierMatches && lifeMember == other.lifeMember;
     }
   }
 
@@ -135,11 +140,11 @@ class IcoreMemberNumber {
 }
 
 /// A regex for matching ICORE numbers.
-/// 
+///
 /// Capture group 1: "L" if life member, empty/null otherwise.
-/// 
+///
 /// Capture group 2: geo code, either an ISO-3166-1 country code or a USPS state code.
-/// 
+///
 /// Capture group 3: the unique identifier, which is a 1-12 character string of non-whitespace characters.
 final _icoreNumberRegex = RegExp(r'^(L?)(' + "$_countryCodes|$_stateCodes" + r')([^\s]{1,12})$');
 
@@ -164,7 +169,7 @@ class IcoreDeduplicator extends StandardDeduplicator {
   }
 
   /// In ICORE, member numbers are one of three types:
-  /// 
+  ///
   /// - [MemberNumberType.standard]: an ordinary member number of the form PA1234.
   /// - [MemberNumberType.life]: a life member number of the form LPA1234.
   /// - [MemberNumberType.benefactor]: a member number with a vanity identifier, like LINREVOSHTR.
@@ -206,7 +211,7 @@ class IcoreDeduplicator extends StandardDeduplicator {
   }
 
   static const similarityThreshold = 65;
-  
+
   @override
   DeduplicationCollision? detectConflicts({
     required DeduplicationCollision conflict,
@@ -262,6 +267,17 @@ class IcoreDeduplicator extends StandardDeduplicator {
     // the source/target lists.
     for(var type in numbers.keys) {
       var numbersOfType = numbers[type] ?? [];
+
+      if(numbersOfType.length > 1) {
+        conflict.causes.add(
+          MultipleNumbersOfType(
+            deduplicatorName: name,
+            memberNumberType: type,
+            memberNumbers: numbersOfType,
+            probablyInvalidNumbers: numbersOfType.where((e) => !icoreNumbers[e]!.valid).toList(),
+          )
+        );
+      }
       // Compare numbers pairwise, add either fixes or blacklists as appropriate (if not
       // already blacklisted).
       for(var i = 0; i < numbersOfType.length; i++) {
@@ -305,7 +321,13 @@ class IcoreDeduplicator extends StandardDeduplicator {
 
     numbers = ongoingNumbers.deepCopy();
 
+
+    // Check to see if we have at most one number of each type.
+    // We can do some tricks if we do.
     bool singleNumberOfMultipleTypes = numbers.length > 1;
+    int standardCount = numbers[MemberNumberType.standard]?.length ?? 0;
+    int lifeCount = numbers[MemberNumberType.life]?.length ?? 0;
+    int benefactorCount = numbers[MemberNumberType.benefactor]?.length ?? 0;
     for(var type in numbers.keys) {
       if(numbers[type]!.length != 1) {
         singleNumberOfMultipleTypes = false;
@@ -313,7 +335,6 @@ class IcoreDeduplicator extends StandardDeduplicator {
     }
 
     // Handle various standard -> life mapping cases.
-    // If we have at most one number of each type, we can do some tricks.
     if(singleNumberOfMultipleTypes) {
       IcoreMemberNumber? standard;
       IcoreMemberNumber? life;
@@ -322,7 +343,7 @@ class IcoreDeduplicator extends StandardDeduplicator {
         standard = icoreNumbers[numbers[MemberNumberType.standard]!.first]!;
       }
       if(numbers.containsKey(MemberNumberType.life)) {
-        life = icoreNumbers[numbers[MemberNumberType.life]!.first]!; 
+        life = icoreNumbers[numbers[MemberNumberType.life]!.first]!;
       }
       if(numbers.containsKey(MemberNumberType.benefactor)) {
         vanity = icoreNumbers[numbers[MemberNumberType.benefactor]!.first]!;
@@ -348,7 +369,7 @@ class IcoreDeduplicator extends StandardDeduplicator {
 
       if(standard != null && life != null) {
         if(standard.sameMember(life)) {
-          // If the standard and life numbers are the same, map standard to life. 
+          // If the standard and life numbers are the same, map standard to life.
           // There's no need to check for blacklisting here, because
           // blacklisting PA1234 to LPA1234 is not a valid operation.
           if(!alreadyMapped(standard.normalizedNumber, life.normalizedNumber, detectedUserMappings)) {
@@ -356,7 +377,7 @@ class IcoreDeduplicator extends StandardDeduplicator {
           }
         }
         else if(
-          standard.geoCode == life.geoCode 
+          standard.geoCode == life.geoCode
           && fuzzywuzzy.weightedRatio(standard.nonLifeNumber, life.nonLifeNumber) > similarityThreshold
           && !blacklist.isBlacklisted(standard.normalizedNumber, life.normalizedNumber)
         ) {
@@ -470,10 +491,6 @@ class IcoreDeduplicator extends StandardDeduplicator {
                 // Not much point in proceeding past this.
                 return conflict;
               }
-              else {
-                // Otherwise, the mapping is from standard to life, and we'll handle that in
-                // the life->vanity step.
-              }
             }
             else {
               finalMapping.sourceNumbers.addIfMissing(life.normalizedNumber);
@@ -491,6 +508,112 @@ class IcoreDeduplicator extends StandardDeduplicator {
           return conflict;
         }
       }
+    }
+
+    ongoingNumbers = numbers.deepCopy();
+
+    // If we have multiple numbers of both standard and life type, we can try to
+    // propose mappings if they're equal or close. (Although we've already done
+    // typo checking at this point, so maybe we can stick with just identical matches.)
+    if(standardCount > 1 && lifeCount >= 1) {
+      // Loop through the standard numbers and compare to life numbers. If the identifier
+      // component is identical, propose a mapping if it isn't blacklisted.
+      for(var standardNumber in numbers[MemberNumberType.standard]!) {
+        var standard = icoreNumbers[standardNumber]!;
+        for(var lifeNumber in numbers[MemberNumberType.life]!) {
+          var life = icoreNumbers[lifeNumber]!;
+          if(standard.sameMember(life, ignoreGeoCode: true)) {
+            if(!blacklist.isBlacklisted(standard.normalizedNumber, life.normalizedNumber)) {
+              ongoingNumbers[MemberNumberType.standard]!.remove(standardNumber);
+              ongoingNumbers[MemberNumberType.life]!.remove(lifeNumber);
+              conflict.proposedActions.add(AutoMapping(
+                sourceNumbers: [standard.normalizedNumber],
+                targetNumber: life.normalizedNumber,
+              ));
+            }
+          }
+        }
+      }
+    }
+
+    // At this point, if we have any numbers left, we can't make further proposals and
+    // need to report an ambiguous mapping.
+
+    // Recalculate our counts.
+    numbers = ongoingNumbers.deepCopy();
+    standardCount = numbers[MemberNumberType.standard]?.length ?? 0;
+    lifeCount = numbers[MemberNumberType.life]?.length ?? 0;
+    benefactorCount = numbers[MemberNumberType.benefactor]?.length ?? 0;
+    var originalStandardCount = originalNumbers[MemberNumberType.standard]?.length ?? 0;
+    var originalLifeCount = originalNumbers[MemberNumberType.life]?.length ?? 0;
+    var originalBenefactorCount = originalNumbers[MemberNumberType.benefactor]?.length ?? 0;
+
+    List<MemberNumberType> conflictingTypes = [];
+    List<String> sourceNumbers = [];
+    List<String> targetNumbers = [];
+    MemberNumberType? targetType;
+    if(standardCount >= 1 && lifeCount >= 1 && benefactorCount == 0) {
+      if(standardCount > 1) {
+        conflictingTypes.add(MemberNumberType.standard);
+      }
+      if(lifeCount > 1) {
+        conflictingTypes.add(MemberNumberType.life);
+      }
+      sourceNumbers.addAll(numbers[MemberNumberType.standard]!);
+      targetNumbers.addAll(numbers[MemberNumberType.life]!);
+      targetType = MemberNumberType.life;
+    }
+    if((originalStandardCount > 1 || originalLifeCount > 1) && benefactorCount > 0) {
+      if(originalStandardCount > 1) {
+        conflictingTypes.add(MemberNumberType.standard);
+      }
+      if(originalLifeCount > 1) {
+        conflictingTypes.add(MemberNumberType.life);
+      }
+      if(originalBenefactorCount > 1) {
+        conflictingTypes.add(MemberNumberType.benefactor);
+      }
+      sourceNumbers.addAll(originalNumbers[MemberNumberType.standard] ?? []);
+      sourceNumbers.addAll(originalNumbers[MemberNumberType.life] ?? []);
+      targetNumbers.addAll(numbers[MemberNumberType.benefactor] ?? []);
+      targetType = MemberNumberType.benefactor;
+    }
+    Map<String, String> relevantMappings = {};
+    for(var type in numbers.keys) {
+      for(var number in numbers[type]!) {
+        relevantMappings[number] = icoreNumbers[number]!.normalizedNumber;
+      }
+    }
+    Map<String, List<String>> relevantBlacklistEntries = {};
+    for(var type in numbers.keys) {
+      for(var number in numbers[type]!) {
+        relevantBlacklistEntries[number] = blacklist[number] ?? [];
+      }
+    }
+
+    for(var number in conflict.uncoveredNumbers) {
+      var type = classify(number);
+      if(type == targetType) {
+        targetNumbers.addIfMissing(number);
+      }
+      else {
+        sourceNumbers.addIfMissing(number);
+      }
+    }
+    if(conflictingTypes.isNotEmpty) {
+      conflict.causes.add(
+        AmbiguousMapping(
+          deduplicatorName: name,
+          conflictingTypes: conflictingTypes,
+          sourceNumbers: sourceNumbers,
+          targetNumbers: targetNumbers,
+          sourceConflicts: sourceNumbers.length > 1,
+          targetConflicts: targetNumbers.length > 1,
+          relevantBlacklistEntries: relevantBlacklistEntries,
+          relevantMappings: relevantMappings,
+          crossMapping: false,
+        )
+      );
     }
 
     return conflict;
