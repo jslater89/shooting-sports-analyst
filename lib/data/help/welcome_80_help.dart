@@ -36,13 +36,9 @@ Among others, the following issues are known:
 * Category filters are not yet supported in the rating view screen.
 * Repeatedly migrating old rating projects with the same name override yields multiple
   projects with the same name.
-* There are a few places where the ratings view UI is a bit slow.
 * Member number mappings, data entry fixes, and blacklist entries migrated from old
   rating projects may not work as expected.
 * Match score viewing for IDPA and PCSL may have some flaws in some cases.
-* Rating project reports may include a large number of notifications about duplicated
-  actions.
-* 
 
 Please report other issues via [Discord](https://discord.gg/rqHh7PVMNA) or
 [GitHub](https://github.com/jslater89/shooting-sports-analyst/issues).
