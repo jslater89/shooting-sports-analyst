@@ -352,8 +352,125 @@ void main() async {
     expect(reason: "source numbers", mapping4.sourceNumbers, equals(["AZ2512"]));
   });
 
+  test("Blacklist Standard to Vanity", () async {
+    var project = DbRatingProject(
+      name: "Blacklist Standard to Vanity",
+      sportName: icoreSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+      )
+    );
 
-  // #endregion
+    var newRatings = await addMatchToTest(db, project, "blacklist-standard-to-vanity");
+    var deduplicator = IcoreDeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      group: ratingGroup,
+      checkDataEntryErrors: true,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    expect(reason: "number of proposed actions", results[0].proposedActions, hasLength(1));
+    expect(reason: "proposed action is Blacklist", results[0].proposedActions.first, isA<Blacklist>());
+    var blacklist = results[0].proposedActions.first as Blacklist;
+    expect(reason: "source number", blacklist.sourceNumber, equals("PA4532"));
+    expect(reason: "target number", blacklist.targetNumber, equals("LAZNOTREALJAY"));
+  });
+
+  test("Blacklist Life to Vanity", () async {
+    var project = DbRatingProject(
+      name: "Blacklist Life to Vanity",
+      sportName: icoreSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "blacklist-life-to-vanity");
+    var deduplicator = IcoreDeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      group: ratingGroup,
+      checkDataEntryErrors: true,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    expect(reason: "number of proposed actions", results[0].proposedActions, hasLength(1));
+    expect(reason: "proposed action is Blacklist", results[0].proposedActions.first, isA<Blacklist>());
+    var blacklist = results[0].proposedActions.first as Blacklist;
+    expect(reason: "source number", blacklist.sourceNumber, equals("LPA4532"));
+    expect(reason: "target number", blacklist.targetNumber, equals("LAZNOTREALJAY"));
+  });
+
+  test("Ambiguous Vanity", () async {
+    var project = DbRatingProject(
+      name: "Ambiguous Vanity",
+      sportName: icoreSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "ambiguous-vanity");
+    var deduplicator = IcoreDeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      group: ratingGroup,
+      checkDataEntryErrors: true,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    expect(reason: "number of causes", results[0].causes, hasLength(2));
+    expect(reason: "cause 1 is MultipleNumbersOfType", results[0].causes[0], isA<MultipleNumbersOfType>());
+    expect(reason: "cause 2 is AmbiguousMapping", results[0].causes[1], isA<AmbiguousMapping>());
+    var multipleNumbersOfType = results[0].causes[0] as MultipleNumbersOfType;
+    expect(reason: "multiple benefactor numbers", multipleNumbersOfType.memberNumberType, equals(MemberNumberType.benefactor));
+    var ambiguousMapping2 = results[0].causes[1] as AmbiguousMapping;
+    expect(reason: "conflicting type is benefactor", ambiguousMapping2.conflictingTypes, unorderedEquals([MemberNumberType.benefactor]));
+    expect(reason: "target is benefactor", ambiguousMapping2.targetNumbers, unorderedEquals(["LPASTATSGEEK", "LAZNOTREALJAY"]));
+    expect(reason: "source numbers", ambiguousMapping2.sourceNumbers, unorderedEquals(["PA4532"]));
+  });
+
+  test("Three Way Ambiguous Vanity", () async {
+    var project = DbRatingProject(
+      name: "Three Way Ambiguous Vanity",
+      sportName: icoreSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "three-way-ambiguous-vanity");
+    var deduplicator = IcoreDeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      group: ratingGroup,
+      checkDataEntryErrors: true,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    expect(reason: "number of causes", results[0].causes, hasLength(2));
+    expect(reason: "cause 1 is MultipleNumbersOfType", results[0].causes[0], isA<MultipleNumbersOfType>());
+    expect(reason: "cause 2 is AmbiguousMapping", results[0].causes[1], isA<AmbiguousMapping>());
+    var multipleNumbersOfType = results[0].causes[0] as MultipleNumbersOfType;
+    expect(reason: "multiple benefactor numbers", multipleNumbersOfType.memberNumberType, equals(MemberNumberType.benefactor));
+    var ambiguousMapping2 = results[0].causes[1] as AmbiguousMapping;
+    expect(reason: "conflicting type is benefactor", ambiguousMapping2.conflictingTypes, unorderedEquals([MemberNumberType.benefactor]));
+    expect(reason: "target is benefactor", ambiguousMapping2.targetNumbers, unorderedEquals(["LPASTATSGEEK", "LAZNOTREALJAY"]));
+    expect(reason: "source numbers", ambiguousMapping2.sourceNumbers, unorderedEquals(["PA4532", "LPA4532"]));
+  });
 }
 
 Future<List<DbShooterRating>> addMatchToTest(AnalystDatabase db, DbRatingProject project, String matchId) async {
@@ -456,6 +573,34 @@ Future<void> setupTestDb(AnalystDatabase db) async {
     matchId: "ambiguous-multiples-of-type",
   );
 
+  var blacklistStandardToVanity = generateMatch(
+    shooters: [competitorMap["PA4532"]!, competitorMap["LAZNOTREALJAY"]!],
+    date: DateTime(2024, 1, 10),
+    matchName: "Blacklist Standard to Vanity",
+    matchId: "blacklist-standard-to-vanity",
+  );
+
+  var blacklistLifeToVanity = generateMatch(
+    shooters: [competitorMap["LPA4532"]!, competitorMap["LAZNOTREALJAY"]!],
+    date: DateTime(2024, 1, 11),
+    matchName: "Blacklist Life to Vanity",
+    matchId: "blacklist-life-to-vanity",
+  );
+
+  var ambiguousVanity = generateMatch(
+    shooters: [competitorMap["PA4532"]!, competitorMap["LPASTATSGEEK"]!, competitorMap["LAZNOTREALJAY"]!],
+    date: DateTime(2024, 1, 12),
+    matchName: "Ambiguous Vanity",
+    matchId: "ambiguous-vanity",
+  );
+
+  var threeWayAmbiguousVanity = generateMatch(
+    shooters: [competitorMap["PA4532"]!, competitorMap["LPA4532"]!, competitorMap["LPASTATSGEEK"]!, competitorMap["LAZNOTREALJAY"]!],
+    date: DateTime(2024, 1, 13),
+    matchName: "Three Way Ambiguous Vanity",
+    matchId: "three-way-ambiguous-vanity",
+  );
+
   var futures = [
     db.saveMatch(standardToLife),
     db.saveMatch(standardToVanityLife),
@@ -466,6 +611,10 @@ Future<void> setupTestDb(AnalystDatabase db) async {
     db.saveMatch(typoRemovalStandardToVanity),
     db.saveMatch(nonambiguousMultiplesOfType),
     db.saveMatch(ambiguousMultiplesOfType),
+    db.saveMatch(blacklistStandardToVanity),
+    db.saveMatch(blacklistLifeToVanity),
+    db.saveMatch(ambiguousVanity),
+    db.saveMatch(threeWayAmbiguousVanity),
   ];
   await Future.wait(futures);
 }
@@ -528,6 +677,13 @@ Map<String, Shooter> generateCompetitors() {
     firstName: "Jay",
     lastName: "Slater",
     memberNumber: "LAZ2512",
+  );
+
+  /// A vanity imitator.
+  competitors["LAZNOTREALJAY"] = Shooter(
+    firstName: "Jay",
+    lastName: "Slater",
+    memberNumber: "LAZNOTREALJAY",
   );
 
   return competitors;
