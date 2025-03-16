@@ -7,8 +7,8 @@
 import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 
 /// Scales ratings to a z-score as calculated from a Weibull variance/stdDev.
-class WeibullZScoreScaler extends RatingScaler {
-  WeibullZScoreScaler({required super.info, this.scaleFactor = 500, this.scaleOffset = 1000});
+class DistributionZScoreScaler extends RatingScaler {
+  DistributionZScoreScaler({required super.info, this.scaleFactor = 500, this.scaleOffset = 1000});
 
   final double scaleFactor;
   final double scaleOffset;
@@ -32,6 +32,6 @@ class WeibullZScoreScaler extends RatingScaler {
 
   @override
   RatingScaler copy() {
-    return WeibullZScoreScaler(info: info.copy(), scaleFactor: scaleFactor, scaleOffset: scaleOffset);
+    return DistributionZScoreScaler(info: info.copy(), scaleFactor: scaleFactor, scaleOffset: scaleOffset);
   }
 }

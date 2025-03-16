@@ -453,6 +453,17 @@ class IcoreDeduplicator extends StandardDeduplicator {
             }
           }
         }
+        else {
+          // If the standard and vanity numbers have different geocodes, they're probably
+          // different competitors, and we should blacklist them.
+          if(!blacklist.isBlacklisted(standard.normalizedNumber, vanity.normalizedNumber)) {
+            conflict.proposedActions.add(Blacklist(
+              sourceNumber: standard.normalizedNumber,
+              targetNumber: vanity.normalizedNumber,
+              bidirectional: true,
+            ));
+          }
+        }
       }
 
       // We're doing the same exact thing for life->vanity as we did for standard->vanity.
@@ -500,6 +511,17 @@ class IcoreDeduplicator extends StandardDeduplicator {
             }
           }
         }
+        else {
+          // If the life and vanity numbers have different geocodes, they're probably
+          // different competitors, and we should blacklist them.
+          if(!blacklist.isBlacklisted(life.normalizedNumber, vanity.normalizedNumber)) {
+            conflict.proposedActions.add(Blacklist(
+              sourceNumber: life.normalizedNumber,
+              targetNumber: vanity.normalizedNumber,
+              bidirectional: true,
+            ));
+          }
+        }
       }
 
       if(finalMapping.sourceNumbers.isNotEmpty) {
@@ -536,6 +558,9 @@ class IcoreDeduplicator extends StandardDeduplicator {
       }
     }
 
+    // TODO: if we have multiple numbers of benefactor type and one or more of other types...
+    // we can try to lean on geocodes to resolve the ambiguity.
+
     // At this point, if we have any numbers left, we can't make further proposals and
     // need to report an ambiguous mapping.
 
@@ -554,29 +579,35 @@ class IcoreDeduplicator extends StandardDeduplicator {
     MemberNumberType? targetType;
     if(standardCount >= 1 && lifeCount >= 1 && benefactorCount == 0) {
       if(standardCount > 1) {
-        conflictingTypes.add(MemberNumberType.standard);
+        conflictingTypes.addIfMissing(MemberNumberType.standard);
       }
       if(lifeCount > 1) {
-        conflictingTypes.add(MemberNumberType.life);
+        conflictingTypes.addIfMissing(MemberNumberType.life);
       }
-      sourceNumbers.addAll(numbers[MemberNumberType.standard]!);
-      targetNumbers.addAll(numbers[MemberNumberType.life]!);
+      sourceNumbers.addAllIfMissing(numbers[MemberNumberType.standard]!);
+      targetNumbers.addAllIfMissing(numbers[MemberNumberType.life]!);
       targetType = MemberNumberType.life;
     }
     if((originalStandardCount > 1 || originalLifeCount > 1) && benefactorCount > 0) {
       if(originalStandardCount > 1) {
-        conflictingTypes.add(MemberNumberType.standard);
+        conflictingTypes.addIfMissing(MemberNumberType.standard);
       }
       if(originalLifeCount > 1) {
-        conflictingTypes.add(MemberNumberType.life);
+        conflictingTypes.addIfMissing(MemberNumberType.life);
       }
       if(originalBenefactorCount > 1) {
-        conflictingTypes.add(MemberNumberType.benefactor);
+        conflictingTypes.addIfMissing(MemberNumberType.benefactor);
       }
-      sourceNumbers.addAll(originalNumbers[MemberNumberType.standard] ?? []);
-      sourceNumbers.addAll(originalNumbers[MemberNumberType.life] ?? []);
-      targetNumbers.addAll(numbers[MemberNumberType.benefactor] ?? []);
+      sourceNumbers.addAllIfMissing(originalNumbers[MemberNumberType.standard] ?? []);
+      sourceNumbers.addAllIfMissing(originalNumbers[MemberNumberType.life] ?? []);
+      targetNumbers.addAllIfMissing(numbers[MemberNumberType.benefactor] ?? []);
       targetType = MemberNumberType.benefactor;
+    }
+    if(originalBenefactorCount > 1 && conflict.uncoveredNumbers.isNotEmpty) {
+      conflictingTypes.addIfMissing(MemberNumberType.benefactor);
+      targetNumbers.addAllIfMissing(numbers[MemberNumberType.benefactor] ?? []);
+      sourceNumbers.addAllIfMissing(numbers[MemberNumberType.standard] ?? []);
+      sourceNumbers.addAllIfMissing(numbers[MemberNumberType.life] ?? []);
     }
     Map<String, String> relevantMappings = {};
     for(var type in numbers.keys) {

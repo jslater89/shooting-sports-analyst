@@ -49,6 +49,7 @@ class RaterStatistics {
   Map<int, int> yearOfEntryHistogram;
 
   ContinuousDistribution ratingDistribution;
+  DistributionFitTests fitTests;
 
   RaterStatistics({
     required this.shooters,
@@ -68,6 +69,21 @@ class RaterStatistics {
     required this.ratingsByClass,
     required this.yearOfEntryHistogram,
     required this.ratingDistribution,
+    required this.fitTests,
+  });
+}
+
+class DistributionFitTests {
+  final double logLikelihood;
+  final double kolmogorovSmirnov;
+  final double chiSquare;
+  final double andersonDarling;
+
+  DistributionFitTests({
+    required this.logLikelihood,
+    required this.kolmogorovSmirnov,
+    required this.chiSquare,
+    required this.andersonDarling,
   });
 }
 
@@ -91,11 +107,18 @@ RaterStatistics _calculateStats(Sport sport, RatingSystem algorithm, RatingGroup
   var ratingDistribution = estimator.estimate(allRatings);
   _log.v("${estimator.runtimeType}: $ratingDistribution");
 
+  var fitTests = DistributionFitTests(
+    logLikelihood: ratingDistribution.logLikelihood(allRatings),
+    kolmogorovSmirnov: ratingDistribution.kolmogorovSmirnovTest(allRatings),
+    chiSquare: ratingDistribution.chiSquareTest(allRatings),
+    andersonDarling: ratingDistribution.andersonDarlingTest(allRatings),
+  );
+
   _log.v("Fit tests:");
-  _log.v("\tLog likelihood: ${ratingDistribution.logLikelihood(allRatings)}");
-  _log.v("\tKolmogorov-Smirnov: ${ratingDistribution.kolmogorovSmirnovTest(allRatings)}");
-  _log.v("\tChi-square: ${ratingDistribution.chiSquareTest(allRatings)}");
-  _log.v("\tAnderson-Darling: ${ratingDistribution.andersonDarlingTest(allRatings)}");
+  _log.v("\tLog likelihood: ${fitTests.logLikelihood}");
+  _log.v("\tKolmogorov-Smirnov: ${fitTests.kolmogorovSmirnov}");
+  _log.v("\tChi-square: ${fitTests.chiSquare}");
+  _log.v("\tAnderson-Darling: ${fitTests.andersonDarling}");
 
   var allHistoryLengths = ratings.map((r) => r.length).toList()..sort(
     (a, b) => a.compareTo(b)
@@ -165,5 +188,6 @@ RaterStatistics _calculateStats(Sport sport, RatingSystem algorithm, RatingGroup
     ratingsByClass: ratingsByClass,
     yearOfEntryHistogram: yearOfEntryHistogram,
     ratingDistribution: ratingDistribution,
+    fitTests: fitTests,
   );
 }

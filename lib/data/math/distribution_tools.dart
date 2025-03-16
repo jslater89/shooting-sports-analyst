@@ -9,6 +9,7 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:data/data.dart';
 import 'package:shooting_sports_analyst/data/math/gamma/gamma_estimator.dart';
+import 'package:shooting_sports_analyst/data/math/gaussian/gaussian_estimator.dart';
 import 'package:shooting_sports_analyst/data/math/lognormal/lognormal_estimator.dart';
 import 'package:shooting_sports_analyst/data/math/weibull/weibull_estimator.dart';
 
@@ -19,7 +20,15 @@ abstract class ContinuousDistributionEstimator {
 enum AvailableEstimators {
   gamma,
   weibull,
-  logNormal;
+  logNormal,
+  normal;
+
+  String get uiLabel => switch(this) {
+    gamma => "Gamma",
+    weibull => "Weibull",
+    logNormal => "Log-normal",
+    normal => "Normal",
+  };
 
   ContinuousDistributionEstimator get estimator {
     switch (this) {
@@ -29,6 +38,8 @@ enum AvailableEstimators {
         return WeibullEstimator();
       case AvailableEstimators.logNormal:
         return LognormalEstimator();
+      case AvailableEstimators.normal:
+        return GaussianEstimator();
     }
   }
 
@@ -40,6 +51,8 @@ enum AvailableEstimators {
         return AvailableEstimators.weibull;
       case LognormalEstimator:
         return AvailableEstimators.logNormal;
+      case GaussianEstimator:
+        return AvailableEstimators.normal;
       default:
         throw ArgumentError("Unknown estimator: $estimator");
     }

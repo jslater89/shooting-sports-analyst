@@ -9,11 +9,11 @@ import 'dart:math';
 
 import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 
-/// Scales ratings according to a Weibull distribution, so that the percentile for each
+/// Scales ratings according to a continuous distribution, so that the percentile for each
 /// entry in [percentiles] is close to the corresponding rating value in [percentileRatings].
 ///
 /// Percentile is a value between 0 and 1, where 0 is the minimum rating and 1 is the maximum rating.
-class WeibullScaler extends RatingScaler {
+class DistributionScaler extends RatingScaler {
   final List<double> percentiles;
   final List<double> percentileRatings;
   final double scaleOffset;
@@ -26,7 +26,7 @@ class WeibullScaler extends RatingScaler {
   // Add a field to track which info was used for the cached parameters
   RatingScalerInfo? _lastInfo;
 
-  WeibullScaler({
+  DistributionScaler({
     required super.info,
     required this.percentiles,
     required this.percentileRatings,
@@ -44,15 +44,10 @@ class WeibullScaler extends RatingScaler {
       return;
     }
 
-    //print("Computing scaling factors with new info");
     final n = percentiles.length;
     final originalRatings = percentiles
         .map((p) => info.ratingDistribution.inverseCumulativeProbability(p))
         .toList();
-
-    //print("Percentiles: $percentiles");
-    //print("Target ratings: $percentileRatings");
-    //print("Original ratings from distribution: $originalRatings");
 
     if (n == 1) {
       _scaleFactor = percentileRatings[0] / originalRatings[0];
@@ -60,14 +55,22 @@ class WeibullScaler extends RatingScaler {
       return;
     }
 
-    // Use the highest and lowest points to determine the linear transformation
-    final highestOriginal = originalRatings[0];  // Assuming percentiles are in descending order
-    final lowestOriginal = originalRatings[n - 1];
-    final highestTarget = percentileRatings[0];
-    final lowestTarget = percentileRatings[n - 1];
+    // Use least squares regression to find the best fit line through all points
+    double sumX = 0;
+    double sumY = 0;
+    double sumXY = 0;
+    double sumXX = 0;
 
-    _scaleFactor = (highestTarget - lowestTarget) / (highestOriginal - lowestOriginal);
-    _offset = highestTarget - (_scaleFactor! * highestOriginal) + scaleOffset;
+    for (int i = 0; i < n; i++) {
+      sumX += originalRatings[i];
+      sumY += percentileRatings[i];
+      sumXY += originalRatings[i] * percentileRatings[i];
+      sumXX += originalRatings[i] * originalRatings[i];
+    }
+
+    // Calculate slope (scale factor) and intercept (offset)
+    _scaleFactor = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+    _offset = (sumY - _scaleFactor! * sumX) / n + scaleOffset;
 
     _lastInfo = info;
   }
@@ -95,7 +98,7 @@ class WeibullScaler extends RatingScaler {
 
   @override
   RatingScaler copy() {
-    return WeibullScaler(
+    return DistributionScaler(
       info: info.copy(),
       percentiles: [...percentiles],
       percentileRatings: [...percentileRatings],
