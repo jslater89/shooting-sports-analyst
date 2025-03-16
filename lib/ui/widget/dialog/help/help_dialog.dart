@@ -36,11 +36,27 @@ class HelpDialog extends StatelessWidget {
 
 class HelpButton extends StatelessWidget {
   final String helpTopicId;
+  final bool tooltip;
+  final String tooltipText;
 
-  const HelpButton({super.key, required this.helpTopicId});
+  const HelpButton({
+    super.key,
+    required this.helpTopicId,
+    this.tooltip = false,
+    this.tooltipText = "Show context-sensitive help",
+  });
 
   @override
   Widget build(BuildContext context) {
+    if(tooltip) {
+      return Tooltip(
+        message: tooltipText,
+        child: IconButton(
+          onPressed: () => HelpDialog.show(context, initialTopic: helpTopicId),
+          icon: const Icon(Icons.help_outline),
+        ),
+      );
+    }
     return IconButton(
       onPressed: () => HelpDialog.show(context, initialTopic: helpTopicId),
       icon: const Icon(Icons.help_outline),

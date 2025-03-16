@@ -78,6 +78,8 @@ class _RaterViewState extends State<RaterView> {
   late RatingProjectSettings settings;
   late List<RatingGroup> groups;
   late List<ShooterRating> uniqueRatings;
+
+  /// All numerical rating values.
   List<double> allRatings = [];
 
   ContinuousDistribution? ratingDistribution;
@@ -112,7 +114,6 @@ class _RaterViewState extends State<RaterView> {
         groups = g;
         if(scaleRatings) {
           uniqueRatings = ratings.map((e) => settings.algorithm.wrapDbRating(e)).sorted((a, b) => b.rating.compareTo(a.rating));
-          allRatings = uniqueRatings.map((e) => e.rating).toList();
         }
         else {
           uniqueRatings = ratings.map((e) => settings.algorithm.wrapDbRating(e)).toList();
@@ -121,6 +122,7 @@ class _RaterViewState extends State<RaterView> {
       }
 
       if(scaleRatings && minRating == null) {
+        allRatings = uniqueRatings.map((e) => e.rating).sorted((a, b) => a.compareTo(b));
         ratingDistribution = estimator.estimate(allRatings);
         _log.i("Generating scaled rating data");
         minRating = uniqueRatings.last;

@@ -123,6 +123,12 @@ extension AddIfMissing<T> on List<T> {
   List<T> removeDuplicates() {
     return this.toSet().toList();
   }
+
+  void addAllIfMissing(Iterable<T> values) {
+    for(var value in values) {
+      addIfMissing(value);
+    }
+  }
 }
 
 extension ListStatistics<T extends Comparable> on List<T> {
@@ -188,7 +194,7 @@ extension ListMap<K, V> on Map<K, List<V>> {
 
   /// Add [value] to the list at [key], but only if it is not already in the list,
   /// creating the list if the list does not exist.
-  /// 
+  ///
   /// Returns true if the value was added, or false if it was already in the list.
   bool addToListIfMissing(K key, V value) {
     if(this[key]?.contains(value) ?? false) {
@@ -376,17 +382,17 @@ extension WindowedList<T> on List<T> {
 
 /// Linearly interpolate between [minOut], [centerOut], and [maxOut], based on
 /// [value] relative to [center].
-/// 
-/// When [value] <= [centerMinFactor] * [center], the result is [minOut]. 
-/// 
+///
+/// When [value] <= [centerMinFactor] * [center], the result is [minOut].
+///
 /// Between [centerMinFactor] * [center] and [center], the result is linearly
 /// interpolated between [minOut] and [centerOut].
-/// 
+///
 /// When [value] equals [center], the result is [centerOut].
-/// 
+///
 /// When [value] is between [center] and [centerMaxFactor] * [center], the result
 /// is linearly interpolated between [centerOut] and [maxOut].
-/// 
+///
 /// When [value] >= [centerMaxFactor] * [center], the result is [maxOut].
 double lerpAroundCenter({
   required double value,
@@ -401,7 +407,7 @@ double lerpAroundCenter({
   var top = center * centerMaxFactor;
   if(value <= bottom) return minOut;
   if(value >= top) return maxOut;
-  
+
   // if value is greater than or equal to center, scale up from centerOut to maxOut
   if(value >= center) {
     var range = maxOut - centerOut;

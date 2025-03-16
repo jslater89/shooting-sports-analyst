@@ -4,7 +4,9 @@ import 'package:collection/collection.dart';
 import 'package:color_models/color_models.dart';
 import 'package:flutter/material.dart';
 import 'package:community_charts_flutter/community_charts_flutter.dart' as charts;
+import 'package:flutter/widgets.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/math/distribution_tools.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_statistics.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/ui/rater/rater_stats_dialog.dart';
@@ -25,12 +27,29 @@ class StackedDistributionDialog extends StatelessWidget {
       content: SizedBox(
         width: size.width * 0.9,
         height: size.height * 0.9,
-        child: StackedDistributionChart(sport: sport, group: group, statistics: statistics),
+        child: Column(
+          children: [
+            Expanded(child: StackedDistributionChart(sport: sport, group: group, statistics: statistics)),
+            const SizedBox(height: 10),
+            Text(
+              "Log likelihood: ${statistics.fitTests.logLikelihood.round()} • "
+              "Kolmogorov-Smirnov: ${statistics.fitTests.kolmogorovSmirnov.toStringAsFixed(4)} • "
+              "Chi-square: ${statistics.fitTests.chiSquare.toStringAsFixed(2)} • "
+              "Anderson-Darling: ${statistics.fitTests.andersonDarling.toStringAsFixed(2)}",
+            ),
+          ],
+        ),
       )
     );
   }
 }
 
+// TODO: convert this so that it can handle arbitrary data
+// Needs, at minimum:
+// 1. A distribution
+// 2. A total histogram
+// 3. Optional sub-histograms with color keys
+// 4. An optional color function, or possibly we can figure out how to do that off of the data
 class StackedDistributionChart extends StatelessWidget {
   const StackedDistributionChart({super.key, required this.statistics, required this.sport, required this.group});
 
@@ -44,6 +63,7 @@ class StackedDistributionChart extends StatelessWidget {
     int maxCount = 0;
     int minBucket = -1 >>> 1; // max int
     int maxBucket = 0;
+    int bucketCount = 0;
     for(var bucket in statistics.histogram.keys) {
       var count = statistics.histogram[bucket] ?? 0;
       var bucketStart = bucket * statistics.histogramBucketSize;
@@ -58,8 +78,9 @@ class StackedDistributionChart extends StatelessWidget {
         maxBucket = bucketStart;
       }
     }
+    bucketCount = (maxBucket - minBucket) ~/ statistics.histogramBucketSize + 1;
 
-    final steps = 100;
+    final steps = 250;
     final rangeHigh = (maxBucket + statistics.histogramBucketSize).toDouble();
     final rangeLow = minBucket.toDouble();
     final range = rangeHigh - rangeLow;
@@ -105,6 +126,8 @@ class StackedDistributionChart extends StatelessWidget {
       histogramSeries.add(series);
     }
 
+    int minBarWidth = (MediaQuery.of(context).size.width * 0.8 / (bucketCount * 1.75)).round();
+
     var chart = charts.LineChart(
       [pdfSeries, ...histogramSeries],
       animate: false,
@@ -118,7 +141,7 @@ class StackedDistributionChart extends StatelessWidget {
           barGroupInnerPaddingPx: 5,
           cornerStrategy: charts.NoCornerStrategy(),
           strokeWidthPx: 0,
-          minBarWidthPx: (MediaQuery.of(context).size.width * 0.8 / (histogramData.length * 1.75)).round(),
+          minBarWidthPx: minBarWidth,
         ),
       ],
       domainAxis: charts.NumericAxisSpec(
