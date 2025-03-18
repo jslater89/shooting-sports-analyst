@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_charts/flutter_charts.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_statistics.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/rater/stacked_distribution_dialog.dart';
@@ -137,7 +138,15 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
             const SizedBox(width: 16),
             ClickableLink(
               onTap: () {
-                showDialog(context: context, builder: (context) => StackedDistributionDialog(sport: widget.sport, group: widget.group, statistics: widget.statistics));
+                showDialog(context: context, builder: (context) => StackedDistributionDialog(
+                  sport: widget.sport,
+                  group: widget.group,
+                  statistics: widget.statistics,
+                  ignoredClassifications: [
+                    // TODO: handle this as a sport extension/interface
+                    if(widget.sport.name == uspsaSport.name) uspsaU,
+                  ],
+                ));
               },
               child: Text("Distribution", style: Theme.of(context).textTheme.bodyLarge!.copyWith(color: Theme.of(context).colorScheme.tertiary)),
             )
