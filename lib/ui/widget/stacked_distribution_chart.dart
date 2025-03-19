@@ -123,20 +123,22 @@ class HistogramLabel {
 /// the populations implied by [HistogramData] values that share a [HistogramLabel].
 /// The color will be a linear blend between the colors of the two population averages
 /// that lie closest above and below the value in question.
+///
+/// If [data] is provided, the chart will display an empirical CDF instead of the
+/// histogram.
 class StackedDistributionChart extends StatelessWidget {
   const StackedDistributionChart({
     super.key,
-    required this.sport,
-    required this.group,
     required this.buckets,
+    this.data,
     this.distribution,
     this.distributionIgnoresLabels = const [],
   });
 
+  bool get showCdf => data != null;
+  final List<double>? data;
   final List<HistogramBucket> buckets;
   final ContinuousDistribution? distribution;
-  final Sport sport;
-  final RatingGroup group;
   final List<HistogramLabel> distributionIgnoresLabels;
 
   @override
@@ -180,7 +182,7 @@ class StackedDistributionChart extends StatelessWidget {
         bucketSize = bucket.bucketSize.round();
       }
       else if(bucket.bucketSize != bucketSize) {
-        throw ArgumentError("StackedDistributionChart requires uniform bucket size");
+        throw ArgumentError("StackedDistributionChart requires uniform bucket size: ${bucket.bucketSize} != $bucketSize");
       }
     }
     bucketCount = (maxBucket - minBucket) ~/ bucketSize + 1;
@@ -195,7 +197,13 @@ class StackedDistributionChart extends StatelessWidget {
 
     if(distribution != null) {
       for(var r = rangeLow; r <= rangeHigh; r += stepSize) {
-        var prob = distribution?.probability(r) ?? 0.0;
+        double prob;
+        if(showCdf) {
+          prob = distribution!.cumulativeProbability(r);
+        }
+        else {
+          prob = distribution!.probability(r);
+        }
         pdfData.add(_PdfStep(value: r, probability: prob));
         if(prob > probMax) {
           probMax = prob;
@@ -253,31 +261,58 @@ class StackedDistributionChart extends StatelessWidget {
 
 
     List<charts.Series<_HistogramStep, double>> histogramSeries = [];
-    for(var label in labels) {
-      var classHist = labelData[label];
-      if(classHist == null) continue;
-
-      List<_HistogramStep> classHistData = [];
-      for(var data in classHist) {
-        var count = data.count;
-        classHistData.add(_HistogramStep(label: data.label, bucketStart: data._bucketCenter, count: count, color: data.color));
+    charts.Series<_PdfStep, double>? cdfSeries;
+    if(showCdf) {
+      var cdfColors = Map.fromEntries(colorLabels.map((label) {
+        RgbColor c = label.color.toRgbColor();
+        var faded = c.withChroma(c.chroma * 0.5);
+        return MapEntry(label, faded.toFlutterColor());
+      }));
+      List<_PdfStep> cdfData = [];
+      data!.sort();
+      for(var (index, value) in data!.indexed) {
+        // empirical CDF is the proportion of values less than or equal to the current value
+        cdfData.add(_PdfStep(value: value, probability: index / data!.length));
       }
-      var series = charts.Series<_HistogramStep, double>(
-        colorFn: (data, index) => data.color.toChartsColor(),
-        id: label.name,
-        data: classHistData,
-        domainFn: (data, index) => data.bucketStart,
-        measureFn: (data, index) => data.count,
-      )
-      ..setAttribute(charts.rendererIdKey, "histogram")
-      ..setAttribute(charts.measureAxisIdKey, "secondaryMeasureAxisId");
-      histogramSeries.add(series);
+      cdfSeries = charts.Series<_PdfStep, double>(
+        id: "cdf",
+        data: cdfData,
+        colorFn: (data, index) => _calculateColor(value: data.value, labels: colorLabels, labelColors: cdfColors, labelAverages: labelAverages) ?? charts.MaterialPalette.blue.shadeDefault,
+        domainFn: (data, index) => data.value,
+        measureFn: (data, index) => data.probability,
+      );
+    }
+    else {
+      for(var label in labels) {
+        var classHist = labelData[label];
+        if(classHist == null) continue;
+
+        List<_HistogramStep> classHistData = [];
+        for(var data in classHist) {
+          var count = data.count;
+          classHistData.add(_HistogramStep(label: data.label, bucketStart: data._bucketCenter, count: count, color: data.color));
+        }
+        var series = charts.Series<_HistogramStep, double>(
+          colorFn: (data, index) => data.color.toChartsColor(),
+          id: label.name,
+          data: classHistData,
+          domainFn: (data, index) => data.bucketStart,
+          measureFn: (data, index) => data.count,
+        )
+        ..setAttribute(charts.rendererIdKey, "histogram")
+        ..setAttribute(charts.measureAxisIdKey, "secondaryMeasureAxisId");
+        histogramSeries.add(series);
+      }
     }
 
     int minBarWidth = (MediaQuery.of(context).size.width * 0.8 / (bucketCount * 1.75)).round();
 
     var chart = charts.LineChart(
-      [if(distribution != null) pdfSeries, ...histogramSeries],
+      [
+        if(distribution != null) pdfSeries,
+        if(showCdf) cdfSeries!,
+        if(!showCdf) ...histogramSeries
+      ],
       animate: false,
       defaultRenderer: charts.LineRendererConfig(
         strokeWidthPx: 3,
@@ -339,8 +374,8 @@ class StackedDistributionChart extends StatelessWidget {
       var fromBelowSteps = (fromBelow * 20).floor();
 
       // Interpolate 10 steps between the two colors
-      var colorAbove = RgbColor.fromHex(labelColors[above]!.toHex());
-      var colorBelow = RgbColor.fromHex(labelColors[below]!.toHex());
+      var colorAbove = labelColors[above]!.toRgbColor();
+      var colorBelow = labelColors[below]!.toRgbColor();
       // 18 steps, including below and above, for 20
       var steps = colorBelow.lerpTo(colorAbove, 18);
       return steps[fromBelowSteps].toChartsColor();
@@ -371,20 +406,26 @@ class _HistogramStep {
   _HistogramStep({required this.label, required this.bucketStart, required this.count, required this.color});
 }
 
-extension FlutterColorToChartsColor on Color {
+extension FlutterColorConverters on Color {
   charts.Color toChartsColor() {
     return charts.Color(r: red, g: green, b: blue);
   }
-}
 
-extension RgbColorToChartsColor on RgbColor {
-  charts.Color toChartsColor() {
-    return charts.Color(r: red, g: green, b: blue);
+  RgbColor toRgbColor() {
+    return RgbColor(red, green, blue);
   }
-}
 
-extension ToHex on Color {
   String toHex() {
     return '#${red.toRadixString(16).padLeft(2, '0')}${green.toRadixString(16).padLeft(2, '0')}${blue.toRadixString(16).padLeft(2, '0')}';
+  }
+}
+
+extension RgbColorConverters on RgbColor {
+  charts.Color toChartsColor() {
+    return charts.Color(r: red, g: green, b: blue);
+  }
+
+  Color toFlutterColor() {
+    return Color.fromARGB(alpha, red, green, blue);
   }
 }

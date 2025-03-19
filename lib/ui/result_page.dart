@@ -19,6 +19,7 @@ import 'package:shooting_sports_analyst/data/search_query_parser.dart';
 import 'package:shooting_sports_analyst/data/sort_mode.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/match/stage_stats_calculator.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/fantasy_scoring_calculator.dart';
@@ -29,6 +30,7 @@ import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/route/broadcast_booth_page.dart';
 import 'package:shooting_sports_analyst/route/compare_shooter_results.dart';
+import 'package:shooting_sports_analyst/ui/rater/stacked_distribution_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/about_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/score_list_settings_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/stage_stats_dialog.dart';
@@ -453,6 +455,17 @@ class _ResultPageState extends State<ResultPage> {
       case _MenuEntry.about:
         var size = MediaQuery.of(context).size;
         showAbout(_innerContext, size);
+        break;
+      case _MenuEntry.plotDistribution:
+        showDialog(context: context, builder: (context) => ScoresDistributionDialog(
+          matchScores: _searchedScores,
+          sport: sport,
+          stage: _stage,
+          ignoredClassifications: [
+            if(sport.name == uspsaSport.name) uspsaU,
+          ],
+          showCdf: true,
+        ));
         break;
     }
   }
@@ -885,7 +898,8 @@ enum MatchPredictionMode {
   enum _MenuEntry {
     refresh,
     broadcastBooth,
-    about;
+    about,
+    plotDistribution;
 
     String get label {
       switch (this) {
@@ -893,6 +907,8 @@ enum MatchPredictionMode {
           return "About";
         case _MenuEntry.broadcastBooth:
           return "Broadcast mode";
+        case _MenuEntry.plotDistribution:
+          return "Scores distribution";
         case _MenuEntry.refresh:
           return "Refresh";
       }

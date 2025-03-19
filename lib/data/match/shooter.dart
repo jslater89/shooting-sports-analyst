@@ -63,7 +63,7 @@ class Shooter {
 
   Shooter copy(PracticalMatch parent) {
     var newShooter = copyWithoutScores();
-    
+
     stageScores.forEach((stage, score) {
       newShooter.stageScores[parent.lookupStage(stage)!] = score.copy(newShooter, stage);
     });
@@ -256,7 +256,7 @@ enum ShooterCategory {
   distinguishedSenior,
   lawEnforcement,
   military;
-  
+
   static ShooterCategory? fromString(String s) {
     return switch(s.toLowerCase()) {
       "junior" => junior,
@@ -268,7 +268,7 @@ enum ShooterCategory {
       String() => null,
     };
   }
-  
+
   String displayString() {
     return switch(this) {
       junior => "Junior",

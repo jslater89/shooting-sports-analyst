@@ -28,7 +28,7 @@ class Shooter {
   @ignore
   /// All member numbers this shooter has been known by, normalized as [originalMemberNumber],
   /// excluding the current member number.
-  List<String> get noncanonicalMemberNumbers => 
+  List<String> get noncanonicalMemberNumbers =>
     [...knownMemberNumbers]..retainWhere((element) => element != _memberNumber);
 
   @ignore
@@ -193,11 +193,12 @@ class MatchEntry extends Shooter {
     return e;
   }
 
-  String getName({bool suffixes = true}) {
+  String getName({bool suffixes = true, bool dnf = false}) {
     if(!suffixes) return [firstName, lastName].join(" ");
 
     var components = [firstName, lastName];
     if(dq) components.add("(DQ)");
+    else if(dnf) components.add("(DNF)");
     if(reentry) components.add("(R)");
     if(female) components.add("(F)");
     return components.join(" ");

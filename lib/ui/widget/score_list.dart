@@ -305,7 +305,7 @@ class _ScoreListState extends State<ScoreList> {
             children: [
               Expanded(flex: 1, child: Text("${widget.baseScores.indexOf(score) + 1}")),
               Expanded(flex: 1, child: Text("${score.place}")),
-              Expanded(flex: 3, child: Text(score.shooter.getName())),
+              Expanded(flex: 3, child: Text(score.shooter.getName(dnf: score.isDnf))),
               if(widget.ratings != null) Consumer<ScoreDisplaySettingsModel>(
                 builder: (context, model, _) {
                   String text = "n/a";

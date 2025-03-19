@@ -9,8 +9,8 @@ import 'dart:math';
 import 'package:data/stats.dart';
 import 'package:shooting_sports_analyst/data/math/distribution_tools.dart';
 
-class LognormalEstimator implements ContinuousDistributionEstimator {
-  LognormalEstimator();
+class LogNormalEstimator implements ContinuousDistributionEstimator {
+  LogNormalEstimator();
 
   LogNormalDistribution estimate(List<double> values) {
     // Take the natural logarithm of all values

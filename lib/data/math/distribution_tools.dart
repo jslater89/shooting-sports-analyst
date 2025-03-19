@@ -37,7 +37,7 @@ enum AvailableEstimators {
       case AvailableEstimators.weibull:
         return WeibullEstimator();
       case AvailableEstimators.logNormal:
-        return LognormalEstimator();
+        return LogNormalEstimator();
       case AvailableEstimators.normal:
         return GaussianEstimator();
     }
@@ -49,7 +49,7 @@ enum AvailableEstimators {
         return AvailableEstimators.gamma;
       case WeibullEstimator:
         return AvailableEstimators.weibull;
-      case LognormalEstimator:
+      case LogNormalEstimator:
         return AvailableEstimators.logNormal;
       case GaussianEstimator:
         return AvailableEstimators.normal;
