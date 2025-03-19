@@ -6,9 +6,11 @@
 
 import 'dart:convert';
 
+import 'package:cookie_store/cookie_store.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/src/widgets/framework.dart';
 import 'package:intl/intl.dart';
+import 'package:shooting_sports_analyst/config/secure_config.dart';
 import 'package:shooting_sports_analyst/data/practiscore_parser.dart';
 import 'package:shooting_sports_analyst/data/results_file_parser.dart';
 import 'package:shooting_sports_analyst/data/source/match_source_error.dart';
@@ -27,6 +29,7 @@ import 'package:shooting_sports_analyst/util.dart';
 import 'package:http/http.dart' as http;
 
 var _log = SSALogger("ReportFileMatchSource");
+var _cookies = CookieStore();
 
 /// This will parse a PractiScore hit factor report.txt file.
 ///
@@ -392,6 +395,55 @@ class PractiscoreHitFactorReportParser extends MatchSource {
     }
 
     try {
+      bool hasValidCredentials = false;
+      var cookies = _cookies.getCookiesForRequest("practiscore.com", "/reports/web/$matchId");
+      if(cookies.isNotEmpty) {
+        // Not sure which cookies are actually needed, so if any a) have an expiration and
+        // b) are expired, we'll just re-authenticate.
+        bool expired = false;
+        for(var cookie in cookies) {
+          if(cookie.expiryTime != null && cookie.expiryTime!.isBefore(DateTime.now())) {
+            expired = true;
+          }
+        }
+
+        if(!expired) {
+          hasValidCredentials = true;
+        }
+      }
+      if(!hasValidCredentials) {
+        var (username, password) = await SecureConfig.getPsCredentials();
+
+        if(username != null && password != null) {
+          var authResponse = await http.post(Uri.parse("https://practiscore.com/login"), body: {
+            "username": username,
+            "password": password
+          });
+
+          if(authResponse.statusCode < 400) {
+            var cookies = authResponse.headers["set-cookie"];
+            if(cookies != null) {
+              try {
+                _cookies.updateCookies(cookies, "practiscore.com", "/");
+                hasValidCredentials = true;
+                _log.i("Successfully authenticated");
+              }
+              catch(e, st) {
+                _log.e("Error parsing cookies", error: e, stackTrace: st);
+              }
+            }
+          }
+        }
+        else {
+          hasValidCredentials = false;
+        }
+      }
+
+      if(!hasValidCredentials) {
+        _log.e("No valid Practiscore credentials");
+        return Result.err(MatchSourceError.noCredentials);
+      }
+
       var token = getClubNameToken(responseString);
       if(verboseParse) _log.v("Token: $token");
       var body = {
@@ -400,7 +452,14 @@ class PractiscoreHitFactorReportParser extends MatchSource {
         'ClubCode': 'None',
         'matchId': matchId,
       };
-      var response = await http.post(Uri.parse(reportUrl), body: body);
+      var outCookies = _cookies.getCookiesForRequest("practiscore.com", "/reports/web/$matchId");
+      var response = await http.post(
+        Uri.parse(reportUrl),
+        body: body,
+        headers: {
+          "Cookie": CookieStore.buildCookieHeader(outCookies),
+        }
+      );
       if(response.statusCode < 400) {
         var responseString = response.body;
         if (responseString.startsWith(r"$")) {
@@ -468,25 +527,21 @@ class PractiscoreHitFactorReportParser extends MatchSource {
   }
 
   @override
-  Widget getDownloadMatchUI({required void Function(ShootingMatch) onMatchSelected, String? initialSearch}) {
+  Widget getDownloadMatchUI({required void Function(ShootingMatch) onMatchSelected, required void Function(MatchSourceError) onError, String? initialSearch}) {
     return Builder(builder: (context) {
       var onSubmitted = (String value) async {
         var matchId = await processMatchUrl(value);
         if(matchId != null) {
           var matchResult = await getMatchFromId(matchId, sport: sport);
           if(matchResult.isErr()) {
-            ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("Unable to download match: ${matchResult.unwrapErr().message}"))
-            );
+            onError(matchResult.unwrapErr());
           }
           else {
             onMatchSelected(matchResult.unwrap());
           }
         }
         else {
-          ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("Invalid match URL"))
-          );
+          onError(FormatError(StringError("Match ID not found in URL")));
         }
       };
       var controller = TextEditingController(text: initialSearch);

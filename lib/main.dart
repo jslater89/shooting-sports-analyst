@@ -14,7 +14,7 @@ import 'package:hive/hive.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:shooting_sports_analyst/config.dart';
+import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/help/all_helps.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';

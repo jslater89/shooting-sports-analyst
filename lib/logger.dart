@@ -10,7 +10,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'package:mutex/mutex.dart';
-import 'package:shooting_sports_analyst/config.dart';
+import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:stack_trace/stack_trace.dart';
 
 SSALogger _log = SSALogger.consoleOnly("LoggerInternal");

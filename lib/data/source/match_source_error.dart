@@ -16,6 +16,7 @@ sealed class MatchSourceError implements ResultErr {
   static NetworkError get networkError => const NetworkError();
   static UnsupportedOperation get unsupportedOperation => const UnsupportedOperation();
   static UnsupportedMatchType get unsupportedMatchType => const UnsupportedMatchType();
+  static NoCredentials get noCredentials => const NoCredentials();
 }
 
 class NetworkError extends MatchSourceError {
@@ -48,7 +49,7 @@ class NotFound extends MatchSourceError {
 }
 
 class FormatError extends MatchSourceError {
-  String get message => "Error parsing match data";
+  String get message => "Error parsing match data: $underlying";
   ResultErr underlying;
 
   FormatError(this.underlying);
@@ -58,4 +59,9 @@ class GeneralError extends MatchSourceError {
   String get message => underlying.message;
   final ResultErr underlying;
   GeneralError(this.underlying);
+}
+
+class NoCredentials extends MatchSourceError {
+  String get message => "Match source requires credentials";
+  const NoCredentials();
 }

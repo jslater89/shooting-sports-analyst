@@ -8,7 +8,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shooting_sports_analyst/config.dart';
+import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/help/deduplication_help.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
@@ -33,7 +33,7 @@ var _log = SSALogger("DeduplicationDialog");
 /// A dialog that accepts a list of deduplication collisions, displays them
 /// and the relevant information to the user, and allows the user to approve,
 /// edit, or reject the deduplication actions.
-/// 
+///
 /// The provided collisions will be edited in place to include the user's
 /// changes. The dialog will pop `true` if the user wants to apply all of the
 /// collisions' proposed actions and continue with loading the project, or
@@ -127,7 +127,7 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
     _sortedCollisions.sort((a, b) {
       var aGreen = _approved[a] ?? false;
       var bGreen = _approved[b] ?? false;
-      
+
       // Green conflicts should be sorted to the bottom.
       if(aGreen && !bGreen) {
         return 1;
@@ -257,8 +257,8 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
                             }),
                           );
                         },
-                        itemCount: _sortedCollisions.length,   
-                        controller: _sidebarScrollController,     
+                        itemCount: _sortedCollisions.length,
+                        controller: _sidebarScrollController,
                       ),
                     ),
                   ],
@@ -338,7 +338,7 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
                 ],
               ),
               Row(
-                mainAxisSize: MainAxisSize.min,              
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   TextButton(
                     child: const Text("CANCEL"),
@@ -359,7 +359,7 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
                             // TODO: SharedPreferences, troll James
                             width: 400,
                           );
-                  
+
                           if(confirm == true) {
                             Navigator.of(context).pop(true);
                           }
@@ -386,9 +386,9 @@ bool _conflictIsGreen(DeduplicationCollision collision, bool approved, {bool edi
 
   //A collision can be automatically resolved if it hasn't been edited, all proposed actions can be autoresolved,
   // and it doesn't contain an international number.
-  bool autoResolve = 
-    !edited 
-    && collision.causes.every((e) => e.canResolveAutomatically) 
+  bool autoResolve =
+    !edited
+    && collision.causes.every((e) => e.canResolveAutomatically)
     && collision.memberNumbers[MemberNumberType.international] == null;
 
   // A collision requires manual review if it has not been approved, and it has a ManualReviewRecommended cause.
@@ -460,7 +460,7 @@ class ConflictListItem extends StatelessWidget {
       }
       subtitleText += ")";
     }
-    
+
     return ListTile(
       onTap: onTap,
       visualDensity: VisualDensity.comfortable,
@@ -513,7 +513,7 @@ class _ConflictDetailsState extends State<ConflictDetails> {
       approveText = "APPROVED";
     }
 
-    
+
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Column(
@@ -752,7 +752,7 @@ class _ConflictDetailsState extends State<ConflictDetails> {
                               }
                               break;
                           }
-                                  
+
                           if(newAction != null) {
                             var na = newAction;
                             setState(() {
@@ -785,7 +785,7 @@ class _ConflictDetailsState extends State<ConflictDetails> {
                         c.proposedActions.add(Blacklist(sourceNumber: uncovered[i], targetNumber: uncovered[j], bidirectional: true));
                       }
                     }
-                    
+
                     // next, add blacklist entries for each uncovered number to every covered number.
                     for(var number in uncovered) {
                       for(var coveredNumber in covered) {

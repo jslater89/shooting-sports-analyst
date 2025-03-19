@@ -79,12 +79,15 @@ class _MatchSourceChooserDialogState extends State<MatchSourceChooserDialog> {
                 value: source,
               ),
               Divider(),
-              Expanded(child: source.getDownloadMatchUI(
-                onMatchSelected: (match) {
-                  submit(match);
-                },
-                initialSearch: widget.initialSearch,
-              )),
+              Expanded(child: source.getDownloadMatchUI(onMatchSelected: (match) {
+                submit(match);
+              },
+              onError: (error) {
+                showDialog(context: context, builder: (context) => AlertDialog(
+                  title: Text("Match source error"),
+                  content: Text(error.message),
+                ));
+              })),
             ],
           ),
         ),

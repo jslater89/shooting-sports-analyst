@@ -30,6 +30,7 @@ import 'package:shooting_sports_analyst/route/practiscore_url.dart';
 import 'package:shooting_sports_analyst/ui/empty_scaffold.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
+import 'package:shooting_sports_analyst/ui/source/credentials_manager.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_cache_chooser_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_source_chooser_dialog.dart';
 
@@ -89,7 +90,17 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     var size = MediaQuery.of(context).size;
 
-    var extraActions = <Widget>[];
+    var extraActions = <Widget>[
+      Tooltip(
+        message: "Manage credentials for match sources",
+        child: IconButton(
+          icon: Icon(Icons.lock),
+          onPressed: () {
+            Navigator.of(context).push(MaterialPageRoute(builder: (context) => SourceCredentialsManager()));
+          },
+        ),
+      )
+    ];
     if(!kIsWeb && kDebugMode) {
       extraActions.add(Tooltip(
         richMessage: TextSpan(
