@@ -21,7 +21,7 @@ abstract class MatchSource<T extends InternalMatchType, S extends InternalMatchF
   bool get isImplemented;
   bool get canSearch;
   List<SportType> get supportedSports;
-  
+
   /// findMatches may return a MatchSearchResult<T> if needed. See
   /// [InternalMatchType].
   Future<Result<List<MatchSearchResult<T>>, MatchSourceError>> findMatches(String search);
@@ -56,8 +56,13 @@ abstract class MatchSource<T extends InternalMatchType, S extends InternalMatchF
   /// The returned UI should fit an 800px by 500px box (or allow scrolling, if taller
   /// than 500px). The enclosing UI will provide 'cancel' or 'back' functionality.
   ///
-  /// Call [onMatchSelected] with a match if one is selected and downloaded.
-  Widget getDownloadMatchUI({required void Function(ShootingMatch) onMatchSelected, String? initialSearch});
+  /// Call [onMatchSelected] with a match if one is selected and downloaded, or
+  /// [onError] with an error if one occurs during a match selection/download.
+  Widget getDownloadMatchUI({
+    required void Function(ShootingMatch) onMatchSelected,
+    required void Function(MatchSourceError) onError,
+    String? initialSearch,
+  });
 }
 
 /// A parent class for implementation-specific search result information.
@@ -68,7 +73,7 @@ abstract class MatchSource<T extends InternalMatchType, S extends InternalMatchF
 abstract class InternalMatchType {}
 
 /// A parent class for implementation-specific match download options.
-/// 
+///
 /// For instance, the PSv2 source uses this to indicate whether the match
 /// fetcher should attempt to download score logs and interpret them.
 abstract class InternalMatchFetchOptions {}
