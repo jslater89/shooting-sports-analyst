@@ -6,6 +6,7 @@
 
 import 'dart:convert';
 
+import 'package:cookie_store/cookie_store.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/src/widgets/framework.dart';
 import 'package:intl/intl.dart';
@@ -26,6 +27,8 @@ import 'package:shooting_sports_analyst/util.dart';
 import 'package:http/http.dart' as http;
 
 var _log = SSALogger("ReportFileMatchSource");
+
+var _cookies = CookieStore();
 
 /// This will parse a PractiScore hit factor report.txt file.
 ///
@@ -386,6 +389,22 @@ class PractiscoreHitFactorReportParser extends MatchSource {
     }
 
     try {
+      var authResponse = await http.post(Uri.parse("https://practiscore.com/login"), body: {
+        "username": "username",
+        "password": "password"
+      });
+
+      var cookies = authResponse.headers["set-cookie"];
+      if(cookies != null) {
+        _log.v("Cookies: $cookies");
+        try {
+          _cookies.updateCookies(cookies, "practiscore.com", "/");
+        }
+        catch(e, st) {
+          _log.e("Error parsing cookies", error: e, stackTrace: st);
+        }
+      }
+
       var token = getClubNameToken(responseString);
       if(verboseParse) _log.v("Token: $token");
       var body = {
@@ -394,15 +413,30 @@ class PractiscoreHitFactorReportParser extends MatchSource {
         'ClubCode': 'None',
         'matchId': matchId,
       };
-      var response = await http.post(Uri.parse(reportUrl), body: body);
+      var outCookies = _cookies.getCookiesForRequest("practiscore.com", "/reports/web/$matchId");
+      _log.v("Out cookies: $outCookies");
+      var response = await http.post(
+        Uri.parse(reportUrl),
+        body: body,
+        headers: {
+          "Cookie": CookieStore.buildCookieHeader(outCookies),
+        }
+      );
       if(response.statusCode < 400) {
         var responseString = response.body;
         if (responseString.startsWith(r"$")) {
           return Result.ok(responseString);
         }
+        else {
+          _log.e("${response.statusCode} Unexpected report format: ${responseString.split("\n").first} [...]");
+          if(response.statusCode < 400) {
+            _log.vv("Full response: $responseString");
+          }
+        }
       }
-
-      if(verboseParse) _log.e("Didn't work: ${response.statusCode} ${response.body}");
+      else {
+        _log.e("Network request error: ${response.statusCode} ${response.body}");
+      }
     }
     catch(e, st) {
       _log.e("download error pt. 2: ${e.runtimeType}", error: e, stackTrace: st);
