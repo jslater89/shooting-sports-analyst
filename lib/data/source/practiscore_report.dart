@@ -405,11 +405,15 @@ class PractiscoreHitFactorReportParser extends MatchSource {
         if(!expired) {
           hasValidCredentials = true;
         }
+        else {
+          _log.i("Saved cookie is expired, re-authenticating");
+        }
       }
       if(!hasValidCredentials) {
         var (username, password) = await SecureConfig.getPsCredentials();
 
         if(username != null && password != null) {
+          _log.i("Attempting to authenticate as $username");
           var authResponse = await http.post(Uri.parse("https://practiscore.com/login"), body: {
             "username": username,
             "password": password
@@ -428,8 +432,12 @@ class PractiscoreHitFactorReportParser extends MatchSource {
               }
             }
           }
+          else {
+            _log.e("Authentication request failed: ${authResponse.statusCode} ${authResponse.body}");
+          }
         }
         else {
+          _log.i("Username/password not found in secure storage");
           hasValidCredentials = false;
         }
       }

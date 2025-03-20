@@ -76,9 +76,9 @@ class _SourceCredentialsManagerState extends State<SourceCredentialsManager> {
                 const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.delete),
-                  onPressed: () {
-                    SecureConfig.setPsUsername("");
-                    SecureConfig.setPsPassword("");
+                  onPressed: () async {
+                    await SecureConfig.setPsUsername("");
+                    await SecureConfig.setPsPassword("");
                     _usernameController.text = "";
                     _passwordController.text = "";
                   },
@@ -97,9 +97,9 @@ class _SourceCredentialsManagerState extends State<SourceCredentialsManager> {
         ),
         TextButton(
           child: Text("SAVE"),
-          onPressed: () {
-            SecureConfig.setPsUsername(_usernameController.text);
-            SecureConfig.setPsPassword(_passwordController.text);
+          onPressed: () async {
+            await SecureConfig.setPsUsername(_usernameController.text);
+            await SecureConfig.setPsPassword(_passwordController.text);
             Navigator.of(context).pop();
           },
         ),
