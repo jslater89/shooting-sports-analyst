@@ -17,6 +17,7 @@ class _SourceCredentialsManagerState extends State<SourceCredentialsManager> {
 
   @override
   void initState() {
+    super.initState();
     _loadCredentials();
   }
 
@@ -40,9 +41,9 @@ class _SourceCredentialsManagerState extends State<SourceCredentialsManager> {
               "here will be stored in your operating system's secure storage, using encryption keys "
               "that are local to your computer. They will be used exclusively to authenticate with "
               "the match source in question.",
-              style: Theme.of(context).textTheme.bodySmall,
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
-            const SizedBox(height: 10),
+            Divider(),
             Text("PractiScore web reports", style: Theme.of(context).textTheme.titleMedium),
             Row(
               children: [
@@ -71,6 +72,16 @@ class _SourceCredentialsManagerState extends State<SourceCredentialsManager> {
                     controller: _passwordController,
                     obscureText: obscure,
                   ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.delete),
+                  onPressed: () {
+                    SecureConfig.setPsUsername("");
+                    SecureConfig.setPsPassword("");
+                    _usernameController.text = "";
+                    _passwordController.text = "";
+                  },
                 ),
               ],
             ),
