@@ -7,29 +7,18 @@
 // ignore: avoid_web_libraries_in_flutter
 
 import 'dart:convert';
-import 'dart:io';
-import 'dart:math';
+import 'dart:async';
 
 
-import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_database.dart';
-import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 // import 'package:shooting_sports_analyst/data/db/object/match/match.dart';
 // import 'package:shooting_sports_analyst/data/db/object/rating/rating_project.dart';
 // import 'package:shooting_sports_analyst/data/db/project/project_db.dart';
-import 'package:shooting_sports_analyst/data/match/practical_match.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
-import 'package:shooting_sports_analyst/data/ranking/evolution/elo_tuner.dart';
-import 'package:shooting_sports_analyst/data/ranking/project_manager.dart';
-import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settings.dart';
-import 'package:shooting_sports_analyst/data/ranking/rating_history.dart';
-import 'package:shooting_sports_analyst/data/source/practiscore_report.dart';
-import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
-import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/db_oneoffs.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
@@ -37,12 +26,9 @@ import 'package:shooting_sports_analyst/route/local_upload.dart';
 import 'package:shooting_sports_analyst/route/home_page.dart';
 import 'package:shooting_sports_analyst/route/practiscore_url.dart';
 import 'package:shooting_sports_analyst/route/ratings.dart';
-import 'package:shooting_sports_analyst/util.dart';
 import 'configure_nonweb.dart' if (dart.library.html) 'configure_web.dart';
 import 'package:fluro/fluro.dart' as fluro;
 
-import 'data/ranking/evolution/genome.dart';
-import 'data/results_file_parser.dart';
 
 var _log = SSALogger("main");
 
@@ -67,8 +53,6 @@ class GlobalData {
 GlobalData globals = GlobalData();
 
 void main() async {
-  // dumpRatings();
-
   _log.i("=== App start ===");
 
   globals.router.define('/', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
@@ -100,34 +84,41 @@ void main() async {
         return PractiscoreResultPage(resultUrl: urlString, sourceId: params['sourceId']![0]);
       }
   ));
-  configureApp();
 
-  WidgetsFlutterBinding.ensureInitialized();
+  runZonedGuarded(
+    () async {
+      configureApp();
 
-  await ConfigLoader().ready;
-  initLogger();
+      WidgetsFlutterBinding.ensureInitialized();
 
-  await AnalystDatabase().ready;
-  _log.i("Database ready");
+      await ConfigLoader().ready;
+      initLogger();
 
+      await AnalystDatabase().ready;
+      _log.i("Database ready");
 
-  if(!HtmlOr.isWeb) {
-    var path = await getApplicationSupportDirectory();
-    Hive.init(path.absolute.path);
+      if(!HtmlOr.isWeb) {
+        var path = await getApplicationSupportDirectory();
+        Hive.init(path.absolute.path);
 
-    // Start warming up the match cache immediately, since we're almost always going to want it
-    matchCacheProgressCallback = (_1, _2) async {
-      await Future.delayed(Duration(microseconds: 1));
-    };
-    MatchCache();
-  }
+        // Start warming up the match cache immediately, since we're almost always going to want it
+        matchCacheProgressCallback = (_1, _2) async {
+          await Future.delayed(Duration(microseconds: 1));
+        };
+        MatchCache();
+      }
 
-  oneoffDbAnalyses(AnalystDatabase());
+      oneoffDbAnalyses(AnalystDatabase());
 
+      _log.i("Hive cache ready");
 
-  _log.i("Hive cache ready");
-
-  runApp(MyApp());
+      runApp(MyApp());
+    },
+    (error, stackTrace) {
+      _log.e("Uncaught error: $error");
+      _log.e("Stack trace: $stackTrace");
+    },
+  );
 }
 
 class MyApp extends StatelessWidget {
