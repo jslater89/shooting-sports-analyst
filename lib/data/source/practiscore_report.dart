@@ -29,7 +29,8 @@ import 'package:shooting_sports_analyst/util.dart';
 import 'package:http/http.dart' as http;
 
 var _log = SSALogger("ReportFileMatchSource");
-var _cookies = CookieStore();
+
+var practiscoreCookies = CookieStore();
 
 /// This will parse a PractiScore hit factor report.txt file.
 ///
@@ -364,6 +365,61 @@ class PractiscoreHitFactorReportParser extends MatchSource {
     return i;
   }
 
+  static Future<bool> authenticate({String matchId = ""}) async {
+    bool hasValidCredentials = false;
+    var cookies = practiscoreCookies.getCookiesForRequest("practiscore.com", "/reports/web/$matchId");
+    if(cookies.isNotEmpty) {
+      // Not sure which cookies are actually needed, so if any a) have an expiration and
+      // b) are expired, we'll just re-authenticate.
+      bool expired = false;
+      for(var cookie in cookies) {
+        if(cookie.expiryTime != null && cookie.expiryTime!.isBefore(DateTime.now())) {
+          expired = true;
+        }
+      }
+
+      if(!expired) {
+        hasValidCredentials = true;
+      }
+      else {
+        _log.i("Saved cookie is expired, re-authenticating");
+      }
+    }
+    if(!hasValidCredentials) {
+      var (username, password) = await SecureConfig.getPsCredentials();
+
+      if(username != null && password != null) {
+        _log.i("Attempting to authenticate as $username");
+        var authResponse = await http.post(Uri.parse("https://practiscore.com/login"), body: {
+          "username": username,
+          "password": password
+        });
+
+        if(authResponse.statusCode < 400) {
+          var cookies = authResponse.headers["set-cookie"];
+          if(cookies != null) {
+            try {
+              practiscoreCookies.updateCookies(cookies, "practiscore.com", "/");
+              hasValidCredentials = true;
+              _log.i("Successfully authenticated");
+            }
+            catch(e, st) {
+              _log.e("Error parsing cookies", error: e, stackTrace: st);
+            }
+          }
+        }
+        else {
+          _log.e("Authentication request failed: ${authResponse.statusCode} ${authResponse.body}");
+        }
+      }
+      else {
+        _log.i("Username/password not found in secure storage");
+        hasValidCredentials = false;
+      }
+    }
+    return hasValidCredentials;
+  }
+
   Future<Result<String, MatchSourceError>> getPractiscoreReportFile(String matchId) async {
     var proxyUrl = getProxyUrl();
     var reportUrl = "${proxyUrl}https://practiscore.com/reports/web/$matchId";
@@ -395,49 +451,7 @@ class PractiscoreHitFactorReportParser extends MatchSource {
     }
 
     try {
-      bool hasValidCredentials = false;
-      var cookies = _cookies.getCookiesForRequest("practiscore.com", "/reports/web/$matchId");
-      if(cookies.isNotEmpty) {
-        // Not sure which cookies are actually needed, so if any a) have an expiration and
-        // b) are expired, we'll just re-authenticate.
-        bool expired = false;
-        for(var cookie in cookies) {
-          if(cookie.expiryTime != null && cookie.expiryTime!.isBefore(DateTime.now())) {
-            expired = true;
-          }
-        }
-
-        if(!expired) {
-          hasValidCredentials = true;
-        }
-      }
-      if(!hasValidCredentials) {
-        var (username, password) = await SecureConfig.getPsCredentials();
-
-        if(username != null && password != null) {
-          var authResponse = await http.post(Uri.parse("https://practiscore.com/login"), body: {
-            "username": username,
-            "password": password
-          });
-
-          if(authResponse.statusCode < 400) {
-            var cookies = authResponse.headers["set-cookie"];
-            if(cookies != null) {
-              try {
-                _cookies.updateCookies(cookies, "practiscore.com", "/");
-                hasValidCredentials = true;
-                _log.i("Successfully authenticated");
-              }
-              catch(e, st) {
-                _log.e("Error parsing cookies", error: e, stackTrace: st);
-              }
-            }
-          }
-        }
-        else {
-          hasValidCredentials = false;
-        }
-      }
+      var hasValidCredentials = await authenticate(matchId: matchId);
 
       if(!hasValidCredentials) {
         _log.e("No valid Practiscore credentials");
@@ -452,7 +466,7 @@ class PractiscoreHitFactorReportParser extends MatchSource {
         'ClubCode': 'None',
         'matchId': matchId,
       };
-      var outCookies = _cookies.getCookiesForRequest("practiscore.com", "/reports/web/$matchId");
+      var outCookies = practiscoreCookies.getCookiesForRequest("practiscore.com", "/reports/web/$matchId");
       var response = await http.post(
         Uri.parse(reportUrl),
         body: body,
