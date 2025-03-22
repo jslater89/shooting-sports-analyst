@@ -5,10 +5,12 @@
  */
 
 import 'package:collection/collection.dart' show IterableExtension;
+import 'package:cookie_store/cookie_store.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/results_file_parser.dart';
+import 'package:shooting_sports_analyst/data/source/practiscore_report.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/logger.dart';
@@ -75,13 +77,22 @@ Future<String?> processMatchUrl(String matchUrl, {BuildContext? context}) async 
 }
 
 Future<Result<PracticalMatch, MatchGetError>> getPractiscoreMatchHeadless(String matchId) async {
+  var hasValidCredentials = await PractiscoreHitFactorReportParser.authenticate(matchId: matchId);
+  if(!hasValidCredentials) {
+    _log.e("No valid Practiscore credentials");
+    return Result.err(MatchGetError.network);
+  }
+  var outCookies = practiscoreCookies.getCookiesForRequest("practiscore.com", "/reports/web/$matchId");
+
   var proxyUrl = getProxyUrl();
   var reportUrl = "${proxyUrl}https://practiscore.com/reports/web/$matchId";
   if(verboseParse) _log.d("Report download URL: $reportUrl");
 
   var responseString = "";
   try {
-    var response = await http.get(Uri.parse(reportUrl));
+    var response = await http.get(Uri.parse(reportUrl), headers: {
+      "Cookie": CookieStore.buildCookieHeader(outCookies),
+    });
     if(response.statusCode < 400) {
       responseString = response.body;
       if (responseString.startsWith(r"$")) {
@@ -115,7 +126,9 @@ Future<Result<PracticalMatch, MatchGetError>> getPractiscoreMatchHeadless(String
       'ClubCode': 'None',
       'matchId': matchId,
     };
-    var response = await http.post(Uri.parse(reportUrl), body: body);
+    var response = await http.post(Uri.parse(reportUrl), body: body, headers: {
+      "Cookie": CookieStore.buildCookieHeader(outCookies),
+    });
     if(response.statusCode < 400) {
       var responseString = response.body;
       if (responseString.startsWith(r"$")) {
@@ -123,8 +136,9 @@ Future<Result<PracticalMatch, MatchGetError>> getPractiscoreMatchHeadless(String
         return match;
       }
     }
-
-    if(verboseParse) _log.w("Didn't work: ${response.statusCode} ${response.body}");
+    else {
+      _log.e("Request error for match download: ${response.statusCode} ${response.body.split("\n").first}");
+    }
   }
   catch(err, stackTrace) {
     _log.e("download error pt. 2", error: err, stackTrace: stackTrace);
