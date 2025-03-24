@@ -4,15 +4,11 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'dart:convert';
-
 import 'package:cookie_store/cookie_store.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/src/widgets/framework.dart';
 import 'package:intl/intl.dart';
 import 'package:shooting_sports_analyst/config/secure_config.dart';
 import 'package:shooting_sports_analyst/data/practiscore_parser.dart';
-import 'package:shooting_sports_analyst/data/results_file_parser.dart';
 import 'package:shooting_sports_analyst/data/source/match_source_error.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/ipsc.dart';
@@ -20,7 +16,6 @@ import 'package:shooting_sports_analyst/data/sport/builtins/pcsl.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
-import 'package:shooting_sports_analyst/data/sport/scoring/stage_scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
