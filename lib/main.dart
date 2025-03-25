@@ -11,6 +11,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,6 +27,7 @@ import 'package:shooting_sports_analyst/route/home_page.dart';
 import 'package:shooting_sports_analyst/route/practiscore_url.dart';
 import 'package:shooting_sports_analyst/route/ratings.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_registry.dart';
+import 'package:shooting_sports_analyst/version.dart';
 import 'package:window_manager/window_manager.dart';
 import 'configure_nonweb.dart' if (dart.library.html) 'configure_web.dart';
 import 'package:fluro/fluro.dart' as fluro;
@@ -55,8 +57,16 @@ GlobalData globals = GlobalData();
 void main() async {
   // dumpRatings();
 
+  FlutterError.onError = (details) {
+    _log.e("Flutter error", error: details.exceptionAsString(), stackTrace: details.stack);
+  };
   runZonedGuarded(() async {
     _log.i("=== App start ===");
+    var info = await PackageInfo.fromPlatform();
+    var localVersion = VersionInfo.version;
+    var packageVersion = info.version;
+    var packageBuildNumber = info.buildNumber;
+    _log.i("Shooting Sports Analyst $localVersion ($packageVersion+$packageBuildNumber)");
     globals.router.define('/', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
       handlerFunc: (context, params) {
         _log.d("/ route params: $params");

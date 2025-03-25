@@ -283,6 +283,9 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
                   labelText: "Search"
                 ),
                 controller: searchController,
+                onSubmitted: (value) {
+                  _applySearch();
+                },
               ),
             ),
             if(widget.matches == null) IconButton(
@@ -388,11 +391,14 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
                         var match = searchedMatches[i];
                         var deletedFuture = db.deleteMatch(match.id);
 
-                        var deleted = await showDialog<bool>(context: context, builder: (c) => LoadingDialog(title: "Deleting...", waitOn: deletedFuture));
-                        if(deleted ?? false) {
+                        var deleted = await LoadingDialog.show(context: context, waitOn: deletedFuture);
+                        if(deleted.isOk()) {
                           setState(() {
                             _updateMatches();
                           });
+                        }
+                        else {
+                          _log.d("Unable to delete match: ${deleted.unwrapErr()}");
                         }
                       },
                     ),

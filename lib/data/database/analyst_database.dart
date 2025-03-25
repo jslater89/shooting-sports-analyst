@@ -226,14 +226,16 @@ class AnalystDatabase {
   }
 
   Future<Result<bool, ResultErr>> deleteMatch(int id) async {
-    try {
-      var result = await isar.dbShootingMatchs.delete(id);
-      return Result.ok(result);
-    }
-    catch(e, stackTrace) {
-      _log.e("Failed to delete match", error: e, stackTrace: stackTrace);
-      return Result.err(StringError(e.toString()));
-    }
+    return isar.writeTxn<Result<bool, ResultErr>>(() async {
+      try {
+        var result = await isar.dbShootingMatchs.delete(id);
+        return Result.ok(result);
+      }
+      catch(e, stackTrace) {
+        _log.e("Failed to delete match", error: e, stackTrace: stackTrace);
+        return Result.err(StringError(e.toString()));
+      }
+    });
   }
 
   Future<Result<bool, ResultErr>> deleteMatchBySourceId(String id) async {
@@ -365,7 +367,7 @@ class AnalystDatabase {
 }
 
 /// The order of a query.
-/// 
+///
 /// Not all elements apply to all queries.
 enum Order {
   /// Ascending order, by the most relevant quality of the data.
@@ -374,7 +376,7 @@ enum Order {
   descending,
 
   /// Descending order by rating change.
-  /// 
+  ///
   /// Applies only to rating event queries.
   descendingChange,
 }

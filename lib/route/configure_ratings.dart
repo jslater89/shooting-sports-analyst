@@ -94,7 +94,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   List<MatchPointer> projectMatches = [];
   List<MatchPointer> lastUsedMatches = [];
   Map<MatchPointer, bool> ongoingMatches = {};
-  MatchListFilters? filters = MatchListFilters();
+  MatchListFilters? filters;
   List<MatchPointer>? filteredMatches;
   String? _lastProjectName;
 
@@ -160,22 +160,20 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         return;
       }
     }
-    else {
-      // This should only happen if we've never launched before, so...
-      _log.i("Autosaved project is null, assuming first start");
 
-      _ratingSystem = MultiplayerPercentEloRater();
-      sport = uspsaSport;
-      _settingsController = _ratingSystem.newSettingsController();
-      setState(() {
-        _settingsWidget = null;
-      });
-      setState(() {
-        _settingsWidget = _ratingSystem.newSettingsWidget(_settingsController);
-      });
+    // Prefs are global, which means that if we have multiple installations of
+    // Analyst, we might have a non-null project ID in prefs, but no project
+    // in the database with that ID, which we should probably fix.
+    _log.i("Autosaved project not found with id $lastProjectId, loading defaults");
+
+    _ratingSystem = MultiplayerPercentEloRater();
+    sport = uspsaSport;
+    _settingsController = _ratingSystem.newSettingsController();
+    setState(() {
+      _settingsWidget = _ratingSystem.newSettingsWidget(_settingsController);
       _settingsController.currentSettings = _ratingSystem.settings;
-      _restoreDefaults();
-    }
+    });
+    _restoreDefaults();
   }
 
   Future<void> _loadProject(DbRatingProject project) async {
@@ -384,7 +382,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                       },
                                       child: DropdownMenu<Sport>(
                                         controller: _sportNameController,
-                                        dropdownMenuEntries: SportRegistry().availableSports.map((s) => 
+                                        dropdownMenuEntries: SportRegistry().availableSports.map((s) =>
                                           DropdownMenuEntry(value: s, label: s.name)).toList(),
                                         onSelected: (v) async {
                                           var confirmed = await ConfirmDialog.show(
@@ -617,26 +615,26 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                     }
                                 ),
                               ),
-                              Tooltip(
-                                message: "Filter matches, calculating ratings for a subset of the matches in this project.",
-                                child: IconButton(
-                                  icon: Icon(Icons.filter_list),
-                                  color: Theme.of(context).primaryColor,
-                                  onPressed: () async {
-                                    var newFilters = await MatchListFilterDialog.show(context, filters ?? MatchListFilters());
+                              // Tooltip(
+                              //   message: "Filter matches, calculating ratings for a subset of the matches in this project.",
+                              //   child: IconButton(
+                              //     icon: Icon(Icons.filter_list),
+                              //     color: Theme.of(context).primaryColor,
+                              //     onPressed: () async {
+                              //       var newFilters = await MatchListFilterDialog.show(context, filters ?? MatchListFilters());
 
-                                    filters = newFilters;
-                                    if(newFilters != null) {
-                                      _filterMatches();
-                                    }
-                                    else {
-                                      setState(() {
-                                        filteredMatches = null;
-                                      });
-                                    }
-                                  },
-                                )
-                              )
+                              //       filters = newFilters;
+                              //       if(newFilters != null) {
+                              //         _filterMatches();
+                              //       }
+                              //       else {
+                              //         setState(() {
+                              //           filteredMatches = null;
+                              //         });
+                              //       }
+                              //     },
+                              //   )
+                              // )
                             ],
                           ),
                           SizedBox(height: 10),
@@ -1142,7 +1140,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                   action: SnackBarAction(
                     label: "SHOW",
                     onPressed: () {
-                      showDialog(context: context, builder: (context) => 
+                      showDialog(context: context, builder: (context) =>
                         AlertDialog(
                           title: Text("Failed to migrate matches"),
                           content: ConstrainedBox(
