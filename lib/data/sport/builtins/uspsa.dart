@@ -21,7 +21,7 @@ const _uspsaPenalties = [
 ];
 
 const uspsaOpen = Division(name: "Open", shortName: "OPEN", fallback: true);
-const uspsaPcc = Division(name: "PCC", shortName: "PCC");
+const uspsaPcc = Division(name: "PCC", shortName: "PCC", alternateNames: ["Pistol Caliber Carbine"]);
 const uspsaLimited = Division(name: "Limited", shortName: "LIM", alternateNames: ["LTD"]);
 const uspsaLimitedOptics = Division(name: "Limited Optics", shortName: "LO", alternateNames: ["limitedoptics"]);
 const uspsaCarryOptics = Division(name: "Carry Optics", shortName: "CO", alternateNames: ["carryoptics"]);
