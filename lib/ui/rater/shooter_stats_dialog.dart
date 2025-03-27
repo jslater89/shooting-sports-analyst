@@ -672,6 +672,17 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     if(minorEntries > 0) powerFactorsPresent += 1;
     if(otherEntries > 0) powerFactorsPresent += 1;
 
+    var levelI = matchesByLevel.keys.firstWhereOrNull((e) => e.eventLevel == EventLevel.local);
+    var levelII = matchesByLevel.keys.firstWhereOrNull((e) => e.eventLevel == EventLevel.regional);
+    var levelIIIPlus = matchesByLevel.keys.where((e) => e.eventLevel.index >= EventLevel.area.index);
+
+    int levelICount = matchesByLevel[levelI] ?? 0;
+    int levelIICount = matchesByLevel[levelII] ?? 0;
+    int levelIIICount = 0;
+    for(var level in levelIIIPlus) {
+      levelIIICount += matchesByLevel[level] ?? 0;
+    }
+
     return [
       Row(
         children: [
@@ -733,7 +744,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         children: [
           Expanded(flex: 4, child: Text("Matches of level I/II/III", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 2, child: Text(
-              "${matchesByLevel[old.MatchLevel.I] ?? 0}/${matchesByLevel[old.MatchLevel.II] ?? 0}/${matchesByLevel[old.MatchLevel.III] ?? 0}",
+              "$levelICount/$levelIICount/$levelIIICount",
               style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
