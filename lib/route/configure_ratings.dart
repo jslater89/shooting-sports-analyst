@@ -1095,6 +1095,10 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
           return;
         }
 
+        // Settings are almost certainly loaded at this point, but just in case...
+        _loadedProject!.settings;
+        // Make sure the latest settings state is what we export.
+        _loadedProject!.changedSettings();
         var json = jsonEncode(_loadedProject!.toJson());
         HtmlOr.saveFile("${_loadedProject!.name.safeFilename()}.json", json);
         break;

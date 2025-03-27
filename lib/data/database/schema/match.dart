@@ -134,9 +134,16 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
       // For each division, filter shooters and calculate match scores
       for(var division in divisionsAppearing) {
         var shooters = match.filterShooters(divisions: [division]);
+
+        try {
         var scores = match.getScores(shooters: shooters);
-        for(var entry in scores.entries) {
-          shooterScores[entry.key] = entry.value;
+          for(var entry in scores.entries) {
+              shooterScores[entry.key] = entry.value;
+          }
+        }
+        catch(e, stackTrace) {
+          _log.e("Error getting scores for ${match.name} (${match.sourceCode}: ${match.sourceIds.first})", error: e, stackTrace: stackTrace);
+          rethrow;
         }
       }
     }
@@ -443,7 +450,7 @@ class DbMatchEntry {
       pf = foundPf;
     }
 
-    Map<MatchStage, Result<RawScore, ResultErr>> hydratedScores = Map.fromEntries(scores.map((dbScore) => 
+    Map<MatchStage, Result<RawScore, ResultErr>> hydratedScores = Map.fromEntries(scores.map((dbScore) =>
       MapEntry(stagesById[dbScore.stageId]!, dbScore.hydrate(stagesById[dbScore.stageId]!, pf, localBonusEvents, localPenaltyEvents))));
     var firstError = hydratedScores.values.firstWhereOrNull((element) => element.isErr());
     if(firstError != null) return Result.err(firstError.unwrapErr());
@@ -605,7 +612,7 @@ class DbScoringEventCount {
   }
 }
 
-@embedded 
+@embedded
 class DbMatchScore extends BareRelativeScore {
   /// The stage ID for this score, or -1 if this is a match score.
   DbMatchScore.empty() : stageScores = [], super(place: 0, ratio: 0, points: 0);

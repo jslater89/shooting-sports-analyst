@@ -62,9 +62,9 @@ final class RelativeStageFinishScoring extends MatchScoring {
   @override
   Map<MatchEntry, RelativeMatchScore> calculateMatchScores({
     required ShootingMatch match,
-    required List<MatchEntry> shooters, 
+    required List<MatchEntry> shooters,
     required List<MatchStage> stages,
-    bool scoreDQ = true, 
+    bool scoreDQ = true,
     MatchPredictionMode predictionMode = MatchPredictionMode.none,
     PreloadedRatingDataSource? ratings,
     DateTime? scoresAfter,
@@ -82,7 +82,8 @@ final class RelativeStageFinishScoring extends MatchScoring {
 
       if(stage.maxPoints == 0 && fixedStageValue == null) {
         _log.e("relative stage finish scoring requires stage max points or fixed stage value");
-        throw ArgumentError("relative stage finish scoring requires stage max points or fixed stage value");
+        _log.d("stage: $stage scoring: ${stage.scoring.runtimeType}");
+        throw ArgumentError("relative stage finish scoring requires stage max points or fixed stage value for $stage");
       }
 
       Map<MatchEntry, RawScore> scores = {};
@@ -196,7 +197,7 @@ final class RelativeStageFinishScoring extends MatchScoring {
         bestTotalScore = totalScore;
       }
     }
-    
+
     // Do predictions
     if(predictionMode != MatchPredictionMode.none) {
       // If we're doing Elo aware predictions, fetch some data.
@@ -257,7 +258,7 @@ final class RelativeStageFinishScoring extends MatchScoring {
           if(stagesCompleted > 0) {
             averageStagePercentage = averageStagePercentage / stagesCompleted;
           }
-        
+
 
           // If they're already done, there's nothing to predict.
           if(stagesCompleted >= stages.length) continue;

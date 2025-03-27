@@ -20,11 +20,12 @@ const _uspsaPenalties = [
   const ScoringEvent("Overtime shot", shortName: "OS", pointChange: -5, sortOrder: 101),
 ];
 
-const uspsaOpen = Division(name: "Open", shortName: "OPEN", fallback: true);
-const uspsaPcc = Division(name: "PCC", shortName: "PCC", alternateNames: ["Pistol Caliber Carbine"]);
+// Too bad, 'not for score' shooters, you're in Open now
+const uspsaOpen = Division(name: "Open", shortName: "OPEN", alternateNames: ["NFS"], fallback: true);
+const uspsaPcc = Division(name: "PCC", shortName: "PCC", alternateNames: ["Pistol Caliber Carbine", "pistolcalibercarbine"]);
 const uspsaLimited = Division(name: "Limited", shortName: "LIM", alternateNames: ["LTD"]);
 const uspsaLimitedOptics = Division(name: "Limited Optics", shortName: "LO", alternateNames: ["limitedoptics"]);
-const uspsaCarryOptics = Division(name: "Carry Optics", shortName: "CO", alternateNames: ["carryoptics"]);
+const uspsaCarryOptics = Division(name: "Carry Optics", shortName: "CO", alternateNames: ["carryoptics", "Carry-Optic"]);
 const uspsaProduction = Division(name: "Production", shortName: "PROD");
 const uspsaSingleStack = Division(name: "Single Stack", shortName: "SS", alternateNames: ["singlestack"]);
 const uspsaRevolver = Division(name: "Revolver", shortName: "REV", alternateNames: ["REVO"]);

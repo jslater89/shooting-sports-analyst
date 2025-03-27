@@ -200,7 +200,6 @@ class RatingProjectLoader {
       return Result.err(CanceledError());
     }
 
-
     // If this project records a list of matches used to calculate ratings, we
     // may be able to append to it rather than running the full calculation.
     // If every match in [matchesToAdd] is after the most recent match in [lastUsed],
