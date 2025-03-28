@@ -181,7 +181,7 @@ class StackedDistributionChart extends StatelessWidget {
       if(bucketSize == -1) {
         bucketSize = bucket.bucketSize.round();
       }
-      else if(bucket.bucketSize != bucketSize) {
+      else if(!bucket.bucketSize.floatEqual(bucketSize)) {
         throw ArgumentError("StackedDistributionChart requires uniform bucket size: ${bucket.bucketSize} != $bucketSize");
       }
     }
@@ -357,16 +357,18 @@ class StackedDistributionChart extends StatelessWidget {
       return null;
     }
 
-    var sortedLabels = labels.sorted((a, b) => labelAverages[a]!.compareTo(labelAverages[b]!));
+    var sortedLabels = labels.sorted((a, b) => (labelAverages[a] ?? 0).compareTo(labelAverages[b] ?? 0));
 
     // Find the two closest classification averages to the rating
-    var above = sortedLabels.firstWhereOrNull((l) => labelAverages[l]! > value);
-    var below = sortedLabels.lastWhereOrNull((l) => labelAverages[l]! < value);
+    var above = sortedLabels.firstWhereOrNull((l) => (labelAverages[l] ?? 0) > value);
+    var below = sortedLabels.lastWhereOrNull((l) => (labelAverages[l] ?? 0) < value);
 
     if(above != null && below != null) {
       // Figure out how far between ratings we are.
-      var distanceToAbove = (value - labelAverages[above]!).abs();
-      var distanceToBelow = (value - labelAverages[below]!).abs();
+      var averageAbove = labelAverages[above] ?? 0;
+      var averageBelow = labelAverages[below] ?? 0;
+      var distanceToAbove = (value - averageAbove).abs();
+      var distanceToBelow = (value - averageBelow).abs();
       var totalDistance = distanceToAbove + distanceToBelow;
 
       // scale to an int between 0 (below) and 19 (above)

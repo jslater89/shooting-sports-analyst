@@ -19,6 +19,7 @@ import 'package:shooting_sports_analyst/data/search_query_parser.dart';
 import 'package:shooting_sports_analyst/data/sort_mode.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/icore.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/match/stage_stats_calculator.dart';
@@ -463,6 +464,7 @@ class _ResultPageState extends State<ResultPage> {
           stage: _stage,
           ignoredClassifications: [
             if(sport.name == uspsaSport.name) uspsaU,
+            if(sport.name == icoreSport.name) icoreUnclassified,
           ],
           showCdf: true,
         ));

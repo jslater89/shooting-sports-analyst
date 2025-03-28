@@ -67,15 +67,15 @@ class _RaterViewOtherSettingsDialogState extends State<RaterViewOtherSettingsDia
               dropdownMenuEntries: RatingScalerType.values.map((e) => DropdownMenuEntry(value: e, label: e.uiLabel)).toList(),
             ),
             const SizedBox(height: 15),
-            DropdownMenu<AvailableEstimators>(
+            DropdownMenu<AvailableEstimator>(
               label: const Text("Rating distribution"),
-              initialSelection: AvailableEstimators.fromEstimator(_displayModel.estimator),
+              initialSelection: AvailableEstimator.fromEstimator(_displayModel.estimator),
               onSelected: (value) {
                 if(value != null) {
                   _displayModel.estimator = value.estimator;
                 }
               },
-              dropdownMenuEntries: AvailableEstimators.values.map((e) => DropdownMenuEntry(value: e, label: e.uiLabel)).toList(),
+              dropdownMenuEntries: AvailableEstimator.values.map((e) => DropdownMenuEntry(value: e, label: e.uiLabel)).toList(),
             ),
           ],
         ),

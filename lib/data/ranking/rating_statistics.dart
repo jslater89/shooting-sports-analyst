@@ -6,13 +6,9 @@
 
 import 'package:collection/collection.dart';
 import 'package:data/stats.dart' show ContinuousDistribution;
-import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
-import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/math/distribution_tools.dart';
 import 'package:shooting_sports_analyst/data/math/gamma/gamma_estimator.dart';
-import 'package:shooting_sports_analyst/data/math/lognormal/lognormal_estimator.dart';
-import 'package:shooting_sports_analyst/data/math/weibull/weibull_estimator.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
@@ -46,6 +42,8 @@ class RaterStatistics {
   /// Map of classifications to a list of ratings.
   Map<Classification, List<double>> ratingsByClass;
 
+  Iterable<double> get allRatings => ratingsByClass.values.flattened;
+
   Map<int, int> yearOfEntryHistogram;
 
   ContinuousDistribution ratingDistribution;
@@ -71,6 +69,17 @@ class RaterStatistics {
     required this.ratingDistribution,
     required this.fitTests,
   });
+
+  void changeDistribution(ContinuousDistributionEstimator estimator) {
+    var allRatingsList = allRatings.toList();
+    ratingDistribution = estimator.estimate(allRatingsList);
+    fitTests = DistributionFitTests(
+      logLikelihood: ratingDistribution.logLikelihood(allRatingsList),
+      kolmogorovSmirnov: ratingDistribution.kolmogorovSmirnovTest(allRatingsList),
+      chiSquare: ratingDistribution.chiSquareTest(allRatingsList),
+      andersonDarling: ratingDistribution.andersonDarlingTest(allRatingsList),
+    );
+  }
 }
 
 class DistributionFitTests {

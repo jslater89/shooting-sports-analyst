@@ -1,26 +1,19 @@
 
 
 import 'package:collection/collection.dart';
-import 'package:color_models/color_models.dart';
+import 'package:data/data.dart' show ContinuousDistribution;
 import 'package:flutter/material.dart';
-import 'package:community_charts_flutter/community_charts_flutter.dart' as charts;
-import 'package:flutter/widgets.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/math/distribution_tools.dart';
 import 'package:shooting_sports_analyst/data/math/gamma/gamma_estimator.dart';
-import 'package:shooting_sports_analyst/data/math/gaussian/gaussian_estimator.dart';
-import 'package:shooting_sports_analyst/data/math/lognormal/lognormal_estimator.dart';
 import 'package:shooting_sports_analyst/data/math/weibull/weibull_estimator.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_statistics.dart';
-import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
-import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/ui/rater/rater_stats_dialog.dart';
-import 'package:community_charts_common/community_charts_common.dart' as commonCharts;
 import 'package:shooting_sports_analyst/ui/widget/stacked_distribution_chart.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
-class RatingDistributionDialog extends StatelessWidget {
+class RatingDistributionDialog extends StatefulWidget {
   const RatingDistributionDialog({
     super.key,
     required this.statistics,
@@ -28,6 +21,7 @@ class RatingDistributionDialog extends StatelessWidget {
     required this.group,
     this.reverseClassifications = true,
     this.ignoredClassifications,
+    this.showCdf = false,
   });
 
   final Sport sport;
@@ -35,6 +29,39 @@ class RatingDistributionDialog extends StatelessWidget {
   final RaterStatistics statistics;
   final bool reverseClassifications;
   final List<Classification>? ignoredClassifications;
+  final bool showCdf;
+  @override
+  State<RatingDistributionDialog> createState() => _RatingDistributionDialogState();
+}
+
+class _RatingDistributionDialogState extends State<RatingDistributionDialog> {
+  late bool showingCdf;
+  late ContinuousDistributionEstimator estimator;
+  late ContinuousDistribution distribution;
+  late List<double> ratingValues;
+  late double minRating;
+  late double maxRating;
+
+  late TextEditingController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    showingCdf = widget.showCdf;
+    estimator = widget.statistics.ratingDistribution.estimator;
+    distribution = widget.statistics.ratingDistribution;
+    ratingValues = widget.statistics.allRatings.toList();
+    minRating = ratingValues.min;
+    maxRating = ratingValues.max;
+    controller = TextEditingController(text: AvailableEstimator.fromEstimator(estimator).uiLabel);
+  }
+
+  void changeDistribution(ContinuousDistributionEstimator estimator) {
+    distribution = estimator.estimate(ratingValues);
+    setState(() {
+      estimator = estimator;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,11 +73,11 @@ class RatingDistributionDialog extends StatelessWidget {
 
     Map<Classification, HistogramLabel> labels = {};
     List<Classification> classifications;
-    if(reverseClassifications) {
-      classifications = sport.classifications.values.toList().reversed.toList();
+    if(widget.reverseClassifications) {
+      classifications = widget.sport.classifications.values.toList().reversed.toList();
     }
     else {
-      classifications = sport.classifications.values.toList();
+      classifications = widget.sport.classifications.values.toList();
     }
 
     List<HistogramLabel> ignoredLabels = [];
@@ -60,24 +87,24 @@ class RatingDistributionDialog extends StatelessWidget {
         color: classification.color,
         index: index,
       );
-      if(ignoredClassifications != null && ignoredClassifications!.contains(classification)) {
+      if(widget.ignoredClassifications != null && widget.ignoredClassifications!.contains(classification)) {
         ignoredLabels.add(labels[classification]!);
       }
     }
 
-    for(var bucket in statistics.histogram.keys) {
-      var bucketStart = bucket * statistics.histogramBucketSize;
-      var bucketEnd = bucketStart + statistics.histogramBucketSize;
-      var bucketCenter = bucketStart + (statistics.histogramBucketSize / 2);
+    for(var bucket in widget.statistics.histogram.keys) {
+      var bucketStart = bucket * widget.statistics.histogramBucketSize;
+      var bucketEnd = bucketStart + widget.statistics.histogramBucketSize;
+      var bucketCenter = bucketStart + (widget.statistics.histogramBucketSize / 2);
 
       List<HistogramData> bucketData = [];
-      for(var classification in sport.classifications.values) {
-        var count = statistics.histogramsByClass[classification]?[bucket];
+      for(var classification in widget.sport.classifications.values) {
+        var count = widget.statistics.histogramsByClass[classification]?[bucket];
         if(count != null) {
           bucketData.add(HistogramData(
             label: labels[classification]!,
             count: count,
-            average: statistics.averageByClass[classification],
+            average: widget.statistics.averageByClass[classification],
           ));
         }
       }
@@ -87,23 +114,41 @@ class RatingDistributionDialog extends StatelessWidget {
     }
 
     return AlertDialog(
-      title: Text("Distribution vs. histogram (${group.name}, ${statistics.ratingDistribution.runtimeType})"),
+      title: Text("Distribution vs. histogram (${widget.group.name}, ${widget.statistics.ratingDistribution.runtimeType})"),
       content: SizedBox(
         width: size.width * 0.9,
         height: size.height * 0.9,
         child: Column(
           children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DistributionSelector(onSelected: changeDistribution, initialSelection: AvailableEstimator.fromEstimator(estimator)),
+                const SizedBox(width: 16),
+                TextButton(
+                  child: Text(showingCdf ? "HISTOGRAM" : "CDF"),
+                  onPressed: () {
+                    setState(() {
+                      showingCdf = !showingCdf;
+                    });
+                  },
+                )
+              ],
+            ),
             Expanded(child: StackedDistributionChart(
               buckets: buckets,
-              distribution: statistics.ratingDistribution,
+              distribution: distribution,
               distributionIgnoresLabels: ignoredLabels,
+              data: showingCdf ? ratingValues : null,
             )),
             const SizedBox(height: 10),
+            Text(distribution.parameterString),
+            const SizedBox(height: 8),
             Text(
-              "Log likelihood: ${statistics.fitTests.logLikelihood.round()} • "
-              "Kolmogorov-Smirnov: ${statistics.fitTests.kolmogorovSmirnov.toStringAsFixed(4)} • "
-              "Chi-square: ${statistics.fitTests.chiSquare.toStringAsFixed(2)} • "
-              "Anderson-Darling: ${statistics.fitTests.andersonDarling.toStringAsFixed(2)}",
+              "Log likelihood: ${widget.statistics.fitTests.logLikelihood.round()} • "
+              "Kolmogorov-Smirnov: ${widget.statistics.fitTests.kolmogorovSmirnov.toStringAsFixed(4)} • "
+              "Chi-square: ${widget.statistics.fitTests.chiSquare.toStringAsFixed(2)} • "
+              "Anderson-Darling: ${widget.statistics.fitTests.andersonDarling.toStringAsFixed(2)}",
             ),
           ],
         ),
@@ -112,7 +157,7 @@ class RatingDistributionDialog extends StatelessWidget {
   }
 }
 
-class ScoresDistributionDialog extends StatelessWidget {
+class ScoresDistributionDialog extends StatefulWidget {
   const ScoresDistributionDialog({
     super.key,
     required this.matchScores,
@@ -127,17 +172,48 @@ class ScoresDistributionDialog extends StatelessWidget {
   final MatchStage? stage;
   final List<Classification> ignoredClassifications;
   final bool showCdf;
+
+  @override
+  State<ScoresDistributionDialog> createState() => _ScoresDistributionDialogState();
+}
+
+class _ScoresDistributionDialogState extends State<ScoresDistributionDialog> {
+  late bool showingCdf;
+  late ContinuousDistributionEstimator estimator;
+  late ContinuousDistribution distribution;
+  late List<double> scoreValues;
+  late double minScore;
+  late double maxScore;
+
+  @override
+  void initState() {
+    super.initState();
+    showingCdf = widget.showCdf;
+    estimator = WeibullEstimator();
+    scoreValues = widget.matchScores.map((e) => e.percentage).where((e) => e > 0).toList();
+    distribution = estimator.estimate(scoreValues);
+    minScore = scoreValues.min;
+    maxScore = scoreValues.max;
+  }
+
+  void changeDistribution(ContinuousDistributionEstimator estimator) {
+    distribution = estimator.estimate(scoreValues);
+    setState(() {
+      estimator = estimator;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    if(!sport.hasClassifications) {
-      throw ArgumentError("Sport ${sport.name} has no classifications");
+    if(!widget.sport.hasClassifications) {
+      throw ArgumentError("Sport ${widget.sport.name} has no classifications");
     }
 
     Map<MatchEntry, RelativeScore> scores = {};
-    for(var s in matchScores) {
+    for(var s in widget.matchScores) {
       RelativeScore score;
-      if(stage != null) {
-        score = s.stageScores[stage]!;
+      if(widget.stage != null) {
+        score = s.stageScores[widget.stage]!;
       }
       else {
         score = s;
@@ -149,19 +225,16 @@ class ScoresDistributionDialog extends StatelessWidget {
     }
 
     var scoreValues = scores.values.map((e) => e.percentage).toList();
-    var distribution = WeibullEstimator().estimate(scoreValues);
 
     // Add a buffer to the start so that > bucketStart && <= bucketEnd fits all scores.
     var bucketSize = 5;
-    var minScore = (scoreValues.min - 1).round();
-    var maxScore = scoreValues.max;
     var bucketCount = (maxScore - minScore) ~/ bucketSize + 1;
 
     Map<Classification, HistogramLabel> labels = {};
     List<HistogramLabel> ignoredLabels = [];
-    for(var c in sport.classifications.values) {
+    for(var c in widget.sport.classifications.values) {
       labels[c] = HistogramLabel(name: c.shortDisplayName, color: c.color, index: c.index);
-      if(ignoredClassifications.contains(c)) {
+      if(widget.ignoredClassifications.contains(c)) {
         ignoredLabels.add(labels[c]!);
       }
     }
@@ -184,7 +257,7 @@ class ScoresDistributionDialog extends StatelessWidget {
       var bucketCenter = bucketStart + (bucketSize / 2);
 
       List<HistogramData> bucketData = [];
-      for(var c in sport.classifications.values) {
+      for(var c in widget.sport.classifications.values) {
         var count = scoresByClass[c]?.where((e) => e.percentage > bucketStart && e.percentage <= bucketEnd).length ?? 0;
         var average = scoresByClass[c]?.map((e) => e.percentage).average;
         bucketData.add(HistogramData(label: labels[c]!, count: count, average: average));
@@ -205,11 +278,25 @@ class ScoresDistributionDialog extends StatelessWidget {
         height: size.height * 0.9,
         child: Column(
           children: [
+            Row(
+              children: [
+                DistributionSelector(onSelected: changeDistribution, initialSelection: AvailableEstimator.fromEstimator(estimator)),
+                const SizedBox(width: 16),
+                TextButton(
+                  child: Text(showingCdf ? "HISTOGRAM" : "CDF"),
+                  onPressed: () {
+                    setState(() {
+                      showingCdf = !showingCdf;
+                    });
+                  },
+                )
+              ],
+            ),
             Expanded(child: StackedDistributionChart(
               buckets: buckets,
               distribution: distribution,
               distributionIgnoresLabels: ignoredLabels,
-              data: showCdf ? scoreValues : null,
+              data: showingCdf ? scoreValues : null,
             )),
             const SizedBox(height: 10),
             Text(
@@ -221,6 +308,42 @@ class ScoresDistributionDialog extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class DistributionSelector extends StatefulWidget {
+  const DistributionSelector({super.key, required this.onSelected, this.initialSelection});
+
+  final void Function(ContinuousDistributionEstimator estimator) onSelected;
+  final AvailableEstimator? initialSelection;
+
+  @override
+  State<DistributionSelector> createState() => _DistributionSelectorState();
+}
+
+class _DistributionSelectorState extends State<DistributionSelector> {
+  late AvailableEstimator selectedEstimator;
+  late TextEditingController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    selectedEstimator = widget.initialSelection ?? AvailableEstimator.values.first;
+    controller = TextEditingController(text: selectedEstimator.uiLabel);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownMenu<AvailableEstimator>(
+      controller: controller,
+      dropdownMenuEntries: AvailableEstimator.values.map((e) => DropdownMenuEntry(value: e, label: e.uiLabel)).toList(),
+      onSelected: (value) {
+        widget.onSelected(value!.estimator);
+        setState(() {
+          selectedEstimator = value;
+        });
+      },
     );
   }
 }

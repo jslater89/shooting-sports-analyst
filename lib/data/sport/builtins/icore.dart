@@ -133,12 +133,12 @@ const icoreM = ScoringEvent(_icoreMName, timeChange: 5, sortOrder: 5);
 const icoreNS = ScoringEvent(_icoreNSName, timeChange: 5, sortOrder: 6);
 const icoreNPM = ScoringEvent(_icoreNPMName, timeChange: 0, sortOrder: 7);
 
-const icoreGrandmaster = Classification(index: 0, name: "Grandmaster", shortName: "GM");
-const icoreMaster = Classification(index: 1, name: "Master", shortName: "M");
-const icoreAClass = Classification(index: 2, name: "A", shortName: "A");
-const icoreBClass = Classification(index: 3, name: "B", shortName: "B");
-const icoreCClass = Classification(index: 4, name: "C", shortName: "C");
-const icoreDClass = Classification(index: 5, name: "D", shortName: "D");
+const icoreGrandmaster = Classification(index: 0, name: "Grandmaster", shortName: "GM", alternateNames: ["G", "Ga", "Grand Master"]);
+const icoreMaster = Classification(index: 1, name: "Master", shortName: "M", alternateNames: ["Ma"]);
+const icoreAClass = Classification(index: 2, name: "A", shortName: "A", alternateNames: ["Aa"]);
+const icoreBClass = Classification(index: 3, name: "B", shortName: "B", alternateNames: ["Ba"]);
+const icoreCClass = Classification(index: 4, name: "C", shortName: "C", alternateNames: ["Ca"]);
+const icoreDClass = Classification(index: 5, name: "D", shortName: "D", alternateNames: ["Da"]);
 const icoreUnclassified = Classification(index: 6, name: "Unclassified", shortName: "U", fallback: true);
 
 const icoreSportName = "ICORE";

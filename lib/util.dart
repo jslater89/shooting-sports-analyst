@@ -429,3 +429,25 @@ extension Clamp on num {
     return this;
   }
 }
+
+extension FloatEqual on num {
+  bool floatEqual(num other, {num epsilon = 1e-10}) {
+    return (this - other).abs() < epsilon;
+  }
+}
+
+extension SignificantDigits on double {
+  /// Return a string representation of this number with approximately [digits] significant
+  /// digits.
+  ///
+  /// Internally, this returns a value with x digits in front of the decimal point and y
+  /// digits after it, where x + y = [digits], or where y = 0 and x >= [digits].
+  String toStringWithSignificantDigits(int digits) {
+    var wholeNumberLength = this.floor().toString().length;
+    var decimalPlaces = digits - wholeNumberLength;
+    if(decimalPlaces <= 0) {
+      return this.toStringAsFixed(0);
+    }
+    return this.toStringAsFixed(decimalPlaces);
+  }
+}

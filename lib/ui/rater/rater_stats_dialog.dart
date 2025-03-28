@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_charts/flutter_charts.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_statistics.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/icore.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/logger.dart';
@@ -145,6 +146,7 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
                   ignoredClassifications: [
                     // TODO: handle this as a sport extension/interface
                     if(widget.sport.name == uspsaSport.name) uspsaU,
+                    if(widget.sport.name == icoreSport.name) icoreUnclassified,
                   ],
                 ));
               },

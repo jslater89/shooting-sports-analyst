@@ -12,12 +12,13 @@ import 'package:shooting_sports_analyst/data/math/gamma/gamma_estimator.dart';
 import 'package:shooting_sports_analyst/data/math/gaussian/gaussian_estimator.dart';
 import 'package:shooting_sports_analyst/data/math/lognormal/lognormal_estimator.dart';
 import 'package:shooting_sports_analyst/data/math/weibull/weibull_estimator.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 abstract class ContinuousDistributionEstimator {
   ContinuousDistribution estimate(List<double> data);
 }
 
-enum AvailableEstimators {
+enum AvailableEstimator {
   gamma,
   weibull,
   logNormal,
@@ -32,27 +33,27 @@ enum AvailableEstimators {
 
   ContinuousDistributionEstimator get estimator {
     switch (this) {
-      case AvailableEstimators.gamma:
+      case AvailableEstimator.gamma:
         return GammaEstimator();
-      case AvailableEstimators.weibull:
+      case AvailableEstimator.weibull:
         return WeibullEstimator();
-      case AvailableEstimators.logNormal:
+      case AvailableEstimator.logNormal:
         return LogNormalEstimator();
-      case AvailableEstimators.normal:
+      case AvailableEstimator.normal:
         return GaussianEstimator();
     }
   }
 
-  static AvailableEstimators fromEstimator(ContinuousDistributionEstimator estimator) {
+  static AvailableEstimator fromEstimator(ContinuousDistributionEstimator estimator) {
     switch (estimator.runtimeType) {
       case GammaEstimator:
-        return AvailableEstimators.gamma;
+        return AvailableEstimator.gamma;
       case WeibullEstimator:
-        return AvailableEstimators.weibull;
+        return AvailableEstimator.weibull;
       case LogNormalEstimator:
-        return AvailableEstimators.logNormal;
+        return AvailableEstimator.logNormal;
       case GaussianEstimator:
-        return AvailableEstimators.normal;
+        return AvailableEstimator.normal;
       default:
         throw ArgumentError("Unknown estimator: $estimator");
     }
@@ -221,5 +222,29 @@ extension StatisticalTests on ContinuousDistribution {
     final aSquared = -n - (sum / n);
 
     return aSquared;
+  }
+}
+
+extension GetEstimator on ContinuousDistribution {
+  ContinuousDistributionEstimator get estimator {
+    return switch(this) {
+      GammaDistribution() => GammaEstimator(),
+      WeibullDistribution() => WeibullEstimator(),
+      LogNormalDistribution() => LogNormalEstimator(),
+      NormalDistribution() => GaussianEstimator(),
+      _ => throw ArgumentError("No estimator for distribution: $runtimeType"),
+    };
+  }
+}
+
+extension ParameterString on ContinuousDistribution {
+  String get parameterString {
+    return switch(this) {
+      GammaDistribution(:final shape, :final scale) => "Shape: ${shape.toStringWithSignificantDigits(5)}, Scale: ${scale.toStringWithSignificantDigits(5)}",
+      WeibullDistribution(:final shape, :final scale) => "Shape: ${shape.toStringWithSignificantDigits(5)}, Scale: ${scale.toStringWithSignificantDigits(5)}",
+      LogNormalDistribution(:final mu, :final sigma) => "Mu: ${mu.toStringWithSignificantDigits(5)}, Sigma: ${sigma.toStringWithSignificantDigits(5)}",
+      NormalDistribution(:final mu, :final sigma) => "Mu: ${mu.toStringWithSignificantDigits(5)}, Sigma: ${sigma.toStringWithSignificantDigits(5)}",
+      _ => throw ArgumentError("No parameter string for distribution: $runtimeType"),
+    };
   }
 }
