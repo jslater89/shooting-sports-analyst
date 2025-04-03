@@ -9,7 +9,6 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:fuzzywuzzy/fuzzywuzzy.dart' as fuzzywuzzy;
-import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
@@ -23,15 +22,11 @@ import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
 import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
-import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
-import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
 import 'package:shooting_sports_analyst/data/ranking/timings.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
-import 'package:shooting_sports_analyst/data/sport/scoring/stage_scoring.dart';
 import 'package:shooting_sports_analyst/logger.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 var _log = SSALogger("ProjectLoader");
@@ -268,6 +263,11 @@ class RatingProjectLoader {
       else {
         _log.i("Unable to append: new matches occur before the last existing match");
       }
+      await host.progressCallback(
+        progress: 0,
+        total: 1,
+        state: LoadingState.clearingOldRatings,
+      );
       await project.resetRatings();
     }
     else {
@@ -411,7 +411,11 @@ class RatingProjectLoader {
         group: group,
         newRatings: newRatings,
         progressCallback: (progress, total, description) async {
-          if(progress == 0 || progress % (max(5, total ~/ 250)) == 0) {
+          var progressStep = max(5, total ~/ 250);
+          if(total < 25) {
+            progressStep = 1;
+          }
+          if(progress == 0 || progress % progressStep == 0) {
             await host.progressCallback(
               progress: _currentMatchStep,
               total: _totalMatchSteps,
@@ -2087,6 +2091,8 @@ class RatingProjectLoader {
 enum LoadingState {
   /// Processing has not yet begun
   notStarted,
+  /// In the case of a full recalculation, old ratings are being cleared
+  clearingOldRatings,
   /// New matches are downloading from remote sources
   downloadingMatches,
   /// Matches are being read from the database
@@ -2104,6 +2110,8 @@ enum LoadingState {
     switch(this) {
       case LoadingState.notStarted:
         return "not started";
+      case LoadingState.clearingOldRatings:
+        return "clearing old ratings";
       case LoadingState.downloadingMatches:
         return "downloading matches";
       case LoadingState.readingMatches:
