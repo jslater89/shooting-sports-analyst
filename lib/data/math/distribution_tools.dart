@@ -248,3 +248,7 @@ extension ParameterString on ContinuousDistribution {
     };
   }
 }
+
+extension NonOverlappingIterableNumExtension on Iterable<num> {
+  double stdDev() => this.standardDeviation();
+}
