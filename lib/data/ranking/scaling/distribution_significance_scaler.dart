@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 
 /// Scales ratings to a z-score as calculated from a Weibull variance/stdDev.
@@ -14,7 +15,7 @@ class DistributionZScoreScaler extends RatingScaler {
   final double scaleOffset;
 
   @override
-  double scaleRating(double number) {
+  double scaleRating(double number, {RatingGroup? group}) {
     var d = info.ratingDistribution;
     var zScore = (number - d.mean) / d.standardDeviation;
     var scaledRating = zScore * scaleFactor;
@@ -22,7 +23,7 @@ class DistributionZScoreScaler extends RatingScaler {
   }
 
   @override
-  double scaleNumber(double number, {required double originalRating}) {
+  double scaleNumber(double number, {required double originalRating, RatingGroup? group}) {
     var d = info.ratingDistribution;
     var zScore = (originalRating - d.mean) / d.standardDeviation;
     var scaledRating = zScore * scaleFactor;

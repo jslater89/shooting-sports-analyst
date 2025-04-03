@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 
 /// Scales ratings so that the average of the top 2% of ratings is equal to [scaleMax].
@@ -18,7 +19,7 @@ class Top2PercentAverageScaler extends RatingScaler {
   });
 
   @override
-  double scaleRating(double rating) {
+  double scaleRating(double rating, {RatingGroup? group}) {
     // linearly scale ratings such that the average rating of the top 2% is scaled to scaleMax and minRating is scaled to scaleMin
     // rating can be greater than top2PercentAverage, in which case it is scaled to a value greater than scaleMax.
 
@@ -27,7 +28,7 @@ class Top2PercentAverageScaler extends RatingScaler {
   }
 
   @override
-  double scaleNumber(double number, {required double originalRating}) {
+  double scaleNumber(double number, {required double originalRating, RatingGroup? group}) {
     double scaleFactor = scaleMax / info.top2PercentAverage;
     return (number * scaleFactor);
   }

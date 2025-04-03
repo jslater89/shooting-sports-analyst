@@ -7,6 +7,7 @@
 
 import 'dart:math';
 
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 
 /// Scales ratings according to a continuous distribution, so that the percentile for each
@@ -76,7 +77,7 @@ class DistributionScaler extends RatingScaler {
   }
 
   @override
-  double scaleRating(double rating) {
+  double scaleRating(double rating, {RatingGroup? group}) {
     _computeScalingFactors();
 
     var intermediate = rating * _scaleFactor! + _offset!;
@@ -91,7 +92,7 @@ class DistributionScaler extends RatingScaler {
   }
 
   @override
-  double scaleNumber(double number, {required double originalRating}) {
+  double scaleNumber(double number, {required double originalRating, RatingGroup? group}) {
     _computeScalingFactors();
     return number * _scaleFactor!;
   }

@@ -158,7 +158,7 @@ final uspsaSport = Sport(
   },
   ratingStrengthProvider: _UspsaRatingStrengthProvider(),
   pubstompProvider: _UspsaPubstompProvider(),
-  builtinRatingGroupsProvider: _UspsaRatingGroupsProvider(),
+  builtinRatingGroupsProvider: UspsaRatingGroupsProvider(),
   connectivityCalculator: SqrtTotalUniqueProductCalculator(),
 );
 
@@ -221,7 +221,12 @@ class _UspsaPubstompProvider implements PubstompProvider {
   }
 }
 
-class _UspsaRatingGroupsProvider implements RatingGroupsProvider {
+class UspsaRatingGroupsProvider implements RatingGroupsProvider {
+  static UspsaRatingGroupsProvider instance = UspsaRatingGroupsProvider._();
+  factory UspsaRatingGroupsProvider() => instance;
+
+  UspsaRatingGroupsProvider._();
+
   @override
   List<RatingGroup> get builtinRatingGroups => _builtinRaterGroups;
 
@@ -238,7 +243,6 @@ class _UspsaRatingGroupsProvider implements RatingGroupsProvider {
 }
 
 final _builtinRaterGroups = <RatingGroup>[
-
   RatingGroup.newBuiltIn(
     uuid: "uspsa-open",
     sportName: uspsaName,

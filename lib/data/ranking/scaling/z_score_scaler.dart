@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 
 /// Convert ratings to z-scores, multiplying the result by [scaleFactor] and adding [scaleOffset].
@@ -14,12 +15,12 @@ class ZScoreScaler extends RatingScaler {
   ZScoreScaler({required super.info, this.scaleFactor = 500, this.scaleOffset = 1000});
 
   @override
-  double scaleRating(double rating) {
+  double scaleRating(double rating, {RatingGroup? group}) {
     return scaleOffset + ((rating - info.ratingMean) / info.ratingStdDev) * scaleFactor;
   }
 
   @override
-  double scaleNumber(double number, {required double originalRating}) {
+  double scaleNumber(double number, {required double originalRating, RatingGroup? group}) {
     var zScore = (originalRating - info.ratingMean) / info.ratingStdDev;
     var scaledRating = zScore * scaleFactor;
     var finalScaleFactor = scaledRating / originalRating;
