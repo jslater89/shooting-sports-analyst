@@ -16,18 +16,20 @@ import 'package:shooting_sports_analyst/util.dart';
 SSALogger _log = SSALogger("ReportDialog");
 
 class ReportDialog extends StatefulWidget {
-  const ReportDialog({super.key, required this.dataSource});
+  const ReportDialog({super.key, required this.dataSource, this.onFiltersChanged, this.initialFilters});
 
   final RatingDataSource dataSource;
+  final void Function(ReportFilters filters)? onFiltersChanged;
+  final ReportFilters? initialFilters;
 
   @override
   State<ReportDialog> createState() => _ReportDialogState();
 
-  static Future<void> show(BuildContext context, RatingDataSource dataSource) {
+  static Future<void> show(BuildContext context, RatingDataSource dataSource, {ReportFilters? initialFilters, void Function(ReportFilters filters)? onFiltersChanged}) {
     return showDialog<void>(
       context: context,
       barrierDismissible: true,
-      builder: (context) => ReportDialog(dataSource: dataSource),
+      builder: (context) => ReportDialog(dataSource: dataSource, initialFilters: initialFilters, onFiltersChanged: onFiltersChanged),
     );
   }
 }
@@ -97,7 +99,7 @@ class _ReportDialogState extends State<ReportDialog> {
         ),
       content: SizedBox(
         width: 1000,
-        child: RatingReportView(allReports: _allReports!, recentReports: _recentReports!),
+        child: RatingReportView(allReports: _allReports!, recentReports: _recentReports!, onFiltersChanged: widget.onFiltersChanged, initialFilters: widget.initialFilters),
       ),
     );
   }

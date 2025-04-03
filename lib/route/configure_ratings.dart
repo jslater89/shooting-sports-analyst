@@ -47,6 +47,7 @@ import 'package:shooting_sports_analyst/ui/rater/member_number_blacklist_dialog.
 import 'package:shooting_sports_analyst/ui/rater/member_number_correction_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_map_dialog.dart';
+import 'package:shooting_sports_analyst/ui/rater/reports/report_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/select_old_project_dialog.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/text_styles.dart';
@@ -1342,6 +1343,13 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
           _saveProject(_loadedProject!.name);
         }
         break;
+      case _MenuEntry.viewReports:
+        if(_loadedProject == null) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Save project first")));
+          return;
+        }
+        ReportDialog.show(context, _loadedProject!);
+        break;
     }
   }
 }
@@ -1350,6 +1358,7 @@ enum _MenuEntry {
   import,
   export,
   hiddenShooters,
+  viewReports,
   dataEntryErrors,
   numberMappings,
   autoMappings,
@@ -1363,6 +1372,7 @@ enum _MenuEntry {
 
   static List<_MenuEntry> get menu => [
     hiddenShooters,
+    viewReports,
     dataEntryErrors,
     numberMappings,
     autoMappings,
@@ -1383,6 +1393,8 @@ enum _MenuEntry {
         return "Export";
       case _MenuEntry.hiddenShooters:
         return "Hide shooters";
+      case _MenuEntry.viewReports:
+        return "View reports";
       case _MenuEntry.dataEntryErrors:
         return "Fix data entry errors";
       case _MenuEntry.numberMappings:

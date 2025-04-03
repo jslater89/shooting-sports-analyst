@@ -6,16 +6,18 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_report.dart';
 import 'package:shooting_sports_analyst/ui/rater/reports/expandable_report_list.dart';
 import 'package:shooting_sports_analyst/ui/rater/reports/filter_bar.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 class RatingReportView extends StatefulWidget {
-  const RatingReportView({super.key, required this.allReports, required this.recentReports});
+  const RatingReportView({super.key, required this.allReports, required this.recentReports, this.onFiltersChanged, this.initialFilters});
 
   final List<RatingReport> allReports;
   final List<RatingReport> recentReports;
+  final void Function(ReportFilters filters)? onFiltersChanged;
+  final ReportFilters? initialFilters;
 
   @override
   State<RatingReportView> createState() => _RatingReportViewState();
@@ -32,6 +34,12 @@ class _RatingReportViewState extends State<RatingReportView> {
       allReports: widget.allReports,
       recentReports: widget.recentReports,
     );
+    if(widget.initialFilters != null) {
+      filterModel.setFilters(widget.initialFilters!);
+    }
+    filterModel.addListener(() {
+      widget.onFiltersChanged?.call(filterModel._filters);
+    });
   }
 
   @override
@@ -48,38 +56,49 @@ class _RatingReportViewState extends State<RatingReportView> {
   }
 }
 
+class ReportFilters {
+  ReportFilters({required this.mode, required this.selectedGroups, required this.selectedTypes, required this.selectedSeverity});
+
+  ReportMode mode;
+  List<String> selectedGroups;
+  List<RatingReportType> selectedTypes;
+  RatingReportSeverity selectedSeverity;
+
+  factory ReportFilters.copy(ReportFilters other) {
+    return ReportFilters(mode: other.mode, selectedGroups: other.selectedGroups, selectedTypes: other.selectedTypes, selectedSeverity: other.selectedSeverity);
+  }
+}
+
 class ReportViewModel extends ChangeNotifier {
-  ReportViewModel({required this.groupNames, required this.allReports, required this.recentReports}) :
-    _selectedTypes = [...RatingReportType.values],
-    _selectedGroups = [...groupNames],
-    _selectedSeverity = RatingReportSeverity.info,
+  ReportViewModel({required this.groupNames, required this.allReports, required this.recentReports, ReportFilters? filters}) :
     _filteredReports = [...allReports] {
+      _filters = filters ?? ReportFilters(mode: ReportMode.recent, selectedGroups: [...groupNames], selectedTypes: [...RatingReportType.values], selectedSeverity: RatingReportSeverity.info);
       _applyFilters(); // for sort
     }
 
   final List<String> groupNames;
   final List<RatingReport> allReports;
   final List<RatingReport> recentReports;
-  
+  late ReportFilters _filters;
+
   List<RatingReport> get filteredReports => _filteredReports;
   List<RatingReport> _filteredReports;
 
-  ReportMode _mode = ReportMode.recent;
-  ReportMode get mode => _mode;
+  ReportMode get mode => _filters.mode;
 
   void setMode(ReportMode mode) {
-    _mode = mode;
+    _filters.mode = mode;
     _applyFilters();
     notifyListeners();
   }
 
-  List<RatingReport> get reports => _mode == ReportMode.all ? allReports : recentReports;
+  List<RatingReport> get reports => _filters.mode == ReportMode.all ? allReports : recentReports;
 
   void _applyFilters() {
     _filteredReports = reports.where((report) {
-      return selectedTypes.contains(report.type) &&
-          selectedGroups.contains(report.ratingGroupName) &&
-          report.severity.index >= selectedSeverity.index;
+      return _filters.selectedTypes.contains(report.type) &&
+          _filters.selectedGroups.contains(report.ratingGroupName) &&
+          report.severity.index >= _filters.selectedSeverity.index;
     }).toList();
     _filteredReports.sort((a, b) {
       if(a.severity != b.severity) {
@@ -89,63 +108,74 @@ class ReportViewModel extends ChangeNotifier {
     });
   }
 
+  void setFilters(ReportFilters filters) {
+    _filters = filters;
+    _filtersChanged();
+  }
+
   void _filtersChanged() {
     _applyFilters();
     notifyListeners();
   }
 
-  List<RatingReportType> _selectedTypes;
-  List<RatingReportType> get selectedTypes => _selectedTypes;
+  List<RatingReportType> get selectedTypes => _filters.selectedTypes;
 
   void addType(RatingReportType type) {
-    _selectedTypes.add(type);
+    _filters.selectedTypes.addIfMissing(type);
     _filtersChanged();
   }
 
   void removeType(RatingReportType type) {
-    _selectedTypes.remove(type);
+    _filters.selectedTypes.remove(type);
     _filtersChanged();
   }
 
   void setTypes(List<RatingReportType> types) {
-    _selectedTypes = types;
+    _filters.selectedTypes = types;
     _filtersChanged();
   }
 
   void allTypes() {
-    _selectedTypes = [...RatingReportType.values];
+    _filters.selectedTypes = [...RatingReportType.values];
     _filtersChanged();
   }
 
-  List<String> _selectedGroups;
-  List<String> get selectedGroups => _selectedGroups;
+  List<String> get selectedGroups => _filters.selectedGroups;
 
   void addGroup(String group) {
-    _selectedGroups.add(group);
+    _filters.selectedGroups.addIfMissing(group);
     _filtersChanged();
   }
 
   void removeGroup(String group) {
-    _selectedGroups.remove(group);
+    _filters.selectedGroups.remove(group);
     _filtersChanged();
   }
 
   void setGroups(List<String> groups) {
-    _selectedGroups = groups;
+    _filters.selectedGroups = groups;
     _filtersChanged();
   }
 
   void allGroups() {
-    _selectedGroups = [...groupNames];
+    _filters.selectedGroups = [...groupNames];
     _filtersChanged();
   }
 
-  RatingReportSeverity _selectedSeverity;
-  RatingReportSeverity get selectedSeverity => _selectedSeverity;
+  RatingReportSeverity get selectedSeverity => _filters.selectedSeverity;
 
   void setSeverity(RatingReportSeverity severity) {
-    _selectedSeverity = severity;
+    _filters.selectedSeverity = severity;
     _filtersChanged();
+  }
+
+  /// Return a copy of the provided filters, without copying its listeners.
+  factory ReportViewModel.copy(ReportViewModel other) {
+    return ReportViewModel(
+      groupNames: other.groupNames,
+      allReports: other.allReports,
+      recentReports: other.recentReports,
+    );
   }
 }
 

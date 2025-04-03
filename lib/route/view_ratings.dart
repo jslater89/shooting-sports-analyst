@@ -34,6 +34,7 @@ import 'package:shooting_sports_analyst/ui/rater/rater_view.dart';
 import 'package:shooting_sports_analyst/ui/rater/rater_view_other_settings_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/rating_filter_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/reports/report_dialog.dart';
+import 'package:shooting_sports_analyst/ui/rater/reports/report_view.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/associate_registrations.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_pointer_chooser_dialog.dart';
@@ -79,6 +80,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   RatingSortMode _sortMode = RatingSortMode.rating;
   late ShootingMatch _selectedMatch;
   late TabController _tabController;
+  ReportFilters? _lastReportFilters;
 
   DateTime? _changeSince;
 
@@ -194,7 +196,9 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
           action: SnackBarAction(
             label: "VIEW",
             onPressed: () {
-              ReportDialog.show(context, widget.dataSource);
+              ReportDialog.show(context, widget.dataSource, initialFilters: _lastReportFilters, onFiltersChanged: (filters) {
+                _lastReportFilters = filters;
+              });
             }
           ),
         )
@@ -524,7 +528,9 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         child: IconButton(
           icon: Icon(Icons.info_outline),
           onPressed: () {
-            ReportDialog.show(context, widget.dataSource);
+            ReportDialog.show(context, widget.dataSource, initialFilters: _lastReportFilters, onFiltersChanged: (filters) {
+              _lastReportFilters = filters;
+            });
           },
         )
       ),
