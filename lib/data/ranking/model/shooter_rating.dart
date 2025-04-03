@@ -30,7 +30,7 @@ import 'package:shooting_sports_analyst/util.dart';
 var _log = SSALogger("ShooterRating");
 
 /// ShooterRatings are convenience wrappers around [DbShooterRating].
-/// 
+///
 /// They hold some common functionality for all shooter ratings. Concrete
 /// implementations for different rating types can provide cleaner access
 /// to the underlying data, especially for the intData and doubleData arrays
@@ -68,7 +68,7 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
   Set<String> get allPossibleMemberNumbers => wrappedRating.allPossibleMemberNumbers;
   @override
   set allPossibleMemberNumbers(Set<String> s) => wrappedRating.allPossibleMemberNumbers = s;
-  
+
   /// The DB rating object backing this rating. If its ID property
   /// is [Isar.autoIncrement], it is assumed that the rating has not
   /// yet been persisted to the database. The database code will update
@@ -88,7 +88,7 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
 
   /// Whether the data contained by [wrappedRating] has been persisted.
   bool get isPersisted => wrappedRating.isPersisted;
-  
+
   /// The number of events over which trend/variance are calculated.
   static const baseTrendWindow = 30;
 
@@ -118,7 +118,7 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
 
   /// All of the rating events in this shooter's history, ordered
   /// from newest to oldest.
-  /// 
+  ///
   /// This returns all rating events, including zero-change events,
   /// and returns a copied list.
   List<T> get ratingEvents {
@@ -286,7 +286,7 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
     // The list of ratings, from oldest to newest.
     // We need to reverse the database query, because we need order.desc to get the N most recent,
     // but we want to iterate from oldest to newest.
-    List<double> ratings = preloadedRatings 
+    List<double> ratings = preloadedRatings
       ?? AnalystDatabase().getRatingEventRatingForSync(wrappedRating, limit: window, offset: 0, order: Order.descending, newRating: false, nonzeroChange: nonzeroChange).reversed.toList();
     List<double> intermediateRatings = [];
 
@@ -395,7 +395,7 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
         doubleDataLength: doubleDataElements,
       ),
       this.sportName = sport.name,
-      super(firstName: shooter.firstName, lastName: shooter.lastName) 
+      super(firstName: shooter.firstName, lastName: shooter.lastName)
   {
     this.memberNumber = shooter.memberNumber;
     this.lastClassification = shooter.classification ?? sport.classifications.fallback();
@@ -463,7 +463,7 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
 
 class MatchHistoryEntry {
   ShootingMatch match;
-  DateTime get date => match.date!;
+  DateTime get date => match.date;
   Division divisionEntered;
   double ratingChange;
   late int place;
