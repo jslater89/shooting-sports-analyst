@@ -66,6 +66,7 @@ sorted-elo-settings*.txt
 .vscode
 base.apk.cache/
 research/**/output.txt
+config.toml
 
 # Things shared with me under NDA that I can't put on Git
 private/

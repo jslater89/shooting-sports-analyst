@@ -10,9 +10,8 @@ import 'package:flutter/foundation.dart';
 import 'package:fluttericon/rpg_awesome_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/help/welcome_80_help.dart';
-import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
-import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
@@ -28,10 +27,9 @@ import 'package:shooting_sports_analyst/route/elo_tuner_page.dart';
 import 'package:shooting_sports_analyst/route/match_database_manager.dart';
 import 'package:shooting_sports_analyst/route/practiscore_url.dart';
 import 'package:shooting_sports_analyst/ui/empty_scaffold.dart';
-import 'package:shooting_sports_analyst/ui/result_page.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/app_settings.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
 import 'package:shooting_sports_analyst/ui/source/credentials_manager.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/match_cache_chooser_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_source_chooser_dialog.dart';
 
 var _log = SSALogger("HomePage");
@@ -92,14 +90,17 @@ class _HomePageState extends State<HomePage> {
 
     var extraActions = <Widget>[
       Tooltip(
-        message: "Manage credentials for match sources",
+        message: "Open app settings",
         child: IconButton(
-          icon: Icon(Icons.lock),
-          onPressed: () {
-            Navigator.of(context).push(MaterialPageRoute(builder: (context) => SourceCredentialsManager()));
+          icon: Icon(Icons.settings),
+          onPressed: () async {
+            var config = await AppSettingsDialog.show(context);
+            if(config != null) {
+              ConfigLoader().setConfig(config);
+            }
           },
         ),
-      )
+      ),
     ];
     if(!kIsWeb && kDebugMode) {
       extraActions.add(Tooltip(

@@ -55,7 +55,10 @@ class _BoothScorecardState extends State<BoothScorecard> {
 
   late RatingContext _ratingContext;
   DbRatingProject? _ratingProjectContext;
-  Map<MatchEntry, ShooterRating?> _ratingLinks = {};
+
+  // Maps shooter UUIDs to ratings. Can't use MatchEntry because of
+  // refresh issues.
+  Map<String, ShooterRating?> _ratingLinks = {};
 
   @override
   void initState() {
@@ -122,6 +125,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
     }
 
     var algorithm = _ratingProjectContext!.settings.algorithm;
+    Map<String, ShooterRating?> newLinks = {};
 
     for(var entry in sc.displayedShooters) {
       var group = await _ratingProjectContext!.groupForDivision(entry.division);
@@ -134,10 +138,14 @@ class _BoothScorecardState extends State<BoothScorecard> {
         );
 
         if(rating != null) {
-          _ratingLinks[entry] = algorithm.wrapDbRating(rating);
+          newLinks[entry.sourceId ?? entry.entryId.toString()] = algorithm.wrapDbRating(rating);
         }
       }
     }
+
+    setState(() {
+      _ratingLinks = newLinks;
+    });
   }
 
   bool _hasChanges(BroadcastBoothModel model) {
@@ -545,7 +553,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
       shooterTooltip = " ${entry.classification!.shortDisplayName}";
     }
 
-    var rating = _ratingLinks[entry];
+    var rating = _ratingLinks[entry.sourceId ?? entry.entryId.toString()];
     if(rating != null) {
       shooterTooltip += " ${_ratingProjectContext!.settings.algorithm.formatRating(rating)}";
     }

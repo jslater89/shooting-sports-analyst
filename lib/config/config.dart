@@ -62,6 +62,12 @@ class ConfigLoader with ChangeNotifier {
     File f = File("./config.toml");
     f.writeAsStringSync(str);
   }
+
+  Future<void> setConfig(SerializedConfig config) async {
+    this.config = config;
+    await save();
+    notifyListeners();
+  }
 }
 
 @JsonSerializable()
@@ -88,5 +94,13 @@ class SerializedConfig {
     builder.writeln("\tplayDeduplicationAlert = $playDeduplicationAlert");
     builder.writeln("\tratingsContextProjectId = $ratingsContextProjectId");
     return builder.toString();
+  }
+
+  SerializedConfig copy() {
+    return SerializedConfig(
+      logLevel: logLevel,
+      playDeduplicationAlert: playDeduplicationAlert,
+      ratingsContextProjectId: ratingsContextProjectId,
+    );
   }
 }

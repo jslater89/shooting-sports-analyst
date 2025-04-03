@@ -42,6 +42,11 @@ extension RatingProjectDatabase on AnalystDatabase {
     if(project.dbCreated == null) {
       project.created = DateTime.now();
     }
+
+    // This is for backward compatibility.
+    if(project.dbUpdated == null) {
+      project.updated = DateTime.now();
+    }
     await isar.writeTxn(() async {
       await isar.dbRatingProjects.put(project);
       await project.dbGroups.save();
