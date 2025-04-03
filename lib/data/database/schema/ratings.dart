@@ -67,6 +67,33 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   String name;
   String encodedSettings;
 
+  /// An internal field for storing [created].
+  @Index()
+  DateTime? dbCreated;
+  /// When this project was created.
+  DateTime get created => dbCreated ?? DateTime(2025, 4, 1);
+  set created(DateTime value) {
+    dbCreated = value;
+  }
+
+  /// An internal field for storing [updated].
+  @Index()
+  DateTime? dbUpdated;
+  /// When this project was last updated (i.e., when a calculation was last performed).
+  DateTime get updated => dbUpdated ?? DateTime(2025, 4, 1);
+  set updated(DateTime value) {
+    dbUpdated = value;
+  }
+
+  /// An internal field for storing [loaded].
+  @Index()
+  DateTime? dbLoaded;
+  /// When this project was last loaded (i.e., when it was viewed in the main rating list).
+  DateTime get loaded => dbLoaded ?? DateTime(2025, 4, 1);
+  set loaded(DateTime value) {
+    dbLoaded = value;
+  }
+
   /// All of the matches this project includes.
   ///
   /// See also [filteredMatchPointers] and [lastUsedMatches].
@@ -217,7 +244,7 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   }
 
   /// Look up an automatic number mapping by its target number.
-  /// 
+  ///
   /// Uncached; use with care.
   DbMemberNumberMapping? lookupAutomaticNumberMappingByTarget(String targetNumber) {
     return automaticNumberMappings.firstWhereOrNull((mapping) => mapping.targetNumber == targetNumber);
@@ -272,6 +299,9 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
     this.encodedSettings = "{}",
     this.transientDataEntryErrorSkip = false,
     this.automaticNumberMappings = const [],
+    this.dbCreated,
+    this.dbUpdated,
+    this.dbLoaded,
     RatingProjectSettings? settings,
   }) {
     if(settings != null) {
@@ -354,7 +384,6 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
 
     return Future.value(DataSourceResult.ok(outGroup));
   }
-
 
   @override
   Future<DataSourceResult<DbShooterRating?>> lookupRating(RatingGroup group, String memberNumber, {bool allPossibleMemberNumbers = false}) async {
@@ -581,7 +610,7 @@ class RatingGroup with DbSportEntity {
 /// MatchPointer is a database record containing enough information
 /// to locate a match in the database, display in the UI, and sort
 /// by relevant fields like level, date, and sport.
-/// 
+///
 /// [DbShootingMatch] is a heavyweight object, so we want to avoid
 /// using IsarLinks to it for the configure screen (it takes a long
 /// time to load).
@@ -633,7 +662,7 @@ class MatchPointer with DbSportEntity implements SourceIdsProvider {
     date = match.date,
     sourceCode = match.sourceCode,
     sourceIds = match.sourceIds,
-    localDbId = match.id 
+    localDbId = match.id
   {
     matchLevelName = match.matchLevelName;
   }
@@ -663,9 +692,9 @@ class MatchPointer with DbSportEntity implements SourceIdsProvider {
           _log.e("Unable to download missing match: source $sourceCode source supported sports${source?.supportedSports} match sport type ${sport.type}");
           return DataSourceResult.err(DataSourceError.invalidRequest);
         }
-        
+
         var result = await source.getMatchFromId(sourceIds.first, sport: sport);
-        
+
         if(result.isErr()) {
           return DataSourceResult.err(DataSourceError.database);
         }

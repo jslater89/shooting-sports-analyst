@@ -26,8 +26,19 @@ class _SelectProjectDialogState extends State<SelectProjectDialog> {
     _getProjects();
   }
 
+  var _sort = _ProjectSort.loaded;
+
   Future<void> _getProjects() async {
     var p = await AnalystDatabase().getAllRatingProjects();
+    p.sort((a, b) {
+      return switch(_sort) {
+        _ProjectSort.name => a.name.compareTo(b.name),
+        _ProjectSort.id => a.id.compareTo(b.id),
+        _ProjectSort.created => a.created.compareTo(b.created),
+        _ProjectSort.updated => a.updated.compareTo(b.updated),
+        _ProjectSort.loaded => a.loaded.compareTo(b.loaded),
+      };
+    });
     setState(() {
       projects = p;
     });
@@ -71,4 +82,12 @@ class _SelectProjectDialogState extends State<SelectProjectDialog> {
       ),
     );
   }
+}
+
+enum _ProjectSort {
+  name,
+  id,
+  created,
+  updated,
+  loaded;
 }

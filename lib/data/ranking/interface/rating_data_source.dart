@@ -61,7 +61,7 @@ abstract interface class RatingDataSource {
   /// If [allPossibleMemberNumbers] is true and the sport supports calculating
   /// alternate member number forms, this will search by all equivalent member
   /// numbers for the competitor, not only those that they actually entered under.
-  /// 
+  ///
   /// Returns Result.ok(null) if no rating is found.
   Future<DataSourceResult<DbShooterRating?>> lookupRating(RatingGroup group, String memberNumber, {bool allPossibleMemberNumbers = false});
 

@@ -39,6 +39,9 @@ extension RatingProjectDatabase on AnalystDatabase {
         project.id = existingProject.id;
       }
     }
+    if(project.dbCreated == null) {
+      project.created = DateTime.now();
+    }
     await isar.writeTxn(() async {
       await isar.dbRatingProjects.put(project);
       await project.dbGroups.save();
@@ -93,10 +96,10 @@ extension RatingProjectDatabase on AnalystDatabase {
   }) async {
     return (await maybeKnownShooter(project: project, group: group, memberNumber: memberNumber, usePossibleMemberNumbers: usePossibleMemberNumbers, useCache: useCache))!;
   }
-  
+
   /// Retrieves a possible shooter rating from the database, or null if
   /// a rating is not found. [memberNumber] is assumed to be processed.
-  /// 
+  ///
   /// if [useCache] is true, [loadedShooterRatingCache] will be checked for
   /// a cached rating before querying the database.
   Future<DbShooterRating?> maybeKnownShooter({
@@ -153,7 +156,7 @@ extension RatingProjectDatabase on AnalystDatabase {
     required ShooterRating rating,
     bool useCache = true,
   }) {
-    
+
     var dbRating = rating.wrappedRating;
     dbRating.project.value = project;
     dbRating.group.value = group;
@@ -171,7 +174,7 @@ extension RatingProjectDatabase on AnalystDatabase {
   }
 
   /// Upsert a DbShooterRating.
-  /// 
+  ///
   /// If [linksChanged] is false, the links will not be saved in the write transaction.
   Future<DbShooterRating> upsertDbShooterRating(DbShooterRating rating, {bool linksChanged = true, bool useCache = true}) {
     if(useCache) {
@@ -311,7 +314,7 @@ extension RatingProjectDatabase on AnalystDatabase {
     else {
       finishedQuery = query.matchIdEqualTo(matchIds.first);
     }
-    
+
     return finishedQuery.findAllSync();
   }
 
@@ -340,7 +343,7 @@ extension RatingProjectDatabase on AnalystDatabase {
   }
 
   /// Get a list of historical rating values for a given competitor.
-  /// 
+  ///
   /// [limit] and [offset] specify the range of values to return.
   /// [after] and [before] limit results by date.
   /// [order] specifies the order of the results (descending by default, or ascending)
@@ -366,10 +369,10 @@ extension RatingProjectDatabase on AnalystDatabase {
   }
 
   /// Migrate an old in-memory project to the new database format.
-  /// 
+  ///
   /// [nameOverride] allows the caller to specify a name for the new project.
   /// If not provided, and the name of the old project is already in use, the migration will fail.
-  /// 
+  ///
   /// On success, the caller will receive a [ProjectMigrationResult] containing the new project and a list of match IDs that failed to migrate.
   Future<Result<ProjectMigrationResult, ResultErr>> migrateOldProject(OldRatingProject project, {String? nameOverride}) async {
     var projectName = project.name;

@@ -224,6 +224,8 @@ class RatingProjectLoader {
       _log.i("No new matches, ${lastUsed.length} last used matches");
       host.progressCallback(progress: 0, total: 0, state: LoadingState.done);
       timings.add(TimingType.wallTime, DateTime.now().difference(wallStart).inMicroseconds);
+      project.loaded = DateTime.now();
+      await db.saveRatingProject(project, checkName: true);
       return Result.ok(null);
     }
 
@@ -244,6 +246,8 @@ class RatingProjectLoader {
       if(!recalculate) {
         _log.i("User asked to advance without calculation, returning OK");
         host.progressCallback(progress: 0, total: 0, state: LoadingState.done);
+        project.loaded = DateTime.now();
+        await db.saveRatingProject(project, checkName: true);
         return Result.ok(null);
       }
     }
@@ -346,6 +350,8 @@ class RatingProjectLoader {
     timings.add(TimingType.wallTime, DateTime.now().difference(wallStart).inMicroseconds);
 
     project.completedFullCalculation = true;
+    project.loaded = DateTime.now();
+    project.updated = project.loaded;
     await db.saveRatingProject(project, checkName: true);
 
     if(dumpMatchConnectivities && _matchConnectivityCsv.isNotEmpty) {
