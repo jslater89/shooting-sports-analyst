@@ -9,12 +9,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/help/scalers_and_distributions_help.dart';
 import 'package:shooting_sports_analyst/data/math/distribution_tools.dart';
+import 'package:shooting_sports_analyst/data/ranking/scaling/group_carrier_scaler.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/standardized_maximum_scaler.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/top_2pct_average_scaler.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/distribution_scaler.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/distribution_significance_scaler.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/z_score_scaler.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/ui/rater/display_settings.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
 
@@ -98,7 +100,8 @@ enum RatingScalerType {
   zScoreEloScale,
   distributionPercentile,
   distributionZScore,
-  distributionZScoreEloScale;
+  distributionZScoreEloScale,
+  groupCarrier;
 
   String get uiLabel => switch(this) {
     none => "None",
@@ -109,6 +112,7 @@ enum RatingScalerType {
     distributionPercentile => "Distribution percentile",
     distributionZScore => "Distribution Z-score",
     distributionZScoreEloScale => "Distribution Z-score (Elo scale)",
+    groupCarrier => "Group carrier",
   };
 
   static fromScaler(RatingScaler scaler) {
@@ -133,6 +137,9 @@ enum RatingScalerType {
     else if(scaler is DistributionZScoreScaler) {
       return RatingScalerType.distributionZScoreEloScale;
     }
+    else if(scaler is GroupCarrierScaler) {
+      return RatingScalerType.groupCarrier;
+    }
     return RatingScalerType.none;
   }
 
@@ -152,6 +159,19 @@ enum RatingScalerType {
         return DistributionZScoreScaler(info: RatingScalerInfo.empty(), scaleFactor: 100, scaleOffset: 0);
       case RatingScalerType.distributionZScoreEloScale:
         return DistributionZScoreScaler(info: RatingScalerInfo.empty());
+      case RatingScalerType.groupCarrier:
+        return GroupCarrierScaler(info: RatingScalerInfo.empty(), targetRating: 2000,
+          groupSourceRatings: {
+            UspsaRatingGroupsProvider.instance.getGroup("uspsa-open")!: 1903,
+            UspsaRatingGroupsProvider.instance.getGroup("uspsa-carryoptics")!: 1851,
+            UspsaRatingGroupsProvider.instance.getGroup("uspsa-production")!: 2015,
+            UspsaRatingGroupsProvider.instance.getGroup("uspsa-limited")!: 2025,
+            UspsaRatingGroupsProvider.instance.getGroup("uspsa-limited-optics")!: 1775,
+            UspsaRatingGroupsProvider.instance.getGroup("uspsa-pcc")!: 1840,
+            UspsaRatingGroupsProvider.instance.getGroup("uspsa-singlestack")!: 2100,
+            UspsaRatingGroupsProvider.instance.getGroup("uspsa-revolver")!: 1929,
+          }
+        );
       case RatingScalerType.none:
         return null;
     }

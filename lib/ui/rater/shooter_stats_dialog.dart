@@ -84,7 +84,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
           children: [
             ClickableLink(
               onTap: () {
-                _launchScoreView(e);
+                _launchScoreView(e.entry.division, e.match, stage: e.stage);
               },
               child: _StatefulContainer(
                 key: GlobalObjectKey(e.hashCode),
@@ -159,17 +159,22 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       thickness: 1,
     ));
 
-    for(var entry in matchHistory.reversed) {
-      widgets.add(Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12.0),
-        child: Row(
-          children: [
-            Expanded(flex: 4, child: Text(entry.match.name, style: Theme.of(context).textTheme.bodyMedium)),
-            Expanded(flex: 1, child: Text("${entry.place}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
-            Expanded(flex: 1, child: Text("${entry.competitors}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
-            Expanded(flex: 1, child: Text(entry.percentFinish, style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
-            Expanded(flex: 1, child: Text("${entry.ratingChange.toStringAsFixed(1)}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end))
-          ],
+    for(var entry in matchHistory) {
+      widgets.add(ClickableLink(
+        onTap: () {
+          _launchScoreView(entry.divisionEntered, entry.match);
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+          child: Row(
+            children: [
+              Expanded(flex: 4, child: Text(entry.match.name, style: Theme.of(context).textTheme.bodyMedium)),
+              Expanded(flex: 1, child: Text("${entry.place}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
+              Expanded(flex: 1, child: Text("${entry.competitors}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
+              Expanded(flex: 1, child: Text(entry.percentFinish, style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
+              Expanded(flex: 1, child: Text("${entry.ratingChange.toStringAsFixed(1)}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end))
+            ],
+          ),
         ),
       ));
       widgets.add(Divider(
@@ -263,6 +268,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                           setState(() {
                             showingEvents = !showingEvents;
                           });
+                          _rightController.animateTo(0, duration: Duration(milliseconds: 200), curve: Curves.easeInOut);
                         },
                       ),
                       Expanded(
@@ -424,7 +430,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
             updatedListener: (model) {
               if(model.hasDatumSelection) {
                 final rating = _ratings[model.selectedDatum[0].index!];
-                _launchScoreView(rating.baseEvent);
+                _launchScoreView(rating.baseEvent.entry.division, rating.baseEvent.match);
               }
             },
           )
@@ -459,17 +465,16 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     );
   }
 
-  void _launchScoreView(RatingEvent e) {
-    var division = e.entry.division;
-    var filters = FilterSet(e.match.sport, empty: true)
+  void _launchScoreView(Division? division, ShootingMatch match, {MatchStage? stage}) {
+    var filters = FilterSet(match.sport, empty: true)
       ..mode = FilterMode.or;
     if(division != null) {
-      filters.divisions = FilterSet.divisionListToMap(e.match.sport, [division]);
+      filters.divisions = FilterSet.divisionListToMap(match.sport, [division]);
     }
     Navigator.of(context).push(MaterialPageRoute(builder: (context) {
       return ResultPage(
-        canonicalMatch: e.match,
-        initialStage: e.match.lookupStageByName(e.stage?.name),
+        canonicalMatch: match,
+        initialStage: stage,
         initialFilters: filters,
         allowWhatIf: false,
         ratings: widget.ratings,

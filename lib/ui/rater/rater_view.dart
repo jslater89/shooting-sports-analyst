@@ -127,7 +127,7 @@ class _RaterViewState extends State<RaterView> {
         _log.i("Generating scaled rating data");
         minRating = uniqueRatings.last;
         maxRating = uniqueRatings.first;
-        var top2PercentRatings = allRatings.take(min(allRatings.length, max(5, (allRatings.length * 0.02).round()))).toList();
+        var top2PercentRatings = allRatings.reversed.take(min(allRatings.length, max(5, (allRatings.length * 0.02).round()))).toList();
         top2PercentAverage = top2PercentRatings.average();
         ratingMean = allRatings.average();
         ratingStdDev = allRatings.standardDeviation();

@@ -43,6 +43,7 @@ class _RatingDistributionDialogState extends State<RatingDistributionDialog> {
   late double maxRating;
 
   late TextEditingController controller;
+  late DistributionFitTests fitTests;
 
   @override
   void initState() {
@@ -54,12 +55,19 @@ class _RatingDistributionDialogState extends State<RatingDistributionDialog> {
     minRating = ratingValues.min;
     maxRating = ratingValues.max;
     controller = TextEditingController(text: AvailableEstimator.fromEstimator(estimator).uiLabel);
+    fitTests = widget.statistics.fitTests;
   }
 
   void changeDistribution(ContinuousDistributionEstimator estimator) {
     distribution = estimator.estimate(ratingValues);
     setState(() {
       estimator = estimator;
+      fitTests = DistributionFitTests(
+        logLikelihood: distribution.logLikelihood(ratingValues),
+        kolmogorovSmirnov: distribution.kolmogorovSmirnovTest(ratingValues),
+        chiSquare: distribution.chiSquareTest(ratingValues),
+        andersonDarling: distribution.andersonDarlingTest(ratingValues),
+      );
     });
   }
 
@@ -145,10 +153,10 @@ class _RatingDistributionDialogState extends State<RatingDistributionDialog> {
             Text(distribution.parameterString),
             const SizedBox(height: 8),
             Text(
-              "Log likelihood: ${widget.statistics.fitTests.logLikelihood.round()} • "
-              "Kolmogorov-Smirnov: ${widget.statistics.fitTests.kolmogorovSmirnov.toStringAsFixed(4)} • "
-              "Chi-square: ${widget.statistics.fitTests.chiSquare.toStringAsFixed(2)} • "
-              "Anderson-Darling: ${widget.statistics.fitTests.andersonDarling.toStringAsFixed(2)}",
+              "Log likelihood: ${fitTests.logLikelihood.round()} • "
+              "Kolmogorov-Smirnov: ${fitTests.kolmogorovSmirnov.toStringAsFixed(4)} • "
+              "Chi-square: ${fitTests.chiSquare.toStringAsFixed(2)} • "
+              "Anderson-Darling: ${fitTests.andersonDarling.toStringAsFixed(2)}",
             ),
           ],
         ),
@@ -184,6 +192,7 @@ class _ScoresDistributionDialogState extends State<ScoresDistributionDialog> {
   late List<double> scoreValues;
   late double minScore;
   late double maxScore;
+  late DistributionFitTests fitTests;
 
   @override
   void initState() {
@@ -194,12 +203,24 @@ class _ScoresDistributionDialogState extends State<ScoresDistributionDialog> {
     distribution = estimator.estimate(scoreValues);
     minScore = scoreValues.min;
     maxScore = scoreValues.max;
+    fitTests = DistributionFitTests(
+      logLikelihood: distribution.logLikelihood(scoreValues),
+      kolmogorovSmirnov: distribution.kolmogorovSmirnovTest(scoreValues),
+      chiSquare: distribution.chiSquareTest(scoreValues),
+      andersonDarling: distribution.andersonDarlingTest(scoreValues),
+    );
   }
 
   void changeDistribution(ContinuousDistributionEstimator estimator) {
     distribution = estimator.estimate(scoreValues);
     setState(() {
       estimator = estimator;
+      fitTests = DistributionFitTests(
+        logLikelihood: distribution.logLikelihood(scoreValues),
+        kolmogorovSmirnov: distribution.kolmogorovSmirnovTest(scoreValues),
+        chiSquare: distribution.chiSquareTest(scoreValues),
+        andersonDarling: distribution.andersonDarlingTest(scoreValues),
+      );
     });
   }
 
@@ -265,10 +286,6 @@ class _ScoresDistributionDialogState extends State<ScoresDistributionDialog> {
       buckets.add(HistogramBucket.multi(bucketStart: bucketStart.toDouble(), bucketEnd: bucketEnd.toDouble(), data: bucketData));
     }
 
-    var logLikelihood = distribution.logLikelihood(scoreValues);
-    var kolmogorovSmirnov = distribution.kolmogorovSmirnovTest(scoreValues);
-    var chiSquare = distribution.chiSquareTest(scoreValues);
-    var andersonDarling = distribution.andersonDarlingTest(scoreValues);
     var size = MediaQuery.of(context).size;
 
     return AlertDialog(
@@ -300,10 +317,10 @@ class _ScoresDistributionDialogState extends State<ScoresDistributionDialog> {
             )),
             const SizedBox(height: 10),
             Text(
-              "Log likelihood: ${logLikelihood.round()} • "
-              "Kolmogorov-Smirnov: ${kolmogorovSmirnov.toStringAsFixed(4)} • "
-              "Chi-square: ${chiSquare.toStringAsFixed(2)} • "
-              "Anderson-Darling: ${andersonDarling.toStringAsFixed(2)}",
+              "Log likelihood: ${fitTests.logLikelihood.round()} • "
+              "Kolmogorov-Smirnov: ${fitTests.kolmogorovSmirnov.toStringAsFixed(4)} • "
+              "Chi-square: ${fitTests.chiSquare.toStringAsFixed(2)} • "
+              "Anderson-Darling: ${fitTests.andersonDarling.toStringAsFixed(2)}",
             ),
           ],
         ),

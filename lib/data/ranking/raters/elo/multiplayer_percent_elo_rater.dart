@@ -622,18 +622,9 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
     var ratingNumber = rating.rating.round();
     if(scaler != null) {
-      ratingNumber = scaler.scaleRating(rating.rating).round();
-    }
-
-    if(scaler != null) {
-      error = scaler.scaleNumber(error, originalRating: rating.rating);
-    }
-
-    if(scaler != null) {
+      ratingNumber = scaler.scaleRating(rating.rating, group: rating.group).round();
+      error = scaler.scaleNumber(error, originalRating: rating.rating, group: rating.group);
       lastMatchChange = scaler.scaleNumber(lastMatchChange, originalRating: rating.rating);
-    }
-
-    if(scaler != null) {
       trend = scaler.scaleNumber(rating.trend, originalRating: rating.rating).round();
     }
 

@@ -23,6 +23,7 @@ class RaterStatistics {
   double minRating;
   double maxRating;
   double medianRating;
+  double ratingStandardDeviation;
   double averageHistory;
   int medianHistory;
 
@@ -55,6 +56,7 @@ class RaterStatistics {
     required this.minRating,
     required this.maxRating,
     required this.medianRating,
+    required this.ratingStandardDeviation,
     required this.averageHistory,
     required this.medianHistory,
     required this.countByClass,
@@ -123,11 +125,11 @@ RaterStatistics _calculateStats(Sport sport, RatingSystem algorithm, RatingGroup
     andersonDarling: ratingDistribution.andersonDarlingTest(allRatings),
   );
 
-  _log.v("Fit tests:");
-  _log.v("\tLog likelihood: ${fitTests.logLikelihood}");
-  _log.v("\tKolmogorov-Smirnov: ${fitTests.kolmogorovSmirnov}");
-  _log.v("\tChi-square: ${fitTests.chiSquare}");
-  _log.v("\tAnderson-Darling: ${fitTests.andersonDarling}");
+  // _log.v("Fit tests:");
+  // _log.v("\tLog likelihood: ${fitTests.logLikelihood}");
+  // _log.v("\tKolmogorov-Smirnov: ${fitTests.kolmogorovSmirnov}");
+  // _log.v("\tChi-square: ${fitTests.chiSquare}");
+  // _log.v("\tAnderson-Darling: ${fitTests.andersonDarling}");
 
   var allHistoryLengths = ratings.map((r) => r.length).toList()..sort(
     (a, b) => a.compareTo(b)
@@ -183,6 +185,7 @@ RaterStatistics _calculateStats(Sport sport, RatingSystem algorithm, RatingGroup
     shooters: count,
     averageRating: allRatings.average,
     medianRating: allRatings.median,
+    ratingStandardDeviation: allRatings.stdDev(),
     minRating: allRatings.min,
     maxRating: allRatings.max,
     averageHistory: allHistoryLengths.average,
