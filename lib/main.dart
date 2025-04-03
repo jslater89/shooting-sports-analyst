@@ -19,6 +19,7 @@ import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/help/all_helps.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_context.dart';
 import 'package:shooting_sports_analyst/db_oneoffs.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
@@ -173,8 +174,11 @@ class _MyAppState extends State<MyApp> {
       );
     }
     else {
-      return Provider.value(
-        value: _prefs!,
+      return MultiProvider(
+        providers: [
+          Provider.value(value: _prefs!),
+          ChangeNotifierProvider(create: (context) => RatingContext()),
+        ],
         child: MaterialApp(
           title: 'Shooting Sports Analyst',
           theme: ThemeData(

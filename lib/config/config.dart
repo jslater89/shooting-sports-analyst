@@ -25,7 +25,7 @@ class ConfigLoader with ChangeNotifier {
     _instance ??= ConfigLoader._();
     return _instance!;
   }
-  
+
   late SerializedConfig config;
   Future<void> get ready => _readyCompleter.future;
   Completer<void> _readyCompleter = Completer();
@@ -33,12 +33,12 @@ class ConfigLoader with ChangeNotifier {
   ConfigLoader._() {
     _init();
   }
-  
+
   Future<void> _init() async {
     await reload();
     _readyCompleter.complete();
   }
-  
+
   Future<void> reload() async {
     File f = File("./config.toml");
     if(!f.existsSync()) {
@@ -71,11 +71,14 @@ class SerializedConfig {
 
   @JsonKey(defaultValue: true)
   bool playDeduplicationAlert;
-  
+
+  @JsonKey(defaultValue: null)
+  int? ratingsContextProjectId;
+
   factory SerializedConfig.fromToml(Map<String, dynamic> json) => _$SerializedConfigFromJson(json);
   Map<String, dynamic> toToml() => _$SerializedConfigToJson(this);
 
-  SerializedConfig({required this.logLevel, required this.playDeduplicationAlert});
+  SerializedConfig({required this.logLevel, required this.playDeduplicationAlert, this.ratingsContextProjectId});
 
   @override
   String toString() {
@@ -83,6 +86,7 @@ class SerializedConfig {
     builder.writeln("Config:");
     builder.writeln("\tlogLevel = ${logLevel.name}");
     builder.writeln("\tplayDeduplicationAlert = $playDeduplicationAlert");
+    builder.writeln("\tratingsContextProjectId = $ratingsContextProjectId");
     return builder.toString();
   }
 }

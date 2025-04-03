@@ -8,6 +8,11 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_context.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
@@ -19,9 +24,12 @@ import 'package:shooting_sports_analyst/ui/booth/scorecard_grid.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_model.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_move.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_settings.dart';
+import 'package:shooting_sports_analyst/ui/rater/shooter_stats_dialog.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
+import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
+import 'package:shooting_sports_analyst/util.dart';
 import 'package:two_dimensional_scrollables/two_dimensional_scrollables.dart';
 
 SSALogger _log = SSALogger("BoothScorecard");
@@ -45,11 +53,17 @@ class _BoothScorecardState extends State<BoothScorecard> {
 
   ScorecardModel get sc => widget.scorecard;
 
+  late RatingContext _ratingContext;
+  DbRatingProject? _ratingProjectContext;
+  Map<MatchEntry, ShooterRating?> _ratingLinks = {};
+
   @override
   void initState() {
     super.initState();
     // _log.v("${widget.scorecard.name} (${widget.hashCode} ${hashCode} ${widget.scorecard.hashCode}) initState");
-   
+    _ratingContext = context.read<RatingContext>();
+    _loadRatingLinks();
+
     var model = context.read<BroadcastBoothModel>();
     cachedModel = model;
 
@@ -59,7 +73,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
     if(_hasChanges(model)) {
       _calculateScores();
     }
-  
+
     listener = () {
       if(!mounted) {
         _log.e("${widget.scorecard.name} ${hashCode} was notified, but not mounted");
@@ -70,7 +84,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
         }
         return;
       }
-      
+
       var model = context.read<BroadcastBoothModel>();
       if(_hasChanges(model)) {
         _calculateScores();
@@ -99,6 +113,31 @@ class _BoothScorecardState extends State<BoothScorecard> {
       return false;
     };
     HardwareKeyboard.instance.addHandler(_controlListener);
+  }
+
+  Future<void> _loadRatingLinks() async {
+    _ratingProjectContext = await _ratingContext.getProject();
+    if(_ratingProjectContext == null) {
+      return;
+    }
+
+    var algorithm = _ratingProjectContext!.settings.algorithm;
+
+    for(var entry in sc.displayedShooters) {
+      var group = await _ratingProjectContext!.groupForDivision(entry.division);
+      if(group.isOk() && group.unwrap() != null) {
+        var rating = await AnalystDatabase().maybeKnownShooter(
+          project: _ratingProjectContext!,
+          group: group.unwrap()!,
+          memberNumber: entry.memberNumber,
+          useCache: true,
+        );
+
+        if(rating != null) {
+          _ratingLinks[entry] = algorithm.wrapDbRating(rating);
+        }
+      }
+    }
   }
 
   bool _hasChanges(BroadcastBoothModel model) {
@@ -227,7 +266,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
     //    the ticker will show as 'lost the lead'.
     // 2024 Area 5 Limited Optics, from about 15:30 to 16:00 on  is a good test case for this.
     if(newScores.keys.first.entryId != oldScores.keys.first.entryId) {
-      var matchLeadChange = changes.values.firstWhereOrNull((element) => 
+      var matchLeadChange = changes.values.firstWhereOrNull((element) =>
         (element.newScore.place == 1 && element.oldScore.place != 1)
         || (element.newScore.place != 1 && element.oldScore.place == 1)
       );
@@ -281,7 +320,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
     }
 
     var isMaximized = widget.scorecard.id == boothModel.maximizedScorecardId;
-  
+
     return Container(
       padding: EdgeInsets.all(2),
       width: sizeModel.cardWidth.toDouble(),
@@ -396,14 +435,14 @@ class _BoothScorecardState extends State<BoothScorecard> {
       columnBuilder: (column) {
         TableSpanExtent extent;
         TableSpanDecoration? decoration;
-      
+
         if(column == 0) {
           extent = FixedTableSpanExtent(_shooterColumnWidth * sc.tableTextSize.fontSizeFactor);
         }
         else {
           extent = FixedTableSpanExtent(_stageColumnWidth * sc.tableTextSize.fontSizeFactor);
         }
-      
+
         // Vertical line after the 'total' column.
         if(column == 1) {
           decoration = TableSpanDecoration(
@@ -412,7 +451,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
             ),
           );
         }
-        
+
         return TableSpan(
           extent: extent,
           backgroundDecoration: decoration,
@@ -480,7 +519,21 @@ class _BoothScorecardState extends State<BoothScorecard> {
   Widget _buildScoreCell(BuildContext context, TableVicinity vicinity, ShootingMatch match) {
     var entry = sc.displayedShooters[vicinity.row - 1];
     var score = sc.scores[entry];
+
     var change = sc.scoreChanges[entry];
+
+    if(vicinity.column == 0) {
+      return _buildCompetitorCell(context, vicinity, entry, score, change, match);
+    }
+    else if(vicinity.column == 1) {
+      return _buildTotalScoreCell(context, vicinity, entry, score, change, match);
+    }
+    else {
+      return _buildStageScoreCell(context, vicinity, entry, score, change, match);
+    }
+  }
+
+  Widget _buildCompetitorCell(BuildContext context, TableVicinity vicinity, MatchEntry entry, RelativeMatchScore? score, MatchScoreChange? change, ShootingMatch match) {
     var shooterTooltip = "";
     if(sc.scoresMultipleDivisions && entry.division != null) {
       shooterTooltip = "${entry.division!.displayName}";
@@ -489,40 +542,47 @@ class _BoothScorecardState extends State<BoothScorecard> {
       }
     }
     else if(entry.classification != null) {
-      shooterTooltip = " ${entry.classification!.shortDisplayName} ";
+      shooterTooltip = " ${entry.classification!.shortDisplayName}";
     }
 
-    if(vicinity.column == 0) {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          Flexible(
-            child: Tooltip(
-              waitDuration: Duration(milliseconds: 500),
-              message: shooterTooltip,
-              child: Text(
-                entry.getName(),
-                textAlign: TextAlign.right,
-                softWrap: true,
-                textScaler: TextScaler.linear(sc.tableTextSize.fontSizeFactor),
-              ),
+    var rating = _ratingLinks[entry];
+    if(rating != null) {
+      shooterTooltip += " ${_ratingProjectContext!.settings.algorithm.formatRating(rating)}";
+    }
+
+    var child = Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        Flexible(
+          child: Tooltip(
+            waitDuration: Duration(milliseconds: 500),
+            message: shooterTooltip,
+            child: Text(
+              entry.getName(),
+              textAlign: TextAlign.right,
+              softWrap: true,
+              textScaler: TextScaler.linear(sc.tableTextSize.fontSizeFactor),
             ),
           ),
-          if(score != null && score.isComplete) Tooltip(
-            waitDuration: Duration(milliseconds: 500),
-            message: "All stages complete",
-            child: Icon(Icons.lock, color: Colors.grey[600], size: 16)
-          ),
-        ],
+        ),
+        if(score != null && score.isComplete) Tooltip(
+          waitDuration: Duration(milliseconds: 500),
+          message: "All stages complete",
+          child: Icon(Icons.lock, color: Colors.grey[600], size: 16)
+        ),
+      ],
+    );
+
+    if(rating != null) {
+      return ClickableLink(
+        onTap: () {
+          ShooterStatsDialog.show(context, rating, match, ratings: _ratingProjectContext!, showDivisions: sc.scoresMultipleDivisions);
+        },
+        child: child,
       );
     }
     else {
-      if(vicinity.column == 1) {
-        return _buildTotalScoreCell(context, vicinity, entry, score, change, match);
-      }
-      else {
-        return _buildStageScoreCell(context, vicinity, entry, score, change, match);
-      }
+      return child;
     }
   }
 

@@ -446,7 +446,7 @@ extension SignificantDigits on double {
     var wholeNumberLength = this.floor().toString().length;
     var decimalPlaces = digits - wholeNumberLength;
     if(decimalPlaces <= 0) {
-      return this.toStringAsFixed(0);
+      return this.round().toString();
     }
     return this.toStringAsFixed(decimalPlaces);
   }

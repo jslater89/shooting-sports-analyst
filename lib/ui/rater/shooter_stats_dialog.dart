@@ -46,6 +46,13 @@ class ShooterStatsDialog extends StatefulWidget {
 
   @override
   State<ShooterStatsDialog> createState() => _ShooterStatsDialogState();
+
+  static Future<void> show(BuildContext context, ShooterRating rating, ShootingMatch match, {RatingDataSource? ratings, bool showDivisions = false}) async {
+    return showDialog<void>(
+      context: context,
+      builder: (context) => ShooterStatsDialog(rating: rating, match: match, ratings: ratings, showDivisions: showDivisions),
+    );
+  }
 }
 
 class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
