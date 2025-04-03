@@ -23,6 +23,7 @@ import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/ui/rater/rater_view.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C extends RaterSettingsController<S>> {
   /// Use in rating changes
@@ -137,6 +138,16 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
     DateTime? trendDate,
     RatingScaler? scaler,
   });
+
+  /// Return a representation of a shooter rating suitable for display in e.g.
+  /// a table.
+  ///
+  /// The default implementation returns a whole number string for numbers >100,
+  /// 1 decimal place for numbers >10, 2 decimal places for numbers >1, and 3
+  /// decimal places otherwise, mirrored on the other side of zero.
+  String formatRating(ShooterRating rating) {
+    return "${rating.rating.toStringWithSignificantDigits(3)}";
+  }
 
   /// Return ShooterPredictions for the list of shooters.
   ///

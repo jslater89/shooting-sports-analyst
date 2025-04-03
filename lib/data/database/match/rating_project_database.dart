@@ -82,8 +82,22 @@ extension RatingProjectDatabase on AnalystDatabase {
     });
   }
 
+  /// Checks if a shooter exists in the database.
+  ///
+  /// This is currently no more efficient than [maybeKnownShooter], but it may be
+  /// possible to optimize in the future.
+  Future<bool> hasShooter({
+    required DbRatingProject project,
+    required RatingGroup group,
+    required String memberNumber,
+    bool useCache = false,
+    bool usePossibleMemberNumbers = false,
+  }) async {
+    return (await maybeKnownShooter(project: project, group: group, memberNumber: memberNumber, usePossibleMemberNumbers: usePossibleMemberNumbers, useCache: useCache)) != null;
+  }
+
   /// Retrieves a known shooter rating from the database.
-  /// 
+  ///
   /// if [useCache] is true, [loadedShooterRatingCache] will be checked for
   /// a cached rating before querying the database.
   Future<DbShooterRating> knownShooter({

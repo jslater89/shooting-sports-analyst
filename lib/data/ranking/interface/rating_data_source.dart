@@ -50,6 +50,10 @@ abstract interface class RatingDataSource {
   Future<DataSourceResult<String>> getProjectName();
   Future<DataSourceResult<RatingProjectSettings>> getSettings();
   Future<DataSourceResult<List<RatingGroup>>> getGroups();
+
+  /// Get the group for a division, returning the most specific group for that
+  /// division (i.e. the group containing [division] that has the fewest total
+  /// divisions).
   Future<DataSourceResult<RatingGroup?>> groupForDivision(Division? division);
   Future<DataSourceResult<List<int>>> getMatchDatabaseIds();
   Future<DataSourceResult<List<MatchPointer>>> getMatchPointers();
