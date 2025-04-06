@@ -6,9 +6,10 @@ part 'registration.g.dart';
 
 @collection
 class MatchRegistrationMapping {
-  Id get id => matchId.stableHash ^ shooterName.stableHash;
+  Id get id => matchId.stableHash ^ shooterName.stableHash ^ shooterDivisionName.stableHash;
 
   @Index(composite: [CompositeIndex("shooterName")])
+  @Index(composite: [CompositeIndex("shooterName"), CompositeIndex("shooterDivisionName")])
   @Index()
   String matchId;
 

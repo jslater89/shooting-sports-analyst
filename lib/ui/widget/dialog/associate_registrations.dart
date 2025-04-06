@@ -170,7 +170,7 @@ class _AssociateRegistrationsDialogState extends State<AssociateRegistrationsDia
     int found = 0;
     int applied = 0;
     for(var unmatched in widget.registrations.unmatchedShooters) {
-      var mapping = await db.getMatchRegistrationMappingByName(matchId: widget.registrations.matchId, shooterName: unmatched.name);
+      var mapping = await db.getMatchRegistrationMappingByName(matchId: widget.registrations.matchId, shooterName: unmatched.name, shooterDivisionName: unmatched.division.name);
       if(mapping != null) {
         found += 1;
         var foundMapping = widget.possibleMappings.firstWhereOrNull((r) => r.allPossibleMemberNumbers.intersects(mapping.detectedMemberNumbers));

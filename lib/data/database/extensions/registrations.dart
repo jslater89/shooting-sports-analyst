@@ -11,8 +11,8 @@ extension RegistrationDatabase on AnalystDatabase {
     return await isar.matchRegistrationMappings.where().matchIdEqualTo(matchId).findAll();
   }
 
-  Future<MatchRegistrationMapping?> getMatchRegistrationMappingByName({required String matchId, required String shooterName}) async {
-    return await isar.matchRegistrationMappings.where().matchIdShooterNameEqualTo(matchId, shooterName).findFirst();
+  Future<MatchRegistrationMapping?> getMatchRegistrationMappingByName({required String matchId, required String shooterName, required String shooterDivisionName}) async {
+    return await isar.matchRegistrationMappings.where().matchIdShooterNameShooterDivisionNameEqualTo(matchId, shooterName, shooterDivisionName).findFirst();
   }
 
   Future<void> saveMatchRegistrationMappings(String matchId, List<MatchRegistrationMapping> mappings) async {
