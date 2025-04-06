@@ -535,6 +535,10 @@ class _ScoreListState extends State<ScoreList> {
                   if(model.value.fixedTimeAvailablePointsFromDivisionMax && hasFixedTime) {
                     int maxPoints = 0;
 
+                    if(stageScore == null) {
+                      return Expanded(flex: 3, child: Text("n/a"));
+                    }
+
                     if(stageScore!.score.scoring is PointsScoring) {
                       for(var score in widget.baseScores) {
                         if(score.stageScores[stage] != null && score.stageScores[stage]!.score.points > maxPoints) {
