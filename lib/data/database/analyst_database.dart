@@ -13,6 +13,7 @@ import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/database/schema/registration.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
@@ -69,6 +70,7 @@ class AnalystDatabase {
         RatingGroupSchema,
         DbRatingEventSchema,
         DbShooterRatingSchema,
+        MatchRegistrationMappingSchema,
       ],
       maxSizeMiB: 1024 * 32,
       directory: "db",
