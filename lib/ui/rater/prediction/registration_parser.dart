@@ -5,9 +5,11 @@
  */
 
 import 'package:collection/collection.dart';
+import 'package:cookie_store/cookie_store.dart';
 import 'package:html_unescape/html_unescape_small.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:http/http.dart' as http;
+import 'package:shooting_sports_analyst/data/source/practiscore_report.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
@@ -16,11 +18,13 @@ var _log = SSALogger("RegistrationParser");
 
 class RegistrationResult {
   final String name;
+  final String matchId;
   final Map<Registration, ShooterRating> registrations;
   final List<Registration> unmatchedShooters;
 
   RegistrationResult(
     this.name,
+    this.matchId,
     this.registrations,
     this.unmatchedShooters,
   );
@@ -55,14 +59,40 @@ Future<RegistrationResult?> getRegistrations(Sport sport, String url, List<Divis
     return null;
   }
 
+  var authenticated = await PractiscoreHitFactorReportParser.authenticate();
+  if(!authenticated) {
+    _log.e("No PS credentials available");
+    return null;
+  }
+
+  // Urls look like [https://]practiscore.com/match-id/[register|squadding[/printhtml]]
+  var urlParts = url.split("/");
+  var matchId = "";
+  var nextIsId = false;
+  for(var part in urlParts) {
+    if(nextIsId) {
+      matchId = part;
+      break;
+    }
+    if(part.toLowerCase().contains("practiscore.com")) {
+      nextIsId = true;
+    }
+  }
+  if(matchId.isEmpty) {
+    _log.w("No match ID found in $url");
+  }
+
   try {
-    var response = await http.get(Uri.parse(url));
+    var cookies = practiscoreCookies.getCookiesForRequest("practiscore.com", "/");
+    var response = await http.get(Uri.parse(url), headers: {
+      "Cookie": CookieStore.buildCookieHeader(cookies)
+    });
     if(response.statusCode < 400) {
       var responseHtml = response.body;
-      return _parseRegistrations(sport, responseHtml, divisions, knownShooters);
+      return _parseRegistrations(sport, matchId, responseHtml, divisions, knownShooters);
     }
     else {
-      _log.e("Failed to get registration URL: $response");
+      _log.e("Failed to get registration URL: $response.statusCode: ${response.body}");
     }
   } catch(e, st) {
     _log.e("Failed to get registration", error: e, stackTrace: st);
@@ -70,14 +100,14 @@ Future<RegistrationResult?> getRegistrations(Sport sport, String url, List<Divis
   return null;
 }
 
-RegistrationResult _parseRegistrations(Sport sport, String registrationHtml, List<Division> divisions, List<ShooterRating> knownShooters) {
+RegistrationResult _parseRegistrations(Sport sport, String matchId, String registrationHtml, List<Division> divisions, List<ShooterRating> knownShooters) {
   var ratings = <Registration, ShooterRating>{};
   var unmatched = <Registration>[];
 
   var matchName = "unnamed match";
 
   // Match a line
-  var shooterRegex = RegExp(r'<span.*title="(?<name>.*)\s+\((?<division>[\w\s]+)\s+\/\s+(?<class>\w+)\)');
+  var shooterRegex = RegExp(r'<span.*?title="(?<name>.*?)\s+\((?<division>[\w\s]+)\s+\/\s+(?<class>\w+)\).*?>', dotAll: true);
   var matchRegex = RegExp(r'<meta\s+property="og:title"\s+content="(?<matchname>.*)"\s*/>');
   var unescape = HtmlUnescape();
   for(var line in registrationHtml.split("\n")) {
@@ -85,35 +115,36 @@ RegistrationResult _parseRegistrations(Sport sport, String registrationHtml, Lis
     if(nameMatch != null) {
       matchName = nameMatch.namedGroup("matchname")!;
       _log.d("Match name: $matchName");
-    }
-
-    var match = shooterRegex.firstMatch(line);
-    if(match != null) {
-      var shooterName = unescape.convert(match.namedGroup("name")!);
-      var d = sport.divisions.lookupByName(match.namedGroup("division")!);
-
-      if(d == null || !divisions.contains(d)) continue;
-
-      var classification = sport.classifications.lookupByName(match.namedGroup("class")!);
-
-      // TODO
-      if(classification == null) continue;
-
-      var foundShooter = _findShooter(shooterName, classification, knownShooters);
-
-      if(foundShooter != null && !ratings.containsValue(foundShooter)) {
-        ratings[Registration(name: shooterName, division: d, classification: classification)] = foundShooter;
-      }
-      else {
-        _log.d("Missing shooter for: $shooterName");
-        unmatched.add(
-          Registration(name: shooterName, division: d, classification: classification)
-        );
-      }
+      break;
     }
   }
 
-  return RegistrationResult(matchName, ratings, unmatched);
+  var matches = shooterRegex.allMatches(registrationHtml);
+  _log.d("Shooter regex has ${matches.length} matches");
+  for(var match in matches) {
+    var shooterName = unescape.convert(match.namedGroup("name")!);
+    var d = sport.divisions.lookupByName(match.namedGroup("division")!);
+
+    if(d == null || !divisions.contains(d)) continue;
+
+    var classification = sport.classifications.lookupByName(match.namedGroup("class")!);
+    // TODO
+    if(classification == null) continue;
+
+    var foundShooter = _findShooter(shooterName, classification, knownShooters);
+
+    if(foundShooter != null && !ratings.containsValue(foundShooter)) {
+      ratings[Registration(name: shooterName, division: d, classification: classification)] = foundShooter;
+    }
+    else {
+      _log.d("Missing shooter for: $shooterName");
+      unmatched.add(
+        Registration(name: shooterName, division: d, classification: classification)
+      );
+    }
+  }
+
+  return RegistrationResult(matchName, matchId, ratings, unmatched);
 }
 
 String _processRegistrationName(String name) {

@@ -6,12 +6,16 @@
 
 import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
-import 'package:shooting_sports_analyst/data/model.dart';
+import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/registrations.dart';
+import 'package:shooting_sports_analyst/data/database/schema/registration.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/rater/prediction/registration_parser.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 var _log = SSALogger("AssocRegistrationsDialog");
 
@@ -28,6 +32,7 @@ class AssociateRegistrationsDialog extends StatefulWidget {
 class _AssociateRegistrationsDialogState extends State<AssociateRegistrationsDialog> {
   late Map<Registration, ShooterRating> selectedMappings;
   late List<ShooterRating> remainingOptions;
+  bool persistMappings = true;
 
   @override
   void initState() {
@@ -36,7 +41,10 @@ class _AssociateRegistrationsDialogState extends State<AssociateRegistrationsDia
 
     selectedMappings = {};
     remainingOptions = []..addAll(widget.possibleMappings);
+    loadSavedMappings();
   }
+
+  List<Registration> deletedMappings = [];
 
   @override
   Widget build(BuildContext context) {
@@ -50,11 +58,24 @@ class _AssociateRegistrationsDialogState extends State<AssociateRegistrationsDia
             children: [
               Text("The following shooters could not be automatically matched. Use the autocomplete text boxes to link them to existing "
                   "ratings, or leave the text boxes blank to leave them out of the prediction."),
+              CheckboxListTile(
+                title: Text("Save mappings?"),
+                value: persistMappings,
+                controlAffinity: ListTileControlAffinity.leading,
+                onChanged: (value) {
+                  setState(() => persistMappings = value ?? false);
+                },
+              ),
               Expanded(
                 child: ListView(
                   children: widget.registrations.unmatchedShooters.map((unmatched) {
-                    var controller = TextEditingController();
                     var enabled = true;
+                    var currentMapping = selectedMappings[unmatched];
+                    var controller = TextEditingController();
+                    if(currentMapping != null) {
+                      controller.text = _formatMapping(unmatched, currentMapping);
+                      enabled = false;
+                    }
 
                     return StatefulBuilder(
                       builder: (context, setState) {
@@ -78,7 +99,7 @@ class _AssociateRegistrationsDialogState extends State<AssociateRegistrationsDia
                                   itemBuilder: (context, rating) {
                                     return Padding(
                                       padding: const EdgeInsets.all(8.0),
-                                      child: Text("${rating.getName(suffixes: false)} (${rating.division?.displayName ?? "NO DIVISION"} ${rating.lastClassification?.displayName ?? "(none)"})"),
+                                      child: Text(_formatMapping(unmatched, rating)),
                                     );
                                   },
                                   onSuggestionSelected: (rating) {
@@ -87,8 +108,9 @@ class _AssociateRegistrationsDialogState extends State<AssociateRegistrationsDia
                                       enabled = false;
                                       selectedMappings[unmatched] = rating;
                                       remainingOptions.remove(rating);
+                                      deletedMappings.remove(unmatched);
                                     });
-                                    controller.text = "${rating.getName(suffixes: false)} (${rating.division?.displayName ?? "NO DIVISION"} ${rating.lastClassification?.displayName})";
+                                    controller.text = _formatMapping(unmatched, rating);
                                   },
                                   textFieldConfiguration: TextFieldConfiguration(
                                     controller: controller,
@@ -104,6 +126,7 @@ class _AssociateRegistrationsDialogState extends State<AssociateRegistrationsDia
                                   enabled = true;
                                   var rating = selectedMappings[unmatched];
                                   if(rating != null) {
+                                    deletedMappings.add(unmatched);
                                     selectedMappings.remove(unmatched);
                                     remainingOptions.add(rating);
                                   }
@@ -131,11 +154,60 @@ class _AssociateRegistrationsDialogState extends State<AssociateRegistrationsDia
         ),
         TextButton(
           child: Text("ADVANCE"),
-          onPressed: () {
+          onPressed: () async {
+            if(persistMappings) {
+              await saveMappings();
+            }
             Navigator.of(context).pop(selectedMappings.values.toList());
           },
         )
       ],
     );
+  }
+
+  Future<void> loadSavedMappings() async {
+    var db = AnalystDatabase();
+    int found = 0;
+    int applied = 0;
+    for(var unmatched in widget.registrations.unmatchedShooters) {
+      var mapping = await db.getMatchRegistrationMappingByName(matchId: widget.registrations.matchId, shooterName: unmatched.name);
+      if(mapping != null) {
+        found += 1;
+        var foundMapping = widget.possibleMappings.firstWhereOrNull((r) => r.allPossibleMemberNumbers.intersects(mapping.detectedMemberNumbers));
+        var registration = widget.registrations.unmatchedShooters.firstWhereOrNull((r) => r.name == mapping.shooterName);
+        if(foundMapping != null && registration != null) {
+          selectedMappings[registration] = foundMapping;
+          applied += 1;
+        }
+        else if(foundMapping != null) {
+          _log.w("Found mapping for ${unmatched.name} but no registration");
+        }
+        else if(registration != null) {
+          _log.w("Found registration for ${unmatched.name} but no mapping");
+        }
+      }
+    }
+    _log.i("Found $found mappings, applied $applied to ${widget.registrations.unmatchedShooters.length} unmatched shooters");
+    setState(() {});
+  }
+
+  Future<void> saveMappings() async {
+    var db = AnalystDatabase();
+    var mappings = selectedMappings.entries.map((e) => MatchRegistrationMapping(
+      matchId: widget.registrations.matchId,
+      shooterName: e.key.name,
+      shooterClassificationName: e.key.classification.name,
+      shooterDivisionName: e.key.division.name,
+      detectedMemberNumbers: e.value.allPossibleMemberNumbers.toList(),
+    )).toList();
+
+    await db.saveMatchRegistrationMappings(widget.registrations.matchId, mappings);
+    await db.deleteMatchRegistrationMappingsByNames(matchId: widget.registrations.matchId, shooterNames: deletedMappings.map((e) => e.name).toList());
+
+    _log.i("Saved ${mappings.length} mappings and deleted ${deletedMappings.length} mappings");
+  }
+
+  String _formatMapping(Registration registration, ShooterRating mapping) {
+    return "${mapping.getName(suffixes: false)} ${mapping.memberNumber} (${mapping.division?.displayName ?? "NO DIVISION"} ${mapping.lastClassification?.displayName})";
   }
 }

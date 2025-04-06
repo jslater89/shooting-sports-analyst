@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
 import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/practiscore_parser.dart';
+import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/legacy_loader/rating_history.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
@@ -22,10 +23,10 @@ import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 var _log = SSALogger("PredictionView");
 
 class PredictionView extends StatefulWidget {
-  const PredictionView({Key? key, required this.rater, required this.predictions}) : super(key: key);
+  const PredictionView({Key? key, required this.dataSource, required this.predictions}) : super(key: key);
 
-  /// The rater that generated the predictions.
-  final Rater rater;
+  /// The data source that generated the predictions.
+  final RatingDataSource dataSource;
 
   /// The predictions.
   final List<ShooterPrediction> predictions;
@@ -122,7 +123,7 @@ class _PredictionViewState extends State<PredictionView> {
                     String line = "";
                     line += "${pred.shooter.getName(suffixes: false)},";
                     line += "${pred.shooter.originalMemberNumber},";
-                    line += "${pred.shooter.lastClassification?.name ?? "none"},";
+                    line += "${pred.shooter.lastClassification?.shortDisplayName ?? "none"},";
                     line += "${pred.shooter.rating.round()},";
                     line += "$low,$midLow,$mean,$midHigh,$high,$lowPlace,$midPlace,$highPlace";
 
@@ -408,7 +409,7 @@ class _PredictionViewState extends State<PredictionView> {
             ),
             Expanded(
               flex: PredictionView._classFlex,
-              child: Text(pred.shooter.lastClassification?.name ?? "(none)", textAlign: TextAlign.end),
+              child: Text(pred.shooter.lastClassification?.shortDisplayName ?? "(none)", textAlign: TextAlign.end),
             ),
             Expanded(
               flex: PredictionView._ratingFlex,

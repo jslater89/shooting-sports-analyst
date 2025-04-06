@@ -29,6 +29,8 @@ import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/rater/display_settings.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_correction_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_dialog.dart';
+import 'package:shooting_sports_analyst/ui/rater/prediction/prediction_view.dart';
+import 'package:shooting_sports_analyst/ui/rater/prediction/registration_parser.dart';
 import 'package:shooting_sports_analyst/ui/rater/rater_stats_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/rater_view.dart';
 import 'package:shooting_sports_analyst/ui/rater/rater_view_other_settings_dialog.dart';
@@ -477,10 +479,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         child: IconButton(
           icon: Icon(RpgAwesome.crystal_ball),
           onPressed: () {
-            var tab = activeTabs[_tabController.index];
-            // TODO: restore
-            // var rater = _history.raterFor(_selectedMatch!, tab);
-            // _startPredictionView(rater, tab);
+            var group = activeTabs[_tabController.index];
+            _startPredictionView(widget.dataSource, group);
           },
         ),
       ), // end if: supports ratings
@@ -645,7 +645,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     }
   }
 
-  Future<void> _startPredictionView(Rater rater, RatingGroup tab) async {
+  Future<void> _startPredictionView(RatingDataSource dataSource, RatingGroup tab) async {
     var options = _ratings.toSet().toList(); //rater.knownShooters.values.toSet().toList();
     options.sort((a, b) => b.rating.compareTo(a.rating));
     List<ShooterRating>? shooters = [];
@@ -682,8 +682,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
     // TODO: pass in cached info if exists
 
-    //var registrationResult = await getRegistrations(rater.sport, url, divisions, options);
-    var registrationResult = null;
+    var registrationResult = await getRegistrations(_sport, url, divisions, options);
     if(registrationResult == null) {
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Unable to retrieve registrations"))
@@ -718,10 +717,10 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     // TODO: write registration info to cache
 
     int seed = _selectedMatch.date.millisecondsSinceEpoch;
-    // var predictions = rater.ratingSystem.predict(shooters, seed: seed);
-    // Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-    //   return PredictionView(rater: rater, predictions: predictions);
-    // }));
+    var predictions = _settings.algorithm.predict(shooters, seed: seed);
+    Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+      return PredictionView(dataSource: dataSource, predictions: predictions);
+    }));
   }
 }
 
