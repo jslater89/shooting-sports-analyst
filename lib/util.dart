@@ -11,7 +11,7 @@ import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
 
 final DateFormat programmerYmdFormat = DateFormat("yyyy-MM-dd");
-
+final DateFormat programmerYmdHmFormat = DateFormat("yyyy-MM-dd HH:mm");
 abstract class ResultErr {
   String get message;
   const ResultErr();
