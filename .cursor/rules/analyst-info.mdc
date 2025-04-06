@@ -1,0 +1,17 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Shooting Sports Analyst
+
+This project is Shooting Sports Analyst, an application for producing Elo and other ratings
+for competitors in practical shooting sports like USPSA, IDPA, PCSL, ICORE, and multigun. It
+also has advanced features for viewing and comparing results, and watching matches live.
+
+## Infrastructure
+The project's database is in [analyst_database.dart](mdc:lib/data/database/analyst_database.dart).
+
+There is a logger in [logger.dart](mdc:lib/logger.dart), which should be instantiated as `var _log = SSALogger("LogTag")` when
+needed.
