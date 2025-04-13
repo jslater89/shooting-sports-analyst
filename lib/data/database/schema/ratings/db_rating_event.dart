@@ -29,6 +29,12 @@ class DbRatingEvent implements IRatingEvent {
   /// The match. See [setMatch].
   final match = IsarLink<DbShootingMatch>();
 
+  /// Set the match ID for this event. This will not update the match link, and
+  /// if [load] is true, setting a different match ID than the current match ID
+  /// will lead to a mismatch between the match ID and the match.
+  ///
+  /// This is currently only used by EloRatingEvent.wrap, and should be avoided
+  /// in favor of [setMatch] in other cases.
   Future<void> setMatchId(String id, {bool load = false}) {
     matchId = id;
     if(load) {
@@ -38,7 +44,7 @@ class DbRatingEvent implements IRatingEvent {
       return Future.value();
     }
   }
-  
+
   /// Set the match for this event, updating both the [match] link
   /// and [matchId].
   Future<void> setMatch(DbShootingMatch m, {bool save = true}) {
@@ -78,10 +84,10 @@ class DbRatingEvent implements IRatingEvent {
   List<int> intData;
 
   // Lazily load info as much as possible, because we only care about it for display.
-  
+
   /// A list of strings, each representing a line of extra information about this rating
   /// event, typically defined by the rating system.
-  /// 
+  ///
   /// Use [infoData] to fill in the data for each line: substrings like {{key}} will be
   /// replaced with the relevant data from the element keyed by 'key' in [infoData].
   List<String> infoLines;
@@ -92,7 +98,7 @@ class DbRatingEvent implements IRatingEvent {
   Map<String, dynamic> extraData;
   String get extraDataAsJson => extraData.isEmpty ? "{}" : jsonEncode(extraData);
   set extraDataAsJson(String v) => v == "{}" ? {} : extraData = jsonDecode(v);
-  
+
   DbRelativeScore score;
   DbRelativeScore matchScore;
 

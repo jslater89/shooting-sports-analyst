@@ -4,7 +4,6 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_relative_score.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
@@ -13,7 +12,6 @@ import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_perc
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 
-import '../../../database/schema/ratings.dart';
 
 enum _DoubleKeys {
   error,

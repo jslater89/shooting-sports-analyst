@@ -142,11 +142,20 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
   /// Return a representation of a shooter rating suitable for display in e.g.
   /// a table.
   ///
+  /// The default implementation calls [formatNumericRating] on the rating's
+  /// numeric rating.
+  String formatRating(ShooterRating rating) {
+    return "${formatNumericRating(rating.rating)}";
+  }
+
+  /// Return a representation of a numeric rating suitable for display in e.g.
+  /// a table.
+  ///
   /// The default implementation returns a whole number string for numbers >100,
   /// 1 decimal place for numbers >10, 2 decimal places for numbers >1, and 3
   /// decimal places otherwise, mirrored on the other side of zero.
-  String formatRating(ShooterRating rating) {
-    return "${rating.rating.toStringWithSignificantDigits(3)}";
+  String formatNumericRating(double rating) {
+    return rating.toStringWithSignificantDigits(3);
   }
 
   /// Return ShooterPredictions for the list of shooters.

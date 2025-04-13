@@ -322,6 +322,55 @@ extension RatingProjectDatabase on AnalystDatabase {
     return query.findAllSync();
   }
 
+  /// Delete rating events from a shooter rating.
+  ///
+  /// If [loadLink] is true, the event link will be loaded from the database before
+  /// the deletion operation if not already loaded. If [loadLink] is false, the caller
+  /// is responsible for ensuring that the event link is loaded.
+  ///
+  /// This operation does not perform any rater-specific work. Callers should generally
+  /// use the [ShooterRating.rollbackEvents] method instead, implementations of which should
+  /// a) call this method to update the database, and b) do any rater-specific work such
+  /// as updateTrends() after it returns.
+  ///
+  /// Returns the number of events deleted.
+  Future<int> deleteRatingEvents(DbShooterRating rating, List<DbRatingEvent> events, {bool loadLink = true}) async {
+    if(loadLink && !rating.events.isLoaded) {
+      await rating.events.load();
+    }
+
+    List<int> eventIds = events.map((e) => e.id).toList();
+    DbRatingEvent? firstEvent;
+    for(var e in events) {
+      if(firstEvent == null) {
+        firstEvent = e;
+      }
+      else {
+        if(e.dateAndStageNumber < firstEvent.dateAndStageNumber) {
+          firstEvent = e;
+        }
+      }
+    }
+
+    double oldRating = 0.0;
+    if(firstEvent == null) {
+      return 0;
+    }
+    else {
+      oldRating = firstEvent.oldRating;
+    }
+
+    var originalLength = rating.events.length;
+    rating.events.removeWhere((e) => eventIds.contains(e.id));
+    rating.cachedLength -= events.length;
+
+    rating.lastSeen = rating.events.last.date;
+    rating.rating = rating.events.last.newRating;
+
+    await upsertDbShooterRating(rating, linksChanged: true);
+    return originalLength - rating.events.length;
+  }
+
   List<DbRatingEvent> getRatingEventsByMatchIdsSync(DbShooterRating rating, {required List<String> matchIds}) {
     if(matchIds.isEmpty) return [];
 
@@ -448,6 +497,8 @@ extension RatingProjectDatabase on AnalystDatabase {
       failedMatchIds: failedMatchIds,
     ));
   }
+
+
 
   Query<DbRatingEvent> _buildShooterEventQuery(DbShooterRating rating, {
     int limit = 0,

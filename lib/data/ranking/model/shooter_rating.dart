@@ -141,8 +141,20 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
 
   /// Called by the rating project loader when rating events change, so that
   /// the shooter rating can clear any relevant caches.
-  void ratingEventsChanged() {
-    _ratingEvents = null;
+  ///
+  /// When rolling back ratings, the caller can pass in the DbRatingEvents that
+  /// were removed, to avoid having to re-query the database.
+  void ratingEventsChanged({List<DbRatingEvent>? removedEvents}) {
+    if(removedEvents != null) {
+      if(_ratingEvents != null) {
+        List<int> wrappedEventIds = removedEvents.map((e) => e.id).toList();
+        _ratingEvents!.removeWhere((e) => wrappedEventIds.contains(e.wrappedEvent.id));
+      }
+    }
+    else {
+      _ratingEvents = null;
+    }
+
     _lastMatchChange = null;
   }
 
@@ -277,6 +289,15 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
   @mustCallSuper
   void updateFromEvents(List<RatingEvent> events) {
     wrappedRating.cachedLength += events.length;
+  }
+
+  /// Roll back the given rating events, deleting them from the database,
+  /// invalidating any cached data, and recalculating trends.
+  Future<void> rollbackEvents(List<DbRatingEvent> events) async {
+    await AnalystDatabase().deleteRatingEvents(wrappedRating, events);
+
+    ratingEventsChanged(removedEvents: events);
+    updateTrends([]);
   }
 
   AverageRating averageRating({int window = ShooterRating.baseTrendWindow, List<double>? preloadedRatings, bool nonzeroChange = true}) {

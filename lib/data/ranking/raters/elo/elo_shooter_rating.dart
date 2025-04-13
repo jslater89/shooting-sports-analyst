@@ -170,22 +170,22 @@ class EloShooterRating extends ShooterRating<EloRatingEvent> {
   }) {
     if (length == 0) return 0.0;
     var events = eventsForWindow(window: window, offset: offset);
-    
+
     double currentDecay = 1.0;
     double weightedSum = 0.0;
     double totalWeight = 0.0;
-    
+
     var reversed = events; // ordered desc from DB
     for (int i = 0; i < reversed.length; i++) {
       var e = reversed[i] as EloRatingEvent;
       if (i >= fullEffect) {
         currentDecay *= decayAfterFull;
       }
-      
+
       weightedSum += pow(e.ratingChange, 2) * currentDecay;
       totalWeight += currentDecay;
     }
-    
+
     return sqrt(weightedSum / totalWeight);
   }
 

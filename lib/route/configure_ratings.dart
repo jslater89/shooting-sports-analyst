@@ -48,6 +48,7 @@ import 'package:shooting_sports_analyst/ui/rater/member_number_correction_dialog
 import 'package:shooting_sports_analyst/ui/rater/member_number_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_map_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/reports/report_dialog.dart';
+import 'package:shooting_sports_analyst/ui/rater/rollback_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/select_old_project_dialog.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/text_styles.dart';
@@ -66,7 +67,7 @@ var _log = SSALogger("ConfigureRatingsPage");
 class ConfigureRatingsPage extends StatefulWidget {
   const ConfigureRatingsPage({Key? key, required this.onSettingsReady}) : super(key: key);
 
-  final void Function(DbRatingProject project, bool forceRecalculate) onSettingsReady;
+  final void Function(DbRatingProject project, {bool forceRecalculate, DateTime? rollbackDate}) onSettingsReady;
 
   @override
   State<ConfigureRatingsPage> createState() => _ConfigureRatingsPageState();
@@ -313,7 +314,20 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                   var project = await _saveProject(_lastProjectName ?? RatingProjectManager.autosaveName);
 
                   if(project != null) {
-                    widget.onSettingsReady(project, _forceRecalculate);
+                    widget.onSettingsReady(project, forceRecalculate: _forceRecalculate);
+                  }
+                },
+              ),
+              SizedBox(width: 20),
+              ElevatedButton(
+                child: Text("ROLLBACK"),
+                onPressed: () async {
+                  var rollbackDate = await RollbackDialog.show(context, _loadedProject!);
+                  if(rollbackDate != null) {
+                    var project = await _saveProject(_lastProjectName ?? RatingProjectManager.autosaveName);
+                    if(project != null) {
+                      widget.onSettingsReady(project, rollbackDate: rollbackDate);
+                    }
                   }
                 },
               ),
