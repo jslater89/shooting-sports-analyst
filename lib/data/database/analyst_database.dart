@@ -215,6 +215,10 @@ class AnalystDatabase {
     return null;
   }
 
+  Future<DbShootingMatch?> getMatchBySourceId(String id) {
+    return getMatchByAnySourceId([id]);
+  }
+
   Future<DbShootingMatch?> getMatch(int id) async {
     return await isar.dbShootingMatchs.get(id);
   }

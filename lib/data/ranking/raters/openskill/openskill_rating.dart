@@ -83,9 +83,20 @@ class OpenskillRating extends ShooterRating<OpenskillRatingEvent> {
   }
 
   @override
-  void updateTrends(List<RatingEvent> changes) {
-    // TODO: implement updateTrends
+  void ratingEventsChanged({List<DbRatingEvent>? removedEvents}) {
+    if (removedEvents != null) {
+      for (var event in removedEvents) {
+        var openskillEvent = OpenskillRatingEvent.wrap(event);
+        mu -= openskillEvent.muChange;
+        sigma -= openskillEvent.sigmaChange;
+      }
+    }
+
+    super.ratingEventsChanged(removedEvents: removedEvents);
   }
+
+  @override
+  void updateTrends(List<RatingEvent> changes) {}
 
   @override
   void copyRatingFrom(OpenskillRating other) {
@@ -106,7 +117,7 @@ class OpenskillRating extends ShooterRating<OpenskillRatingEvent> {
   OpenskillRatingEvent wrapEvent(DbRatingEvent e) {
     return OpenskillRatingEvent.wrap(e);
   }
-  
+
   @override
   List<OpenskillRatingEvent> get emptyRatingEvents => [];
 }

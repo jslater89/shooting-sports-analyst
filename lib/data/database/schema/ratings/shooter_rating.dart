@@ -116,6 +116,36 @@ class DbShooterRating extends Shooter with DbSportEntity {
   /// Match windows contain competitor information used to calculate connectivity.
   List<MatchWindow> matchWindows = [];
 
+  /// Historical connectivity entries (raw DB list). See [historicalConnectivity].
+  List<HistoricalConnectivity> dbHistoricalConnectivity = [];
+
+  Set<HistoricalConnectivity>? _historicalConnectivity;
+
+  /// A set of historical connectivity entries. Each entry contains the connectivity
+  /// score a competitor possessed after a given match.
+  @ignore
+  Set<HistoricalConnectivity> get historicalConnectivity {
+    if(_historicalConnectivity == null) {
+      _historicalConnectivity = dbHistoricalConnectivity.toSet();
+    }
+    return _historicalConnectivity!;
+  }
+  set historicalConnectivity(Set<HistoricalConnectivity> value) {
+    dbHistoricalConnectivity = value.toList();
+    _historicalConnectivity = null;
+  }
+
+  /// Add a historical connectivity entry. If an entry already exists for the
+  /// specified match, it is removed and replaced with the new entry.
+  void addHistoricalConnectivity(HistoricalConnectivity entry) {
+    if(_historicalConnectivity == null) {
+      _historicalConnectivity = dbHistoricalConnectivity.toSet();
+    }
+    _historicalConnectivity!.remove(entry);
+    _historicalConnectivity!.add(entry);
+    dbHistoricalConnectivity = _historicalConnectivity!.toList();
+  }
+
   /// Use to store algorithm-specific double data.
   List<double> doubleData = [];
   /// Use to store algorithm-specific integer data.
@@ -124,8 +154,44 @@ class DbShooterRating extends Shooter with DbSportEntity {
   DateTime firstSeen;
   DateTime lastSeen;
 
+  /// Update the connectivity of this rating, and its most recent rating event.
+  ///
+  /// If [save] is true, this method will make the change and save the rating to
+  /// the database. If false, the caller is responsible for saving the rating.
+  Future<void> updateConnectivity({
+    required SourceIdsProvider match,
+    required double connectivity,
+    required double rawConnectivity,
+    bool save = false,
+  }) async {
+    this.connectivity = connectivity;
+    this.rawConnectivity = rawConnectivity;
+
+    addHistoricalConnectivity(HistoricalConnectivity.create(
+      matchSourceIds: match.sourceIds,
+      connectivity: connectivity,
+      rawConnectivity: rawConnectivity,
+    ));
+
+    if(save) {
+      await AnalystDatabase().upsertDbShooterRating(this);
+    }
+  }
+
+  Future<List<DbRatingEvent>> getEventsInWindow({int window = 0, int offset = 0}) async {
+    return AnalystDatabase().getRatingEventsFor(this, limit: window, offset: offset);
+  }
+
   List<DbRatingEvent> getEventsInWindowSync({int window = 0, int offset = 0}) {
     return AnalystDatabase().getRatingEventsForSync(this, limit: window, offset: offset);
+  }
+
+  Future<List<DbRatingEvent>> matchEvents(SourceIdsProvider match) {
+    return AnalystDatabase().getRatingEventsByMatchIds(this, matchIds: match.sourceIds);
+  }
+
+  List<DbRatingEvent> matchEventsSync(SourceIdsProvider match) {
+    return AnalystDatabase().getRatingEventsByMatchIdsSync(this, matchIds: match.sourceIds);
   }
 
   double averageFinishRatio({int window = 0, int offset = 0}) {
@@ -232,4 +298,44 @@ class MatchWindow {
   String toString() {
     return "MatchWindow(uniqueOpponentIds: ${uniqueOpponentIds.length}, date: ${programmerYmdFormat.format(date)})";
   }
+}
+
+@embedded
+class HistoricalConnectivity {
+  /// A single source ID for the match for this entry, for set membership checks.
+  @ignore
+  String get matchSourceId => matchSourceIds.first;
+  /// All source IDs for the match for this entry, to determine if this entry
+  /// belongs to a particular match.
+  List<String> matchSourceIds;
+  double connectivity;
+  double rawConnectivity;
+
+  HistoricalConnectivity({
+    this.matchSourceIds = const [],
+    this.connectivity = 0.0,
+    this.rawConnectivity = 0.0,
+  });
+
+  /// Create a new connectivity history entry. Use this in preference
+  /// to the no-argument constructor, which is only provided for Isar.
+  HistoricalConnectivity.create({
+    required this.matchSourceIds,
+    required this.connectivity,
+    required this.rawConnectivity,
+  });
+
+  bool forMatch(SourceIdsProvider match) {
+    return matchSourceIds.intersects(match.sourceIds);
+  }
+
+  operator ==(Object other) {
+    if(other is HistoricalConnectivity) {
+      return other.matchSourceId == matchSourceId;
+    }
+    return false;
+  }
+
+  @ignore
+  int get hashCode => matchSourceId.hashCode;
 }

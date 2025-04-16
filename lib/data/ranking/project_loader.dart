@@ -17,6 +17,7 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/connectivity.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_report.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/connectivity/valid_competitors.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
@@ -1378,7 +1379,6 @@ class RatingProjectLoader {
     if(Timings.enabled) timings.add(TimingType.calcConnectedness, DateTime.now().difference(start).inMicroseconds);
 
     Map<DbShooterRating, Map<RelativeScore, RatingEvent>> changes = {};
-    Set<DbShooterRating> shootersAtMatch = Set();
     int changeCount = 0;
 
     if(Timings.enabled) start = DateTime.now();
@@ -1461,7 +1461,6 @@ class RatingProjectLoader {
           var wrapped = ratingSystem.wrapDbRating(r);
           wrapped.updateFromEvents(changes[r]!.values.toList());
           wrapped.updateTrends(changes[r]!.values.toList());
-          shootersAtMatch.add(r);
           if(Timings.enabled) timings.add(TimingType.applyChanges, DateTime.now().difference(changeStart).inMicroseconds);
         }
 
@@ -1558,7 +1557,6 @@ class RatingProjectLoader {
         var wrapped = ratingSystem.wrapDbRating(r);
         wrapped.updateFromEvents(changes[r]!.values.toList());
         wrapped.updateTrends(changes[r]!.values.toList());
-        shootersAtMatch.add(r);
         if(Timings.enabled) timings.add(TimingType.applyChanges, DateTime.now().difference(changeStart).inMicroseconds);
       }
 
@@ -1575,6 +1573,23 @@ class RatingProjectLoader {
     if(Timings.enabled) start = DateTime.now();
     List<Future<void>> futures = [];
     if(shooters.length > 1 && sport.connectivityCalculator != null) {
+      var connectivityCompetitors = match.connectivityCompetitors(group);
+      Set<DbShooterRating> shootersAtMatch = {};
+      for(var c in connectivityCompetitors) {
+        // Everyone who has a rating at the match will be in the cache, so we
+        // can skip the DB hit.
+        var rating = await AnalystDatabase().maybeKnownShooter(
+          project: project,
+          group: group,
+          memberNumber: c.memberNumber,
+          useCache: true,
+          onlyCache: true,
+        );
+        if(rating != null) {
+          shootersAtMatch.add(rating);
+        }
+      }
+
       var calc = sport.connectivityCalculator!;
       Set<int> uniqueIds = {...shootersAtMatch.map((e) => e.id)};
       for(var rating in shootersAtMatch) {
@@ -1604,8 +1619,13 @@ class RatingProjectLoader {
         rating.matchWindows = editableList;
 
         var newConnectivity = calc.calculateRatingConnectivity(rating);
-        rating.connectivity = newConnectivity.connectivity;
-        rating.rawConnectivity = newConnectivity.rawConnectivity;
+
+        rating.updateConnectivity(
+          match: match,
+          connectivity: newConnectivity.connectivity,
+          rawConnectivity: newConnectivity.rawConnectivity,
+          save: false,
+        );
 
         futures.add(AnalystDatabase().upsertDbShooterRating(rating));
       }

@@ -14,6 +14,8 @@ import 'package:shooting_sports_analyst/data/database/match/rating_project_datab
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/connectivity/valid_competitors.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 // import 'package:shooting_sports_analyst/data/db/object/match/shooter.dart';
 // import 'package:shooting_sports_analyst/data/db/object/rating/shooter_rating.dart';
@@ -144,6 +146,7 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
   ///
   /// When rolling back ratings, the caller can pass in the DbRatingEvents that
   /// were removed, to avoid having to re-query the database.
+  @mustCallSuper
   void ratingEventsChanged({List<DbRatingEvent>? removedEvents}) {
     if(removedEvents != null) {
       if(_ratingEvents != null) {
@@ -293,11 +296,58 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
 
   /// Roll back the given rating events, deleting them from the database,
   /// invalidating any cached data, and recalculating trends.
-  Future<void> rollbackEvents(List<DbRatingEvent> events) async {
+  ///
+  /// Implementations must call super.rollbackEvents, and should call it
+  /// before doing any work on their own. Implementations should also call
+  /// AnalystDatabase().upsertDbShooterRating() if they make changes that
+  /// should be persisted to the DB.
+  @mustCallSuper
+  Future<void> rollbackEvents(List<DbRatingEvent> events, {bool updateConnectivity = true, required bool byStage}) async {
     await AnalystDatabase().deleteRatingEvents(wrappedRating, events);
 
     ratingEventsChanged(removedEvents: events);
+
+    // Some ratings do error calculations immediately in updateFromEvents.
+    updateFromEvents([]);
     updateTrends([]);
+
+    if(updateConnectivity && sport.connectivityCalculator != null) {
+      if(!wrappedRating.project.isLoaded) {
+        await wrappedRating.project.load();
+      }
+      var calc = sport.connectivityCalculator!;
+      var window = calc.matchWindowCount;
+
+      /// We get matches in new to old order, but we need to process them in old to new order so
+      /// we get the expected order of match windows.
+      var matches = (await AnalystDatabase().getMostRecentMatchesFor(wrappedRating, window: window)).reversed;
+      List<MatchWindow> windows = [];
+      for(var dbMatch in matches) {
+        var m = dbMatch.hydrate(useCache: true).unwrap();
+        Set<int> ratingIds = {};
+        var filteredShooters = m.connectivityCompetitors(group);
+        for(var s in filteredShooters) {
+          var rating = await AnalystDatabase().maybeKnownShooter(project: wrappedRating.project.value!, group: group, memberNumber: s.memberNumber, useCache: true);
+          if(rating != null && rating.length > 0) {
+            ratingIds.add(rating.id);
+          }
+        }
+
+        if(ratingIds.length > 1) {
+          windows.add(MatchWindow(
+            matchSourceId: m.sourceIds.first,
+            uniqueOpponentIds: ratingIds.toList(),
+          ));
+        }
+      }
+
+      wrappedRating.matchWindows = windows;
+      var connectivity = calc.calculateRatingConnectivity(wrappedRating);
+      this.connectivity = connectivity.connectivity;
+      this.rawConnectivity = connectivity.rawConnectivity;
+    }
+
+    await AnalystDatabase().upsertDbShooterRating(wrappedRating);
   }
 
   AverageRating averageRating({int window = ShooterRating.baseTrendWindow, List<double>? preloadedRatings, bool nonzeroChange = true}) {
@@ -332,6 +382,7 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
     return AverageRating(firstRating: firstRating, minRating: lowestPoint, maxRating: highestPoint, averageOfIntermediates: intermediateAverage, window: window);
   }
 
+  /// Returns the rating events for the given window and offset, from newest to oldest.
   List<T> eventsWithWindow({int window = baseTrendWindow, int offset = 0}) {
     return AnalystDatabase().getRatingEventsForSync(wrappedRating, limit: window, offset: offset).map((e) => wrapEvent(e)).toList();
   }

@@ -8,7 +8,10 @@ import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings/connectivity.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
+import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
+import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
@@ -167,7 +170,49 @@ class RatingProjectRollback {
       }
       else if(eventsToRemove.isNotEmpty) {
         var wrapped = rater.wrapDbRating(rating);
-        await wrapped.rollbackEvents(eventsToRemove);
+        var supportsConnectivity = project.sport.connectivityCalculator != null;
+        await wrapped.rollbackEvents(eventsToRemove, updateConnectivity: supportsConnectivity, byStage: project.settings.byStage);
+      }
+    }
+
+    // Calculate new connectivity baselines for all groups in the project
+    if(project.sport.connectivityCalculator != null) {
+      var calc = project.sport.connectivityCalculator!;
+      for(var group in project.groups) {
+        List<double>? connectivityScores;
+        double? connectivitySum;
+        int? matchCount;
+        int? competitorCount;
+
+        if(calc.requiredBaselineData.contains(ConnectivityRequiredData.connectivityScores)) {
+          connectivityScores = await db.getConnectivity(project, group);
+          competitorCount = connectivityScores.length;
+        }
+        if(calc.requiredBaselineData.contains(ConnectivityRequiredData.connectivitySum)) {
+          if(connectivityScores != null) {
+            connectivitySum = connectivityScores.sum;
+          }
+          else {
+            connectivitySum = await db.getConnectivitySum(project, group);
+          }
+        }
+        if(calc.requiredBaselineData.contains(ConnectivityRequiredData.competitorCount) && competitorCount == null) {
+          competitorCount = await db.countShooterRatings(project, group);
+        }
+        if(calc.requiredBaselineData.contains(ConnectivityRequiredData.matchCount)) {
+          matchCount = project.matchPointers.length;
+        }
+
+        var baseline = calc.calculateConnectivityBaseline(
+          matchCount: matchCount,
+          competitorCount: competitorCount,
+          connectivitySum: connectivitySum,
+          connectivityScores: connectivityScores,
+        );
+        project.connectivityContainer.add(BaselineConnectivity(
+          groupUuid: group.uuid,
+          connectivity: baseline,
+        ));
       }
     }
 

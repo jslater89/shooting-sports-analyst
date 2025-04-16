@@ -17,13 +17,13 @@ class RatingChange {
   final Map<String, double> change;
 
   /// A list of strings, each representing a line of extra information about this rating.
-  /// 
+  ///
   /// [infoData] should be used to embed dynamic information, to avoid string interpolation
   /// costs during rating math. A {{key}} in these strings enclosed in double curly braces
   /// will be replaced with the element having {{key}} in [infoData].
   List<String> infoLines;
   /// A list of info elements, each containing data that can be filled into infoLines.
-  /// 
+  ///
   /// [RatingEventInfoElement]s have a key property, and strings in infoLines can contain
   /// {{key}} strings; the {{key}} string will be replaced by the data contained by the
   /// relevant element in this list.

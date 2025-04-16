@@ -210,6 +210,14 @@ extension RatingProjectDatabase on AnalystDatabase {
     });
   }
 
+  /// Upsert a DbRatingEvent.
+  Future<DbRatingEvent> upsertDbRatingEvent(DbRatingEvent event) {
+    return isar.writeTxn(() async {
+      await isar.dbRatingEvents.put(event);
+      return event;
+    });
+  }
+
   /// Update DbShooterRatings that have changed as part of the rating process.
   Future<int> updateChangedRatings(Iterable<DbShooterRating> ratings, {bool useCache = true}) async {
     var count = await isar.writeTxn(() async {
@@ -306,8 +314,9 @@ extension RatingProjectDatabase on AnalystDatabase {
     int offset = 0,
     DateTime? after,
     DateTime? before,
+    Order order = Order.descending,
   }) async {
-    var query = _buildShooterEventQuery(rating, limit: limit, offset: offset, after: after, before: before);
+    var query = _buildShooterEventQuery(rating, limit: limit, offset: offset, after: after, before: before, order: order);
     return query.findAll();
   }
 
@@ -352,12 +361,8 @@ extension RatingProjectDatabase on AnalystDatabase {
       }
     }
 
-    double oldRating = 0.0;
     if(firstEvent == null) {
       return 0;
-    }
-    else {
-      oldRating = firstEvent.oldRating;
     }
 
     var originalLength = rating.events.length;
@@ -369,6 +374,38 @@ extension RatingProjectDatabase on AnalystDatabase {
 
     await upsertDbShooterRating(rating, linksChanged: true);
     return originalLength - rating.events.length;
+  }
+
+  Future<List<DbShootingMatch>> getMostRecentMatchesFor(DbShooterRating rating, {int window = 5}) async {
+    var query = rating.events.filter()
+      .sortByDateAndStageNumberDesc()
+      .distinctByMatchId()
+      .limit(window);
+    var events = await query.findAll();
+    var matches = <DbShootingMatch>[];
+    for(var e in events) {
+      var id = e.matchId;
+      var match = await getMatchBySourceId(id);
+      if(match != null) {
+        matches.add(match);
+      }
+    }
+    return matches;
+  }
+
+  Future<List<DbRatingEvent>> getRatingEventsByMatchIds(DbShooterRating rating, {required List<String> matchIds}) async {
+    if(matchIds.isEmpty) return [];
+
+    var query = rating.events.filter();
+    QueryBuilder<DbRatingEvent, DbRatingEvent, QAfterFilterCondition> finishedQuery;
+    if(matchIds.length > 1) {
+      finishedQuery = query.anyOf(matchIds, (q, id) => q.matchIdEqualTo(id));
+    }
+    else {
+      finishedQuery = query.matchIdEqualTo(matchIds.first);
+    }
+
+    return finishedQuery.findAll();
   }
 
   List<DbRatingEvent> getRatingEventsByMatchIdsSync(DbShooterRating rating, {required List<String> matchIds}) {

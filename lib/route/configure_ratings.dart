@@ -297,39 +297,45 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
             mainAxisSize: MainAxisSize.max,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              ElevatedButton(
-                child: Text("ADVANCE"),
-                onPressed: () async {
-                  var settings = _makeAndValidateSettings();
+              Tooltip(
+                message: "View (calculating, if needed) ratings for the currently-selected matches.",
+                child: ElevatedButton(
+                  child: Text("ADVANCE"),
+                  onPressed: () async {
+                    var settings = _makeAndValidateSettings();
 
-                  if(settings == null) return;
+                    if(settings == null) return;
 
-                  if(projectMatches.isEmpty || filteredMatches != null && filteredMatches!.isEmpty) {
-                    setState(() {
-                      _validationError = "No match URLs entered";
-                    });
-                    return;
-                  }
+                    if(projectMatches.isEmpty || filteredMatches != null && filteredMatches!.isEmpty) {
+                      setState(() {
+                        _validationError = "No match URLs entered";
+                      });
+                      return;
+                    }
 
-                  var project = await _saveProject(_lastProjectName ?? RatingProjectManager.autosaveName);
+                    var project = await _saveProject(_lastProjectName ?? RatingProjectManager.autosaveName);
 
-                  if(project != null) {
-                    widget.onSettingsReady(project, forceRecalculate: _forceRecalculate);
-                  }
-                },
+                    if(project != null) {
+                      widget.onSettingsReady(project, forceRecalculate: _forceRecalculate);
+                    }
+                  },
+                ),
               ),
               SizedBox(width: 20),
-              ElevatedButton(
-                child: Text("ROLLBACK"),
-                onPressed: () async {
-                  var rollbackDate = await RollbackDialog.show(context, _loadedProject!);
-                  if(rollbackDate != null) {
-                    var project = await _saveProject(_lastProjectName ?? RatingProjectManager.autosaveName);
-                    if(project != null) {
-                      widget.onSettingsReady(project, rollbackDate: rollbackDate);
+              Tooltip(
+                message: "Roll back to a previous date, removing ratings after that date.",
+                child: ElevatedButton(
+                  child: Text("ROLL BACK"),
+                  onPressed: () async {
+                    var rollbackDate = await RollbackDialog.show(context, _loadedProject!);
+                    if(rollbackDate != null) {
+                      var project = await _saveProject(_lastProjectName ?? RatingProjectManager.autosaveName);
+                      if(project != null) {
+                        widget.onSettingsReady(project, rollbackDate: rollbackDate);
+                      }
                     }
-                  }
-                },
+                  },
+                ),
               ),
               SizedBox(width: 20),
               ElevatedButton(

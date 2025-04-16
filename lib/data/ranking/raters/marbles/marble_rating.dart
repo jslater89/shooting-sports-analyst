@@ -75,6 +75,9 @@ class MarbleRating extends ShooterRating<MarbleRatingEvent> {
     }
   }
 
+  // TODO: support rollback?
+  // might already do enough
+
   @override
   void updateTrends(List<RatingEvent> changes) {
     var trendWindow = ShooterRating.baseTrendWindow;
@@ -89,7 +92,7 @@ class MarbleRating extends ShooterRating<MarbleRatingEvent> {
       marbleValues.addAll(
         // We want to get the rating prior to the event to correctly calculate the trend
         AnalystDatabase().getRatingEventRatingForSync(
-          wrappedRating, 
+          wrappedRating,
           limit: dbRequirement,
           offset: 0,
           order: Order.descending,
