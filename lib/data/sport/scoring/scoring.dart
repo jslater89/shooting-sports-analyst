@@ -316,6 +316,8 @@ class RawScore {
   /// If [includeTargetPenalties] is true, penalties resulting from hits or lack of hits on targets (M, NS, etc.) are
   /// included in the total. For example, in a USPSA match, includeTargetPenalties = false would include only A, C, and
   /// D hits.
+  ///
+  /// If [countPenalties] is false, [includeTargetPenalties] is ignored.
   int getTotalPoints({bool countPenalties = true, bool allowNegative = false, bool includeTargetPenalties = true}) {
     if(countPenalties) {
       if(allowNegative) {

@@ -239,20 +239,7 @@ class USPSAFantasyScoringCalculator implements FantasyScoringCalculator<USPSAFan
   /// This calculates the value of a shooter's positive scoring hits only, assuming minor
   /// scoring.
   int _getStagePoints(RawScore score) {
-    int totalPoints = 0;
-    for(var hit in score.targetEvents.keys) {
-      if(hit.matches("A")) {
-        totalPoints += score.targetEvents[hit]! * 5;
-      }
-      else if(hit.matches("C")) {
-        totalPoints += score.targetEvents[hit]! * 3;
-      }
-      else if(hit.matches("D")) {
-        totalPoints += score.targetEvents[hit]! * 1;
-      }
-    }
-
-    return totalPoints;
+    return score.getTotalPoints(countPenalties: false, includeTargetPenalties: false);
   }
 }
 

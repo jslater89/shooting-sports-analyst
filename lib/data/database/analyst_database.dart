@@ -84,6 +84,8 @@ class AnalystDatabase {
           await isar.ratingGroups.putAll(provider.builtinRatingGroups);
         }
       }
+
+      // TODO: fantasy initialization here
     });
 
     _readyCompleter.complete();
@@ -215,12 +217,20 @@ class AnalystDatabase {
     return null;
   }
 
+  Future<List<DbShootingMatch>> getMatchesByAnySourceIds(Iterable<String> ids) async {
+    return await isar.dbShootingMatchs.where().anyOf(ids, (query, id) => query.sourceIdsElementEqualTo(id)).findAll();
+  }
+
   Future<DbShootingMatch?> getMatchBySourceId(String id) {
     return getMatchByAnySourceId([id]);
   }
 
   Future<DbShootingMatch?> getMatch(int id) async {
     return await isar.dbShootingMatchs.get(id);
+  }
+
+  Future<List<DbShootingMatch>> getMatchesByIds(Iterable<Id> ids) async {
+    return await isar.dbShootingMatchs.where().anyOf(ids, (query, id) => query.idEqualTo(id)).findAll();
   }
 
   Future<List<DbShootingMatch>> getMatchesByMemberNumbers(Iterable<String> memberNumbers) async {

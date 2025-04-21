@@ -15,3 +15,11 @@ The project's database is in [analyst_database.dart](mdc:lib/data/database/analy
 
 There is a logger in [logger.dart](mdc:lib/logger.dart), which should be instantiated as `var _log = SSALogger("LogTag")` when
 needed.
+
+## Practical Shooting Primer
+Practical shooting sports are a subset of shooting sports, distinguished by time-based scoring
+(faster is better, given the same accuracy), penalties for inaccuracy, and oftentimes, but not
+always, movement.
+
+Matches are organized into stages, or courses of fire. Each stage is scored separately, and match
+scores are a sum of the stage scores in some way.
