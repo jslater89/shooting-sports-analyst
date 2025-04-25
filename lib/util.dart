@@ -260,6 +260,10 @@ int combineHashes(int hash, int value) {
   return hash ^ (hash >> 6);
 }
 
+int combineHashList(List<int> hashes) {
+  return hashes.fold(0, combineHashes);
+}
+
 extension AsPercentage on double {
   String asPercentage({int decimals = 2}) {
     if(decimals == 0) {

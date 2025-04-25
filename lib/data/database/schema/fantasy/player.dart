@@ -62,7 +62,21 @@ class FantasyPlayer {
 
 @collection
 class PlayerMonthlyPerformance {
-  Id get id => combineHashes(playerId.stableHash, monthId.stableHash);
+  static Id idFromDbEntities({
+    required FantasyPlayer player,
+    required LeagueMonth month,
+  }) {
+    return combineHashes(player.id.stableHash, month.id.stableHash);
+  }
+
+  static Id idFromEntityIds({
+    required int playerId,
+    required int monthId,
+  }) {
+    return combineHashes(playerId.stableHash, monthId.stableHash);
+  }
+
+  Id get id => idFromEntityIds(playerId: playerId, monthId: monthId);
 
   final player = IsarLink<FantasyPlayer>();
   final month = IsarLink<LeagueMonth>();

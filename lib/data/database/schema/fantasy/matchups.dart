@@ -6,8 +6,8 @@
 
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/league.dart';
+import 'package:shooting_sports_analyst/data/database/schema/fantasy/player.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/roster.dart';
-import 'package:shooting_sports_analyst/data/sport/scoring/fantasy_scoring_calculator.dart';
 
 part 'matchups.g.dart';
 
@@ -35,28 +35,28 @@ class Matchup {
 @embedded
 class SlotScore {
   int slotIndex;
-  String dbScore;
 
-  double get points => score.points;
+  int playerId;
+  int monthId;
 
-  FantasyScore? _cachedScore;
-  @ignore
-  FantasyScore get score {
-    if(_cachedScore == null) {
-      _cachedScore = FantasyScore.fromJson(dbScore);
-    }
-    return _cachedScore!;
-  }
-
-  set score(FantasyScore value) {
-    _cachedScore = value;
-    dbScore = value.toJson();
-  }
-
+  /// A no-arg constructor for Isar. Prefer [fromDbEntities] or [fromIds].
   SlotScore({
     this.slotIndex = 0,
-    this.dbScore = "",
+    this.playerId = 0,
+    this.monthId = 0,
   });
 
-  SlotScore.fromFantasyScore(this.slotIndex, FantasyScore score) : dbScore = score.toJson(), _cachedScore = score;
+  /// Create a [SlotScore] from the given player and league month.
+  SlotScore.fromDbEntities({
+    required FantasyPlayer player,
+    required LeagueMonth month,
+    required int slotIndex,
+  }) : slotIndex = slotIndex, playerId = player.id, monthId = month.id;
+
+  /// Create a [SlotScore] from the given database IDs.
+  SlotScore.fromIds({
+    required int playerId,
+    required int monthId,
+    required int slotIndex,
+  }) : slotIndex = slotIndex, playerId = playerId, monthId = monthId;
 }

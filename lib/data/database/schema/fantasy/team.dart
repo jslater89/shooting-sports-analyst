@@ -23,7 +23,14 @@ class Team {
   /// The players on this team.
   final players = IsarLinks<FantasyPlayer>();
 
-  /// The roster assignments for this team.
+  /// Pending roster assignments for this team.
+  ///
+  /// Whenever a month starts, the assignments in this list will be
+  /// copied to a [MonthlyRoster] object tied to the [LeagueMonth],
+  /// and those assignments will be used for scoring.
+  ///
+  /// This list will _not_ be cleared: think of it as the assignments
+  /// on the team's roster settings page.
   final rosterAssignments = IsarLinks<RosterAssignment>();
 
   Team({

@@ -18,10 +18,13 @@ part 'roster.g.dart';
 /// A team's monthly roster.
 @collection
 class MonthlyRoster {
-  Id id = Isar.autoIncrement;
+  Id get id => combineHashList([teamId, monthId]);
 
   final team = IsarLink<Team>();
   final month = IsarLink<LeagueMonth>();
+
+  int teamId;
+  int monthId;
 
   // The actual assignments for this month
   final assignments = IsarLinks<RosterAssignment>();
@@ -29,8 +32,37 @@ class MonthlyRoster {
   // When this roster was last edited
   DateTime lastModified;
 
-  // Whether this roster is locked (happens automatically on 1st)
+  // Whether this roster is locked.
   bool isLocked;
+
+  /// Whether this roster should be locked.
+  ///
+  /// Returns true when the current time is greater than or equal to the
+  /// start date of the league month.
+  Future<bool> shouldLock() async {
+    var leagueMonth = await getLeagueMonth();
+    var now = DateTime.now().toUtc();
+    return now.isAfter(leagueMonth.startDate) || now.isAtSameMomentAs(leagueMonth.startDate);
+  }
+
+  Future<LeagueMonth> getLeagueMonth() async {
+    if(!month.isLoaded) {
+      await month.load();
+    }
+    return month.value!;
+  }
+
+  Future<LeagueSeason> getLeagueSeason() async {
+    return getLeagueMonth().then((month) => month.getSeason());
+  }
+
+  Future<League> getLeague() async {
+    return getLeagueSeason().then((season) => season.getLeague());
+  }
+
+  Future<List<RosterSlot>> getSlots() async {
+    return getLeague().then((league) => league.getRosterSlots());
+  }
 
   /// The scores for each slot in this roster.
   List<SlotScore> slotScores;
@@ -40,31 +72,84 @@ class MonthlyRoster {
     return slotScores.firstWhere((element) => element.slotIndex == index);
   }
 
+  /// Get the player performance for a slot by index.
+  Future<PlayerMonthlyPerformance?> getSlotPerformance(int index) async {
+
+  }
+
   /// Get the score for a slot by slot type and index.
   SlotScore getSlotScore(FantasyRosterSlotType slotType, int index) {
     return slotScores.firstWhere((element) => element.slotIndex == index);
   }
 
   MonthlyRoster({
+    required this.teamId,
+    required this.monthId,
     required this.lastModified,
     required this.isLocked,
     this.slotScores = const [],
   });
 }
 
-/// A player in a MonthlyRoster on a team.
+/// An association between a player and a roster slot.
+///
+/// It may be a provisional assignment (i.e. what you see on a team's roster settings
+/// page), in which case [month] and [monthId] will be null, or it may be a finalized
+/// assignment (i.e. used, or in the process of being used, for scoring), in which case
+/// [month] and [monthId] will be non-null.
+///
+/// The [id] is a combination of the [teamId], [slotId], and [monthId].
 @collection
 class RosterAssignment {
-  Id id = Isar.autoIncrement;
+  static Id idForIds({required int teamId, required int slotId, int? monthId}) {
+    List<int> ids = [teamId, slotId];
+    if(monthId != null) {
+      ids.add(monthId);
+    }
+    return combineHashList(ids);
+  }
 
-  @Backlink(to: 'rosterAssignments')
+  Id get id => idForIds(teamId: teamId, slotId: slotId, monthId: monthId);
+
   final team = IsarLink<Team>();
   final slot = IsarLink<RosterSlot>();
   final player = IsarLink<FantasyPlayer>();
+  final month = IsarLink<LeagueMonth>();
 
-  RosterAssignment();
+  int teamId;
+  int slotId;
+  int? monthId;
+
+  /// Create a roster assignment from raw IDs.
+  ///
+  /// This does not populate links or save the assignment to the database.
+  RosterAssignment({
+    required this.teamId,
+    required this.slotId,
+    this.monthId,
+  });
+
+  /// Create a roster assignment from database entities.
+  ///
+  /// This sets the values of the [team], [slot], and [player] links,
+  /// but does not save the assignment to the database.
+  RosterAssignment.fromEntities({
+    required Team team,
+    required RosterSlot slot,
+    required FantasyPlayer player,
+    LeagueMonth? month,
+  }) : teamId = team.id,
+       slotId = slot.id,
+       monthId = month?.id
+  {
+    this.team.value = team;
+    this.slot.value = slot;
+    this.player.value = player;
+    this.month.value = month;
+  }
 }
 
+/// A slot in a [MonthlyRoster] with its display order.
 @collection
 class RosterSlot {
   Id id = Isar.autoIncrement;
@@ -91,6 +176,9 @@ abstract interface class FantasyRosterSlotProvider {
 /// of what competitors are eligible to be assigned to it.
 ///
 /// Roster slots are generally created by a [FantasyRosterSlotProvider].
+///
+/// The roster slot type's [id] is a combination of its [sportName] and [name];
+/// [id] uniquely identifies the type by definition.
 @collection
 class FantasyRosterSlotType with DbSportEntity {
   Id get id => (sportName + name).stableHash;

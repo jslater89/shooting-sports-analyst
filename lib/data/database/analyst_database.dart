@@ -9,6 +9,11 @@ import 'dart:io';
 
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_query_element.dart';
+import 'package:shooting_sports_analyst/data/database/schema/fantasy/league.dart';
+import 'package:shooting_sports_analyst/data/database/schema/fantasy/matchups.dart';
+import 'package:shooting_sports_analyst/data/database/schema/fantasy/player.dart';
+import 'package:shooting_sports_analyst/data/database/schema/fantasy/roster.dart';
+import 'package:shooting_sports_analyst/data/database/schema/fantasy/team.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
@@ -65,12 +70,25 @@ class AnalystDatabase {
     }
     isar = await Isar.open(
       [
+        // Rating-related collections
         DbShootingMatchSchema,
         DbRatingProjectSchema,
         RatingGroupSchema,
         DbRatingEventSchema,
         DbShooterRatingSchema,
         MatchRegistrationMappingSchema,
+
+        // Fantasy-related collections
+        LeagueSchema,
+        FantasyRosterSlotTypeSchema,
+        LeagueSeasonSchema,
+        LeagueMonthSchema,
+        TeamSchema,
+        FantasyPlayerSchema,
+        MatchupSchema,
+        PlayerMonthlyPerformanceSchema,
+        MonthlyRosterSchema,
+        RosterAssignmentSchema,
       ],
       maxSizeMiB: 1024 * 32,
       directory: "db",
