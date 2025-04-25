@@ -4,7 +4,6 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
@@ -20,9 +19,7 @@ import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_dedup
 // import 'package:shooting_sports_analyst/data/db/object/match/shooter.dart';
 // import 'package:shooting_sports_analyst/data/db/object/rating/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/average_rating.dart';
-import 'package:shooting_sports_analyst/data/ranking/model/connected_shooter.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
-import 'package:shooting_sports_analyst/data/sorted_list.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
@@ -380,6 +377,33 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
 
     var intermediateAverage = intermediateRatings.isEmpty ? 0.0 : intermediateRatings.average;
     return AverageRating(firstRating: firstRating, minRating: lowestPoint, maxRating: highestPoint, averageOfIntermediates: intermediateAverage, window: window);
+  }
+
+  AverageRating averageRatingByDate({required DateTime start, required DateTime end, List<double>? preloadedRatings, bool nonzeroChange = true}) {
+    double lowestPoint = double.maxFinite;
+    double highestPoint = 0;
+
+    List<double> ratings = preloadedRatings
+      ?? AnalystDatabase().getRatingEventRatingForSync(wrappedRating, after: start, before: end, order: Order.descending, newRating: false, nonzeroChange: nonzeroChange).reversed.toList();
+    List<double> intermediateRatings = [];
+
+    if(ratings.isEmpty) {
+      return AverageRating(firstRating: rating, minRating: rating, maxRating: rating, averageOfIntermediates: rating, window: 0);
+    }
+
+    // Iterate from oldest to newest (although it doesn't really matter).
+    double firstRating = 0.0;
+    firstRating = ratings.first;
+
+    for(var rating in ratings) {
+      var intermediateRating = rating;
+      if(intermediateRating < lowestPoint) lowestPoint = intermediateRating;
+      if(intermediateRating > highestPoint) highestPoint = intermediateRating;
+      intermediateRatings.add(intermediateRating);
+    }
+
+    var intermediateAverage = intermediateRatings.isEmpty ? 0.0 : intermediateRatings.average;
+    return AverageRating(firstRating: firstRating, minRating: lowestPoint, maxRating: highestPoint, averageOfIntermediates: intermediateAverage, window: ratings.length);
   }
 
   /// Returns the rating events for the given window and offset, from newest to oldest.

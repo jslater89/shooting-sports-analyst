@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/career_stats.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
@@ -64,15 +65,15 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   List<Widget>? _historyLines;
   bool showingEvents = true;
   Sport get sport => widget.match.sport;
-  List<RatingEvent> ratingEvents = [];
-  List<RatingEvent> combinedRatingEvents = [];
+  late CareerStats careerStats;
+  late PeriodicStats displayedStats;
 
   @override
   void initState() {
     super.initState();
-    combinedRatingEvents = widget.rating.ratingEvents;
-    ratingEvents = combinedRatingEvents.where((e) => e.ratingChange != 0).toList();
-    matchHistory = widget.rating.careerHistory();
+
+    careerStats = CareerStats(sport, widget.rating);
+    displayedStats = careerStats.careerStats;
   }
 
   String _divisionName(RatingEvent e) {
@@ -80,7 +81,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   }
 
   List<Widget> _buildEventLines() {
-    _eventLines = ratingEvents
+    _eventLines = displayedStats.events
       .map((e) => Tooltip(
       waitDuration: Duration(milliseconds: 500),
       message: e.infoLines.map((line) => line.apply(e.infoData)).join("\n"),
@@ -130,7 +131,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     String header = "Date,Match,StageNum,StageName,StageRounds,RatingBefore,RatingChange,RatingAfter\n";
     String content = "";
 
-    for(var event in ratingEvents) {
+    for(var event in displayedStats.events) {
       content +=
           "${(event.match.date).toString()}"
           "${event.match.name}," +
@@ -166,7 +167,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       thickness: 1,
     ));
 
-    for(var entry in matchHistory) {
+    for(var entry in displayedStats.matchHistory) {
       widgets.add(ClickableLink(
         onTap: () {
           _launchScoreView(entry.divisionEntered, entry.match);
@@ -257,6 +258,28 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                         mainAxisAlignment: MainAxisAlignment.start,
                         // mainAxisSize: MainAxisSize.min,
                         children: [
+                          DropdownMenu<int>(
+                            initialSelection: 0,
+                            dropdownMenuEntries: [
+                              DropdownMenuEntry(value: 0, label: "Career"),
+                              ...careerStats.years.map((e) => DropdownMenuEntry(value: e, label: e.toString())).toList(),
+                            ],
+                            onSelected: (value) {
+                              if(value != null) {
+                                var stats = careerStats.statsForYear(value);
+                                if(stats != null) {
+                                  setState(() {
+                                    // rebuild chart and event table
+                                    _eventLines = null;
+                                    _historyLines = null;
+                                    _series = null;
+                                    _chart = null;
+                                    displayedStats = stats;
+                                  });
+                                }
+                              }
+                            },
+                          ),
                           ..._buildShooterStats(context),
                         ],
                       ),
@@ -328,15 +351,15 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
 
   Widget _buildChart(ShooterRating rating) {
     double accumulator = 0;
-    double minRating = 10000;
-    double maxRating = -10000;
-    double minWithError = 10000;
-    double maxWithError = -10000;
+    double minRating = 10000000;
+    double maxRating = -10000000;
+    double minWithError = 10000000;
+    double maxWithError = -10000000;
 
     var size = MediaQuery.of(context).size;
 
     if(_series == null) {
-      var eventsOfInterest = rating.ratingEvents.reversed.where((e) => e.newRating != 0 && e.ratingChange != 0);
+      var eventsOfInterest = displayedStats.events.reversed.where((e) => e.newRating != 0 && e.ratingChange != 0);
       _ratings = eventsOfInterest.mapIndexed((i, e) {
         if(e.newRating < minRating) minRating = e.newRating;
         if(e.newRating > maxRating) maxRating = e.newRating;
@@ -512,187 +535,38 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   }
 
   bool get byStage {
-    if(ratingEvents.isEmpty) return true;
-
-    return ratingEvents.last.stage != null;
+    return careerStats.byStage;
   }
-  List<MatchHistoryEntry> matchHistory = [];
-  RawScore? totalScore;
-  double totalPoints = 0;
-  Set<ShootingMatch> dqs = {};
-  Set<ShootingMatch> matches = {};
-  Map<ShootingMatch, Classification> classesByMatch = {};
-  Map<ShootingMatch, Division> divisionsByMatch = {};
-  Set<ShootingMatch> matchesWithRatingChanges = {};
-  Map<MatchLevel, int> matchesByLevel = {};
-  int majorEntries = 0;
-  int minorEntries = 0;
-  int otherEntries = 0;
-  int get totalEntries => majorEntries + minorEntries + otherEntries;
-  int stageWins = 0;
-  List<int> stageFinishes = [];
-  int classStageWins = 0;
-  List<int> classStageFinishes = [];
-  int matchWins = 0;
-  List<int> matchFinishes = [];
-  int classMatchWins = 0;
-  List<int> classMatchFinishes = [];
-  List<int> competitorCounts = [];
 
-  void calculateTotalScore() {
-    // scoring isn't important; we'll add to targetEvents/penaltyEvents later
-    var total = RawScore(scoring: const HitFactorScoring(), targetEvents: {}, penaltyEvents: {});
-
-    Map<ShootingMatch, RelativeMatchScore> matchScores = {};
-    for(var event in combinedRatingEvents) {
-      var match = event.match;
-      var divisions = widget.rating.group.divisions;
-      RelativeScore eventScore;
-      RelativeMatchScore? matchScore;
-      if(matchScores.containsKey(match)) {
-        matchScore = matchScores[match]!;
-      }
-      else {
-        var scores = match.getScoresFromFilters(FilterSet(sport, divisions: divisions, empty: true, mode: FilterMode.or));
-        matchScore = scores.entries.firstWhereOrNull((element) => widget.rating.equalsShooter(element.key))?.value;
-        if(matchScore == null) {
-          _log.w("Shooter ${widget.rating.name} doesn't have a score for match ${match.name}");
-          continue;
-        }
-        matchScores[match] = matchScore;
-      }
-      if(byStage) {
-        var stage = match.stages.firstWhere((s) => s.stageId == event.stageNumber);
-        var stageScore = matchScore.stageScores[stage];
-        if(stageScore == null) {
-          _log.w("Shooter ${widget.rating.name} doesn't have a score for stage ${stage.name} in match ${match.name}");
-          continue;
-        }
-        eventScore = stageScore;
-
-        if(eventScore.place == 1) {
-          stageWins += 1;
-        }
-        stageFinishes.add(eventScore.place);
-
-        var stageClassScores = match.getScores(
-          stages: [stage],
-          shooters: match.shooters.where((element) =>
-            eventScore.shooter.division == element.division
-            && eventScore.shooter.classification == element.classification
-          ).toList()
-        );
-        var stageClassScore = stageClassScores.entries.firstWhereOrNull((element) => widget.rating.equalsShooter(element.key))?.value;
-
-        if(stageClassScore != null) {
-          classStageFinishes.add(stageClassScore.place);
-          if (stageClassScore.place == 1) {
-            classStageWins += 1;
-          }
-        }
-      }
-      else {
-        eventScore = matchScore;
-      }
-
-      if(eventScore is RelativeMatchScore) {
-        total += eventScore.total;
-        totalPoints += eventScore.total.points;
-      }
-      else if(eventScore is RelativeStageScore) {
-        total += eventScore.score;
-        totalPoints += eventScore.score.points;
-      }
-
-      if(eventScore.shooter.dq) {
-        dqs.add(event.match);
-      }
-      if(ratingEvents.contains(event)) {
-        matchesWithRatingChanges.add(event.match);
-      }
-      if(!matches.contains(event.match) && event.match.level != null) {
-        matchesByLevel[event.match.level!] ??= 0;
-        matchesByLevel[event.match.level!] = matchesByLevel[event.match.level ?? old.MatchLevel.I]! + 1;
-      }
-      matches.add(event.match);
-      if(eventScore.shooter.classification != null) {
-        classesByMatch[event.match] = eventScore.shooter.classification!;
-      }
-      if(eventScore.shooter.division != null) {
-        divisionsByMatch[event.match] = eventScore.shooter.division!;
-      }
-
-      // switch(score.shooter.powerFactor) {
-      //   case old.PowerFactor.major:
-      //     majorEntries += 1;
-      //     break;
-      //   case old.PowerFactor.minor:
-      //     minorEntries += 1;
-      //     break;
-      //   default:
-      //     otherEntries += 1;
-      //     break;
-      // }
-    }
-
-    totalScore = total;
-
-    for(var match in matches) {
-      var classification = classesByMatch[match]!;
-      var division = divisionsByMatch[match]!;
-      var scores = match.getScores(shooters: match.shooters.where((element) => element.division == division).toList());
-      competitorCounts.add(scores.length);
-      var score = scores.entries.firstWhereOrNull((element) => widget.rating.equalsShooter(element.key))?.value;
-
-      if(score == null) {
-        throw StateError("Shooter in match doesn't have a score");
-      }
-
-      matchFinishes.add(score.place);
-      if (score.place == 1) matchWins += 1;
-
-      if (classification != old.Classification.unknown) {
-        var scores = match.getScores(
-            shooters: match.shooters.where((element) => element.division == division && element.classification == classification).toList());
-        var score = scores.entries.firstWhereOrNull((element) => widget.rating.equalsShooter(element.key))!.value;
-
-        if(classification != old.Classification.U) {
-          classMatchFinishes.add(score.place);
-          if (score.place == 1) {
-            classMatchWins += 1;
-          }
-        }
-      }
-    }
-
-  }
 
   List<Widget> _buildShooterStats(BuildContext context) {
-    if(ratingEvents.isEmpty) {
+    if(displayedStats.events.isEmpty) {
       return [Text("No data available", style: Theme.of(context).textTheme.bodyMedium)];
     }
 
-    var average = widget.rating.averageRating();
-    var lifetimeAverage = widget.rating.averageRating(window: ratingEvents.length);
-
-    if(totalScore == null) {
-      calculateTotalScore();
+    AverageRating average;
+    if(displayedStats.isCareer) {
+      average = widget.rating.averageRating();
     }
+    else {
+      average = widget.rating.averageRatingByDate(start: displayedStats.start, end: displayedStats.end);
+    }
+    var lifetimeAverage = widget.rating.averageRating(window: careerStats.careerStats.events.length);
 
     int powerFactorsPresent = 0;
-    if(majorEntries > 0) powerFactorsPresent += 1;
-    if(minorEntries > 0) powerFactorsPresent += 1;
-    if(otherEntries > 0) powerFactorsPresent += 1;
+    if(displayedStats.majorEntries > 0) powerFactorsPresent += 1;
+    if(displayedStats.minorEntries > 0) powerFactorsPresent += 1;
+    if(displayedStats.otherEntries > 0) powerFactorsPresent += 1;
 
-    var levelI = matchesByLevel.keys.firstWhereOrNull((e) => e.eventLevel == EventLevel.local);
-    var levelII = matchesByLevel.keys.firstWhereOrNull((e) => e.eventLevel == EventLevel.regional);
-    var levelIIIPlus = matchesByLevel.keys.where((e) => e.eventLevel.index >= EventLevel.area.index);
+    var levelI = displayedStats.matchesByLevel.keys.firstWhereOrNull((e) => e.eventLevel == EventLevel.local);
+    var levelII = displayedStats.matchesByLevel.keys.firstWhereOrNull((e) => e.eventLevel == EventLevel.regional);
+    var levelIIIPlus = displayedStats.matchesByLevel.keys.where((e) => e.eventLevel.index >= EventLevel.area.index);
 
-    int levelICount = matchesByLevel[levelI] ?? 0;
-    int levelIICount = matchesByLevel[levelII] ?? 0;
+    int levelICount = displayedStats.matchesByLevel[levelI] ?? 0;
+    int levelIICount = displayedStats.matchesByLevel[levelII] ?? 0;
     int levelIIICount = 0;
     for(var level in levelIIIPlus) {
-      levelIIICount += matchesByLevel[level] ?? 0;
+      levelIIICount += displayedStats.matchesByLevel[level] ?? 0;
     }
 
     return [
@@ -712,14 +586,14 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       Divider(height: 2, thickness: 1),
       Row(
         children: [
-          Expanded(flex: 4, child: Text("Average rating (past 30 events)", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(flex: 4, child: Text("Average rating (${displayedStats.isCareer ? "past 30 events" : displayedStats.start.year})", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 2, child: Text("${average.averageOfIntermediates.round()}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       Divider(height: 2, thickness: 1),
       Row(
         children: [
-          Expanded(flex: 4, child: Text("Min-max rating (past 30 events)", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(flex: 4, child: Text("Min-max rating (${displayedStats.isCareer ? "past 30 events" : displayedStats.start.year})", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 2, child: Text("${average.minRating.round()}-${average.maxRating.round()}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
@@ -727,31 +601,31 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       if(byStage) Row(
         children: [
           Expanded(flex: 4, child: Text("Total stages/matches", style: Theme.of(context).textTheme.bodyMedium)),
-          Expanded(flex: 2, child: Text("${widget.rating.combinedRatingEvents.length}/${matches.length}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
+          Expanded(flex: 2, child: Text("${displayedStats.combinedEvents.length}/${displayedStats.matches.length}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       if(byStage) Divider(height: 2, thickness: 1),
-      if(byStage && ratingEvents.length != widget.rating.combinedRatingEvents.length) Row(
+      if(byStage && displayedStats.combinedEvents.length != displayedStats.events.length) Row(
         children: [
           Expanded(flex: 4, child: Text("Stages/matches with rating changes", style: Theme.of(context).textTheme.bodyMedium)),
-          Expanded(flex: 2, child: Text("${ratingEvents.length}/${matchesWithRatingChanges.length}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
+          Expanded(flex: 2, child: Text("${displayedStats.events.length}/${displayedStats.matchesWithRatingChanges.length}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
-      if(byStage && ratingEvents.length != widget.rating.combinedRatingEvents.length) Divider(height: 2, thickness: 1),
+      if(byStage && displayedStats.combinedEvents.length != displayedStats.events.length) Divider(height: 2, thickness: 1),
       if(!byStage) Row(
         children: [
           Expanded(flex: 4, child: Text("Total matches", style: Theme.of(context).textTheme.bodyMedium)),
-          Expanded(flex: 2, child: Text("${matches.length}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
+          Expanded(flex: 2, child: Text("${displayedStats.matches.length}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       if(!byStage) Divider(height: 2, thickness: 1),
-      if(!byStage && ratingEvents.length != widget.rating.combinedRatingEvents.length) Row(
+      if(!byStage && displayedStats.combinedEvents.length != displayedStats.events.length) Row(
         children: [
           Expanded(flex: 4, child: Text("Matches with rating changes", style: Theme.of(context).textTheme.bodyMedium)),
-          Expanded(flex: 2, child: Text("${matchesWithRatingChanges.length}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
+          Expanded(flex: 2, child: Text("${displayedStats.matchesWithRatingChanges.length}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
-      if(!byStage && ratingEvents.length != widget.rating.combinedRatingEvents.length) Divider(height: 2, thickness: 1),
+      if(!byStage && displayedStats.combinedEvents.length != displayedStats.events.length) Divider(height: 2, thickness: 1),
       Row(
         children: [
           Expanded(flex: 4, child: Text("Matches of level I/II/III", style: Theme.of(context).textTheme.bodyMedium)),
@@ -761,11 +635,11 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         ],
       ),
       Divider(height: 2, thickness: 1),
-      if(classMatchFinishes.isNotEmpty) Row(
+      if(displayedStats.classMatchFinishes.isNotEmpty) Row(
         children: [
           Expanded(flex: 4, child: Text("Match wins/class wins", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 2, child: Text(
-              "${matchWins}/${classMatchWins}",
+              "${displayedStats.matchWins}/${displayedStats.classMatchWins}",
               style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
@@ -774,8 +648,8 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         children: [
           Expanded(flex: 4, child: Text("Avg. match finish/class finish", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 2, child: Text(
-              "${matchFinishes.isNotEmpty ? matchFinishes.average.toStringAsFixed(1) : "-"}/"
-              "${classMatchFinishes.isNotEmpty ? classMatchFinishes.average.toStringAsFixed(1) : "-"}",
+              "${displayedStats.matchFinishes.isNotEmpty ? displayedStats.matchFinishes.average.toStringAsFixed(1) : "-"}/"
+              "${displayedStats.classMatchFinishes.isNotEmpty ? displayedStats.classMatchFinishes.average.toStringAsFixed(1) : "-"}",
               style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
@@ -784,7 +658,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         children: [
           Expanded(flex: 4, child: Text("Avg. no. competitors", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 2, child: Text(
-              "${competitorCounts.average.toStringAsFixed(1)}",
+              "${displayedStats.competitorCounts.average.toStringAsFixed(1)}",
               style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
@@ -793,7 +667,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         children: [
           Expanded(flex: 4, child: Text("Stage wins/class stage wins", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 2, child: Text(
-              "${stageWins}/${classStageWins}",
+              "${displayedStats.stageWins}/${displayedStats.classStageWins}",
               style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
@@ -802,25 +676,25 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         children: [
           Expanded(flex: 4, child: Text("Avg. stage finish/class stage finish", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 2, child: Text(
-              "${stageFinishes.isNotEmpty ? stageFinishes.average.toStringAsFixed(1) : "-"}/"
-                  "${classStageFinishes.isNotEmpty ? classStageFinishes.average.toStringAsFixed(1) : "-"}",
+              "${displayedStats.stageFinishes.isNotEmpty ? displayedStats.stageFinishes.average.toStringAsFixed(1) : "-"}/"
+              "${displayedStats.classStageFinishes.isNotEmpty ? displayedStats.classStageFinishes.average.toStringAsFixed(1) : "-"}",
               style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
       if(byStage) Divider(height: 2, thickness: 1),
-      if(powerFactorsPresent > 1 || widget.rating.division == old.Division.singleStack) Row(
+      if(powerFactorsPresent > 1) Row(
         children: [
           Expanded(flex: 4, child: Text("Major/minor/other PF", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 2, child: Text(
-              "${(majorEntries / totalEntries).asPercentage(decimals: 0)}%/${(minorEntries / totalEntries).asPercentage(decimals: 0)}%/${(otherEntries / totalEntries).asPercentage(decimals: 0)}%"
+              "${(displayedStats.majorEntries / displayedStats.totalEntries).asPercentage(decimals: 0)}%/${(displayedStats.minorEntries / displayedStats.totalEntries).asPercentage(decimals: 0)}%/${(displayedStats.otherEntries / displayedStats.totalEntries).asPercentage(decimals: 0)}%"
               , style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
-      if(powerFactorsPresent > 1 || widget.rating.division == old.Division.singleStack) Divider(height: 2, thickness: 1),
+      if(powerFactorsPresent > 1) Divider(height: 2, thickness: 1),
       Row(
         children: [
           Expanded(flex: 4, child: Text("Total hits", style: Theme.of(context).textTheme.bodyMedium)),
-          Expanded(flex: 4, child: Text(totalScore?.scoringEventText(sport) ?? "",
+          Expanded(flex: 4, child: Text(displayedStats.totalScore?.scoringEventText(sport) ?? "",
               style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
@@ -828,7 +702,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       Row(
         children: [
           Expanded(flex: 2, child: Text("Hit percentages", style: Theme.of(context).textTheme.bodyMedium)),
-          Expanded(flex: 4, child: Text(totalScore?.hitPercentages(sport) ?? "",
+          Expanded(flex: 4, child: Text(displayedStats.totalScore?.hitPercentages(sport) ?? "",
               style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
@@ -838,7 +712,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
           Expanded(flex: 4, child: Text("Total time/points/hit factor", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 4, child: Text(
             // TODO: display hit factor, final time, or points based on scoring
-              "${_separatedDecimalFormat.format(totalScore!.finalTime)} s/${_separatedNumberFormat.format(totalPoints)} pts/${(totalPoints / totalScore!.finalTime).toStringAsFixed(4)} HF",
+              "${_separatedDecimalFormat.format(displayedStats.totalScore!.finalTime)} s/${_separatedNumberFormat.format(displayedStats.totalPoints)} pts/${(displayedStats.totalPoints / displayedStats.totalScore!.finalTime).toStringAsFixed(4)} HF",
               style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
@@ -847,7 +721,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         children: [
           Expanded(flex: 4, child: Text("DQs", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 4, child: Text(
-              "${dqs.length}",
+              "${displayedStats.dqs.length}",
               style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
