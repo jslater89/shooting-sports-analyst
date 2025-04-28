@@ -96,12 +96,16 @@ class PeriodicStats {
   int get totalEntries => majorEntries + minorEntries + otherEntries;
   int stageWins = 0;
   List<int> stageFinishes = [];
+  List<double> stagePercentages = [];
   int classStageWins = 0;
   List<int> classStageFinishes = [];
+  List<double> classStagePercentages = [];
   int matchWins = 0;
-  List<int> matchFinishes = [];
+  List<int> matchPlaces = [];
+  List<double> matchPercentages = [];
   int classMatchWins = 0;
-  List<int> classMatchFinishes = [];
+  List<int> classMatchPlaces = [];
+  List<double> classMatchPercentages = [];
   List<int> competitorCounts = [];
 
   void addFrom(PeriodicStats other) {
@@ -133,15 +137,19 @@ class PeriodicStats {
 
     stageWins += other.stageWins;
     stageFinishes.addAll(other.stageFinishes);
+    stagePercentages.addAll(other.stagePercentages);
 
     classStageWins += other.classStageWins;
     classStageFinishes.addAll(other.classStageFinishes);
+    classStagePercentages.addAll(other.classStagePercentages);
 
     matchWins += other.matchWins;
-    matchFinishes.addAll(other.matchFinishes);
+    matchPlaces.addAll(other.matchPlaces);
+    matchPercentages.addAll(other.matchPercentages);
 
     classMatchWins += other.classMatchWins;
-    classMatchFinishes.addAll(other.classMatchFinishes);
+    classMatchPlaces.addAll(other.classMatchPlaces);
+    classMatchPercentages.addAll(other.classMatchPercentages);
 
     competitorCounts.addAll(other.competitorCounts);
   }
@@ -188,6 +196,7 @@ class PeriodicStats {
           stageWins += 1;
         }
         stageFinishes.add(eventScore.place);
+        stagePercentages.add(eventScore.percentage);
 
         var stageClassScores = match.getScores(
           stages: [stage],
@@ -200,6 +209,7 @@ class PeriodicStats {
 
         if(stageClassScore != null) {
           classStageFinishes.add(stageClassScore.place);
+          classStagePercentages.add(stageClassScore.percentage);
           if (stageClassScore.place == 1) {
             classStageWins += 1;
           }
@@ -262,7 +272,8 @@ class PeriodicStats {
         throw StateError("Shooter in match doesn't have a score");
       }
 
-      matchFinishes.add(score.place);
+      matchPlaces.add(score.place);
+      matchPercentages.add(score.percentage);
       if (score.place == 1) matchWins += 1;
 
       if (classification != null) {
@@ -271,7 +282,8 @@ class PeriodicStats {
         var score = scores.entries.firstWhereOrNull((element) => rating.equalsShooter(element.key))!.value;
 
         if(!classification.fallback) {
-          classMatchFinishes.add(score.place);
+          classMatchPlaces.add(score.place);
+          classMatchPercentages.add(score.percentage);
           if (score.place == 1) {
             classMatchWins += 1;
           }

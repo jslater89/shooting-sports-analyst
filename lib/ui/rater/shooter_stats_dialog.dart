@@ -258,8 +258,10 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                         mainAxisAlignment: MainAxisAlignment.start,
                         // mainAxisSize: MainAxisSize.min,
                         children: [
+                          SizedBox(height: 10),
                           DropdownMenu<int>(
                             initialSelection: 0,
+                            label: Text("Period"),
                             dropdownMenuEntries: [
                               DropdownMenuEntry(value: 0, label: "Career"),
                               ...careerStats.years.map((e) => DropdownMenuEntry(value: e, label: e.toString())).toList(),
@@ -635,7 +637,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         ],
       ),
       Divider(height: 2, thickness: 1),
-      if(displayedStats.classMatchFinishes.isNotEmpty) Row(
+      if(displayedStats.classMatchPlaces.isNotEmpty) Row(
         children: [
           Expanded(flex: 4, child: Text("Match wins/class wins", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 2, child: Text(
@@ -646,10 +648,20 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       Divider(height: 2, thickness: 1),
       Row(
         children: [
-          Expanded(flex: 4, child: Text("Avg. match finish/class finish", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(flex: 4, child: Text("Avg. match place/class place", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 2, child: Text(
-              "${displayedStats.matchFinishes.isNotEmpty ? displayedStats.matchFinishes.average.toStringAsFixed(1) : "-"}/"
-              "${displayedStats.classMatchFinishes.isNotEmpty ? displayedStats.classMatchFinishes.average.toStringAsFixed(1) : "-"}",
+              "${displayedStats.matchPlaces.isNotEmpty ? displayedStats.matchPlaces.average.toStringAsFixed(1) : "-"}/"
+              "${displayedStats.classMatchPlaces.isNotEmpty ? displayedStats.classMatchPlaces.average.toStringAsFixed(1) : "-"}",
+              style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
+        ],
+      ),
+      Divider(height: 2, thickness: 1),
+      Row(
+        children: [
+          Expanded(flex: 4, child: Text("Avg. match pct./class pct.", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(flex: 2, child: Text(
+              "${displayedStats.matchPercentages.isNotEmpty ? displayedStats.matchPercentages.average.toStringAsFixed(1) : "-"}/"
+              "${displayedStats.classMatchPercentages.isNotEmpty ? displayedStats.classMatchPercentages.average.toStringAsFixed(1) : "-"}",
               style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
@@ -668,6 +680,16 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
           Expanded(flex: 4, child: Text("Stage wins/class stage wins", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 2, child: Text(
               "${displayedStats.stageWins}/${displayedStats.classStageWins}",
+              style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
+        ],
+      ),
+      if(byStage) Divider(height: 2, thickness: 1),
+      if(byStage) Row(
+        children: [
+          Expanded(flex: 4, child: Text("Stage pct./class stage pct.", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(flex: 2, child: Text(
+              "${displayedStats.stagePercentages.isNotEmpty ? displayedStats.stagePercentages.average.toStringAsFixed(1) : "-"}/"
+              "${displayedStats.classStagePercentages.isNotEmpty ? displayedStats.classStagePercentages.average.toStringAsFixed(1) : "-"}",
               style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
