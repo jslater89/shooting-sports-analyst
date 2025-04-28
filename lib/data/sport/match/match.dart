@@ -223,6 +223,10 @@ class ShootingMatch implements SourceIdsProvider {
     return null;
   }
 
+  MatchStage? lookupStageById(int stageId) {
+    return stages.firstWhereOrNull((s) => s.stageId == stageId);
+  }
+
   List<MatchEntry> applyFilterSet(FilterSet filters) {
     return filterShooters(
       filterMode: filters.mode,

@@ -38,7 +38,13 @@ final NumberFormat _separatedDecimalFormat = NumberFormat("#,###.00");
 
 /// This displays per-stage changes for a shooter.
 class ShooterStatsDialog extends StatefulWidget {
-  const ShooterStatsDialog({Key? key, required this.rating, required this.match, this.ratings, this.showDivisions = false}) : super(key: key);
+  const ShooterStatsDialog({
+    Key? key,
+    required this.rating,
+    required this.match,
+    this.ratings,
+    this.showDivisions = false,
+  }) : super(key: key);
 
   final bool showDivisions;
   final ShooterRating rating;
@@ -462,7 +468,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
             updatedListener: (model) {
               if(model.hasDatumSelection) {
                 final rating = _ratings[model.selectedDatum[0].index!];
-                _launchScoreView(rating.baseEvent.entry.division, rating.baseEvent.match);
+                _launchScoreView(rating.baseEvent.entry.division, rating.baseEvent.match, stage: rating.baseEvent.stage);
               }
             },
           )

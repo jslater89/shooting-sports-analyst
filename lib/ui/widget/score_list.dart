@@ -9,8 +9,10 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/synchronous_rating_data_source.dart';
+import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/legacy_loader/rating_history.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
@@ -259,6 +261,18 @@ class _ScoreListState extends State<ScoreList> {
       stagesComplete = score.stageScores.values.where((element) => !element.score.dnf).length;
     }
 
+    DbShooterRating? dbRating;
+    ShooterRating? shooterRating;
+    RatingProjectSettings? settings;
+
+    if(widget.ratings != null) {
+      dbRating = ratingCache!.lookupRatingByMatchEntry(score.shooter);
+      settings = ratingCache!.getSettings();
+      if(dbRating != null && settings != null) {
+        shooterRating = settings.algorithm.wrapDbRating(dbRating);
+      }
+    }
+
     return GestureDetector(
       onTap: () async {
         if(widget.whatIfMode) {
@@ -283,7 +297,14 @@ class _ScoreListState extends State<ScoreList> {
         }
         else {
           var action = await showDialog<ShooterDialogAction>(context: context, builder: (context) {
-            return ShooterResultCard(sport: widget.match!.sport, matchScore: score, scoreDQ: widget.scoreDQ,);
+            return ShooterResultCard(
+              sport: widget.match!.sport,
+              match: widget.match,
+              shooterRating: shooterRating,
+              ratings: widget.ratings,
+              matchScore: score,
+              scoreDQ: widget.scoreDQ,
+            );
           });
 
           if(action != null && action.launchComparison) {
@@ -309,11 +330,9 @@ class _ScoreListState extends State<ScoreList> {
               if(widget.ratings != null) Consumer<ScoreDisplaySettingsModel>(
                 builder: (context, model, _) {
                   String text = "n/a";
-                  var dbRating = ratingCache!.lookupRatingByMatchEntry(score.shooter);
-                  var settings = ratingCache!.getSettings();
 
-                  if(dbRating != null && settings != null) {
-                    var rating = settings.algorithm.wrapDbRating(dbRating);
+                  if(shooterRating != null) {
+                    var rating = shooterRating;
 
                     switch(model.value.ratingMode) {
                       case RatingDisplayMode.preMatch:
@@ -446,6 +465,18 @@ class _ScoreListState extends State<ScoreList> {
     var matchScore = widget.filteredScores[i];
     var stageScore = widget.filteredScores[i].stageScores[stage];
 
+    DbShooterRating? dbRating;
+    ShooterRating? shooterRating;
+    RatingProjectSettings? settings;
+
+    if(widget.ratings != null) {
+      dbRating = ratingCache!.lookupRatingByMatchEntry(matchScore.shooter);
+      settings = ratingCache!.getSettings();
+      if(dbRating != null && settings != null) {
+        shooterRating = settings.algorithm.wrapDbRating(dbRating);
+      }
+    }
+
     return GestureDetector(
       onTap: () async {
         if(widget.whatIfMode) {
@@ -497,11 +528,9 @@ class _ScoreListState extends State<ScoreList> {
               if(widget.ratings != null) Consumer<ScoreDisplaySettingsModel>(
                   builder: (context, model, _) {
                     String text = "n/a";
-                    var dbRating = ratingCache!.lookupRatingByMatchEntry(matchScore.shooter);
-                    var settings = ratingCache!.getSettings();
 
-                    if(dbRating != null && settings != null) {
-                      var rating = settings.algorithm.wrapDbRating(dbRating);
+                    if(shooterRating != null) {
+                      var rating = shooterRating;
 
                       switch(model.value.ratingMode) {
                         case RatingDisplayMode.preMatch:

@@ -359,7 +359,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     List<String> infoLines = [
       "Actual/expected percent: {{pcActual}}/{{pcExpected}} on {{stage}}",
       "Actual/expected place: {{placeActual}}/{{placeExpected}}",
-      "Rating ± Change: {{rating}}/{{change}} ({{pctFromPct}}% from pct, {{pctFromPlace}}% from place)",
+      "Rating ± Change: {{rating}}/{{change}} ({{eloFromPct}} from pct, {{eloFromPlace}} from place)",
       "eff. K, multipliers: {{effK}}, SoS {{sos}}, IP {{ip}}, Zero {{zero}}",
       "Conn {{conn}}, EW {{ew}}, Err {{err}}, Dir {{dir}}, Bomb {{bomb}}",
     ];
@@ -371,8 +371,8 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       RatingEventInfoElement.double(name: "placeExpected", doubleValue: params.usedScores - (params.expectedScore * params.divisor), numberFormat: "%00.1f"),
       RatingEventInfoElement.double(name: "rating", doubleValue: aRating.rating, numberFormat: "%00.0f"),
       RatingEventInfoElement.double(name: "change", doubleValue: change, numberFormat: "%00.2f"),
-      RatingEventInfoElement.double(name: "pctFromPct", doubleValue: changeFromPercent, numberFormat: "%00.2f"),
-      RatingEventInfoElement.double(name: "pctFromPlace", doubleValue: changeFromPlace, numberFormat: "%00.2f"),
+      RatingEventInfoElement.double(name: "eloFromPct", doubleValue: changeFromPercent, numberFormat: "%00.2f"),
+      RatingEventInfoElement.double(name: "eloFromPlace", doubleValue: changeFromPlace, numberFormat: "%00.2f"),
       RatingEventInfoElement.double(name: "effK", doubleValue: effectiveK, numberFormat: "%00.2f"),
       RatingEventInfoElement.double(name: "sos", doubleValue: matchStrengthMultiplier, numberFormat: "%00.3f"),
       RatingEventInfoElement.double(name: "ip", doubleValue: placementMultiplier, numberFormat: "%00.3f"),

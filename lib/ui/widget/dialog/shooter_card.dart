@@ -5,10 +5,13 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
-import 'package:shooting_sports_analyst/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/ui/rater/shooter_stats_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/captioned_text.dart';
 import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_list.dart';
@@ -16,11 +19,21 @@ import 'package:shooting_sports_analyst/util.dart';
 
 class ShooterResultCard extends StatelessWidget {
   final Sport sport;
+  final ShootingMatch? match;
+  final ShooterRating? shooterRating;
+  final RatingDataSource? ratings;
   final RelativeMatchScore? matchScore;
   final RelativeStageScore? stageScore;
   final bool scoreDQ;
 
-  const ShooterResultCard({Key? key, required this.sport,this.matchScore, this.stageScore, this.scoreDQ = true}) : super(key: key);
+  const ShooterResultCard({
+    Key? key,
+    required this.sport,
+    this.match,
+    this.shooterRating,
+    this.ratings,
+    this.matchScore,
+    this.stageScore, this.scoreDQ = true}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -166,6 +179,12 @@ class ShooterResultCard extends StatelessWidget {
                 Navigator.of(context).pop(ShooterDialogAction(launchComparison: true));
               },
             ),
+            if(match != null && ratings != null) IconButton(
+              icon: Icon(Icons.auto_graph),
+              onPressed: () {
+                ShooterStatsDialog.show(context, shooterRating!, match!, ratings: ratings);
+              }
+            )
           ],
         ),
       );

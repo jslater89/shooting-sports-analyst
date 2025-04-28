@@ -164,7 +164,13 @@ class _ResultPageState extends State<ResultPage> {
 
     if(widget.initialStage != null) {
       var stageCopy = _currentMatch.lookupStage(widget.initialStage!);
-      if(stageCopy != null) _applyStage(StageMenuItem(stageCopy));
+      if(stageCopy != null) {
+        _applyStage(StageMenuItem(stageCopy));
+      }
+      else if(kDebugMode) {
+        _log.w("Stage ${widget.initialStage!.name} not found in match ${_currentMatch.name}");
+        _log.w("Available stages: ${_currentMatch.stages.map((s) => s.name).join(", ")}");
+      }
     }
     if(widget.initialFilters != null) {
       widget.initialFilters!.knownSquads = squadList;
