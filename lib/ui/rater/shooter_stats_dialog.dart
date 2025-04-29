@@ -70,6 +70,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   List<Widget>? _eventLines;
   List<Widget>? _historyLines;
   bool showingEvents = true;
+  bool reverseHistoryLines = false;
   Sport get sport => widget.match.sport;
   late CareerStats careerStats;
   late PeriodicStats displayedStats;
@@ -173,7 +174,15 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       thickness: 1,
     ));
 
-    for(var entry in displayedStats.matchHistory) {
+    Iterable<MatchHistoryEntry> entries;
+    if(reverseHistoryLines) {
+      entries = displayedStats.matchHistory.reversed;
+    }
+    else {
+      entries = displayedStats.matchHistory;
+    }
+
+    for(var entry in entries) {
       widgets.add(ClickableLink(
         onTap: () {
           _launchScoreView(entry.divisionEntered, entry.match);
@@ -299,15 +308,30 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                   flex: 5,
                   child: Column(
                     children: [
-                      ClickableLink(
-                        child: Text(showingEvents ? "Event history" : "Match history",
-                            style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).colorScheme.tertiary)),
-                        onTap: () {
-                          setState(() {
-                            showingEvents = !showingEvents;
-                          });
-                          _rightController.animateTo(0, duration: Duration(milliseconds: 200), curve: Curves.easeInOut);
-                        },
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ClickableLink(
+                            child: Text(showingEvents ? "Event history" : "Match history",
+                                style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).colorScheme.tertiary)),
+                            onTap: () {
+                              setState(() {
+                                showingEvents = !showingEvents;
+                              });
+                              _rightController.animateTo(0, duration: Duration(milliseconds: 200), curve: Curves.easeInOut);
+                            },
+                          ),
+                          if(!showingEvents)
+                            IconButton(
+                              icon: Icon(reverseHistoryLines ? Icons.arrow_downward : Icons.arrow_upward),
+                              onPressed: () {
+                                setState(() {
+                                  reverseHistoryLines = !reverseHistoryLines;
+                                  _historyLines = null;
+                              });
+                            })
+                        ],
                       ),
                       Expanded(
                         child: Scrollbar(

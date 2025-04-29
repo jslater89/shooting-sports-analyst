@@ -173,17 +173,23 @@ class ShooterResultCard extends StatelessWidget {
                 decoration: TextDecoration.underline,
               ),
             ),
-            IconButton(
-              icon: Icon(Icons.compare_arrows),
-              onPressed: () {
-                Navigator.of(context).pop(ShooterDialogAction(launchComparison: true));
-              },
+            Tooltip(
+              message: "Compare this competitor's stage scores to others",
+              child: IconButton(
+                icon: Icon(Icons.compare_arrows),
+                onPressed: () {
+                  Navigator.of(context).pop(ShooterDialogAction(launchComparison: true));
+                },
+              ),
             ),
-            if(match != null && ratings != null) IconButton(
-              icon: Icon(Icons.auto_graph),
-              onPressed: () {
-                ShooterStatsDialog.show(context, shooterRating!, match!, ratings: ratings);
-              }
+            if(match != null && ratings != null) Tooltip(
+              message: "Show this competitor's rating history",
+              child: IconButton(
+                icon: Icon(Icons.auto_graph),
+                onPressed: () {
+                  ShooterStatsDialog.show(context, shooterRating!, match!, ratings: ratings);
+                }
+              ),
             )
           ],
         ),
