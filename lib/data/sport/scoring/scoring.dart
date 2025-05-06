@@ -329,11 +329,28 @@ class RawScore {
     this.dq = false,
   });
 
-  bool get dnf =>
-      (this.scoring is HitFactorScoring && targetEvents.length == 0 && rawTime == 0.0)
-      || (this.scoring is TimePlusScoring && (this.scoring as TimePlusScoring).rawZeroWithEventsIsNonDnf && targetEvents.isEmpty && rawTime == 0.0)
-      || (this.scoring is TimePlusScoring && !((this.scoring as TimePlusScoring).rawZeroWithEventsIsNonDnf) && rawTime == 0.0)
-      || (this.scoring is PointsScoring && points == 0);
+  bool get dnf {
+    if(this.scoring is PointsScoring && points == 0) {
+      return true;
+    }
+
+    if(this.scoring is TimePlusScoring && !((this.scoring as TimePlusScoring).rawZeroWithEventsIsNonDnf) && rawTime == 0.0) {
+      return true;
+    }
+
+    // At least one scoring hit on target must occur for a non-DNF.
+    var events = targetEventCount;
+
+    if(this.scoring is HitFactorScoring && events == 0 && rawTime == 0.0) {
+      return true;
+    }
+
+    if(this.scoring is TimePlusScoring && (this.scoring as TimePlusScoring).rawZeroWithEventsIsNonDnf && events == 0 && rawTime == 0.0) {
+      return true;
+    }
+
+    return false;
+  }
       // IgnoredScoring and TimePlusChronoScoring are never DNFs.
 
   /// The hit factor represented by this score.
