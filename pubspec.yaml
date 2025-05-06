@@ -56,7 +56,7 @@ dependencies:
   html_unescape: ^2.0.0
   provider: ^6.0.5
   json_annotation: ^4.9.0
-  archive: ^3.4.10
+  archive: ^4.0.7
   mutex: ^3.1.0
   toml: ^0.14.0
   stack_trace: ^1.11.0
