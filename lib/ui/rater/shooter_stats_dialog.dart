@@ -191,7 +191,12 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
           padding: const EdgeInsets.symmetric(horizontal: 12.0),
           child: Row(
             children: [
-              Expanded(flex: 4, child: Text(entry.match.name, style: Theme.of(context).textTheme.bodyMedium)),
+              Expanded(flex: 4, child:
+                Tooltip(
+                  child: Text(entry.match.name, style: Theme.of(context).textTheme.bodyMedium),
+                  message: programmerYmdFormat.format(entry.match.date),
+                )
+              ),
               Expanded(flex: 1, child: Text("${entry.place}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
               Expanded(flex: 1, child: Text("${entry.competitors}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
               Expanded(flex: 1, child: Text(entry.percentFinish, style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
@@ -716,7 +721,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       if(byStage) Divider(height: 2, thickness: 1),
       if(byStage) Row(
         children: [
-          Expanded(flex: 4, child: Text("Stage pct./class stage pct.", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(flex: 4, child: Text("Avg. stage pct./class stage pct.", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 2, child: Text(
               "${displayedStats.stagePercentages.isNotEmpty ? displayedStats.stagePercentages.average.toStringAsFixed(1) : "-"}/"
               "${displayedStats.classStagePercentages.isNotEmpty ? displayedStats.classStagePercentages.average.toStringAsFixed(1) : "-"}",
