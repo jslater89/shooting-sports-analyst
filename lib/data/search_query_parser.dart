@@ -46,11 +46,19 @@ class SearchQueryElement {
   Division? division;
   PowerFactor? powerFactor;
   String? name;
+  bool? dq;
+  bool? dnf;
 
   bool matchesShooter(MatchEntry s) {
+    if(dq != null && !s.dq) return false;
+
     if(classification != null && s.classification != classification) return false;
     if(division != null && s.division != division) return false;
     if(powerFactor != null && s.powerFactor != powerFactor) return false;
+
+    // Elsewhere in the code, we allow 1 DNF to still count, for whatever reason
+    if(dnf != null && s.scores.values.where((s) => s.dnf).length <= 1) return false;
+
     if(name != null && !s.getName().toLowerCase().startsWith(name!) && !s.lastName.toLowerCase().startsWith(name!)) return false;
 
     return true;
@@ -128,6 +136,8 @@ SearchQueryElement? _parseGroup(SportPrefixMatcher matcher, String group) {
   for(String item in items) {
     item = item.trim();
 
+    var dq = item.toLowerCase() == "dq";
+    var dnf = item.toLowerCase() == "dnf";
     var pf = _matchPowerFactor(matcher, item);
     var div = _matchDivision(matcher, item);
     var cls = _matchClassification(matcher, item);
@@ -147,6 +157,12 @@ SearchQueryElement? _parseGroup(SportPrefixMatcher matcher, String group) {
     }
     else if(cls != null) {
       element.classification = cls;
+    }
+    else if(dq) {
+      element.dq = true;
+    }
+    else if(dnf) {
+      element.dnf = true;
     }
     else {
       _log.d("Bad item: $item");
