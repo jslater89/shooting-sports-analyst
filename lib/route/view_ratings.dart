@@ -39,6 +39,7 @@ import 'package:shooting_sports_analyst/ui/rater/reports/report_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/reports/report_view.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/associate_registrations.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/loading_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_pointer_chooser_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/url_entry_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -549,6 +550,58 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     ];
   }
 
+  Future<bool> _exportCsv() async {
+    try {
+      var archive = Archive();
+      var sport = await widget.dataSource.getSport().unwrap();
+      for(var tab in activeTabs) {
+        var ratings = (await widget.dataSource.getRatings(tab).unwrap()).map((e) => (_settings.algorithm.wrapDbRating(e)));
+        var sortedRatings = ratings.where((e) => e.length >= _minRatings);
+
+        Duration? maxAge;
+        if(_maxDays > 0) {
+          maxAge = Duration(days: _maxDays);
+        }
+
+        var hiddenShooters = [];
+        for(var s in _settings.hiddenShooters) {
+          hiddenShooters.add(ShooterDeduplicator.numberProcessor(sport)(s));
+        }
+
+        if(maxAge != null) {
+          var cutoff = _selectedMatch.date;
+          cutoff = cutoff.subtract(maxAge);
+          sortedRatings = sortedRatings.where((r) => r.lastSeen.isAfter(cutoff));
+        }
+
+        if(_filters.ladyOnly) {
+          sortedRatings = sortedRatings.where((r) => r.female);
+        }
+
+        if(_filters.activeCategories.isNotEmpty) {
+          sortedRatings = sortedRatings.where((r) =>
+              _filters.activeCategories.contains(r.ageCategory));
+        }
+
+        if(hiddenShooters.isNotEmpty) {
+          sortedRatings = sortedRatings.where((r) => !hiddenShooters.contains(r.memberNumber));
+        }
+
+        var comparator = _settings.algorithm.comparatorFor(_sortMode) ?? _sortMode.comparator();
+        var asList = sortedRatings.sorted(comparator);
+
+        var csv = _settings.algorithm.ratingsToCsv(asList);
+        archive.add(ArchiveFile.string("${tab.name.safeFilename()}.csv", csv));
+      }
+      var zip = ZipEncoder().encode(archive, autoClose: true);
+
+      return HtmlOr.saveBuffer("ratings-${_projectName.safeFilename()}.zip", zip);
+    } catch(e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to encode archive")));
+      return false;
+    }
+  }
+
   Future<void> _handleClick(_MenuEntry item, BuildContext context) async {
     switch(item) {
       case _MenuEntry.setChangeSince:
@@ -559,54 +612,12 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         break;
 
       case _MenuEntry.csvExport:
-        try {
-          var archive = Archive();
-          var sport = await widget.dataSource.getSport().unwrap();
-          for(var tab in activeTabs) {
-            var ratings = (await widget.dataSource.getRatings(tab).unwrap()).map((e) => (_settings.algorithm.wrapDbRating(e)));
-            var sortedRatings = ratings.where((e) => e.length >= _minRatings);
-
-            Duration? maxAge;
-            if(_maxDays > 0) {
-              maxAge = Duration(days: _maxDays);
-            }
-
-            var hiddenShooters = [];
-            for(var s in _settings.hiddenShooters) {
-              hiddenShooters.add(ShooterDeduplicator.numberProcessor(sport)(s));
-            }
-
-            if(maxAge != null) {
-              var cutoff = _selectedMatch?.date ?? DateTime.now();
-              cutoff = cutoff.subtract(maxAge);
-              sortedRatings = sortedRatings.where((r) => r.lastSeen.isAfter(cutoff));
-            }
-
-            if(_filters.ladyOnly) {
-              sortedRatings = sortedRatings.where((r) => r.female);
-            }
-
-            if(_filters.activeCategories.isNotEmpty) {
-              sortedRatings = sortedRatings.where((r) =>
-                  _filters.activeCategories.contains(r.ageCategory));
-            }
-
-            if(hiddenShooters.isNotEmpty) {
-              sortedRatings = sortedRatings.where((r) => !hiddenShooters.contains(r.memberNumber));
-            }
-
-            var comparator = _settings.algorithm.comparatorFor(_sortMode) ?? _sortMode.comparator();
-            var asList = sortedRatings.sorted(comparator);
-
-            var csv = _settings.algorithm.ratingsToCsv(asList);
-            archive.add(ArchiveFile.string("${tab.name.safeFilename()}.csv", csv));
-          }
-          var zip = ZipEncoder().encode(archive, autoClose: true);
-
-          HtmlOr.saveBuffer("ratings-${_projectName.safeFilename()}.zip", zip);
-      } catch(e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to encode archive")));
-      }
+        var future = _exportCsv();
+        await LoadingDialog.show(
+          context: context,
+          waitOn: future,
+          title: "Exporting ratings...",
+        );
 
 
       case _MenuEntry.dataErrors:
