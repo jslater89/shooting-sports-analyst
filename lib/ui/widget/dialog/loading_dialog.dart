@@ -28,8 +28,8 @@ class LoadingDialog<T> extends StatefulWidget {
   @override
   State<LoadingDialog> createState() => _LoadingDialogState<T>();
 
-  static Future<T> show<T>({required BuildContext context, required Future<T> waitOn, String title = "Loading...", ProgressModel? progressProvider}) async {
-    var result = await showDialog(context: context, barrierDismissible: false, builder: (context) {
+  static Future<T?> show<T>({required BuildContext context, required Future<T> waitOn, String title = "Loading...", ProgressModel? progressProvider}) async {
+    var result = await showDialog<T>(context: context, barrierDismissible: false, builder: (context) {
       if(progressProvider != null) {
         return ChangeNotifierProvider.value(
           value: progressProvider,

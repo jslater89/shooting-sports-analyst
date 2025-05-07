@@ -374,14 +374,14 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
                           waitOn: MatchSource.reloadMatch(match),
                         );
 
-                        if(result.isOk()) {
+                        if(result != null && result.isOk()) {
                           _log.i("Refreshed ${result.unwrap().name} (${result.unwrap().sourceIds})");
                           if(mounted) setState(() {
                             _updateMatches();
                           });
                         }
                         else {
-                          _log.d("Unable to refresh match: ${result.unwrapErr()}");
+                          _log.d("Unable to refresh match: ${result?.unwrapErr()}");
                         }
                       },
                     ),
@@ -392,13 +392,13 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
                         var deletedFuture = db.deleteMatch(match.id);
 
                         var deleted = await LoadingDialog.show(context: context, waitOn: deletedFuture);
-                        if(deleted.isOk()) {
+                        if(deleted != null && deleted.isOk()) {
                           setState(() {
                             _updateMatches();
                           });
                         }
                         else {
-                          _log.d("Unable to delete match: ${deleted.unwrapErr()}");
+                          _log.d("Unable to delete match: ${deleted?.unwrapErr()}");
                         }
                       },
                     ),

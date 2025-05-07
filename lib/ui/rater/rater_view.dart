@@ -274,6 +274,8 @@ class _RaterViewState extends State<RaterView> {
               return GestureDetector(
                 key: Key(rating.memberNumber),
                 onTap: () {
+                  if(rating.length == 0) return;
+
                   showDialog(context: context, builder: (context) {
                     return ShooterStatsDialog(rating: rating, match: widget.currentMatch, ratings: widget.dataSource, showDivisions: widget.group.divisions.length > 1);
                   });

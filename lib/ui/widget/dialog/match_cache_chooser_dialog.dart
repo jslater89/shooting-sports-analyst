@@ -357,14 +357,14 @@ class _MatchCacheChooserDialogState extends State<MatchCacheChooserDialog> {
 
                         var result = await LoadingDialog.show(context: context, waitOn: MatchCache().getMatch(url, forceUpdate: true));
 
-                        if(result.isOk()) {
+                        if(result != null && result.isOk()) {
                           print("Refreshed ${result.unwrap().name} (${result.unwrap().practiscoreId} ${result.unwrap().practiscoreIdShort})");
                           cache!.save();
                           if(mounted) setState(() {
                             _updateMatches();
                           });
                         }
-                        else debugPrint("Unable to get match: ${result.unwrapErr()}");
+                        else debugPrint("Unable to get match: ${result?.unwrapErr()}");
                       },
                     ),
                     IconButton(
