@@ -1717,12 +1717,14 @@ class RatingProjectLoader {
     if(score.score.targetEventCount == 0 && score.score.rawTime <= 0.1) return false;
 
     // The George Williams Rule: filter out suspiciously high hit factors
-    if(sport.defaultStageScoring is HitFactorScoring) {
+    if(score.score.scoring is HitFactorScoring) {
       if(score.score.hitFactor > 30) return false;
     }
 
     // Filter out extremely short times that are probably DNFs or partial scores entered for DQs
-    if(score.score.rawTime <= 0.5) return false;
+    // But don't do that for PointsScoring, because fixed time is PointsScoring in USPSA and often
+    // doesn't have a time entered.
+    if((score.score.scoring is! PointsScoring) && score.score.rawTime <= 0.5) return false;
 
     // The Jalise Williams rule: filter out subminor/unknown PFs
     if(score.shooter.powerFactor.doesNotScore) return false;
