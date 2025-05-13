@@ -691,6 +691,13 @@ class RatingProjectLoader {
           await db.upsertDbShooterRating(targetRating);
         }
 
+        if(!targetRating.group.isLoaded) {
+          await targetRating.group.load();
+          if(targetRating.group.value == null) {
+            targetRating.group.value = group;
+          }
+        }
+
         // Add all of the source numbers to the target's known list
         targetRating.addKnownMemberNumbers(mapping.sourceNumbers);
 

@@ -81,7 +81,7 @@ class _ScoreListState extends State<ScoreList> {
     if(widget.ratings != null) {
       ratingCache = ChangeNotifierRatingDataSource(widget.ratings!);
       ratingCache!.addListener(() {
-        setState(() {
+        setStateIfMounted(() {
           // ratings were reloaded
         });
       });

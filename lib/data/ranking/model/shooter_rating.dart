@@ -241,7 +241,13 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
       return event.newRating;
     }
     else {
-      return rating;
+      var firstEvent = AnalystDatabase().getRatingEventsForSync(wrappedRating, limit: 1, order: Order.ascending).firstOrNull;
+      if(firstEvent != null) {
+        return firstEvent.newRating;
+      }
+      else {
+        return rating;
+      }
     }
   }
 
