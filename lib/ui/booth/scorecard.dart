@@ -598,6 +598,12 @@ class _BoothScorecardState extends State<BoothScorecard> {
     if(score == null) {
       return Center(child: Text("-", textAlign: TextAlign.center));
     }
+    var percentageText = "${score.percentage.toStringAsFixed(2)}%";
+    if(score.place == 1) {
+      if(score.percentageMargin != null) {
+        percentageText = "+${score.percentageMargin!.toStringAsFixed(2)}%";
+      }
+    }
     var matchScoreColor = change != null ? Colors.green[500] : null;
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -613,7 +619,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
           )
         ),
         Text(
-          "${score.percentage.toStringAsFixed(2)}%",
+          percentageText,
           textAlign: TextAlign.center,
           style: TextStyle(color: matchScoreColor),
           textScaler: TextScaler.linear(sc.tableTextSize.fontSizeFactor),
@@ -647,6 +653,13 @@ class _BoothScorecardState extends State<BoothScorecard> {
       );
     }
 
+    var percentageText = "${stageScore.percentage.toStringAsFixed(2)}%";
+    if(stageScore.place == 1) {
+      if(stageScore.percentageMargin != null) {
+        percentageText = "+${stageScore.percentageMargin!.toStringAsFixed(2)}%";
+      }
+    }
+
     var stageScoreColor = stageChange != null ? Colors.green[500] : null;
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -662,7 +675,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
           waitDuration: Duration(milliseconds: 500),
           message: "${stageScore.points.toStringAsFixed(1)}pt",
           child: Text(
-            "${stageScore.percentage.toStringAsFixed(2)}%",
+            percentageText,
             textAlign: TextAlign.center,
             style: TextStyle(color: stageScoreColor),
             textScaler: TextScaler.linear(sc.tableTextSize.fontSizeFactor),

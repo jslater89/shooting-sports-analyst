@@ -139,6 +139,23 @@ final class RelativeStageFinishScoring extends MatchScoring {
           points = max(0.0, stageValue * ratio);
         }
 
+        double? pointsMargin;
+        double? ratioMargin;
+
+        if(i == 0 && sortedShooters.length > 1) {
+          var secondPlace = scores[sortedShooters[1]]!;
+          var secondPlaceRatio = scoring.ratio(secondPlace, bestScore);
+          var secondPlacePoints = 0.0;
+          if(scoring is PointsScoring && pointsAreUSPSAFixedTime) {
+            secondPlacePoints = secondPlace.points.toDouble();
+          }
+          else if(!secondPlace.dnf || scoreDQ) {
+            secondPlacePoints = max(0.0, stageValue * secondPlaceRatio);
+          }
+          pointsMargin = points - secondPlacePoints;
+          ratioMargin = ratio - secondPlaceRatio;
+        }
+
         var relativeStageScore = RelativeStageScore(
           shooter: shooter,
           stage: stage,
@@ -146,6 +163,8 @@ final class RelativeStageFinishScoring extends MatchScoring {
           place: i + 1,
           ratio: ratio,
           points: points,
+          pointsMargin: pointsMargin,
+          ratioMargin: ratioMargin,
         );
         stageScores[shooter] ??= {};
         stageScores[shooter]![stage] = relativeStageScore;
@@ -330,13 +349,26 @@ final class RelativeStageFinishScoring extends MatchScoring {
       var shooter = sortedShooters[i];
       var shooterStageScores = stageScores[shooter]!;
       var totalScore = stageScoreTotals[shooter]!;
+      double ratio = bestTotalScore == 0 ? 0 : totalScore / bestTotalScore;
+
+      double? pointsMargin;
+      double? ratioMargin;
+      if(i == 0 && sortedShooters.length > 1) {
+        var secondPlace = sortedShooters[1];
+        var secondPlaceScore = stageScoreTotals[secondPlace]!;
+        pointsMargin = totalScore - secondPlaceScore;
+        var secondPlaceRatio = bestTotalScore == 0 ? 0 : secondPlaceScore / bestTotalScore;
+        ratioMargin = ratio - secondPlaceRatio;
+      }
 
       matchScores[shooter] = RelativeMatchScore(
         shooter: shooter,
         stageScores: shooterStageScores,
         place: i + 1,
-        ratio: bestTotalScore == 0 ? 0 : totalScore / bestTotalScore,
+        ratio: ratio,
         points: totalScore,
+        pointsMargin: pointsMargin,
+        ratioMargin: ratioMargin,
       );
     }
 

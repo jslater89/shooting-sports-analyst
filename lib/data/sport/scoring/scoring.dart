@@ -47,13 +47,28 @@ abstract class BareRelativeScore {
   /// match, it's the final points or time per stage/match.
   final double points;
 
+  /// The difference in points between this score and the next highest score.
+  ///
+  /// Only valid for 1st place.
+  final double? pointsMargin;
+
+  /// The difference in percentage between this score and the next highest score.
+  ///
+  /// Only valid for 1st place.
+  final double? ratioMargin;
+
   /// A convenience getter for [ratio] * 100.
   double get percentage => ratio * 100;
+
+  /// A convenience getter for [ratioMargin] * 100.
+  double? get percentageMargin => ratioMargin != null ? ratioMargin! * 100 : null;
 
   const BareRelativeScore({
     required this.place,
     required this.ratio,
     required this.points,
+    this.pointsMargin,
+    this.ratioMargin,
   });
 }
 
@@ -69,6 +84,8 @@ abstract class RelativeScore extends BareRelativeScore {
     required super.place,
     required super.ratio,
     required super.points,
+    super.pointsMargin,
+    super.ratioMargin,
   });
 
   RelativeScore.copy(RelativeScore other) :
@@ -77,6 +94,8 @@ abstract class RelativeScore extends BareRelativeScore {
       place: other.place,
       ratio: other.ratio,
       points: other.points,
+      pointsMargin: other.pointsMargin,
+      ratioMargin: other.ratioMargin,
     );
 }
 
@@ -91,6 +110,8 @@ class RelativeMatchScore extends RelativeScore {
     required super.place,
     required super.ratio,
     required super.points,
+    super.pointsMargin,
+    super.ratioMargin,
   }) : total = stageScores.values.map((e) => e.score).sum {
     var max = maxPoints();
     var actualPoints = stageScores.values.map((e) => e.score.getTotalPoints(countPenalties: true)).sum.toDouble();
@@ -152,6 +173,8 @@ class RelativeStageScore extends RelativeScore {
     required super.place,
     required super.ratio,
     required super.points,
+    super.pointsMargin,
+    super.ratioMargin,
   });
 
   double getPercentTotalPoints({bool scoreDQ = true, bool countPenalties = true, int? maxPoints}) {

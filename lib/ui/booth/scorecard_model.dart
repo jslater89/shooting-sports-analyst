@@ -154,7 +154,7 @@ class ScorecardModel {
 }
 
 /// Filters for a scorecard, either for scoring or display.
-/// 
+///
 /// [filterSet] is standard Analyst match filters.
 /// [entryIds] and [entryUuids] are used to filter down to specific
 /// match entries. For PractiScore, entryUuids is preferred because

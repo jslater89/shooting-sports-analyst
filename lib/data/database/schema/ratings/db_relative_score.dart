@@ -28,22 +28,37 @@ class DbRelativeScore {
   /// match, it's the final points or time per stage/match.
   double points;
 
+  /// The margin in points between this score and the winning score.
+  double? pointsMargin;
+  /// The margin in ratio between this score and the winning score.
+  double? ratioMargin;
+
+  @ignore
+  /// The margin in percentage between this score and the winning score.
+  double? get percentageMargin => ratioMargin != null ? ratioMargin! * 100 : null;
+
   DbRelativeScore({
     this.place = 0,
     this.ratio = 0,
     this.points = 0,
+    this.pointsMargin,
+    this.ratioMargin,
   });
 
   DbRelativeScore.fromHydrated(RelativeScore score) :
       place = score.place,
       ratio = score.ratio,
-      points = score.points;
+      points = score.points,
+      pointsMargin = score.pointsMargin,
+      ratioMargin = score.ratioMargin;
 
   DbRelativeScore copy() {
     return DbRelativeScore(
       place: place,
       ratio: ratio,
       points: points,
+      pointsMargin: pointsMargin,
+      ratioMargin: ratioMargin,
     );
   }
 }
