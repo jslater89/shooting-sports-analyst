@@ -59,16 +59,22 @@ class _ScoreListSettingsDialogState extends State<ScoreListSettingsDialog> {
                 }
               },
             ),
-            if(widget.showFantasySettings) CheckboxListTile(
-              title: Text("Show fantasy points"),
-              value: settings.showFantasyScores,
-              onChanged: (v) {
-                if(v != null) {
-                  setState(() {
-                    settings.showFantasyScores = v;
-                  });
-                }
-              },
+            if(widget.showFantasySettings) ListTile(
+              title: Text("Fantasy points mode"),
+              trailing: DropdownButton<FantasyPointsMode>(
+                value: settings.fantasyPointsMode,
+                items: FantasyPointsMode.values.map((v) => DropdownMenuItem<FantasyPointsMode>(
+                  child: Text(v.uiLabel),
+                  value: v,
+                )).toList(),
+                onChanged: (v) {
+                  if(v != null) {
+                    setState(() {
+                      settings.fantasyPointsMode = v;
+                    });
+                  }
+                },
+              ),
             ),
             if(widget.showRatingsSettings) ListTile(
               title: Text("Rating display mode"),

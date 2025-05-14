@@ -106,7 +106,7 @@ class _ResultPageState extends State<ResultPage> {
     availablePointsCountPenalties: true,
     fixedTimeAvailablePointsFromDivisionMax: true,
     predictionMode: MatchPredictionMode.none,
-    showFantasyScores: false,
+    fantasyPointsMode: FantasyPointsMode.off,
   ));
 
   int get _matchMaxPoints => _filteredStages.map((stage) => stage.maxPoints).sum;
@@ -225,6 +225,9 @@ class _ResultPageState extends State<ResultPage> {
     PreloadedRatingDataSource? cachedRatings = null;
     if(widget.ratings != null) {
       cachedRatings = (await InMemoryCachedRatingSource()..initFrom(widget.ratings!, ratingsToCache: filteredShooters));
+    }
+    if(_settings.value.fantasyPointsMode == FantasyPointsMode.currentFilters) {
+      _fantasyScores = _currentMatch.sport.fantasyScoresProvider?.calculateFantasyScores(_currentMatch, byDivision: false, entries: filteredShooters);
     }
     setState(() {
       _baseScores = _currentMatch.getScores(
@@ -383,14 +386,25 @@ class _ResultPageState extends State<ResultPage> {
   }
 
   void _updateFantasyScores() {
-    _log.d("Updating fantasy scores: ${_settings.value.showFantasyScores}");
+    _log.d("Updating fantasy scores: ${_settings.value.fantasyPointsMode}");
     var fantasyScoringCalculator = _currentMatch.sport.fantasyScoresProvider;
-    if(fantasyScoringCalculator != null && _settings.value.showFantasyScores) {
-      setState(() {
-        _fantasyScores = fantasyScoringCalculator.calculateFantasyScores(_currentMatch);
-      });
+    if(fantasyScoringCalculator != null && _settings.value.fantasyPointsMode != FantasyPointsMode.off) {
+      if(_settings.value.fantasyPointsMode == FantasyPointsMode.byDivision) {
+        setState(() {
+          _fantasyScores = fantasyScoringCalculator.calculateFantasyScores(_currentMatch);
+        });
+      }
+      else if(_settings.value.fantasyPointsMode == FantasyPointsMode.currentFilters) {
+        setState(() {
+          _fantasyScores = fantasyScoringCalculator.calculateFantasyScores(_currentMatch, byDivision: false, entries: _filteredShooters);
+        });
+      }
+
+      if(_sortMode == SortMode.fantasyPoints) {
+        _applySortMode(_sortMode);
+      }
     }
-    else {
+    else if(_settings.value.fantasyPointsMode == FantasyPointsMode.off) {
       if(_sortMode == SortMode.fantasyPoints) {
         _sortMode = SortMode.score;
         _applySortMode(_sortMode);
@@ -558,9 +572,9 @@ class _ResultPageState extends State<ResultPage> {
               child: IconButton(
                   icon: Icon(Icons.undo),
                   onPressed: () async {
-                    _currentMatch = _canonicalMatch!.copy();
+                    _currentMatch = _canonicalMatch.copy();
                     List<MatchEntry> filteredShooters = _filterShooters();
-                    var scores = _currentMatch!.getScores(shooters: filteredShooters);
+                    var scores = _currentMatch.getScores(shooters: filteredShooters);
 
                     //debugPrint("Match: $_currentMatch Stage: $_stage Shooters: $_filteredShooters Scores: $scores");
                     debugPrint("${_filteredShooters[0].scores}");
@@ -710,12 +724,12 @@ class _ResultPageState extends State<ResultPage> {
 
             if(newSettings != null) {
               var oldPredictionMode = _settings.value.predictionMode;
-              var oldShowFantasyPoints = _settings.value.showFantasyScores;
+              var oldFantasyPointsMode = _settings.value.fantasyPointsMode;
               _settings.value = newSettings;
               if(_settings.value.predictionMode != oldPredictionMode) {
                 _updateHypotheticalScores();
               }
-              if(_settings.value.showFantasyScores != oldShowFantasyPoints) {
+              if(_settings.value.fantasyPointsMode != oldFantasyPointsMode) {
                 _updateFantasyScores();
               }
             }
@@ -835,23 +849,23 @@ class ScoreDisplaySettingsModel extends ValueNotifier<ScoreDisplaySettings> {
 class ScoreDisplaySettings {
   RatingDisplayMode ratingMode;
   MatchPredictionMode predictionMode;
+  FantasyPointsMode fantasyPointsMode;
   bool availablePointsCountPenalties;
   bool fixedTimeAvailablePointsFromDivisionMax;
-  bool showFantasyScores;
 
   ScoreDisplaySettings({
     required this.ratingMode,
     required this.availablePointsCountPenalties,
     required this.fixedTimeAvailablePointsFromDivisionMax,
     required this.predictionMode,
-    required this.showFantasyScores,
+    required this.fantasyPointsMode,
   });
   ScoreDisplaySettings.copy(ScoreDisplaySettings other) :
       this.ratingMode = other.ratingMode,
       this.availablePointsCountPenalties = other.availablePointsCountPenalties,
       this.fixedTimeAvailablePointsFromDivisionMax = other.fixedTimeAvailablePointsFromDivisionMax,
       this.predictionMode = other.predictionMode,
-      this.showFantasyScores = other.showFantasyScores;
+      this.fantasyPointsMode = other.fantasyPointsMode;
 }
 
 enum RatingDisplayMode {
@@ -903,22 +917,34 @@ enum MatchPredictionMode {
   };
 }
 
-  enum _MenuEntry {
-    refresh,
-    broadcastBooth,
-    about,
-    plotDistribution;
+enum FantasyPointsMode {
+  off,
+  byDivision,
+  currentFilters;
 
-    String get label {
-      switch (this) {
-        case _MenuEntry.about:
-          return "About";
-        case _MenuEntry.broadcastBooth:
-          return "Broadcast mode";
-        case _MenuEntry.plotDistribution:
-          return "Scores distribution";
-        case _MenuEntry.refresh:
-          return "Refresh";
-      }
+  String get uiLabel => switch(this) {
+    off => "Off",
+    byDivision => "By division",
+    currentFilters => "Current filters",
+  };
+}
+
+enum _MenuEntry {
+  refresh,
+  broadcastBooth,
+  about,
+  plotDistribution;
+
+  String get label {
+    switch (this) {
+      case _MenuEntry.about:
+        return "About";
+      case _MenuEntry.broadcastBooth:
+        return "Broadcast mode";
+      case _MenuEntry.plotDistribution:
+        return "Scores distribution";
+      case _MenuEntry.refresh:
+        return "Refresh";
     }
   }
+}
