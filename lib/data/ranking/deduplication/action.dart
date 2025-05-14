@@ -45,10 +45,39 @@ class PreexistingMapping extends DeduplicationAction {
   );
 
   @override
-  String get descriptiveString => "Preexisting mapping: $sourceNumber -> $targetNumber";
+  String get descriptiveString => "Preexisting mapping: $sourceNumber → $targetNumber";
 
   @override
   String get shortUiLabel => "mapping";
+}
+
+/// PreexistingBlacklist is a blacklist entry that bears on this conflict
+/// that has been detected in the project's settings. It is returned when
+/// a resolved conflict is detected, and the blacklist entry is the only
+/// thing covering one or more numbers.
+class PreexistingBlacklist extends DeduplicationAction {
+  final String sourceNumber;
+  final String targetNumber;
+
+  @override
+  Iterable<String> get coveredNumbers => [sourceNumber, targetNumber];
+
+  PreexistingBlacklist({
+    required this.sourceNumber,
+    required this.targetNumber,
+  });
+
+  @override
+  PreexistingBlacklist copy() => PreexistingBlacklist(
+    sourceNumber: sourceNumber,
+    targetNumber: targetNumber,
+  );
+
+  @override
+  String get descriptiveString => "Preexisting blacklist: $sourceNumber ↔ $targetNumber";
+
+  @override
+  String get shortUiLabel => "blacklist";
 }
 
 /// AutoMapping is a member number mapping that has been automatically
@@ -193,10 +222,10 @@ class DataEntryFix extends DeduplicationAction {
   });
 
   @override
-  bool operator ==(Object other) => 
-    other is DataEntryFix 
-    && sourceNumber == other.sourceNumber 
-    && targetNumber == other.targetNumber 
+  bool operator ==(Object other) =>
+    other is DataEntryFix
+    && sourceNumber == other.sourceNumber
+    && targetNumber == other.targetNumber
     && deduplicatorName == other.deduplicatorName;
 
   @override

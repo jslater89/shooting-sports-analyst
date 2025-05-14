@@ -4,11 +4,13 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
@@ -34,6 +36,7 @@ import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/shooter_aliases.dart';
+import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
@@ -58,6 +61,7 @@ import 'package:shooting_sports_analyst/ui/rater/enter_name_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/select_project_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/shooter_aliases_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/loading_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_database_chooser_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/rater_groups_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -1216,28 +1220,62 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         break;
 
       case _MenuEntry.reloadProjectMatches:
-        showDialog(context: context, builder: (context) => AlertDialog(
-          title: Text("Pending reimplementation"),
-          content: Text("This feature is pending reimplementation. It will be available soon."),
-        ));
-        // var delete = await showDialog<bool>(context: context, builder: (context) {
-        //   return ConfirmDialog(
-        //     content: Text("Reloading matches will redownload all matches in this project from PractiScore."),
-        //     positiveButtonLabel: "RELOAD",
-        //   );
-        // });
+        ProgressModel progress = ProgressModel();
+        progress.total = projectMatches.length;
+        progress.current = 0;
+        var completer = Completer<void>();
+        LoadingDialog.show(
+          title: "Reloading matches",
+          context: context,
+          waitOn: completer.future,
+          progressProvider: progress,
+        );
 
-        // if(delete ?? false) {
-        //   await MatchCache().ready;
-        //   for(var url in matchUrls) {
-        //     MatchCache().deleteMatchByUrl(url);
-        //     knownMatches.remove(url);
-        //   }
+        var scorelogThreshold = DateTime.now().subtract(Duration(days: 14));
+        for(var (i, m) in projectMatches.indexed) {
+          var source = MatchSourceRegistry().getByCodeOrNull(m.sourceCode);
+          if(source != null && m.sourceIds.isNotEmpty) {
+            InternalMatchFetchOptions? options;
+            if(source is PSv2MatchSource) {
+              options = PSv2MatchFetchOptions(
+                downloadScoreLogs: m.date?.isAfter(scorelogThreshold) ?? true,
+              );
+            }
+            var matchRes = await source.getMatchFromId(m.sourceIds.first, options: options);
 
-        //   setState(() {});
+            if(matchRes.isOk()) {
+              var match = matchRes.unwrap();
 
-        //   updateUrls();
-        // }
+              if(match.level == null || match.level!.eventLevel.index < m.level!.eventLevel.index) {
+                // In the case where we originally pulled a match from the old PractiScore CSV report parser,
+                // we might have match level data that doesn't come down through the new source, so keep the
+                // old data if it looks suspicious.
+                match.level = m.level;
+              }
+              projectMatches[i] = MatchPointer.fromMatch(match);
+              var res = await AnalystDatabase().saveMatch(match);
+              if(res.isErr()) {
+                _log.e("Error saving match ${match.name}: ${res.unwrapErr()}");
+              }
+            }
+            else {
+              _log.e("Error refreshing match from source: ${matchRes.unwrapErr()}");
+            }
+          }
+          else {
+            if(m.sourceIds.isEmpty) {
+              _log.e("No source IDs for match ${m.name}");
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("No source information available for match")));
+            }
+            else {
+              _log.e("Unknown source code ${m.sourceCode}");
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unknown source ${m.sourceCode} for match")));
+            }
+          }
+          progress.current = i;
+        }
+
+        completer.complete();
         break;
 
 

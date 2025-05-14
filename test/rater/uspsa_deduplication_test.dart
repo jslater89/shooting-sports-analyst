@@ -54,7 +54,7 @@ void main() async {
     );
 
     expect(deduplication.isOk(), isTrue);
-    
+
     var results = deduplication.unwrap();
     expect(reason: "number of results", results, hasLength(1));
     expect(reason: "number of causes", results[0].causes, hasLength(1));
@@ -84,7 +84,7 @@ void main() async {
     );
 
     expect(deduplication.isOk(), isTrue);
-    
+
     var results = deduplication.unwrap();
     expect(reason: "number of results", results, hasLength(1));
     expect(reason: "number of causes", results[0].causes, hasLength(1));
@@ -247,8 +247,8 @@ void main() async {
     expect(reason: "preexisting mapping source number", preexistingMapping.sourceNumber, equals("A123456"));
     expect(reason: "preexisting mapping target number", preexistingMapping.targetNumber, equals("L1235"));
     var dataEntryFix = results[0].proposedActions.firstWhereOrNull((e) => e is DataEntryFix) as DataEntryFix;
-    expect(reason: "data entry fix source number", dataEntryFix.sourceNumber, equals("L1234"));
-    expect(reason: "data entry fix target number", dataEntryFix.targetNumber, equals("L1235"));
+    expect(reason: "data entry fix source number", dataEntryFix.sourceNumber, equals("L1235"));
+    expect(reason: "data entry fix target number", dataEntryFix.targetNumber, equals("L1234"));
   });
 
   test("Auto-Mapped Dissimilar Numbers", () async {
@@ -316,7 +316,7 @@ void main() async {
     var results = deduplication.unwrap();
     expect(reason: "number of results", results, isEmpty);
   });
-  
+
   test("Improvable UserMapping", () async {
     var project = DbRatingProject(
       name: "Improvable UserMapping",
@@ -536,7 +536,7 @@ void main() async {
     expect(reason: "target number", fix.targetNumber, equals("RD12"));
     expect(reason: "source numbers", fix.sourceNumbers, unorderedEquals(["L1234"]));
   });
-  
+
   test("AmbiguousMapping Resolvable", () async {
     var project = DbRatingProject(
       name: "AmbiguousMapping Resolvable",
@@ -573,7 +573,7 @@ void main() async {
     expect(reason: "auto mapping target number", autoMapping.targetNumber, equals("L1234"));
     expect(reason: "auto mapping source numbers", autoMapping.sourceNumbers, unorderedEquals(["A123456"]));
   });
-  
+
   test("AmbiguousMapping Unresolvable", () async {
     var project = DbRatingProject(
       name: "AmbiguousMapping Unresolvable",
@@ -1073,6 +1073,51 @@ void main() async {
     expect(reason: "number of results", results, isEmpty);
   });
 
+  test("Michael Morgan Ambiguous Mapping", () async {
+    // In this case, we have a known mapping from FY94000 to B96, and a blacklist
+    // from A163595 to FY94000. Since we know that FY94000 is B96, we shouldn't
+    // need an explicit blacklist entry for A163595 -> B96.
+    var project = DbRatingProject(
+      name: "Michael Morgan Ambiguous Mapping",
+      sportName: uspsaSport.name,
+      settings: RatingProjectSettings(
+        algorithm: MultiplayerPercentEloRater(),
+        userMemberNumberMappings: {
+          "FY94000": "B96",
+        },
+        memberNumberMappingBlacklist: {
+          "A163595": ["FY94000"],
+        }
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "michael-morgan-ambiguous-mapping");
+    var deduplicator = USPSADeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      checkDataEntryErrors: true,
+      group: ratingGroup,
+    );
+
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    var result = results.first;
+    var cause = result.causes.first;
+    expect(reason: "cause is FixedInSettings", cause, isA<FixedInSettings>());
+    var proposedActions = result.proposedActions;
+    expect(reason: "number of proposed actions", proposedActions, hasLength(2));
+    var preexistingMapping = proposedActions.firstWhereOrNull((e) => e is PreexistingMapping) as PreexistingMapping;
+    expect(reason: "preexisting mapping", preexistingMapping, isNotNull);
+    expect(reason: "preexisting mapping source number", preexistingMapping.sourceNumber, equals("FY94000"));
+    expect(reason: "preexisting mapping target number", preexistingMapping.targetNumber, equals("B96"));
+    var preexistingBlacklist = proposedActions.firstWhereOrNull((e) => e is PreexistingBlacklist) as PreexistingBlacklist;
+    expect(reason: "preexisting blacklist", preexistingBlacklist, isNotNull);
+    expect(reason: "preexisting blacklist source number", preexistingBlacklist.sourceNumber, equals("A163595"));
+    expect(reason: "preexisting blacklist target number", preexistingBlacklist.targetNumber, equals("FY94000"));
+  });
+
   // #endregion
 }
 
@@ -1309,6 +1354,13 @@ Future<void> setupTestDb(AnalystDatabase db) async {
     matchId: "mark-miller-already-added-ambiguous-mapping",
   );
 
+  var michaelMorganAmbiguousMappingMatch = generateMatch(
+    shooters: [competitorMap["FY94000"]!, competitorMap["A163595"]!, competitorMap["B96"]!],
+    date: DateTime(2024, 6, 14),
+    matchName: "Michael Morgan Ambiguous Mapping",
+    matchId: "michael-morgan-ambiguous-mapping",
+  );
+
   var futures = [
     db.saveMatch(simpleDataEntryMatch),
     db.saveMatch(simpleBlacklistMatch),
@@ -1338,6 +1390,7 @@ Future<void> setupTestDb(AnalystDatabase db) async {
     db.saveMatch(notAMemberNumberMatch),
     db.saveMatch(multipleInternationalStandardNumbersMatch),
     db.saveMatch(markMillerAlreadyAddedAmbiguousMappingMatch),
+    db.saveMatch(michaelMorganAmbiguousMappingMatch),
   ];
   await Future.wait(futures);
 }
@@ -1495,6 +1548,23 @@ Map<String, Shooter> generateCompetitors() {
     firstName: "Mark",
     lastName: "Miller",
     memberNumber: "TY7058",
+  );
+
+  // Michael Morgans (preexisting mapping from FY to B, blacklist from A to FY)
+  competitors["FY94000"] = Shooter(
+    firstName: "Michael",
+    lastName: "Morgan",
+    memberNumber: "FY94000",
+  );
+  competitors["A163595"] = Shooter(
+    firstName: "Michael",
+    lastName: "Morgan",
+    memberNumber: "A163595",
+  );
+  competitors["B96"] = Shooter(
+    firstName: "Michael",
+    lastName: "Morgan",
+    memberNumber: "B96",
   );
 
   return competitors;

@@ -55,6 +55,10 @@ class DeduplicationCollision {
   }
   List<String> get uncoveredNumbersList => uncoveredNumbers.toList();
 
+  /// True if the proposed "actions" are all preexisting mappings or blacklists, i.e.
+  /// things the user has already done or approved in the past.
+  bool get noNewActions => proposedActions.every((a) => a is PreexistingMapping || a is PreexistingBlacklist);
+
   DeduplicationCollision({
     required this.deduplicatorName,
     required this.memberNumbers,
@@ -87,7 +91,7 @@ class FixedInSettings extends ConflictType {
 /// An automatic mapping or data entry fix has been proposed, but the user should review
 /// the proposed actions before applying them, because heuristic detection may be
 /// unreliable.
-/// 
+///
 /// A conflict with this type should always be presented to the user in a 'review this'
 /// fashion.
 class ManualReviewRecommended extends ConflictType {
@@ -98,7 +102,7 @@ class ManualReviewRecommended extends ConflictType {
 
 /// In multiple-numbers-of-type conflicts, one deduplicator name has
 /// multiple member numbers of the same type ([memberNumberType]).
-/// 
+///
 /// The [memberNumbers] list contains all the member numbers of the
 /// given type. [stringDifference] is the string difference between
 /// the two member numbers, if there are exactly two. [probableTypo]
@@ -144,7 +148,7 @@ class MultipleNumbersOfType extends ConflictType {
 /// cannot be mapped to member numbers of a higher-priority type,
 /// because there are at least two member numbers of at least one
 /// of the types.
-/// 
+///
 /// [sourceConflicts] and [targetConflicts] indicate whether the
 /// source numbers or target numbers caused the conflict. [conflictingTypes]
 /// indicates the type of the conflicting member numbers.
@@ -152,35 +156,35 @@ class MultipleNumbersOfType extends ConflictType {
 /// The list of target member numbers guarantees that all its
 /// member numbers are of the same type. The source member numbers
 /// may be of different types.
-/// 
+///
 /// [relevantBlacklistEntries] is a filtered view of the project's blacklist
 /// that includes only entries relevant to this conflict: any blacklist targets
 /// for blacklist entries for the conflict sources that match the conflict targets
 /// or sources.
-/// 
+///
 /// e.g.
-/// 
+///
 /// Source:    Target:
 ///  A12345     L1234
 ///  A67890
-/// 
+///
 /// deduplicatorName: "johndoe"
 /// sourceConflicts: true, targetConflicts: false
 /// conflictingTypes: [associate]
-/// 
+///
 /// Source:    Target:
 ///  A12345     L1234
 ///  A67890     L5678
-/// 
+///
 /// deduplicatorName: "johndoe"
 /// sourceConflicts: true, targetConflicts: true
 /// conflictingTypes: [associate, lifetime]
-/// 
+///
 /// Source:    Target:
 ///  A12345     B123
 ///  A67890     B456
 ///  L1234
-/// 
+///
 /// deduplicatorName: "johndoe"
 /// sourceConflicts: true, targetConflicts: true
 /// conflictingTypes: [associate, benefactor]

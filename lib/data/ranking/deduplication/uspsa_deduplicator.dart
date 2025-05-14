@@ -411,15 +411,7 @@ class USPSADeduplicator extends StandardDeduplicator {
           }
         }
 
-        // If there are any detected mappings whose target is better than or equal to our current target,
-        // we should use that as the target instead—consider a case where we have a mapping A123456 -> L1235,
-        // but an L1234 typo appears before L1235. We want to take the mapping into account.
-        for(var number in detectedMappings.values) {
-          if(classify(number).betterThanOrEqual(type)) {
-            probableTarget = number;
-            break;
-          }
-        }
+
         List<String> sourceNumbers = [];
         for(var number in numbers[type]!.where((e) => e != probableTarget)) {
           int strdiff = 0;
@@ -440,7 +432,7 @@ class USPSADeduplicator extends StandardDeduplicator {
             sourceNumbers.add(number);
           }
           // TODO: else if number is associate and too short or too long, preferentially make it a source
-          else if(!(blacklist[number]?.contains(probableTarget) ?? false)) {
+          else if(!blacklist.isBlacklisted(number, probableTarget, bidirectional: true)) {
             proposedActions.add(Blacklist(
               sourceNumber: number,
               targetNumber: probableTarget,
@@ -551,6 +543,26 @@ class USPSADeduplicator extends StandardDeduplicator {
       // If there are no conflicting types and at most one type with any entries left,
       // then we don't need to add an ambiguous mapping entry (i.e., all of the
       // numbers have been handled in some previous conflict or mapping).
+
+      // If there are uncovered numbers in the conflict, check if they're blacklisted,
+      // and add PreexistingBlacklist actions if so.
+      bool addedPreexistingBlacklist = false;
+      for(var number in conflict.uncoveredNumbers) {
+        for(var target in conflict.flattenedMemberNumbers) {
+          if(blacklist.isBlacklisted(number, target, bidirectional: true)) {
+            conflict.proposedActions.add(PreexistingBlacklist(
+              sourceNumber: number,
+              targetNumber: target,
+            ));
+            addedPreexistingBlacklist = true;
+          }
+        }
+      }
+
+      if(conflict.uncoveredNumbers.isEmpty && conflict.noNewActions) {
+        conflict.causes.add(FixedInSettings());
+      }
+
       return conflict;
     }
 
@@ -712,10 +724,10 @@ class USPSADeduplicator extends StandardDeduplicator {
     // If the number is too long or too short for its type, it isn't
     // a valid target.
     var n = USPSAMemberNumber(number);
-    if(n.type == MemberNumberType.standard 
+    if(n.type == MemberNumberType.standard
         && (
-          n.internalNumber.length < 5 
-          || n.internalNumber.length > 6 
+          n.internalNumber.length < 5
+          || n.internalNumber.length > 6
           || n.numericComponentAsInt > 300000
           || n.numericComponentAsInt < 1000
         )) {
@@ -749,7 +761,7 @@ class USPSADeduplicator extends StandardDeduplicator {
   /// numbers.
   @override
   String processNumber(String number) {
-    // If the number is all zeroes, it's invalid, and we won't be able to use it to 
+    // If the number is all zeroes, it's invalid, and we won't be able to use it to
     // identify a competitor.
     if(RegExp(r"^0+$").hasMatch(number)) {
       return "";
