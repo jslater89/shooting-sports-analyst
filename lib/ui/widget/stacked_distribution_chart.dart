@@ -423,8 +423,8 @@ extension FlutterColorConverters on Color {
 }
 
 extension RgbColorConverters on RgbColor {
-  charts.Color toChartsColor() {
-    return charts.Color(r: red, g: green, b: blue);
+  charts.Color toChartsColor({double? alpha}) {
+    return charts.Color(r: red, g: green, b: blue, a: alpha != null ? (alpha * 255).toInt() : 255);
   }
 
   Color toFlutterColor() {

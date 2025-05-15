@@ -6,6 +6,7 @@
 
 
 import 'dart:io';
+import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
@@ -13,6 +14,7 @@ import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
@@ -34,6 +36,9 @@ Future<void> oneoffDbAnalyses(AnalystDatabase db) async {
   // await _matchBumpGms(db);
   // await _addMemberNumbersToMatches(db);
   // await _doesMyQueryWork(db);
+
+  // var project = (await db.getRatingProjectByName("L2s Main"))!;
+  //await calculateMatchHeat(db, project);
 }
 
 Future<void> _howGoodIsTomCastro(AnalystDatabase db) async {
@@ -57,11 +62,11 @@ Future<void> _howGoodIsTomCastro(AnalystDatabase db) async {
     if(match.eventName.toLowerCase().contains("fipt") || match.eventName.toLowerCase().contains("f.i.p.t.")) continue;
     if(match.eventName.toLowerCase().contains("side match")) continue;
     if(match.eventName.toLowerCase().contains("richmond hotshots")) continue;
-    if(match.matchEventLevel == uspsaLevel1 
-      && !match.eventName.toLowerCase().contains("national") 
-      && !match.eventName.toLowerCase().contains("area") 
-      && !match.eventName.toLowerCase().contains("championship") 
-      && !match.eventName.toLowerCase().contains("sectional") 
+    if(match.matchEventLevel == uspsaLevel1
+      && !match.eventName.toLowerCase().contains("national")
+      && !match.eventName.toLowerCase().contains("area")
+      && !match.eventName.toLowerCase().contains("championship")
+      && !match.eventName.toLowerCase().contains("sectional")
       && !match.eventName.toLowerCase().contains("ipsc")) continue;
     for(var entry in match.shooters) {
       if(memberNumbers.contains(entry.memberNumber)) {
@@ -132,7 +137,7 @@ Future<void> _matchBumpGms(AnalystDatabase db) async {
     }
     var match = matchRes.unwrap();
     for(var division in uspsaSport.divisions.values) {
-      // to be eligible for match bumps, a non-GM must win, and three GMs 
+      // to be eligible for match bumps, a non-GM must win, and three GMs
       // must finish above 90%.
       var scores = match.getScoresFromFilters(
         FilterSet(
@@ -330,3 +335,149 @@ Future<void> _lady90PercentFinishes(AnalystDatabase db) async {
 //   f.writeAsString(buf.toString());
 //   _log.i("Analysis complete: wrote ${f.path} in ${DateTime.now().difference(startTime).inMilliseconds}ms");
 // }
+
+class MatchHeat {
+  MatchPointer matchPointer;
+  double topTenPercentAverageRating;
+  double medianRating;
+  double classificationStrength;
+  int ratedCompetitorCount;
+  int unratedCompetitorCount;
+
+  int get competitorCount => ratedCompetitorCount + unratedCompetitorCount;
+
+  MatchHeat({
+    required this.matchPointer,
+    required this.topTenPercentAverageRating,
+    required this.medianRating,
+    required this.classificationStrength,
+    required this.ratedCompetitorCount,
+    required this.unratedCompetitorCount,
+  });
+
+  @override
+  String toString() {
+    return
+"""MatchHeat(
+  topTenPercentAverageRating: $topTenPercentAverageRating,
+  medianRating: $medianRating,
+  classificationStrength: $classificationStrength,
+  ratedCompetitorCount: $ratedCompetitorCount,
+  unratedCompetitorCount: $unratedCompetitorCount,
+)""";
+  }
+}
+
+Future<Map<MatchPointer, MatchHeat>> calculateMatchHeat(AnalystDatabase db, DbRatingProject project, {void Function(MatchPointer, MatchHeat)? heatCallback}) async {
+  var sport = project.sport;
+
+  Map<MatchPointer, MatchHeat> matchHeat = {};
+
+  // For each match, calculate the match heat.
+  for(var ptr in project.matchPointers) {
+    var dbMatch = await db.getMatchByAnySourceId(ptr.sourceIds);
+    if(dbMatch == null) {
+      _log.w("Match not found: ${ptr.name}");
+      continue;
+    }
+    var matchRes = await HydratedMatchCache().get(dbMatch);
+    if(matchRes.isErr()) {
+      _log.w("Error hydrating match: ${matchRes.unwrapErr()}");
+      continue;
+    }
+    var match = matchRes.unwrap();
+    Map<MatchEntry, double> shooterRatings = {};
+    int ratedCompetitorCount = 0;
+    int unratedCompetitorCount = 0;
+    List<double> topTenPercentAverageRatings = [];
+    List<double> medianRatings = [];
+    List<double> classificationStrengths = [];
+
+    // For each division, find ratings for all rated competitors, ignoring divisions with fewer than 5 competitors.
+    for(var division in sport.divisions.values) {
+      var groupRes = await project.groupForDivision(division);
+
+      if(groupRes.isErr()) {
+        _log.w("Error getting group for division ${division.name}: ${groupRes.unwrapErr()}");
+        continue;
+      }
+      var group = groupRes.unwrap();
+      if(group == null) {
+        _log.w("No group found for division: ${division.name}");
+        continue;
+      }
+
+      var divisionEntries = match.filterShooters(divisions: [division]);
+      if(divisionEntries.length < 5) {
+        continue;
+      }
+      for(var entry in divisionEntries) {
+        var rating = await db.maybeKnownShooter(
+          project: project,
+          group: group,
+          memberNumber: entry.memberNumber,
+          useCache: true,
+          usePossibleMemberNumbers: true,
+        );
+        if(rating != null) {
+          shooterRatings[entry] = rating.rating;
+          ratedCompetitorCount++;
+        }
+        else {
+          unratedCompetitorCount++;
+        }
+      }
+    }
+
+    // For each division, calculate divisional heat.
+    for(var division in sport.divisions.values) {
+      var scores = match.getScoresFromFilters(FilterSet(sport, divisions: [division]));
+      if(scores.length < 5) {
+        continue;
+      }
+
+      var competitors = scores.keys.toList();
+      var ratedCompetitors = competitors.where((e) => shooterRatings.containsKey(e));
+
+      // Get the average rating of the top 10% of rated competitors.
+      var topTenPercentAverageRating = ratedCompetitors
+        .map((e) => shooterRatings[e]!)
+        .take(max(1, (ratedCompetitors.length * 0.1).round()))
+        .average;
+
+      // Get the median rating of rated competitors.
+      var medianRating = ratedCompetitors
+        .map((e) => shooterRatings[e]!)
+        .sorted((a, b) => a.compareTo(b))
+        .toList()[ratedCompetitors.length ~/ 2];
+
+      // Get the average classification strength of all competitors.
+      var classificationStrength = competitors
+        .map((e) => sport.ratingStrengthProvider?.strengthForClass(e.classification))
+        .whereNotNull()
+        .average;
+
+      topTenPercentAverageRatings.add(topTenPercentAverageRating);
+      medianRatings.add(medianRating);
+      classificationStrengths.add(classificationStrength);
+    }
+
+    if(topTenPercentAverageRatings.isEmpty) {
+      _log.w("No top ten percent average ratings for match: ${ptr.name}");
+      continue;
+    }
+
+    // The match heat is (for now) the average of divisional heats.
+    matchHeat[ptr] = MatchHeat(
+      matchPointer: ptr,
+      topTenPercentAverageRating: topTenPercentAverageRatings.average,
+      medianRating: medianRatings.average,
+      classificationStrength: classificationStrengths.average,
+      ratedCompetitorCount: ratedCompetitorCount,
+      unratedCompetitorCount: unratedCompetitorCount,
+    );
+    heatCallback?.call(ptr, matchHeat[ptr]!);
+  }
+
+  return matchHeat;
+}

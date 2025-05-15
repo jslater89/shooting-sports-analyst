@@ -239,7 +239,7 @@ packages:
     description:
       path: community_charts_flutter
       ref: master
-      resolved-ref: c27db2990b5fecee1776f50d11a8c91f1dabb5fb
+      resolved-ref: "93ea755be47b3f78159e55c35e93a6cdd070f137"
       url: "https://github.com/jslater89/community_charts.git"
     source: git
     version: "1.0.4"

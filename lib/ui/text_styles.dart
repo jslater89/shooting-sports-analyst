@@ -23,4 +23,10 @@ class TextStyles {
   static TextStyle bodyMedium(BuildContext context) {
     return Theme.of(context).textTheme.bodyMedium!;
   }
+
+  static TextStyle tooltipText(BuildContext context) {
+    return Theme.of(context).textTheme.bodyMedium!.copyWith(
+      color: Colors.white,
+    );
+  }
 }
