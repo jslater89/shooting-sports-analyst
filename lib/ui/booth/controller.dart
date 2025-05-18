@@ -18,6 +18,7 @@ import 'package:shooting_sports_analyst/ui/booth/global_card_settings_dialog.dar
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_model.dart';
+import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 
 SSALogger _log = SSALogger("BoothController");
@@ -237,6 +238,8 @@ class BroadcastBoothController {
 
   void addDefaultScorecards({int columns = 2}) {
     var sport = model.latestMatch.sport;
+
+    model.globalScorecardSettings.predictionMode = MatchPredictionMode.averageStageFinish;
 
     List<List<ScorecardModel>> scorecards = [];
     List<ScorecardModel> currentRow = [];
