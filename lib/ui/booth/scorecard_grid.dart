@@ -22,7 +22,7 @@ SSALogger _log = SSALogger("BoothScorecardGrid");
 class ScorecardGridSizeModel {
   ScorecardGridSizeModel({
     required this.screenSize,
-  }) { 
+  }) {
     cardHeight = minScorecardHeight;
     cardWidth = minScorecardWidth;
   }
@@ -53,7 +53,7 @@ class ScorecardGridSizeModel {
 
     var adjustedHeight = screenSize.height;
     var adjustedWidth = screenSize.width;
-    
+
     double provisionalCardHeight = adjustedHeight / this.rowCount;
     double provisionalCardWidth = adjustedWidth / this.columnCount;
 
@@ -94,7 +94,7 @@ class BoothScorecardGrid extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.max,
             children: [
-              
+
             ],
           ),
         )
@@ -127,6 +127,19 @@ class _ScorecardInnerGridState extends State<ScorecardInnerGrid> {
   @override
   Widget build(BuildContext context) {
     var model = context.watch<BroadcastBoothModel>();
+    var controller = context.watch<BroadcastBoothController>();
+
+    if(model.scorecardCount == 0) {
+      return Center(
+        child: TextButton(
+          child: Text("ADD DEFAULT SCORECARDS"),
+          onPressed: () {
+            controller.addDefaultScorecards();
+          },
+        )
+      );
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
         if(model.maximizedScorecardId != null) {

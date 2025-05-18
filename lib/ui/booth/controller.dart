@@ -29,11 +29,11 @@ class BroadcastBoothController {
 
   Future<void> loadFrom(BroadcastBoothModel newModel) async {
     await model.copyFrom(newModel, resetLastUpdateTime: true);
-    
+
     // these will be rebuilt if the model is in timewarp
     // live ticker events will be cleared/recreated in refreshMatch
     model.tickerModel.timewarpTickerEvents.clear();
-    
+
     await refreshMatch();
   }
 
@@ -75,8 +75,8 @@ class BroadcastBoothController {
 
     // If there are any new scores since the last update, ding if settings allow.
     var scores = model.latestMatch.getScores();
-    if(model.tickerModel.updateBell && scores.values.any((score) => 
-      score.stageScores.values.any((stageScore) => 
+    if(model.tickerModel.updateBell && scores.values.any((score) =>
+      score.stageScores.values.any((stageScore) =>
         stageScore.score.modified?.isAfter(priorUpdateTime) ?? false
       )
     )) {
@@ -127,7 +127,7 @@ class BroadcastBoothController {
       model.tickerModel.liveTickerEvents.addAll(events);
       _log.v("Live ticker events: ${model.tickerModel.liveTickerEvents.length}");
     }
-    
+
     if(_tickerHasNewEventsTimer == null) {
       _tickerHasNewEventsTimer = Timer(const Duration(milliseconds: 250), () {
         _log.i("Dispatching ticker update");
@@ -167,7 +167,7 @@ class BroadcastBoothController {
       }
       eventMap[key]!.add(event);
     }
-    
+
     List<TickerEvent> outputEvents = [];
     for(var events in eventMap.values) {
       if(events.length == 1) {
@@ -200,7 +200,7 @@ class BroadcastBoothController {
       model.tickerModel.liveTickerEvents.addAll(outputEvents);
     }
   }
-  
+
   void addScorecardRow() {
     model.scorecards.add([
       ScorecardModel(
@@ -235,8 +235,42 @@ class BroadcastBoothController {
     model.update();
   }
 
+  void addDefaultScorecards({int columns = 2}) {
+    var sport = model.latestMatch.sport;
+
+    List<List<ScorecardModel>> scorecards = [];
+    List<ScorecardModel> currentRow = [];
+    for(var d in sport.divisions.values) {
+      var filters = FilterSet(sport, empty: true, divisions: [d], mode: FilterMode.or);
+      var displayFilters = ScorecardFilters(
+        filterSet: filters,
+      );
+      currentRow.add(ScorecardModel(
+        id: model.nextValidScorecardId,
+        name: d.name,
+        scoreFilters: filters,
+        displayFilters: displayFilters,
+        parent: model,
+        predictionMode: model.globalScorecardSettings.predictionMode,
+        tableTextSize: model.globalScorecardSettings.tableTextSize,
+      ));
+
+      if(currentRow.length == columns) {
+        scorecards.add(currentRow);
+        currentRow = [];
+      }
+    }
+
+    if(currentRow.isNotEmpty) {
+      scorecards.add(currentRow);
+    }
+
+    model.scorecards = scorecards;
+    model.update();
+  }
+
   /// Maximize a scorecard to take up the entire grid.
-  /// 
+  ///
   /// [scorecard] should be the scorecard to maximize, or null to clear the maximized scorecard.
   void maximizeScorecard(ScorecardModel? scorecard) {
     model.maximizedScorecardId = scorecard?.id;
@@ -361,7 +395,7 @@ class BroadcastBoothController {
       if(colIndex == 0) {
         return false;
       }
-      
+
       row.remove(scorecard);
       var targetCol = colIndex - 1;
       if(targetCol >= row.length) {

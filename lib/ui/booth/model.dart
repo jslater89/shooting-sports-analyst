@@ -9,18 +9,11 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:json_annotation/json_annotation.dart';
-import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
-import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
-import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/booth/global_card_settings_dialog.dart';
-import 'package:shooting_sports_analyst/ui/booth/score_utils.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_model.dart';
 import 'package:shooting_sports_analyst/ui/booth/ticker_criteria.dart';
-import 'package:shooting_sports_analyst/ui/result_page.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
-import 'package:shooting_sports_analyst/util.dart';
 
 part 'model.g.dart';
 
@@ -57,11 +50,11 @@ class BroadcastBoothModel with ChangeNotifier {
   GlobalScorecardSettingsModel globalScorecardSettings = GlobalScorecardSettingsModel();
 
   List<List<ScorecardModel>> scorecards = [];
-  int get scorecardCount => scorecards.map((row) => row.length).reduce((a, b) => a + b);
+  int get scorecardCount => scorecards.isEmpty ? 0 : scorecards.map((row) => row.length).reduce((a, b) => a + b);
 
   /// A single scorecard to be displayed in place of the entire grid.
   int? maximizedScorecardId;
-  
+
   @JsonKey(includeFromJson: false, includeToJson: false)
   ScorecardModel? get maximizedScorecard => maximizedScorecardId != null ? scorecards.expand((row) => row).firstWhereOrNull((scorecard) => scorecard.id == maximizedScorecardId) : null;
 
@@ -77,7 +70,7 @@ class BroadcastBoothModel with ChangeNotifier {
     matchSource = match.sourceCode {
       _readyCompleter.complete();
     }
-  
+
   BroadcastBoothModel.json(this.matchSource, this.matchId, this.globalScorecardSettings);
 
   @JsonKey(includeFromJson: false, includeToJson: false)
