@@ -569,6 +569,24 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     }
   }
 
+  Future<bool> _exportJson() async {
+    try {
+      var archive = Archive();
+      for(var tab in activeTabs) {
+        var asList = await _ratingsForExport(tab);
+        var json = _settings.algorithm.ratingsToJson(asList);
+        var jsonString = JsonUtf8Encoder().convert(json);
+        archive.addFile(ArchiveFile("${tab.name.safeFilename()}.json", jsonString.length, jsonString));
+      }
+      var zip = ZipEncoder().encode(archive, autoClose: true);
+
+      return HtmlOr.saveBuffer("ratings-${_projectName.safeFilename()}.zip", zip);
+    } catch(e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to encode archive")));
+      return false;
+    }
+  }
+
   Future<List<ShooterRating>> _ratingsForExport(RatingGroup tab) async {
     var sport = await widget.dataSource.getSport().unwrap();
     var ratings = (await widget.dataSource.getRatings(tab).unwrap()).map((e) => (_settings.algorithm.wrapDbRating(e)));
@@ -626,15 +644,12 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         );
 
       case _MenuEntry.jsonExport:
-        var archive = Archive();
-        for(var tab in activeTabs) {
-          var asList = await _ratingsForExport(tab);
-          var json = _settings.algorithm.ratingsToJson(asList);
-          var jsonString = JsonUtf8Encoder().convert(json);
-          archive.addFile(ArchiveFile("${tab.name.safeFilename()}.json", jsonString.length, jsonString));
-        }
-        var zip = ZipEncoder().encode(archive);
-        HtmlOr.saveBuffer("ratings-${_projectName.safeFilename()}-json.zip", zip);
+        var future = _exportJson();
+        await LoadingDialog.show(
+          context: context,
+          waitOn: future,
+          title: "Exporting ratings...",
+        );
 
       case _MenuEntry.dataErrors:
         var changed = await showDialog<bool>(barrierDismissible: false, context: context, builder: (context) => MemberNumberCorrectionListDialog(
