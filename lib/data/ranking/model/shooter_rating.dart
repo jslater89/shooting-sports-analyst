@@ -462,14 +462,15 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
     ShootingMatch? lastMatch;
     for(var e in ratingEvents) {
       if(e.match != lastMatch) {
-        var division = e.match.shooters.firstWhereOrNull((element) => this.equalsShooter(element))?.division;
-        if(division == null) {
+        var matchEntry = e.match.shooters.firstWhereOrNull((element) => this.equalsShooter(element));
+        var division = matchEntry?.division;
+        if(matchEntry == null || division == null) {
           _log.w("Unable to match division for $this at ${e.match}");
           lastMatch = e.match;
           continue;
         }
         history.add(MatchHistoryEntry(
-          match: e.match, shooter: this, divisionEntered: division,
+          match: e.match, shooter: this, divisionEntered: division, matchEntry: matchEntry,
           ratingChange: changeForEvent(e.match, null) ?? 0,
         ));
         lastMatch = e.match;
@@ -565,6 +566,7 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
 
 class MatchHistoryEntry {
   ShootingMatch match;
+  MatchEntry matchEntry;
   DateTime get date => match.date;
   Division divisionEntered;
   double ratingChange;
@@ -578,6 +580,7 @@ class MatchHistoryEntry {
     required ShooterRating shooter,
     required this.divisionEntered,
     required this.ratingChange,
+    required this.matchEntry,
   }) {
     var scores = match.getScores(shooters: match.filterShooters(filterMode: FilterMode.and, divisions: [divisionEntered], allowReentries: false));
     var score = scores.values.firstWhereOrNull((element) => shooter.equalsShooter(element.shooter));

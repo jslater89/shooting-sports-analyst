@@ -538,7 +538,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         )
       ),
       PopupMenuButton<_MenuEntry>(
-        onSelected: (item) => _handleClick(item),
+        onSelected: (item) => _handleClick(item, context),
         itemBuilder: (context) {
           List<PopupMenuEntry<_MenuEntry>> items = _MenuEntry.values.map((v) =>
             PopupMenuItem(
@@ -626,7 +626,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     return asList;
   }
 
-  Future<void> _handleClick(_MenuEntry item) async {
+  Future<void> _handleClick(_MenuEntry item, BuildContext context) async {
     switch(item) {
       case _MenuEntry.setChangeSince:
         var date = await showDatePicker(context: context, initialDate: _changeSince ?? DateTime.now(), firstDate: DateTime(2015, 1, 1), lastDate: DateTime.now());
