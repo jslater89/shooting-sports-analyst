@@ -20,7 +20,7 @@ var _log = SSALogger("StandardDeduplicator");
 /// conflicts detected in project settings are noted, and only delegating to
 /// subclasses once it is clear that conflicts exist, and that sport-specific
 /// logic will be required to resolve them.
-/// 
+///
 /// Sport-specific logic goes in [detectConflicts].
 abstract class StandardDeduplicator extends ShooterDeduplicator {
 
@@ -35,6 +35,7 @@ abstract class StandardDeduplicator extends ShooterDeduplicator {
   {
     var userMappings = ratingProject.settings.userMemberNumberMappings;
     var autoMappings = ratingProject.automaticNumberMappings;
+    Map<String, List<String>> reverseMappings = {};
 
     await progressCallback?.call(0, 2, "Preparing data");
 
@@ -44,10 +45,12 @@ abstract class StandardDeduplicator extends ShooterDeduplicator {
     for(var mapping in autoMappings) {
       for(var sourceNumber in mapping.sourceNumbers) {
         allMappings[sourceNumber] = mapping.targetNumber;
+        reverseMappings.addToListIfMissing(mapping.targetNumber, sourceNumber);
       }
     }
     for(var mapping in userMappings.entries) {
       allMappings[mapping.key] = mapping.value;
+      reverseMappings.addToListIfMissing(mapping.value, mapping.key);
     }
 
     await progressCallback?.call(1, 2, "Preparing data");
@@ -188,6 +191,54 @@ abstract class StandardDeduplicator extends ShooterDeduplicator {
         // If we condense numbers and end up with a single number, there's no conflict.
         continue;
       }
+
+      // If we have two remaining numbers across all types and they're of different types,
+      // we can briefly make the assumption that they're different people, check for blacklists
+      // between them and all their reverse mappings, and resolve the conflict early if we can.
+      if(conflict.flattenedMemberNumbers.length == 2) {
+        var number1 = conflict.flattenedMemberNumbers.first;
+        var number2 = conflict.flattenedMemberNumbers.last;
+        var type1 = classify(number1);
+        var type2 = classify(number2);
+        if(type1 != type2) {
+          Set<String> identities1 = {number1};
+          Set<String> identities2 = {number2};
+          for(var number in reverseMappings[number1] ?? []) {
+            identities1.add(number);
+          }
+          for(var number in reverseMappings[number2] ?? []) {
+            identities2.add(number);
+          }
+
+          // In plain language, if identity1 or any of the numbers that map to it are blacklisted
+          // to identity2 or any of the numbers that map to it, we know they're different people and
+          // can add an explicit blacklist between the numbers that precipitated the conflict detection,
+          // and short circuit the rest (since we know that we only have two numbers and there won't be
+          // other conflicts).
+          bool shortCircuited = false;
+
+          for(var identity1 in identities1) {
+            for(var identity2 in identities2) {
+              if(blacklist.isBlacklisted(identity1, identity2, bidirectional: true)) {
+                conflict.proposedActions.add(Blacklist(
+                  sourceNumber: number1,
+                  targetNumber: number2,
+                  bidirectional: true,
+                ));
+                conflicts.add(conflict);
+                shortCircuited = true;
+                break;
+              }
+            }
+            if(shortCircuited) break;
+          }
+
+          if(shortCircuited) {
+            continue;
+          }
+        }
+      }
+
 
       // Check if any user mappings apply to the list of ratings, and if they haven't been
       // previously applied. This can happen if we're doing a full recalculation.
@@ -385,28 +436,28 @@ abstract class StandardDeduplicator extends ShooterDeduplicator {
   }
 
   /// Detect conflicts for a given deduplicator name.
-  /// 
+  ///
   /// This will be called for each deduplicator name in the project that has more
   /// than one rating, and whose conflict has not already been resolved on previous
   /// runs (but not yet applied, in the event of full recalculations).
-  /// 
+  ///
   /// [conflict] is the base conflict object, which should be modified in place
   /// and returned if it should be added to the resulting conflict list. If there
   /// is no conflict, return null.
-  /// 
+  ///
   /// [name] is the processed name of the competitor that caused the conflict.
-  /// 
+  ///
   /// [ratings] is the list of ratings that have [name] as their name.
-  /// 
+  ///
   /// [numbers] is a map of member number type to list of member numbers for the given
   /// deduplicator name.
-  /// 
+  ///
   /// [userMappings] is a map of member number to target number for any user-specified
   /// mappings.
-  /// 
+  ///
   /// [allMappings] is a map of member number to target number for all number mappings,
   /// both automatic and user-specified.
-  /// 
+  ///
   /// [blacklist] is a map of member numbers to a list of member numbers. A key in this
   /// map should not be mapped to any of the values in its list.
   DeduplicationCollision? detectConflicts({
@@ -423,13 +474,13 @@ abstract class StandardDeduplicator extends ShooterDeduplicator {
   });
 
   /// If applicable, condense member numbers in the given map.
-  /// 
+  ///
   /// If the sport logic admits multiple equivalent numbers of one type, this condenses
   /// them into a single number. (The archetypal case is USPSA's A/TY/FY associate numbers.)
-  /// 
+  ///
   /// [numbers] is a map of member number types to lists of member numbers. It is safe to
   /// modify in place.
-  /// 
+  ///
   /// Return the condensed map (you can return [numbers] without copying). The default
   /// implementation returns the input map unchanged.
   Map<MemberNumberType, List<String>> condenseMemberNumbers(Map<MemberNumberType, List<String>> numbers) {

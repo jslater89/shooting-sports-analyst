@@ -1118,6 +1118,53 @@ void main() async {
     expect(reason: "preexisting blacklist target number", preexistingBlacklist.targetNumber, equals("FY94000"));
   });
 
+  test("Michael Morgan Ambiguous Mapping 2", () async {
+    // In this test, we know that FY94000 and B96 are the same person, and that A163595 is not.
+    // So, if we see only B96 and A163595, but we have a mapping that tells us FY94000 is B96 and
+    // a blacklist that tells us A163595 != FY94000, we can infer that A163595 != B96.
+    var project = DbRatingProject(
+      name: "Michael Morgan Ambiguous Mapping 2",
+      sportName: uspsaSport.name,
+      automaticNumberMappings: [
+        DbMemberNumberMapping(
+          deduplicatorName: "michaelmorgan",
+          sourceNumbers: ["FY94000"],
+          targetNumber: "B96",
+        )
+      ],
+      settings: RatingProjectSettings(
+        memberNumberMappingBlacklist: {
+          "A163595": ["FY94000"],
+          "FY94000": ["A163595"],
+        },
+        algorithm: MultiplayerPercentEloRater(),
+      )
+    );
+
+    var newRatings = await addMatchToTest(db, project, "michael-morgan-ambiguous-mapping-2");
+    var deduplicator = USPSADeduplicator();
+    var deduplication = await deduplicator.deduplicateShooters(
+      ratingProject: project,
+      newRatings: newRatings,
+      checkDataEntryErrors: true,
+      group: ratingGroup,
+    );
+
+    // We expect a zero-cause result with a proposed blacklist between the two numbers, because
+    // having it in the explicit blacklist makes future deduplication easier.
+    expect(deduplication.isOk(), isTrue);
+    var results = deduplication.unwrap();
+    expect(reason: "number of results", results, hasLength(1));
+    var result = results.first;
+    expect(reason: "number of causes", result.causes, isEmpty);
+    var proposedActions = result.proposedActions;
+    expect(reason: "number of proposed actions", proposedActions, hasLength(1));
+    var proposedBlacklist = proposedActions.firstWhereOrNull((e) => e is Blacklist) as Blacklist;
+    expect(reason: "proposed blacklist", proposedBlacklist, isNotNull);
+    expect(reason: "proposed blacklist source number", proposedBlacklist.sourceNumber, equals("A163595"));
+    expect(reason: "proposed blacklist target number", proposedBlacklist.targetNumber, equals("B96"));
+  });
+
   // #endregion
 }
 
@@ -1361,6 +1408,13 @@ Future<void> setupTestDb(AnalystDatabase db) async {
     matchId: "michael-morgan-ambiguous-mapping",
   );
 
+  var michaelMorganAmbiguousMappingMatch2 = generateMatch(
+    shooters: [competitorMap["A163595"]!, competitorMap["B96"]!],
+    date: DateTime(2024, 6, 21),
+    matchName: "Michael Morgan Ambiguous Mapping 2",
+    matchId: "michael-morgan-ambiguous-mapping-2",
+  );
+
   var futures = [
     db.saveMatch(simpleDataEntryMatch),
     db.saveMatch(simpleBlacklistMatch),
@@ -1391,6 +1445,7 @@ Future<void> setupTestDb(AnalystDatabase db) async {
     db.saveMatch(multipleInternationalStandardNumbersMatch),
     db.saveMatch(markMillerAlreadyAddedAmbiguousMappingMatch),
     db.saveMatch(michaelMorganAmbiguousMappingMatch),
+    db.saveMatch(michaelMorganAmbiguousMappingMatch2),
   ];
   await Future.wait(futures);
 }
