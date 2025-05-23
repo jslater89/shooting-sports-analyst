@@ -546,7 +546,6 @@ class USPSADeduplicator extends StandardDeduplicator {
 
       // If there are uncovered numbers in the conflict, check if they're blacklisted,
       // and add PreexistingBlacklist actions if so.
-      bool addedPreexistingBlacklist = false;
       for(var number in conflict.uncoveredNumbers) {
         for(var target in conflict.flattenedMemberNumbers) {
           if(blacklist.isBlacklisted(number, target, bidirectional: true)) {
@@ -554,7 +553,6 @@ class USPSADeduplicator extends StandardDeduplicator {
               sourceNumber: number,
               targetNumber: target,
             ));
-            addedPreexistingBlacklist = true;
           }
         }
       }

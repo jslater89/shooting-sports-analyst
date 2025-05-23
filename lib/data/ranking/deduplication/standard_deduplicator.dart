@@ -192,48 +192,130 @@ abstract class StandardDeduplicator extends ShooterDeduplicator {
         continue;
       }
 
-      // If we have two remaining numbers across all types and they're of different types,
-      // we can briefly make the assumption that they're different people, check for blacklists
-      // between them and all their reverse mappings, and resolve the conflict early if we can.
-      if(conflict.flattenedMemberNumbers.length == 2) {
-        var number1 = conflict.flattenedMemberNumbers.first;
-        var number2 = conflict.flattenedMemberNumbers.last;
-        var type1 = classify(number1);
-        var type2 = classify(number2);
-        if(type1 != type2) {
-          Set<String> identities1 = {number1};
-          Set<String> identities2 = {number2};
-          for(var number in reverseMappings[number1] ?? []) {
-            identities1.add(number);
+      // Try to sort the numbers into identities: sets of strings that refer to the same person,
+      // according to mappings/reverse mappings.
+      List<Set<String>> identities = [];
+      for(var number in conflict.flattenedMemberNumbers) {
+        bool foundIdentity = false;
+        for(var identity in identities) {
+          // A number belongs to an identity if it is either the source or target of a mapping
+          // that belongs to the identity.
+          if(identity.contains(number)) {
+            // This shouldn't happen, but catch it anyway just in case.
+            foundIdentity = true;
           }
-          for(var number in reverseMappings[number2] ?? []) {
-            identities2.add(number);
+          else if(identity.contains(allMappings[number])) {
+            // If the identity contains the target of number's mapping, number belongs to the identity.
+            identity.add(number);
+            foundIdentity = true;
           }
-
-          // In plain language, if identity1 or any of the numbers that map to it are blacklisted
-          // to identity2 or any of the numbers that map to it, we know they're different people and
-          // can add an explicit blacklist between the numbers that precipitated the conflict detection,
-          // and short circuit the rest (since we know that we only have two numbers and there won't be
-          // other conflicts).
-          bool shortCircuited = false;
-
-          for(var identity1 in identities1) {
-            for(var identity2 in identities2) {
-              if(blacklist.isBlacklisted(identity1, identity2, bidirectional: true)) {
-                conflict.proposedActions.add(Blacklist(
-                  sourceNumber: number1,
-                  targetNumber: number2,
-                  bidirectional: true,
-                ));
-                conflicts.add(conflict);
-                shortCircuited = true;
-                break;
+          else {
+          // If the identity contains the source of number's mapping, number belongs to the identity.
+            var reverse = reverseMappings[number];
+            if(reverse != null) {
+              for(var reverseMapping in reverse) {
+                if(identity.contains(reverseMapping)) {
+                  identity.add(number);
+                  foundIdentity = true;
+                }
               }
             }
-            if(shortCircuited) break;
           }
 
-          if(shortCircuited) {
+          // If we found an identity, we can stop looking.
+          if(foundIdentity) {
+            break;
+          }
+        }
+
+        if(!foundIdentity) {
+          identities.add({number});
+        }
+      }
+
+      // Add known mappings/reverse mappings to the identities.
+      for(var identity in identities) {
+        Set<String> mappedNumbers = {};
+        for(var number in identity) {
+          var mappingTarget = allMappings[number];
+          if(mappingTarget != null) {
+            mappedNumbers.add(mappingTarget);
+          }
+
+          var mappingSources = reverseMappings[number];
+          if(mappingSources != null) {
+            for(var mappingSource in mappingSources) {
+              mappedNumbers.add(mappingSource);
+            }
+          }
+        }
+        identity.addAll(mappedNumbers);
+      }
+
+      // If we have more than one identity, and if at least one number in each identity is blacklisted
+      // to at least one number in each other identity, all numbers in each identity are implicitly
+      // blacklisted to all numbers in every other identity.
+      //
+      // We check for the existence of a rule break rather than satisfaction of the rule for all cases
+      // for ease of logic.
+      if(identities.length > 1) {
+        bool implicitBlacklist = true;
+        identityLoop: for(int i = 0; i < identities.length; i++) {
+          var identity1 = identities[i];
+          for(int j = i + 1; j < identities.length; j++) {
+            var identity2 = identities[j];
+
+            bool atLeastOneBlacklisted = false;
+            numberLoop:for(var n1 in identity1) {
+              for(var n2 in identity2) {
+                if(blacklist.isBlacklisted(n1, n2, bidirectional: true)) {
+                  atLeastOneBlacklisted = true;
+                  break numberLoop;
+                }
+              }
+            }
+            if(!atLeastOneBlacklisted) {
+              implicitBlacklist = false;
+              break identityLoop;
+            }
+          }
+        }
+
+        // If we have an implicit blacklist, we can add it to the conflict and skip the rest of the process.
+        if(implicitBlacklist) {
+          // Add explicit blacklist entries for all implicitly blacklisted numbers.
+          bool addedNewBlacklist = false;
+          for(int i = 0; i < identities.length; i++) {
+            var identity1 = identities[i];
+            for(int j = i + 1; j < identities.length; j++) {
+              var identity2 = identities[j];
+              for(var n1 in identity1) {
+                for(var n2 in identity2) {
+                  if(!blacklist.isBlacklisted(n1, n2, bidirectional: true)) {
+                    blacklist.addToListIfMissing(n1, n2);
+                    blacklist.addToListIfMissing(n2, n1);
+                    conflict.proposedActions.add(Blacklist(
+                      sourceNumber: n1,
+                      targetNumber: n2,
+                      bidirectional: true,
+                    ));
+                    addedNewBlacklist = true;
+                  }
+                }
+              }
+            }
+          }
+
+          // If we didn't propose any actions, then all of the 'implicit' blacklists are
+          // actually already explicit, so we shouldn't add the ImplicitBlacklist cause.
+          if(addedNewBlacklist) {
+            conflict.causes.add(ImplicitBlacklist(
+              deduplicatorName: name,
+              identities: identities,
+            ));
+            // We may be able to remove this later if it proves reliable.
+            conflict.causes.add(ManualReviewRecommended());
+            conflicts.add(conflict);
             continue;
           }
         }

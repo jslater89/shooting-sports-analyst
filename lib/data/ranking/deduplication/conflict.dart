@@ -100,6 +100,25 @@ class ManualReviewRecommended extends ConflictType {
   const ManualReviewRecommended();
 }
 
+/// The deduplicator has detected that the member numbers in this conflict are organized
+/// into several distinct identities, and that at least one number in each identity is
+/// blacklisted to at least one number in each other identity.
+///
+/// This means that all numbers in each identity are implicitly blacklisted to all numbers
+/// in every other identity. The recommended actions list in the main conflict will contain
+/// blacklist entries for those implicitly blacklisted numbers.
+class ImplicitBlacklist extends ConflictType {
+  final String deduplicatorName;
+  final List<Set<String>> identities;
+  int get identityCount => identities.length;
+
+  bool get canResolveAutomatically => true;
+  const ImplicitBlacklist({
+    required this.deduplicatorName,
+    required this.identities,
+  });
+}
+
 /// In multiple-numbers-of-type conflicts, one deduplicator name has
 /// multiple member numbers of the same type ([memberNumberType]).
 ///

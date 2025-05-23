@@ -863,7 +863,8 @@ class IssueDescription extends StatelessWidget {
       MultipleNumbersOfType() => _buildMultipleNumbersOfType(context, sport, issue as MultipleNumbersOfType),
       FixedInSettings() => Text("• Fixed in settings (should never appear)", style: Theme.of(context).textTheme.bodyMedium),
       AmbiguousMapping() => _buildAmbiguousMapping(context, sport, issue as AmbiguousMapping),
-      ManualReviewRecommended() => Text("• Deduplication engine recommends manual review")
+      ManualReviewRecommended() => Text("• Deduplication engine recommends manual review"),
+      ImplicitBlacklist() => _buildImplicitBlacklist(context, sport, issue as ImplicitBlacklist),
     };
   }
 
@@ -885,6 +886,14 @@ class IssueDescription extends StatelessWidget {
     else {
       return Text("• Multiple ${issue.memberNumberType.infixName} numbers: ${issue.memberNumbers.join(", ")}$probablyInvalidString$strdiffString", style: Theme.of(context).textTheme.bodyMedium);
     }
+  }
+
+  Widget _buildImplicitBlacklist(BuildContext context, Sport sport, ImplicitBlacklist issue) {
+    List<String> identities = [];
+    for(var identity in issue.identities) {
+      identities.add("(${identity.join(", ")})");
+    }
+    return Text("• Implicit blacklist between multiple identities: ${identities.join(", ")}", style: Theme.of(context).textTheme.bodyMedium);
   }
 
   Widget _buildAmbiguousMapping(BuildContext context, Sport sport, AmbiguousMapping issue) {
