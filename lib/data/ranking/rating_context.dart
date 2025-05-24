@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'package:flutter/foundation.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
@@ -17,7 +23,7 @@ class RatingContext with ChangeNotifier {
       return false;
     }
     else {
-      return await AnalystDatabase().getRatingProjectById(_projectId!) != null;
+      return (await AnalystDatabase().getRatingProjectById(_projectId!)) != null;
     }
   }
 
