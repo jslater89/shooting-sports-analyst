@@ -42,7 +42,7 @@ class HelpButton extends StatelessWidget {
   const HelpButton({
     super.key,
     required this.helpTopicId,
-    this.tooltip = false,
+    this.tooltip = true,
     this.tooltipText = "Show context-sensitive help",
   });
 

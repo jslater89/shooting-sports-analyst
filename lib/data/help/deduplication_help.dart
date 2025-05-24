@@ -100,7 +100,7 @@ changes if the automatic detection appears correct.
       which helps to distinguish between one person committing typos and two people with the
       same name.
 * Use the edit button in proposed actions to modify the deduplicator's proposed actions
-* Use the swap button (↔️) when editing proposed actions to quickly switch source and target numbers
+* Use the swap button (↔) when editing proposed actions to quickly switch source and target numbers
 * The RESTORE ORIGINAL ACTIONS button will undo any changes to the current duplicate
 * Use the BLACKLIST REMAINING button if you have specified all the necessary actions but there are still uncovered numbers
     * It adds blacklist entries for all remaining uncovered numbers to all other numbers, indicating

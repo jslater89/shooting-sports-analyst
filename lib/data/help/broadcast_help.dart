@@ -23,7 +23,7 @@ in a given match at one time, highlighting new or interesting scores as they hap
 
 The user interface is arranged into two parts: the ticker and the scorecard grid.
 
-## Ticker 
+## Ticker
 The ticker shows information about how soon the scores will update again, along with scrolling
 'headline news' from the match: scores far above or below average, new stage wins,
 and match lead changes. On the top left, the ticker also contains controls to pause,
@@ -42,6 +42,10 @@ scorecard. When the mouse is within a scorecard table, the scroll wheel scrolls 
 You can hold the control key while scrolling to disable scrolling inside a scorecard, and scroll
 the grid instead.
 
+When opening a new project, an 'Add Default Scorecards' button will be displayed in place of
+the scorecard grid. This will add one scorecard per division, using average stage finish
+scoring.
+
 ## Scorecards
 Scorecards show match scores in tabular format, with one row per shooter, one column for
 match score, and one column for each stage. Each scorecard calculates a separate set of
@@ -49,7 +53,10 @@ match scores, so that the user can configure scorecards for different divisions,
 and classifications to be displayed side by side. Hovering over some text elements in a scorecard
 cell will, depending on the current sport, show a tooltip with more information about the score:
 when viewing a USPSA match, for instance, time and hits when hovering over the hit factor, and
-raw stage points when hovering over the stage percentage.
+raw stage points when hovering over the stage percentage. The winner's percentage is shown as
+a margin to second place, rather than '100%'—if second place is 96.25%, for instance, the winner's
+score will be displayed as '+3.75%', so that it is possible to see the quality of a win at a
+glance.
 
 In the scorecard header, the name is shown alongside the number of scores calculated and rows
 displayed below. On the right are configuration buttons. The four arrows button moves the scorecard

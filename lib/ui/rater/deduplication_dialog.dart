@@ -26,7 +26,6 @@ import 'package:shooting_sports_analyst/ui/widget/dialog/deduplication/data_entr
 import 'package:shooting_sports_analyst/ui/widget/dialog/deduplication/mapping.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/maybe_tooltip.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 var _log = SSALogger("DeduplicationDialog");
 

@@ -34,17 +34,13 @@ once, but I will attempt to keep it up to date as the alpha process progresses.
 Among others, the following issues are known:
 
 * Category filters are not yet supported in the rating view screen.
-* Repeatedly migrating old rating projects with the same name override yields multiple
-  projects with the same name.
-* Member number mappings, data entry fixes, and blacklist entries migrated from old
-  rating projects may not work as expected.
 * Match score viewing for IDPA and PCSL may have some flaws in some cases.
 
 Please report other issues via [Discord](https://discord.gg/rqHh7PVMNA) or
 [GitHub](https://github.com/jslater89/shooting-sports-analyst/issues).
 
 ## This Help System
-e
+
 Instead of writing documentation in various READMEs and blog posts, I decided to build
 a help system directly into the application. The index to the left lists all available
 topics, and where relevant help topics exist, 'help' icons in the application will link

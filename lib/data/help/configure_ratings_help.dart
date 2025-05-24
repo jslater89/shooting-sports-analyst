@@ -24,6 +24,10 @@ The ratings configuration page allows you to set up how ratings are calculated a
 Tap the 'Advance' button at the top of the page to proceed to the ratings view. If the application detects that it is
 necessary, you will be prompted to perform a full recalculation.
 
+The 'Rollback' button at the top of the page allows you to roll the project back to the state it was in at a certain
+date, or after a certain match. This is useful to clear changes from a partial match, or to roll back to a date prior
+to a newly added match, if that match occurs before others in the data and cannot be appended.
+
 ## Projects
 
 A **rating project** is a collection of rating data stored in the database. Shooting Sports Analyst supports an arbitrary

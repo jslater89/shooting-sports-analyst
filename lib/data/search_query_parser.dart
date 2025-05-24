@@ -50,14 +50,29 @@ class SearchQueryElement {
   bool? dnf;
 
   bool matchesShooter(MatchEntry s) {
-    if(dq != null && !s.dq) return false;
+    if(dq != null) {
+      if(dq == true) {
+        if(!s.dq) return false;
+      }
+      else if(dq == false) {
+        if(s.dq) return false;
+      }
+    }
 
     if(classification != null && s.classification != classification) return false;
     if(division != null && s.division != division) return false;
     if(powerFactor != null && s.powerFactor != powerFactor) return false;
 
     // Elsewhere in the code, we allow 1 DNF to still count, for whatever reason
-    if(dnf != null && s.scores.values.where((s) => s.dnf).length <= 1) return false;
+    if(dnf != null) {
+      var isMatchDnf = s.scores.values.where((s) => s.dnf).length > 1;
+      if(dnf == true) {
+        if(!isMatchDnf) return false;
+      }
+      else if(dnf == false) {
+        if(isMatchDnf) return false;
+      }
+    }
 
     if(name != null && !s.getName().toLowerCase().startsWith(name!) && !s.lastName.toLowerCase().startsWith(name!)) return false;
 
@@ -90,7 +105,7 @@ List<SearchQueryElement>? parseQuery(Sport sport, String query) {
 
   var replacements = _replaceQuotedStrings(query);
   // Split the string including replaced literals
-  List<String> groups = replacements.modifiedString.split("or");
+  List<String> groups = replacements.modifiedString.split(" or ");
 
   // After splitting by 'or', replace the literal000,001,... placeholders
   // with their original values.
@@ -136,6 +151,8 @@ SearchQueryElement? _parseGroup(SportPrefixMatcher matcher, String group) {
   for(String item in items) {
     item = item.trim();
 
+    var notDq = item.toLowerCase() == "!dq";
+    var notDnf = item.toLowerCase() == "!dnf";
     var dq = item.toLowerCase() == "dq";
     var dnf = item.toLowerCase() == "dnf";
     var pf = _matchPowerFactor(matcher, item);
@@ -163,6 +180,12 @@ SearchQueryElement? _parseGroup(SportPrefixMatcher matcher, String group) {
     }
     else if(dnf) {
       element.dnf = true;
+    }
+    else if(notDq) {
+      element.dq = false;
+    }
+    else if(notDnf) {
+      element.dnf = false;
     }
     else {
       _log.d("Bad item: $item");

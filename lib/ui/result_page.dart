@@ -13,6 +13,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/help/results_help.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/memory_cached_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/search_query_parser.dart';
@@ -32,7 +33,7 @@ import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/route/broadcast_booth_page.dart';
 import 'package:shooting_sports_analyst/route/compare_shooter_results.dart';
 import 'package:shooting_sports_analyst/ui/rater/stacked_distribution_dialog.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/about_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/score_list_settings_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/stage_stats_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/filter_controls.dart';
@@ -473,9 +474,8 @@ class _ResultPageState extends State<ResultPage> {
           builder: (context) => BroadcastBoothPage(match: _currentMatch),
         ));
         break;
-      case _MenuEntry.about:
-        var size = MediaQuery.of(context).size;
-        showAbout(_innerContext, size);
+      case _MenuEntry.help:
+        HelpDialog.show(context, initialTopic: resultsHelpId);
         break;
       case _MenuEntry.plotDistribution:
         showDialog(context: context, builder: (context) => ScoresDistributionDialog(
@@ -932,13 +932,13 @@ enum FantasyPointsMode {
 enum _MenuEntry {
   refresh,
   broadcastBooth,
-  about,
+  help,
   plotDistribution;
 
   String get label {
     switch (this) {
-      case _MenuEntry.about:
-        return "About";
+      case _MenuEntry.help:
+        return "Help";
       case _MenuEntry.broadcastBooth:
         return "Broadcast mode";
       case _MenuEntry.plotDistribution:

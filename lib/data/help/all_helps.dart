@@ -18,6 +18,7 @@ import 'package:shooting_sports_analyst/data/help/openskill_help.dart';
 import 'package:shooting_sports_analyst/data/help/points_help.dart';
 import 'package:shooting_sports_analyst/data/help/rating_event_help.dart';
 import 'package:shooting_sports_analyst/data/help/rating_reports_help.dart';
+import 'package:shooting_sports_analyst/data/help/results_help.dart';
 import 'package:shooting_sports_analyst/data/help/scalers_and_distributions_help.dart';
 import 'package:shooting_sports_analyst/data/help/uspsa_deduplicator_help.dart';
 import 'package:shooting_sports_analyst/data/help/welcome_80_help.dart';
@@ -42,4 +43,5 @@ void registerHelpTopics() {
   r.register(helpMarblesConfiguration);
   r.register(helpScalersAndDistributions);
   r.register(helpIcoreDeduplicator);
+  r.register(helpResults);
 }
