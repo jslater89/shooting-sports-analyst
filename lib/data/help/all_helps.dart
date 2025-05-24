@@ -5,6 +5,7 @@
  */
 
 import 'package:shooting_sports_analyst/data/help/about_help.dart';
+import 'package:shooting_sports_analyst/data/help/app_settings_help.dart';
 import 'package:shooting_sports_analyst/data/help/broadcast_help.dart';
 import 'package:shooting_sports_analyst/data/help/configure_ratings_help.dart';
 import 'package:shooting_sports_analyst/data/help/deduplication_help.dart';
@@ -44,4 +45,5 @@ void registerHelpTopics() {
   r.register(helpScalersAndDistributions);
   r.register(helpIcoreDeduplicator);
   r.register(helpResults);
+  r.register(helpAppSettings);
 }
