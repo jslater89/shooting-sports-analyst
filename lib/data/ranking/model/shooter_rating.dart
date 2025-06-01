@@ -458,10 +458,12 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
 
   List<MatchHistoryEntry> careerHistory() {
     List<MatchHistoryEntry> history = [];
+    Set<String> visitedMatchSourceIds = {};
 
     ShootingMatch? lastMatch;
     for(var e in ratingEvents) {
-      if(e.match != lastMatch) {
+      if(e.match != lastMatch && !visitedMatchSourceIds.contains(e.match.sourceIds.first)) {
+        visitedMatchSourceIds.add(e.match.sourceIds.first);
         var matchEntry = e.match.shooters.firstWhereOrNull((element) => this.equalsShooter(element));
         var division = matchEntry?.division;
         if(matchEntry == null || division == null) {

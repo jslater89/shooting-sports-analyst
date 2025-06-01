@@ -16,13 +16,14 @@ import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart'
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
-import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/standardized_maximum_scaler.dart';
+import 'package:shooting_sports_analyst/data/source/classifiers/classifier_import.dart';
+import 'package:shooting_sports_analyst/data/source/classifiers/icore_export_converter.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/icore.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
-import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -42,6 +43,9 @@ Future<void> oneoffDbAnalyses(AnalystDatabase db) async {
 
   // var project = (await db.getRatingProjectByName("L2s Main"))!;
   //await calculateMatchHeat(db, project);
+
+  // await _analyzeIcoreDump(File("/home/jay/Downloads/masterScores.json"));
+  // await _importIcoreDump(File("/home/jay/Downloads/masterScores.json"));
 }
 
 Future<void> _howGoodIsTomCastro(AnalystDatabase db) async {
@@ -558,4 +562,69 @@ Future<RatingScalerInfo> _calculateGroupInfo(AnalystDatabase db, DbRatingProject
     ratingMean: 0,
     ratingStdDev: 1,
   );
+}
+
+Future<void> _analyzeIcoreDump(File file) async {
+  var masterScores = IcoreClassifierExport.fromFile(file);
+  var analystScores = masterScores.toAnalystScores();
+
+  Map<DateTime, Map<String, List<ClassifierScore>>> scoresByDateDivision = {};
+  for(var score in analystScores) {
+    var monthDate = DateTime(score.date.year, score.date.month, 1);
+    var monthMap = scoresByDateDivision[monthDate] ?? {};
+    monthMap.addToList(score.division, score);
+    scoresByDateDivision[monthDate] = monthMap;
+  }
+
+  for(var date in scoresByDateDivision.keys.sorted((a, b) => b.compareTo(a))) {
+    var monthMap = scoresByDateDivision[date]!;
+    print("${programmerYmdFormat.format(date)}:");
+    for(var division in monthMap.keys.sorted((a, b) => a.compareTo(b))) {
+      var scores = monthMap[division]!;
+      Map<String, List<ClassifierScore>> scoresByClassifier = {};
+      for(var score in scores) {
+        scoresByClassifier.addToList(score.classifierCode, score);
+      }
+      var withEnoughScores = scoresByClassifier.values.where((e) => e.length >= 4);
+      print("\t${division}: ${scores.length} (${withEnoughScores.length} eligible)");
+    }
+  }
+}
+
+Future<void> _importIcoreDump(File file) async {
+  var masterScores = IcoreClassifierExport.fromFile(file);
+  var analystScores = masterScores.toAnalystScores();
+  var db = AnalystDatabase();
+
+  await db.isar.writeTxn(() async {
+    int deleted = await db.isar.dbShootingMatchs.filter()
+      .eventNameStartsWith("ICORE Classifier Analysis")
+      .deleteAll();
+    _log.i("Deleted ${deleted} matches");
+  });
+
+  var importer = ClassifierImporter(
+    sport: icoreSport,
+    duration: PseudoMatchDuration.month,
+    minimumScoreCount: 4,
+    matchNamePrefix: "ICORE Classifier Analysis",
+  );
+  var matchesResult = importer.import(analystScores);
+  if(matchesResult.isErr()) {
+    _log.w("Error importing scores: ${matchesResult.unwrapErr()}");
+    return;
+  }
+  var matches = matchesResult.unwrap();
+  _log.i("Imported ${matches.length} matches");
+  int dbInserts = 0;
+  for(var match in matches) {
+    var saveResult = await db.saveMatch(match);
+    if(saveResult.isOk()) {
+      dbInserts++;
+    }
+    else {
+      _log.w("Error saving match: ${saveResult.unwrapErr()}");
+    }
+  }
+  _log.i("Saved ${dbInserts} matches to DB");
 }

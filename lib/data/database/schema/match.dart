@@ -133,10 +133,10 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
     if(divisionsAppearing.length > 1) {
       // For each division, filter shooters and calculate match scores
       for(var division in divisionsAppearing) {
-        var shooters = match.filterShooters(divisions: [division]);
+        var shooters = match.filterShooters(divisions: [division], filterMode: FilterMode.or);
 
         try {
-        var scores = match.getScores(shooters: shooters);
+          var scores = match.getScores(shooters: shooters);
           for(var entry in scores.entries) {
               shooterScores[entry.key] = entry.value;
           }
