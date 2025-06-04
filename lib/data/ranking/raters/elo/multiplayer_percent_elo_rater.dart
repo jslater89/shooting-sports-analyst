@@ -485,7 +485,8 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     required _ScoreParameters params,
     bool isDnf = false,
   }) {
-    bool matchInProgress = match?.inProgress ?? false;
+    // TODO: put this in project settings eventually.
+    bool matchInProgress = false;
 
     double actualPercent;
     if(_disableMatchBlend(matchInProgress, score.shooter.dq, isDnf)) {

@@ -99,7 +99,11 @@ class ShootingMatch implements SourceIdsProvider {
   List<int> get sortedSquadNumbers => squadNumbers.toList()..sort();
 
   /// Whether a match is in progress for score display purposes.
-  bool get inProgress => DateTime.now().isBefore(date.add(Duration(days: 7)));
+  ///
+  /// 6 days is as long as the longest matches in the US—staff Wed-Thu, main match
+  /// Fri-Sun.
+  bool get inProgress => DateTime.now().isBefore(date.add(Duration(days: 6)));
+
   int get maxPoints => stages.map((s) => s.maxPoints).sum;
 
   ShootingMatch({
