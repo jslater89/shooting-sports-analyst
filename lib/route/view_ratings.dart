@@ -40,6 +40,7 @@ import 'package:shooting_sports_analyst/ui/rater/rating_filter_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/reports/report_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/reports/report_view.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
+import 'package:shooting_sports_analyst/ui/source/credentials_manager.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/associate_registrations.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/loading_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_pointer_chooser_dialog.dart';
@@ -722,20 +723,39 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     // TODO: pass in cached info if exists
 
     var registrationResult = await getRegistrations(_sport, url, divisions, options);
-    if(registrationResult == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Unable to retrieve registrations"))
-      );
+    if(registrationResult.isErr()) {
+      if(registrationResult.unwrapErr() == RegistrationError.noCredentials) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("No credentials found"),
+            action: SnackBarAction(
+              label: "SET CREDENTIALS",
+              onPressed: () {
+                showDialog(context: context, builder: (context) {
+                  return SourceCredentialsManager();
+                });
+              },
+            ),
+          )
+        );
+      }
+      else {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Unable to retrieve registrations"))
+        );
+      }
       return;
     }
 
-    shooters.addAll(registrationResult.registrations.values);
+    var registrationContainer = registrationResult.unwrap();
 
-    if(registrationResult.unmatchedShooters.isNotEmpty) {
+    shooters.addAll(registrationContainer.registrations.values);
+
+    if(registrationContainer.unmatchedShooters.isNotEmpty) {
       var newRegistrations = await showDialog<List<ShooterRating>>(context: context, builder: (context) {
         return AssociateRegistrationsDialog(
-            registrations: registrationResult,
-            possibleMappings: options.where((element) => !registrationResult.registrations.values.contains(element)).toList());
+            registrations: registrationContainer,
+            possibleMappings: options.where((element) => !registrationContainer.registrations.values.contains(element)).toList());
       }, barrierDismissible: false);
 
       if(newRegistrations != null) {

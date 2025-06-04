@@ -22,7 +22,7 @@ var _log = SSALogger("AssocRegistrationsDialog");
 class AssociateRegistrationsDialog extends StatefulWidget {
   const AssociateRegistrationsDialog({Key? key, required this.registrations, required this.possibleMappings}) : super(key: key);
 
-  final RegistrationResult registrations;
+  final RegistrationContainer registrations;
   final List<ShooterRating> possibleMappings;
 
   @override

@@ -13,16 +13,34 @@ import 'package:shooting_sports_analyst/data/source/practiscore_report.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 var _log = SSALogger("RegistrationParser");
 
-class RegistrationResult {
+typedef RegistrationResult = Result<RegistrationContainer, ResultErr>;
+
+enum RegistrationError implements ResultErr {
+  badUrl,
+  noCredentials,
+  noMatchId,
+  networkError;
+
+  @override
+  String get message => switch(this) {
+    badUrl => "Bad URL",
+    noCredentials => "No credentials",
+    noMatchId => "No match ID",
+    networkError => "Network error",
+  };
+}
+
+class RegistrationContainer {
   final String name;
   final String matchId;
   final Map<Registration, ShooterRating> registrations;
   final List<Registration> unmatchedShooters;
 
-  RegistrationResult(
+  RegistrationContainer(
     this.name,
     this.matchId,
     this.registrations,
@@ -53,16 +71,16 @@ class Registration {
   int get hashCode => name.hashCode + division.hashCode + classification.hashCode;
 }
 
-Future<RegistrationResult?> getRegistrations(Sport sport, String url, List<Division> divisions, List<ShooterRating> knownShooters) async {
+Future<RegistrationResult> getRegistrations(Sport sport, String url, List<Division> divisions, List<ShooterRating> knownShooters) async {
   if(!url.endsWith("squadding")) {
     _log.i("Wrong URL");
-    return null;
+    return RegistrationResult.err(RegistrationError.badUrl);
   }
 
   var authenticated = await PractiscoreHitFactorReportParser.authenticate();
   if(!authenticated) {
     _log.e("No PS credentials available");
-    return null;
+    return RegistrationResult.err(RegistrationError.noCredentials);
   }
 
   // Urls look like [https://]practiscore.com/match-id/[register|squadding[/printhtml]]
@@ -89,7 +107,7 @@ Future<RegistrationResult?> getRegistrations(Sport sport, String url, List<Divis
     });
     if(response.statusCode < 400) {
       var responseHtml = response.body;
-      return _parseRegistrations(sport, matchId, responseHtml, divisions, knownShooters);
+      return RegistrationResult.ok(_parseRegistrations(sport, matchId, responseHtml, divisions, knownShooters));
     }
     else {
       _log.e("Failed to get registration URL: $response.statusCode: ${response.body}");
@@ -97,10 +115,10 @@ Future<RegistrationResult?> getRegistrations(Sport sport, String url, List<Divis
   } catch(e, st) {
     _log.e("Failed to get registration", error: e, stackTrace: st);
   }
-  return null;
+  return RegistrationResult.err(RegistrationError.networkError);
 }
 
-RegistrationResult _parseRegistrations(Sport sport, String matchId, String registrationHtml, List<Division> divisions, List<ShooterRating> knownShooters) {
+RegistrationContainer _parseRegistrations(Sport sport, String matchId, String registrationHtml, List<Division> divisions, List<ShooterRating> knownShooters) {
   var ratings = <Registration, ShooterRating>{};
   var unmatched = <Registration>[];
 
@@ -144,7 +162,7 @@ RegistrationResult _parseRegistrations(Sport sport, String matchId, String regis
     }
   }
 
-  return RegistrationResult(matchName, matchId, ratings, unmatched);
+  return RegistrationContainer(matchName, matchId, ratings, unmatched);
 }
 
 String _processRegistrationName(String name) {
