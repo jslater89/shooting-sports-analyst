@@ -9,7 +9,7 @@ import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
 
 class UrlEntryDialog extends StatefulWidget {
-  const UrlEntryDialog({Key? key, this.hintText, this.sources, this.title, this.descriptionText, this.validator}) : super(key: key);
+  const UrlEntryDialog({Key? key, this.hintText, this.sources, this.title, this.descriptionText, this.validator, this.showCacheCheckbox, this.initialCacheValue}) : super(key: key);
 
   /// The title for the URL entry dialog.
   final String? title;
@@ -20,7 +20,15 @@ class UrlEntryDialog extends StatefulWidget {
   /// If present, show a dropdown list of match sources below the URL entry
   /// dialog, and return a tuple of (MatchSource, String?) instead of a string.
   final List<MatchSource>? sources;
+  /// A validator function that returns an error message if the URL is invalid
+  /// or null if the URL is valid.
   final String? Function(String)? validator;
+  /// If true, show a checkbox for the user to indicate whether the caller
+  /// is permitted to use cached data, if available. If set, return a tuple of
+  /// (bool, String?) instead of a string. Incompatible with [sources].
+  final bool? showCacheCheckbox;
+  /// If non-null, the initial value of the cache checkbox.
+  final bool? initialCacheValue;
 
   @override
   State<UrlEntryDialog> createState() => _UrlEntryDialogState();
@@ -31,12 +39,16 @@ class _UrlEntryDialogState extends State<UrlEntryDialog> {
 
   String? errorText;
   MatchSource? source;
+  bool allowCached = true;
 
   @override
   void initState() {
     super.initState();
     if(widget.sources != null) {
       source = widget.sources!.first;
+    }
+    if(widget.initialCacheValue != null) {
+      allowCached = widget.initialCacheValue!;
     }
   }
 
@@ -80,6 +92,17 @@ class _UrlEntryDialogState extends State<UrlEntryDialog> {
                   });
                 },
               )
+            else if(widget.showCacheCheckbox == true)
+              CheckboxListTile(
+                title: Text("Use cached data"),
+                controlAffinity: ListTileControlAffinity.leading,
+                value: allowCached,
+                onChanged: (v) {
+                  setState(() {
+                    allowCached = v ?? true;
+                  });
+                },
+              )
           ],
         ),
       ),
@@ -105,11 +128,14 @@ class _UrlEntryDialogState extends State<UrlEntryDialog> {
   }
 
   void submit(String url) {
-    if(widget.sources == null) {
-      Navigator.of(context).pop(url);
+    if(widget.sources != null) {
+      Navigator.of(context).pop((source, url));
+    }
+    else if(widget.showCacheCheckbox == true) {
+      Navigator.of(context).pop((allowCached, url));
     }
     else {
-      Navigator.of(context).pop((source, url));
+      Navigator.of(context).pop(url);
     }
   }
 }

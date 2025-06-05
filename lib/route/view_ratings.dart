@@ -691,10 +691,12 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     List<ShooterRating>? shooters = [];
     var divisions = tab.divisions;
 
-    var url = await showDialog<String>(context: context, builder: (context) {
+    var result = await showDialog<(bool, String?)>(context: context, builder: (context) {
       return UrlEntryDialog(
         hintText: "https://practiscore.com/match-name/squadding",
-        descriptionText: "Enter a link to the match registration or squadding page.",
+        descriptionText: "Enter a link to the match registration or squadding page.\nUncheck 'used cached data' to force a fresh download.",
+        showCacheCheckbox: true,
+        initialCacheValue: true,
         validator: (url) {
           if(url.endsWith("/register") || url.endsWith("/squadding") || url.endsWith("/printhtml") || (url.endsWith("/") && !url.contains("squadding"))) {
             return null;
@@ -705,6 +707,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         }
       );
     });
+
+    var (allowCached, url) = result ?? (true, null);
 
     if(url == null) {
       return;
@@ -720,9 +724,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       url = url.replaceFirst("/printhtml", "");
     }
 
-    // TODO: pass in cached info if exists
-
-    var registrationResult = await getRegistrations(_sport, url, divisions, options);
+    var registrationResult = await getRegistrations(_sport, url, divisions, options, allowCached: allowCached);
     if(registrationResult.isErr()) {
       if(registrationResult.unwrapErr() == RegistrationError.noCredentials) {
         ScaffoldMessenger.of(context).showSnackBar(

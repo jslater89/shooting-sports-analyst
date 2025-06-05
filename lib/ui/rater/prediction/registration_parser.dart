@@ -7,6 +7,7 @@
 import 'package:collection/collection.dart';
 import 'package:cookie_store/cookie_store.dart';
 import 'package:html_unescape/html_unescape_small.dart';
+import 'package:shooting_sports_analyst/data/match_cache/registration_cache.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:http/http.dart' as http;
 import 'package:shooting_sports_analyst/data/source/practiscore_report.dart';
@@ -71,7 +72,7 @@ class Registration {
   int get hashCode => name.hashCode + division.hashCode + classification.hashCode;
 }
 
-Future<RegistrationResult> getRegistrations(Sport sport, String url, List<Division> divisions, List<ShooterRating> knownShooters) async {
+Future<RegistrationResult> getRegistrations(Sport sport, String url, List<Division> divisions, List<ShooterRating> knownShooters, {bool allowCached = true}) async {
   if(!url.endsWith("squadding")) {
     _log.i("Wrong URL");
     return RegistrationResult.err(RegistrationError.badUrl);
@@ -100,17 +101,29 @@ Future<RegistrationResult> getRegistrations(Sport sport, String url, List<Divisi
     _log.w("No match ID found in $url");
   }
 
+  if(allowCached) {
+    var cached = await RegistrationCache().get(url);
+    if(cached != null && cached.isNotEmpty) {
+      _log.i("Using cached registration for $url");
+      return RegistrationResult.ok(_parseRegistrations(sport, matchId, cached, divisions, knownShooters));
+    }
+  }
   try {
-    var cookies = practiscoreCookies.getCookiesForRequest("practiscore.com", "/");
-    var response = await http.get(Uri.parse(url), headers: {
-      "Cookie": CookieStore.buildCookieHeader(cookies)
+    var uri = Uri.parse(url);
+    var cookies = practiscoreCookies.getCookiesForRequest("practiscore.com", uri.path);
+    var response = await http.get(uri, headers: {
+      "Cookie": CookieStore.buildCookieHeader(cookies),
     });
     if(response.statusCode < 400) {
       var responseHtml = response.body;
+
+      // Cache regardless of allowCached, so that new data gets
+      // cached.
+      RegistrationCache().put(url, responseHtml);
       return RegistrationResult.ok(_parseRegistrations(sport, matchId, responseHtml, divisions, knownShooters));
     }
     else {
-      _log.e("Failed to get registration URL: $response.statusCode: ${response.body}");
+      _log.e("Failed to get registration URL: ${response.statusCode}: ${response.body}");
     }
   } catch(e, st) {
     _log.e("Failed to get registration", error: e, stackTrace: st);

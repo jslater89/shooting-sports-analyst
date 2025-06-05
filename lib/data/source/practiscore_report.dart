@@ -368,7 +368,11 @@ class PractiscoreHitFactorReportParser extends MatchSource {
       // b) are expired, we'll just re-authenticate.
       bool expired = false;
       for(var cookie in cookies) {
-        if(cookie.expiryTime != null && cookie.expiryTime!.isBefore(DateTime.now())) {
+        if(cookie.expiryTime != null
+            && cookie.expiryTime!.isBefore(DateTime.now())
+            && cookie.expiryTime!.isAfter(DateTime(1970, 1, 1))
+          ) {
+          _log.d("Cookie ${cookie.name} expired at ${cookie.expiryTime}");
           expired = true;
         }
       }
@@ -377,7 +381,7 @@ class PractiscoreHitFactorReportParser extends MatchSource {
         hasValidCredentials = true;
       }
       else {
-        _log.i("Saved cookie is expired, re-authenticating");
+        _log.i("At least one cookie expired, re-authenticating");
       }
     }
     if(!hasValidCredentials) {
