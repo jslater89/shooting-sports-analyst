@@ -78,7 +78,7 @@ class SerializedConfig {
   @JsonKey(defaultValue: true)
   bool playDeduplicationAlert;
 
-  @JsonKey(defaultValue: null)
+  @JsonKey(defaultValue: null, includeIfNull: false)
   int? ratingsContextProjectId;
 
   factory SerializedConfig.fromToml(Map<String, dynamic> json) => _$SerializedConfigFromJson(json);
