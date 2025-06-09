@@ -328,7 +328,12 @@ class ShootingMatch implements SourceIdsProvider {
 }
 
 class MatchStage {
+  /// A unique-per-match int identifier for this stage.
+  ///
+  /// Note that PractiScore does not enforce per-match uniqueness on this number.
   int stageId;
+
+  /// The name of this stage.
   String name;
 
   /// The minimum number of scoring events required to
