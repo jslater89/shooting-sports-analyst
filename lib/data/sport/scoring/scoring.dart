@@ -848,6 +848,10 @@ extension Sorting on List<RelativeMatchScore> {
         else if(a.total.finalTime > 0 && b.total.finalTime == 0) return -1;
         else if(a.total.finalTime == 0 && b.total.finalTime > 0) return 1;
 
+        // In time sorting, DNFs should be at the bottom.
+        if(a.isDnf && !b.isDnf) return 1;
+        if(b.isDnf && !a.isDnf) return -1;
+
         return a.total.finalTime.compareTo(b.total.finalTime);
       });
     }
