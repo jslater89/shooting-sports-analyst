@@ -575,7 +575,9 @@ class MatchHistoryEntry {
   late int place;
   late int competitors;
   late double finishRatio;
+  double? victoryRatio;
   String get percentFinish => finishRatio.asPercentage();
+  String? get percentVictory => victoryRatio != null ? "+${victoryRatio?.asPercentage()}" : null;
 
   MatchHistoryEntry({
     required this.match,
@@ -589,6 +591,7 @@ class MatchHistoryEntry {
 
     this.place = score!.place;
     this.finishRatio = score.ratio;
+    this.victoryRatio = score.ratioMargin;
     this.competitors = scores.length;
   }
 

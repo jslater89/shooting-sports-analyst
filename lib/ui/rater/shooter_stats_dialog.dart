@@ -183,6 +183,13 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     }
 
     for(var entry in entries) {
+      Text textWidget;
+      if(entry.percentVictory != null) {
+        textWidget = Text(entry.percentVictory!, style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.bold), textAlign: TextAlign.end);
+      }
+      else {
+        textWidget = Text(entry.percentFinish, style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end);
+      }
       widgets.add(ClickableLink(
         onTap: () {
           _launchScoreView(entry.divisionEntered, entry.match);
@@ -199,7 +206,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
               ),
               Expanded(flex: 1, child: Text("${entry.place}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
               Expanded(flex: 1, child: Text("${entry.competitors}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
-              Expanded(flex: 1, child: Text(entry.percentFinish, style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end)),
+              Expanded(flex: 1, child: textWidget),
               Expanded(flex: 1, child: Text("${entry.ratingChange.toStringAsFixed(1)}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end))
             ],
           ),
