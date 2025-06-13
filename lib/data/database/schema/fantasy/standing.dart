@@ -119,6 +119,7 @@ class LeagueStanding {
         await month.load();
       }
       return month.value?.allPlayRosters.firstWhereOrNull((roster) => roster.teamId == teamId);
+      // TODO: handle H2H-only leagues
     }
     return null;
   }

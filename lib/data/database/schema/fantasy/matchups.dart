@@ -21,6 +21,20 @@ class Matchup {
   final homeRoster = IsarLink<MonthlyRoster>();
   final awayRoster = IsarLink<MonthlyRoster>();
 
+  Future<MonthlyRoster> getHomeRoster() async {
+    if(!homeRoster.isLoaded) {
+      await homeRoster.load();
+    }
+    return homeRoster.value!;
+  }
+
+  Future<MonthlyRoster> getAwayRoster() async {
+    if(!awayRoster.isLoaded) {
+      await awayRoster.load();
+    }
+    return awayRoster.value!;
+  }
+
   bool? homeWins;
   double? marginOfVictory;
 

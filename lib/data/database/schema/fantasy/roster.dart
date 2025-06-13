@@ -5,6 +5,7 @@
  */
 
 import 'package:isar/isar.dart';
+import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/league.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/matchups.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/player.dart';
@@ -45,11 +46,34 @@ class MonthlyRoster {
     return now.isAfter(leagueMonth.startDate) || now.isAtSameMomentAs(leagueMonth.startDate);
   }
 
+  Future<Team> getTeam() async {
+    if(!team.isLoaded) {
+      await team.load();
+    }
+    return team.value!;
+  }
+
   Future<LeagueMonth> getLeagueMonth() async {
     if(!month.isLoaded) {
       await month.load();
     }
     return month.value!;
+  }
+
+  Future<List<RosterAssignment>> getAssignments() async {
+    if(!assignments.isLoaded) {
+      await assignments.load();
+    }
+    return assignments.toList();
+  }
+
+  Future<List<FantasyPlayer>> getPlayers() async {
+    var assignments = await getAssignments();
+    var players = <FantasyPlayer>[];
+    for(var assignment in assignments) {
+      players.add(await assignment.getPlayer());
+    }
+    return players;
   }
 
   Future<LeagueSeason> getLeagueSeason() async {
@@ -74,7 +98,9 @@ class MonthlyRoster {
 
   /// Get the player performance for a slot by index.
   Future<PlayerMonthlyPerformance?> getSlotPerformance(int index) async {
-
+    var slotScore = getSlotScoreByIndex(index);
+    var performance = await PlayerMonthlyPerformance.getByEntityIds(playerId: slotScore.playerId, monthId: monthId);
+    return performance;
   }
 
   /// Get the score for a slot by slot type and index.
@@ -119,6 +145,13 @@ class RosterAssignment {
   int teamId;
   int slotId;
   int? monthId;
+
+  Future<FantasyPlayer> getPlayer() async {
+    if(!player.isLoaded) {
+      await player.load();
+    }
+    return player.value!;
+  }
 
   /// Create a roster assignment from raw IDs.
   ///

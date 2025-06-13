@@ -13,6 +13,7 @@ import 'package:shooting_sports_analyst/data/database/schema/fantasy/league.dart
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/matchups.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/player.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/roster.dart';
+import 'package:shooting_sports_analyst/data/database/schema/fantasy/standing.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/team.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
@@ -81,6 +82,8 @@ class AnalystDatabase {
         // Fantasy-related collections
         LeagueSchema,
         FantasyRosterSlotTypeSchema,
+        RosterSlotSchema,
+        LeagueStandingSchema,
         LeagueSeasonSchema,
         LeagueMonthSchema,
         TeamSchema,

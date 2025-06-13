@@ -13,22 +13,72 @@ import 'package:shooting_sports_analyst/data/database/schema/fantasy/team.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/fantasy_scoring_calculator.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 part 'player.g.dart';
 
+final _log = SSALogger("FantasyPlayer");
+
 @collection
-class FantasyPlayer {
+class FantasyPlayer with DbSportEntity, DbDivisionEntity {
+  String sportName = "";
+  String divisionName = "";
+
   Id id = Isar.autoIncrement;
+
+  /// The member number of the player.
+  ///
+  /// Used to identify the player in the event
+  /// of a recalculation of the league's project
+  /// which results in the target rating being
+  /// deleted and recreated.
+  String memberNumber = "";
 
   /// The rating that this player is based upon.
   final rating = IsarLink<DbShooterRating>();
+
+  Future<DbShooterRating?> getRatingOrNull() async {
+    if(!rating.isLoaded) {
+      await rating.load();
+    }
+    return rating.value;
+  }
 
   Future<DbShooterRating> getRating() async {
     if(!rating.isLoaded) {
       await rating.load();
     }
     return rating.value!;
+  }
+
+  Future<bool> resolveRating() async {
+    var rating = await getRatingOrNull();
+    if(rating != null) {
+      return true;
+    }
+
+    var project = await getProject();
+    var groupRes = await project.groupForDivision(division);
+    if(groupRes.isErr()) {
+      _log.e("Failed to get group for $this: ${groupRes.unwrapErr()}");
+      return false;
+    }
+    var group = groupRes.unwrap();
+    if(group == null) {
+      _log.e("No group found for $this");
+      return false;
+    }
+    rating = await AnalystDatabase().maybeKnownShooter(project: project, group: group, memberNumber: memberNumber);
+    if(rating == null) {
+      _log.e("No rating found for $this");
+      return false;
+    }
+    this.rating.value = rating;
+    await AnalystDatabase().isar.writeTxn(() async {
+      await this.rating.save();
+    });
+    return true;
   }
 
   /// The project that hosts this player's rating.
@@ -49,7 +99,8 @@ class FantasyPlayer {
       after: month.startDate,
       before: month.endDate,
     );
-    var matches = await db.getMatchesByAnySourceIds(events.map((e) => e.matchId).toList());
+    Set<String> matchIds = events.map((e) => e.matchId).toSet();
+    var matches = await db.getMatchesByAnySourceIds(matchIds.toList());
     return matches.map((m) => m.hydrate(useCache: true).unwrap()).toList();
   }
 
@@ -86,15 +137,12 @@ class PlayerMonthlyPerformance {
   @Index()
   int monthId;
 
-  // All matches they shot this month
+  /// All matches they shot this month.
   List<MatchPerformance> matchPerformances = [];
 
-  // Best performance (the one used for scoring), or null
-  // if they didn't shoot any matches this month
+  /// Best performance (the one used for scoring), or null
+  /// if they didn't shoot any matches this month.
   MatchPerformance? bestPerformance;
-
-  // Which rosters used this player this month
-  final usedInRosters = IsarLinks<MonthlyRoster>();
 
   PlayerMonthlyPerformance({
     required this.playerId,
@@ -112,6 +160,20 @@ class PlayerMonthlyPerformance {
     result.player.value = player;
     result.month.value = month;
     return result;
+  }
+
+  static Future<PlayerMonthlyPerformance?> getById(Id id) async {
+    var db = AnalystDatabase();
+    var performance = await db.isar.playerMonthlyPerformances.get(id);
+    return performance;
+  }
+
+  static Future<PlayerMonthlyPerformance?> getByEntityIds({
+    required int playerId,
+    required int monthId,
+  }) async {
+    var id = idFromEntityIds(playerId: playerId, monthId: monthId);
+    return getById(id);
   }
 }
 

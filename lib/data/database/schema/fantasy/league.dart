@@ -11,8 +11,11 @@ import 'package:shooting_sports_analyst/data/database/schema/fantasy/roster.dart
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/standing.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/team.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 
 part 'league.g.dart';
+
+final _log = SSALogger("LeagueSchema");
 
 enum MonthOfYear {
   january,
@@ -48,15 +51,7 @@ class League with DbSportEntity {
   @Enumerated(EnumType.ordinal)
   MonthOfYear endMonth = MonthOfYear.october;
 
-  /// The number of head-to-head matchups per month.
-  int headToHeadPerMonth = 0;
-
-  // TODO: all-play and head-to-head scoring/scheduling rules
-  // I want to be able to capture a few things:
-  // - a few different ways to distribute points for all play,
-  //   like some variations of 'inverse place' or 'F1-style'
-  // - a few different ways to schedule head-to-head matchups
-  // - point values for head-to-head outcomes
+  LeagueScoringSettings scoringSettings = LeagueScoringSettings();
 
   // #endregion Settings
 
@@ -90,6 +85,13 @@ class League with DbSportEntity {
   /// have a value for [LeagueStanding.league], and this is only the
   /// all-time standings per team.
   final allTimeStandings = IsarLinks<LeagueStanding>();
+
+  Future<DbRatingProject> getProject() async {
+    if(!ratingProject.isLoaded) {
+      await ratingProject.load();
+    }
+    return ratingProject.value!;
+  }
 
   Future<LeagueSeason> getCurrentSeason() async {
     if(!currentSeason.isLoaded) {
@@ -127,6 +129,82 @@ enum LeagueState {
 
   /// The league is finished; it is not expected to play another season.
   finished,
+}
+
+@embedded
+class LeagueScoringSettings {
+  @enumerated
+  HeadToHeadMatchupType headToHeadType = HeadToHeadMatchupType.none;
+
+  /// The number of head-to-head matchups per month.
+  ///
+  /// Currently, only 0 and 1 are supported.
+  int headToHeadPerMonth = 0;
+
+  /// League points awarded for a head-to-head win.
+  int headToHeadWinPoints = 0;
+
+  /// League points awarded for a head-to-head tie.
+  ///
+  /// See [headToHeadTieFactor] for the definition of a tie.
+  int headToHeadTiePoints = 0;
+
+  /// League points awarded for a head-to-head loss.
+  int headToHeadLossPoints = 0;
+
+  /// If the loser's points in a head-to-head matchup are within
+  /// (1 - [headToHeadTieFactor]) and (1 + [headToHeadTieFactor]) times
+  /// the winner's points, the matchup is considered a tie, and both parties
+  /// receive [headToHeadTiePoints].
+  ///
+  /// If null, there are no ties.
+  double? headToHeadTieFactor;
+
+  /// League points awarded for each position in the all-play standings.
+  /// The list may be shorter or longer than the number of teams in the league;
+  /// as many elements as possible will be used, with index 0 corresponding to
+  /// the first place team.
+  List<int> allPlayPointsByStanding = [];
+
+  LeagueScoringSettings();
+
+  /// Creates a linear all-play scoring system, with an optional head-to-head component.
+  ///
+  ///
+  LeagueScoringSettings.createLinear({
+    required int teamCount,
+    required HeadToHeadMatchupType headToHeadType,
+    required double headToHeadFraction,
+    double? headToHeadTieFactor,
+  }) {
+    allPlayPointsByStanding = List.generate(teamCount, (index) => teamCount - index);
+
+    if(headToHeadType != HeadToHeadMatchupType.none) {
+      if(teamCount.isEven) {
+        headToHeadPerMonth = 1;
+        headToHeadWinPoints = (teamCount * headToHeadFraction).toInt();
+      }
+      else {
+        _log.w("Cannot (yet) create a head-to-head matchup for an odd number of teams");
+        headToHeadType = HeadToHeadMatchupType.none;
+      }
+    }
+  }
+}
+
+/// The type of head-to-head matchups to schedule.
+enum HeadToHeadMatchupType {
+  /// No head-to-head matchups are scheduled.
+  none,
+
+  /// Each team will play every other team once before repeating opponents.
+  roundRobin,
+
+  /// Each team will play a random opponent each month.
+  random,
+
+  /// Each team will be paired with an opponent from a nearby position in the standings.
+  seeded,
 }
 
 @collection
@@ -215,6 +293,9 @@ class LeagueMonth {
   /// Use [startDate] and [endDate] for guaranteed second-accurate times.
   DateTime month;
 
+  /// The match pointers whose scores have been processed for this month.
+  List<MatchPointer> matchPointers = [];
+
   /// The matchups for this month. Obtain rosters and teams by following
   /// the links in [Matchup].
   final IsarLinks<Matchup> matchups = IsarLinks<Matchup>();
@@ -229,9 +310,20 @@ class LeagueMonth {
   /// Monthly standings for this month.
   final IsarLinks<LeagueStanding> standings = IsarLinks<LeagueStanding>();
 
+  /// The first second of the first day of the month.
   DateTime get startDate => DateTime.utc(month.year, month.month);
 
-  DateTime get endDate => DateTime.utc(month.year, month.month + 1, 23, 59, 59);
+  /// The last second of the prior month (i.e., one second before this month
+  /// begins).
+  DateTime get startDateMinusOne => DateTime.utc(month.year, month.month, 0, 23, 59, 59);
+
+  /// The last second of the last day of the month (i.e., the last second of the 0th day
+  /// of the next month).
+  DateTime get endDate => DateTime.utc(month.year, month.month + 1, 0, 23, 59, 59);
+
+  /// The first second of the next month (i.e., one second after this month
+  /// ends).
+  DateTime get endDatePlusOne => DateTime.utc(month.year, month.month + 1);
 
   Future<LeagueSeason> getSeason() async {
     if(!season.isLoaded) {
@@ -242,6 +334,20 @@ class LeagueMonth {
 
   Future<League> getLeague() async {
     return getSeason().then((season) => season.getLeague());
+  }
+
+  Future<List<Matchup>> getMatchups() async {
+    if(!matchups.isLoaded) {
+      await matchups.load();
+    }
+    return matchups.toList();
+  }
+
+  Future<List<MonthlyRoster>> getAllPlayRosters() async {
+    if(!allPlayRosters.isLoaded) {
+      await allPlayRosters.load();
+    }
+    return allPlayRosters.toList();
   }
 
   LeagueMonth({

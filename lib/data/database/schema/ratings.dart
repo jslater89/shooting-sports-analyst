@@ -55,6 +55,16 @@ mixin DbSportEntity {
   set sport(Sport s) => sportName = s.name;
 }
 
+mixin DbDivisionEntity on DbSportEntity {
+  String get divisionName;
+  set divisionName(String value);
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @ignore
+  Division? get division => sport.divisions.lookupByName(divisionName);
+  set division(Division? d) => divisionName = d?.name ?? "";
+}
+
 @collection
 class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRatingDataSource {
   Id id = Isar.autoIncrement;
