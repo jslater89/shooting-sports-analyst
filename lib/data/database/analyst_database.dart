@@ -9,6 +9,7 @@ import 'dart:io';
 
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_query_element.dart';
+import 'package:shooting_sports_analyst/data/database/schema/fantasy/fantasy_user.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/league.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/matchups.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/player.dart';
@@ -80,6 +81,7 @@ class AnalystDatabase {
         MatchRegistrationMappingSchema,
 
         // Fantasy-related collections
+        FantasyUserSchema,
         LeagueSchema,
         FantasyRosterSlotTypeSchema,
         RosterSlotSchema,

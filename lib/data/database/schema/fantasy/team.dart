@@ -5,6 +5,7 @@
  */
 
 import 'package:isar/isar.dart';
+import 'package:shooting_sports_analyst/data/database/schema/fantasy/fantasy_user.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/league.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/player.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/roster.dart';
@@ -16,6 +17,9 @@ class Team {
   Id id = Isar.autoIncrement;
 
   String name;
+
+  /// The manager of the team.
+  final manager = IsarLink<FantasyUser>();
 
   @Backlink(to: 'teams')
   final league = IsarLink<League>();

@@ -6,6 +6,7 @@
 
 
 import 'package:isar/isar.dart';
+import 'package:shooting_sports_analyst/data/database/schema/fantasy/fantasy_user.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/matchups.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/roster.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/standing.dart';
@@ -38,7 +39,17 @@ enum MonthOfYear {
 class League with DbSportEntity {
   Id id = Isar.autoIncrement;
 
+  /// The sport of the league.
   String sportName;
+
+  /// The name of the league.
+  String name;
+
+  /// The commissioner of the league.
+  final commissioner = IsarLink<FantasyUser>();
+
+  /// The maximum number of teams in the league.
+  int maximumTeams;
 
   // #region Settings
   final rosterSlots = IsarLinks<RosterSlot>();
@@ -51,7 +62,7 @@ class League with DbSportEntity {
   @Enumerated(EnumType.ordinal)
   MonthOfYear endMonth = MonthOfYear.october;
 
-  LeagueScoringSettings scoringSettings = LeagueScoringSettings();
+  LeagueScoringSettings scoringSettings;
 
   // #endregion Settings
 
@@ -110,7 +121,10 @@ class League with DbSportEntity {
 
   League({
     required this.sportName,
+    required this.name,
+    required this.scoringSettings,
     required this.creationDate,
+    this.maximumTeams = 8,
     this.state = LeagueState.offseason,
   });
 }
@@ -214,7 +228,6 @@ class LeagueSeason {
   @Backlink(to: 'seasons')
   final league = IsarLink<League>();
 
-  String name;
   DateTime startDate;
   DateTime endDate;
 
@@ -251,7 +264,6 @@ class LeagueSeason {
   }
 
   LeagueSeason({
-    required this.name,
     required this.startDate,
     required this.endDate,
   });
