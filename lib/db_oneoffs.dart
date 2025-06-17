@@ -16,6 +16,7 @@ import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart'
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/math/distribution_tools.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/standardized_maximum_scaler.dart';
@@ -46,6 +47,7 @@ Future<void> oneoffDbAnalyses(AnalystDatabase db) async {
 
   // await _analyzeIcoreDump(File("/home/jay/Downloads/masterScores.json"));
   // await _importIcoreDump(File("/home/jay/Downloads/masterScores.json"));
+  // await _winningPointsByDate();
 }
 
 Future<void> _howGoodIsTomCastro(AnalystDatabase db) async {
@@ -627,4 +629,85 @@ Future<void> _importIcoreDump(File file) async {
     }
   }
   _log.i("Saved ${dbInserts} matches to DB");
+}
+
+Future<void> _winningPointsByDate() async {
+  var db = AnalystDatabase();
+  var project = await db.getRatingProjectByName("L2s Main");
+  if(project == null) {
+    _log.e("L2s Main project not found");
+    return;
+  }
+
+  var sport = project.sport;
+
+  // Map of date to map of division name to list of winning percent points.
+  Map<DateTime, Map<String, List<double>>> winningPercentPoints = {};
+
+  for(var pointer in project.matchPointers) {
+    var matchRes = await pointer.getDbMatch(db);
+    if(matchRes.isErr()) {
+      _log.w("Error getting match: ${matchRes.unwrapErr()}");
+      continue;
+    }
+    var match = matchRes.unwrap();
+    if(!match.sport.hasDivisions) {
+      _log.w("Sport has no divisions: ${match.eventName}");
+      return;
+    }
+    var hydratedMatchRes = await match.hydrate(useCache: true);
+    if(hydratedMatchRes.isErr()) {
+      _log.w("Error hydrating match: ${hydratedMatchRes.unwrapErr()}");
+      continue;
+    }
+    var hydratedMatch = hydratedMatchRes.unwrap();
+    int pointsAvailable = 0;
+    for(var stage in hydratedMatch.stages) {
+      pointsAvailable += stage.maxPoints;
+    }
+    if(pointsAvailable == 0) {
+      _log.w("Match has no points: ${match.eventName}");
+      continue;
+    }
+
+    Set<Division> divisions = {};
+    for(var entry in hydratedMatch.shooters) {
+      if(entry.division != null) {
+        divisions.add(entry.division!);
+      }
+    }
+
+    for(var division in divisions) {
+      var scores = hydratedMatch.getScoresFromFilters(FilterSet(icoreSport, divisions: [division], mode: FilterMode.or));
+      var firstPlace = scores.values.firstWhereOrNull((e) => e.place == 1);
+      if(firstPlace != null) {
+        var points = firstPlace.total.points;
+        var date = match.date;
+        winningPercentPoints[date] ??= {};
+        winningPercentPoints[date]!.addToList(division.name, points / pointsAvailable);
+        // _log.i("${match.eventName} ${division.name}: ${points} / ${pointsAvailable} = ${points / pointsAvailable}");
+      }
+    }
+  }
+
+  List<DateTime> years = List.generate(2025 - 2018 + 1, (index) => DateTime(2018 + index));
+  for(var year in years) {
+    for(var division in sport.divisions.values) {
+      List<double> averages = [];
+      var resultsPerYear = winningPercentPoints.entries.where((e) => e.key.year == year.year);
+      for(var result in resultsPerYear) {
+        var points = result.value[division.name];
+        if(points != null) {
+          averages.addAll(points);
+        }
+      }
+      if(averages.isEmpty) {
+        _log.i("$year ${division.name}: No results");
+        continue;
+      }
+      var average = averages.average;
+      var stdDev = averages.stdDev();
+      _log.i("$year ${division.name}: ${average.asPercentage()} (${stdDev.toStringAsFixed(3)})");
+    }
+  }
 }
