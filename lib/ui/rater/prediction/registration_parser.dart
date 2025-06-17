@@ -154,6 +154,11 @@ RegistrationContainer _parseRegistrations(Sport sport, String matchId, String re
   _log.d("Shooter regex has ${matches.length} matches");
   for(var match in matches) {
     var shooterName = unescape.convert(match.namedGroup("name")!);
+
+    if(shooterName.contains("\n")) {
+      _log.w("Skipping shooter name containing newline: $shooterName");
+      continue;
+    }
     var d = sport.divisions.lookupByName(match.namedGroup("division")!);
 
     if(d == null || !divisions.contains(d)) continue;
