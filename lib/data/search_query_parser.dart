@@ -303,16 +303,19 @@ class SportPrefixMatcher {
     var matcher = classificationMatcher;
     var suppressors = [divisionMatcher, powerFactorMatcher];
 
-    var div = matcher.lookup(name);
-    if(div != null) {
+    var cls = matcher.lookup(name);
+    if(cls != null) {
       for(var s in suppressors) {
         var v = s.lookup(name);
-        if(v != null) {
+        // If the classification name matches exactly, don't suppress it
+        // Classifications are often extremely short 'A', 'B', 'C', etc.,
+        // so we don't want to suppress C if it matches 'C'arry Optics.
+        if(v != null && cls.name.toLowerCase() != name) {
           return null;
         }
       }
 
-      return div;
+      return cls;
     }
 
     return null;

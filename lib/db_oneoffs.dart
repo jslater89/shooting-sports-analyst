@@ -678,36 +678,46 @@ Future<void> _winningPointsByDate() async {
     }
 
     for(var division in divisions) {
-      var scores = hydratedMatch.getScoresFromFilters(FilterSet(icoreSport, divisions: [division], mode: FilterMode.or));
+      var scores = hydratedMatch.getScoresFromFilters(FilterSet(sport, divisions: [division], mode: FilterMode.or, empty: true));
       var firstPlace = scores.values.firstWhereOrNull((e) => e.place == 1);
       if(firstPlace != null) {
-        var points = firstPlace.total.points;
+        Map<MatchStage, int> stageMax = {};
+        for(var s in firstPlace.stageScores.keys) {
+          if(s.scoring is PointsScoring && sport.type.isHitFactor) {
+            var bestPoints = 0;
+            for(var score in scores.values.where((e) => e.shooter.division == division)) {
+              if(score.stageScores[s] != null && score.stageScores[s]!.score.points > bestPoints) {
+                bestPoints = score.stageScores[s]!.score.points;
+              }
+            }
+            stageMax[s] = bestPoints;
+          }
+        }
+
+        var points = firstPlace.percentTotalPointsWithSettings(scoreDQ: true, countPenalties: true, stageMaxPoints: stageMax);
         var date = match.date;
         winningPercentPoints[date] ??= {};
-        winningPercentPoints[date]!.addToList(division.name, points / pointsAvailable);
-        // _log.i("${match.eventName} ${division.name}: ${points} / ${pointsAvailable} = ${points / pointsAvailable}");
+        winningPercentPoints[date]!.addToList(division.name, points);
+        _log.i("${match.eventName} ${division.name}: ${points}");
       }
     }
   }
 
-  List<DateTime> years = List.generate(2025 - 2018 + 1, (index) => DateTime(2018 + index));
-  for(var year in years) {
-    for(var division in sport.divisions.values) {
-      List<double> averages = [];
-      var resultsPerYear = winningPercentPoints.entries.where((e) => e.key.year == year.year);
-      for(var result in resultsPerYear) {
-        var points = result.value[division.name];
-        if(points != null) {
-          averages.addAll(points);
+  for(var division in sport.divisions.values) {
+    List<String> csvLines = [];
+    csvLines.add("Date,Winning Percent Points");
+    for(var result in winningPercentPoints.entries) {
+      var points = result.value[division.name];
+      if(points != null) {
+        for(var p in points) {
+          csvLines.add("${result.key},${p}");
         }
       }
-      if(averages.isEmpty) {
-        _log.i("$year ${division.name}: No results");
-        continue;
-      }
-      var average = averages.average;
-      var stdDev = averages.stdDev();
-      _log.i("$year ${division.name}: ${average.asPercentage()} (${stdDev.toStringAsFixed(3)})");
+    }
+
+    if(csvLines.isNotEmpty) {
+      File f = File("/tmp/winning_percent_points_${division.name}.csv");
+      f.writeAsStringSync(csvLines.join("\n"));
     }
   }
 }

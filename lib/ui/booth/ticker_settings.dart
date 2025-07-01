@@ -188,10 +188,9 @@ class _TickerSettingsWidgetState extends State<TickerSettingsWidget> {
                   Text("Restore defaults")
                 ],
               ),
-              onPressed: () async {
-                widget.tickerModel.globalTickerCriteria = [
-                  ...BoothTickerModel.defaultTickerCriteria,
-                ];
+              onPressed: () {
+                widget.tickerModel.globalTickerCriteria.clear();
+                widget.tickerModel.globalTickerCriteria.addAll(BoothTickerModel.defaultTickerCriteria);
                 setState(() {});
               },
             ),
@@ -340,4 +339,3 @@ class _TickerCriterionEditDialogState extends State<TickerCriterionEditDialog> {
     );
   }
 }
-

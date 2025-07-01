@@ -91,8 +91,8 @@ changes if the automatic detection appears correct.
 ## Tips
 
 * Read help topics for specific deduplicators to learn more about their behavior
-  * [USPSA]($uspsaDeduplicatorHelpLink)
-  * [ICORE]($icoreDeduplicatorHelpLink)
+    * [USPSA]($uspsaDeduplicatorHelpLink)
+    * [ICORE]($icoreDeduplicatorHelpLink)
 * Member numbers in green have been addressed by one or more actions
 * Click member numbers to view the competitor's classification page (USPSA only)
     * Classification pages will always display a user's highest-priority member number by [USPSA rules]($uspsaDeduplicatorHelpLink),

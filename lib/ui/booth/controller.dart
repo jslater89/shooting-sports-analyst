@@ -248,6 +248,13 @@ class BroadcastBoothController {
       var displayFilters = ScorecardFilters(
         filterSet: filters,
       );
+      var competitors = model.latestMatch.filterShooters(
+        divisions: filters.activeDivisions.toList(),
+      );
+      if(competitors.isEmpty) {
+        continue;
+      }
+
       currentRow.add(ScorecardModel(
         id: model.nextValidScorecardId,
         name: d.name,
