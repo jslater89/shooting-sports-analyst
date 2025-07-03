@@ -77,8 +77,8 @@ class _SSAFileOutput {
   static const _LOG_DIR = "./logs/";
   static const _FILENAME = "./logs/analyst.log";
 
-  /// Keep main file and two more.
-  static const _FILE_LIMIT = 3;
+  /// Keep main file and 24 more.
+  static const _FILE_LIMIT = 25;
 
   static const _MAX_FILE_SIZE = 1024 * 1024 * 5;
   static const _MIN_FILE_DELAY = 60;
