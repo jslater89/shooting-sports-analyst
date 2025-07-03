@@ -679,6 +679,10 @@ Future<void> _winningPointsByDate() async {
 
     for(var division in divisions) {
       var scores = hydratedMatch.getScoresFromFilters(FilterSet(sport, divisions: [division], mode: FilterMode.or, empty: true));
+      if(scores.length < 3) {
+        // skip matches with less than 3 shooters
+        continue;
+      }
       var firstPlace = scores.values.firstWhereOrNull((e) => e.place == 1);
       if(firstPlace != null) {
         Map<MatchStage, int> stageMax = {};
