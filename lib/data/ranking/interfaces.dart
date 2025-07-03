@@ -59,7 +59,7 @@ class DivisionRatingGroupProvider implements RatingGroupsProvider {
 
   DivisionRatingGroupProvider(String sportName,this.divisions) :
     divisionRatingGroups = divisions.mapIndexed((index, d) => RatingGroup(
-      uuid: "$sportName-${d.name.toLowerCase().replaceAll(" ", "-")}",
+      uuid: "${sportName.toLowerCase()}-${d.name.toLowerCase().replaceAll(" ", "-")}",
       sortOrder: index,
       sportName: sportName,
       name: d.name,

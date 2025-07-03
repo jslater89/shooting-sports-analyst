@@ -15,6 +15,7 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_e
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/database/schema/registration.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/idpa.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/match/translator.dart';
@@ -77,7 +78,22 @@ class AnalystDatabase {
       name: test ? "test-database" : "database",
     );
 
-    isar.writeTxn(() async {
+    // TODO Fix for broken IDPA databases; remove after releasing alpha11
+    var provider = idpaSport.builtinRatingGroupsProvider;
+    if(provider != null && (await isar.ratingGroups.getByUuid("icore-pcc")) != null) {
+      int deleted = 0;
+      for(var group in provider.builtinRatingGroups) {
+        var wrongId = group.uuid.replaceFirst("idpa-", "icore-");
+        await isar.writeTxn(() async {
+          await isar.ratingGroups.deleteByUuid(wrongId);
+          await isar.ratingGroups.put(group);
+        });
+        deleted += 1;
+      }
+      _log.i("Fixed $deleted broken IDPA rating groups");
+    }
+
+    await isar.writeTxn(() async {
       for(var sport in SportRegistry().availableSports) {
         var provider = sport.builtinRatingGroupsProvider;
         if(provider != null) {
