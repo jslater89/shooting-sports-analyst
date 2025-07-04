@@ -10,7 +10,6 @@ import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:shooting_sports_analyst/logger.dart';
-import 'package:shooting_sports_analyst/ui/rater/rater_view.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 part 'rating_report.g.dart';
@@ -452,9 +451,9 @@ class DuplicateDataEntryFix extends RatingReportData {
     if(other is! DuplicateDataEntryFix) {
       return false;
     }
-    return deduplicatorName == other.deduplicatorName 
-      && sourceNumber == other.sourceNumber 
-      && targetNumber == other.targetNumber 
+    return deduplicatorName == other.deduplicatorName
+      && sourceNumber == other.sourceNumber
+      && targetNumber == other.targetNumber
       && ratingGroupUuid == other.ratingGroupUuid;
   }
 

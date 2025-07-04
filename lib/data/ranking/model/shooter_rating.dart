@@ -215,7 +215,7 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
           candidateEvent = e;
         }
       }
-      else if(candidateEvent == null && e.match.date!.isBefore(match.date!)) {
+      else if(candidateEvent == null && e.match.date.isBefore(match.date)) {
         candidateEvent = e;
       }
 

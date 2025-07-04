@@ -6,7 +6,6 @@
 
 import 'dart:math';
 
-import 'package:collection/collection.dart';
 import 'package:data/data.dart';
 import 'package:shooting_sports_analyst/data/math/gamma/gamma_estimator.dart';
 import 'package:shooting_sports_analyst/data/math/gaussian/gaussian_estimator.dart';

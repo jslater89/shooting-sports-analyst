@@ -246,13 +246,13 @@ class SSALogger extends LogPrinter {
   /// what the filter is set to.
   void vv(dynamic message, {dynamic error, StackTrace? stackTrace}) {
     if(kReleaseMode) return;
-    _logger!.t("VV:$message", error: error, stackTrace: stackTrace);
+    _logger.t("VV:$message", error: error, stackTrace: stackTrace);
   }
-  void v(dynamic message, {dynamic error, StackTrace? stackTrace}) => _logger!.t(message, error: error, stackTrace: stackTrace);
-  void d(dynamic message, {dynamic error, StackTrace? stackTrace}) => _logger!.d(message, error: error, stackTrace: stackTrace);
-  void i(dynamic message, {dynamic error, StackTrace? stackTrace}) => _logger!.i(message, error: error, stackTrace: stackTrace);
-  void w(dynamic message, {dynamic error, StackTrace? stackTrace}) => _logger!.w(message, error: error, stackTrace: stackTrace);
-  void e(dynamic message, {dynamic error, StackTrace? stackTrace}) => _logger!.e(message, error: error, stackTrace: stackTrace);
+  void v(dynamic message, {dynamic error, StackTrace? stackTrace}) => _logger.t(message, error: error, stackTrace: stackTrace);
+  void d(dynamic message, {dynamic error, StackTrace? stackTrace}) => _logger.d(message, error: error, stackTrace: stackTrace);
+  void i(dynamic message, {dynamic error, StackTrace? stackTrace}) => _logger.i(message, error: error, stackTrace: stackTrace);
+  void w(dynamic message, {dynamic error, StackTrace? stackTrace}) => _logger.w(message, error: error, stackTrace: stackTrace);
+  void e(dynamic message, {dynamic error, StackTrace? stackTrace}) => _logger.e(message, error: error, stackTrace: stackTrace);
 
   @override
   List<String> log(LogEvent event) {

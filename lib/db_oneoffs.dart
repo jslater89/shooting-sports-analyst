@@ -1,3 +1,5 @@
+// ignore_for_file: unused_local_variable
+
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -16,7 +18,6 @@ import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart'
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
-import 'package:shooting_sports_analyst/data/math/distribution_tools.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/standardized_maximum_scaler.dart';
@@ -28,11 +29,6 @@ import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
-import 'package:shooting_sports_analyst/data/match/practical_match.dart';
-import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
-import 'package:shooting_sports_analyst/logger.dart';
-import 'package:shooting_sports_analyst/util.dart';
-import 'package:intl/intl.dart';
 
 SSALogger _log = SSALogger("DbOneoffs");
 
@@ -230,7 +226,7 @@ Future<void> _matchBumpGms(AnalystDatabase db) async {
       var gmRating = ratings[gm];
       double? eloAtMatch;
       if(gmRating != null) {
-        eloAtMatch = EloShooterRating.wrapDbRating(gmRating!).ratingAtEvent(match!, null);
+        eloAtMatch = EloShooterRating.wrapDbRating(gmRating).ratingAtEvent(match!, null);
       }
       print("\t\t${gm.name} (${gm.memberNumber}, ${eloAtMatch?.round() ?? "(unknown)"} Elo at match, ${gmRating?.rating.round() ?? "(unrated)"} Elo today)");
     }

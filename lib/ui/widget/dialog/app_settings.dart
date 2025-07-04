@@ -70,7 +70,13 @@ class _AppSettingsDialogState extends State<AppSettingsDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             DropdownMenu<Level>(
-              dropdownMenuEntries: Level.values.map((e) => DropdownMenuEntry(value: e, label: e.name)).toList(),
+              dropdownMenuEntries: [
+                Level.trace,
+                Level.debug,
+                Level.info,
+                Level.warning,
+                Level.error,
+              ].map((e) => DropdownMenuEntry(value: e, label: e.name)).toList(),
               onSelected: (value) {
                 if(value != null) {
                   config.logLevel = value;

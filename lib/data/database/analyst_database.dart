@@ -302,6 +302,7 @@ class AnalystDatabase {
   Query<DbShootingMatch> _buildMatchQuery(List<MatchQueryElement> elements, {int? limit, int? offset, MatchSortField sort = const DateSort()}) {
     NamePartsQuery? nameQuery;
     DateQuery? dateQuery;
+    // ignore: unused_local_variable
     LevelNameQuery? levelNameQuery;
 
     for(var e in elements) {

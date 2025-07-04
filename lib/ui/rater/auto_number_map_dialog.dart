@@ -6,10 +6,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
-import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
-import 'package:shooting_sports_analyst/util.dart';
 
 class AutoNumberMapDialog extends StatefulWidget {
   const AutoNumberMapDialog({
@@ -103,7 +101,7 @@ class _AutoNumberMapDialogState extends State<AutoNumberMapDialog> {
                             child: TextField(
                               controller: targetFilterController,
                               decoration: InputDecoration(
-                                hintText: "Target",  
+                                hintText: "Target",
                               ),
                             ),
                           ),
@@ -114,7 +112,7 @@ class _AutoNumberMapDialogState extends State<AutoNumberMapDialog> {
                             child: TextField(
                               controller: sourceFilterController,
                               decoration: InputDecoration(
-                                hintText: "Source",  
+                                hintText: "Source",
                               ),
                             ),
                           ),

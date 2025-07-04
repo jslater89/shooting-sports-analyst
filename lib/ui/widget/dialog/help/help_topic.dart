@@ -5,19 +5,13 @@
  */
 
 import 'package:collection/collection.dart';
-import 'package:flutter/foundation.dart';
-import 'package:shooting_sports_analyst/data/help/deduplication_help.dart';
-import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_parser.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_registry.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_renderer.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_token.dart';
-import 'package:shooting_sports_analyst/util.dart';
 
 /// A help topic is an article that can be displayed to the user.
-/// 
+///
 /// It can be formatted with a very small subset of Markdown,
-/// including # and ## headers, _italics_, *bold*, 
+/// including # and ## headers, _italics_, *bold*,
 /// [links](?help-topic-id) or [links](https://example.com),
 /// and * bullet lists.
 class HelpTopic {
@@ -45,5 +39,5 @@ class HelpTopic {
     return buffer.toString();
   }
 
-  
+
 }

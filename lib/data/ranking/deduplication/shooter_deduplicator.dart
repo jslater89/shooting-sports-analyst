@@ -5,7 +5,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
-import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
@@ -56,7 +55,7 @@ abstract class ShooterDeduplicator {
   });
 
   /// Process a shooter's name into a deduplicator name.
-  /// 
+  ///
   /// This currently converts to lowercase, removes all whitespace, and removes all
   /// non-alphanumeric characters.
   static String processName(Shooter shooter) {
@@ -75,7 +74,7 @@ abstract class ShooterDeduplicator {
   /// If calculable, return a list of alternate forms of the provided member number.
   /// The returned list will always include the original number, even if no calculation
   /// is possible (in which case it will be the only element in the list).
-  /// 
+  ///
   /// In cases (like frickin' USPSA) where member 123456 may be prefixed in one of
   /// several ways without changing the numeric element (A, TY, FY) or the underlying
   /// member, we want to be able to save all of them to the database at once.
@@ -85,7 +84,7 @@ abstract class ShooterDeduplicator {
   /// international associate numbers that are valid USPSA numbers but not valid international
   /// member numbers, we need another stupid check to determine if a number is a real-deal international
   /// number OR a USPSA-issued foreign associate number OR neither.
-  /// 
+  ///
   /// The default implementation returns the correct answer for any reasonable member numbering
   /// system that correctly implements [classify].
   bool isInternationalNumber(String number) {
@@ -94,7 +93,7 @@ abstract class ShooterDeduplicator {
 
   /// A normalized member number is a member number that has been processed for
   /// display purposes.
-  /// 
+  ///
   /// The default implementation removes all non-alphanumeric characters and
   /// converts to uppercase.
   String normalizeNumber(String number) {
@@ -103,11 +102,11 @@ abstract class ShooterDeduplicator {
 
   /// A processed member number is a member number that has been processed to
   /// some greater standard than normalization, if relevant.
-  /// 
+  ///
   /// Originally, this was intended to process a member number down to a
   /// form where string equality was equivalent to competitor equality,
   /// but the implementations so far do not hold to this.
-  /// 
+  ///
   /// The default implementation returns the normalized number.
   String processNumber(String number) {
     return normalizeNumber(number);
@@ -156,7 +155,7 @@ abstract class ShooterDeduplicator {
 
   /// Returns a number processor for the given sport, falling back to a default
   /// implementation if the sport does not have a shooter deduplicator.
-  /// 
+  ///
   /// See [processNumber] for more information the processing applied by a number
   /// processor.
   static String Function(String) numberProcessor(Sport sport) {
@@ -165,7 +164,7 @@ abstract class ShooterDeduplicator {
 
   /// Returns a number normalizer for the given sport, falling back to a default
   /// implementation if the sport does not have a shooter deduplicator.
-  /// 
+  ///
   /// See [normalizeNumber] for more information the normalization applied by a
   /// number normalizer.
   static String Function(String) numberNormalizer(Sport sport) {
@@ -185,7 +184,7 @@ enum MemberNumberType {
   /// number.
   international,
 
-  /// 
+  ///
   standard,
   life,
   benefactor,
@@ -226,7 +225,7 @@ class DeduplicationResult extends Result<List<DeduplicationCollision>, RatingErr
 extension DeepCopyMemberNumberMap<T, U> on Map<T, List<U>> {
   Map<T, List<U>> deepCopy() {
     return {
-      for(var type in keys) 
+      for(var type in keys)
         type: [...this[type]!]
     };
   }

@@ -15,7 +15,7 @@ import 'package:shooting_sports_analyst/data/sport/model.dart';
 
 enum _DoubleKeys {
   mu,
-  sigma,
+  // sigma,
 }
 
 class OpenskillRating extends ShooterRating<OpenskillRatingEvent> {

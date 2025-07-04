@@ -4,7 +4,6 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
@@ -35,7 +34,7 @@ abstract class OrdinalPlaceFunctionModel implements MarbleModel {
       shares[s] = share;
       sumShares += share;
     }
-    
+
     for(var s in results.keys) {
       var score = results[s]!;
       var relativeShare = shares[s]! / sumShares;

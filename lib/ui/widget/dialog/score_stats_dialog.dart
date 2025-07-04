@@ -32,17 +32,17 @@ class _ScoreStatsDialogState extends State<ScoreStatsDialog> {
 
     _log.i("Calculating score stats for ${widget.scores.length} scores on stage ${widget.stage}");
 
-    late List<RelativeScore> scores;
-    if(widget.stage != null) {
-      scores = widget.scores.map((e) => e.stageScores[widget.stage]!).toList()..sort((a, b) => a.place.compareTo(b.place));
-    }
-    else {
-      // No need to re-sort, since we're already in match score order
-      scores = widget.scores;
-    }
+    // late List<RelativeScore> scores;
+    // if(widget.stage != null) {
+    //   scores = widget.scores.map((e) => e.stageScores[widget.stage]!).toList()..sort((a, b) => a.place.compareTo(b.place));
+    // }
+    // else {
+    //   // No need to re-sort, since we're already in match score order
+    //   scores = widget.scores;
+    // }
 
-    double correlation = 0.0;
-    int unclassified = 0;
+    // double correlation = 0.0;
+    // int unclassified = 0;
     // TODO: fix later
     // can probably be made USPSA-specific
 

@@ -9,8 +9,6 @@ import 'package:color_models/color_models.dart';
 import 'package:data/data.dart' show ContinuousDistribution;
 import 'package:flutter/material.dart';
 import 'package:community_charts_flutter/community_charts_flutter.dart' as charts;
-import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
-import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/util.dart';
 // import 'package:community_charts_common/community_charts_common.dart' as common;
 

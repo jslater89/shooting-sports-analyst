@@ -66,7 +66,7 @@ class WeibullEstimator implements ContinuousDistributionEstimator {
     var sumLogX = 0.0;
     var sumXk = 0.0;
     var sumXkLnX = 0.0;
-    var sumLnX = 0.0;
+    // var sumLnX = 0.0;
 
     for (final x in data) {
       final logX = log(x);
@@ -74,7 +74,7 @@ class WeibullEstimator implements ContinuousDistributionEstimator {
       final xk = pow(x, k);
       sumXk += xk;
       sumXkLnX += xk * logX;
-      sumLnX += logX;
+      //sumLnX += logX;
     }
 
     final fValue = n / k + sumLogX - n * sumXkLnX / sumXk;

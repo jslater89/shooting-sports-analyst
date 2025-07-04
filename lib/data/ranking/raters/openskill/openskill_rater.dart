@@ -5,7 +5,6 @@
  */
 
 
-import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -73,10 +72,14 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
     DateTime? trendDate,
     RatingScaler? scaler,
   }) {
-    var trend = rating.rating - rating.averageRating().firstRating;
-    if(trendDate != null) {
-      trend = rating.rating - rating.ratingForDate(trendDate);
-    }
+    // double trend;
+    // if(trendDate != null) {
+    //   trend = rating.rating - rating.ratingForDate(trendDate);
+    // }
+    // else {
+    //   trend = rating.rating - rating.averageRating().firstRating;
+    // }
+
     rating as OpenskillRating;
 
     return ScoreRow(

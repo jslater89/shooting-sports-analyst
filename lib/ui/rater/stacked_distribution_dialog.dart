@@ -106,7 +106,7 @@ class _RatingDistributionDialogState extends State<RatingDistributionDialog> {
     for(var bucket in widget.statistics.histogram.keys) {
       var bucketStart = bucket * widget.statistics.histogramBucketSize;
       var bucketEnd = bucketStart + widget.statistics.histogramBucketSize;
-      var bucketCenter = bucketStart + (widget.statistics.histogramBucketSize / 2);
+      // var bucketCenter = bucketStart + (widget.statistics.histogramBucketSize / 2);
 
       List<HistogramData> bucketData = [];
       for(var classification in widget.sport.classifications.values) {
@@ -278,7 +278,7 @@ class _ScoresDistributionDialogState extends State<ScoresDistributionDialog> {
     for(var i = 0; i < bucketCount; i++) {
       var bucketStart = minScore + (i * bucketSize);
       var bucketEnd = bucketStart + bucketSize;
-      var bucketCenter = bucketStart + (bucketSize / 2);
+      // var bucketCenter = bucketStart + (bucketSize / 2);
 
       List<HistogramData> bucketData = [];
       for(var c in widget.sport.classifications.values) {

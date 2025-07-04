@@ -10,7 +10,7 @@ import 'package:shooting_sports_analyst/data/match/shooter.dart';
 class RatingFilterDialog extends StatefulWidget {
   RatingFilterDialog({Key? key, required RatingFilters filters}) : this.filters = RatingFilters.copy(filters), super(key: key);
 
-  RatingFilters filters;
+  final RatingFilters filters;
 
   @override
   State<RatingFilterDialog> createState() => _RatingFilterDialogState();

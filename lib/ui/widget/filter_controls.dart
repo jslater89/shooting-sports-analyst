@@ -5,7 +5,6 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/sort_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
@@ -32,7 +31,7 @@ class FilterControls extends StatefulWidget {
   final FilterSet filters;
 
   final FocusNode? returnFocus;
-  
+
   final Function(SortMode) onSortModeChanged;
   final Function(StageMenuItem) onStageChanged;
   final Function(FilterSet) onFiltersChanged;

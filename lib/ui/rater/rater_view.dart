@@ -187,7 +187,6 @@ class _RaterViewState extends State<RaterView> {
     )];
   }
 
-  int _ratingWindow = 12;
   List<Widget> _buildRatingRows(RatingScaler? scaler) {
     // TODO: turn this into a Provider and a model, since we need it both in the parent and here
     var hiddenShooters = [];
@@ -204,7 +203,7 @@ class _RaterViewState extends State<RaterView> {
     // });
 
     if(widget.maxAge != null) {
-      var cutoff = widget.currentMatch.date ?? DateTime.now();
+      var cutoff = widget.currentMatch.date;
       cutoff = cutoff.subtract(widget.maxAge!);
       sortedRatings = sortedRatings.where((r) => r.lastSeen.isAfter(cutoff));
     }

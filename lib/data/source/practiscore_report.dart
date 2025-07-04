@@ -1,3 +1,5 @@
+// ignore_for_file: unused_field
+
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -262,7 +264,6 @@ class PractiscoreHitFactorReportParser extends MatchSource {
   static const int _TOTAL_POINTS = 27;
   int _readScoreLines(List<String> stageScoreLines, Map<int, MatchStage> stagesByFileId, Map<int, MatchEntry> shootersByFileId) {
     int i = 0;
-    Map<int, Map<MatchStage, RawScore>> scores = {};
 
     for (String line in stageScoreLines) {
       try {

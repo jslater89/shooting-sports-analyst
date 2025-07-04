@@ -8,7 +8,6 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
-import 'package:json_annotation/json_annotation.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/booth/controller.dart';
@@ -77,10 +76,6 @@ class BoothScorecardGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var model = context.watch<BroadcastBoothModel>();
-    var controller = context.read<BroadcastBoothController>();
-
-    int rowCount = model.scorecards.length;
     var size = MediaQuery.of(context).size;
 
     return Column(

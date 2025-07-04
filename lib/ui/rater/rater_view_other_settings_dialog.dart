@@ -6,7 +6,6 @@
 
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/help/scalers_and_distributions_help.dart';
 import 'package:shooting_sports_analyst/data/math/distribution_tools.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/group_carrier_scaler.dart';

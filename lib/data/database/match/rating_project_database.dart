@@ -76,7 +76,7 @@ extension RatingProjectDatabase on AnalystDatabase {
   }
 
   Future<bool> _innerDeleteShooterRating(DbShooterRating rating) async {
-      var deleted = await rating.events.filter().deleteAll();
+      await rating.events.filter().deleteAll();
       // _log.v("Deleted $deleted events while deleting rating");
       return isar.dbShooterRatings.delete(rating.id);
   }

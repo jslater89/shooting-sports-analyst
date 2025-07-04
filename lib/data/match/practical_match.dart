@@ -4,20 +4,14 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'dart:math';
 
-import 'package:flutter/foundation.dart';
-import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/model.dart';
-import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
-import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/legacy_loader/rating_history.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
-import 'package:shooting_sports_analyst/ui/widget/score_list.dart';
 
 var _log = SSALogger("OldMatch");
 
@@ -257,7 +251,6 @@ class PracticalMatch {
     }
 
     if(predictionMode != MatchPredictionMode.none) {
-      var locatedRatings = <ShooterRating>[];
       Map<ShooterRating, ShooterPrediction> predictions = {};
       ShooterPrediction? highPrediction;
 
@@ -310,6 +303,8 @@ class PracticalMatch {
               else if (predictionMode.eloAware) {
                 var rating = null;
                 var prediction = predictions[rating];
+                // The unused_local_variable is evidently a false positive.
+                // ignore: unnecessary_null_comparison
                 if(prediction != null && highPrediction != null) {
                   var percent = 0.3 + ((prediction.mean + prediction.shift / 2) / (highPrediction.halfHighPrediction + highPrediction.shift / 2) * 0.7);
                   matchScores[shooter]!.total.relativePoints += stage.maxPoints * percent;

@@ -5,14 +5,12 @@
  */
 
 import 'package:collection/collection.dart';
-import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/standard_deduplicator.dart';
-import 'package:shooting_sports_analyst/data/ranking/deduplication/uspsa_deduplicator.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
 import 'package:fuzzywuzzy/fuzzywuzzy.dart' as fuzzywuzzy;
@@ -356,7 +354,6 @@ class IcoreDeduplicator extends StandardDeduplicator {
       // 2. Standard -> Vanity
       // 3. Life -> Vanity
       // 4. Standard -> Life -> Vanity
-      var bestType = vanity != null ? MemberNumberType.benefactor : MemberNumberType.life;
       var bestMember = vanity ?? life!;
 
       // We'll handle each of the four situations in turn, individually, and combine them into
@@ -365,7 +362,6 @@ class IcoreDeduplicator extends StandardDeduplicator {
         sourceNumbers: [],
         targetNumber: bestMember.normalizedNumber,
       );
-      bool finalMappingIsUserMapping = false;
 
       if(standard != null && life != null) {
         if(standard.sameMember(life)) {

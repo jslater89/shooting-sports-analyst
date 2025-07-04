@@ -6,10 +6,8 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:json_annotation/json_annotation.dart';
-import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
-import 'package:shooting_sports_analyst/html_or/fake_html.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
 import 'package:shooting_sports_analyst/ui/booth/score_utils.dart';
@@ -53,7 +51,7 @@ class TickerEventCriterion {
       );
       events.addAll(e);
     }
-    
+
     return events;
   }
 }
@@ -96,7 +94,7 @@ class ExtremeScore extends TickerEventType {
   final String typeName = extremeScoreName;
 
   @override
-  String get uiLabel { 
+  String get uiLabel {
     String amountLabel = "";
     if(aboveAverage && !belowAverage) {
       amountLabel = "+${changeThreshold}%";
@@ -157,7 +155,7 @@ class ExtremeScore extends TickerEventType {
     }
     return extremeWord;
   }
-  
+
   @override
   List<TickerEvent> generateEvents({
     required ScorecardModel scorecard,
@@ -220,7 +218,7 @@ class ExtremeScore extends TickerEventType {
           mainAxisSize: MainAxisSize.min,
           children: [
             DropdownButtonFormField<String>(
-              value: aboveAverage && !belowAverage ? "above" : 
+              value: aboveAverage && !belowAverage ? "above" :
                      belowAverage && !aboveAverage ? "below" : "both",
               items: [
                 DropdownMenuItem(value: "above", child: Text("Above average")),
@@ -321,7 +319,7 @@ class MatchLeadChange extends TickerEventType {
 
   factory MatchLeadChange.fromJson(Map<String, dynamic> json) => _$MatchLeadChangeFromJson(json);
   Map<String, dynamic> toJson() => _$MatchLeadChangeToJson(this);
-  
+
   @override
   List<TickerEvent> generateEvents({
     required ScorecardModel scorecard,
@@ -380,7 +378,7 @@ class MatchLeadChange extends TickerEventType {
     }
     return [];
   }
-  
+
   @override
   String get uiLabel => "Match lead change";
 
@@ -400,7 +398,7 @@ class StageLeadChange extends TickerEventType {
 
   factory StageLeadChange.fromJson(Map<String, dynamic> json) => _$StageLeadChangeFromJson(json);
   Map<String, dynamic> toJson() => _$StageLeadChangeToJson(this);
-  
+
   @override
   List<TickerEvent> generateEvents({
     required ScorecardModel scorecard,
@@ -442,7 +440,7 @@ class StageLeadChange extends TickerEventType {
     }
     return events;
   }
-  
+
   @override
   String get uiLabel => "Stage lead change";
 
@@ -577,7 +575,7 @@ class NewShooterScore extends TickerEventType {
     else if("${competitor.entryId}" == shooterUuid) {
       return [];
     }
-    
+
     // no change found
     return [];
   }
@@ -613,7 +611,7 @@ class NewShooterScore extends TickerEventType {
       }
     );
   }
-  
+
   @override
   String get uiLabel => "$shooterName scores";
 }
