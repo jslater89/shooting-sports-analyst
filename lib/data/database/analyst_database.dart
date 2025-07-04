@@ -146,7 +146,8 @@ class AnalystDatabase {
           NamePartsQuery(name),
         if(sport != null)
           SportQuery(sport),
-        DateQuery(after: after, before: before),
+        if(after != null || before != null)
+          DateQuery(after: after, before: before),
       ],
       limit: pageSize,
       offset: page * pageSize,
@@ -335,6 +336,7 @@ class AnalystDatabase {
     // for paging, unless an alternate 'where' is highly selective, leaning on the
     // index for sort is probably preferable.
     MatchQueryElement? whereElement;
+    Iterable<MatchQueryElement> filterElements = elements;
     if(dateQuery == null && (sort is DateSort)) {
       dateQuery = DateQuery(before: null, after: null);
       whereElement = dateQuery;
@@ -343,10 +345,7 @@ class AnalystDatabase {
       nameQuery = NamePartsQuery("");
       whereElement = nameQuery;
     }
-    if(whereElement == null && sportQuery != null) {
-      whereElement = sportQuery;
-    }
-    Iterable<MatchQueryElement> filterElements = elements;
+    (whereElement, filterElements) = _buildElementLists(elements, whereElement);
 
     if(nameQuery?.canWhere ?? false) {
       nameQuery!;
@@ -357,6 +356,13 @@ class AnalystDatabase {
       if(nameQuery.name.length >= 3 || (sort is NameSort)) {
         (whereElement, filterElements) = _buildElementLists(elements, nameQuery);
       }
+    }
+    else if(sportQuery != null && whereElement == null) {
+      // If we have a sport query and no other where element, we can where on it.
+      // This is very unlikely to happen currently, since we're usually going to end up
+      // with a name or date where for sorting, but just in case we add future sorts
+      // that aren't where-backed...
+      (whereElement, filterElements) = _buildElementLists(elements, sportQuery);
     }
 
     var (sortProperties, whereSort) = _buildMatchSortFields(whereElement, sort);
