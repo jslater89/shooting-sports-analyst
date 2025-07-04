@@ -4,15 +4,11 @@
 
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
-import 'package:isar/isar.dart';
-import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_loader.dart';
-import 'package:shooting_sports_analyst/data/ranking/raters/points/points_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/timings.dart';
-import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/rater/deduplication_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
@@ -27,7 +23,7 @@ SSALogger _log = SSALogger("LoadRatingsPage");
 
 class LoadRatingsPage extends StatefulWidget {
   const LoadRatingsPage({super.key, required this.project, this.forceRecalculate = false, required this.onRatingsComplete, required this.onError});
-  
+
   final bool forceRecalculate;
   final DbRatingProject project;
   final VoidCallback onRatingsComplete;
@@ -67,7 +63,7 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
   }
 
   Future<void> calculateRatings() async {
-    
+
     setState(() {
       currentState = LoadingState.readingMatches;
     });

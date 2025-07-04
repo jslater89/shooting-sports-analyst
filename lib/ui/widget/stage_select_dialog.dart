@@ -5,7 +5,6 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 
 class StageSelectDialog extends StatefulWidget {

@@ -9,12 +9,8 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:shooting_sports_analyst/data/model.dart';
-import 'package:shooting_sports_analyst/data/practiscore_parser.dart';
-import 'package:shooting_sports_analyst/data/results_file_parser.dart';
 import 'package:shooting_sports_analyst/data/source/practiscore_report.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
-import 'package:shooting_sports_analyst/data/sport/builtins/ipsc.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';

@@ -4,7 +4,6 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
@@ -12,7 +11,6 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_e
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rating_change.dart';
-import 'package:shooting_sports_analyst/data/sorted_list.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
@@ -118,9 +116,9 @@ class PointsRating extends ShooterRating<PointsRatingEvent> {
   PointsRating.wrapDbRating(DbShooterRating rating) : super.wrapDbRating(rating);
 
 
-  final int Function(PointsRatingEvent a, PointsRatingEvent b) _ratingComparator = (a, b) {
-    return b.ratingChange.compareTo(a.ratingChange);
-  };
+  // final int Function(PointsRatingEvent a, PointsRatingEvent b) _ratingComparator = (a, b) {
+  //   return b.ratingChange.compareTo(a.ratingChange);
+  // };
 
   @override
   PointsRatingEvent wrapEvent(DbRatingEvent e) {

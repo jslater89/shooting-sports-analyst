@@ -6,7 +6,6 @@
 
 import 'dart:math';
 
-import 'package:collection/collection.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
@@ -15,7 +14,6 @@ import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/icore_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
-import 'package:shooting_sports_analyst/data/ranking/deduplication/uspsa_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/icore.dart';

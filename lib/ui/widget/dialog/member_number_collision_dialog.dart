@@ -6,13 +6,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
-import 'package:shooting_sports_analyst/data/database/schema/match.dart';
-import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';

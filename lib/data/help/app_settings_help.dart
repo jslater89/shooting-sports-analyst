@@ -5,7 +5,6 @@
  */
 
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_topic.dart';
-import 'package:shooting_sports_analyst/version.dart';
 
 const appSettingsHelpId = "app-settings";
 const appSettingsHelpLink = "?app-settings";

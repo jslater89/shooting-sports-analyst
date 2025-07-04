@@ -9,7 +9,6 @@ import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
-import 'package:mutex/mutex.dart';
 import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
@@ -248,6 +247,13 @@ class BroadcastBoothController {
       var displayFilters = ScorecardFilters(
         filterSet: filters,
       );
+      var competitors = model.latestMatch.filterShooters(
+        divisions: filters.activeDivisions.toList(),
+      );
+      if(competitors.isEmpty) {
+        continue;
+      }
+
       currentRow.add(ScorecardModel(
         id: model.nextValidScorecardId,
         name: d.name,

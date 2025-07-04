@@ -59,13 +59,13 @@ class DivisionRatingGroupProvider implements RatingGroupsProvider {
 
   DivisionRatingGroupProvider(String sportName,this.divisions) :
     divisionRatingGroups = divisions.mapIndexed((index, d) => RatingGroup(
-      uuid: "icore-${d.name.toLowerCase().replaceAll(" ", "-")}",
+      uuid: "${sportName.toLowerCase()}-${d.name.toLowerCase().replaceAll(" ", "-")}",
       sortOrder: index,
       sportName: sportName,
       name: d.name,
       displayName: d.shortDisplayName,
       divisionNames: [d.name],
-    )).toList() 
+    )).toList()
   {
     builtinRatingGroups = divisionRatingGroups;
     defaultRatingGroups = divisionRatingGroups;
@@ -79,7 +79,7 @@ class DivisionRatingGroupProvider implements RatingGroupsProvider {
 
   @override
   late final List<RatingGroup> defaultRatingGroups;
-  
+
   @override
   RatingGroup? getGroup(String uuid) {
     return divisionRatingGroups.firstWhereOrNull((d) => d.uuid == uuid);
@@ -89,11 +89,11 @@ class DivisionRatingGroupProvider implements RatingGroupsProvider {
 abstract interface class ConnectivityCalculator {
   /// The data required for this calculator to calculate
   /// a baseline connectivity score.
-  /// 
+  ///
   /// Only data requested in this list will be provided to
   /// [calculateConnectivityBaseline].
   List<ConnectivityRequiredData> get requiredBaselineData;
-  
+
   /// Calculate the baseline connectivity score for a rating
   /// group. Data requsted in [requiredBaselineData] will be
   /// provided. Other data will be null.
@@ -118,7 +118,7 @@ abstract interface class ConnectivityCalculator {
   double calculateMatchConnectivity(List<double> connectivityScores);
 
   /// Calculate the scale factor for a given match connectivity vs. a baseline.
-  /// 
+  ///
   /// Clamp to [minScale] and [maxScale] if they are provided.
   double getScaleFactor({
     required double connectivity,

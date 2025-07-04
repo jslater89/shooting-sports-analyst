@@ -4,7 +4,6 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:flutter/foundation.dart';
 // import 'package:shooting_sports_analyst/data/db/object/match/shooter.dart';
 import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/results_file_parser.dart';

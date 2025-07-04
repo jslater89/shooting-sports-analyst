@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
-import 'package:shooting_sports_analyst/ui/booth/model.dart';
 
 part 'global_card_settings_dialog.g.dart';
 

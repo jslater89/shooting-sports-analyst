@@ -23,14 +23,12 @@ import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/main.dart';
 import 'package:shooting_sports_analyst/preference_names.dart';
 import 'package:shooting_sports_analyst/route/broadcast_booth_page.dart';
-import 'package:shooting_sports_analyst/route/elo_tuner_page.dart';
 import 'package:shooting_sports_analyst/route/match_database_manager.dart';
 import 'package:shooting_sports_analyst/route/match_heat_page.dart';
 import 'package:shooting_sports_analyst/route/practiscore_url.dart';
 import 'package:shooting_sports_analyst/ui/empty_scaffold.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/app_settings.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
-import 'package:shooting_sports_analyst/ui/source/credentials_manager.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_source_chooser_dialog.dart';
 
 var _log = SSALogger("HomePage");

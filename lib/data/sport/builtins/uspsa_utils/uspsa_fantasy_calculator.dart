@@ -159,7 +159,7 @@ class USPSAFantasyScoringCalculator implements FantasyScoringCalculator<USPSAFan
       }
       var score = scores[shooter]!;
 
-      int totalPoints = 0;
+      // int totalPoints = 0;
       int penaltyCount = 0;
 
       // Points for finish percentage.

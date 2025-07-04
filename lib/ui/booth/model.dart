@@ -203,7 +203,7 @@ class BoothTickerModel with ChangeNotifier {
     List<TickerEventCriterion>? globalTickerCriteria,
     this.updateBell = false,
     this.updateBellVolume = .75,
-  }) : lastUpdateTime = lastUpdateTime ?? DateTime.now(), globalTickerCriteria = globalTickerCriteria ?? defaultTickerCriteria;
+  }) : lastUpdateTime = lastUpdateTime ?? DateTime.now(), globalTickerCriteria = globalTickerCriteria ?? [...defaultTickerCriteria];
 
   factory BoothTickerModel.fromJson(Map<String, dynamic> json) => _$BoothTickerModelFromJson(json);
 
@@ -212,10 +212,10 @@ class BoothTickerModel with ChangeNotifier {
   void copyFrom(BoothTickerModel other) {
     updateInterval = other.updateInterval;
     lastUpdateTime = other.lastUpdateTime;
-    globalTickerCriteria = other.globalTickerCriteria;
+    globalTickerCriteria = [...other.globalTickerCriteria];
     tickerSpeed = other.tickerSpeed;
     paused = other.paused;
-    timewarpTickerEvents = other.timewarpTickerEvents;
+    timewarpTickerEvents = [...other.timewarpTickerEvents];
     updateBell = other.updateBell;
     updateBellVolume = other.updateBellVolume;
     hasNewEvents = other.hasNewEvents;

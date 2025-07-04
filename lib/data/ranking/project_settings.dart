@@ -7,14 +7,12 @@
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
-import 'package:shooting_sports_analyst/data/ranking/legacy_loader/old_rating_project.dart';
 import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/shooter_aliases.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/member_number_collision_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 const _keepHistoryKey = "keepHistory";
@@ -57,6 +55,7 @@ class RatingProjectSettings {
   /// A map of member number mappings that should _not_ be made automatically.
   ///
   /// If a candidate member number change appears in this map, in either direction
+  // ignore: deprecated_new_in_comment_reference
   /// (i.e., map[old] = new or map[new] = old), the shooter ratings corresponding
   /// to those numbers will not be merged.
   ///
@@ -169,10 +168,10 @@ class RatingProjectSettings {
   }
 
   /// Add a user-specified member number mapping, or update an existing mapping.
-  /// 
+  ///
   /// If the source number already has a mapping, it, as well as its preexisting
   /// target number, will be updated to point to the new target number.
-  /// 
+  ///
   /// Returns true if the mapping was added or updated, or false if the requested
   /// mapping already exists.
   bool addUserMapping(String sourceNumber, String targetNumber) {
@@ -188,7 +187,7 @@ class RatingProjectSettings {
   }
 
   /// Add a member number mapping blacklist entry from source to target.
-  /// 
+  ///
   /// Returns true if the entry was added, or false the blacklist already
   /// contains an entry from source to target.
   bool addBlacklistEntry(String sourceNumber, String targetNumber) {

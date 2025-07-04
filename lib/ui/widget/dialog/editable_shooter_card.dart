@@ -11,7 +11,6 @@ import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
-import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/ui/widget/captioned_text.dart';
 import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/shooter_card.dart';
@@ -107,7 +106,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
               children: [
                 CaptionedText(
                     captionText: "Match Score",
-                    text: "${widget.matchScore!.points!.toStringAsFixed(2)} (${widget.matchScore!.ratio.asPercentage()}%)"
+                    text: "${widget.matchScore!.points.toStringAsFixed(2)} (${widget.matchScore!.ratio.asPercentage()}%)"
                 ),
                 SizedBox(width: 12),
                 CaptionedText(

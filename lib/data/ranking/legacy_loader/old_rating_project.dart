@@ -42,6 +42,7 @@ class OldRatingProjectSettings {
   /// A map of member number mappings that should _not_ be made automatically.
   ///
   /// If a candidate member number change appears in this map, in either direction
+  // ignore: deprecated_new_in_comment_reference
   /// (i.e., map[old] = new or map[new] = old), the shooter ratings corresponding
   /// to those numbers will not be merged.
   ///

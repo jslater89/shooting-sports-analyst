@@ -5,15 +5,12 @@
  */
 
 import 'package:collection/collection.dart';
-import 'package:isar/isar.dart';
-import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
 import 'package:shooting_sports_analyst/data/sort_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/display_settings.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/fantasy_scoring_calculator.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
-import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 
 /// A Sport is a shooting sports discipline.
 class Sport {
@@ -83,7 +80,7 @@ class Sport {
 
     throw StateError("sport with power factors is missing default power factor");
   }
-  
+
   final Map<String, MatchLevel> eventLevels;
 
   bool get hasPowerFactors => powerFactors.length > 1; // All sports have one default PF
@@ -100,7 +97,7 @@ class Sport {
   /// The deduplication logic used for this sport. Leave null if deduplication
   /// is unnecessary.
   final ShooterDeduplicator? shooterDeduplicator;
-  /// 
+  ///
   final RatingStrengthProvider? ratingStrengthProvider;
   final PubstompProvider? pubstompProvider;
   final RatingGroupsProvider? builtinRatingGroupsProvider;
@@ -447,7 +444,7 @@ class MatchLevel extends NameLookupEntity {
 /// data for other sports: if I ever get leave to write an official uspsa.org
 /// match source, it will support USPSA only, not USPSA and other generic hit
 /// factor matches.
-/// 
+///
 /// The second group ('userDefined') is for non-hardcoded but still predefined
 /// sports. If (I write a sport editor and) a user defines a sport with it, it
 /// gets one of these types, and match sources declaring those types can parse

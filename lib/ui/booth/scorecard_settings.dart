@@ -10,7 +10,6 @@ import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/logger.dart';
-import 'package:shooting_sports_analyst/ui/booth/model.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_model.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
@@ -149,16 +148,16 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
             List<MatchEntry>? competitors;
             if(previouslySelectedStrings != null) {
               competitors = await MatchEntrySelectDialog.show<String>(
-                context, 
-                match: widget.match, 
+                context,
+                match: widget.match,
                 filters: scorecard.fullScoreFilters.filterSet ?? FilterSet(widget.match.sport),
                 previousSelection: previouslySelectedStrings,
               );
             }
             else {
               competitors = await MatchEntrySelectDialog.show<int>(
-                context, 
-                match: widget.match, 
+                context,
+                match: widget.match,
                 filters: scorecard.fullScoreFilters.filterSet ?? FilterSet(widget.match.sport),
                 previousSelection: previouslySelectedInts ?? <int>[],
               );
@@ -197,7 +196,7 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
               scorecard.displayFilters.filterSet!.knownSquads = widget.match.squadNumbers.toList();
               scorecard.displayFilters.filterSet!.knownSquads.sort();
             }
-            var filters = await FilterDialog.show(context, scorecard.displayFilters.filterSet 
+            var filters = await FilterDialog.show(context, scorecard.displayFilters.filterSet
               ?? FilterSet(widget.match.sport, empty: true));
 
             // returns null on cancel
@@ -224,16 +223,16 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
             List<MatchEntry>? competitors;
             if(previouslySelectedStrings != null) {
               competitors = await MatchEntrySelectDialog.show<String>(
-                context, 
-                match: widget.match, 
+                context,
+                match: widget.match,
                 filters: scorecard.displayFilters.filterSet ?? FilterSet(widget.match.sport),
                 previousSelection: previouslySelectedStrings,
               );
             }
             else {
               competitors = await MatchEntrySelectDialog.show<int>(
-                context, 
-                match: widget.match, 
+                context,
+                match: widget.match,
                 filters: scorecard.displayFilters.filterSet ?? FilterSet(widget.match.sport),
                 previousSelection: previouslySelectedInts ?? <int>[],
               );
@@ -325,10 +324,10 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
 }
 
 /// MatchEntrySelectDialog selects match entries from a match's shooters.
-/// 
+///
 /// If T is String, the dialog will use [MatchEntry.sourceId] as the unique identifier. Otherwise,
 /// it will use [MatchEntry.entryId].
-/// 
+///
 /// If T is String but some entries have null source IDs, this dialog will throw an exception.
 class MatchEntrySelectDialog<T> extends StatefulWidget {
   const MatchEntrySelectDialog({super.key, required this.match, required this.filters, required this.previousSelection});
@@ -410,7 +409,7 @@ class _MatchEntrySelectDialogState<T> extends State<MatchEntrySelectDialog<T>> {
                       setState(() {
                         if(value == true) {
                           selectedEntries.add(shooter);
-                        } 
+                        }
                         else {
                           selectedEntries.remove(shooter);
                         }

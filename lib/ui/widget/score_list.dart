@@ -6,7 +6,6 @@
 
 import 'dart:math';
 
-import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
@@ -568,7 +567,7 @@ class _ScoreListState extends State<ScoreList> {
                       return Expanded(flex: 3, child: Text("n/a"));
                     }
 
-                    if(stageScore!.score.scoring is PointsScoring) {
+                    if(stageScore.score.scoring is PointsScoring) {
                       for(var score in widget.baseScores) {
                         if(score.stageScores[stage] != null && score.stageScores[stage]!.score.points > maxPoints) {
                           maxPoints = score.stageScores[stage]!.score.points;

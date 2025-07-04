@@ -30,7 +30,7 @@ class GammaEstimator implements ContinuousDistributionEstimator {
     }
 
     // Calculate necessary statistics
-    final n = data.length;
+    // final n = data.length;
     final mean = data.average();
     final logMean = data.map(log).average();
     final s = log(mean) - logMean;

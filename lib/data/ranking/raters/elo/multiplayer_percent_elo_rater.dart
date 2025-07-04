@@ -4,7 +4,6 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'dart:convert';
 import 'dart:math';
 
 import 'package:collection/collection.dart';
@@ -12,7 +11,6 @@ import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:intl/intl.dart';
-import 'package:json_annotation/json_annotation.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/gumbel.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
@@ -270,6 +268,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     }
 
     var backRatingErr = 0.0;
+    // ignore: unused_local_variable
     var backRatingRaw = 0.0;
     var stepSize = K * 2;
     int steps = 0;
@@ -535,6 +534,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   static const _nameFlex = 5;
   static const _ratingFlex = 2;
   static const _matchChangeFlex = 2;
+  // ignore: unused_field
   static const _uncertaintyFlex = 2;
   static const _errorFlex = 2;
   static const _connectednessFlex = 2;
@@ -676,7 +676,6 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
       var error = s.standardError;
 
-      ShootingMatch? match;
       double lastMatchChange = s.lastMatchChange;
 
       csv += "${s.originalMemberNumber},";

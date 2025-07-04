@@ -4,7 +4,6 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/model.dart';

@@ -5,7 +5,6 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 import 'model/shooter_rating.dart';

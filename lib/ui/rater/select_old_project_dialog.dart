@@ -4,7 +4,6 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
 
@@ -50,7 +49,7 @@ class _MigrateOldProjectDialogState extends State<MigrateOldProjectDialog> {
 
   var _nameOverride = TextEditingController();
   OldRatingProject? _selectedProject;
-  
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(

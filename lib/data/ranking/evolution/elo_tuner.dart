@@ -1,3 +1,5 @@
+// ignore_for_file: unused_local_variable
+
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -76,7 +78,7 @@ class EloTuner {
     currentPopulation.addAll(initialPopulation);
 
     _log.d("Tuning with ${initialPopulation.length} genomes and ${trainingData.length} test sets");
-    
+
     for(var p in currentPopulation) {
       Location? placed;
       while(placed == null) {
@@ -156,7 +158,7 @@ class EloTuner {
 
   Future<void> runGeneration(Future<void> Function(EvaluationProgressUpdate) callback) async {
     _log.d("Starting generation $currentGeneration with ${currentPopulation.length} members");
-    
+
     int genomeIndex = 0;
     var totalDuration = 0;
     var sw = Stopwatch();

@@ -4,9 +4,9 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
 import 'package:shooting_sports_analyst/data/sort_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
-import 'package:shooting_sports_analyst/data/sport/scoring/stage_scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 
 final _idpaPenalties = [
@@ -16,8 +16,21 @@ final _idpaPenalties = [
   const ScoringEvent("FTDR", timeChange: 30, alternateNames: ["Failure to Do Right"]),
 ];
 
+final idpaSportName = "IDPA";
+const idpaDivisions = [
+  const Division(name: "SSP", longName: "Stock Service Pistol", shortName: "SSP"),
+  const Division(name: "PCC", longName: "Pistol Caliber Carbine", shortName: "PCC", alternateNames: ["PCC10"]),
+  const Division(name: "ESP", longName: "Enhanced Service Pistol", shortName: "ESP"),
+  const Division(name: "CDP", longName: "Custom Defensive Pistol", shortName: "CDP"),
+  const Division(name: "CO", longName: "Carry Optics", shortName: "CO"),
+  const Division(name: "CCP", longName: "Compact Carry Pistol", shortName: "CCP"),
+  const Division(name: "BUG", longName: "Backup Gun", shortName: "BUG"),
+  const Division(name: "REV", longName: "Revolver", shortName: "REV", alternateNames: ["REVO", "SSR", "ESR"]),
+  const Division(name: "NFC", longName: "Not For Competition", shortName: "NFC", alternateNames: ["SPD"], fallback: true),
+];
+
 final idpaSport = Sport(
-    "IDPA",
+    idpaSportName,
     type: SportType.idpa,
     matchScoring: CumulativeScoring(highScoreWins: false),
     defaultStageScoring: const TimePlusScoring(),
@@ -38,17 +51,7 @@ final idpaSport = Sport(
       const Classification(index: 5, name: "Novice", shortName: "NV"),
       const Classification(index: 6, name: "Unclassified", shortName: "UN", fallback: true),
     ],
-    divisions: [
-      const Division(name: "SSP", longName: "Stock Service Pistol", shortName: "SSP"),
-      const Division(name: "PCC", longName: "Pistol Caliber Carbine", shortName: "PCC", alternateNames: ["PCC10"]),
-      const Division(name: "ESP", longName: "Enhanced Service Pistol", shortName: "ESP"),
-      const Division(name: "CDP", longName: "Custom Defensive Pistol", shortName: "CDP"),
-      const Division(name: "CO", longName: "Carry Optics", shortName: "CO"),
-      const Division(name: "CCP", longName: "Compact Carry Pistol", shortName: "CCP"),
-      const Division(name: "BUG", longName: "Backup Gun", shortName: "BUG"),
-      const Division(name: "REV", longName: "Revolver", shortName: "REV", alternateNames: ["REVO", "SSR", "ESR"]),
-      const Division(name: "NFC", longName: "Not For Competition", shortName: "NFC", alternateNames: ["SPD"], fallback: true),
-    ],
+    divisions: idpaDivisions,
     powerFactors: [
       PowerFactor("",
         targetEvents: [
@@ -59,5 +62,6 @@ final idpaSport = Sport(
         ],
         penaltyEvents: _idpaPenalties,
       ),
-    ]
+    ],
+    builtinRatingGroupsProvider: DivisionRatingGroupProvider(idpaSportName, idpaDivisions),
 );

@@ -8,8 +8,6 @@ import 'package:shooting_sports_analyst/data/sport/builtins/icore.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/idpa.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/ipsc.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/pcsl.dart';
-import 'package:shooting_sports_analyst/data/sport/builtins/sporting_clays.dart';
-import 'package:shooting_sports_analyst/data/sport/builtins/uhrc.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 
@@ -20,7 +18,7 @@ class SportRegistry {
       uspsaSport,
       ipscSport,
       pcslSport,
-      idpaSport,  
+      idpaSport,
       icoreSport,
     ]);
     return _instance!;
@@ -35,17 +33,6 @@ class SportRegistry {
         throw ArgumentError("cannot add multiple sports with the same name");
       }
       _sportsByName[s.name] = s;
-    }
-  }
-
-  Future<void> addDefaultRatingGroups() async {
-    for(var sport in _sportsByName.values) {
-      var p = sport.builtinRatingGroupsProvider;
-      if(p != null) {
-        for(var group in p.defaultRatingGroups) {
-
-        }
-      }
     }
   }
 

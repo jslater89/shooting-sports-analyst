@@ -77,8 +77,6 @@ class _ResultPageState extends State<ResultPage> {
   ScrollController _verticalScrollController = ScrollController();
   ScrollController _horizontalScrollController = ScrollController();
 
-  late BuildContext _innerContext;
-
   /// widget.canonicalMatch is copied here, so we can save changes to the DB
   /// after we refresh.
   late ShootingMatch _canonicalMatch;
@@ -527,7 +525,7 @@ class _ResultPageState extends State<ResultPage> {
       fantasyScores: _fantasyScores,
       onScoreEdited: (shooter, stage, wholeMatch) {
         if(wholeMatch) {
-          for(var stage in _currentMatch!.stages) {
+          for(var stage in _currentMatch.stages) {
             if(_editedShooters[stage] == null) _editedShooters[stage] = [];
 
             _editedShooters[stage]!.add(shooter);
@@ -585,13 +583,13 @@ class _ResultPageState extends State<ResultPage> {
                     setState(() {
                       _editedShooters = {};
                       _currentMatch = _currentMatch;
-                      _stage = _stage == null ? null : _currentMatch!.lookupStage(_stage!);
+                      _stage = _stage == null ? null : _currentMatch.lookupStage(_stage!);
                       _baseScores = scores.values.toList();
                       _searchedScores = []..addAll(scores.values);
                       _whatIfMode = false;
                     });
 
-                    var newStages = _filteredStages.map((stage) => _currentMatch!.lookupStage(stage)!).toList();
+                    var newStages = _filteredStages.map((stage) => _currentMatch.lookupStage(stage)!).toList();
                     _selectStages(newStages);
                     _applyStage(_stage != null ? StageMenuItem(_stage!) : StageMenuItem.match());
                   }
@@ -662,7 +660,7 @@ class _ResultPageState extends State<ResultPage> {
             icon: Icon(Icons.table_chart),
             onPressed: () {
               showDialog(context: context, builder: (context) {
-                return MatchBreakdown(sport: sport, match: _currentMatch, shooters: _currentMatch!.shooters);
+                return MatchBreakdown(sport: sport, match: _currentMatch, shooters: _currentMatch.shooters);
               });
             },
           )
@@ -685,7 +683,7 @@ class _ResultPageState extends State<ResultPage> {
         child: IconButton(
           icon: Icon(Icons.bar_chart),
           onPressed: () {
-            var stats = MatchStatsCalculator(_currentMatch!);
+            var stats = MatchStatsCalculator(_currentMatch);
             var stageStats = stats.stageStats[_stage!]!;
             StageStatsDialog.show(context, stageStats);
           }
@@ -811,7 +809,7 @@ class _ResultPageState extends State<ResultPage> {
             value: _settings,
             child: Scaffold(
               appBar: AppBar(
-                title: Text(_currentMatch?.name ?? "Match Results Viewer"),
+                title: Text(_currentMatch.name),
                 centerTitle: true,
                 actions: actions,
                 bottom: _operationInProgress ? PreferredSize(
@@ -821,7 +819,6 @@ class _ResultPageState extends State<ResultPage> {
               ),
               body: Builder(
                 builder: (context) {
-                  _innerContext = context;
                   return Column(
                     children: [
                       sortWidget,

@@ -6,7 +6,6 @@
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
 import 'package:shooting_sports_analyst/ui/booth/ticker_criteria.dart';
 
@@ -188,10 +187,9 @@ class _TickerSettingsWidgetState extends State<TickerSettingsWidget> {
                   Text("Restore defaults")
                 ],
               ),
-              onPressed: () async {
-                widget.tickerModel.globalTickerCriteria = [
-                  ...BoothTickerModel.defaultTickerCriteria,
-                ];
+              onPressed: () {
+                widget.tickerModel.globalTickerCriteria.clear();
+                widget.tickerModel.globalTickerCriteria.addAll(BoothTickerModel.defaultTickerCriteria);
                 setState(() {});
               },
             ),
@@ -340,4 +338,3 @@ class _TickerCriterionEditDialogState extends State<TickerCriterionEditDialog> {
     );
   }
 }
-

@@ -4,11 +4,24 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/sorts.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa_utils/uspsa_fantasy_calculator.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/stage_scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
+
+const ipscSportName = "IPSC";
+const ipscDivisions = [
+  const Division(name: "Open", shortName: "OPEN", fallback: true),
+  const Division(name: "PCC Optic", shortName: "PCCO", alternateNames: ["PCC", "PCC Optics"]),
+  const Division(name: "PCC Iron", shortName: "PCCI", alternateNames: ["PCC Irons"]),
+  const Division(name: "Standard", shortName: "STD", alternateNames: ["STA"]),
+  const Division(name: "Prod. Optics", longName: "Production Optics", shortName: "PO"),
+  const Division(name: "Production", shortName: "PROD"),
+  const Division(name: "Classic", shortName: "CLS", alternateNames: ["CLS"]),
+  const Division(name: "Revolver", shortName: "REV", alternateNames: ["REVO"]),
+];
 
 final _ipscPenalties = [
   const ScoringEvent("Procedural", shortName: "P", pointChange: -10),
@@ -29,7 +42,7 @@ final _minorPowerFactor = PowerFactor("Minor",
 );
 
 final ipscSport = Sport(
-  "IPSC",
+  ipscSportName,
   type: SportType.ipsc,
   matchScoring: RelativeStageFinishScoring(pointsAreUSPSAFixedTime: true),
   defaultStageScoring: const HitFactorScoring(),
@@ -54,16 +67,7 @@ final ipscSport = Sport(
     const Classification(index: 6, name: "Expired", shortName: "X"),
     const Classification(index: 7, name: "Unclassified", shortName: "U", alternateNames: [""], fallback: true),
   ],
-  divisions: [
-    const Division(name: "Open", shortName: "OPEN", fallback: true),
-    const Division(name: "PCC Optic", shortName: "PCCO", alternateNames: ["PCC", "PCC Optics"]),
-    const Division(name: "PCC Iron", shortName: "PCCI", alternateNames: ["PCC Irons"]),
-    const Division(name: "Standard", shortName: "STD", alternateNames: ["STA"]),
-    const Division(name: "Prod. Optics", longName: "Production Optics", shortName: "PO"),
-    const Division(name: "Production", shortName: "PROD"),
-    const Division(name: "Classic", shortName: "CLS", alternateNames: ["CLS"]),
-    const Division(name: "Revolver", shortName: "REV", alternateNames: ["REVO"]),
-  ],
+  divisions: ipscDivisions,
   ageCategories: [
     const AgeCategory(name: "Junior"),
     const AgeCategory(name: "Senior"),
@@ -96,5 +100,6 @@ final ipscSport = Sport(
       fallback: true,
       penaltyEvents: _ipscPenalties,
     ),
-  ]
+  ],
+  builtinRatingGroupsProvider: DivisionRatingGroupProvider(ipscSportName, ipscDivisions)
 );

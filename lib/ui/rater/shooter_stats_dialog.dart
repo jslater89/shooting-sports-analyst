@@ -19,7 +19,6 @@ import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
-import 'package:shooting_sports_analyst/data/model.dart' as old;
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:community_charts_flutter/community_charts_flutter.dart' as charts;
 // ignore: implementation_imports

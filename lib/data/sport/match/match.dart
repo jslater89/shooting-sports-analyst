@@ -5,15 +5,10 @@
  */
 
 import 'package:collection/collection.dart';
-import 'package:flutter/foundation.dart';
-import 'package:isar/isar.dart';
-import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/match/practical_match.dart' as oldschema;
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
-import 'package:shooting_sports_analyst/data/ranking/legacy_loader/rating_history.dart';
 import 'package:shooting_sports_analyst/data/sport/match/translator.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
-import 'package:shooting_sports_analyst/data/sport/scoring/stage_scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';

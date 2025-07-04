@@ -11,11 +11,11 @@ import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
 import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/practiscore_parser.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
-import 'package:shooting_sports_analyst/data/ranking/legacy_loader/rating_history.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/rater/shooter_stats_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/box_and_whisker.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
@@ -405,7 +405,16 @@ class _PredictionViewState extends State<PredictionView> {
             ),
             Expanded(
               flex: PredictionView._nameFlex,
-              child: Text(pred.shooter.getName(suffixes: false)),
+              child: GestureDetector(
+                onTap: () async {
+                  var latestEvent = pred.shooter.eventsWithWindow(window: 1).firstOrNull;
+                  if(latestEvent != null) {
+                    var latestMatch = latestEvent.match;
+                    ShooterStatsDialog.show(context, pred.shooter, latestMatch);
+                  }
+                },
+                child: Text(pred.shooter.getName(suffixes: false)),
+              ),
             ),
             Expanded(
               flex: PredictionView._classFlex,

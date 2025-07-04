@@ -77,8 +77,8 @@ class _SSAFileOutput {
   static const _LOG_DIR = "./logs/";
   static const _FILENAME = "./logs/analyst.log";
 
-  /// Keep main file and two more.
-  static const _FILE_LIMIT = 3;
+  /// Keep main file and 24 more.
+  static const _FILE_LIMIT = 25;
 
   static const _MAX_FILE_SIZE = 1024 * 1024 * 5;
   static const _MIN_FILE_DELAY = 60;
@@ -246,13 +246,13 @@ class SSALogger extends LogPrinter {
   /// what the filter is set to.
   void vv(dynamic message, {dynamic error, StackTrace? stackTrace}) {
     if(kReleaseMode) return;
-    _logger!.t("VV:$message", error: error, stackTrace: stackTrace);
+    _logger.t("VV:$message", error: error, stackTrace: stackTrace);
   }
-  void v(dynamic message, {dynamic error, StackTrace? stackTrace}) => _logger!.t(message, error: error, stackTrace: stackTrace);
-  void d(dynamic message, {dynamic error, StackTrace? stackTrace}) => _logger!.d(message, error: error, stackTrace: stackTrace);
-  void i(dynamic message, {dynamic error, StackTrace? stackTrace}) => _logger!.i(message, error: error, stackTrace: stackTrace);
-  void w(dynamic message, {dynamic error, StackTrace? stackTrace}) => _logger!.w(message, error: error, stackTrace: stackTrace);
-  void e(dynamic message, {dynamic error, StackTrace? stackTrace}) => _logger!.e(message, error: error, stackTrace: stackTrace);
+  void v(dynamic message, {dynamic error, StackTrace? stackTrace}) => _logger.t(message, error: error, stackTrace: stackTrace);
+  void d(dynamic message, {dynamic error, StackTrace? stackTrace}) => _logger.d(message, error: error, stackTrace: stackTrace);
+  void i(dynamic message, {dynamic error, StackTrace? stackTrace}) => _logger.i(message, error: error, stackTrace: stackTrace);
+  void w(dynamic message, {dynamic error, StackTrace? stackTrace}) => _logger.w(message, error: error, stackTrace: stackTrace);
+  void e(dynamic message, {dynamic error, StackTrace? stackTrace}) => _logger.e(message, error: error, stackTrace: stackTrace);
 
   @override
   List<String> log(LogEvent event) {

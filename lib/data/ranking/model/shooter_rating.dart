@@ -215,7 +215,7 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
           candidateEvent = e;
         }
       }
-      else if(candidateEvent == null && e.match.date!.isBefore(match.date!)) {
+      else if(candidateEvent == null && e.match.date.isBefore(match.date)) {
         candidateEvent = e;
       }
 
@@ -243,7 +243,7 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
     else {
       var firstEvent = AnalystDatabase().getRatingEventsForSync(wrappedRating, limit: 1, order: Order.ascending).firstOrNull;
       if(firstEvent != null) {
-        return firstEvent.newRating;
+        return firstEvent.oldRating;
       }
       else {
         return rating;

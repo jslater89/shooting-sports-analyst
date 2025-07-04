@@ -6,7 +6,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shooting_sports_analyst/data/help/elo_configuration_help.dart';
 import 'package:shooting_sports_analyst/data/help/marbles_configuration_help.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_settings.dart';
@@ -33,19 +32,19 @@ class MarbleSettingsController extends RaterSettingsController<MarbleSettings> w
     _currentSettings = s;
     notifyListeners();
   }
-  
+
   @override
   void restoreDefaults() {
     _restoreDefaults = true;
     _currentSettings.restoreDefaults();
     notifyListeners();
   }
-  
+
   @override
   void settingsChanged() {
     notifyListeners();
   }
-  
+
   @override
   String? validate() {
     return lastError;
@@ -57,11 +56,11 @@ class MarbleSettingsWidget extends RaterSettingsWidget<MarbleSettings, MarbleSet
     super(key: key, controller: controller);
 
   final MarbleSettingsController controller;
-  
+
   @override
   State<StatefulWidget> createState() {
     return _MarbleSettingsWidgetState();
-  }  
+  }
 }
 
 class _MarbleSettingsWidgetState extends State<MarbleSettingsWidget> {
@@ -136,13 +135,13 @@ class _MarbleSettingsWidgetState extends State<MarbleSettingsWidget> {
         _validateText();
       }
     });
-    
+
     _midpointController.addListener(() {
       if(double.tryParse(_midpointController.text) != null) {
         _validateText();
       }
     });
-    
+
     _ordinalPowerController.addListener(() {
       if(double.tryParse(_ordinalPowerController.text) != null) {
         _validateText();
@@ -177,7 +176,7 @@ class _MarbleSettingsWidgetState extends State<MarbleSettingsWidget> {
       widget.controller.lastError = "Ante must be positive";
       return;
     }
-    
+
     if(power == null) {
       widget.controller.lastError = "Power formatted incorrectly";
       return;

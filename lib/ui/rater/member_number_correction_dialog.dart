@@ -5,12 +5,10 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/member_number_collision_dialog.dart';
 
 class MemberNumberCorrectionListDialog extends StatefulWidget {
   const MemberNumberCorrectionListDialog({

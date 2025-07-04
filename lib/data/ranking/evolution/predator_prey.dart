@@ -6,7 +6,6 @@
 
 import 'dart:math';
 
-import 'package:shooting_sports_analyst/data/ranking/evolution/elo_evaluation.dart';
 
 abstract class GridEntity<P> {
   Location? _location;
@@ -207,7 +206,7 @@ class PredatorPreyGrid<P extends Prey> {
 
   /// Randomly places a grid occupant, trying up to [numRetries]
   /// times to generate a valid random coordinate.
-  /// 
+  ///
   /// If random placement fails, returns (-1, -1).
   Location? placeEntity(GridEntity<P> occupant, [int numRetries = 100]) {
     if(occupant.location != null) {
@@ -220,10 +219,10 @@ class PredatorPreyGrid<P extends Prey> {
         return location;
       }
     }
-    
+
     return null;
   }
-  
+
   /// Set the occupant of a given cell.
   void _setOccupant(Location cell, GridEntity<P> occupant) {
     if(entityAt(cell) != null) {

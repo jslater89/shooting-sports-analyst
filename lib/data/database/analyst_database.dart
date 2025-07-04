@@ -22,9 +22,11 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_e
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/database/schema/registration.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/idpa.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/match/translator.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
@@ -36,6 +38,7 @@ class AnalystDatabase {
   static const eventNameIndex = "eventNameParts";
   static const sourceIdsIndex = "sourceIds";
   static const dateIndex = "date";
+  static const sportNameIndex = "sportName";
   static const memberNumbersAppearingIndex = "memberNumbersAppearing";
   static Future<void> get readyStatic => _readyCompleter.future;
   static Completer<void> _readyCompleter = Completer();
@@ -100,7 +103,22 @@ class AnalystDatabase {
       name: test ? "test-database" : "database",
     );
 
-    isar.writeTxn(() async {
+    // TODO Fix for broken IDPA databases; remove after releasing alpha11
+    var provider = idpaSport.builtinRatingGroupsProvider;
+    if(provider != null && (await isar.ratingGroups.getByUuid("icore-pcc")) != null) {
+      int deleted = 0;
+      for(var group in provider.builtinRatingGroups) {
+        var wrongId = group.uuid.replaceFirst("idpa-", "icore-");
+        await isar.writeTxn(() async {
+          await isar.ratingGroups.deleteByUuid(wrongId);
+          await isar.ratingGroups.put(group);
+        });
+        deleted += 1;
+      }
+      _log.i("Fixed $deleted broken IDPA rating groups");
+    }
+
+    await isar.writeTxn(() async {
       for(var sport in SportRegistry().availableSports) {
         var provider = sport.builtinRatingGroupsProvider;
         if(provider != null) {
@@ -138,12 +156,23 @@ class AnalystDatabase {
   int loadedShooterRatingCacheMisses = 0;
 
   /// The standard match query: index on name if present or date if not.
-  Future<List<DbShootingMatch>> queryMatches({String? name, DateTime? after, DateTime? before, int page = 0, int pageSize = 100, MatchSortField sort = const DateSort()}) {
+  Future<List<DbShootingMatch>> queryMatches({
+    String? name,
+    DateTime? after,
+    DateTime? before,
+    int page = 0,
+    int pageSize = 100,
+    MatchSortField sort = const DateSort(),
+    Sport? sport,
+  }) {
     Query<DbShootingMatch> finalQuery = _buildMatchQuery(
       [
         if(name != null)
           NamePartsQuery(name),
-        DateQuery(after: after, before: before),
+        if(sport != null)
+          SportQuery(sport),
+        if(after != null || before != null)
+          DateQuery(after: after, before: before),
       ],
       limit: pageSize,
       offset: page * pageSize,
@@ -319,7 +348,9 @@ class AnalystDatabase {
   Query<DbShootingMatch> _buildMatchQuery(List<MatchQueryElement> elements, {int? limit, int? offset, MatchSortField sort = const DateSort()}) {
     NamePartsQuery? nameQuery;
     DateQuery? dateQuery;
+    // ignore: unused_local_variable
     LevelNameQuery? levelNameQuery;
+    SportQuery? sportQuery;
 
     for(var e in elements) {
       switch(e) {
@@ -329,6 +360,8 @@ class AnalystDatabase {
           dateQuery = e;
         case LevelNameQuery():
           levelNameQuery = e;
+        case SportQuery():
+          sportQuery = e;
       }
     }
 
@@ -336,6 +369,7 @@ class AnalystDatabase {
     // for paging, unless an alternate 'where' is highly selective, leaning on the
     // index for sort is probably preferable.
     MatchQueryElement? whereElement;
+    Iterable<MatchQueryElement> filterElements = elements;
     if(dateQuery == null && (sort is DateSort)) {
       dateQuery = DateQuery(before: null, after: null);
       whereElement = dateQuery;
@@ -344,7 +378,7 @@ class AnalystDatabase {
       nameQuery = NamePartsQuery("");
       whereElement = nameQuery;
     }
-    Iterable<MatchQueryElement> filterElements = elements;
+    (whereElement, filterElements) = _buildElementLists(elements, whereElement);
 
     if(nameQuery?.canWhere ?? false) {
       nameQuery!;
@@ -355,6 +389,13 @@ class AnalystDatabase {
       if(nameQuery.name.length >= 3 || (sort is NameSort)) {
         (whereElement, filterElements) = _buildElementLists(elements, nameQuery);
       }
+    }
+    else if(sportQuery != null && whereElement == null) {
+      // If we have a sport query and no other where element, we can where on it.
+      // This is very unlikely to happen currently, since we're usually going to end up
+      // with a name or date where for sorting, but just in case we add future sorts
+      // that aren't where-backed...
+      (whereElement, filterElements) = _buildElementLists(elements, sportQuery);
     }
 
     var (sortProperties, whereSort) = _buildMatchSortFields(whereElement, sort);

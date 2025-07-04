@@ -1,3 +1,5 @@
+// ignore_for_file: unused_local_variable
+
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -21,22 +23,15 @@ most points for coming in around 2700.
 I may think of others, but this is a pretty good set to start with.
  */
 
-import 'dart:math';
 
 import 'package:collection/collection.dart';
-import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/match/practical_match.dart';
 import 'package:shooting_sports_analyst/data/ranking/evolution/predator_prey.dart';
 import 'package:shooting_sports_analyst/data/ranking/legacy_loader/old_rating_project.dart';
 import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
-import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settings.dart';
-import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/legacy_loader/rating_history.dart';
-import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
-import 'package:shooting_sports_analyst/data/sport/model.dart';
-import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 
 class EloEvaluator extends Prey<EloEvaluator> {
   int generation;

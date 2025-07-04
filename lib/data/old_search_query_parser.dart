@@ -6,7 +6,6 @@
 
 
 import 'package:collection/collection.dart';
-import 'package:flutter/foundation.dart';
 import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/logger.dart';

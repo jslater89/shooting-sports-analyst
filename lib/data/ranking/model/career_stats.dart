@@ -189,7 +189,12 @@ class PeriodicStats {
         matchScores[match] = matchScore;
       }
       if(byStage) {
-        var stage = match.stages.firstWhere((s) => s.stageId == event.stageNumber);
+        var stage = match.stages.firstWhereOrNull((s) => s.stageId == event.stageNumber);
+        if(stage == null) {
+          _log.w("${match.name} is missing stage ${event.stageNumber}");
+          _log.vv("Has stages: ${match.stages.map((e) => "${e.stageId}: ${e.name}").toList()}");
+          continue;
+        }
         var stageScore = matchScore.stageScores[stage];
         if(stageScore == null) {
           _log.w("Shooter ${rating.name} doesn't have a score for stage ${stage.name} in match ${match.name}");

@@ -8,7 +8,6 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
-import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 class StageStats {

@@ -21,7 +21,6 @@ import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_sourc
 import 'package:shooting_sports_analyst/data/ranking/interface/synchronous_rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
-import 'package:shooting_sports_analyst/data/ranking/legacy_loader/rating_history.dart';
 import 'package:shooting_sports_analyst/data/old_search_query_parser.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_statistics.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
@@ -82,15 +81,12 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   late Sport _sport;
   String _projectName = "";
   late RatingProjectSettings _settings;
-  bool _settingsChanged = false;
   RatingSortMode _sortMode = RatingSortMode.rating;
   late ShootingMatch _selectedMatch;
   late TabController _tabController;
   ReportFilters? _lastReportFilters;
 
   DateTime? _changeSince;
-
-  var _loadingScrollController = ScrollController();
 
   Duration durationSinceLastYear() {
     var now = DateTime.now();
@@ -342,7 +338,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                     ),
                     items: [
                       DropdownMenuItem<ShootingMatch>(
-                        child: Text(_selectedMatch!.name),
+                        child: Text(_selectedMatch.name),
                         value: _selectedMatch,
                       )
                     ],
@@ -521,7 +517,6 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
             if(hidden != null) {
               setState(() {
                 _settings.hiddenShooters = hidden;
-                _settingsChanged = true;
               });
             }
           },
@@ -660,7 +655,6 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
         if(changed ?? false) {
           setState(() {
-            _settingsChanged = true;
           });
         }
         break;

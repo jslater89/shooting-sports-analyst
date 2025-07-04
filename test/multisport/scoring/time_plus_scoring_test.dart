@@ -6,7 +6,6 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/idpa.dart';
-import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';

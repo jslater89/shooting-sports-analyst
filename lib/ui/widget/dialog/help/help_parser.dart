@@ -5,7 +5,6 @@
  */
 
 import 'package:flutter/foundation.dart';
-import 'package:shooting_sports_analyst/data/help/about_help.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_token.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_topic.dart';
@@ -27,13 +26,13 @@ class HelpParser {
 
     var tokens = <HelpToken>[];
     var currentParagraph = Paragraph([]);
-    
+
     var processedContent = _processContent(topic.content);
     var lines = processedContent.split("\n");
-    
+
     for (var i = 0; i < lines.length; i++) {
       var line = lines[i];
-      
+
       // Skip empty lines, but use them to break paragraphs
       if (line.isEmpty) {
         if (currentParagraph.tokens.isNotEmpty) {
@@ -74,7 +73,7 @@ class HelpParser {
         }
       }
       var lineTokens = _tokenizeLine(line, lastToken: lastToken, parent: currentParagraph);
-      
+
       // Headers always start a new paragraph
       if (lineTokens.any((t) => t is Heading)) {
         if (currentParagraph.tokens.isNotEmpty) {
@@ -86,12 +85,12 @@ class HelpParser {
         currentParagraph.tokens.addAll(lineTokens);
       }
     }
-    
+
     // Don't forget the last paragraph
     if (currentParagraph.tokens.isNotEmpty) {
       tokens.add(currentParagraph);
     }
-    
+
     if(_shouldDumpTokenTree) {
       _dumpTokenTree(tokens);
     }
@@ -101,13 +100,13 @@ class HelpParser {
   }
 
   /// Process the content of the help topic to prepare it for tokenization.
-  /// 
+  ///
   /// The main processing step is removing all single newlines that do not
   /// precede a heading marker or a list marker.
   static String _processContent(String content) {
     var lines = content.split("\n");
     var processedLines = <String>[];
-    
+
     for (var i = 0; i < lines.length; i++) {
       var line = lines[i];
       var manualNewline = false;
@@ -129,7 +128,7 @@ class HelpParser {
       if(!nextLine.startsWith(_listPattern)) {
         nextLine = nextLine.trim();
       }
-      
+
       // Keep the newline if:
       // 1. Next line is empty (double newline = paragraph break)
       // 2. Next line starts with header marker, or this line is a header
@@ -142,17 +141,17 @@ class HelpParser {
           nextLine.trimLeft().startsWith(_listPattern) ||
           line.isEmpty ||
           manualNewline;
-          
+
       var finalLine = line + (keepNewline ? "\n" : " ");
       processedLines.add(finalLine);
     }
-    
+
     return processedLines.join();
   }
 
   static final _ParseState _parseState = _ParseState();
 
-  static final _singleNewlinePattern = RegExp(r'^(.)\n(?![\n#*]|\d+\.)');
+  // static final _singleNewlinePattern = RegExp(r'^(.)\n(?![\n#*]|\d+\.)');
   static final _headerPattern = RegExp(r'^#+\s');
   static final _linkPattern = RegExp(r'\[(.*?)\]\((.*?)\)');
   static final _emphasisPattern = RegExp(r'_(.*?)_|\*\*(.*?)\*\*');
@@ -169,7 +168,7 @@ class HelpParser {
     if(lastToken is PlainText && lastToken.hasManualBreak) {
       lastTokenHasManualBreak = true;
     }
-    
+
     if(_parseState.inList && !subline && !_emptyLinePattern.hasMatch(line)) {
       // We get to here when we encounter a line that does not start with a list marker
       // after we've already started a list.
@@ -187,7 +186,7 @@ class HelpParser {
 
     if(line.startsWith(_headerPattern)) {
       tokens.addAll(_tokenizeHeaderLine(line, parent: parent));
-    } 
+    }
     else if(listMatch != null) {
       _parseState.inList = true;
       _parseState.inOrderedList = listMatch.group(2)!.startsWith(RegExp(r"\d"));
@@ -196,13 +195,13 @@ class HelpParser {
 
       tokens.addAll(_tokenizeListItem(line,
         lastToken: lastToken,
-        ordered: _parseState.inOrderedList, 
-        indentDepth: indent, 
+        ordered: _parseState.inOrderedList,
+        indentDepth: indent,
         listIndex: _parseState.listIndicesByIndent[indent] ?? 1));
-    } 
+    }
     else if(_linkPattern.hasMatch(line)) {
       tokens.addAll(_tokenizeLinkLine(line, parent: parent));
-    } 
+    }
     else {
       if(lastTokenHasManualBreak && lastToken?.parent is ListItem) {
         var parent = lastToken!.parent! as ListItem;
@@ -212,7 +211,7 @@ class HelpParser {
         tokens.addAll(_tokenizeText(line, parent: parent));
       }
     }
-    
+
     return tokens;
   }
 

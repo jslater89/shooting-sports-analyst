@@ -7,7 +7,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
-import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_settings.dart';
 
 class OpenskillSettingsController extends RaterSettingsController<OpenskillSettings> with ChangeNotifier {

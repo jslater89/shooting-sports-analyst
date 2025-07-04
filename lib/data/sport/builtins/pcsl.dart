@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/sorts.dart';
 import 'package:shooting_sports_analyst/data/sport/display_settings.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
@@ -25,6 +26,69 @@ const _pcslD = ScoringEvent("D", pointChange: 1);
 const _pcslM = ScoringEvent("M", pointChange: -10);
 const _pcslNS = ScoringEvent("NS", pointChange: -10);
 const _pcslPseudoK = ScoringEvent("NPM", pointChange: 0);
+
+const pcslSportName = "PCSL";
+const pcslDivisions = [
+  const Division(
+    name: "Open",
+    longName: "Open",
+    shortName: "OPEN",
+  ),
+  const Division(
+    name: "Practical",
+    longName: "2-Gun Practical",
+    shortName: "2GP",
+    alternateNames: ["Practical (2-Gun)"],
+  ),
+  const Division(
+    name: "2-Gun Comp.",
+    longName: "2-Gun Competition",
+    shortName: "2GC",
+    alternateNames: ["Competition (2-Gun)"],
+  ),
+  const Division(
+    name: "Competition",
+    shortName: "COMP",
+    alternateNames: ["Competition (COMP)", "1-Gun Competition"],
+    fallback: true,
+  ),
+  const Division(
+    name: "Practical Optics",
+    shortName: "PO",
+    alternateNames: [
+      "Practical Optics (PO)",
+      "1-Gun Practical Optics",
+      "Practical Optics (Pistol)",
+    ],
+  ),
+  const Division(
+    name: "Practical Irons",
+    shortName: "PI",
+    alternateNames: [
+      "Practical Irons (PI)",
+      "1-Gun Practical Irons",
+      "Practical Irons (Pistol)",
+    ],
+  ),
+  const Division(
+    name: "Actual Carry Pistol",
+    shortName: "ACP",
+    alternateNames: [
+      "Actual Carry Pistol (ACP)",
+      "1-Gun Actual Carry Pistol",
+      "1-Gun ACP (Actual Carry Pistol)",
+    ],
+  ),
+  const Division(
+    name: "PCC",
+    shortName: "PCC",
+    alternateNames: [
+      "Pistol Caliber Carbine (PCC)",
+      "1-Gun PCC",
+      "1-Gun Pistol Caliber Carbine",
+    ],
+  ),
+];
 
 final _pcslDisplaySettings = SportDisplaySettings(
   showClassification: false,
@@ -52,7 +116,7 @@ final _pcslDisplaySettings = SportDisplaySettings(
 );
 
 final pcslSport = Sport(
-  "PCSL",
+  pcslSportName,
   type: SportType.pcsl,
   matchScoring: RelativeStageFinishScoring(),
   defaultStageScoring: const HitFactorScoring(),
@@ -63,67 +127,7 @@ final pcslSport = Sport(
     const Classification(index: 0, name: "Standard Competitor", shortName: "STD", fallback: true),
     const Classification(index: 1, name: "Coachable Shooter", shortName: "CS"),
   ],
-  divisions: [
-    const Division(
-      name: "Open",
-      longName: "Open",
-      shortName: "OPEN",
-    ),
-    const Division(
-      name: "Practical",
-      longName: "2-Gun Practical",
-      shortName: "2GP",
-      alternateNames: ["Practical (2-Gun)"],
-    ),
-    const Division(
-      name: "2-Gun Comp.",
-      longName: "2-Gun Competition", 
-      shortName: "2GC",
-      alternateNames: ["Competition (2-Gun)"],
-    ),
-    const Division(
-      name: "Competition",
-      shortName: "COMP",
-      alternateNames: ["Competition (COMP)", "1-Gun Competition"],
-      fallback: true,
-    ),
-    const Division(
-      name: "Practical Optics",
-      shortName: "PO",
-      alternateNames: [
-        "Practical Optics (PO)",
-        "1-Gun Practical Optics",
-        "Practical Optics (Pistol)",
-      ],
-    ),
-    const Division(
-      name: "Practical Irons",
-      shortName: "PI", 
-      alternateNames: [
-        "Practical Irons (PI)",
-        "1-Gun Practical Irons",
-        "Practical Irons (Pistol)",
-      ],
-    ),
-    const Division(
-      name: "Actual Carry Pistol",
-      shortName: "ACP",
-      alternateNames: [
-        "Actual Carry Pistol (ACP)",
-        "1-Gun Actual Carry Pistol",
-        "1-Gun ACP (Actual Carry Pistol)",
-      ],
-    ),
-    const Division(
-      name: "PCC",
-      shortName: "PCC",
-      alternateNames: [
-        "Pistol Caliber Carbine (PCC)",
-        "1-Gun PCC",
-        "1-Gun Pistol Caliber Carbine",
-      ],
-    ),
-  ],
+  divisions: pcslDivisions,
   powerFactors: [
     PowerFactor("",
       targetEvents: [
@@ -137,5 +141,6 @@ final pcslSport = Sport(
       ],
       penaltyEvents: _pcslPenalties,
     ),
-  ]
+  ],
+  builtinRatingGroupsProvider: DivisionRatingGroupProvider(pcslSportName, pcslDivisions)
 );

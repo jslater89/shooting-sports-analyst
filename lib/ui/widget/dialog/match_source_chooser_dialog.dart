@@ -5,7 +5,6 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 
@@ -42,7 +41,7 @@ class MatchSourceChooserDialog extends StatefulWidget {
 }
 
 class _MatchSourceChooserDialogState extends State<MatchSourceChooserDialog> {
-  final TextEditingController _urlController = TextEditingController();
+  // final TextEditingController _urlController = TextEditingController();
 
   String? errorText;
   late MatchSource source;

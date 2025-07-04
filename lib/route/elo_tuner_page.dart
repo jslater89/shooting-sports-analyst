@@ -8,14 +8,11 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_charts/flutter_charts.dart';
 import 'package:shooting_sports_analyst/data/match/practical_match.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
 import 'package:shooting_sports_analyst/data/ranking/evolution/elo_evaluation.dart';
 import 'package:shooting_sports_analyst/data/ranking/evolution/elo_tuner.dart';
 import 'package:shooting_sports_analyst/data/ranking/evolution/genome.dart';
-import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settings.dart';
-import 'package:shooting_sports_analyst/data/ranking/legacy_loader/rating_history.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/rater/evolution/predator_prey_view.dart';

@@ -1,3 +1,5 @@
+// ignore_for_file: unused_local_variable
+
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -91,7 +93,7 @@ class OldRatingHistory {
   void loadRatings(Map<OldRaterGroup, Rater> ratings) {
     _ratersByDivision[_matches.last] = ratings;
   }
-  
+
   // Returns false if the match already exists
   Future<bool> addMatch(PracticalMatch match) async {
     if(matches.contains(match)) return false;
@@ -147,7 +149,7 @@ class OldRatingHistory {
 
   /// Used to key the matches map for online match-adding
   PracticalMatch? _lastMatch;
-  
+
   Future<RatingResult> _processInitialMatches() async {
     if(verbose) _log.v("Loading matches");
 
@@ -243,7 +245,7 @@ class OldRatingHistory {
     _log.i("Total of ${countUniqueShooters()} shooters, ${_matches.length} matches, and $stageCount stages");
     return RatingResult.ok();
   }
-  
+
   void _raterForGroup(List<PracticalMatch> matches, OldRaterGroup group, [Future<void> Function(int, int, String?)? progressCallback]) {
     throw UnimplementedError("OldRatingHistory._raterForGroup is no longer implemented");
   }

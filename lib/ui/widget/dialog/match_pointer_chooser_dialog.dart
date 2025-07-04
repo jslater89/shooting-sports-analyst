@@ -101,7 +101,7 @@ class _MatchPointerChooserDialogState extends State<MatchPointerChooserDialog> {
 
   Future<void> _updateMatches() async {
     setState(() {
-      matches = [...widget.matches!];
+      matches = [...widget.matches];
     });
     if(searchController.text.isNotEmpty) {
       _applySearch();
@@ -118,14 +118,9 @@ class _MatchPointerChooserDialogState extends State<MatchPointerChooserDialog> {
   }
 
   void _applySearch() {
-    if(widget.matches != null) {
-      var search = searchController.text;
-      searchedMatches = matches.where((m) =>
-          m.name.toLowerCase().contains(search.toLowerCase())).toList();
-    }
-    else {
-      _updateMatches();
-    }
+    var search = searchController.text;
+    searchedMatches = matches.where((m) =>
+        m.name.toLowerCase().contains(search.toLowerCase())).toList();
   }
 
   @override
