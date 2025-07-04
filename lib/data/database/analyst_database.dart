@@ -19,6 +19,7 @@ import 'package:shooting_sports_analyst/data/sport/builtins/idpa.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/match/translator.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
@@ -30,6 +31,7 @@ class AnalystDatabase {
   static const eventNameIndex = "eventNameParts";
   static const sourceIdsIndex = "sourceIds";
   static const dateIndex = "date";
+  static const sportNameIndex = "sportName";
   static const memberNumbersAppearingIndex = "memberNumbersAppearing";
   static Future<void> get readyStatic => _readyCompleter.future;
   static Completer<void> _readyCompleter = Completer();
@@ -129,11 +131,21 @@ class AnalystDatabase {
   int loadedShooterRatingCacheMisses = 0;
 
   /// The standard match query: index on name if present or date if not.
-  Future<List<DbShootingMatch>> queryMatches({String? name, DateTime? after, DateTime? before, int page = 0, int pageSize = 100, MatchSortField sort = const DateSort()}) {
+  Future<List<DbShootingMatch>> queryMatches({
+    String? name,
+    DateTime? after,
+    DateTime? before,
+    int page = 0,
+    int pageSize = 100,
+    MatchSortField sort = const DateSort(),
+    Sport? sport,
+  }) {
     Query<DbShootingMatch> finalQuery = _buildMatchQuery(
       [
         if(name != null)
           NamePartsQuery(name),
+        if(sport != null)
+          SportQuery(sport),
         DateQuery(after: after, before: before),
       ],
       limit: pageSize,
@@ -304,6 +316,7 @@ class AnalystDatabase {
     DateQuery? dateQuery;
     // ignore: unused_local_variable
     LevelNameQuery? levelNameQuery;
+    SportQuery? sportQuery;
 
     for(var e in elements) {
       switch(e) {
@@ -313,6 +326,8 @@ class AnalystDatabase {
           dateQuery = e;
         case LevelNameQuery():
           levelNameQuery = e;
+        case SportQuery():
+          sportQuery = e;
       }
     }
 
@@ -327,6 +342,9 @@ class AnalystDatabase {
     else if(nameQuery == null && (sort is NameSort)) {
       nameQuery = NamePartsQuery("");
       whereElement = nameQuery;
+    }
+    if(whereElement == null && sportQuery != null) {
+      whereElement = sportQuery;
     }
     Iterable<MatchQueryElement> filterElements = elements;
 

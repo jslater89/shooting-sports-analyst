@@ -6,6 +6,7 @@
 
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 
 sealed class MatchQueryElement {
   String get index;
@@ -56,6 +57,25 @@ class NamePartsQuery extends MatchQueryElement {
   }
 
   NamePartsQuery(this.name);
+}
+
+class SportQuery extends MatchQueryElement {
+  String get index => AnalystDatabase.sportNameIndex;
+  String get property => "sportName";
+
+  Sport sport;
+
+  SportQuery(this.sport);
+
+  bool get canWhere => true;
+
+  @override
+  FilterOperation? get filterCondition {
+    return FilterCondition.equalTo(property: property, value: sport.name);
+  }
+
+  @override
+  List<WhereClause>? get whereClauses => [IndexWhereClause.equalTo(indexName: index, value: [sport.name])];
 }
 
 class DateQuery extends MatchQueryElement {

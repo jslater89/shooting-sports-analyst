@@ -13,6 +13,7 @@ import 'package:shooting_sports_analyst/data/database/match/match_query_element.
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/loading_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_source_chooser_dialog.dart';
@@ -28,8 +29,11 @@ class MatchDatabaseChooserDialog extends StatefulWidget {
     this.helpText,
     this.multiple = false,
     this.showIds = false,
+    this.sport,
   }) : super(key: key);
 
+  /// If provided, only matches for this sport will be shown.
+  final Sport? sport;
   final bool showIds;
   final bool showStats;
   final List<DbShootingMatch>? matches;
@@ -46,6 +50,7 @@ class MatchDatabaseChooserDialog extends StatefulWidget {
     String? helpText,
     bool multiple = false,
     bool showIds = false,
+    Sport? sport,
   }) {
     return showDialog(context: context, builder: (context) => MatchDatabaseChooserDialog(
       showIds: showIds,
@@ -53,6 +58,7 @@ class MatchDatabaseChooserDialog extends StatefulWidget {
       matches: matches,
       helpText: helpText,
       multiple: multiple,
+      sport: sport,
     ), barrierDismissible: false);
   }
 }
@@ -131,6 +137,7 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
       if(page > 0) {
         var newMatches = await db.queryMatches(
           name: searchController.text.isNotEmpty ? searchController.text : null,
+          sport: widget.sport,
           sort: alphabeticSort ? const NameSort() : const DateSort(),
           page: page,
         );
@@ -139,6 +146,7 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
       else {
         matches = await db.queryMatches(
           name: searchController.text.isNotEmpty ? searchController.text : null,
+          sport: widget.sport,
           sort: alphabeticSort ? const NameSort() : const DateSort(),
         );
       }
@@ -292,7 +300,11 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
                   hintText: "https://practiscore.com/results/new/...",
                   initialSearch: searchController.text,
                 );
-                if(result == null) return;
+                if(result == null) {
+                  // Update matches, because we might have done the long-press-download trick
+                  _updateMatches();
+                  return;
+                }
                 var (_, match) = result;
 
                 var saveResult = await db.saveMatch(match);

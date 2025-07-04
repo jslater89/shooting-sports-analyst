@@ -55,6 +55,8 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
 
   @enumerated
   EventLevel matchEventLevel;
+
+  @Index(name: AnalystDatabase.sportNameIndex, type: IndexType.hash, caseSensitive: false)
   String sportName;
 
   List<DbMatchStage> stages;

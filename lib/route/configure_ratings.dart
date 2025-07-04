@@ -579,7 +579,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                   color: Theme.of(context).primaryColor,
                                   onPressed: () async {
                                     var dbEntries = await showDialog<List<DbShootingMatch>>(context: context, builder: (context) {
-                                      return MatchDatabaseChooserDialog(multiple: true);
+                                      return MatchDatabaseChooserDialog(multiple: true, sport: sport);
                                     }, barrierDismissible: false);
 
                                     _log.v("Entries from DB: $dbEntries");
