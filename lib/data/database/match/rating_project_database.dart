@@ -32,6 +32,10 @@ extension RatingProjectDatabase on AnalystDatabase {
     return isar.dbRatingProjects.where().nameEqualTo(name).findFirst();
   }
 
+  DbRatingProject? getRatingProjectByNameSync(String name) {
+    return isar.dbRatingProjects.where().nameEqualTo(name).findFirstSync();
+  }
+
   Future<DbRatingProject> saveRatingProject(DbRatingProject project, {bool checkName = true, bool saveLinks = true}) async {
     if(checkName) {
       var existingProject = await getRatingProjectByName(project.name);
@@ -52,6 +56,31 @@ extension RatingProjectDatabase on AnalystDatabase {
       await project.dbGroups.save();
       if(saveLinks) {
         await project.ratings.save();
+      }
+    });
+    return project;
+  }
+
+  DbRatingProject saveRatingProjectSync(DbRatingProject project, {bool checkName = true, bool saveLinks = true}) {
+    if(checkName) {
+      var existingProject = getRatingProjectByNameSync(project.name);
+      if(existingProject != null) {
+        project.id = existingProject.id;
+      }
+    }
+    if(project.dbCreated == null) {
+      project.created = DateTime.now();
+    }
+
+    // This is for backward compatibility.
+    if(project.dbUpdated == null) {
+      project.updated = DateTime.now();
+    }
+    isar.writeTxnSync(() {
+      isar.dbRatingProjects.putSync(project);
+      project.dbGroups.saveSync();
+      if(saveLinks) {
+        project.ratings.saveSync();
       }
     });
     return project;
@@ -86,6 +115,19 @@ extension RatingProjectDatabase on AnalystDatabase {
       return _innerDeleteShooterRating(rating);
     });
   }
+
+  bool deleteShooterRatingSync(DbShooterRating rating) {
+    return isar.writeTxnSync(() {
+      return _innerDeleteShooterRatingSync(rating);
+    });
+  }
+
+  bool _innerDeleteShooterRatingSync(DbShooterRating rating) {
+      rating.events.filter().deleteAllSync();
+      // _log.v("Deleted $deleted events while deleting rating");
+      return isar.dbShooterRatings.deleteSync(rating.id);
+  }
+
 
   /// Checks if a shooter exists in the database.
   ///
@@ -169,6 +211,59 @@ extension RatingProjectDatabase on AnalystDatabase {
     return null;
   }
 
+  /// Retrieves a possible shooter rating from the database, or null if
+  /// a rating is not found. [memberNumber] is assumed to be processed.
+  ///
+  /// if [useCache] is true, [loadedShooterRatingCache] will be checked for
+  /// a cached rating before querying the database.
+  DbShooterRating? maybeKnownShooterSync({
+    required DbRatingProject project,
+    required RatingGroup group,
+    required String memberNumber,
+    bool usePossibleMemberNumbers = false,
+    bool useCache = false,
+    bool onlyCache = false,
+    bool saveToCache = true,
+  }) {
+    if(useCache) {
+      var cachedRating = lookupCachedRating(group, memberNumber);
+      if(cachedRating != null) {
+        loadedShooterRatingCacheHits++;
+        return cachedRating;
+      }
+      if(onlyCache) {
+        return null;
+      }
+    }
+    if(usePossibleMemberNumbers) {
+      var rating = isar.dbShooterRatings.where().dbAllPossibleMemberNumbersElementEqualTo(memberNumber)
+        .filter()
+        .project((q) => q.idEqualTo(project.id))
+        .group((q) => q.uuidEqualTo(group.uuid))
+        .findFirstSync();
+      if(rating != null) {
+        if(saveToCache) {
+          cacheRating(group, rating);
+        }
+        loadedShooterRatingCacheMisses++;
+        return rating;
+      }
+    }
+    else {
+      var rating = isar.dbShooterRatings.where().dbKnownMemberNumbersElementEqualTo(memberNumber)
+        .filter()
+        .project((q) => q.idEqualTo(project.id))
+        .group((q) => q.uuidEqualTo(group.uuid))
+        .findFirstSync();
+      if(rating != null && saveToCache) {
+        loadedShooterRatingCacheMisses++;
+        cacheRating(group, rating);
+      }
+      return rating;
+    }
+    return null;
+  }
+
   Future<DbShooterRating> newShooterRatingFromWrapped({
     required DbRatingProject project,
     required RatingGroup group,
@@ -192,6 +287,29 @@ extension RatingProjectDatabase on AnalystDatabase {
     });
   }
 
+  DbShooterRating newShooterRatingFromWrappedSync({
+    required DbRatingProject project,
+    required RatingGroup group,
+    required ShooterRating rating,
+    bool useCache = true,
+  }) {
+
+    var dbRating = rating.wrappedRating;
+    dbRating.project.value = project;
+    dbRating.group.value = group;
+    if(useCache) {
+      cacheRating(group, dbRating);
+    }
+    return isar.writeTxnSync(() {
+      isar.dbShooterRatings.putSync(dbRating);
+
+      dbRating.project.saveSync();
+      dbRating.group.saveSync();
+
+      return dbRating;
+    });
+  }
+
   /// Upsert a DbShooterRating.
   ///
   /// If [linksChanged] is false, the links will not be saved in the write transaction.
@@ -200,14 +318,70 @@ extension RatingProjectDatabase on AnalystDatabase {
       cacheRating(rating.group.value!, rating);
     }
     return isar.writeTxn(() async {
-      await isar.dbShooterRatings.put(rating);
-      if(linksChanged) {
-        await rating.events.save();
-        await rating.project.save();
-        await rating.group.save();
-      }
-      return rating;
+      return _innerUpsertDbShooterRating(rating, linksChanged);
     });
+  }
+
+  Future<List<DbShooterRating>> upsertDbShooterRatings(List<DbShooterRating> ratings, {bool linksChanged = true, bool useCache = true}) async {
+    if(useCache) {
+      for(var r in ratings) {
+        cacheRating(r.group.value!, r);
+      }
+    }
+    return isar.writeTxn(() async {
+      List<DbShooterRating> results = [];
+      for(var r in ratings) {
+        results.add(await _innerUpsertDbShooterRating(r, linksChanged));
+      }
+      return results;
+    });
+  }
+
+  Future<DbShooterRating> _innerUpsertDbShooterRating(DbShooterRating rating, bool linksChanged) async {
+    await isar.dbShooterRatings.put(rating);
+    if(linksChanged) {
+      await rating.events.save();
+      await rating.project.save();
+      await rating.group.save();
+    }
+    return rating;
+  }
+
+  /// Upsert a DbShooterRating.
+  ///
+  /// If [linksChanged] is false, the links will not be saved in the write transaction.
+  DbShooterRating upsertDbShooterRatingSync(DbShooterRating rating, {bool linksChanged = true, bool useCache = true}) {
+    if(useCache) {
+      cacheRating(rating.group.value!, rating);
+    }
+    return isar.writeTxnSync(() {
+      return _innerUpsertDbShooterRatingSync(rating, linksChanged);
+    });
+  }
+
+  List<DbShooterRating> upsertDbShooterRatingsSync(List<DbShooterRating> ratings, {bool linksChanged = true, bool useCache = true}) {
+    if(useCache) {
+      for(var r in ratings) {
+        cacheRating(r.group.value!, r);
+      }
+    }
+    return isar.writeTxnSync(() {
+      List<DbShooterRating> results = [];
+      for(var r in ratings) {
+        results.add(_innerUpsertDbShooterRatingSync(r, linksChanged));
+      }
+      return results;
+    });
+  }
+
+  DbShooterRating _innerUpsertDbShooterRatingSync(DbShooterRating rating, bool linksChanged) {
+    isar.dbShooterRatings.putSync(rating);
+    if(linksChanged) {
+      rating.events.saveSync();
+      rating.project.saveSync();
+      rating.group.saveSync();
+    }
+    return rating;
   }
 
   /// Upsert a DbRatingEvent.
@@ -274,6 +448,76 @@ extension RatingProjectDatabase on AnalystDatabase {
         await Future.wait(eventFutures);
         r.newRatingEvents.clear();
         await r.events.save();
+
+        if(Timings.enabled) Timings().add(TimingType.persistEvents, DateTime.now().difference(start).inMicroseconds);
+      }
+
+      return count;
+    });
+
+    if(useCache) {
+      for(var r in ratings) {
+        cacheRating(r.group.value!, r);
+      }
+    }
+    return count;
+  }
+
+  /// Update DbShooterRatings that have changed as part of the rating process.
+  int updateChangedRatingsSync(Iterable<DbShooterRating> ratings, {bool useCache = true}) {
+    var count = isar.writeTxnSync(() {
+      late DateTime start;
+      int count = 0;
+
+      Map<String, DbShootingMatch> matches = {};
+
+      for(var r in ratings) {
+        if(Timings.enabled) start = DateTime.now();
+        if(!r.isPersisted) {
+          _log.w("Unexpectedly unpersisted DB rating");
+          r.project.saveSync();
+          r.group.saveSync();
+        }
+        isar.dbShooterRatings.putSync(r);
+        if(Timings.enabled) Timings().add(TimingType.saveDbRating, DateTime.now().difference(start).inMicroseconds);
+
+        if(Timings.enabled) start = DateTime.now();
+        for(var event in r.newRatingEvents) {
+          if(!event.isPersisted) {
+            if(event.matchId.isNotEmpty && (!event.match.isLoaded || event.match.value == null)) {
+              late DateTime matchStart;
+              if(Timings.enabled) matchStart = DateTime.now();
+              // If the hydrated match is cached, build a dummy match with the correct DB ID for the event.
+              var cacheResult = HydratedMatchCache().getBySourceId(event.matchId);
+              DbShootingMatch? match = null;
+              if(cacheResult.isOk()) {
+                var m = cacheResult.unwrap();
+                if(m.databaseId != null) {
+                  DbShootingMatch placeholder = DbShootingMatch.dbPlaceholder(m.databaseId!);
+                  match = placeholder;
+                }
+              }
+
+              // Otherwise, check our local cache.
+              if(match == null) {
+                match = matches[event.matchId];
+              }
+
+              // If it still isn't available, ask the DB.
+              if(match == null) {
+                match = this.getMatchByAnySourceIdSync([event.matchId]);
+                matches[event.matchId] = match!;
+              }
+              event.match.value = match;
+              if(Timings.enabled) Timings().add(TimingType.getEventMatches, DateTime.now().difference(matchStart).inMicroseconds);
+            }
+            isar.dbRatingEvents.putSync(event);
+            event.match.saveSync();
+            r.events.add(event);
+          }
+        }
+        r.newRatingEvents.clear();
+        r.events.saveSync();
 
         if(Timings.enabled) Timings().add(TimingType.persistEvents, DateTime.now().difference(start).inMicroseconds);
       }
