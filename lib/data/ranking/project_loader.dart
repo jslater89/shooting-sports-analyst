@@ -395,7 +395,7 @@ class RatingProjectLoader {
       }
 
       // 1. For each match, add shooters.
-      var (ratings, _) = await _addShootersFromMatch(group, match);
+      var (ratings, _) = _addShootersFromMatch(group, match);
 
       if(_canceled) {
         return Result.err(CanceledError());
@@ -973,11 +973,11 @@ class RatingProjectLoader {
   ///
   /// Use [encounter] if you want shooters to be added regardless of whether they appear
   /// in scores. (i.e., shooters who DQ on the first stage, or are no-shows but still included in the data)
-  Future<(List<DbShooterRating>, int)> _addShootersFromMatch(RatingGroup group, ShootingMatch match) async {
+  (List<DbShooterRating>, int) _addShootersFromMatch(RatingGroup group, ShootingMatch match) {
     var start = DateTime.now();
     int added = 0;
     int updated = 0;
-    var shooters = await _getShooters(group, match);
+    var shooters = _getShooters(group, match);
     List<DbShooterRating> newRatings = [];
     for(MatchEntry s in shooters) {
       // Process the member number:
@@ -1193,7 +1193,7 @@ class RatingProjectLoader {
     return (newRatings, added + updated);
   }
 
-  Future<List<MatchEntry>> _getShooters(RatingGroup group, ShootingMatch match, {bool verify = false}) async {
+  List<MatchEntry> _getShooters(RatingGroup group, ShootingMatch match, {bool verify = false}) {
     var filters = group.filters;
     var shooters = <MatchEntry>[];
     shooters = match.filterShooters(
@@ -1280,7 +1280,7 @@ class RatingProjectLoader {
   Future<int> _rankMatch(RatingGroup group, ShootingMatch match) async {
     late DateTime start;
     if(Timings.enabled) start = DateTime.now();
-    var shooters = await _getShooters(group, match, verify: true);
+    var shooters = _getShooters(group, match, verify: true);
     var scores = match.getScores(shooters: shooters, scoreDQ: settings.byStage);
 
     // Skip when a match has no shooters in a group
@@ -1406,7 +1406,7 @@ class RatingProjectLoader {
         if(Timings.enabled) timings.add(TimingType.scoreMap, DateTime.now().difference(innerStart).inMicroseconds);
 
         if(ratingSystem.mode == RatingMode.wholeEvent) {
-          await _processWholeEvent(
+          _processWholeEvent(
               match: match,
               group: group,
               stage: s,
@@ -1502,7 +1502,7 @@ class RatingProjectLoader {
       }
 
       if(ratingSystem.mode == RatingMode.wholeEvent) {
-        await _processWholeEvent(
+        _processWholeEvent(
             match: match,
             group: group,
             stage: null,
@@ -1580,7 +1580,7 @@ class RatingProjectLoader {
       for(var c in connectivityCompetitors) {
         // Everyone who has a rating at the match will be in the cache, so we
         // can skip the DB hit.
-        var rating = await AnalystDatabase().maybeKnownShooter(
+        var rating = db.maybeKnownShooterSync(
           project: project,
           group: group,
           memberNumber: c.memberNumber,

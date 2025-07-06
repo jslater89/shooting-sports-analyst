@@ -50,19 +50,19 @@ class Timings {
         ]),
         TimingElement(TimingType.changeMap),
         TimingElement(TimingType.updateConnectedness),
-      ])
-    ]),
-    TimingElement(TimingType.persistRatingChanges, [
-      TimingElement(TimingType.loadEvents),
-      TimingElement(TimingType.applyChanges),
-      TimingElement(TimingType.updateDbRatings, [
-        TimingElement(TimingType.dbRatingUpdateTransaction, [
-          TimingElement(TimingType.saveDbRating),
-          TimingElement(TimingType.persistEvents, [
-            TimingElement(TimingType.getEventMatches),
-          ])
+        TimingElement(TimingType.persistRatingChanges, [
+          TimingElement(TimingType.loadEvents),
+          TimingElement(TimingType.applyChanges),
+          TimingElement(TimingType.updateDbRatings, [
+            TimingElement(TimingType.dbRatingUpdateTransaction, [
+              TimingElement(TimingType.saveDbRating),
+              TimingElement(TimingType.persistEvents, [
+                TimingElement(TimingType.getEventMatches),
+              ])
+            ]),
+            TimingElement(TimingType.cacheUpdatedRatings),
+          ]),
         ]),
-        TimingElement(TimingType.cacheUpdatedRatings),
       ]),
     ]),
     TimingElement(TimingType.removeUnseenShooters),

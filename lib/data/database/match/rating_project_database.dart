@@ -393,10 +393,9 @@ extension RatingProjectDatabase on AnalystDatabase {
   }
 
   /// Update DbShooterRatings that have changed as part of the rating process.
-  Future<int> updateChangedRatings(Iterable<DbShooterRating> ratings, {bool useCache = true}) async {
-    var count = await isar.writeTxn(() async {
+  Future<void> updateChangedRatings(Iterable<DbShooterRating> ratings, {bool useCache = true}) async {
+    await isar.writeTxn(() async {
       late DateTime start;
-      int count = 0;
 
       Map<String, DbShootingMatch> matches = {};
 
@@ -451,8 +450,6 @@ extension RatingProjectDatabase on AnalystDatabase {
 
         if(Timings.enabled) Timings().add(TimingType.persistEvents, DateTime.now().difference(start).inMicroseconds);
       }
-
-      return count;
     });
 
     if(useCache) {
@@ -460,16 +457,14 @@ extension RatingProjectDatabase on AnalystDatabase {
         cacheRating(r.group.value!, r);
       }
     }
-    return count;
   }
 
   /// Update DbShooterRatings that have changed as part of the rating process.
-  int updateChangedRatingsSync(Iterable<DbShooterRating> ratings, {bool useCache = true}) {
+  void updateChangedRatingsSync(Iterable<DbShooterRating> ratings, {bool useCache = true}) {
     late DateTime outerStart;
     if(Timings.enabled) outerStart = DateTime.now();
-    var count = isar.writeTxnSync(() {
+    isar.writeTxnSync(() {
       late DateTime start;
-      int count = 0;
 
       Map<String, DbShootingMatch> matches = {};
 
@@ -523,8 +518,6 @@ extension RatingProjectDatabase on AnalystDatabase {
 
         if(Timings.enabled) Timings().add(TimingType.persistEvents, DateTime.now().difference(start).inMicroseconds);
       }
-
-      return count;
     });
     if(Timings.enabled) Timings().add(TimingType.dbRatingUpdateTransaction, DateTime.now().difference(outerStart).inMicroseconds);
 
@@ -536,7 +529,6 @@ extension RatingProjectDatabase on AnalystDatabase {
     }
     if(Timings.enabled) Timings().add(TimingType.cacheUpdatedRatings, DateTime.now().difference(outerStart).inMicroseconds);
 
-    return count;
   }
 
   Future<int> countShooterRatings(DbRatingProject project, RatingGroup group) async {
