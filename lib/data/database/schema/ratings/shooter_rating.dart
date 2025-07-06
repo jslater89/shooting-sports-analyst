@@ -178,6 +178,30 @@ class DbShooterRating extends Shooter with DbSportEntity {
     }
   }
 
+    /// Update the connectivity of this rating, and its most recent rating event.
+  ///
+  /// If [save] is true, this method will make the change and save the rating to
+  /// the database. If false, the caller is responsible for saving the rating.
+  void updateConnectivitySync({
+    required SourceIdsProvider match,
+    required double connectivity,
+    required double rawConnectivity,
+    bool save = false,
+  }) {
+    this.connectivity = connectivity;
+    this.rawConnectivity = rawConnectivity;
+
+    addHistoricalConnectivity(HistoricalConnectivity.create(
+      matchSourceIds: match.sourceIds,
+      connectivity: connectivity,
+      rawConnectivity: rawConnectivity,
+    ));
+
+    if(save) {
+      AnalystDatabase().upsertDbShooterRatingSync(this);
+    }
+  }
+
   Future<List<DbRatingEvent>> getEventsInWindow({int window = 0, int offset = 0}) async {
     return AnalystDatabase().getRatingEventsFor(this, limit: window, offset: offset);
   }

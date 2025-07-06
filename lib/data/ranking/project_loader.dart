@@ -395,7 +395,7 @@ class RatingProjectLoader {
       }
 
       // 1. For each match, add shooters.
-      var (ratings, _) = await _addShootersFromMatch(group, match);
+      var (ratings, _) = _addShootersFromMatch(group, match);
 
       if(_canceled) {
         return Result.err(CanceledError());
@@ -449,7 +449,7 @@ class RatingProjectLoader {
             resolvedInSettings += 1;
             for(var action in conflict.proposedActions) {
               didSomething = true;
-              await _applyDeduplicationAction(group, action);
+              _applyDeduplicationAction(group, action);
             }
           }
         }
@@ -468,13 +468,13 @@ class RatingProjectLoader {
           var actions = userDedupResult.unwrap();
           for(var action in actions) {
             didSomething = true;
-            await _applyDeduplicationAction(group, action);
+            _applyDeduplicationAction(group, action);
           }
         }
 
         if(didSomething) {
           project.changedSettings();
-          db.saveRatingProject(project, checkName: true);
+          db.saveRatingProjectSync(project, checkName: true);
         }
       }
     }
@@ -518,11 +518,7 @@ class RatingProjectLoader {
         }
       }
 
-      // 3.1.2. Rank match through code in Rater
-      // TODO: may be possible to remove this 'await' once everything is working
-      // May allow some processing to proceed in 'parallel', or at least while DB
-      // operations are happening
-      _currentMatchStep += 10;
+      // 3.1.2. Rank match
       subProgress += 1;
       await host.progressCallback(
         progress: _currentMatchStep,
@@ -553,7 +549,7 @@ class RatingProjectLoader {
   ///
   /// (Since we've already added new ratings, we need to delete any redundant ones and make
   /// sure any new ones are updated before we advance to calculating ratings.)
-  Future<void> _applyDeduplicationAction(RatingGroup group, DeduplicationAction action) async {
+  void _applyDeduplicationAction(RatingGroup group, DeduplicationAction action) {
     switch(action.runtimeType) {
       // For mappings, we need to delete any source ratings, make sure the target has all relevant
       // member numbers, and copy any data we're missing to the target.
@@ -647,22 +643,24 @@ class RatingProjectLoader {
 
         // Find any competitors who match sourceNumber and copy their data to the
         // target number.
-        List<Future<DbShooterRating?>> futures = [];
+        List<DbShooterRating> ratings = [];
         for(var sourceNumber in mapping.sourceNumbers) {
           // maybeKnownShooter here, because we might not have added all of the mapping sources yet.
-          futures.add(db.maybeKnownShooter(
+          var r = db.maybeKnownShooterSync(
             project: project,
             group: group,
             memberNumber: sourceNumber,
             usePossibleMemberNumbers: true,
             useCache: true,
-          ));
+          );
+          if(r != null) {
+            ratings.add(r);
+          }
         }
-        var ratings = (await Future.wait(futures)).whereNotNull().toList();
 
         // We can't necessarily use knownShooter here, because it's possible that the target number
         // was user-entered based on outside knowledge.
-        var targetRating = await db.maybeKnownShooter(
+        var targetRating = db.maybeKnownShooterSync(
           project: project,
           group: group,
           memberNumber: mapping.targetNumber,
@@ -688,11 +686,11 @@ class RatingProjectLoader {
           if(ratings.isNotEmpty) {
             targetRating.copyVitalsFrom(ratings.first);
           }
-          await db.upsertDbShooterRating(targetRating);
+          db.upsertDbShooterRatingSync(targetRating);
         }
 
         if(!targetRating.group.isLoaded) {
-          await targetRating.group.load();
+          targetRating.group.loadSync();
           if(targetRating.group.value == null) {
             targetRating.group.value = group;
           }
@@ -720,7 +718,7 @@ class RatingProjectLoader {
           // based on last seen/first seen
 
           targetRating.addKnownMemberNumbers(r.knownMemberNumbers);
-          await db.deleteShooterRating(r);
+          db.deleteShooterRatingSync(r);
         }
 
         if(ratingsWithHistory.length > 1) {
@@ -737,7 +735,7 @@ class RatingProjectLoader {
           project.addReport(report);
         }
 
-        await db.upsertDbShooterRating(targetRating, linksChanged: false);
+        db.upsertDbShooterRatingSync(targetRating, linksChanged: false);
 
         break;
       case Blacklist:
@@ -806,7 +804,7 @@ class RatingProjectLoader {
         }
 
         bool hasInternationalNumbers = false;
-        var sourceRating = await db.maybeKnownShooter(
+        var sourceRating = db.maybeKnownShooterSync(
           project: project,
           group: group,
           memberNumber: fix.sourceNumber,
@@ -846,7 +844,7 @@ class RatingProjectLoader {
         }
 
         if(sourceRating != null && sourceRating.deduplicatorName == fix.deduplicatorName) {
-          var targetRating = await db.maybeKnownShooter(
+          var targetRating = db.maybeKnownShooterSync(
             project: project,
             group: group,
             memberNumber: fix.targetNumber,
@@ -855,10 +853,10 @@ class RatingProjectLoader {
           if(targetRating != null) {
             if(sourceRating.knownMemberNumbers.any((n) => !targetRating.knownMemberNumbers.contains(n))) {
               targetRating.addKnownMemberNumbers(sourceRating.knownMemberNumbers);
-              await db.upsertDbShooterRating(targetRating);
+              db.upsertDbShooterRatingSync(targetRating);
             }
           }
-          await db.deleteShooterRating(sourceRating);
+          db.deleteShooterRatingSync(sourceRating);
         }
 
         // var mapping = project.lookupAutomaticNumberMapping(fix.sourceNumber);
@@ -975,12 +973,11 @@ class RatingProjectLoader {
   ///
   /// Use [encounter] if you want shooters to be added regardless of whether they appear
   /// in scores. (i.e., shooters who DQ on the first stage, or are no-shows but still included in the data)
-  Future<(List<DbShooterRating>, int)> _addShootersFromMatch(RatingGroup group, ShootingMatch match) async {
+  (List<DbShooterRating>, int) _addShootersFromMatch(RatingGroup group, ShootingMatch match) {
     var start = DateTime.now();
     int added = 0;
     int updated = 0;
-    var shooters = await _getShooters(group, match);
-    List<Future<DbShooterRating>> saveFutures = [];
+    var shooters = _getShooters(group, match);
     List<DbShooterRating> newRatings = [];
     for(MatchEntry s in shooters) {
       // Process the member number:
@@ -1117,7 +1114,7 @@ class RatingProjectLoader {
         // If doing a full recalculation, we know everyone is in the cache because we added them in previous
         // iterations of this function. In that case, we ask for 'cache only' and skip the DB query. (Time savings
         // potentially quite big?)
-        var rating = await db.maybeKnownShooter(
+        var rating = db.maybeKnownShooterSync(
           project: project,
           group: group,
           memberNumber: s.memberNumber,
@@ -1129,7 +1126,7 @@ class RatingProjectLoader {
         if(rating == null) {
           var newRating = ratingSystem.newShooterRating(s, sport: project.sport, date: match.date);
           newRating.allPossibleMemberNumbers.addAll(possibleNumbers);
-          await db.newShooterRatingFromWrapped(
+          db.newShooterRatingFromWrappedSync(
             rating: newRating,
             group: group,
             project: project,
@@ -1182,7 +1179,7 @@ class RatingProjectLoader {
 
           // We don't need to wait on this yet, because a) it goes into the cache synchronously,
           // and b) if we need to get the same competitor from the DB, we will fetch it from the cache.
-          saveFutures.add(db.upsertDbShooterRating(rating));
+          db.upsertDbShooterRatingSync(rating);
         }
       }
     }
@@ -1193,12 +1190,10 @@ class RatingProjectLoader {
       timings.matchEntryCount += shooters.length;
     }
 
-    await Future.wait(saveFutures);
-
     return (newRatings, added + updated);
   }
 
-  Future<List<MatchEntry>> _getShooters(RatingGroup group, ShootingMatch match, {bool verify = false}) async {
+  List<MatchEntry> _getShooters(RatingGroup group, ShootingMatch match, {bool verify = false}) {
     var filters = group.filters;
     var shooters = <MatchEntry>[];
     shooters = match.filterShooters(
@@ -1215,14 +1210,14 @@ class RatingProjectLoader {
     }
 
     if(verify) {
-      await shooters.retainWhereAsync((element) async => await _verifyShooter(group, element));
+      shooters.retainWhere((element) => _verifyShooter(group, element));
     }
 
     return shooters;
   }
 
   Map<Shooter, bool> _verifyCache = {};
-  Future<bool> _verifyShooter(RatingGroup g, MatchEntry s) async {
+  bool _verifyShooter(RatingGroup g, MatchEntry s) {
     if(_verifyCache.containsKey(s)) return _verifyCache[s]!;
 
     var finalMemberNumber = s.memberNumber;
@@ -1250,7 +1245,7 @@ class RatingProjectLoader {
     // after member numbers have been processed.
     String memNum = finalMemberNumber;
 
-    var rating = await db.maybeKnownShooter(
+    var rating = db.maybeKnownShooterSync(
       project: project,
       group: g,
       memberNumber: finalMemberNumber,
@@ -1285,7 +1280,7 @@ class RatingProjectLoader {
   Future<int> _rankMatch(RatingGroup group, ShootingMatch match) async {
     late DateTime start;
     if(Timings.enabled) start = DateTime.now();
-    var shooters = await _getShooters(group, match, verify: true);
+    var shooters = _getShooters(group, match, verify: true);
     var scores = match.getScores(shooters: shooters, scoreDQ: settings.byStage);
 
     // Skip when a match has no shooters in a group
@@ -1304,7 +1299,7 @@ class RatingProjectLoader {
         matchStrength += sport.ratingStrengthProvider?.strengthForClass(shooter.classification) ?? 1.0;
 
         // Update
-        var rating = await AnalystDatabase().maybeKnownShooter(
+        var rating = db.maybeKnownShooterSync(
           project: project,
           group: group,
           memberNumber: shooter.memberNumber,
@@ -1343,7 +1338,7 @@ class RatingProjectLoader {
     if(sport.connectivityCalculator != null) {
       List<double> connectivityScores = [];
       for(var shooter in shooters) {
-        var rating = await AnalystDatabase().maybeKnownShooter(
+        var rating = db.maybeKnownShooterSync(
           project: project,
           group: group,
           memberNumber: shooter.memberNumber,
@@ -1371,7 +1366,7 @@ class RatingProjectLoader {
       // Done separately (rather than once, before the loop) to save a match's
       // worth of map accesses in the loop.
       for(var shooter in shooters) {
-        var rating = await AnalystDatabase().maybeKnownShooter(
+        var rating = db.maybeKnownShooterSync(
           project: project,
           group: group,
           memberNumber: shooter.memberNumber,
@@ -1411,7 +1406,7 @@ class RatingProjectLoader {
         if(Timings.enabled) timings.add(TimingType.scoreMap, DateTime.now().difference(innerStart).inMicroseconds);
 
         if(ratingSystem.mode == RatingMode.wholeEvent) {
-          await _processWholeEvent(
+          _processWholeEvent(
               match: match,
               group: group,
               stage: s,
@@ -1461,7 +1456,7 @@ class RatingProjectLoader {
         changeCount += changes.length;
         for(var r in changes.keys) {
           var changeStart = DateTime.now();
-          if(!r.events.isLoaded) await r.events.load();
+          if(!r.events.isLoaded) r.events.loadSync();
           if(Timings.enabled) timings.add(TimingType.loadEvents, DateTime.now().difference(changeStart).inMicroseconds);
 
           changeStart = DateTime.now();
@@ -1472,7 +1467,7 @@ class RatingProjectLoader {
         }
 
         var updateStart = DateTime.now();
-        await AnalystDatabase().updateChangedRatings(changes.keys);
+        db.updateChangedRatingsSync(changes.keys);
         if(Timings.enabled) timings.add(TimingType.updateDbRatings, DateTime.now().difference(updateStart).inMicroseconds);
         if(Timings.enabled) timings.add(TimingType.persistRatingChanges, DateTime.now().difference(persistStart).inMicroseconds);
 
@@ -1507,7 +1502,7 @@ class RatingProjectLoader {
       }
 
       if(ratingSystem.mode == RatingMode.wholeEvent) {
-        await _processWholeEvent(
+        _processWholeEvent(
             match: match,
             group: group,
             stage: null,
@@ -1578,14 +1573,14 @@ class RatingProjectLoader {
 
     // Update connectivity
     if(Timings.enabled) start = DateTime.now();
-    List<Future<void>> futures = [];
+    List<DbShooterRating> ratings = [];
     if(shooters.length > 1 && sport.connectivityCalculator != null) {
       var connectivityCompetitors = match.connectivityCompetitors(group);
       Set<DbShooterRating> shootersAtMatch = {};
       for(var c in connectivityCompetitors) {
         // Everyone who has a rating at the match will be in the cache, so we
         // can skip the DB hit.
-        var rating = await AnalystDatabase().maybeKnownShooter(
+        var rating = db.maybeKnownShooterSync(
           project: project,
           group: group,
           memberNumber: c.memberNumber,
@@ -1627,19 +1622,18 @@ class RatingProjectLoader {
 
         var newConnectivity = calc.calculateRatingConnectivity(rating);
 
-        rating.updateConnectivity(
+        rating.updateConnectivitySync(
           match: match,
           connectivity: newConnectivity.connectivity,
           rawConnectivity: newConnectivity.rawConnectivity,
           save: false,
         );
-
-        futures.add(AnalystDatabase().upsertDbShooterRating(rating));
+        ratings.add(rating);
       }
 
-      // Wait for shooter updates to finish
-      if(futures.isNotEmpty) {
-        await Future.wait(futures);
+      // Wait for shooter updates to finish, and batch them for speed.
+      if(ratings.isNotEmpty) {
+        db.upsertDbShooterRatingsSync(ratings, linksChanged: false);
       }
 
       // Calculate new baseline
@@ -1649,7 +1643,7 @@ class RatingProjectLoader {
       int? competitorCount;
 
       if(calc.requiredBaselineData.contains(ConnectivityRequiredData.connectivityScores)) {
-        connectivityScores = await db.getConnectivity(project, group);
+        connectivityScores = db.getConnectivitySync(project, group);
         competitorCount = connectivityScores.length;
       }
       if(calc.requiredBaselineData.contains(ConnectivityRequiredData.connectivitySum)) {
@@ -1657,7 +1651,7 @@ class RatingProjectLoader {
           connectivitySum = connectivityScores.sum;
         }
         else {
-          connectivitySum = await db.getConnectivitySum(project, group);
+          connectivitySum = db.getConnectivitySumSync(project, group);
         }
       }
       if(calc.requiredBaselineData.contains(ConnectivityRequiredData.competitorCount) && competitorCount == null) {
@@ -1780,9 +1774,8 @@ class RatingProjectLoader {
         var otherScore = s.stageScores[stage]!;
         _encounteredMemberNumber(num);
 
-        ShooterRating rating = wrappedRatings[num] ?? ratingSystem.wrapDbRating(
-            (await db.maybeKnownShooter(project: project, group: group, memberNumber: num, useCache: true))!
-        );
+        ShooterRating rating = wrappedRatings[num]
+        ?? ratingSystem.wrapDbRating(db.maybeKnownShooterSync(project: project, group: group, memberNumber: num, useCache: true)!);
 
         scoreMap[rating] = otherScore;
         matchScoreMap[rating] = s;
@@ -1834,9 +1827,8 @@ class RatingProjectLoader {
         String num = s.shooter.memberNumber;
         _encounteredMemberNumber(num);
 
-        ShooterRating rating = wrappedRatings[num] ?? ratingSystem.wrapDbRating(
-            (await db.maybeKnownShooter(project: project, group: group, memberNumber: num, useCache: true))!
-        );
+        ShooterRating rating = wrappedRatings[num]
+        ?? ratingSystem.wrapDbRating(db.maybeKnownShooterSync(project: project, group: group, memberNumber: num, useCache: true)!);
 
         scoreMap[rating] = s;
         matchScoreMap[rating] = s;
