@@ -305,7 +305,7 @@ class RatingProjectLoader {
     );
     List<ShootingMatch> hydratedMatches = [];
     for(var matchPointer in matchesToAdd) {
-      var dbMatch = await matchPointer.getDbMatch(db, downloadIfMissing: true);
+      var dbMatch = await matchPointer.getDbMatch(db, downloadIfMissing: true, ignoreUnknownDivisions: true);
       if(dbMatch.isErr()) {
         return Result.err(MatchLoadFailureError(
           cause: MatchLoadFailureCause.invalidData,
