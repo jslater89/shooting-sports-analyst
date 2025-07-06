@@ -115,10 +115,17 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
     super.dispose();
   }
 
+<<<<<<< HEAD
   Future<List<int>> _getAllMatchIdsMatchingSearch() async {
     var matchIds = <int>[];
     if(widget.matches != null) {
       var matches = [...widget.matches!];
+=======
+  Future<List<DbShootingMatch>> _getAllMatchesMatchingSearch() async {
+    var matches = <DbShootingMatch>[];
+    if(widget.matches != null) {
+      matches = [...widget.matches!];
+>>>>>>> a67afddddc245729e4a364795aabedec9fb64e1a
 
       if(searchController.text.isNotEmpty) {
         var search = searchController.text;
@@ -132,11 +139,17 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
       else {
         matches.sort((a, b) => b.date.compareTo(a.date));
       }
+<<<<<<< HEAD
 
       matchIds = matches.map((m) => m.id).toList();
     }
     else {
       matchIds = await db.queryMatchIds(
+=======
+    }
+    else {
+      matches = await db.queryMatches(
+>>>>>>> a67afddddc245729e4a364795aabedec9fb64e1a
         name: searchController.text.isNotEmpty ? searchController.text : null,
         sport: widget.sport,
         pageSize: 100000,
@@ -144,7 +157,11 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
       );
     }
 
+<<<<<<< HEAD
     return matchIds;
+=======
+    return matches;
+>>>>>>> a67afddddc245729e4a364795aabedec9fb64e1a
   }
 
   Future<void> _updateMatches() async {
@@ -263,9 +280,15 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
                   child: TextButton(
                     child: Text("SELECT ALL"),
                     onPressed: () async {
+<<<<<<< HEAD
                       var allMatchIds = await _getAllMatchIdsMatchingSearch();
                       setState(() {
                         selectedMatches.addAll(allMatchIds);
+=======
+                      var allMatches = await _getAllMatchesMatchingSearch();
+                      setState(() {
+                        selectedMatches.addAll(allMatches.map((m) => m.id));
+>>>>>>> a67afddddc245729e4a364795aabedec9fb64e1a
                       });
                     },
                   ),
