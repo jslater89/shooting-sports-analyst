@@ -518,11 +518,7 @@ class RatingProjectLoader {
         }
       }
 
-      // 3.1.2. Rank match through code in Rater
-      // TODO: may be possible to remove this 'await' once everything is working
-      // May allow some processing to proceed in 'parallel', or at least while DB
-      // operations are happening
-      _currentMatchStep += 10;
+      // 3.1.2. Rank match
       subProgress += 1;
       await host.progressCallback(
         progress: _currentMatchStep,
@@ -1647,7 +1643,7 @@ class RatingProjectLoader {
       int? competitorCount;
 
       if(calc.requiredBaselineData.contains(ConnectivityRequiredData.connectivityScores)) {
-        connectivityScores = await db.getConnectivity(project, group);
+        connectivityScores = db.getConnectivitySync(project, group);
         competitorCount = connectivityScores.length;
       }
       if(calc.requiredBaselineData.contains(ConnectivityRequiredData.connectivitySum)) {
@@ -1655,7 +1651,7 @@ class RatingProjectLoader {
           connectivitySum = connectivityScores.sum;
         }
         else {
-          connectivitySum = await db.getConnectivitySum(project, group);
+          connectivitySum = db.getConnectivitySumSync(project, group);
         }
       }
       if(calc.requiredBaselineData.contains(ConnectivityRequiredData.competitorCount) && competitorCount == null) {
@@ -1778,9 +1774,8 @@ class RatingProjectLoader {
         var otherScore = s.stageScores[stage]!;
         _encounteredMemberNumber(num);
 
-        ShooterRating rating = wrappedRatings[num] ?? ratingSystem.wrapDbRating(
-            (await db.maybeKnownShooter(project: project, group: group, memberNumber: num, useCache: true))!
-        );
+        ShooterRating rating = wrappedRatings[num]
+        ?? ratingSystem.wrapDbRating(db.maybeKnownShooterSync(project: project, group: group, memberNumber: num, useCache: true)!);
 
         scoreMap[rating] = otherScore;
         matchScoreMap[rating] = s;
@@ -1832,9 +1827,8 @@ class RatingProjectLoader {
         String num = s.shooter.memberNumber;
         _encounteredMemberNumber(num);
 
-        ShooterRating rating = wrappedRatings[num] ?? ratingSystem.wrapDbRating(
-            (await db.maybeKnownShooter(project: project, group: group, memberNumber: num, useCache: true))!
-        );
+        ShooterRating rating = wrappedRatings[num]
+        ?? ratingSystem.wrapDbRating(db.maybeKnownShooterSync(project: project, group: group, memberNumber: num, useCache: true)!);
 
         scoreMap[rating] = s;
         matchScoreMap[rating] = s;

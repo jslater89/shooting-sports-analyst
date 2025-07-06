@@ -465,6 +465,8 @@ extension RatingProjectDatabase on AnalystDatabase {
 
   /// Update DbShooterRatings that have changed as part of the rating process.
   int updateChangedRatingsSync(Iterable<DbShooterRating> ratings, {bool useCache = true}) {
+    late DateTime outerStart;
+    if(Timings.enabled) outerStart = DateTime.now();
     var count = isar.writeTxnSync(() {
       late DateTime start;
       int count = 0;
@@ -524,12 +526,16 @@ extension RatingProjectDatabase on AnalystDatabase {
 
       return count;
     });
+    if(Timings.enabled) Timings().add(TimingType.dbRatingUpdateTransaction, DateTime.now().difference(outerStart).inMicroseconds);
 
+    if(Timings.enabled) outerStart = DateTime.now();
     if(useCache) {
       for(var r in ratings) {
         cacheRating(r.group.value!, r);
       }
     }
+    if(Timings.enabled) Timings().add(TimingType.cacheUpdatedRatings, DateTime.now().difference(outerStart).inMicroseconds);
+
     return count;
   }
 
@@ -546,11 +552,25 @@ extension RatingProjectDatabase on AnalystDatabase {
         .findAll();
   }
 
+  List<double> getConnectivitySync(DbRatingProject project, RatingGroup group) {
+    return project.ratings.filter()
+        .group((q) => q.uuidEqualTo(group.uuid))
+        .connectivityProperty()
+        .findAllSync();
+  }
+
   Future<double> getConnectivitySum(DbRatingProject project, RatingGroup group) {
     return project.ratings.filter()
         .group((q) => q.uuidEqualTo(group.uuid))
         .connectivityProperty()
         .sum();
+  }
+
+  double getConnectivitySumSync(DbRatingProject project, RatingGroup group) {
+    return project.ratings.filter()
+        .group((q) => q.uuidEqualTo(group.uuid))
+        .connectivityProperty()
+        .sumSync();
   }
 
   Future<List<DbRatingEvent>> getRatingEventsFor(DbShooterRating rating, {
