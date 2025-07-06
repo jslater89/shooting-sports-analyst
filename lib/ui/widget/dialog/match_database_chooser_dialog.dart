@@ -346,6 +346,19 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
                   descriptionText: "Enter a link to a Practiscore results page.",
                   hintText: "https://practiscore.com/results/new/...",
                   initialSearch: searchController.text,
+                  onMatchDownloaded: (match) {
+                    // We don't need to refresh the match list here, because we will once we leave
+                    // the dialog.
+                    setState(() {
+                      if(match.databaseId != null) {
+                        selectedMatches.add(match.databaseId!);
+                        _log.v("Added match ${match.name} (${match.sourceIds}) (${match.databaseId}) to selected matches");
+                      }
+                      else {
+                        _log.w("Downloaded match ${match.name} (${match.sourceIds}) has no database ID");
+                      }
+                    });
+                  },
                 );
                 if(result == null) {
                   // Update matches, because we might have done the long-press-download trick
@@ -443,6 +456,7 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
                       onPressed: () async {
                         var match = searchedMatches[i];
                         var deletedFuture = db.deleteMatch(match.id);
+                        selectedMatches.remove(match.id);
 
                         var deleted = await LoadingDialog.show(context: context, waitOn: deletedFuture);
                         if(deleted != null && deleted.isOk()) {

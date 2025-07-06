@@ -76,10 +76,12 @@ abstract class MatchSource<T extends InternalMatchType, S extends InternalMatchF
   /// The returned UI should fit an 800px by 500px box (or allow scrolling, if taller
   /// than 500px). The enclosing UI will provide 'cancel' or 'back' functionality.
   ///
-  /// Call [onMatchSelected] with a match if one is selected and downloaded, or
+  /// Call [onMatchSelected] with a match if one is selected for immediate viewing,
+  /// [onMatchDownloaded] with a match if one is selected for background download, or
   /// [onError] with an error if one occurs during a match selection/download.
   Widget getDownloadMatchUI({
     required void Function(ShootingMatch) onMatchSelected,
+    void Function(ShootingMatch)? onMatchDownloaded,
     required void Function(MatchSourceError) onError,
     String? initialSearch,
   });

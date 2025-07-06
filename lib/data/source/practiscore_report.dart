@@ -541,7 +541,12 @@ class PractiscoreHitFactorReportParser extends MatchSource {
   }
 
   @override
-  Widget getDownloadMatchUI({required void Function(ShootingMatch) onMatchSelected, required void Function(MatchSourceError) onError, String? initialSearch}) {
+  Widget getDownloadMatchUI({
+    required void Function(ShootingMatch) onMatchSelected,
+    void Function(ShootingMatch)? onMatchDownloaded,
+    required void Function(MatchSourceError) onError,
+    String? initialSearch,
+  }) {
     return Builder(builder: (context) {
       var onSubmitted = (String value) async {
         var matchId = await processMatchUrl(value);
