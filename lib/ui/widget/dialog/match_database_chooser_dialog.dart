@@ -115,6 +115,36 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
     super.dispose();
   }
 
+  Future<List<DbShootingMatch>> _getAllMatchesMatchingSearch() async {
+    var matches = <DbShootingMatch>[];
+    if(widget.matches != null) {
+      matches = [...widget.matches!];
+
+      if(searchController.text.isNotEmpty) {
+        var search = searchController.text;
+        matches = matches.where((m) =>
+          m.eventName.toLowerCase().contains(search.toLowerCase())).toList();
+      }
+
+      if(alphabeticSort) {
+        matches.sort((a, b) => a.eventName.compareTo(b.eventName));
+      }
+      else {
+        matches.sort((a, b) => b.date.compareTo(a.date));
+      }
+    }
+    else {
+      matches = await db.queryMatches(
+        name: searchController.text.isNotEmpty ? searchController.text : null,
+        sport: widget.sport,
+        pageSize: 100000,
+        sort: alphabeticSort ? const NameSort() : const DateSort(),
+      );
+    }
+
+    return matches;
+  }
+
   Future<void> _updateMatches() async {
     if(widget.matches != null) {
       setState(() {
@@ -215,13 +245,28 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
                     });
                   },
                 ),
-                TextButton(
-                  child: Text("SELECT ALL"),
-                  onPressed: () {
-                    setState(() {
-                      selectedMatches.addAll(searchedMatches.map((m) => m.id));
-                    });
-                  },
+                Tooltip(
+                  message: "Select all matches currently visible in the list, not including additional pages.",
+                  child: TextButton(
+                    child: Text("SELECT LOADED"),
+                    onPressed: () {
+                      setState(() {
+                        selectedMatches.addAll(searchedMatches.map((m) => m.id));
+                      });
+                    },
+                  ),
+                ),
+                Tooltip(
+                  message: "Select all matches that match the current search, including additional pages.",
+                  child: TextButton(
+                    child: Text("SELECT ALL"),
+                    onPressed: () async {
+                      var allMatches = await _getAllMatchesMatchingSearch();
+                      setState(() {
+                        selectedMatches.addAll(allMatches.map((m) => m.id));
+                      });
+                    },
+                  ),
                 ),
               ],
             ),
