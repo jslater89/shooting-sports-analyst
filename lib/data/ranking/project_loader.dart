@@ -1174,7 +1174,7 @@ class RatingProjectLoader {
           // We asked for allPossibleMemberNumbers, so if this member number isn't
           // in the knownMemberNumbers list, add it.
           if(!rating.knownMemberNumbers.contains(s.memberNumber)) {
-            rating.knownMemberNumbers.add(s.memberNumber);
+            rating.addKnownMemberNumber(s.memberNumber);
           }
 
           // We don't need to wait on this yet, because a) it goes into the cache synchronously,
