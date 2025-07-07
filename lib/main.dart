@@ -63,6 +63,8 @@ void main() async {
     _log.e("Flutter error", error: details.exceptionAsString(), stackTrace: details.stack);
   };
   runZonedGuarded(() async {
+      WidgetsFlutterBinding.ensureInitialized();
+
     _log.i("=== App start ===");
     var info = await PackageInfo.fromPlatform();
     var localVersion = VersionInfo.version;
@@ -99,8 +101,6 @@ void main() async {
         }
     ));
     configureApp();
-
-    WidgetsFlutterBinding.ensureInitialized();
 
     await windowManager.ensureInitialized();
     var options = WindowOptions(
