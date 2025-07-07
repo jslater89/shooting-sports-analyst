@@ -287,11 +287,17 @@ extension RatingProjectDatabase on AnalystDatabase {
     });
   }
 
+  /// Create a new DbShooterRating from a rating engine-specific [ShooterRating].
+  ///
+  /// If [standalone] is true, the database operation will be wrapped in a write transaction.
+  /// Otherwise, the caller is responsible for ensuring that the database operation is wrapped
+  /// in a write transaction.
   DbShooterRating newShooterRatingFromWrappedSync({
     required DbRatingProject project,
     required RatingGroup group,
     required ShooterRating rating,
     bool useCache = true,
+    bool standalone = true,
   }) {
 
     var dbRating = rating.wrappedRating;
@@ -300,14 +306,24 @@ extension RatingProjectDatabase on AnalystDatabase {
     if(useCache) {
       cacheRating(group, dbRating);
     }
-    return isar.writeTxnSync(() {
+    if(standalone) {
+      return isar.writeTxnSync(() {
+        isar.dbShooterRatings.putSync(dbRating);
+
+        dbRating.project.saveSync();
+        dbRating.group.saveSync();
+
+        return dbRating;
+      });
+    }
+    else {
       isar.dbShooterRatings.putSync(dbRating);
 
       dbRating.project.saveSync();
       dbRating.group.saveSync();
 
       return dbRating;
-    });
+    }
   }
 
   /// Upsert a DbShooterRating.
@@ -350,13 +366,22 @@ extension RatingProjectDatabase on AnalystDatabase {
   /// Upsert a DbShooterRating.
   ///
   /// If [linksChanged] is false, the links will not be saved in the write transaction.
-  DbShooterRating upsertDbShooterRatingSync(DbShooterRating rating, {bool linksChanged = true, bool useCache = true}) {
+  ///
+  /// If [standalone] is true, the database operation will be wrapped in a write transaction.
+  /// Otherwise, the caller is responsible for ensuring that the database operation is wrapped
+  /// in a write transaction.
+  DbShooterRating upsertDbShooterRatingSync(DbShooterRating rating, {bool linksChanged = true, bool useCache = true, bool standalone = true}) {
     if(useCache) {
       cacheRating(rating.group.value!, rating);
     }
-    return isar.writeTxnSync(() {
+    if(standalone) {
+      return isar.writeTxnSync(() {
+        return _innerUpsertDbShooterRatingSync(rating, linksChanged);
+      });
+    }
+    else {
       return _innerUpsertDbShooterRatingSync(rating, linksChanged);
-    });
+    }
   }
 
   List<DbShooterRating> upsertDbShooterRatingsSync(List<DbShooterRating> ratings, {bool linksChanged = true, bool useCache = true}) {

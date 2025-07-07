@@ -979,6 +979,8 @@ class RatingProjectLoader {
     int added = 0;
     int updated = 0;
     var shooters = _getShooters(group, match);
+    List<ShooterRating> ratingsToCreate = [];
+    List<DbShooterRating> ratingsToUpsert = [];
     List<DbShooterRating> newRatings = [];
     for(MatchEntry s in shooters) {
       // Process the member number:
@@ -1127,11 +1129,7 @@ class RatingProjectLoader {
         if(rating == null) {
           var newRating = ratingSystem.newShooterRating(s, sport: project.sport, date: match.date);
           newRating.allPossibleMemberNumbers.addAll(possibleNumbers);
-          db.newShooterRatingFromWrappedSync(
-            rating: newRating,
-            group: group,
-            project: project,
-          );
+          ratingsToCreate.add(newRating);
           newRatings.add(newRating.wrappedRating);
           added += 1;
         }
@@ -1180,10 +1178,19 @@ class RatingProjectLoader {
 
           // We don't need to wait on this yet, because a) it goes into the cache synchronously,
           // and b) if we need to get the same competitor from the DB, we will fetch it from the cache.
-          db.upsertDbShooterRatingSync(rating);
+          ratingsToUpsert.add(rating);
         }
       }
     }
+
+    db.writeTxnSync(() {
+      for(var rating in ratingsToCreate) {
+        db.newShooterRatingFromWrappedSync(rating: rating, group: group, project: project, standalone: false);
+      }
+      for(var rating in ratingsToUpsert) {
+        db.upsertDbShooterRatingSync(rating, standalone: false);
+      }
+    });
 
     if(Timings.enabled) {
       timings.add(TimingType.addShooters, DateTime.now().difference(start).inMicroseconds);
