@@ -520,6 +520,7 @@ class RatingProjectLoader {
 
       // 3.1.2. Rank match
       subProgress += 1;
+      _currentMatchStep += 10;
       await host.progressCallback(
         progress: _currentMatchStep,
         total: _totalMatchSteps,
