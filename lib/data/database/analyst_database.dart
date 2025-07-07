@@ -109,6 +109,12 @@ class AnalystDatabase {
 
   AnalystDatabase._();
 
+  /// Perform a synchronous write transaction.
+  T writeTxnSync<T>(T Function() txn, {bool silent = false}) {
+    // Making my life slightly easier if I ever want to move off of Isar.
+    return isar.writeTxnSync(txn, silent: silent);
+  }
+
   /// Contains a cache of shooter ratings. By default, [knownShooter] and [maybeKnownShooter]
   /// will not read from the cache. By default, ratings will be saved to the cache when
   /// inserted, updated, or read.

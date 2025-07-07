@@ -52,7 +52,7 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
     super.initState();
 
     RatingProjectLoaderHost host = RatingProjectLoaderHost(
-      progressCallback: callback,
+      progressCallback: progressCallback,
       deduplicationCallback: deduplicationCallback,
       unableToAppendCallback: unableToAppendCallback,
       fullRecalculationRequiredCallback: fullRecalculationRequiredCallback,
@@ -112,7 +112,7 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
     }
   }
 
-  Future<void> callback({
+  Future<void> progressCallback({
     required int progress,
     required int total,
     required LoadingState state,

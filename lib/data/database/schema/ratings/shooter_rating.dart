@@ -30,27 +30,70 @@ class DbShooterRating extends Shooter with DbSportEntity {
   @ignore
   bool get isPersisted => id != Isar.autoIncrement;
 
+  List<String>? _dbKnownMemberNumbers;
+  List<String>? _dbAllPossibleMemberNumbers;
+
   @Index(name: AnalystDatabase.knownMemberNumbersIndex, type: IndexType.hashElements)
-  List<String> get dbKnownMemberNumbers => List<String>.from(knownMemberNumbers);
-  set dbKnownMemberNumbers(List<String> values) => knownMemberNumbers = {}..addAll(values);
+  List<String> get dbKnownMemberNumbers {
+    if(_dbKnownMemberNumbers == null) {
+      _dbKnownMemberNumbers = List<String>.from(knownMemberNumbers);
+    }
+    return _dbKnownMemberNumbers!;
+  }
+  set dbKnownMemberNumbers(List<String> values) => _dbKnownMemberNumbers = values;
 
   @Index(name: AnalystDatabase.allPossibleMemberNumbersIndex, type: IndexType.hashElements)
-  List<String> get dbAllPossibleMemberNumbers => List<String>.from(allPossibleMemberNumbers);
-  set dbAllPossibleMemberNumbers(List<String> values) => allPossibleMemberNumbers = {}..addAll(values);
+  List<String> get dbAllPossibleMemberNumbers {
+    if(_dbAllPossibleMemberNumbers == null) {
+      _dbAllPossibleMemberNumbers = List<String>.from(allPossibleMemberNumbers);
+    }
+    return _dbAllPossibleMemberNumbers!;
+  }
+  set dbAllPossibleMemberNumbers(List<String> values) => _dbAllPossibleMemberNumbers = values;
+
+  @override
+  void addKnownMemberNumber(String number) {
+    // Erase cached values after adding a new member number
+    super.addKnownMemberNumber(number);
+    _dbKnownMemberNumbers = null;
+    _dbAllPossibleMemberNumbers = null;
+  }
+
+  String _firstName;
+  String _lastName;
+  @override
+  @Index()
+  String get firstName => _firstName;
+  set firstName(String value) {
+    _firstName = value;
+    _firstNameParts = null;
+  }
 
   @override
   @Index()
-  String firstName;
+  String get lastName => _lastName;
+  set lastName(String value) {
+    _lastName = value;
+    _lastNameParts = null;
+  }
 
-  @override
-  @Index()
-  String lastName;
 
-
+  List<String>? _firstNameParts;
+  List<String>? _lastNameParts;
   @Index()
-  List<String> get firstNameParts => firstName.split(RegExp(r'\s+'));
+  List<String> get firstNameParts {
+    if(_firstNameParts == null) {
+      _firstNameParts = firstName.split(RegExp(r'\s+'));
+    }
+    return _firstNameParts!;
+  }
   @Index()
-  List<String> get lastNameParts => lastName.split(RegExp(r'\s+'));
+  List<String> get lastNameParts {
+    if(_lastNameParts == null) {
+      _lastNameParts = lastName.split(RegExp(r'\s+'));
+    }
+    return _lastNameParts!;
+  }
 
   @Index()
   String get deduplicatorName => ShooterDeduplicator.processName(this);
@@ -225,8 +268,8 @@ class DbShooterRating extends Shooter with DbSportEntity {
 
   DbShooterRating({
     required this.sportName,
-    required this.firstName,
-    required this.lastName,
+    required String firstName,
+    required String lastName,
     required super.memberNumber,
     required super.female,
     required this.rating,
@@ -235,12 +278,14 @@ class DbShooterRating extends Shooter with DbSportEntity {
     required this.connectivity,
     required this.firstSeen,
     required this.lastSeen,
-  }) : super(firstName: firstName, lastName: lastName);
+  }) : this._firstName = firstName,
+       this._lastName = lastName,
+       super(firstName: firstName, lastName: lastName);
 
   DbShooterRating.empty({
     required Sport sport,
-    this.firstName = "",
-    this.lastName = "",
+    String firstName = "",
+    String lastName = "",
     super.memberNumber = "",
     super.female = false,
     this.rating = 0.0,
@@ -252,6 +297,8 @@ class DbShooterRating extends Shooter with DbSportEntity {
     int doubleDataLength = 0,
     int intDataLength = 0,
   }) :
+        this._firstName = firstName,
+        this._lastName = lastName,
         this.firstSeen = firstSeen ?? DateTime(0),
         this.lastSeen = lastSeen ?? DateTime(0),
         this.sportName = sport.name,
