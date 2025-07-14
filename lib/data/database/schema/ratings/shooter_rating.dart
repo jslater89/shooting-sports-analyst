@@ -30,33 +30,37 @@ class DbShooterRating extends Shooter with DbSportEntity {
   @ignore
   bool get isPersisted => id != Isar.autoIncrement;
 
-  List<String>? _dbKnownMemberNumbers;
-  List<String>? _dbAllPossibleMemberNumbers;
+  // List<String>? _dbKnownMemberNumbers;
+  // List<String>? _dbAllPossibleMemberNumbers;
 
   @Index(name: AnalystDatabase.knownMemberNumbersIndex, type: IndexType.hashElements)
-  List<String> get dbKnownMemberNumbers {
-    if(_dbKnownMemberNumbers == null) {
-      _dbKnownMemberNumbers = List<String>.from(knownMemberNumbers);
-    }
-    return _dbKnownMemberNumbers!;
-  }
-  set dbKnownMemberNumbers(List<String> values) => _dbKnownMemberNumbers = values;
+  List<String> get dbKnownMemberNumbers => List<String>.from(knownMemberNumbers);
+  // List<String> get dbKnownMemberNumbers {
+  //   if(_dbKnownMemberNumbers == null) {
+  //     _dbKnownMemberNumbers = List<String>.from(knownMemberNumbers);
+  //   }
+  //   return _dbKnownMemberNumbers!;
+  // }
+  // set dbKnownMemberNumbers(List<String> values) => _dbKnownMemberNumbers = values;
+  set dbKnownMemberNumbers(List<String> values) => knownMemberNumbers = values.toSet();
 
   @Index(name: AnalystDatabase.allPossibleMemberNumbersIndex, type: IndexType.hashElements)
-  List<String> get dbAllPossibleMemberNumbers {
-    if(_dbAllPossibleMemberNumbers == null) {
-      _dbAllPossibleMemberNumbers = List<String>.from(allPossibleMemberNumbers);
-    }
-    return _dbAllPossibleMemberNumbers!;
-  }
-  set dbAllPossibleMemberNumbers(List<String> values) => _dbAllPossibleMemberNumbers = values;
+  List<String> get dbAllPossibleMemberNumbers => List<String>.from(allPossibleMemberNumbers);
+  // List<String> get dbAllPossibleMemberNumbers {
+  //   if(_dbAllPossibleMemberNumbers == null) {
+  //     _dbAllPossibleMemberNumbers = List<String>.from(allPossibleMemberNumbers);
+  //   }
+  //   return _dbAllPossibleMemberNumbers!;
+  // }
+  // set dbAllPossibleMemberNumbers(List<String> values) => _dbAllPossibleMemberNumbers = values;
+  set dbAllPossibleMemberNumbers(List<String> values) => allPossibleMemberNumbers = values.toSet();
 
   @override
   void addKnownMemberNumber(String number) {
     // Erase cached values after adding a new member number
     super.addKnownMemberNumber(number);
-    _dbKnownMemberNumbers = null;
-    _dbAllPossibleMemberNumbers = null;
+    // _dbKnownMemberNumbers = null;
+    // _dbAllPossibleMemberNumbers = null;
   }
 
   String _firstName;

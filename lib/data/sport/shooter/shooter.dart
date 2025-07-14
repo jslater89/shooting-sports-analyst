@@ -48,8 +48,7 @@ class Shooter {
     if(originalMemberNumber.isEmpty) {
       originalMemberNumber = processedNumber;
     }
-    knownMemberNumbers.add(processedNumber);
-    allPossibleMemberNumbers.add(processedNumber);
+    addKnownMemberNumber(processedNumber);
     _memberNumber = processedNumber;
   }
 
