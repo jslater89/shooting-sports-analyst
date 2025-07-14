@@ -68,7 +68,6 @@ class DbShooterRating extends Shooter with DbSportEntity {
     _firstName = value;
     _firstNameParts = null;
   }
-
   @override
   @Index()
   String get lastName => _lastName;

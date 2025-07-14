@@ -126,13 +126,13 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
             }
             var filters = await FilterDialog.show(context, scorecard.scoreFilters);
             if(filters != null) {
-              scorecard.scoreFilters = filters;
+              scorecard.fullScoreFilters.filterSet = filters;
               _applyScoreFilters();
 
               if(scorecard.displayFilters.isEmpty) {
-                scorecard.displayFilters.filterSet = scorecard.scoreFilters.copy();
-                _applyDisplayFilters();
+                scorecard.displayFilters.filterSet = scorecard.fullScoreFilters.filterSet?.copy();
               }
+              _applyDisplayFilters();
 
               setState(() {
               });
