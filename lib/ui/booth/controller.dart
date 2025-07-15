@@ -242,6 +242,7 @@ class BroadcastBoothController {
 
     List<List<ScorecardModel>> scorecards = [];
     List<ScorecardModel> currentRow = [];
+    int id = 1;
     for(var d in sport.divisions.values) {
       var filters = FilterSet(sport, empty: true, divisions: [d], mode: FilterMode.or);
       var displayFilters = ScorecardFilters(
@@ -255,7 +256,7 @@ class BroadcastBoothController {
       }
 
       currentRow.add(ScorecardModel(
-        id: model.nextValidScorecardId,
+        id: id++,
         name: d.name,
         scoreFilters: filters,
         displayFilters: displayFilters,
