@@ -636,6 +636,13 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       Divider(height: 2, thickness: 1),
       Row(
         children: [
+          Expanded(flex: 2, child: Text("First/last seen", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(flex: 4, child: Text("${programmerYmdFormat.format(widget.rating.firstSeen)}/${programmerYmdFormat.format(widget.rating.lastSeen)}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
+        ],
+      ),
+      Divider(height: 2, thickness: 1),
+      Row(
+        children: [
           Expanded(flex: 4, child: Text("Min-max rating (${displayedStats.isCareer ? "past 30 events" : displayedStats.start.year})", style: Theme.of(context).textTheme.bodyMedium)),
           Expanded(flex: 2, child: Text("${average.minRating.round()}-${average.maxRating.round()}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
