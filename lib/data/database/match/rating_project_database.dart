@@ -9,6 +9,7 @@ import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/match/migration_result.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_heat.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
@@ -99,6 +100,8 @@ extension RatingProjectDatabase on AnalystDatabase {
           _innerDeleteShooterRating(rating);
         }
       }
+
+      await isar.matchHeats.filter().projectIdEqualTo(project.id).deleteAll();
 
       return isar.dbRatingProjects.delete(project.id);
     });

@@ -10,8 +10,11 @@ import 'package:collection/collection.dart';
 import 'package:color_models/color_models.dart';
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/match_heat.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_heat.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/db_oneoffs.dart';
 import 'package:community_charts_flutter/community_charts_flutter.dart' as charts;
@@ -19,13 +22,16 @@ import 'package:community_charts_flutter/community_charts_flutter.dart' as chart
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/text_styles.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/stacked_distribution_chart.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 var _log = SSALogger("MatchHeatGraphPage");
 
 class MatchHeatGraphPage extends StatefulWidget {
-  const MatchHeatGraphPage({super.key});
+  MatchHeatGraphPage({super.key, required this.dataSource});
+
+  final RatingDataSource dataSource;
 
   @override
   State<MatchHeatGraphPage> createState() => _MatchHeatGraphPageState();
@@ -35,7 +41,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
 
   @override
   void initState() {
-    _startCalculation();
+    _loadMatchHeat();
     super.initState();
   }
 
@@ -52,8 +58,8 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
   double _minX = 0;
   double _maxX = 0;
   double _progress = 0;
-  int _matchCount = 0;
   DbRatingProject? _project;
+  bool _loadError = false;
   Map<Classification, double> _classStrengths = {};
   double _minClassStrength = 2e32;
   double _maxClassStrength = -2e32;
@@ -61,35 +67,71 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
   List<MatchPointer> _highlightedMatches = [];
   List<MatchPointer> _excludedMatches = [];
 
-  void _startCalculation() async {
+  void _loadMatchHeat() async {
     var db = AnalystDatabase();
-    _project = (await db.getRatingProjectByName("L2s Main"))!;
-    _matchCount = _project!.matchPointers.length;
+    var projectId = await widget.dataSource.getProjectId();
+    if(projectId.isErr()) {
+      _log.w("Error getting project ID: ${projectId.unwrapErr()}");
+      setState(() {
+        _loadError = true;
+      });
+      return;
+    }
+    _project = await db.getRatingProjectById(projectId.unwrap());
+    if(_project == null) {
+      _log.w("Rating project not found: ${projectId.unwrap()}");
+      setState(() {
+        _loadError = true;
+      });
+      return;
+    }
 
-    for(var c in _project!.sport.classifications.values) {
-      _classStrengths[c] = _project!.sport.ratingStrengthProvider!.strengthForClass(c);
+    var sport = _project!.sport;
+
+    for(var c in sport.classifications.values) {
+      _classStrengths[c] = sport.ratingStrengthProvider!.strengthForClass(c);
     }
 
     _rebuildChart();
 
-    var matchHeat = await calculateMatchHeat(db, _project!, heatCallback: _heatCallback);
-    setStateIfMounted(() {
-      _matchHeat = matchHeat;
-      _progress = 1;
-    });
-  }
+    var precalculatedHeat = await db.getMatchHeatForProject(_project!.id);
+    for(var heat in precalculatedHeat) {
+      _matchHeat[heat.matchPointer] = heat;
+    }
 
-  void _heatCallback(MatchPointer ptr, MatchHeat heat) {
-    setStateIfMounted(() {
-      _matchHeat[ptr] = heat;
-      _progress = (_matchHeat.length / _matchCount).clamp(0, 1);
-      _minY = min(_minY, heat.weightedTopTenPercentAverageRating - 100);
-      _maxY = max(_maxY, heat.weightedTopTenPercentAverageRating + 100);
-      _maxX = max(_maxX, heat.usedCompetitorCount + 20);
-      _minClassStrength = min(_minClassStrength, heat.weightedClassificationStrength);
-      _maxClassStrength = max(_maxClassStrength, heat.weightedClassificationStrength);
-      _rebuildChart();
-    });
+    List<MatchPointer> missingMatches = [];
+    for(var ptr in _project!.matchPointers) {
+      if(!_matchHeat.containsKey(ptr)) {
+        missingMatches.add(ptr);
+      }
+    }
+
+    if(missingMatches.isNotEmpty) {
+      setStateIfMounted(() {
+        _progress = 0;
+      });
+    }
+    else {
+      _recalculateSizes();
+      setStateIfMounted(() {
+        _progress = 1;
+        _rebuildChart();
+      });
+    }
+
+    for(var (i, ptr) in missingMatches.indexed) {
+      var matchHeat = await db.calculateHeatForMatch(_project!.id, ptr);
+      if(matchHeat != null) {
+        _matchHeat[ptr] = matchHeat;
+        db.saveMatchHeat(matchHeat);
+      }
+      _recalculateSizes();
+      setStateIfMounted(() {
+        _progress = (i + 1) / missingMatches.length;
+        _rebuildChart();
+      });
+    }
+
   }
 
   void _recalculateSizes() {
@@ -102,11 +144,12 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
     for(var heat in _matchHeat.values) {
       _minY = min(_minY, heat.weightedTopTenPercentAverageRating - 100);
       _maxY = max(_maxY, heat.weightedTopTenPercentAverageRating + 100);
+      _maxX = max(_maxX, heat.rawCompetitorCount + 10);
       _minClassStrength = min(_minClassStrength, heat.weightedClassificationStrength);
       _maxClassStrength = max(_maxClassStrength, heat.weightedClassificationStrength);
     }
 
-    setState(() {});
+    setStateIfMounted(() {});
   }
 
   @override
@@ -120,8 +163,29 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
             _recalculateSizes();
             _rebuildChart();
           }
-
         ),
+        actions: [
+          IconButton(
+            onPressed: () async {
+              var confirmed = await ConfirmDialog.show(
+                context,
+                title: "Refresh",
+                content: Text("Are you sure you want to fully recalculate match heat?"),
+                positiveButtonLabel: "RECALCULATE",
+                negativeButtonLabel: "CANCEL",
+              );
+              if(confirmed == true) {
+                _matchHeat = {};
+                await AnalystDatabase().deleteMatchHeatForProject(_project!.id);
+                setState(() {
+                  _progress = 0;
+                });
+                _loadMatchHeat();
+              }
+            },
+            icon: Icon(Icons.refresh),
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: Size.fromHeight(4),
           child: LinearProgressIndicator(
@@ -229,7 +293,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
         }
       },
       colorFn: (MatchHeat heat, _) {
-        if(_project == null || _project!.sport.ratingStrengthProvider == null) {
+        if(_project!.sport.ratingStrengthProvider == null) {
           return charts.MaterialPalette.blue.shadeDefault;
         }
         else {
@@ -299,7 +363,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
                   var match = matchRes.unwrap();
                   Navigator.push(context, MaterialPageRoute(builder: (context) => ResultPage(
                     canonicalMatch: match,
-                    ratings: _project!
+                    ratings: _project
                   )));
                 }
               }
@@ -489,6 +553,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
   String _calculateAverageHighlightedHeat() {
     var totalMatches = 0;
     MatchHeat total = MatchHeat(
+      projectId: _project!.id,
       matchPointer: MatchPointer(),
       topTenPercentAverageRating: 0,
       weightedTopTenPercentAverageRating: 0,

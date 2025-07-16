@@ -58,6 +58,11 @@ mixin DbSportEntity {
 class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRatingDataSource {
   Id id = Isar.autoIncrement;
 
+  @override
+  Future<DataSourceResult<int>> getProjectId() async {
+    return DataSourceResult.ok(id);
+  }
+
   @Index()
   String sportName;
 

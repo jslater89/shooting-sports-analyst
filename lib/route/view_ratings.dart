@@ -27,6 +27,7 @@ import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/route/match_heat_page.dart';
 import 'package:shooting_sports_analyst/ui/rater/display_settings.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_correction_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_dialog.dart';
@@ -672,6 +673,12 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         }
         break;
 
+      case _MenuEntry.viewMatchHeat:
+        Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+          return MatchHeatGraphPage(dataSource: widget.dataSource);
+        }));
+        break;
+
       case _MenuEntry.otherSettings:
         var displayModel = Provider.of<RaterViewDisplayModel>(context, listen: false);
         RaterViewOtherSettingsDialog.show(context, displayModel);
@@ -785,6 +792,7 @@ enum _MenuEntry {
   jsonExport,
   dataErrors,
   viewResults,
+  viewMatchHeat,
   otherSettings;
 
   String get label {
@@ -799,6 +807,8 @@ enum _MenuEntry {
         return "Fix data entry errors";
       case _MenuEntry.viewResults:
         return "View match results";
+      case _MenuEntry.viewMatchHeat:
+        return "View match heat";
       case _MenuEntry.otherSettings:
         return "Miscellaneous settings";
     }
