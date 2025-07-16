@@ -862,7 +862,7 @@ class IssueDescription extends StatelessWidget {
       MultipleNumbersOfType() => _buildMultipleNumbersOfType(context, sport, issue as MultipleNumbersOfType),
       FixedInSettings() => Text("• Fixed in settings (should never appear)", style: Theme.of(context).textTheme.bodyMedium),
       AmbiguousMapping() => _buildAmbiguousMapping(context, sport, issue as AmbiguousMapping),
-      ManualReviewRecommended() => Text("• Deduplication engine recommends manual review"),
+      ManualReviewRecommended() => Text("• Deduplication engine recommends manual review", style: Theme.of(context).textTheme.bodyMedium),
       ImplicitBlacklist() => _buildImplicitBlacklist(context, sport, issue as ImplicitBlacklist),
     };
   }

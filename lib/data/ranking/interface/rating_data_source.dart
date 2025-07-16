@@ -45,6 +45,8 @@ class DataSourceResult<T> extends Result<T, DataSourceError> {
 ///
 ///
 abstract interface class RatingDataSource {
+  /// Returns the ID of the rating project.
+  Future<DataSourceResult<int>> getProjectId();
   Future<DataSourceResult<Sport>> getSport();
   Future<DataSourceResult<String>> getProjectName();
   Future<DataSourceResult<RatingProjectSettings>> getSettings();

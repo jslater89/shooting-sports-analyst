@@ -50,15 +50,18 @@ class Timings {
         ]),
         TimingElement(TimingType.changeMap),
         TimingElement(TimingType.updateConnectedness),
-      ])
-    ]),
-    TimingElement(TimingType.persistRatingChanges, [
-      TimingElement(TimingType.loadEvents),
-      TimingElement(TimingType.applyChanges),
-      TimingElement(TimingType.updateDbRatings, [
-        TimingElement(TimingType.saveDbRating),
-        TimingElement(TimingType.persistEvents, [
-          TimingElement(TimingType.getEventMatches),
+        TimingElement(TimingType.persistRatingChanges, [
+          TimingElement(TimingType.loadEvents),
+          TimingElement(TimingType.applyChanges),
+          TimingElement(TimingType.updateDbRatings, [
+            TimingElement(TimingType.dbRatingUpdateTransaction, [
+              TimingElement(TimingType.saveDbRating),
+              TimingElement(TimingType.persistEvents, [
+                TimingElement(TimingType.getEventMatches),
+              ])
+            ]),
+            TimingElement(TimingType.cacheUpdatedRatings),
+          ]),
         ]),
       ]),
     ]),
@@ -126,6 +129,8 @@ enum TimingType {
   loadEvents,
   applyChanges,
   updateDbRatings,
+  dbRatingUpdateTransaction,
+  cacheUpdatedRatings,
   saveDbRating,
   persistEvents,
   getEventMatches,
@@ -152,6 +157,8 @@ enum TimingType {
     TimingType.persistRatingChanges => "Persist rating changes",
     TimingType.loadEvents => "Load rating events",
     TimingType.applyChanges => "Apply rating changes",
+    TimingType.dbRatingUpdateTransaction => "DB rating update transaction",
+    TimingType.cacheUpdatedRatings => "Cache updated ratings",
     TimingType.updateDbRatings => "Update DB ratings",
     TimingType.saveDbRating => "Save DB rating",
     TimingType.persistEvents => "Persist new events",
@@ -187,4 +194,3 @@ class TimingElement {
     return content;
   }
 }
-

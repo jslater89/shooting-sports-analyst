@@ -9,7 +9,15 @@ import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 
 class MatchSourceChooserDialog extends StatefulWidget {
-  const MatchSourceChooserDialog({Key? key, this.hintText, required this.sources, this.title, this.descriptionText, this.initialSearch}) : super(key: key);
+  const MatchSourceChooserDialog({
+    Key? key,
+    this.hintText,
+    required this.sources,
+    this.title,
+    this.descriptionText,
+    this.initialSearch,
+    this.onMatchDownloaded,
+  }) : super(key: key);
 
   /// The title for the URL entry dialog.
   final String? title;
@@ -21,6 +29,9 @@ class MatchSourceChooserDialog extends StatefulWidget {
   final List<MatchSource> sources;
   /// Initial search text.
   final String? initialSearch;
+  /// Callback for when a match is downloaded in the background rather than selected for
+  /// immediate viewing.
+  final void Function(ShootingMatch)? onMatchDownloaded;
 
   @override
   State<MatchSourceChooserDialog> createState() => _MatchSourceChooserDialogState();
@@ -32,10 +43,18 @@ class MatchSourceChooserDialog extends StatefulWidget {
     String? descriptionText,
     String? hintText,
     String? initialSearch,
+    void Function(ShootingMatch)? onMatchDownloaded,
   }) {
     return showDialog<(MatchSource, ShootingMatch)>(
       context: context,
-      builder: (context) => MatchSourceChooserDialog(sources: sources, title: title, descriptionText: descriptionText, hintText: hintText, initialSearch: initialSearch),
+      builder: (context) => MatchSourceChooserDialog(
+        sources: sources,
+        title: title,
+        descriptionText: descriptionText,
+        hintText: hintText,
+        initialSearch: initialSearch,
+        onMatchDownloaded: onMatchDownloaded,
+      ),
     );
   }
 }
@@ -83,6 +102,7 @@ class _MatchSourceChooserDialogState extends State<MatchSourceChooserDialog> {
                   onMatchSelected: (match) {
                     submit(match);
                   },
+                  onMatchDownloaded: widget.onMatchDownloaded,
                   onError: (error) {
                     showDialog(context: context, builder: (context) => AlertDialog(
                       title: Text("Match source error"),

@@ -52,7 +52,12 @@ class PSv2MatchSource extends MatchSource {
   }
 
   @override
-  Widget getDownloadMatchUI({required void Function(ShootingMatch) onMatchSelected, required void Function(MatchSourceError) onError, String? initialSearch}) {
+  Widget getDownloadMatchUI({
+    required void Function(ShootingMatch) onMatchSelected,
+    void Function(ShootingMatch)? onMatchDownloaded,
+    required void Function(MatchSourceError) onError,
+    String? initialSearch,
+  }) {
     // TODO: implement getDownloadMatchUI
     throw UnimplementedError();
   }

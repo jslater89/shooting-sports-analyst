@@ -242,6 +242,7 @@ class BroadcastBoothController {
 
     List<List<ScorecardModel>> scorecards = [];
     List<ScorecardModel> currentRow = [];
+    int id = 1;
     for(var d in sport.divisions.values) {
       var filters = FilterSet(sport, empty: true, divisions: [d], mode: FilterMode.or);
       var displayFilters = ScorecardFilters(
@@ -255,7 +256,7 @@ class BroadcastBoothController {
       }
 
       currentRow.add(ScorecardModel(
-        id: model.nextValidScorecardId,
+        id: id++,
         name: d.name,
         scoreFilters: filters,
         displayFilters: displayFilters,
@@ -282,8 +283,21 @@ class BroadcastBoothController {
   ///
   /// [scorecard] should be the scorecard to maximize, or null to clear the maximized scorecard.
   void maximizeScorecard(ScorecardModel? scorecard) {
+    // reassignScorecardIds();
     model.maximizedScorecardId = scorecard?.id;
     model.update();
+  }
+
+  /// Reassign all scorecard IDs to the next valid ID.
+  ///
+  /// Unused currently; implemented to fix a bug but left around in case
+  /// it's useful in the future.
+  void reassignScorecardIds() {
+    for(var row in model.scorecards) {
+      for(var scorecard in row) {
+        scorecard.id = model.nextValidScorecardId;
+      }
+    }
   }
 
   void removeScorecard(ScorecardModel scorecard) {

@@ -9,6 +9,7 @@ import 'dart:convert';
 import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
 import 'package:json_annotation/json_annotation.dart';
+import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/connectivity.dart';
@@ -20,6 +21,7 @@ import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
+import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
@@ -65,6 +67,11 @@ mixin DbDivisionEntity on DbSportEntity {
 @collection
 class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRatingDataSource {
   Id id = Isar.autoIncrement;
+
+  @override
+  Future<DataSourceResult<int>> getProjectId() async {
+    return DataSourceResult.ok(id);
+  }
 
   @Index()
   String sportName;
@@ -680,7 +687,7 @@ class MatchPointer with DbSportEntity implements SourceIdsProvider {
   /// [sourceCode] is not a valid source code and a download was requested.
   /// Returns [DataSourceError.notFound] if the match is not found in the database,
   /// or if [downloadIfMissing] is true and the match cannot be downloaded.
-  Future<DataSourceResult<DbShootingMatch>> getDbMatch(AnalystDatabase db, {bool downloadIfMissing = false}) async {
+  Future<DataSourceResult<DbShootingMatch>> getDbMatch(AnalystDatabase db, {bool downloadIfMissing = false, bool ignoreUnknownDivisions = false}) async {
     DbShootingMatch? match;
     if(localDbId != null) {
       match = await db.getMatch(localDbId!);
@@ -700,7 +707,14 @@ class MatchPointer with DbSportEntity implements SourceIdsProvider {
           return DataSourceResult.err(DataSourceError.invalidRequest);
         }
 
-        var result = await source.getMatchFromId(sourceIds.first, sport: sport);
+        InternalMatchFetchOptions? options;
+        if(source is PSv2MatchSource) {
+          options = PSv2MatchFetchOptions(
+            ignoreUnknownDivisions: ignoreUnknownDivisions,
+          );
+        }
+
+        var result = await source.getMatchFromId(sourceIds.first, sport: sport, options: options);
 
         if(result.isErr()) {
           return DataSourceResult.err(DataSourceError.database);

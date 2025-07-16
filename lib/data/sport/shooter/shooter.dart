@@ -48,18 +48,21 @@ class Shooter {
     if(originalMemberNumber.isEmpty) {
       originalMemberNumber = processedNumber;
     }
-    knownMemberNumbers.add(processedNumber);
-    allPossibleMemberNumbers.add(processedNumber);
+    addKnownMemberNumber(processedNumber);
     _memberNumber = processedNumber;
   }
 
   void addKnownMemberNumbers(Iterable<String> numbers) {
     for(var number in numbers) {
-      var normalized = normalizeNumber(number);
-      if(normalized.isNotEmpty) {
-        knownMemberNumbers.add(normalized);
-        allPossibleMemberNumbers.add(normalized);
-      }
+      addKnownMemberNumber(number);
+    }
+  }
+
+  void addKnownMemberNumber(String number) {
+    var normalized = normalizeNumber(number);
+    if(normalized.isNotEmpty) {
+      knownMemberNumbers.add(normalized);
+      allPossibleMemberNumbers.add(normalized);
     }
   }
 

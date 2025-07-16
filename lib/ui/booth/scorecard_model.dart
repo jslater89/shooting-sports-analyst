@@ -97,8 +97,8 @@ class ScorecardModel {
     return ScorecardModel(
       id: id,
       name: name,
-      scoreFilters: scoreFilters,
-      newScoreFilters: newScoreFilters,
+      scoreFilters: scoreFilters.copy(),
+      newScoreFilters: newScoreFilters?.copy(),
       displayFilters: displayFilters.copy(),
       parent: parent,
       scoresAfter: scoresAfter,

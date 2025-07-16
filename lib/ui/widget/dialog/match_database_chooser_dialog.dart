@@ -115,6 +115,38 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
     super.dispose();
   }
 
+  Future<List<int>> _getAllMatchIdsMatchingSearch() async {
+    var matchIds = <int>[];
+    if(widget.matches != null) {
+      var matches = [...widget.matches!];
+
+      if(searchController.text.isNotEmpty) {
+        var search = searchController.text;
+        matches = matches.where((m) =>
+          m.eventName.toLowerCase().contains(search.toLowerCase())).toList();
+      }
+
+      if(alphabeticSort) {
+        matches.sort((a, b) => a.eventName.compareTo(b.eventName));
+      }
+      else {
+        matches.sort((a, b) => b.date.compareTo(a.date));
+      }
+
+      matchIds = matches.map((m) => m.id).toList();
+    }
+    else {
+      matchIds = await db.queryMatchIds(
+        name: searchController.text.isNotEmpty ? searchController.text : null,
+        sport: widget.sport,
+        pageSize: 100000,
+        sort: alphabeticSort ? const NameSort() : const DateSort(),
+      );
+    }
+
+    return matchIds;
+  }
+
   Future<void> _updateMatches() async {
     if(widget.matches != null) {
       setState(() {
@@ -215,13 +247,28 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
                     });
                   },
                 ),
-                TextButton(
-                  child: Text("SELECT ALL"),
-                  onPressed: () {
-                    setState(() {
-                      selectedMatches.addAll(searchedMatches.map((m) => m.id));
-                    });
-                  },
+                Tooltip(
+                  message: "Select all matches currently visible in the list, not including additional pages.",
+                  child: TextButton(
+                    child: Text("SELECT LOADED"),
+                    onPressed: () {
+                      setState(() {
+                        selectedMatches.addAll(searchedMatches.map((m) => m.id));
+                      });
+                    },
+                  ),
+                ),
+                Tooltip(
+                  message: "Select all matches that match the current search, including additional pages.",
+                  child: TextButton(
+                    child: Text("SELECT ALL"),
+                    onPressed: () async {
+                      var allMatchIds = await _getAllMatchIdsMatchingSearch();
+                      setState(() {
+                        selectedMatches.addAll(allMatchIds);
+                      });
+                    },
+                  ),
                 ),
               ],
             ),
@@ -299,6 +346,19 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
                   descriptionText: "Enter a link to a Practiscore results page.",
                   hintText: "https://practiscore.com/results/new/...",
                   initialSearch: searchController.text,
+                  onMatchDownloaded: (match) {
+                    // We don't need to refresh the match list here, because we will once we leave
+                    // the dialog.
+                    setState(() {
+                      if(match.databaseId != null) {
+                        selectedMatches.add(match.databaseId!);
+                        _log.v("Added match ${match.name} (${match.sourceIds}) (${match.databaseId}) to selected matches");
+                      }
+                      else {
+                        _log.w("Downloaded match ${match.name} (${match.sourceIds}) has no database ID");
+                      }
+                    });
+                  },
                 );
                 if(result == null) {
                   // Update matches, because we might have done the long-press-download trick
@@ -396,6 +456,7 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
                       onPressed: () async {
                         var match = searchedMatches[i];
                         var deletedFuture = db.deleteMatch(match.id);
+                        selectedMatches.remove(match.id);
 
                         var deleted = await LoadingDialog.show(context: context, waitOn: deletedFuture);
                         if(deleted != null && deleted.isOk()) {

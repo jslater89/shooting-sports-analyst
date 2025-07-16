@@ -525,10 +525,20 @@ class ScoringEvent extends NameLookupEntity {
     }
     else if(sport.matchScoring is CumulativeScoring) {
       if((sport.matchScoring as CumulativeScoring).lowScoreWins) {
-        return pointChange <= 0 || timeChange <= 0;
+        if(sport.defaultStageScoring is TimePlusScoring) {
+          return timeChange <= 0;
+        }
+        else {
+          return pointChange <= 0;
+        }
       }
       else {
-        return pointChange >= 0 || timeChange >= 0;
+        if(sport.defaultStageScoring is TimePlusScoring) {
+          return timeChange >= 0;
+        }
+        else {
+          return pointChange >= 0;
+        }
       }
     }
     else {

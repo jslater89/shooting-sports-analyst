@@ -28,10 +28,17 @@ class BroadcastBoothModel with ChangeNotifier {
 
   /// Get the next available scorecard id.
   int get nextValidScorecardId {
-    while(scorecards.any((row) => row.any((scorecard) => scorecard.id == nextScorecardId))) {
-      nextScorecardId++;
+    Map<int, bool> usedIds = {};
+    for(var row in scorecards) {
+      for(var scorecard in row) {
+        usedIds[scorecard.id] = true;
+      }
     }
-    return nextScorecardId;
+    int lowestValidId = 1;
+    while(usedIds.containsKey(lowestValidId)) {
+      lowestValidId++;
+    }
+    return lowestValidId;
   }
 
   String matchSource;

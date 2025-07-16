@@ -101,22 +101,22 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     ];
-    if(!kIsWeb && kDebugMode) {
-      extraActions.add(Tooltip(
-        richMessage: TextSpan(
-          children: [
-            TextSpan(text: "Stand back! I'm going to try "),
-            TextSpan(text: "science!", style: TextStyle(fontStyle: FontStyle.italic)),
-          ]
-        ),
-        child: IconButton(
-          icon: Icon(RpgAwesome.bubbling_potion),
-          onPressed: () {
-            Navigator.of(context).push(MaterialPageRoute(builder: (context) => MatchHeatGraphPage()));
-          },
-        ),
-      ));
-    }
+    // if(!kIsWeb && kDebugMode) {
+    //   extraActions.add(Tooltip(
+    //     richMessage: TextSpan(
+    //       children: [
+    //         TextSpan(text: "Stand back! I'm going to try "),
+    //         TextSpan(text: "science!", style: TextStyle(fontStyle: FontStyle.italic)),
+    //       ]
+    //     ),
+    //     child: IconButton(
+    //       icon: Icon(RpgAwesome.bubbling_potion),
+    //       onPressed: () {
+    //         Navigator.of(context).push(MaterialPageRoute(builder: (context) => MatchHeatGraphPage(project)));
+    //       },
+    //     ),
+    //   ));
+    // }
 
     return EmptyScaffold(
       title: "Main Menu",

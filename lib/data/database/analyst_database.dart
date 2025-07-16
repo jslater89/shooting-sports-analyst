@@ -17,6 +17,7 @@ import 'package:shooting_sports_analyst/data/database/schema/fantasy/roster.dart
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/standing.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/team.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_heat.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
@@ -82,6 +83,7 @@ class AnalystDatabase {
         DbRatingEventSchema,
         DbShooterRatingSchema,
         MatchRegistrationMappingSchema,
+        MatchHeatSchema,
 
         // Fantasy-related collections
         FantasyUserSchema,
@@ -134,6 +136,12 @@ class AnalystDatabase {
 
   AnalystDatabase._();
 
+  /// Perform a synchronous write transaction.
+  T writeTxnSync<T>(T Function() txn, {bool silent = false}) {
+    // Making my life slightly easier if I ever want to move off of Isar.
+    return isar.writeTxnSync(txn, silent: silent);
+  }
+
   /// Contains a cache of shooter ratings. By default, [knownShooter] and [maybeKnownShooter]
   /// will not read from the cache. By default, ratings will be saved to the cache when
   /// inserted, updated, or read.
@@ -166,6 +174,32 @@ class AnalystDatabase {
     Sport? sport,
   }) {
     Query<DbShootingMatch> finalQuery = _buildMatchQuery(
+      [
+        if(name != null)
+          NamePartsQuery(name),
+        if(sport != null)
+          SportQuery(sport),
+        if(after != null || before != null)
+          DateQuery(after: after, before: before),
+      ],
+      limit: pageSize,
+      offset: page * pageSize,
+    );
+
+    return finalQuery.findAll();
+  }
+
+  /// Return Isar match IDs matching the query.
+  Future<List<int>> queryMatchIds({
+    String? name,
+    DateTime? after,
+    DateTime? before,
+    int page = 0,
+    int pageSize = 100,
+    MatchSortField sort = const DateSort(),
+    Sport? sport,
+  }) {
+    Query<int> finalQuery = _buildMatchIdQuery(
       [
         if(name != null)
           NamePartsQuery(name),
@@ -345,7 +379,48 @@ class AnalystDatabase {
     _log.i("Match cache migration complete with $matchCount cache entries processed");
   }
 
-  Query<DbShootingMatch> _buildMatchQuery(List<MatchQueryElement> elements, {int? limit, int? offset, MatchSortField sort = const DateSort()}) {
+  /// Build a match query. Returns either a [Query<DbShootingMatch>] or a [Query<int>], depending on the [idProperty] parameter.
+  Query<DbShootingMatch> _buildMatchQuery(List<MatchQueryElement> elements, {int? limit, int? offset, MatchSortField sort = const DateSort(), bool idProperty = false}) {
+    var (whereElement, filterElements, sortProperties, whereSort) = _buildMatchQueryElements(elements, sort: sort);
+
+    Query<DbShootingMatch> query = isar.dbShootingMatchs.buildQuery(
+      whereClauses: whereElement?.whereClauses ?? [],
+      filter: filterElements.isEmpty ? null : FilterGroup.and([
+        for(var f in filterElements)
+          if(f.filterCondition != null)
+            f.filterCondition!,
+      ]),
+      sortBy: sortProperties,
+      whereSort: whereSort,
+      limit: limit,
+      offset: offset,
+    );
+
+    return query;
+  }
+
+
+  Query<int> _buildMatchIdQuery(List<MatchQueryElement> elements, {int? limit, int? offset, MatchSortField sort = const DateSort()}) {
+    var (whereElement, filterElements, sortProperties, whereSort) = _buildMatchQueryElements(elements, sort: sort);
+
+    Query<int> query = isar.dbShootingMatchs.buildQuery(
+      whereClauses: whereElement?.whereClauses ?? [],
+      filter: filterElements.isEmpty ? null : FilterGroup.and([
+        for(var f in filterElements)
+          if(f.filterCondition != null)
+            f.filterCondition!,
+      ]),
+      sortBy: sortProperties,
+      property: "id",
+      whereSort: whereSort,
+      limit: limit,
+      offset: offset,
+    );
+
+    return query;
+  }
+
+  (MatchQueryElement?, Iterable<MatchQueryElement>, List<SortProperty>, Sort) _buildMatchQueryElements(List<MatchQueryElement> elements, {int? limit, int? offset, MatchSortField sort = const DateSort()}) {
     NamePartsQuery? nameQuery;
     DateQuery? dateQuery;
     // ignore: unused_local_variable
@@ -399,21 +474,7 @@ class AnalystDatabase {
     }
 
     var (sortProperties, whereSort) = _buildMatchSortFields(whereElement, sort);
-
-    Query<DbShootingMatch> query = isar.dbShootingMatchs.buildQuery(
-      whereClauses: whereElement?.whereClauses ?? [],
-      filter: filterElements.isEmpty ? null : FilterGroup.and([
-        for(var f in filterElements)
-          if(f.filterCondition != null)
-            f.filterCondition!,
-      ]),
-      sortBy: sortProperties,
-      whereSort: whereSort,
-      limit: limit,
-      offset: offset,
-    );
-
-    return query;
+    return (whereElement, filterElements, sortProperties, whereSort);
   }
 
   (List<SortProperty>, Sort) _buildMatchSortFields(MatchQueryElement? whereElement, MatchSortField sort) {
