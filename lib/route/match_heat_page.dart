@@ -66,6 +66,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
   TextEditingController _searchController = TextEditingController();
   List<MatchPointer> _highlightedMatches = [];
   List<MatchPointer> _excludedMatches = [];
+  List<String> _searchTerms = [];
 
   void _loadMatchHeat() async {
     var db = AnalystDatabase();
@@ -216,17 +217,28 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
                   },
                   icon: Icon(Icons.search),
                 ),
-                IconButton(
-                  onPressed: () {
-                    _searchController.clear();
-                    _highlightedMatches = [];
-                    _excludedMatches = [];
-                    setState(() {
-                      _rebuildChart();
-                    });
-                  },
-                  icon: Icon(Icons.clear),
+                Tooltip(
+                  message: "Clear all searches",
+                  child: IconButton(
+                    onPressed: () {
+                      _searchController.clear();
+                      _searchTerms = [];
+                      _highlightedMatches = [];
+                      _excludedMatches = [];
+                      setState(() {
+                        _rebuildChart();
+                      });
+                    },
+                    icon: Icon(Icons.clear),
+                  ),
                 ),
+                if(_highlightedMatches.isNotEmpty)
+                  Tooltip(
+                    message: "Searched for:\n${_searchTerms.join("\n")}",
+                    child: Text("${_searchTerms.length} search term${_searchTerms.length == 1 ? "" : "s"}")
+                  ),
+                if(_highlightedMatches.isNotEmpty)
+                  SizedBox(width: 10),
                 if(_highlightedMatches.isNotEmpty)
                   Tooltip(
                     message: _calculateAverageHighlightedHeat(),
@@ -257,6 +269,12 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
           _highlightedMatches.add(match);
         }
       }
+    }
+    if(exclude) {
+      _searchTerms.add("-$value");
+    }
+    else {
+      _searchTerms.add(value);
     }
     setState(() {
       _rebuildChart();
