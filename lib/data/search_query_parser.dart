@@ -46,6 +46,7 @@ class SearchQueryElement {
   Division? division;
   PowerFactor? powerFactor;
   String? name;
+  bool? lady;
   bool? dq;
   bool? dnf;
 
@@ -56,6 +57,15 @@ class SearchQueryElement {
       }
       else if(dq == false) {
         if(s.dq) return false;
+      }
+    }
+
+    if(lady != null) {
+      if(lady == true) {
+        if(!s.female) return false;
+      }
+      else if(lady == false) {
+        if(s.female) return false;
       }
     }
 
@@ -155,6 +165,8 @@ SearchQueryElement? _parseGroup(SportPrefixMatcher matcher, String group) {
     var notDnf = item.toLowerCase() == "!dnf";
     var dq = item.toLowerCase() == "dq";
     var dnf = item.toLowerCase() == "dnf";
+    var lady = item.toLowerCase() == "lady";
+    var notLady = item.toLowerCase() == "!lady";
     var pf = _matchPowerFactor(matcher, item);
     var div = _matchDivision(matcher, item);
     var cls = _matchClassification(matcher, item);
@@ -186,6 +198,12 @@ SearchQueryElement? _parseGroup(SportPrefixMatcher matcher, String group) {
     }
     else if(notDnf) {
       element.dnf = false;
+    }
+    else if(lady) {
+      element.lady = true;
+    }
+    else if(notLady) {
+      element.lady = false;
     }
     else {
       _log.d("Bad item: $item");
