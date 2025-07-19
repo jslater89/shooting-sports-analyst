@@ -654,7 +654,7 @@ class RatingProjectLoader {
             group: group,
             memberNumber: sourceNumber,
             usePossibleMemberNumbers: true,
-            useCache: inFullRecalc,
+            useCache: true,
           );
           if(r != null) {
             ratings.add(r);
@@ -668,7 +668,7 @@ class RatingProjectLoader {
           group: group,
           memberNumber: mapping.targetNumber,
           usePossibleMemberNumbers: true,
-          useCache: inFullRecalc,
+          useCache: true,
         );
         // If we're in that scenario, start by checking a source rating with history, and copy the
         // mapping target number to that one.
