@@ -1397,7 +1397,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
           _memNumMappings.clear();
           _memNumMappingBlacklist.clear();
           _memNumCorrections.clear();
-          _loadedProject!.automaticNumberMappings.clear();
+          _loadedProject!.automaticNumberMappings = [];
           _saveProject(_loadedProject!.name);
         }
         break;
