@@ -9,12 +9,12 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 /// Text in a help topic.
-/// 
+///
 /// Tokens are hierarchical: a [Link] contains another help token,
 /// which might be a [PlainText] or an [Emphasis], and in the latter
 /// case, the [Emphasis] contains a [PlainText] holding the actual
 /// string.
-/// 
+///
 /// Headers and links are evaluated first, and their content will be
 sealed class HelpToken {
   HelpToken({required this.parent, required this.lineStart, required this.lineEnd});
@@ -99,7 +99,7 @@ class Paragraph extends HelpToken {
 }
 
 /// A running string of plain text.
-/// 
+///
 /// If the text ends with a backslash or a double space, it will be treated as a manual line break.
 class PlainText extends LinkableHelpToken {
   String text;
@@ -161,7 +161,7 @@ class Heading extends HelpToken {
       style = Theme.of(context).textTheme.titleLarge!;
     }
     else if(level == 2) {
-      style = Theme.of(context).textTheme.titleMedium!;
+      style = Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.w500);
     }
     else {
       renderLevel = 3;
@@ -239,7 +239,7 @@ enum EmphasisType {
 }
 
 /// A list item is an element in an ordered or unordered list.
-/// 
+///
 /// For the moment, ordered lists do not support indenting/nesting.
 class ListItem extends LinkableHelpToken {
   final List<HelpToken> tokens;
@@ -255,10 +255,10 @@ class ListItem extends LinkableHelpToken {
     super.link,
     required super.parent,
   }) : super(lineStart: true, lineEnd: true);
-  
+
   @override
   String get asPlainText => tokens.map((e) => e.asPlainText).join();
-  
+
   @override
   List<InlineSpan> intoSpans(BuildContext context, TextStyle baseStyle, {void Function(String p1)? onLinkTapped}) {
     var contentTokens = tokens.map((e) => e.intoSpans(context, baseStyle, onLinkTapped: onLinkTapped)).flattened.toList();

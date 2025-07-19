@@ -15,6 +15,7 @@ import 'package:shooting_sports_analyst/data/help/icore_deduplicator_help.dart';
 import 'package:shooting_sports_analyst/data/help/marbles_configuration_help.dart';
 import 'package:shooting_sports_analyst/data/help/marbles_help.dart';
 import 'package:shooting_sports_analyst/data/help/match_database_manager_help.dart';
+import 'package:shooting_sports_analyst/data/help/match_heat_help.dart';
 import 'package:shooting_sports_analyst/data/help/openskill_help.dart';
 import 'package:shooting_sports_analyst/data/help/points_help.dart';
 import 'package:shooting_sports_analyst/data/help/rating_event_help.dart';
@@ -46,4 +47,5 @@ void registerHelpTopics() {
   r.register(helpIcoreDeduplicator);
   r.register(helpResults);
   r.register(helpAppSettings);
+  r.register(helpMatchHeat);
 }

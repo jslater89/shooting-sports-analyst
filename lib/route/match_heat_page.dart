@@ -14,6 +14,7 @@ import 'package:shooting_sports_analyst/data/database/extensions/match_heat.dart
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_heat.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/help/match_heat_help.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/db_oneoffs.dart';
@@ -23,6 +24,7 @@ import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/text_styles.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/stacked_distribution_chart.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
@@ -186,6 +188,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
             },
             icon: Icon(Icons.refresh),
           ),
+          HelpButton(helpTopicId: matchHeatHelpId),
         ],
         bottom: PreferredSize(
           preferredSize: Size.fromHeight(4),
