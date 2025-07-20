@@ -125,7 +125,7 @@ class DbRatingEvent implements IRatingEvent {
       }
     }
 
-  DbRatingEvent copy() {
+  DbRatingEvent copy({DbShooterRating? newOwner}) {
     var event =  DbRatingEvent(
       ratingChange: this.ratingChange,
       oldRating: this.oldRating,
@@ -141,7 +141,7 @@ class DbRatingEvent implements IRatingEvent {
     )..intData = ([]..addAll(intData))..doubleData = ([]..addAll(doubleData));
 
     event.match.value = this.match.value;
-    event.owner.value = this.owner.value;
+    event.owner.value = newOwner ?? this.owner.value;
 
     return event;
   }

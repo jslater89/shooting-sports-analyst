@@ -309,7 +309,7 @@ class DbShooterRating extends Shooter with DbSportEntity {
         this.intData = List.filled(intDataLength, 0, growable: true),
         super(firstName: firstName, lastName: lastName);
 
-  void copyRatingFrom(DbShooterRating other) {
+  void copyRatingFrom(DbShooterRating other, {bool copyEvents = true}) {
     // sport won't change
     // biographical info won't change
     this.rating = other.rating;
@@ -323,6 +323,12 @@ class DbShooterRating extends Shooter with DbSportEntity {
     }
     this.doubleData = []..addAll(other.doubleData);
     this.intData = []..addAll(other.intData);
+
+    if(copyEvents) {
+      this.cachedLength = other.cachedLength;
+      other.events.loadSync();
+      this.events.addAll(other.events.map((e) => e.copy(newOwner: this)));
+    }
   }
 
   @override

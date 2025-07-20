@@ -218,7 +218,8 @@ extension RatingProjectDatabase on AnalystDatabase {
   /// a rating is not found. [memberNumber] is assumed to be processed.
   ///
   /// if [useCache] is true, [loadedShooterRatingCache] will be checked for
-  /// a cached rating before querying the database.
+  /// a cached rating before querying the database. If [onlyCache] is true,
+  /// the cache will be checked, but no database query will be made.
   DbShooterRating? maybeKnownShooterSync({
     required DbRatingProject project,
     required RatingGroup group,

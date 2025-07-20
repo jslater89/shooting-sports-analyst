@@ -599,17 +599,19 @@ class RatingProjectLoader {
           project.automaticNumberMappings.removeWhere((autoMapping) => autoMapping.sourceNumbers.any((number) => mapping.sourceNumbers.contains(number)));
         }
         else {
+          // If this is an auto-mapping, check to see if it supersedes other mappings,
+          // and if so, create a new mapping that combines them.
           mapping as AutoMapping;
-          List<DbMemberNumberMapping> mappings = [];
+          List<DbMemberNumberMapping> otherMappings = [];
           for(var sourceNumber in mapping.sourceNumbers) {
             var existingMapping = project.lookupAutomaticNumberMapping(sourceNumber);
             if(existingMapping != null) {
-              mappings.add(existingMapping);
+              otherMappings.add(existingMapping);
             }
           }
 
-          if(mappings.length == 1) {
-            var existingMapping = mappings.first;
+          if(otherMappings.length == 1) {
+            var existingMapping = otherMappings.first;
             if(existingMapping.targetNumber == mapping.targetNumber && existingMapping.sourceNumbers.containsOnly(mapping.sourceNumbers)) {
               project.addReport(RatingReport(
                 type: RatingReportType.duplicateAutoMapping,
@@ -625,7 +627,7 @@ class RatingProjectLoader {
           }
 
           Set<String> sourceNumbers = {};
-          for(var m in mappings) {
+          for(var m in otherMappings) {
             sourceNumbers.addAll(m.sourceNumbers);
           }
           sourceNumbers.addAll(mapping.sourceNumbers);
@@ -637,7 +639,7 @@ class RatingProjectLoader {
             targetNumber: mapping.targetNumber,
           );
           var autoMappings = [...project.automaticNumberMappings];
-          autoMappings.removeWhere((m) => mappings.contains(m));
+          autoMappings.removeWhere((m) => otherMappings.contains(m));
           autoMappings.add(newMapping);
           project.automaticNumberMappings = autoMappings;
         }
@@ -705,14 +707,21 @@ class RatingProjectLoader {
         // If the rating has history, increment a count so we can warn the user that a full
         // recalculation will be necessary for accuracy. In the meantime, copy from the longest
         // rating to this one.
-        // TODO: check what the old code did re: copying rating events
         List<DbShooterRating> ratingsWithHistory = [];
+        bool eventsCopied = false;
+        int longestHistoryId = -1;
+        int longestHistoryLength = 0;
         for(var r in ratings) {
           if(r.length > 0) {
             ratingsWithHistory.add(r);
 
             if(r.length > targetRating.length) {
               targetRating.copyRatingFrom(r);
+              eventsCopied = true;
+            }
+            if(r.length > longestHistoryLength) {
+              longestHistoryId = r.id;
+              longestHistoryLength = r.length;
             }
           }
           // TODO: copy vitals where sensible to do so
@@ -736,7 +745,7 @@ class RatingProjectLoader {
           project.addReport(report);
         }
 
-        db.upsertDbShooterRatingSync(targetRating, linksChanged: false);
+        db.upsertDbShooterRatingSync(targetRating, linksChanged: eventsCopied);
 
         break;
       case Blacklist:
