@@ -32,7 +32,8 @@ class FantasyPlayer with DbSportEntity, DbDivisionEntity {
   /// Used to identify the player in the event
   /// of a recalculation of the league's project
   /// which results in the target rating being
-  /// deleted and recreated.
+  /// deleted and recreated, or a member number
+  /// mapping which does the same.
   String memberNumber = "";
 
   /// The rating that this player is based upon.
