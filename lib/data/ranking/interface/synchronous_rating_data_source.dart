@@ -22,6 +22,8 @@ class ChangeNotifierRatingDataSource with ChangeNotifier {
   /// Returns a shooter rating from the cache.
   DbShooterRating? lookupRatingByMatchEntry(MatchEntry entry) {
     var division = _groupForDivision(entry.division);
+    if(division == null) return null;
+
     var key = _RatingCacheKey(division, entry.memberNumber);
 
     if(_ratingCache.containsKey(key)) return _ratingCache[key];
@@ -37,6 +39,15 @@ class ChangeNotifierRatingDataSource with ChangeNotifier {
     }
 
     var division = _groupForDivision(entry.division);
+    if(division == null) {
+      if(_ratingGroupsCache!.isNotEmpty) {
+        division = _ratingGroupsCache!.first;
+      }
+      else {
+        return;
+      }
+    }
+
     var ratingResult = await _source.lookupRating(division, entry.memberNumber);
 
     if(ratingResult.isOk()) {
@@ -85,14 +96,16 @@ class ChangeNotifierRatingDataSource with ChangeNotifier {
 
   List<RatingGroup>? _ratingGroupsCache;
 
-  RatingGroup _groupForDivision(Division? d) {
-    if(d == null) return _ratingGroupsCache!.first;
+  RatingGroup? _groupForDivision(Division? d) {
+    if(d == null && _ratingGroupsCache != null) return _ratingGroupsCache!.first;
 
-    for(var g in _ratingGroupsCache!) {
-      if(g.divisionNames.contains(d.name)) return g;
+    if(d != null) {
+      for(var g in _ratingGroupsCache!) {
+        if(g.divisionNames.contains(d.name)) return g;
+      }
     }
 
-    throw ArgumentError("sport does not contain division");
+    return null;
   }
 
   List<DbShooterRating>? getRatings(RatingGroup group) {

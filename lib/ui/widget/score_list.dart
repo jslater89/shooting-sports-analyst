@@ -610,60 +610,6 @@ class _ScoreListState extends State<ScoreList> {
   }
 }
 
-extension LookupShooterRating on Map<OldRaterGroup, Rater> {
-  ShooterRating? lookupNew(ShootingMatch match, MatchEntry s) {
-    Rater? group = lookupRater(match, s);
-
-    if(group != null) {
-      // might not be present in the case of rating sets that
-      // don't cover the whole sport
-      // return group.ratingForNew(s);
-    }
-
-    return null;
-  }
-
-  double? lookupRating({required MatchEntry shooter, RatingDisplayMode mode = RatingDisplayMode.preMatch, required ShootingMatch match, MatchStage? stage}) {
-    switch(mode) {
-      case RatingDisplayMode.preMatch:
-        var rating = this.lookupNew(match, shooter)?.ratingForEvent(match, null, beforeMatch: true);
-        return rating;
-      case RatingDisplayMode.postMatch:
-        var rating = this.lookupNew(match, shooter)?.ratingForEvent(match, null, beforeMatch: false);
-        return rating;
-      case RatingDisplayMode.change:
-        var rating = this.lookupNew(match, shooter)?.changeForEvent(match, stage);
-        return rating;
-    }
-  }
-
-  Rater? lookupOldRater(old.Shooter shooter) {
-    // TODO: fix when ratings are converted
-    // for(var group in this.keys) {
-    //   if(group.divisions.contains(shooter.division)) {
-    //     return this[group]!;
-    //   }
-    // }
-
-    return null;
-  }
-
-  Rater? lookupRater(ShootingMatch match, MatchEntry s) {
-    OldRaterGroup? group = null;
-    outer:for(var g in this.keys) {
-      for(var division in g.divisions) {
-        var matchingDivision = match.sport.divisions.lookupByName(division.name, fallback: false);
-        if(matchingDivision == s.division) {
-          group = g;
-          break outer;
-        }
-      }
-    }
-
-    return this[group];
-  }
-}
-
 class ShooterDialogAction {
   bool launchComparison;
   ScoreEdit scoreEdit;
