@@ -682,14 +682,41 @@ class RatingProjectLoader {
         }
         // If we still don't have a target rating, create one and copy biographical information.
         if(targetRating == null) {
+          Set<String> knownMemberNumbers = {...mapping.sourceNumbers, mapping.targetNumber};
           targetRating = DbShooterRating.empty(
             sport: sport,
-            memberNumber: mapping.targetNumber,
+            memberNumber: mapping.targetNumber, // will be overwritten by copy functions
           );
           if(ratings.isNotEmpty) {
-            targetRating.copyVitalsFrom(ratings.first);
+            DbShooterRating sourceRating = ratings.first;
+            for(var r in ratings) {
+              if(r.length > sourceRating.length) {
+                sourceRating = r;
+              }
+              else if(r.knownMemberNumbers.length > sourceRating.knownMemberNumbers.length) {
+                sourceRating = r;
+              }
+            }
+            targetRating.copyVitalsFrom(sourceRating);
+            targetRating.copyRatingFrom(sourceRating);
+            targetRating.group.value = sourceRating.group.value;
+            targetRating.project.value = project;
+
+            targetRating.addKnownMemberNumbers(knownMemberNumbers);
+            targetRating.memberNumber = mapping.targetNumber;
+
+            if(targetRating.group.value == null) {
+              targetRating.group.value = group;
+            }
+            db.upsertDbShooterRatingSync(targetRating);
           }
-          db.upsertDbShooterRatingSync(targetRating);
+          else {
+            // TODO: add a RatingReport for this scenario
+            // I don't think it ever happens (we should always have source ratings), but
+            // we can't progress without a source rating to ensure that we get the right
+            // intData and doubleData on the new rating.
+            _log.w("Attempted to create a target rating for ${mapping.sourceNumbers}, but no source ratings were available");
+          }
         }
 
         if(!targetRating.group.isLoaded) {
