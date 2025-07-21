@@ -6,8 +6,6 @@
 
 import 'dart:convert';
 // ignore: avoid_web_libraries_in_flutter
-import 'package:flutter/foundation.dart';
-import 'package:fluttericon/rpg_awesome_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
@@ -24,7 +22,6 @@ import 'package:shooting_sports_analyst/main.dart';
 import 'package:shooting_sports_analyst/preference_names.dart';
 import 'package:shooting_sports_analyst/route/broadcast_booth_page.dart';
 import 'package:shooting_sports_analyst/route/match_database_manager.dart';
-import 'package:shooting_sports_analyst/route/match_heat_page.dart';
 import 'package:shooting_sports_analyst/route/practiscore_url.dart';
 import 'package:shooting_sports_analyst/ui/empty_scaffold.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/app_settings.dart';

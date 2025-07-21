@@ -13,7 +13,6 @@ import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_sourc
 import 'package:shooting_sports_analyst/data/ranking/interface/synchronous_rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
-import 'package:shooting_sports_analyst/data/ranking/legacy_loader/rating_history.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/fantasy_scoring_calculator.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
@@ -25,7 +24,6 @@ import 'package:shooting_sports_analyst/ui/widget/dialog/editable_shooter_card.d
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/shooter_card.dart';
 import 'package:shooting_sports_analyst/util.dart';
-import 'package:shooting_sports_analyst/data/model.dart' as old;
 
 class ScoreList extends StatefulWidget {
   final ShootingMatch? match;
