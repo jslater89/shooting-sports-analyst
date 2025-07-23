@@ -189,6 +189,10 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       else {
         textWidget = Text(entry.percentFinish, style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.end);
       }
+      String matchName = entry.match.name;
+      if(entry.matchEntry.dq) {
+        matchName += " (DQ)";
+      }
       widgets.add(ClickableLink(
         onTap: () {
           _launchScoreView(entry.divisionEntered, entry.match);
@@ -199,7 +203,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
             children: [
               Expanded(flex: 4, child:
                 Tooltip(
-                  child: Text(entry.match.name, style: Theme.of(context).textTheme.bodyMedium),
+                  child: Text(matchName, style: Theme.of(context).textTheme.bodyMedium),
                   message: programmerYmdFormat.format(entry.match.date),
                 )
               ),
