@@ -270,6 +270,14 @@ class _ScoreListState extends State<ScoreList> {
       }
     }
 
+    String percentText;
+    if(score.ratioMargin != null) {
+      percentText = "+${score.ratioMargin!.asPercentage()}%";
+    }
+    else {
+      percentText = "${score.ratio.asPercentage()}%";
+    }
+
     return GestureDetector(
       onTap: () async {
         if(widget.whatIfMode) {
@@ -352,7 +360,7 @@ class _ScoreListState extends State<ScoreList> {
               if(sport.hasClassifications && sport.displaySettings.showClassification) Expanded(flex: 1, child: Text(score.shooter.classification?.shortName ?? "UNK")),
               if(sport.hasDivisions) Expanded(flex: 2, child: Text(score.shooter.division?.displayName ?? "NO DIVISION")),
               if(sport.hasPowerFactors && sport.displaySettings.showPowerFactor) Expanded(flex: 1, child: Text(score.shooter.powerFactor.shortName)),
-              Expanded(flex: 2, child: Text("${score.ratio.asPercentage()}%")),
+              Expanded(flex: 2, child: Text(percentText)),
               Expanded(flex: 2, child: Text(score.points.toStringAsFixed(2))),
               if(widget.match?.inProgress ?? false) Expanded(flex: 1, child: Text("$stagesComplete", textAlign: TextAlign.end)),
               if(widget.match?.inProgress ?? false) SizedBox(width: 15),
@@ -474,6 +482,14 @@ class _ScoreListState extends State<ScoreList> {
       }
     }
 
+    String percentText;
+    if(stageScore?.ratioMargin != null) {
+      percentText = "+${stageScore!.ratioMargin!.asPercentage()}%";
+    }
+    else {
+      percentText = "${stageScore?.ratio.asPercentage() ?? "0.00"}%";
+    }
+
     return GestureDetector(
       onTap: () async {
         if(widget.whatIfMode) {
@@ -588,7 +604,7 @@ class _ScoreListState extends State<ScoreList> {
               Expanded(flex: 2, child: Text(stageScore?.score.finalTime.toStringAsFixed(2) ?? "0.00")),
               if(sport.type.isTimePlus) Expanded(flex: 2, child: Text(stageScore?.score.rawTime.toStringAsFixed(2) ?? "0.00")),
               if(sport.type.isHitFactor) Expanded(flex: 2, child: Text(stageScore?.score.displayString ?? "-")),
-              Expanded(flex: 2, child: Text("${stageScore?.ratio.asPercentage() ?? "0.00"}%")),
+              Expanded(flex: 2, child: Text(percentText)),
               if(sport.matchScoring is RelativeStageFinishScoring) Expanded(flex: 2, child: Text(stageScore?.points.toStringAsFixed(2) ?? "0.00")),
               ..._buildScoreColumns(stageScore?.score),
             ],
