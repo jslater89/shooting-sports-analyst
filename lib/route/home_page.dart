@@ -9,6 +9,8 @@ import 'dart:convert';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
+import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/application_preferences.dart';
 import 'package:shooting_sports_analyst/data/help/welcome_80_help.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
@@ -58,11 +60,11 @@ class _HomePageState extends State<HomePage> {
 
 
     Future.delayed(Duration.zero, () {
-      var prefs = context.read<SharedPreferences>();
-      var welcomeShown = prefs.getBool(Preferences.welcome80Shown) ?? false;
-      if(!welcomeShown) {
+      var prefs = AnalystDatabase().getPreferences();
+      if(!prefs.welcome80Shown) {
         _log.i("Showing 8.0 welcome dialog");
-        prefs.setBool(Preferences.welcome80Shown, true);
+        prefs.welcome80Shown = true;
+        AnalystDatabase().savePreferences(prefs);
         HelpDialog.show(context, initialTopic: welcome80HelpId);
       }
     });

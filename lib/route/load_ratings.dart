@@ -2,8 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
@@ -73,6 +75,16 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
       var error = result.unwrapErr();
       _log.e(error.message);
       widget.onError(error);
+    }
+    else {
+      var config = ConfigLoader().config;
+      if(config.playRatingsCalculationCompleteAlert) {
+        var complete = result.unwrap();
+        if(complete.matchesAddedCount > 0) {
+          var player = AudioPlayer();
+          player.play(AssetSource("audio/update-bell.mp3"));
+        }
+      }
     }
   }
 

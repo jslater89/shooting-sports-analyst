@@ -90,6 +90,16 @@ class DeduplicationError extends RatingProjectLoadError {
   }
 }
 
+class RatingsCalculationComplete {
+  List<MatchPointer> matchesAdded;
+  int get matchesAddedCount => matchesAdded.length;
+  bool wasFullRecalc;
+  bool wasAppend;
+  bool get noCalculation => !wasFullRecalc && !wasAppend;
+
+  RatingsCalculationComplete({required this.matchesAdded, required this.wasFullRecalc, required this.wasAppend});
+}
+
 typedef RatingProjectLoaderCallback = Future<void> Function({
   required int progress,
   required int total,
@@ -165,7 +175,7 @@ class RatingProjectLoader {
 
   List<String> _matchConnectivityCsv = [];
   bool dumpMatchConnectivities = false;
-  Future<Result<void, RatingProjectLoadError>> calculateRatings({bool fullRecalc = false}) async {
+  Future<Result<RatingsCalculationComplete, RatingProjectLoadError>> calculateRatings({bool fullRecalc = false}) async {
     wallStart = DateTime.now();
 
     HydratedMatchCache().clear();
@@ -227,7 +237,7 @@ class RatingProjectLoader {
       timings.add(TimingType.wallTime, DateTime.now().difference(wallStart).inMicroseconds);
       project.loaded = DateTime.now();
       await db.saveRatingProject(project, checkName: true);
-      return Result.ok(null);
+      return Result.ok(RatingsCalculationComplete(matchesAdded: [], wasFullRecalc: false, wasAppend: false));
     }
 
     if(!fullRecalc && !project.completedFullCalculation) {
@@ -249,7 +259,7 @@ class RatingProjectLoader {
         host.progressCallback(progress: 0, total: 0, state: LoadingState.done);
         project.loaded = DateTime.now();
         await db.saveRatingProject(project, checkName: true);
-        return Result.ok(null);
+        return Result.ok(RatingsCalculationComplete(matchesAdded: [], wasFullRecalc: false, wasAppend: false));
       }
     }
 
@@ -360,7 +370,7 @@ class RatingProjectLoader {
       var file = File("match_connectivity.csv");
       await file.writeAsString(csv);
     }
-    return Result.ok(null);
+    return Result.ok(RatingsCalculationComplete(matchesAdded: matchesToAdd, wasFullRecalc: fullRecalc, wasAppend: canAppend && !fullRecalc));
   }
 
   void cancel() {

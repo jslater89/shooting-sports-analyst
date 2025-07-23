@@ -78,13 +78,16 @@ class SerializedConfig {
   @JsonKey(defaultValue: true)
   bool playDeduplicationAlert;
 
+  @JsonKey(defaultValue: false)
+  bool playRatingsCalculationCompleteAlert;
+
   @JsonKey(defaultValue: null, includeIfNull: false)
   int? ratingsContextProjectId;
 
   factory SerializedConfig.fromToml(Map<String, dynamic> json) => _$SerializedConfigFromJson(json);
   Map<String, dynamic> toToml() => _$SerializedConfigToJson(this);
 
-  SerializedConfig({required this.logLevel, required this.playDeduplicationAlert, this.ratingsContextProjectId});
+  SerializedConfig({required this.logLevel, required this.playDeduplicationAlert, required this.playRatingsCalculationCompleteAlert, this.ratingsContextProjectId});
 
   @override
   String toString() {
@@ -92,6 +95,7 @@ class SerializedConfig {
     builder.writeln("Config:");
     builder.writeln("\tlogLevel = ${logLevel.name}");
     builder.writeln("\tplayDeduplicationAlert = $playDeduplicationAlert");
+    builder.writeln("\tplayRatingsCalculationCompleteAlert = $playRatingsCalculationCompleteAlert");
     builder.writeln("\tratingsContextProjectId = $ratingsContextProjectId");
     return builder.toString();
   }
@@ -100,6 +104,7 @@ class SerializedConfig {
     return SerializedConfig(
       logLevel: logLevel,
       playDeduplicationAlert: playDeduplicationAlert,
+      playRatingsCalculationCompleteAlert: playRatingsCalculationCompleteAlert,
       ratingsContextProjectId: ratingsContextProjectId,
     );
   }

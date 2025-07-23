@@ -76,6 +76,7 @@ class AnalystDatabase {
         DbShooterRatingSchema,
         MatchRegistrationMappingSchema,
         MatchHeatSchema,
+        ApplicationPreferencesSchema,
       ],
       maxSizeMiB: 1024 * 32,
       directory: "db",

@@ -47,6 +47,7 @@ class _AppSettingsDialogState extends State<AppSettingsDialog> {
 
   Future<void> _loadProject() async {
     project = await AnalystDatabase().getRatingProjectById(config.ratingsContextProjectId ?? -1);
+    _projectController.text = project?.name ?? config.ratingsContextProjectId?.toString() ?? "(none)";
   }
 
   void setProject(DbRatingProject? project) {
@@ -93,6 +94,15 @@ class _AppSettingsDialogState extends State<AppSettingsDialog> {
               value: config.playDeduplicationAlert,
               onChanged: (value) {
                 config.playDeduplicationAlert = value ?? false;
+              },
+            ),
+            const SizedBox(height: 16),
+            CheckboxListTile(
+              title: const Text("Play ratings calculation complete alert"),
+              subtitle: const Text("Play a sound when ratings calculation is complete"),
+              value: config.playRatingsCalculationCompleteAlert,
+              onChanged: (value) {
+                config.playRatingsCalculationCompleteAlert = value ?? false;
               },
             ),
             const SizedBox(height: 16),
