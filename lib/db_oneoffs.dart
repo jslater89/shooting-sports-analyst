@@ -44,7 +44,7 @@ Future<void> oneoffDbAnalyses(AnalystDatabase db) async {
   //await calculateMatchHeat(db, project);
 
   // await _analyzeIcoreDump(File("/home/jay/Downloads/masterScores.json"));
-  // await _importIcoreDump(File("/home/jay/Downloads/masterScores.json"));
+  // await _importIcoreDump(File("/home/jay/Documents/tmp/icore-stats/masterScores-20250723.json"));
   // await _winningPointsByDate();
 }
 

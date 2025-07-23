@@ -64,17 +64,41 @@ class IcoreClassifierRecord {
   @JsonKey(name: 'scoreRAW')
   String scoreRaw;
 
+  @JsonKey(name: "OpnClass")
+  String? openClass;
+
+  @JsonKey(name: "LtdClass")
+  String? limitedClass;
+
+  @JsonKey(name: "ClcClass")
+  String? classicClass;
+
+  @JsonKey(name: "L6Class")
+  String? l6Class;
+
+  @JsonKey(name: "B6Class")
+  String? big6Class;
+
   double? get time => double.tryParse(scoreRaw);
 
   ClassifierScore toAnalystScore() {
     if(time == null || parsedEventDate == null) {
       _log.e("Invalid classifier record: $eventDate $scoreRaw");
     }
+    var classString = switch(eventDivision) {
+      "O" => openClass,
+      "L" => limitedClass,
+      "C" => classicClass,
+      "L6" => l6Class,
+      "B6" => big6Class,
+      _ => "U",
+    };
     return ClassifierScore(
       classifierCode: classifierNumber,
       classifierNumber: int.tryParse(classifierNumber.replaceFirst("CS-", "")),
       date: parsedEventDate!,
       division: eventDivision,
+      classification: classString,
       firstName: memberFirstName,
       lastName: memberLastName,
       memberNumber: memberNumber,

@@ -1173,6 +1173,14 @@ class RatingProjectLoader {
         );
 
         if(rating == null) {
+          if(ratingsToCreate.any((r) => r.allPossibleMemberNumbers.contains(s.memberNumber))) {
+            // Special case: in some cases, competitors might enter a match twice. In those cases,
+            // we'll already have created a rating for them, so don't do another one.
+            //
+            // This probably results in losing the scores for the second entry, but that's acceptable.
+            // TODO: maybe settings somewhere to control this?
+            continue;
+          }
           var newRating = ratingSystem.newShooterRating(s, sport: project.sport, date: match.date);
           newRating.allPossibleMemberNumbers.addAll(possibleNumbers);
           ratingsToCreate.add(newRating);

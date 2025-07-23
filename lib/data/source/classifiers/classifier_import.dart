@@ -143,6 +143,12 @@ class ClassifierImporter {
         _log.w("Division not found: ${score.division}");
         continue;
       }
+
+      var classification = sport.classifications.lookupByName(score.classification);
+      if(classification == null) {
+        _log.w("Classification not found: ${score.classification}");
+      }
+
       // Create raw score
       var raw = RawScore(
         scoring: sport.defaultStageScoring,
@@ -160,6 +166,7 @@ class ClassifierImporter {
         powerFactor: sport.defaultPowerFactor,
         scores: {stage: raw},
         division: division,
+        classification: classification,
         memberNumber: score.memberNumber,
         reentry: false,
       );
@@ -201,6 +208,8 @@ class ClassifierScore {
   final String lastName;
   /// The competitor's member number/ID.
   final String memberNumber;
+  /// The competitor's class (either at the time of the score, or now).
+  String? classification;
 
   /// A synthetic sort property that matches RatingEvent sort order.
   int get dateAndStageNumber => date.millisecondsSinceEpoch ~/ 1000 + classifierNumber;
@@ -231,6 +240,7 @@ class ClassifierScore {
     int? classifierNumber,
     required this.date,
     required this.division,
+    this.classification,
     required this.firstName,
     required this.lastName,
     required this.memberNumber,
