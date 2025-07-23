@@ -36,6 +36,7 @@ class ScorecardSettingsDialog extends StatelessWidget {
   }
 
   static Future<ScorecardModel?> show(BuildContext context, {required ScorecardModel scorecard, required ShootingMatch match}) {
+    _log.i("Showing scorecard settings dialog for ${scorecard.name} id:${scorecard.id}");
     return showDialog<ScorecardModel>(
       context: context,
       builder: (context) => ScorecardSettingsDialog(scorecard: scorecard, match: match),
