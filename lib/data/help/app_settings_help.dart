@@ -24,7 +24,9 @@ verbosity (at the start of the list) will log information that may be useful whe
 submitting issue reports.
 
 The deduplication alert checkbox will instruct the application to play an alert sound
-when manual action is required for deduplication.
+when manual action is required for deduplication, and the ratings calculation complete
+alert checkbox will instruct the application to play an alert sound when ratings
+calculation is complete (provided calculation is required).
 
 The ratings context setting identifies the project that should be used as a ratings
 context when using broadcast mode to view a match.

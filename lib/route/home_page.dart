@@ -61,7 +61,13 @@ class _HomePageState extends State<HomePage> {
 
     Future.delayed(Duration.zero, () {
       var prefs = AnalystDatabase().getPreferences();
-      if(!prefs.welcome80Shown) {
+      if(!prefs.welcome80BetaShown) {
+        _log.i("Showing 8.0 beta welcome dialog");
+        prefs.welcome80BetaShown = true;
+        AnalystDatabase().savePreferences(prefs);
+        HelpDialog.show(context, initialTopic: welcome80HelpId);
+      }
+      else if(!prefs.welcome80Shown) {
         _log.i("Showing 8.0 welcome dialog");
         prefs.welcome80Shown = true;
         AnalystDatabase().savePreferences(prefs);

@@ -5,6 +5,8 @@
  */
 
 import 'package:shooting_sports_analyst/data/help/deduplication_help.dart';
+import 'package:shooting_sports_analyst/data/help/icore_deduplicator_help.dart';
+import 'package:shooting_sports_analyst/data/help/match_heat_help.dart';
 import 'package:shooting_sports_analyst/data/help/uspsa_deduplicator_help.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_topic.dart';
 
@@ -17,9 +19,9 @@ final helpWelcome80 = HelpTopic(
 );
 
 const _content =
-"""# Welcome to Shooting Sports Analyst 8.0!
+"""# Welcome to the Shooting Sports Analyst 8.0 beta!
 
-This release represents more than a year of sustained work and more than 15,000 new lines of
+This release represents more than a year of sustained work and nearly 20,000 new lines of
 code, focusing on support for multiple sports, improved match import, and database storage
 for match results and ratings. This foundational work paves the way for new enhancements in
 future releases, centering on the use of ratings to provide context in other areas of the
@@ -31,20 +33,18 @@ once, but I will attempt to keep it up to date as the alpha process progresses.
 
 ## Known Issues
 
-Among others, the following issues are known:
+There are very likely to be issues in this release, but at the time of writing, I don't
+know of any that are serious or consistent enough to list here.
 
-* Category filters are not yet supported in the rating view screen.
-* Match score viewing for IDPA and PCSL may have some flaws in some cases.
-
-Please report other issues via [Discord](https://discord.gg/rqHh7PVMNA) or
+Please report any issues you discover via [Discord](https://discord.gg/rqHh7PVMNA) or
 [GitHub](https://github.com/jslater89/shooting-sports-analyst/issues).
 
 ## This Help System
 
 Instead of writing documentation in various READMEs and blog posts, I decided to build
-a help system directly into the application. The index to the left lists all available
-topics, and where relevant help topics exist, 'help' icons in the application will link
-to them, launching this window on the correct page.
+a help system directly into the application. In various places throughout the application,
+you will see a circle-question-mark 'help' icon. Clicking it will open this window and
+show the relevant help topic. The index to the left lists all available topics.
 
 Analyst is a very complicated tool, and I expect the help system will continue to grow
 as the 8.0 release cycle proceeds.
@@ -82,26 +82,31 @@ Whereas a full run of the 470-match L2s-since-2018 ratings takes less than a min
 the same project in 8.0 takes between 10 and 20 minutes, at present. There is still some
 optimization meat on the bone, but even once 8.0 is as optimized as 7.0 was (and 7.0 was
 seriously optimized), I expect that the calculation times in 8.0 will still be substantially
-longer.
+longer. (Please note that, owing to certain issues with Windows filesystems, calculations
+may take longer on Windows than on other platforms.)
 
 The good news is that, because ratings are persisted across application restarts, you
 should not _need_ to perform full calculations very often. The two most common scenarios
 (starting the application to look at ratings, and appending matches that all occur after
 the most recently calculated ratings) are much faster in 8.0, because they no longer
-require calculating ratings entirely from scratch every time.
+require calculating ratings entirely from scratch every time. Even if you miss a recent
+match and append matches that occur after it, the application now supports rolling back
+ratings to an earlier date. You can roll back to before the match you missed, append it,
+and append the remaining matches that occur after it, in lieu of performing a full
+calculation.
 
 ### Available Rating Algorithms
 All of the rating algorithms that were available in 7.0 are also available in 8.0, and
 should work the same way. Elo numbers will likely be somewhat different, and may not
-be stable from release to release during the alpha period, since connectivity is handled
+be stable from release to release during the beta period, since connectivity is handled
 substantially differently in 8.0 vs. 7.0, and the precise details of the algorithm are
 not yet settled.
 
 ### Non-USPSA Ratings
-... are not quite ready yet, but the path from here to there is clear. The largest
-obstacle is writing a generic shooter deduplicator, but given that most non-USPSA
-sports have a substantially less dumb member numbering system than USPSA, that
-task is less daunting than it was for the USPSA case.
+... more or less work, although they have only been tested with IDPA and ICORE. Time-plus
+ratings seem to work better with much higher place weight/lower percent weight than hit
+factor ratings, as percentages are more sensitive to small variations in time-plus scoring,
+particularly on short stages.
 
 ### Deduplication
 Shooter deduplication has been substantially improved in 8.0, and can handle a dramatically
@@ -110,16 +115,23 @@ project load, so that you don't need to pay attention during the entire rating p
 
 The deduplication process has [its own help topic]($deduplicationHelpLink), which you can
 also view via the help button in the deduplication window during project loading. The
-deduplication window shows dramatically more information than the previous deduplication
+deduplication window shows much more information than the previous deduplication
 UI, and does a much better job at guiding you through the process. It is also heavily
-tested, with 27 separate scenarios covered by automated tests.
+tested, with more than 50 separate scenarios covered by automated tests.
 
 The [USPSA deduplicator]($uspsaDeduplicatorHelpLink) has its own help topic as well,
 which goes into specifics about the peculiarities of the process as applied to USPSA.
+So also does the [ICORE deduplicator]($icoreDeduplicatorHelpLink).
+
+IDPA deduplication is not yet supported.
 
 ### The Loading Screen
 Since rating calculations take longer, the loading screen has been improved to provide
 more detail on what the rating engine is doing at a particular time, and about how much
 progress it has made against the expected total. An upper progress bar shows the total
 completion status, while a lower progress bar shows the status of the current task.
+
+## Match Heat
+Accessible from a ratings view page, the match heat view shows a scatter plot of match
+size vs. match heat. More information is available in the [match heat help topic]($matchHeatHelpLink).
 """;
