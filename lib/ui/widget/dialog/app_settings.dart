@@ -93,7 +93,9 @@ class _AppSettingsDialogState extends State<AppSettingsDialog> {
               subtitle: const Text("Play a sound when loading a project and deduplication is required"),
               value: config.playDeduplicationAlert,
               onChanged: (value) {
-                config.playDeduplicationAlert = value ?? false;
+                setState(() {
+                  config.playDeduplicationAlert = value ?? false;
+                });
               },
             ),
             const SizedBox(height: 16),
@@ -102,7 +104,9 @@ class _AppSettingsDialogState extends State<AppSettingsDialog> {
               subtitle: const Text("Play a sound when ratings calculation is complete"),
               value: config.playRatingsCalculationCompleteAlert,
               onChanged: (value) {
-                config.playRatingsCalculationCompleteAlert = value ?? false;
+                setState(() {
+                  config.playRatingsCalculationCompleteAlert = value ?? false;
+                });
               },
             ),
             const SizedBox(height: 16),

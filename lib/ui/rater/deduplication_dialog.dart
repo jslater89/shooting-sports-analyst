@@ -933,6 +933,7 @@ class MemberNumberTypeColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var sport = Provider.of<Sport>(context, listen: false);
+    var dedup = sport.shooterDeduplicator;
     bool uspsa = sport.name == uspsaName;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4.0),
@@ -940,10 +941,10 @@ class MemberNumberTypeColumn extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(type.uiName, style: Theme.of(context).textTheme.titleSmall),
-          if(uspsa)
+          if(dedup != null)
             for(var number in collision.memberNumbers[type]!)
-              _USPSALink(number: number, collision: collision),
-          if(!uspsa)
+              _DedupLink(deduplicator: dedup, number: number, collision: collision),
+          if(dedup == null)
             for(var number in collision.memberNumbers[type]!)
               Text(number, style: TextStyles.bodyMedium(context).copyWith(color: collision.coversNumber(number) ? Colors.green.shade600 : Colors.grey.shade400)),
         ],
@@ -952,18 +953,21 @@ class MemberNumberTypeColumn extends StatelessWidget {
   }
 }
 
-class _USPSALink extends StatelessWidget {
-  const _USPSALink({super.key, required this.number, required this.collision});
+class _DedupLink extends StatelessWidget {
+  const _DedupLink({super.key, required this.deduplicator, required this.number, required this.collision});
 
+  final ShooterDeduplicator deduplicator;
   final String number;
   final DeduplicationCollision collision;
 
   @override
   Widget build(BuildContext context) {
-    return ClickableLink(
-      url: Uri.parse("https://uspsa.org/classification/$number"),
-      child: Text(number, style: TextStyles.underlineBodyMedium(context).copyWith(color: collision.coversNumber(number) ? Colors.green.shade600 : Colors.grey.shade400)),
-    );
+    return RichText(text: deduplicator.linksForMemberNumbers(
+      context: context,
+      text: number,
+      memberNumbers: [number],
+      linkStyle: TextStyles.underlineBodyMedium(context).copyWith(color: collision.coversNumber(number) ? Colors.green.shade600 : Colors.grey.shade400),
+    ));
   }
 }
 
