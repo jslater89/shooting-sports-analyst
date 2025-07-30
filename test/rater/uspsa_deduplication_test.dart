@@ -26,9 +26,14 @@ void main() async {
   var db = AnalystDatabase.test();
   var ratingGroup = uspsaSport.builtinRatingGroupsProvider!.divisionRatingGroups.firstWhere((e) => e.name == "Open");
 
-  setUpAll(() async {
-    print("Setting up test data");
+  setUp(() async {
     await setupTestDb(db);
+  });
+
+  tearDown(() async {
+    await db.isar.writeTxn(() async {
+      await db.isar.clear();
+    });
   });
 
   // #region Tests
@@ -1205,10 +1210,9 @@ Future<List<DbShooterRating>> addMatchToTest(AnalystDatabase db, DbRatingProject
 
 
 Future<void> setupTestDb(AnalystDatabase db) async {
-  db.isar.writeTxn(() async {
-    await db.isar.clear();
-  });
-
+  if(db.isar.name != "test-database") {
+    throw Exception("Database is not a test database");
+  }
   var competitorMap = generateCompetitors();
 
   var simpleDataEntryMatch = generateMatch(

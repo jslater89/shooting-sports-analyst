@@ -19,9 +19,14 @@ void main() async {
   var db = AnalystDatabase.test();
   var ratingGroup = idpaSport.builtinRatingGroupsProvider!.builtinRatingGroups.first;
 
-  setUpAll(() async {
-    print("Setting up test data");
+  setUp(() async {
     await setupTestDb(db);
+  });
+
+  tearDown(() async {
+    await db.isar.writeTxn(() async {
+      await db.isar.clear();
+    });
   });
 
   test("Typo Fix", () async {
@@ -149,12 +154,8 @@ Future<List<DbShooterRating>> addMatchToTest(AnalystDatabase db, DbRatingProject
 
 Future<void> setupTestDb(AnalystDatabase db) async {
   if(db.isar.name != "test-database") {
-    throw Exception("Test database is not a test database");
+    throw Exception("Database is not a test database");
   }
-
-  db.isar.writeTxn(() async {
-    await db.isar.clear();
-  });
 
   var competitorMap = generateCompetitors();
 
