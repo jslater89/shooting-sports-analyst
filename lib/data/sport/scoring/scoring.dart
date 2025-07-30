@@ -7,6 +7,9 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/fantasy_scoring_calculator.dart';
@@ -1070,6 +1073,37 @@ extension Sorting on List<RelativeMatchScore> {
 
       var aRatingValue = aRatingWrapped.ratingForEvent(match, stage);
       var bRatingValue = bRatingWrapped.ratingForEvent(match, stage);
+
+      return bRatingValue.compareTo(aRatingValue);
+    });
+  }
+
+  void sortByLocalRating({required DbRatingProject ratings, required RatingDisplayMode displayMode, required ShootingMatch match, MatchStage? stage}) {
+    var db = AnalystDatabase();
+    this.sort((a, b) {
+      var aGroupRes = ratings.groupForDivisionSync(a.shooter.division);
+      var bGroupRes = ratings.groupForDivisionSync(b.shooter.division);
+      if(aGroupRes.isErr() || bGroupRes.isErr()) return b.ratio.compareTo(a.ratio);
+
+      var aGroup = aGroupRes.unwrap();
+      var bGroup = bGroupRes.unwrap();
+
+      var aRating = db.maybeKnownShooterSync(project: ratings, group: aGroup!, memberNumber: a.shooter.memberNumber);
+      var bRating = db.maybeKnownShooterSync(project: ratings, group: bGroup!, memberNumber: b.shooter.memberNumber);
+
+      if(aRating == null || bRating == null) return b.ratio.compareTo(a.ratio);
+
+      var settings = ratings.getSettingsSync();
+      var aRatingWrapped = settings.algorithm.wrapDbRating(aRating);
+      var bRatingWrapped = settings.algorithm.wrapDbRating(bRating);
+
+      var aRatingValue = aRatingWrapped.ratingForEvent(match, stage, beforeMatch: displayMode == RatingDisplayMode.preMatch);
+      var bRatingValue = bRatingWrapped.ratingForEvent(match, stage, beforeMatch: displayMode == RatingDisplayMode.preMatch);
+
+      if(displayMode == RatingDisplayMode.change) {
+        aRatingValue = aRatingValue - aRatingWrapped.ratingForEvent(match, stage, beforeMatch: true);
+        bRatingValue = bRatingValue - bRatingWrapped.ratingForEvent(match, stage, beforeMatch: true);
+      }
 
       return bRatingValue.compareTo(aRatingValue);
     });

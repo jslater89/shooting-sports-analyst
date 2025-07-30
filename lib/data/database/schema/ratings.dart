@@ -344,6 +344,10 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
     return Future.value(DataSourceResult.ok(settings));
   }
 
+  RatingProjectSettings getSettingsSync() {
+    return settings;
+  }
+
   @override
   Future<DataSourceResult<List<String>>> getMatchSourceIds() async {
     return DataSourceResult.ok(matchPointers.map((m) => m.sourceIds.first).toList());
@@ -387,6 +391,24 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
     }
 
     return Future.value(DataSourceResult.ok(outGroup));
+  }
+
+  DataSourceResult<RatingGroup?> groupForDivisionSync(Division? division) {
+    var fewestDivisions = 65536;
+    RatingGroup? outGroup = null;
+    if(division == null) {
+      // TODO: this might not be the right result for a null division
+      return DataSourceResult.ok(groups.first);
+    }
+
+    for(var group in groups) {
+      if(group.divisions.length < fewestDivisions && group.divisions.contains(division)) {
+        fewestDivisions = group.divisions.length;
+        outGroup = group;
+      }
+    }
+
+    return DataSourceResult.ok(outGroup);
   }
 
   @override

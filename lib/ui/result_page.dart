@@ -304,8 +304,8 @@ class _ResultPageState extends State<ResultPage> {
         scores.sortBySurname();
         break;
       case SortMode.rating:
-        if(widget.ratings != null) {
-          // scores.sortByRating(ratings: widget.ratings!, displayMode: _settings.value.ratingMode, match: _currentMatch, stage: _stage);
+        if(widget.ratings != null && widget.ratings is DbRatingProject) {
+          scores.sortByLocalRating(ratings: widget.ratings! as DbRatingProject, displayMode: _settings.value.ratingMode, match: _currentMatch, stage: _stage);
         }
         else {
           // We shouldn't hit this, because we hide rating sort if there aren't any ratings,
