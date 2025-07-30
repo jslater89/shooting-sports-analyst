@@ -311,27 +311,25 @@ class RawScore {
   /// included in the total. For example, in a USPSA match, includeTargetPenalties = false would include only A, C, and
   /// D hits.
   int getTotalPoints({bool countPenalties = true, bool allowNegative = false, bool includeTargetPenalties = true}) {
-    if(countPenalties) {
-      if(allowNegative) {
-        return points;
-      }
-      else {
-        return max(0, points);
-      }
+    int total;
+    if(countPenalties && includeTargetPenalties) {
+      total = points;
+    }
+    else if(countPenalties) {
+      var positiveEvents = targetEvents.keys.where((e) => e.pointChange >= 0).toList();
+      total = positiveEvents.map((e) => targetEvents[e]! * e.pointChange).sum;
+      total += penaltyEvents.points;
+    }
+    else { // includeTargetPenalties only
+      var positiveEvents = targetEvents.keys.where((e) => e.pointChange >= 0).toList();
+      total = positiveEvents.map((e) => targetEvents[e]! * e.pointChange).sum;
+    }
+
+    if(allowNegative) {
+      return total;
     }
     else {
-      if(includeTargetPenalties) {
-        if(allowNegative) {
-          return targetEvents.points;
-        }
-        else {
-          return max(0, targetEvents.points);
-        }
-      }
-      else {
-        var positiveEvents = targetEvents.keys.where((e) => e.pointChange >= 0).toList();
-        return positiveEvents.map((e) => targetEvents[e]! * e.pointChange).sum;
-      }
+      return max(0, total);
     }
   }
 
