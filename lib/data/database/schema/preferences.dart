@@ -1,5 +1,7 @@
 
+import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
+import 'package:shooting_sports_analyst/ui/result_page.dart';
 
 part 'preferences.g.dart';
 
@@ -16,4 +18,36 @@ class ApplicationPreferences {
 
   /// The ID of the last project that was loaded.
   int? lastProjectId;
+
+  /// Whether penalties are counted towards the available points.
+  bool availablePointsCountPenalties = true;
+
+  /// True if available points on hit factor fixed time stages are calculated
+  /// based on the maximum number of points achieved, rather than the number of
+  /// points possible.
+  bool improvedFixedTimeMax = true;
+
+  /// The name of the last-selected fantasy points mode.
+  String fantasyPointsModeName = FantasyPointsMode.off.name;
+  @ignore
+  FantasyPointsMode get fantasyPointsMode => FantasyPointsMode.values.firstWhereOrNull((e) => e.name == fantasyPointsModeName) ?? FantasyPointsMode.off;
+  set fantasyPointsMode(FantasyPointsMode value) {
+    fantasyPointsModeName = value.name;
+  }
+
+  /// The name of the last-selected rating display mode.
+  String ratingDisplayModeName = RatingDisplayMode.preMatch.name;
+  @ignore
+  RatingDisplayMode get ratingDisplayMode => RatingDisplayMode.values.firstWhereOrNull((e) => e.name == ratingDisplayModeName) ?? RatingDisplayMode.preMatch;
+  set ratingDisplayMode(RatingDisplayMode value) {
+    ratingDisplayModeName = value.name;
+  }
+
+  /// The name of the last selected match prediction mode.
+  String matchPredictionModeName = MatchPredictionMode.none.name;
+  @ignore
+  MatchPredictionMode get matchPredictionMode => MatchPredictionMode.values.firstWhereOrNull((e) => e.name == matchPredictionModeName) ?? MatchPredictionMode.none;
+  set matchPredictionMode(MatchPredictionMode value) {
+    matchPredictionModeName = value.name;
+  }
 }

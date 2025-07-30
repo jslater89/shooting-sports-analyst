@@ -14,9 +14,9 @@ import 'package:shooting_sports_analyst/data/database/schema/preferences.dart';
 /// whether welcome dialogs have been shown, or certain initial state for some
 /// UI elements that should be persisted across app restarts, but isn't
 extension ApplicationPreferenceStorage on AnalystDatabase {
-  ApplicationPreferences getPreferences() => isar.applicationPreferences.getSync(1) ?? ApplicationPreferences();
+  ApplicationPreferences getPreferencesSync() => isar.applicationPreferences.getSync(1) ?? ApplicationPreferences();
 
-  void savePreferences(ApplicationPreferences preferences) {
+  void savePreferencesSync(ApplicationPreferences preferences) {
     isar.writeTxnSync(() {
       isar.applicationPreferences.putSync(preferences);
     });

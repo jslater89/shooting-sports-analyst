@@ -126,7 +126,9 @@ class USPSAFantasyScoringCalculator implements FantasyScoringCalculator<USPSAFan
   }) {
     Map<MatchStage, double> lowTimes = {};
     Map<MatchStage, int> highPoints = {};
-    int stageCount = match.stages.length;
+    int stageCount = match.stages.where((s) =>
+      s.scoring is! IgnoredScoring
+    ).length;
 
     for(var stage in match.stages) {
       lowTimes[stage] = double.infinity;

@@ -158,7 +158,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   }
 
   Future<void> _loadAutosave() async {
-    var dbPrefs = AnalystDatabase().getPreferences();
+    var dbPrefs = AnalystDatabase().getPreferencesSync();
     var prefsLastProjectId = prefs.getInt(Preferences.lastProjectId);
 
     if(dbPrefs.lastProjectId != null) {
@@ -176,7 +176,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         // If we get to here, we've loaded a project from legacy prefs, so copy the ID
         // to the new prefs and save.
         dbPrefs.lastProjectId = prefsLastProjectId;
-        AnalystDatabase().savePreferences(dbPrefs);
+        AnalystDatabase().savePreferencesSync(dbPrefs);
         return;
       }
     }
@@ -923,9 +923,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
     await AnalystDatabase().saveRatingProject(project);
 
-    var prefs = AnalystDatabase().getPreferences();
+    var prefs = AnalystDatabase().getPreferencesSync();
     prefs.lastProjectId = project.id;
-    AnalystDatabase().savePreferences(prefs);
+    AnalystDatabase().savePreferencesSync(prefs);
     _log.i("Saved project ${project.name} at ${project.id}; it will be autoloaded");
 
     if(mounted) {
