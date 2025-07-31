@@ -7,8 +7,10 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 /// This connectivity calculator uses the square root of the product of the
@@ -31,9 +33,9 @@ class SqrtTotalUniqueProductCalculator implements ConnectivityCalculator {
 
   @override
   double calculateConnectivityBaseline({
-    int? matchCount, 
-    int? competitorCount, 
-    double? connectivitySum, 
+    int? matchCount,
+    int? competitorCount,
+    double? connectivitySum,
     List<double>? connectivityScores,
   }) {
     if(connectivityScores!.isEmpty) return defaultBaselineConnectivity;
@@ -41,7 +43,7 @@ class SqrtTotalUniqueProductCalculator implements ConnectivityCalculator {
     double median = 0.0;
     if(connectivityScores.length.isOdd) {
       median = connectivityScores[connectivityScores.length ~/ 2];
-    } 
+    }
     else {
       median = (connectivityScores[connectivityScores.length ~/ 2] + connectivityScores[connectivityScores.length ~/ 2 - 1]) / 2;
     }
@@ -77,10 +79,10 @@ class SqrtTotalUniqueProductCalculator implements ConnectivityCalculator {
   int get baselineMatchWindowCount => 100;
 
   @override
-  List<ConnectivityRequiredData> get requiredBaselineData => [
-    ConnectivityRequiredData.connectivityScores,
+  List<BaselineConnectivityRequiredData> get requiredBaselineData => [
+    BaselineConnectivityRequiredData.connectivityScores,
   ];
-  
+
   @override
   double calculateMatchConnectivity(List<double> connectivityScores) {
     if(connectivityScores.isEmpty) return 0;
@@ -91,4 +93,74 @@ class SqrtTotalUniqueProductCalculator implements ConnectivityCalculator {
 
   @override
   double get defaultBaselineConnectivity => 400.0;
+
+  @override
+  List<CompetitorConnectivityRequiredData> get requiredCompetitorData => [
+    CompetitorConnectivityRequiredData.match,
+    CompetitorConnectivityRequiredData.matchPointers,
+    CompetitorConnectivityRequiredData.competitorRatings,
+  ];
+
+  @override
+  bool updateCompetitorData({
+    required DbShooterRating rating,
+    ShootingMatch? match,
+    Iterable<DbShooterRating>? competitors,
+    int? competitorCount,
+    List<MatchPointer>? matchPointers,
+  }) {
+    Set<int> ids = {};
+    for(var c in competitors!) {
+      if(c.id != rating.id) {
+        ids.add(c.id);
+      }
+    }
+    var window = MatchWindow.createFromHydratedMatch(
+      match: match!,
+      uniqueOpponentIds: ids.toList(),
+      totalOpponents: ids.length,
+    );
+
+    MatchWindow? oldestWindow;
+    // While we have more than 4 match windows, remove the oldest one
+    // (so that the new one we add brings us to 5).
+    var editableList = rating.matchWindows.toList();
+    while(editableList.length > (matchWindowCount - 1)) {
+      for(var window in editableList) {
+        if(oldestWindow == null || window.date.isBefore(oldestWindow.date)) {
+          oldestWindow = window;
+        }
+      }
+      if(oldestWindow != null) {
+        editableList.remove(oldestWindow);
+        oldestWindow = null;
+      }
+    }
+    editableList.add(window);
+    rating.matchWindows = editableList;
+
+    return true;
+  }
+
+  @override
+  bool rollbackCompetitorData({
+    required DbShooterRating rating,
+    List<ShootingMatch>? matchesRemoved,
+    Iterable<Iterable<DbShooterRating>>? competitorsRemoved,
+    Iterable<int>? competitorCountsRemoved,
+    List<MatchPointer>? matchPointers,
+  }) {
+    for(var match in matchesRemoved!) {
+      rating.matchWindows.remove(match);
+    }
+
+    // TODO: this is an incomplete implementation
+    // Getting it actually correct may be extremely hard, though, as we'll need
+    // to rebuild connectivity data for old matches to get up to the correct window.
+    return true;
+  }
+
+
+  @override
+  bool get useHistoryForRollback => true;
 }

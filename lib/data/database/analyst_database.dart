@@ -280,6 +280,16 @@ class AnalystDatabase {
     return null;
   }
 
+
+  DbShootingMatch? getMatchByAnySourceIdSync(List<String> ids) {
+    for(var id in ids) {
+      var match = isar.dbShootingMatchs.getByIndexSync(AnalystDatabase.sourceIdsIndex, [id]);
+      if(match != null) return match;
+    }
+
+    return null;
+  }
+
   Future<DbShootingMatch?> getMatchBySourceId(String id) {
     return getMatchByAnySourceId([id]);
   }
@@ -318,15 +328,6 @@ class AnalystDatabase {
       _log.e("Failed to delete match", error: e, stackTrace: stackTrace);
       return Result.err(StringError(e.toString()));
     }
-  }
-
-  DbShootingMatch? getMatchByAnySourceIdSync(List<String> ids) {
-    for(var id in ids) {
-      var match = isar.dbShootingMatchs.getBySourceIdsSync([id]);
-      if(match != null) return match;
-    }
-
-    return null;
   }
 
   Future<void> migrateFromMatchCache(ProgressCallback callback) async {

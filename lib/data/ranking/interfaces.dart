@@ -7,6 +7,7 @@
 import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 
@@ -92,7 +93,13 @@ abstract interface class ConnectivityCalculator {
   ///
   /// Only data requested in this list will be provided to
   /// [calculateConnectivityBaseline].
-  List<ConnectivityRequiredData> get requiredBaselineData;
+  List<BaselineConnectivityRequiredData> get requiredBaselineData;
+
+  /// The data required for this calculator to calculate
+  /// a competitor connectivity score. This is used primarily by
+  /// the project rollback system to determine what data is necessary
+  /// to provide to [rollbackCompetitorData].
+  List<CompetitorConnectivityRequiredData> get requiredCompetitorData;
 
   /// Calculate the baseline connectivity score for a rating
   /// group. Data requsted in [requiredBaselineData] will be
@@ -112,6 +119,48 @@ abstract interface class ConnectivityCalculator {
 
   /// Calculate the connectivity score for a shooter.
   NewConnectivity calculateRatingConnectivity(DbShooterRating rating);
+
+  /// Update the data structures on DbShooterRating that this calculator requires.
+  ///
+  /// Data not requested in [requiredCompetitorData] may be null.
+  ///
+  /// Return true if the project loader needs to save the rating after this call.
+  /// Project loaders may batch updates, so updates made here may not be immediately
+  /// persisted.
+  ///
+  /// [competitors] is a list of all competitors in the match.
+  bool updateCompetitorData({
+    required DbShooterRating rating,
+    ShootingMatch? match,
+    Iterable<DbShooterRating>? competitors,
+    int? competitorCount,
+    List<MatchPointer>? matchPointers,
+  });
+
+  /// Rollback the data structures on DbShooterRating that this calculator requires.
+  ///
+  /// Data not requested in [requiredCompetitorData] may be null.
+  ///
+  /// Return true if the project loader needs to save the rating after this call.
+  /// Project loaders may batch updates, so updates made here may not be immediately
+  /// persisted.
+  ///
+  /// Unlike [updateCompetitorData], this method is called with a list of matches,
+  /// since step-by-step rollback may be computationally expensive.
+  bool rollbackCompetitorData({
+    required DbShooterRating rating,
+    List<ShootingMatch>? matchesRemoved,
+    List<MatchPointer>? matchPointers,
+    Iterable<Iterable<DbShooterRating>>? competitorsRemoved,
+    Iterable<int>? competitorCountsRemoved,
+  });
+
+  /// Whether to use historical connectivity data for rollback.
+  ///
+  /// If true, the connectivity calculator expects the rollback system to
+  /// use the historical connectivity data to update the rating's connectivity and
+  /// rawConnectivity prior to calling [rollbackCompetitorData].
+  bool get useHistoryForRollback;
 
   /// Calculate the connectivity score for a match, given a list of
   /// connectivity scores.
@@ -133,11 +182,26 @@ abstract interface class ConnectivityCalculator {
 
 /// The data required for a connectivity calculator to calculate a baseline
 /// connectivity score.
-enum ConnectivityRequiredData {
+enum BaselineConnectivityRequiredData {
   matchCount,
   competitorCount,
   connectivitySum,
   connectivityScores,
+}
+
+/// The data required for a connectivity calculator to calculate a competitor
+/// connectivity score.
+enum CompetitorConnectivityRequiredData {
+  /// A simple count of competitors in the match, according to the relevant filters.
+  /// This will include unrated/non-rateable competitors, but requires no database lookups.
+  competitorCount,
+  /// An iterable of the rating objects for each competitor in the match.
+  competitorRatings,
+  /// The match being added, or matches being rolled back.
+  match,
+  /// The list of match pointers for the rating project. When rolling back, this list will
+  /// contain the match pointers after removing the rolled-back matches.
+  matchPointers,
 }
 
 class NewConnectivity {

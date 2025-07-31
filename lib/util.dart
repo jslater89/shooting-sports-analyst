@@ -423,7 +423,7 @@ double lerpAroundCenter({
   else {
     var range = centerOut - minOut;
     var scale = (center - value) / (center - bottom);
-    return minOut + range * scale;
+    return centerOut - range * scale;
   }
 }
 

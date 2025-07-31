@@ -269,6 +269,7 @@ class RatingProjectLoader {
       project.reports = [];
       project.recentReports = [];
       project.completedFullCalculation = false;
+      project.connectivityContainer.reset();
       if(fullRecalc) {
         _log.i("Unable to append: full recalculation requested");
       }
@@ -1655,33 +1656,15 @@ class RatingProjectLoader {
       }
 
       var calc = sport.connectivityCalculator!;
-      Set<int> uniqueIds = {...shootersAtMatch.map((e) => e.id)};
       for(var rating in shootersAtMatch) {
-        var ids = uniqueIds.where((id) => id != rating.id).toList();
-        var window = MatchWindow.createFromHydratedMatch(
+        // ignoring the return value, because we always save the rating at this point
+        calc.updateCompetitorData(
           match: match,
-          uniqueOpponentIds: ids,
-          totalOpponents: ids.length,
+          rating: rating,
+          competitors: shootersAtMatch,
+          competitorCount: shootersAtMatch.length,
+          matchPointers: project.matchPointers,
         );
-
-        MatchWindow? oldestWindow;
-        // While we have more than 4 match windows, remove the oldest one
-        // (so that the new one we add brings us to 5).
-        var editableList = rating.matchWindows.toList();
-        while(editableList.length > (calc.matchWindowCount - 1)) {
-          for(var window in editableList) {
-            if(oldestWindow == null || window.date.isBefore(oldestWindow.date)) {
-              oldestWindow = window;
-            }
-          }
-          if(oldestWindow != null) {
-            editableList.remove(oldestWindow);
-            oldestWindow = null;
-          }
-        }
-        editableList.add(window);
-        rating.matchWindows = editableList;
-
         var newConnectivity = calc.calculateRatingConnectivity(rating);
 
         rating.updateConnectivitySync(
@@ -1704,11 +1687,11 @@ class RatingProjectLoader {
       int? matchCount;
       int? competitorCount;
 
-      if(calc.requiredBaselineData.contains(ConnectivityRequiredData.connectivityScores)) {
+      if(calc.requiredBaselineData.contains(BaselineConnectivityRequiredData.connectivityScores)) {
         connectivityScores = db.getConnectivitySync(project, group);
         competitorCount = connectivityScores.length;
       }
-      if(calc.requiredBaselineData.contains(ConnectivityRequiredData.connectivitySum)) {
+      if(calc.requiredBaselineData.contains(BaselineConnectivityRequiredData.connectivitySum)) {
         if(connectivityScores != null) {
           connectivitySum = connectivityScores.sum;
         }
@@ -1716,10 +1699,10 @@ class RatingProjectLoader {
           connectivitySum = db.getConnectivitySumSync(project, group);
         }
       }
-      if(calc.requiredBaselineData.contains(ConnectivityRequiredData.competitorCount) && competitorCount == null) {
+      if(calc.requiredBaselineData.contains(BaselineConnectivityRequiredData.competitorCount) && competitorCount == null) {
         competitorCount = await db.countShooterRatings(project, group);
       }
-      if(calc.requiredBaselineData.contains(ConnectivityRequiredData.matchCount)) {
+      if(calc.requiredBaselineData.contains(BaselineConnectivityRequiredData.matchCount)) {
         matchCount = project.matchPointers.length;
       }
 

@@ -281,18 +281,18 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
 
   /// Delete all shooter ratings and rating events belonging to this project.
   Future<void> resetRatings() async {
-    return AnalystDatabase().isar.writeTxn(() async {
-      await ratings.load();
-      var eventCount = 0;
+    await ratings.load();
+    AnalystDatabase().isar.writeTxnSync(() {
+      int eventCount = 0;
       for(var r in ratings) {
-        var count = await r.events.filter().deleteAll();
-        await r.events.reset();
+        var count = r.events.filter().deleteAllSync();
+        r.events.resetSync();
         eventCount += count;
       }
 
       lastUsedMatches = [];
-      var count = await ratings.filter().deleteAll();
-      await ratings.reset();
+      var count = ratings.filter().deleteAllSync();
+      ratings.resetSync();
       _log.i("Cleared $count ratings and $eventCount events");
     });
   }

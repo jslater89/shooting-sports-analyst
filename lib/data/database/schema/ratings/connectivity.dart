@@ -46,4 +46,8 @@ class ConnectivityContainer {
   double getConnectivity(RatingGroup group, {double defaultValue = 1.0}) {
     return _connectivities[group.uuid]?.connectivity ?? defaultValue;
   }
+
+  void reset() {
+    _connectivities.clear();
+  }
 }
