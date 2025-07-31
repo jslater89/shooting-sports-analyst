@@ -386,7 +386,11 @@ extension WindowedList<T> on List<T> {
 }
 
 /// Linearly interpolate between [minOut], [centerOut], and [maxOut], based on
-/// [value] relative to [center].
+/// [value] relative to [center], using [centerMinFactor] and [centerMaxFactor]
+/// to determine the range. If [rangeMin] and [rangeMax] are provided, the
+/// interpolation is done between [rangeMin] and [rangeMax] instead of
+/// [centerMinFactor] * [center] and [centerMaxFactor] * [center]. The [center]
+/// and factors approach is preferred, but cannot be used when [center] is zero.
 ///
 /// When [value] <= [centerMinFactor] * [center], the result is [minOut].
 ///
@@ -402,6 +406,8 @@ extension WindowedList<T> on List<T> {
 double lerpAroundCenter({
   required double value,
   required double center,
+  double? rangeMin,
+  double? rangeMax,
   double centerMinFactor = 0.5,
   double centerMaxFactor = 2.0,
   double minOut = 0.5,
@@ -410,6 +416,14 @@ double lerpAroundCenter({
 }) {
   var bottom = center * centerMinFactor;
   var top = center * centerMaxFactor;
+  if(center == 0) {
+    if(rangeMin == null || rangeMax == null) {
+      throw ArgumentError("center cannot be zero if rangeMin or rangeMax is not provided");
+    }
+    bottom = rangeMin;
+    top = rangeMax;
+  }
+
   if(value <= bottom) return minOut;
   if(value >= top) return maxOut;
 

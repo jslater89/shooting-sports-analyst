@@ -7,7 +7,7 @@
 import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/connectivity/rating_carriers.dart';
-import 'package:shooting_sports_analyst/data/ranking/connectivity/sqrt_total_unique_product.dart';
+// import 'package:shooting_sports_analyst/data/ranking/connectivity/sqrt_total_unique_product.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/uspsa_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
