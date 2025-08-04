@@ -461,6 +461,9 @@ class _ResultPageState extends State<ResultPage> {
             });
 
             _applyFilters(_filters);
+            if(_settings.value.fantasyPointsMode != FantasyPointsMode.off) {
+              _updateFantasyScores();
+            }
             _log.i("Refreshed match from source");
           }
           else {

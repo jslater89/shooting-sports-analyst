@@ -367,7 +367,7 @@ class _ScoreListState extends State<ScoreList> {
               if(fantasyScores != null) Expanded(
                 flex: 2,
                 child: Tooltip(
-                  message: fantasyScores![score.shooter]?.tooltip,
+                  message: fantasyScores![score.shooter]?.tooltip ?? "n/a",
                   child: Text(fantasyScores![score.shooter]?.points.toStringAsFixed(2) ?? "0.0"),
                 )
               ),

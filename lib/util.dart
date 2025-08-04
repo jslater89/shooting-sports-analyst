@@ -254,6 +254,9 @@ extension StableIntHash on int {
   }
 }
 
+/// Combine two hashes into a new hash, in a way that
+/// will not change over app runs or Flutter releases
+/// and can therefore be used in the database as a key.
 int combineHashes(int hash, int value) {
   hash = 0x1fffffff & (hash + value);
   hash = 0x1fffffff & (hash + ((0x0007ffff & hash) << 10));

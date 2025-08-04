@@ -322,6 +322,10 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
       .findAll());
   }
 
+  DataSourceResult<List<DbShooterRating>> getRatingsSync(RatingGroup group) {
+    return DataSourceResult.ok(ratings.filter().group((q) => q.idEqualTo(group.id)).findAllSync());
+  }
+
   Future<DataSourceResult<List<DbShooterRating>>> getRatingsByDeduplicatorName(RatingGroup group, String deduplicatorName) async {
     return DataSourceResult.ok(await ratings.filter()
       .group((q) => q.idEqualTo(group.id))
@@ -678,7 +682,7 @@ class MatchPointer with DbSportEntity implements SourceIdsProvider {
     name = match.name,
     date = match.date,
     sourceCode = match.sourceCode,
-    sourceIds = match.sourceIds,
+    sourceIds = [...match.sourceIds],
     matchLevelName = match.level?.name,
     localDbId = match.databaseId;
 
@@ -687,7 +691,7 @@ class MatchPointer with DbSportEntity implements SourceIdsProvider {
     name = match.eventName,
     date = match.date,
     sourceCode = match.sourceCode,
-    sourceIds = match.sourceIds,
+    sourceIds = [...match.sourceIds],
     localDbId = match.id
   {
     matchLevelName = match.matchLevelName;
