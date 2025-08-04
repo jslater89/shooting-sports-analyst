@@ -25,6 +25,7 @@ import 'package:shooting_sports_analyst/ui/text_styles.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/stacked_distribution_chart.dart';
+import 'package:shooting_sports_analyst/ui_util.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 var _log = SSALogger("MatchHeatGraphPage");

@@ -4,7 +4,6 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:flutter/material.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
@@ -17,18 +16,16 @@ import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_perc
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rater.dart';
-import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
-import 'package:shooting_sports_analyst/ui/rater/rater_view.dart';
-import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_sorts.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 part 'rating_system.g.dart';
 
-abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C extends RaterSettingsController<S>> {
+abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings> {
   /// Use in rating changes
   static const ratingKey = "rating";
 
@@ -117,36 +114,6 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings, C 
   int histogramBucketSize({required int shooterCount, required int matchCount, required double minRating, required double maxRating}) {
     return 100;
   }
-
-  /// Return a new instance of a [RaterSettingsController] subclass for
-  /// the given rater type, which allows the UI to retrieve settings and
-  /// restore defaults.
-  RaterSettingsController<S> newSettingsController();
-
-  /// Return a widget tree which can be inserted into a child of a Column
-  /// wrapped in a SingleChildScrollView, which implements the settings for this
-  /// rating system.
-  RaterSettingsWidget<S, C> newSettingsWidget(C controller);
-
-  /// Return a Row containing labels for a table of shooter ratings.
-  Row buildRatingKey(BuildContext context, {DateTime? trendDate});
-
-  /// Return a ScoreRow containing values for a given shooter rating in a table of shooter ratings.
-  ///
-  /// [rating] is guaranteed to be the subclass of ShooterRating corresponding to this
-  /// rating system.
-  ///
-  /// If [trendDate] is provided, the rating change since that date should be displayed in
-  /// place of the last-30-events trend.
-  ///
-  /// If [scaleFactor] is provided, the rating should be scaled by the given factor for display.
-  ScoreRow buildRatingRow({
-    required BuildContext context,
-    required int place,
-    required ShooterRating rating,
-    DateTime? trendDate,
-    RatingScaler? scaler,
-  });
 
   /// Return a representation of a shooter rating suitable for display in e.g.
   /// a table.

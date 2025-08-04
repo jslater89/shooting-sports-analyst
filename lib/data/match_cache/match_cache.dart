@@ -9,7 +9,7 @@ import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:hive/hive.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+// import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/practiscore_parser.dart';
 import 'package:shooting_sports_analyst/data/results_file_parser.dart';
@@ -46,14 +46,12 @@ class MatchCache {
   /// Index is the full index of the cache. The index is always fully loaded when
   /// loading the match cache.
   Map<String, MatchCacheIndexEntry> _index = {};
-  late SharedPreferences _prefs;
   /// Box contains the full match files. Items are loaded from _box to _cache on demand.
   late Box<String> _box;
   /// IndexBox contains the match index, and is loaded on start.
   late Box<MatchCacheIndexEntry> _indexBox;
   static const _cachePrefix = "cache/";
   static const _cacheSeparator = "XxX";
-  static const _migrated = "migrated?";
 
   void _init() async {
     Hive.registerAdapter(MatchCacheIndexEntryAdapter());
@@ -61,11 +59,6 @@ class MatchCache {
     _box = await Hive.openBox<String>("match-cache");
     _indexBox = await Hive.openBox<MatchCacheIndexEntry>("match-cache-index");
 
-    if(!_box.containsKey(_migrated)) {
-      _prefs = await SharedPreferences.getInstance();
-      await _migrate();
-    }
-    
     if(_indexBox.isEmpty) {
       await _instance!._load();
       await _firstTimeIndex();
@@ -618,24 +611,6 @@ class MatchCache {
   List<MatchCacheIndexEntry> allIndexEntries() {
     var idxSet = Set<MatchCacheIndexEntry>()..addAll(_index.values);
     return idxSet.toList();
-  }
-
-  Future<void> _migrate() async {
-    _log.i("Migrating MatchCache to HiveDB");
-    for(var key in _prefs.getKeys()) {
-      if (key.startsWith(_cachePrefix)) {
-        var string = _prefs.getString(key);
-        if (string != null) {
-          _box.put(key, string);
-          _log.v("Moved $key to Hive");
-        }
-        _prefs.remove(key);
-        _log.v("Deleted $key from shared prefs");
-      }
-    }
-
-    _box.put(_migrated, "true");
-    _log.i("Migration complete");
   }
 }
 

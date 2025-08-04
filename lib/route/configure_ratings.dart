@@ -25,17 +25,23 @@ import 'package:shooting_sports_analyst/data/help/openskill_help.dart';
 import 'package:shooting_sports_analyst/data/help/points_help.dart';
 import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_settings_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_system_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/elo/ui/elo_settings_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/marbles/ui/marble_settings_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/openskill/ui/openskill_settings_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/points/ui/points_settings_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/shooter_aliases.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
@@ -108,6 +114,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   late RaterSettingsController _settingsController;
   RaterSettingsWidget? _settingsWidget;
   late RatingSystem _ratingSystem;
+  late RatingSystemUi _ratingSystemUi;
   _ConfigurableRater? _currentRater = _ConfigurableRater.multiplayerElo;
 
   bool _forceRecalculate = false;
@@ -187,10 +194,11 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     _log.i("Autosaved project not found with id ${dbPrefs.lastProjectId} or fallback $prefsLastProjectId, loading defaults");
 
     _ratingSystem = MultiplayerPercentEloRater();
+    _ratingSystemUi = EloSettingsUi();
     sport = uspsaSport;
-    _settingsController = _ratingSystem.newSettingsController();
+    _settingsController = _ratingSystemUi.newSettingsController();
     setState(() {
-      _settingsWidget = _ratingSystem.newSettingsWidget(_settingsController);
+      _settingsWidget = _ratingSystemUi.newSettingsWidget(_settingsController);
       _settingsController.currentSettings = _ratingSystem.settings;
     });
     _restoreDefaults();
@@ -217,12 +225,13 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     });
     var algorithm = project.settings.algorithm;
     _ratingSystem = algorithm;
-    _settingsController = algorithm.newSettingsController();
+    _ratingSystemUi = RatingSystemUi.forAlgorithm(algorithm);
+    _settingsController = _ratingSystemUi.newSettingsController();
     setState(() {
       _settingsWidget = null;
     });
     setState(() {
-      _settingsWidget = algorithm.newSettingsWidget(_settingsController);
+      _settingsWidget = _ratingSystemUi.newSettingsWidget(_settingsController);
     });
     _settingsController.currentSettings = algorithm.settings;
     _currentRater = _currentRaterFor(algorithm);
@@ -842,28 +851,32 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         case _ConfigurableRater.multiplayerElo:
           settings = EloSettings();
           _ratingSystem = MultiplayerPercentEloRater(settings: settings as EloSettings);
-          _settingsController = _ratingSystem.newSettingsController();
+          _ratingSystemUi = EloSettingsUi();
+          _settingsController = _ratingSystemUi.newSettingsController();
           break;
         case _ConfigurableRater.points:
           settings = PointsSettings();
           _ratingSystem = PointsRater(settings as PointsSettings);
-          _settingsController = _ratingSystem.newSettingsController();
+          _ratingSystemUi = PointsSettingsUi();
+          _settingsController = _ratingSystemUi.newSettingsController();
           break;
         case _ConfigurableRater.openskill:
           settings = OpenskillSettings();
           _ratingSystem = OpenskillRater(settings: settings as OpenskillSettings);
-          _settingsController = _ratingSystem.newSettingsController();
+          _ratingSystemUi = OpenskillSettingsUi();
+          _settingsController = _ratingSystemUi.newSettingsController();
           break;
         case _ConfigurableRater.marbles:
           settings = MarbleSettings();
           _ratingSystem = MarbleRater(settings: settings as MarbleSettings);
-          _settingsController = _ratingSystem.newSettingsController();
+          _ratingSystemUi = MarbleSettingsUi();
+          _settingsController = _ratingSystemUi.newSettingsController();
           break;
       }
 
       setState(() {
         _currentRater = v;
-        _settingsWidget = _ratingSystem.newSettingsWidget(_settingsController);
+        _settingsWidget = _ratingSystemUi.newSettingsWidget(_settingsController);
       });
       _settingsController.currentSettings = settings;
     }

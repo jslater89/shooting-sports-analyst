@@ -6,8 +6,21 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_settings_ui.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_system_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_settings.dart';
+
+class OpenskillSettingsUi extends RatingSystemUi<OpenskillSettings, OpenskillSettingsController> {
+  @override
+  OpenskillSettingsController newSettingsController() {
+    return OpenskillSettingsController();
+  }
+
+  @override
+  OpenskillSettingsWidget newSettingsWidget(OpenskillSettingsController controller) {
+    return OpenskillSettingsWidget(controller: controller);
+  }
+}
 
 class OpenskillSettingsController extends RaterSettingsController<OpenskillSettings> with ChangeNotifier {
   OpenskillSettings _currentSettings;

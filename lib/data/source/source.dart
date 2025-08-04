@@ -4,7 +4,6 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:flutter/widgets.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/source/match_source_error.dart';
@@ -70,21 +69,6 @@ abstract class MatchSource<T extends InternalMatchType, S extends InternalMatchF
   ///
   /// A caller providing [sport] requires a match belonging to the provided sport.
   Future<Result<ShootingMatch, MatchSourceError>> getMatchFromId(String id, {SportType? typeHint, Sport? sport, S? options});
-
-  /// Return the UI to be displayed in the 'get match' dialog.
-  ///
-  /// The returned UI should fit an 800px by 500px box (or allow scrolling, if taller
-  /// than 500px). The enclosing UI will provide 'cancel' or 'back' functionality.
-  ///
-  /// Call [onMatchSelected] with a match if one is selected for immediate viewing,
-  /// [onMatchDownloaded] with a match if one is selected for background download, or
-  /// [onError] with an error if one occurs during a match selection/download.
-  Widget getDownloadMatchUI({
-    required void Function(ShootingMatch) onMatchSelected,
-    void Function(ShootingMatch)? onMatchDownloaded,
-    required void Function(MatchSourceError) onError,
-    String? initialSearch,
-  });
 
   static Future<Result<ShootingMatch, MatchSourceError>> reloadMatch(DbShootingMatch match) async {
     var source = MatchSourceRegistry().getByCodeOrNull(match.sourceCode);

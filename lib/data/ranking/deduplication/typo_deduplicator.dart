@@ -5,14 +5,12 @@
  */
 
 import 'package:collection/collection.dart';
-import 'package:flutter/widgets.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/standard_deduplicator.dart';
 import 'package:fuzzywuzzy/fuzzywuzzy.dart' as fuzzywuzzy;
-import 'package:shooting_sports_analyst/data/sport/builtins/idpa.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -167,15 +165,5 @@ class TypoDeduplicator extends StandardDeduplicator {
       return [number];
     }
     return [];
-  }
-
-  @override
-  InlineSpan linksForMemberNumbers({required BuildContext context, required String text, required List<String> memberNumbers, TextStyle? runningStyle, TextStyle? linkStyle}) {
-    if(sport == idpaSport) {
-      return MemberNumberLinker("https://www.idpa.com/members/{{number}}/").linksForMemberNumbers(context: context, text: text, memberNumbers: memberNumbers, runningStyle: runningStyle, linkStyle: linkStyle);
-    }
-    else {
-      return super.linksForMemberNumbers(context: context, text: text, memberNumbers: memberNumbers, runningStyle: runningStyle, linkStyle: linkStyle);
-    }
   }
 }

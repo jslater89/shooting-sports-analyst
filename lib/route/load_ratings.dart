@@ -14,6 +14,7 @@ import 'package:shooting_sports_analyst/data/ranking/timings.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/rater/deduplication_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
+import 'package:shooting_sports_analyst/ui_util.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 SSALogger _log = SSALogger("LoadRatingsPage");
@@ -77,7 +78,7 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
       widget.onError(error);
     }
     else {
-      var config = ConfigLoader().config;
+      var config = ChangeNotifierConfigLoader().config;
       if(config.playRatingsCalculationCompleteAlert) {
         var complete = result.unwrap();
         if(complete.matchesAddedCount > 0) {

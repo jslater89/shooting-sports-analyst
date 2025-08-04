@@ -8,11 +8,11 @@ import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/match/practical_match.dart' as oldschema;
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/sport/match/translator.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/match_prediction_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
-import 'package:shooting_sports_analyst/ui/result_page.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 
 /// A class that provides information about the match source used
 /// to download or create a match.
@@ -31,9 +31,6 @@ class BareSourceIdsProvider implements SourceIdsProvider {
     this.sourceCode = "(n/a)",
     required this.sourceIds,
   });
-}
-enum FilterMode {
-  or, and,
 }
 
 /// A match in some shooting event.

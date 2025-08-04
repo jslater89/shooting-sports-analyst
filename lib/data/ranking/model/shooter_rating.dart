@@ -6,15 +6,13 @@
 
 
 import 'package:collection/collection.dart';
-import 'package:flutter/foundation.dart';
 import 'package:isar/isar.dart';
+import 'package:meta/meta.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
-import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
-import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/connectivity/valid_competitors.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
@@ -23,6 +21,7 @@ import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/average_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';

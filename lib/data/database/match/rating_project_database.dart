@@ -17,7 +17,7 @@ import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/timings.dart';
-import 'package:shooting_sports_analyst/data/source/practiscore_report.dart';
+import 'package:shooting_sports_analyst/data/source/practiscore_report_constants.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -790,7 +790,7 @@ extension RatingProjectDatabase on AnalystDatabase {
       var id = matchUrl.split("/").last;
       String? prefixedId = null;
       if(shortIdRegex.hasMatch(id)) {
-        prefixedId = "${PractiscoreHitFactorReportParser.uspsaCode}:$id";
+        prefixedId = "${uspsaCode}:$id";
       }
       var match = await getMatchByAnySourceId([
         id,

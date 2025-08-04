@@ -31,6 +31,31 @@ class UrlEntryDialog extends StatefulWidget {
 
   @override
   State<UrlEntryDialog> createState() => _UrlEntryDialogState();
+
+  static Future<String?> show(BuildContext context, {
+    String? hintText,
+    List<MatchSource>? sources,
+    String? title,
+    String? descriptionText,
+    String? Function(String)? validator,
+    bool? showCacheCheckbox,
+    bool? initialCacheValue,
+    bool? barrierDismissible,
+  }) async {
+    return showDialog<String?>(
+      context: context,
+      barrierDismissible: barrierDismissible ?? true,
+      builder: (context) => UrlEntryDialog(
+        hintText: hintText,
+        sources: sources,
+        title: title,
+        descriptionText: descriptionText,
+        validator: validator,
+        showCacheCheckbox: showCacheCheckbox,
+        initialCacheValue: initialCacheValue,
+      ),
+    );
+  }
 }
 
 class _UrlEntryDialogState extends State<UrlEntryDialog> {

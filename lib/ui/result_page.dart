@@ -14,11 +14,12 @@ import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/application_preferences.dart';
-import 'package:shooting_sports_analyst/data/database/schema/preferences.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/fantasy/fantasy_points_mode.dart';
 import 'package:shooting_sports_analyst/data/help/results_help.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/memory_cached_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_display_mode.dart';
 import 'package:shooting_sports_analyst/data/search_query_parser.dart';
 import 'package:shooting_sports_analyst/data/sort_mode.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
@@ -28,7 +29,9 @@ import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/match/stage_stats_calculator.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/fantasy_scoring_calculator.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/match_prediction_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
@@ -40,7 +43,6 @@ import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/score_list_settings_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/stage_stats_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/filter_controls.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_breakdown.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_list.dart';
 
@@ -897,67 +899,6 @@ class ScoreDisplaySettings {
     prefs.fantasyPointsMode = fantasyPointsMode;
     AnalystDatabase().savePreferencesSync(prefs);
   }
-}
-
-enum RatingDisplayMode {
-  preMatch,
-  postMatch,
-  change;
-
-  String get uiLabel {
-    switch(this) {
-
-      case RatingDisplayMode.preMatch:
-        return "Pre-match";
-      case RatingDisplayMode.postMatch:
-        return "Post-match";
-      case RatingDisplayMode.change:
-        return "Change";
-    }
-  }
-}
-
-enum MatchPredictionMode {
-  none,
-  highAvailable,
-  averageStageFinish,
-  averageHistoricalFinish,
-  /// Predict only shooters who have completed at least one stage.
-  eloAwarePartial,
-  /// Predict shooters who haven't appeared at the match yet, but are registered.
-  eloAwareFull;
-
-  static List<MatchPredictionMode> dropdownValues(bool includeElo) {
-    if(includeElo) return values;
-    else return [none, highAvailable, averageStageFinish];
-  }
-
-  bool get eloAware => switch(this) {
-    eloAwarePartial => true,
-    eloAwareFull => true,
-    _ => false,
-  };
-
-  String get uiLabel => switch(this) {
-    none => "None",
-    highAvailable => "High available",
-    averageStageFinish => "Average stage finish",
-    averageHistoricalFinish => "Average finish in ratings",
-    eloAwarePartial => "Elo-aware (seen only)",
-    eloAwareFull => "Elo-aware (all entrants)",
-  };
-}
-
-enum FantasyPointsMode {
-  off,
-  byDivision,
-  currentFilters;
-
-  String get uiLabel => switch(this) {
-    off => "Off",
-    byDivision => "By division",
-    currentFilters => "Current filters",
-  };
 }
 
 enum _MenuEntry {

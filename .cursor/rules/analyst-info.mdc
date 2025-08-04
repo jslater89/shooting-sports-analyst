@@ -1,6 +1,6 @@
 ---
-description: 
-globs: 
+description:
+globs:
 alwaysApply: true
 ---
 
@@ -13,7 +13,7 @@ also has advanced features for viewing and comparing results, and watching match
 ## Infrastructure
 The project's database is in [analyst_database.dart](mdc:lib/data/database/analyst_database.dart).
 
-There is a logger in [logger.dart](mdc:lib/logger.dart), which should be instantiated as `var _log = SSALogger("LogTag")` when
+There is a logger in [logger.dart](mdc:lib/logger.dart), which should be instantiated as `final _log = SSALogger("LogTag")` when
 needed.
 
 ## Practical Shooting Primer

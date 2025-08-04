@@ -14,7 +14,7 @@ class RatingContext with ChangeNotifier {
   int? _projectId;
 
   RatingContext() {
-    _projectId = ConfigLoader().config.ratingsContextProjectId;
+    _projectId = ChangeNotifierConfigLoader().config.ratingsContextProjectId;
   }
 
   bool get hasProjectId => _projectId != null;
@@ -38,22 +38,22 @@ class RatingContext with ChangeNotifier {
 
   Future<void> setProjectId(int projectId) async {
     _projectId = projectId;
-    ConfigLoader().config.ratingsContextProjectId = projectId;
-    await ConfigLoader().save();
+    ChangeNotifierConfigLoader().config.ratingsContextProjectId = projectId;
+    await ChangeNotifierConfigLoader().save();
     notifyListeners();
   }
 
   Future<void> clearProjectId() async {
     _projectId = null;
-    ConfigLoader().config.ratingsContextProjectId = null;
-    await ConfigLoader().save();
+    ChangeNotifierConfigLoader().config.ratingsContextProjectId = null;
+    await ChangeNotifierConfigLoader().save();
     notifyListeners();
   }
 
   Future<void> setProject(DbRatingProject project) async {
     _projectId = project.id;
-    ConfigLoader().config.ratingsContextProjectId = project.id;
-    await ConfigLoader().save();
+    ChangeNotifierConfigLoader().config.ratingsContextProjectId = project.id;
+    await ChangeNotifierConfigLoader().save();
     notifyListeners();
   }
 }

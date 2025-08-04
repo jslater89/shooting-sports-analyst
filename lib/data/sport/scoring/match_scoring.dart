@@ -12,10 +12,10 @@ import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/match_prediction_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/logger.dart';
-import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 var _log = SSALogger("MatchScoring");

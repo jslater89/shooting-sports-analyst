@@ -37,6 +37,7 @@ import 'package:shooting_sports_analyst/ui/rater/rater_stats_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/rater_view.dart';
 import 'package:shooting_sports_analyst/ui/rater/rater_view_other_settings_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/rating_filter_dialog.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_sorts.dart';
 import 'package:shooting_sports_analyst/ui/rater/reports/report_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/reports/report_view.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';

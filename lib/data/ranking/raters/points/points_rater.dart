@@ -5,14 +5,12 @@
  */
 
 
-import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
-import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_mode.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
-import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/models/decaying_points.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/models/f1_points.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/models/inverse_place.dart';
@@ -20,16 +18,13 @@ import 'package:shooting_sports_analyst/data/ranking/raters/points/models/percen
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_settings.dart';
-import 'package:shooting_sports_analyst/data/ranking/raters/points/ui/points_settings_ui.dart';
-import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
-import 'package:shooting_sports_analyst/ui/rater/rater_view.dart';
-import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_sorts.dart';
 
-class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSettingsController> {
+class PointsRater extends RatingSystem<PointsRating, PointsSettings> {
   PointsRater(this.settings) : model = PointsModel.fromSettings(settings);
 
   final PointsModel model;
@@ -39,80 +34,6 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
     settings.loadFromJson(json);
 
     return PointsRater(settings);
-  }
-
-  static const _leadPaddingFlex = 4;
-  static const _placeFlex = 1;
-  static const _memNumFlex = 2;
-  static const _classFlex = 1;
-  static const _nameFlex = 3;
-  static const _ratingFlex = 2;
-  static const _stagesFlex = 2;
-  static const _ppmFlex = 2;
-  static const _trailPaddingFlex = 4;
-
-  @override
-  Row buildRatingKey(BuildContext context, {DateTime? trendDate}) {
-    return Row(
-      mainAxisSize: MainAxisSize.max,
-      children: [
-        Expanded(flex: _leadPaddingFlex + _placeFlex, child: Text("")),
-        Expanded(flex: _memNumFlex, child: Text("Member #")),
-        Expanded(flex: _classFlex, child: Text("Class")),
-        Expanded(flex: _nameFlex, child: Text("Name")),
-        Expanded(flex: _ratingFlex, child: Text("Points", textAlign: TextAlign.end)),
-        Expanded(
-          flex: _stagesFlex,
-          child: Tooltip(
-            message: "At most ${settings.matchesToCount} matches will count for points.",
-            child: Text("Matches/${settings.matchesToCount}", textAlign: TextAlign.end),
-          ),
-        ),
-        Expanded(flex: _ppmFlex, child: Text("Points/Match", textAlign: TextAlign.end)),
-        Expanded(flex: _trailPaddingFlex, child: Text("")),
-      ],
-    );
-  }
-
-  @override
-  ScoreRow buildRatingRow({
-    required BuildContext context,
-    required int place,
-    required ShooterRating rating,
-    DateTime? trendDate,
-    RatingScaler? scaler,
-  }) {
-    rating as PointsRating;
-
-    var ratingText = "";
-    if(settings.mode == PointsMode.inversePlace || settings.mode == PointsMode.f1) {
-      ratingText = rating.rating.round().toString();
-    }
-    else {
-      ratingText = rating.rating.toStringAsFixed(1);
-    }
-
-    var ppmText = (rating.rating / rating.length.clamp(1, settings.matchesToCount)).toStringAsFixed(1);
-
-    return ScoreRow(
-      color: (place - 1) % 2 == 1 ? Colors.grey[200] : Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(2.0),
-        child: Row(
-          children: [
-            Expanded(flex: _leadPaddingFlex, child: Text("")),
-            Expanded(flex: _placeFlex, child: Text("$place")),
-            Expanded(flex: _memNumFlex, child: Text(rating.memberNumber)),
-            Expanded(flex: _classFlex, child: Text(rating.lastClassification?.shortDisplayName ?? "(none)")),
-            Expanded(flex: _nameFlex, child: Text(rating.getName(suffixes: false))),
-            Expanded(flex: _ratingFlex, child: Text("$ratingText", textAlign: TextAlign.end)),
-            Expanded(flex: _stagesFlex, child: Text("${rating.length}", textAlign: TextAlign.end)),
-            Expanded(flex: _ppmFlex, child: Text("$ppmText", textAlign: TextAlign.end)),
-            Expanded(flex: _trailPaddingFlex, child: Text("")),
-          ]
-        )
-      )
-    );
   }
 
   @override
@@ -125,7 +46,7 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
 
   @override
   void encodeToJson(Map<String, dynamic> json) {
-    json[OldRatingProject.algorithmKey] = OldRatingProject.pointsValue;
+    json[DbRatingProject.algorithmKey] = DbRatingProject.pointsValue;
     settings.encodeToJson(json);
   }
 
@@ -173,16 +94,6 @@ class PointsRater extends RatingSystem<PointsRating, PointsSettings, PointsSetti
       infoLines: infoLines,
       infoData: infoData,
     );
-  }
-
-  @override
-  PointsSettingsController newSettingsController() {
-    return PointsSettingsController();
-  }
-
-  @override
-  PointsSettingsWidget newSettingsWidget(PointsSettingsController controller) {
-    return PointsSettingsWidget(controller: controller);
   }
 
   @override

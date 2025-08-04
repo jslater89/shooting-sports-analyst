@@ -6,16 +6,11 @@
 
 import 'package:collection/collection.dart' show IterableExtension;
 import 'package:cookie_store/cookie_store.dart';
-import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/results_file_parser.dart';
 import 'package:shooting_sports_analyst/data/source/practiscore_report.dart';
-import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
-import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/logger.dart';
-import 'package:shooting_sports_analyst/route/practiscore_url.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/url_entry_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 var _log = SSALogger("PractiscoreParser");
@@ -34,7 +29,7 @@ String? getPractiscoreWebReportUrl(String source) {
   return webReportLine?.split('"').firstWhereOrNull((element) => element.contains("reports/web"));
 }
 
-Future<String?> processMatchUrl(String matchUrl, {BuildContext? context}) async {
+Future<String?> processMatchUrl(String matchUrl) async {
   var matchUrlParts = matchUrl.split("/");
   var matchId = matchUrlParts.last;
 
@@ -43,9 +38,8 @@ Future<String?> processMatchUrl(String matchUrl, {BuildContext? context}) async 
   if(!matchId.contains(r"-")) {
     try {
       if(verboseParse) _log.d("Trying to get match from URL: $matchUrl");
-      var response = await http.get(Uri.parse("${getProxyUrl()}$matchUrl"));
+      var response = await http.get(Uri.parse(matchUrl));
       if(response.statusCode == 404) {
-        if(context != null) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Match not found.")));
         _log.d("404: match not found: $matchUrl");
         return null;
       }
@@ -55,20 +49,17 @@ Future<String?> processMatchUrl(String matchUrl, {BuildContext? context}) async 
           matchId = foundUrl.split("/").last;
         }
         else {
-          if(context != null) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unable to determine web report URL.")));
           _log.d("Unable to determine web report URL (probably not hit factor)");
           return null;
         }
       }
       else {
         _log.e("${response.statusCode} ${response.body}");
-        if(context != null) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unable to download match file.")));
         return null;
       }
     }
     catch(e, st) {
       _log.e("parse error", error: e, stackTrace: st);
-      if(context != null) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Unable to download match file.")));
       return null;
     }
   }
@@ -84,8 +75,7 @@ Future<Result<PracticalMatch, MatchGetError>> getPractiscoreMatchHeadless(String
   }
   var outCookies = practiscoreCookies.getCookiesForRequest("practiscore.com", "/reports/web/$matchId");
 
-  var proxyUrl = getProxyUrl();
-  var reportUrl = "${proxyUrl}https://practiscore.com/reports/web/$matchId";
+  var reportUrl = "https://practiscore.com/reports/web/$matchId";
   if(verboseParse) _log.d("Report download URL: $reportUrl");
 
   var responseString = "";
@@ -144,59 +134,4 @@ Future<Result<PracticalMatch, MatchGetError>> getPractiscoreMatchHeadless(String
     _log.e("download error pt. 2", error: err, stackTrace: stackTrace);
   }
   return Result.err(MatchGetError.network);
-}
-
-Future<String?> getMatchId(BuildContext context, {String? presetUrl}) async {
-  var matchUrl = presetUrl ??
-      await getMatchUrl(context);
-
-  if (matchUrl == null) {
-    return null;
-  }
-
-  var matchId = processMatchUrl(matchUrl, context: context);
-
-  return matchId;
-}
-
-Future<(MatchSource, String?)?> getMatchIdWithSource(BuildContext context) async {
-  (MatchSource, String?)? response;
-  response = await getMatchUrlWithSource(context);
-
-  if (response == null || response.$2 == null) {
-    return null;
-  }
-
-  var (matchSource, matchUrl) = response;
-
-  var matchId = await processMatchUrl(matchUrl!, context: context);
-
-  return (matchSource, matchId);
-}
-
-Future<(MatchSource, String?)?> getMatchUrlWithSource(BuildContext context) {
-  return showDialog<(MatchSource, String?)>(
-      context: context,
-      builder: (context) {
-        return UrlEntryDialog(
-          hintText: "https://practiscore.com/results/new/...",
-          title: "Enter PractiScore match URL",
-          descriptionText: "Copy the URL to the match's PractiScore results page and paste it in the field below.",
-          sources: MatchSourceRegistry().practiscoreUrlSources,
-        );
-      }
-  );
-}
-
-Future<String?> getMatchUrl(BuildContext context) {
-  return showDialog<String>(
-    context: context,
-    builder: (context) {
-      return UrlEntryDialog(
-        hintText: "https://practiscore.com/results/new/...",
-        title: "Enter PractiScore match URL",
-        descriptionText: "Copy the URL to the match's PractiScore results page and paste it in the field below.",
-      );
-    }
-  );
 }

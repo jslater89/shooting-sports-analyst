@@ -7,11 +7,19 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'package:mutex/mutex.dart';
-import 'package:shooting_sports_analyst/config/config.dart';
+import 'package:shooting_sports_analyst/config/serialized_config.dart';
 import 'package:stack_trace/stack_trace.dart';
+
+abstract interface class DebugModeProvider {
+  bool get kDebugMode;
+  bool get kReleaseMode;
+}
+
+abstract interface class ConfigProvider {
+  void addListener(void Function(SerializedConfig config));
+}
 
 SSALogger _log = SSALogger.consoleOnly("LoggerInternal");
 
@@ -20,13 +28,14 @@ SSALogger _log = SSALogger.consoleOnly("LoggerInternal");
 // takes effect.
 Level _minLevel = Level.trace;
 
-void initLogger() {
-  ConfigLoader().addListener(() {
-    _minLevel = ConfigLoader().config.logLevel;
-  });
+void initLogger(SerializedConfig? initialConfig, ConfigProvider provider) {
+  _minLevel = initialConfig?.logLevel ?? Level.trace;
+  provider.addListener((config) => _minLevel = config.logLevel);
 }
 
 class _SSALogFilter extends LogFilter {
+  bool get kReleaseMode => SSALogger.debugProvider.kReleaseMode;
+
   @override
   bool shouldLog(LogEvent event) {
     if(kReleaseMode) {
@@ -209,7 +218,11 @@ class _SSALogOutput extends LogOutput {
 }
 
 class SSALogger extends LogPrinter {
-  static const _callsiteLevel = kDebugMode ? Level.debug : Level.warning;
+  static late DebugModeProvider debugProvider;
+  static bool get kDebugMode => debugProvider.kDebugMode;
+  static bool get kReleaseMode => debugProvider.kReleaseMode;
+
+  static Level get _callsiteLevel => kDebugMode ? Level.debug : Level.warning;
 
   late _SSALogOutput _output;
   late Logger _logger;

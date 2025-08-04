@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/sort_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';

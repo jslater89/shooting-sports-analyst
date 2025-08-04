@@ -6,8 +6,8 @@
 
 import 'dart:convert';
 
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
-import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
 
 const _kKey = "k";
 const _probBaseKey = "probBase";
@@ -203,7 +203,7 @@ class EloSettings extends RaterSettings {
 
   @override
   void encodeToJson(Map<String, dynamic> json) {
-    json[OldRatingProject.byStageKey] = byStage;
+    json[DbRatingProject.byStageKey] = byStage;
     json[_kKey] = K;
     json[_probBaseKey] = probabilityBase;
     json[_pctWeightKey] = percentWeight;
@@ -242,7 +242,7 @@ class EloSettings extends RaterSettings {
     probabilityBase = (json[_probBaseKey] ?? defaultProbabilityBase) as double;
     scale = (json[_scaleKey] ?? defaultScale) as double;
     matchBlend = (json[_matchBlendKey] ?? defaultMatchBlend) as double;
-    byStage = (json[OldRatingProject.byStageKey] ?? true) as bool;
+    byStage = (json[DbRatingProject.byStageKey] ?? true) as bool;
     errorAwareK = (json[_errorAwareKKey] ?? true) as bool;
     errorAwareMaxValue = (json[_errorAwareMaxValueKey] ?? defaultScale) as double;
     errorAwareZeroValue = (json[_errorAwareZeroValueKey] ?? defaultErrorAwareZeroValue) as double;

@@ -8,8 +8,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:hive/hive.dart';
-import 'package:sanitize_filename/sanitize_filename.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/match/shooter.dart';
 import 'package:shooting_sports_analyst/data/ranking/legacy_loader/old_rating_project.dart';
 import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
@@ -19,7 +18,6 @@ import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/legacy_loader/rating_history.dart';
 import 'package:shooting_sports_analyst/data/ranking/shooter_aliases.dart';
-import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 
 var _log = SSALogger("RatingProjectMgr");
@@ -34,27 +32,25 @@ class RatingProjectManager {
       _instance = RatingProjectManager._();
       _instance!._init();
     }
-    
+
     return _instance!;
   }
-  
+
   RatingProjectManager._() : _readyCompleter = Completer() {
     ready = _readyCompleter.future;
   }
-  
+
   late Future<bool> ready;
   Completer<bool> _readyCompleter;
   static bool get readyNow => _instance != null && _instance!._readyCompleter.isCompleted;
 
-  late SharedPreferences _prefs;
   late Box<String> _box;
   static const String _migrated = "migrated?";
-  
+
   Future<void> _init() async {
     _box = await Hive.openBox<String>("rating-projects");
 
     if(!_box.containsKey(_migrated)) {
-      _prefs = await SharedPreferences.getInstance();
       await _migrate();
     }
     await _loadFromPrefs();
@@ -90,50 +86,26 @@ class RatingProjectManager {
 
   Future<void> _migrate() async {
     _log.i("Migrating ProjectManager to HiveDB");
-    for(var key in _prefs.getKeys()) {
-      if (key.startsWith(projectPrefix)) {
-        var string = _prefs.getString(key);
-        if (string != null) {
-          _box.put(key, string);
-          _log.v("Moved $key to Hive");
-        }
-        _prefs.remove(key);
-        _log.v("Deleted $key from shared prefs");
-      }
-    }
 
     _box.put(_migrated, "true");
     _log.i("Migration complete");
   }
 
   Future<void> exportToFile(OldRatingProject project) async {
-    await HtmlOr.saveFile("${sanitizeFilename(project.name, replacement: "-").replaceAll(RegExp(r"\s+"), "-")}.json", project.toJson());
+    // await HtmlOr.saveFile("${sanitizeFilename(project.name, replacement: "-").replaceAll(RegExp(r"\s+"), "-")}.json", project.toJson());
   }
 
   Future<OldRatingProject?> importFromFile() async {
-    var fileContents = await HtmlOr.pickAndReadFileNow();
-
-    if(fileContents != null) {
-      try {
-        var encodedProject = jsonDecode(fileContents);
-        var project =  OldRatingProject.fromJson(encodedProject);
-        project.name = "${project.name}";
-        return project;
-      } catch(e, st) {
-        _log.e("Error loading file", error: e, stackTrace: st);
-      }
-    }
-
     return null;
   }
-  
+
   // Maps project name to a project
   Map<String, OldRatingProject> _projects = {};
-  
+
   bool projectExists(String name) {
     return _projects.containsKey(name);
   }
-  
+
   Future<void> saveProject(OldRatingProject project, {String? mapName}) async {
     _projects[project.name] = project;
     if(mapName != null && mapName != project.name) {
@@ -162,7 +134,7 @@ class RatingProjectManager {
   List<String> savedProjects() {
     return _projects.keys.toList();
   }
-  
+
   OldRatingProject? loadProject(String name) {
     var project = _projects[name];
     if(project != null) {
@@ -197,13 +169,6 @@ const _groupsKey = "groups";
 // Values for the multiplayer percent elo rater.
 
 class OldRatingProject {
-  // TODO: move these somewhere newer
-  static const byStageKey = "byStage";
-  static const algorithmKey = "algo";
-  static const multiplayerEloValue = "multiElo";
-  static const openskillValue = "openskill";
-  static const pointsValue = "points";
-  static const marbleValue = "marbles";
 
   String name;
   OldRatingProjectSettings settings;
@@ -260,7 +225,7 @@ class OldRatingProject {
       groups = []..addAll(((encodedProject[_groupsKey] ?? []) as List<dynamic>).map((s) => OldRaterGroup.values.byName(s)));
     }
 
-    var algorithmName = (encodedProject[algorithmKey] ?? multiplayerEloValue) as String;
+    var algorithmName = (encodedProject[DbRatingProject.algorithmKey] ?? DbRatingProject.multiplayerEloValue) as String;
     var algorithm = _algorithmForName(algorithmName, encodedProject);
 
     var recognizedDivisions = <String, List<Division>>{};
@@ -312,11 +277,11 @@ class OldRatingProject {
 
   static RatingSystem _algorithmForName(String name, Map<String, dynamic> encodedProject) {
     switch(name) {
-      case multiplayerEloValue:
+      case DbRatingProject.multiplayerEloValue:
         return MultiplayerPercentEloRater.fromJson(encodedProject);
-      case pointsValue:
+      case DbRatingProject.pointsValue:
         return PointsRater.fromJson(encodedProject);
-      case openskillValue:
+      case DbRatingProject.openskillValue:
         return OpenskillRater.fromJson(encodedProject);
       default:
         throw ArgumentError();

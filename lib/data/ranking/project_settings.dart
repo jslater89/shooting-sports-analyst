@@ -7,6 +7,7 @@
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
@@ -146,7 +147,7 @@ class RatingProjectSettings {
   factory RatingProjectSettings.fromOld(OldRatingProject project) {
     var sport = uspsaSport;
     var oldMap = jsonDecode(project.toJson());
-    var algorithmName = oldMap[OldRatingProject.algorithmKey];
+    var algorithmName = oldMap[DbRatingProject.algorithmKey];
     var algorithm = RatingSystem.algorithmForName(algorithmName, oldMap);
     var recognizedDivisions = Map.fromEntries(project.settings.recognizedDivisions.entries.map((e) =>
       MapEntry(e.key, e.value.map((d) => sport.divisions.lookupByName(d.name)!).toList())

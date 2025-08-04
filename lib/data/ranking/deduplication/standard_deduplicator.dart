@@ -5,17 +5,13 @@
  */
 
 import 'package:collection/collection.dart';
-import 'package:flutter/gestures.dart';
-import 'package:flutter/widgets.dart';
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/logger.dart';
-import 'package:shooting_sports_analyst/ui/text_styles.dart';
 import 'package:shooting_sports_analyst/util.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 var _log = SSALogger("StandardDeduplicator");
 
@@ -606,82 +602,5 @@ extension BlacklistCheck on Map<String, List<String>> {
       if(blacklist == null) return false;
       return blacklist.contains(target);
     }
-  }
-}
-
-class MemberNumberLinker {
-  // The URL to use for the link. The location of the member number in the URL should
-  // be indicated by the placeholder string {{number}}.
-  final String url;
-
-  MemberNumberLinker(this.url);
-
-   InlineSpan linksForMemberNumbers({
-    required BuildContext context,
-    required String text,
-    required List<String> memberNumbers,
-    TextStyle? runningStyle,
-    TextStyle? linkStyle,
-  }) {
-    runningStyle ??= TextStyles.bodyMedium(context);
-    linkStyle ??= TextStyles.linkBodyMedium(context);
-
-    // sort member numbers by length, longest first, so that
-    // we never split a longer member number by a shorter one
-    // that happens to be a substring of it
-    // e.g. for "53007" and "A53007", if we split by "53007" first
-    // we'll end up with "A53007" -> ["A", "53007"] eventually
-    memberNumbers.sort((a, b) => b.length.compareTo(a.length));
-
-    Map<String, TextSpan> spans = {};
-    for(var number in memberNumbers) {
-      spans[number] = TextSpan(
-        text: number,
-        style: linkStyle,
-        recognizer: TapGestureRecognizer()..onTap = () => launchUrl(Uri.parse(url.replaceFirst("{{number}}", number))),
-        mouseCursor: SystemMouseCursors.click,
-      );
-    }
-
-    int index = 0;
-    Map<int, String> numberIndexes = {};
-
-    // Replace each member number with a guard string that will let us split
-    // after the member number.
-    // e.g.: "String contains A123456, a standard number" -> "String contains ZzZ0XxX, a standard number"
-    List<TextSpan> allSpans = [];
-    String splittableText = text;
-    for(var n in memberNumbers) {
-      numberIndexes[index] = n;
-      splittableText = splittableText.replaceAll(n, "ZzZ${index}XxX");
-      index++;
-    }
-
-    // Split the text into parts, and replace each part with a TextSpan, replacing each
-    // member number guard string with the corresponding text span.
-    // e.g.: "String contains ZzZ0XxX, a standard number" -> ["String contains ZzZ0", ", a standard number"]
-    List<String> parts = splittableText.split("XxX");
-    for(var part in parts) {
-      TextSpan? linkSpan;
-      // Each part should contain zero or one guard strings of the format ZzZ<index>.
-      // Extract it and replace it with the corresponding TextSpan.
-      var pattern = RegExp(r"ZzZ(\d+)");
-      var match = pattern.firstMatch(part);
-      if(match != null) {
-        var index = int.parse(match.group(1)!);
-        var number = numberIndexes[index];
-        linkSpan = spans[number];
-        part = part.replaceFirst(pattern, "");
-      }
-
-      allSpans.add(TextSpan(text: part, style: runningStyle));
-      if(linkSpan != null) {
-        allSpans.add(linkSpan);
-      }
-    }
-
-    return TextSpan(
-      children: allSpans,
-    );
   }
 }

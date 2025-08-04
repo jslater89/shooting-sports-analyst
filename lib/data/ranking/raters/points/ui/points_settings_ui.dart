@@ -7,8 +7,22 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_settings_ui.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_system_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_settings.dart';
+
+class PointsSettingsUi extends RatingSystemUi<PointsSettings, PointsSettingsController> {
+
+  @override
+  PointsSettingsController newSettingsController() {
+    return PointsSettingsController();
+  }
+
+  @override
+  PointsSettingsWidget newSettingsWidget(PointsSettingsController controller) {
+    return PointsSettingsWidget(controller: controller);
+  }
+}
 
 class PointsSettingsController extends RaterSettingsController<PointsSettings> with ChangeNotifier {
   PointsSettings _currentSettings;

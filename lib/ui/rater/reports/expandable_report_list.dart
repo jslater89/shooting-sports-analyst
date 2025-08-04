@@ -6,6 +6,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shooting_sports_analyst/ui/rater/rating_report_ui.dart';
 import 'package:shooting_sports_analyst/ui/rater/reports/report_view.dart';
 
 class ExpandableReportList extends StatelessWidget {

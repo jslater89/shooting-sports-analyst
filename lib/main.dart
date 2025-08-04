@@ -9,13 +9,17 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' as foundation;
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hive/hive.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
+import 'package:shooting_sports_analyst/config/secure_config.dart';
+import 'package:shooting_sports_analyst/config/serialized_config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/help/all_helps.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
@@ -56,14 +60,48 @@ class GlobalData {
 
 GlobalData globals = GlobalData();
 
+class FlutterDebugProvider implements DebugModeProvider {
+  bool get kDebugMode => foundation.kDebugMode;
+
+  @override
+  bool get kReleaseMode => foundation.kReleaseMode;
+}
+
+class FlutterConfigProvider implements ConfigProvider {
+  @override
+  void addListener(void Function(SerializedConfig config) listener) {
+    ChangeNotifierConfigLoader().addListener(() {
+      listener.call(ConfigLoader().config);
+    });
+  }
+}
+
+class FlutterSecureStorageProvider implements SecureStorageProvider {
+  @override
+  Future<void> write(String key, String value) async {
+    await FlutterSecureStorage().write(key: key, value: value);
+  }
+
+  @override
+  Future<String?> read(String key) async {
+    return await FlutterSecureStorage().read(key: key);
+  }
+
+  @override
+  Future<void> delete(String key) async {
+    await FlutterSecureStorage().delete(key: key);
+  }
+}
+
 void main() async {
+  SSALogger.debugProvider = FlutterDebugProvider();
   // dumpRatings();
 
   FlutterError.onError = (details) {
     _log.e("Flutter error", error: details.exceptionAsString(), stackTrace: details.stack);
   };
   runZonedGuarded(() async {
-      WidgetsFlutterBinding.ensureInitialized();
+    WidgetsFlutterBinding.ensureInitialized();
 
     _log.i("=== App start ===");
     var info = await PackageInfo.fromPlatform();
@@ -113,7 +151,8 @@ void main() async {
     });
 
     await ConfigLoader().ready;
-    initLogger();
+    SecureConfig.storageEngine = FlutterSecureStorageProvider();
+    initLogger(ConfigLoader().config, FlutterConfigProvider());
 
     await AnalystDatabase().ready;
     _log.i("Database ready");

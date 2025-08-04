@@ -4,13 +4,13 @@
 
 import 'package:json_annotation/json_annotation.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/match_prediction_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/ui/booth/global_card_settings_dialog.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
 import 'package:shooting_sports_analyst/ui/booth/score_utils.dart';
-import 'package:shooting_sports_analyst/ui/result_page.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 
 part 'scorecard_model.g.dart';
 

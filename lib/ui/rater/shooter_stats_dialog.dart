@@ -15,10 +15,10 @@ import 'package:shooting_sports_analyst/data/ranking/model/career_stats.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:community_charts_flutter/community_charts_flutter.dart' as charts;
 // ignore: implementation_imports

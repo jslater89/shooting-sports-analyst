@@ -7,13 +7,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shooting_sports_analyst/data/help/marbles_configuration_help.dart';
-import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_settings_ui.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_system_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/model/marble_model.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/model/ordinal_power_law_model.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/model/power_law_model.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/model/sigmoid_model.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
+
+class MarbleSettingsUi extends RatingSystemUi<MarbleSettings, MarbleSettingsController> {
+  @override
+  MarbleSettingsController newSettingsController() {
+    return MarbleSettingsController();
+  }
+
+  @override
+  MarbleSettingsWidget newSettingsWidget(MarbleSettingsController controller) {
+    return MarbleSettingsWidget(controller: controller);
+  }
+}
 
 class MarbleSettingsController extends RaterSettingsController<MarbleSettings> with ChangeNotifier {
   MarbleSettings _currentSettings;

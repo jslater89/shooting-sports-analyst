@@ -9,7 +9,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
 import 'package:shooting_sports_analyst/data/model.dart';
-import 'package:shooting_sports_analyst/data/practiscore_parser.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
@@ -18,6 +17,7 @@ import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/rater/shooter_stats_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/box_and_whisker.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/url_entry_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 
 var _log = SSALogger("PredictionView");
@@ -175,7 +175,7 @@ class _PredictionViewState extends State<PredictionView> {
   void _validate(double highPrediction) async {
     await MatchCache().ready;
 
-    var matchUrl = await getMatchUrl(context);
+    var matchUrl = await UrlEntryDialog.show(context, hintText: "https://practiscore.com/reports/web/");
 
     if(matchUrl == null) return;
 

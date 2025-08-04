@@ -7,11 +7,11 @@
  */
 
 import 'package:cookie_store/cookie_store.dart';
-import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shooting_sports_analyst/config/secure_config.dart';
 import 'package:shooting_sports_analyst/data/practiscore_parser.dart';
 import 'package:shooting_sports_analyst/data/source/match_source_error.dart';
+import 'package:shooting_sports_analyst/data/source/practiscore_report_constants.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/ipsc.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/pcsl.dart';
@@ -21,7 +21,6 @@ import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
-import 'package:shooting_sports_analyst/route/practiscore_url.dart';
 import 'package:shooting_sports_analyst/util.dart';
 import 'package:http/http.dart' as http;
 
@@ -39,10 +38,6 @@ var practiscoreCookies = CookieStore();
 /// If the sport has event levels, they must match the PractiScore I/II/III
 /// format in one of the name fields.
 class PractiscoreHitFactorReportParser extends MatchSource {
-  static const uspsaCode = "report-uspsa";
-  static const ipscCode = "report-ipsc";
-  static const pcslCode = "report-pcsl";
-
   Sport sport;
   bool verboseParse;
 
@@ -421,8 +416,7 @@ class PractiscoreHitFactorReportParser extends MatchSource {
   }
 
   Future<Result<String, MatchSourceError>> getPractiscoreReportFile(String matchId) async {
-    var proxyUrl = getProxyUrl();
-    var reportUrl = "${proxyUrl}https://practiscore.com/reports/web/$matchId";
+    var reportUrl = "https://practiscore.com/reports/web/$matchId";
     if(verboseParse) _log.d("Report download URL: $reportUrl");
 
     var responseString = "";
@@ -538,52 +532,6 @@ class PractiscoreHitFactorReportParser extends MatchSource {
       return Result.err(fileContentsResult.unwrapErr());
     }
     return Future.value(parseWebReport(fileContentsResult.unwrap(), sourceIds: [applyCode(id)]));
-  }
-
-  @override
-  Widget getDownloadMatchUI({
-    required void Function(ShootingMatch) onMatchSelected,
-    void Function(ShootingMatch)? onMatchDownloaded,
-    required void Function(MatchSourceError) onError,
-    String? initialSearch,
-  }) {
-    return Builder(builder: (context) {
-      var onSubmitted = (String value) async {
-        var matchId = await processMatchUrl(value);
-        if(matchId != null) {
-          var matchResult = await getMatchFromId(matchId, sport: sport);
-          if(matchResult.isErr()) {
-            onError(matchResult.unwrapErr());
-          }
-          else {
-            onMatchSelected(matchResult.unwrap());
-          }
-        }
-        else {
-          onError(FormatError(StringError("Match ID not found in URL")));
-        }
-      };
-      var controller = TextEditingController(text: initialSearch);
-      return Column(
-        children: [
-          Text("Enter a link to a match and press Enter."),
-          TextField(
-            controller: controller,
-            decoration: InputDecoration(
-              hintText: "https://practiscore.com/results/new/...",
-                suffixIcon: IconButton(
-                  color: Theme.of(context).buttonTheme.colorScheme?.primary,
-                  icon: Icon(Icons.search),
-                  onPressed: () {
-                    onSubmitted(controller.text);
-                  },
-                )
-            ),
-            onSubmitted: onSubmitted,
-          ),
-        ],
-      );
-    });
   }
 }
 

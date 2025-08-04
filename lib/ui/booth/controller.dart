@@ -13,12 +13,12 @@ import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/match_prediction_mode.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/ui/booth/global_card_settings_dialog.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_model.dart';
-import 'package:shooting_sports_analyst/ui/result_page.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 
 SSALogger _log = SSALogger("BoothController");
 

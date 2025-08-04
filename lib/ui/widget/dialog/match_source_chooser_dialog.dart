@@ -6,6 +6,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
+import 'package:shooting_sports_analyst/data/source/source_ui.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 
 class MatchSourceChooserDialog extends StatefulWidget {
@@ -98,7 +99,8 @@ class _MatchSourceChooserDialogState extends State<MatchSourceChooserDialog> {
               ),
               Divider(),
               Expanded(child:
-                source.getDownloadMatchUI(
+                SourceUI.forSource(source).getDownloadMatchUIFor(
+                  source: source,
                   onMatchSelected: (match) {
                     submit(match);
                   },

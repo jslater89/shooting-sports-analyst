@@ -5,6 +5,9 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/data/fantasy/fantasy_points_mode.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_display_mode.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/match_prediction_mode.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 
 class ScoreListSettingsDialog extends StatefulWidget {

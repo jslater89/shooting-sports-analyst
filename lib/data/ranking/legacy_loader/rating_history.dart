@@ -12,9 +12,9 @@ import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manag
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_error.dart';
-import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/logger.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/member_number_collision_dialog.dart';
+// import 'package:shooting_sports_analyst/ui/widget/dialog/member_number_collision_dialog.dart';
 
 var _log = SSALogger("RatingHistory");
 
@@ -79,10 +79,6 @@ class OldRatingHistory {
   void resetRaters() {
     _lastMatch = null;
     _ratersByDivision.clear();
-  }
-
-  void applyFix(CollisionFix fix) {
-    _settings.applyFix(fix);
   }
 
   Future<RatingResult> processInitialMatches() async {

@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_report.dart';
+import 'package:shooting_sports_analyst/ui/rater/rating_report_ui.dart';
 import 'package:shooting_sports_analyst/ui/rater/reports/report_view.dart';
 
 class ReportFilterBar extends StatelessWidget {
@@ -113,7 +114,7 @@ class ReportFilterBar extends StatelessWidget {
             ),
           ),
         ),
-        
+
       ],
     );
   }

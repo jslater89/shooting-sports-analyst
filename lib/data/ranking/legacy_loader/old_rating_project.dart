@@ -9,7 +9,6 @@ import 'package:shooting_sports_analyst/data/ranking/member_number_correction.da
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/legacy_loader/rating_history.dart';
 import 'package:shooting_sports_analyst/data/ranking/shooter_aliases.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/member_number_collision_dialog.dart';
 
 class OldRatingProjectSettings {
   // All of the below are serialized
@@ -86,29 +85,6 @@ class OldRatingProjectSettings {
   }) {
     if(memberNumberCorrections != null) this.memberNumberCorrections = memberNumberCorrections;
     else this.memberNumberCorrections = MemberNumberCorrectionContainer();
-  }
-
-  void applyFix(CollisionFix fix) {
-    switch(fix.action) {
-      case CollisionFixAction.mapping:
-        userMemberNumberMappings[fix.memberNumber1] = fix.memberNumber2;
-        break;
-      case CollisionFixAction.blacklist:
-        memberNumberMappingBlacklist[fix.memberNumber1] = fix.memberNumber2;
-        break;
-      case CollisionFixAction.dataFix:
-        memberNumberCorrections.add(MemberNumberCorrection(
-          name: fix.name1!,
-          invalidNumber: fix.memberNumber1,
-          correctedNumber: fix.memberNumber2
-        ));
-        break;
-      case CollisionFixAction.abort:
-        throw StateError("can't apply 'abort'");
-      case CollisionFixAction.skipRemainingDataErrors:
-        transientDataEntryErrorSkip = true;
-        break;
-    }
   }
 
   static List<OldRaterGroup> groupsForSettings({bool combineOpenPCC = false, LimLoCoCombination limLoCo = LimLoCoCombination.none, bool combineLocap = true}) {

@@ -6,8 +6,6 @@
 
 import 'dart:convert';
 // ignore: avoid_web_libraries_in_flutter
-import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/application_preferences.dart';
@@ -18,10 +16,8 @@ import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 
 import 'package:flutter/material.dart';
-import 'package:shooting_sports_analyst/data/practiscore_parser.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/main.dart';
-import 'package:shooting_sports_analyst/preference_names.dart';
 import 'package:shooting_sports_analyst/route/broadcast_booth_page.dart';
 import 'package:shooting_sports_analyst/route/match_database_manager.dart';
 import 'package:shooting_sports_analyst/route/practiscore_url.dart';
@@ -77,10 +73,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _launchPresetPractiscore({String? url}) async {
-    var matchId = await getMatchId(context, presetUrl: url);
-    if(matchId != null) {
-      HtmlOr.navigateTo(context, "/web/report-uspsa/$matchId");
-    }
+    // var matchId = await getMatchId(context, presetUrl: url);
+    //if(matchId != null) {
+    //  HtmlOr.navigateTo(context, "/web/report-uspsa/$matchId");
+    //}
   }
 
   void _launchNonPractiscoreFile({required String url}) async {
@@ -100,7 +96,7 @@ class _HomePageState extends State<HomePage> {
           onPressed: () async {
             var config = await AppSettingsDialog.show(context);
             if(config != null) {
-              ConfigLoader().setConfig(config);
+              ChangeNotifierConfigLoader().setConfig(config);
             }
           },
         ),

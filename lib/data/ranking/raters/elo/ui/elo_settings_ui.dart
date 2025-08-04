@@ -8,9 +8,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shooting_sports_analyst/data/help/elo_configuration_help.dart';
-import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_system_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_settings_ui.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
+
+class EloSettingsUi extends RatingSystemUi<EloSettings, EloSettingsController> {
+  @override
+  EloSettingsController newSettingsController() {
+    return EloSettingsController();
+  }
+
+  @override
+  EloSettingsWidget newSettingsWidget(EloSettingsController controller) {
+    return EloSettingsWidget(controller: controller);
+  }
+}
 
 class EloSettingsController extends RaterSettingsController<EloSettings> with ChangeNotifier {
   EloSettings _currentSettings;

@@ -7,8 +7,8 @@
 import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/logger.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 
 var _log = SSALogger("CareerStats");
 

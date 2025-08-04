@@ -8,10 +8,11 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/match_prediction_mode.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_model.dart';
-import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 
 SSALogger _log = SSALogger("ScorecardSettingsDialog");

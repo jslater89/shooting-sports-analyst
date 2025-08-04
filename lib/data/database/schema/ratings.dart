@@ -18,15 +18,14 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rat
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
-import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
 import 'package:uuid/v4.dart';
 
@@ -66,6 +65,19 @@ mixin DbDivisionEntity on DbSportEntity {
 
 @collection
 class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRatingDataSource {
+  @ignore
+  static const byStageKey = "byStage";
+  @ignore
+  static const algorithmKey = "algo";
+  @ignore
+  static const multiplayerEloValue = "multiElo";
+  @ignore
+  static const openskillValue = "openskill";
+  @ignore
+  static const pointsValue = "points";
+  @ignore
+  static const marbleValue = "marbles";
+
   Id id = Isar.autoIncrement;
 
   @override
@@ -206,7 +218,7 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   RatingProjectSettings get settings {
     if(_settings == null) {
       var jsonSettings = jsonDecodedSettings;
-      var algorithmName = (jsonSettings[OldRatingProject.algorithmKey] ?? OldRatingProject.multiplayerEloValue) as String;
+      var algorithmName = (jsonSettings[DbRatingProject.algorithmKey] ?? DbRatingProject.multiplayerEloValue) as String;
       var algorithm = RatingSystem.algorithmForName(algorithmName, jsonSettings);
       _settings = RatingProjectSettings.decodeFromJson(sport, algorithm, jsonSettings);
     }

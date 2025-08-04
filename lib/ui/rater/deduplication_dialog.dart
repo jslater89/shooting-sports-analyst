@@ -13,12 +13,12 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/help/deduplication_help.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
+import 'package:shooting_sports_analyst/data/ranking/deduplication/deduplicator_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/text_styles.dart';
-import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/ui/widget/constrained_tooltip.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/deduplication/blacklist.dart';
@@ -103,7 +103,7 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
       _viewed[_selectedCollision!] = true;
     }
 
-    if(ConfigLoader().config.playDeduplicationAlert) {
+    if(ChangeNotifierConfigLoader().config.playDeduplicationAlert) {
       player = AudioPlayer();
       player?.play(AssetSource("audio/update-bell.mp3"));
     }
@@ -876,7 +876,7 @@ class IssueDescription extends StatelessWidget {
     }
     if(dedup != null) {
       var text = "• Multiple ${issue.memberNumberType.infixName} numbers: ${issue.memberNumbers.join(", ")}$probablyInvalidString$strdiffString";
-      return RichText(text: dedup.linksForMemberNumbers(
+      return RichText(text: MemberNumberLinker.forDeduplicator(dedup).linksForMemberNumbers(
         context: context,
         text: text,
         memberNumbers: issue.memberNumbers,
@@ -912,7 +912,7 @@ class IssueDescription extends StatelessWidget {
       targetNumbers = issue.targetNumbers.firstOrNull ?? "(null)";
     }
     if(dedup != null) {
-      return RichText(text: dedup.linksForMemberNumbers(
+      return RichText(text: MemberNumberLinker.forDeduplicator(dedup).linksForMemberNumbers(
         context: context,
         text: "• Ambiguous mapping from $sourceNumbers to $targetNumbers",
         memberNumbers: [...issue.sourceNumbers, ...issue.targetNumbers],
@@ -962,7 +962,7 @@ class _DedupLink extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return RichText(text: deduplicator.linksForMemberNumbers(
+    return RichText(text: MemberNumberLinker.forDeduplicator(deduplicator).linksForMemberNumbers(
       context: context,
       text: number,
       memberNumbers: [number],
@@ -984,7 +984,7 @@ class ProposedAction extends StatelessWidget {
     Widget textWidget;
     var dedup = sport.shooterDeduplicator;
     if(dedup != null) {
-      textWidget = RichText(text: dedup.linksForMemberNumbers(
+      textWidget = RichText(text: MemberNumberLinker.forDeduplicator(dedup).linksForMemberNumbers(
         context: context,
         text: action.descriptiveString,
         memberNumbers: action.coveredNumbers.toList(),

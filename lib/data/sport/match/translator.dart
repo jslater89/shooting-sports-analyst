@@ -4,15 +4,14 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
+import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_code.dart';
 import 'package:shooting_sports_analyst/data/match/practical_match.dart' as old;
 import 'package:shooting_sports_analyst/data/match/score.dart';
 import 'package:shooting_sports_analyst/data/match/shooter.dart' as oldS;
-import 'package:shooting_sports_analyst/data/source/practiscore_report.dart';
+import 'package:shooting_sports_analyst/data/source/practiscore_report_constants.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
-import 'package:shooting_sports_analyst/data/sport/scoring/stage_scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
@@ -99,11 +98,11 @@ extension MatchTranslator on ShootingMatch {
       stages: newStages,
       shooters: newShooters,
       level: uspsaSport.eventLevels.lookupByName((match.level ?? old.MatchLevel.I).name)!,
-      sourceCode: PSv2MatchSource.psv2Code,
+      sourceCode: psv2Code,
       sourceIds: [
         // practiscoreID is a UUID, so it doesn't need a prefix, but practiscoreIdShort is an incrementing int
         "${match.practiscoreId}",
-        if(match.practiscoreIdShort != null) "${PractiscoreHitFactorReportParser.uspsaCode}:${match.practiscoreIdShort!}",
+        if(match.practiscoreIdShort != null) "${uspsaCode}:${match.practiscoreIdShort!}",
       ]
     );
 

@@ -16,9 +16,9 @@ import 'package:shooting_sports_analyst/data/database/schema/match_heat.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/standardized_maximum_scaler.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/logger.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 
 final _log = SSALogger("MatchHeatDatabase");
 
