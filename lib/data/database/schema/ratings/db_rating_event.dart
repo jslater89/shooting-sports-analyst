@@ -17,7 +17,7 @@ import 'package:sprintf/sprintf.dart';
 part 'db_rating_event.g.dart';
 
 @collection
-class DbRatingEvent implements IRatingEvent {
+class DbRatingEvent implements IRatingEvent, IConnectivityEvent {
   Id id = Isar.autoIncrement;
 
   @ignore
@@ -72,6 +72,10 @@ class DbRatingEvent implements IRatingEvent {
   double ratingChange;
   double oldRating;
   double get newRating => oldRating + ratingChange;
+
+  double newConnectivity = 1.0;
+  double oldConnectivity = 1.0;
+  double get connectivityChange => newConnectivity - oldConnectivity;
 
   /// A synthetic incrementing value used to sort rating events by date and stage
   /// number.

@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:shooting_sports_analyst/data/ranking/deduplication/typo_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
 import 'package:shooting_sports_analyst/data/sort_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
@@ -29,6 +30,14 @@ const idpaDivisions = [
   const Division(name: "NFC", longName: "Not For Competition", shortName: "NFC", alternateNames: ["SPD", "Not For Competition (NFC)", "N/A"], fallback: true),
 ];
 
+const _icoreDM = const Classification(index: 0, name: "Distinguished Master", shortName: "DM");
+const _icoreMA = const Classification(index: 1, name: "Master", shortName: "MA");
+const _icoreEX = const Classification(index: 2, name: "Expert", shortName: "EX");
+const _icoreSS = const Classification(index: 3, name: "Sharpshooter", shortName: "SS");
+const _icoreMM = const Classification(index: 4, name: "Marksman", shortName: "MM");
+const _icoreNV = const Classification(index: 5, name: "Novice", shortName: "NV");
+const _icoreUN = const Classification(index: 6, name: "Unclassified", shortName: "UN", fallback: true);
+
 final idpaSport = Sport(
     idpaSportName,
     type: SportType.idpa,
@@ -43,13 +52,13 @@ final idpaSport = Sport(
       SortMode.classification,
     ],
     classifications: [
-      const Classification(index: 0, name: "Distinguished Master", shortName: "DM"),
-      const Classification(index: 1, name: "Master", shortName: "MA"),
-      const Classification(index: 2, name: "Expert", shortName: "EX"),
-      const Classification(index: 3, name: "Sharpshooter", shortName: "SS"),
-      const Classification(index: 4, name: "Marksman", shortName: "MM"),
-      const Classification(index: 5, name: "Novice", shortName: "NV"),
-      const Classification(index: 6, name: "Unclassified", shortName: "UN", fallback: true),
+      _icoreDM,
+      _icoreMA,
+      _icoreEX,
+      _icoreSS,
+      _icoreMM,
+      _icoreNV,
+      _icoreUN,
     ],
     divisions: idpaDivisions,
     powerFactors: [
@@ -64,4 +73,14 @@ final idpaSport = Sport(
       ),
     ],
     builtinRatingGroupsProvider: DivisionRatingGroupProvider(idpaSportName, idpaDivisions),
+    shooterDeduplicator: TypoDeduplicator(sportName: idpaSportName, validNumberRegex: RegExp(r"^[a-zA-Z]{1,3}[0-9]{3,9}$")),
+    initialEloRatings: {
+      _icoreDM: 1400,
+      _icoreMA: 1200,
+      _icoreEX: 1000,
+      _icoreSS: 900,
+      _icoreMM: 800,
+      _icoreNV: 700,
+      _icoreUN: 800,
+    }
 );

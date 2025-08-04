@@ -213,7 +213,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
     }
 
     sc.scores = match.getScoresFromFilters(
-      sc.scoreFilters,
+      sc.fullScoreFilters.filterSet ?? sc.scoreFilters,
       shooterUuids: sc.fullScoreFilters.entryUuids,
       shooterIds: sc.fullScoreFilters.entryIds,
       scoresAfter: sc.scoresAfter,

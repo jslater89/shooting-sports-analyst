@@ -18,6 +18,7 @@ import 'package:shooting_sports_analyst/data/database/schema/fantasy/standing.da
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/team.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_heat.dart';
+import 'package:shooting_sports_analyst/data/database/schema/preferences.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
@@ -84,6 +85,7 @@ class AnalystDatabase {
         DbShooterRatingSchema,
         MatchRegistrationMappingSchema,
         MatchHeatSchema,
+        ApplicationPreferencesSchema,
 
         // Fantasy-related collections
         FantasyUserSchema,
@@ -307,6 +309,10 @@ class AnalystDatabase {
     return await isar.dbShootingMatchs.where().anyOf(ids, (query, id) => query.sourceIdsElementEqualTo(id)).findAll();
   }
 
+  DbShootingMatch? getMatchByAnySourceIdSync(List<String> ids) {
+    return isar.dbShootingMatchs.where().anyOf(ids, (query, id) => query.sourceIdsElementEqualTo(id)).findFirstSync();
+  }
+
   Future<DbShootingMatch?> getMatchBySourceId(String id) {
     return getMatchByAnySourceId([id]);
   }
@@ -349,15 +355,6 @@ class AnalystDatabase {
       _log.e("Failed to delete match", error: e, stackTrace: stackTrace);
       return Result.err(StringError(e.toString()));
     }
-  }
-
-  DbShootingMatch? getMatchByAnySourceIdSync(List<String> ids) {
-    for(var id in ids) {
-      var match = isar.dbShootingMatchs.getBySourceIdsSync([id]);
-      if(match != null) return match;
-    }
-
-    return null;
   }
 
   Future<void> migrateFromMatchCache(ProgressCallback callback) async {

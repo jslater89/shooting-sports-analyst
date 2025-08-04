@@ -4,6 +4,8 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:math';
+
 import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
@@ -162,6 +164,9 @@ class DbShooterRating extends Shooter with DbSportEntity {
   /// Match windows contain competitor information used to calculate connectivity.
   List<MatchWindow> matchWindows = [];
 
+  /// Contains aggregate statistical information used to calculate connectivity.
+  AggregateConnectivityData aggregateConnectivityData = AggregateConnectivityData();
+
   /// Historical connectivity entries (raw DB list). See [historicalConnectivity].
   List<HistoricalConnectivity> dbHistoricalConnectivity = [];
 
@@ -190,6 +195,13 @@ class DbShooterRating extends Shooter with DbSportEntity {
     _historicalConnectivity!.remove(entry);
     _historicalConnectivity!.add(entry);
     dbHistoricalConnectivity = _historicalConnectivity!.toList();
+  }
+
+  /// Get the historical connectivity entry for a given match.
+  ///
+  /// Returns null if no entry exists for the match.
+  HistoricalConnectivity? getHistoricalConnectivityForMatch(SourceIdsProvider match) {
+    return historicalConnectivity.firstWhereOrNull((e) => e.forMatch(match));
   }
 
   /// Use to store algorithm-specific double data.
@@ -380,6 +392,11 @@ class MatchWindow {
   }
 }
 
+/// A historical connectivity entry, representing the connectivity score a competitor
+/// possessed after a given match.
+///
+/// Note that equality is based only on the first matchSourceId; the actual connectivity
+/// score is not considered in the equality check.
 @embedded
 class HistoricalConnectivity {
   /// A single source ID for the match for this entry, for set membership checks.
@@ -418,4 +435,63 @@ class HistoricalConnectivity {
 
   @ignore
   int get hashCode => matchSourceId.hashCode;
+}
+
+@embedded
+class AggregateConnectivityData {
+  /// Total number of competitor encounters across all matches
+  int totalEncounters = 0;
+
+  /// Number of matches competed in
+  int matchCount = 0;
+
+  /// Sum of squared match sizes (for variance calculation)
+  double sumSquaredMatchSizes = 0.0;
+
+  /// Sum of cubed match sizes (for skewness calculation)
+  double sumCubedMatchSizes = 0.0;
+
+  /// All match sizes (for perfect min/max tracking and rollback)
+  List<int> matchSizes = [];
+
+  void addMatch(int competitorCount) {
+    matchCount++;
+    totalEncounters += competitorCount;
+    double size = competitorCount.toDouble();
+    sumSquaredMatchSizes += size * size;
+    sumCubedMatchSizes += size * size * size;
+
+    matchSizes = [...matchSizes, competitorCount];
+  }
+
+  void removeMatch(int competitorCount) {
+    if (matchCount <= 0) return;
+
+    matchCount--;
+    totalEncounters -= competitorCount;
+    double size = competitorCount.toDouble();
+    sumSquaredMatchSizes -= size * size;
+    sumCubedMatchSizes -= size * size * size;
+
+    var index = matchSizes.lastIndexWhere((e) => e == competitorCount);
+    if(index != -1) {
+      var newSizes = [...matchSizes];
+      newSizes.removeAt(index);
+      matchSizes = newSizes;
+    }
+  }
+
+  @ignore
+  /// Get current minimum match size
+  int get minMatchSize {
+    if (matchSizes.isEmpty) return 0;
+    return matchSizes.reduce(min);
+  }
+
+  @ignore
+  /// Get current maximum match size
+  int get maxMatchSize {
+    if (matchSizes.isEmpty) return 0;
+    return matchSizes.reduce(max);
+  }
 }

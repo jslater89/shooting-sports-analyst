@@ -291,18 +291,18 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
 
   /// Delete all shooter ratings and rating events belonging to this project.
   Future<void> resetRatings() async {
-    return AnalystDatabase().isar.writeTxn(() async {
-      await ratings.load();
-      var eventCount = 0;
+    await ratings.load();
+    AnalystDatabase().isar.writeTxnSync(() {
+      int eventCount = 0;
       for(var r in ratings) {
-        var count = await r.events.filter().deleteAll();
-        await r.events.reset();
+        var count = r.events.filter().deleteAllSync();
+        r.events.resetSync();
         eventCount += count;
       }
 
       lastUsedMatches = [];
-      var count = await ratings.filter().deleteAll();
-      await ratings.reset();
+      var count = ratings.filter().deleteAllSync();
+      ratings.resetSync();
       _log.i("Cleared $count ratings and $eventCount events");
     });
   }
@@ -332,6 +332,10 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
       .findAll());
   }
 
+  DataSourceResult<List<DbShooterRating>> getRatingsSync(RatingGroup group) {
+    return DataSourceResult.ok(ratings.filter().group((q) => q.idEqualTo(group.id)).findAllSync());
+  }
+
   Future<DataSourceResult<List<DbShooterRating>>> getRatingsByDeduplicatorName(RatingGroup group, String deduplicatorName) async {
     return DataSourceResult.ok(await ratings.filter()
       .group((q) => q.idEqualTo(group.id))
@@ -352,6 +356,10 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   @override
   Future<DataSourceResult<RatingProjectSettings>> getSettings() {
     return Future.value(DataSourceResult.ok(settings));
+  }
+
+  RatingProjectSettings getSettingsSync() {
+    return settings;
   }
 
   @override
@@ -397,6 +405,24 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
     }
 
     return Future.value(DataSourceResult.ok(outGroup));
+  }
+
+  DataSourceResult<RatingGroup?> groupForDivisionSync(Division? division) {
+    var fewestDivisions = 65536;
+    RatingGroup? outGroup = null;
+    if(division == null) {
+      // TODO: this might not be the right result for a null division
+      return DataSourceResult.ok(groups.first);
+    }
+
+    for(var group in groups) {
+      if(group.divisions.length < fewestDivisions && group.divisions.contains(division)) {
+        fewestDivisions = group.divisions.length;
+        outGroup = group;
+      }
+    }
+
+    return DataSourceResult.ok(outGroup);
   }
 
   @override
@@ -666,7 +692,7 @@ class MatchPointer with DbSportEntity implements SourceIdsProvider {
     name = match.name,
     date = match.date,
     sourceCode = match.sourceCode,
-    sourceIds = match.sourceIds,
+    sourceIds = [...match.sourceIds],
     matchLevelName = match.level?.name,
     localDbId = match.databaseId;
 
@@ -675,7 +701,7 @@ class MatchPointer with DbSportEntity implements SourceIdsProvider {
     name = match.eventName,
     date = match.date,
     sourceCode = match.sourceCode,
-    sourceIds = match.sourceIds,
+    sourceIds = [...match.sourceIds],
     localDbId = match.id
   {
     matchLevelName = match.matchLevelName;

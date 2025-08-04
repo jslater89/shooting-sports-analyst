@@ -1,4 +1,5 @@
-// ignore_for_file: unused_local_variable
+// ignore_for_file: unused_local_variable, unused_element
+// ignore_for_file: unused_import
 
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public
@@ -19,6 +20,8 @@ import 'package:shooting_sports_analyst/data/database/match/rating_project_datab
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_heat.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/math/distribution_tools.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/standardized_maximum_scaler.dart';
@@ -43,8 +46,10 @@ Future<void> oneoffDbAnalyses(AnalystDatabase db) async {
   //await calculateMatchHeat(db, project);
 
   // await _analyzeIcoreDump(File("/home/jay/Downloads/masterScores.json"));
-  // await _importIcoreDump(File("/home/jay/Downloads/masterScores.json"));
+  // await _importIcoreDump(File("/home/jay/Documents/tmp/icore-stats/masterScores-20250723.json"));
   // await _winningPointsByDate();
+
+  // await _stageSizeAnalysis(db);
 }
 
 Future<void> _howGoodIsTomCastro(AnalystDatabase db) async {
@@ -499,5 +504,251 @@ Future<void> _winningPointsByDate() async {
       File f = File("/tmp/winning_percent_points_${division.name}.csv");
       f.writeAsStringSync(csvLines.join("\n"));
     }
+  }
+}
+
+class _StagePointer {
+  MatchPointer match;
+  int stageNumber;
+  int roundCount;
+
+  _StagePointer({required this.match, required this.stageNumber, required this.roundCount});
+
+  operator ==(Object other) {
+    if(other is _StagePointer) {
+      return match.sourceIds.first == other.match.sourceIds.first && stageNumber == other.stageNumber;
+    }
+    return false;
+  }
+
+  int get hashCode => combineHashes(match.sourceIds.first.hashCode, stageNumber.hashCode);
+}
+
+class _StagePerformance {
+  _StagePointer stage;
+  double place;
+  double ratio;
+  double ratingChange;
+  bool positive;
+  double positiveProportion;
+
+  _StagePerformance({required this.stage, required this.place, required this.ratio, required this.ratingChange, required this.positive, double? positiveProportion}) :
+    this.positiveProportion = positiveProportion ?? (positive ? 1 : 0);
+
+
+  operator +(Object other) {
+    if(other is _StagePerformance) {
+      return _StagePerformance(
+        stage: stage,
+        place: (place + other.place),
+        ratio: (ratio + other.ratio),
+        ratingChange: (ratingChange + other.ratingChange),
+        positive: positive && other.positive,
+      );
+    }
+    return this;
+  }
+
+  operator /(int count) {
+    return _StagePerformance(stage: stage, place: place / count, ratio: ratio / count, ratingChange: ratingChange / count, positive: positive, positiveProportion: positiveProportion / count);
+  }
+}
+
+class _TotalStagePerformance {
+  int count = 0;
+  double place = 0;
+  double placeStdDev = 0;
+  double ratio = 0;
+  double ratioStdDev = 0;
+  double ratingChange = 0;
+  double ratingChangeStdDev = 0;
+  double positiveProportion = 0;
+
+  _TotalStagePerformance();
+
+  _TotalStagePerformance.from(List<_StagePerformance> stages) {
+    count = stages.length;
+    if(count == 0) {
+      return;
+    }
+    place = stages.map((e) => e.place).average;
+    ratio = stages.map((e) => e.ratio).average;
+    ratingChange = stages.map((e) => e.ratingChange).average;
+    positiveProportion = stages.map((e) => e.positiveProportion).average;
+    placeStdDev = stages.map((e) => e.place).stdDev();
+    ratioStdDev = stages.map((e) => e.ratio).stdDev();
+    ratingChangeStdDev = stages.map((e) => e.ratingChange).stdDev();
+  }
+}
+
+Future<void> _stageSizeAnalysis(AnalystDatabase db) async {
+
+  final bool normalizeStageSizeCounts = false;
+
+  var project = await db.getRatingProjectByName("L2s Main");
+  if(project == null) {
+    _log.e("L2s Main project not found");
+    return;
+  }
+
+  var matchPointers = project.matchPointers;
+  List<String> stageSizeCsvLines = ["Date, Match Name, Stage Number, Stage Size"];
+  List<_StagePointer> shortCourses = [];
+  List<_StagePointer> mediumCourses = [];
+  List<_StagePointer> longCourses = [];
+  Map<String, DbShootingMatch> matches = {};
+  _log.i("Beginning stage size analysis");
+  for(var pointer in matchPointers) {
+    var matchRes = await pointer.getDbMatch(db);
+    if(matchRes.isErr()) {
+      _log.w("Error getting match: ${matchRes.unwrapErr()}");
+      continue;
+    }
+    var match = matchRes.unwrap();
+    for(var id in match.sourceIds) {
+      matches[id] = match;
+    }
+
+    int shortCourseCount = 0;
+    int mediumCourseCount = 0;
+    int longCourseCount = 0;
+
+    for(var stage in match.stages) {
+      if(stage.minRounds > 0) {
+        stageSizeCsvLines.add('${matchRes.unwrap().date},"${matchRes.unwrap().eventName}",${stage.stageId},${stage.minRounds}');
+      }
+
+      if(stage.minRounds <= 12) {
+        shortCourses.add(_StagePointer(match: pointer, stageNumber: stage.stageId, roundCount: stage.minRounds));
+        shortCourseCount++;
+      }
+      else if(stage.minRounds <= 24) {
+        mediumCourses.add(_StagePointer(match: pointer, stageNumber: stage.stageId, roundCount: stage.minRounds));
+        mediumCourseCount++;
+      }
+      else {
+        longCourses.add(_StagePointer(match: pointer, stageNumber: stage.stageId, roundCount: stage.minRounds));
+        longCourseCount++;
+      }
+    }
+
+    int total = shortCourseCount + mediumCourseCount + longCourseCount;
+    _log.v("${match.eventName}: ${shortCourseCount} short, ${mediumCourseCount} medium, ${longCourseCount} long");
+  }
+
+
+  _log.i("Writing ${stageSizeCsvLines.length} stage size CSV lines");
+  String stageSizeCsv = stageSizeCsvLines.join("\n");
+  File f = File("/tmp/stage_size_analysis.csv");
+  f.writeAsStringSync(stageSizeCsv);
+  _log.i("Finished writing");
+
+  stageSizeCsvLines.clear();
+
+  _log.i("Beginning average analysis");
+  for(var group in project.groups) {
+    Map<DbShooterRating, List<_StagePerformance>> stagePerformances = {};
+    // Each shooter's list contains three elements, one each containing average performances for short, medium, and long courses.
+    Map<DbShooterRating, List<_TotalStagePerformance>> averagePerformancesBySize = {};
+    var ratingsRes = project.getRatingsSync(group);
+    if(ratingsRes.isErr()) {
+      _log.w("Error getting ratings: ${ratingsRes.unwrapErr()}");
+      continue;
+    }
+    var ratings = ratingsRes.unwrap();
+    int totalRatings = ratings.length;
+    ratings.retainWhere((e) => e.lastSeen.isAfter(DateTime(2024, 1, 1)) && e.length >= 30);
+    _log.i("Found ${ratings.length} recent-ish ratings for group ${group.name} (${totalRatings} total)");
+    ratings.sort((a, b) => b.rating.compareTo(a.rating));
+    for(int i = 0; i < ratings.length; i++) {
+      var rating = ratings[i];
+
+      for(var event in rating.events) {
+        var match = matches[event.matchId];
+        if(match == null) {
+          _log.w("Match not found: ${event.matchId}");
+          continue;
+        }
+
+        var stage = match.stages.firstWhereOrNull((e) => e.stageId == event.stageNumber);
+        if(stage == null) {
+          continue;
+        }
+
+        var stagePointer = _StagePointer(match: MatchPointer.fromDbMatch(match), stageNumber: stage.stageId, roundCount: stage.minRounds);
+        var stagePerformance = _StagePerformance(stage: stagePointer, place: event.score.place.toDouble(), ratio: event.score.ratio, ratingChange: event.ratingChange, positive: event.ratingChange > 0);
+        stagePerformances[rating] ??= [];
+        stagePerformances[rating]!.add(stagePerformance);
+      }
+
+      List<_StagePerformance> shortCoursePerformances = [];
+      List<_StagePerformance> mediumCoursePerformances = [];
+      List<_StagePerformance> longCoursePerformances = [];
+      int shortCourseCount = 0;
+      int positiveShortCourses = 0;
+        int mediumCourseCount = 0;
+      int positiveMediumCourses = 0;
+      int longCourseCount = 0;
+      int positiveLongCourses = 0;
+      // Calculate average performances for each stage size.
+      for(var performance in stagePerformances[rating] ?? []) {
+
+        if(performance.stage.roundCount <= 12) {
+          shortCoursePerformances.add(performance);
+          if(performance.positive) {
+            positiveShortCourses++;
+          }
+          shortCourseCount++;
+        }
+        else if(performance.stage.roundCount <= 24) {
+          mediumCoursePerformances.add(performance);
+          if(performance.positive) {
+            positiveMediumCourses++;
+          }
+          mediumCourseCount++;
+        }
+        else {
+          longCoursePerformances.add(performance);
+          if(performance.positive) {
+            positiveLongCourses++;
+          }
+          longCourseCount++;
+        }
+      }
+
+      averagePerformancesBySize[rating] ??= [];
+      var shortCourseTotal = _TotalStagePerformance.from(shortCoursePerformances);
+      averagePerformancesBySize[rating]!.add(shortCourseTotal);
+
+      // ignore: dead_code
+      if(normalizeStageSizeCounts && mediumCourseCount > shortCourseCount) {
+        mediumCoursePerformances.shuffle();
+        mediumCoursePerformances = mediumCoursePerformances.sublist(0, shortCourseCount);
+      }
+
+      var mediumCourseTotal = _TotalStagePerformance.from(mediumCoursePerformances);
+      averagePerformancesBySize[rating]!.add(mediumCourseTotal);
+
+      // ignore: dead_code
+      if(normalizeStageSizeCounts && longCourseCount > shortCourseCount) {
+        longCoursePerformances.shuffle();
+        longCoursePerformances = longCoursePerformances.sublist(0, shortCourseCount);
+      }
+
+      var longCourseTotal = _TotalStagePerformance.from(longCoursePerformances);
+      averagePerformancesBySize[rating]!.add(longCourseTotal);
+    }
+
+    // Write CSV lines for each competitor's averages.
+    List<String> averageCsvLines = ["Shooter Number, Shooter Name, Shooter Rating, SC Count, SC Place, SC Place StdDev, SC Finish, SC Finish StdDev, SC Rating Change, SC Change StdDev, SC Positive Proportion, MC Count, MC Place, MC Place StdDev, MC Finish, MC Finish StdDev, MC Rating Change, MC Change StdDev, MC Positive Proportion, LC Count, LC Place, LC Place StdDev, LC Finish, LC Finish StdDev, LC Rating Change, LC Change StdDev, LC Positive Proportion"];
+    for(var entry in averagePerformancesBySize.entries) {
+      var rating = entry.key;
+      var performances = entry.value;
+      averageCsvLines.add('${rating.memberNumber},"${rating.name.replaceAll('"', "")}",${rating.rating},${performances[0].count}, ${performances[0].place},${performances[0].placeStdDev},${performances[0].ratio},${performances[0].ratioStdDev},${performances[0].ratingChange},${performances[0].ratingChangeStdDev},${performances[0].positiveProportion},${performances[1].count},${performances[1].place},${performances[1].placeStdDev},${performances[1].ratio},${performances[1].ratioStdDev},${performances[1].ratingChange},${performances[1].ratingChangeStdDev},${performances[1].positiveProportion},${performances[2].count},${performances[2].place},${performances[2].placeStdDev},${performances[2].ratio},${performances[2].ratioStdDev},${performances[2].ratingChange},${performances[2].ratingChangeStdDev},${performances[2].positiveProportion}');
+    }
+
+    File f = File("/tmp/stage_size_shooter_analysis_${group.name}.csv");
+    f.writeAsStringSync(averageCsvLines.join("\n"));
+    _log.i("Wrote ${averageCsvLines.length} average lines to ${f.path}");
   }
 }

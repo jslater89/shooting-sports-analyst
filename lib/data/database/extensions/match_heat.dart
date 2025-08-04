@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'dart:math';
 
 import 'package:collection/collection.dart';
@@ -8,7 +14,6 @@ import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart'
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_heat.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
-import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/standardized_maximum_scaler.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';

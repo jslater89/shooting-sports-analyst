@@ -6,11 +6,11 @@
 
 import 'dart:convert';
 // ignore: avoid_web_libraries_in_flutter
-import 'package:flutter/foundation.dart';
-import 'package:fluttericon/rpg_awesome_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
+import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/application_preferences.dart';
 import 'package:shooting_sports_analyst/data/help/welcome_80_help.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
@@ -24,7 +24,6 @@ import 'package:shooting_sports_analyst/main.dart';
 import 'package:shooting_sports_analyst/preference_names.dart';
 import 'package:shooting_sports_analyst/route/broadcast_booth_page.dart';
 import 'package:shooting_sports_analyst/route/match_database_manager.dart';
-import 'package:shooting_sports_analyst/route/match_heat_page.dart';
 import 'package:shooting_sports_analyst/route/practiscore_url.dart';
 import 'package:shooting_sports_analyst/ui/empty_scaffold.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/app_settings.dart';
@@ -61,11 +60,17 @@ class _HomePageState extends State<HomePage> {
 
 
     Future.delayed(Duration.zero, () {
-      var prefs = context.read<SharedPreferences>();
-      var welcomeShown = prefs.getBool(Preferences.welcome80Shown) ?? false;
-      if(!welcomeShown) {
+      var prefs = AnalystDatabase().getPreferencesSync();
+      if(!prefs.welcome80BetaShown) {
+        _log.i("Showing 8.0 beta welcome dialog");
+        prefs.welcome80BetaShown = true;
+        AnalystDatabase().savePreferencesSync(prefs);
+        HelpDialog.show(context, initialTopic: welcome80HelpId);
+      }
+      else if(!prefs.welcome80Shown) {
         _log.i("Showing 8.0 welcome dialog");
-        prefs.setBool(Preferences.welcome80Shown, true);
+        prefs.welcome80Shown = true;
+        AnalystDatabase().savePreferencesSync(prefs);
         HelpDialog.show(context, initialTopic: welcome80HelpId);
       }
     });

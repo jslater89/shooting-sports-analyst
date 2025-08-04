@@ -17,7 +17,6 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/help/match_heat_help.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
-import 'package:shooting_sports_analyst/db_oneoffs.dart';
 import 'package:community_charts_flutter/community_charts_flutter.dart' as charts;
 // import 'package:community_charts_common/community_charts_common.dart' as common;
 import 'package:shooting_sports_analyst/logger.dart';

@@ -7,6 +7,9 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/fantasy_scoring_calculator.dart';
@@ -310,27 +313,25 @@ class RawScore {
   ///
   /// If [countPenalties] is false, [includeTargetPenalties] is ignored.
   int getTotalPoints({bool countPenalties = true, bool allowNegative = false, bool includeTargetPenalties = true}) {
-    if(countPenalties) {
-      if(allowNegative) {
-        return points;
-      }
-      else {
-        return max(0, points);
-      }
+    int total;
+    if(countPenalties && includeTargetPenalties) {
+      total = points;
+    }
+    else if(countPenalties) {
+      var positiveEvents = targetEvents.keys.where((e) => e.pointChange >= 0).toList();
+      total = positiveEvents.map((e) => targetEvents[e]! * e.pointChange).sum;
+      total += penaltyEvents.points;
+    }
+    else { // includeTargetPenalties only
+      var positiveEvents = targetEvents.keys.where((e) => e.pointChange >= 0).toList();
+      total = positiveEvents.map((e) => targetEvents[e]! * e.pointChange).sum;
+    }
+
+    if(allowNegative) {
+      return total;
     }
     else {
-      if(includeTargetPenalties) {
-        if(allowNegative) {
-          return targetEvents.points;
-        }
-        else {
-          return max(0, targetEvents.points);
-        }
-      }
-      else {
-        var positiveEvents = targetEvents.keys.where((e) => e.pointChange >= 0).toList();
-        return positiveEvents.map((e) => targetEvents[e]! * e.pointChange).sum;
-      }
+      return max(0, total);
     }
   }
 
@@ -1072,6 +1073,37 @@ extension Sorting on List<RelativeMatchScore> {
 
       var aRatingValue = aRatingWrapped.ratingForEvent(match, stage);
       var bRatingValue = bRatingWrapped.ratingForEvent(match, stage);
+
+      return bRatingValue.compareTo(aRatingValue);
+    });
+  }
+
+  void sortByLocalRating({required DbRatingProject ratings, required RatingDisplayMode displayMode, required ShootingMatch match, MatchStage? stage}) {
+    var db = AnalystDatabase();
+    this.sort((a, b) {
+      var aGroupRes = ratings.groupForDivisionSync(a.shooter.division);
+      var bGroupRes = ratings.groupForDivisionSync(b.shooter.division);
+      if(aGroupRes.isErr() || bGroupRes.isErr()) return b.ratio.compareTo(a.ratio);
+
+      var aGroup = aGroupRes.unwrap();
+      var bGroup = bGroupRes.unwrap();
+
+      var aRating = db.maybeKnownShooterSync(project: ratings, group: aGroup!, memberNumber: a.shooter.memberNumber);
+      var bRating = db.maybeKnownShooterSync(project: ratings, group: bGroup!, memberNumber: b.shooter.memberNumber);
+
+      if(aRating == null || bRating == null) return b.ratio.compareTo(a.ratio);
+
+      var settings = ratings.getSettingsSync();
+      var aRatingWrapped = settings.algorithm.wrapDbRating(aRating);
+      var bRatingWrapped = settings.algorithm.wrapDbRating(bRating);
+
+      var aRatingValue = aRatingWrapped.ratingForEvent(match, stage, beforeMatch: displayMode == RatingDisplayMode.preMatch);
+      var bRatingValue = bRatingWrapped.ratingForEvent(match, stage, beforeMatch: displayMode == RatingDisplayMode.preMatch);
+
+      if(displayMode == RatingDisplayMode.change) {
+        aRatingValue = aRatingValue - aRatingWrapped.ratingForEvent(match, stage, beforeMatch: true);
+        bRatingValue = bRatingValue - bRatingWrapped.ratingForEvent(match, stage, beforeMatch: true);
+      }
 
       return bRatingValue.compareTo(aRatingValue);
     });

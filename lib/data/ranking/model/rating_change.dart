@@ -45,7 +45,13 @@ abstract interface class IRatingEvent {
   double get newRating;
 }
 
-abstract class RatingEvent implements IRatingEvent {
+abstract interface class IConnectivityEvent extends IRatingEvent {
+  double get connectivityChange;
+  double get oldConnectivity;
+  double get newConnectivity;
+}
+
+abstract class RatingEvent implements IRatingEvent, IConnectivityEvent {
   String get eventName => "${match.name}" + (stage == null ? "" : " - ${stage!.name}");
 
   List<String> get infoLines => wrappedEvent.infoLines;
@@ -130,6 +136,10 @@ abstract class RatingEvent implements IRatingEvent {
   set oldRating(double v) => wrappedEvent.oldRating = v;
 
   double get newRating => oldRating + ratingChange;
+
+  double get oldConnectivity => wrappedEvent.oldConnectivity;
+  double get newConnectivity => wrappedEvent.newConnectivity;
+  double get connectivityChange => wrappedEvent.connectivityChange;
 
   RatingEvent({
     required this.wrappedEvent,

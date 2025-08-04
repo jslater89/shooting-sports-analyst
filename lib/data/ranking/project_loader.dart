@@ -90,6 +90,16 @@ class DeduplicationError extends RatingProjectLoadError {
   }
 }
 
+class RatingsCalculationComplete {
+  List<MatchPointer> matchesAdded;
+  int get matchesAddedCount => matchesAdded.length;
+  bool wasFullRecalc;
+  bool wasAppend;
+  bool get noCalculation => !wasFullRecalc && !wasAppend;
+
+  RatingsCalculationComplete({required this.matchesAdded, required this.wasFullRecalc, required this.wasAppend});
+}
+
 typedef RatingProjectLoaderCallback = Future<void> Function({
   required int progress,
   required int total,
@@ -165,7 +175,7 @@ class RatingProjectLoader {
 
   List<String> _matchConnectivityCsv = [];
   bool dumpMatchConnectivities = false;
-  Future<Result<void, RatingProjectLoadError>> calculateRatings({bool fullRecalc = false}) async {
+  Future<Result<RatingsCalculationComplete, RatingProjectLoadError>> calculateRatings({bool fullRecalc = false}) async {
     wallStart = DateTime.now();
 
     HydratedMatchCache().clear();
@@ -227,7 +237,7 @@ class RatingProjectLoader {
       timings.add(TimingType.wallTime, DateTime.now().difference(wallStart).inMicroseconds);
       project.loaded = DateTime.now();
       await db.saveRatingProject(project, checkName: true);
-      return Result.ok(null);
+      return Result.ok(RatingsCalculationComplete(matchesAdded: [], wasFullRecalc: false, wasAppend: false));
     }
 
     if(!fullRecalc && !project.completedFullCalculation) {
@@ -249,7 +259,7 @@ class RatingProjectLoader {
         host.progressCallback(progress: 0, total: 0, state: LoadingState.done);
         project.loaded = DateTime.now();
         await db.saveRatingProject(project, checkName: true);
-        return Result.ok(null);
+        return Result.ok(RatingsCalculationComplete(matchesAdded: [], wasFullRecalc: false, wasAppend: false));
       }
     }
 
@@ -259,6 +269,7 @@ class RatingProjectLoader {
       project.reports = [];
       project.recentReports = [];
       project.completedFullCalculation = false;
+      project.connectivityContainer.reset();
       if(fullRecalc) {
         _log.i("Unable to append: full recalculation requested");
       }
@@ -360,7 +371,7 @@ class RatingProjectLoader {
       var file = File("match_connectivity.csv");
       await file.writeAsString(csv);
     }
-    return Result.ok(null);
+    return Result.ok(RatingsCalculationComplete(matchesAdded: matchesToAdd, wasFullRecalc: fullRecalc, wasAppend: canAppend && !fullRecalc));
   }
 
   void cancel() {
@@ -682,14 +693,41 @@ class RatingProjectLoader {
         }
         // If we still don't have a target rating, create one and copy biographical information.
         if(targetRating == null) {
+          Set<String> knownMemberNumbers = {...mapping.sourceNumbers, mapping.targetNumber};
           targetRating = DbShooterRating.empty(
             sport: sport,
-            memberNumber: mapping.targetNumber,
+            memberNumber: mapping.targetNumber, // will be overwritten by copy functions
           );
           if(ratings.isNotEmpty) {
-            targetRating.copyVitalsFrom(ratings.first);
+            DbShooterRating sourceRating = ratings.first;
+            for(var r in ratings) {
+              if(r.length > sourceRating.length) {
+                sourceRating = r;
+              }
+              else if(r.knownMemberNumbers.length > sourceRating.knownMemberNumbers.length) {
+                sourceRating = r;
+              }
+            }
+            targetRating.copyVitalsFrom(sourceRating);
+            targetRating.copyRatingFrom(sourceRating);
+            targetRating.group.value = sourceRating.group.value;
+            targetRating.project.value = project;
+
+            targetRating.addKnownMemberNumbers(knownMemberNumbers);
+            targetRating.memberNumber = mapping.targetNumber;
+
+            if(targetRating.group.value == null) {
+              targetRating.group.value = group;
+            }
+            db.upsertDbShooterRatingSync(targetRating);
           }
-          db.upsertDbShooterRatingSync(targetRating);
+          else {
+            // TODO: add a RatingReport for this scenario
+            // I don't think it ever happens (we should always have source ratings), but
+            // we can't progress without a source rating to ensure that we get the right
+            // intData and doubleData on the new rating.
+            _log.w("Attempted to create a target rating for ${mapping.sourceNumbers}, but no source ratings were available");
+          }
         }
 
         if(!targetRating.group.isLoaded) {
@@ -1136,6 +1174,14 @@ class RatingProjectLoader {
         );
 
         if(rating == null) {
+          if(ratingsToCreate.any((r) => r.allPossibleMemberNumbers.contains(s.memberNumber))) {
+            // Special case: in some cases, competitors might enter a match twice. In those cases,
+            // we'll already have created a rating for them, so don't do another one.
+            //
+            // This probably results in losing the scores for the second entry, but that's acceptable.
+            // TODO: maybe settings somewhere to control this?
+            continue;
+          }
           var newRating = ratingSystem.newShooterRating(s, sport: project.sport, date: match.date);
           newRating.allPossibleMemberNumbers.addAll(possibleNumbers);
           ratingsToCreate.add(newRating);
@@ -1610,33 +1656,15 @@ class RatingProjectLoader {
       }
 
       var calc = sport.connectivityCalculator!;
-      Set<int> uniqueIds = {...shootersAtMatch.map((e) => e.id)};
       for(var rating in shootersAtMatch) {
-        var ids = uniqueIds.where((id) => id != rating.id).toList();
-        var window = MatchWindow.createFromHydratedMatch(
+        // ignoring the return value, because we always save the rating at this point
+        calc.updateCompetitorData(
           match: match,
-          uniqueOpponentIds: ids,
-          totalOpponents: ids.length,
+          rating: rating,
+          competitors: shootersAtMatch,
+          competitorCount: shootersAtMatch.length,
+          matchPointers: project.matchPointers,
         );
-
-        MatchWindow? oldestWindow;
-        // While we have more than 4 match windows, remove the oldest one
-        // (so that the new one we add brings us to 5).
-        var editableList = rating.matchWindows.toList();
-        while(editableList.length > (calc.matchWindowCount - 1)) {
-          for(var window in editableList) {
-            if(oldestWindow == null || window.date.isBefore(oldestWindow.date)) {
-              oldestWindow = window;
-            }
-          }
-          if(oldestWindow != null) {
-            editableList.remove(oldestWindow);
-            oldestWindow = null;
-          }
-        }
-        editableList.add(window);
-        rating.matchWindows = editableList;
-
         var newConnectivity = calc.calculateRatingConnectivity(rating);
 
         rating.updateConnectivitySync(
@@ -1659,11 +1687,11 @@ class RatingProjectLoader {
       int? matchCount;
       int? competitorCount;
 
-      if(calc.requiredBaselineData.contains(ConnectivityRequiredData.connectivityScores)) {
+      if(calc.requiredBaselineData.contains(BaselineConnectivityRequiredData.connectivityScores)) {
         connectivityScores = db.getConnectivitySync(project, group);
         competitorCount = connectivityScores.length;
       }
-      if(calc.requiredBaselineData.contains(ConnectivityRequiredData.connectivitySum)) {
+      if(calc.requiredBaselineData.contains(BaselineConnectivityRequiredData.connectivitySum)) {
         if(connectivityScores != null) {
           connectivitySum = connectivityScores.sum;
         }
@@ -1671,10 +1699,10 @@ class RatingProjectLoader {
           connectivitySum = db.getConnectivitySumSync(project, group);
         }
       }
-      if(calc.requiredBaselineData.contains(ConnectivityRequiredData.competitorCount) && competitorCount == null) {
+      if(calc.requiredBaselineData.contains(BaselineConnectivityRequiredData.competitorCount) && competitorCount == null) {
         competitorCount = await db.countShooterRatings(project, group);
       }
-      if(calc.requiredBaselineData.contains(ConnectivityRequiredData.matchCount)) {
+      if(calc.requiredBaselineData.contains(BaselineConnectivityRequiredData.matchCount)) {
         matchCount = project.matchPointers.length;
       }
 

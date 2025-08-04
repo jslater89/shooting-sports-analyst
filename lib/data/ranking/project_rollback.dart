@@ -6,11 +6,13 @@
 
 import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/connectivity.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
@@ -122,6 +124,19 @@ class RatingProjectRollback {
     project.filteredMatchPointers = filteredPointers;
     project.lastUsedMatches = lastUsedPointers;
 
+    List<ShootingMatch> matchesRemoved = [];
+    if(project.sport.connectivityCalculator != null) {
+      for(var ptr in matches) {
+        var dbMatch = db.getMatchByAnySourceIdSync(ptr.sourceIds);
+        if (dbMatch != null) {
+          var hydrated = HydratedMatchCache().get(dbMatch);
+          if(hydrated.isOk()) {
+            matchesRemoved.add(hydrated.unwrap());
+          }
+        }
+      }
+    }
+
     await callback(progress: 0, total: 1, state: RollbackState.loadingRatings);
 
     // TODO: add query for ratings last seen after date
@@ -170,7 +185,7 @@ class RatingProjectRollback {
       else if(eventsToRemove.isNotEmpty) {
         var wrapped = rater.wrapDbRating(rating);
         var supportsConnectivity = project.sport.connectivityCalculator != null;
-        await wrapped.rollbackEvents(eventsToRemove, updateConnectivity: supportsConnectivity, byStage: project.settings.byStage);
+        await wrapped.rollbackEvents(eventsToRemove, matchesRemoved, updateConnectivity: supportsConnectivity, byStage: project.settings.byStage);
       }
     }
 
@@ -183,11 +198,11 @@ class RatingProjectRollback {
         int? matchCount;
         int? competitorCount;
 
-        if(calc.requiredBaselineData.contains(ConnectivityRequiredData.connectivityScores)) {
+        if(calc.requiredBaselineData.contains(BaselineConnectivityRequiredData.connectivityScores)) {
           connectivityScores = await db.getConnectivity(project, group);
           competitorCount = connectivityScores.length;
         }
-        if(calc.requiredBaselineData.contains(ConnectivityRequiredData.connectivitySum)) {
+        if(calc.requiredBaselineData.contains(BaselineConnectivityRequiredData.connectivitySum)) {
           if(connectivityScores != null) {
             connectivitySum = connectivityScores.sum;
           }
@@ -195,10 +210,10 @@ class RatingProjectRollback {
             connectivitySum = await db.getConnectivitySum(project, group);
           }
         }
-        if(calc.requiredBaselineData.contains(ConnectivityRequiredData.competitorCount) && competitorCount == null) {
+        if(calc.requiredBaselineData.contains(BaselineConnectivityRequiredData.competitorCount) && competitorCount == null) {
           competitorCount = await db.countShooterRatings(project, group);
         }
-        if(calc.requiredBaselineData.contains(ConnectivityRequiredData.matchCount)) {
+        if(calc.requiredBaselineData.contains(BaselineConnectivityRequiredData.matchCount)) {
           matchCount = project.matchPointers.length;
         }
 

@@ -13,6 +13,9 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/application_preferences.dart';
+import 'package:shooting_sports_analyst/data/database/schema/preferences.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/help/results_help.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/memory_cached_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
@@ -129,6 +132,7 @@ class _ResultPageState extends State<ResultPage> {
     super.initState();
 
     _canonicalMatch = widget.canonicalMatch;
+    _settings.value.loadFromPreferences();
 
     Set<int> squads = {};
     for(var s in _canonicalMatch.shooters) {
@@ -174,6 +178,13 @@ class _ResultPageState extends State<ResultPage> {
     if(widget.initialFilters != null) {
       widget.initialFilters!.knownSquads = squadList;
       _applyFilters(widget.initialFilters!);
+    }
+
+    if(_settings.value.predictionMode != MatchPredictionMode.none) {
+      _updateHypotheticalScores();
+    }
+    if(_settings.value.fantasyPointsMode != FantasyPointsMode.off) {
+      _updateFantasyScores();
     }
   }
 
@@ -293,8 +304,8 @@ class _ResultPageState extends State<ResultPage> {
         scores.sortBySurname();
         break;
       case SortMode.rating:
-        if(widget.ratings != null) {
-          // scores.sortByRating(ratings: widget.ratings!, displayMode: _settings.value.ratingMode, match: _currentMatch, stage: _stage);
+        if(widget.ratings != null && widget.ratings is DbRatingProject) {
+          scores.sortByLocalRating(ratings: widget.ratings! as DbRatingProject, displayMode: _settings.value.ratingMode, match: _currentMatch, stage: _stage);
         }
         else {
           // We shouldn't hit this, because we hide rating sort if there aren't any ratings,
@@ -450,6 +461,9 @@ class _ResultPageState extends State<ResultPage> {
             });
 
             _applyFilters(_filters);
+            if(_settings.value.fantasyPointsMode != FantasyPointsMode.off) {
+              _updateFantasyScores();
+            }
             _log.i("Refreshed match from source");
           }
           else {
@@ -724,6 +738,7 @@ class _ResultPageState extends State<ResultPage> {
               var oldPredictionMode = _settings.value.predictionMode;
               var oldFantasyPointsMode = _settings.value.fantasyPointsMode;
               _settings.value = newSettings;
+              _settings.value.saveToPreferences();
               if(_settings.value.predictionMode != oldPredictionMode) {
                 _updateHypotheticalScores();
               }
@@ -863,6 +878,25 @@ class ScoreDisplaySettings {
       this.fixedTimeAvailablePointsFromDivisionMax = other.fixedTimeAvailablePointsFromDivisionMax,
       this.predictionMode = other.predictionMode,
       this.fantasyPointsMode = other.fantasyPointsMode;
+
+  void loadFromPreferences() {
+    var prefs = AnalystDatabase().getPreferencesSync();
+    this.ratingMode = prefs.ratingDisplayMode;
+    this.availablePointsCountPenalties = prefs.availablePointsCountPenalties;
+    this.fixedTimeAvailablePointsFromDivisionMax = prefs.improvedFixedTimeMax;
+    this.predictionMode = prefs.matchPredictionMode;
+    this.fantasyPointsMode = prefs.fantasyPointsMode;
+  }
+
+  void saveToPreferences() {
+    var prefs = AnalystDatabase().getPreferencesSync();
+    prefs.ratingDisplayMode = ratingMode;
+    prefs.availablePointsCountPenalties = availablePointsCountPenalties;
+    prefs.improvedFixedTimeMax = fixedTimeAvailablePointsFromDivisionMax;
+    prefs.matchPredictionMode = predictionMode;
+    prefs.fantasyPointsMode = fantasyPointsMode;
+    AnalystDatabase().savePreferencesSync(prefs);
+  }
 }
 
 enum RatingDisplayMode {

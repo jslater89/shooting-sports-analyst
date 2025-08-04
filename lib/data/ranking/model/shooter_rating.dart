@@ -9,6 +9,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
@@ -16,6 +17,7 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_e
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/connectivity/valid_competitors.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
+import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
 // import 'package:shooting_sports_analyst/data/db/object/match/shooter.dart';
 // import 'package:shooting_sports_analyst/data/db/object/rating/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/average_rating.dart';
@@ -134,6 +136,25 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
 
     var out = [..._ratingEvents!, ...newRatingEvents];
     return out;
+  }
+
+  /// Get the latest rating event for this shooter.
+  ///
+  /// This uses the _ratingEvents cache if available, or queries the database for
+  /// only the latest event, which avoids the overhead of loading all events.
+  T? get latestRatingEvent {
+    if(_ratingEvents == null) {
+      var events = AnalystDatabase().getRatingEventsForSync(wrappedRating, limit: 1);
+      if(events.isNotEmpty) {
+        return wrapEvent(events.first);
+      }
+      else {
+        return null;
+      }
+    }
+    else {
+      return _ratingEvents!.firstOrNull;
+    }
   }
 
   List<T>? _ratingEvents = null;
@@ -305,7 +326,7 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
   /// AnalystDatabase().upsertDbShooterRating() if they make changes that
   /// should be persisted to the DB.
   @mustCallSuper
-  Future<void> rollbackEvents(List<DbRatingEvent> events, {bool updateConnectivity = true, required bool byStage}) async {
+  Future<void> rollbackEvents(List<DbRatingEvent> events, List<ShootingMatch> matchesRemoved, {bool updateConnectivity = true, required bool byStage}) async {
     await AnalystDatabase().deleteRatingEvents(wrappedRating, events);
 
     ratingEventsChanged(removedEvents: events);
@@ -315,39 +336,66 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
     updateTrends([]);
 
     if(updateConnectivity && sport.connectivityCalculator != null) {
-      if(!wrappedRating.project.isLoaded) {
-        await wrappedRating.project.load();
-      }
       var calc = sport.connectivityCalculator!;
-      var window = calc.matchWindowCount;
 
-      /// We get matches in new to old order, but we need to process them in old to new order so
-      /// we get the expected order of match windows.
-      var matches = (await AnalystDatabase().getMostRecentMatchesFor(wrappedRating, window: window)).reversed;
-      List<MatchWindow> windows = [];
-      for(var dbMatch in matches) {
-        var m = dbMatch.hydrate(useCache: true).unwrap();
-        Set<int> ratingIds = {};
-        var filteredShooters = m.connectivityCompetitors(group);
-        for(var s in filteredShooters) {
-          var rating = await AnalystDatabase().maybeKnownShooter(project: wrappedRating.project.value!, group: group, memberNumber: s.memberNumber, useCache: true);
-          if(rating != null && rating.length > 0) {
-            ratingIds.add(rating.id);
+      List<int>? competitorCountsRemoved;
+      if(calc.requiredCompetitorData.contains(CompetitorConnectivityRequiredData.competitorCount)) {
+        competitorCountsRemoved = [];
+        for(var m in matchesRemoved) {
+          competitorCountsRemoved.add(m.connectivityCompetitors(group).length);
+        }
+      }
+
+      List<List<DbShooterRating>>? allCompetitorsRemoved;
+      if(calc.requiredCompetitorData.contains(CompetitorConnectivityRequiredData.competitorRatings)) {
+        allCompetitorsRemoved = [];
+        var project = wrappedRating.project.value!;
+        for(var m in matchesRemoved) {
+          List<DbShooterRating> matchCompetitorsRemoved = [];
+          var filters = group.filters;
+          var shooters = m.applyFilterSet(filters);
+          for(var s in shooters) {
+            var rating = await project.lookupRating(group, s.memberNumber);
+            if(rating.isOk() && rating.unwrap() != null) {
+              matchCompetitorsRemoved.add(rating.unwrap()!);
+            }
+          }
+          allCompetitorsRemoved.add(matchCompetitorsRemoved);
+        }
+      }
+
+      List<MatchPointer>? matchPointers;
+      if(calc.requiredCompetitorData.contains(CompetitorConnectivityRequiredData.matchPointers)) {
+        // Earlier parts of the rollback process have already removed the rolled-back pointers.
+        matchPointers = wrappedRating.project.value?.matchPointers;
+        if(matchPointers == null) {
+          _log.w("No match pointers found for ${wrappedRating.project.value}");
+        }
+      }
+
+      if(calc.useHistoryForRollback) {
+        var latestEvent = latestRatingEvent;
+        var matchForEvent = latestEvent?.match;
+        if(matchForEvent != null) {
+          var historicalConnectivity = wrappedRating.getHistoricalConnectivityForMatch(matchForEvent);
+          if(historicalConnectivity != null) {
+            this.connectivity = historicalConnectivity.connectivity;
+            this.rawConnectivity = historicalConnectivity.rawConnectivity;
           }
         }
-
-        if(ratingIds.length > 1) {
-          windows.add(MatchWindow(
-            matchSourceId: m.sourceIds.first,
-            uniqueOpponentIds: ratingIds.toList(),
-          ));
-        }
       }
-
-      wrappedRating.matchWindows = windows;
-      var connectivity = calc.calculateRatingConnectivity(wrappedRating);
-      this.connectivity = connectivity.connectivity;
-      this.rawConnectivity = connectivity.rawConnectivity;
+      calc.rollbackCompetitorData(
+        rating: wrappedRating,
+        matchesRemoved: matchesRemoved,
+        matchPointers: matchPointers,
+        competitorCountsRemoved: competitorCountsRemoved,
+        competitorsRemoved: allCompetitorsRemoved,
+      );
+      if(!calc.useHistoryForRollback) {
+        var newConnectivity = calc.calculateRatingConnectivity(wrappedRating);
+        this.connectivity = newConnectivity.connectivity;
+        this.rawConnectivity = newConnectivity.rawConnectivity;
+      }
     }
 
     await AnalystDatabase().upsertDbShooterRating(wrappedRating);

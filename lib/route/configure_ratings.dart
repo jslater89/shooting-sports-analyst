@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/application_preferences.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
@@ -157,20 +158,33 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   }
 
   Future<void> _loadAutosave() async {
-    var lastProjectId = prefs.getInt(Preferences.lastProjectId);
+    var dbPrefs = AnalystDatabase().getPreferencesSync();
+    var prefsLastProjectId = prefs.getInt(Preferences.lastProjectId);
 
-    if(lastProjectId != null) {
-      var project = await AnalystDatabase().getRatingProjectById(lastProjectId);
+    if(dbPrefs.lastProjectId != null) {
+      var project = await AnalystDatabase().getRatingProjectById(dbPrefs.lastProjectId!);
       if(project != null) {
         _loadProject(project);
         return;
       }
     }
+    else if(prefsLastProjectId != null) {
+      var project = await AnalystDatabase().getRatingProjectById(prefsLastProjectId);
+      if(project != null) {
+        _loadProject(project);
 
-    // Prefs are global, which means that if we have multiple installations of
-    // Analyst, we might have a non-null project ID in prefs, but no project
-    // in the database with that ID, which we should probably fix.
-    _log.i("Autosaved project not found with id $lastProjectId, loading defaults");
+        // If we get to here, we've loaded a project from legacy prefs, so copy the ID
+        // to the new prefs and save.
+        dbPrefs.lastProjectId = prefsLastProjectId;
+        AnalystDatabase().savePreferencesSync(dbPrefs);
+        return;
+      }
+    }
+
+    // This is probably a multiple-installations scenario, where we have no ID in the database
+    // and an ID from a different installation in prefs. Defer fixing it until the user saves
+    // a project, which will trigger a save of the ID to the new DB-backed prefs.
+    _log.i("Autosaved project not found with id ${dbPrefs.lastProjectId} or fallback $prefsLastProjectId, loading defaults");
 
     _ratingSystem = MultiplayerPercentEloRater();
     sport = uspsaSport;
@@ -909,7 +923,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
 
     await AnalystDatabase().saveRatingProject(project);
 
-    prefs.setInt(Preferences.lastProjectId, project.id);
+    var prefs = AnalystDatabase().getPreferencesSync();
+    prefs.lastProjectId = project.id;
+    AnalystDatabase().savePreferencesSync(prefs);
     _log.i("Saved project ${project.name} at ${project.id}; it will be autoloaded");
 
     if(mounted) {

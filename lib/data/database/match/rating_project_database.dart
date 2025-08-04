@@ -439,7 +439,6 @@ extension RatingProjectDatabase on AnalystDatabase {
         if(Timings.enabled) Timings().add(TimingType.saveDbRating, DateTime.now().difference(start).inMicroseconds);
 
         if(Timings.enabled) start = DateTime.now();
-        var eventFutures = <Future>[];
         for(var event in r.newRatingEvents) {
           if(!event.isPersisted) {
             if(event.matchId.isNotEmpty && (!event.match.isLoaded || event.match.value == null)) {
@@ -469,13 +468,12 @@ extension RatingProjectDatabase on AnalystDatabase {
               event.match.value = match;
               if(Timings.enabled) Timings().add(TimingType.getEventMatches, DateTime.now().difference(matchStart).inMicroseconds);
             }
-            eventFutures.add(isar.dbRatingEvents.put(event).then((_) => event.match.save()));
+            isar.dbRatingEvents.putSync(event);
             r.events.add(event);
           }
         }
-        await Future.wait(eventFutures);
         r.newRatingEvents.clear();
-        await r.events.save();
+        r.events.saveSync();
 
         if(Timings.enabled) Timings().add(TimingType.persistEvents, DateTime.now().difference(start).inMicroseconds);
       }
