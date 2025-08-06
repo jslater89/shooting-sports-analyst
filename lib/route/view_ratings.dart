@@ -776,8 +776,6 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       return;
     }
 
-    // TODO: write registration info to cache
-
     int seed = _selectedMatch.date.millisecondsSinceEpoch;
     var predictions = _settings.algorithm.predict(shooters, seed: seed);
     Navigator.of(context).push(MaterialPageRoute(builder: (context) {
