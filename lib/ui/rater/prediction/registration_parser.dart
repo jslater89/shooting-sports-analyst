@@ -12,11 +12,12 @@ import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:http/http.dart' as http;
 import 'package:shooting_sports_analyst/data/source/practiscore_report.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
-import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 var _log = SSALogger("RegistrationParser");
+
+const bool verbose = false;
 
 typedef RegistrationResult = Result<RegistrationContainer, ResultErr>;
 
@@ -78,12 +79,6 @@ Future<RegistrationResult> getRegistrations(Sport sport, String url, List<Divisi
     return RegistrationResult.err(RegistrationError.badUrl);
   }
 
-  var authenticated = await PractiscoreHitFactorReportParser.authenticate();
-  if(!authenticated) {
-    _log.e("No PS credentials available");
-    return RegistrationResult.err(RegistrationError.noCredentials);
-  }
-
   // Urls look like [https://]practiscore.com/match-id/[register|squadding[/printhtml]]
   var urlParts = url.split("/");
   var matchId = "";
@@ -109,6 +104,12 @@ Future<RegistrationResult> getRegistrations(Sport sport, String url, List<Divisi
     }
   }
   try {
+    var authenticated = await PractiscoreHitFactorReportParser.authenticate();
+    if(!authenticated) {
+      _log.e("No PS credentials available");
+      return RegistrationResult.err(RegistrationError.noCredentials);
+    }
+
     var uri = Uri.parse(url);
     var cookies = practiscoreCookies.getCookiesForRequest("practiscore.com", uri.path);
     var response = await http.get(uri, headers: {
@@ -116,11 +117,14 @@ Future<RegistrationResult> getRegistrations(Sport sport, String url, List<Divisi
     });
     if(response.statusCode < 400) {
       var responseHtml = response.body;
+      var processedHtml = _processRegistrationHtml(responseHtml);
+
+      _log.d("Retrieved ${processedHtml.length} bytes of registrations, processed to ${responseHtml.length} bytes");
 
       // Cache regardless of allowCached, so that new data gets
       // cached.
-      RegistrationCache().put(url, responseHtml);
-      return RegistrationResult.ok(_parseRegistrations(sport, matchId, responseHtml, divisions, knownShooters));
+      RegistrationCache().put(url, processedHtml);
+      return RegistrationResult.ok(_parseRegistrations(sport, matchId, processedHtml, divisions, knownShooters));
     }
     else {
       _log.e("Failed to get registration URL: ${response.statusCode}: ${response.body}");
@@ -131,6 +135,12 @@ Future<RegistrationResult> getRegistrations(Sport sport, String url, List<Divisi
   return RegistrationResult.err(RegistrationError.networkError);
 }
 
+String _processRegistrationHtml(String registrationHtml) {
+  // registrationHtml = registrationHtml.replaceAll("\n", "");
+  registrationHtml = registrationHtml.replaceAll(RegExp(r"\s{4,}"), " ");
+  return registrationHtml;
+}
+
 RegistrationContainer _parseRegistrations(Sport sport, String matchId, String registrationHtml, List<Division> divisions, List<ShooterRating> knownShooters) {
   var ratings = <Registration, ShooterRating>{};
   var unmatched = <Registration>[];
@@ -138,7 +148,7 @@ RegistrationContainer _parseRegistrations(Sport sport, String matchId, String re
   var matchName = "unnamed match";
 
   // Match a line
-  var shooterRegex = RegExp(r'<span.*?title="(?<name>.*?)\s+\((?<division>[\w\s]+)\s+\/\s+(?<class>\w+)\).*?>', dotAll: true);
+  var shooterRegex = RegExp(r'title="(?<name>.*)\s+\((?<division>[\w\s]+)\s+\/\s+(?<class>\w+)\)"');
   var matchRegex = RegExp(r'<meta\s+property="og:title"\s+content="(?<matchname>.*)"\s*/>');
   var unescape = HtmlUnescape();
   for(var line in registrationHtml.split("\n")) {
@@ -151,8 +161,9 @@ RegistrationContainer _parseRegistrations(Sport sport, String matchId, String re
   }
 
   var matches = shooterRegex.allMatches(registrationHtml);
-  _log.d("Shooter regex has ${matches.length} matches");
+  int regexMatches = 0;
   for(var match in matches) {
+    regexMatches += 1;
     var shooterName = unescape.convert(match.namedGroup("name")!);
 
     if(shooterName.contains("\n")) {
@@ -161,11 +172,20 @@ RegistrationContainer _parseRegistrations(Sport sport, String matchId, String re
     }
     var d = sport.divisions.lookupByName(match.namedGroup("division")!);
 
-    if(d == null || !divisions.contains(d)) continue;
+    if(d == null || !divisions.contains(d)) {
+      if(verbose) {
+        _log.v("Skipping division not of interest: $d");
+      }
+      continue;
+    }
 
     var classification = sport.classifications.lookupByName(match.namedGroup("class")!);
-    // TODO
-    if(classification == null) continue;
+    if(classification == null) {
+      if(verbose) {
+        _log.v("Skipping unknown classification: $shooterName");
+      }
+      continue;
+    }
 
     var foundShooter = _findShooter(shooterName, classification, knownShooters);
 
@@ -179,6 +199,8 @@ RegistrationContainer _parseRegistrations(Sport sport, String matchId, String re
       );
     }
   }
+
+  _log.d("Found ${ratings.length} registrations from $regexMatches matches");
 
   return RegistrationContainer(matchName, matchId, ratings, unmatched);
 }

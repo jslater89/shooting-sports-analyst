@@ -8,7 +8,7 @@
 PRODUCT_NAME = Shooting Sports Analyst
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.generico.shootingSportsAnalyst
+PRODUCT_BUNDLE_IDENTIFIER = com.shootingsportsanalyst.shootingSportsAnalyst
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = © 2024 Jay Slater and contributors. Available under MPLv2.0.
+PRODUCT_COPYRIGHT = © 2025 Jay Slater and contributors. Available under MPLv2.0.

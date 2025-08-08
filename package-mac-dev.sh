@@ -17,7 +17,7 @@ rm "Shooting_Sports_Analyst.app.zip"
 mkdir data
 cp "$PROJ_ROOT/data/L2s-Since-2019.json" data/
 cp "$PROJ_ROOT/data/Nationals-and-Area-Matches.json" data/
-cp "$PROJ_ROOT/mac-assets/*" .
+cp $PROJ_ROOT/mac-assets/* .
 echo "$VERSION > version.txt"
 
 cd "$PROJ_ROOT" || exit

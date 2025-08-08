@@ -102,9 +102,9 @@ class _SourceCredentialsManagerState extends State<SourceCredentialsManager> {
         ),
         TextButton(
           child: Text("SAVE"),
-          onPressed: () {
-            SecureConfig.setPsUsername(_usernameController.text);
-            SecureConfig.setPsPassword(_passwordController.text);
+          onPressed: () async {
+            await SecureConfig.setPsUsername(_usernameController.text);
+            await SecureConfig.setPsPassword(_passwordController.text);
             Navigator.of(context).pop();
           },
         ),

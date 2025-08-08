@@ -9,8 +9,9 @@ import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 
 class StageSelectDialog extends StatefulWidget {
   final Map<MatchStage, bool?> initialState;
+  final bool showRoundCounts;
 
-  const StageSelectDialog({Key? key, required this.initialState}) : super(key: key);
+  const StageSelectDialog({Key? key, required this.initialState, this.showRoundCounts = false}) : super(key: key);
 
   @override
   _StageSelectDialogState createState() => _StageSelectDialogState();
@@ -38,7 +39,12 @@ class _StageSelectDialogState extends State<StageSelectDialog> {
       SizedBox(height: 10),
     ]..addAll(
       state.keys.map(
-        (MatchStage s) => CheckboxListTile(value: state[s], onChanged: (v) => _toggle(s, v), title: Text(s.name),)
+        (MatchStage s) => CheckboxListTile(
+          value: state[s],
+          onChanged: (v) => _toggle(s, v),
+          title: Text(s.name),
+          subtitle: widget.showRoundCounts ? Text("${s.minRounds} rounds") : null,
+        )
       )
     );
 
