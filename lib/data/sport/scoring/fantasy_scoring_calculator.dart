@@ -61,11 +61,11 @@ class FantasyScore<T> {
     return("$points");
   }
 
-  String toJson() {
-    return jsonEncode({
+  Map<String, dynamic> toJson() {
+    return {
       "type": type,
       "categoryScores": scoringCategories.map((key, value) => MapEntry(key.toString(), value)),
-    });
+    };
   }
 
   static FantasyScore fromJson(String json) {

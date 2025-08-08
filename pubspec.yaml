@@ -73,6 +73,9 @@ dependencies:
   flutter_secure_storage: ^9.2.0
   package_info_plus: ^8.0.2
   meta: ^1.11.0
+  shelf: ^1.4.1
+  shelf_router: ^1.1.4
+  shelf_plus: ^1.9.2
 
 dev_dependencies:
   flutter_test:
@@ -84,6 +87,7 @@ dev_dependencies:
     hosted: https://pub.isar-community.dev/
   hive_generator: ^2.0.0
   json_serializable: ^6.6.0
+  shelf_router_generator: ^1.1.1
 
 flutter_launcher_icons:
   android: false

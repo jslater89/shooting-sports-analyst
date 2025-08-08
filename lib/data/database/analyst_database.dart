@@ -59,6 +59,11 @@ class AnalystDatabase {
     return _instance!;
   }
 
+  AnalystDatabase.path(String path) {
+    _instance = AnalystDatabase._();
+    _instance!._init(path: path);
+  }
+
   static AnalystDatabase? _testInstance;
   factory AnalystDatabase.test() {
     if(_testInstance == null) {
@@ -70,8 +75,8 @@ class AnalystDatabase {
 
   late Isar isar;
 
-  Future<void> _init({bool test = false}) async {
-    var db = Directory("db/");
+  Future<void> _init({bool test = false, String? path}) async {
+    var db = Directory(path ?? "db/");
     if(!db.existsSync()) {
       db.createSync(recursive: true);
     }
@@ -103,7 +108,7 @@ class AnalystDatabase {
         RosterAssignmentSchema,
       ],
       maxSizeMiB: 1024 * 32,
-      directory: "db",
+      directory: db.path,
       name: test ? "test-database" : "database",
     );
 

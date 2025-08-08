@@ -1,6 +1,8 @@
 
 import 'dart:io';
 
+import 'package:shelf/shelf_io.dart' as shelf_io;
+import 'package:shelf_plus/shelf_plus.dart';
 import 'package:shooting_sports_analyst/config/secure_config.dart';
 import 'package:shooting_sports_analyst/config/serialized_config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
@@ -8,6 +10,8 @@ import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+
+import 'league_service.dart';
 
 final _log = SSALogger("Server Main");
 
@@ -30,6 +34,10 @@ Future<void> main() async {
   _log.i("Database contains $matchCount matches, $projectCount projects, and $ratingCount ratings.");
 
   _log.i("Server initialization completed.");
+
+  var leagueService = LeagueService();
+  var server = await shelf_io.serve(leagueService.router, InternetAddress.anyIPv6, 8080);
+  _log.i("Server running on ${server.address}:${server.port}");
 }
 
 class ServerDebugProvider implements DebugModeProvider {
