@@ -218,7 +218,7 @@ class _FilterControlsState extends State<FilterControls> {
                                 for(MatchStage s in widget.allStages) {
                                   initialState[s] = widget.filteredStages.contains(s);
                                 }
-                                return StageSelectDialog(initialState: initialState);
+                                return StageSelectDialog(initialState: initialState, showRoundCounts: true);
                               }
                             );
 
