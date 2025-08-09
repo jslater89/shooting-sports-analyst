@@ -1,7 +1,6 @@
 
 import 'dart:io';
 
-import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_plus/shelf_plus.dart';
 import 'package:shooting_sports_analyst/config/secure_config.dart';
 import 'package:shooting_sports_analyst/config/serialized_config.dart';
@@ -10,8 +9,10 @@ import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/server/middleware/logger_middleware.dart';
+import 'package:shooting_sports_analyst/version.dart';
 
-import 'league_service.dart';
+import '../lib/server/fantasy/league_service.dart';
 
 final _log = SSALogger("Server Main");
 
@@ -35,10 +36,21 @@ Future<void> main() async {
 
   _log.i("Server initialization completed.");
 
-  var leagueService = LeagueService();
-  var server = await shelf_io.serve(leagueService.router, InternetAddress.anyIPv6, 8080);
-  _log.i("Server running on ${server.address}:${server.port}");
+  shelfRun(init);
 }
+
+Handler init() {
+  final app = Router().plus;
+  app.use(createLoggerMiddleware());
+  app.get("/", (request) => "Shooting Sports Analyst API ${VersionInfo.version}");
+
+  var leagueService = LeagueService([createLoggerMiddleware("/league/")]);
+  app.mount("/league", leagueService.router);
+
+  return app.call;
+}
+
+
 
 class ServerDebugProvider implements DebugModeProvider {
   @override

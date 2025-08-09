@@ -1,9 +1,7 @@
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
-import 'package:shelf/shelf.dart';
 import 'package:shelf_plus/shelf_plus.dart';
-import 'package:shelf_router/shelf_router.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
@@ -13,37 +11,45 @@ import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/fantasy_scoring_calculator.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
+/// Serves league endpoints, with a first path element of the league id.
 class LeagueService {
-  final database = AnalystDatabase();
+  LeagueService([List<Middleware> middleware = const []]) {
+    for(final m in middleware) {
+      router.use(m);
+    }
+    router.get("/<leagueId>/player/<playerId>/scoring", getScoring);
+  }
 
-  /// /league/<leagueId>/player/<playerId>/scoring
+  final database = AnalystDatabase();
+  final router = Router().plus;
+
+  /// /<leagueId>/player/<playerId>/scoring
   ///
   /// Returns the best score for each month for the given player.
-
-  Future<Response> getScoring(Request request, String leagueId, String playerId) async {
+  dynamic getScoring(Request request, String leagueId, String playerId) async {
     final ratingContext = await database.getRatingProjectByName("L2s Main");
     if(ratingContext == null) {
-      return Response.notFound({"error": "Rating project not found"});
+      return Response.notFound('Rating project not found');
     }
 
     final groupRes = await ratingContext.groupForDivision(uspsaRevolver);
     if(groupRes.isErr()) {
-      return Response.internalServerError(body: {"error": "Failed to get group for division"});
+      return Response.internalServerError(body: 'Failed to get group for division');
     }
 
     final group = groupRes.unwrap();
     if(group == null) {
-      return Response.notFound({"error": "Group not found"});
+      return Response.notFound('Group not found');
     }
 
     final ratingRes = await ratingContext.lookupRating(group, playerId, allPossibleMemberNumbers: true);
     if(ratingRes.isErr()) {
-      return Response.internalServerError(body: {"error": "Failed to lookup rating"});
+      return Response.internalServerError(body: 'Failed to lookup rating');
     }
 
     final rating = ratingRes.unwrap();
     if(rating == null) {
-      return Response.notFound({"error": "Rating not found"});
+      return Response.notFound('Rating not found');
     }
 
     final matchIds = <String>{};
@@ -59,7 +65,7 @@ class LeagueService {
       matchIds.add(dbMatch.sourceIds.first);
       final matchRes = HydratedMatchCache().get(dbMatch);
       if(matchRes.isErr()) {
-        return Response.internalServerError(body: {"error": "Failed to get match"});
+        return Response.internalServerError(body: 'Failed to get match');
       }
       final match = matchRes.unwrap();
       final year = match.date.year;
@@ -68,7 +74,7 @@ class LeagueService {
       matchesByMonth[TempDate(year, month)]!.add(match);
     }
 
-    final scoresByMonth = <TempDate, List<FantasyScore<dynamic>>>{};
+    final scoresByMonth = <TempDate, List<FantasyScoreContainer>>{};
     const calculator = USPSAFantasyScoringCalculator();
 
     for(final date in matchesByMonth.keys) {
@@ -80,22 +86,44 @@ class LeagueService {
           continue;
         }
         scoresByMonth[date] ??= [];
-        scoresByMonth[date]!.add(scores[entry]!);
+        scoresByMonth[date]!.add(FantasyScoreContainer(match.name, match.date, scores[entry]!));
       }
     }
 
-    final bestScoreByMonth = <String, Map<String, dynamic>>{};
+    final bestScoreByMonth = <TempDate, FantasyScoreContainer>{};
     for(final date in scoresByMonth.keys) {
       final scores = scoresByMonth[date]!;
       final bestScore = scores.reduce((a, b) => a.points > b.points ? a : b);
-      bestScoreByMonth[date.toString()] = bestScore.toJson();
+      bestScoreByMonth[date] = bestScore;
     }
 
-    return Response.ok(jsonEncode(bestScoreByMonth));
+    return bestScoreByMonth.toJson();
   }
+}
 
-  RouterPlus get router => Router().plus
-    ..get("/league/<leagueId>/player/<playerId>/scoring", getScoring);
+extension _ScoringToJson on Map<TempDate, FantasyScoreContainer> {
+  Map<String, dynamic> toJson() {
+    return map((key, value) => MapEntry(key.toJson(), value.toJson()));
+  }
+}
+
+class FantasyScoreContainer {
+  final String matchName;
+  final DateTime matchDate;
+  final FantasyScore<dynamic> score;
+
+  double get points => score.points;
+
+  FantasyScoreContainer(this.matchName, this.matchDate, this.score);
+
+  Map<String, dynamic> toJson() {
+    return {
+      "matchName": matchName,
+      "matchDate": matchDate.toIso8601String(),
+      "points": points,
+      "details": score.toJson(),
+    };
+  }
 }
 
 class TempDate {
@@ -106,6 +134,10 @@ class TempDate {
 
   @override
   String toString() {
+    return "$year-$month";
+  }
+
+  String toJson() {
     return "$year-$month";
   }
 
