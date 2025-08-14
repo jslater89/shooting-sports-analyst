@@ -32,7 +32,7 @@ dependencies:
   file_picker: ^5.2.4
   url_launcher: 6.1.14
   sprintf: ^7.0.0
-  intl: ^0.17.0
+  intl: ^0.18.0
   flutter_charts: ^0.5.0
   community_charts_flutter:
     # path: ../community_charts/community_charts_flutter
@@ -76,6 +76,7 @@ dependencies:
   shelf: ^1.4.1
   shelf_router: ^1.1.4
   shelf_plus: ^1.9.2
+  dart_console: ^4.1.2
 
 dev_dependencies:
   flutter_test:

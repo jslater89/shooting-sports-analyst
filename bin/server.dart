@@ -9,10 +9,9 @@ import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/server/fantasy/league_service.dart';
 import 'package:shooting_sports_analyst/server/middleware/logger_middleware.dart';
 import 'package:shooting_sports_analyst/version.dart';
-
-import '../lib/server/fantasy/league_service.dart';
 
 final _log = SSALogger("Server Main");
 

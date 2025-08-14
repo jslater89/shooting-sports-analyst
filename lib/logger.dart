@@ -212,13 +212,14 @@ class _SSALogOutput extends LogOutput {
   void output(OutputEvent event) async {
     await launchFuture;
 
-    if(this.console) event.lines.forEach((element) { print(element); });
+    if(this.console && SSALogger.consoleOutput) event.lines.forEach((element) { print(element); });
     if(this.file) fileOutput.write(event.lines.join("\n"));
   }
 }
 
 class SSALogger extends LogPrinter {
   static late DebugModeProvider debugProvider;
+  static bool consoleOutput = true;
   static bool get kDebugMode => debugProvider.kDebugMode;
   static bool get kReleaseMode => debugProvider.kReleaseMode;
 
