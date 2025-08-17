@@ -12,8 +12,12 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:dart_console/dart_console.dart';
 import 'package:data/stats.dart' show WeibullDistribution;
 import 'package:isar/isar.dart';
+import 'package:shooting_sports_analyst/config/serialized_config.dart';
+import 'package:shooting_sports_analyst/console/labeled_progress_bar.dart';
+import 'package:shooting_sports_analyst/console/repl.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
@@ -32,28 +36,195 @@ import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/logger.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
+import 'package:shooting_sports_analyst/version.dart';
 
-SSALogger _log = SSALogger("DbOneoffs");
+import 'server.dart';
 
-Future<void> oneoffDbAnalyses(AnalystDatabase db) async {
-  // await _howGoodIsTomCastro(db);
-  // await _matchBumpGms(db);
-  // await _addMemberNumbersToMatches(db);
-  // await _doesMyQueryWork(db);
+late SSALogger _log = SSALogger("DbOneoffs");
 
-  // var project = (await db.getRatingProjectByName("L2s Main"))!;
-  //await calculateMatchHeat(db, project);
+Future<void> main() async {
+  SSALogger.debugProvider = ServerDebugProvider();
+  SSALogger.consoleOutput = false;
+  SSALogger.fileOutput = true;
+  await _log.ready;
 
-  // await _analyzeIcoreDump(File("/home/jay/Downloads/masterScores.json"));
-  // await _importIcoreDump(File("/home/jay/Documents/tmp/icore-stats/masterScores-20250723.json"));
-  // await _winningPointsByDate();
+  await ConfigLoader().ready;
+  var config = ConfigLoader().config;
 
-  // await _stageSizeAnalysis(db);
+  var db = await AnalystDatabase();
+  await db.ready;
+
+  var console = Console();
+  await menuLoop(console, [
+    TomCastroCommand(db),
+    MatchBumpGmsCommand(db),
+    DoesMyQueryWorkCommand(db),
+    Lady90PercentFinishesCommand(db),
+    AnalyzeIcoreDumpCommand(db),
+    ImportIcoreDumpCommand(db),
+    WinningPointsByDateCommand(db),
+    StageSizeAnalysisCommand(db),
+    QuitCommand(),
+  ], menuHeader: "DB Oneoffs ${VersionInfo.version}", commandSelected: (command) async {
+    switch(command.command?.runtimeType) {
+      case QuitCommand:
+        return false;
+      default:
+        return true;
+    }
+  });
 }
 
-Future<void> _howGoodIsTomCastro(AnalystDatabase db) async {
+abstract class DbOneoffCommand extends MenuCommandClass {
+  final AnalystDatabase db;
+  DbOneoffCommand(this.db);
+}
+
+class TomCastroCommand extends DbOneoffCommand {
+  TomCastroCommand(super.db);
+
+  @override
+  final String key = "TC";
+  @override
+  final String title = "How Good Is Tom Castro?";
+  @override
+  Future<void> executor(Console console, List<MenuArgumentValue> arguments) async {
+    await _howGoodIsTomCastro(db, console);
+  }
+}
+
+class MatchBumpGmsCommand extends DbOneoffCommand {
+  MatchBumpGmsCommand(super.db);
+
+  @override
+  final String key = "GM";
+  @override
+  final String title = "Match Bump GMs";
+
+  @override
+  Future<void> executor(Console console, List<MenuArgumentValue> arguments) async {
+    await _matchBumpGms(db, console);
+  }
+}
+
+class DoesMyQueryWorkCommand extends DbOneoffCommand {
+  DoesMyQueryWorkCommand(super.db);
+
+  @override
+  final String key = "DMQ";
+  @override
+  final String title = "Does My Query Work?";
+
+  @override
+  Future<void> executor(Console console, List<MenuArgumentValue> arguments) async {
+    await _doesMyQueryWork(db, console);
+  }
+}
+
+class QuitCommand extends MenuCommand {
+  @override
+  final String key = "Q";
+  @override
+  final String title = "Quit";
+}
+
+class Lady90PercentFinishesCommand extends DbOneoffCommand {
+  Lady90PercentFinishesCommand(super.db);
+
+  @override
+  final String key = "L90";
+  @override
+  final String title = "Lady 90% Finishes";
+
+  @override
+  Future<void> executor(Console console, List<MenuArgumentValue> arguments) async {
+    await _lady90PercentFinishes(db, console);
+  }
+}
+
+class AnalyzeIcoreDumpCommand extends DbOneoffCommand {
+  AnalyzeIcoreDumpCommand(super.db);
+
+  @override
+  final String key = "AID";
+  @override
+  final String title = "Analyze Icore Dump";
+  @override
+  List<MenuArgument> get arguments => [
+    StringMenuArgument(
+      label: "file",
+      description: "Path to an ICORE DB JSON dump to analyze",
+      required: true,
+    ),
+  ];
+
+  @override
+  Future<void> executor(Console console, List<MenuArgumentValue> arguments) async {
+    var path = arguments.first.value;
+    var file = File(path);
+    if(!file.existsSync()) {
+      console.print("File does not exist: ${file.path}");
+      return;
+    }
+    await _analyzeIcoreDump(db, console, file);
+  }
+}
+
+class ImportIcoreDumpCommand extends DbOneoffCommand {
+  ImportIcoreDumpCommand(super.db);
+
+  @override
+  final String key = "IID";
+  @override
+  final String title = "Import Icore Dump";
+
+  @override
+  Future<void> executor(Console console, List<MenuArgumentValue> arguments) async {
+    var path = arguments.first.value;
+    var file = File(path);
+    if(!file.existsSync()) {
+      console.print("File does not exist: ${file.path}");
+      return;
+    }
+    await _importIcoreDump(db, console, file);
+  }
+
+  @override
+  List<MenuArgument> get arguments => [
+    StringMenuArgument(label: "file", description: "Path to an ICORE DB JSON dump to import", required: true),
+  ];
+}
+
+class WinningPointsByDateCommand extends DbOneoffCommand {
+  WinningPointsByDateCommand(super.db);
+
+  @override
+  final String key = "WPD";
+  @override
+  final String title = "Winning Points By Date";
+
+  @override
+  Future<void> executor(Console console, List<MenuArgumentValue> arguments) async {
+    await _winningPointsByDate(db, console);
+  }
+}
+
+class StageSizeAnalysisCommand extends DbOneoffCommand {
+  StageSizeAnalysisCommand(super.db);
+
+  @override
+  final String key = "SSA";
+  @override
+  final String title = "Stage Size Analysis";
+
+  @override
+  Future<void> executor(Console console, List<MenuArgumentValue> arguments) async {
+    await _stageSizeAnalysis(db, console);
+  }
+}
+
+Future<void> _howGoodIsTomCastro(AnalystDatabase db, Console console) async {
   var project = (await db.getRatingProjectByName("L2s Main"))!;
   var pccGroup = await project.groupForDivision(uspsaPcc).unwrap();
   var coGroup = await project.groupForDivision(uspsaCarryOptics).unwrap();
@@ -63,13 +234,14 @@ Future<void> _howGoodIsTomCastro(AnalystDatabase db) async {
   memberNumbers.addAll(pccTom.map((e) => e.allPossibleMemberNumbers).flattened);
   memberNumbers.addAll(coTom.map((e) => e.allPossibleMemberNumbers).flattened);
   var tomMatches = await db.getMatchesByMemberNumbers(memberNumbers.toList());
-  print("Tom matches: ${tomMatches.length}");
+  console.print("Tom matches: ${tomMatches.length}");
 
   List<int> tomPccFinishes = [];
   List<int> tomCoFinishes = [];
   List<String> matchNamesThatCount = [];
   List<int> pccMatchSizes = [];
   List<int> coMatchSizes = [];
+  var matchProgressBar = LabeledProgressBar(maxValue: tomMatches.length, initialLabel: "Processing matches...");
   for(var match in tomMatches) {
     if(match.eventName.toLowerCase().contains("fipt") || match.eventName.toLowerCase().contains("f.i.p.t.")) continue;
     if(match.eventName.toLowerCase().contains("side match")) continue;
@@ -108,15 +280,17 @@ Future<void> _howGoodIsTomCastro(AnalystDatabase db) async {
         }
       }
     }
+    matchProgressBar.tick();
   }
+  matchProgressBar.complete();
 
   var pccWins = tomPccFinishes.where((e) => e == 1).length;
   var coWins = tomCoFinishes.where((e) => e == 1).length;
-  print("Match names that count: \n${matchNamesThatCount.join("\n")}");
-  print("PCC wins: $pccWins/${tomPccFinishes.length}");
-  print("CO wins: $coWins/${tomCoFinishes.length}");
-  print("PCC average finish: ${tomPccFinishes.average.toStringAsFixed(2)}/${pccMatchSizes.average.toStringAsFixed(2)}");
-  print("CO average finish: ${tomCoFinishes.average.toStringAsFixed(2)}/${coMatchSizes.average.toStringAsFixed(2)}");
+  console.print("Match names that count: \n${matchNamesThatCount.join("\n")}");
+  console.print("PCC wins: $pccWins/${tomPccFinishes.length}");
+  console.print("CO wins: $coWins/${tomCoFinishes.length}");
+  console.print("PCC average finish: ${tomPccFinishes.average.toStringAsFixed(2)}/${pccMatchSizes.average.toStringAsFixed(2)}");
+  console.print("CO average finish: ${tomCoFinishes.average.toStringAsFixed(2)}/${coMatchSizes.average.toStringAsFixed(2)}");
 }
 
 Future<int> _getTomPlace(DbShootingMatch match, DbMatchEntry entry) async {
@@ -132,16 +306,19 @@ Future<int> _getTomPlace(DbShootingMatch match, DbMatchEntry entry) async {
   return scores.entries.firstWhere((e) => e.key.memberNumber == entry.memberNumber).value.place;
 }
 
-Future<void> _matchBumpGms(AnalystDatabase db) async {
-  var matches = await db.isar.dbShootingMatchs.where().anyDate()
+Future<void> _matchBumpGms(AnalystDatabase db, Console console) async {
+  console.print("Loading matches...");
+  var matches = db.isar.dbShootingMatchs.where().anyDate()
     .filter()
     .sportNameEqualTo(uspsaSport.name)
-    .sortByDate().findAll();
+    .sortByDate().findAllSync();
 
 
   Map<ShootingMatch, MatchEntry> gmBumpEligible = {};
   Map<MatchEntry, ShootingMatch> gmBumpMatches = {};
   Map<MatchEntry, List<MatchEntry>> gmsBeat = {};
+  console.print("Searching for eligible GM bumps...");
+  var matchProgressBar = LabeledProgressBar(maxValue: matches.length);
   for(var dbMatch in matches) {
     var matchRes = await HydratedMatchCache().get(dbMatch);
     if(matchRes.isErr()) {
@@ -182,13 +359,19 @@ Future<void> _matchBumpGms(AnalystDatabase db) async {
         gmsBeat[winner] = gmsOver90;
       }
     }
+    matchProgressBar.tick("${dbMatch.eventName}");
   }
+  matchProgressBar.complete();
 
   var project = (await db.getRatingProjectByName("L2s Main"))!;
   Map<MatchEntry, DbShooterRating> ratings = {};
 
   await project.dbGroups.load();
 
+  var ratingLookupProgressBar = LabeledProgressBar(
+    maxValue: [...gmBumpEligible.values, ...gmsBeat.values.flattened].length,
+    initialLabel: "Looking up ratings...",
+  );
   for(var entry in [...gmBumpEligible.values, ...gmsBeat.values.flattened]) {
     var group = await project.groupForDivision(entry.division).unwrap();
     if(group != null) {
@@ -200,9 +383,12 @@ Future<void> _matchBumpGms(AnalystDatabase db) async {
     else {
       print("!!! null group for ${entry.name} ${entry.memberNumber} ${entry.division}");
     }
+    ratingLookupProgressBar.tick();
   }
+  ratingLookupProgressBar.complete();
 
-  print("Eligible for GM bumps: ");
+  console.clearScreen();
+  console.print("Eligible for GM bumps: ");
   var bumpEligible = gmBumpEligible.values.sorted((a, b) {
     var aRating = ratings[a];
     var bRating = ratings[b];
@@ -220,50 +406,91 @@ Future<void> _matchBumpGms(AnalystDatabase db) async {
       return aRating!.rating.compareTo(bRating!.rating);
     }
   });
+
+  double minimumEloAtMatch = 1e20;
+  double maximumEloAtMatch = 0;
+  double minimumEloToday = 1e20;
+  double maximumEloToday = 0;
+  List<double> elosAtMatch = [];
+  List<double> elosToday = [];
+  List<double> beatenElos = [];
+  int unratedAtMatch = 0;
+  int currentlyGM = 0;
   for(var bumpEntry in bumpEligible) {
     var entry = bumpEntry;
     var match = gmBumpMatches[entry];
     var over = gmsBeat[entry];
     var rating = ratings[entry];
-    print("${entry.name} at ${match?.name} in ${entry.division}");
-    print("\tWas ${entry.classification} at match");
-    print("\tIs now ${rating?.lastClassification ?? "(unknown class)"} with ${rating?.rating.round() ?? "(unrated)"} Elo");
-    print("\tBeat these GMs over 90%:");
+    if(rating == null) {
+      continue;
+    }
+    var eloToday = rating.rating;
+    minimumEloToday = min(minimumEloToday, eloToday);
+    maximumEloToday = max(maximumEloToday, eloToday);
+    elosToday.add(eloToday);
+    var eloAtMatch = EloShooterRating.wrapDbRating(rating).ratingAtEvent(match!, null);
+    if(eloAtMatch != null) {
+      minimumEloAtMatch = min(minimumEloAtMatch, eloAtMatch);
+      maximumEloAtMatch = max(maximumEloAtMatch, eloAtMatch);
+      elosAtMatch.add(eloAtMatch);
+    }
+    else {
+      unratedAtMatch += 1;
+    }
+    if(rating.lastClassification == uspsaGM) {
+      currentlyGM += 1;
+    }
+    console.print("${entry.name} at ${match.name} in ${entry.division}");
+    console.print("\tWas ${entry.classification} with ${eloAtMatch?.round()} Elo at match");
+    console.print("\tIs now ${rating.lastClassification ?? "(unknown class)"} with ${eloAtMatch?.round() ?? "(unknown)"} Elo");
+    console.print("\tBeat these GMs over 90%:");
     for(var gm in over!) {
       var gmRating = ratings[gm];
       double? eloAtMatch;
       if(gmRating != null) {
-        eloAtMatch = EloShooterRating.wrapDbRating(gmRating).ratingAtEvent(match!, null);
+        beatenElos.add(gmRating.rating);
+        eloAtMatch = EloShooterRating.wrapDbRating(gmRating).ratingAtEvent(match, null);
       }
-      print("\t\t${gm.name} (${gm.memberNumber}, ${eloAtMatch?.round() ?? "(unknown)"} Elo at match, ${gmRating?.rating.round() ?? "(unrated)"} Elo today)");
+      console.print("\t\t${gm.name} (${gm.memberNumber}, ${eloAtMatch?.round() ?? "(unknown)"} Elo at match, ${gmRating?.rating.round() ?? "(unrated)"} Elo today)");
     }
-    print("\n");
+    console.print("\n");
   }
+
+  console.print("Collective stats for bumped shooters:");
+  console.print("Min-max Elo at match: ${minimumEloAtMatch.round()} to ${maximumEloAtMatch.round()}");
+  console.print("Average Elo at match: ${elosAtMatch.average.round()}");
+  console.print("Min-max Elo today: ${minimumEloToday.round()} to ${maximumEloToday.round()}");
+  console.print("Average Elo today: ${elosToday.average.round()}");
+  console.print("Average Elo of GMs beaten: ${beatenElos.average.round()}");
+  console.print("Unrated at match: ${unratedAtMatch}");
+  console.print("Currently GM: ${currentlyGM}");
+  console.print("Total eligible: ${bumpEligible.length}");
 }
 
-Future<void> _addMemberNumbersToMatches(AnalystDatabase db) async {
-  var matches = await db.isar.dbShootingMatchs.where().anyDate().findAll();
-  for(var match in matches) {
-    match.memberNumbersAppearing = match.shooters.map((e) => e.memberNumber).where((e) => e.isNotEmpty).toList();
-  }
-  await db.isar.writeTxn(() async {
-    await db.isar.dbShootingMatchs.putAll(matches);
-  });
-  _log.i("${matches.length} matches updated");
-}
+// Future<void> _addMemberNumbersToMatches(AnalystDatabase db) async {
+//   var matches = await db.isar.dbShootingMatchs.where().anyDate().findAll();
+//   for(var match in matches) {
+//     match.memberNumbersAppearing = match.shooters.map((e) => e.memberNumber).where((e) => e.isNotEmpty).toList();
+//   }
+//   await db.isar.writeTxn(() async {
+//     await db.isar.dbShootingMatchs.putAll(matches);
+//   });
+//   _log.i("${matches.length} matches updated");
+// }
 
-Future<void> _doesMyQueryWork(AnalystDatabase db) async {
+Future<void> _doesMyQueryWork(AnalystDatabase db, Console console) async {
   var startTime = DateTime.now();
   var matches = await db.queryMatchesByCompetitorMemberNumbers(["A102675", "TY102675", "FY102675"], pageSize: 5);
   var timeTaken = DateTime.now().difference(startTime).inMilliseconds;
   for(var match in matches) {
-    _log.i("${match}");
+    console.print("${match}");
   }
-  _log.i("${matches.length} matches found in ${timeTaken}ms");
+  console.print("${matches.length} matches found in ${timeTaken}ms");
 }
 
-Future<void> _lady90PercentFinishes(AnalystDatabase db) async {
+Future<void> _lady90PercentFinishes(AnalystDatabase db, Console console) async {
   var startTime = DateTime.now();
+  console.print("Loading matches...");
   var matches = await db.isar.dbShootingMatchs
     .filter()
     .shootersElement((q) =>
@@ -273,82 +500,29 @@ Future<void> _lady90PercentFinishes(AnalystDatabase db) async {
     )
     .sortByDate()
     .findAll();
-  _log.d("Starting oneoffDbAnalyses");
-  // await _matchChronoCounts();
+
+  console.print("Found ${matches.length} matches, processing...");
+
+  var matchProgressBar = LabeledProgressBar(maxValue: matches.length);
+  var buf = StringBuffer();
+  for(var match in matches) {
+    for(var shooter in match.shooters) {
+      if(shooter.female && (shooter.precalculatedScore?.percentage ?? 0) >= 90) {
+        var competitorCount = match.shooters.where((e) => e.divisionName == shooter.divisionName).length;
+        buf.writeln('${match.date},${match.eventName.replaceAll(',', ' ')},${match.matchLevelName},${shooter.firstName},${shooter.lastName},${shooter.divisionName},${shooter.precalculatedScore?.percentage},${shooter.precalculatedScore?.place},${competitorCount}');
+      }
+    }
+    matchProgressBar.tick("${match.eventName}");
+  }
+  matchProgressBar.complete();
+
+  console.print("Writing to file...");
+  File f = File("/tmp/lady_90_percent.csv");
+  f.writeAsString(buf.toString());
+  console.print("Analysis complete: wrote ${f.path} in ${DateTime.now().difference(startTime).inMilliseconds}ms");
 }
 
-// Future<void> _matchChronoCounts() async {
-//   await MatchCache().ready;
-//   Map<MatchLevel, List<PracticalMatch>> matches = {};
-//   Map<MatchLevel, int> matchCounts = {};
-//   Map<MatchLevel, int> chronoCounts = {};
-//   await RatingProjectManager().ready;
-
-//   var project = RatingProjectManager().loadProject("L2s Main");
-//   for(var url in project!.matchUrls) {
-//     var match = await MatchCache().getMatchImmediate(url);
-//     matches.addToList(match!.level ?? MatchLevel.I, match);
-//   }
-
-//   for(var match in matches.values.flattened) {
-//     var date = match.date!;
-//     if(match.name!.toLowerCase().contains("national")) {
-//       match.level = MatchLevel.III;
-//     }
-//     else if(match.level == MatchLevel.I || match.level == null) {
-//       match.level = MatchLevel.II;
-//     }
-//     matchCounts.increment(match.level ?? MatchLevel.I);
-//     if(match.hasChrono) {
-//       chronoCounts.increment(match.level ?? MatchLevel.I);
-//     }
-//   }
-
-//   for(var level in MatchLevel.values) {
-//     if(matchCounts[level] == null || matchCounts[level] == 0) continue;
-//     _log.i("Level ${level.name}: ${chronoCounts[level]}/${matchCounts[level]}");
-//   }
-
-//   File f = File("chrono_by_match.csv");
-//   String csv = "Match Name,Match Date,Probable Match Level,Has Chrono\n";
-//   for(var level in MatchLevel.values) {
-//     if(matches[level] == null || matches[level]!.isEmpty) continue;
-//     for(var match in matches[level]!) {
-//       csv += '"${match.name}",${programmerYmdFormat.format(match.date!)},${match.level?.name ?? MatchLevel.I.name},${match.hasChrono}\n';
-//     }
-//   }
-//   f.writeAsStringSync(csv);
-//   _log.i("Analysis complete: wrote ${f.path}");
-// }
-
-// Future<void> _lady90PercentFinishes(AnalystDatabase db) async {
-//   var startTime = DateTime.now();
-//   var matches = await db.matchDb.dbShootingMatchs
-//     .filter()
-//     .shootersElement((q) =>
-//       q.femaleEqualTo(true)
-//       .and()
-//       .precalculatedScore((q) => q.percentageGreaterThan(90, include: true))
-//     )
-//     .sortByDate()
-//     .findAll();
-
-//   var buf = StringBuffer();
-//   for(var match in matches) {
-//     for(var shooter in match.shooters) {
-//       if(shooter.female && (shooter.precalculatedScore?.percentage ?? 0) >= 90) {
-//         var competitorCount = match.shooters.where((e) => e.divisionName == shooter.divisionName).length;
-//         buf.writeln('${match.date},${match.eventName.replaceAll(',', ' ')},${match.matchLevelName},${shooter.firstName},${shooter.lastName},${shooter.divisionName},${shooter.precalculatedScore?.percentage},${shooter.precalculatedScore?.place},${competitorCount}');
-//       }
-//     }
-//   }
-
-//   File f = File("female_90_percent.csv");
-//   f.writeAsString(buf.toString());
-//   _log.i("Analysis complete: wrote ${f.path} in ${DateTime.now().difference(startTime).inMilliseconds}ms");
-// }
-
-Future<void> _analyzeIcoreDump(File file) async {
+Future<void> _analyzeIcoreDump(AnalystDatabase db, Console console, File file) async {
   var masterScores = IcoreClassifierExport.fromFile(file);
   var analystScores = masterScores.toAnalystScores();
 
@@ -362,7 +536,7 @@ Future<void> _analyzeIcoreDump(File file) async {
 
   for(var date in scoresByDateDivision.keys.sorted((a, b) => b.compareTo(a))) {
     var monthMap = scoresByDateDivision[date]!;
-    print("${programmerYmdFormat.format(date)}:");
+    console.print("${programmerYmdFormat.format(date)}:");
     for(var division in monthMap.keys.sorted((a, b) => a.compareTo(b))) {
       var scores = monthMap[division]!;
       Map<String, List<ClassifierScore>> scoresByClassifier = {};
@@ -370,21 +544,20 @@ Future<void> _analyzeIcoreDump(File file) async {
         scoresByClassifier.addToList(score.classifierCode, score);
       }
       var withEnoughScores = scoresByClassifier.values.where((e) => e.length >= 4);
-      print("\t${division}: ${scores.length} (${withEnoughScores.length} eligible)");
+      console.print("\t${division}: ${scores.length} (${withEnoughScores.length} eligible)");
     }
   }
 }
 
-Future<void> _importIcoreDump(File file) async {
+Future<void> _importIcoreDump(AnalystDatabase db, Console console, File file) async {
   var masterScores = IcoreClassifierExport.fromFile(file);
   var analystScores = masterScores.toAnalystScores();
-  var db = AnalystDatabase();
 
   await db.isar.writeTxn(() async {
     int deleted = await db.isar.dbShootingMatchs.filter()
       .eventNameStartsWith("ICORE Classifier Analysis")
       .deleteAll();
-    _log.i("Deleted ${deleted} matches");
+    console.print("Deleted ${deleted} matches");
   });
 
   var importer = ClassifierImporter(
@@ -395,11 +568,11 @@ Future<void> _importIcoreDump(File file) async {
   );
   var matchesResult = importer.import(analystScores);
   if(matchesResult.isErr()) {
-    _log.w("Error importing scores: ${matchesResult.unwrapErr()}");
+    console.print("Error importing scores: ${matchesResult.unwrapErr()}");
     return;
   }
   var matches = matchesResult.unwrap();
-  _log.i("Imported ${matches.length} matches");
+  console.print("Imported ${matches.length} matches");
   int dbInserts = 0;
   for(var match in matches) {
     var saveResult = await db.saveMatch(match);
@@ -407,17 +580,16 @@ Future<void> _importIcoreDump(File file) async {
       dbInserts++;
     }
     else {
-      _log.w("Error saving match: ${saveResult.unwrapErr()}");
+      console.print("Error saving match: ${saveResult.unwrapErr()}");
     }
   }
-  _log.i("Saved ${dbInserts} matches to DB");
+  console.print("Saved ${dbInserts} matches to DB");
 }
 
-Future<void> _winningPointsByDate() async {
-  var db = AnalystDatabase();
+Future<void> _winningPointsByDate(AnalystDatabase db, Console console) async {
   var project = await db.getRatingProjectByName("L2s Main");
   if(project == null) {
-    _log.e("L2s Main project not found");
+    console.print("L2s Main project not found");
     return;
   }
 
@@ -429,17 +601,17 @@ Future<void> _winningPointsByDate() async {
   for(var pointer in project.matchPointers) {
     var matchRes = await pointer.getDbMatch(db);
     if(matchRes.isErr()) {
-      _log.w("Error getting match: ${matchRes.unwrapErr()}");
+      console.print("Error getting match: ${matchRes.unwrapErr()}");
       continue;
     }
     var match = matchRes.unwrap();
     if(!match.sport.hasDivisions) {
-      _log.w("Sport has no divisions: ${match.eventName}");
+      console.print("Sport has no divisions: ${match.eventName}");
       return;
     }
     var hydratedMatchRes = await match.hydrate(useCache: true);
     if(hydratedMatchRes.isErr()) {
-      _log.w("Error hydrating match: ${hydratedMatchRes.unwrapErr()}");
+        console.print("Error hydrating match: ${hydratedMatchRes.unwrapErr()}");
       continue;
     }
     var hydratedMatch = hydratedMatchRes.unwrap();
@@ -448,7 +620,7 @@ Future<void> _winningPointsByDate() async {
       pointsAvailable += stage.maxPoints;
     }
     if(pointsAvailable == 0) {
-      _log.w("Match has no points: ${match.eventName}");
+      console.print("Match has no points: ${match.eventName}");
       continue;
     }
 
@@ -484,7 +656,7 @@ Future<void> _winningPointsByDate() async {
         var date = match.date;
         winningPercentPoints[date] ??= {};
         winningPercentPoints[date]!.addToList(division.name, points);
-        _log.i("${match.eventName} ${division.name}: ${points}");
+        console.print("${match.eventName} ${division.name}: ${points}");
       }
     }
   }
@@ -582,13 +754,13 @@ class _TotalStagePerformance {
   }
 }
 
-Future<void> _stageSizeAnalysis(AnalystDatabase db) async {
+Future<void> _stageSizeAnalysis(AnalystDatabase db, Console console) async {
 
   final bool normalizeStageSizeCounts = false;
 
   var project = await db.getRatingProjectByName("L2s Main");
   if(project == null) {
-    _log.e("L2s Main project not found");
+    console.print("L2s Main project not found");
     return;
   }
 
@@ -598,11 +770,15 @@ Future<void> _stageSizeAnalysis(AnalystDatabase db) async {
   List<_StagePointer> mediumCourses = [];
   List<_StagePointer> longCourses = [];
   Map<String, DbShootingMatch> matches = {};
-  _log.i("Beginning stage size analysis");
+  console.print("Beginning stage size analysis");
+  console.print("Loading ${matchPointers.length} matches and counting stages...");
+
+  var progressBar = LabeledProgressBar(maxValue: matchPointers.length, initialLabel: "<event name>");
+
   for(var pointer in matchPointers) {
     var matchRes = await pointer.getDbMatch(db);
     if(matchRes.isErr()) {
-      _log.w("Error getting match: ${matchRes.unwrapErr()}");
+      console.print("Error getting match: ${matchRes.unwrapErr()}");
       continue;
     }
     var match = matchRes.unwrap();
@@ -634,40 +810,44 @@ Future<void> _stageSizeAnalysis(AnalystDatabase db) async {
     }
 
     int total = shortCourseCount + mediumCourseCount + longCourseCount;
-    _log.v("${match.eventName}: ${shortCourseCount} short, ${mediumCourseCount} medium, ${longCourseCount} long");
+
+    progressBar.tick("${match.eventName}: ${shortCourseCount} short, ${mediumCourseCount} medium, ${longCourseCount} long");
   }
+  progressBar.complete();
 
 
-  _log.i("Writing ${stageSizeCsvLines.length} stage size CSV lines");
+  console.print("Writing ${stageSizeCsvLines.length} stage size CSV lines");
   String stageSizeCsv = stageSizeCsvLines.join("\n");
   File f = File("/tmp/stage_size_analysis.csv");
   f.writeAsStringSync(stageSizeCsv);
-  _log.i("Finished writing");
+  console.print("Finished writing");
 
   stageSizeCsvLines.clear();
 
-  _log.i("Beginning average analysis");
+  console.print("Beginning average analysis");
   for(var group in project.groups) {
     Map<DbShooterRating, List<_StagePerformance>> stagePerformances = {};
     // Each shooter's list contains three elements, one each containing average performances for short, medium, and long courses.
     Map<DbShooterRating, List<_TotalStagePerformance>> averagePerformancesBySize = {};
     var ratingsRes = project.getRatingsSync(group);
     if(ratingsRes.isErr()) {
-      _log.w("Error getting ratings: ${ratingsRes.unwrapErr()}");
+      console.print("Error getting ratings: ${ratingsRes.unwrapErr()}");
       continue;
     }
     var ratings = ratingsRes.unwrap();
     int totalRatings = ratings.length;
     ratings.retainWhere((e) => e.lastSeen.isAfter(DateTime(2024, 1, 1)) && e.length >= 30);
-    _log.i("Found ${ratings.length} recent-ish ratings for group ${group.name} (${totalRatings} total)");
+    console.print("Found ${ratings.length} recent-ish ratings for group ${group.name} (${totalRatings} total)");
     ratings.sort((a, b) => b.rating.compareTo(a.rating));
+    console.print("Analyzing ${ratings.length} ratings...");
+    var progressBar = LabeledProgressBar(maxValue: ratings.length);
     for(int i = 0; i < ratings.length; i++) {
       var rating = ratings[i];
 
       for(var event in rating.events) {
         var match = matches[event.matchId];
         if(match == null) {
-          _log.w("Match not found: ${event.matchId}");
+          console.print("Match not found: ${event.matchId}");
           continue;
         }
 
@@ -738,7 +918,10 @@ Future<void> _stageSizeAnalysis(AnalystDatabase db) async {
 
       var longCourseTotal = _TotalStagePerformance.from(longCoursePerformances);
       averagePerformancesBySize[rating]!.add(longCourseTotal);
+
+      progressBar.tick(rating.toString());
     }
+    progressBar.complete();
 
     // Write CSV lines for each competitor's averages.
     List<String> averageCsvLines = ["Shooter Number, Shooter Name, Shooter Rating, SC Count, SC Place, SC Place StdDev, SC Finish, SC Finish StdDev, SC Rating Change, SC Change StdDev, SC Positive Proportion, MC Count, MC Place, MC Place StdDev, MC Finish, MC Finish StdDev, MC Rating Change, MC Change StdDev, MC Positive Proportion, LC Count, LC Place, LC Place StdDev, LC Finish, LC Finish StdDev, LC Rating Change, LC Change StdDev, LC Positive Proportion"];
@@ -750,6 +933,6 @@ Future<void> _stageSizeAnalysis(AnalystDatabase db) async {
 
     File f = File("/tmp/stage_size_shooter_analysis_${group.name}.csv");
     f.writeAsStringSync(averageCsvLines.join("\n"));
-    _log.i("Wrote ${averageCsvLines.length} average lines to ${f.path}");
+    console.print("Wrote ${averageCsvLines.length} average lines to ${f.path}");
   }
 }

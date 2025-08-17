@@ -25,7 +25,6 @@ import 'package:shooting_sports_analyst/data/help/all_helps.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
 import 'package:shooting_sports_analyst/data/match_cache/registration_cache.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_context.dart';
-import 'package:shooting_sports_analyst/db_oneoffs.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/route/local_upload.dart';
@@ -172,7 +171,7 @@ void main() async {
       await RegistrationCache().ready;
     _log.i("Registration cache ready");
 
-    oneoffDbAnalyses(AnalystDatabase());
+    // oneoffDbAnalyses(AnalystDatabase());
     HelpTopicRegistry().initialize();
     registerHelpTopics();
 

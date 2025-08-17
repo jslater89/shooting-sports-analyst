@@ -6,7 +6,6 @@
 
 
 import 'package:data/data.dart' show ContinuousDistribution, WeibullDistribution;
-import 'package:flutter/widgets.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 /// Rating scalers scale ratings, either clamping/stretching to a new range,
 /// or scaling by a factor, or offsetting by a value.
@@ -28,7 +27,6 @@ abstract class RatingScaler {
   RatingScaler copy();
 
   bool get hasSettings => false;
-  Widget? settingsWidget() => null;
 }
 
 /// Contains information required for a RatingScaler to scale a rating.

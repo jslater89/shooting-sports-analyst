@@ -213,13 +213,14 @@ class _SSALogOutput extends LogOutput {
     await launchFuture;
 
     if(this.console && SSALogger.consoleOutput) event.lines.forEach((element) { print(element); });
-    if(this.file) fileOutput.write(event.lines.join("\n"));
+    if(this.file && SSALogger.fileOutput) fileOutput.write(event.lines.join("\n"));
   }
 }
 
 class SSALogger extends LogPrinter {
   static late DebugModeProvider debugProvider;
   static bool consoleOutput = true;
+  static bool fileOutput = true;
   static bool get kDebugMode => debugProvider.kDebugMode;
   static bool get kReleaseMode => debugProvider.kReleaseMode;
 
@@ -230,26 +231,31 @@ class SSALogger extends LogPrinter {
 
   final String tag;
   SSALogger(this.tag) {
-    _init(true);
+    _init();
   }
   SSALogger.consoleOnly(this.tag) {
-    _init(false);
+    _init(console: true, file: false);
+  }
+  SSALogger.fileOnly(this.tag) {
+    _init(console: false, file: true);
   }
 
   Future<void> get ready => _readyCompleter.future;
   Completer<void> _readyCompleter = Completer();
 
-  Future<void> _init(bool file) async {
+  Future<void> _init({bool file = true, bool console = true}) async {
     // This needs to be able to load independently of other
     // components,
     _minLevel = Level.trace;
 
-    _output = _SSALogOutput(console: true, file: true);
+    _output = _SSALogOutput(console: console, file: file);
     _logger = new Logger(
       printer: this,
       filter: _SSALogFilter(),
       output: _output,
     );
+
+    _readyCompleter.complete();
   }
 
   Future<void> canLog() async {
