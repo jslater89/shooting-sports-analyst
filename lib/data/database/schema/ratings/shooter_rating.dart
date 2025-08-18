@@ -281,6 +281,16 @@ class DbShooterRating extends Shooter with DbSportEntity {
     return events.map((e) => e.score.ratio).average;
   }
 
+  bool matchesShooter(Shooter s) {
+    if(s.memberNumber == memberNumber) {
+      return true;
+    }
+    if(allPossibleMemberNumbers.contains(s.memberNumber)) {
+      return true;
+    }
+    return false;
+  }
+
   DbShooterRating({
     required this.sportName,
     required String firstName,

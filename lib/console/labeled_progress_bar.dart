@@ -6,6 +6,8 @@ class LabeledProgressBar {
   late final Console _console;
   String _currentLabel = "";
 
+  bool _hasError = false;
+
   LabeledProgressBar({
     required int maxValue,
     String initialLabel = "",
@@ -32,9 +34,18 @@ class LabeledProgressBar {
     _bar.tick();
   }
 
+  /// Print an error/status message to the console, below the progress bar.
+  void error(String message) {
+    _hasError = true;
+    _console.moveDown(2);
+    _console.overwriteLine(message);
+    _console.moveUp(2);
+
+  }
+
   /// Complete the progress bar, moving the cursor to the next clear line.
   void complete() {
     _bar.complete();
-    _console.moveDown(2);
+    _console.moveDown(_hasError ? 3 : 2);
   }
 }
