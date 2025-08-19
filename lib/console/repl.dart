@@ -129,6 +129,38 @@ extension PrintExtension on Console {
     cursorPosition = position;
   }
 
+  /// Ensure that there are at least [count] lines of available to write below the
+  /// current cursor position, writing blank lines as needed.
+  ///
+  /// Return the cursor to the previous position when done.
+  void ensureLines(int count) {
+    var currentPosition = cursorPosition;
+    if((currentPosition?.col ?? 0) > 0) {
+      // Extra newline if we're on a line that has content:
+      // e.g. ensureLines(1) with the cursor at 'c'
+      //    abc (\n: 1)
+      //    <desired blank line> (\n: 2)
+      count += 1;
+    }
+    var desiredRow = currentPosition?.row ?? 0 + count;
+    int restoreCol = currentPosition?.col ?? 0;
+    int totalLines = count;
+
+    if(desiredRow >= windowHeight) {
+      // In the move-down case, we may need more rows to fit the desired downward move.
+      cursorPosition = Coordinate(windowHeight - 1, 0);
+      var neededRows = desiredRow - windowHeight + 1;
+      for(var i = 0; i < neededRows; i++) {
+        write("\n");
+      }
+
+      // Move back up to the previous position, which is now at a different
+      // console coordinate, so we have to do a relative move.
+      moveUp(totalLines);
+    }
+    cursorPosition = Coordinate(currentPosition?.row ?? 0, restoreCol);
+  }
+
   /// Move the cursor up by the given number of lines.
   void moveUp(int count, {bool carriageReturn = false, bool clearLine = false}) {
     var position = cursorPosition;
@@ -147,6 +179,15 @@ extension PrintExtension on Console {
 
     if(clearLine) {
       eraseLine();
+    }
+
+    if(newRow >= windowHeight) {
+      // In the move-down case, we may need more rows to fit the desired downward move.
+      cursorPosition = Coordinate(windowHeight - 1, 0);
+      var neededRows = newRow - windowHeight + 1;
+      for(var i = 0; i < neededRows; i++) {
+        write("\n");
+      }
     }
 
     cursorPosition = Coordinate(newRow, newCol);

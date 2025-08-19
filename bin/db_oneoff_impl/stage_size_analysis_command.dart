@@ -49,14 +49,14 @@ class _StagePointer {
 
 class _StagePerformance {
   _StagePointer stage;
-  double score;
+  double hitFactor;
   double place;
   double ratio;
   double ratingChange;
   bool positive;
   double positiveProportion;
 
-  _StagePerformance({required this.stage, required this.score, required this.place, required this.ratio, required this.ratingChange, required this.positive, double? positiveProportion}) :
+  _StagePerformance({required this.stage, required this.hitFactor, required this.place, required this.ratio, required this.ratingChange, required this.positive, double? positiveProportion}) :
     this.positiveProportion = positiveProportion ?? (positive ? 1 : 0);
 
 
@@ -64,7 +64,7 @@ class _StagePerformance {
     if(other is _StagePerformance) {
       return _StagePerformance(
         stage: stage,
-        score: (score + other.score),
+        hitFactor: (hitFactor + other.hitFactor),
         place: (place + other.place),
         ratio: (ratio + other.ratio),
         ratingChange: (ratingChange + other.ratingChange),
@@ -75,13 +75,14 @@ class _StagePerformance {
   }
 
   operator /(int count) {
-    return _StagePerformance(stage: stage, score: score / count, place: place / count, ratio: ratio / count, ratingChange: ratingChange / count, positive: positive, positiveProportion: positiveProportion / count);
+    return _StagePerformance(stage: stage, hitFactor: hitFactor / count, place: place / count, ratio: ratio / count, ratingChange: ratingChange / count, positive: positive, positiveProportion: positiveProportion / count);
   }
 }
 
 class _TotalStagePerformance {
   int count = 0;
-  double score = 0;
+  double hitFactor = 0;
+  double hitFactorStdDev = 0;
   double place = 0;
   double placeStdDev = 0;
   double ratio = 0;
@@ -97,7 +98,8 @@ class _TotalStagePerformance {
     if(count == 0) {
       return;
     }
-    score = stages.map((e) => e.score).average;
+    hitFactor = stages.map((e) => e.hitFactor).average;
+    hitFactorStdDev = stages.map((e) => e.hitFactor).stdDev();
     place = stages.map((e) => e.place).average;
     ratio = stages.map((e) => e.ratio).average;
     ratingChange = stages.map((e) => e.ratingChange).average;
@@ -163,8 +165,6 @@ Future<void> _stageSizeAnalysis(AnalystDatabase db, Console console) async {
       }
     }
 
-    int total = shortCourseCount + mediumCourseCount + longCourseCount;
-
     progressBar.tick("${match.eventName}: ${shortCourseCount} short, ${mediumCourseCount} medium, ${longCourseCount} long");
   }
   progressBar.complete();
@@ -194,7 +194,7 @@ Future<void> _stageSizeAnalysis(AnalystDatabase db, Console console) async {
     console.print("Found ${ratings.length} recent-ish ratings for group ${group.name} (${totalRatings} total)");
     ratings.sort((a, b) => b.rating.compareTo(a.rating));
     console.print("Analyzing ${ratings.length} ratings...");
-    var progressBar = LabeledProgressBar(maxValue: ratings.length);
+    var progressBar = LabeledProgressBar(maxValue: ratings.length, canHaveErrors: true);
     Map<String, Map<MatchEntry, RelativeMatchScore>> matchScores = {};
     for(int i = 0; i < ratings.length; i++) {
       var rating = ratings[i];
@@ -238,7 +238,7 @@ Future<void> _stageSizeAnalysis(AnalystDatabase db, Console console) async {
         var competitorStageScore = competitorStageScoreEntry.value;
 
         var stagePointer = _StagePointer(match: MatchPointer.fromDbMatch(match), stageNumber: stage.stageId, roundCount: stage.minRounds);
-        var stagePerformance = _StagePerformance(stage: stagePointer, score: competitorStageScore.score.hitFactor, place: event.score.place.toDouble(), ratio: event.score.ratio, ratingChange: event.ratingChange, positive: event.ratingChange > 0);
+        var stagePerformance = _StagePerformance(stage: stagePointer, hitFactor: competitorStageScore.score.hitFactor, place: event.score.place.toDouble(), ratio: event.score.ratio, ratingChange: event.ratingChange, positive: event.ratingChange > 0);
         stagePerformances[rating] ??= [];
         stagePerformances[rating]!.add(stagePerformance);
       }
@@ -247,33 +247,21 @@ Future<void> _stageSizeAnalysis(AnalystDatabase db, Console console) async {
       List<_StagePerformance> mediumCoursePerformances = [];
       List<_StagePerformance> longCoursePerformances = [];
       int shortCourseCount = 0;
-      int positiveShortCourses = 0;
-        int mediumCourseCount = 0;
-      int positiveMediumCourses = 0;
+      int mediumCourseCount = 0;
       int longCourseCount = 0;
-      int positiveLongCourses = 0;
       // Calculate average performances for each stage size.
       for(var performance in stagePerformances[rating] ?? []) {
 
         if(performance.stage.roundCount <= 12) {
           shortCoursePerformances.add(performance);
-          if(performance.positive) {
-            positiveShortCourses++;
-          }
           shortCourseCount++;
         }
         else if(performance.stage.roundCount <= 24) {
           mediumCoursePerformances.add(performance);
-          if(performance.positive) {
-            positiveMediumCourses++;
-          }
           mediumCourseCount++;
         }
         else {
           longCoursePerformances.add(performance);
-          if(performance.positive) {
-            positiveLongCourses++;
-          }
           longCourseCount++;
         }
       }
@@ -305,11 +293,57 @@ Future<void> _stageSizeAnalysis(AnalystDatabase db, Console console) async {
     progressBar.complete();
 
     // Write CSV lines for each competitor's averages.
-    List<String> averageCsvLines = ["Shooter Number, Shooter Name, Shooter Rating, SC Count, SC HF, SC Place, SC Place StdDev, SC Finish, SC Finish StdDev, SC Rating Change, SC Change StdDev, SC Positive Proportion, MC Count, MC HF, MC Place, MC Place StdDev, MC Finish, MC Finish StdDev, MC Rating Change, MC Change StdDev, MC Positive Proportion, LC Count, LC HF, LC Place, LC Place StdDev, LC Finish, LC Finish StdDev, LC Rating Change, LC Change StdDev, LC Positive Proportion"];
-    for(var entry in averagePerformancesBySize.entries) {
+    List<String> averageCsvLines = [
+      [
+        "Shooter Number",
+        "Shooter Name",
+        "Shooter Rating",
+        "SC Count", "SC HF", "SC HF StdDev", "SC Place", "SC Place StdDev", "SC Finish", "SC Finish StdDev", "SC Rating Change", "SC Change StdDev", "SC Positive Proportion",
+        "MC Count", "MC HF", "MC HF StdDev", "MC Place", "MC Place StdDev", "MC Finish", "MC Finish StdDev", "MC Rating Change", "MC Change StdDev", "MC Positive Proportion",
+        "LC Count", "LC HF", "LC HF StdDev", "LC Place", "LC Place StdDev", "LC Finish", "LC Finish StdDev", "LC Rating Change", "LC Change StdDev", "LC Positive Proportion"
+      ].join(", ")
+    ];
+    for (var entry in averagePerformancesBySize.entries) {
       var rating = entry.key;
       var performances = entry.value;
-      averageCsvLines.add('${rating.memberNumber},"${rating.name.replaceAll('"', "")}",${rating.rating},${performances[0].count},${performances[0].score},${performances[0].place},${performances[0].placeStdDev},${performances[0].ratio},${performances[0].ratioStdDev},${performances[0].ratingChange},${performances[0].ratingChangeStdDev},${performances[0].positiveProportion},${performances[1].count},${performances[1].score},${performances[1].place},${performances[1].placeStdDev},${performances[1].ratio},${performances[1].ratioStdDev},${performances[1].ratingChange},${performances[1].ratingChangeStdDev},${performances[1].positiveProportion},${performances[2].count},${performances[2].score},${performances[2].place},${performances[2].placeStdDev},${performances[2].ratio},${performances[2].ratioStdDev},${performances[2].ratingChange},${performances[2].ratingChangeStdDev},${performances[2].positiveProportion}');
+      averageCsvLines.add([
+        rating.memberNumber,
+        '"${rating.name.replaceAll('"', "")}"',
+        rating.rating,
+        // SC
+        performances[0].count,
+        performances[0].hitFactor,
+        performances[0].hitFactorStdDev,
+        performances[0].place,
+        performances[0].placeStdDev,
+        performances[0].ratio,
+        performances[0].ratioStdDev,
+        performances[0].ratingChange,
+        performances[0].ratingChangeStdDev,
+        performances[0].positiveProportion,
+        // MC
+        performances[1].count,
+        performances[1].hitFactor,
+        performances[1].hitFactorStdDev,
+        performances[1].place,
+        performances[1].placeStdDev,
+        performances[1].ratio,
+        performances[1].ratioStdDev,
+        performances[1].ratingChange,
+        performances[1].ratingChangeStdDev,
+        performances[1].positiveProportion,
+        // LC
+        performances[2].count,
+        performances[2].hitFactor,
+        performances[2].hitFactorStdDev,
+        performances[2].place,
+        performances[2].placeStdDev,
+        performances[2].ratio,
+        performances[2].ratioStdDev,
+        performances[2].ratingChange,
+        performances[2].ratingChangeStdDev,
+        performances[2].positiveProportion
+      ].join(", "));
     }
 
     File f = File("/tmp/stage_size_shooter_analysis_${group.name}.csv");

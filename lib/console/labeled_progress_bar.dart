@@ -7,6 +7,7 @@ class LabeledProgressBar {
   String _currentLabel = "";
 
   bool _hasError = false;
+  bool canHaveErrors = false;
 
   LabeledProgressBar({
     required int maxValue,
@@ -14,11 +15,23 @@ class LabeledProgressBar {
     Coordinate? startCoordinate,
     int? barWidth,
     bool showSpinner = true,
+    this.canHaveErrors = false,
     List<String> tickCharacters = const <String>['-', '\\', '|', '/'],
   }) {
     _console = Console();
     _currentLabel = initialLabel;
+    // current state:
+    // <initial label>\n
+    // <cursor position>
     _console.print(_currentLabel);
+    if(canHaveErrors) {
+      _console.print(""); // reserve a line for errors
+      _console.moveUp(1);
+      // current state:
+      // <initial label>\n
+      // <cursor position for progress bar>\n
+      // <blank line for errors>
+    }
     _bar = ProgressBar(maxValue: maxValue, startCoordinate: startCoordinate, barWidth: barWidth, showSpinner: showSpinner, tickCharacters: tickCharacters);
     _console.moveUp(1);
   }
@@ -35,7 +48,12 @@ class LabeledProgressBar {
   }
 
   /// Print an error/status message to the console, below the progress bar.
+  ///
+  /// If the progress bar was not created with [canHaveErrors] set to true, this will do nothing.
   void error(String message) {
+    if(!canHaveErrors) {
+      return;
+    }
     _hasError = true;
     _console.moveDown(2);
     _console.overwriteLine(message);

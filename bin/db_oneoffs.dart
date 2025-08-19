@@ -39,6 +39,7 @@ import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
 import 'package:shooting_sports_analyst/version.dart';
 
+import 'db_oneoff_impl/stacked_labeled_progress_bar_test.dart';
 import 'server.dart';
 import 'db_oneoff_impl/base.dart';
 import 'db_oneoff_impl/tom_castro_command.dart';
