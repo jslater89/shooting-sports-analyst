@@ -24,11 +24,11 @@ const _uspsaPenalties = [
 // Too bad, 'not for score' shooters, you're in Open now
 const uspsaOpen = Division(name: "Open", shortName: "OPEN", alternateNames: ["NFS"], fallback: true);
 const uspsaPcc = Division(name: "PCC", shortName: "PCC", alternateNames: ["Pistol Caliber Carbine", "pistolcalibercarbine"]);
-const uspsaLimited = Division(name: "Limited", shortName: "LIM", alternateNames: ["LTD"]);
+const uspsaLimited = Division(name: "Limited", shortName: "LIM", alternateNames: ["LTD", "Standard"]);
 const uspsaLimitedOptics = Division(name: "Limited Optics", shortName: "LO", alternateNames: ["limitedoptics"]);
-const uspsaCarryOptics = Division(name: "Carry Optics", shortName: "CO", alternateNames: ["carryoptics", "Carry-Optic"]);
+const uspsaCarryOptics = Division(name: "Carry Optics", shortName: "CO", alternateNames: ["carryoptics", "Carry-Optic", "Production Optics"]);
 const uspsaProduction = Division(name: "Production", shortName: "PROD");
-const uspsaSingleStack = Division(name: "Single Stack", shortName: "SS", alternateNames: ["singlestack"]);
+const uspsaSingleStack = Division(name: "Single Stack", shortName: "SS", alternateNames: ["singlestack", "Classic"]);
 const uspsaRevolver = Division(name: "Revolver", shortName: "REV", alternateNames: ["REVO"]);
 const uspsaLimited10 = Division(name: "Limited 10", shortName: "L10", alternateNames: ["LIM10", "LTD10", "limited10"]);
 
