@@ -226,13 +226,13 @@ Future<void> _stageSizeAnalysis(AnalystDatabase db, Console console) async {
         }
         var competitorEntry = matchScore.entries.firstWhereOrNull((e) => rating.matchesShooter(e.key));
         if(competitorEntry == null) {
-          progressBar.error("Competitor not found: ${rating.memberNumber}");
+          progressBar.error("Competitor not found: $rating");
           continue;
         }
         var competitorScore = competitorEntry.value;
         var competitorStageScoreEntry = competitorScore.stageScores.entries.firstWhereOrNull((e) => e.key.stageId == stage.stageId);
         if(competitorStageScoreEntry == null) {
-          progressBar.error("Competitor stage score not found: ${rating.memberNumber} ${stage.stageId}");
+          progressBar.error("Competitor stage score not found: $rating ${stage.stageId}");
           continue;
         }
         var competitorStageScore = competitorStageScoreEntry.value;
@@ -240,11 +240,16 @@ Future<void> _stageSizeAnalysis(AnalystDatabase db, Console console) async {
         var stagePointer = _StagePointer(match: MatchPointer.fromDbMatch(match), stageNumber: stage.stageId, roundCount: stage.minRounds);
         var ratio = competitorStageScore.ratio;
         if(competitorStageScore.place == 1) {
-          // For stage winners, pretend that there's a '100% stage winner' epsilon
-          // better than second place, and use that to calculate the ratio.
-          var secondPlace = 1 - (competitorStageScore.ratioMargin ?? 0);
-          var epsilonGreaterThan = secondPlace + 0.0001; // 0.01%
-          ratio = 1 / epsilonGreaterThan;
+          if(competitorStageScore.ratioMargin != null && competitorStageScore.ratioMargin! < 0.5) {
+            // For stage winners, pretend that there's a '100% stage winner' epsilon
+            // better than second place, and use that to calculate the ratio.
+            var secondPlace = 1 - (competitorStageScore.ratioMargin ?? 0);
+            var epsilonGreaterThan = secondPlace + 0.0001; // 0.01%
+            ratio = 1 / epsilonGreaterThan;
+          }
+          else {
+            progressBar.error("Likely solo competitor: $rating ${match.eventName}");
+          }
         }
         var stagePerformance = _StagePerformance(stage: stagePointer, hitFactor: competitorStageScore.score.hitFactor, place: event.score.place.toDouble(), ratio: ratio, ratingChange: event.ratingChange, positive: event.ratingChange > 0);
         stagePerformances[rating] ??= [];
