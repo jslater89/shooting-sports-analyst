@@ -238,7 +238,15 @@ Future<void> _stageSizeAnalysis(AnalystDatabase db, Console console) async {
         var competitorStageScore = competitorStageScoreEntry.value;
 
         var stagePointer = _StagePointer(match: MatchPointer.fromDbMatch(match), stageNumber: stage.stageId, roundCount: stage.minRounds);
-        var stagePerformance = _StagePerformance(stage: stagePointer, hitFactor: competitorStageScore.score.hitFactor, place: event.score.place.toDouble(), ratio: event.score.ratio, ratingChange: event.ratingChange, positive: event.ratingChange > 0);
+        var ratio = competitorStageScore.ratio;
+        if(competitorStageScore.place == 1) {
+          // For stage winners, pretend that there's a '100% stage winner' epsilon
+          // better than second place, and use that to calculate the ratio.
+          var secondPlace = 1 - (competitorStageScore.ratioMargin ?? 0);
+          var epsilonGreaterThan = secondPlace + 0.0001; // 0.01%
+          ratio = 1 / epsilonGreaterThan;
+        }
+        var stagePerformance = _StagePerformance(stage: stagePointer, hitFactor: competitorStageScore.score.hitFactor, place: event.score.place.toDouble(), ratio: ratio, ratingChange: event.ratingChange, positive: event.ratingChange > 0);
         stagePerformances[rating] ??= [];
         stagePerformances[rating]!.add(stagePerformance);
       }
