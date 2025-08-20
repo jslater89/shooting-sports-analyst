@@ -141,17 +141,20 @@ String _processRegistrationHtml(String registrationHtml) {
   return registrationHtml;
 }
 
-RegistrationContainer _parseRegistrations(Sport sport, String matchId, String registrationHtml, List<Division> divisions, List<ShooterRating> knownShooters) {
+RegistrationContainer _parseRegistrations(
+  Sport sport, String matchId, String registrationHtml, List<Division> divisions, List<ShooterRating> knownShooters
+) {
   var ratings = <Registration, ShooterRating>{};
   var unmatched = <Registration>[];
 
   var matchName = "unnamed match";
 
   // Match a line
-  var shooterRegex = RegExp(r'title="(?<name>.*)\s+\((?<division>[\w\s]+)\s+\/\s+(?<class>\w+)\)"');
+  var shooterRegex = RegExp(r'title="(?<name>.*?)\s+\((?<division>[\w\s]+?)(\s+\/\s+(?<class>\w+?))?\)"');
   var matchRegex = RegExp(r'<meta\s+property="og:title"\s+content="(?<matchname>.*)"\s*/>');
   var unescape = HtmlUnescape();
-  for(var line in registrationHtml.split("\n")) {
+  var lines = registrationHtml.split("\n");
+  for(var line in lines) {
     var nameMatch = matchRegex.firstMatch(line);
     if(nameMatch != null) {
       matchName = nameMatch.namedGroup("matchname")!;
@@ -160,43 +163,54 @@ RegistrationContainer _parseRegistrations(Sport sport, String matchId, String re
     }
   }
 
-  var matches = shooterRegex.allMatches(registrationHtml);
+  var allowUnknownClass = matchName.toLowerCase().contains("ipsc");
+
   int regexMatches = 0;
-  for(var match in matches) {
-    regexMatches += 1;
-    var shooterName = unescape.convert(match.namedGroup("name")!);
+  for(var line in lines) {
+    var matches = shooterRegex.allMatches(line);
+    for(var match in matches) {
+      regexMatches += 1;
 
-    if(shooterName.contains("\n")) {
-      _log.w("Skipping shooter name containing newline: $shooterName");
-      continue;
-    }
-    var d = sport.divisions.lookupByName(match.namedGroup("division")!);
-
-    if(d == null || !divisions.contains(d)) {
-      if(verbose) {
-        _log.v("Skipping division not of interest: $d");
+      if(match.end - match.start > 250) {
+        _log.w("Suspiciously long regex match: ${match.end - match.start} bytes");
+        continue;
       }
-      continue;
-    }
+      var shooterName = unescape.convert(match.namedGroup("name")!);
 
-    var classification = sport.classifications.lookupByName(match.namedGroup("class")!);
-    if(classification == null) {
-      if(verbose) {
-        _log.v("Skipping unknown classification: $shooterName");
+      if(shooterName.contains("\n")) {
+        _log.w("Skipping shooter name containing newline: $shooterName");
+        continue;
       }
-      continue;
-    }
+      var d = sport.divisions.lookupByName(match.namedGroup("division")!);
 
-    var foundShooter = _findShooter(shooterName, classification, knownShooters);
+      if(d == null || !divisions.contains(d)) {
+        if(verbose) {
+          _log.v("Skipping division not of interest: $d");
+        }
+        continue;
+      }
 
-    if(foundShooter != null && !ratings.containsValue(foundShooter)) {
-      ratings[Registration(name: shooterName, division: d, classification: classification)] = foundShooter;
-    }
-    else {
-      _log.d("Missing shooter for: $shooterName");
-      unmatched.add(
-        Registration(name: shooterName, division: d, classification: classification)
-      );
+      var classification = sport.classifications.lookupByName(match.namedGroup("class"));
+      if(classification == null && !allowUnknownClass) {
+        if(verbose) {
+          _log.v("Skipping unknown classification: $shooterName");
+        }
+        continue;
+      }
+
+      var fallbackClassification = sport.classifications.fallback()!;
+
+      var foundShooter = _findShooter(shooterName, null, knownShooters);
+
+      if(foundShooter != null && !ratings.containsValue(foundShooter)) {
+        ratings[Registration(name: shooterName, division: d, classification: classification ?? fallbackClassification)] = foundShooter;
+      }
+      else {
+        _log.d("Missing shooter for: $shooterName");
+        unmatched.add(
+          Registration(name: shooterName, division: d, classification: classification ?? fallbackClassification)
+        );
+      }
     }
   }
 
@@ -216,7 +230,7 @@ List<String> _processShooterName(Shooter shooter) {
   ];
 }
 
-ShooterRating? _findShooter(String shooterName, Classification classification, List<ShooterRating> knownShooters) {
+ShooterRating? _findShooter(String shooterName, Classification? classification, List<ShooterRating> knownShooters) {
   var processedName = _processRegistrationName(shooterName);
   var firstGuess = knownShooters.firstWhereOrNull((rating) {
     return _processShooterName(rating).join().replaceAll(RegExp(r"[^a-z]"), "") == processedName;
