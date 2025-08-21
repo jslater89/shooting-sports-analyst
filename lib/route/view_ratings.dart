@@ -15,6 +15,7 @@ import 'package:flutter/services.dart';
 import 'package:fluttericon/rpg_awesome_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/application_preferences.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
@@ -693,6 +694,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     List<ShooterRating>? shooters = [];
     var divisions = tab.divisions;
 
+    var appPrefs = AnalystDatabase().getPreferencesSync();
+
     var result = await showDialog<(bool, String?)>(context: context, builder: (context) {
       return UrlEntryDialog(
         hintText: "https://practiscore.com/match-name/squadding",
@@ -700,6 +703,10 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         initialUrl: lastUrlPredicted,
         showCacheCheckbox: true,
         initialCacheValue: true,
+        typeaheadSuggestionsFunction: (String url) {
+          var suggestions = appPrefs.predictionSuggestions(url);
+          return suggestions.map((e) => TypeaheadUrlSuggestion(url: e.url, matchName: e.matchName)).toList();
+        },
         validator: (url) {
           if(url.endsWith("/register") || url.endsWith("/squadding") || url.endsWith("/printhtml") || (url.endsWith("/") && !url.contains("squadding"))) {
             return null;
@@ -754,6 +761,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
     lastUrlPredicted = url;
     var registrationContainer = registrationResult.unwrap();
+    appPrefs.addRecentPredictionUrl(url, registrationContainer.name);
+    AnalystDatabase().savePreferencesSync(appPrefs);
 
     shooters.addAll(registrationContainer.registrations.values);
 
