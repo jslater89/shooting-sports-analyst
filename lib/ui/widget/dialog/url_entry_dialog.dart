@@ -59,7 +59,7 @@ class _UrlEntryDialogState extends State<UrlEntryDialog> {
   String? errorText;
   MatchSource? source;
   bool allowCached = true;
-  late TypeaheadSuggestionsFunction? typeaheadSuggestionsFunction;
+  TypeaheadSuggestionsFunction? typeaheadSuggestionsFunction;
 
   @override
   void initState() {
@@ -101,6 +101,9 @@ class _UrlEntryDialogState extends State<UrlEntryDialog> {
           children: [
             Text(widget.descriptionText ?? "Enter a link to a match."),
             TypeAheadFormField(
+              // Use the default no items found builder if we have suggestions but no results, and no-op widget
+              // if we don't have suggestions at all.
+              noItemsFoundBuilder: typeaheadSuggestionsFunction != null ? null : (context) => Container(width: 0, height: 0),
               suggestionsCallback: (String pattern) async {
                 return typeaheadSuggestionsFunction?.call(pattern) ?? [];
               },
