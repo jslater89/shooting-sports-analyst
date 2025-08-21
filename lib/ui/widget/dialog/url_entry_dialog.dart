@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
 
 class UrlEntryDialog extends StatefulWidget {
-  const UrlEntryDialog({Key? key, this.hintText, this.sources, this.title, this.descriptionText, this.validator, this.showCacheCheckbox, this.initialCacheValue}) : super(key: key);
+  const UrlEntryDialog({Key? key, this.hintText, this.sources, this.title, this.descriptionText, this.validator, this.showCacheCheckbox, this.initialCacheValue, this.initialUrl}) : super(key: key);
 
   /// The title for the URL entry dialog.
   final String? title;
@@ -28,6 +28,8 @@ class UrlEntryDialog extends StatefulWidget {
   final bool? showCacheCheckbox;
   /// If non-null, the initial value of the cache checkbox.
   final bool? initialCacheValue;
+  /// If non-null, the initial value of the URL field.
+  final String? initialUrl;
 
   @override
   State<UrlEntryDialog> createState() => _UrlEntryDialogState();
@@ -48,6 +50,9 @@ class _UrlEntryDialogState extends State<UrlEntryDialog> {
     }
     if(widget.initialCacheValue != null) {
       allowCached = widget.initialCacheValue!;
+    }
+    if(widget.initialUrl != null) {
+      _urlController.text = widget.initialUrl!;
     }
   }
 

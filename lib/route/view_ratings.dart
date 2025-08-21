@@ -686,6 +686,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     }
   }
 
+  String? lastUrlPredicted;
   Future<void> _startPredictionView(RatingDataSource dataSource, RatingGroup tab) async {
     var options = _ratings.toSet().toList(); //rater.knownShooters.values.toSet().toList();
     options.sort((a, b) => b.rating.compareTo(a.rating));
@@ -696,6 +697,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       return UrlEntryDialog(
         hintText: "https://practiscore.com/match-name/squadding",
         descriptionText: "Enter a link to the match registration or squadding page.\nUncheck 'used cached data' to force a fresh download.",
+        initialUrl: lastUrlPredicted,
         showCacheCheckbox: true,
         initialCacheValue: true,
         validator: (url) {
@@ -750,6 +752,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       return;
     }
 
+    lastUrlPredicted = url;
     var registrationContainer = registrationResult.unwrap();
 
     shooters.addAll(registrationContainer.registrations.values);
