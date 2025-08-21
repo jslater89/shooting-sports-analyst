@@ -17,6 +17,7 @@ import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/rater/shooter_stats_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/box_and_whisker.dart';
+import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 
@@ -386,85 +387,94 @@ class _PredictionViewState extends State<PredictionView> {
       }
     }
 
-    return ConstrainedBox(
-      key: Key(pred.shooter.memberNumber),
-      constraints: BoxConstraints(
-        minHeight: PredictionView._rowHeight,
-      ),
-      child: ScoreRow(
-        color: (index - 1) % 2 == 1 ? Colors.grey[200] : Colors.white,
-        child: Row(
-          children: [
-            Expanded(
-              flex: PredictionView._padding,
-              child: Container(),
-            ),
-            Expanded(
-              flex: PredictionView._rowFlex,
-              child: Text("${index + 1}"),
-            ),
-            Expanded(
-              flex: PredictionView._nameFlex,
-              child: GestureDetector(
-                onTap: () async {
-                  var latestEvent = pred.shooter.eventsWithWindow(window: 1).firstOrNull;
-                  if(latestEvent != null) {
-                    var latestMatch = latestEvent.match;
-                    ShooterStatsDialog.show(context, pred.shooter, latestMatch);
-                  }
-                },
-                child: Text(pred.shooter.getName(suffixes: false)),
+    return ClickableLink(
+      onTap: () {
+        var latestEvent = pred.shooter.eventsWithWindow(window: 1).firstOrNull;
+        if(latestEvent != null) {
+          var latestMatch = latestEvent.match;
+          ShooterStatsDialog.show(context, pred.shooter, latestMatch);
+        }
+      },
+      child: ConstrainedBox(
+        key: Key(pred.shooter.memberNumber),
+        constraints: BoxConstraints(
+          minHeight: PredictionView._rowHeight,
+        ),
+        child: ScoreRow(
+          color: (index - 1) % 2 == 1 ? Colors.grey[200] : Colors.white,
+          child: Row(
+            children: [
+              Expanded(
+                flex: PredictionView._padding,
+                child: Container(),
               ),
-            ),
-            Expanded(
-              flex: PredictionView._classFlex,
-              child: Text(pred.shooter.lastClassification?.shortDisplayName ?? "(none)", textAlign: TextAlign.end),
-            ),
-            Expanded(
-              flex: PredictionView._ratingFlex,
-              child: Text(pred.shooter.rating.round().toString(), textAlign: TextAlign.end),
-            ),
-            Expanded(
-              flex: PredictionView._95ciFlex,
-              child: Text("${pred.lowPlace}", textAlign: TextAlign.end), //Text("${whiskerLowPercent.toStringAsFixed(1)}", textAlign: TextAlign.end),
-            ),
-            Expanded(
-              flex: PredictionView._95ciFlex,
-              child: Text("${pred.medianPlace}", textAlign: TextAlign.end), // Text("${whiskerHighPercent.toStringAsFixed(1)}%", textAlign: TextAlign.end),
-            ),
-            Expanded(
-              flex: PredictionView._95ciFlex,
-              child: Text("${pred.highPlace}", textAlign: TextAlign.end), // Text("${whiskerHighPercent.toStringAsFixed(1)}%", textAlign: TextAlign.end),
-            ),
-            if(outcomes.isNotEmpty) Expanded(
-              flex: PredictionView._95ciFlex,
-              child: Text("${outcome?.place ?? "n/a"}", textAlign: TextAlign.end), // Text("${whiskerHighPercent.toStringAsFixed(1)}%", textAlign: TextAlign.end),
-            ),
-            SizedBox(width: PredictionView._whiskerPlotPadding),
-            Expanded(
-              flex: PredictionView._whiskerPlotFlex,
-              child: Tooltip(
-                message: "68% confidence: ${boxLowPercent.toStringAsFixed(1)}-${boxHighPercent.toStringAsFixed(1)}%\n"
-                    "95% confidence: ${whiskerLowPercent.toStringAsFixed(1)}-${whiskerHighPercent.toStringAsFixed(1)}%" + (
-                    outcomePercent != null ? "\nOutcome: ${outcomePercent.toStringAsFixed(1)}%" : ""),
-                child: BoxAndWhiskerPlot(
-                  minimum: whiskerLowPercent,
-                  lowerQuartile: boxLowPercent,
-                  median: meanPercent,
-                  upperQuartile: boxHighPercent,
-                  maximum: whiskerHighPercent,
-                  direction: PlotDirection.horizontal,
-                  rangeMin: renderMinPercent,
-                  rangeMax: renderMaxPercent,
-                  fillBox: true,
-                  boxSize: 12,
-                  strokeWidth: 1.5,
-                  referenceLines: referenceLines,
+              Expanded(
+                flex: PredictionView._rowFlex,
+                child: Text("${index + 1}"),
+              ),
+              Expanded(
+                flex: PredictionView._nameFlex,
+                child: GestureDetector(
+                  onTap: () async {
+                    var latestEvent = pred.shooter.eventsWithWindow(window: 1).firstOrNull;
+                    if(latestEvent != null) {
+                      var latestMatch = latestEvent.match;
+                      ShooterStatsDialog.show(context, pred.shooter, latestMatch);
+                    }
+                  },
+                  child: Text(pred.shooter.getName(suffixes: false)),
                 ),
-              )
-            ),
-            SizedBox(width: PredictionView._whiskerPlotPadding),
-          ],
+              ),
+              Expanded(
+                flex: PredictionView._classFlex,
+                child: Text(pred.shooter.lastClassification?.shortDisplayName ?? "(none)", textAlign: TextAlign.end),
+              ),
+              Expanded(
+                flex: PredictionView._ratingFlex,
+                child: Text(pred.shooter.rating.round().toString(), textAlign: TextAlign.end),
+              ),
+              Expanded(
+                flex: PredictionView._95ciFlex,
+                child: Text("${pred.lowPlace}", textAlign: TextAlign.end), //Text("${whiskerLowPercent.toStringAsFixed(1)}", textAlign: TextAlign.end),
+              ),
+              Expanded(
+                flex: PredictionView._95ciFlex,
+                child: Text("${pred.medianPlace}", textAlign: TextAlign.end), // Text("${whiskerHighPercent.toStringAsFixed(1)}%", textAlign: TextAlign.end),
+              ),
+              Expanded(
+                flex: PredictionView._95ciFlex,
+                child: Text("${pred.highPlace}", textAlign: TextAlign.end), // Text("${whiskerHighPercent.toStringAsFixed(1)}%", textAlign: TextAlign.end),
+              ),
+              if(outcomes.isNotEmpty) Expanded(
+                flex: PredictionView._95ciFlex,
+                child: Text("${outcome?.place ?? "n/a"}", textAlign: TextAlign.end), // Text("${whiskerHighPercent.toStringAsFixed(1)}%", textAlign: TextAlign.end),
+              ),
+              SizedBox(width: PredictionView._whiskerPlotPadding),
+              Expanded(
+                flex: PredictionView._whiskerPlotFlex,
+                child: Tooltip(
+                  message: "68% confidence: ${boxLowPercent.toStringAsFixed(1)}-${boxHighPercent.toStringAsFixed(1)}%\n"
+                      "95% confidence: ${whiskerLowPercent.toStringAsFixed(1)}-${whiskerHighPercent.toStringAsFixed(1)}%" + (
+                      outcomePercent != null ? "\nOutcome: ${outcomePercent.toStringAsFixed(1)}%" : ""),
+                  child: BoxAndWhiskerPlot(
+                    minimum: whiskerLowPercent,
+                    lowerQuartile: boxLowPercent,
+                    median: meanPercent,
+                    upperQuartile: boxHighPercent,
+                    maximum: whiskerHighPercent,
+                    direction: PlotDirection.horizontal,
+                    rangeMin: renderMinPercent,
+                    rangeMax: renderMaxPercent,
+                    fillBox: true,
+                    boxSize: 12,
+                    strokeWidth: 1.5,
+                    referenceLines: referenceLines,
+                  ),
+                )
+              ),
+              SizedBox(width: PredictionView._whiskerPlotPadding),
+            ],
+          ),
         ),
       ),
     );
