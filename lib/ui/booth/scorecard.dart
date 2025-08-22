@@ -371,7 +371,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
                         Tooltip(
                           message: isMaximized ? "Minimize" : "Maximize",
                           child: TextButton(
-                            child: Icon(isMaximized ? Icons.minimize : Icons.maximize),
+                            child: Icon(isMaximized ? Icons.minimize : Icons.fullscreen),
                             onPressed: () {
                               controller.maximizeScorecard(isMaximized ? null : widget.scorecard);
                             },
