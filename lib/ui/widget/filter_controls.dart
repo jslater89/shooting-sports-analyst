@@ -9,6 +9,7 @@ import 'package:shooting_sports_analyst/data/sort_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/stage_select_dialog.dart';
 
@@ -188,7 +189,7 @@ class _FilterControlsState extends State<FilterControls> {
                       DropdownButton<SortMode>(
                         underline: Container(
                           height: 1,
-                          color: Colors.black,
+                          color: ThemeColors.onBackgroundColor(context),
                         ),
                         items: _buildSortItems(),
                         onChanged: (SortMode? s) {
@@ -206,7 +207,7 @@ class _FilterControlsState extends State<FilterControls> {
                       DropdownButton<StageMenuItem>(
                         underline: Container(
                           height: 1,
-                          color: Colors.black,
+                          color: ThemeColors.onBackgroundColor(context),
                         ),
                         items: _buildStageMenuItems(),
                         onChanged: (StageMenuItem? item) async {

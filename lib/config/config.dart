@@ -95,7 +95,7 @@ class SerializedConfig {
     required this.playDeduplicationAlert,
     required this.playRatingsCalculationCompleteAlert,
     this.ratingsContextProjectId,
-    this.themeMode = ThemeMode.system,
+    required this.themeMode,
   });
 
   @override

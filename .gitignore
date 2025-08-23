@@ -67,6 +67,7 @@ sorted-elo-settings*.txt
 base.apk.cache/
 research/**/output.txt
 config.toml
+ui_config.toml
 db/
 
 # Things shared with me under NDA that I can't put on Git

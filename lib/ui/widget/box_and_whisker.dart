@@ -5,6 +5,7 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/ui/colors.dart';
 
 class BoxAndWhiskerPlot extends StatelessWidget {
   const BoxAndWhiskerPlot({
@@ -42,14 +43,18 @@ class BoxAndWhiskerPlot extends StatelessWidget {
   final double? boxSize;
   final double strokeWidth;
   final Color referenceLineColor;
-  final Color whiskerColor;
-  final Color lowerBoxColor;
-  final Color upperBoxColor;
+  final Color? whiskerColor;
+  final Color? lowerBoxColor;
+  final Color? upperBoxColor;
   final bool fillBox;
 
   @override
   Widget build(BuildContext context) {
     var ownSize = MediaQuery.of(context).size;
+
+    var finalWhiskerColor = whiskerColor ?? ThemeColors.onBackgroundColor(context);
+    var finalLowerBoxColor = lowerBoxColor ?? ThemeColors.onBackgroundColor(context);
+    var finalUpperBoxColor = upperBoxColor ?? ThemeColors.onBackgroundColor(context);
 
     var height = boxSize ?? ownSize.height;
     var width = ownSize.width;
@@ -63,7 +68,7 @@ class BoxAndWhiskerPlot extends StatelessWidget {
           painter: _BoxPlotPainter(
             direction: direction,
             fillBox: fillBox,
-            lowerBoxColor: lowerBoxColor,
+            lowerBoxColor: finalLowerBoxColor,
             lowerQuartile: lowerQuartile,
             maximum: maximum,
             median: median,
@@ -71,11 +76,12 @@ class BoxAndWhiskerPlot extends StatelessWidget {
             rangeMax: rangeMax,
             rangeMin: rangeMin,
             strokeWidth: strokeWidth,
-            upperBoxColor: upperBoxColor,
+            upperBoxColor: finalUpperBoxColor,
             upperQuartile: upperQuartile,
-            whiskerColor: whiskerColor,
+            whiskerColor: finalWhiskerColor,
             referenceLines: referenceLines,
             referenceLineColor: referenceLineColor,
+            contrastingLineColor: ThemeColors.onBackgroundColorFaded(context),
           ),
         ),
       ),
@@ -96,6 +102,7 @@ class _BoxPlotPainter extends CustomPainter {
   final double? rangeMin;
   final double? rangeMax;
   final double strokeWidth;
+  final Color? contrastingLineColor;
   final Color whiskerColor;
   final Color lowerBoxColor;
   final Color upperBoxColor;
@@ -113,6 +120,7 @@ class _BoxPlotPainter extends CustomPainter {
     required this.rangeMin,
     required this.rangeMax,
     required this.strokeWidth,
+    this.contrastingLineColor,
     required this.whiskerColor,
     required this.lowerBoxColor,
     required this.upperBoxColor,
@@ -139,7 +147,7 @@ class _BoxPlotPainter extends CustomPainter {
     contrastingLinePaint.color = whiskerColor;
     contrastingLinePaint.strokeCap = StrokeCap.butt;
     if(fillBox && (whiskerColor == upperBoxColor || whiskerColor == lowerBoxColor)) {
-      contrastingLinePaint.color = Colors.white;
+      contrastingLinePaint.color = contrastingLineColor ?? Colors.white;
     }
 
     Paint lowerBoxPaint = Paint();
@@ -204,7 +212,7 @@ class _BoxPlotPainter extends CustomPainter {
         lines.add(coord.roundToDouble());
       }
     }
-    
+
     double crossStart = 0.0;
     double crossEnd = crossDimension;
 
@@ -265,7 +273,7 @@ class _BoxPlotPainter extends CustomPainter {
       || strokeWidth != strokeWidth
     ;
   }
-  
+
 }
 
 enum PlotDirection {

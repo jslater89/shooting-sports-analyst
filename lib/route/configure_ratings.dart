@@ -562,7 +562,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 message: "Add match links parsed from PractiScore page source.",
                                 child: IconButton(
                                   icon: Icon(Icons.link),
-                                  color: Theme.of(context).primaryColor,
                                   onPressed: () async {
                                     // var urls = await showDialog<List<String>>(context: context, builder: (context) {
                                     //   return EnterPractiscoreSourceDialog();
@@ -590,7 +589,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 message: "Add a match from the match database.",
                                 child: IconButton(
                                   icon: Icon(Icons.dataset),
-                                  color: Theme.of(context).primaryColor,
                                   onPressed: () async {
                                     var dbEntries = await showDialog<List<DbShootingMatch>>(context: context, builder: (context) {
                                       return MatchDatabaseChooserDialog(multiple: true, sport: sport);
@@ -617,7 +615,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 message: "Remove all matches from the list.",
                                 child: IconButton(
                                   icon: Icon(Icons.remove),
-                                  color: Theme.of(context).primaryColor,
                                   onPressed: () async {
                                     var delete = await showDialog<bool>(context: context, builder: (context) {
                                       return ConfirmDialog(
@@ -638,7 +635,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 message: "Sort matches from most recent to least recent. Non-cached matches will be displayed first.",
                                 child: IconButton(
                                   icon: Icon(Icons.sort),
-                                  color: Theme.of(context).primaryColor,
                                   onPressed: () async {
                                     _sortMatches(false);
                                   }
@@ -648,7 +644,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 message: "Sort matches alphabetically. Non-cached matches will be displayed first.",
                                 child: IconButton(
                                     icon: Icon(Icons.sort_by_alpha),
-                                    color: Theme.of(context).primaryColor,
                                     onPressed: () async {
                                       _sortMatches(true);
                                     }
@@ -737,7 +732,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                         message: "Reload this match from its source.",
                                         child: IconButton(
                                           icon: Icon(Icons.refresh),
-                                          color: Theme.of(context).primaryColor,
                                           onPressed: () async {
                                             var result = await MatchSource.reloadMatch(matchPointer.intoSourcePlaceholder());
                                             if(result.isOk()) {
@@ -753,7 +747,6 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                       ),
                                       IconButton(
                                         icon: Icon(Icons.remove),
-                                        color: Theme.of(context).primaryColor,
                                         onPressed: () {
                                           setState(() {
                                             projectMatches.remove(matchPointer);

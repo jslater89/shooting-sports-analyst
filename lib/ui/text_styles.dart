@@ -5,6 +5,7 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/ui/colors.dart';
 
 class TextStyles {
   static TextStyle linkBodyMedium(BuildContext context) {
@@ -25,8 +26,9 @@ class TextStyles {
   }
 
   static TextStyle tooltipText(BuildContext context) {
+    var color = ThemeColors.backgroundColor(context);
     return Theme.of(context).textTheme.bodyMedium!.copyWith(
-      color: Colors.white,
+      color: color,
     );
   }
 }
