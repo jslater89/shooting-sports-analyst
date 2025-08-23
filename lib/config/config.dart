@@ -84,10 +84,19 @@ class SerializedConfig {
   @JsonKey(defaultValue: null, includeIfNull: false)
   int? ratingsContextProjectId;
 
+  @JsonKey(defaultValue: ThemeMode.system)
+  ThemeMode themeMode;
+
   factory SerializedConfig.fromToml(Map<String, dynamic> json) => _$SerializedConfigFromJson(json);
   Map<String, dynamic> toToml() => _$SerializedConfigToJson(this);
 
-  SerializedConfig({required this.logLevel, required this.playDeduplicationAlert, required this.playRatingsCalculationCompleteAlert, this.ratingsContextProjectId});
+  SerializedConfig({
+    required this.logLevel,
+    required this.playDeduplicationAlert,
+    required this.playRatingsCalculationCompleteAlert,
+    this.ratingsContextProjectId,
+    this.themeMode = ThemeMode.system,
+  });
 
   @override
   String toString() {
@@ -97,6 +106,7 @@ class SerializedConfig {
     builder.writeln("\tplayDeduplicationAlert = $playDeduplicationAlert");
     builder.writeln("\tplayRatingsCalculationCompleteAlert = $playRatingsCalculationCompleteAlert");
     builder.writeln("\tratingsContextProjectId = $ratingsContextProjectId");
+    builder.writeln("\tthemeMode = ${themeMode.name}");
     return builder.toString();
   }
 
@@ -106,6 +116,7 @@ class SerializedConfig {
       playDeduplicationAlert: playDeduplicationAlert,
       playRatingsCalculationCompleteAlert: playRatingsCalculationCompleteAlert,
       ratingsContextProjectId: ratingsContextProjectId,
+      themeMode: themeMode,
     );
   }
 }

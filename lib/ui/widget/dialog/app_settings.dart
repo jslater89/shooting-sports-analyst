@@ -14,6 +14,7 @@ import 'package:shooting_sports_analyst/data/help/app_settings_help.dart';
 import 'package:shooting_sports_analyst/ui/rater/select_project_dialog.dart';
 import 'package:shooting_sports_analyst/ui/source/credentials_manager.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 class AppSettingsDialog extends StatefulWidget {
   const AppSettingsDialog({super.key});
@@ -35,14 +36,16 @@ class _AppSettingsDialogState extends State<AppSettingsDialog> {
 
   TextEditingController _logLevelController = TextEditingController();
   TextEditingController _projectController = TextEditingController();
+  TextEditingController _themeModeController = TextEditingController();
   @override
   void initState() {
     super.initState();
 
     config = ConfigLoader().config.copy();
     _loadProject();
-    _logLevelController.text = config.logLevel.name;
+    _logLevelController.text = config.logLevel.name.toTitleCase();
     _projectController.text = project?.name ?? config.ratingsContextProjectId?.toString() ?? "(none)";
+    _themeModeController.text = config.themeMode.name.toTitleCase();
   }
 
   Future<void> _loadProject() async {
@@ -70,6 +73,23 @@ class _AppSettingsDialogState extends State<AppSettingsDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            DropdownMenu<ThemeMode>(
+              dropdownMenuEntries: [
+                ThemeMode.system,
+                ThemeMode.light,
+                ThemeMode.dark,
+              ].map((e) => DropdownMenuEntry(value: e, label: e.name.toTitleCase())).toList(),
+              onSelected: (value) {
+                if(value != null) {
+                  config.themeMode = value;
+                  _themeModeController.text = value.name.toTitleCase();
+                }
+              },
+              controller: _themeModeController,
+              label: const Text("Theme mode"),
+              width: 300,
+            ),
+            const SizedBox(height: 16),
             DropdownMenu<Level>(
               dropdownMenuEntries: [
                 Level.trace,
@@ -77,15 +97,16 @@ class _AppSettingsDialogState extends State<AppSettingsDialog> {
                 Level.info,
                 Level.warning,
                 Level.error,
-              ].map((e) => DropdownMenuEntry(value: e, label: e.name)).toList(),
+              ].map((e) => DropdownMenuEntry(value: e, label: e.name.toTitleCase())).toList(),
               onSelected: (value) {
                 if(value != null) {
                   config.logLevel = value;
-                  _logLevelController.text = value.name;
+                  _logLevelController.text = value.name.toTitleCase();
                 }
               },
               controller: _logLevelController,
               label: const Text("Log level"),
+              width: 300,
             ),
             const SizedBox(height: 16),
             CheckboxListTile(

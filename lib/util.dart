@@ -4,8 +4,6 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'dart:ui';
-
 import 'package:collection/collection.dart';
 import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
@@ -471,5 +469,11 @@ extension SignificantDigits on double {
       return this.round().toString();
     }
     return this.toStringAsFixed(decimalPlaces);
+  }
+}
+
+extension TitleCase on String {
+  String toTitleCase() {
+    return this.split(" ").map((e) => e.substring(0, 1).toUpperCase() + e.substring(1)).join(" ");
   }
 }
