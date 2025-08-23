@@ -262,7 +262,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   List<ShooterRating> _ratings = [];
 
   Widget _ratingView() {
-    final backgroundColor = Theme.of(context).backgroundColor;
+    final backgroundColor = Theme.of(context).colorScheme.secondary;
 
     if(!initialized) {
       _log.w("No match selected!");
@@ -275,6 +275,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
           color: backgroundColor,
           child: TabBar(
             controller: _tabController,
+            indicatorColor: Theme.of(context).colorScheme.primary,
             tabs: activeTabs.map((t) {
               return Tab(
                 text: t.uiLabel,
@@ -338,7 +339,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                   DropdownButton<ShootingMatch>(
                     underline: Container(
                       height: 1,
-                      color: Colors.black,
+                      color: ThemeColors.onBackgroundColor(context),
                     ),
                     items: [
                       DropdownMenuItem<ShootingMatch>(
@@ -354,7 +355,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                     child: DropdownButton<RatingSortMode>(
                       underline: Container(
                         height: 1,
-                        color: Colors.black,
+                        color: ThemeColors.onBackgroundColor(context),
                       ),
                       items: sortModes.map((s) {
                         return DropdownMenuItem(

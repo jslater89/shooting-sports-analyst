@@ -454,7 +454,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
         if(column == 1) {
           decoration = TableSpanDecoration(
             border: TableSpanBorder(
-              trailing: BorderSide(color: Colors.black),
+              trailing: BorderSide(color: ThemeColors.onBackgroundColor(context)),
             ),
           );
         }
@@ -470,7 +470,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
             extent: FixedTableSpanExtent(_headerHeight * sc.tableTextSize.fontSizeFactor),
             backgroundDecoration: TableSpanDecoration(
               border: TableSpanBorder(
-                trailing: BorderSide(color: Colors.black),
+                trailing: BorderSide(color: ThemeColors.onBackgroundColor(context)),
               ),
             ),
           );

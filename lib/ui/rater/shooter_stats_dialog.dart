@@ -17,6 +17,7 @@ import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rating
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
@@ -27,6 +28,7 @@ import 'package:community_charts_flutter/src/text_style.dart' as style;
 import 'package:community_charts_flutter/src/text_element.dart' as element;
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/ui/widget/stacked_distribution_chart.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 final _log = SSALogger("ShooterStatsDialog");
@@ -494,6 +496,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
             updatedListener: (model) {
               if(model.hasDatumSelection) {
                 final rating = _ratings[model.selectedDatum[0].index!];
+                _EloTooltipRenderer.context = context;
                 _EloTooltipRenderer.index = model.selectedDatum[0].index!;
                 _EloTooltipRenderer.indexTotal = _ratings.length;
                 _EloTooltipRenderer.rating = rating.baseEvent.newRating;
@@ -515,6 +518,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         domainAxis: charts.NumericAxisSpec(
           renderSpec: charts.NoneRenderSpec(
               axisLineStyle: charts.LineStyleSpec(
+                color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
                 thickness: 1,
               )
           ),
@@ -528,6 +532,19 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
             desiredTickCount: 10,
           ),
           tickFormatterSpec: charts.BasicNumericTickFormatterSpec.fromNumberFormat(_nf),
+          renderSpec: charts.GridlineRendererSpec(
+            labelStyle: charts.TextStyleSpec(
+              color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
+            ),
+            axisLineStyle: charts.LineStyleSpec(
+              color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
+              thickness: 1,
+            ),
+            lineStyle: charts.LineStyleSpec(
+              color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
+              thickness: 1,
+            ),
+          ),
           showAxisLine: true,
         ),
       );
@@ -831,6 +848,7 @@ class _AccumulatedRatingEvent {
 }
 
 class _EloTooltipRenderer extends charts.CircleSymbolRenderer {
+  static late BuildContext context;
   static late double rating;
   static late double error;
   static late int index;
@@ -857,7 +875,8 @@ class _EloTooltipRenderer extends charts.CircleSymbolRenderer {
         fill: charts.Color.transparent
     );
     var textStyle = style.TextStyle();
-    textStyle.color = charts.Color.black;
+    var color = ThemeColors.onBackgroundColor(context);
+    textStyle.color = charts.Color.fromHex(code: color.toHex());
     textStyle.fontSize = 12;
     canvas.drawText(
         element.TextElement("$ratingText", style: textStyle),
@@ -888,8 +907,9 @@ class _StatefulContainerState extends State<_StatefulContainer> {
 
   @override
   Widget build(BuildContext context) {
+    var bgColor = ThemeColors.onBackgroundColor(context);
     return Container(
-      color: highlighted ? Colors.black12 : null,
+      color: highlighted ? bgColor.withOpacity(0.1) : null,
       child: widget.child,
     );
   }

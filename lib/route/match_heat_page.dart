@@ -20,6 +20,7 @@ import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:community_charts_flutter/community_charts_flutter.dart' as charts;
 // import 'package:community_charts_common/community_charts_common.dart' as common;
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/text_styles.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
@@ -395,9 +396,35 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
       animate: false,
       primaryMeasureAxis: charts.NumericAxisSpec(
         viewport: charts.NumericExtents(_minY, _maxY),
+        renderSpec: charts.GridlineRendererSpec(
+          labelStyle: charts.TextStyleSpec(
+            color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
+          ),
+          axisLineStyle: charts.LineStyleSpec(
+            color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
+            thickness: 1,
+          ),
+          lineStyle: charts.LineStyleSpec(
+            color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
+            thickness: 1,
+          ),
+        ),
       ),
       domainAxis: charts.NumericAxisSpec(
         viewport: charts.NumericExtents(_minX, _maxX),
+        renderSpec: charts.GridlineRendererSpec(
+          labelStyle: charts.TextStyleSpec(
+            color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
+          ),
+          axisLineStyle: charts.LineStyleSpec(
+            color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
+            thickness: 1,
+          ),
+          lineStyle: charts.LineStyleSpec(
+            color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
+            thickness: 1,
+          ),
+        ),
       ),
     );
     _chartWidget = MouseRegion(
@@ -443,6 +470,8 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
           top -= 100;
         }
 
+        var finalBackgroundColor = ThemeColors.onBackgroundColor(context);
+
         return Stack(
           children: [
             Positioned(
@@ -451,7 +480,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
               child: Container(
                 width: 300,
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.8),
+                  color: finalBackgroundColor.withOpacity(0.8),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 padding: EdgeInsets.all(8),

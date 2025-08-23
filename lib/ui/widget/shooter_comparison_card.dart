@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
+import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 class ShooterComparisonCard extends StatelessWidget {
@@ -58,7 +59,7 @@ class ShooterComparisonCard extends StatelessWidget {
     var stage = stageScore.stage;
     if(stage.scoring is IgnoredScoring) return [];
 
-    var color = stageScore.score.dnf ? Colors.grey : Colors.black;
+    var color = stageScore.score.dnf ? ThemeColors.onBackgroundColorFaded(context) : ThemeColors.onBackgroundColor(context);
     var headlineTheme = Theme.of(context).textTheme.titleMedium?.copyWith(color: color);
     var textTheme = Theme.of(context).textTheme.bodyMedium?.copyWith(color: color);
 

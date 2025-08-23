@@ -211,31 +211,29 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     final lightTheme = ThemeData(
       useMaterial3: false,
-      brightness: Brightness.light,
-      colorSchemeSeed: Colors.indigo,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: Colors.indigo,
+        brightness: Brightness.light,
+        secondary: Colors.indigo[300]!,
+      ),
       visualDensity: VisualDensity.adaptivePlatformDensity,
-      // textTheme: Theme.of(context).textTheme.apply(),
     );
-    var darkTheme = lightTheme;
-    try {
-      darkTheme = ThemeData(
-        useMaterial3: false,
+    var darkTheme = ThemeData(
+      brightness: Brightness.dark,
+      useMaterial3: false,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: Colors.indigo,
         brightness: Brightness.dark,
-        colorSchemeSeed: Colors.indigo,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-        // textTheme: Theme.of(context).textTheme.apply(
-        //   bodyColor: Colors.grey[400],
-        //   displayColor: Colors.grey[400],
-        // ),
-      );
-    }
-    catch(e) {
-      _log.e("Error creating dark theme", error: e);
-    }
+        secondary: Colors.grey[800]!,
+        tertiary: Colors.indigo[300]!,
+      ),
+      visualDensity: VisualDensity.adaptivePlatformDensity,
+      textTheme: lightTheme.textTheme.apply(
+        bodyColor: Colors.grey[300],
+        displayColor: Colors.grey[300],
+      ),
+    );
 
-    if(!ChangeNotifierConfigLoader().ready) {
-      return Container();
-    }
     var config = ChangeNotifierConfigLoader().uiConfig;
     if(_prefs == null) {
       return MaterialApp(
