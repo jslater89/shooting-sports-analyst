@@ -19,6 +19,7 @@ import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/route/compare_shooter_results.dart';
+import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/editable_shooter_card.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
@@ -158,7 +159,7 @@ class _ScoreListState extends State<ScoreList> {
             border: Border(
                 bottom: BorderSide()
             ),
-            color: Colors.white,
+            color: ThemeColors.backgroundColor(context),
           ),
           child: Padding(
             padding: const EdgeInsets.all(2.0),
@@ -323,7 +324,7 @@ class _ScoreListState extends State<ScoreList> {
         }
       },
       child: ScoreRow(
-        color: index % 2 == 1 ? Colors.grey[200] : Colors.white,
+        color: ThemeColors.backgroundColor(context, rowIndex: index),
         edited: widget.editedShooters.contains(score.shooter),
         child: Padding(
           padding: const EdgeInsets.all(2.0),

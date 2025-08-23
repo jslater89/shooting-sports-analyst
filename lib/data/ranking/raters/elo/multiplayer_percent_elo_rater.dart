@@ -23,6 +23,7 @@ import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart'
 import 'package:shooting_sports_analyst/data/ranking/timings.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/rater/rater_view.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -632,7 +633,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     }
 
     return ScoreRow(
-      color: (place - 1) % 2 == 1 ? Colors.grey[200] : Colors.white,
+      color: ThemeColors.backgroundColor(context, rowIndex: place - 1),
       child: Padding(
           padding: const EdgeInsets.all(2.0),
           child: Row(

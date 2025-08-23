@@ -29,6 +29,7 @@ import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/route/match_heat_page.dart';
+import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/rater/display_settings.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_correction_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_dialog.dart';
@@ -320,7 +321,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       ConstrainedBox(
         constraints: BoxConstraints(minWidth: size.width, maxWidth: size.width),
         child: Container(
-          color: Colors.white,
+          color: ThemeColors.backgroundColor(context),
           child: Padding(
             padding: const EdgeInsets.only(bottom: 10.0),
             child: Center(

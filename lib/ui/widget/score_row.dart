@@ -5,6 +5,7 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/ui/colors.dart';
 
 class ScoreRow extends StatefulWidget {
   final Widget? child;
@@ -32,10 +33,10 @@ class _ScoreRowState extends State<ScoreRow> {
   Widget build(BuildContext context) {
     Color background;
     if(widget.index != null && widget.color == null) {
-      background = ((widget.index!) % 2 == 1) ? Colors.grey[200]! : Colors.white;
+      background = ThemeColors.backgroundColor(context, rowIndex: widget.index);
     }
     else {
-      background = widget.color ?? Colors.white;
+      background = widget.color ?? ThemeColors.backgroundColor(context, rowIndex: widget.index);
     }
 
     Color hoverColor = widget.hoverColor ?? Theme.of(context).colorScheme.primary;
