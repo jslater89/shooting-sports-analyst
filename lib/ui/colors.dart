@@ -4,11 +4,11 @@ class ThemeColors {
   static Color backgroundColor(BuildContext context, {int? rowIndex}) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
     if(rowIndex == null) {
-      return isDark ? Colors.grey[900]! : Colors.white;
+      return isDark ? Colors.grey[850]! : Colors.white;
     }
 
     if(isDark) {
-      return rowIndex % 2 == 0 ? Colors.grey[900]! : Colors.grey[800]!;
+      return rowIndex % 2 == 0 ? Colors.grey[850]! : Colors.grey[800]!;
     }
     else {
       return rowIndex % 2 == 0 ? Colors.white : Colors.grey[300]!;
