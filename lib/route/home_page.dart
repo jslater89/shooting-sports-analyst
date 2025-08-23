@@ -96,7 +96,7 @@ class _HomePageState extends State<HomePage> {
           onPressed: () async {
             var config = await AppSettingsDialog.show(context);
             if(config != null) {
-              ChangeNotifierConfigLoader().setConfig(config);
+              ChangeNotifierConfigLoader().setConfigs(config);
             }
           },
         ),

@@ -23,8 +23,8 @@ class AppSettingsDialog extends StatefulWidget {
   @override
   State<AppSettingsDialog> createState() => _AppSettingsDialogState();
 
-  static Future<SerializedConfig?> show(BuildContext context) {
-    return showDialog<SerializedConfig>(
+  static Future<(SerializedConfig, SerializedUIConfig)?> show(BuildContext context) {
+    return showDialog<(SerializedConfig, SerializedUIConfig)?>(
       context: context,
       builder: (context) => AppSettingsDialog(),
     );
@@ -33,6 +33,7 @@ class AppSettingsDialog extends StatefulWidget {
 
 class _AppSettingsDialogState extends State<AppSettingsDialog> {
   late SerializedConfig config;
+  late SerializedUIConfig uiConfig;
   DbRatingProject? project;
 
   TextEditingController _logLevelController = TextEditingController();
@@ -42,11 +43,12 @@ class _AppSettingsDialogState extends State<AppSettingsDialog> {
   void initState() {
     super.initState();
 
-    config = ConfigLoader().config.copy();
+    config = ChangeNotifierConfigLoader().config.copy();
+    uiConfig = ChangeNotifierConfigLoader().uiConfig.copy();
     _loadProject();
     _logLevelController.text = config.logLevel.name.toTitleCase();
     _projectController.text = project?.name ?? config.ratingsContextProjectId?.toString() ?? "(none)";
-    _themeModeController.text = config.themeMode.name.toTitleCase();
+    _themeModeController.text = uiConfig.themeMode.name.toTitleCase();
   }
 
   Future<void> _loadProject() async {
@@ -82,7 +84,7 @@ class _AppSettingsDialogState extends State<AppSettingsDialog> {
               ].map((e) => DropdownMenuEntry(value: e, label: e.name.toTitleCase())).toList(),
               onSelected: (value) {
                 if(value != null) {
-                  config.themeMode = value;
+                  uiConfig.themeMode = value;
                   _themeModeController.text = value.name.toTitleCase();
                 }
               },
@@ -186,7 +188,7 @@ class _AppSettingsDialogState extends State<AppSettingsDialog> {
                 TextButton(
                   child: const Text("SAVE"),
                   onPressed: () {
-                    Navigator.of(context).pop(config);
+                    Navigator.of(context).pop((config, uiConfig));
                   },
                 ),
               ],

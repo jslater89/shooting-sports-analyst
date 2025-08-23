@@ -20,7 +20,7 @@ Future<void> main() async {
   SSALogger.consoleOutput = false;
 
   var console = Console();
-  await ConfigLoader().ready;
+  await ConfigLoader().readyFuture;
   var config = ConfigLoader().config;
 
   _database = AnalystDatabase();

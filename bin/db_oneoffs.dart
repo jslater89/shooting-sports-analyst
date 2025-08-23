@@ -59,7 +59,7 @@ Future<void> main() async {
   SSALogger.fileOutput = true;
   await _log.ready;
 
-  await ConfigLoader().ready;
+  await ConfigLoader().readyFuture;
   var config = ConfigLoader().config;
 
   var db = await AnalystDatabase();

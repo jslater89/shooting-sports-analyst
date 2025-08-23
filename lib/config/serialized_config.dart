@@ -20,10 +20,13 @@ class ConfigLoader {
   }
 
   /// Internal-only for subclasses. Use the default constructor.
-  ConfigLoader.create();
+  ConfigLoader.create() {
+    _init();
+  }
 
   late SerializedConfig config;
-  Future<void> get ready => _readyCompleter.future;
+  bool get ready => _readyCompleter.isCompleted;
+  Future<void> get readyFuture => _readyCompleter.future;
   Completer<void> _readyCompleter = Completer();
 
   ConfigLoader._() {

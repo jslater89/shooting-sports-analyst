@@ -29,9 +29,6 @@ class ChangeNotifierConfigLoader extends ConfigLoader with ChangeNotifier {
   ChangeNotifierConfigLoader._() : super.create();
 
   late SerializedConfig config;
-  Future<void> get ready => _readyCompleter.future;
-  Completer<void> _readyCompleter = Completer();
-
   late SerializedUIConfig uiConfig;
 
   @override
@@ -42,6 +39,12 @@ class ChangeNotifierConfigLoader extends ConfigLoader with ChangeNotifier {
 
   Future<void> setUIConfig(SerializedUIConfig config) async {
     uiConfig = config;
+    notifyListeners();
+  }
+
+  Future<void> setConfigs((SerializedConfig config, SerializedUIConfig uiConfig) configs) async {
+    config = configs.$1;
+    uiConfig = configs.$2;
     notifyListeners();
   }
 
@@ -88,4 +91,6 @@ class SerializedUIConfig {
 
   Map<String, dynamic> toJson() => _$SerializedUIConfigToJson(this);
   factory SerializedUIConfig.fromJson(Map<String, dynamic> json) => _$SerializedUIConfigFromJson(json);
+
+  SerializedUIConfig copy() => SerializedUIConfig(themeMode: themeMode);
 }

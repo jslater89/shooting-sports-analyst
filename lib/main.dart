@@ -70,7 +70,7 @@ class FlutterConfigProvider implements ConfigProvider {
   @override
   void addListener(void Function(SerializedConfig config) listener) {
     ChangeNotifierConfigLoader().addListener(() {
-      listener.call(ConfigLoader().config);
+      listener.call(ChangeNotifierConfigLoader().config);
     });
   }
 }
@@ -149,9 +149,9 @@ void main() async {
       await windowManager.focus();
     });
 
-    await ConfigLoader().ready;
+    await ChangeNotifierConfigLoader().readyFuture;
     SecureConfig.storageEngine = FlutterSecureStorageProvider();
-    initLogger(ConfigLoader().config, FlutterConfigProvider());
+    initLogger(ChangeNotifierConfigLoader().config, FlutterConfigProvider());
 
     await AnalystDatabase().ready;
     _log.i("Database ready");
@@ -232,7 +232,11 @@ class _MyAppState extends State<MyApp> {
     catch(e) {
       _log.e("Error creating dark theme", error: e);
     }
-    var config = ConfigLoader().uiConfig;
+
+    if(!ChangeNotifierConfigLoader().ready) {
+      return Container();
+    }
+    var config = ChangeNotifierConfigLoader().uiConfig;
     if(_prefs == null) {
       return MaterialApp(
         title: 'Shooting Sports Analyst',

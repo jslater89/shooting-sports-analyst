@@ -19,7 +19,7 @@ Future<void> main() async {
   print("Starting server.");
   SSALogger.debugProvider = ServerDebugProvider();
   var configLoader = ConfigLoader();
-  await configLoader.ready;
+  await configLoader.readyFuture;
   print("Loaded configuration.");
   initLogger(configLoader.config, ServerConfigProvider());
   _log.i("Initialized logger.");
