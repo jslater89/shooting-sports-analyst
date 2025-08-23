@@ -191,6 +191,11 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     _getPrefs();
+    ChangeNotifierConfigLoader().addListener(() {
+      setState(() {
+        // refresh theme mode
+      });
+    });
   }
 
   Future<void> _getPrefs() async {
@@ -204,22 +209,36 @@ class _MyAppState extends State<MyApp> {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+    final lightTheme = ThemeData(
+      useMaterial3: false,
+      brightness: Brightness.light,
+      colorSchemeSeed: Colors.indigo,
+      visualDensity: VisualDensity.adaptivePlatformDensity,
+      // textTheme: Theme.of(context).textTheme.apply(),
+    );
+    var darkTheme = lightTheme;
+    try {
+      darkTheme = ThemeData(
+        useMaterial3: false,
+        brightness: Brightness.dark,
+        colorSchemeSeed: Colors.indigo,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
+        // textTheme: Theme.of(context).textTheme.apply(
+        //   bodyColor: Colors.grey[400],
+        //   displayColor: Colors.grey[400],
+        // ),
+      );
+    }
+    catch(e) {
+      _log.e("Error creating dark theme", error: e);
+    }
+    var config = ConfigLoader().uiConfig;
     if(_prefs == null) {
       return MaterialApp(
         title: 'Shooting Sports Analyst',
-        theme: ThemeData(
-          useMaterial3: false,
-          brightness: Brightness.light,
-          colorSchemeSeed: Colors.indigo,
-          visualDensity: VisualDensity.adaptivePlatformDensity,
-        ),
-        darkTheme: ThemeData(
-          useMaterial3: false,
-          brightness: Brightness.dark,
-          colorSchemeSeed: Colors.indigo,
-          visualDensity: VisualDensity.adaptivePlatformDensity,
-        ),
-        // themeMode: ThemeMode.dark,
+        theme: lightTheme,
+        darkTheme: darkTheme,
+        themeMode: config.themeMode,
         home: Container(),
       );
     }
@@ -231,18 +250,9 @@ class _MyAppState extends State<MyApp> {
         ],
         child: MaterialApp(
           title: 'Shooting Sports Analyst',
-          theme: ThemeData(
-            useMaterial3: false,
-            primarySwatch: Colors.indigo,
-            visualDensity: VisualDensity.adaptivePlatformDensity,
-          ),
-          darkTheme: ThemeData(
-            useMaterial3: false,
-            brightness: Brightness.dark,
-            colorSchemeSeed: Colors.indigo,
-            visualDensity: VisualDensity.adaptivePlatformDensity,
-          ),
-          // themeMode: ThemeMode.dark,
+          theme: lightTheme,
+          darkTheme: darkTheme,
+          themeMode: config.themeMode,
           initialRoute: '/',
           onGenerateRoute: globals.router.generator,
         ),
