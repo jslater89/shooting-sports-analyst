@@ -12,15 +12,23 @@ import 'package:shooting_sports_analyst/data/sport/scoring/stage_scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 
 const ipscSportName = "IPSC";
+const ipscOpen = Division(name: "Open", shortName: "OPEN", fallback: true);
+const ipscPccOptics = Division(name: "PCC Optic", shortName: "PCCO", alternateNames: ["PCC", "PCC Optics"]);
+const ipscPccIrons = Division(name: "PCC Iron", shortName: "PCCI", alternateNames: ["PCC Irons"]);
+const ipscStandard = Division(name: "Standard", shortName: "STD", alternateNames: ["STA"], fallback: true);
+const ipscProductionOptics = Division(name: "Production Optics", longName: "Production Optics", shortName: "PO");
+const ipscProduction = Division(name: "Production", shortName: "PROD", fallback: true);
+const ipscClassic = Division(name: "Classic", shortName: "CLS", alternateNames: ["CLS"]);
+const ipscRevolver = Division(name: "Revolver", shortName: "REV", alternateNames: ["REVO"]);
 const ipscDivisions = [
-  const Division(name: "Open", shortName: "OPEN", fallback: true),
-  const Division(name: "PCC Optic", shortName: "PCCO", alternateNames: ["PCC", "PCC Optics"]),
-  const Division(name: "PCC Iron", shortName: "PCCI", alternateNames: ["PCC Irons"]),
-  const Division(name: "Standard", shortName: "STD", alternateNames: ["STA"]),
-  const Division(name: "Prod. Optics", longName: "Production Optics", shortName: "PO"),
-  const Division(name: "Production", shortName: "PROD"),
-  const Division(name: "Classic", shortName: "CLS", alternateNames: ["CLS"]),
-  const Division(name: "Revolver", shortName: "REV", alternateNames: ["REVO"]),
+  ipscOpen,
+  ipscPccOptics,
+  ipscPccIrons,
+  ipscStandard,
+  ipscProductionOptics,
+  ipscProduction,
+  ipscClassic,
+  ipscRevolver,
 ];
 
 final _ipscPenalties = [

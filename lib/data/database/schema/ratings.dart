@@ -22,7 +22,9 @@ import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manag
 import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/ipsc.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
@@ -388,7 +390,7 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
     }
 
     for(var group in groups) {
-      if(group.divisions.length < fewestDivisions && group.divisions.contains(division)) {
+      if(group.divisions.length < fewestDivisions && group.containsDivision(division)) {
         fewestDivisions = group.divisions.length;
         outGroup = group;
       }
@@ -406,7 +408,7 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
     }
 
     for(var group in groups) {
-      if(group.divisions.length < fewestDivisions && group.divisions.contains(division)) {
+      if(group.divisions.length < fewestDivisions && group.containsDivision(division)) {
         fewestDivisions = group.divisions.length;
         outGroup = group;
       }
@@ -562,6 +564,40 @@ class RatingGroup with DbSportEntity {
   int sortOrder;
 
   bool builtin;
+
+  bool containsDivision(Division division) {
+    // special case for USPSA/IPSC compatibility
+    if(sport == uspsaSport && ipscSport.divisions.values.contains(division)) {
+      if(division == ipscOpen && divisions.contains(uspsaOpen)) {
+        return true;
+      }
+      else if(division == ipscStandard && divisions.contains(uspsaLimited)) {
+        return true;
+      }
+      else if(division == ipscProduction && divisions.contains(uspsaProduction)) {
+        return true;
+      }
+      else if(division == ipscClassic && divisions.contains(uspsaSingleStack)) {
+        return true;
+      }
+      else if(division == ipscRevolver && divisions.contains(uspsaRevolver)) {
+        return true;
+      }
+      else if(division == ipscPccOptics && divisions.contains(uspsaPcc)) {
+        return true;
+      }
+      else if(division == ipscPccIrons && divisions.contains(uspsaPcc)) {
+        return true;
+      }
+      else if(division == ipscProductionOptics && divisions.contains(uspsaCarryOptics)) {
+        return true;
+      }
+      return false;
+    }
+    else {
+      return divisions.contains(division);
+    }
+  }
 
   @ignore
   List<Division> get divisions =>
