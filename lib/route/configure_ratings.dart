@@ -569,8 +569,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                               ),
                               Tooltip(
                                 message: "Add match links parsed from PractiScore page source.",
-                                child: IconButton(
-                                  icon: Icon(Icons.link),
+                                child: TextButton(
+                                  child: Icon(Icons.link),
                                   onPressed: () async {
                                     // var urls = await showDialog<List<String>>(context: context, builder: (context) {
                                     //   return EnterPractiscoreSourceDialog();
@@ -596,8 +596,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                               ),
                               Tooltip(
                                 message: "Add a match from the match database.",
-                                child: IconButton(
-                                  icon: Icon(Icons.dataset),
+                                child: TextButton(
+                                  child: Icon(Icons.dataset),
                                   onPressed: () async {
                                     var dbEntries = await showDialog<List<DbShootingMatch>>(context: context, builder: (context) {
                                       return MatchDatabaseChooserDialog(multiple: true, sport: sport);
@@ -622,8 +622,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                               ),
                               Tooltip(
                                 message: "Remove all matches from the list.",
-                                child: IconButton(
-                                  icon: Icon(Icons.remove),
+                                child: TextButton(
+                                  child: Icon(Icons.remove),
                                   onPressed: () async {
                                     var delete = await showDialog<bool>(context: context, builder: (context) {
                                       return ConfirmDialog(
@@ -642,8 +642,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                               ),
                               Tooltip(
                                 message: "Sort matches from most recent to least recent. Non-cached matches will be displayed first.",
-                                child: IconButton(
-                                  icon: Icon(Icons.sort),
+                                child: TextButton(
+                                  child: Icon(Icons.sort),
                                   onPressed: () async {
                                     _sortMatches(false);
                                   }
@@ -651,8 +651,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                               ),
                               Tooltip(
                                 message: "Sort matches alphabetically. Non-cached matches will be displayed first.",
-                                child: IconButton(
-                                    icon: Icon(Icons.sort_by_alpha),
+                                  child: TextButton(
+                                    child: Icon(Icons.sort_by_alpha),
                                     onPressed: () async {
                                       _sortMatches(true);
                                     }
@@ -715,15 +715,12 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                         message: (ongoingMatches[matchPointer] ?? false) ?
                                             "This match is in progress. Click to toggle." :
                                             "This match is completed. Click to toggle.",
-                                        child: IconButton(
-                                          icon: Icon(
+                                        child: TextButton(
+                                          child: Icon(
                                             (ongoingMatches[matchPointer] ?? false) ?
                                               Icons.calendar_today :
                                               Icons.event_available
                                           ),
-                                          color: (ongoingMatches[matchPointer] ?? false) ?
-                                              Theme.of(context).primaryColor :
-                                              Colors.grey[350],
                                           onPressed: () {
                                             if(ongoingMatches[matchPointer] ?? false) {
                                               setState(() {
@@ -739,8 +736,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                       ),
                                       Tooltip(
                                         message: "Reload this match from its source.",
-                                        child: IconButton(
-                                          icon: Icon(Icons.refresh),
+                                        child: TextButton(
+                                          child: Icon(Icons.refresh),
                                           onPressed: () async {
                                             var result = await MatchSource.reloadMatch(matchPointer.intoSourcePlaceholder());
                                             if(result.isOk()) {
@@ -754,8 +751,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                           },
                                         ),
                                       ),
-                                      IconButton(
-                                        icon: Icon(Icons.remove),
+                                      TextButton(
+                                        child: Icon(Icons.remove),
                                         onPressed: () {
                                           setState(() {
                                             projectMatches.remove(matchPointer);
