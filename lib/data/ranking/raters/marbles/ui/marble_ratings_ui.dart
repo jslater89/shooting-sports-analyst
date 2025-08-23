@@ -5,6 +5,7 @@ import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
+import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 
 extension MarbleRatingsUi on MarbleRater {
@@ -75,7 +76,7 @@ extension MarbleRatingsUi on MarbleRater {
     }
 
     return ScoreRow(
-      color: (place - 1) % 2 == 1 ? Colors.grey[200] : Colors.white,
+      color: ThemeColors.backgroundColor(context, rowIndex: place - 1),
       child: Padding(
         padding: const EdgeInsets.all(2.0),
         child: Row(

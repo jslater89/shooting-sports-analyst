@@ -15,6 +15,7 @@ import 'package:flutter/services.dart';
 import 'package:fluttericon/rpg_awesome_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/application_preferences.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
@@ -28,6 +29,7 @@ import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/route/match_heat_page.dart';
+import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/rater/display_settings.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_correction_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_dialog.dart';
@@ -320,7 +322,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       ConstrainedBox(
         constraints: BoxConstraints(minWidth: size.width, maxWidth: size.width),
         child: Container(
-          color: Colors.white,
+          color: ThemeColors.backgroundColor(context),
           child: Padding(
             padding: const EdgeInsets.only(bottom: 10.0),
             child: Center(
@@ -687,18 +689,26 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     }
   }
 
+  String? lastUrlPredicted;
   Future<void> _startPredictionView(RatingDataSource dataSource, RatingGroup tab) async {
     var options = _ratings.toSet().toList(); //rater.knownShooters.values.toSet().toList();
     options.sort((a, b) => b.rating.compareTo(a.rating));
     List<ShooterRating>? shooters = [];
     var divisions = tab.divisions;
 
+    var appPrefs = AnalystDatabase().getPreferencesSync();
+
     var result = await showDialog<(bool, String?)>(context: context, builder: (context) {
       return UrlEntryDialog(
         hintText: "https://practiscore.com/match-name/squadding",
         descriptionText: "Enter a link to the match registration or squadding page.\nUncheck 'used cached data' to force a fresh download.",
+        initialUrl: lastUrlPredicted,
         showCacheCheckbox: true,
         initialCacheValue: true,
+        typeaheadSuggestionsFunction: (String url) {
+          var suggestions = appPrefs.predictionSuggestions(url);
+          return suggestions.map((e) => TypeaheadUrlSuggestion(url: e.url, matchName: e.matchName)).toList();
+        },
         validator: (url) {
           if(url.endsWith("/register") || url.endsWith("/squadding") || url.endsWith("/printhtml") || (url.endsWith("/") && !url.contains("squadding"))) {
             return null;
@@ -751,7 +761,10 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       return;
     }
 
+    lastUrlPredicted = url;
     var registrationContainer = registrationResult.unwrap();
+    appPrefs.addRecentPredictionUrl(url, registrationContainer.name);
+    AnalystDatabase().savePreferencesSync(appPrefs);
 
     shooters.addAll(registrationContainer.registrations.values);
 

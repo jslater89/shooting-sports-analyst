@@ -209,9 +209,17 @@ class _MyAppState extends State<MyApp> {
         title: 'Shooting Sports Analyst',
         theme: ThemeData(
           useMaterial3: false,
-          primarySwatch: Colors.indigo,
+          brightness: Brightness.light,
+          colorSchemeSeed: Colors.indigo,
           visualDensity: VisualDensity.adaptivePlatformDensity,
         ),
+        darkTheme: ThemeData(
+          useMaterial3: false,
+          brightness: Brightness.dark,
+          colorSchemeSeed: Colors.indigo,
+          visualDensity: VisualDensity.adaptivePlatformDensity,
+        ),
+        // themeMode: ThemeMode.dark,
         home: Container(),
       );
     }
@@ -228,6 +236,13 @@ class _MyAppState extends State<MyApp> {
             primarySwatch: Colors.indigo,
             visualDensity: VisualDensity.adaptivePlatformDensity,
           ),
+          darkTheme: ThemeData(
+            useMaterial3: false,
+            brightness: Brightness.dark,
+            colorSchemeSeed: Colors.indigo,
+            visualDensity: VisualDensity.adaptivePlatformDensity,
+          ),
+          // themeMode: ThemeMode.dark,
           initialRoute: '/',
           onGenerateRoute: globals.router.generator,
         ),

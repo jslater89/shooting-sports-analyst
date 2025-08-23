@@ -5,10 +5,23 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
 
 class UrlEntryDialog extends StatefulWidget {
-  const UrlEntryDialog({Key? key, this.hintText, this.sources, this.title, this.descriptionText, this.validator, this.showCacheCheckbox, this.initialCacheValue}) : super(key: key);
+  const UrlEntryDialog({
+    Key? key,
+    this.hintText,
+    this.sources,
+    this.title,
+    this.descriptionText,
+    this.validator,
+    this.showCacheCheckbox,
+    this.initialCacheValue,
+    this.initialUrl,
+    this.typeaheadSuggestions,
+    this.typeaheadSuggestionsFunction,
+  }) : super(key: key);
 
   /// The title for the URL entry dialog.
   final String? title;
@@ -28,6 +41,13 @@ class UrlEntryDialog extends StatefulWidget {
   final bool? showCacheCheckbox;
   /// If non-null, the initial value of the cache checkbox.
   final bool? initialCacheValue;
+  /// If non-null, the initial value of the URL field.
+  final String? initialUrl;
+  /// If non-null, a list of typeahead suggestions to show in the URL field.
+  final List<TypeaheadUrlSuggestion>? typeaheadSuggestions;
+  /// If non-null, a function that returns a list of typeahead suggestions
+  /// based on the current URL.
+  final TypeaheadSuggestionsFunction? typeaheadSuggestionsFunction;
 
   @override
   State<UrlEntryDialog> createState() => _UrlEntryDialogState();
@@ -64,6 +84,7 @@ class _UrlEntryDialogState extends State<UrlEntryDialog> {
   String? errorText;
   MatchSource? source;
   bool allowCached = true;
+  TypeaheadSuggestionsFunction? typeaheadSuggestionsFunction;
 
   @override
   void initState() {
@@ -73,6 +94,25 @@ class _UrlEntryDialogState extends State<UrlEntryDialog> {
     }
     if(widget.initialCacheValue != null) {
       allowCached = widget.initialCacheValue!;
+    }
+    if(widget.initialUrl != null) {
+      _urlController.text = widget.initialUrl!;
+    }
+
+    if(widget.typeaheadSuggestionsFunction != null) {
+      typeaheadSuggestionsFunction = widget.typeaheadSuggestionsFunction!;
+    }
+    else if(widget.typeaheadSuggestions != null) {
+      typeaheadSuggestionsFunction = (String url) {
+        var suggestions = widget.typeaheadSuggestions!;
+        if(url.isNotEmpty) {
+          suggestions = suggestions.where((e) => e.url.toLowerCase().contains(url.toLowerCase())).toList();
+        }
+        if(suggestions.length > 10) {
+          suggestions = suggestions.sublist(0, 10);
+        }
+        return suggestions;
+      };
     }
   }
 
@@ -85,21 +125,29 @@ class _UrlEntryDialogState extends State<UrlEntryDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(widget.descriptionText ?? "Enter a link to a match."),
-            TextFormField(
-              decoration: InputDecoration(
-                hintText: widget.hintText ?? "https://practiscore.com/results/new/...",
-                errorText: errorText,
-              ),
-              controller: _urlController,
-              onFieldSubmitted: (text) {
-                var url = _urlController.text;
-                var error = widget.validator?.call(url);
-
-                setState(() {
-                  errorText = error;
-                });
-                if(error == null) submit(url);
+            TypeAheadFormField(
+              // Use the default no items found builder if we have suggestions but no results, and no-op widget
+              // if we don't have suggestions at all.
+              noItemsFoundBuilder: typeaheadSuggestionsFunction != null ? null : (context) => Container(width: 0, height: 0),
+              suggestionsCallback: (String pattern) async {
+                return typeaheadSuggestionsFunction?.call(pattern) ?? [];
               },
+              onSuggestionSelected: (suggestion) {
+                _urlController.text = suggestion.url;
+              },
+              itemBuilder: (context, suggestion) {
+                return ListTile(
+                  title: Text(suggestion.matchName),
+                  subtitle: Text(suggestion.url),
+                );
+              },
+              textFieldConfiguration: TextFieldConfiguration(
+                decoration: InputDecoration(
+                  hintText: widget.hintText ?? "https://practiscore.com/results/new/...",
+                  errorText: errorText,
+                ),
+                controller: _urlController,
+              ),
             ),
             if(widget.sources != null)
               DropdownButton<MatchSource>(
@@ -162,4 +210,13 @@ class _UrlEntryDialogState extends State<UrlEntryDialog> {
       Navigator.of(context).pop(url);
     }
   }
+}
+
+typedef TypeaheadSuggestionsFunction = List<TypeaheadUrlSuggestion>? Function(String);
+
+class TypeaheadUrlSuggestion {
+  final String url;
+  final String? matchName;
+
+  TypeaheadUrlSuggestion({required this.url, this.matchName});
 }

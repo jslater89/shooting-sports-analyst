@@ -24,11 +24,11 @@ import 'package:shooting_sports_analyst/ui/booth/scorecard_grid.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_model.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_move.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_settings.dart';
+import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/rater/shooter_stats_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui_util.dart';
-import 'package:shooting_sports_analyst/util.dart';
 import 'package:two_dimensional_scrollables/two_dimensional_scrollables.dart';
 
 SSALogger _log = SSALogger("BoothScorecard");
@@ -372,7 +372,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
                         Tooltip(
                           message: isMaximized ? "Minimize" : "Maximize",
                           child: TextButton(
-                            child: Icon(isMaximized ? Icons.minimize : Icons.maximize),
+                            child: Icon(isMaximized ? Icons.minimize : Icons.fullscreen),
                             onPressed: () {
                               controller.maximizeScorecard(isMaximized ? null : widget.scorecard);
                             },
@@ -479,7 +479,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
           return TableSpan(
             extent: FixedTableSpanExtent(_scoreRowHeight * sc.tableTextSize.fontSizeFactor),
             backgroundDecoration: TableSpanDecoration(
-              color: row % 2 == 0 ? Colors.white : Colors.grey[200],
+              color: ThemeColors.backgroundColor(context, rowIndex: row),
             ),
           );
         }

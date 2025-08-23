@@ -1625,7 +1625,7 @@ class RatingProjectLoader {
       }
 
       var updateStart = DateTime.now();
-      await AnalystDatabase().updateChangedRatings(changes.keys);
+      db.updateChangedRatingsSync(changes.keys);
       if(Timings.enabled) timings.add(TimingType.updateDbRatings, DateTime.now().difference(updateStart).inMicroseconds);
       if(Timings.enabled) timings.add(TimingType.persistRatingChanges, DateTime.now().difference(persistStart).inMicroseconds);
 

@@ -20,6 +20,7 @@ import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart'
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/data/old_search_query_parser.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/rater/display_settings.dart';
 import 'package:shooting_sports_analyst/ui/rater/rating_filter_dialog.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_sorts.dart';
@@ -176,7 +177,7 @@ class _RaterViewState extends State<RaterView> {
             border: Border(
                 bottom: BorderSide()
             ),
-            color: Colors.white,
+            color: ThemeColors.backgroundColor(context),
           ),
           child: Padding(
             padding: const EdgeInsets.all(2.0),
