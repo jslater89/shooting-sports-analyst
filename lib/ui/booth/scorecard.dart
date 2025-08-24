@@ -313,6 +313,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
   }
 
   ScrollPhysics innerScrollPhysics = const ClampingScrollPhysics();
+  ScrollController horizontalScrollController = ScrollController();
 
   @override
   Widget build(BuildContext context) {
@@ -404,12 +405,19 @@ class _BoothScorecardState extends State<BoothScorecard> {
                 ],
               ),
               Expanded(
-                child: _buildTable(),
+                child: widget.scorecard.hasHorizontalScrollbar ? _buildTableWithScrollbar() : _buildTable(),
               )
             ]
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTableWithScrollbar() {
+    return Scrollbar(
+      controller: horizontalScrollController,
+      child: _buildTable(),
     );
   }
 
@@ -420,6 +428,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
     return TableView.builder(
       horizontalDetails: ScrollableDetails.horizontal(
         physics: innerScrollPhysics,
+        controller: horizontalScrollController,
       ),
       verticalDetails: ScrollableDetails.vertical(
         physics: innerScrollPhysics,

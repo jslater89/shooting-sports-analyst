@@ -58,6 +58,8 @@ class ScorecardModel {
   @JsonKey(includeFromJson: false, includeToJson: false)
   bool get scoresMultipleDivisions => (fullScoreFilters.filterSet?.activeDivisions.length ?? 0) > 1;
 
+  bool hasHorizontalScrollbar;
+
   ScorecardModel({
     required this.id,
     required this.name,
@@ -69,6 +71,7 @@ class ScorecardModel {
     this.scoresAfter,
     this.scoresBefore,
     this.predictionMode = MatchPredictionMode.none,
+    this.hasHorizontalScrollbar = false,
   }) {
     if(newScoreFilters == null) {
       newScoreFilters = ScorecardFilters(filterSet: scoreFilters);
@@ -87,6 +90,7 @@ class ScorecardModel {
       required this.predictionMode,
       this.scoresAfter,
       this.scoresBefore,
+      this.hasHorizontalScrollbar = false,
     }
   );
 
@@ -105,6 +109,7 @@ class ScorecardModel {
       scoresBefore: scoresBefore,
       predictionMode: predictionMode,
       tableTextSize: tableTextSize,
+      hasHorizontalScrollbar: hasHorizontalScrollbar,
     );
   }
 
@@ -117,11 +122,13 @@ class ScorecardModel {
     scoresBefore = other.scoresBefore;
     predictionMode = other.predictionMode;
     tableTextSize = other.tableTextSize;
+    hasHorizontalScrollbar = other.hasHorizontalScrollbar;
   }
 
   void copyGlobalSettingsFrom(GlobalScorecardSettingsModel settings) {
     predictionMode = settings.predictionMode;
     tableTextSize = settings.tableTextSize;
+    hasHorizontalScrollbar = settings.hasHorizontalScrollbar;
   }
 
   factory ScorecardModel.fromJson(Map<String, dynamic> json) => _$ScorecardModelFromJson(json);

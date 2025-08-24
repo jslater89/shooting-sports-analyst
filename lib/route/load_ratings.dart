@@ -133,7 +133,8 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
     int? subProgress,
     int? subTotal,
   }) async {
-    if(state != currentState) {
+    bool importantChange = state != currentState;
+    if(importantChange) {
       _log.i("Rating calculation state changed: $state");
     }
     else {
@@ -149,7 +150,9 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
       _subTotal = subTotal;
     });
     // Allow a UI update
-    await Future.delayed(const Duration(microseconds: 1));
+    // Important changes are things like state changes, or when we're done. Wait
+    // at least a frame for those to make sure we get one.
+    await Future.delayed(importantChange ? const Duration(milliseconds: 5) : const Duration(microseconds: 1));
 
     if(state == LoadingState.done) {
       _log.i(Timings());
