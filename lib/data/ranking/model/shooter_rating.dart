@@ -9,12 +9,10 @@ import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
-import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
-import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/connectivity/valid_competitors.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
@@ -401,6 +399,7 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
     await AnalystDatabase().upsertDbShooterRating(wrappedRating);
   }
 
+
   AverageRating averageRating({int window = ShooterRating.baseTrendWindow, List<double>? preloadedRatings, bool nonzeroChange = true}) {
     double lowestPoint = rating;
     double highestPoint = rating;
@@ -611,6 +610,63 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
     this.lastSeen = other.lastSeen;
     this.firstSeen = other.firstSeen;
     super.copyVitalsFrom(other);
+  }
+
+  List<double> getRatingEventChangesForTrend(int limit, {bool nonzeroChange = true}) {
+    // First, get changes from newRatingEvents
+    var newChanges = wrappedRating.newRatingEvents
+      .where((e) => !nonzeroChange || e.ratingChange != 0)
+      .take(limit)
+      .map((e) => e.ratingChange)
+      .toList();
+
+    if (newChanges.length >= limit) {
+      return newChanges;
+    }
+
+    // If we need more, get from database
+    var dbLimit = limit - newChanges.length;
+    var dbChanges = AnalystDatabase().getRatingEventChangeForSync(
+      wrappedRating,
+      limit: dbLimit,
+      offset: 0,
+      order: Order.descending,
+      nonzeroChange: nonzeroChange
+    );
+
+
+    // We want to return changes in order from newest to oldest, to match
+    // the DB semantics. newChanges are newer at the tail, so we need to reverse them;
+    // dbChanges are older at the tail, so we don't need to reverse them.
+    return [...newChanges.reversed, ...dbChanges];
+  }
+
+  List<double> getRatingEventRatingsForTrend(int limit, {bool nonzeroChange = true, bool newRating = true}) {
+    // First, get ratings from newRatingEvents
+    var newRatings = wrappedRating.newRatingEvents
+      .where((e) => !nonzeroChange || e.ratingChange != 0)
+      .take(limit)
+      .map((e) => e.newRating)
+      .toList();
+
+    if (newRatings.length >= limit) {
+      return newRatings;
+    }
+
+    // If we need more, get from database
+    var dbLimit = limit - newRatings.length;
+    var dbRatings = AnalystDatabase().getRatingEventRatingForSync(
+      wrappedRating,
+      limit: dbLimit,
+      offset: 0,
+      order: Order.descending,
+      nonzeroChange: nonzeroChange
+    );
+
+    // We want to return ratings in order from newest to oldest, to match
+    // the DB semantics. newRatings are newer at the tail, so we need to reverse them;
+    // dbRatings are older at the tail, so we don't need to reverse them.
+    return [...newRatings.reversed, ...dbRatings];
   }
 }
 

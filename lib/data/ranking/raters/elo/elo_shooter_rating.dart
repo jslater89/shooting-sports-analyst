@@ -261,13 +261,11 @@ class EloShooterRating extends ShooterRating<EloRatingEvent> {
   void updateTrends(List<RatingEvent> changes) {
     // [changes] is not yet persisted, so we want a list of up to longTrendWindow events
     // that is [...dbEvents, ...changes].
+
+    // However, at this point, [changes] _is_ in the newRatingEvents list, so we can
+    // use the ShooterRating specialty getters.
     var longTrendWindow = ShooterRating.baseTrendWindow * 2;
     var trendWindow = ShooterRating.baseTrendWindow;
-
-    var meaningfulChanges = changes.where((e) => e.ratingChange != 0.0).toList();
-
-    var newEventContribution = meaningfulChanges.length;
-    var dbRequirement = longTrendWindow - newEventContribution;
 
     if(longTrendWindow == 0) {
       return;
@@ -276,17 +274,9 @@ class EloShooterRating extends ShooterRating<EloRatingEvent> {
     List<double> ratingChanges = [];
     List<double> ratingValues = [];
 
-    if(dbRequirement > 0) {
-      List<double> dbRatingChanges = AnalystDatabase().getRatingEventChangeForSync(wrappedRating, limit: dbRequirement, offset: 0, order: Order.descending, nonzeroChange: true);
-      List<double> dbRatingValues = AnalystDatabase().getRatingEventRatingForSync(wrappedRating, limit: dbRequirement, offset: 0, order: Order.descending, nonzeroChange: true);
-
-      // Put the list in order from oldest to newest.
-      ratingChanges.addAll(dbRatingChanges.reversed);
-      ratingValues.addAll(dbRatingValues.reversed);
-    }
-
-    ratingChanges.addAll(meaningfulChanges.map((e) => e.ratingChange));
-    ratingValues.addAll(meaningfulChanges.map((e) => e.newRating));
+    // Order from oldest to newest.
+    ratingChanges.addAll(getRatingEventChangesForTrend(longTrendWindow).reversed);
+    ratingValues.addAll(getRatingEventRatingsForTrend(longTrendWindow).reversed);
 
     var stdDevChanges = ratingChanges.getTailWindow(trendWindow);
     var stdDev = sqrt(stdDevChanges.map((e) => pow(e, 2)).sum / (stdDevChanges.length - 1));
