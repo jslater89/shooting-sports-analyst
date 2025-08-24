@@ -315,7 +315,21 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
           )).toList(),
           onChanged: (value) {
             if (value != null) {
-              scorecard.predictionMode = value;
+              setState(() {
+                  scorecard.predictionMode = value;
+              });
+            }
+          },
+        ),
+        CheckboxListTile(
+          title: const Text("Show horizontal scrollbar"),
+          value: scorecard.hasHorizontalScrollbar,
+          controlAffinity: ListTileControlAffinity.leading,
+          onChanged: (value) {
+            if(value != null) {
+              setState(() {
+                scorecard.hasHorizontalScrollbar = value;
+              });
             }
           },
         ),

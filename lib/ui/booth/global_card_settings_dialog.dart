@@ -17,12 +17,14 @@ class GlobalScorecardSettingsModel with ChangeNotifier {
   double minScorecardHeight;
   double minScorecardWidth;
   TableTextSize tableTextSize;
+  bool hasHorizontalScrollbar;
 
   GlobalScorecardSettingsModel({
     this.predictionMode = MatchPredictionMode.none,
     this.minScorecardHeight = 400.0,
     this.minScorecardWidth = 900.0,
     this.tableTextSize = TableTextSize.normal,
+    this.hasHorizontalScrollbar = false,
   });
 
   GlobalScorecardSettingsModel copy() => GlobalScorecardSettingsModel(
@@ -30,6 +32,7 @@ class GlobalScorecardSettingsModel with ChangeNotifier {
     minScorecardHeight: minScorecardHeight,
     minScorecardWidth: minScorecardWidth,
     tableTextSize: tableTextSize,
+    hasHorizontalScrollbar: hasHorizontalScrollbar,
   );
 
   factory GlobalScorecardSettingsModel.fromJson(Map<String, dynamic> json) => _$GlobalScorecardSettingsModelFromJson(json);
@@ -171,6 +174,17 @@ class _GlobalScorecardSettingsWidgetState extends State<GlobalScorecardSettingsW
             }
             else {
               model.minScorecardHeight = -1;
+            }
+            model.validate();
+          },
+        ),
+        CheckboxListTile(
+          title: const Text("Show horizontal scrollbars"),
+          value: settings.hasHorizontalScrollbar,
+          controlAffinity: ListTileControlAffinity.leading,
+          onChanged: (value) {
+            if(value != null) {
+              model.hasHorizontalScrollbar = value;
             }
             model.validate();
           },
