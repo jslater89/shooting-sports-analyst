@@ -282,14 +282,22 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   bool transientDataEntryErrorSkip;
 
   /// Delete all shooter ratings and rating events belonging to this project.
-  Future<void> resetRatings() async {
-    await ratings.load();
+  Future<void> resetRatings({ProgressCallback? progressCallback}) async {
+    int ratingCount = ratings.countSync();
+    ProgressCallback innerCallback = (progress, total) async {
+      if(progressCallback != null) {
+        await progressCallback(progress + ratingCount, total);
+      }
+    };
     AnalystDatabase().isar.writeTxnSync(() {
       int eventCount = 0;
-      for(var r in ratings) {
+      for(var (i, r) in ratings.indexed) {
         var count = r.events.filter().deleteAllSync();
         r.events.resetSync();
         eventCount += count;
+        if(i % 50 == 0) {
+          innerCallback(i, ratingCount);
+        }
       }
 
       lastUsedMatches = [];

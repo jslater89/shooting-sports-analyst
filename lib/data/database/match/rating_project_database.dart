@@ -91,13 +91,17 @@ extension RatingProjectDatabase on AnalystDatabase {
     return isar.dbRatingProjects.where().findAll();
   }
 
-  Future<bool> deleteRatingProject(DbRatingProject project) async {
+  Future<bool> deleteRatingProject(DbRatingProject project, {ProgressCallback? progressCallback}) async {
+    int ratingCount = project.ratings.countSync();
     // clear all linked shooter ratings
     return isar.writeTxn(() async {
       if(!project.ratings.isLoaded) {
         await project.ratings.load();
-        for(var rating in project.ratings) {
+        for(var (i, rating) in project.ratings.indexed) {
           _innerDeleteShooterRating(rating);
+          if(progressCallback != null && i % 50 == 0) {
+            await progressCallback(i, ratingCount);
+          }
         }
       }
 
