@@ -284,7 +284,13 @@ class RatingProjectLoader {
         total: 1,
         state: LoadingState.clearingOldRatings,
       );
-      await project.resetRatings();
+      await project.resetRatings(progressCallback: (progress, total) async {
+        await host.progressCallback(
+          progress: progress,
+          total: total,
+          state: LoadingState.clearingOldRatings,
+        );
+      });
     }
     else {
       // Fixed-length list on DB load
