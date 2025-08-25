@@ -365,28 +365,42 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
               ),
               Padding(
                 padding: const EdgeInsets.only(left: 8.0),
-                child: Row(
-                  children: [
-                    Checkbox(value: _forceRecalculate, onChanged: (value) {
-                      setState(() {
-                        _forceRecalculate = value ?? false;
-                      });
-                    }),
-                    Text("Force recalculate"),
-                  ],
+                child: Tooltip(
+                  message: "Recalculate the project in full, even if appending ratings\n"
+                      "would otherwise be possible.",
+                  child: Row(
+                    children: [
+                      Checkbox(value: _forceRecalculate, onChanged: (value) {
+                        setState(() {
+                          _forceRecalculate = value ?? false;
+                        });
+                      }),
+                      Text("Force recalculate"),
+                    ],
+                  ),
                 ),
               ),
               Padding(
                 padding: const EdgeInsets.only(left: 8.0),
-                child: Row(
-                  children: [
-                    Checkbox(value: _skipDeduplication, onChanged: (value) {
-                      setState(() {
-                        _skipDeduplication = value ?? false;
-                      });
-                    }),
-                    Text("Skip deduplication"),
-                  ],
+                child: Tooltip(
+                  message: "Skip deduplication (only available with force recalculate).\n"
+                      "Use this only when doing a pure recalculation, i.e. when you have not\n"
+                      "added any new matches since the last calculation.",
+                  child: Row(
+                    children: [
+                      Checkbox(
+                        value: _skipDeduplication && _forceRecalculate,
+                        onChanged: (value) {
+                          if(!_forceRecalculate) {
+                            return;
+                          }
+                          setState(() {
+                            _skipDeduplication = value ?? false;
+                          });
+                        }),
+                      Text("Skip deduplication"),
+                    ],
+                  ),
                 ),
               )
             ],
