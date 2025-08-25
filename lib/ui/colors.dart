@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'package:flutter/material.dart';
 
 class ThemeColors {
@@ -27,5 +33,15 @@ class ThemeColors {
 
   static Color onBackgroundColorFaded(BuildContext context) {
     return onBackgroundColor(context).withOpacity(0.65);
+  }
+
+  static Color linkColor(BuildContext context) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+    if(isDark) {
+      return Theme.of(context).colorScheme.primary;
+    }
+    else {
+      return Theme.of(context).colorScheme.tertiary;
+    }
   }
 }

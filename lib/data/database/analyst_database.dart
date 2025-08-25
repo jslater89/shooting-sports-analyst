@@ -185,7 +185,7 @@ class AnalystDatabase {
         if(name != null)
           NamePartsQuery(name),
         if(sport != null)
-          SportQuery(sport),
+          SportQuery([sport]),
         if(after != null || before != null)
           DateQuery(after: after, before: before),
       ],
@@ -204,14 +204,14 @@ class AnalystDatabase {
     int page = 0,
     int pageSize = 100,
     MatchSortField sort = const DateSort(),
-    Sport? sport,
+    List<Sport>? sports,
   }) {
     Query<int> finalQuery = _buildMatchIdQuery(
       [
         if(name != null)
           NamePartsQuery(name),
-        if(sport != null)
-          SportQuery(sport),
+        if(sports != null)
+          SportQuery(sports),
         if(after != null || before != null)
           DateQuery(after: after, before: before),
       ],

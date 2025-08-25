@@ -175,7 +175,7 @@ class _RaterViewState extends State<RaterView> {
       child: Container(
           decoration: BoxDecoration(
             border: Border(
-                bottom: BorderSide()
+                bottom: BorderSide(color: ThemeColors.onBackgroundColor(context))
             ),
             color: ThemeColors.backgroundColor(context),
           ),

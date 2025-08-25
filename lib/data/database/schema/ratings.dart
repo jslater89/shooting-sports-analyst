@@ -636,6 +636,35 @@ class RatingGroup with DbSportEntity {
       .cast<Division>()
       .toList();
 
+  List<Division> ipscCompatibleDivisions() {
+    var divisions = this.divisions;
+    if(sport == uspsaSport) {
+      // special case for using IPSC matches in USPSA projects
+      if(divisions.contains(uspsaOpen)) {
+        divisions.add(ipscOpen);
+      }
+      if(divisions.contains(uspsaLimited)) {
+        divisions.add(ipscStandard);
+      }
+      if(divisions.contains(uspsaProduction)) {
+        divisions.add(ipscProduction);
+      }
+      if(divisions.contains(uspsaCarryOptics)) {
+        divisions.add(ipscProductionOptics);
+      }
+      if(divisions.contains(uspsaSingleStack)) {
+        divisions.add(ipscClassic);
+      }
+      if(divisions.contains(uspsaRevolver)) {
+        divisions.add(ipscRevolver);
+      }
+      if(divisions.contains(uspsaPcc)) {
+        divisions.add(ipscPccOptics);
+      }
+    }
+    return divisions;
+  }
+
   @ignore
   FilterSet get filters {
     var f = FilterSet(
@@ -649,6 +678,17 @@ class RatingGroup with DbSportEntity {
 
     f.divisions = FilterSet.divisionListToMap(sport, divisions);
 
+    return f;
+  }
+
+  FilterSet ipscCompatibleFilters() {
+    var f = filters;
+    var compatibleDivisions = ipscCompatibleDivisions();
+    for(var division in compatibleDivisions) {
+      // need to do this rather than divisionListToMap, because that validates
+      // that the sport includes the division, and in this case, it doesn't
+      f.divisions[division] = true;
+    }
     return f;
   }
 

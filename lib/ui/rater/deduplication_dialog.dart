@@ -15,7 +15,6 @@ import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/deduplicator_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
-import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/text_styles.dart';
@@ -934,7 +933,6 @@ class MemberNumberTypeColumn extends StatelessWidget {
   Widget build(BuildContext context) {
     var sport = Provider.of<Sport>(context, listen: false);
     var dedup = sport.shooterDeduplicator;
-    bool uspsa = sport.name == uspsaName;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4.0),
       child: Column(

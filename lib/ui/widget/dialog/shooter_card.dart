@@ -11,6 +11,7 @@ import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/rater/shooter_stats_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/captioned_text.dart';
 import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
@@ -169,7 +170,7 @@ class ShooterResultCard extends StatelessWidget {
             Text(
               shooterString,
               style: Theme.of(context).textTheme.headline6!.copyWith(
-                color: Theme.of(context).primaryColor,
+                color: ThemeColors.linkColor(context),
                 decoration: TextDecoration.underline,
               ),
             ),

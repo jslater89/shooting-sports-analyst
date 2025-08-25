@@ -45,6 +45,7 @@ import 'package:shooting_sports_analyst/data/ranking/raters/points/ui/points_set
 import 'package:shooting_sports_analyst/data/ranking/shooter_aliases.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/ipsc.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
@@ -627,8 +628,9 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 child: TextButton(
                                   child: Icon(Icons.dataset),
                                   onPressed: () async {
+                                    var sports = sport.name == uspsaSport.name ? [sport, ipscSport] : [sport];
                                     var dbEntries = await showDialog<List<DbShootingMatch>>(context: context, builder: (context) {
-                                      return MatchDatabaseChooserDialog(multiple: true, sport: sport);
+                                      return MatchDatabaseChooserDialog(multiple: true, sports: sports);
                                     }, barrierDismissible: false);
 
                                     _log.v("Entries from DB: $dbEntries");

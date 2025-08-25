@@ -63,19 +63,19 @@ class SportQuery extends MatchQueryElement {
   String get index => AnalystDatabase.sportNameIndex;
   String get property => "sportName";
 
-  Sport sport;
+  List<Sport> sports;
 
-  SportQuery(this.sport);
+  SportQuery(this.sports);
 
   bool get canWhere => true;
 
   @override
   FilterOperation? get filterCondition {
-    return FilterCondition.equalTo(property: property, value: sport.name);
+    return FilterGroup.or(sports.map((s) => FilterCondition.equalTo(property: property, value: s.name)).toList());
   }
 
   @override
-  List<WhereClause>? get whereClauses => [IndexWhereClause.equalTo(indexName: index, value: [sport.name])];
+  List<WhereClause>? get whereClauses => sports.map((s) => IndexWhereClause.equalTo(indexName: index, value: [s.name])).toList();
 }
 
 class DateQuery extends MatchQueryElement {

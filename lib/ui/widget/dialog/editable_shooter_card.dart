@@ -11,6 +11,7 @@ import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/widget/captioned_text.dart';
 import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/shooter_card.dart';
@@ -476,7 +477,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
             Text(
               "${shooter.getName()} - ${shooter.division?.displayName ?? "NO DIVISION"} ${shooter.classification?.displayName}",
               style: Theme.of(context).textTheme.headline6!.copyWith(
-                color: Theme.of(context).primaryColor,
+                color: ThemeColors.linkColor(context),
                 decoration: TextDecoration.underline,
               ),
             ),

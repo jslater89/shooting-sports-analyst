@@ -62,7 +62,6 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
   double _maxX = 0;
   double _progress = 0;
   DbRatingProject? _project;
-  bool _loadError = false;
   Map<Classification, double> _classStrengths = {};
   double _minClassStrength = 2e32;
   double _maxClassStrength = -2e32;
@@ -76,17 +75,11 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
     var projectId = await widget.dataSource.getProjectId();
     if(projectId.isErr()) {
       _log.w("Error getting project ID: ${projectId.unwrapErr()}");
-      setState(() {
-        _loadError = true;
-      });
       return;
     }
     _project = await db.getRatingProjectById(projectId.unwrap());
     if(_project == null) {
       _log.w("Rating project not found: ${projectId.unwrap()}");
-      setState(() {
-        _loadError = true;
-      });
       return;
     }
 
@@ -587,9 +580,10 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
     }
 
     double alpha = 0.75;
+    var isDark = Theme.of(context).brightness == Brightness.dark;
     if(dimmed) {
       color = color?.withChroma(color.chroma * 0.2);
-      alpha = 0.1;
+      alpha = isDark ? 0.25 : 0.1;
     }
     if(!dimmed && _highlightedMatches.isNotEmpty) {
       alpha = 0.9;
