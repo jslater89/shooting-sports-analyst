@@ -28,4 +28,14 @@ class ThemeColors {
   static Color onBackgroundColorFaded(BuildContext context) {
     return onBackgroundColor(context).withOpacity(0.65);
   }
+
+  static Color linkColor(BuildContext context) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+    if(isDark) {
+      return Theme.of(context).colorScheme.primary;
+    }
+    else {
+      return Theme.of(context).colorScheme.tertiary;
+    }
+  }
 }

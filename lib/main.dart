@@ -194,6 +194,13 @@ class _MyAppState extends State<MyApp> {
         bodyColor: Colors.grey[300],
         displayColor: Colors.grey[300],
       ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: Colors.grey[800]!,
+        contentTextStyle: TextStyle(
+          color: Colors.grey[300],
+        ),
+        actionTextColor: Colors.indigo[300]!,
+      ),
     );
 
     var config = ConfigLoader().config;
