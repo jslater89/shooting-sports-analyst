@@ -491,10 +491,11 @@ extension RatingProjectDatabase on AnalystDatabase {
   }
 
   /// Update DbShooterRatings that have changed as part of the rating process.
-  void updateChangedRatingsSync(Iterable<DbShooterRating> ratings, {bool useCache = true}) {
+  void updateChangedRatingsSync(Iterable<DbShooterRating> ratings, {bool useCache = true, ChangedRatingPersistedSyncCallback? onPersisted}) {
     late DateTime outerStart;
     if(Timings.enabled) outerStart = DateTime.now();
     isar.writeTxnSync(() {
+      int progress = 0;
       late DateTime start;
 
       Map<String, DbShootingMatch> matches = {};
@@ -548,6 +549,14 @@ extension RatingProjectDatabase on AnalystDatabase {
         r.events.saveSync();
 
         if(Timings.enabled) Timings().add(TimingType.persistEvents, DateTime.now().difference(start).inMicroseconds);
+        if(onPersisted != null) {
+          onPersisted(
+            progress: progress,
+            total: ratings.length,
+            message: r.toString(),
+          );
+          progress += 1;
+        }
       }
     });
     if(Timings.enabled) Timings().add(TimingType.dbRatingUpdateTransaction, DateTime.now().difference(outerStart).inMicroseconds);
@@ -1040,3 +1049,15 @@ enum RatingMigrationError implements ResultErr {
     nameOverlap => "Ratings database already contains a project with that name."
   };
 }
+
+typedef ChangedRatingPersistedCallback = Future<void> Function({
+  required int progress,
+  required int total,
+  String? message
+});
+
+typedef ChangedRatingPersistedSyncCallback = void Function({
+  required int progress,
+  required int total,
+  String? message
+});

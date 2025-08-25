@@ -16,7 +16,7 @@ import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/connectivity.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_report.dart';
-import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/connectivity/in_memory_container.dart';
 import 'package:shooting_sports_analyst/data/ranking/connectivity/valid_competitors.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
@@ -166,17 +166,20 @@ class RatingProjectLoader {
 
   MemberNumberCorrectionContainer get _dataCorrections => settings.memberNumberCorrections;
   List<String> get memberNumberWhitelist => settings.memberNumberWhitelist;
+  final connectivityOverlay = InMemoryConnectivityContainer();
 
   RatingProjectLoader(this.project, this.host, {this.parallel = false});
   DateTime wallStart = DateTime.now();
 
   bool parallel;
   bool inFullRecalc = false;
+  bool skipDeduplication = false;
 
   List<String> _matchConnectivityCsv = [];
   bool dumpMatchConnectivities = false;
-  Future<Result<RatingsCalculationComplete, RatingProjectLoadError>> calculateRatings({bool fullRecalc = false}) async {
+  Future<Result<RatingsCalculationComplete, RatingProjectLoadError>> calculateRatings({bool fullRecalc = false, bool skipDeduplication = false}) async {
     wallStart = DateTime.now();
+    this.skipDeduplication = skipDeduplication;
 
     HydratedMatchCache().clear();
     db.clearLoadedShooterRatingCache();
@@ -313,6 +316,10 @@ class RatingProjectLoader {
     project.lastUsedMatches = [...project.lastUsedMatches, ...matchesToAdd];
     await db.saveRatingProject(project, checkName: true);
 
+    if(project.sport.connectivityCalculator != null) {
+      connectivityOverlay.primeConnectivityScores(project);
+    }
+
     await host.progressCallback(
       progress: 0,
       total: _totalMatchSteps,
@@ -428,7 +435,7 @@ class RatingProjectLoader {
 
     // 2. Deduplicate shooters.
     var dedup = sport.shooterDeduplicator;
-    if(dedup != null) {
+    if(dedup != null && !skipDeduplication) {
       var start = DateTime.now();
       var dedupResult = await dedup.deduplicateShooters(
         ratingProject: project,
@@ -506,6 +513,7 @@ class RatingProjectLoader {
     var subProgress = 0;
 
     int changeCount = 0;
+    Set<DbShooterRating> changedRatings = {};
 
     var start = DateTime.now();
     for (var match in matches) {
@@ -547,8 +555,24 @@ class RatingProjectLoader {
         subProgress: subProgress,
         subTotal: subTotal,
       );
-      changeCount += await _rankMatch(group, match);
+      var newChanges = await _rankMatch(group, match);
+      changeCount += newChanges.length;
+      changedRatings.addAll(newChanges);
     }
+
+    await host.progressCallback(
+        progress: _currentMatchStep,
+        total: _totalMatchSteps,
+        state: LoadingState.persistingChanges,
+        eventName: "(none)",
+        groupName: group.name,
+        subProgress: subProgress,
+        subTotal: subTotal,
+      );
+
+    var persistStart = DateTime.now();
+    db.updateChangedRatingsSync(changedRatings);
+    if(Timings.enabled) timings.add(TimingType.persistRatingChanges, DateTime.now().difference(persistStart).inMicroseconds);
 
     var count = await db.countShooterRatings(project, group);
     if(Timings.enabled) timings.add(TimingType.rateMatches, DateTime.now().difference(start).inMicroseconds);
@@ -753,6 +777,8 @@ class RatingProjectLoader {
         // rating to this one.
         List<DbShooterRating> ratingsWithHistory = [];
         bool eventsCopied = false;
+        // see the to-do below
+        // ignore: unused_local_variable
         int longestHistoryId = -1;
         int longestHistoryLength = 0;
         for(var r in ratings) {
@@ -1192,6 +1218,9 @@ class RatingProjectLoader {
           newRating.allPossibleMemberNumbers.addAll(possibleNumbers);
           ratingsToCreate.add(newRating);
           newRatings.add(newRating.wrappedRating);
+          if(project.sport.connectivityCalculator != null) {
+            connectivityOverlay.addNewConnectivityScore(group.uuid, 0.0);
+          }
           added += 1;
         }
         else {
@@ -1345,8 +1374,8 @@ class RatingProjectLoader {
 
   double get _centerStrength => sport.ratingStrengthProvider?.centerStrength ?? 1.0;
 
-  /// Returns the number of rating changes.
-  Future<int> _rankMatch(RatingGroup group, ShootingMatch match) async {
+  /// Returns a set of ratings that were changed.
+  Future<Set<DbShooterRating>> _rankMatch(RatingGroup group, ShootingMatch match) async {
     late DateTime start;
     if(Timings.enabled) start = DateTime.now();
     var shooters = _getShooters(group, match, verify: true);
@@ -1354,7 +1383,7 @@ class RatingProjectLoader {
 
     // Skip when a match has no shooters in a group
     if(shooters.length == 0 && scores.length == 0) {
-      return 0;
+      return {};
     }
 
     if(Timings.enabled) timings.add(TimingType.getShootersAndScores, DateTime.now().difference(start).inMicroseconds);
@@ -1450,6 +1479,7 @@ class RatingProjectLoader {
     if(Timings.enabled) timings.add(TimingType.calcConnectedness, DateTime.now().difference(start).inMicroseconds);
 
     Map<DbShooterRating, Map<RelativeScore, RatingEvent>> changes = {};
+    Set<DbShooterRating> changedRatings = {};
     int changeCount = 0;
 
     if(Timings.enabled) start = DateTime.now();
@@ -1521,8 +1551,8 @@ class RatingProjectLoader {
           }
         }
 
-        var persistStart = DateTime.now();
         changeCount += changes.length;
+        var updateStart = DateTime.now();
         for(var r in changes.keys) {
           var changeStart = DateTime.now();
           if(!r.events.isLoaded) r.events.loadSync();
@@ -1535,12 +1565,9 @@ class RatingProjectLoader {
           if(Timings.enabled) timings.add(TimingType.applyChanges, DateTime.now().difference(changeStart).inMicroseconds);
         }
 
-        var updateStart = DateTime.now();
-        db.updateChangedRatingsSync(changes.keys);
-        if(Timings.enabled) timings.add(TimingType.updateDbRatings, DateTime.now().difference(updateStart).inMicroseconds);
-        if(Timings.enabled) timings.add(TimingType.persistRatingChanges, DateTime.now().difference(persistStart).inMicroseconds);
-
+        changedRatings.addAll(changes.keys);
         changes.clear();
+        if(Timings.enabled) timings.add(TimingType.updateDbRatings, DateTime.now().difference(updateStart).inMicroseconds);
       }
     }
     else { // by match
@@ -1617,11 +1644,11 @@ class RatingProjectLoader {
         }
       }
 
-      var persistStart = DateTime.now();
+      var updateStart = DateTime.now();
       changeCount += changes.length;
       for(var r in changes.keys) {
         var changeStart = DateTime.now();
-        if(!r.events.isLoaded) await r.events.load();
+        if(!r.events.isLoaded) r.events.loadSync();
         if(Timings.enabled) timings.add(TimingType.loadEvents, DateTime.now().difference(changeStart).inMicroseconds);
 
         changeStart = DateTime.now();
@@ -1631,12 +1658,9 @@ class RatingProjectLoader {
         if(Timings.enabled) timings.add(TimingType.applyChanges, DateTime.now().difference(changeStart).inMicroseconds);
       }
 
-      var updateStart = DateTime.now();
-      db.updateChangedRatingsSync(changes.keys);
-      if(Timings.enabled) timings.add(TimingType.updateDbRatings, DateTime.now().difference(updateStart).inMicroseconds);
-      if(Timings.enabled) timings.add(TimingType.persistRatingChanges, DateTime.now().difference(persistStart).inMicroseconds);
-
+      changedRatings.addAll(changes.keys);
       changes.clear();
+      if(Timings.enabled) timings.add(TimingType.updateDbRatings, DateTime.now().difference(updateStart).inMicroseconds);
     }
     if(Timings.enabled) timings.add(TimingType.rateShooters, DateTime.now().difference(start).inMicroseconds);
 
@@ -1664,6 +1688,7 @@ class RatingProjectLoader {
       var calc = sport.connectivityCalculator!;
       for(var rating in shootersAtMatch) {
         // ignoring the return value, because we always save the rating at this point
+        var oldConnectivity = rating.connectivity;
         calc.updateCompetitorData(
           match: match,
           rating: rating,
@@ -1679,13 +1704,17 @@ class RatingProjectLoader {
           rawConnectivity: newConnectivity.rawConnectivity,
           save: false,
         );
+        connectivityOverlay.updateConnectivityScore(group.uuid, oldConnectivity, newConnectivity.connectivity);
         ratings.add(rating);
       }
 
       // Wait for shooter updates to finish, and batch them for speed.
-      if(ratings.isNotEmpty) {
-        db.upsertDbShooterRatingsSync(ratings, linksChanged: false);
-      }
+      // if(ratings.isNotEmpty) {
+      //   // TODO: this is necessary for connectivity calculators, at present
+      //   // And it's kind of a pain in the neck to fix, because the DB connectivity
+      //   // query doesn't do any filtering by competitor, which we would need here.
+      //   db.upsertDbShooterRatingsSync(ratings, linksChanged: false);
+      // }
 
       // Calculate new baseline
       List<double>? connectivityScores;
@@ -1694,7 +1723,7 @@ class RatingProjectLoader {
       int? competitorCount;
 
       if(calc.requiredBaselineData.contains(BaselineConnectivityRequiredData.connectivityScores)) {
-        connectivityScores = db.getConnectivitySync(project, group);
+        connectivityScores = connectivityOverlay.getConnectivityScores(group.uuid);
         competitorCount = connectivityScores.length;
       }
       if(calc.requiredBaselineData.contains(BaselineConnectivityRequiredData.connectivitySum)) {
@@ -1702,7 +1731,7 @@ class RatingProjectLoader {
           connectivitySum = connectivityScores.sum;
         }
         else {
-          connectivitySum = db.getConnectivitySumSync(project, group);
+          connectivitySum = connectivityOverlay.getConnectivitySum(group.uuid);
         }
       }
       if(calc.requiredBaselineData.contains(BaselineConnectivityRequiredData.competitorCount) && competitorCount == null) {
@@ -1731,7 +1760,7 @@ class RatingProjectLoader {
     if(Timings.enabled) timings.add(TimingType.updateConnectedness, DateTime.now().difference(start).inMicroseconds);
 
     timings.ratingEventCount += changeCount;
-    return changeCount;
+    return changedRatings;
   }
 
   (List<MatchEntry>, List<RelativeMatchScore>) _filterScores(List<MatchEntry> shooters, List<RelativeMatchScore> scores, MatchStage? stage) {
@@ -2181,6 +2210,8 @@ enum LoadingState {
   deduplicatingCompetitors,
   /// Scores are being processed
   processingScores,
+  /// Changes are being persisted
+  persistingChanges,
   /// Loading is complete
   done;
 
@@ -2200,6 +2231,8 @@ enum LoadingState {
         return "deduplicating competitors";
       case LoadingState.processingScores:
         return "processing scores";
+      case LoadingState.persistingChanges:
+        return "persisting changes";
       case LoadingState.done:
         return "finished";
     }
