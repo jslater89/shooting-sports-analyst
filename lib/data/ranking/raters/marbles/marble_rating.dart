@@ -4,8 +4,6 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
-import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
@@ -82,27 +80,8 @@ class MarbleRating extends ShooterRating<MarbleRatingEvent> {
   void updateTrends(List<RatingEvent> changes) {
     var trendWindow = ShooterRating.baseTrendWindow;
 
-    var meaningfulChanges = changes.where((e) => e.ratingChange != 0.0).toList();
-
-    var newEventContribution = meaningfulChanges.length;
-    var dbRequirement = trendWindow - newEventContribution;
-
     List<double> marbleValues = [];
-    if(dbRequirement > 0) {
-      marbleValues.addAll(
-        // We want to get the rating prior to the event to correctly calculate the trend
-        AnalystDatabase().getRatingEventRatingForSync(
-          wrappedRating,
-          limit: dbRequirement,
-          offset: 0,
-          order: Order.descending,
-          nonzeroChange: true,
-          newRating: false,
-        ).reversed
-      );
-    }
-
-    marbleValues.addAll(meaningfulChanges.map((e) => e.newRating));
+    marbleValues.addAll(getRatingEventRatings(trendWindow).reversed);
 
     if(marbleValues.isEmpty) {
       this.trend = rating - MarbleSettings.defaultStartingMarbles.toDouble();

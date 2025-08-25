@@ -400,6 +400,7 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
     await AnalystDatabase().upsertDbShooterRating(wrappedRating);
   }
 
+
   AverageRating averageRating({int window = ShooterRating.baseTrendWindow, List<double>? preloadedRatings, bool nonzeroChange = true}) {
     double lowestPoint = rating;
     double highestPoint = rating;
@@ -610,6 +611,103 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
     this.lastSeen = other.lastSeen;
     this.firstSeen = other.firstSeen;
     super.copyVitalsFrom(other);
+  }
+
+  List<double> getRatingEventChanges(int limit, {bool nonzeroChange = false}) {
+    // First, get changes from newRatingEvents (new to old)
+    var newChanges = wrappedRating.newRatingEvents.reversed
+      .where((e) => !nonzeroChange || e.ratingChange != 0)
+      .take(limit)
+      .map((e) => e.ratingChange)
+      .toList();
+
+    if (newChanges.length >= limit) {
+      return newChanges;
+    }
+
+    // If we need more, get from database
+    var dbLimit = limit - newChanges.length;
+    var dbChanges = AnalystDatabase().getRatingEventChangeForSync(
+      wrappedRating,
+      limit: dbLimit,
+      offset: 0,
+      order: Order.descending,
+      nonzeroChange: nonzeroChange
+    );
+
+
+    // We want to return changes in order from newest to oldest, to match
+    // the DB semantics. newChanges are newer at the tail, so we need to reverse them;
+    // dbChanges are older at the tail, so we don't need to reverse them.
+    return [...newChanges.reversed, ...dbChanges];
+  }
+
+  List<double> getRatingEventRatings(int limit, {bool nonzeroChange = false, bool newRating = true}) {
+    // First, get ratings from newRatingEvents (new to old)
+    var newRatings = wrappedRating.newRatingEvents.reversed
+      .where((e) => !nonzeroChange || e.ratingChange != 0)
+      .take(limit)
+      .map((e) => e.newRating)
+      .toList();
+
+    if (newRatings.length >= limit) {
+      return newRatings;
+    }
+
+    // If we need more, get from database
+    var dbLimit = limit - newRatings.length;
+    var dbRatings = AnalystDatabase().getRatingEventRatingForSync(
+      wrappedRating,
+      limit: dbLimit,
+      offset: 0,
+      order: Order.descending,
+      nonzeroChange: nonzeroChange
+    );
+
+    // We want to return ratings in order from newest to oldest, to match
+    // the DB semantics. newRatings are newer at the tail, so we need to reverse them;
+    // dbRatings are older at the tail, so we don't need to reverse them.
+    return [...newRatings.reversed, ...dbRatings];
+  }
+
+  List<DbRatingEvent> getRatingEvents(int limit, {int offset = 0}) {
+    var newEvents = wrappedRating.newRatingEvents
+      .skip(offset)
+      .take(limit)
+      .toList();
+
+    if(newEvents.length >= limit) {
+      return newEvents;
+    }
+
+    var dbLimit = limit - newEvents.length;
+    var dbEvents = AnalystDatabase().getRatingEventsForSync(wrappedRating, limit: dbLimit, offset: offset, order: Order.descending);
+
+    return [...newEvents.reversed, ...dbEvents];
+  }
+
+  List<List<double>> getRatingEventDoubleData(int limit, {int offset = 0, bool nonzeroChange = false}) {
+    // First, get data from newRatingEvents (new to old)
+    var newData = wrappedRating.newRatingEvents.reversed
+      .skip(offset)
+      .take(limit)
+      .map((e) => e.doubleData)
+      .toList();
+
+    if(newData.length >= limit) {
+      return newData;
+    }
+
+    var dbLimit = limit - newData.length;
+    var dbData = AnalystDatabase().getRatingEventDoubleDataForSync(
+      wrappedRating,
+      limit: dbLimit,
+      offset: offset,
+      order: Order.descending,
+      nonzeroChange: nonzeroChange,
+    );
+
+    return [...newData.reversed, ...dbData];
   }
 }
 

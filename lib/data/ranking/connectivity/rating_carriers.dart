@@ -69,6 +69,9 @@ class RatingCarrierConnectivityCalculator implements ConnectivityCalculator {
     double baselineScale = 1.0,
     double maxScale = 1.2,
   }) {
+    if(baseline == 0) {
+      return 1.0;
+    }
     return lerpAroundCenter(
       value: connectivity,
       center: baseline,

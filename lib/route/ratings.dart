@@ -26,16 +26,18 @@ class _RatingsContainerPageState extends State<RatingsContainerPage> {
   bool get configured => project != null;
   bool calculated = false;
   bool forceRecalculate = false;
+  bool skipDeduplication = false;
   DateTime? rollbackDate;
 
   @override
   Widget build(BuildContext context) {
     if(!configured) {
       return ConfigureRatingsPage(
-        onSettingsReady: (DbRatingProject project, {bool forceRecalculate = false, DateTime? rollbackDate}) async {
+        onSettingsReady: (DbRatingProject project, {bool forceRecalculate = false, bool skipDeduplication = false, DateTime? rollbackDate}) async {
           setState(() {
             this.project = project;
             this.forceRecalculate = forceRecalculate;
+            this.skipDeduplication = skipDeduplication;
             this.rollbackDate = rollbackDate;
           });
         }
@@ -46,6 +48,7 @@ class _RatingsContainerPageState extends State<RatingsContainerPage> {
         return LoadRatingsPage(
           project: project!,
           forceRecalculate: forceRecalculate,
+          skipDeduplication: skipDeduplication,
           onRatingsComplete: () {
             setState(() {
               calculated = true;
