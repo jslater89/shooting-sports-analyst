@@ -4,7 +4,6 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -22,6 +21,7 @@ import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/ui/openskill_settings_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
+import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 
 class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, OpenskillSettingsController> {
@@ -83,7 +83,7 @@ class OpenskillRater extends RatingSystem<OpenskillRating, OpenskillSettings, Op
     rating as OpenskillRating;
 
     return ScoreRow(
-      color: (place - 1) % 2 == 1 ? Colors.grey[200] : Colors.white,
+      color: ThemeColors.backgroundColor(context, rowIndex: place - 1),
       child: Padding(
         padding: const EdgeInsets.all(2.0),
         child: Row(

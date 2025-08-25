@@ -25,6 +25,7 @@ import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 
 class MarbleRater extends RatingSystem<MarbleRating, MarbleSettings, MarbleSettingsController> {
@@ -106,7 +107,7 @@ class MarbleRater extends RatingSystem<MarbleRating, MarbleSettings, MarbleSetti
     }
 
     return ScoreRow(
-      color: (place - 1) % 2 == 1 ? Colors.grey[200] : Colors.white,
+      color: ThemeColors.backgroundColor(context, rowIndex: place - 1),
       child: Padding(
         padding: const EdgeInsets.all(2.0),
         child: Row(
