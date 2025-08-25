@@ -72,7 +72,7 @@ var _log = SSALogger("ConfigureRatingsPage");
 class ConfigureRatingsPage extends StatefulWidget {
   const ConfigureRatingsPage({Key? key, required this.onSettingsReady}) : super(key: key);
 
-  final void Function(DbRatingProject project, {bool forceRecalculate, DateTime? rollbackDate}) onSettingsReady;
+  final void Function(DbRatingProject project, {bool forceRecalculate, bool skipDeduplication, DateTime? rollbackDate}) onSettingsReady;
 
   @override
   State<ConfigureRatingsPage> createState() => _ConfigureRatingsPageState();
@@ -111,6 +111,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
   _ConfigurableRater? _currentRater = _ConfigurableRater.multiplayerElo;
 
   bool _forceRecalculate = false;
+  bool _skipDeduplication = false;
   bool _keepHistory = false;
 
   List<RatingGroup> _groups = [];
@@ -334,7 +335,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                     var project = await _saveProject(_lastProjectName ?? RatingProjectManager.autosaveName);
 
                     if(project != null) {
-                      widget.onSettingsReady(project, forceRecalculate: _forceRecalculate);
+                      widget.onSettingsReady(project, forceRecalculate: _forceRecalculate, skipDeduplication: _skipDeduplication);
                     }
                   },
                 ),
@@ -372,6 +373,19 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                       });
                     }),
                     Text("Force recalculate"),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(left: 8.0),
+                child: Row(
+                  children: [
+                    Checkbox(value: _skipDeduplication, onChanged: (value) {
+                      setState(() {
+                        _skipDeduplication = value ?? false;
+                      });
+                    }),
+                    Text("Skip deduplication"),
                   ],
                 ),
               )

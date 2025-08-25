@@ -24,9 +24,17 @@ SSALogger _log = SSALogger("LoadRatingsPage");
 /// ready to go.
 
 class LoadRatingsPage extends StatefulWidget {
-  const LoadRatingsPage({super.key, required this.project, this.forceRecalculate = false, required this.onRatingsComplete, required this.onError});
+  const LoadRatingsPage({
+    super.key,
+    required this.project,
+    this.forceRecalculate = false,
+    this.skipDeduplication = false,
+    required this.onRatingsComplete,
+    required this.onError,
+  });
 
   final bool forceRecalculate;
+  final bool skipDeduplication;
   final DbRatingProject project;
   final VoidCallback onRatingsComplete;
   final void Function(RatingProjectLoadError error) onError;
@@ -70,7 +78,7 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
       currentState = LoadingState.readingMatches;
     });
 
-    var result = await loader.calculateRatings(fullRecalc: widget.forceRecalculate);
+    var result = await loader.calculateRatings(fullRecalc: widget.forceRecalculate, skipDeduplication: widget.skipDeduplication);
     if(result.isErr()) {
       var error = result.unwrapErr();
       _log.e(error.message);
@@ -152,7 +160,7 @@ class _LoadRatingsPageState extends State<LoadRatingsPage> {
     // Allow a UI update
     // Important changes are things like state changes, or when we're done. Wait
     // at least a frame for those to make sure we get one.
-    await Future.delayed(importantChange ? const Duration(milliseconds: 5) : const Duration(microseconds: 1));
+    await Future.delayed(importantChange ? const Duration(milliseconds: 1000 ~/ 30) : const Duration(microseconds: 1));
 
     if(state == LoadingState.done) {
       _log.i(Timings());

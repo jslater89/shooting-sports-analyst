@@ -172,11 +172,13 @@ class RatingProjectLoader {
 
   bool parallel;
   bool inFullRecalc = false;
+  bool skipDeduplication = false;
 
   List<String> _matchConnectivityCsv = [];
   bool dumpMatchConnectivities = false;
-  Future<Result<RatingsCalculationComplete, RatingProjectLoadError>> calculateRatings({bool fullRecalc = false}) async {
+  Future<Result<RatingsCalculationComplete, RatingProjectLoadError>> calculateRatings({bool fullRecalc = false, bool skipDeduplication = false}) async {
     wallStart = DateTime.now();
+    this.skipDeduplication = skipDeduplication;
 
     HydratedMatchCache().clear();
     db.clearLoadedShooterRatingCache();
@@ -428,7 +430,7 @@ class RatingProjectLoader {
 
     // 2. Deduplicate shooters.
     var dedup = sport.shooterDeduplicator;
-    if(dedup != null) {
+    if(dedup != null && !skipDeduplication) {
       var start = DateTime.now();
       var dedupResult = await dedup.deduplicateShooters(
         ratingProject: project,
@@ -1698,6 +1700,9 @@ class RatingProjectLoader {
 
       // Wait for shooter updates to finish, and batch them for speed.
       if(ratings.isNotEmpty) {
+        // TODO: this is necessary for connectivity calculators, at present
+        // And it's kind of a pain in the neck to fix, because the DB connectivity
+        // query doesn't do any filtering by competitor, which we would need here.
         db.upsertDbShooterRatingsSync(ratings, linksChanged: false);
       }
 

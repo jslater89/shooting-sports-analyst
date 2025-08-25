@@ -81,7 +81,7 @@ class MarbleRating extends ShooterRating<MarbleRatingEvent> {
     var trendWindow = ShooterRating.baseTrendWindow;
 
     List<double> marbleValues = [];
-    marbleValues.addAll(getRatingEventRatingsForTrend(trendWindow).reversed);
+    marbleValues.addAll(getRatingEventRatings(trendWindow).reversed);
 
     if(marbleValues.isEmpty) {
       this.trend = rating - MarbleSettings.defaultStartingMarbles.toDouble();
