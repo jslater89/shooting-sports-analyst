@@ -16,7 +16,7 @@ import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/connectivity.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_report.dart';
-import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/connectivity/in_memory_container.dart';
 import 'package:shooting_sports_analyst/data/ranking/connectivity/valid_competitors.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
@@ -166,6 +166,7 @@ class RatingProjectLoader {
 
   MemberNumberCorrectionContainer get _dataCorrections => settings.memberNumberCorrections;
   List<String> get memberNumberWhitelist => settings.memberNumberWhitelist;
+  final connectivityOverlay = InMemoryConnectivityContainer();
 
   RatingProjectLoader(this.project, this.host, {this.parallel = false});
   DateTime wallStart = DateTime.now();
@@ -314,6 +315,10 @@ class RatingProjectLoader {
     // clearing the old list happens in the resetRatings call above.
     project.lastUsedMatches = [...project.lastUsedMatches, ...matchesToAdd];
     await db.saveRatingProject(project, checkName: true);
+
+    if(project.sport.connectivityCalculator != null) {
+      connectivityOverlay.primeConnectivityScores(project);
+    }
 
     await host.progressCallback(
       progress: 0,
@@ -1213,6 +1218,9 @@ class RatingProjectLoader {
           newRating.allPossibleMemberNumbers.addAll(possibleNumbers);
           ratingsToCreate.add(newRating);
           newRatings.add(newRating.wrappedRating);
+          if(project.sport.connectivityCalculator != null) {
+            connectivityOverlay.addNewConnectivityScore(group.uuid, 0.0);
+          }
           added += 1;
         }
         else {
@@ -1680,6 +1688,7 @@ class RatingProjectLoader {
       var calc = sport.connectivityCalculator!;
       for(var rating in shootersAtMatch) {
         // ignoring the return value, because we always save the rating at this point
+        var oldConnectivity = rating.connectivity;
         calc.updateCompetitorData(
           match: match,
           rating: rating,
@@ -1695,16 +1704,17 @@ class RatingProjectLoader {
           rawConnectivity: newConnectivity.rawConnectivity,
           save: false,
         );
+        connectivityOverlay.updateConnectivityScore(group.uuid, oldConnectivity, newConnectivity.connectivity);
         ratings.add(rating);
       }
 
       // Wait for shooter updates to finish, and batch them for speed.
-      if(ratings.isNotEmpty) {
-        // TODO: this is necessary for connectivity calculators, at present
-        // And it's kind of a pain in the neck to fix, because the DB connectivity
-        // query doesn't do any filtering by competitor, which we would need here.
-        db.upsertDbShooterRatingsSync(ratings, linksChanged: false);
-      }
+      // if(ratings.isNotEmpty) {
+      //   // TODO: this is necessary for connectivity calculators, at present
+      //   // And it's kind of a pain in the neck to fix, because the DB connectivity
+      //   // query doesn't do any filtering by competitor, which we would need here.
+      //   db.upsertDbShooterRatingsSync(ratings, linksChanged: false);
+      // }
 
       // Calculate new baseline
       List<double>? connectivityScores;
@@ -1713,7 +1723,7 @@ class RatingProjectLoader {
       int? competitorCount;
 
       if(calc.requiredBaselineData.contains(BaselineConnectivityRequiredData.connectivityScores)) {
-        connectivityScores = db.getConnectivitySync(project, group);
+        connectivityScores = connectivityOverlay.getConnectivityScores(group.uuid);
         competitorCount = connectivityScores.length;
       }
       if(calc.requiredBaselineData.contains(BaselineConnectivityRequiredData.connectivitySum)) {
@@ -1721,7 +1731,7 @@ class RatingProjectLoader {
           connectivitySum = connectivityScores.sum;
         }
         else {
-          connectivitySum = db.getConnectivitySumSync(project, group);
+          connectivitySum = connectivityOverlay.getConnectivitySum(group.uuid);
         }
       }
       if(calc.requiredBaselineData.contains(BaselineConnectivityRequiredData.competitorCount) && competitorCount == null) {
