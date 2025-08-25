@@ -417,7 +417,7 @@ class _ScoreListState extends State<ScoreList> {
             border: Border(
                 bottom: BorderSide()
             ),
-            color: Colors.white,
+            color: ThemeColors.backgroundColor(context),
           ),
           child: Padding(
             padding: const EdgeInsets.all(2.0),
@@ -530,7 +530,7 @@ class _ScoreListState extends State<ScoreList> {
         }
       },
       child: ScoreRow(
-        color: i % 2 == 1 ? Colors.grey[200] : Colors.white,
+        color: ThemeColors.backgroundColor(context, rowIndex: i),
         edited: widget.editedShooters.contains(matchScore.shooter),
         child: Padding(
           padding: const EdgeInsets.all(2.0),

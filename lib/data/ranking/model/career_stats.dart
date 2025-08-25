@@ -173,7 +173,7 @@ class PeriodicStats {
     Map<ShootingMatch, RelativeMatchScore> matchScores = {};
     for(var event in combinedEvents) {
       var match = event.match;
-      var divisions = rating.group.divisions;
+      var divisions = rating.group.ipscCompatibleDivisions();
       RelativeScore eventScore;
       RelativeMatchScore? matchScore;
       if(matchScores.containsKey(match)) {

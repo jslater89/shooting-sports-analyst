@@ -30,10 +30,13 @@ class MatchDatabaseChooserDialog extends StatefulWidget {
     this.multiple = false,
     this.showIds = false,
     this.sport,
+    this.sports,
   }) : super(key: key);
 
   /// If provided, only matches for this sport will be shown.
   final Sport? sport;
+  /// If provided, only matches for these sports will be shown.
+  final List<Sport>? sports;
   final bool showIds;
   final bool showStats;
   final List<DbShootingMatch>? matches;
@@ -51,7 +54,11 @@ class MatchDatabaseChooserDialog extends StatefulWidget {
     bool multiple = false,
     bool showIds = false,
     Sport? sport,
+    List<Sport>? sports,
   }) {
+    if(sport != null && sports != null) {
+      throw ArgumentError("Cannot provide both sport and sports");
+    }
     return showDialog(context: context, builder: (context) => MatchDatabaseChooserDialog(
       showIds: showIds,
       showStats: showStats,
@@ -59,6 +66,7 @@ class MatchDatabaseChooserDialog extends StatefulWidget {
       helpText: helpText,
       multiple: multiple,
       sport: sport,
+      sports: sports,
     ), barrierDismissible: false);
   }
 }
@@ -68,6 +76,7 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
 
   int page = 0;
 
+  List<Sport>? sports;
   List<String> addedMatches = [];
   bool alphabeticSort = false;
 
@@ -84,6 +93,12 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
     super.initState();
     db = AnalystDatabase();
 
+    if(widget.sport != null) {
+      sports = [widget.sport!];
+    }
+    else {
+      sports = widget.sports;
+    }
     searchController.addListener(() {
       _searchDebouncer?.cancel();
       _searchDebouncer = Timer(Duration(milliseconds: 500), () {
@@ -138,7 +153,7 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
     else {
       matchIds = await db.queryMatchIds(
         name: searchController.text.isNotEmpty ? searchController.text : null,
-        sport: widget.sport,
+        sports: sports,
         pageSize: 100000,
         sort: alphabeticSort ? const NameSort() : const DateSort(),
       );

@@ -26,6 +26,8 @@ import 'package:shooting_sports_analyst/data/ranking/member_number_correction.da
 import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/timings.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/ipsc.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -523,7 +525,7 @@ class RatingProjectLoader {
       // 3.1.1. Check recognized divisions
       var onlyDivisions = settings.recognizedDivisions[match.sourceIds.first];
       if(onlyDivisions != null) {
-        var divisionsOfInterest = group.filters.divisions.entries.where((e) => e.value).map((e) => e.key).toList();
+        var divisionsOfInterest = group.ipscCompatibleFilters().divisions.entries.where((e) => e.value).map((e) => e.key).toList();
 
         // Process this iff onlyDivisions contains at least one division of interest
         // e.g. this rater/dOI is prod, oD is open/limited; oD contains 0 of dOI, so
@@ -1293,6 +1295,9 @@ class RatingProjectLoader {
 
   List<MatchEntry> _getShooters(RatingGroup group, ShootingMatch match, {bool verify = false}) {
     var filters = group.filters;
+    if(sport.name == uspsaSport.name && match.sport.name == ipscSport.name) {
+      filters = group.ipscCompatibleFilters();
+    }
     var shooters = <MatchEntry>[];
     shooters = match.filterShooters(
       filterMode: filters.mode,
