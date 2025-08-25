@@ -14,11 +14,9 @@ import 'package:shooting_sports_analyst/data/help/deduplication_help.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/action.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/conflict.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
-import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/text_styles.dart';
-import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/ui/widget/constrained_tooltip.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/deduplication/blacklist.dart';
@@ -934,7 +932,6 @@ class MemberNumberTypeColumn extends StatelessWidget {
   Widget build(BuildContext context) {
     var sport = Provider.of<Sport>(context, listen: false);
     var dedup = sport.shooterDeduplicator;
-    bool uspsa = sport.name == uspsaName;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4.0),
       child: Column(
