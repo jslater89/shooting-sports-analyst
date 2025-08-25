@@ -366,7 +366,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
               Padding(
                 padding: const EdgeInsets.only(left: 8.0),
                 child: Tooltip(
-                  message: "Recalculate the project in full, even if appending ratings\n"
+                  message: "Recalculate the project in full, even if appending matches\n"
                       "would otherwise be possible.",
                   child: Row(
                     children: [

@@ -5,23 +5,20 @@
  */
 
 import 'dart:convert';
+
+import 'package:flutter/material.dart';
 // ignore: avoid_web_libraries_in_flutter
-import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/application_preferences.dart';
 import 'package:shooting_sports_analyst/data/help/welcome_80_help.dart';
+import 'package:shooting_sports_analyst/data/practiscore_parser.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
-
-import 'package:flutter/material.dart';
-import 'package:shooting_sports_analyst/data/practiscore_parser.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/main.dart';
-import 'package:shooting_sports_analyst/preference_names.dart';
 import 'package:shooting_sports_analyst/route/broadcast_booth_page.dart';
 import 'package:shooting_sports_analyst/route/match_database_manager.dart';
 import 'package:shooting_sports_analyst/route/practiscore_url.dart';
