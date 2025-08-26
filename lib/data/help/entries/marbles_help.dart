@@ -5,8 +5,8 @@
  */
 
 
-import 'package:shooting_sports_analyst/data/help/marbles_configuration_help.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_topic.dart';
+import 'package:shooting_sports_analyst/data/help/entries/marbles_configuration_help.dart';
+import 'package:shooting_sports_analyst/data/help/help_topic.dart';
 
 const marblesHelpId = "marbles_help";
 const marblesHelpLink = "?$marblesHelpId";
@@ -17,7 +17,7 @@ final helpMarbles = HelpTopic(
   content: _content,
 );
 
-const _content = 
+const _content =
 """# Marble Game
 
 The marble game is a rating algorithm originally designed by Twitter user

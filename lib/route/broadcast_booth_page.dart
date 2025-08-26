@@ -8,7 +8,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shooting_sports_analyst/data/help/broadcast_help.dart';
+import 'package:shooting_sports_analyst/data/help/entries/broadcast_help.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/booth/controller.dart';
@@ -188,7 +188,7 @@ class _BroadcastBoothPageState extends State<BroadcastBoothPage> {
               );
             },
           );
-          
+
           return result ?? false;
         },
         child: MultiProvider(

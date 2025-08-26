@@ -5,7 +5,7 @@
  */
 
 
-import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_topic.dart';
+import 'package:shooting_sports_analyst/data/help/help_topic.dart';
 
 const matchHeatHelpId = "match_heat";
 const matchHeatHelpLink = "?match_heat";

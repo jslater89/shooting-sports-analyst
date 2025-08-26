@@ -4,11 +4,11 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import "package:shooting_sports_analyst/data/help/elo_help.dart";
-import "package:shooting_sports_analyst/data/help/marbles_help.dart";
-import "package:shooting_sports_analyst/data/help/openskill_help.dart";
-import "package:shooting_sports_analyst/data/help/points_help.dart";
-import "package:shooting_sports_analyst/ui/widget/dialog/help/help_topic.dart";
+import "package:shooting_sports_analyst/data/help/entries/elo_help.dart";
+import "package:shooting_sports_analyst/data/help/entries/marbles_help.dart";
+import "package:shooting_sports_analyst/data/help/entries/openskill_help.dart";
+import "package:shooting_sports_analyst/data/help/entries/points_help.dart";
+import "package:shooting_sports_analyst/data/help/help_topic.dart";
 
 const configureRatingsHelpId = "configure_ratings";
 const configureRatingsHelpLink = "?configure_ratings";

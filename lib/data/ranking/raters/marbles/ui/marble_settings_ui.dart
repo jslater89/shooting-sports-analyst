@@ -6,7 +6,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shooting_sports_analyst/data/help/marbles_configuration_help.dart';
+import 'package:shooting_sports_analyst/data/help/entries/marbles_configuration_help.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/model/marble_model.dart';

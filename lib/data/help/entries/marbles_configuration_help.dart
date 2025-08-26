@@ -4,8 +4,8 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:shooting_sports_analyst/data/help/marbles_help.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_topic.dart';
+import 'package:shooting_sports_analyst/data/help/entries/marbles_help.dart';
+import 'package:shooting_sports_analyst/data/help/help_topic.dart';
 
 const marblesConfigHelpId = "marbles_configuration_help";
 const marblesConfigHelpLink = "?$marblesConfigHelpId";
@@ -16,7 +16,7 @@ final helpMarblesConfiguration = HelpTopic(
   content: _content,
 );
 
-const _content = 
+const _content =
 """# Marble Game Configuration
 
 For general information on the marble game, see the [marble game help]($marblesHelpLink).

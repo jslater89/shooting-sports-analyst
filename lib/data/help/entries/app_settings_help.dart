@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_topic.dart';
+import 'package:shooting_sports_analyst/data/help/help_topic.dart';
 
 const appSettingsHelpId = "app-settings";
 const appSettingsHelpLink = "?app-settings";

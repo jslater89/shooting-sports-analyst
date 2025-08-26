@@ -4,8 +4,8 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import "package:shooting_sports_analyst/data/help/rating_event_help.dart";
-import "package:shooting_sports_analyst/ui/widget/dialog/help/help_topic.dart";
+import "package:shooting_sports_analyst/data/help/entries/rating_event_help.dart";
+import "package:shooting_sports_analyst/data/help/help_topic.dart";
 
 const pointsHelpId = "points";
 const pointsHelpLink = "?points";

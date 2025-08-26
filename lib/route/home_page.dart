@@ -11,7 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/application_preferences.dart';
-import 'package:shooting_sports_analyst/data/help/welcome_80_help.dart';
+import 'package:shooting_sports_analyst/data/help/entries/welcome_80_help.dart';
 import 'package:shooting_sports_analyst/data/practiscore_parser.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';

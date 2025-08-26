@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_topic.dart';
+import 'package:shooting_sports_analyst/data/help/help_topic.dart';
 
 const matchDatabaseManagerHelpId = "match_database_manager";
 const matchDatabaseManagerHelpLink = "?match_database_manager";
@@ -15,7 +15,7 @@ final helpMatchDatabaseManager = HelpTopic(
   content: _content,
 );
 
-const _content = 
+const _content =
 """# Match Database Manager
 
 This screen lists all matches currently in the database, and allows filtering based on name and date.

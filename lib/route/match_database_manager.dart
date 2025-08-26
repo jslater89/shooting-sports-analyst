@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/db_statistics.dart';
-import 'package:shooting_sports_analyst/data/help/match_database_manager_help.dart';
+import 'package:shooting_sports_analyst/data/help/entries/match_database_manager_help.dart';
 import 'package:shooting_sports_analyst/ui/database/match/match_db_list_view.dart';
 import 'package:shooting_sports_analyst/ui/database/stats/db_statistics_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
@@ -68,7 +68,7 @@ class _MatchDatabaseManagerPageState extends State<MatchDatabaseManagerPage> {
                   icon: Icon(Icons.copy),
                   onPressed: () async {
                     listModel.loading = true;
-                
+
                     var db = AnalystDatabase();
                     var loadingModel = ProgressModel();
                     var future = db.migrateFromMatchCache((progress, total) async {

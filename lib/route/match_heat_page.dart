@@ -14,7 +14,7 @@ import 'package:shooting_sports_analyst/data/database/extensions/match_heat.dart
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_heat.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
-import 'package:shooting_sports_analyst/data/help/match_heat_help.dart';
+import 'package:shooting_sports_analyst/data/help/entries/match_heat_help.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:community_charts_flutter/community_charts_flutter.dart' as charts;

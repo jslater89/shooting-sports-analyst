@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_topic.dart';
+import 'package:shooting_sports_analyst/data/help/help_topic.dart';
 import 'package:shooting_sports_analyst/version.dart';
 
 const aboutHelpId = "about";
@@ -18,7 +18,7 @@ final helpAbout = HelpTopic(
 const _content =
 """# About
 
-Shooting Sports Analyst is a desktop application for viewing, analyzing, and predicting USPSA match results.
+Shooting Sports Analyst is a desktop application for viewing, analyzing, and predicting practical shooting match results.
 Visit the repository at [https://github.com/jslater89/shooting-sports-analyst](https://github.com/jslater89/shooting-sports-analyst)
 for more information, and visit [https://patreon.com/ShootingSportsAnalyst](https://patreon.com/ShootingSportsAnalyst)
 to support the ongoing development of this software.
