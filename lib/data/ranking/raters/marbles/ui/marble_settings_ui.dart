@@ -6,9 +6,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shooting_sports_analyst/data/help/marbles_configuration_help.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_settings_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system_ui.dart';
+import 'package:shooting_sports_analyst/data/help/entries/marbles_configuration_help.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/model/marble_model.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/model/ordinal_power_law_model.dart';

@@ -4,9 +4,9 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import "package:shooting_sports_analyst/data/help/icore_deduplicator_help.dart";
-import "package:shooting_sports_analyst/data/help/uspsa_deduplicator_help.dart";
-import "package:shooting_sports_analyst/ui/widget/dialog/help/help_topic.dart";
+import "package:shooting_sports_analyst/data/help/entries/icore_deduplicator_help.dart";
+import "package:shooting_sports_analyst/data/help/entries/uspsa_deduplicator_help.dart";
+import "package:shooting_sports_analyst/data/help/help_topic.dart";
 
 const deduplicationHelpId = "deduplication";
 const deduplicationHelpLink = "?deduplication";

@@ -17,12 +17,13 @@ import 'package:shooting_sports_analyst/data/database/match/rating_project_datab
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/util.dart';
-import 'package:shooting_sports_analyst/data/help/configure_ratings_help.dart';
-import 'package:shooting_sports_analyst/data/help/elo_configuration_help.dart';
-import 'package:shooting_sports_analyst/data/help/elo_help.dart';
-import 'package:shooting_sports_analyst/data/help/marbles_help.dart';
-import 'package:shooting_sports_analyst/data/help/openskill_help.dart';
-import 'package:shooting_sports_analyst/data/help/points_help.dart';
+import 'package:shooting_sports_analyst/data/help/entries/configure_ratings_help.dart';
+import 'package:shooting_sports_analyst/data/help/entries/elo_configuration_help.dart';
+import 'package:shooting_sports_analyst/data/help/entries/elo_help.dart';
+import 'package:shooting_sports_analyst/data/help/entries/marbles_help.dart';
+import 'package:shooting_sports_analyst/data/help/entries/openskill_help.dart';
+import 'package:shooting_sports_analyst/data/help/entries/points_help.dart';
+import 'package:shooting_sports_analyst/data/help/entries/recalculation_help.dart';
 import 'package:shooting_sports_analyst/data/ranking/member_number_correction.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_settings_ui.dart';
@@ -412,7 +413,8 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                     ],
                   ),
                 ),
-              )
+              ),
+              HelpButton(helpTopicId: recalculationHelpId, tooltipText: "Show help about recalculation options"),
             ],
           ),
         ),

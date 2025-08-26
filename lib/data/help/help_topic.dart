@@ -5,7 +5,9 @@
  */
 
 import 'package:collection/collection.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_parser.dart';
+import 'package:shooting_sports_analyst/data/help/help_directory.dart';
+import 'package:shooting_sports_analyst/data/help/help_parser.dart';
+import 'package:shooting_sports_analyst/data/help/help_registry.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_token.dart';
 
 /// A help topic is an article that can be displayed to the user.
@@ -14,16 +16,23 @@ import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_token.dart';
 /// including # and ## headers, _italics_, *bold*,
 /// [links](?help-topic-id) or [links](https://example.com),
 /// and * bullet lists.
-class HelpTopic {
+class HelpTopic extends HelpRegistryEntry {
+  @override
   final String id;
+  @override
   final String name;
   final String content;
+  @override
+  HelpDirectory? parent;
 
   HelpTopic({
     required this.id,
     required this.name,
     required this.content,
   });
+
+  @override
+  bool get hasContent => true;
 
   String contentPreview() {
     var tokens = HelpParser.tokenize(this).whereNot((element) => element is Heading);

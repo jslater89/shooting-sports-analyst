@@ -11,7 +11,7 @@ import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:logger/logger.dart';
-import 'package:shooting_sports_analyst/data/help/app_settings_help.dart';
+import 'package:shooting_sports_analyst/data/help/entries/app_settings_help.dart';
 import 'package:shooting_sports_analyst/ui/rater/select_project_dialog.dart';
 import 'package:shooting_sports_analyst/ui/source/credentials_manager.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';

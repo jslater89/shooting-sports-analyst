@@ -7,9 +7,11 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/data/help/help_directory.dart';
+import 'package:shooting_sports_analyst/data/help/help_registry.dart';
 import 'package:shooting_sports_analyst/logger.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_parser.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_topic.dart';
+import 'package:shooting_sports_analyst/data/help/help_parser.dart';
+import 'package:shooting_sports_analyst/data/help/help_topic.dart';
 
 const _shouldCacheRenderedSpans = !kDebugMode;
 
@@ -23,7 +25,7 @@ class HelpRenderer extends StatefulWidget {
     this.controller,
   });
 
-  final HelpTopic topic;
+  final HelpRegistryEntry topic;
   final void Function(String id) onLinkTapped;
   final HelpRendererController? controller;
   @override
@@ -76,7 +78,10 @@ class _HelpRendererState extends State<HelpRenderer> {
 
   @override
   Widget build(BuildContext context) {
-    var tokens = HelpParser.tokenize(widget.topic);
+    if(widget.topic is HelpDirectory) {
+      return Center(child: Text("Select a topic"));
+    }
+    var tokens = HelpParser.tokenize(widget.topic as HelpTopic);
     List<InlineSpan> spans;
     if(_shouldCacheRenderedSpans && _contentCache[widget.topic.id] != null) {
       spans = _contentCache[widget.topic.id]!;
