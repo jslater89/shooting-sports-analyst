@@ -21,6 +21,11 @@ SSALogger _log = SSALogger.consoleOnly("LoggerInternal");
 Level _minLevel = Level.trace;
 
 void initLogger() {
+  var logDir = Directory(_SSAFileOutput._LOG_DIR);
+  if(!logDir.existsSync()) {
+    logDir.createSync(recursive: true);
+  }
+
   ConfigLoader().addListener(() {
     _minLevel = ConfigLoader().config.logLevel;
   });
@@ -97,7 +102,6 @@ class _SSAFileOutput {
 
     var dir = Directory(_LOG_DIR);
     if(!dir.existsSync()) {
-      _log.v("Creating directory $_LOG_DIR");
       await dir.create();
     }
 

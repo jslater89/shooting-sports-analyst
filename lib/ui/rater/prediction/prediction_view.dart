@@ -15,6 +15,7 @@ import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/rater/shooter_stats_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/box_and_whisker.dart';
 import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
@@ -149,9 +150,9 @@ class _PredictionViewState extends State<PredictionView> {
               Container(
                 decoration: BoxDecoration(
                   border: Border(
-                    bottom: BorderSide(),
+                    bottom: BorderSide(color: ThemeColors.onBackgroundColor(context)),
                   ),
-                  color: Colors.white,
+                  color: ThemeColors.backgroundColor(context),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(2.0),
@@ -401,7 +402,7 @@ class _PredictionViewState extends State<PredictionView> {
           minHeight: PredictionView._rowHeight,
         ),
         child: ScoreRow(
-          color: (index - 1) % 2 == 1 ? Colors.grey[200] : Colors.white,
+          color: ThemeColors.backgroundColor(context, rowIndex: index),
           child: Row(
             children: [
               Expanded(
@@ -465,6 +466,9 @@ class _PredictionViewState extends State<PredictionView> {
                     direction: PlotDirection.horizontal,
                     rangeMin: renderMinPercent,
                     rangeMax: renderMaxPercent,
+                    lowerBoxColor: ThemeColors.onBackgroundColor(context),
+                    upperBoxColor: ThemeColors.onBackgroundColor(context),
+                    whiskerColor: ThemeColors.onBackgroundColor(context),
                     fillBox: true,
                     boxSize: 12,
                     strokeWidth: 1.5,

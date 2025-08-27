@@ -71,12 +71,8 @@ class ApplicationPreferences {
   }
 
   void addRecentPredictionUrl(String url, String matchName) {
-    final existing = recentPredictionUrls.firstWhereOrNull((e) => e.url == url);
-    if (existing != null) {
-      recentPredictionUrls.remove(existing);
-    }
     var newUrl = RecentPredictionUrl.create(url: url, matchName: matchName, lastUsed: DateTime.now());
-    recentPredictionUrls = [newUrl, ...recentPredictionUrls];
+    recentPredictionUrls = [newUrl, ...recentPredictionUrls.where((e) => e.url != url)];
     if (recentPredictionUrls.length > 100) {
       recentPredictionUrls.sort((a, b) => b.lastUsed.compareTo(a.lastUsed));
       recentPredictionUrls.removeRange(100, recentPredictionUrls.length);
