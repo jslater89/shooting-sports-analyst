@@ -1,6 +1,6 @@
 VERSION=$1
 if [ -z "$VERSION" ]; then
-    VERSION=$(grep 'version:' pubspec.yaml | sed -r 's/version: ([0-9.]*)\+[0-9]+/\1/')
+    VERSION=$(grep -m 1 'version:' pubspec.yaml | sed -r 's/version: ([0-9]+\.[0-9]+\.[0-9]+(-[a-z0-9]+)?)\+[0-9]+/\1/')
 fi
 
 PROJ_ROOT=$(pwd)
@@ -17,4 +17,3 @@ echo "$VERSION" > shooting-sports-analyst/version.txt
 zip -r shooting-sports-analyst.zip shooting-sports-analyst
 cd "$PROJ_ROOT" || exit
 cp build/linux/x64/release/shooting-sports-analyst.zip "shooting-sports-analyst-$VERSION-linux.zip"
-
