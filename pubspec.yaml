@@ -104,10 +104,13 @@ flutter_launcher_icons:
 
 # The following section is specific to Flutter.
 flutter:
+  fonts:
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/roboto/Roboto-VariableFont_wdth,wght.ttf
+        - asset: assets/fonts/roboto/Roboto-Italic-VariableFont_wdth,wght.ttf
+          style: italic
   assets:
     - assets/icon.png
     - assets/audio/update-bell.mp3
-  # The following line ensures that the Material Icons font is
-  # included with your application, so that you can use the icons in
-  # the material Icons class.
   uses-material-design: true

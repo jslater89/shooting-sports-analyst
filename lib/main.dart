@@ -170,6 +170,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     final lightTheme = ThemeData(
+      fontFamily: 'Roboto',
       useMaterial3: false,
       colorScheme: ColorScheme.fromSeed(
         seedColor: Colors.indigo,
@@ -179,6 +180,7 @@ class _MyAppState extends State<MyApp> {
       visualDensity: VisualDensity.adaptivePlatformDensity,
     );
     var darkTheme = ThemeData(
+      fontFamily: 'Roboto',
       brightness: Brightness.dark,
       useMaterial3: false,
       colorScheme: ColorScheme.fromSeed(
