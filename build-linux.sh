@@ -1,10 +1,14 @@
 VERSION=$1
+FLUTTER_COMMAND="fvm flutter"
+if [[ "$APPIMAGE" == *cursor* || "$APPIMAGE" == *vscode* ]]; then
+  FLUTTER_COMMAND="flutter"
+fi
 if [ -z "$VERSION" ]; then
     VERSION=$(grep -m 1 'version:' pubspec.yaml | sed -r 's/version: ([0-9]+\.[0-9]+\.[0-9]+(-[a-z0-9]+)?)\+[0-9]+/\1/')
 fi
 
 PROJ_ROOT=$(pwd)
-fvm flutter build linux
+$FLUTTER_COMMAND build linux
 cd build/linux/x64/release || exit
 rm shooting-sports-analyst.zip
 rm -rf shooting-sports-analyst
