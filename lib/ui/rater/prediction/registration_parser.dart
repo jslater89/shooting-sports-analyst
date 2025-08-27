@@ -173,6 +173,10 @@ RegistrationContainer _parseRegistrations(
 
       if(match.end - match.start > 250) {
         _log.w("Suspiciously long regex match: ${match.end - match.start} bytes");
+        // first 100 and last 100 and last 100 characters
+        var first100 = match.namedGroup("name")!.substring(0, 100);
+        var last100 = match.namedGroup("name")!.substring(match.namedGroup("name")!.length - 100);
+        _log.v("Suspiciously long regex match: $first100...$last100");
         continue;
       }
       var shooterName = unescape.convert(match.namedGroup("name")!);
@@ -202,8 +206,13 @@ RegistrationContainer _parseRegistrations(
 
       var foundShooter = _findShooter(shooterName, null, knownShooters);
 
-      if(foundShooter != null && !ratings.containsValue(foundShooter)) {
-        ratings[Registration(name: shooterName, division: d, classification: classification ?? fallbackClassification)] = foundShooter;
+      if(foundShooter != null) {
+        if(!ratings.containsValue(foundShooter)) {
+          ratings[Registration(name: shooterName, division: d, classification: classification ?? fallbackClassification)] = foundShooter;
+        }
+        else {
+          _log.w("Duplicate shooter found: $shooterName");
+        }
       }
       else {
         _log.d("Missing shooter for: $shooterName");
