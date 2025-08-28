@@ -15,7 +15,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
 # Read more about iOS versioning at
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-version: 8.0.0-alpha12+12
+version: 8.0.0-beta2+14
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -110,10 +110,43 @@ flutter_launcher_icons:
 
 # The following section is specific to Flutter.
 flutter:
+  fonts:
+    # - family: Roboto
+    #   fonts:
+    #     - asset: assets/fonts/roboto/Roboto-VariableFont_wdth,wght.ttf
+    #     - asset: assets/fonts/roboto/Roboto-Italic-VariableFont_wdth,wght.ttf
+    #       style: italic
+    - family: Ubuntu Sans
+      fonts:
+      - asset: assets/fonts/ubuntu-sans/UbuntuSans-Regular.ttf
+      - asset: assets/fonts/ubuntu-sans/UbuntuSans-Light.ttf
+        weight: 300
+      - asset: assets/fonts/ubuntu-sans/UbuntuSans-Medium.ttf
+        weight: 500
+      - asset: assets/fonts/ubuntu-sans/UbuntuSans-SemiBold.ttf
+        weight: 600
+      - asset: assets/fonts/ubuntu-sans/UbuntuSans-Bold.ttf
+        weight: 700
+      - asset: assets/fonts/ubuntu-sans/UbuntuSans-ExtraBold.ttf
+        weight: 800
+      - asset: assets/fonts/ubuntu-sans/UbuntuSans-Italic.ttf
+        style: italic
+      - asset: assets/fonts/ubuntu-sans/UbuntuSans-LightItalic.ttf
+        weight: 300
+        style: italic
+      - asset: assets/fonts/ubuntu-sans/UbuntuSans-MediumItalic.ttf
+        weight: 500
+        style: italic
+      - asset: assets/fonts/ubuntu-sans/UbuntuSans-SemiBoldItalic.ttf
+        weight: 600
+        style: italic
+      - asset: assets/fonts/ubuntu-sans/UbuntuSans-BoldItalic.ttf
+        weight: 700
+        style: italic
+      - asset: assets/fonts/ubuntu-sans/UbuntuSans-ExtraBoldItalic.ttf
+        weight: 800
+        style: italic
   assets:
     - assets/icon.png
     - assets/audio/update-bell.mp3
-  # The following line ensures that the Material Icons font is
-  # included with your application, so that you can use the icons in
-  # the material Icons class.
   uses-material-design: true

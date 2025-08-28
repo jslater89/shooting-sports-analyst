@@ -106,8 +106,8 @@ class _SSAFileOutput {
 
     var dir = Directory(_LOG_DIR);
     if(!dir.existsSync()) {
-      print("Creating directory $_LOG_DIR");
       await dir.create();
+      print("Created directory $_LOG_DIR");
     }
 
     _reloadFilesArray();

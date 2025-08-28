@@ -168,7 +168,7 @@ class _HomePageState extends State<HomePage> {
             Text("View and manage matches in the match database", style: Theme
                 .of(context)
                 .textTheme
-                .subtitle1!
+                .titleMedium!
                 .apply(color: Colors.grey),
                 textAlign: TextAlign.center,
                 ),

@@ -1,5 +1,9 @@
 PROJ_ROOT=$(pwd)
-fvm flutter build linux
+FLUTTER_COMMAND="fvm flutter"
+if [[ "$APPIMAGE" == *cursor* || "$APPIMAGE" == *vscode* ]]; then
+  FLUTTER_COMMAND="flutter"
+fi
+$FLUTTER_COMMAND build linux
 cd build/linux/x64/release || exit
 rm shooting-sports-analyst.zip
 rm -rf shooting-sports-analyst
@@ -14,4 +18,3 @@ echo "$VERSION" > shooting-sports-analyst/version.txt
 zip -r shooting-sports-analyst.zip shooting-sports-analyst
 cd "$PROJ_ROOT" || exit
 cp build/linux/x64/release/shooting-sports-analyst.zip "shooting-sports-analyst-$VERSION-linux-dev.zip"
-

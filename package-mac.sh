@@ -2,7 +2,7 @@
 
 VERSION=$1
 if [ -z "$VERSION" ]; then
-    VERSION=$(grep 'version:' pubspec.yaml | sed -r 's/version: ([0-9.]*)\+[0-9]+/\1/')
+    VERSION=$(grep -m 1 'version:' pubspec.yaml | sed -r 's/version: ([0-9]+\.[0-9]+\.[0-9]+(-[a-z0-9]+)?)\+[0-9]+/\1/')
 fi
 
 PROJ_ROOT=$(pwd)
@@ -18,8 +18,8 @@ mv "$PROJ_ROOT/Shooting_Sports_Analyst.app.zip" .
 unzip "Shooting_Sports_Analyst.app.zip"
 rm "Shooting_Sports_Analyst.app.zip"
 mkdir data
-cp "$PROJ_ROOT/data/L2s-Since-2019.json" data/
-cp "$PROJ_ROOT/data/Nationals-and-Area-Matches.json" data/
+# cp "$PROJ_ROOT/data/L2s-Since-2019.json" data/
+# cp "$PROJ_ROOT/data/Nationals-and-Area-Matches.json" data/
 cp $PROJ_ROOT/mac-assets/* .
 echo "$VERSION > version.txt"
 

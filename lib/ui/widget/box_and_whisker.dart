@@ -21,9 +21,10 @@ class BoxAndWhiskerPlot extends StatelessWidget {
     this.boxSize,
     this.referenceLines = const [],
     this.referenceLineColor = Colors.green,
-    this.whiskerColor = Colors.black,
-    this.lowerBoxColor = Colors.black,
-    this.upperBoxColor = Colors.black,
+    this.whiskerColor,
+    this.lowerBoxColor,
+    this.upperBoxColor,
+    this.medianStrokeColor,
     this.strokeWidth = 1.0,
     this.fillBox = false,
   }) : super(key: key);
@@ -46,6 +47,7 @@ class BoxAndWhiskerPlot extends StatelessWidget {
   final Color? whiskerColor;
   final Color? lowerBoxColor;
   final Color? upperBoxColor;
+  final Color? medianStrokeColor;
   final bool fillBox;
 
   @override
@@ -55,6 +57,7 @@ class BoxAndWhiskerPlot extends StatelessWidget {
     var finalWhiskerColor = whiskerColor ?? ThemeColors.onBackgroundColor(context);
     var finalLowerBoxColor = lowerBoxColor ?? ThemeColors.onBackgroundColor(context);
     var finalUpperBoxColor = upperBoxColor ?? ThemeColors.onBackgroundColor(context);
+    var finalMedianStrokeColor = medianStrokeColor ?? ThemeColors.backgroundColor(context);
 
     var height = boxSize ?? ownSize.height;
     var width = ownSize.width;
@@ -81,7 +84,7 @@ class BoxAndWhiskerPlot extends StatelessWidget {
             whiskerColor: finalWhiskerColor,
             referenceLines: referenceLines,
             referenceLineColor: referenceLineColor,
-            contrastingLineColor: ThemeColors.onBackgroundColorFaded(context),
+            medianStrokeColor: finalMedianStrokeColor,
           ),
         ),
       ),
@@ -102,13 +105,13 @@ class _BoxPlotPainter extends CustomPainter {
   final double? rangeMin;
   final double? rangeMax;
   final double strokeWidth;
-  final Color? contrastingLineColor;
   final Color whiskerColor;
   final Color lowerBoxColor;
   final Color upperBoxColor;
   final bool fillBox;
   final List<double> referenceLines;
   final Color referenceLineColor;
+  final Color medianStrokeColor;
 
   _BoxPlotPainter({
     required this.minimum,
@@ -120,13 +123,13 @@ class _BoxPlotPainter extends CustomPainter {
     required this.rangeMin,
     required this.rangeMax,
     required this.strokeWidth,
-    this.contrastingLineColor,
     required this.whiskerColor,
     required this.lowerBoxColor,
     required this.upperBoxColor,
     required this.fillBox,
     required this.referenceLines,
     required this.referenceLineColor,
+    required this.medianStrokeColor,
   });
 
   double height = 0.0;
@@ -147,7 +150,7 @@ class _BoxPlotPainter extends CustomPainter {
     contrastingLinePaint.color = whiskerColor;
     contrastingLinePaint.strokeCap = StrokeCap.butt;
     if(fillBox && (whiskerColor == upperBoxColor || whiskerColor == lowerBoxColor)) {
-      contrastingLinePaint.color = contrastingLineColor ?? Colors.white;
+      contrastingLinePaint.color = medianStrokeColor;
     }
 
     Paint lowerBoxPaint = Paint();
