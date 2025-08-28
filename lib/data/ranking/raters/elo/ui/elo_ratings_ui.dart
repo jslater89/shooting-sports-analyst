@@ -80,7 +80,6 @@ extension EloRatingsUi on MultiplayerPercentEloRater {
     );
   }
 
-  @override
   ScoreRow buildRatingRow({
     required BuildContext context,
     required int place,

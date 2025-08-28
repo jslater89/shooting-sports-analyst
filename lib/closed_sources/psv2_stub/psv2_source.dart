@@ -8,7 +8,6 @@
 This is the PSv2 stub.
  */
 
-import 'package:flutter/src/widgets/framework.dart';
 import 'package:shooting_sports_analyst/data/source/match_source_error.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
@@ -48,17 +47,6 @@ class PSv2MatchSource extends MatchSource {
   @override
   Future<Result<ShootingMatch, MatchSourceError>> getMatchFromId(String id, {Sport? sport, SportType? typeHint, InternalMatchFetchOptions? options}) {
     // TODO: implement getMatchFromId
-    throw UnimplementedError();
-  }
-
-  @override
-  Widget getDownloadMatchUI({
-    required void Function(ShootingMatch) onMatchSelected,
-    void Function(ShootingMatch)? onMatchDownloaded,
-    required void Function(MatchSourceError) onError,
-    String? initialSearch,
-  }) {
-    // TODO: implement getDownloadMatchUI
     throw UnimplementedError();
   }
 }
