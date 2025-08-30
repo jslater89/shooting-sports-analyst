@@ -551,15 +551,42 @@ class _ResultPageState extends State<ResultPage> {
       fantasyScores: _fantasyScores,
       onScoreEdited: (shooter, stage, wholeMatch) {
         if(wholeMatch) {
+          var newPf = shooter.powerFactor;
+          for(var scoreEntry in shooter.scores.entries) {
+            var score = scoreEntry.value;
+            Map<ScoringEvent, int> targetEvents = {};
+            Map<ScoringEvent, int> penaltyEvents = {};
+            for(var event in score.targetEvents.keys) {
+              var newPfEvent = newPf.targetEvents.lookupByName(event.name);
+              if(newPfEvent != null) {
+                targetEvents[newPfEvent] = score.targetEvents[event] ?? 0;
+              }
+              else {
+                _log.w("Unknown target event ${event.name} in power factor ${newPf.name}");
+              }
+            }
+            for(var event in score.penaltyEvents.keys) {
+              var newPfEvent = newPf.penaltyEvents.lookupByName(event.name);
+              if(newPfEvent != null) {
+                penaltyEvents[newPfEvent] = score.penaltyEvents[event] ?? 0;
+              }
+              else {
+                _log.w("Unknown penalty event ${event.name} in power factor ${newPf.name}");
+              }
+            }
+            scoreEntry.value.targetEvents = targetEvents;
+            scoreEntry.value.penaltyEvents = penaltyEvents;
+            scoreEntry.value.clearCache();
+          }
           for(var stage in _currentMatch.stages) {
-            if(_editedShooters[stage] == null) _editedShooters[stage] = [];
+            _editedShooters[stage] ??= [];
 
             _editedShooters[stage]!.add(shooter);
           }
         }
 
-        if(stage != null && _editedShooters[stage] == null) {
-          _editedShooters[stage] = [];
+        if(stage != null) {
+          _editedShooters[stage] ??= [];
           if(!_editedShooters[stage]!.contains(shooter)) {
             _editedShooters[stage]!.add(shooter);
           }
@@ -601,7 +628,7 @@ class _ResultPageState extends State<ResultPage> {
                     var scores = _currentMatch.getScores(shooters: filteredShooters);
 
                     //debugPrint("Match: $_currentMatch Stage: $_stage Shooters: $_filteredShooters Scores: $scores");
-                    debugPrint("${_filteredShooters[0].scores}");
+                    // debugPrint("${_filteredShooters[0].scores}");
 
                     // Not sure if vestigial or the sign of a bug
                     // var filteredStages = []..addAll(_filteredStages);
