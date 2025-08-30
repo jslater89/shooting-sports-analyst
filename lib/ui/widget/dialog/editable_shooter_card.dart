@@ -41,17 +41,18 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
   bool _wholeMatchChange = false;
 
   String _scoreError = "";
+  late PowerFactor _pf;
 
   @override
   void initState() {
     super.initState();
 
     _timeController.text = _score.rawTime.toStringAsFixed(2);
-    var pf = _shooter.powerFactor;
-    for(var event in pf.targetEvents.values) {
+    _pf = _shooter.powerFactor;
+    for(var event in _pf.targetEvents.values) {
       _targetControllers[event] = TextEditingController(text: "${_score.targetEvents[event] ?? 0}");
     }
-    for(var event in pf.penaltyEvents.values) {
+    for(var event in _pf.penaltyEvents.values) {
       _penaltyControllers[event] = TextEditingController(text: "${_score.penaltyEvents[event] ?? 0}");
     }
   }
@@ -117,7 +118,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
               ],
             ),
             SizedBox(height: 10),
-            MatchScoreBody(result: widget.matchScore!.total, powerFactor: widget.matchScore!.shooter.powerFactor),
+            MatchScoreBody(result: widget.matchScore!.total, powerFactor: _pf),
             SizedBox(height: 10),
             Row(
               mainAxisSize: MainAxisSize.min,
