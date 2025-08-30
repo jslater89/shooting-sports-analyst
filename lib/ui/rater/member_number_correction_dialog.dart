@@ -93,13 +93,15 @@ class _MemberNumberCorrectionListDialogState extends State<MemberNumberCorrectio
 
   @override
   Widget build(BuildContext context) {
+    var screenSize = MediaQuery.of(context).size;
     return AlertDialog(
       title: Text(widget.title),
       scrollable: true,
       content: SizedBox(
         width: widget.width,
+        height: screenSize.height * 0.9,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: MainAxisSize.max,
           children: [
             if(widget.helpText != null) Text(widget.helpText!),
             Text(errorText, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).errorColor)),
@@ -231,27 +233,34 @@ class _MemberNumberCorrectionListDialogState extends State<MemberNumberCorrectio
               ),
             ),
             SizedBox(height: 8),
-            for(var correction in filteredCorrections ?? widget.corrections.all) SizedBox(
-              width: widget.width / 1.25,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                mainAxisSize: MainAxisSize.max,
-                children: [
-                  Text("Use ${correction.correctedNumber} if ${correction.name} enters ${correction.invalidNumber}"),
-                  SizedBox(width: 10),
-                  IconButton(
-                    icon: Icon(Icons.remove),
-                    onPressed: () {
-                      setState(() {
-                        changed = true;
-                        widget.corrections.remove(correction);
-                        filteredCorrections?.remove(correction);
-                      });
-                    },
-                  )
-                ],
-              ),
-            )
+            Expanded(child: ListView.builder(
+              itemBuilder: (context, index) {
+                var correctionSource = filteredCorrections ?? widget.corrections.all;
+                var correction = correctionSource[index];
+                return SizedBox(
+                  width: widget.width / 1.25,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisSize: MainAxisSize.max,
+                    children: [
+                      Text("Use ${correction.correctedNumber} if ${correction.name} enters ${correction.invalidNumber}"),
+                      SizedBox(width: 10),
+                      IconButton(
+                        icon: Icon(Icons.remove),
+                        onPressed: () {
+                          setState(() {
+                            changed = true;
+                            widget.corrections.remove(correction);
+                            filteredCorrections?.remove(correction);
+                          });
+                        },
+                      )
+                    ],
+                  ),
+                );
+              },
+              itemCount: filteredCorrections?.length ?? widget.corrections.all.length,
+            ))
           ],
         ),
       ),
