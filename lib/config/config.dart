@@ -28,7 +28,6 @@ class ChangeNotifierConfigLoader extends ConfigLoader with ChangeNotifier {
 
   ChangeNotifierConfigLoader._() : super.create();
 
-  late SerializedConfig config;
   late SerializedUIConfig uiConfig;
 
   @override
@@ -39,12 +38,14 @@ class ChangeNotifierConfigLoader extends ConfigLoader with ChangeNotifier {
 
   Future<void> setUIConfig(SerializedUIConfig config) async {
     uiConfig = config;
+    await save();
     notifyListeners();
   }
 
   Future<void> setConfigs((SerializedConfig config, SerializedUIConfig uiConfig) configs) async {
     config = configs.$1;
     uiConfig = configs.$2;
+    await save();
     notifyListeners();
   }
 
@@ -78,6 +79,7 @@ class ChangeNotifierConfigLoader extends ConfigLoader with ChangeNotifier {
     var str = await doc.toString();
     File f = File("./ui_config.toml");
     await f.writeAsString(str);
+    _log.d("Saved UI config: $uiConfig");
     await super.save();
   }
 }
@@ -93,4 +95,12 @@ class SerializedUIConfig {
   factory SerializedUIConfig.fromJson(Map<String, dynamic> json) => _$SerializedUIConfigFromJson(json);
 
   SerializedUIConfig copy() => SerializedUIConfig(themeMode: themeMode);
+
+  @override
+  String toString() {
+    var builder = StringBuffer();
+    builder.writeln("UIConfig:");
+    builder.writeln("\tthemeMode = ${themeMode.name}");
+    return builder.toString();
+  }
 }

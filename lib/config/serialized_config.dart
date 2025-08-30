@@ -62,6 +62,7 @@ class ConfigLoader {
     var str = await doc.toString();
     File f = File("./config.toml");
     f.writeAsStringSync(str);
+    _log.d("Saved config: $config");
   }
 
   Future<void> setConfig(SerializedConfig config) async {
