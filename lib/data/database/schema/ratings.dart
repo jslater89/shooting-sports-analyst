@@ -576,35 +576,10 @@ class RatingGroup with DbSportEntity {
   bool containsDivision(Division division) {
     // special case for USPSA/IPSC compatibility
     if(sport == uspsaSport && ipscSport.divisions.values.contains(division)) {
-      if(division == ipscOpen && divisions.contains(uspsaOpen)) {
-        return true;
-      }
-      else if(division == ipscStandard && divisions.contains(uspsaLimited)) {
-        return true;
-      }
-      else if(division == ipscProduction && divisions.contains(uspsaProduction)) {
-        return true;
-      }
-      else if(division == ipscClassic && divisions.contains(uspsaSingleStack)) {
-        return true;
-      }
-      else if(division == ipscRevolver && divisions.contains(uspsaRevolver)) {
-        return true;
-      }
-      else if(division == ipscPccOptics && divisions.contains(uspsaPcc)) {
-        return true;
-      }
-      else if(division == ipscPccIrons && divisions.contains(uspsaPcc)) {
-        return true;
-      }
-      else if(division == ipscProductionOptics && divisions.contains(uspsaCarryOptics)) {
-        return true;
-      }
-      return false;
+      division = uspsaDivisionForIpscDivision(division) ?? division;
     }
-    else {
-      return divisions.contains(division);
-    }
+
+    return divisions.contains(division);
   }
 
   @ignore
@@ -617,28 +592,10 @@ class RatingGroup with DbSportEntity {
   List<Division> ipscCompatibleDivisions() {
     var divisions = this.divisions;
     if(sport == uspsaSport) {
-      // special case for using IPSC matches in USPSA projects
-      if(divisions.contains(uspsaOpen)) {
-        divisions.add(ipscOpen);
-      }
-      if(divisions.contains(uspsaLimited)) {
-        divisions.add(ipscStandard);
-      }
-      if(divisions.contains(uspsaProduction)) {
-        divisions.add(ipscProduction);
-      }
-      if(divisions.contains(uspsaCarryOptics)) {
-        divisions.add(ipscProductionOptics);
-      }
-      if(divisions.contains(uspsaSingleStack)) {
-        divisions.add(ipscClassic);
-      }
-      if(divisions.contains(uspsaRevolver)) {
-        divisions.add(ipscRevolver);
-      }
-      if(divisions.contains(uspsaPcc)) {
-        divisions.add(ipscPccOptics);
-      }
+      divisions = addUspsaCompatibleIpscDivisions(divisions);
+    }
+    else if(sport == ipscSport) {
+      divisions = addIpscCompatibleUspsaDivisions(divisions);
     }
     return divisions;
   }

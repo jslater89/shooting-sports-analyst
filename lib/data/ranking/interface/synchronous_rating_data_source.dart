@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/ipsc.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
@@ -19,9 +20,11 @@ class ChangeNotifierRatingDataSource with ChangeNotifier {
 
   ChangeNotifierRatingDataSource(this._source);
 
-  /// Returns a shooter rating from the cache.
+  /// Returns a shooter rating from the cache, or null if there is either no rating,
+  /// or the rating is not yet cached. Attempts to look up and cache the rating.
   DbShooterRating? lookupRatingByMatchEntry(MatchEntry entry) {
-    var division = _groupForDivision(entry.division);
+    var division = groupForDivisionSync(entry.division);
+
     if(division == null) return null;
 
     var key = _RatingCacheKey(division, entry.memberNumber);
@@ -38,20 +41,20 @@ class ChangeNotifierRatingDataSource with ChangeNotifier {
       await _cacheRatingGroups();
     }
 
-    var division = _groupForDivision(entry.division);
-    if(division == null) {
+    var group = groupForDivisionSync(entry.division);
+    if(group == null) {
       if(_ratingGroupsCache!.isNotEmpty) {
-        division = _ratingGroupsCache!.first;
+        group = _ratingGroupsCache!.first;
       }
       else {
         return;
       }
     }
 
-    var ratingResult = await _source.lookupRating(division, entry.memberNumber);
+    var ratingResult = await _source.lookupRating(group, entry.memberNumber);
 
     if(ratingResult.isOk()) {
-      var key = _RatingCacheKey(division, entry.memberNumber);
+      var key = _RatingCacheKey(group, entry.memberNumber);
       _ratingCache[key] = ratingResult.unwrap();
       notifyListeners();
     }
@@ -96,13 +99,18 @@ class ChangeNotifierRatingDataSource with ChangeNotifier {
 
   List<RatingGroup>? _ratingGroupsCache;
 
-  RatingGroup? _groupForDivision(Division? d) {
+  RatingGroup? groupForDivisionSync(Division? d) {
     if(d == null && _ratingGroupsCache != null) return _ratingGroupsCache!.first;
 
     if(d != null) {
       for(var g in _ratingGroupsCache!) {
         if(g.divisionNames.contains(d.name)) return g;
       }
+    }
+
+    if(d != null && ipscSport.divisions.values.contains(d)) {
+      var uspsaDivision = uspsaDivisionForIpscDivision(d);
+      return groupForDivisionSync(uspsaDivision);
     }
 
     return null;

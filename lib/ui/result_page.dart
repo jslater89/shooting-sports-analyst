@@ -18,6 +18,7 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/help/entries/results_help.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/memory_cached_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
+import 'package:shooting_sports_analyst/data/ranking/interface/synchronous_rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/search_query_parser.dart';
 import 'package:shooting_sports_analyst/data/sort_mode.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
@@ -78,6 +79,7 @@ class _ResultPageState extends State<ResultPage> {
   FocusNode? _appFocus;
   ScrollController _verticalScrollController = ScrollController();
   ScrollController _horizontalScrollController = ScrollController();
+  ChangeNotifierRatingDataSource? _ratingCache;
 
   /// widget.canonicalMatch is copied here, so we can save changes to the DB
   /// after we refresh.
@@ -129,6 +131,10 @@ class _ResultPageState extends State<ResultPage> {
   @override
   void initState() {
     super.initState();
+
+    if(widget.ratings != null) {
+      _ratingCache = ChangeNotifierRatingDataSource(widget.ratings!);
+    }
 
     _canonicalMatch = widget.canonicalMatch;
     _settings.value.loadFromPreferences();
@@ -531,6 +537,7 @@ class _ResultPageState extends State<ResultPage> {
       maxPoints: _matchMaxPoints,
       stage: _stage,
       ratings: widget.ratings,
+      ratingCache: _ratingCache,
       scoreDQ: _filters.scoreDQs,
       verticalScrollController: _verticalScrollController,
       horizontalScrollController: _horizontalScrollController,

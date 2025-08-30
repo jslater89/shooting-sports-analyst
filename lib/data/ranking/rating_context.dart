@@ -10,6 +10,9 @@ import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 
+/// The application may have a "ratings context", which is a project that is used
+/// for ratings display outside of the context of the ratings section of the UI.
+/// Use [getProject] to get a project if it exists.
 class RatingContext with ChangeNotifier {
   int? _projectId;
 
