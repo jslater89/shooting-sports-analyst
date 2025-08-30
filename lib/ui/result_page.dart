@@ -19,6 +19,7 @@ import 'package:shooting_sports_analyst/data/fantasy/fantasy_points_mode.dart';
 import 'package:shooting_sports_analyst/data/help/entries/results_help.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/memory_cached_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
+import 'package:shooting_sports_analyst/data/ranking/interface/synchronous_rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_display_mode.dart';
 import 'package:shooting_sports_analyst/data/search_query_parser.dart';
 import 'package:shooting_sports_analyst/data/sort_mode.dart';
@@ -81,6 +82,7 @@ class _ResultPageState extends State<ResultPage> {
   FocusNode? _appFocus;
   ScrollController _verticalScrollController = ScrollController();
   ScrollController _horizontalScrollController = ScrollController();
+  ChangeNotifierRatingDataSource? _ratingCache;
 
   /// widget.canonicalMatch is copied here, so we can save changes to the DB
   /// after we refresh.
@@ -132,6 +134,10 @@ class _ResultPageState extends State<ResultPage> {
   @override
   void initState() {
     super.initState();
+
+    if(widget.ratings != null) {
+      _ratingCache = ChangeNotifierRatingDataSource(widget.ratings!);
+    }
 
     _canonicalMatch = widget.canonicalMatch;
     _settings.value.loadFromPreferences();
@@ -306,7 +312,10 @@ class _ResultPageState extends State<ResultPage> {
         scores.sortBySurname();
         break;
       case SortMode.rating:
-        if(widget.ratings != null && widget.ratings is DbRatingProject) {
+        if(_ratingCache != null) {
+          scores.sortByCachedRating(cache: _ratingCache!, displayMode: _settings.value.ratingMode, match: _currentMatch, stage: _stage);
+        }
+        else if(widget.ratings != null && widget.ratings is DbRatingProject) {
           scores.sortByLocalRating(ratings: widget.ratings! as DbRatingProject, displayMode: _settings.value.ratingMode, match: _currentMatch, stage: _stage);
         }
         else {
@@ -534,6 +543,7 @@ class _ResultPageState extends State<ResultPage> {
       maxPoints: _matchMaxPoints,
       stage: _stage,
       ratings: widget.ratings,
+      ratingCache: _ratingCache,
       scoreDQ: _filters.scoreDQs,
       verticalScrollController: _verticalScrollController,
       horizontalScrollController: _horizontalScrollController,

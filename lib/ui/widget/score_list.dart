@@ -43,6 +43,7 @@ class ScoreList extends StatefulWidget {
   final List<MatchEntry> editedShooters;
   final bool whatIfMode;
   final RatingDataSource? ratings;
+  final ChangeNotifierRatingDataSource? ratingCache;
 
   const ScoreList({
     Key? key,
@@ -60,6 +61,7 @@ class ScoreList extends StatefulWidget {
     this.editedShooters = const [],
     this.ratings,
     this.fantasyScores,
+    this.ratingCache,
   }) : super(key: key);
 
   @override
@@ -72,14 +74,13 @@ class _ScoreListState extends State<ScoreList> {
 
   Map<Shooter, FantasyScore>? get fantasyScores => widget.fantasyScores;
 
-  ChangeNotifierRatingDataSource? ratingCache;
+  ChangeNotifierRatingDataSource? get ratingCache => widget.ratingCache;
 
   @override
   void initState() {
     super.initState();
 
-    if(widget.ratings != null) {
-      ratingCache = ChangeNotifierRatingDataSource(widget.ratings!);
+    if(ratingCache != null) {
       ratingCache!.addListener(() {
         setStateIfMounted(() {
           // ratings were reloaded
@@ -90,7 +91,7 @@ class _ScoreListState extends State<ScoreList> {
 
   @override
   Widget build(BuildContext context) {
-    if(widget.ratings != null && (ratingCache!.getSettings() == null || ratingCache!.getGroups() == null)) {
+    if(ratingCache != null && (ratingCache!.getSettings() == null || ratingCache!.getGroups() == null)) {
       return const Center(child: CircularProgressIndicator());
     }
 
@@ -159,7 +160,7 @@ class _ScoreListState extends State<ScoreList> {
       child: Container(
           decoration: BoxDecoration(
             border: Border(
-                bottom: BorderSide()
+                bottom: BorderSide(color: ThemeColors.onBackgroundColor(context))
             ),
             color: ThemeColors.backgroundColor(context),
           ),
@@ -417,7 +418,7 @@ class _ScoreListState extends State<ScoreList> {
       child: Container(
           decoration: BoxDecoration(
             border: Border(
-                bottom: BorderSide()
+              bottom: BorderSide(color: ThemeColors.onBackgroundColor(context))
             ),
             color: ThemeColors.backgroundColor(context),
           ),
