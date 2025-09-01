@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_context.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/database/match/widget/match_db_list_view_search.dart';
@@ -73,6 +74,8 @@ class _MatchDatabaseListViewState extends State<MatchDatabaseListView> {
                   var match = listModel.searchedMatches[i];
                   return GestureDetector(
                     onTap: () async {
+                      var ratingsContext = context.read<RatingContext>();
+                      var ratings = await ratingsContext.getProject();
                       var fullMatchResult = match.hydrate();
                       if(fullMatchResult.isErr()) {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -90,6 +93,7 @@ class _MatchDatabaseListViewState extends State<MatchDatabaseListView> {
                           ResultPage(
                             canonicalMatch: fullMatchResult.unwrap(),
                             allowWhatIf: true,
+                            ratings: ratings,
                           ),
                         ));
                       }

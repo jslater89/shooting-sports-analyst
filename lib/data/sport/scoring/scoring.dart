@@ -1077,18 +1077,37 @@ extension Sorting on List<RelativeMatchScore> {
     });
   }
 
-  void sortByLocalRating({required DbRatingProject ratings, required RatingDisplayMode displayMode, required ShootingMatch match, MatchStage? stage}) {
+  void sortByLocalRating({required DbRatingProject ratings, ChangeNotifierRatingDataSource? ratingCache, required RatingDisplayMode displayMode, required ShootingMatch match, MatchStage? stage}) {
     var db = AnalystDatabase();
     this.sort((a, b) {
-      var aGroupRes = ratings.groupForDivisionSync(a.shooter.division);
-      var bGroupRes = ratings.groupForDivisionSync(b.shooter.division);
-      if(aGroupRes.isErr() || bGroupRes.isErr()) return b.ratio.compareTo(a.ratio);
+      DbShooterRating? aRating, bRating;
+      if(ratingCache != null) {
+        aRating = ratingCache.lookupRatingByMatchEntry(a.shooter);
+        bRating = ratingCache.lookupRatingByMatchEntry(b.shooter);
+      }
 
-      var aGroup = aGroupRes.unwrap();
-      var bGroup = bGroupRes.unwrap();
+      if(aRating == null || bRating == null) {
+        var aGroupRes = ratings.groupForDivisionSync(a.shooter.division);
+        var bGroupRes = ratings.groupForDivisionSync(b.shooter.division);
+        if(aGroupRes.isErr() || bGroupRes.isErr()) return b.ratio.compareTo(a.ratio);
 
-      var aRating = db.maybeKnownShooterSync(project: ratings, group: aGroup!, memberNumber: a.shooter.memberNumber);
-      var bRating = db.maybeKnownShooterSync(project: ratings, group: bGroup!, memberNumber: b.shooter.memberNumber);
+<<<<<<< HEAD
+=======
+        var aGroup = aGroupRes.unwrap();
+        var bGroup = bGroupRes.unwrap();
+
+        aRating = db.maybeKnownShooterSync(project: ratings, group: aGroup!, memberNumber: a.shooter.memberNumber);
+        bRating = db.maybeKnownShooterSync(project: ratings, group: bGroup!, memberNumber: b.shooter.memberNumber);
+
+        if(ratingCache != null) {
+          if(aRating != null) {
+            ratingCache.cacheRating(a.shooter, aRating);
+          }
+          if(bRating != null) {
+            ratingCache.cacheRating(b.shooter, bRating);
+          }
+        }
+      }
 
       if(aRating == null || bRating == null) return b.ratio.compareTo(a.ratio);
 
@@ -1108,6 +1127,7 @@ extension Sorting on List<RelativeMatchScore> {
     });
   }
 
+>>>>>>> be708c2 (Use cache for ratings)
   void sortByClassification() {
     this.sort((a, b) {
       return (a.shooter.classification?.index ?? 100000).compareTo(b.shooter.classification?.index ?? 100000);

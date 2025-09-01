@@ -310,7 +310,11 @@ class _ResultPageState extends State<ResultPage> {
         break;
       case SortMode.rating:
         if(widget.ratings != null && widget.ratings is DbRatingProject) {
+<<<<<<< HEAD
           scores.sortByLocalRating(ratings: widget.ratings! as DbRatingProject, displayMode: _settings.value.ratingMode, match: _currentMatch, stage: _stage);
+=======
+          scores.sortByLocalRating(ratings: widget.ratings! as DbRatingProject, ratingCache: _ratingCache, displayMode: _settings.value.ratingMode, match: _currentMatch, stage: _stage);
+>>>>>>> be708c2 (Use cache for ratings)
         }
         else {
           // We shouldn't hit this, because we hide rating sort if there aren't any ratings,
