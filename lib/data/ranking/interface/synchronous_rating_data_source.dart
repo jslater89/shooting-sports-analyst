@@ -36,6 +36,15 @@ class ChangeNotifierRatingDataSource with ChangeNotifier {
     return null;
   }
 
+  void cacheRating(MatchEntry entry, DbShooterRating rating) {
+    var group = groupForDivisionSync(entry.division);
+    if(group == null) return;
+
+    var key = _RatingCacheKey(group, entry.memberNumber);
+    _ratingCache[key] = rating;
+    notifyListeners();
+  }
+
   Future<void> _cacheRating(MatchEntry entry) async {
     if(_ratingGroupsCache == null) {
       await _cacheRatingGroups();

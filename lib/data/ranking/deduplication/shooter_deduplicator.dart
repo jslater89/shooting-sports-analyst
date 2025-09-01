@@ -55,7 +55,7 @@ abstract class ShooterDeduplicator {
   /// Process a shooter's name into a deduplicator name.
   ///
   /// This currently converts to lowercase, removes all whitespace, and removes all
-  /// non-alphanumeric characters.
+  /// non-alphanumeric characters, including accented characters.
   static String processName(Shooter shooter) {
     var lowercaseName = shooter.name.toLowerCase();
     if(_processNameCache.containsKey(lowercaseName)) return _processNameCache[lowercaseName]!;

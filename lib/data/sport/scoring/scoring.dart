@@ -1079,40 +1079,35 @@ extension Sorting on List<RelativeMatchScore> {
     });
   }
 
-  void sortByLocalRating({required DbRatingProject ratings, required RatingDisplayMode displayMode, required ShootingMatch match, MatchStage? stage}) {
+  void sortByLocalRating({required DbRatingProject ratings, ChangeNotifierRatingDataSource? ratingCache, required RatingDisplayMode displayMode, required ShootingMatch match, MatchStage? stage}) {
     var db = AnalystDatabase();
     this.sort((a, b) {
-      var aGroupRes = ratings.groupForDivisionSync(a.shooter.division);
-      var bGroupRes = ratings.groupForDivisionSync(b.shooter.division);
-      if(aGroupRes.isErr() || bGroupRes.isErr()) return b.ratio.compareTo(a.ratio);
-
-      var aGroup = aGroupRes.unwrap();
-      var bGroup = bGroupRes.unwrap();
-
-      var aRating = db.maybeKnownShooterSync(project: ratings, group: aGroup!, memberNumber: a.shooter.memberNumber);
-      var bRating = db.maybeKnownShooterSync(project: ratings, group: bGroup!, memberNumber: b.shooter.memberNumber);
-
-      if(aRating == null || bRating == null) return b.ratio.compareTo(a.ratio);
-
-      var settings = ratings.getSettingsSync();
-      var aRatingWrapped = settings.algorithm.wrapDbRating(aRating);
-      var bRatingWrapped = settings.algorithm.wrapDbRating(bRating);
-
-      var aRatingValue = aRatingWrapped.ratingForEvent(match, stage, beforeMatch: displayMode == RatingDisplayMode.preMatch);
-      var bRatingValue = bRatingWrapped.ratingForEvent(match, stage, beforeMatch: displayMode == RatingDisplayMode.preMatch);
-
-      if(displayMode == RatingDisplayMode.change) {
-        aRatingValue = aRatingValue - aRatingWrapped.ratingForEvent(match, stage, beforeMatch: true);
-        bRatingValue = bRatingValue - bRatingWrapped.ratingForEvent(match, stage, beforeMatch: true);
+      DbShooterRating? aRating, bRating;
+      if(ratingCache != null) {
+        aRating = ratingCache.lookupRatingByMatchEntry(a.shooter);
+        bRating = ratingCache.lookupRatingByMatchEntry(b.shooter);
       }
 
-      return bRatingValue.compareTo(aRatingValue);
-    });
-  }
+      if(aRating == null || bRating == null) {
+        var aGroupRes = ratings.groupForDivisionSync(a.shooter.division);
+        var bGroupRes = ratings.groupForDivisionSync(b.shooter.division);
+        if(aGroupRes.isErr() || bGroupRes.isErr()) return b.ratio.compareTo(a.ratio);
 
-  void sortByCachedRating({required ChangeNotifierRatingDataSource cache, required RatingDisplayMode displayMode, required ShootingMatch match, MatchStage? stage}) {
-    this.sort((a, b) {
-      var aRating = cache.lookupRatingByMatchEntryAsync(a.shooter);
+        var aGroup = aGroupRes.unwrap();
+        var bGroup = bGroupRes.unwrap();
+
+        aRating = db.maybeKnownShooterSync(project: ratings, group: aGroup!, memberNumber: a.shooter.memberNumber);
+        bRating = db.maybeKnownShooterSync(project: ratings, group: bGroup!, memberNumber: b.shooter.memberNumber);
+
+        if(ratingCache != null) {
+          if(aRating != null) {
+            ratingCache.cacheRating(a.shooter, aRating);
+          }
+          if(bRating != null) {
+            ratingCache.cacheRating(b.shooter, bRating);
+          }
+        }
+      }
 
       if(aRating == null || bRating == null) return b.ratio.compareTo(a.ratio);
 
