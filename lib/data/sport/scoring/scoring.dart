@@ -1091,8 +1091,6 @@ extension Sorting on List<RelativeMatchScore> {
         var bGroupRes = ratings.groupForDivisionSync(b.shooter.division);
         if(aGroupRes.isErr() || bGroupRes.isErr()) return b.ratio.compareTo(a.ratio);
 
-<<<<<<< HEAD
-=======
         var aGroup = aGroupRes.unwrap();
         var bGroup = bGroupRes.unwrap();
 
@@ -1127,7 +1125,6 @@ extension Sorting on List<RelativeMatchScore> {
     });
   }
 
->>>>>>> be708c2 (Use cache for ratings)
   void sortByClassification() {
     this.sort((a, b) {
       return (a.shooter.classification?.index ?? 100000).compareTo(b.shooter.classification?.index ?? 100000);
