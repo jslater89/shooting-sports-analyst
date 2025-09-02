@@ -9,6 +9,7 @@ import 'package:color_models/color_models.dart';
 import 'package:data/data.dart' show ContinuousDistribution;
 import 'package:flutter/material.dart';
 import 'package:community_charts_flutter/community_charts_flutter.dart' as charts;
+import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/util.dart';
 // import 'package:community_charts_common/community_charts_common.dart' as common;
 
@@ -327,13 +328,31 @@ class StackedDistributionChart extends StatelessWidget {
       ],
       domainAxis: charts.NumericAxisSpec(
         viewport: charts.NumericExtents(minBucketStart - (bucketSize * 0.25), maxBucketStart + (bucketSize * 1.25)),
+        renderSpec: charts.SmallTickRendererSpec(
+          labelStyle: charts.TextStyleSpec(
+            color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
+            fontSize: 12,
+          ),
+        ),
       ),
       primaryMeasureAxis: distribution != null ? charts.NumericAxisSpec(
         viewport: charts.NumericExtents(0, probMax + probMax * 0.1),
+        renderSpec: charts.GridlineRendererSpec(
+          lineStyle: charts.LineStyleSpec(
+            color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
+            thickness: 1,
+          ),
+        ),
         tickProviderSpec: null,
       ) : null,
       secondaryMeasureAxis: charts.NumericAxisSpec(
         viewport: charts.NumericExtents(0, maxCount + maxCount * 0.1),
+        renderSpec: charts.SmallTickRendererSpec(
+          labelStyle: charts.TextStyleSpec(
+            color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
+            fontSize: 12,
+          ),
+        ),
         tickProviderSpec: charts.BasicNumericTickProviderSpec(
           dataIsInWholeNumbers: true,
           desiredMinTickCount: 8,

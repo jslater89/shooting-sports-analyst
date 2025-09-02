@@ -32,7 +32,13 @@ class ThemeColors {
   }
 
   static Color onBackgroundColorFaded(BuildContext context) {
-    return onBackgroundColor(context).withOpacity(0.65);
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+    if(isDark) {
+      return Colors.grey[500]!;
+    }
+    else {
+      return Colors.grey[700]!;
+    }
   }
 
   static Color linkColor(BuildContext context) {

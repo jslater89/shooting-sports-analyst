@@ -342,10 +342,16 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
         charts.ChartTitle(
           "Elo",
           behaviorPosition: charts.BehaviorPosition.start,
+          titleStyleSpec: charts.TextStyleSpec(
+            color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
+          ),
         ),
         charts.ChartTitle(
           "Competitor Count",
           behaviorPosition: charts.BehaviorPosition.bottom,
+          titleStyleSpec: charts.TextStyleSpec(
+            color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
+          ),
         ),
       ],
       selectionModels: [
