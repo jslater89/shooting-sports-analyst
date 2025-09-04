@@ -72,6 +72,9 @@ dependencies:
   cookie_store: ^0.3.5
   flutter_secure_storage: ^9.2.0
   package_info_plus: ^8.0.2
+  meta: ^1.11.0
+  encrypt: ^5.0.3
+  crypto: ^3.0.3
 
 dev_dependencies:
   flutter_test:

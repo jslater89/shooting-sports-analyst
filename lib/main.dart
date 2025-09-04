@@ -8,6 +8,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
@@ -16,6 +17,13 @@ import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
+<<<<<<< HEAD
+=======
+import 'package:shooting_sports_analyst/config/encrypted_file_store/encrypted_file_store.dart';
+import 'package:shooting_sports_analyst/config/encrypted_file_store/macos_key_deriver.dart';
+import 'package:shooting_sports_analyst/config/secure_config.dart';
+import 'package:shooting_sports_analyst/config/serialized_config.dart';
+>>>>>>> f3b9da7 (Encrypted file storage for frickin' Macs)
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/help/entries/all_helps.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
@@ -54,60 +62,63 @@ class GlobalData {
 }
 
 GlobalData globals = GlobalData();
-
-<<<<<<< HEAD
-=======
-class FlutterDebugProvider implements DebugModeProvider {
-  bool get kDebugMode => foundation.kDebugMode;
-
-  @override
-  bool get kReleaseMode => foundation.kReleaseMode;
-}
-
-class FlutterConfigProvider implements ConfigProvider {
-  @override
-  void addListener(void Function(SerializedConfig config) listener) {
-    ChangeNotifierConfigLoader().addListener(() {
-      listener.call(ChangeNotifierConfigLoader().config);
-    });
-  }
-}
-
 class FlutterSecureStorageProvider implements SecureStorageProvider {
 
   static FlutterSecureStorageProvider? _instance;
 
   late FlutterSecureStorage _storage;
+  late EncryptedFileStore _fileStore;
+
   factory FlutterSecureStorageProvider() {
     _instance ??= FlutterSecureStorageProvider._();
     return _instance!;
   }
 
   FlutterSecureStorageProvider._() {
-    _storage = FlutterSecureStorage(
-      mOptions: MacOsOptions(
-        accessibility: KeychainAccessibility.first_unlock,
-        synchronizable: true
-      ),
-    );
+    if(Platform.isMacOS) {
+      _fileStore = EncryptedFileStore(key: deriveMacOsKey());
+    }
+    else {
+      _storage = FlutterSecureStorage(
+        mOptions: MacOsOptions(
+          accessibility: KeychainAccessibility.first_unlock,
+          synchronizable: true
+        ),
+      );
+    }
   }
+
   @override
   Future<void> write(String key, String value) async {
-    await _storage.write(key: key, value: value);
+    if(Platform.isMacOS) {
+      await _fileStore.write(key, value);
+    }
+    else {
+      await _storage.write(key: key, value: value);
+    }
   }
 
   @override
   Future<String?> read(String key) async {
-    return await _storage.read(key: key);
+    if(Platform.isMacOS) {
+      return await _fileStore.read(key);
+    }
+    else {
+      return await _storage.read(key: key);
+    }
   }
 
   @override
   Future<void> delete(String key) async {
-    await _storage.delete(key: key);
+    if(Platform.isMacOS) {
+      await _fileStore.delete(key);
+    }
+    else {
+      await _storage.delete(key: key);
+    }
   }
 }
 
->>>>>>> b9238f4 (More MacOS fixes)
 void main() async {
   // dumpRatings();
 
