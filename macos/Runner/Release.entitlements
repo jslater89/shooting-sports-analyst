@@ -10,7 +10,7 @@
 	<true/>
 	<key>keychain-access-groups</key>
 	<array>
-		<string>com.shootingsportsanalyst.shootingSportsAnalyst</string>
+		<string>$(AppIdentifierPrefix)com.shootingsportsanalyst.shootingSportsAnalyst</string>
 	</array>
 </dict>
 </plist>

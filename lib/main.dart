@@ -75,19 +75,36 @@ class FlutterConfigProvider implements ConfigProvider {
 }
 
 class FlutterSecureStorageProvider implements SecureStorageProvider {
+
+  static FlutterSecureStorageProvider? _instance;
+
+  late FlutterSecureStorage _storage;
+  factory FlutterSecureStorageProvider() {
+    _instance ??= FlutterSecureStorageProvider._();
+    return _instance!;
+  }
+
+  FlutterSecureStorageProvider._() {
+    _storage = FlutterSecureStorage(
+      mOptions: MacOsOptions(
+        accessibility: KeychainAccessibility.first_unlock,
+        synchronizable: true
+      ),
+    );
+  }
   @override
   Future<void> write(String key, String value) async {
-    await FlutterSecureStorage().write(key: key, value: value);
+    await _storage.write(key: key, value: value);
   }
 
   @override
   Future<String?> read(String key) async {
-    return await FlutterSecureStorage().read(key: key);
+    return await _storage.read(key: key);
   }
 
   @override
   Future<void> delete(String key) async {
-    await FlutterSecureStorage().delete(key: key);
+    await _storage.delete(key: key);
   }
 }
 
