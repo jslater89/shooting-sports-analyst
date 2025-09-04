@@ -5,12 +5,17 @@ import 'package:encrypt/encrypt.dart';
 import 'package:shooting_sports_analyst/config/secure_config.dart';
 
 class EncryptedFileStore extends SecureStorageProvider {
-  EncryptedFileStore({this.path = "db/efs.db", required this.key}) {
-    aes = AES(Key.fromUtf8(key));
+  EncryptedFileStore({this.path = "db/efs.db", required String key}) {
+    if(key.length < (256 ~/ 4)) {
+      throw ArgumentError("key too short");
+    }
+    if(key.length > (256 ~/ 4)) {
+      key = key.substring(0, 256 ~/ 4);
+    }
+    aes = AES(Key.fromBase16(key));
   }
 
   final String path;
-  final String key;
   late final AES aes;
 
   File getFile() {
@@ -36,9 +41,14 @@ class EncryptedFileStore extends SecureStorageProvider {
     var iv = IV.fromBase64(ivContents);
     var contents = await f.readAsString();
     var decrypter = Encrypter(aes);
-    var decrypted = decrypter.decrypt(Encrypted.fromBase64(contents), iv: iv);
 
-    return jsonDecode(decrypted);
+    try {
+      var decrypted = decrypter.decrypt(Encrypted.fromBase64(contents), iv: iv);
+      var map = jsonDecode(decrypted);
+      return Map.castFrom(map);
+    } catch(e) {
+      return {};
+    }
   }
 
   Future<File> saveEntries(Map<String, String> entries) async {
@@ -49,6 +59,16 @@ class EncryptedFileStore extends SecureStorageProvider {
     var encrypted = encrypter.encrypt(jsonEncode(entries), iv: iv);
     await ivFile.writeAsString(iv.base64);
     return f.writeAsString(encrypted.base64);
+  }
+
+  void saveEntriesSync(Map<String, String> entries) {
+    var f = getFile();
+    var ivFile = getIvFile();
+    var iv = IV.fromLength(16);
+    var encrypter = Encrypter(aes);
+    var encrypted = encrypter.encrypt(jsonEncode(entries), iv: iv);
+    ivFile.writeAsStringSync(iv.base64);
+    f.writeAsStringSync(encrypted.base64);
   }
 
   @override
