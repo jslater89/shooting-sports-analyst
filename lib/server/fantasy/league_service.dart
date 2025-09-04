@@ -108,7 +108,7 @@ extension _ScoringToJson on Map<TempDate, FantasyScoreContainer> {
 class FantasyScoreContainer {
   final String matchName;
   final DateTime matchDate;
-  final FantasyScore<dynamic> score;
+  final FantasyScore score;
 
   double get points => score.points;
 

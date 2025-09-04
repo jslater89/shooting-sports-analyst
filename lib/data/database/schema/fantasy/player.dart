@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
@@ -177,26 +178,64 @@ class PlayerMonthlyPerformance {
   }
 }
 
+/// A match performance for a player. It contains their fantasy-relevant stats
+/// by scoring category, and can be used to calculate final fantasy scores
+/// based on those stats and provided weights.
 @embedded
 class MatchPerformance {
   String matchId;
   String matchName;
   DateTime matchDate;
+  int stageCount;
 
   // The division they shot
   String divisionName;
 
-  // Their raw scores by category
-  List<DbFantasyScore> dbScores;
+  // Their fantasy stats by scoring category, in DB-friendly format.
+  List<DbFantasyStat> dbScores;
 
-  Map<String, List<FantasyScore>> getScores() {
-    return Map.fromEntries(dbScores.map((s) => MapEntry(s.calculatorType, s.scores)));
+  Map<FantasyScoringCategory, double> getScores({Map<FantasyScoringCategory, double>? weights}) {
+    var result = <FantasyScoringCategory, double>{};
+    DbFantasyStat? participationPenaltyStat;
+    for(var s in dbScores) {
+      if(s.category.isSpecial) {
+        if(s.category == FantasyScoringCategory.divisionParticipationPenalty) {
+          participationPenaltyStat = s;
+        }
+        continue;
+      }
+      else {
+        if(s.category.isCountable) {
+          var pointsAvailable = weights?[s.category] ?? s.category.defaultPointsAvailable;
+          var score = s.count! * pointsAvailable;
+          result[s.category] = score;
+        }
+        else {
+          var pointsAvailable = weights?[s.category] ?? s.category.defaultPointsAvailable;
+          var score = s.rawScore! * pointsAvailable;
+          result[s.category] = score;
+        }
+      }
+    }
+
+    if(participationPenaltyStat != null) {
+      var participationPenaltyRatio = participationPenaltyStat.rawScore;
+      if(participationPenaltyRatio != null && participationPenaltyRatio < 1) {
+        var participationPenaltyWeight = weights?[FantasyScoringCategory.divisionParticipationPenalty] ?? FantasyScoringCategory.divisionParticipationPenalty.defaultPointsAvailable;
+        var runningScore = result.values.sum;
+        var actualScore = runningScore * participationPenaltyRatio;
+        result[FantasyScoringCategory.divisionParticipationPenalty] = (actualScore - runningScore) * participationPenaltyWeight;
+      }
+    }
+
+    return result;
   }
 
   MatchPerformance({
     this.matchId = "",
     this.matchName = "",
     this.divisionName = "",
+    this.stageCount = 0,
     this.dbScores = const [],
   }) : matchDate = DateTime(0, 0, 0);
 
@@ -205,27 +244,30 @@ class MatchPerformance {
     required this.matchName,
     required this.matchDate,
     required this.divisionName,
+    required this.stageCount,
     required this.dbScores,
   });
 }
 
+/// A fantasy stat for a player, in DB-friendly format.
+///
+/// [rawScore] is the raw score for the stat.
 @embedded
-class DbFantasyScore {
-  String calculatorType;
-  List<String> rawScores;
+class DbFantasyStat {
+  @enumerated
+  FantasyScoringCategory category;
+  double? rawScore;
+  int? count;
 
-  @ignore
-  List<FantasyScore> get scores {
-    return rawScores.map((s) => FantasyScore.fromJson(s)).toList();
-  }
-
-  DbFantasyScore({
-    this.calculatorType = "",
-    this.rawScores = const [],
+  DbFantasyStat({
+    this.category = FantasyScoringCategory.finishPercentage,
+    this.rawScore,
+    this.count,
   });
 
-  DbFantasyScore.create({
-    required this.calculatorType,
-    required this.rawScores,
+  DbFantasyStat.create({
+    required this.category,
+    this.rawScore,
+    this.count,
   });
 }
