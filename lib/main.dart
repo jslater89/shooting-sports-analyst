@@ -55,6 +55,59 @@ class GlobalData {
 
 GlobalData globals = GlobalData();
 
+<<<<<<< HEAD
+=======
+class FlutterDebugProvider implements DebugModeProvider {
+  bool get kDebugMode => foundation.kDebugMode;
+
+  @override
+  bool get kReleaseMode => foundation.kReleaseMode;
+}
+
+class FlutterConfigProvider implements ConfigProvider {
+  @override
+  void addListener(void Function(SerializedConfig config) listener) {
+    ChangeNotifierConfigLoader().addListener(() {
+      listener.call(ChangeNotifierConfigLoader().config);
+    });
+  }
+}
+
+class FlutterSecureStorageProvider implements SecureStorageProvider {
+
+  static FlutterSecureStorageProvider? _instance;
+
+  late FlutterSecureStorage _storage;
+  factory FlutterSecureStorageProvider() {
+    _instance ??= FlutterSecureStorageProvider._();
+    return _instance!;
+  }
+
+  FlutterSecureStorageProvider._() {
+    _storage = FlutterSecureStorage(
+      mOptions: MacOsOptions(
+        accessibility: KeychainAccessibility.first_unlock,
+        synchronizable: true
+      ),
+    );
+  }
+  @override
+  Future<void> write(String key, String value) async {
+    await _storage.write(key: key, value: value);
+  }
+
+  @override
+  Future<String?> read(String key) async {
+    return await _storage.read(key: key);
+  }
+
+  @override
+  Future<void> delete(String key) async {
+    await _storage.delete(key: key);
+  }
+}
+
+>>>>>>> b9238f4 (More MacOS fixes)
 void main() async {
   // dumpRatings();
 
