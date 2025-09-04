@@ -15,11 +15,29 @@ import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
-class USPSAFantasyScoringCalculator implements FantasyScoringCalculator<USPSAFantasyScoringCategory> {
-  const USPSAFantasyScoringCalculator();
+class USPSAFantasyScoringCalculator extends FantasyScoringCalculator {
+  const USPSAFantasyScoringCalculator({Map<FantasyScoringCategory, double>? pointsAvailable}) : _pointsAvailable = pointsAvailable;
+
+  final Map<FantasyScoringCategory, double>? _pointsAvailable;
 
   @override
-  Map<MatchEntry, FantasyScore<USPSAFantasyScoringCategory>> calculateFantasyScores(ShootingMatch match, {
+  Map<FantasyScoringCategory, double> get pointsAvailable => _pointsAvailable ?? {
+    FantasyScoringCategory.finishPercentage: 100,
+    FantasyScoringCategory.stageWins: 100,
+    FantasyScoringCategory.stageTop10Percents: 75,
+    FantasyScoringCategory.stageTop25Percents: 50,
+    FantasyScoringCategory.rawTimeWins: 100,
+    FantasyScoringCategory.rawTimeTop10Percents: 75,
+    FantasyScoringCategory.rawTimeTop25Percents: 50,
+    FantasyScoringCategory.accuracyWins: 100,
+    FantasyScoringCategory.accuracyTop10Percents: 75,
+    FantasyScoringCategory.accuracyTop25Percents: 50,
+    FantasyScoringCategory.penalties: -5,
+    FantasyScoringCategory.divisionParticipationPenalty: 1,
+  };
+
+  @override
+  Map<MatchEntry, FantasyScore> calculateFantasyScores(ShootingMatch match, {
     bool byDivision = true,
     List<MatchEntry>? entries,
   }) {
@@ -65,7 +83,7 @@ class USPSAFantasyScoringCalculator implements FantasyScoringCalculator<USPSAFan
       }
     }
 
-    Map<MatchEntry, FantasyScore<USPSAFantasyScoringCategory>> fantasyScores = {};
+    Map<MatchEntry, FantasyScore> fantasyScores = {};
     if(byDivision) {
       for(var division in match.sport.divisions.values) {
         if(eligible[division] == true) {
@@ -122,7 +140,7 @@ class USPSAFantasyScoringCalculator implements FantasyScoringCalculator<USPSAFan
     required ShootingMatch match,
     required Map<MatchEntry, RelativeMatchScore> scores,
     required double participationPenalty,
-    required Map<MatchEntry, FantasyScore<USPSAFantasyScoringCategory>> fantasyScores,
+    required Map<MatchEntry, FantasyScore> fantasyScores,
   }) {
     Map<MatchStage, double> lowTimes = {};
     Map<MatchStage, int> highPoints = {};
@@ -155,9 +173,11 @@ class USPSAFantasyScoringCalculator implements FantasyScoringCalculator<USPSAFan
     }
 
     for(var shooter in scores.keys) {
-      var scoreMap = <USPSAFantasyScoringCategory, double>{};
-      for(var category in USPSAFantasyScoringCategory.values) {
+      var scoreMap = <FantasyScoringCategory, double>{};
+      var countMap = <FantasyScoringCategory, int>{};
+      for(var category in FantasyScoringCategory.values) {
         scoreMap[category] = 0;
+        countMap[category] = 0;
       }
       var score = scores[shooter]!;
 
@@ -165,7 +185,8 @@ class USPSAFantasyScoringCalculator implements FantasyScoringCalculator<USPSAFan
       int penaltyCount = 0;
 
       // Points for finish percentage.
-        scoreMap[USPSAFantasyScoringCategory.finishPercentage] = score.percentage;
+      var finishPointsAvailable = pointsAvailable[FantasyScoringCategory.finishPercentage] ?? FantasyScoringCategory.finishPercentage.defaultPointsAvailable;
+      scoreMap[FantasyScoringCategory.finishPercentage] = score.ratio * finishPointsAvailable;
 
       for(var stage in match.stages) {
         var stageScore = score.stageScores[stage];
@@ -178,43 +199,62 @@ class USPSAFantasyScoringCalculator implements FantasyScoringCalculator<USPSAFan
         // Points for stage wins, top 10%, and top 25%.
         if(stageScore.place == 1) {
         // if(stageScore.percentage >= 95) {
-          scoreMap.incrementBy(USPSAFantasyScoringCategory.stageWins, 100 / stageCount);
+          var weight = pointsAvailable[FantasyScoringCategory.stageWins] ?? FantasyScoringCategory.stageWins.defaultPointsAvailable;
+          scoreMap.incrementBy(FantasyScoringCategory.stageWins, weight / stageCount);
+          countMap.incrementBy(FantasyScoringCategory.stageWins, 1);
         }
         else if(stageScore.percentage >= 90) {
-          scoreMap.incrementBy(USPSAFantasyScoringCategory.stageTop10Percents, 75 / stageCount);
+          var weight = pointsAvailable[FantasyScoringCategory.stageTop10Percents] ?? FantasyScoringCategory.stageTop10Percents.defaultPointsAvailable;
+          scoreMap.incrementBy(FantasyScoringCategory.stageTop10Percents, weight / stageCount);
+          countMap.incrementBy(FantasyScoringCategory.stageTop10Percents, 1);
         }
         else if(stageScore.percentage >= 75) {
-          scoreMap.incrementBy(USPSAFantasyScoringCategory.stageTop25Percents, 50 / stageCount);
+          var weight = pointsAvailable[FantasyScoringCategory.stageTop25Percents] ?? FantasyScoringCategory.stageTop25Percents.defaultPointsAvailable;
+          scoreMap.incrementBy(FantasyScoringCategory.stageTop25Percents, weight / stageCount);
+          countMap.incrementBy(FantasyScoringCategory.stageTop25Percents, 1);
         }
 
         double timePercentage = lowTime / stageScore.score.finalTime * 100;
         if(stageScore.score.finalTime == lowTime) {
         // if(timePercentage >= 95) {
-          scoreMap.incrementBy(USPSAFantasyScoringCategory.rawTimeWins, 100 / stageCount);
+          var weight = pointsAvailable[FantasyScoringCategory.rawTimeWins] ?? FantasyScoringCategory.rawTimeWins.defaultPointsAvailable;
+          scoreMap.incrementBy(FantasyScoringCategory.rawTimeWins, weight / stageCount);
+          countMap.incrementBy(FantasyScoringCategory.rawTimeWins, 1);
         }
         else if(timePercentage >= 90) {
-          scoreMap.incrementBy(USPSAFantasyScoringCategory.rawTimeTop10Percents, 75 / stageCount);
+          var weight = pointsAvailable[FantasyScoringCategory.rawTimeTop10Percents] ?? FantasyScoringCategory.rawTimeTop10Percents.defaultPointsAvailable;
+          scoreMap.incrementBy(FantasyScoringCategory.rawTimeTop10Percents, weight / stageCount);
+          countMap.incrementBy(FantasyScoringCategory.rawTimeTop10Percents, 1);
         }
         else if(timePercentage >= 75) {
-          scoreMap.incrementBy(USPSAFantasyScoringCategory.rawTimeTop25Percents, 50 / stageCount);
+          var weight = pointsAvailable[FantasyScoringCategory.rawTimeTop25Percents] ?? FantasyScoringCategory.rawTimeTop25Percents.defaultPointsAvailable;
+          scoreMap.incrementBy(FantasyScoringCategory.rawTimeTop25Percents, weight / stageCount);
+          countMap.incrementBy(FantasyScoringCategory.rawTimeTop25Percents, 1);
         }
 
         int stagePoints = _getStagePoints(stageScore.score);
         double accuracyPercentage = stagePoints / highScore * 100;
         if(stagePoints == highScore) {
         //if(accuracyPercentage >= 95) {
-          scoreMap.incrementBy(USPSAFantasyScoringCategory.accuracyWins, 100 / stageCount);
+          var weight = pointsAvailable[FantasyScoringCategory.accuracyWins] ?? FantasyScoringCategory.accuracyWins.defaultPointsAvailable;
+          scoreMap.incrementBy(FantasyScoringCategory.accuracyWins, weight / stageCount);
+          countMap.incrementBy(FantasyScoringCategory.accuracyWins, 1);
         }
         else if(accuracyPercentage >= 90) {
-          scoreMap.incrementBy(USPSAFantasyScoringCategory.accuracyTop10Percents, 75 / stageCount);
+          var weight = pointsAvailable[FantasyScoringCategory.accuracyTop10Percents] ?? FantasyScoringCategory.accuracyTop10Percents.defaultPointsAvailable;
+          scoreMap.incrementBy(FantasyScoringCategory.accuracyTop10Percents, weight / stageCount);
+          countMap.incrementBy(FantasyScoringCategory.accuracyTop10Percents, 1);
         }
         else if(accuracyPercentage >= 75) {
-          scoreMap.incrementBy(USPSAFantasyScoringCategory.accuracyTop25Percents, 50 / stageCount);
+          var weight = pointsAvailable[FantasyScoringCategory.accuracyTop25Percents] ?? FantasyScoringCategory.accuracyTop25Percents.defaultPointsAvailable;
+          scoreMap.incrementBy(FantasyScoringCategory.accuracyTop25Percents, weight / stageCount);
+          countMap.incrementBy(FantasyScoringCategory.accuracyTop25Percents, 1);
         }
 
         for(var hit in stageScore.score.targetEvents.keys) {
           if(hit.matches("M") || hit.matches("NS")) {
             penaltyCount += stageScore.score.targetEvents[hit]!;
+            countMap.incrementBy(FantasyScoringCategory.penalties, 1);
           }
         }
 
@@ -222,19 +262,24 @@ class USPSAFantasyScoringCalculator implements FantasyScoringCalculator<USPSAFan
       }
 
       // Points for penalties.
-      scoreMap[USPSAFantasyScoringCategory.penalties] = -5.0 * penaltyCount;
+      var weight = pointsAvailable[FantasyScoringCategory.penalties] ?? FantasyScoringCategory.penalties.defaultPointsAvailable;
+      scoreMap[FantasyScoringCategory.penalties] = weight * penaltyCount;
+      countMap[FantasyScoringCategory.penalties] = penaltyCount;
 
       double runningScore = scoreMap.values.sum;
 
       if(participationPenalty < 1) {
+        var weight = pointsAvailable[FantasyScoringCategory.divisionParticipationPenalty] ?? FantasyScoringCategory.divisionParticipationPenalty.defaultPointsAvailable;
         var actualScore = runningScore * participationPenalty;
-        scoreMap[USPSAFantasyScoringCategory.divisionParticipationPenalty] = actualScore - runningScore;
+        // To apply a weight, in this case, we want to reduce the difference (i.e. the total penalty) by
+        // the weight.
+        scoreMap[FantasyScoringCategory.divisionParticipationPenalty] = (actualScore - runningScore) * weight;
       }
       else {
-        scoreMap[USPSAFantasyScoringCategory.divisionParticipationPenalty] = 0;
+        scoreMap[FantasyScoringCategory.divisionParticipationPenalty] = 0;
       }
 
-      fantasyScores[shooter] = FantasyScore(scoreMap);
+      fantasyScores[shooter] = FantasyScore(scoreMap, counts: countMap);
     }
   }
 
@@ -255,74 +300,5 @@ class USPSAFantasyScoringCalculator implements FantasyScoringCalculator<USPSAFan
     }
 
     return totalPoints;
-  }
-}
-
-/// USPSA fantasy scoring categories. A full scoring positive category should be worth 100 points.
-enum USPSAFantasyScoringCategory {
-  /// Points equal to finish percentage.
-  finishPercentage,
-
-  // Points for stage wins, top 10%, and top 25% finishes. No double dipping.
-  // If a shooter wins, they aren't eligible for top 10% or top 25% points.
-
-  /// 100/N points per stage win, where N is the number of stages.
-  stageWins,
-  /// 75/N points per stage top 10 finish, where N is the number of stages.
-  stageTop10Percents,
-  /// 50/N points per stage top 25 finish, where N is the number of stages.
-  stageTop25Percents,
-
-  // Points for raw time champs. Same double dipping rules as stage scores.
-
-  /// 100/N points per stage raw time win, where N is the number of stages.
-  rawTimeWins,
-
-  /// 75/N points per stage raw time top 10 finish, where N is the number of stages.
-  rawTimeTop10Percents,
-
-  /// 50/N points per stage raw time top 25 finish, where N is the number of stages.
-  rawTimeTop25Percents,
-
-  // Points for accuracy. Same double dipping rules as stage scores.
-
-  /// 100/N points per stage accuracy win, where N is the number of stages.
-  accuracyWins,
-
-  /// 75/N points per stage accuracy top 10 finish, where N is the number of stages.
-  accuracyTop10Percents,
-
-  /// 50/N points per stage accuracy top 25 finish, where N is the number of stages.
-  accuracyTop25Percents,
-
-  /// -5 points per miss, no-shoot, or procedural.
-  penalties,
-
-  /// A negative number to account for division participation, which is calculated
-  /// as a percentage of the sum of the other components.
-  ///
-  /// If a division is the largest, or if it has at least 25 shooters and at least 1
-  /// GM, plus at least 1 GM per 50 shooters total, it gets no penalty.
-  ///
-  /// Otherwise, it gets a penalty of (sum of other components) * (proportion of smallest
-  /// division eligible for full points).
-  divisionParticipationPenalty;
-
-  @override
-  String toString() {
-    return switch(this) {
-      USPSAFantasyScoringCategory.finishPercentage => "Finish Percentage",
-      USPSAFantasyScoringCategory.stageWins => "Stage Wins",
-      USPSAFantasyScoringCategory.stageTop10Percents => "Stage Top 10%",
-      USPSAFantasyScoringCategory.stageTop25Percents => "Stage Top 25%",
-      USPSAFantasyScoringCategory.rawTimeWins => "Raw Time Wins",
-      USPSAFantasyScoringCategory.rawTimeTop10Percents => "Raw Time Top 10%",
-      USPSAFantasyScoringCategory.rawTimeTop25Percents => "Raw Time Top 25%",
-      USPSAFantasyScoringCategory.accuracyWins => "Accuracy Wins",
-      USPSAFantasyScoringCategory.accuracyTop10Percents => "Accuracy Top 10%",
-      USPSAFantasyScoringCategory.accuracyTop25Percents => "Accuracy Top 25%",
-      USPSAFantasyScoringCategory.penalties => "Penalties",
-      USPSAFantasyScoringCategory.divisionParticipationPenalty => "Division Participation Penalty",
-    };
   }
 }
