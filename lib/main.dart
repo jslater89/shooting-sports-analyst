@@ -18,13 +18,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
-<<<<<<< HEAD
-=======
 import 'package:shooting_sports_analyst/config/encrypted_file_store/encrypted_file_store.dart';
 import 'package:shooting_sports_analyst/config/encrypted_file_store/macos_key_deriver.dart';
 import 'package:shooting_sports_analyst/config/secure_config.dart';
-import 'package:shooting_sports_analyst/config/serialized_config.dart';
->>>>>>> f3b9da7 (Encrypted file storage for frickin' Macs)
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/help/entries/all_helps.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
