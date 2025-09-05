@@ -4,11 +4,24 @@ import 'dart:io';
 
 import 'package:hashlib/hashlib.dart';
 import 'package:hashlib/random.dart';
+import 'package:uuid/uuid.dart';
 
 String deriveMacOsKey() {
-  var keyString = "${Platform.localHostname}-{Platform.environment['USER']}";
-  var key = pbkdf2(utf8.encode(keyString), utf8.encode(_getSalt()));
+  var keyString = "${Platform.localHostname}-${Platform.environment['USER']}-${_getUuid()}";
+  var key = argon2id(utf8.encode(keyString), utf8.encode(_getSalt()), hashLength: 32, security: Argon2Security.good);
   return key.hex();
+}
+
+String _getUuid() {
+  var uuidFile = File("db/efs.uuid");
+  if(!uuidFile.existsSync()) {
+    uuidFile.createSync(recursive: true);
+    var uuid = Uuid().v4();
+    uuidFile.writeAsStringSync(uuid);
+    return uuid;
+  }
+
+  return uuidFile.readAsStringSync();
 }
 
 String _getSalt() {
