@@ -47,7 +47,7 @@ class FantasyScore<T> {
     var buffer = StringBuffer();
 
     for(var category in scoringCategories.entries) {
-      buffer.write("${category.key}: ${category.value.toStringAsFixed(2)}\n");
+      buffer.write("${category.key}: ${category.value.toStringAsFixed(2)}${category.key.isCountable ? " (${counts[category.key]})" : ""}\n");
     }
 
     return buffer.toString().substring(0, buffer.length - 1);

@@ -69,6 +69,7 @@ research/**/output.txt
 config.toml
 ui_config.toml
 db/
+local**
 
 # Things shared with me under NDA that I can't put on Git
 private/
