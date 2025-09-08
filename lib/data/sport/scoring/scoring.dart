@@ -7,11 +7,7 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
-import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
-import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
-import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
-import 'package:shooting_sports_analyst/data/ranking/interface/synchronous_rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_display_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/fantasy_scoring_calculator.dart';
@@ -775,7 +771,7 @@ extension MatchScoresToCSV on List<RelativeMatchScore> {
   }
 }
 
-extension Sorting on List<RelativeMatchScore> {
+extension UiIndependentSorting on List<RelativeMatchScore> {
   void sortByScore({MatchStage? stage}) {
     if(stage != null) {
       this.sort((a, b) {
@@ -1074,54 +1070,6 @@ extension Sorting on List<RelativeMatchScore> {
 
       var aRatingValue = aRatingWrapped.ratingForEvent(match, stage);
       var bRatingValue = bRatingWrapped.ratingForEvent(match, stage);
-
-      return bRatingValue.compareTo(aRatingValue);
-    });
-  }
-
-  void sortByLocalRating({required DbRatingProject ratings, ChangeNotifierRatingDataSource? ratingCache, required RatingDisplayMode displayMode, required ShootingMatch match, MatchStage? stage}) {
-    var db = AnalystDatabase();
-    this.sort((a, b) {
-      DbShooterRating? aRating, bRating;
-      if(ratingCache != null) {
-        aRating = ratingCache.lookupRatingByMatchEntry(a.shooter);
-        bRating = ratingCache.lookupRatingByMatchEntry(b.shooter);
-      }
-
-      if(aRating == null || bRating == null) {
-        var aGroupRes = ratings.groupForDivisionSync(a.shooter.division);
-        var bGroupRes = ratings.groupForDivisionSync(b.shooter.division);
-        if(aGroupRes.isErr() || bGroupRes.isErr()) return b.ratio.compareTo(a.ratio);
-
-        var aGroup = aGroupRes.unwrap();
-        var bGroup = bGroupRes.unwrap();
-
-        aRating = db.maybeKnownShooterSync(project: ratings, group: aGroup!, memberNumber: a.shooter.memberNumber);
-        bRating = db.maybeKnownShooterSync(project: ratings, group: bGroup!, memberNumber: b.shooter.memberNumber);
-
-        if(ratingCache != null) {
-          if(aRating != null) {
-            ratingCache.cacheRating(a.shooter, aRating);
-          }
-          if(bRating != null) {
-            ratingCache.cacheRating(b.shooter, bRating);
-          }
-        }
-      }
-
-      if(aRating == null || bRating == null) return b.ratio.compareTo(a.ratio);
-
-      var settings = ratings.getSettingsSync();
-      var aRatingWrapped = settings.algorithm.wrapDbRating(aRating);
-      var bRatingWrapped = settings.algorithm.wrapDbRating(bRating);
-
-      var aRatingValue = aRatingWrapped.ratingForEvent(match, stage, beforeMatch: displayMode == RatingDisplayMode.preMatch);
-      var bRatingValue = bRatingWrapped.ratingForEvent(match, stage, beforeMatch: displayMode == RatingDisplayMode.preMatch);
-
-      if(displayMode == RatingDisplayMode.change) {
-        aRatingValue = aRatingValue - aRatingWrapped.ratingForEvent(match, stage, beforeMatch: true);
-        bRatingValue = bRatingValue - bRatingWrapped.ratingForEvent(match, stage, beforeMatch: true);
-      }
 
       return bRatingValue.compareTo(aRatingValue);
     });

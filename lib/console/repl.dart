@@ -68,23 +68,41 @@ Future<ExecutedCommand?> _renderMenu(
     var argumentValues = <MenuArgumentValue>[];
     for(var i = 0; i < command.arguments.length; i++) {
       var argument = command.arguments[i];
-      if(argumentStrings.isEmpty) {
+      if(argumentStrings.isEmpty && !argument.hasDefaultValue) {
         var label = "Argument count mismatch: ${command.key} requires ${command.arguments.length} arguments, but got ${parts.length - 1}";
         var errorString = "\n${MenuCommand.getUsage(console, command)}";
         return ExecutedCommand(command: null, arguments: [
           MenuArgumentValue<String>(argument: StringMenuArgument(label: label), value: errorString)
         ]);
       }
-      var string = argumentStrings.removeAt(0);
-      var value = argument.parseInput(string);
-      if(value == null) {
-        console.write("Invalid argument: $string\n");
+      String? argString;
+      if(argumentStrings.isNotEmpty) {
+        argString = argumentStrings.removeAt(0);
+      }
+      MenuArgumentValue? value;
+      if(argString == null) {
+        value = argument.getDefaultValue();
+      }
+      else {
+        value = argument.parseInput(argString);
+      }
+      if(value == null && argString != null) {
+        console.write("Invalid argument: $argString\n");
         var errorString = "\n${MenuCommand.getUsage(console, command)}";
         return ExecutedCommand(command: null, arguments: [
           MenuArgumentValue<String>(argument: StringMenuArgument(label: "Invalid argument"), value: errorString)
         ]);
       }
-      argumentValues.add(value);
+      else if(value == null && argString == null) {
+        console.write("Missing argument: ${argument.label}\n");
+        var errorString = "\n${MenuCommand.getUsage(console, command)}";
+        return ExecutedCommand(command: null, arguments: [
+          MenuArgumentValue<String>(argument: StringMenuArgument(label: "Missing argument"), value: errorString)
+        ]);
+      }
+      else if(value != null) {
+        argumentValues.add(value);
+      }
     }
     return ExecutedCommand(command: command, arguments: argumentValues);
   }
@@ -213,10 +231,16 @@ Future<void> notYetImplementedExecutor(Console console, List<MenuArgumentValue> 
 abstract class MenuArgument<T> {
   final String label;
   final bool required;
+  final T? defaultValue;
+  final T Function()? defaultValueFactory;
   final String? description;
   MenuArgumentValue<T>? parseInput(String value);
+  T? getDefault() => defaultValue ?? defaultValueFactory?.call();
+  MenuArgumentValue<T>? getDefaultValue() => getDefault() != null ? MenuArgumentValue(argument: this, value: getDefault()!) : null;
 
-  const MenuArgument({required this.required, required this.label, this.description});
+  bool get hasDefaultValue => defaultValue != null || defaultValueFactory != null;
+
+  const MenuArgument({required this.required, required this.label, this.description, this.defaultValue, this.defaultValueFactory});
 }
 
 /// A string menu argument, which performs no additional validation
@@ -224,7 +248,7 @@ class StringMenuArgument extends MenuArgument<String> {
   @override
   MenuArgumentValue<String>? parseInput(String value) => MenuArgumentValue(argument: this, value: value);
 
-  const StringMenuArgument({required super.label, super.required = false, super.description});
+  const StringMenuArgument({required super.label, super.required = false, super.description, super.defaultValue, super.defaultValueFactory});
 }
 
 class IntMenuArgument extends MenuArgument<int> {
@@ -237,13 +261,16 @@ class IntMenuArgument extends MenuArgument<int> {
     return MenuArgumentValue(argument: this, value: intValue);
   }
 
-  const IntMenuArgument({required super.label, super.required = false, super.description});
+  const IntMenuArgument({required super.label, super.required = false, super.description, super.defaultValue, super.defaultValueFactory});
 }
 
 
 class MenuArgumentValue<T> {
   final MenuArgument<T> argument;
   final T value;
+
+  bool canGetAs<T>() => value is T;
+  T getAs<T>() => value as T;
 
   const MenuArgumentValue({required this.argument, required this.value});
 }
