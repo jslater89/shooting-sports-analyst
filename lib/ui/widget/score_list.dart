@@ -172,6 +172,9 @@ class _ScoreListState extends State<ScoreList> {
                 Expanded(flex: 3, child: Text("Name")),
                 if(widget.ratings != null) Consumer<ScoreDisplaySettingsModel>(
                     builder: (context, model, _) {
+                      if(model.value.ratingMode == RatingDisplayMode.none) {
+                        return Container();
+                      }
                       var message;
                       switch(model.value.ratingMode) {
                         case RatingDisplayMode.preMatch:
@@ -182,6 +185,9 @@ class _ScoreListState extends State<ScoreList> {
                           break;
                         case RatingDisplayMode.change:
                           message = "The shooter's change in rating at this match.";
+                          break;
+                        case RatingDisplayMode.none:
+                          message = "(n/a)";
                           break;
                       }
                       return Expanded(flex: 1, child: Tooltip(
@@ -336,6 +342,9 @@ class _ScoreListState extends State<ScoreList> {
               Expanded(flex: 3, child: Text(score.shooter.getName(dnf: score.isDnf))),
               if(widget.ratings != null) Consumer<ScoreDisplaySettingsModel>(
                 builder: (context, model, _) {
+                  if(model.value.ratingMode == RatingDisplayMode.none) {
+                    return Container();
+                  }
                   String text = "n/a";
 
                   if(shooterRating != null) {
@@ -353,6 +362,9 @@ class _ScoreListState extends State<ScoreList> {
                       case RatingDisplayMode.change:
                         var r = rating.changeForEvent(widget.match!, null);
                         if(r != null) text = r.toStringAsFixed(1);
+                        break;
+                      case RatingDisplayMode.none:
+                        text = "(n/a)";
                         break;
                     }
                   }
@@ -429,6 +441,9 @@ class _ScoreListState extends State<ScoreList> {
                 Expanded(flex: 3, child: Text("Name")),
                 if(widget.ratings != null) Consumer<ScoreDisplaySettingsModel>(
                   builder: (context, model, _) {
+                    if(model.value.ratingMode == RatingDisplayMode.none) {
+                      return Container();
+                    }
                     var message;
                     switch(model.value.ratingMode) {
                       case RatingDisplayMode.preMatch:
@@ -439,6 +454,9 @@ class _ScoreListState extends State<ScoreList> {
                         break;
                       case RatingDisplayMode.change:
                         message = "The shooter's change in rating on this stage.";
+                        break;
+                      case RatingDisplayMode.none:
+                        message = "(n/a)";
                         break;
                     }
                     return Expanded(flex: 1, child: Tooltip(
@@ -540,8 +558,12 @@ class _ScoreListState extends State<ScoreList> {
               Expanded(flex: 1, child: Text("${widget.baseScores.indexOf(matchScore) + 1}")),
               Expanded(flex: 1, child: Text("${stageScore?.place}")),
               Expanded(flex: 3, child: Text(matchScore.shooter.getName())),
+              // TODO: lift this up to build the whole row, so we don't need to build a spurious Container
               if(widget.ratings != null) Consumer<ScoreDisplaySettingsModel>(
                   builder: (context, model, _) {
+                    if(model.value.ratingMode == RatingDisplayMode.none) {
+                      return Container();
+                    }
                     String text = "n/a";
 
                     if(shooterRating != null) {
@@ -559,6 +581,9 @@ class _ScoreListState extends State<ScoreList> {
                         case RatingDisplayMode.change:
                           var r = rating.changeForEvent(widget.match!, stage);
                           if(r != null) text = r.toStringAsFixed(1);
+                          break;
+                        case RatingDisplayMode.none:
+                          text = "(n/a)";
                           break;
                       }
                     }
