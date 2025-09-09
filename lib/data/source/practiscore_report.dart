@@ -391,6 +391,11 @@ class PractiscoreHitFactorReportParser extends MatchSource {
         });
 
         if(authResponse.statusCode < 400) {
+          // Detect login errors, since PS evidently always 302s on login requests, either back to login
+          // for failures or to the dashboard for success
+          if(authResponse.body.contains("<title>Redirecting to https://practiscore.com/login</title>")) {
+            return false;
+          }
           var cookies = authResponse.headers["set-cookie"];
           if(cookies != null) {
             try {
@@ -401,6 +406,10 @@ class PractiscoreHitFactorReportParser extends MatchSource {
             catch(e, st) {
               _log.e("Error parsing cookies", error: e, stackTrace: st);
             }
+          }
+          else {
+            _log.e("No cookies set in authentication response");
+            hasValidCredentials = false;
           }
         }
         else {
