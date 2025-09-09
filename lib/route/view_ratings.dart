@@ -741,9 +741,9 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       if(registrationResult.unwrapErr() == RegistrationError.noCredentials) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("No credentials found"),
+            content: Text("Missing or invalid credentials"),
             action: SnackBarAction(
-              label: "SET CREDENTIALS",
+              label: "EDIT CREDENTIALS",
               onPressed: () {
                 showDialog(context: context, builder: (context) {
                   return SourceCredentialsManager();
