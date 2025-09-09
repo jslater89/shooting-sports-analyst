@@ -7,6 +7,7 @@ import 'package:shooting_sports_analyst/data/database/db_statistics.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/server/fantasy/cli/calculate_annual_stats.dart';
 import 'package:shooting_sports_analyst/util.dart';
 import 'package:shooting_sports_analyst/version.dart';
 
@@ -28,6 +29,10 @@ Future<void> main() async {
   var context = await _database.getRatingProjectById(config.ratingsContextProjectId ?? -1);
   if(context != null) {
     _ratingContext = context;
+    console.print("Using ratings context: ${context.name}");
+  }
+  else if(config.ratingsContextProjectId != null) {
+    console.print("No ratings context found for id ${config.ratingsContextProjectId}");
   }
 
   await _mainMenuLoop(console);
@@ -70,8 +75,16 @@ Future<void> _mainMenuLoop(Console console) async {
   );
 }
 
+int _getRatingContextId() => _ratingContext?.id ?? -1;
 enum _FantasyMenuCommand implements MenuCommand {
   usageStats("1", "Usage Stats", execute: notYetImplementedExecutor),
+  calculateStatsForYear("2", "Calculate Stats for Year",
+    execute: calculateAnnualStats,
+    arguments: [
+      IntMenuArgument(label: "Year", required: true),
+      IntMenuArgument(label: "Ratings Context", defaultValueFactory: _getRatingContextId)
+    ]
+  ),
   back("B", "Back");
 
   final String key;
@@ -90,6 +103,8 @@ Future<void> _fantasyMenuLoop(Console console) async {
     commandSelected: (command) async {
       switch(command.command) {
         case _FantasyMenuCommand.usageStats:
+          return true;
+        case _FantasyMenuCommand.calculateStatsForYear:
           return true;
         case _FantasyMenuCommand.back:
           return false;
@@ -175,6 +190,9 @@ Future<void> _setRatingContext(Console console, List<MenuArgumentValue> argument
     console.write("Project not found\n");
     return;
   }
-  // _ratingContext = project;
+  _ratingContext = project;
+  var config = ConfigLoader().config;
+  config.ratingsContextProjectId = projectId;
+  await ConfigLoader().save();
   console.write("Rating context set to ${project.name}\n");
 }
