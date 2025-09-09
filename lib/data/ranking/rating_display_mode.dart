@@ -2,7 +2,8 @@
 enum RatingDisplayMode {
   preMatch,
   postMatch,
-  change;
+  change,
+  none;
 
   String get uiLabel {
     switch(this) {
@@ -13,6 +14,8 @@ enum RatingDisplayMode {
         return "Post-match";
       case RatingDisplayMode.change:
         return "Change";
+      case RatingDisplayMode.none:
+        return "None";
     }
   }
 }
