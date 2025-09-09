@@ -93,6 +93,7 @@ class _ResultPageState extends State<ResultPage> {
   /// sport won't change during a refresh.
   Sport get sport => widget.canonicalMatch.sport;
   late FilterSet _filters;
+  Map<MatchEntry, FantasyStats>? _fantasyStats;
   Map<MatchEntry, FantasyScore>? _fantasyScores;
   List<RelativeMatchScore> _baseScores = [];
   List<RelativeMatchScore> _searchedScores = [];
@@ -242,7 +243,8 @@ class _ResultPageState extends State<ResultPage> {
       cachedRatings = (await InMemoryCachedRatingSource()..initFrom(widget.ratings!, ratingsToCache: filteredShooters));
     }
     if(_settings.value.fantasyPointsMode == FantasyPointsMode.currentFilters) {
-      _fantasyScores = _currentMatch.sport.fantasyScoresProvider?.calculateFantasyScores(_currentMatch, byDivision: false, entries: filteredShooters);
+      _fantasyStats = _currentMatch.sport.fantasyScoresProvider?.calculateFantasyStats(_currentMatch, byDivision: false, entries: filteredShooters);
+      _fantasyScores = _currentMatch.sport.fantasyScoresProvider?.calculateFantasyScores(stats: _fantasyStats!, pointsAvailable: FantasyScoringCategory.defaultCategoryPoints);
     }
     setState(() {
       _baseScores = _currentMatch.getScores(
@@ -406,12 +408,14 @@ class _ResultPageState extends State<ResultPage> {
     if(fantasyScoringCalculator != null && _settings.value.fantasyPointsMode != FantasyPointsMode.off) {
       if(_settings.value.fantasyPointsMode == FantasyPointsMode.byDivision) {
         setState(() {
-          _fantasyScores = fantasyScoringCalculator.calculateFantasyScores(_currentMatch);
+          _fantasyStats = fantasyScoringCalculator.calculateFantasyStats(_currentMatch, byDivision: true);
+          _fantasyScores = fantasyScoringCalculator.calculateFantasyScores(stats: _fantasyStats!, pointsAvailable: FantasyScoringCategory.defaultCategoryPoints);
         });
       }
       else if(_settings.value.fantasyPointsMode == FantasyPointsMode.currentFilters) {
         setState(() {
-          _fantasyScores = fantasyScoringCalculator.calculateFantasyScores(_currentMatch, byDivision: false, entries: _filteredShooters);
+          _fantasyStats = fantasyScoringCalculator.calculateFantasyStats(_currentMatch, byDivision: false, entries: _filteredShooters);
+          _fantasyScores = fantasyScoringCalculator.calculateFantasyScores(stats: _fantasyStats!, pointsAvailable: FantasyScoringCategory.defaultCategoryPoints);
         });
       }
 

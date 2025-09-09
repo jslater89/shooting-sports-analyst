@@ -18,33 +18,40 @@ import 'package:shooting_sports_analyst/data/sport/model.dart';
 abstract class FantasyScoringCalculator {
   const FantasyScoringCalculator();
 
-  /// Calculate fantasy scores for a match.
+  /// Calculate fantasy scores for a match, given a map of [stats] and a map of [pointsAvailable]
+  /// per category.
   ///
-  /// If [byDivision] is true (the default behavior), scores are calculated
-  /// with reference to the division of the match entry—e.g. in the USPSA
-  /// calculator, a Limited shooter will only compete for percent finish, raw time
-  /// wins, and accuracy wins with other Limited shooters. If [byDivision] is false,
-  /// every competitor included in the calculation will be scored together.
-  ///
-  /// If [entries] is provided, scores are calculated with respect to those entries
-  /// only. By providing [entries] and setting [byDivision] to false, it is possible
-  /// to calculate fantasy scores for an arbitrary subset of competitors in a match.
-  Map<MatchEntry, FantasyScore> calculateFantasyScores(ShootingMatch match, {
-    bool byDivision = true,
-    List<MatchEntry>? entries,
-  });
-
-  /// The scoring categories that are used by this calculator.
-  List<FantasyScoringCategory> get scoringCategories => FantasyScoringCategory.values;
-
-  /// The points available for each scoring category. Defaults to 100 for finish percentage
+  /// [pointsAvailable] weights scores. Defaults to 100 for finish percentage
   /// and stage/accuracy/raw time wins, 75 for top 10% finishes, 50 for top 25% finishes.
   ///
   /// [FantasyScoringCategory.penalties] and [FantasyScoringCategory.divisionParticipationPenalty]
   /// are special cases. For penalties, the value in this map is the points deducted per penalty.
   /// For division participation penalty, the value in this map is the weight applied to the total
   /// penalty (between 0 for off and 1 for full strength).
-  Map<FantasyScoringCategory, double> get pointsAvailable;
+  Map<MatchEntry, FantasyScore> calculateFantasyScores({
+    required Map<MatchEntry, FantasyStats> stats,
+    Map<FantasyScoringCategory, double> pointsAvailable = FantasyScoringCategory.defaultCategoryPoints,
+  });
+
+  /// Calculate the fantasy stats for a match, given a shooting match and some informatino
+  /// about which competitor or map of competitors to include.
+  ///
+  /// If [byDivision] is true (the default behavior), stats are calculated
+  /// with reference to the division of the match entry—e.g. in the USPSA
+  /// calculator, a Limited shooter will only compete for percent finish, raw time
+  /// wins, and accuracy wins with other Limited shooters. If [byDivision] is false,
+  /// every competitor included in the calculation will be scored together.
+  ///
+  /// If [entries] is provided, stats are calculated with respect to those entries
+  /// only. By providing [entries] and setting [byDivision] to false, it is possible
+  /// to calculate fantasy stats for an arbitrary subset of competitors in a match.
+  Map<MatchEntry, FantasyStats> calculateFantasyStats(ShootingMatch match, {
+    bool byDivision = true,
+    List<MatchEntry>? entries,
+  });
+
+  /// The scoring categories that are used by this calculator.
+  List<FantasyScoringCategory> get scoringCategories => FantasyScoringCategory.values;
 }
 
 /// A score for a competitor in a fantasy league.
@@ -95,6 +102,17 @@ class FantasyScore {
     }
     return score;
   }
+}
+
+/// Fantasy stats for a shooter at a given match, containing sufficient information to rehydrate a [FantasyScore]
+/// with this object and a map of [pointsAvailable] weights.
+class FantasyStats {
+  final Map<FantasyScoringCategory, int> integerStats = {};
+  final Map<FantasyScoringCategory, double> doubleStats = {};
+
+  final int stageCount;
+
+  FantasyStats({required this.stageCount});
 }
 
 enum FantasyScoringCategory {
@@ -166,21 +184,6 @@ enum FantasyScoringCategory {
     _ => false,
   };
 
-  double get defaultPointsAvailable => switch(this) {
-    FantasyScoringCategory.finishPercentage => 100,
-    FantasyScoringCategory.stageWins => 100,
-    FantasyScoringCategory.stageTop10Percents => 75,
-    FantasyScoringCategory.stageTop25Percents => 50,
-    FantasyScoringCategory.rawTimeWins => 100,
-    FantasyScoringCategory.rawTimeTop10Percents => 75,
-    FantasyScoringCategory.rawTimeTop25Percents => 50,
-    FantasyScoringCategory.accuracyWins => 100,
-    FantasyScoringCategory.accuracyTop10Percents => 75,
-    FantasyScoringCategory.accuracyTop25Percents => 50,
-    FantasyScoringCategory.penalties => -5,
-    FantasyScoringCategory.divisionParticipationPenalty => 1,
-  };
-
   @override
   String toString() {
     return switch(this) {
@@ -198,4 +201,21 @@ enum FantasyScoringCategory {
       FantasyScoringCategory.divisionParticipationPenalty => "Division Participation Penalty",
     };
   }
+
+  double get defaultPointsAvailable => defaultCategoryPoints[this]!;
+
+  static const Map<FantasyScoringCategory, double> defaultCategoryPoints = {
+    FantasyScoringCategory.finishPercentage: 100,
+    FantasyScoringCategory.stageWins: 100,
+    FantasyScoringCategory.stageTop10Percents: 75,
+    FantasyScoringCategory.stageTop25Percents: 50,
+    FantasyScoringCategory.rawTimeWins: 100,
+    FantasyScoringCategory.rawTimeTop10Percents: 75,
+    FantasyScoringCategory.rawTimeTop25Percents: 50,
+    FantasyScoringCategory.accuracyWins: 100,
+    FantasyScoringCategory.accuracyTop10Percents: 75,
+    FantasyScoringCategory.accuracyTop25Percents: 50,
+    FantasyScoringCategory.penalties: -5,
+    FantasyScoringCategory.divisionParticipationPenalty: 1,
+  };
 }
