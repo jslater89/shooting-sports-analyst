@@ -11,6 +11,7 @@ import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_context.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/database/match/widget/match_db_list_view_search.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
@@ -130,7 +131,7 @@ class _MatchDatabaseListViewState extends State<MatchDatabaseListView> {
     return Container(
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(),
+          bottom: BorderSide(color: ThemeColors.onBackgroundColor(context)),
         )
       ),
       child: ScoreRow(
