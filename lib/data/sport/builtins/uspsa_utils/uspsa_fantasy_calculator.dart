@@ -16,33 +16,27 @@ import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 class USPSAFantasyScoringCalculator extends FantasyScoringCalculator {
-  const USPSAFantasyScoringCalculator({Map<FantasyScoringCategory, double>? pointsAvailable}) : _pointsAvailable = pointsAvailable;
+  const USPSAFantasyScoringCalculator();
 
-  final Map<FantasyScoringCategory, double>? _pointsAvailable;
-
+  // TODO: it may be possible to lift some of this to the base class
+  // But some of it is still USPSA-specific, participation penalty in particular
   @override
-  Map<FantasyScoringCategory, double> get pointsAvailable => _pointsAvailable ?? {
-    FantasyScoringCategory.finishPercentage: 100,
-    FantasyScoringCategory.stageWins: 100,
-    FantasyScoringCategory.stageTop10Percents: 75,
-    FantasyScoringCategory.stageTop25Percents: 50,
-    FantasyScoringCategory.rawTimeWins: 100,
-    FantasyScoringCategory.rawTimeTop10Percents: 75,
-    FantasyScoringCategory.rawTimeTop25Percents: 50,
-    FantasyScoringCategory.accuracyWins: 100,
-    FantasyScoringCategory.accuracyTop10Percents: 75,
-    FantasyScoringCategory.accuracyTop25Percents: 50,
-    FantasyScoringCategory.penalties: -5,
-    FantasyScoringCategory.divisionParticipationPenalty: 1,
-  };
-
-  @override
-  Map<MatchEntry, FantasyScore> calculateFantasyScores(ShootingMatch match, {
+  Map<MatchEntry, FantasyStats> calculateFantasyStats(ShootingMatch match, {
     bool byDivision = true,
     List<MatchEntry>? entries,
   }) {
+    Map<MatchEntry, FantasyStats> fantasyStats = {};
 
-    // Calculate participation penalty ratios, based on the rules in [USPSAFantasyScoringCategory.divisionParticipationPenalty].
+    // Calculate participation penalty ratios.
+    //
+    // A division gets full points if it has at least 25 shooters and at least 1 GM,
+    // is bigger than any division with at least 25 shooters and at least 1 GM,
+    // and has at least 1 GM per 50 shooters. If no division is otherwise eligible,
+    // the largest division is eligible for full points, and all others receive
+    // the participation penalty.
+    //
+    // Otherwise, it gets a penalty of (sum of other components) * (proportion of smallest
+    // division eligible for full points).
     Map<Division, double> participationPenaltyRatios = {};
     Map<Division, bool> eligible = {};
     Map<Division, int> shooterCounts = {};
@@ -83,7 +77,6 @@ class USPSAFantasyScoringCalculator extends FantasyScoringCalculator {
       }
     }
 
-    Map<MatchEntry, FantasyScore> fantasyScores = {};
     if(byDivision) {
       for(var division in match.sport.divisions.values) {
         if(eligible[division] == true) {
@@ -106,7 +99,7 @@ class USPSAFantasyScoringCalculator extends FantasyScoringCalculator {
           match: match,
           scores: scores,
           participationPenalty: participationPenalty,
-          fantasyScores: fantasyScores,
+          fantasyStats: fantasyStats,
         );
       }
     }
@@ -126,21 +119,21 @@ class USPSAFantasyScoringCalculator extends FantasyScoringCalculator {
         match: match,
         scores: scores,
         participationPenalty: participationPenalty,
-        fantasyScores: fantasyScores,
+        fantasyStats: fantasyStats,
       );
     }
     else {
       throw ArgumentError("byDivision must be true or entries must be provided");
     }
 
-    return fantasyScores;
+    return fantasyStats;
   }
 
   void _calculate({
     required ShootingMatch match,
     required Map<MatchEntry, RelativeMatchScore> scores,
     required double participationPenalty,
-    required Map<MatchEntry, FantasyScore> fantasyScores,
+    required Map<MatchEntry, FantasyStats> fantasyStats,
   }) {
     Map<MatchStage, double> lowTimes = {};
     Map<MatchStage, int> highPoints = {};
@@ -173,6 +166,8 @@ class USPSAFantasyScoringCalculator extends FantasyScoringCalculator {
     }
 
     for(var shooter in scores.keys) {
+      var stats = FantasyStats(stageCount: stageCount);
+
       var scoreMap = <FantasyScoringCategory, double>{};
       var countMap = <FantasyScoringCategory, int>{};
       for(var category in FantasyScoringCategory.values) {
@@ -185,8 +180,7 @@ class USPSAFantasyScoringCalculator extends FantasyScoringCalculator {
       int penaltyCount = 0;
 
       // Points for finish percentage.
-      var finishPointsAvailable = pointsAvailable[FantasyScoringCategory.finishPercentage] ?? FantasyScoringCategory.finishPercentage.defaultPointsAvailable;
-      scoreMap[FantasyScoringCategory.finishPercentage] = score.ratio * finishPointsAvailable;
+      stats.doubleStats[FantasyScoringCategory.finishPercentage] = score.ratio;
 
       for(var stage in match.stages) {
         var stageScore = score.stageScores[stage];
@@ -199,87 +193,63 @@ class USPSAFantasyScoringCalculator extends FantasyScoringCalculator {
         // Points for stage wins, top 10%, and top 25%.
         if(stageScore.place == 1) {
         // if(stageScore.percentage >= 95) {
-          var weight = pointsAvailable[FantasyScoringCategory.stageWins] ?? FantasyScoringCategory.stageWins.defaultPointsAvailable;
-          scoreMap.incrementBy(FantasyScoringCategory.stageWins, weight / stageCount);
-          countMap.incrementBy(FantasyScoringCategory.stageWins, 1);
+          stats.integerStats.increment(FantasyScoringCategory.stageWins);
         }
         else if(stageScore.percentage >= 90) {
-          var weight = pointsAvailable[FantasyScoringCategory.stageTop10Percents] ?? FantasyScoringCategory.stageTop10Percents.defaultPointsAvailable;
-          scoreMap.incrementBy(FantasyScoringCategory.stageTop10Percents, weight / stageCount);
-          countMap.incrementBy(FantasyScoringCategory.stageTop10Percents, 1);
+          stats.integerStats.increment(FantasyScoringCategory.stageTop10Percents);
         }
         else if(stageScore.percentage >= 75) {
-          var weight = pointsAvailable[FantasyScoringCategory.stageTop25Percents] ?? FantasyScoringCategory.stageTop25Percents.defaultPointsAvailable;
-          scoreMap.incrementBy(FantasyScoringCategory.stageTop25Percents, weight / stageCount);
-          countMap.incrementBy(FantasyScoringCategory.stageTop25Percents, 1);
+          stats.integerStats.increment(FantasyScoringCategory.stageTop25Percents);
         }
 
         double timePercentage = lowTime / stageScore.score.finalTime * 100;
         if(stageScore.score.finalTime == lowTime) {
         // if(timePercentage >= 95) {
-          var weight = pointsAvailable[FantasyScoringCategory.rawTimeWins] ?? FantasyScoringCategory.rawTimeWins.defaultPointsAvailable;
-          scoreMap.incrementBy(FantasyScoringCategory.rawTimeWins, weight / stageCount);
-          countMap.incrementBy(FantasyScoringCategory.rawTimeWins, 1);
+          stats.integerStats.increment(FantasyScoringCategory.rawTimeWins);
         }
         else if(timePercentage >= 90) {
-          var weight = pointsAvailable[FantasyScoringCategory.rawTimeTop10Percents] ?? FantasyScoringCategory.rawTimeTop10Percents.defaultPointsAvailable;
-          scoreMap.incrementBy(FantasyScoringCategory.rawTimeTop10Percents, weight / stageCount);
-          countMap.incrementBy(FantasyScoringCategory.rawTimeTop10Percents, 1);
+          stats.integerStats.increment(FantasyScoringCategory.rawTimeTop10Percents);
         }
         else if(timePercentage >= 75) {
-          var weight = pointsAvailable[FantasyScoringCategory.rawTimeTop25Percents] ?? FantasyScoringCategory.rawTimeTop25Percents.defaultPointsAvailable;
-          scoreMap.incrementBy(FantasyScoringCategory.rawTimeTop25Percents, weight / stageCount);
-          countMap.incrementBy(FantasyScoringCategory.rawTimeTop25Percents, 1);
+          stats.integerStats.increment(FantasyScoringCategory.rawTimeTop25Percents);
         }
 
         int stagePoints = _getStagePoints(stageScore.score);
         double accuracyPercentage = stagePoints / highScore * 100;
         if(stagePoints == highScore) {
         //if(accuracyPercentage >= 95) {
-          var weight = pointsAvailable[FantasyScoringCategory.accuracyWins] ?? FantasyScoringCategory.accuracyWins.defaultPointsAvailable;
-          scoreMap.incrementBy(FantasyScoringCategory.accuracyWins, weight / stageCount);
-          countMap.incrementBy(FantasyScoringCategory.accuracyWins, 1);
+          stats.integerStats.increment(FantasyScoringCategory.accuracyWins);
         }
         else if(accuracyPercentage >= 90) {
-          var weight = pointsAvailable[FantasyScoringCategory.accuracyTop10Percents] ?? FantasyScoringCategory.accuracyTop10Percents.defaultPointsAvailable;
-          scoreMap.incrementBy(FantasyScoringCategory.accuracyTop10Percents, weight / stageCount);
-          countMap.incrementBy(FantasyScoringCategory.accuracyTop10Percents, 1);
+          stats.integerStats.increment(FantasyScoringCategory.accuracyTop10Percents);
         }
         else if(accuracyPercentage >= 75) {
-          var weight = pointsAvailable[FantasyScoringCategory.accuracyTop25Percents] ?? FantasyScoringCategory.accuracyTop25Percents.defaultPointsAvailable;
-          scoreMap.incrementBy(FantasyScoringCategory.accuracyTop25Percents, weight / stageCount);
-          countMap.incrementBy(FantasyScoringCategory.accuracyTop25Percents, 1);
+          stats.integerStats.increment(FantasyScoringCategory.accuracyTop25Percents);
         }
 
         for(var hit in stageScore.score.targetEvents.keys) {
           if(hit.matches("M") || hit.matches("NS")) {
-            penaltyCount += stageScore.score.targetEvents[hit]!;
-            countMap.incrementBy(FantasyScoringCategory.penalties, 1);
+            var count = stageScore.score.targetEvents[hit]!;
+            if(count > 0) {
+              penaltyCount += count;
+            }
           }
         }
 
-        penaltyCount += stageScore.score.penaltyEvents.values.sum;
+        penaltyCount += stageScore.score.penaltyEventCount;
       }
 
-      // Points for penalties.
-      var weight = pointsAvailable[FantasyScoringCategory.penalties] ?? FantasyScoringCategory.penalties.defaultPointsAvailable;
-      scoreMap[FantasyScoringCategory.penalties] = weight * penaltyCount;
-      countMap[FantasyScoringCategory.penalties] = penaltyCount;
-
-      double runningScore = scoreMap.values.sum;
+      // Points for procedurals/other non-hit penalties.
+      stats.integerStats.incrementBy(FantasyScoringCategory.penalties, penaltyCount);
 
       if(participationPenalty < 1) {
-        var weight = pointsAvailable[FantasyScoringCategory.divisionParticipationPenalty] ?? FantasyScoringCategory.divisionParticipationPenalty.defaultPointsAvailable;
-        var actualScore = runningScore * participationPenalty;
-        // To apply a weight, in this case, we want to reduce the difference (i.e. the total penalty) by
-        // the weight.
-        scoreMap[FantasyScoringCategory.divisionParticipationPenalty] = (actualScore - runningScore) * weight;
+        stats.doubleStats[FantasyScoringCategory.divisionParticipationPenalty] = participationPenalty;
       }
       else {
-        scoreMap[FantasyScoringCategory.divisionParticipationPenalty] = 0;
+        stats.doubleStats[FantasyScoringCategory.divisionParticipationPenalty] = 1;
       }
 
-      fantasyScores[shooter] = FantasyScore(scoreMap, counts: countMap);
+      fantasyStats[shooter] = stats;
     }
   }
 
@@ -287,5 +257,100 @@ class USPSAFantasyScoringCalculator extends FantasyScoringCalculator {
   /// scoring.
   int _getStagePoints(RawScore score) {
     return score.getTotalPoints(countPenalties: false, includeTargetPenalties: false);
+  }
+
+  @override
+  Map<MatchEntry, FantasyScore> calculateFantasyScores({
+    required Map<MatchEntry, FantasyStats> stats,
+    Map<FantasyScoringCategory, double> pointsAvailable = FantasyScoringCategory.defaultCategoryPoints,
+  }) {
+    Map<MatchEntry, FantasyScore> fantasyScores = {};
+
+    for(var entry in stats.keys) {
+      var fantasyStats = stats[entry]!;
+      Map<FantasyScoringCategory, double> scoreMap = {};
+      Map<FantasyScoringCategory, int> countMap = {};
+
+      // Stage percentage
+      var finishPoints = pointsAvailable[FantasyScoringCategory.finishPercentage]!;
+      scoreMap[FantasyScoringCategory.finishPercentage] = fantasyStats.doubleStats[FantasyScoringCategory.finishPercentage]! * finishPoints;
+      countMap[FantasyScoringCategory.finishPercentage] = 1;
+
+      // Stage wins
+      var stageWinPoints = pointsAvailable[FantasyScoringCategory.stageWins]!;
+      int count = fantasyStats.integerStats[FantasyScoringCategory.stageWins] ?? 0;
+      scoreMap[FantasyScoringCategory.stageWins] = (stageWinPoints / fantasyStats.stageCount) * count;
+      countMap[FantasyScoringCategory.stageWins] = count;
+
+      // Stage top 10%
+      var stageTop10Points = pointsAvailable[FantasyScoringCategory.stageTop10Percents]!;
+      count = fantasyStats.integerStats[FantasyScoringCategory.stageTop10Percents] ?? 0;
+      scoreMap[FantasyScoringCategory.stageTop10Percents] = (stageTop10Points / fantasyStats.stageCount) * count;
+      countMap[FantasyScoringCategory.stageTop10Percents] = count;
+
+      // Stage top 25%
+      var stageTop25Points = pointsAvailable[FantasyScoringCategory.stageTop25Percents]!;
+      count = fantasyStats.integerStats[FantasyScoringCategory.stageTop25Percents] ?? 0;
+      scoreMap[FantasyScoringCategory.stageTop25Percents] = (stageTop25Points / fantasyStats.stageCount) * count;
+      countMap[FantasyScoringCategory.stageTop25Percents] = count;
+
+      // Raw time wins
+      var rawTimeWinPoints = pointsAvailable[FantasyScoringCategory.rawTimeWins]!;
+      count = fantasyStats.integerStats[FantasyScoringCategory.rawTimeWins] ?? 0;
+      scoreMap[FantasyScoringCategory.rawTimeWins] = (rawTimeWinPoints / fantasyStats.stageCount) * count;
+      countMap[FantasyScoringCategory.rawTimeWins] = count;
+
+      // Raw time top 10%
+      var rawTimeTop10Points = pointsAvailable[FantasyScoringCategory.rawTimeTop10Percents]!;
+      count = fantasyStats.integerStats[FantasyScoringCategory.rawTimeTop10Percents] ?? 0;
+      scoreMap[FantasyScoringCategory.rawTimeTop10Percents] = (rawTimeTop10Points / fantasyStats.stageCount) * count;
+      countMap[FantasyScoringCategory.rawTimeTop10Percents] = count;
+
+      // Raw time top 25%
+      var rawTimeTop25Points = pointsAvailable[FantasyScoringCategory.rawTimeTop25Percents]!;
+      count = fantasyStats.integerStats[FantasyScoringCategory.rawTimeTop25Percents] ?? 0;
+      scoreMap[FantasyScoringCategory.rawTimeTop25Percents] = (rawTimeTop25Points / fantasyStats.stageCount) * count;
+      countMap[FantasyScoringCategory.rawTimeTop25Percents] = count;
+
+      // Accuracy wins
+      var accuracyWinPoints = pointsAvailable[FantasyScoringCategory.accuracyWins]!;
+      count = fantasyStats.integerStats[FantasyScoringCategory.accuracyWins] ?? 0;
+      scoreMap[FantasyScoringCategory.accuracyWins] = (accuracyWinPoints / fantasyStats.stageCount) * count;
+      countMap[FantasyScoringCategory.accuracyWins] = count;
+
+      // Accuracy top 10%
+      var accuracyTop10Points = pointsAvailable[FantasyScoringCategory.accuracyTop10Percents]!;
+      count = fantasyStats.integerStats[FantasyScoringCategory.accuracyTop10Percents] ?? 0;
+      scoreMap[FantasyScoringCategory.accuracyTop10Percents] = (accuracyTop10Points / fantasyStats.stageCount) * count;
+      countMap[FantasyScoringCategory.accuracyTop10Percents] = count;
+
+      // Accuracy top 25%
+      var accuracyTop25Points = pointsAvailable[FantasyScoringCategory.accuracyTop25Percents]!;
+      count = fantasyStats.integerStats[FantasyScoringCategory.accuracyTop25Percents] ?? 0;
+      scoreMap[FantasyScoringCategory.accuracyTop25Percents] = (accuracyTop25Points / fantasyStats.stageCount) * count;
+      countMap[FantasyScoringCategory.accuracyTop25Percents] = count;
+
+      // Penalties
+      var penaltyCount = fantasyStats.integerStats[FantasyScoringCategory.penalties] ?? 0;
+      var pointsPerPenalty = pointsAvailable[FantasyScoringCategory.penalties]!;
+      scoreMap[FantasyScoringCategory.penalties] = penaltyCount * pointsPerPenalty;
+      countMap[FantasyScoringCategory.penalties] = penaltyCount;
+
+      // Division participation penalty
+      var divisionParticipationPenalty = fantasyStats.doubleStats[FantasyScoringCategory.divisionParticipationPenalty]!;
+      if(divisionParticipationPenalty < 1) {
+        var runningScore = scoreMap.values.sum;
+        var actualScore = runningScore * divisionParticipationPenalty;
+        scoreMap[FantasyScoringCategory.divisionParticipationPenalty] = (actualScore - runningScore);
+      }
+      else {
+        scoreMap[FantasyScoringCategory.divisionParticipationPenalty] = 0;
+      }
+
+      fantasyScores[entry] = FantasyScore(scoreMap, counts: countMap);
+    }
+
+    return fantasyScores;
+
   }
 }
