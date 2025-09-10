@@ -103,6 +103,7 @@ class AnalystDatabase {
         TeamSchema,
         FantasyPlayerSchema,
         MatchupSchema,
+        PlayerMatchPerformanceSchema,
         PlayerMonthlyPerformanceSchema,
         MonthlyRosterSchema,
         RosterAssignmentSchema,

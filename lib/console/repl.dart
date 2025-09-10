@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'dart:io';
 import 'dart:math';
 
@@ -7,7 +13,8 @@ import 'package:dart_console/dart_console.dart';
 /// Render a menu with the given commands, returning a selected command (to be fed to the next call to renderMenu)
 /// or null, if the user has pressed Ctrl-C or EOF/Ctrl-D and wishes to exit the application.
 ///
-/// If the user has entered an unknown command, this will return an ExecutedCommand with a null command.
+/// If the user has entered an unknown command, this will return an ExecutedCommand with a null command. If the
+/// returned ExecutedCommand has a StringMenuArgument, this will be printed to the console.
 Future<ExecutedCommand?> _renderMenu(
   Console console,
   List<MenuCommand> commands, {
@@ -23,9 +30,6 @@ Future<ExecutedCommand?> _renderMenu(
     if(executedCommand.arguments.isNotEmpty) {
       var errorArgument = executedCommand.arguments.first;
       console.write("${errorArgument.argument.label}: ${errorArgument.value}\n");
-    }
-    else {
-      console.write("Command execution error\n");
     }
   }
   var longestKey = commands.map((c) => c.key.length).reduce((a, b) => a > b ? a : b);
@@ -59,9 +63,14 @@ Future<ExecutedCommand?> _renderMenu(
     var command = commands.firstWhereOrNull((c) => c.key == commandName.toUpperCase());
 
     if(command == null) {
-      return ExecutedCommand(command: null, arguments: [
-        MenuArgumentValue<String>(argument: StringMenuArgument(label: "Unknown command"), value: commandName)
-      ]);
+      if(commandName.isNotEmpty) {
+        return ExecutedCommand(command: null, arguments: [
+          MenuArgumentValue<String>(argument: StringMenuArgument(label: "Unknown command"), value: commandName)
+        ]);
+      }
+      else {
+        return ExecutedCommand(command: null, arguments: []);
+      }
     }
 
     var argumentStrings = parts.sublist(1);

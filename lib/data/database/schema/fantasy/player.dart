@@ -4,7 +4,6 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
@@ -21,11 +20,64 @@ part 'player.g.dart';
 final _log = SSALogger("FantasyPlayer");
 
 @collection
-class FantasyPlayer with DbSportEntity, DbDivisionEntity {
-  String sportName = "";
-  String divisionName = "";
+class FantasyPlayer with DbSportEntity {
+  FantasyPlayer();
 
-  Id id = Isar.autoIncrement;
+  FantasyPlayer.fromRating(DbShooterRating rating, {String? groupUuidOverride}) :
+    sportName = rating.sportName,
+    name = rating.name,
+    groupUuid = groupUuidOverride ?? rating.group.value?.uuid ?? "",
+    memberNumber = rating.memberNumber,
+    projectId = rating.project.value!.id {
+    this.rating.value = rating;
+  }
+
+  String sportName = "";
+  int projectId = -1;
+  String groupUuid = "";
+
+  /// A synthetic ID for the player, combining sport name, division name, and member number.
+  ///
+  /// By convention, it is best to use originalMemberNumber instead of memberNumber for this ID;
+  /// memberNumber is likely to change over the course of a player's career (A/TY/FY forms, lifetime, etc.),
+  /// whereas the first number they appear with is likely to remain the same.
+  Id get id => combineHashList([
+    sportName.stableHash,
+    groupUuid.stableHash,
+    memberNumber.stableHash,
+    projectId.stableHash,
+  ]);
+
+  static Id idFromEntities({
+    required Sport sport,
+    required RatingGroup group,
+    required Shooter shooter,
+    required DbRatingProject project,
+  }) {
+    return combineHashList([
+      sport.name.stableHash,
+      group.uuid.stableHash,
+      shooter.originalMemberNumber.stableHash,
+      project.id.stableHash,
+    ]);
+  }
+
+  static Id idFromEntityIdentifiers({
+    required String sportName,
+    required String groupUuid,
+    required String memberNumber,
+    required int projectId,
+  }) {
+    return combineHashList([
+      sportName.stableHash,
+      groupUuid.stableHash,
+      memberNumber.stableHash,
+      projectId.stableHash,
+    ]);
+  }
+
+  /// A display name for the player.
+  String name = "";
 
   /// The member number of the player.
   ///
@@ -38,6 +90,9 @@ class FantasyPlayer with DbSportEntity, DbDivisionEntity {
 
   /// The rating that this player is based upon.
   final rating = IsarLink<DbShooterRating>();
+
+  /// Match performances for this player.
+  final matchPerformances = IsarLinks<PlayerMatchPerformance>();
 
   Future<DbShooterRating?> getRatingOrNull() async {
     if(!rating.isLoaded) {
@@ -60,17 +115,12 @@ class FantasyPlayer with DbSportEntity, DbDivisionEntity {
     }
 
     var project = await getProject();
-    var groupRes = await project.groupForDivision(division);
-    if(groupRes.isErr()) {
-      _log.e("Failed to get group for $this: ${groupRes.unwrapErr()}");
-      return false;
-    }
-    var group = groupRes.unwrap();
+    var group = await project.sport.builtinRatingGroupsProvider?.getGroup(groupUuid);
     if(group == null) {
       _log.e("No group found for $this");
       return false;
     }
-    rating = await AnalystDatabase().maybeKnownShooter(project: project, group: group, memberNumber: memberNumber);
+    rating = await AnalystDatabase().maybeKnownShooter(project: project, group: group, memberNumber: memberNumber, useCache: true);
     if(rating == null) {
       _log.e("No rating found for $this");
       return false;
@@ -139,11 +189,11 @@ class PlayerMonthlyPerformance {
   int monthId;
 
   /// All matches they shot this month.
-  List<MatchPerformance> matchPerformances = [];
+  final matchPerformances = IsarLinks<PlayerMatchPerformance>();
 
   /// Best performance (the one used for scoring), or null
   /// if they didn't shoot any matches this month.
-  MatchPerformance? bestPerformance;
+  final bestPerformance = IsarLink<PlayerMatchPerformance>();
 
   PlayerMonthlyPerformance({
     required this.playerId,
@@ -181,93 +231,109 @@ class PlayerMonthlyPerformance {
 /// A match performance for a player. It contains their fantasy-relevant stats
 /// by scoring category, and can be used to calculate final fantasy scores
 /// based on those stats and provided weights.
-@embedded
-class MatchPerformance {
-  String matchId;
-  String matchName;
-  DateTime matchDate;
-  int stageCount;
+@collection
+class PlayerMatchPerformance {
 
-  // The division they shot
-  String divisionName;
+  Id get id => combineHashList([playerId.stableHash, projectId.stableHash, groupUuid.stableHash, matchId.stableHash]);
+
+  @Backlink(to: 'matchPerformances')
+  final player = IsarLink<FantasyPlayer>();
+
+  @Index()
+  int get playerId => player.value?.id ?? -1;
+
+  @Index(composite: [CompositeIndex('groupUuid')])
+  int get projectId => player.value?.projectId ?? -1;
+
+  @Index()
+  String matchId = "";
+  String matchName = "";
+
+  @Index()
+  DateTime matchDate = DateTime(0, 0, 0);
+  int stageCount = 0;
+
+  // The rating group against which these stats were calculated.
+  @Index()
+  String get groupUuid => player.value?.groupUuid ?? "";
 
   // Their fantasy stats by scoring category, in DB-friendly format.
-  List<DbFantasyStat> dbScores;
+  DbFantasyStats dbScores = DbFantasyStats();
 
-  Map<FantasyScoringCategory, double> getScores({Map<FantasyScoringCategory, double>? weights}) {
-    var result = <FantasyScoringCategory, double>{};
-    DbFantasyStat? participationPenaltyStat;
-    for(var s in dbScores) {
-      if(s.category.isSpecial) {
-        if(s.category == FantasyScoringCategory.divisionParticipationPenalty) {
-          participationPenaltyStat = s;
-        }
-        continue;
-      }
-      else {
-        if(s.category.isCountable) {
-          var pointsAvailable = weights?[s.category] ?? s.category.defaultPointsAvailable;
-          var score = s.count! * pointsAvailable;
-          result[s.category] = score;
-        }
-        else {
-          var pointsAvailable = weights?[s.category] ?? s.category.defaultPointsAvailable;
-          var score = s.rawScore! * pointsAvailable;
-          result[s.category] = score;
-        }
-      }
-    }
+  /// A convenience container for calculated points for this performance.
+  /// Not persisted, because it will vary from league to league; use it for
+  /// intermediate storage when operating on a list of performances.
+  @ignore
+  double points = 0;
 
-    if(participationPenaltyStat != null) {
-      var participationPenaltyRatio = participationPenaltyStat.rawScore;
-      if(participationPenaltyRatio != null && participationPenaltyRatio < 1) {
-        var participationPenaltyWeight = weights?[FantasyScoringCategory.divisionParticipationPenalty] ?? FantasyScoringCategory.divisionParticipationPenalty.defaultPointsAvailable;
-        var runningScore = result.values.sum;
-        var actualScore = runningScore * participationPenaltyRatio;
-        result[FantasyScoringCategory.divisionParticipationPenalty] = (actualScore - runningScore) * participationPenaltyWeight;
-      }
-    }
-
-    return result;
+  FantasyScore getScore({required FantasyScoringCalculator calculator, FantasyPointsAvailable? weights}) {
+    return calculator.calculateFantasyScore(stats: dbScores, pointsAvailable: weights ?? FantasyScoringCategory.defaultCategoryPoints);
   }
 
-  MatchPerformance({
+  PlayerMatchPerformance({
     this.matchId = "",
     this.matchName = "",
-    this.divisionName = "",
     this.stageCount = 0,
-    this.dbScores = const [],
+    required this.dbScores,
   }) : matchDate = DateTime(0, 0, 0);
 
-  MatchPerformance.create({
+  PlayerMatchPerformance.create({
     required this.matchId,
     required this.matchName,
     required this.matchDate,
-    required this.divisionName,
     required this.stageCount,
     required this.dbScores,
   });
+
+  PlayerMatchPerformance.fromEntities({
+    required FantasyPlayer player,
+    required MatchPointer match,
+    required DbFantasyStats stats,
+  }) {
+    this.player.value = player;
+    this.matchId = match.sourceIds.first;
+    this.matchName = match.name;
+    this.matchDate = match.date!;
+    this.stageCount = stats.stageCount;
+    this.dbScores = stats;
+  }
 }
 
 /// A fantasy stat for a player, in DB-friendly format.
 ///
 /// [rawScore] is the raw score for the stat.
 @embedded
-class DbFantasyStat {
-  @enumerated
-  FantasyScoringCategory category;
-  double? rawScore;
-  int? count;
+class DbFantasyStats {
+  double finishPercentage = 0;
+  int stageWins = 0;
+  int stageTop10Percents = 0;
+  int stageTop25Percents = 0;
+  int rawTimeWins = 0;
+  int rawTimeTop10Percents = 0;
+  int rawTimeTop25Percents = 0;
+  int accuracyWins = 0;
+  int accuracyTop10Percents = 0;
+  int accuracyTop25Percents = 0;
+  int penalties = 0;
+  double divisionParticipationPenalty = 0;
 
-  DbFantasyStat({
-    this.category = FantasyScoringCategory.finishPercentage,
-    this.rawScore,
-    this.count,
-  });
+  int stageCount = 0;
 
-  DbFantasyStat.create({
-    required this.category,
-    this.rawScore,
-    this.count,
+  DbFantasyStats();
+
+  DbFantasyStats.create({
+    required this.finishPercentage,
+    required this.stageWins,
+    required this.stageTop10Percents,
+    required this.stageTop25Percents,
+    required this.rawTimeWins,
+    required this.rawTimeTop10Percents,
+    required this.rawTimeTop25Percents,
+    required this.accuracyWins,
+    required this.accuracyTop10Percents,
+    required this.accuracyTop25Percents,
+    required this.penalties,
+    required this.divisionParticipationPenalty,
+    required this.stageCount,
   });
 }

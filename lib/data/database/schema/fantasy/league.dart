@@ -337,6 +337,9 @@ class LeagueMonth {
   /// ends).
   DateTime get endDatePlusOne => DateTime.utc(month.year, month.month + 1);
 
+  // TODO: need to store the prevailing league settings for this month here
+  // That way we can get them from PlayerMonthlyPerformances,
+
   Future<LeagueSeason> getSeason() async {
     if(!season.isLoaded) {
       await season.load();

@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'package:collection/collection.dart';
 import 'package:shelf_plus/shelf_plus.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
@@ -78,7 +84,7 @@ class LeagueService {
     for(final date in matchesByMonth.keys) {
       final matches = matchesByMonth[date]!;
       for(final match in matches) {
-        final scores = calculator.calculateFantasyScores(match);
+        final scores = calculator.calculateFantasyScores(stats: calculator.calculateFantasyStats(match), pointsAvailable: FantasyScoringCategory.defaultCategoryPoints);
         final entry = match.shooters.firstWhereOrNull((shooter) => rating.allPossibleMemberNumbers.intersects(shooter.allPossibleMemberNumbers));
         if(entry == null) {
           continue;
@@ -119,7 +125,7 @@ class FantasyScoreContainer {
       "matchName": matchName,
       "matchDate": matchDate.toIso8601String(),
       "points": points,
-      "details": score.toJson(),
+      "details": score.categoryScores.map((key, value) => MapEntry(key.toString(), value)),
     };
   }
 }

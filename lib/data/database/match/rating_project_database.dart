@@ -168,8 +168,13 @@ extension RatingProjectDatabase on AnalystDatabase {
   /// Retrieves a possible shooter rating from the database, or null if
   /// a rating is not found. [memberNumber] is assumed to be processed.
   ///
-  /// if [useCache] is true, [loadedShooterRatingCache] will be checked for
+  /// If [useCache] is true, [loadedShooterRatingCache] will be checked for
   /// a cached rating before querying the database.
+  ///
+  /// If [onlyCache] is true, the cache will be checked, but no database query will be made.
+  ///
+  /// If [saveToCache] is true (the default), any ratings looked up will be saved to the cache.
+  ///
   Future<DbShooterRating?> maybeKnownShooter({
     required DbRatingProject project,
     required RatingGroup group,

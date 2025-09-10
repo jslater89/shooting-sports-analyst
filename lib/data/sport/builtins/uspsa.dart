@@ -241,6 +241,18 @@ class UspsaRatingGroupsProvider implements RatingGroupsProvider {
   RatingGroup? getGroup(String uuid) {
     return _builtinRaterGroups.firstWhereOrNull((g) => g.uuid == uuid);
   }
+
+  static String translateIpscUuid(String ipscUuid) {
+    if(ipscUuid == "ipsc-open") return "uspsa-open";
+    if(ipscUuid == "ipsc-standard") return "uspsa-limited";
+    if(ipscUuid == "ipsc-production") return "uspsa-production";
+    if(ipscUuid == "ipsc-production-optics") return "uspsa-carryoptics";
+    if(ipscUuid == "ipsc-classic") return "uspsa-singlestack";
+    if(ipscUuid == "ipsc-revolver") return "uspsa-revolver";
+    if(ipscUuid == "ipsc-pcc-optics") return "uspsa-pcc";
+    if(ipscUuid == "ipsc-pcc-irons") return "uspsa-pcc";
+    return ipscUuid;
+  }
 }
 
 final _builtinRaterGroups = <RatingGroup>[

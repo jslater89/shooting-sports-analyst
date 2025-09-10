@@ -8,6 +8,8 @@ import 'package:shooting_sports_analyst/data/database/match/rating_project_datab
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/server/fantasy/cli/calculate_annual_stats.dart';
+import 'package:shooting_sports_analyst/server/fantasy/cli/show_fantasy_leaders.dart';
+import 'package:shooting_sports_analyst/server/fantasy/cli/show_valid_groups.dart';
 import 'package:shooting_sports_analyst/util.dart';
 import 'package:shooting_sports_analyst/version.dart';
 
@@ -83,6 +85,14 @@ enum _FantasyMenuCommand implements MenuCommand {
     arguments: [
       IntMenuArgument(label: "Year", required: true),
       IntMenuArgument(label: "Ratings Context", defaultValueFactory: _getRatingContextId)
+    ]
+  ),
+  showGroups("3", "Show Valid Groups", execute: showValidGroupsForFantasyProject),
+  showLeaders("4", "Show Fantasy Scoring Leaders",
+    execute: showFantasyScoringLeaders,
+    arguments: [
+      IntMenuArgument(label: "Year", required: true),
+      StringMenuArgument(label: "Group", required: true)
     ]
   ),
   back("B", "Back");

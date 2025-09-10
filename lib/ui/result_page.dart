@@ -14,6 +14,7 @@ import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/application_preferences.dart';
+import 'package:shooting_sports_analyst/data/database/schema/fantasy/player.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/fantasy/fantasy_points_mode.dart';
 import 'package:shooting_sports_analyst/data/help/entries/results_help.dart';
@@ -97,7 +98,7 @@ class _ResultPageState extends State<ResultPage> {
   /// sport won't change during a refresh.
   Sport get sport => widget.canonicalMatch.sport;
   late FilterSet _filters;
-  Map<MatchEntry, FantasyStats>? _fantasyStats;
+  Map<MatchEntry, DbFantasyStats>? _fantasyStats;
   Map<MatchEntry, FantasyScore>? _fantasyScores;
   List<RelativeMatchScore> _baseScores = [];
   List<RelativeMatchScore> _searchedScores = [];
