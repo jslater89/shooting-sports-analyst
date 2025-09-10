@@ -77,8 +77,8 @@ Future<ExecutedCommand?> _renderMenu(
     var argumentValues = <MenuArgumentValue>[];
     for(var i = 0; i < command.arguments.length; i++) {
       var argument = command.arguments[i];
-      if(argumentStrings.isEmpty && !argument.hasDefaultValue) {
-        var label = "Argument count mismatch: ${command.key} requires ${command.arguments.length} arguments, but got ${parts.length - 1}";
+      if(argumentStrings.isEmpty && !argument.hasDefaultValue && argument.required) {
+        var label = "Argument count mismatch: ${command.key} requires ${command.arguments.where((e) => e.required).length} arguments, but got ${parts.length - 1}";
         var errorString = "\n${MenuCommand.getUsage(console, command)}";
         return ExecutedCommand(command: null, arguments: [
           MenuArgumentValue<String>(argument: StringMenuArgument(label: label), value: errorString)
@@ -96,13 +96,13 @@ Future<ExecutedCommand?> _renderMenu(
         value = argument.parseInput(argString);
       }
       if(value == null && argString != null) {
-        console.write("Invalid argument: $argString\n");
+        console.write("Invalid argument for ${argument.label}: $argString\n");
         var errorString = "\n${MenuCommand.getUsage(console, command)}";
         return ExecutedCommand(command: null, arguments: [
           MenuArgumentValue<String>(argument: StringMenuArgument(label: "Invalid argument"), value: errorString)
         ]);
       }
-      else if(value == null && argString == null) {
+      else if(value == null && argString == null && argument.required) {
         console.write("Missing argument: ${argument.label}\n");
         var errorString = "\n${MenuCommand.getUsage(console, command)}";
         return ExecutedCommand(command: null, arguments: [

@@ -30,32 +30,102 @@ Future<void> showFantasyScoringLeaders(Console console, List<MenuArgumentValue> 
     console.print("No ratings context found for id $projectId");
     return;
   }
-  var groupUuid = project.groups.firstWhereOrNull((e) => e.uuid == arguments.last.value)?.uuid;
+
+  if(arguments.length < 2) {
+    console.print("Invalid arguments: ${arguments.map((e) => e.value).join(", ")}");
+    return;
+  }
+  if(!arguments[1].canGetAs<int>()) {
+    console.print("Invalid year: ${arguments.first.value}");
+    return;
+  }
+  if(!arguments[0].canGetAs<String>()) {
+    console.print("Invalid group: ${arguments.last.value}");
+    return;
+  }
+
+  int? month;
+  bool allMonths = false;
+  if(arguments.length >= 3) {
+    bool hasArgument = false;
+    var monthValue = arguments[2].getAs<String>();
+    if(monthValue.toLowerCase() == "all") {
+      allMonths = true;
+      hasArgument = true;
+    }
+    else {
+      var month = int.tryParse(monthValue);
+      if(month == null) {
+        console.print("Invalid month: ${arguments[2].value}");
+        return;
+      }
+      month = month;
+      hasArgument = true;
+    }
+
+    if(!hasArgument) {
+      console.print("Invalid month: ${arguments[2].value}");
+      return;
+    }
+  }
+
+  var year = arguments[1].getAs<int>();
+  var group = arguments[0].getAs<String>();
+
+  var groupUuid = project.groups.firstWhereOrNull((e) => e.uuid == group)?.uuid;
 
   if(groupUuid == null) {
-    console.print("Invalid group: ${arguments.last.value}. Use a UUID from this list:");
+    console.print("Invalid group: $group. Use a UUID from this list:");
 
     printValidGroupsTable(console, project);
     return;
   }
-  if(arguments.length != 2) {
-    console.print("Invalid arguments: ${arguments.map((e) => e.value).join(", ")}");
-    return;
-  }
-  if(!arguments.first.canGetAs<int>()) {
-    console.print("Invalid year: ${arguments.first.value}");
-    return;
-  }
-  if(!arguments.last.canGetAs<String>()) {
-    console.print("Invalid group: ${arguments.last.value}");
-    return;
-  }
-  var year = arguments.first.getAs<int>();
-  var group = arguments.last.getAs<String>();
 
+  if(allMonths) {
+    for(var month = 3; month <= 11; month++) {
+      _calculateForDates(
+        year: year,
+        month: month,
+        groupUuid: groupUuid,
+        projectId: projectId,
+        console: console,
+        db: db,
+        topN: 3,
+      );
+    }
+  }
+  else {
+    _calculateForDates(
+      year: year,
+      month: month,
+      groupUuid: groupUuid,
+      projectId: projectId,
+      console: console,
+      db: db,
+    );
+  }
+
+  var end = DateTime.now();
+  console.print("Time taken: ${(end.difference(start).inMilliseconds / 1000).toStringAsFixed(3)} seconds");
+}
+
+Future<void> _calculateForDates({
+  required int year,
+  int? month,
+  required String groupUuid,
+  required int projectId,
+  required Console console,
+  required AnalystDatabase db,
+  int topN = 10,
+}) async {
   var startDate = DateTime(year, 1, 1);
-  var endDate = DateTime(year, 12, 31, 23, 59, 59);
-  console.print("Getting performances for $year $group");
+  var endDate = DateTime(year + 1).subtract(const Duration(seconds: 1));
+  if(month != null) {
+    startDate = DateTime(year, month, 1);
+    endDate = DateTime(year, month + 1).subtract(const Duration(seconds: 1));
+  }
+
+  console.print("Getting performances for $year${month != null ? "-$month" : ""} $groupUuid");
   var performances = db.getMatchPerformancesForProjectGroupIdsSync(
     projectId: projectId,
     groupUuid: groupUuid,
@@ -72,6 +142,7 @@ Future<void> showFantasyScoringLeaders(Console console, List<MenuArgumentValue> 
   var calculator = USPSAFantasyScoringCalculator();
 
   console.print("Calculating monthly bests");
+  Map<Id, int> totalAppearances = {};
   Map<Id, Map<DateTime, PlayerMatchPerformance>> bestMonthlyPerformances = {};
   for(var id in performancesByPlayer.keys) {
     var playerPerformances = performancesByPlayer[id]!;
@@ -80,6 +151,7 @@ Future<void> showFantasyScoringLeaders(Console console, List<MenuArgumentValue> 
         // Ignore the standard offseason of December, January, and February
         continue;
       }
+      totalAppearances.increment(id);
       var monthDate = DateTime(performance.matchDate.year, performance.matchDate.month, 1);
       var previousBest = bestMonthlyPerformances[id]?[monthDate];
       if(previousBest == null) {
@@ -99,7 +171,7 @@ Future<void> showFantasyScoringLeaders(Console console, List<MenuArgumentValue> 
     }
   }
 
-  console.print("Summing yearly scores");
+  console.print("Summing scores");
   Map<FantasyPlayer, double> yearlyTotals = {};
   for(var id in bestMonthlyPerformances.keys) {
     var player = db.getPlayerByIdSync(id);
@@ -112,17 +184,21 @@ Future<void> showFantasyScoringLeaders(Console console, List<MenuArgumentValue> 
   }
 
   var sortedPlayers = yearlyTotals.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-  for(int i = 0; i < min(10, sortedPlayers.length); i++) {
+  for(int i = 0; i < min(topN, sortedPlayers.length); i++) {
     var player = sortedPlayers[i].key;
     var total = sortedPlayers[i].value;
-    console.print("${i+1}. ${player.name} - ${total.toStringAsFixed(1)}");
     var performances = bestMonthlyPerformances[player.id]!.values.toList();
     performances.sort((a, b) => b.matchDate.compareTo(a.matchDate));
+    String parenthetical;
+    if(month == null) {
+      parenthetical = "(${(total / 8).toStringAsFixed(1)} per month, ${performances.length}/8 months, ${totalAppearances[player.id]!} total matches)";
+    }
+    else {
+      parenthetical = "(${totalAppearances[player.id]!} total matches)";
+    }
+    console.print("${i+1}. ${player.name} - ${total.toStringAsFixed(1)} $parenthetical");
     for(var performance in performances) {
       console.print("    ${performance.matchName} (${programmerYmdFormat.format(performance.matchDate)}) - ${performance.points.toStringAsFixed(1)}");
     }
   }
-
-  var end = DateTime.now();
-  console.print("Time taken: ${(end.difference(start).inMilliseconds / 1000).toStringAsFixed(3)} seconds");
 }

@@ -165,12 +165,14 @@ List<int> mode(List<int> data) {
 }
 
 extension IncrementHistogram<T> on Map<T, int> {
-  /// Increase the value of [key] in this map by 1.
+  /// Increase the value of [key] in this map by 1, adding the key
+  /// to the map first if needed.
   void increment(T key) {
     incrementBy(key, 1);
   }
 
-  /// Increase the value of [key] in this map by [amount].
+  /// Increase the value of [key] in this map by [amount], adding the key
+  /// to the map first if needed.
   void incrementBy(T key, int amount) {
     var value = this[key] ?? 0;
     value += amount;
@@ -179,6 +181,8 @@ extension IncrementHistogram<T> on Map<T, int> {
 }
 
 extension IncrementDoubleMap<T> on Map<T, double> {
+  /// Increase the value of [key] in this map by [amount], adding the key
+  /// to the map first if needed.
   void incrementBy(T key, double amount) {
     var value = this[key] ?? 0;
     value += amount;

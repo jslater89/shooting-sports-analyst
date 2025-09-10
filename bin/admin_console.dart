@@ -91,9 +91,10 @@ enum _FantasyMenuCommand implements MenuCommand {
   showLeaders("4", "Show Fantasy Scoring Leaders",
     execute: showFantasyScoringLeaders,
     arguments: [
+      StringMenuArgument(label: "Group", required: true),
       IntMenuArgument(label: "Year", required: true),
-      StringMenuArgument(label: "Group", required: true)
-    ]
+      StringMenuArgument(label: "Month", description: "A numeric month, or 'all' to print monthly stats for the full year"),
+    ],
   ),
   back("B", "Back");
 
