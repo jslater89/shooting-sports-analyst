@@ -8,6 +8,7 @@ import 'package:shooting_sports_analyst/data/database/match/rating_project_datab
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/server/fantasy/cli/calculate_annual_stats.dart';
+import 'package:shooting_sports_analyst/server/fantasy/cli/lookup_competitor_scores.dart';
 import 'package:shooting_sports_analyst/server/fantasy/cli/show_fantasy_leaders.dart';
 import 'package:shooting_sports_analyst/server/fantasy/cli/show_valid_groups.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -94,6 +95,13 @@ enum _FantasyMenuCommand implements MenuCommand {
       StringMenuArgument(label: "Group", required: true),
       IntMenuArgument(label: "Year", required: true),
       StringMenuArgument(label: "Month", description: "A numeric month, or 'all' to print monthly stats for the full year"),
+    ],
+  ),
+  lookupCompetitorScors("5", "Lookup Competitor Scores",
+    execute: lookupCompetitorScores,
+    arguments: [
+      StringMenuArgument(label: "Group", required: true),
+      StringMenuArgument(label: "Name", required: true),
     ],
   ),
   back("B", "Back");

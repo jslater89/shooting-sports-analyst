@@ -15,7 +15,7 @@ import 'package:flutter/material.dart';
 /// case, the [Emphasis] contains a [PlainText] holding the actual
 /// string.
 ///
-/// Headers and links are evaluated first, and their content will be
+/// Headers and links are evaluated first.
 sealed class HelpToken {
   HelpToken({required this.parent, required this.lineStart, required this.lineEnd});
 

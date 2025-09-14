@@ -13,6 +13,7 @@ import 'package:shooting_sports_analyst/data/database/schema/match_heat.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/legacy_loader/project_manager.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
@@ -298,6 +299,44 @@ extension RatingProjectDatabase on AnalystDatabase {
 
       return dbRating;
     });
+  }
+
+  /// Find shooter ratings by partial name.
+  ///
+  /// Requires at least 3 characters to match.
+  Future<List<DbShooterRating>> findShooterRatings({
+    required DbRatingProject project,
+    required RatingGroup group,
+    required String name,
+  }) {
+    if(name.length < 3) {
+      return Future.value([]);
+    }
+    var processedName = ShooterDeduplicator.processNameString(name);
+    return isar.dbShooterRatings.filter()
+      .deduplicatorNameContains(processedName)
+      .project((q) => q.idEqualTo(project.id))
+      .group((q) => q.uuidEqualTo(group.uuid))
+      .findAll();
+  }
+
+  /// Find shooter ratings by partial name.
+  ///
+  /// Requires at least 3 characters to match.
+  List<DbShooterRating> findShooterRatingsSync({
+    required DbRatingProject project,
+    required RatingGroup group,
+    required String name,
+  }) {
+    if(name.length < 3) {
+      return [];
+    }
+    var processedName = ShooterDeduplicator.processNameString(name);
+    return isar.dbShooterRatings.filter()
+      .deduplicatorNameContains(processedName)
+      .project((q) => q.idEqualTo(project.id))
+      .group((q) => q.uuidEqualTo(group.uuid))
+      .findAllSync();
   }
 
   /// Create a new DbShooterRating from a rating engine-specific [ShooterRating].

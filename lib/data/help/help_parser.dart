@@ -63,7 +63,7 @@ class HelpParser {
       if(lastListToken == null) {
         // If we didn't find a list item in the current paragraph, we have to
         // search through all the tokens in the entire document. Same note as
-        // above on subndoe order vs token order.
+        // above on subnode order vs token order.
         for(var token in tokens.reversed) {
           for(var child in token.subnodes) {
             if(child is ListItem) {

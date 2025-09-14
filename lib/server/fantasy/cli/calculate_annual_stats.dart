@@ -66,6 +66,7 @@ Future<void> calculateAnnualStats(Console console, List<MenuArgumentValue> argum
   Map<FantasyPlayer, List<PlayerMatchPerformance>> performancesByPlayer = {};
   List<PlayerMatchPerformance> performances = [];
   int totalPerformances = 0;
+  int myPerformances = 0;
 
   for(var match in matches) {
     progressBar.tick(match.name);
@@ -84,7 +85,6 @@ Future<void> calculateAnnualStats(Console console, List<MenuArgumentValue> argum
       continue;
     }
 
-    int myPerformances = 0;
 
     for(var rating in stats!.keys) {
       var fantasyPlayer = await db.getPlayerFor(

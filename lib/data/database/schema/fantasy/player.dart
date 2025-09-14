@@ -27,7 +27,7 @@ class FantasyPlayer with DbSportEntity {
     sportName = rating.sportName,
     name = rating.name,
     groupUuid = groupUuidOverride ?? rating.group.value?.uuid ?? "",
-    memberNumber = rating.memberNumber,
+    memberNumber = rating.originalMemberNumber,
     projectId = rating.project.value!.id {
     this.rating.value = rating;
   }
@@ -36,7 +36,7 @@ class FantasyPlayer with DbSportEntity {
   int projectId = -1;
   String groupUuid = "";
 
-  /// A synthetic ID for the player, combining sport name, division name, and member number.
+  /// A synthetic ID for the player, combining sport name, division name, member number, and project.
   ///
   /// By convention, it is best to use originalMemberNumber instead of memberNumber for this ID;
   /// memberNumber is likely to change over the course of a player's career (A/TY/FY forms, lifetime, etc.),

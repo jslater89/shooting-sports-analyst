@@ -6,7 +6,6 @@
 
 import 'dart:math';
 
-import 'package:collection/collection.dart';
 import 'package:dart_console/dart_console.dart';
 import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/config/serialized_config.dart';
@@ -18,6 +17,7 @@ import 'package:shooting_sports_analyst/data/database/schema/fantasy/player.dart
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa_utils/uspsa_fantasy_calculator.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/fantasy_scoring_calculator.dart';
 import 'package:shooting_sports_analyst/server/fantasy/cli/show_valid_groups.dart';
+import 'package:shooting_sports_analyst/server/fantasy/cli/util.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 Future<void> showFantasyScoringLeaders(Console console, List<MenuArgumentValue> arguments) async {
@@ -72,14 +72,20 @@ Future<void> showFantasyScoringLeaders(Console console, List<MenuArgumentValue> 
   var year = arguments[1].getAs<int>();
   var group = arguments[0].getAs<String>();
 
-  var groupUuid = project.groups.firstWhereOrNull((e) => e.uuid == group)?.uuid;
-
-  if(groupUuid == null) {
-    console.print("Invalid group: $group. Use a UUID from this list:");
-
+  var groups = resolveRatingGroup(group, project);
+  if(groups.isEmpty) {
+    console.print("No groups found for: ${arguments[0].value}");
+    console.print("Use a UUID from this list:");
     printValidGroupsTable(console, project);
     return;
   }
+  else if(groups.length > 1) {
+    console.print("Multiple groups found for: ${arguments[0].value}");
+    console.print("Use a UUID from this list:");
+    printValidGroupsTable(console, project);
+    return;
+  }
+  var groupUuid = groups.first.uuid;
 
   if(allMonths) {
     for(var month = 3; month <= 11; month++) {
@@ -198,7 +204,7 @@ Future<void> _calculateForDates({
     }
     console.print("${i+1}. ${player.name} - ${total.toStringAsFixed(1)} $parenthetical");
     for(var performance in performances) {
-      console.print("    ${performance.matchName} (${programmerYmdFormat.format(performance.matchDate)}) - ${performance.points.toStringAsFixed(1)}");
+      console.print("    ${programmerYmdFormat.format(performance.matchDate)} - ${performance.matchName} - ${performance.points.toStringAsFixed(1)}");
     }
   }
 }

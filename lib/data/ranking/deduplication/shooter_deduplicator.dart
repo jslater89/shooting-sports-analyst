@@ -67,6 +67,14 @@ abstract class ShooterDeduplicator {
 
     return name;
   }
+  static String processNameString(String name) {
+    if(_processNameCache.containsKey(name)) return _processNameCache[name]!;
+
+    String processed = "${name.toLowerCase().replaceAll(RegExp(r"\s+"), "")}";
+    processed = processed.replaceAll(RegExp(r"[^a-zA-Z0-9]"), "");
+
+    return processed;
+  }
   static Map<String, String> _processNameCache = {};
 
   /// If calculable, return a list of alternate forms of the provided member number.

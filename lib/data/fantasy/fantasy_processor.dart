@@ -30,8 +30,8 @@ class FantasyProcessor {
 
   /// Process a league.
   ///
-  /// Processing is idempotent; if the operation completes successfully, future calls to [processLeague]
-  /// will not duplicate work.
+  /// Processing is idempotent. If the operation completes successfully, future calls to [processLeague]
+  /// will not duplicate work. If the operation fails, partial work will not be committed to the database.
   static Future<bool> processLeague(League league, DateTime referenceDate) async {
     var season = await league.getCurrentSeason();
 

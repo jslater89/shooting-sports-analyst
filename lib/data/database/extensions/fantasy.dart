@@ -53,7 +53,7 @@ extension FantasyDatabase on AnalystDatabase {
     var id = FantasyPlayer.idFromEntityIdentifiers(
       sportName: rating.sportName,
       groupUuid: uuid,
-      memberNumber: rating.memberNumber,
+      memberNumber: rating.originalMemberNumber,
       projectId: project.id,
     );
 
@@ -98,7 +98,7 @@ extension FantasyDatabase on AnalystDatabase {
     var id = FantasyPlayer.idFromEntityIdentifiers(
       sportName: rating.sportName,
       groupUuid: uuid,
-      memberNumber: rating.memberNumber,
+      memberNumber: rating.originalMemberNumber,
       projectId: project.id,
     );
 
