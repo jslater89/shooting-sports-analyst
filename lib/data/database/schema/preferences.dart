@@ -6,6 +6,7 @@
 
 import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_display_mode.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 
 part 'preferences.g.dart';
