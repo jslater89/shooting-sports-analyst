@@ -261,6 +261,15 @@ int combineHashes(int hash, int value) {
   return hash ^ (hash >> 6);
 }
 
+/// Combine a list of hashes into a new hash, in a way that
+/// will not change over app runs or Flutter releases
+/// and can therefore be used in the database as a key.
+///
+/// This is a non-commutative operation, so the order of the hashes matters.
+int combineHashList(List<int> hashes) {
+  return hashes.reduce((a, b) => combineHashes(a, b));
+}
+
 extension AsPercentage on double {
   String asPercentage({int decimals = 2}) {
     if(decimals == 0) {

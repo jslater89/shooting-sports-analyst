@@ -62,6 +62,13 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
   List<DbMatchStage> stages;
   List<DbMatchEntry> shooters;
 
+  /// If true, shooters are stored in [shooterLinks] as documents in a separate collection,
+  /// rather than as embedded documents in [shooters].
+  bool shootersStoredSeparately = false;
+
+  /// Shooters for this match. Empty if [shootersStoredSeparately] is false.
+  final shooterLinks = IsarLinks<StandaloneDbMatchEntry>();
+
   List<DbScoringEvent> localBonusEvents;
   List<DbScoringEvent> localPenaltyEvents;
 
@@ -84,6 +91,7 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
     required this.memberNumbersAppearing,
     required this.localBonusEvents,
     required this.localPenaltyEvents,
+    this.shootersStoredSeparately = false,
   });
 
   DbShootingMatch.dbPlaceholder(this.id) :
@@ -99,7 +107,8 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
     shooters = [],
     memberNumbersAppearing = [],
     localBonusEvents = [],
-    localPenaltyEvents = [];
+    localPenaltyEvents = [],
+    shootersStoredSeparately = false;
 
   DbShootingMatch.sourcePlaceholder({
     required Sport sport,
@@ -115,9 +124,10 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
     sportName = sport.name,
     stages = [],
     shooters = [],
-    memberNumbersAppearing = [],
+      memberNumbersAppearing = [],
     localBonusEvents = [],
-    localPenaltyEvents = [];
+    localPenaltyEvents = [],
+    shootersStoredSeparately = false;
 
   factory DbShootingMatch.from(ShootingMatch match) {
     Set<Division> divisionsAppearing = {};
@@ -157,31 +167,70 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
       }
     }
 
+    // Very large matches will require us to store shooters in a separate collection, because
+    // we can't embed them all in the match document. The Handgun World Shoot (1622 entries, 30 stages)
+    // was too big, so we'll pick 60% of that as the threshold, on the basis that the stored
+    // World Shoot shooters occupy about 25mb, and 16mb is the document size limit.
+    var matchShooterStages = match.stages.length * match.shooters.length;
+    final threshold = 1622 * 30 * 0.60;
+    final shootersStoredSeparately = matchShooterStages > threshold;
+
     List<DbMatchEntry> dbEntries = [];
+    List<StandaloneDbMatchEntry> standaloneDbEntries = [];
     for(var entry in match.shooters) {
       var score = shooterScores[entry];
       if(score == null) {
         _log.w("shooter score for ${entry.firstName} ${entry.lastName} not found, leaving out");
       }
-      dbEntries.add(DbMatchEntry.from(entry, score));
+      if(shootersStoredSeparately) {
+        standaloneDbEntries.add(StandaloneDbMatchEntry.from(entry, score, matchSourceIds: match.sourceIds));
+      }
+      else {
+        dbEntries.add(DbMatchEntry.from(entry, score));
+      }
     }
 
-    return DbShootingMatch(
-      id: match.databaseId ?? Isar.autoIncrement,
-      eventName: match.name,
-      rawDate: match.rawDate,
-      date: match.date,
-      matchLevelName: match.level?.name,
-      matchEventLevel: match.level?.eventLevel ?? EventLevel.local,
-      sourceIds: []..addAll(match.sourceIds),
-      sourceCode: match.sourceCode,
-      sportName: match.sport.name,
-      shooters: dbEntries,
-      stages: []..addAll(match.stages.map((s) => DbMatchStage.from(s))),
-      memberNumbersAppearing: memberNumbersAppearing.toList(),
-      localBonusEvents: match.localBonusEvents.map((e) => DbScoringEvent.fromScoringEvent(e)).toList(),
-      localPenaltyEvents: match.localPenaltyEvents.map((e) => DbScoringEvent.fromScoringEvent(e)).toList(),
-    );
+    if(shootersStoredSeparately) {
+      var dbMatch = DbShootingMatch(
+        id: match.databaseId ?? Isar.autoIncrement,
+        eventName: match.name,
+        rawDate: match.rawDate,
+        date: match.date,
+        matchLevelName: match.level?.name,
+        matchEventLevel: match.level?.eventLevel ?? EventLevel.local,
+        sourceIds: []..addAll(match.sourceIds),
+        sourceCode: match.sourceCode,
+        sportName: match.sport.name,
+        stages: []..addAll(match.stages.map((s) => DbMatchStage.from(s))),
+        shooters: [],
+        shootersStoredSeparately: true,
+        memberNumbersAppearing: memberNumbersAppearing.toList(),
+        localBonusEvents: match.localBonusEvents.map((e) => DbScoringEvent.fromScoringEvent(e)).toList(),
+        localPenaltyEvents: match.localPenaltyEvents.map((e) => DbScoringEvent.fromScoringEvent(e)).toList(),
+      );
+
+      dbMatch.shooterLinks.addAll(standaloneDbEntries);
+      return dbMatch;
+    }
+    else {
+      return DbShootingMatch(
+        id: match.databaseId ?? Isar.autoIncrement,
+        eventName: match.name,
+        rawDate: match.rawDate,
+        date: match.date,
+        matchLevelName: match.level?.name,
+        matchEventLevel: match.level?.eventLevel ?? EventLevel.local,
+        sourceIds: []..addAll(match.sourceIds),
+        sourceCode: match.sourceCode,
+        sportName: match.sport.name,
+        shooters: dbEntries,
+        stages: []..addAll(match.stages.map((s) => DbMatchStage.from(s))),
+        memberNumbersAppearing: memberNumbersAppearing.toList(),
+        localBonusEvents: match.localBonusEvents.map((e) => DbScoringEvent.fromScoringEvent(e)).toList(),
+        localPenaltyEvents: match.localPenaltyEvents.map((e) => DbScoringEvent.fromScoringEvent(e)).toList(),
+      );
+    }
+
   }
 
   Result<ShootingMatch, ResultErr> hydrate({bool useCache = false}) {
@@ -205,7 +254,17 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
 
     List<MatchStage> hydratedStages = stages.map((s) => s.hydrate(sport)).toList();
     Map<int, MatchStage> stagesById = Map.fromEntries(hydratedStages.map((e) => MapEntry(e.stageId, e)));
-    List<Result<MatchEntry, ResultErr>> hydratedShooters = shooters.map((s) =>
+
+    List<DbMatchEntry> localShooters = [];
+    if(shootersStoredSeparately) {
+      // Load and hydrate shooters from the separate collection.
+      localShooters = shooterLinks.map((e) => e.intoDbMatchEntry()).toList();
+    }
+    else {
+      localShooters = shooters;
+    }
+
+    List<Result<MatchEntry, ResultErr>> hydratedShooters = localShooters.map((s) =>
       s.hydrate(sport, stagesById, localBonusEvents, localPenaltyEvents)).toList();
     var firstError = hydratedShooters.firstWhereOrNull((e) => e.isErr());
     if(firstError != null) return Result.err(firstError.unwrapErr());
@@ -357,8 +416,7 @@ class DbScoringEventOverride {
   }
 }
 
-@embedded
-class DbMatchEntry {
+abstract class DbMatchEntryBase {
   int entryId;
   String firstName;
   String lastName;
@@ -376,8 +434,9 @@ class DbMatchEntry {
   List<DbRawScore> scores;
   DbMatchScore? precalculatedScore;
   String? sourceId;
+  List<String> matchSourceIds;
 
-  DbMatchEntry({
+  DbMatchEntryBase({
     this.entryId = -1,
     this.firstName = "(invalid)",
     this.lastName = "(invalid)",
@@ -387,14 +446,122 @@ class DbMatchEntry {
     this.female = false,
     this.dq = false,
     this.reentry = false,
+    this.squad,
     this.powerFactorName = "(invalid)",
     this.divisionName,
     this.classificationName,
     this.ageCategoryName,
-    this.squad,
     this.scores = const [],
     this.precalculatedScore,
     this.sourceId,
+    this.matchSourceIds = const [],
+  });
+}
+
+@collection
+class StandaloneDbMatchEntry extends DbMatchEntryBase {
+  @Index(type: IndexType.hashElements)
+  @override
+  List<String> matchSourceIds;
+
+  /// A hash of the entry ID, source ID, and match ID, which together uniquely identify an entry
+  /// even across matches and sports.
+  Id get dbId {
+    if(matchSourceIds.isNotEmpty) {
+      return combineHashList([entryId.stableHash, matchSourceIds.first.stableHash]);
+    }
+    else {
+      // TODO: this may cause crashes with Isar
+      throw ArgumentError("matchSourceIds is required for non-embedded DbMatchEntry $this");
+    }
+  }
+
+  StandaloneDbMatchEntry({
+    super.entryId,
+    super.firstName,
+    super.lastName,
+    super.memberNumber,
+    super.originalMemberNumber,
+    super.knownMemberNumbers,
+    super.female,
+    super.dq,
+    super.squad,
+    super.reentry,
+    super.powerFactorName,
+    super.divisionName,
+    super.classificationName,
+    super.ageCategoryName,
+    super.scores,
+    super.precalculatedScore,
+    super.sourceId,
+    this.matchSourceIds = const [],
+  });
+
+  StandaloneDbMatchEntry.from(MatchEntry entry, RelativeMatchScore? score, {required this.matchSourceIds}) : super(
+    entryId: entry.entryId,
+    firstName: entry.firstName,
+    lastName: entry.lastName,
+    memberNumber: entry.memberNumber,
+    originalMemberNumber: entry.originalMemberNumber,
+    knownMemberNumbers: entry.knownMemberNumbers.toList(),
+    female: entry.female,
+    dq: entry.dq,
+    squad: entry.squad,
+    reentry: entry.reentry,
+    powerFactorName: entry.powerFactor.name,
+    divisionName: entry.division?.name,
+    classificationName: entry.classification?.name,
+    ageCategoryName: entry.ageCategory?.name,
+    scores: entry.scores.keys.map((stage) {
+      return DbRawScore.from(stage.stageId, entry.scores[stage]!);
+    }).toList(),
+    precalculatedScore: DbMatchScore.from(score),
+    sourceId: entry.sourceId,
+  );
+
+  DbMatchEntry intoDbMatchEntry() {
+    return DbMatchEntry(
+      entryId: entryId,
+      firstName: firstName,
+      lastName: lastName,
+      memberNumber: memberNumber,
+      originalMemberNumber: originalMemberNumber,
+      knownMemberNumbers: knownMemberNumbers,
+      female: female,
+      dq: dq,
+      squad: squad,
+      reentry: reentry,
+      powerFactorName: powerFactorName,
+      divisionName: divisionName,
+      classificationName: classificationName,
+      ageCategoryName: ageCategoryName,
+      scores: scores,
+      precalculatedScore: precalculatedScore,
+      sourceId: sourceId,
+    );
+  }
+}
+
+@embedded
+class DbMatchEntry extends DbMatchEntryBase {
+  DbMatchEntry({
+    super.entryId,
+    super.firstName,
+    super.lastName,
+    super.memberNumber,
+    super.originalMemberNumber,
+    super.knownMemberNumbers,
+    super.female,
+    super.dq,
+    super.reentry,
+    super.powerFactorName,
+    super.divisionName,
+    super.classificationName,
+    super.ageCategoryName,
+    super.squad,
+    super.scores,
+    super.precalculatedScore,
+    super.sourceId,
   });
 
   factory DbMatchEntry.from(MatchEntry entry, RelativeMatchScore? score) {

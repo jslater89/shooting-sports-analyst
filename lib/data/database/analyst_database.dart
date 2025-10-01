@@ -71,6 +71,7 @@ class AnalystDatabase {
     isar = await Isar.open(
       [
         DbShootingMatchSchema,
+        StandaloneDbMatchEntrySchema,
         DbRatingProjectSchema,
         RatingGroupSchema,
         DbRatingEventSchema,
@@ -248,8 +249,8 @@ class AnalystDatabase {
     }
     var dbMatch = DbShootingMatch.from(match);
     try {
+      var oldMatch = await getMatchByAnySourceId(dbMatch.sourceIds);
       dbMatch = await isar.writeTxn<DbShootingMatch>(() async {
-        var oldMatch = await getMatchByAnySourceId(dbMatch.sourceIds);
         if (oldMatch != null) {
           dbMatch.id = oldMatch.id;
           await isar.dbShootingMatchs.put(dbMatch);
@@ -259,6 +260,20 @@ class AnalystDatabase {
         }
         return dbMatch;
       });
+
+      if(dbMatch.shootersStoredSeparately) {
+        // We need to load outside the write transaction, because load can't be done inside.
+        // It should be lightweight because dbMatch shouldn't have any DB entries (just the newly inserted ones).
+        await dbMatch.shooterLinks.load();
+        await isar.writeTxn(() async {
+          if(oldMatch != null) {
+            var deletedEntries = await deleteStandaloneMatchEntriesForMatchSourceIds(oldMatch.sourceIds);
+            _log.d("Deleted $deletedEntries standalone match entries while updating match ${oldMatch.eventName}");
+          }
+          await isar.standaloneDbMatchEntrys.putAll(dbMatch.shooterLinks.toList());
+          await dbMatch.shooterLinks.save();
+        });
+      }
     }
     catch(e, stackTrace) {
       _log.e("Failed to save match", error: e, stackTrace: stackTrace);
@@ -306,9 +321,18 @@ class AnalystDatabase {
     return matches;
   }
 
+  Future<int> deleteStandaloneMatchEntriesForMatchSourceIds(List<String> matchSourceIds) async {
+    return await isar.standaloneDbMatchEntrys.where().anyOf(matchSourceIds, (q, sourceId) => q.matchSourceIdsElementEqualTo(sourceId)).deleteAll();
+  }
+
   Future<Result<bool, ResultErr>> deleteMatch(int id) async {
     return isar.writeTxn<Result<bool, ResultErr>>(() async {
       try {
+        var match = await isar.dbShootingMatchs.get(id);
+        if(match?.shootersStoredSeparately ?? false) {
+          var deletedEntries = await deleteStandaloneMatchEntriesForMatchSourceIds(match!.sourceIds);
+          _log.d("Deleted $deletedEntries standalone match entries while deleting match ${match.eventName}");
+        }
         var result = await isar.dbShootingMatchs.delete(id);
         return Result.ok(result);
       }
@@ -320,14 +344,11 @@ class AnalystDatabase {
   }
 
   Future<Result<bool, ResultErr>> deleteMatchBySourceId(String id) async {
-    try {
-      var result = await isar.dbShootingMatchs.deleteBySourceIds([id]);
-      return Result.ok(result);
+    var match = await getMatchBySourceId(id);
+    if(match == null) {
+      return Result.ok(false);
     }
-    catch(e, stackTrace) {
-      _log.e("Failed to delete match", error: e, stackTrace: stackTrace);
-      return Result.err(StringError(e.toString()));
-    }
+    return deleteMatch(match.id);
   }
 
   Future<void> migrateFromMatchCache(ProgressCallback callback) async {
