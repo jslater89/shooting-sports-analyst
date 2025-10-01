@@ -40,6 +40,7 @@ import 'package:shooting_sports_analyst/util.dart';
 import 'package:shooting_sports_analyst/version.dart';
 
 import 'db_oneoff_impl/stacked_labeled_progress_bar_test.dart';
+import 'db_oneoff_impl/stage_counts_by_year_command.dart';
 import 'server.dart';
 import 'db_oneoff_impl/base.dart';
 import 'db_oneoff_impl/tom_castro_command.dart';
@@ -75,6 +76,7 @@ Future<void> main() async {
     ImportIcoreDumpCommand(db),
     WinningPointsByDateCommand(db),
     StageSizeAnalysisCommand(db),
+    StageCountsByYearCommand(db),
     QuitCommand(),
   ], menuHeader: "DB Oneoffs ${VersionInfo.version}", commandSelected: (command) async {
     switch(command.command?.runtimeType) {
