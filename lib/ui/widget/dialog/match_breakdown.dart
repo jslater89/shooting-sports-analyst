@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/ui/colors.dart';
 
 class MatchBreakdown extends StatelessWidget {
   final List<MatchEntry> shooters;
@@ -34,14 +35,14 @@ class MatchBreakdown extends StatelessWidget {
     }
 
     shooterCounts[_DivisionClass(null, null)] = 0;
-    
+
     for(MatchEntry s in shooters) {
       shooterCounts[_DivisionClass(s.division, s.classification)] = shooterCounts[_DivisionClass(s.division, s.classification)]! + 1;
       shooterCounts[_DivisionClass(s.division, null)] = shooterCounts[_DivisionClass(s.division, null)]! + 1;
       shooterCounts[_DivisionClass(null, s.classification)] = shooterCounts[_DivisionClass(null, s.classification)]! + 1;
       shooterCounts[_DivisionClass(null, null)] = shooterCounts[_DivisionClass(null, null)]! + 1;
     }
-    
+
     return AlertDialog(
       title: Text("Match Breakdown"),
       content: Column(
@@ -51,7 +52,7 @@ class MatchBreakdown extends StatelessWidget {
           SizedBox(height: 12),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            child: _buildTable(shooterCounts)
+            child: _buildTable(context, shooterCounts)
           ),
           SizedBox(height: 12),
           _buildPowerFactor(shooters),
@@ -60,7 +61,7 @@ class MatchBreakdown extends StatelessWidget {
     );
   }
 
-  Widget _buildTable(Map<_DivisionClass, int> shooterCounts) {
+  Widget _buildTable(BuildContext context, Map<_DivisionClass, int> shooterCounts) {
     var rows = <TableRow>[];
 
     var divisions = <Division>[]..addAll(sport.divisions.values);
@@ -109,7 +110,7 @@ class MatchBreakdown extends StatelessWidget {
         TableRow(
           children: columns,
           decoration: BoxDecoration(
-            color: i++ % 2 == 0 ? Colors.white : Colors.grey[200],
+            color: ThemeColors.backgroundColor(context, rowIndex: i++),
           )
         )
       );
@@ -135,7 +136,7 @@ class MatchBreakdown extends StatelessWidget {
       TableRow(
         children: columns,
         decoration: BoxDecoration(
-          color: i++ % 2 == 0 ? Colors.white : Colors.grey[200],
+          color: ThemeColors.backgroundColor(context, rowIndex: i),
         )
       ),
     );
@@ -172,7 +173,7 @@ class _DivisionClass {
   final Classification? classification;
 
   _DivisionClass(this.division, this.classification);
-  
+
   @override
   bool operator ==(Object other) {
     if(!(other is _DivisionClass)) return false;
