@@ -116,6 +116,10 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
   double get rating => wrappedRating.rating;
   set rating(double v) => wrappedRating.rating = v;
 
+  String formattedRating() {
+    return rating.toStringWithSignificantDigits(3);
+  }
+
   /// All of the rating events in this shooter's history, ordered
   /// from newest to oldest.
   ///

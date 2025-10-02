@@ -20,6 +20,7 @@ import 'package:shooting_sports_analyst/data/help/entries/openskill_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/points_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/rating_event_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/rating_reports_help.dart';
+import 'package:shooting_sports_analyst/data/help/entries/rating_set_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/recalculation_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/results_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/scalers_and_distributions_help.dart';
@@ -67,5 +68,6 @@ void registerHelpTopics() {
   ratings.addChild(helpMarbles);
   ratings.addChild(helpMarblesConfiguration);
   ratings.addChild(helpRecalculation);
+  ratings.addChild(helpRatingSets);
   root.addChild(ratings);
 }

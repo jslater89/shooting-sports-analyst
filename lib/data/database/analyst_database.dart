@@ -21,6 +21,7 @@ import 'package:shooting_sports_analyst/data/database/schema/match_heat.dart';
 import 'package:shooting_sports_analyst/data/database/schema/preferences.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/database/schema/registration.dart';
 import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
@@ -87,6 +88,7 @@ class AnalystDatabase {
         StandaloneDbMatchEntrySchema,
         DbRatingProjectSchema,
         RatingGroupSchema,
+        RatingSetSchema,
         DbRatingEventSchema,
         DbShooterRatingSchema,
         MatchRegistrationMappingSchema,
