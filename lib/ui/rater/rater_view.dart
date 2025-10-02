@@ -88,6 +88,7 @@ class _RaterViewState extends State<RaterView> {
   ContinuousDistribution? ratingDistribution;
   ShooterRating? minRating;
   ShooterRating? maxRating;
+  bool uniqueRatingsSorted = false;
   double? top2PercentAverage;
   double? ratingMean;
   double? ratingStdDev;
@@ -117,6 +118,7 @@ class _RaterViewState extends State<RaterView> {
         groups = g;
         if(scaleRatings) {
           uniqueRatings = ratings.map((e) => settings.algorithm.wrapDbRating(e)).sorted((a, b) => b.rating.compareTo(a.rating));
+          uniqueRatingsSorted = true;
         }
         else {
           uniqueRatings = ratings.map((e) => settings.algorithm.wrapDbRating(e)).toList();
@@ -125,7 +127,11 @@ class _RaterViewState extends State<RaterView> {
       }
 
       if(scaleRatings && minRating == null) {
-        allRatings = uniqueRatings.map((e) => e.rating).sorted((a, b) => a.compareTo(b));
+        allRatings = uniqueRatings.map((e) => e.rating).where((r) => r >= 0).sorted((a, b) => a.compareTo(b));
+        if(!uniqueRatingsSorted) {
+          uniqueRatings = uniqueRatings.sorted((a, b) => b.rating.compareTo(a.rating));
+          uniqueRatingsSorted = true;
+        }
         ratingDistribution = estimator.estimate(allRatings);
         _log.i("Generating scaled rating data");
         minRating = uniqueRatings.last;
