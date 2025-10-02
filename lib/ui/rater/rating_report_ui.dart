@@ -18,7 +18,7 @@ extension RatingReportTypeUiBuilder on RatingReportType{
   List<Widget> expandedFor(BuildContext context, RatingReport data) {
     switch(this) {
       case RatingReportType.stringDifferenceNameForSameNumber:
-        var typedData = data as StringDifferenceNameForSameNumber;
+        var typedData = data.data as StringDifferenceNameForSameNumber;
         return [
           Text(
             "The following names appear in the dataset for ${typedData.number} and have high string difference, which may indicate "
@@ -32,7 +32,7 @@ extension RatingReportTypeUiBuilder on RatingReportType{
           ...typedData.names.map((name) => Text(" • $name")),
         ];
       case RatingReportType.ratingMergeWithDualHistory:
-        var typedData = data as RatingMergeWithDualHistory;
+        var typedData = data.data as RatingMergeWithDualHistory;
         return [
           Text(
             "Ratings corresponding to the following member numbers were merged as a result of a member number mapping, "
@@ -43,7 +43,7 @@ extension RatingReportTypeUiBuilder on RatingReportType{
           ...typedData.memberNumbers.map((number) => Text(" • $number")),
         ];
       case RatingReportType.dataEntryFixLoop:
-        var typedData = data as DataEntryFixLoop;
+        var typedData = data.data as DataEntryFixLoop;
         return [
           Text(
             "The following numbers are part of a data entry fix loop: data entry fixes occur for each number in this list, "
@@ -54,7 +54,7 @@ extension RatingReportTypeUiBuilder on RatingReportType{
           Text(typedData.numbers.join(" → ")),
         ];
       case RatingReportType.duplicateDataEntryFix:
-        var typedData = data as DuplicateDataEntryFix;
+        var typedData = data.data as DuplicateDataEntryFix;
         return [
           Text(
             "The deduplicator attempted to add the data entry fix below, which duplicates an existing data entry fix. "
@@ -67,7 +67,7 @@ extension RatingReportTypeUiBuilder on RatingReportType{
           Text("Target number: ${typedData.targetNumber}"),
         ];
       case RatingReportType.duplicateBlacklistEntry:
-        var typedData = data as DuplicateBlacklistEntry;
+        var typedData = data.data as DuplicateBlacklistEntry;
         return [
           Text(
             "The deduplicator attempted to add the blacklist entry below, which duplicates an existing entry. "
@@ -79,7 +79,7 @@ extension RatingReportTypeUiBuilder on RatingReportType{
           Text("Target number: ${typedData.targetNumber}"),
         ];
       case RatingReportType.duplicateUserMapping:
-        var typedData = data as DuplicateUserMapping;
+        var typedData = data.data as DuplicateUserMapping;
         return [
           Text(
             "The user mapping below duplicates an existing user mapping. This may be an issue with the import of a "
@@ -91,7 +91,7 @@ extension RatingReportTypeUiBuilder on RatingReportType{
           Text("Target number: ${typedData.targetNumber}"),
         ];
       case RatingReportType.duplicateAutoMapping:
-        var typedData = data as DuplicateAutoMapping;
+        var typedData = data.data as DuplicateAutoMapping;
         return [
           Text(
             "The auto mapping below duplicates an existing auto mapping. This may be an issue with the import of a "
@@ -103,7 +103,7 @@ extension RatingReportTypeUiBuilder on RatingReportType{
           Text("Target number: ${typedData.targetNumber}"),
         ];
       case RatingReportType.blacklistedMapping:
-        var typedData = data as BlacklistedMapping;
+        var typedData = data.data as BlacklistedMapping;
         return [
           Text(
             "The mapping below was detected and/or appears in the project settings, but is also blacklisted. "
@@ -114,7 +114,7 @@ extension RatingReportTypeUiBuilder on RatingReportType{
           Text("Target number: ${typedData.targetNumber}"),
         ];
       case RatingReportType.fiftyPercentDnfs:
-        var typedData = data as FiftyPercentDnfs;
+        var typedData = data.data as FiftyPercentDnfs;
         return [
           Text(
             "The match ${typedData.matchName} has a DNF rate of ${typedData.dnfRatio.asPercentage(decimals: 0)} "
