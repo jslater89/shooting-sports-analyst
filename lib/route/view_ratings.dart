@@ -17,6 +17,7 @@ import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/application_preferences.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_set.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/synchronous_rating_data_source.dart';
@@ -39,6 +40,7 @@ import 'package:shooting_sports_analyst/ui/rater/rater_stats_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/rater_view.dart';
 import 'package:shooting_sports_analyst/ui/rater/rater_view_other_settings_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/rating_filter_dialog.dart';
+import 'package:shooting_sports_analyst/ui/rater/rating_set_manager.dart';
 import 'package:shooting_sports_analyst/ui/rater/reports/report_dialog.dart';
 import 'package:shooting_sports_analyst/ui/rater/reports/report_view.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
@@ -76,6 +78,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   int _minRatings = 0;
   int _maxDays = 365;
   RatingFilters _filters = RatingFilters(ladyOnly: false);
+  List<RatingSet> _ratingSets = [];
 
   List<RatingGroup> activeTabs = [];
 
@@ -302,6 +305,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                 maxAge: maxAge,
                 sortMode: _sortMode,
                 filters: _filters,
+                ratingSets: _ratingSets,
                 onRatingsFiltered: (ratings) {
                   _ratings = ratings;
                 },
@@ -471,12 +475,6 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
   List<Widget> _generateActions(BuildContext context) {
     if(!initialized) return [];
-
-    // These are replicated in actions below, because generateActions is only
-    // called when the state of this widget changes, and tab switching happens
-    // fully below this widget.
-    // (n.b. tab/rater used to be initialized here once)
-
     return [
       if(_settings.algorithm.supportsPrediction) Tooltip(
         message: "Predict the outcome of a match based on ratings.",
@@ -682,6 +680,16 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         }));
         break;
 
+      case _MenuEntry.chooseRatingSets:
+        var ratingSets = await RatingSetManagerDialog.show(context, db: AnalystDatabase(), validRatings: _ratings, initialSelection: _ratingSets);
+
+        if(ratingSets != null) {
+          setState(() {
+            _ratingSets = ratingSets;
+          });
+        }
+        break;
+
       case _MenuEntry.otherSettings:
         var displayModel = Provider.of<RaterViewDisplayModel>(context, listen: false);
         RaterViewOtherSettingsDialog.show(context, displayModel);
@@ -805,6 +813,7 @@ enum _MenuEntry {
   dataErrors,
   viewResults,
   viewMatchHeat,
+  chooseRatingSets,
   otherSettings;
 
   String get label {
@@ -821,6 +830,8 @@ enum _MenuEntry {
         return "View match results";
       case _MenuEntry.viewMatchHeat:
         return "View match heat";
+      case _MenuEntry.chooseRatingSets:
+        return "Choose rating sets";
       case _MenuEntry.otherSettings:
         return "Miscellaneous settings";
     }

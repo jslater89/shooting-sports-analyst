@@ -10,7 +10,10 @@ import 'package:collection/collection.dart' hide IterableNumberExtension;
 import 'package:data/data.dart' show IterableNumExtension, ContinuousDistribution;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/rating_sets.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_set.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/synchronous_rating_data_source.dart';
@@ -48,6 +51,7 @@ class RaterView extends StatefulWidget {
     this.search, this.maxAge, this.minRatings = 0,
     this.sortMode = RatingSortMode.rating,
     required this.filters,
+    required this.ratingSets,
     this.onRatingsFiltered,
     this.hiddenShooters = const [],
     this.changeSince,
@@ -63,7 +67,7 @@ class RaterView extends StatefulWidget {
   final RatingGroup group;
   final ShootingMatch currentMatch;
   final RatingSortMode sortMode;
-
+  final List<RatingSet> ratingSets;
   /// A list of shooters to hide from the results. Entries are member numbers.
   final List<String> hiddenShooters;
 
@@ -240,6 +244,21 @@ class _RaterViewState extends State<RaterView> {
 
     if(widget.hiddenShooters.isNotEmpty) {
       sortedRatings = sortedRatings.where((r) => !hiddenShooters.contains(r.memberNumber));
+    }
+
+    if(widget.ratingSets.isNotEmpty) {
+      Set<RatingSet> applied = {};
+      sortedRatings = sortedRatings.where((r) => widget.ratingSets.any((s) {
+        if(s.matches(r)) {
+          applied.add(s);
+          return true;
+        }
+        return false;
+      })).toList();
+      var db = AnalystDatabase();
+      for(var set in applied) {
+        db.saveRatingSetSync(set);
+      }
     }
 
     var comparator = settings.algorithm.comparatorFor(widget.sortMode, changeSince: widget.changeSince)
