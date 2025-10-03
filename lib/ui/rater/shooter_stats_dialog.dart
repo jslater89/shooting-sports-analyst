@@ -9,6 +9,9 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/application_preferences.dart';
+import 'package:shooting_sports_analyst/data/database/schema/preferences.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/career_stats.dart';
@@ -67,6 +70,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
   final ScrollController _rightController = ScrollController();
   final ScrollController _leftController = ScrollController();
 
+  late ApplicationPreferences _appPrefs;
   RatingEvent? _highlighted;
   List<Widget>? _eventLines;
   List<Widget>? _historyLines;
@@ -82,6 +86,9 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
 
     careerStats = CareerStats(sport, widget.rating);
     displayedStats = careerStats.careerStats;
+    _appPrefs = AnalystDatabase().getPreferencesSync();
+    showingEvents = _appPrefs.shooterStatsHistoryType == ShooterStatsHistoryType.events;
+    reverseHistoryLines = _appPrefs.shooterStatsHistoryDescending;
   }
 
   String _divisionName(RatingEvent e) {
@@ -336,6 +343,8 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                               setState(() {
                                 showingEvents = !showingEvents;
                               });
+                              _appPrefs.shooterStatsHistoryType = showingEvents ? ShooterStatsHistoryType.events : ShooterStatsHistoryType.matches;
+                              AnalystDatabase().savePreferencesSync(_appPrefs);
                               _rightController.animateTo(0, duration: Duration(milliseconds: 200), curve: Curves.easeInOut);
                             },
                           ),
@@ -347,6 +356,9 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                                   reverseHistoryLines = !reverseHistoryLines;
                                   _historyLines = null;
                               });
+                              // History lines are ascending by default, so 'ascending' is 'not reversed'
+                              _appPrefs.shooterStatsHistoryAscending = !reverseHistoryLines;
+                              AnalystDatabase().savePreferencesSync(_appPrefs);
                             })
                         ],
                       ),

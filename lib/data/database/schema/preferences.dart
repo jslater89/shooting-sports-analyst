@@ -80,6 +80,16 @@ class ApplicationPreferences {
       recentPredictionUrls.removeRange(100, recentPredictionUrls.length);
     }
   }
+
+  /// Whether event history or match history was shown most recently in the shooter stats dialog.
+  @enumerated
+  ShooterStatsHistoryType shooterStatsHistoryType = ShooterStatsHistoryType.events;
+
+  /// Whether shooter history was sorted in ascending or descending order most recently.
+  bool shooterStatsHistoryAscending = true;
+
+  @ignore
+  bool get shooterStatsHistoryDescending => !shooterStatsHistoryAscending;
 }
 
 @embedded
@@ -94,4 +104,9 @@ class RecentPredictionUrl {
   RecentPredictionUrl copyWith({DateTime? lastUsed}) {
     return RecentPredictionUrl.create(url: url, matchName: matchName, lastUsed: lastUsed ?? this.lastUsed);
   }
+}
+
+enum ShooterStatsHistoryType {
+  events,
+  matches,
 }
