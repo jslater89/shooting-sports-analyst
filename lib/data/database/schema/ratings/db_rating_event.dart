@@ -8,6 +8,7 @@ import 'dart:convert';
 
 import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
+import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_relative_score.dart';
@@ -58,6 +59,39 @@ class DbRatingEvent implements IRatingEvent, IConnectivityEvent {
     }
   }
 
+  void setMatchSync(DbShootingMatch m, {bool save = true}) {
+    matchId = m.sourceIds.first;
+    match.value = m;
+    if(save) {
+      return match.saveSync();
+    }
+  }
+
+  /// Get the match for this event.
+  Future<DbShootingMatch?> getMatch({bool save = true}) async {
+    if(match.value != null) {
+      return match.value!;
+    }
+
+    var m = await AnalystDatabase().getMatchByAnySourceId([matchId]);
+    if(m != null) {
+      setMatch(m, save: save);
+    }
+    return m;
+  }
+
+  DbShootingMatch? getMatchSync({bool save = true}) {
+    if(match.value != null) {
+      return match.value!;
+    }
+
+    var m = AnalystDatabase().getMatchByAnySourceIdSync([matchId]);
+    if(m != null) {
+      setMatch(m, save: save);
+    }
+    return m;
+  }
+
   /// A match identifier for the match. See [setMatch].
   String matchId;
 
@@ -76,6 +110,15 @@ class DbRatingEvent implements IRatingEvent, IConnectivityEvent {
   double newConnectivity = 1.0;
   double oldConnectivity = 1.0;
   double get connectivityChange => newConnectivity - oldConnectivity;
+
+  // TODO: need to add an 'intraDayOrder' field
+  // We want to sort by date, then intraDayOrder, then stage number,
+  // so that we can sort events from matches that start on the same day in the
+  // correct order.
+  // Sadly I don't think there's an efficient way to do everyone's events in the
+  // actual order they were shot, unless we go week-by-week or something, which loses
+  // generality for longer matches.
+  // I guess we could technically use minutes in the date for intraDayOrder too.
 
   /// A synthetic incrementing value used to sort rating events by date and stage
   /// number.

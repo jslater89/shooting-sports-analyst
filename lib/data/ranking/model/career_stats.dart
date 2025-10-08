@@ -59,6 +59,8 @@ class CareerStats {
       var historyEntries = matchHistory.where((e) => e.match.date.isAfter(yearStart) && e.match.date.isBefore(yearEnd)).toList();
       var combinedEvents = rating.ratingEvents.where((e) => e.match.date.isAfter(yearStart) && e.match.date.isBefore(yearEnd)).toList();
       var stats = PeriodicStats(career: this, combinedEvents: combinedEvents, matchHistory: historyEntries, start: yearStart, end: yearEnd);
+      // Resort here because we're sorting slightly differently than the DB sorts at the moment
+      stats.resort();
       annualStats.add(stats);
       careerStats.addFrom(stats);
     }
@@ -160,9 +162,40 @@ class PeriodicStats {
   }
 
   void resort() {
-    events.sort((a, b) => b.wrappedEvent.dateAndStageNumber.compareTo(a.wrappedEvent.dateAndStageNumber));
-    combinedEvents.sort((a, b) => b.wrappedEvent.dateAndStageNumber.compareTo(a.wrappedEvent.dateAndStageNumber));
-    matchHistory.sort((a, b) => a.match.date.compareTo(b.match.date));
+    events.sort((a, b) {
+      if(b.wrappedEvent.date == a.wrappedEvent.date) {
+        // For events on the same day but not the same match, we want to sort by match name
+        if(a.wrappedEvent.matchId != b.wrappedEvent.matchId) {
+          var aName = a.wrappedEvent.getMatchSync()?.eventName ?? "null";
+          var bName = b.wrappedEvent.getMatchSync()?.eventName ?? "null";
+          return aName.compareTo(bName);
+        }
+      }
+      return b.wrappedEvent.dateAndStageNumber.compareTo(a.wrappedEvent.dateAndStageNumber);
+    });
+    combinedEvents.sort((a, b) {
+      if(b.wrappedEvent.date == a.wrappedEvent.date) {
+        // For events on the same day but not the same match, we want to sort by match name
+        if(a.wrappedEvent.matchId != b.wrappedEvent.matchId) {
+          var aName = a.wrappedEvent.getMatchSync()?.eventName ?? "null";
+          var bName = b.wrappedEvent.getMatchSync()?.eventName ?? "null";
+          return aName.compareTo(bName);
+        }
+      }
+      return b.wrappedEvent.dateAndStageNumber.compareTo(a.wrappedEvent.dateAndStageNumber);
+    });
+    matchHistory.sort((a, b) {
+      var result = a.match.date.compareTo(b.match.date);
+      if(result != 0) {
+        return result;
+      }
+      else {
+        // Sort matches on the same day by name
+        var aName = a.match.name;
+        var bName = b.match.name;
+        return bName.compareTo(aName);
+      }
+    });
   }
 
 
