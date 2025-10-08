@@ -418,10 +418,21 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     double maxWithError = -10000000;
 
     var size = MediaQuery.of(context).size;
+    Map<int, int> yearIndices = {};
 
     if(_series == null) {
       var eventsOfInterest = displayedStats.events.reversed.where((e) => e.newRating != 0 && e.ratingChange != 0);
+      // Map from year to index of first event in that year,
+      // used to show year separators.
       _ratings = eventsOfInterest.mapIndexed((i, e) {
+
+        // Update year indices
+        // We're starting at the beginning, so the first event we see with a given
+        // year is the index we care about.
+        if(!yearIndices.containsKey(e.wrappedEvent.date.year)) {
+          yearIndices[e.wrappedEvent.date.year] = i;
+        }
+
         if(e.newRating < minRating) minRating = e.newRating;
         if(e.newRating > maxRating) maxRating = e.newRating;
 
@@ -500,7 +511,17 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
           charts.LinePointHighlighter(
             selectionModelType: charts.SelectionModelType.info,
             symbolRenderer: _EloTooltipRenderer(),
-          )
+          ),
+          charts.RangeAnnotation([
+            for(var year in yearIndices.keys)
+              charts.LineAnnotationSegment(
+                yearIndices[year]!,
+                charts.RangeAnnotationAxisType.domain,
+                startLabel: year.toString(),
+                labelStyleSpec: charts.TextStyleSpec(color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex())),
+                color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
+              ),
+          ]),
         ],
         selectionModels: [
           charts.SelectionModelConfig(
