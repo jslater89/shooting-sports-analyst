@@ -70,7 +70,7 @@ class RaterView extends StatefulWidget {
   /// A list of shooters to hide from the results. Entries are member numbers.
   final List<String> hiddenShooters;
 
-  final void Function(List<ShooterRating>)? onRatingsFiltered;
+  final void Function(List<ShooterRating> ratings, List<ShooterRating> completeRatings)? onRatingsFiltered;
 
   @override
   State<RaterView> createState() => _RaterViewState();
@@ -270,7 +270,7 @@ class _RaterViewState extends State<RaterView> {
         ?? widget.sortMode.comparator(changeSince: widget.changeSince);
     var asList = sortedRatings.sorted(comparator);
 
-    widget.onRatingsFiltered?.call(asList);
+    widget.onRatingsFiltered?.call(asList, uniqueRatings);
 
     RatingScalerInfo? info;
     if(initialized && scaler != null) {

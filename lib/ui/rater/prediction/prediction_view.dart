@@ -68,7 +68,7 @@ class _PredictionViewState extends State<PredictionView> {
     double minValue = 10000;
     double maxValue = -10000;
 
-    final backgroundColor = Colors.white;
+    final backgroundColor = ThemeColors.backgroundColor(context);
 
     var highPrediction = sortedPredictions.isEmpty ? 0.0 : (sortedPredictions[0].center + sortedPredictions[0].upperBox) / 2;
 

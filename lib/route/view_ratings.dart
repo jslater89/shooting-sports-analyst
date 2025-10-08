@@ -262,6 +262,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     );
   }
 
+  List<ShooterRating> _completeRatings = [];
   List<ShooterRating> _ratings = [];
 
   Widget _ratingView() {
@@ -307,7 +308,8 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
                 sortMode: _sortMode,
                 filters: _filters,
                 ratingSets: _ratingSets,
-                onRatingsFiltered: (ratings) {
+                onRatingsFiltered: (ratings, completeRatings) {
+                  _completeRatings = completeRatings;
                   _ratings = ratings;
                 },
                 hiddenShooters: _settings.hiddenShooters,
@@ -682,7 +684,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         break;
 
       case _MenuEntry.chooseRatingSets:
-        var ratingSets = await RatingSetManagerDialog.show(context, db: AnalystDatabase(), validRatings: _ratings, initialSelection: _ratingSets);
+        var ratingSets = await RatingSetManagerDialog.show(context, db: AnalystDatabase(), validRatings: _completeRatings, initialSelection: _ratingSets);
 
         if(ratingSets != null) {
           setState(() {

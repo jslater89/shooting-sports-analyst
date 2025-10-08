@@ -500,7 +500,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
           charts.LinePointHighlighter(
             selectionModelType: charts.SelectionModelType.info,
             symbolRenderer: _EloTooltipRenderer(),
-          ),
+          )
         ],
         selectionModels: [
           charts.SelectionModelConfig(
