@@ -508,6 +508,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                 startLabel: year.toString(),
                 labelStyleSpec: charts.TextStyleSpec(color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex())),
                 color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
+                strokeWidthPx: 1,
               ),
           ]),
         ],
