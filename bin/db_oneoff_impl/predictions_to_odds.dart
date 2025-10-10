@@ -109,7 +109,7 @@ class PredictionsToOddsCommand extends DbOneoffCommand {
         //continue;
       }
 
-      individualOdds[userPred] = DecimalOdds.fromProbability(probability);
+      individualOdds[userPred] = DecimalOdds.fromProbability(probability, houseEdge: 0.05);
     }
 
     // Generate parlay odds using the individual odds and predictions
@@ -144,7 +144,8 @@ class PredictionsToOddsCommand extends DbOneoffCommand {
       var probability = odds.toProbability();
 
       console.print("${userPred.shooter.getName()}: ${userPred.bestPlace}-${userPred.worstPlace} place");
-      console.print("  Probability: ${(probability * 100).toStringAsFixed(2)}%");
+      console.print("  Raw Probability: ${(probability * 100).toStringAsFixed(2)}%");
+      console.print("  Probability w/ Edge: ${(odds.toProbabilityWithHouseEdge() * 100).toStringAsFixed(2)}%");
       console.print("  Decimal Odds: ${odds.decimal.toStringAsFixed(2)}");
       console.print("  Fractional Odds: ${odds.fractional}");
       console.print("  Moneyline: ${odds.moneyline}");
@@ -152,11 +153,12 @@ class PredictionsToOddsCommand extends DbOneoffCommand {
     }
 
     if(!parlayFailed) {
-      var parlayOdds = DecimalOdds.fromProbability(parlayProbability);
+      var parlayOdds = DecimalOdds.fromProbability(parlayProbability, houseEdge: 0.09);
 
       console.print("=== Parlay Odds ===");
       console.print("All predictions combined:");
-      console.print("  Probability: ${(parlayProbability * 100).toStringAsFixed(2)}%");
+      console.print("  Raw Probability: ${(parlayProbability * 100).toStringAsFixed(2)}%");
+      console.print("  Probability w/ Edge: ${(parlayOdds.toProbabilityWithHouseEdge() * 100).toStringAsFixed(2)}%");
       console.print("  Decimal Odds: ${parlayOdds.decimal.toStringAsFixed(2)}");
       console.print("  Fractional Odds: ${parlayOdds.fractional}");
       console.print("  Moneyline: ${parlayOdds.moneyline}");
@@ -170,7 +172,9 @@ class PredictionsToOddsCommand extends DbOneoffCommand {
     int bestPlace,
     int worstPlace,
     Map<ShooterRating, ShooterPrediction> shooterToPrediction,
-    {Random? random}
+    {
+      Random? random,
+    }
   ) {
     // Use Monte Carlo simulation with the actual prediction data
     // mean = average expected score from 1000 Monte Carlo runs
@@ -211,18 +215,9 @@ class PredictionsToOddsCommand extends DbOneoffCommand {
       }
     }
 
-    double probability;
-    if(successes == trials) {
-      // Turn sure things into almost sure things
-      probability = (successes - 1) / trials;
-    }
-    else if(successes == 0) {
-      // Turn impossible things into almost impossible things
-      probability = 1 / trials;
-    }
-    else {
-      probability = successes / trials;
-    }
+    var minProbability = 1 / trials;
+    var maxProbability = (successes - 1) / trials;
+    var probability = (successes / trials).clamp(minProbability, maxProbability);
 
     return probability;
   }
@@ -233,7 +228,7 @@ class PredictionsToOddsCommand extends DbOneoffCommand {
   double _combineOddsParlay(
     Console console,
     List<UserPrediction> userPredictions,
-    Map<UserPrediction, DecimalOdds> individualOdds
+    Map<UserPrediction, DecimalOdds> individualOdds,
   ) {
 
     if(!_isParlayPossible(userPredictions)) {
@@ -260,8 +255,8 @@ class PredictionsToOddsCommand extends DbOneoffCommand {
     var legCount = userPredictions.length;
 
     // For parlays more than 75% full, decrease the probability by between 0% and 25%.
-    // Decreasing the probability reduces the estimate that the parlay will be correct,
-    // which enhances payouts for hard parlays.
+    // Probability is our estimate that the parlay is correct, so we decrease it to make
+    // the payout higher.
     if(fullness > 0.75) {
       parlayProbability *= (1 - (0.25 * (fullness - 0.75)));
     }
@@ -451,24 +446,38 @@ class UserPrediction {
   UserPrediction.exactPlace(this.shooter, this.bestPlace) : this.worstPlace = bestPlace;
 }
 
-/// Represents decimal odds for betting
+/// Represents decimal odds for betting.
 class DecimalOdds {
-  final double decimal;
+  static const worstPossibleOdds = 1.0001;
 
-  DecimalOdds(this.decimal) {
-    if (decimal <= 1.0) {
+  /// The raw decimal odds, before the house edge is applied.
+  final double rawDecimal;
+
+  /// The decimal odds, after the house edge is applied.
+  ///
+  /// House edge reduces the payout.
+  double get decimal => max(worstPossibleOdds, rawDecimal * (1 - houseEdge));
+
+  /// The house edge, as a percentage.
+  ///
+  /// House edge reduces the payout.
+  final double houseEdge;
+
+  DecimalOdds(this.rawDecimal, {this.houseEdge = 0.00}) {
+    if (rawDecimal <= 1.0) {
       throw ArgumentError("Decimal odds must be greater than 1.0");
     }
   }
 
-  factory DecimalOdds.fromProbability(double probability) {
+  factory DecimalOdds.fromProbability(double probability, {double houseEdge = 0.00}) {
     if (probability <= 0 || probability >= 1) {
       throw ArgumentError("Probability must be between 0 and 1");
     }
-    return DecimalOdds(1.0 / probability);
+    return DecimalOdds(1.0 / probability, houseEdge: houseEdge);
   }
 
-  double toProbability() => 1.0 / decimal;
+  double toProbability() => 1.0 / rawDecimal;
+  double toProbabilityWithHouseEdge() => 1.0 / decimal;
 
   String get fractional {
     var numerator = decimal - 1.0;
@@ -484,14 +493,17 @@ class DecimalOdds {
   }
 
   String get moneyline {
-    if (decimal >= 2.0) {
+    if(decimal == 2.0) {
+      return "+100";
+    }
+    else if (decimal > 2.0) {
       // Positive moneyline for underdogs
       var payout = (decimal - 1.0) * 100;
       return "+${payout.round()}";
     } else {
       // Negative moneyline for favorites
-      var stake = 100 / (decimal - 1.0);
-      return "-${stake.round()}";
+      var stake = -100 / (decimal - 1.0);
+      return "${stake.round()}";
     }
   }
 
