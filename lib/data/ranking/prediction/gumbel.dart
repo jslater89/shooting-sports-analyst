@@ -8,17 +8,28 @@ import 'dart:math';
 
 class Gumbel {
   static Random random = Random();
-  static List<double> generate(int n, {double mu = 1, double beta = 2}) {
+  static List<double> generate(int n, {double mu = 1, double beta = 2, Random? rng}) {
     var samples = <double>[];
     while(samples.length < n) {
-      var r = random.nextDouble();
+      var r = rng?.nextDouble() ?? random.nextDouble();
       samples.add(mu - beta * log(-log(r)));
     }
 
     return samples;
   }
 
-  List<double> samples;
+  static double betaFromNormalSigma(double sigma) {
+    // precalculated sqrt(6)/pi
+    return sigma * .780;
+  }
 
-  Gumbel(this.samples);
+  double sample({Random? random}) {
+    var r = random ?? Gumbel.random;
+    return mu - beta * log(-log(r.nextDouble()));
+  }
+
+  double mu;
+  double beta;
+
+  Gumbel({required this.mu, required this.beta});
 }

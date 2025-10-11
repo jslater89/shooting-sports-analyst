@@ -8,6 +8,7 @@ import 'package:shooting_sports_analyst/data/database/extensions/registrations.d
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/match_cache/registration_cache.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/prediction/gumbel.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/ui/rater/prediction/registration_parser.dart';
@@ -203,7 +204,6 @@ class PredictionsToOddsCommand extends DbOneoffCommand {
       var actualMean = shooterPrediction.mean + shooterPrediction.shift;
       var z = actualRandom.nextGaussian();
       var shooterExpectedScore = actualMean + shooterPrediction.oneSigma * z;
-      // var shooterExpectedScore = Gumbel.generate(1, mu: actualMean, beta: shooterPrediction.oneSigma).first;
 
       // Generate random expected scores for all other shooters
       var otherExpectedScores = <double>[];
@@ -213,7 +213,6 @@ class PredictionsToOddsCommand extends DbOneoffCommand {
         var otherMean = otherPred.mean + otherPred.shift;
         var z = actualRandom.nextGaussian();
         var otherExpectedScore = otherMean + otherPred.oneSigma * z;
-        // var otherExpectedScore = Gumbel.generate(1, mu: otherMean, beta: otherPred.oneSigma).first;
 
         otherExpectedScores.add(otherExpectedScore);
       }
