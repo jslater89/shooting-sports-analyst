@@ -86,12 +86,13 @@ class PredictionsToOddsCommand extends DbOneoffCommand {
       }
 
       var probability = _calculatePlaceRangeProbability(
-        console,
-        shooterPrediction,
-        userPred.bestPlace,
-        userPred.worstPlace,
-        shootersToPredictions,
-        random: random
+        console: console,
+        shooterPrediction: shooterPrediction,
+        bestPlace: userPred.bestPlace,
+        worstPlace: userPred.worstPlace,
+        shootersToPredictions: shootersToPredictions,
+        disasterChance: 0.01,
+        random: random,
       );
 
       if (probability < 0 || probability > 1) {
@@ -114,7 +115,11 @@ class PredictionsToOddsCommand extends DbOneoffCommand {
 
     // Generate parlay odds using the individual odds and predictions
     // Use joint probability for likely scenarios, naive combination for unlikely ones
-    var parlayProbability = _combineOddsParlay(console, userPredictions, individualOdds);
+    var parlayProbability = _combineOddsParlay(
+      console: console,
+      userPredictions: userPredictions,
+      individualOdds: individualOdds,
+    );
 
     // For debugging/comparison, also calculate joint probability
     // var jointProbability = _simulateParlay(console, userPredictions, individualOdds, shootersToPredictions);
@@ -146,7 +151,7 @@ class PredictionsToOddsCommand extends DbOneoffCommand {
       console.print("${userPred.shooter.getName()}: ${userPred.bestPlace}-${userPred.worstPlace} place");
       console.print("  Raw Probability: ${(probability * 100).toStringAsFixed(2)}%");
       console.print("  Probability w/ Edge: ${(odds.toProbabilityWithHouseEdge() * 100).toStringAsFixed(2)}%");
-      console.print("  Decimal Odds: ${odds.decimal.toStringAsFixed(2)}");
+      console.print("  Decimal Odds: ${odds.decimal.toStringAsFixed(3)}");
       console.print("  Fractional Odds: ${odds.fractional}");
       console.print("  Moneyline: ${odds.moneyline}");
       console.print("");
@@ -157,25 +162,27 @@ class PredictionsToOddsCommand extends DbOneoffCommand {
 
       console.print("=== Parlay Odds ===");
       console.print("All predictions combined:");
+      console.print("  Validity Check: ${_isParlayPossibleConstraintSatisfaction(userPredictions) ? "Valid" : "Possibly Invalid"}");
+      console.print("  Specificity: ${(_parlaySpecificity(userPredictions) * 100).toStringAsFixed(2)}%");
+      console.print("  Fill: ${(_parlayFillProportion(userPredictions) * 100).toStringAsFixed(2)}%");
       console.print("  Raw Probability: ${(parlayProbability * 100).toStringAsFixed(2)}%");
       console.print("  Probability w/ Edge: ${(parlayOdds.toProbabilityWithHouseEdge() * 100).toStringAsFixed(2)}%");
-      console.print("  Decimal Odds: ${parlayOdds.decimal.toStringAsFixed(2)}");
+      console.print("  Decimal Odds: ${parlayOdds.decimal.toStringAsFixed(3)}");
       console.print("  Fractional Odds: ${parlayOdds.fractional}");
       console.print("  Moneyline: ${parlayOdds.moneyline}");
     }
   }
 
   /// Calculate the probability that a shooter finishes within the specified place range
-  double _calculatePlaceRangeProbability(
-    Console console,
-    ShooterPrediction shooterPrediction,
-    int bestPlace,
-    int worstPlace,
-    Map<ShooterRating, ShooterPrediction> shooterToPrediction,
-    {
-      Random? random,
-    }
-  ) {
+  double _calculatePlaceRangeProbability({
+    required Console console,
+    required ShooterPrediction shooterPrediction,
+    required int bestPlace,
+    required int worstPlace,
+    required Map<ShooterRating, ShooterPrediction> shootersToPredictions,
+    required double disasterChance,
+    Random? random,
+  }) {
     // Use Monte Carlo simulation with the actual prediction data
     // mean = average expected score from 1000 Monte Carlo runs
     // oneSigma = standard deviation of those runs
@@ -187,6 +194,10 @@ class PredictionsToOddsCommand extends DbOneoffCommand {
     var actualRandom = random ?? Random();
 
     for (var i = 0; i < trials; i++) {
+      if(actualRandom.nextDouble() < disasterChance) {
+        continue;
+      }
+
       // Generate a random expected score for this shooter
       var z = actualRandom.nextGaussian();
       var shooterExpectedScore = shooterPrediction.mean + shooterPrediction.oneSigma * z;
@@ -196,7 +207,7 @@ class PredictionsToOddsCommand extends DbOneoffCommand {
 
       // Generate random expected scores for all other shooters
       var otherExpectedScores = <double>[];
-      for (var otherPred in shooterToPrediction.values) {
+      for (var otherPred in shootersToPredictions.values) {
         if (otherPred == shooterPrediction) continue;
 
         var otherZ = actualRandom.nextGaussian();
@@ -225,16 +236,11 @@ class PredictionsToOddsCommand extends DbOneoffCommand {
 
   /// Calculate the probability that all user predictions are correct (parlay)
   /// using naive independent combination (fast but less accurate)
-  double _combineOddsParlay(
-    Console console,
-    List<UserPrediction> userPredictions,
-    Map<UserPrediction, DecimalOdds> individualOdds,
-  ) {
-
-    if(!_isParlayPossible(userPredictions)) {
-      console.print("Warning: Parlay is impossible due to overlapping place ranges");
-      return 0.0;
-    }
+  double _combineOddsParlay({
+    required Console console,
+    required List<UserPrediction> userPredictions,
+    required Map<UserPrediction, DecimalOdds> individualOdds,
+  }) {
 
     // For a parlay, we need the probability that ALL predictions are correct
     // This is the product of individual probabilities, assuming independence
@@ -251,7 +257,7 @@ class PredictionsToOddsCommand extends DbOneoffCommand {
       parlayProbability *= individualProbability;
     }
 
-    var fullness = _parlayFillProportion(userPredictions);
+    var fullness = _parlayFillProportion(userPredictions).clamp(0.0, 1.0);
     var legCount = userPredictions.length;
 
     // For parlays more than 75% full, decrease the probability by between 0% and 25%.
@@ -324,7 +330,12 @@ class PredictionsToOddsCommand extends DbOneoffCommand {
   //   return successes / trials;
   // }
 
-  /// Check if a parlay is logically possible given the place ranges
+  /// Check if a parlay is logically possible given the place ranges.
+  ///
+  /// This marks some technically-valid parlays as impossible: for example,
+  /// P1 -> 1st place, P2 -> 2nd place, P3 -> 1st place to 3rd place. Although
+  /// this is technically valid, we also don't want to allow it, because it
+  /// is equivalent to a 1st/2nd/3rd place parlay.
   bool _isParlayPossible(List<UserPrediction> userPredictions) {
     // Calculate the number of predictions that cover each place.
     Map<int, int> requiredAtPlace = {};
@@ -348,13 +359,57 @@ class PredictionsToOddsCommand extends DbOneoffCommand {
     return true;
   }
 
+  bool _isParlayPossibleConstraintSatisfaction(List<UserPrediction> userPredictions) {
+  // Find the maximum place we need to consider
+  int maxPlace = userPredictions.map((p) => p.worstPlace).reduce(max);
+
+  // Try to assign each prediction to a valid place
+  return _canAssignPredictions(userPredictions, 0, <int, UserPrediction>{}, maxPlace);
+}
+
+bool _canAssignPredictions(
+  List<UserPrediction> predictions,
+  int predictionIndex,
+  Map<int, UserPrediction> currentAssignment,
+  int maxPlace
+) {
+  // Base case: all predictions assigned
+  if (predictionIndex >= predictions.length) {
+    return true;
+  }
+
+  var currentPred = predictions[predictionIndex];
+
+  // Try each place in this prediction's range
+  for (int place = currentPred.bestPlace; place <= currentPred.worstPlace; place++) {
+    // Skip if this place is already taken
+    if (currentAssignment.containsKey(place)) {
+      continue;
+    }
+
+    // Try assigning this prediction to this place
+    currentAssignment[place] = currentPred;
+
+    // Recursively try to assign remaining predictions
+    if (_canAssignPredictions(predictions, predictionIndex + 1, currentAssignment, maxPlace)) {
+      return true;
+    }
+
+    // Backtrack
+    currentAssignment.remove(place);
+  }
+
+  return false;
+}
+
   /// Return a factor from 0 to 1 representing how 'full' the parlay is.
   ///
   /// A "full parlay" is one where each place covered by the parlay must be
   /// occupied by a prediction, e.g. a 10-leg parlay where each leg predicts
   /// a top 10 finish.
   ///
-  /// Impossible parlays will have values greater than 1.
+  /// Full parlays will have a value of 1.0. Parlays that fail the impossible
+  /// parlays check will have a value greater than 1.0.
   double _parlayFillProportion(List<UserPrediction> userPredictions) {
     // Calculate the number of predictions that cover each place.
     Map<int, int> requiredAtPlace = {};
@@ -368,8 +423,6 @@ class PredictionsToOddsCommand extends DbOneoffCommand {
     List<double> predictionProportions = [];
     for(var pred in userPredictions) {
       var range = pred.worstPlace - pred.bestPlace + 1;
-      // If any place in this prediction is required more than the range of this prediction,
-      // the parlay is impossible.
       List<double> proportions = [];
       for(var place = pred.bestPlace; place <= pred.worstPlace; place++) {
         proportions.add(requiredAtPlace[place]! / range);
@@ -377,6 +430,32 @@ class PredictionsToOddsCommand extends DbOneoffCommand {
       predictionProportions.add(proportions.average);
     }
     return predictionProportions.average;
+  }
+
+  /// Return a factor from 0 to 1 representing how specific the parlay is.
+  ///
+  /// A specific parlay is one in which individual legs cover a smaller range
+  /// than the overall range covered by the parlay. A 10-leg parlay where each
+  /// leg predicts a top 10 finish has zero specificity, whereas a 10-leg parlay
+  /// where each leg predicts a single place from 1 to 10 has specificity 1.0.
+  double _parlaySpecificity(List<UserPrediction> userPredictions) {
+    Map<int, bool> coversPlace = {};
+    for(var pred in userPredictions) {
+      for(var place = pred.bestPlace; place <= pred.worstPlace; place++) {
+        coversPlace[place] = true;
+      }
+    }
+    int rangeSize = coversPlace.length;
+
+    List<double> predictionSpecificities = [];
+    for(var pred in userPredictions) {
+      var range = pred.worstPlace - pred.bestPlace + 1;
+      var specificity = range / rangeSize;
+      predictionSpecificities.add(1 - specificity);
+    }
+    var maximumSpecificity = 1 - (1 / rangeSize);
+    var normalizedSpecificity = predictionSpecificities.average / maximumSpecificity;
+    return normalizedSpecificity;
   }
 
   /// Generate a complete ranking for all shooters using their individual prediction data
@@ -449,6 +528,7 @@ class UserPrediction {
 /// Represents decimal odds for betting.
 class DecimalOdds {
   static const worstPossibleOdds = 1.0001;
+  static const bestPOssibleOdds = 10000.0;
 
   /// The raw decimal odds, before the house edge is applied.
   final double rawDecimal;
