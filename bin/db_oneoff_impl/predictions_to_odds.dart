@@ -62,9 +62,9 @@ class PredictionsToOddsCommand extends DbOneoffCommand {
     var robertkrogh = knownShooters.firstWhereOrNull((s) => s.wrappedRating.deduplicatorName == "robertkrogh");
     // var christilley = knownShooters.firstWhereOrNull((s) => s.wrappedRating.deduplicatorName == "christilley");
     var userPredictions = <UserPrediction>[
-      UserPrediction(shooter: christiansailer!, bestPlace: 1, worstPlace: 10),
-      UserPrediction(shooter: mikehwang!, bestPlace: 1, worstPlace: 10),
-      UserPrediction(shooter: bryanjones!, bestPlace: 1, worstPlace: 10),
+      UserPrediction(shooter: christiansailer!, bestPlace: 1, worstPlace: 3),
+      UserPrediction(shooter: mikehwang!, bestPlace: 1, worstPlace: 4),
+      UserPrediction(shooter: bryanjones!, bestPlace: 1, worstPlace: 5),
       UserPrediction(shooter: aaroneddins!, bestPlace: 1, worstPlace: 10),
       UserPrediction(shooter: russelldaniels!, bestPlace: 1, worstPlace: 10),
       UserPrediction(shooter: gregoryclement!, bestPlace: 1, worstPlace: 10),
@@ -198,21 +198,22 @@ class PredictionsToOddsCommand extends DbOneoffCommand {
         continue;
       }
 
-      // Generate a random expected score for this shooter
-      var z = actualRandom.nextGaussian();
-      var shooterExpectedScore = shooterPrediction.mean + shooterPrediction.oneSigma * z;
+      // Generate a random expected score for this shooter using a normal distribution
 
-      // Apply trend shift
-      shooterExpectedScore += shooterPrediction.ciOffset * (shooterPrediction.oneSigma / 2);
+      var actualMean = shooterPrediction.mean + shooterPrediction.shift;
+      var z = actualRandom.nextGaussian();
+      var shooterExpectedScore = actualMean + shooterPrediction.oneSigma * z;
+      // var shooterExpectedScore = Gumbel.generate(1, mu: actualMean, beta: shooterPrediction.oneSigma).first;
 
       // Generate random expected scores for all other shooters
       var otherExpectedScores = <double>[];
       for (var otherPred in shootersToPredictions.values) {
         if (otherPred == shooterPrediction) continue;
 
-        var otherZ = actualRandom.nextGaussian();
-        var otherExpectedScore = otherPred.mean + otherPred.oneSigma * otherZ;
-        otherExpectedScore += otherPred.ciOffset * otherPred.oneSigma;
+        var otherMean = otherPred.mean + otherPred.shift;
+        var z = actualRandom.nextGaussian();
+        var otherExpectedScore = otherMean + otherPred.oneSigma * z;
+        // var otherExpectedScore = Gumbel.generate(1, mu: otherMean, beta: otherPred.oneSigma).first;
 
         otherExpectedScores.add(otherExpectedScore);
       }

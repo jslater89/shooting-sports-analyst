@@ -40,8 +40,11 @@ class ShooterPrediction {
       this.oneSigma = sigma,
       this.twoSigma = sigma * 2;
 
+  /// A value suitble for ordinal sorting, based off of the 95%/-2 sigma
+  /// expected value.
   double get ordinal => mean - twoSigma + shift;
 
+  /// The shift in mean due to the ciOffset.
   double get shift => (oneSigma / 2) * (ciOffset);
 
   @override
