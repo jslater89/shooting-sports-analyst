@@ -22,7 +22,7 @@ import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 /// A prediction for a shooter's finish.
 ///
 /// Users of this class are responsible for filling in [lowPlace] and [highPlace].
-class ShooterPrediction {
+class AlgorithmPrediction {
   final ShooterRating shooter;
 
   final double mean;
@@ -34,7 +34,7 @@ class ShooterPrediction {
   late int highPlace;
   late int medianPlace;
 
-  ShooterPrediction({
+  AlgorithmPrediction({
     required this.shooter, required this.mean, required double sigma, this.ciOffset = 0.5,
   }) :
       this.oneSigma = sigma,

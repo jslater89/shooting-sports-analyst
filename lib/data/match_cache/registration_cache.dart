@@ -26,29 +26,41 @@ class RegistrationCache {
   var _ready = Completer<bool>();
   Future<bool> get ready => _ready.future;
 
+  late final Directory dbPath;
+
   Future<void> _init() async {
     _log.i("Initializing registration cache");
-    Directory dbPath = Directory("./db/registration_cache");
+    dbPath = Directory("./db/registration_cache");
     if(!dbPath.existsSync()) {
       dbPath.createSync(recursive: true);
     }
 
+    await _openBox();
+    await _box.close();
+
+    _ready.complete(true);
+  }
+
+  Future<void> _openBox() async {
     _box = await Hive.openLazyBox(
       "registration_cache",
       path: dbPath.path
     );
-
-    _ready.complete(true);
   }
 
   /// Contains match registration HTML. The key is the match URL.
   late LazyBox<String> _box;
 
   Future<void> put(String url, String html) async {
-    _box.put(url, html);
+    await _openBox();
+    await _box.put(url, html);
+    await _box.close();
   }
 
   Future<String?> get(String url) async {
-    return _box.get(url);
+    await _openBox();
+    var html = await _box.get(url);
+    await _box.close();
+    return html;
   }
 }

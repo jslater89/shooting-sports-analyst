@@ -31,7 +31,7 @@ class PredictionView extends StatefulWidget {
   final RatingDataSource dataSource;
 
   /// The predictions.
-  final List<ShooterPrediction> predictions;
+  final List<AlgorithmPrediction> predictions;
 
   @override
   State<PredictionView> createState() => _PredictionViewState();
@@ -50,9 +50,9 @@ class PredictionView extends StatefulWidget {
 }
 
 class _PredictionViewState extends State<PredictionView> {
-  Map<ShooterPrediction, SimpleMatchResult> outcomes = {};
-  List<ShooterPrediction> sortedPredictions = [];
-  List<ShooterPrediction> searchedPredictions = [];
+  Map<AlgorithmPrediction, SimpleMatchResult> outcomes = {};
+  List<AlgorithmPrediction> sortedPredictions = [];
+  List<AlgorithmPrediction> searchedPredictions = [];
   String search = "";
 
   @override
@@ -365,7 +365,7 @@ class _PredictionViewState extends State<PredictionView> {
     );
   }
 
-  Widget _buildPredictionsRow(ShooterPrediction pred, double min, double max, double highPrediction, int index) {
+  Widget _buildPredictionsRow(AlgorithmPrediction pred, double min, double max, double highPrediction, int index) {
     double renderMin = min * 0.95;
     double renderMax = max * 1.01;
 

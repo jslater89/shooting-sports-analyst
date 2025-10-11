@@ -137,7 +137,7 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings> {
   /// Return ShooterPredictions for the list of shooters.
   ///
   /// Provide a [seed] for repeatable predictions, if desired.
-  List<ShooterPrediction> predict(List<ShooterRating> ratings, {int? seed}) {
+  List<AlgorithmPrediction> predict(List<ShooterRating> ratings, {int? seed}) {
     throw UnimplementedError();
   }
 
@@ -149,7 +149,7 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings> {
     required List<ShooterRating> shooters,
     required Map<ShooterRating, RelativeScore> scores,
     required Map<ShooterRating, RelativeMatchScore> matchScores,
-    required List<ShooterPrediction> predictions,
+    required List<AlgorithmPrediction> predictions,
     bool chatty = true,
   }) {
     throw UnimplementedError();
@@ -204,7 +204,7 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings> {
 
 class PredictionOutcome {
   double error;
-  Map<ShooterPrediction, SimpleMatchResult> actualResults;
+  Map<AlgorithmPrediction, SimpleMatchResult> actualResults;
 
   /// True if the [RatingSystem] changed the prediction inputs
   /// to generate more complete data about its accuracy, in

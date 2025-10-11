@@ -616,9 +616,9 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   bool get supportsValidation => true;
 
   @override
-  List<ShooterPrediction> predict(List<ShooterRating> ratings, {int? seed}) {
+  List<AlgorithmPrediction> predict(List<ShooterRating> ratings, {int? seed}) {
     List<EloShooterRating> eloRatings = List.castFrom(ratings);
-    List<ShooterPrediction> predictions = [];
+    List<AlgorithmPrediction> predictions = [];
 
     if(seed != null) {
       Gumbel.random = Random(seed);
@@ -683,7 +683,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       var variance = expectedScores.map((e) => pow(e - averagePerformance, 2)).average;
       var performanceDeviation = sqrt(variance);
 
-      predictions.add(ShooterPrediction(
+      predictions.add(AlgorithmPrediction(
         shooter: rating,
         mean: averagePerformance,
         ciOffset: trendShift,
@@ -718,11 +718,11 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     required List<ShooterRating> shooters,
     required Map<ShooterRating, RelativeScore> scores,
     required Map<ShooterRating, RelativeMatchScore> matchScores,
-    required List<ShooterPrediction> predictions,
+    required List<AlgorithmPrediction> predictions,
     bool chatty = true,
   }) {
-    Map<ShooterRating, ShooterPrediction> shootersToPredictions = {};
-    Map<ShooterPrediction, SimpleMatchResult> actualOutcomes = {};
+    Map<ShooterRating, AlgorithmPrediction> shootersToPredictions = {};
+    Map<AlgorithmPrediction, SimpleMatchResult> actualOutcomes = {};
     double errorSum = 0;
     List<double> errors = [];
     bool repredicted = false;

@@ -4,6 +4,8 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:math';
+
 import 'package:collection/collection.dart';
 import 'package:intl/intl.dart';
 
@@ -478,5 +480,17 @@ extension SignificantDigits on double {
 extension TitleCase on String {
   String toTitleCase() {
     return this.split(" ").map((e) => e.substring(0, 1).toUpperCase() + e.substring(1)).join(" ");
+  }
+}
+
+
+// Extension to add Gaussian random number generation
+extension RandomGaussian on Random {
+  /// Generate a random number from a standard normal distribution.
+  double nextGaussian() {
+    // Box-Muller transform
+    var u1 = nextDouble();
+    var u2 = nextDouble();
+    return sqrt(-2 * log(u1)) * cos(2 * pi * u2);
   }
 }

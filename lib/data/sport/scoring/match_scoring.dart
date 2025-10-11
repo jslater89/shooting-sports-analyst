@@ -221,8 +221,8 @@ final class RelativeStageFinishScoring extends MatchScoring {
     if(predictionMode != MatchPredictionMode.none) {
       // If we're doing Elo aware predictions, fetch some data.
       var locatedRatings = <ShooterRating>[];
-      Map<ShooterRating, ShooterPrediction> predictions = {};
-      ShooterPrediction? highPrediction;
+      Map<ShooterRating, AlgorithmPrediction> predictions = {};
+      AlgorithmPrediction? highPrediction;
       if(predictionMode.eloAware) {
         RatingSystem? r = null;
         for(var shooter in shooters) {
