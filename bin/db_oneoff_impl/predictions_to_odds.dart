@@ -1,14 +1,19 @@
-import 'package:collection/collection.dart';
-import 'package:dart_console/src/console.dart';
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'dart:math';
 
+import 'package:collection/collection.dart';
+import 'package:dart_console/src/console.dart';
 import 'package:shooting_sports_analyst/console/repl.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/registrations.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/match_cache/registration_cache.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
-import 'package:shooting_sports_analyst/data/ranking/prediction/gumbel.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/ui/rater/prediction/registration_parser.dart';
