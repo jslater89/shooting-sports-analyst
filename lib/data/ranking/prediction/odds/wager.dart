@@ -23,17 +23,47 @@ class Wager {
     required this.probability,
     required this.amount,
   });
+
+  Wager copyWith({
+    UserPrediction? prediction,
+    PredictionProbability? probability,
+    double? amount,
+  }) => Wager(
+    prediction: prediction ?? this.prediction,
+    probability: probability ?? this.probability,
+    amount: amount ?? this.amount,
+  );
+
+  Wager deepCopy() => Wager(
+    prediction: prediction.copyWith(),
+    probability: probability.copyWith(),
+    amount: amount,
+  );
 }
 
 class Parlay {
   final List<Wager> legs;
   final double amount;
   PredictionProbability get probability => PredictionProbability.fromParlayLegs(legs);
+  double get payout => amount * probability.decimalOdds;
 
   Parlay({
     required this.legs,
     required this.amount,
   });
+
+  Parlay copyWith({
+    List<Wager>? legs,
+    double? amount,
+  }) => Parlay(
+    legs: legs ?? this.legs,
+    amount: amount ?? this.amount,
+  );
+
+  Parlay deepCopy() => Parlay(
+    legs: legs.map((leg) => leg.deepCopy()).toList(),
+    amount: amount,
+  );
 
   bool isPossible() {
     return Parlay.isParlayPossible(legs);

@@ -24,6 +24,10 @@ class UserPrediction {
 
   UserPrediction.exactPlace(this.shooter, this.bestPlace) : this.worstPlace = bestPlace;
 
+  /// Return a copy of the prediction with the given fields updated.
+  ///
+  /// This is also a deep copy; [shooter] should not be modified, and
+  /// the other fields are copied by value.
   UserPrediction copyWith({
     ShooterRating? shooter,
     int? bestPlace,

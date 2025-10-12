@@ -60,11 +60,11 @@ class _WagerDialogState extends State<WagerDialog> {
     }
   }
 
-  void _updateWager(int index, UserPrediction newPrediction, {double amount = 1.0}) {
+  void _updateWager(int index, Wager newWager) {
     double? bestPossibleOdds;
-    var algorithmPrediction = _shootersToPredictions[newPrediction.shooter];
+    var algorithmPrediction = _shootersToPredictions[newWager.prediction.shooter];
     if(algorithmPrediction != null) {
-      if(algorithmPrediction.lowPlace < newPrediction.bestPlace) {
+      if(algorithmPrediction.lowPlace < newWager.prediction.bestPlace) {
         // If the algorithm prediction predicts a better place in the worst
         // case scenario than the user prediction's best place, cap the odds
         // at moneyline +25000 (250:1) to capture the rare but possible chance
@@ -73,23 +73,26 @@ class _WagerDialogState extends State<WagerDialog> {
       }
     }
     Wager wager;
+    var newPrediction = newWager.prediction;
     if(bestPossibleOdds != null) {
       wager = Wager(
         prediction: newPrediction,
         probability: PredictionProbability.fromUserPrediction(
-          newPrediction, _shootersToPredictions,
+          newPrediction,
+          _shootersToPredictions,
           bestPossibleOdds: bestPossibleOdds,
         ),
-        amount: amount,
+        amount: newWager.amount,
       );
     }
     else {
       wager = Wager(
         prediction: newPrediction,
         probability: PredictionProbability.fromUserPrediction(
-          newPrediction, _shootersToPredictions,
+          newPrediction,
+          _shootersToPredictions,
         ),
-        amount: amount,
+        amount: newWager.amount,
       );
     }
 
@@ -138,21 +141,24 @@ class _WagerDialogState extends State<WagerDialog> {
                           message: "Fractional: ${leg.probability.fractionalOdds}\n"
                               "Decimal: ${leg.probability.decimalOdds.toStringAsFixed(3)}\n"
                               "Probabilities: ${leg.probability.probability.asPercentage(decimals: 2, includePercent: true)}/${leg.probability.probabilityWithHouseEdge.asPercentage(decimals: 2, includePercent: true)}",
-                          child: Text("Moneyline: ${leg.probability.moneylineOdds}")
+                          child: Text(
+                            "Moneyline: ${leg.probability.moneylineOdds}  -  "
+                            "Payout: ${leg.amount.toStringAsFixed(2)} → ${leg.payout.toStringAsFixed(2)}"
+                          )
                         ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
                               onPressed: () async {
-                                var newPrediction = await EditPredictionDialog.show(
+                                var newWager = await EditWagerDialog.show(
                                   context,
-                                  prediction: leg.prediction,
+                                  prediction: leg,
                                   availableCompetitors: widget.predictions,
                                 );
 
-                                if (newPrediction != null) {
-                                  _updateWager(index, newPrediction);
+                                if (newWager != null) {
+                                  _updateWager(index, newWager);
                                 }
                               },
                               icon: Icon(Icons.edit),
@@ -177,9 +183,25 @@ class _WagerDialogState extends State<WagerDialog> {
             if(_parlay != null)
               ListTile(
                 title: Text("${_parlay!.legs.length}-leg parlay"),
-                subtitle: Text("Moneyline: ${_parlay!.probability.moneylineOdds}"),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
+                subtitle: Tooltip(
+                  message: "Fractional: ${_parlay!.probability.fractionalOdds}\n"
+                      "Decimal: ${_parlay!.probability.decimalOdds.toStringAsFixed(3)}\n"
+                      "Probabilities: ${_parlay!.probability.probability.asPercentage(decimals: 2, includePercent: true)}/${_parlay!.probability.probabilityWithHouseEdge.asPercentage(decimals: 2, includePercent: true)}",
+                  child: Text(
+                    "Moneyline: ${_parlay!.probability.moneylineOdds}  -  "
+                    "Payout: ${_parlay!.amount.toStringAsFixed(2)} → ${_parlay!.payout.toStringAsFixed(2)}"
+                  ),
+                ),
+                trailing: IconButton(
+                  icon: Icon(Icons.edit),
+                  onPressed: () async {
+                    var newParlay = await EditParlayAmountDialog.show(context, parlay: _parlay!);
+                    if(newParlay != null) {
+                      setState(() {
+                        _parlay = newParlay;
+                      });
+                    }
+                  },
                 )
               ),
             Row(
@@ -195,17 +217,21 @@ class _WagerDialogState extends State<WagerDialog> {
                 TextButton(
                   child: Text("ADD LEG"),
                   onPressed: _legs.length >= 10 ? null : () async {
-                    var newPrediction = await EditPredictionDialog.show(
+                    var newWager = await EditWagerDialog.show(
                       context,
-                      prediction: UserPrediction(
-                        shooter: widget.predictions[0].shooter,
-                        bestPlace: 1,
-                        worstPlace: 3),
+                      prediction: Wager(
+                        prediction: UserPrediction(
+                          shooter: widget.predictions[0].shooter,
+                          bestPlace: 1,
+                          worstPlace: 3),
+                        probability: PredictionProbability(0.5),
+                        amount: 10,
+                      ),
                       availableCompetitors: widget.predictions,
                     );
 
-                    if(newPrediction != null) {
-                      _updateWager(-1, newPrediction);
+                    if(newWager != null) {
+                      _updateWager(-1, newWager);
                     }
                   }
                 ),
@@ -222,35 +248,37 @@ class _WagerDialogState extends State<WagerDialog> {
   }
 }
 
-class EditPredictionDialog extends StatefulWidget {
-  const EditPredictionDialog({super.key, required this.prediction, required this.availableCompetitors});
+class EditWagerDialog extends StatefulWidget {
+  const EditWagerDialog({super.key, required this.wager, required this.availableCompetitors});
 
-  final UserPrediction prediction;
+  final Wager wager;
   final List<AlgorithmPrediction> availableCompetitors;
 
-  static Future<UserPrediction?> show(BuildContext context, {required UserPrediction prediction, required List<AlgorithmPrediction> availableCompetitors}) async {
-    return showDialog<UserPrediction>(context: context, builder: (context) => EditPredictionDialog(prediction: prediction, availableCompetitors: availableCompetitors));
+  static Future<Wager?> show(BuildContext context, {required Wager prediction, required List<AlgorithmPrediction> availableCompetitors}) async {
+    return showDialog<Wager>(context: context, builder: (context) => EditWagerDialog(wager: prediction, availableCompetitors: availableCompetitors));
   }
 
   @override
-  State<EditPredictionDialog> createState() => _EditPredictionDialogState();
+  State<EditWagerDialog> createState() => _EditWagerDialogState();
 }
 
-class _EditPredictionDialogState extends State<EditPredictionDialog> {
+class _EditWagerDialogState extends State<EditWagerDialog> {
 
-  late UserPrediction _newPrediction;
+  late Wager _newWager;
   @override
   void initState() {
-    _newPrediction = widget.prediction.copyWith();
+    _newWager = widget.wager.deepCopy();
     _competitorController = TextEditingController(); // handled by initialSelection
-    _bestPlaceController = TextEditingController(text: _newPrediction.bestPlace.toString());
-    _worstPlaceController = TextEditingController(text: _newPrediction.worstPlace.toString());
+    _bestPlaceController = TextEditingController(text: _newWager.prediction.bestPlace.toString());
+    _worstPlaceController = TextEditingController(text: _newWager.prediction.worstPlace.toString());
+    _amountController = TextEditingController(text: _newWager.amount.toString());
     super.initState();
   }
 
   late TextEditingController _competitorController;
   late TextEditingController _bestPlaceController;
   late TextEditingController _worstPlaceController;
+  late TextEditingController _amountController;
 
   @override
   Widget build(BuildContext context) {
@@ -262,13 +290,15 @@ class _EditPredictionDialogState extends State<EditPredictionDialog> {
           DropdownMenu<ShooterRating>(
             dropdownMenuEntries: widget.availableCompetitors.map((e) =>
               DropdownMenuEntry<ShooterRating>(value: e.shooter, label: e.shooter.name)).toList(),
-            initialSelection: _newPrediction.shooter,
+            initialSelection: _newWager.prediction.shooter,
             enableFilter: true,
             enableSearch: true,
             menuHeight: 500,
             onSelected: (value) {
               if(value != null) {
-                _newPrediction = _newPrediction.copyWith(shooter: value);
+                _newWager = _newWager.copyWith(
+                  prediction: _newWager.prediction.copyWith(shooter: value)
+                );
                 _competitorController.text = value.name;
               }
             },
@@ -284,8 +314,10 @@ class _EditPredictionDialogState extends State<EditPredictionDialog> {
             ],
             onChanged: (value) {
               var newBestPlace = int.tryParse(value);
-              if(newBestPlace != null && newBestPlace <= _newPrediction.worstPlace) {
-                _newPrediction = _newPrediction.copyWith(bestPlace: newBestPlace);
+              if(newBestPlace != null && newBestPlace <= _newWager.prediction.worstPlace) {
+                _newWager = _newWager.copyWith(
+                  prediction: _newWager.prediction.copyWith(bestPlace: newBestPlace)
+                );
               }
             },
           ),
@@ -298,11 +330,27 @@ class _EditPredictionDialogState extends State<EditPredictionDialog> {
             ],
             onChanged: (value) {
               var newWorstPlace = int.tryParse(value);
-              if(newWorstPlace != null && newWorstPlace >= _newPrediction.bestPlace) {
-                _newPrediction = _newPrediction.copyWith(worstPlace: newWorstPlace);
+              if(newWorstPlace != null && newWorstPlace >= _newWager.prediction.bestPlace) {
+                _newWager = _newWager.copyWith(
+                  prediction: _newWager.prediction.copyWith(worstPlace: newWorstPlace)
+                );
               }
             },
           ),
+          TextField(
+            controller: _amountController,
+            decoration: InputDecoration(labelText: "Amount"),
+            keyboardType: TextInputType.numberWithOptions(decimal: true, signed: false),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r"[0-9\.]*")),
+            ],
+            onChanged: (value) {
+              var newAmount = double.tryParse(value);
+              if(newAmount != null && newAmount > 0) {
+                _newWager = _newWager.copyWith(amount: newAmount);
+              }
+            },
+          )
         ],
       ),
       actions: [
@@ -313,11 +361,70 @@ class _EditPredictionDialogState extends State<EditPredictionDialog> {
             var newBestPlace = int.tryParse(_bestPlaceController.text);
             var newWorstPlace = int.tryParse(_worstPlaceController.text);
             if(newBestPlace != null && newWorstPlace != null && newBestPlace <= newWorstPlace) {
-              _newPrediction = _newPrediction.copyWith(bestPlace: newBestPlace, worstPlace: newWorstPlace);
+              _newWager = _newWager.copyWith(
+                prediction: _newWager.prediction.copyWith(bestPlace: newBestPlace, worstPlace: newWorstPlace)
+              );
             }
-            Navigator.of(context).pop(_newPrediction);
+            var newAmount = double.tryParse(_amountController.text);
+            if(newAmount != null && newAmount > 0) {
+              _newWager = _newWager.copyWith(amount: newAmount);
+            }
+            Navigator.of(context).pop(_newWager);
           }
         )
+      ],
+    );
+  }
+}
+
+class EditParlayAmountDialog extends StatefulWidget {
+  const EditParlayAmountDialog({super.key, required this.parlay});
+
+  final Parlay parlay;
+
+  static Future<Parlay?> show(BuildContext context, {required Parlay parlay}) async {
+    return showDialog<Parlay>(context: context, builder: (context) => EditParlayAmountDialog(parlay: parlay));
+  }
+
+  @override
+  State<EditParlayAmountDialog> createState() => _EditParlayAmountDialogState();
+}
+
+class _EditParlayAmountDialogState extends State<EditParlayAmountDialog> {
+  late TextEditingController _amountController;
+
+  @override
+  void initState() {
+    super.initState();
+    _amountController = TextEditingController(text: widget.parlay.amount.toString());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text("Edit parlay amount"),
+      content: TextField(
+        controller: _amountController,
+        decoration: InputDecoration(labelText: "Amount"),
+        keyboardType: TextInputType.numberWithOptions(decimal: true, signed: false),
+        inputFormatters: [
+          FilteringTextInputFormatter.allow(RegExp(r"[0-9\.]*")),
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: Text("CANCEL")),
+        TextButton(
+          child: Text("SAVE"),
+          onPressed: () {
+            var newAmount = double.tryParse(_amountController.text);
+            if(newAmount != null && newAmount > 0) {
+              Navigator.of(context).pop(widget.parlay.copyWith(amount: newAmount));
+            }
+            else {
+              Navigator.of(context).pop(widget.parlay);
+            }
+          },
+        ),
       ],
     );
   }

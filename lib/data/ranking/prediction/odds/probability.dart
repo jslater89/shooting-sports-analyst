@@ -216,4 +216,16 @@ class PredictionProbability {
     }
     return a;
   }
+
+  PredictionProbability copyWith({
+    double? probability,
+    double? houseEdge,
+    double? worstPossibleOdds,
+    double? bestPossibleOdds,
+  }) => PredictionProbability(
+    probability ?? this.probability,
+    houseEdge: houseEdge ?? this.houseEdge,
+    worstPossibleOdds: worstPossibleOdds ?? this.worstPossibleOdds,
+    bestPossibleOdds: bestPossibleOdds ?? this.bestPossibleOdds,
+  );
 }
