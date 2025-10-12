@@ -53,6 +53,7 @@ class AlgorithmPrediction {
   }
 
   double get center => mean;
+  double get shiftedCenter => mean + shift;
   double get upperBox => mean + oneSigma + shift;
   double get lowerBox => mean - oneSigma + shift;
   double get upperWhisker => mean + twoSigma + shift;
@@ -62,4 +63,7 @@ class AlgorithmPrediction {
   double get halfLowPrediction => mean - oneSigma / 2 + shift / 2;
   double get halfHighPrediction => mean + (oneSigma + shift) / 2;
   double get highPrediction => mean + (oneSigma + shift);
+
+  double get upperBoxWhiskerMidpoint => (upperBox + upperWhisker) / 2;
+  double get lowerBoxWhiskerMidpoint => (lowerBox + lowerWhisker) / 2;
 }
