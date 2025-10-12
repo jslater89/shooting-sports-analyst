@@ -276,11 +276,14 @@ int combineHashList(List<int> hashes) {
 }
 
 extension AsPercentage on double {
-  String asPercentage({int decimals = 2}) {
+  /// Show the double as a percentage with [decimals] decimal places.
+  /// If [decimals] is 0, the percentage is shown without a decimal point.
+  /// If [includePercent] is true, the percentage is shown with a percent sign.
+  String asPercentage({int decimals = 2, bool includePercent = false}) {
     if(decimals == 0) {
-      return "${(this * 100).round()}%";
+      return "${(this * 100).round()}${includePercent ? "%" : ""}";
     }
-    return (this * 100).toStringAsFixed(decimals);
+    return "${(this * 100).toStringAsFixed(decimals)}${includePercent ? "%" : ""}";
   }
 }
 

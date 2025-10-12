@@ -117,7 +117,7 @@ extension RatingReportTypeUiBuilder on RatingReportType{
         var typedData = data.data as FiftyPercentDnfs;
         return [
           Text(
-            "The match ${typedData.matchName} has a DNF rate of ${typedData.dnfRatio.asPercentage(decimals: 0)} "
+            "The match ${typedData.matchName} has a DNF rate of ${typedData.dnfRatio.asPercentage(decimals: 0)}% "
             "(${typedData.dnfCount}/${typedData.competitorCount}) in ${typedData.ratingGroupName}. This may indicate "
             "either a bug with the scoring system, an issue with the match data, or simply a low-participation "
             "division with some no-shows."

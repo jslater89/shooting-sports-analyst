@@ -12,6 +12,7 @@ import 'package:shooting_sports_analyst/data/model.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/colors.dart';
@@ -20,15 +21,19 @@ import 'package:shooting_sports_analyst/ui/widget/box_and_whisker.dart';
 import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/url_entry_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/wager_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 
 var _log = SSALogger("PredictionView");
 
 class PredictionView extends StatefulWidget {
-  const PredictionView({Key? key, required this.dataSource, required this.predictions}) : super(key: key);
+  const PredictionView({Key? key, required this.dataSource, required this.matchId, required this.predictions}) : super(key: key);
 
   /// The data source that generated the predictions.
   final RatingDataSource dataSource;
+
+  /// The match.
+  final String matchId;
 
   /// The predictions.
   final List<AlgorithmPrediction> predictions;
@@ -104,6 +109,13 @@ class _PredictionViewState extends State<PredictionView> {
                 ),
               ),
             // endif kDebugMode
+            Tooltip(
+              message: "Generate odds",
+              child: IconButton(
+                icon: Icon(Icons.casino),
+                onPressed: () => WagerDialog.show(context, predictions: sortedPredictions, matchId: widget.matchId),
+              )
+            ),
             Tooltip(
               message: "Export predictions as CSV",
               child: IconButton(

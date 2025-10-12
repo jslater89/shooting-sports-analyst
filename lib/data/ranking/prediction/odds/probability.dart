@@ -14,6 +14,13 @@ import 'package:shooting_sports_analyst/util.dart';
 
 /// Represents a prediction probability with various odds formats.
 class PredictionProbability {
+
+  /// The minimum possible odds.
+  static const _worstPossibleOddsDefault = 1.0001;
+  /// The maximum possible odds.
+  static const _bestPossibleOddsDefault = 10000.0;
+
+
   /// The house edge for parlays.
   static const parlayHouseEdge = 0.09;
   /// The house edge for standard wagers.
@@ -32,8 +39,8 @@ class PredictionProbability {
 
   PredictionProbability(this.probability, {
     this.houseEdge = 0.00,
-    this.worstPossibleOdds = 1.0001,
-    this.bestPossibleOdds = 10000.0,
+    this.worstPossibleOdds = _worstPossibleOddsDefault,
+    this.bestPossibleOdds = _bestPossibleOddsDefault,
   }) {
     if (probability <= 0 || probability >= 1) {
       throw ArgumentError("Probability must be between 0 and 1");
@@ -94,6 +101,8 @@ class PredictionProbability {
     Random? random,
     double disasterChance = 0.01,
     double? houseEdge,
+    double bestPossibleOdds = _bestPossibleOddsDefault,
+    double worstPossibleOdds = _worstPossibleOddsDefault,
   }) {
     /// Calculate the probability that a shooter finishes within the specified place range
     // Use Monte Carlo simulation with the actual prediction data
@@ -146,10 +155,15 @@ class PredictionProbability {
     }
 
     var minProbability = 1 / trials;
-    var maxProbability = (successes - 1) / trials;
+    var maxProbability = (trials - 1) / trials;
     var probability = (successes / trials).clamp(minProbability, maxProbability);
 
-    return PredictionProbability(probability, houseEdge: houseEdge ?? standardHouseEdge);
+    return PredictionProbability(
+      probability,
+      houseEdge: houseEdge ?? standardHouseEdge,
+      worstPossibleOdds: worstPossibleOdds,
+      bestPossibleOdds: bestPossibleOdds,
+    );
   }
 
 

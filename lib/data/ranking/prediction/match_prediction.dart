@@ -19,7 +19,7 @@ See if rating percentage correlates with match finish percentage?
 
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 
-/// A prediction for a shooter's finish.
+/// An algorithmic prediction for a shooter's finish.
 ///
 /// Users of this class are responsible for filling in [lowPlace] and [highPlace].
 class AlgorithmPrediction {

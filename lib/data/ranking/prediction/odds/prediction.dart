@@ -23,4 +23,14 @@ class UserPrediction {
   }
 
   UserPrediction.exactPlace(this.shooter, this.bestPlace) : this.worstPlace = bestPlace;
+
+  UserPrediction copyWith({
+    ShooterRating? shooter,
+    int? bestPlace,
+    int? worstPlace,
+  }) => UserPrediction(
+    shooter: shooter ?? this.shooter,
+    bestPlace: bestPlace ?? this.bestPlace,
+    worstPlace: worstPlace ?? this.worstPlace,
+  );
 }
