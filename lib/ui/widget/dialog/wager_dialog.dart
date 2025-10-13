@@ -4,6 +4,8 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
@@ -81,6 +83,7 @@ class _WagerDialogState extends State<WagerDialog> {
           newPrediction,
           _shootersToPredictions,
           bestPossibleOdds: bestPossibleOdds,
+          random: Random(widget.matchId.stableHash),
         ),
         amount: newWager.amount,
       );
@@ -91,6 +94,7 @@ class _WagerDialogState extends State<WagerDialog> {
         probability: PredictionProbability.fromUserPrediction(
           newPrediction,
           _shootersToPredictions,
+          random: Random(widget.matchId.stableHash),
         ),
         amount: newWager.amount,
       );
