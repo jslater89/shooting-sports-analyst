@@ -128,7 +128,7 @@ class _FilterDialogState extends State<FilterDialog> {
 
   List<Widget> _powerFactorTiles(BuildContext context) {
     return [
-      Text("Power Factors", style: Theme.of(context).textTheme.subtitle1!.apply(decoration: TextDecoration.underline)),
+      Text("Power Factors", style: Theme.of(context).textTheme.titleMedium!.apply(decoration: TextDecoration.underline)),
       for(var pf in _filters.sport.powerFactors.values)
         CheckboxListTile(
           title: Text(pf.displayName),
@@ -143,7 +143,7 @@ class _FilterDialogState extends State<FilterDialog> {
 
   List<Widget> _otherTiles(BuildContext context) {
     return [
-      Text("Categories", style: Theme.of(context).textTheme.subtitle1!.apply(decoration: TextDecoration.underline)),
+      Text("Categories", style: Theme.of(context).textTheme.titleMedium!.apply(decoration: TextDecoration.underline)),
       Tooltip(
         message: "Include only female competitors.",
         child: CheckboxListTile(
@@ -177,7 +177,7 @@ class _FilterDialogState extends State<FilterDialog> {
 
   List<Widget> _divisionTiles(BuildContext context) {
     return [
-      Text("Divisions", style: Theme.of(context).textTheme.subtitle1!.apply(decoration: TextDecoration.underline)),
+      Text("Divisions", style: Theme.of(context).textTheme.titleMedium!.apply(decoration: TextDecoration.underline)),
       for(var division in _filters.sport.divisions.values)
         CheckboxListTile(
           title: Text(division.displayName),
@@ -192,7 +192,7 @@ class _FilterDialogState extends State<FilterDialog> {
 
   List<Widget> _classTiles(BuildContext context) {
     return [
-      Text("Classes", style: Theme.of(context).textTheme.subtitle1!.apply(decoration: TextDecoration.underline)),
+      Text("Classes", style: Theme.of(context).textTheme.titleMedium!.apply(decoration: TextDecoration.underline)),
       for(var classification in _filters.sport.classifications.values)
         CheckboxListTile(
           title: Text(classification.shortDisplayName),

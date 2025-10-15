@@ -5,7 +5,7 @@
  */
 
 
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/fantasy_user.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/matchups.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/roster.dart';

@@ -186,7 +186,7 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
           children: [
             Padding(
               padding: const EdgeInsets.only(left: 16.0),
-              child: Text("Model", style: Theme.of(context).textTheme.subtitle1!),
+              child: Text("Model", style: Theme.of(context).textTheme.titleMedium!),
             ),
             Tooltip(
               message: settings.mode.tooltip,
@@ -220,7 +220,7 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
               message: "If 0, use all matches. If greater than 0, use best N matches.",
               child: Padding(
                 padding: const EdgeInsets.only(left: 16),
-                child: Text("Matches to count", style: Theme.of(context).textTheme.subtitle1!),
+                child: Text("Matches to count", style: Theme.of(context).textTheme.titleMedium!),
               )
             ),
             SizedBox(
@@ -249,7 +249,7 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
                     "the matches to count setting.",
                 child: Padding(
                   padding: const EdgeInsets.only(left: 16),
-                  child: Text("Participation bonus", style: Theme.of(context).textTheme.subtitle1!),
+                  child: Text("Participation bonus", style: Theme.of(context).textTheme.titleMedium!),
                 )
             ),
             SizedBox(
@@ -276,7 +276,7 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
                 message: "For decaying score mode, the score to give the winner.",
                 child: Padding(
                   padding: const EdgeInsets.only(left: 16),
-                  child: Text("Decay start", style: Theme.of(context).textTheme.subtitle1!),
+                  child: Text("Decay start", style: Theme.of(context).textTheme.titleMedium!),
                 )
             ),
             SizedBox(
@@ -305,7 +305,7 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
                     "after the winner's.",
                 child: Padding(
                   padding: const EdgeInsets.only(left: 16),
-                  child: Text("Decay factor", style: Theme.of(context).textTheme.subtitle1!),
+                  child: Text("Decay factor", style: Theme.of(context).textTheme.titleMedium!),
                 )
             ),
             SizedBox(
@@ -334,7 +334,7 @@ class _PointsSettingsWidgetState extends State<PointsSettingsWidget> {
                 "valid opponent. Enter 0 to count all match entries, or -1 to count only those with scores on all stages.",
                 child: Padding(
                   padding: const EdgeInsets.only(left: 16),
-                  child: Text("Stages required per match", style: Theme.of(context).textTheme.subtitle1!),
+                  child: Text("Stages required per match", style: Theme.of(context).textTheme.titleMedium!),
                 )
             ),
             SizedBox(

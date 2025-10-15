@@ -186,7 +186,7 @@ class _FilterControlsState extends State<FilterControls> {
                   if(widget.sport.resultSortModes.isNotEmpty) Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text("Sort by...", style: Theme.of(context).textTheme.caption),
+                      Text("Sort by...", style: Theme.of(context).textTheme.bodySmall),
                       DropdownButton<SortMode>(
                         underline: Container(
                           height: 1,
@@ -204,7 +204,7 @@ class _FilterControlsState extends State<FilterControls> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text("Results for...", style: Theme.of(context).textTheme.caption),
+                      Text("Results for...", style: Theme.of(context).textTheme.bodySmall),
                       DropdownButton<StageMenuItem>(
                         underline: Container(
                           height: 1,

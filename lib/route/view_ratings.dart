@@ -26,6 +26,7 @@ import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_statistics.dart';
 import 'package:shooting_sports_analyst/data/search_query_parser.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
@@ -224,7 +225,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).primaryColor;
-    final backgroundColor = Theme.of(context).backgroundColor;
+    final backgroundColor = Theme.of(context).colorScheme.surface;
     var animation = (_operationInProgress) ?
       AlwaysStoppedAnimation<Color>(backgroundColor) : AlwaysStoppedAnimation<Color>(primaryColor);
 
@@ -697,7 +698,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
   String? lastUrlPredicted;
   Future<void> _startPredictionView(RatingDataSource dataSource, RatingGroup tab) async {
-    var options = _ratings.toSet().toList(); //rater.knownShooters.values.toSet().toList();
+    var options = _ratings.toSet().toList();
     options.sort((a, b) => b.rating.compareTo(a.rating));
     List<ShooterRating>? shooters = [];
     var divisions = tab.divisions;
@@ -799,7 +800,11 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     int seed = _selectedMatch.date.millisecondsSinceEpoch;
     var predictions = _settings.algorithm.predict(shooters, seed: seed);
     Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-      return PredictionView(dataSource: dataSource, predictions: predictions, matchId: registrationContainer.matchId);
+      return PredictionView(dataSource: dataSource, predictions: predictions, matchId: registrationContainer.matchId, filters: FilterSet(
+        _sport,
+        mode: FilterMode.or,
+        divisions: [...divisions],
+      ));
     }));
   }
 }

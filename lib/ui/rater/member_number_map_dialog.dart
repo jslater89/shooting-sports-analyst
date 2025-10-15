@@ -85,7 +85,7 @@ class _MemberNumberMapDialogState extends State<MemberNumberMapDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             if(widget.helpText != null) Text(widget.helpText!),
-            Text(errorText, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).errorColor)),
+            Text(errorText, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).colorScheme.error)),
             SizedBox(height: 8),
             SizedBox(
               width: widget.width / 1.5,

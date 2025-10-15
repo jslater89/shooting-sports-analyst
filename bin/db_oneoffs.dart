@@ -14,7 +14,7 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:dart_console/dart_console.dart';
 import 'package:data/stats.dart' show WeibullDistribution;
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/config/serialized_config.dart';
 import 'package:shooting_sports_analyst/console/labeled_progress_bar.dart';
 import 'package:shooting_sports_analyst/console/repl.dart';

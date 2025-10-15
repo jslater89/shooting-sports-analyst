@@ -104,7 +104,7 @@ class _MemberNumberCorrectionListDialogState extends State<MemberNumberCorrectio
           mainAxisSize: MainAxisSize.max,
           children: [
             if(widget.helpText != null) Text(widget.helpText!),
-            Text(errorText, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).errorColor)),
+            Text(errorText, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).colorScheme.error)),
             SizedBox(
               width: widget.width / 1.25,
               child: Card(

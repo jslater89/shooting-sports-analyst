@@ -127,6 +127,19 @@ Division? uspsaDivisionForIpscDivision(Division? division) {
   return null;
 }
 
+/// Retrieve the IPSC division that corresponds to a USPSA division.
+Division? ipscDivisionForUspsaDivision(Division? division) {
+  if(division == null) return null;
+  if(division == uspsaOpen) return ipscOpen;
+  if(division == uspsaLimited) return ipscStandard;
+  if(division == uspsaProduction) return ipscProduction;
+  if(division == uspsaCarryOptics) return ipscProductionOptics;
+  if(division == uspsaSingleStack) return ipscClassic;
+  if(division == uspsaRevolver) return ipscRevolver;
+  if(division == uspsaPcc) return ipscPccOptics;
+  return null;
+}
+
 /// Retrieve the USPSA division that corresponds to an IPSC division name.
 ///
 /// Internally, looks up the IPSC division by name and then calls [uspsaDivisionForIpscDivision].

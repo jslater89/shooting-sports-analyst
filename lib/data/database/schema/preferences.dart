@@ -5,8 +5,8 @@
  */
 
 import 'package:collection/collection.dart';
-import 'package:isar/isar.dart';
 import 'package:shooting_sports_analyst/data/fantasy/fantasy_points_mode.dart';
+import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_display_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/match_prediction_mode.dart';
 

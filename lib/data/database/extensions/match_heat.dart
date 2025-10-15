@@ -8,16 +8,20 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:data/stats.dart' show WeibullDistribution;
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_heat.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/standardized_maximum_scaler.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/ipsc.dart' show ipscSport, ipscDivisionForUspsaDivision;
+import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart' show uspsaSport;
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 
 final _log = SSALogger("MatchHeatDatabase");
@@ -93,7 +97,20 @@ extension MatchHeatDatabase on AnalystDatabase {
 
     // For each division, find ratings for all rated competitors, ignoring divisions with fewer than 5 competitors.
     for(var division in sport.divisions.values) {
-      var groupRes = await project.groupForDivision(division);
+      DataSourceResult<RatingGroup?> groupRes;
+      Division finalDivision = division;
+      if(sport == uspsaSport && match.sport == ipscSport) {
+        var ipscDivision = ipscDivisionForUspsaDivision(division);
+        if(ipscDivision == null) {
+          _log.w("No IPSC division found for USPSA division: ${division.name}");
+          continue;
+        }
+        groupRes = await project.groupForDivision(ipscDivision);
+        finalDivision = ipscDivision;
+      }
+      else {
+        groupRes = await project.groupForDivision(division);
+      }
 
       if(groupRes.isErr()) {
         _log.w("Error getting group for division ${division.name}: ${groupRes.unwrapErr()}");
@@ -112,7 +129,7 @@ extension MatchHeatDatabase on AnalystDatabase {
         scalers[group.uuid] = scaler;
       }
 
-      var divisionEntries = match.filterShooters(divisions: [division]);
+      var divisionEntries = match.filterShooters(divisions: [finalDivision]);
       if(divisionEntries.length < 5) {
         continue;
       }
@@ -147,9 +164,18 @@ extension MatchHeatDatabase on AnalystDatabase {
 
     // For each division, calculate divisional heat.
     for(var division in sport.divisions.values) {
-      var scores = match.getScoresFromFilters(FilterSet(sport, divisions: [division]));
+      Division finalDivision = division;
+      if(sport == uspsaSport && match.sport == ipscSport) {
+        var ipscDivision = ipscDivisionForUspsaDivision(division);
+        if(ipscDivision == null) {
+          _log.w("No IPSC division found for USPSA division: ${division.name}");
+          continue;
+        }
+        finalDivision = ipscDivision;
+      }
+      var scores = match.getScoresFromFilters(FilterSet(sport, divisions: [finalDivision]));
 
-      var competitors = scores.keys.where((e) => e.division == division).toList();
+      var competitors = scores.keys.where((e) => e.division == finalDivision).toList();
       var ratedCompetitors = competitors.where((e) => shooterRatings.containsKey(e));
 
       if(ratedCompetitors.length < 5) {

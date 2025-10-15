@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 
 part 'scoring_events.g.dart';
@@ -31,7 +31,7 @@ class DbScoringEvent {
 
   bool bonus;
   String bonusLabel;
-  
+
   bool dynamic;
 
   DbScoringEvent({

@@ -35,9 +35,9 @@ class MemberNumberDialog extends StatefulWidget {
 class _MemberNumberDialogState extends State<MemberNumberDialog> {
   List<String> numbers = [];
   String errorText = "";
-  
+
   var inputController = TextEditingController();
-  
+
   @override
   void initState() {
     super.initState();
@@ -56,7 +56,7 @@ class _MemberNumberDialogState extends State<MemberNumberDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             if(widget.helpText != null) Text(widget.helpText!),
-            Text(errorText, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).errorColor)),
+            Text(errorText, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).colorScheme.error)),
             SizedBox(
               width: widget.width / 2,
               child: TextField(

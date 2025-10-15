@@ -477,7 +477,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
           children: [
             Text(
               "${shooter.getName()} - ${shooter.division?.displayName ?? "NO DIVISION"} ${shooter.classification?.displayName}",
-              style: Theme.of(context).textTheme.headline6!.copyWith(
+              style: Theme.of(context).textTheme.titleLarge!.copyWith(
                 color: ThemeColors.linkColor(context),
                 decoration: TextDecoration.underline,
               ),
@@ -497,7 +497,7 @@ class _EditableShooterCardState extends State<EditableShooterCard> {
         children: [
           Text(
             "${shooter.getName()} - ${shooter.division?.displayName ?? "NO DIVISION"} ${shooter.classification?.displayName ?? "NO CLASSIFICATION"}",
-            style: Theme.of(context).textTheme.headline6,
+            style: Theme.of(context).textTheme.titleLarge,
           ),
           IconButton(
             icon: Icon(Icons.compare_arrows),

@@ -149,7 +149,7 @@ class _OpenskillSettingsWidgetState extends State<OpenskillSettingsWidget> {
               message: "Beta controls the base variability of ratings.",
               child: Padding(
                 padding: const EdgeInsets.only(left: 16),
-                child: Text("Beta", style: Theme.of(context).textTheme.subtitle1!),
+                child: Text("Beta", style: Theme.of(context).textTheme.titleMedium!),
               ),
             ),
             SizedBox(
@@ -177,7 +177,7 @@ class _OpenskillSettingsWidgetState extends State<OpenskillSettingsWidget> {
                   "which prevents ratings from becoming stagnant over time.",
               child: Padding(
                 padding: const EdgeInsets.only(left: 16),
-                child: Text("Tau", style: Theme.of(context).textTheme.subtitle1!),
+                child: Text("Tau", style: Theme.of(context).textTheme.titleMedium!),
               ),
             ),
             SizedBox(
