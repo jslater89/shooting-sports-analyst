@@ -50,13 +50,15 @@ class SearchQueryElement {
   bool? dq;
   bool? dnf;
 
-  bool matchesShooter(MatchEntry s) {
-    if(dq != null) {
-      if(dq == true) {
-        if(!s.dq) return false;
-      }
-      else if(dq == false) {
-        if(s.dq) return false;
+  bool matchesShooter(MatchEntry s, {bool matchDq = true, bool matchDnf = true}) {
+    if(matchDq) {
+      if(dq != null) {
+        if(dq == true) {
+          if(!s.dq) return false;
+        }
+        else if(dq == false) {
+          if(s.dq) return false;
+        }
       }
     }
 
@@ -73,14 +75,16 @@ class SearchQueryElement {
     if(division != null && s.division != division) return false;
     if(powerFactor != null && s.powerFactor != powerFactor) return false;
 
-    // Elsewhere in the code, we allow 1 DNF to still count, for whatever reason
-    if(dnf != null) {
-      var isMatchDnf = s.scores.values.where((s) => s.dnf).length > 1;
-      if(dnf == true) {
-        if(!isMatchDnf) return false;
-      }
-      else if(dnf == false) {
-        if(isMatchDnf) return false;
+    if(matchDnf) {
+      // Elsewhere in the code, we allow 1 DNF to still count, for whatever reason
+      if(dnf != null) {
+        var isMatchDnf = s.scores.values.where((s) => s.dnf).length > 1;
+        if(dnf == true) {
+          if(!isMatchDnf) return false;
+        }
+        else if(dnf == false) {
+          if(isMatchDnf) return false;
+        }
       }
     }
 

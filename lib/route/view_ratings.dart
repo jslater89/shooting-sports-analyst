@@ -23,8 +23,8 @@ import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_sourc
 import 'package:shooting_sports_analyst/data/ranking/interface/synchronous_rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
-import 'package:shooting_sports_analyst/data/old_search_query_parser.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_statistics.dart';
+import 'package:shooting_sports_analyst/data/search_query_parser.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
@@ -92,6 +92,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   late ShootingMatch _selectedMatch;
   late TabController _tabController;
   ReportFilters? _lastReportFilters;
+  String _searchTerm = "";
 
   DateTime? _changeSince;
 
@@ -111,7 +112,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     _searchController.addListener(() {
       var t = _searchController.text;
       if(t.startsWith('?')) {
-        var q = parseQuery(t);
+        var q = parseQuery(_sport, t);
         if(q == null && searchError == null) {
           setState(() {
             searchError = "Invalid query";
@@ -219,12 +220,6 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       // }
     }
   }
-  String _searchTerm = "";
-  // void _updateSearch() {
-  //   setState(() {
-  //     _searchTerm = _searchController.text;
-  //   });
-  // }
 
   @override
   Widget build(BuildContext context) {

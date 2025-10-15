@@ -20,8 +20,8 @@ import 'package:shooting_sports_analyst/data/ranking/interface/synchronous_ratin
 import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
+import 'package:shooting_sports_analyst/data/search_query_parser.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
-import 'package:shooting_sports_analyst/data/old_search_query_parser.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/rater/display_settings.dart';
@@ -47,7 +47,9 @@ class RaterView extends StatefulWidget {
     required this.dataSource,
     required this.group,
     required this.currentMatch,
-    this.search, this.maxAge, this.minRatings = 0,
+    this.search,
+    this.maxAge,
+    this.minRatings = 0,
     this.sortMode = RatingSortMode.rating,
     required this.filters,
     required this.ratingSets,
@@ -229,7 +231,7 @@ class _RaterViewState extends State<RaterView> {
 
     if(widget.search != null && widget.search!.isNotEmpty) {
       if(widget.search!.startsWith('?')) {
-        var queryElements = parseQuery(widget.search!.toLowerCase());
+        var queryElements = parseQuery(widget.sport, widget.search!.toLowerCase());
 
         if(queryElements != null) {
           sortedRatings = sortedRatings.where((r) =>
