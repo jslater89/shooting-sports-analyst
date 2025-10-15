@@ -506,6 +506,8 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                 yearIndices[year]!,
                 charts.RangeAnnotationAxisType.domain,
                 startLabel: year.toString(),
+                labelDirection: charts.AnnotationLabelDirection.vertical,
+                labelPosition: charts.AnnotationLabelPosition.inside,
                 labelStyleSpec: charts.TextStyleSpec(color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex())),
                 color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
                 strokeWidthPx: 1,
