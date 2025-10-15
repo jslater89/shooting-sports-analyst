@@ -66,22 +66,19 @@ class _MatchDatabaseManagerPageState extends State<MatchDatabaseManagerPage> {
                 message: "Migrate matches from old match cache",
                 child: IconButton(
                   icon: Icon(Icons.copy),
-                  onPressed: () async {
-                    listModel.loading = true;
-
-                    var db = AnalystDatabase();
-                    var loadingModel = ProgressModel();
-                    var future = db.migrateFromMatchCache((progress, total) async {
-                      loadingModel.total = total;
-                      loadingModel.current = progress;
-                      await Future.delayed(Duration.zero);
-                    });
-                    await LoadingDialog.show(
-                      context: context,
-                      waitOn: future,
-                      progressProvider: loadingModel,
-                    );
-                    listModel.search(null);
+                  onPressed: () {
+                    showDialog(context: context, builder: (context) => AlertDialog(
+                      title: Text("Migration no longer supported"),
+                      content: Text("Due to the age of the data store used by the match cache,\n"
+                          "migration is no longer supported. Use an 8.0.0 beta version or\n"
+                          "earlier to migrate matches."),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: Text("OK"),
+                        ),
+                      ],
+                    ));
                   },
                 ),
               ),

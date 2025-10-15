@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 
 part 'db_relative_score.g.dart';

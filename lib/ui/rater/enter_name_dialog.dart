@@ -21,13 +21,13 @@ class _EnterNameDialogState extends State<EnterNameDialog> {
   String _errorText = "";
   bool confirm = false;
   bool confirmed = false;
-  
+
   @override
   void initState() {
     super.initState();
 
     nameController = TextEditingController(text: widget.initial);
-    nameController.addListener(() { 
+    nameController.addListener(() {
       if(RatingProjectManager().projectExists(nameController.text)) {
         setState(() {
           confirm = true;
@@ -55,7 +55,7 @@ class _EnterNameDialogState extends State<EnterNameDialog> {
       });
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -64,7 +64,7 @@ class _EnterNameDialogState extends State<EnterNameDialog> {
         mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(width: 400),
-          Text(_errorText, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).errorColor)),
+          Text(_errorText, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).colorScheme.error)),
           TextField(
             keyboardType: TextInputType.text,
             decoration: InputDecoration(

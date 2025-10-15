@@ -606,7 +606,7 @@ class _ResultPageState extends State<ResultPage> {
     );
 
     final primaryColor = Theme.of(context).primaryColor;
-    final backgroundColor = Theme.of(context).backgroundColor;
+    final backgroundColor = Theme.of(context).colorScheme.surface;
 
     if(_operationInProgress) _log.v("Operation in progress");
 

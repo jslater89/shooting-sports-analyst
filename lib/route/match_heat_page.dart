@@ -115,19 +115,26 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
       });
     }
 
+    bool updatedDuringMissingMatches = false;
     for(var (i, ptr) in missingMatches.indexed) {
       var matchHeat = await db.calculateHeatForMatch(_project!.id, ptr);
       if(matchHeat != null) {
         _matchHeat[ptr] = matchHeat;
         db.saveMatchHeat(matchHeat);
+        _recalculateSizes();
+        _rebuildChart();
+        updatedDuringMissingMatches = true;
       }
-      _recalculateSizes();
       setStateIfMounted(() {
         _progress = (i + 1) / missingMatches.length;
+      });
+    }
+    if(!updatedDuringMissingMatches) {
+      _recalculateSizes();
+      setStateIfMounted(() {
         _rebuildChart();
       });
     }
-
   }
 
   void _recalculateSizes() {

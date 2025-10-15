@@ -169,7 +169,7 @@ class ShooterResultCard extends StatelessWidget {
           children: [
             Text(
               shooterString,
-              style: Theme.of(context).textTheme.headline6!.copyWith(
+              style: Theme.of(context).textTheme.titleLarge!.copyWith(
                 color: ThemeColors.linkColor(context),
                 decoration: TextDecoration.underline,
               ),
@@ -201,7 +201,7 @@ class ShooterResultCard extends StatelessWidget {
       children: [
         Text(
           shooterString,
-          style: Theme.of(context).textTheme.headline6,
+          style: Theme.of(context).textTheme.titleLarge,
         ),
         IconButton(
           icon: Icon(Icons.compare_arrows),

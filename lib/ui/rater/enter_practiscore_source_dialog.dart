@@ -63,7 +63,7 @@ class _EnterPractiscoreSourceDialogState extends State<EnterPractiscoreSourceDia
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(_errorText, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).errorColor)),
+              Text(_errorText, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).colorScheme.error)),
               Expanded(
                 child: SingleChildScrollView(
                   child: TextField(

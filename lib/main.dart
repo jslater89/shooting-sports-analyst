@@ -23,7 +23,6 @@ import 'package:shooting_sports_analyst/config/encrypted_file_store/macos_key_de
 import 'package:shooting_sports_analyst/config/secure_config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/help/entries/all_helps.dart';
-import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
 import 'package:shooting_sports_analyst/data/match_cache/registration_cache.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_context.dart';
 import 'package:shooting_sports_analyst/db_oneoffs.dart';
@@ -177,18 +176,6 @@ void main() async {
 
     await AnalystDatabase().ready;
     _log.i("Database ready");
-
-    if(!HtmlOr.isWeb) {
-      var path = await getApplicationSupportDirectory();
-      Hive.init(path.absolute.path);
-
-      // Start warming up the match cache immediately, since we're almost always going to want it
-      matchCacheProgressCallback = (_1, _2) async {
-        await Future.delayed(Duration(microseconds: 1));
-      };
-      MatchCache();
-    }
-    _log.i("Match cache ready");
 
       await RegistrationCache().ready;
     _log.i("Registration cache ready");

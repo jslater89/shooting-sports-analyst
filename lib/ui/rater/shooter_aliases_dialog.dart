@@ -11,7 +11,7 @@ class ShooterAliasesDialog extends StatefulWidget {
   const ShooterAliasesDialog(this.initialAliases, {Key? key}) : super(key: key);
 
   final Map<String, String> initialAliases;
-  
+
   @override
   State<ShooterAliasesDialog> createState() => _ShooterAliasesDialogState();
 }
@@ -47,9 +47,9 @@ class _ShooterAliasesDialogState extends State<ShooterAliasesDialog> {
                   "Aliases are only necessary when a shooter switches to a lifetime "
                   "member number, and the name he registered with at the first match using his "
                   "lifetime member number differs from the name he registered with at his first "
-                  "match in the dataset.", style: Theme.of(context).textTheme.bodyText2),
+                  "match in the dataset.", style: Theme.of(context).textTheme.bodyMedium),
               SizedBox(height: 5),
-              Text(_errorText, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).errorColor)),
+              Text(_errorText, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).colorScheme.error)),
               SizedBox(height: 15),
               Row(
                 children: [

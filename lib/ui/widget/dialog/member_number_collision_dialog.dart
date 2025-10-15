@@ -160,7 +160,7 @@ class _MemberNumberCollisionDialogState extends State<MemberNumberCollisionDialo
       child: Column(
         children: [
           ClickableLink(
-            child: Text("${culprit.getName(suffixes: false)} - ${culprit.originalMemberNumber}", style: Theme.of(context).textTheme.headline6),
+            child: Text("${culprit.getName(suffixes: false)} - ${culprit.originalMemberNumber}", style: Theme.of(context).textTheme.titleLarge),
             onTap: () {
               if(culprit.length > 0) {
                 showDialog(context: context, builder: (context) => ShooterStatsDialog(rating: culprit, match: culprit.ratingEvents.last.match));
@@ -171,7 +171,7 @@ class _MemberNumberCollisionDialogState extends State<MemberNumberCollisionDialo
             },
           ),
           Divider(),
-          Text("Recent Matches", style: Theme.of(context).textTheme.subtitle1),
+          Text("Recent Matches", style: Theme.of(context).textTheme.titleMedium),
           for(var match in matches)
             ClickableLink(
               child: Text(match.name),
@@ -186,7 +186,7 @@ class _MemberNumberCollisionDialogState extends State<MemberNumberCollisionDialo
             ),
           Divider(),
           if(culprit.knownMemberNumbers.isNotEmpty)
-            Text("Alternate Member Numbers", style: Theme.of(context).textTheme.subtitle1),
+            Text("Alternate Member Numbers", style: Theme.of(context).textTheme.titleMedium),
           if(culprit.knownMemberNumbers.isNotEmpty)
             for(var number in culprit.knownMemberNumbers)
               ClickableLink(
@@ -195,7 +195,7 @@ class _MemberNumberCollisionDialogState extends State<MemberNumberCollisionDialo
               ),
           if(culprit.knownMemberNumbers.isNotEmpty)
             Divider(),
-          Text("Related Shooters", style: Theme.of(context).textTheme.subtitle1),
+          Text("Related Shooters", style: Theme.of(context).textTheme.titleMedium),
           for(var shooter in accomplices)
             ClickableLink(
               child: Text("${shooter.getName(suffixes: false)} - ${shooter.originalMemberNumber}"),

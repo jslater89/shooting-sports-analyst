@@ -9,7 +9,6 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/match/practical_match.dart';
-import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
 import 'package:shooting_sports_analyst/data/ranking/evolution/elo_evaluation.dart';
 import 'package:shooting_sports_analyst/data/ranking/evolution/elo_tuner.dart';
 import 'package:shooting_sports_analyst/data/ranking/evolution/genome.dart';
@@ -19,7 +18,6 @@ import 'package:shooting_sports_analyst/ui/rater/evolution/predator_prey_view.da
 import 'package:shooting_sports_analyst/ui/rater/evolution/solution_space_chart.dart';
 import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
-import 'package:shooting_sports_analyst/ui/widget/match_cache_loading_indicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/evolution/l2s_data.dart' as l2s;
 import 'package:shooting_sports_analyst/data/ranking/evolution/wpa_data.dart' as wpa;
 import 'package:shooting_sports_analyst/data/ranking/evolution/east_data.dart' as east;
@@ -62,12 +60,12 @@ class _EloTunerPageState extends State<EloTunerPage> {
     // Allow time for the 'loading' screen to display
     await Future.delayed(Duration(milliseconds: 1));
 
-    await MatchCache().ready;
+    // await MatchCache().ready;
     setState(() {
       matchCacheReady = true;
     });
 
-    var cache = MatchCache();
+    // var cache = MatchCache();
     List<PracticalMatch> l2Test = [];
     List<PracticalMatch> l2Calibration = [];
     List<PracticalMatch> wpaTest = [];
@@ -75,32 +73,32 @@ class _EloTunerPageState extends State<EloTunerPage> {
     List<PracticalMatch> eastTest = [];
     List<PracticalMatch> eastCalibration = [];
 
-    for(var url in l2s.calibration) {
-      l2Calibration.add((await cache.getMatch(url)).unwrap());
-      _log.v("Got $url");
-    }
-    for(var url in l2s.test) {
-      l2Test.add((await cache.getMatch(url)).unwrap());
-      _log.v("Got $url");
-    }
-    for(var url in wpa.calibration) {
-      wpaCalibration.add((await cache.getMatch(url)).unwrap());
-      _log.v("Got $url");
-    }
-    for(var url in wpa.test) {
-      wpaTest.add((await cache.getMatch(url)).unwrap());
-      _log.v("Got $url");
-    }
-    for(var url in east.calibration) {
-      eastCalibration.add((await cache.getMatch(url)).unwrap());
-      _log.v("Got $url");
-    }
-    for(var url in east.test) {
-      eastTest.add((await cache.getMatch(url)).unwrap());
-      _log.v("Got $url");
-    }
+    // for(var url in l2s.calibration) {
+    //   l2Calibration.add((await cache.getMatch(url)).unwrap());
+    //   _log.v("Got $url");
+    // }
+    // for(var url in l2s.test) {
+    //   l2Test.add((await cache.getMatch(url)).unwrap());
+    //   _log.v("Got $url");
+    // }
+    // for(var url in wpa.calibration) {
+    //   wpaCalibration.add((await cache.getMatch(url)).unwrap());
+    //   _log.v("Got $url");
+    // }
+    // for(var url in wpa.test) {
+    //   wpaTest.add((await cache.getMatch(url)).unwrap());
+    //   _log.v("Got $url");
+    // }
+    // for(var url in east.calibration) {
+    //   eastCalibration.add((await cache.getMatch(url)).unwrap());
+    //   _log.v("Got $url");
+    // }
+    // for(var url in east.test) {
+    //   eastTest.add((await cache.getMatch(url)).unwrap());
+    //   _log.v("Got $url");
+    // }
 
-    cache.save();
+    // cache.save();
 
     _log.d("WPA: ${wpaCalibration.length} calibration matches, ${wpaTest.length} eval matches");
     _log.d("L2s: ${l2Calibration.length} calibration matches, ${l2Test.length} eval matches");
@@ -250,7 +248,7 @@ class _EloTunerPageState extends State<EloTunerPage> {
       mainAxisSize: MainAxisSize.max,
       children: [
         SizedBox(height: 128, width: width),
-        MatchCacheLoadingIndicator(),
+        // MatchCacheLoadingIndicator(),
       ],
     );
   }
@@ -338,7 +336,7 @@ class _EloTunerPageState extends State<EloTunerPage> {
                 child: Column(
                   children: [
                     Text("Generation ${update.currentGeneration + 1}: ${update.currentOperation} $genomeString",
-                      style: Theme.of(context).textTheme.headline5),
+                      style: Theme.of(context).textTheme.headlineSmall),
                     _sortControls(),
                     Expanded(
                       child: ListView.builder(
@@ -402,7 +400,7 @@ class _EloTunerPageState extends State<EloTunerPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       mainAxisSize: MainAxisSize.max,
                       children: [
-                        Expanded(child: Text("Population Statistics", style: Theme.of(context).textTheme.subtitle1)),
+                        Expanded(child: Text("Population Statistics", style: Theme.of(context).textTheme.titleMedium)),
                         Expanded(child: Text("${t.nonDominated.length}/${t.currentPopulation.length} nondominated solutions")),
                         Expanded(child: Text("$unevaluated solutions to evaluate")),
                         Expanded(child: Text("${t.totalEvaluations} total solutions evaluated")),
@@ -582,7 +580,7 @@ class _EloTunerPageState extends State<EloTunerPage> {
               children: [
                 Row(
                   children: [
-                    Text("#${index + 1} Genome ${eval.generation}.${eval.hashCode} ", style: Theme.of(context).textTheme.subtitle1),
+                    Text("#${index + 1} Genome ${eval.generation}.${eval.hashCode} ", style: Theme.of(context).textTheme.titleMedium),
                     SizedBox(width: 8),
                     ...errorWidgets(eval)
                   ],

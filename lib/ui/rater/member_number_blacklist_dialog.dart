@@ -87,7 +87,7 @@ class _MemberNumberBlacklistDialogState extends State<MemberNumberBlacklistDialo
           mainAxisSize: MainAxisSize.min,
           children: [
             if(widget.helpText != null) Text(widget.helpText!),
-            Text(errorText, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).errorColor)),
+            Text(errorText, style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Theme.of(context).colorScheme.error)),
             SizedBox(
               width: widget.width / 1.5,
               child: Card(
@@ -103,7 +103,7 @@ class _MemberNumberBlacklistDialogState extends State<MemberNumberBlacklistDialo
                             child: TextField(
                               controller: sourceFilterController,
                               decoration: InputDecoration(
-                                hintText: "Source",  
+                                hintText: "Source",
                               ),
                             ),
                           ),
@@ -114,7 +114,7 @@ class _MemberNumberBlacklistDialogState extends State<MemberNumberBlacklistDialo
                             child: TextField(
                               controller: targetFilterController,
                               decoration: InputDecoration(
-                                hintText: "Target",  
+                                hintText: "Target",
                               ),
                             ),
                           ),

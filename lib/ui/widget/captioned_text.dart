@@ -17,7 +17,7 @@ class CaptionedText extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(captionText!, style: Theme.of(context).textTheme.caption),
+        Text(captionText!, style: Theme.of(context).textTheme.bodySmall),
         Text(text!),
       ],
     );

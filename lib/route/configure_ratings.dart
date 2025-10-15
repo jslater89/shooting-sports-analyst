@@ -411,7 +411,13 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         ),
         Padding(
           padding: const EdgeInsets.all(8.0),
-          child: SizedBox(width: 400, child: Text(_validationError, style: Theme.of(context).textTheme.bodyText1!.copyWith(color: Theme.of(context).errorColor))),
+          child: SizedBox(
+            width: 400,
+            child: Text(
+              _validationError,
+              style: Theme.of(context).textTheme.bodyLarge!.copyWith(color: Theme.of(context).colorScheme.error)
+            ),
+          ),
         ),
         Expanded(
           child: Row(
@@ -441,7 +447,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                 mainAxisSize: MainAxisSize.max,
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text("Sport", style: Theme.of(context).textTheme.subtitle1!),
+                                  Text("Sport", style: Theme.of(context).textTheme.titleMedium!),
                                   SizedBox(
                                     width: 150,
                                     child: Focus(
@@ -489,7 +495,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                   message: "What divisions/groups to rate. Currently:\n${_currentGroups.map((g) => g.uiLabel).join("\n")}",
                                   child: Padding(
                                     padding: const EdgeInsets.only(left: 16),
-                                    child: Text("Active rater groups", style: Theme.of(context).textTheme.subtitle1!),
+                                    child: Text("Active rater groups", style: Theme.of(context).textTheme.titleMedium!),
                                   ),
                                 ),
                                 Padding(
@@ -530,7 +536,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
                                   child: Tooltip(
                                     message: "The rating algorithm to use. Switching algorithms discards all settings below\n"
                                         "this dropdown!",
-                                    child: Text("Rating engine", style: Theme.of(context).textTheme.subtitle1!)
+                                    child: Text("Rating engine", style: Theme.of(context).textTheme.titleMedium!)
                                   ),
                                 ),
                                 Padding(

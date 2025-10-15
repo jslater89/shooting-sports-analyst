@@ -19,7 +19,7 @@ class EmptyScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     var size = MediaQuery.of(context).size;
     final primaryColor = Theme.of(context).primaryColor;
-    final backgroundColor = Theme.of(context).backgroundColor;
+    final backgroundColor = Theme.of(context).colorScheme.surface;
     var animation = operationInProgress! ?
     AlwaysStoppedAnimation<Color>(backgroundColor) : AlwaysStoppedAnimation<Color>(primaryColor);
 

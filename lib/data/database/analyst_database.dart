@@ -7,7 +7,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_query_element.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_heat.dart';
@@ -17,7 +17,6 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_e
 import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/database/schema/registration.dart';
-import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/idpa.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
@@ -353,24 +352,24 @@ class AnalystDatabase {
     return deleteMatch(match.id);
   }
 
-  Future<void> migrateFromMatchCache(ProgressCallback callback) async {
-    _log.d("Migrating from match cache");
-    var cache = MatchCache();
+  // Future<void> migrateFromMatchCache(ProgressCallback callback) async {
+  //   _log.d("Migrating from match cache");
+  //   var cache = MatchCache();
 
-    int i = 0;
-    int matchCount = cache.allIndexEntries().length;
-    for(var ie in cache.allIndexEntries()) {
-      var oldMatch = await cache.getByIndex(ie);
-      var newMatch = MatchTranslator.shootingMatchFrom(oldMatch);
-      await saveMatch(newMatch);
-      i += 1;
-      if(i % 10 == 0) {
-        _log.v("Migration: saved $i of $matchCount to database");
-        await callback.call(i, matchCount);
-      }
-    }
-    _log.i("Match cache migration complete with $matchCount cache entries processed");
-  }
+  //   int i = 0;
+  //   int matchCount = cache.allIndexEntries().length;
+  //   for(var ie in cache.allIndexEntries()) {
+  //     var oldMatch = await cache.getByIndex(ie);
+  //     var newMatch = MatchTranslator.shootingMatchFrom(oldMatch);
+  //     await saveMatch(newMatch);
+  //     i += 1;
+  //     if(i % 10 == 0) {
+  //       _log.v("Migration: saved $i of $matchCount to database");
+  //       await callback.call(i, matchCount);
+  //     }
+  //   }
+  //   _log.i("Match cache migration complete with $matchCount cache entries processed");
+  // }
 
   /// Build a match query. Returns either a [Query<DbShootingMatch>] or a [Query<int>], depending on the [idProperty] parameter.
   Query<DbShootingMatch> _buildMatchQuery(List<MatchQueryElement> elements, {int? limit, int? offset, MatchSortField sort = const DateSort(), bool idProperty = false}) {

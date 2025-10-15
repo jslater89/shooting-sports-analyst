@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 
 extension LinkUtilities<T> on IsarLinks<T> {
   void empty({bool ensureLoaded = false}) {
@@ -33,7 +33,7 @@ extension LinkUtilities<T> on IsarLinks<T> {
     });
   }
 
-  /// Applies the given [change] to the links object. This is 
+  /// Applies the given [change] to the links object. This is
   /// not a DB call, and the change will not be persisted until
   /// the next call to [save].
   void apply(IsarLinksChange<T> change) {
@@ -73,10 +73,10 @@ class IsarLinksChange<T> {
     added = currentSelection.where((e) => !startingSelection.contains(e)).toList(),
     removed = startingSelection.where((e) => !currentSelection.contains(e)).toList();
 
-  
+
   /// Returns a new [IsarLinksChange] that results from the starting selection of this
   /// [IsarLinksChange] and the current selection of the [other] [IsarLinksChange].
-  /// 
+  ///
   /// This is useful for UI scenarios where the user might make multiple changes
   /// before committing them to the DB, and allows using [currentSelection] for UI
   /// state.

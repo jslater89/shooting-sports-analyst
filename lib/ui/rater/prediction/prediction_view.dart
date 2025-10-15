@@ -7,12 +7,10 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:shooting_sports_analyst/data/match_cache/match_cache.dart';
-import 'package:shooting_sports_analyst/data/model.dart';
-import 'package:shooting_sports_analyst/data/practiscore_parser.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/colors.dart';
@@ -20,15 +18,20 @@ import 'package:shooting_sports_analyst/ui/rater/shooter_stats_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/box_and_whisker.dart';
 import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/match_database_chooser_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 
 var _log = SSALogger("PredictionView");
 
 class PredictionView extends StatefulWidget {
-  const PredictionView({Key? key, required this.dataSource, required this.predictions}) : super(key: key);
+  const PredictionView({Key? key, required this.dataSource, required this.filters, required this.predictions}) : super(key: key);
 
   /// The data source that generated the predictions.
   final RatingDataSource dataSource;
+
+  /// The filters from the rating group used to generate the predictions.
+  final FilterSet filters;
 
   /// The predictions.
   final List<ShooterPrediction> predictions;
@@ -175,29 +178,29 @@ class _PredictionViewState extends State<PredictionView> {
   }
 
   void _validate(double highPrediction) async {
-    await MatchCache().ready;
+    var matchList = await MatchDatabaseChooserDialog.show(
+      context: context,
+      multiple: false,
+    );
+    if(matchList == null || matchList.isEmpty) return;
+    var dbMatch = matchList.first;
 
-    var matchUrl = await getMatchUrl(context);
+    var matchRes = dbMatch.hydrate(useCache: true);
 
-    if(matchUrl == null) return;
-
-    var result = await MatchCache().getMatch(matchUrl);
-    if(result.isErr()) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.unwrapErr().message)));
+    if(matchRes.isErr()) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(matchRes.unwrapErr().message)));
       return;
     }
+    var match = matchRes.unwrap();
 
-    var match = result.unwrap();
-
-    // var filters = widget.rater.filters;
-    var shooters = <Shooter>[];
-    // var shooters = match.filterShooters(
-    //   filterMode: filters.mode,
-    //   divisions: filters.activeDivisions.toList(),
-    //   powerFactors: [],
-    //   classes: [],
-    //   allowReentries: false,
-    // );
+    var filters = widget.filters;
+    var shooters = match.filterShooters(
+      filterMode: filters.mode,
+      divisions: filters.activeDivisions.toList(),
+      powerFactors: [],
+      classes: [],
+      allowReentries: false,
+    );
     var scores = match.getScores(
       shooters: shooters,
       scoreDQ: false,
@@ -213,7 +216,7 @@ class _PredictionViewState extends State<PredictionView> {
       var rating = null;
       // var rating = widget.rater.ratingFor(shooter);
       if(rating != null) {
-        var score = scores.firstWhereOrNull((element) => element.shooter == shooter);
+        var score = scores[shooter];
         // var prediction = sortedPredictions.firstWhereOrNull((element) => element.shooter == rating);
         if(score != null) {
           matchScores[rating] = score;

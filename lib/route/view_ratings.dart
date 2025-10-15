@@ -46,6 +46,7 @@ import 'package:shooting_sports_analyst/ui/rater/reports/report_view.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/source/credentials_manager.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/associate_registrations.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/filter_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/loading_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_pointer_chooser_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/url_entry_dialog.dart';
@@ -223,7 +224,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
   @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).primaryColor;
-    final backgroundColor = Theme.of(context).backgroundColor;
+    final backgroundColor = Theme.of(context).colorScheme.surface;
     var animation = (_operationInProgress) ?
       AlwaysStoppedAnimation<Color>(backgroundColor) : AlwaysStoppedAnimation<Color>(primaryColor);
 
@@ -694,7 +695,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
 
   String? lastUrlPredicted;
   Future<void> _startPredictionView(RatingDataSource dataSource, RatingGroup tab) async {
-    var options = _ratings.toSet().toList(); //rater.knownShooters.values.toSet().toList();
+    var options = _ratings.toSet().toList();
     options.sort((a, b) => b.rating.compareTo(a.rating));
     List<ShooterRating>? shooters = [];
     var divisions = tab.divisions;
@@ -796,7 +797,11 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     int seed = _selectedMatch.date.millisecondsSinceEpoch;
     var predictions = _settings.algorithm.predict(shooters, seed: seed);
     Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-      return PredictionView(dataSource: dataSource, predictions: predictions);
+      return PredictionView(dataSource: dataSource, predictions: predictions, filters: FilterSet(
+        _sport,
+        mode: FilterMode.or,
+        divisions: [...divisions],
+      ));
     }));
   }
 }
