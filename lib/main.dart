@@ -177,6 +177,8 @@ void main() async {
     await AnalystDatabase().ready;
     _log.i("Database ready");
 
+    Hive.init((await getApplicationSupportDirectory()).absolute.path);
+
       await RegistrationCache().ready;
     _log.i("Registration cache ready");
 
