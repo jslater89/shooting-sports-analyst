@@ -25,6 +25,7 @@ import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/text_styles.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/match_pointer_chooser_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/stacked_distribution_chart.dart';
 import 'package:shooting_sports_analyst/ui_util.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -50,7 +51,6 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
 
   @override
   void dispose() {
-    _searchController.dispose();
     _overlayEntry?.remove();
     super.dispose();
   }
@@ -65,10 +65,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
   Map<Classification, double> _classStrengths = {};
   double _minClassStrength = 2e32;
   double _maxClassStrength = -2e32;
-  TextEditingController _searchController = TextEditingController();
   List<MatchPointer> _highlightedMatches = [];
-  List<MatchPointer> _excludedMatches = [];
-  List<String> _searchTerms = [];
 
   void _loadMatchHeat() async {
     var db = AnalystDatabase();
@@ -158,7 +155,6 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
 
   @override
   Widget build(BuildContext context) {
-    var searchedResults = _highlightedMatches.whereNot((e) => _excludedMatches.contains(e)).length;
     return Scaffold(
       appBar: AppBar(
         title: GestureDetector(
@@ -203,32 +199,28 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
         child: Column(
           children: [
             Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: "Search",
-                    ),
-                    onSubmitted: (value) {
-                      _search(value);
+                Tooltip(
+                  message: "Highlight matches",
+                  child: IconButton(
+                    onPressed: () async {
+                      var pointers = await MatchPointerChooserDialog.showMultiple(context: context, matches: _project!.matchPointers);
+                      if(pointers != null) {
+                        _highlightedMatches = pointers;
+                        setState(() {
+                          _rebuildChart();
+                        });
+                      }
                     },
+                    icon: Icon(Icons.filter_list),
                   ),
-                ),
-                IconButton(
-                  onPressed: () {
-                    _search(_searchController.text);
-                  },
-                  icon: Icon(Icons.search),
                 ),
                 Tooltip(
                   message: "Clear all searches",
                   child: IconButton(
                     onPressed: () {
-                      _searchController.clear();
-                      _searchTerms = [];
                       _highlightedMatches = [];
-                      _excludedMatches = [];
                       setState(() {
                         _rebuildChart();
                       });
@@ -237,16 +229,11 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
                   ),
                 ),
                 if(_highlightedMatches.isNotEmpty)
-                  Tooltip(
-                    message: "Searched for:\n${_searchTerms.join("\n")}",
-                    child: Text("${_searchTerms.length} search term${_searchTerms.length == 1 ? "" : "s"}")
-                  ),
-                if(_highlightedMatches.isNotEmpty)
                   SizedBox(width: 10),
                 if(_highlightedMatches.isNotEmpty)
                   Tooltip(
                     message: _calculateAverageHighlightedHeat(),
-                    child: Text("$searchedResults results")
+                    child: Text("${_highlightedMatches.length} results")
                   ),
               ],
             ),
@@ -258,38 +245,11 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
     );
   }
 
-  void _search(String value) {
-    bool exclude = false;
-    if(value.startsWith("-")) {
-      exclude = true;
-      value = value.substring(1);
-    }
-    for(var match in _matchHeat.keys) {
-      if(match.name.toLowerCase().contains(value.toLowerCase())) {
-        if(exclude) {
-          _excludedMatches.add(match);
-        }
-        else {
-          _highlightedMatches.add(match);
-        }
-      }
-    }
-    if(exclude) {
-      _searchTerms.add("-$value");
-    }
-    else {
-      _searchTerms.add(value);
-    }
-    setState(() {
-      _rebuildChart();
-    });
-  }
-
   bool get hasHighlighting => _highlightedMatches.isNotEmpty;
 
   bool _isHighlighted(MatchPointer match) {
     if(_highlightedMatches.isNotEmpty) {
-      return _highlightedMatches.contains(match) && !_excludedMatches.contains(match);
+      return _highlightedMatches.contains(match);
     }
     // If nothing is highlighted, everything is
     return true;
@@ -451,7 +411,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
     }
 
     // If there is highlighting going on, only show overlays for highlighted matches
-    if(hasHighlighting && (!_highlightedMatches.contains(match) || _excludedMatches.contains(match))) {
+    if(hasHighlighting && !_highlightedMatches.contains(match)) {
       return;
     }
 
@@ -623,8 +583,12 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
       rawCompetitorCount: 0,
     );
 
-    for(var match in _highlightedMatches.whereNot((e) => _excludedMatches.contains(e))) {
-      var heat = _matchHeat[match]!;
+    for(var match in _highlightedMatches) {
+      var heat = _matchHeat[match];
+      if(heat == null) {
+        _log.d("No heat found for match: ${match.name}");
+        continue;
+      }
       total.topTenPercentAverageRating += heat.topTenPercentAverageRating;
       total.weightedTopTenPercentAverageRating += heat.weightedTopTenPercentAverageRating;
       total.medianRating += heat.medianRating;
@@ -635,6 +599,10 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
       total.unratedCompetitorCount += heat.unratedCompetitorCount;
       total.rawCompetitorCount += heat.rawCompetitorCount;
       totalMatches++;
+    }
+
+    if(totalMatches == 0) {
+      return "No matches with heat found";
     }
 
     total.topTenPercentAverageRating /= totalMatches;

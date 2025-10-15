@@ -19,7 +19,7 @@ import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart'
 import 'package:shooting_sports_analyst/data/ranking/scaling/standardized_maximum_scaler.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/ipsc.dart' show ipscSport, ipscDivisionForUspsaDivision;
-import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart' show uspsaSport;
+import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart' show uspsaSport, uspsaA;
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
@@ -105,7 +105,7 @@ extension MatchHeatDatabase on AnalystDatabase {
           _log.w("No IPSC division found for USPSA division: ${division.name}");
           continue;
         }
-        groupRes = await project.groupForDivision(ipscDivision);
+        groupRes = await project.groupForDivision(division);
         finalDivision = ipscDivision;
       }
       else {
@@ -173,12 +173,15 @@ extension MatchHeatDatabase on AnalystDatabase {
         }
         finalDivision = ipscDivision;
       }
-      var scores = match.getScoresFromFilters(FilterSet(sport, divisions: [finalDivision]));
+      var scores = match.getScoresFromFilters(FilterSet(match.sport, divisions: [finalDivision]));
 
       var competitors = scores.keys.where((e) => e.division == finalDivision).toList();
       var ratedCompetitors = competitors.where((e) => shooterRatings.containsKey(e));
 
       if(ratedCompetitors.length < 5) {
+        // _log.d("Not enough rated competitors for division ${division.name}${finalDivision == division ? "" : " ($finalDivision)"}: ${ratedCompetitors.length}");
+        // _log.v("Division: $division Final division: $finalDivision");
+        // _log.v("Competitors found: ${scores.length}/${competitors.length}/${ratedCompetitors.length}");
         continue;
       }
 
@@ -197,10 +200,14 @@ extension MatchHeatDatabase on AnalystDatabase {
       // Get the average classification strength of all competitors.
       var classificationStrength = competitors
         .map((e) => sport.ratingStrengthProvider?.strengthForClass(e.classification))
-        .whereNotNull()
+        .nonNulls
         .average;
 
       double weight = competitors.length.toDouble() / rawCompetitorCount.toDouble();
+
+      if(sport == uspsaSport && match.sport == ipscSport) {
+        classificationStrength = uspsaSport.ratingStrengthProvider!.strengthForClass(uspsaA);
+      }
 
       topTenPercentAverageRatings.add(topTenPercentAverageRating);
       weightedTopTenPercentAverageRatings.add((topTenPercentAverageRating, weight));
