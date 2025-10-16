@@ -77,6 +77,8 @@ dependencies:
   encrypt: ^5.0.3
   crypto: ^3.0.3
   hashlib: ^2.2.0
+  html: ^0.15.6
+  advance_math: ^3.3.8
 
 dev_dependencies:
   flutter_test:

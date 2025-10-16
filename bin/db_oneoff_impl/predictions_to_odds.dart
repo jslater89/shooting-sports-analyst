@@ -70,22 +70,22 @@ class PredictionsToOddsCommand extends DbOneoffCommand {
     var bridgerhavens = knownShooters.firstWhereOrNull((s) => s.wrappedRating.deduplicatorName == "bridgerhavens");
     var robertkrogh = knownShooters.firstWhereOrNull((s) => s.wrappedRating.deduplicatorName == "robertkrogh");
     // var christilley = knownShooters.firstWhereOrNull((s) => s.wrappedRating.deduplicatorName == "christilley");
-    var userPredictions = <UserPrediction>[
-      UserPrediction(shooter: christiansailer!, bestPlace: 1, worstPlace: 3),
-      UserPrediction(shooter: mikehwang!, bestPlace: 1, worstPlace: 4),
-      UserPrediction(shooter: bryanjones!, bestPlace: 1, worstPlace: 5),
-      UserPrediction(shooter: aaroneddins!, bestPlace: 1, worstPlace: 10),
-      UserPrediction(shooter: russelldaniels!, bestPlace: 1, worstPlace: 10),
-      UserPrediction(shooter: gregoryclement!, bestPlace: 1, worstPlace: 10),
-      UserPrediction(shooter: johnvlieger!, bestPlace: 1, worstPlace: 10),
-      UserPrediction(shooter: chrisgelnett!, bestPlace: 1, worstPlace: 10),
-      UserPrediction(shooter: bridgerhavens!, bestPlace: 1, worstPlace: 10),
-      UserPrediction(shooter: robertkrogh!, bestPlace: 1, worstPlace: 10),
+    var userPredictions = <PlacePrediction>[
+      PlacePrediction(shooter: christiansailer!, bestPlace: 1, worstPlace: 3),
+      PlacePrediction(shooter: mikehwang!, bestPlace: 1, worstPlace: 4),
+      PlacePrediction(shooter: bryanjones!, bestPlace: 1, worstPlace: 5),
+      PlacePrediction(shooter: aaroneddins!, bestPlace: 1, worstPlace: 10),
+      PlacePrediction(shooter: russelldaniels!, bestPlace: 1, worstPlace: 10),
+      PlacePrediction(shooter: gregoryclement!, bestPlace: 1, worstPlace: 10),
+      PlacePrediction(shooter: johnvlieger!, bestPlace: 1, worstPlace: 10),
+      PlacePrediction(shooter: chrisgelnett!, bestPlace: 1, worstPlace: 10),
+      PlacePrediction(shooter: bridgerhavens!, bestPlace: 1, worstPlace: 10),
+      PlacePrediction(shooter: robertkrogh!, bestPlace: 1, worstPlace: 10),
       // UserPrediction(shooter: christilley!, bestPlace: 1, worstPlace: 10),
     ];
 
     // Generate odds for individual predictions
-    var individualOdds = <UserPrediction, PredictionProbability>{};
+    var individualOdds = <PlacePrediction, PredictionProbability>{};
     var random = Random(registration.matchId.stableHash);
     for (var userPred in userPredictions) {
       var shooterPrediction = shootersToPredictions[userPred.shooter];
@@ -94,7 +94,7 @@ class PredictionsToOddsCommand extends DbOneoffCommand {
         continue;
       }
 
-      var probability = PredictionProbability.fromUserPrediction(
+      var probability = PredictionProbability.fromPlacePrediction(
         userPred,
         shootersToPredictions,
         disasterChance: 0.01,

@@ -4,8 +4,11 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:io';
+
 import 'package:collection/collection.dart';
 import 'package:cookie_store/cookie_store.dart';
+import 'package:html/parser.dart';
 import 'package:html_unescape/html_unescape_small.dart';
 import 'package:shooting_sports_analyst/data/match_cache/registration_cache.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
@@ -100,6 +103,7 @@ Future<RegistrationResult> getRegistrations(Sport sport, String url, List<Divisi
     var cached = await RegistrationCache().get(url);
     if(cached != null && cached.isNotEmpty) {
       _log.i("Using cached registration for $url");
+      File("cached.html").writeAsStringSync(cached);
       return RegistrationResult.ok(_parseRegistrations(sport, matchId, cached, divisions, knownShooters));
     }
   }
@@ -147,27 +151,49 @@ RegistrationContainer _parseRegistrations(
   var ratings = <Registration, ShooterRating>{};
   var unmatched = <Registration>[];
 
+  var document = HtmlParser(registrationHtml).parse();
+
   var matchName = "unnamed match";
 
   // Match a line
-  var shooterRegex = RegExp(r'title="(?<name>.*?)\s+\((?<division>[\w\s]+?)(\s+\/\s+(?<class>\w+?))?\)"');
-  var matchRegex = RegExp(r'<meta\s+property="og:title"\s+content="(?<matchname>.*)"\s*/>');
-  var unescape = HtmlUnescape();
-  var lines = registrationHtml.split("\n");
-  for(var line in lines) {
-    var nameMatch = matchRegex.firstMatch(line);
-    if(nameMatch != null) {
-      matchName = nameMatch.namedGroup("matchname")!;
-      _log.d("Match name: $matchName");
-      break;
-    }
+  var metaTitle = document.querySelector("meta[property='og:title']");
+  if(metaTitle != null) {
+    matchName = metaTitle.attributes["content"]!;
+    _log.d("Match name: $matchName");
   }
+  var shooterRegex = RegExp(r'(?<name>.*?)\s+\((?<division>[\w\s]+?)(\s+\/\s+(?<class>\w+?))?\)');
+  // var matchRegex = RegExp(r'<meta\s+property="og:title"\s+content="(?<matchname>.*)"\s*/>');
+  var unescape = HtmlUnescape();
 
   var allowUnknownClass = matchName.toLowerCase().contains("ipsc");
 
   int regexMatches = 0;
-  for(var line in lines) {
-    var matches = shooterRegex.allMatches(line);
+  var shooterElements = document.querySelectorAll("div.squadBox span.clearable");
+  _log.i("Found ${shooterElements.length} shooter elements");
+  for(var element in shooterElements) {
+    var innerSpan = element.querySelector("span");
+    if(innerSpan == null) {
+      String outText = element.innerHtml;
+      if(outText.length > 200) {
+        outText = outText.substring(0, 100) + "..." + outText.substring(outText.length - 100);
+      }
+      _log.w("Skipping shooter element with no inner span: $outText");
+      continue;
+    }
+    var title = innerSpan.attributes["title"] ?? "";
+
+    if(title.isEmpty) {
+      _log.w("Unable to get title for shooter entry: ${innerSpan.outerHtml}");
+      continue;
+    }
+
+    var matches = shooterRegex.allMatches(title);
+
+    if(matches.isEmpty) {
+      _log.w("No matches found for shooter: $title");
+      continue;
+    }
+
     for(var match in matches) {
       regexMatches += 1;
 

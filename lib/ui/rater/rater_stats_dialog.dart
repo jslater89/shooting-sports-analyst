@@ -105,6 +105,16 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
         ],
       ),
       Divider(height: 2, thickness: 1),
+      Row(
+        children: [
+          Expanded(flex: 4, child: Text("Average/median connectivity", style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(
+            flex: 2,
+            child: Text("${widget.statistics.averageConnectivity.toStringAsFixed(1)}/${widget.statistics.medianConnectivity.toStringAsFixed(1)}", style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)
+          ),
+        ],
+      ),
+      Divider(height: 2, thickness: 1),
       Padding(
         padding: const EdgeInsets.only(top: 16.0, bottom: 8),
         child: ClickableLink(

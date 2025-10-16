@@ -26,6 +26,8 @@ class RaterStatistics {
   double ratingStandardDeviation;
   double averageHistory;
   int medianHistory;
+  double averageConnectivity;
+  double medianConnectivity;
 
   int histogramBucketSize;
 
@@ -57,6 +59,8 @@ class RaterStatistics {
     required this.maxRating,
     required this.medianRating,
     required this.ratingStandardDeviation,
+    required this.averageConnectivity,
+    required this.medianConnectivity,
     required this.averageHistory,
     required this.medianHistory,
     required this.countByClass,
@@ -114,6 +118,7 @@ RaterStatistics getRatingStatistics({
 RaterStatistics _calculateStats(Sport sport, RatingSystem algorithm, RatingGroup group, List<ShooterRating> ratings, ContinuousDistributionEstimator estimator) {
   var count = ratings.length;
   var allRatings = ratings.map((r) => r.rating).toList()..sort();
+  var allConnectivities = ratings.map((r) => r.connectivity).toList()..sort();
 
   var ratingDistribution = estimator.estimate(allRatings);
   _log.v("${estimator.runtimeType}: $ratingDistribution");
@@ -190,6 +195,8 @@ RaterStatistics _calculateStats(Sport sport, RatingSystem algorithm, RatingGroup
     maxRating: allRatings.max,
     averageHistory: allHistoryLengths.average,
     medianHistory: allHistoryLengths.median,
+    averageConnectivity: allConnectivities.average,
+    medianConnectivity: allConnectivities.median,
     histogram: histogram,
     countByClass: countsByClass,
     averageByClass: averagesByClass,

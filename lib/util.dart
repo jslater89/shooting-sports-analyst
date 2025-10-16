@@ -487,7 +487,7 @@ extension TitleCase on String {
 }
 
 
-// Extension to add Gaussian random number generation
+/// Extension to add Gaussian random number generation
 extension RandomGaussian on Random {
   /// Generate a random number from a standard normal distribution.
   double nextGaussian() {
@@ -495,5 +495,43 @@ extension RandomGaussian on Random {
     var u1 = nextDouble();
     var u2 = nextDouble();
     return sqrt(-2 * log(u1)) * cos(2 * pi * u2);
+  }
+
+  /// Generate a random number from a Gaussian distribution with specified parameters.
+  double nextGaussianWithParams({double mu = 0.0, double sigma = 1.0}) {
+    return mu + sigma * nextGaussian();
+  }
+}
+
+extension RandomMesa on Random {
+  /// Generate a random number from a "mesa" distribution (mixture of two normals)
+  /// Creates a flatter peak than normal distribution while keeping similar tails
+  double nextMesa({double weight = 0.7, double narrowStd = 0.5, double wideStd = 1.5}) {
+    if (nextDouble() < weight) {
+      // Narrow normal (70% of the time)
+      return nextGaussianWithParams(mu: 0.0, sigma: narrowStd);
+    } else {
+      // Wide normal (30% of the time)
+      return nextGaussianWithParams(mu: 0.0, sigma: wideStd);
+    }
+  }
+}
+
+/// Extension to add Laplace random number generation
+  extension RandomLaplace on Random {
+  /// Generate a random number from a standard Laplace distribution (mu=0, b=1).
+  double nextLaplace() {
+    var u = nextDouble();
+    // Use the inverse transform method more carefully
+    if (u < 0.5) {
+      return log(2 * u);
+    } else {
+      return -log(2 * (1 - u));
+    }
+  }
+
+  /// Generate a random number from a Laplace distribution with specified parameters.
+  double nextLaplaceWithParams({double mu = 0.0, double b = 1.0}) {
+    return mu + b * nextLaplace();
   }
 }

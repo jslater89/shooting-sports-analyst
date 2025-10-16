@@ -25,9 +25,17 @@ import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 class AlgorithmPrediction {
   final ShooterRating shooter;
 
+  /// An average performance value.
   final double mean;
+
+  /// The standard deviation of the performance.
   final double oneSigma;
+
+  /// Two standard deviations of the performance.
   final double twoSigma;
+
+  /// An offset strength to apply to the performance based on trend,
+  /// between -1 and 1.
   final double ciOffset;
 
   late int lowPlace;
@@ -35,7 +43,7 @@ class AlgorithmPrediction {
   late int medianPlace;
 
   AlgorithmPrediction({
-    required this.shooter, required this.mean, required double sigma, this.ciOffset = 0.5,
+    required this.shooter, required this.mean, required double sigma, this.ciOffset = 0.0,
   }) :
       this.oneSigma = sigma,
       this.twoSigma = sigma * 2;
@@ -51,6 +59,8 @@ class AlgorithmPrediction {
   String toString() {
     return "${shooter.getName(suffixes: false)}: ${mean.toStringAsPrecision(4)} ± ${twoSigma.toStringAsPrecision(4)}";
   }
+
+  double ciOffsetMultiplier({double strength = 0.05}) => 1 + (ciOffset * strength);
 
   double get center => mean;
   double get shiftedCenter => mean + shift;

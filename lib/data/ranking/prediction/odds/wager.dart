@@ -35,16 +35,22 @@ class Wager {
   );
 
   Wager deepCopy() => Wager(
-    prediction: prediction.copyWith(),
+    prediction: prediction.deepCopy(),
     probability: probability.copyWith(),
     amount: amount,
   );
+
+  String get descriptiveString => prediction.descriptiveString;
+  String? get tooltipString => prediction.tooltipString(probability.info);
 }
 
 class Parlay {
   final List<Wager> legs;
   final double amount;
-  PredictionProbability get probability => PredictionProbability.fromParlayLegs(legs);
+  PredictionProbability get probability => PredictionProbability.fromParlayLegs(
+    legs,
+    houseEdgePerLeg: PredictionProbability.standardHouseEdge,
+  );
   double get payout => amount * probability.decimalOdds;
 
   Parlay({
@@ -69,12 +75,16 @@ class Parlay {
     return Parlay.isParlayPossible(legs);
   }
 
-  double get fillProportion => Parlay.parlayFillProportion(legs.map((leg) => leg.prediction).toList());
-  double get specificity => Parlay.parlaySpecificity(legs.map((leg) => leg.prediction).toList());
+  List<PlacePrediction> get placePredictions => legs.map((leg) => leg.prediction).where((prediction) => prediction is PlacePrediction).toList().cast<PlacePrediction>();
+  List<PercentagePrediction> get percentagePredictions => legs.map((leg) => leg.prediction).where((prediction) => prediction is PercentagePrediction).toList().cast<PercentagePrediction>();
+
+  double get fillProportion => Parlay.parlayFillProportion(placePredictions);
+  double get specificity => Parlay.parlaySpecificity(placePredictions);
 
   static bool isParlayPossible(List<Wager> legs) {
     // Find the maximum place we need to consider
-    int maxPlace = legs.map((p) => p.prediction.worstPlace).reduce(max);
+    var placePredictions = legs.where((leg) => leg.prediction is PlacePrediction).map((leg) => leg.prediction as PlacePrediction).toList();
+    var maxPlace = placePredictions.map((p) => p.worstPlace).reduce(max);
 
     // Try to assign each prediction to a valid place
     return _canAssignPredictions(legs, 0, <int, Wager>{}, maxPlace);
@@ -94,7 +104,7 @@ class Parlay {
     var currentLeg = legs[predictionIndex];
 
     // Try each place in this prediction's range
-    for (int place = currentLeg.prediction.bestPlace; place <= currentLeg.prediction.worstPlace; place++) {
+    for (int place = (currentLeg.prediction as PlacePrediction).bestPlace; place <= (currentLeg.prediction as PlacePrediction).worstPlace; place++) {
       // Skip if this place is already taken
       if (currentAssignment.containsKey(place)) {
         continue;
@@ -115,7 +125,8 @@ class Parlay {
     return false;
   }
 
-  /// Return a factor from 0 to 1 representing how 'full' the parlay is.
+  /// Return a factor from 0 to 1 representing how 'full' the parlay is,
+  /// based on only its place components.
   ///
   /// A "full parlay" is one where each place covered by the parlay must be
   /// occupied by a prediction, e.g. a 10-leg parlay where each leg predicts
@@ -123,7 +134,7 @@ class Parlay {
   ///
   /// Full parlays will have a value of 1.0. Parlays that fail the impossible
   /// parlays check will have a value greater than 1.0.
-  static double  parlayFillProportion(List<UserPrediction> predictions) {
+  static double  parlayFillProportion(List<PlacePrediction> predictions) {
     // Calculate the number of predictions that cover each place.
     Map<int, int> requiredAtPlace = {};
     for(var leg in predictions) {
@@ -142,16 +153,21 @@ class Parlay {
       }
       predictionProportions.add(proportions.average);
     }
+
+    if(predictionProportions.isEmpty) {
+      return 0.5;
+    }
     return predictionProportions.average;
   }
 
-  /// Return a factor from 0 to 1 representing how specific the parlay is.
+  /// Return a factor from 0 to 1 representing how specific the parlay is,
+  /// based on only its place components.
   ///
   /// A specific parlay is one in which individual legs cover a smaller range
   /// than the overall range covered by the parlay. A 10-leg parlay where each
   /// leg predicts a top 10 finish has zero specificity, whereas a 10-leg parlay
   /// where each leg predicts a single place from 1 to 10 has specificity 1.0.
-  static double parlaySpecificity(List<UserPrediction> predictions) {
+  static double parlaySpecificity(List<PlacePrediction> predictions) {
     Map<int, bool> coversPlace = {};
     for(var leg in predictions) {
       for(var place = leg.bestPlace; place <= leg.worstPlace; place++) {
@@ -165,6 +181,9 @@ class Parlay {
       var range = leg.worstPlace - leg.bestPlace + 1;
       var specificity = range / rangeSize;
       predictionSpecificities.add(1 - specificity);
+    }
+    if(predictionSpecificities.isEmpty) {
+      return 0.5;
     }
     var maximumSpecificity = 1 - (1 / rangeSize);
     var normalizedSpecificity = predictionSpecificities.average / maximumSpecificity;

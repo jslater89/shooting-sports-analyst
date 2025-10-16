@@ -25,8 +25,15 @@ class GammaEstimator implements ContinuousDistributionEstimator {
     if (data.isEmpty) {
       throw ArgumentError("Data list cannot be empty");
     }
-    if (data.any((x) => x <= 0)) {
-      throw ArgumentError("All data points must be positive");
+    List<double> remappedNegatives = [];
+    for(var x in data) {
+      if(x <= 0) {
+        remappedNegatives.add(0.01);
+      }
+    }
+    if(remappedNegatives.isNotEmpty) {
+      data.removeWhere((x) => x <= 0);
+      data.addAll(remappedNegatives);
     }
 
     // Calculate necessary statistics

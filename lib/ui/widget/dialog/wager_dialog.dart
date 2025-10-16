@@ -13,7 +13,7 @@ import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/probability.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/wager.dart';
-import 'package:shooting_sports_analyst/ui/booth/scorecard.dart';
+import 'package:shooting_sports_analyst/ui/widget/maybe_tooltip.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 class WagerDialog extends StatefulWidget {
@@ -65,8 +65,9 @@ class _WagerDialogState extends State<WagerDialog> {
   void _updateWager(int index, Wager newWager) {
     double? bestPossibleOdds;
     var algorithmPrediction = _shootersToPredictions[newWager.prediction.shooter];
-    if(algorithmPrediction != null) {
-      if(algorithmPrediction.lowPlace < newWager.prediction.bestPlace) {
+    var userPrediction = newWager.prediction;
+    if(algorithmPrediction != null && userPrediction is PlacePrediction) {
+      if(algorithmPrediction.lowPlace < userPrediction.bestPlace) {
         // If the algorithm prediction predicts a better place in the worst
         // case scenario than the user prediction's best place, cap the odds
         // at moneyline +25000 (250:1) to capture the rare but possible chance
@@ -79,8 +80,7 @@ class _WagerDialogState extends State<WagerDialog> {
     if(bestPossibleOdds != null) {
       wager = Wager(
         prediction: newPrediction,
-        probability: PredictionProbability.fromUserPrediction(
-          newPrediction,
+        probability: newPrediction.calculateProbability(
           _shootersToPredictions,
           bestPossibleOdds: bestPossibleOdds,
           random: Random(widget.matchId.stableHash),
@@ -91,8 +91,7 @@ class _WagerDialogState extends State<WagerDialog> {
     else {
       wager = Wager(
         prediction: newPrediction,
-        probability: PredictionProbability.fromUserPrediction(
-          newPrediction,
+        probability: newPrediction.calculateProbability(
           _shootersToPredictions,
           random: Random(widget.matchId.stableHash),
         ),
@@ -140,7 +139,7 @@ class _WagerDialogState extends State<WagerDialog> {
                             ),
                           ),
                         ),
-                        title: Text("${leg.prediction.shooter.name} ${leg.prediction.bestPlace.ordinalPlace}-${leg.prediction.worstPlace.ordinalPlace}"),
+                        title: MaybeTooltip(message: leg.tooltipString, child: Text(leg.descriptiveString)),
                         subtitle: Tooltip(
                           message: "Fractional: ${leg.probability.fractionalOdds}\n"
                               "Decimal: ${leg.probability.decimalOdds.toStringAsFixed(3)}\n"
@@ -155,11 +154,28 @@ class _WagerDialogState extends State<WagerDialog> {
                           children: [
                             IconButton(
                               onPressed: () async {
-                                var newWager = await EditWagerDialog.show(
-                                  context,
-                                  prediction: leg,
-                                  availableCompetitors: widget.predictions,
-                                );
+                                Wager? newWager;
+                                if(leg.prediction is PlacePrediction) {
+                                  newWager = await EditPlaceWagerDialog.show(
+                                    context,
+                                    prediction: leg,
+                                    availableCompetitors: widget.predictions,
+                                  );
+                                }
+                                else if(leg.prediction is PercentagePrediction) {
+                                  newWager = await EditPercentageWagerDialog.show(
+                                    context,
+                                    prediction: leg,
+                                    availableCompetitors: widget.predictions,
+                                  );
+                                }
+                                else if(leg.prediction is PercentageSpreadPrediction) {
+                                  newWager = await EditSpreadWagerDialog.show(
+                                    context,
+                                    prediction: leg,
+                                    availableCompetitors: widget.predictions,
+                                  );
+                                }
 
                                 if (newWager != null) {
                                   _updateWager(index, newWager);
@@ -219,12 +235,12 @@ class _WagerDialogState extends State<WagerDialog> {
                   }),
                 ),
                 TextButton(
-                  child: Text("ADD LEG"),
+                  child: Text("ADD PLACE LEG"),
                   onPressed: _legs.length >= 10 ? null : () async {
-                    var newWager = await EditWagerDialog.show(
+                    var newWager = await EditPlaceWagerDialog.show(
                       context,
                       prediction: Wager(
-                        prediction: UserPrediction(
+                        prediction: PlacePrediction(
                           shooter: widget.predictions[0].shooter,
                           bestPlace: 1,
                           worstPlace: 3),
@@ -234,6 +250,47 @@ class _WagerDialogState extends State<WagerDialog> {
                       availableCompetitors: widget.predictions,
                     );
 
+                    if(newWager != null) {
+                      _updateWager(-1, newWager);
+                    }
+                  }
+                ),
+                TextButton(
+                  child: Text("ADD PERCENTAGE LEG"),
+                  onPressed: _legs.length >= 10 ? null : () async {
+                    var newWager = await EditPercentageWagerDialog.show(
+                      context,
+                      prediction: Wager(
+                        prediction: PercentagePrediction(
+                          shooter: widget.predictions[0].shooter,
+                          ratio: 0.95,
+                        ),
+                        probability: PredictionProbability(0.5),
+                        amount: 10,
+                      ),
+                      availableCompetitors: widget.predictions,
+                    );
+                    if(newWager != null) {
+                      _updateWager(-1, newWager);
+                    }
+                  }
+                ),
+                TextButton(
+                  child: Text("ADD SPREAD LEG"),
+                  onPressed: _legs.length >= 10 ? null : () async {
+                    var newWager = await EditSpreadWagerDialog.show(
+                      context,
+                      prediction: Wager(
+                        prediction: PercentageSpreadPrediction(
+                          shooter: widget.predictions[0].shooter,
+                          underdog: widget.predictions[1].shooter,
+                          ratioSpread: 0.05,
+                        ),
+                        probability: PredictionProbability(0.5),
+                        amount: 10,
+                      ),
+                      availableCompetitors: widget.predictions,
+                    );
                     if(newWager != null) {
                       _updateWager(-1, newWager);
                     }
@@ -252,29 +309,34 @@ class _WagerDialogState extends State<WagerDialog> {
   }
 }
 
-class EditWagerDialog extends StatefulWidget {
-  const EditWagerDialog({super.key, required this.wager, required this.availableCompetitors});
+class EditPlaceWagerDialog extends StatefulWidget {
+  const EditPlaceWagerDialog({super.key, required this.wager, required this.availableCompetitors});
 
   final Wager wager;
   final List<AlgorithmPrediction> availableCompetitors;
 
   static Future<Wager?> show(BuildContext context, {required Wager prediction, required List<AlgorithmPrediction> availableCompetitors}) async {
-    return showDialog<Wager>(context: context, builder: (context) => EditWagerDialog(wager: prediction, availableCompetitors: availableCompetitors));
+    return showDialog<Wager>(context: context, builder: (context) => EditPlaceWagerDialog(wager: prediction, availableCompetitors: availableCompetitors));
   }
 
   @override
-  State<EditWagerDialog> createState() => _EditWagerDialogState();
+  State<EditPlaceWagerDialog> createState() => _EditPlaceWagerDialogState();
 }
 
-class _EditWagerDialogState extends State<EditWagerDialog> {
+class _EditPlaceWagerDialogState extends State<EditPlaceWagerDialog> {
 
   late Wager _newWager;
+  late PlacePrediction _newPrediction;
   @override
   void initState() {
     _newWager = widget.wager.deepCopy();
+    if(_newWager.prediction is! PlacePrediction) {
+      throw ArgumentError("Prediction is not a place prediction");
+    }
+    _newPrediction = _newWager.prediction as PlacePrediction;
     _competitorController = TextEditingController(); // handled by initialSelection
-    _bestPlaceController = TextEditingController(text: _newWager.prediction.bestPlace.toString());
-    _worstPlaceController = TextEditingController(text: _newWager.prediction.worstPlace.toString());
+    _bestPlaceController = TextEditingController(text: _newPrediction.bestPlace.toString());
+    _worstPlaceController = TextEditingController(text: _newPrediction.worstPlace.toString());
     _amountController = TextEditingController(text: _newWager.amount.toString());
     super.initState();
   }
@@ -287,22 +349,23 @@ class _EditWagerDialogState extends State<EditWagerDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text("Edit prediction"),
+      title: Text("Edit place prediction"),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           DropdownMenu<ShooterRating>(
             dropdownMenuEntries: widget.availableCompetitors.map((e) =>
               DropdownMenuEntry<ShooterRating>(value: e.shooter, label: e.shooter.name)).toList(),
-            initialSelection: _newWager.prediction.shooter,
+            initialSelection: _newPrediction.shooter,
             enableFilter: true,
             enableSearch: true,
             menuHeight: 500,
             onSelected: (value) {
               if(value != null) {
-                _newWager = _newWager.copyWith(
-                  prediction: _newWager.prediction.copyWith(shooter: value)
-                );
+                setState(() {
+                  _newPrediction = _newPrediction.copyWith(shooter: value);
+                  _newWager = _newWager.copyWith(prediction: _newPrediction);
+                });
                 _competitorController.text = value.name;
               }
             },
@@ -318,10 +381,11 @@ class _EditWagerDialogState extends State<EditWagerDialog> {
             ],
             onChanged: (value) {
               var newBestPlace = int.tryParse(value);
-              if(newBestPlace != null && newBestPlace <= _newWager.prediction.worstPlace) {
-                _newWager = _newWager.copyWith(
-                  prediction: _newWager.prediction.copyWith(bestPlace: newBestPlace)
-                );
+              if(newBestPlace != null && newBestPlace <= _newPrediction.worstPlace) {
+                setState(() {
+                  _newPrediction = _newPrediction.copyWith(bestPlace: newBestPlace);
+                  _newWager = _newWager.copyWith(prediction: _newPrediction);
+                });
               }
             },
           ),
@@ -334,10 +398,11 @@ class _EditWagerDialogState extends State<EditWagerDialog> {
             ],
             onChanged: (value) {
               var newWorstPlace = int.tryParse(value);
-              if(newWorstPlace != null && newWorstPlace >= _newWager.prediction.bestPlace) {
-                _newWager = _newWager.copyWith(
-                  prediction: _newWager.prediction.copyWith(worstPlace: newWorstPlace)
-                );
+              if(newWorstPlace != null && newWorstPlace >= _newPrediction.bestPlace) {
+                setState(() {
+                  _newPrediction = _newPrediction.copyWith(worstPlace: newWorstPlace);
+                  _newWager = _newWager.copyWith(prediction: _newPrediction);
+                });
               }
             },
           ),
@@ -365,9 +430,286 @@ class _EditWagerDialogState extends State<EditWagerDialog> {
             var newBestPlace = int.tryParse(_bestPlaceController.text);
             var newWorstPlace = int.tryParse(_worstPlaceController.text);
             if(newBestPlace != null && newWorstPlace != null && newBestPlace <= newWorstPlace) {
-              _newWager = _newWager.copyWith(
-                prediction: _newWager.prediction.copyWith(bestPlace: newBestPlace, worstPlace: newWorstPlace)
+              setState(() {
+                _newPrediction = _newPrediction.copyWith(bestPlace: newBestPlace, worstPlace: newWorstPlace);
+                _newWager = _newWager.copyWith(prediction: _newPrediction);
+              });
+            }
+            var newAmount = double.tryParse(_amountController.text);
+            if(newAmount != null && newAmount > 0) {
+              _newWager = _newWager.copyWith(amount: newAmount);
+            }
+            Navigator.of(context).pop(_newWager);
+          }
+        )
+      ],
+    );
+  }
+}
+
+class EditPercentageWagerDialog extends StatefulWidget {
+  const EditPercentageWagerDialog({super.key, required this.wager, required this.availableCompetitors});
+
+  final Wager wager;
+  final List<AlgorithmPrediction> availableCompetitors;
+
+  static Future<Wager?> show(BuildContext context, {required Wager prediction, required List<AlgorithmPrediction> availableCompetitors}) async {
+    return showDialog<Wager>(context: context, builder: (context) => EditPercentageWagerDialog(wager: prediction, availableCompetitors: availableCompetitors));
+  }
+
+  @override
+  State<EditPercentageWagerDialog> createState() => _EditPercentageWagerDialogState();
+}
+
+class _EditPercentageWagerDialogState extends State<EditPercentageWagerDialog> {
+
+  late Wager _newWager;
+  late PercentagePrediction _newPrediction;
+  @override
+  void initState() {
+    _newWager = widget.wager.deepCopy();
+    if(_newWager.prediction is! PercentagePrediction) {
+      throw ArgumentError("Prediction is not a percentage prediction");
+    }
+    _newPrediction = _newWager.prediction as PercentagePrediction;
+    _competitorController = TextEditingController(); // handled by initialSelection
+    _percentageController = TextEditingController(text: _newPrediction.percentage.toStringAsFixed(1));
+    _amountController = TextEditingController(text: _newWager.amount.toString());
+    super.initState();
+  }
+
+  late TextEditingController _competitorController;
+  late TextEditingController _percentageController;
+  late TextEditingController _amountController;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text("Edit percentage prediction"),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          DropdownMenu<ShooterRating>(
+            dropdownMenuEntries: widget.availableCompetitors.map((e) =>
+              DropdownMenuEntry<ShooterRating>(value: e.shooter, label: e.shooter.name)).toList(),
+            initialSelection: _newPrediction.shooter,
+            enableFilter: true,
+            enableSearch: true,
+            menuHeight: 500,
+            onSelected: (value) {
+              if(value != null) {
+                setState(() {
+                  _newPrediction = _newPrediction.copyWith(shooter: value);
+                  _newWager = _newWager.copyWith(prediction: _newPrediction);
+                });
+                _competitorController.text = value.name;
+              }
+            },
+            controller: _competitorController,
+            label: Text("Competitor"),
+          ),
+          TextField(
+            controller: _percentageController,
+            decoration: InputDecoration(
+              labelText: "Percentage",
+              prefixText: _newPrediction.above ? "≥" : "≤",
+              suffixText: "%"),
+            keyboardType: TextInputType.numberWithOptions(decimal: true, signed: false),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r"[0-9\.]*")),
+            ],
+            onChanged: (value) {
+              var newPercentage = double.tryParse(value);
+              if(newPercentage != null && newPercentage >= 0 && newPercentage <= 100) {
+                setState(() {
+                  _newPrediction = _newPrediction.copyWith(ratio: newPercentage / 100);
+                  _newWager = _newWager.copyWith(prediction: _newPrediction);
+                });
+              }
+            },
+          ),
+          TextField(
+            controller: _amountController,
+            decoration: InputDecoration(labelText: "Amount"),
+            keyboardType: TextInputType.numberWithOptions(decimal: true, signed: false),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r"[0-9\.]*")),
+            ],
+            onChanged: (value) {
+              var newAmount = double.tryParse(value);
+              if(newAmount != null && newAmount > 0) {
+                _newWager = _newWager.copyWith(amount: newAmount);
+              }
+            },
+          ),
+          CheckboxListTile(
+            value: _newPrediction.above,
+            title: Text("Above?"),
+            onChanged: (value) {
+              setState(() {
+                _newPrediction = _newPrediction.copyWith(above: value ?? true);
+              });
+            },
+          )
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: Text("CANCEL")),
+        TextButton(
+          child: Text("SAVE"),
+          onPressed: () {
+            var newPercentage = double.tryParse(_percentageController.text);
+            if(newPercentage != null && newPercentage >= 0 && newPercentage <= 100) {
+              setState(() {
+                _newPrediction = _newPrediction.copyWith(ratio: newPercentage / 100);
+                _newWager = _newWager.copyWith(prediction: _newPrediction);
+              });
+            }
+            var newAmount = double.tryParse(_amountController.text);
+            if(newAmount != null && newAmount > 0) {
+              _newWager = _newWager.copyWith(amount: newAmount);
+            }
+            Navigator.of(context).pop(_newWager);
+          }
+        )
+      ],
+    );
+  }
+}
+
+class EditSpreadWagerDialog extends StatefulWidget {
+  const EditSpreadWagerDialog({super.key, required this.wager, required this.availableCompetitors});
+
+  final Wager wager;
+  final List<AlgorithmPrediction> availableCompetitors;
+
+  static Future<Wager?> show(BuildContext context, {required Wager prediction, required List<AlgorithmPrediction> availableCompetitors}) async {
+    return showDialog<Wager>(context: context, builder: (context) => EditSpreadWagerDialog(wager: prediction, availableCompetitors: availableCompetitors));
+  }
+
+  @override
+  State<EditSpreadWagerDialog> createState() => _EditSpreadWagerDialogState();
+}
+
+class _EditSpreadWagerDialogState extends State<EditSpreadWagerDialog> {
+
+  late Wager _newWager;
+  late PercentageSpreadPrediction _newPrediction;
+  @override
+  void initState() {
+    _newWager = widget.wager.deepCopy();
+    if(_newWager.prediction is! PercentageSpreadPrediction) {
+      throw ArgumentError("Prediction is not a percentage prediction");
+    }
+    _newPrediction = _newWager.prediction as PercentageSpreadPrediction;
+    _underdogController = TextEditingController();
+    _favoriteController = TextEditingController();
+    _spreadController = TextEditingController(text: _newPrediction.percentageSpread.toStringAsFixed(2));
+    _amountController = TextEditingController(text: _newWager.amount.toString());
+    super.initState();
+  }
+
+  late TextEditingController _favoriteController;
+  late TextEditingController _underdogController;
+  late TextEditingController _spreadController;
+  late TextEditingController _amountController;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text("Edit percentage spread prediction"),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          DropdownMenu<ShooterRating>(
+            dropdownMenuEntries: widget.availableCompetitors.map((e) =>
+              DropdownMenuEntry<ShooterRating>(value: e.shooter, label: e.shooter.name)).toList(),
+            initialSelection: _newPrediction.favorite,
+            enableFilter: true,
+            enableSearch: true,
+            menuHeight: 500,
+            onSelected: (value) {
+              if(value != null) {
+                setState(() {
+                  _newPrediction = _newPrediction.copyWith(shooter: value);
+                  _newWager = _newWager.copyWith(prediction: _newPrediction);
+                });
+                _favoriteController.text = value.name;
+              }
+            },
+            controller: _favoriteController,
+            label: Text("Favorite"),
+          ),
+          TextField(
+            controller: _spreadController,
+            decoration: InputDecoration(labelText: "Spread (favorite -)", suffixText: "%"),
+            keyboardType: TextInputType.numberWithOptions(decimal: true, signed: false),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r"[0-9\.]*")),
+            ],
+            onChanged: (value) {
+              var newSpread = double.tryParse(value);
+              if(newSpread != null && newSpread >= 0 && newSpread <= 100) {
+                setState(() {
+                  _newPrediction = _newPrediction.copyWith(ratioSpread: newSpread / 100);
+                  _newWager = _newWager.copyWith(prediction: _newPrediction);
+                });
+              }
+            },
+          ),
+          SizedBox(height: 10),
+          DropdownMenu<ShooterRating>(
+            dropdownMenuEntries: widget.availableCompetitors.map((e) =>
+              DropdownMenuEntry<ShooterRating>(value: e.shooter, label: e.shooter.name)).toList(),
+            initialSelection: _newPrediction.underdog,
+            enableFilter: true,
+            enableSearch: true,
+            menuHeight: 500,
+            onSelected: (value) {
+              if(value != null) {
+                setState(() {
+                  _newPrediction = _newPrediction.copyWith(underdog: value);
+                  _newWager = _newWager.copyWith(prediction: _newPrediction);
+                });
+                _underdogController.text = value.name;
+              }
+            },
+            controller: _underdogController,
+            label: Text("Underdog"),
+          ),
+          TextField(
+            controller: _amountController,
+            decoration: InputDecoration(labelText: "Amount"),
+            keyboardType: TextInputType.numberWithOptions(decimal: true, signed: false),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r"[0-9\.]*")),
+            ],
+            onChanged: (value) {
+              var newAmount = double.tryParse(value);
+              if(newAmount != null && newAmount > 0) {
+                _newWager = _newWager.copyWith(amount: newAmount);
+              }
+            },
+          )
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: Text("CANCEL")),
+        TextButton(
+          child: Text("SAVE"),
+          onPressed: () {
+            if(_newPrediction.shooter == _newPrediction.underdog) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text("Favorite and underdog cannot be the same shooter.")),
               );
+              return;
+            }
+            var newSpread = double.tryParse(_spreadController.text);
+            if(newSpread != null && newSpread >= 0 && newSpread <= 100) {
+              setState(() {
+                _newPrediction = _newPrediction.copyWith(ratioSpread: newSpread / 100);
+                _newWager = _newWager.copyWith(prediction: _newPrediction);
+              });
             }
             var newAmount = double.tryParse(_amountController.text);
             if(newAmount != null && newAmount > 0) {

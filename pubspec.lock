@@ -9,6 +9,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "85.0.0"
+  advance_math:
+    dependency: "direct main"
+    description:
+      name: advance_math
+      sha256: "72dcec8196bc222815c29ed2bcb2c1adfe25cec008612ea2994063acfa68d055"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.3.8"
   analyzer:
     dependency: transitive
     description:
@@ -113,6 +121,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.2"
+  buffer:
+    dependency: transitive
+    description:
+      name: buffer
+      sha256: "389da2ec2c16283c8787e0adaede82b1842102f8c8aae2f49003a766c5c6b3d1"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.2.3"
   build:
     dependency: transitive
     description:
@@ -291,6 +307,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.3"
+  csslib:
+    dependency: transitive
+    description:
+      name: csslib
+      sha256: "09bad715f418841f976c77db72d5398dc1253c21fb9c0c7f0b0b985860b2d58e"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.2"
   dart_console:
     dependency: "direct main"
     description:
@@ -626,6 +650,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.3.0"
+  html:
+    dependency: "direct main"
+    description:
+      name: html
+      sha256: "6d1264f2dffa1b1101c25a91dff0dc2daee4c18e87cd8538729773c073dbf602"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.15.6"
   html_unescape:
     dependency: "direct main"
     description:

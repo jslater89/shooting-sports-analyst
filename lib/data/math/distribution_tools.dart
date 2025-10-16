@@ -248,6 +248,8 @@ extension ParameterString on ContinuousDistribution {
   }
 }
 
+/// An extension to add package:data/data.dart extensions to Iterable<num>
+/// without overlapping methods from package:collection/collection.dart.
 extension NonOverlappingIterableNumExtension on Iterable<num> {
   double stdDev() => this.standardDeviation();
 }

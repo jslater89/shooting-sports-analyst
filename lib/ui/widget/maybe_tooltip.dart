@@ -6,6 +6,8 @@
 
 import 'package:flutter/material.dart';
 
+/// A widget that shows a tooltip if either [message] or [richMessage] is non-null,
+/// and returns the child otherwise.
 class MaybeTooltip extends StatelessWidget {
   const MaybeTooltip({super.key, this.message, this.richMessage, required this.child});
 
