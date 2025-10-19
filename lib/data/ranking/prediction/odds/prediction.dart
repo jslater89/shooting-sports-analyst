@@ -9,7 +9,6 @@ import 'dart:math';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/probability.dart';
-import 'package:shooting_sports_analyst/ui/booth/scorecard.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 abstract class UserPrediction {
@@ -49,6 +48,7 @@ class PlacePrediction extends UserPrediction {
   static const minPlaceInfo = "minPlace";
   static const maxPlaceInfo = "maxPlace";
   static const meanPlaceInfo = "meanPlace";
+  static const medianPlaceInfo = "medianPlace";
   static const stdDevPlaceInfo = "stdDevPlace";
 
   PlacePrediction({
@@ -108,7 +108,7 @@ class PlacePrediction extends UserPrediction {
   String? tooltipString(Map<String, double> info) {
     return
 """${info[minPlaceInfo]?.toStringAsFixed(0)} - ${info[maxPlaceInfo]?.toStringAsFixed(0)}
-${info[meanPlaceInfo]?.toStringAsFixed(2)} ± ${info[stdDevPlaceInfo]?.toStringAsFixed(2)}""";
+${info[meanPlaceInfo]?.toStringAsFixed(2)} ± ${info[stdDevPlaceInfo]?.toStringAsFixed(2)} (${info[medianPlaceInfo]?.toStringAsFixed(0)})""";
   }
 }
 
@@ -120,6 +120,7 @@ class PercentagePrediction extends UserPrediction {
   static const minPercentageInfo = "minPercentage";
   static const maxPercentageInfo = "maxPercentage";
   static const meanPercentageInfo = "meanPercentage";
+  static const medianPercentageInfo = "medianPercentage";
   static const stdDevPercentageInfo = "stdDevPercentage";
 
   PercentagePrediction({
@@ -161,7 +162,7 @@ class PercentagePrediction extends UserPrediction {
   String? tooltipString(Map<String, double> info) {
     return
 """${info[minPercentageInfo]?.asPercentage(decimals: 1, includePercent: true)} - ${info[maxPercentageInfo]?.asPercentage(decimals: 1, includePercent: true)}
-${info[meanPercentageInfo]?.asPercentage(decimals: 1, includePercent: true)} ± ${info[stdDevPercentageInfo]?.asPercentage(decimals: 2, includePercent: true)}""";
+${info[meanPercentageInfo]?.asPercentage(decimals: 1, includePercent: true)} ± ${info[stdDevPercentageInfo]?.asPercentage(decimals: 2, includePercent: true)} (${info[medianPercentageInfo]?.asPercentage(decimals: 1, includePercent: true)})""";
   }
 }
 
@@ -174,6 +175,7 @@ class PercentageSpreadPrediction extends UserPrediction {
   static const minPercentageSpreadInfo = "minPercentageSpread";
   static const maxPercentageSpreadInfo = "maxPercentageSpread";
   static const meanPercentageSpreadInfo = "meanPercentageSpread";
+  static const medianPercentageSpreadInfo = "medianPercentageSpread";
   static const stdDevPercentageSpreadInfo = "stdDevPercentageSpread";
 
   PercentageSpreadPrediction({
@@ -221,6 +223,6 @@ class PercentageSpreadPrediction extends UserPrediction {
   String? tooltipString(Map<String, double> info) {
     return
 """${info[minPercentageSpreadInfo]?.asPercentage(decimals: 2, includePercent: true)} - ${info[maxPercentageSpreadInfo]?.asPercentage(decimals: 2, includePercent: true)}
-${info[meanPercentageSpreadInfo]?.asPercentage(decimals: 2, includePercent: true)} ± ${info[stdDevPercentageSpreadInfo]?.asPercentage(decimals: 3, includePercent: true)}""";
+${info[meanPercentageSpreadInfo]?.asPercentage(decimals: 2, includePercent: true)} ± ${info[stdDevPercentageSpreadInfo]?.asPercentage(decimals: 3, includePercent: true)} (${info[medianPercentageSpreadInfo]?.asPercentage(decimals: 2, includePercent: true)})""";
   }
 }

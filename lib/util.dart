@@ -501,6 +501,10 @@ extension RandomGaussian on Random {
   double nextGaussianWithParams({double mu = 0.0, double sigma = 1.0}) {
     return mu + sigma * nextGaussian();
   }
+
+  List<double> generateGaussianWithParams(int n, {double mu = 0.0, double sigma = 1.0}) {
+    return List.generate(n, (index) => nextGaussianWithParams(mu: mu, sigma: sigma));
+  }
 }
 
 extension RandomMesa on Random {
@@ -534,4 +538,65 @@ extension RandomMesa on Random {
   double nextLaplaceWithParams({double mu = 0.0, double b = 1.0}) {
     return mu + b * nextLaplace();
   }
+}
+
+/// Extension to add shifted normal distribution generation
+extension RandomShiftedNormal on Random {
+  /// Generate a random number from a normal distribution with mode shifted based on ciOffset.
+  ///
+  /// - ciOffset < 0: Mode shifted left (peak below 0)
+  /// - ciOffset > 0: Mode shifted right (peak above 0)
+  /// - ciOffset = 0: Standard normal (peak at 0)
+  double nextShiftedNormal({double ciOffset = 0.0, double sigma = 1.0}) {
+    // Generate standard normal sample
+    var sample = nextGaussian();
+
+    // Shift the mode based on ciOffset
+    // Map ciOffset (-1 to 1) to a shift amount (-0.5 to 0.5)
+    // This keeps the distribution centered around 0 but shifts the peak
+    var modeShift = ciOffset * 0.5;
+    sample = sample + modeShift;
+
+    // Scale by sigma to match the original Gaussian behavior
+    return sigma * sample;
+  }
+}
+
+
+extension PlaceSuffix on int {
+  String get ordinalPlace {
+    var string = this.toString();
+    if(string.endsWith("11") || string.endsWith("12") || string.endsWith("13")) {
+      return "${string}th";
+    }
+    var lastCodeUnit = string.codeUnits.last;
+    var character = String.fromCharCode(lastCodeUnit);
+    switch(character) {
+      case "1": return "${string}st";
+      case "2": return "${string}nd";
+      case "3": return "${string}rd";
+    }
+    return "${string}th";
+  }
+}
+
+extension AsExtension on Object? {
+  /// Cast this object to [X].
+  X as<X>() => this as X;
+
+  /// Cast this object to [X], or return null if it is not of type [X].
+  X? asOrNull<X>() {
+    var self = this;
+    return self is X ? self : null;
+  }
+}
+
+extension AsSubtypeExtension<X> on X {
+  /// Cast this object to [Y], which is a subtype of [X].
+  Y asSubtype<Y extends X>() => this as Y;
+}
+
+extension AsNotNullExtension<X> on X? {
+  /// Cast this object to [X], or throw an error if it is null.
+  X asNotNull() => this as X;
 }

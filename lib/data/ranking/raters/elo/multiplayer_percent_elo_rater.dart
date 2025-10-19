@@ -9,7 +9,6 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
-import 'package:shooting_sports_analyst/data/ranking/prediction/gumbel.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settings.dart';
@@ -620,23 +619,38 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     List<EloShooterRating> eloRatings = List.castFrom(ratings);
     List<AlgorithmPrediction> predictions = [];
 
+    Random r;
     if(seed != null) {
-      Gumbel.random = Random(seed);
+      r = Random(seed);
+    }
+    else {
+      r = Random();
     }
 
     for(var rating in eloRatings) {
       var error = rating.standardError;
-      var stdDev = error;
 
-      // Compression reduces the amount by which rating error far from compressionCenter
-      // varies the size of error bars.
-      // Smaller compression factors will yield wider error bars for people further from compressionCenter.
-      // Essentially, this is a fluff factor to keep the system from predicting tiny errors for top shooters.
-      var lowerCompressionFactor = 0.8;
-      var upperCompressionFactor = 0.9;
-      var compressionCenter = 100.0;
-      if(error > compressionCenter) stdDev = compressionCenter + pow(stdDev - compressionCenter, upperCompressionFactor);
-      else stdDev = compressionCenter - pow(compressionCenter - stdDev, lowerCompressionFactor);
+      // Error range thresholds
+      const lowErrorThreshold = 10.0;
+      const midErrorThreshold = 40.0;
+      const highErrorMaxThreshold = 80.0;  // Explicit maximum error that maps to maxPercent
+
+      // Percentage ranges for each error level
+      const lowErrorMinPercent = 0.025;  // 2.5%
+      const lowErrorMaxPercent = 0.045;  // 4.5%
+      const midErrorMinPercent = 0.045;  // 4.5%
+      const midErrorMaxPercent = 0.0575; // 5.5%
+      const highErrorMinPercent = 0.0575; // 5.75%
+      const highErrorMaxPercent = 0.065;  // 6.5%
+
+      // Map error ranges to percentage of rating
+      var errorPercentage = switch(error) {
+        < lowErrorThreshold => lowErrorMinPercent + (error / lowErrorThreshold) * (lowErrorMaxPercent - lowErrorMinPercent),
+        < midErrorThreshold => midErrorMinPercent + (error - lowErrorThreshold) / (midErrorThreshold - lowErrorThreshold) * (midErrorMaxPercent - midErrorMinPercent),
+        _ => highErrorMinPercent + min(highErrorMaxPercent - highErrorMinPercent, (error - midErrorThreshold) / (highErrorMaxThreshold - midErrorThreshold) * (highErrorMaxPercent - highErrorMinPercent)),
+      };
+
+      var stdDev = rating.rating * errorPercentage;
 
       // If rating error is very high, increase the size of error bars. If it's very low, reduce the
       // size of error bars.
@@ -644,9 +658,9 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       var minThreshold = settings.errorAwareMinThreshold;
       var errMultiplier = 1.0;
       if (error >= errThreshold) {
-        errMultiplier = 1 + min(1.0, ((error - errThreshold) / (settings.scale - errThreshold))) * 1;
+        errMultiplier = 1 + min(0.5, ((error - errThreshold) / (settings.scale - errThreshold))) * 1;
       }
-      else if (error < minThreshold) {
+      if (error < minThreshold) {
         errMultiplier = 1 - ((minThreshold - error) / minThreshold) * 0.5;
       }
       stdDev = stdDev * errMultiplier;
@@ -658,6 +672,9 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
       var trendShiftMaxVal = settings.scale / 2;
       var trendShiftMaxMagnitude = 0.9;
+      if(rating.length < 100) {
+        trendShiftMaxMagnitude = 0.9 * rating.length / 100;
+      }
       var trendShiftProportion = max(-1.0, min(1.0, trendAverage / trendShiftMaxVal));
       var trendShift = trendShiftProportion * trendShiftMaxMagnitude;
 
@@ -665,8 +682,8 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       // actual, accurate representation of the shooter's skill, and average the win probability of all of those
       // potential ratings against the rest of the field.
 
-      //List<double> possibleRatings = Normal.generate(monteCarloTrials, mean: rating.rating, variance: stdDev * stdDev);
-      List<double> possibleRatings = Gumbel.generate(monteCarloTrials, mu: rating.rating, beta: stdDev);
+      // List<double> possibleRatings = Gumbel.generate(monteCarloTrials, mu: rating.rating, beta: stdDev, rng: r);
+      List<double> possibleRatings = r.generateGaussianWithParams(monteCarloTrials, mu: rating.rating, sigma: stdDev);
       List<double> expectedScores = [];
       for(var maybeRating in possibleRatings) {
         var expectedScore = 0.0;

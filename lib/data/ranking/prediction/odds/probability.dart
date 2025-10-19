@@ -156,7 +156,7 @@ class PredictionProbability {
 
       // Adjust mean by up to 10% based on trend.
       var actualMean = shooterPrediction.mean + shooterPrediction.oneSigma * shooterPrediction.ciOffset;
-      var z = actualRandom.nextGaussian();
+      var z = _nextDistributedValue(actualRandom, shooterPrediction.ciOffset);
       var shooterExpectedScore = actualMean + shooterPrediction.oneSigma * z;
 
       // Generate random expected scores for all other shooters
@@ -165,7 +165,7 @@ class PredictionProbability {
         if (otherPred == shooterPrediction) continue;
 
         var otherMean = otherPred.mean + otherPred.oneSigma * otherPred.ciOffset;
-        var z = actualRandom.nextGaussian();
+        var z = _nextDistributedValue(actualRandom, otherPred.ciOffset);
         var otherExpectedScore = otherMean + otherPred.oneSigma * z;
 
         otherExpectedScores.add(otherExpectedScore);
@@ -185,6 +185,7 @@ class PredictionProbability {
     Map<String, double> info = {};
     info[PlacePrediction.minPlaceInfo] = predictedPlaces.min.toDouble();
     info[PlacePrediction.maxPlaceInfo] = predictedPlaces.max.toDouble();
+    info[PlacePrediction.medianPlaceInfo] = predictedPlaces.median.toDouble();
     info[PlacePrediction.meanPlaceInfo] = predictedPlaces.average;
     info[PlacePrediction.stdDevPlaceInfo] = predictedPlaces.stdDev();
 
@@ -237,7 +238,7 @@ class PredictionProbability {
 
       // Generate a random expected score for this shooter using a normal distribution
       var actualMean = shooterPrediction.mean + shooterPrediction.oneSigma * shooterPrediction.ciOffset;
-      var z = actualRandom.nextGaussian();
+      var z = _nextDistributedValue(actualRandom, shooterPrediction.ciOffset);
       var shooterExpectedScore = actualMean + shooterPrediction.twoSigma * z;
 
       // Generate random expected scores for all other shooters
@@ -250,7 +251,7 @@ class PredictionProbability {
         if (otherPred == shooterPrediction) continue;
 
         var otherMean = otherPred.mean + otherPred.oneSigma * otherPred.ciOffset;
-        var z = actualRandom.nextGaussian();
+        var z = _nextDistributedValue(actualRandom, otherPred.ciOffset);
         var otherExpectedScore = otherMean + otherPred.oneSigma * z;
 
         otherExpectedScores.add(otherExpectedScore);
@@ -271,13 +272,8 @@ class PredictionProbability {
       var estimatedMinimumPercentage = 95.8 + -0.0457 * ratingDelta;
       var ratioFloor = estimatedMinimumPercentage / 100;
       var ratioMultiplier = 1.0 - ratioFloor;
-      if(bestExpectedScore == minimumRatingScore) {
-        print("break");
-      }
+
       var shooterRatio = ((shooterExpectedScore - minimumRatingScore) / (bestExpectedScore - minimumRatingScore)) * ratioMultiplier + ratioFloor;
-      if(shooterRatio.isNaN || shooterRatio.isInfinite) {
-        print("break");
-      }
       predictedPercentages.add(shooterRatio);
       if(percentagePrediction.above ? shooterRatio >= ratio : shooterRatio <= ratio) {
         successes++;
@@ -291,6 +287,7 @@ class PredictionProbability {
     Map<String, double> info = {};
     info[PercentagePrediction.minPercentageInfo] = predictedPercentages.min.toDouble();
     info[PercentagePrediction.maxPercentageInfo] = predictedPercentages.max.toDouble();
+    info[PercentagePrediction.medianPercentageInfo] = predictedPercentages.median;
     info[PercentagePrediction.meanPercentageInfo] = predictedPercentages.average;
     info[PercentagePrediction.stdDevPercentageInfo] = predictedPercentages.stdDev();
 
@@ -341,11 +338,11 @@ class PredictionProbability {
       // Generate a random expected score for both the favorite and the underdog
 
       var favoriteActualMean = favoritePrediction.mean + favoritePrediction.oneSigma * favoritePrediction.ciOffset;
-      var z = actualRandom.nextGaussian();
+      var z = _nextDistributedValue(actualRandom, favoritePrediction.ciOffset);
       var favoriteExpectedScore = favoriteActualMean + favoritePrediction.oneSigma * z;
 
       var underdogActualMean = underdogPrediction.mean + underdogPrediction.oneSigma * underdogPrediction.ciOffset;
-      z = actualRandom.nextGaussian();
+      z = _nextDistributedValue(actualRandom, underdogPrediction.ciOffset);
       var underdogExpectedScore = underdogActualMean + underdogPrediction.oneSigma * z;
 
       // Generate random expected scores for all other shooters
@@ -359,7 +356,7 @@ class PredictionProbability {
         if (otherPred == favoritePrediction || otherPred == underdogPrediction) continue;
 
         var otherMean = otherPred.mean + otherPred.oneSigma * otherPred.ciOffset;
-        var z = actualRandom.nextGaussian();
+        var z = _nextDistributedValue(actualRandom, otherPred.ciOffset);
         var otherExpectedScore = otherMean + otherPred.oneSigma * z;
 
         otherExpectedScores.add(otherExpectedScore);
@@ -396,6 +393,7 @@ class PredictionProbability {
     Map<String, double> info = {};
     info[PercentageSpreadPrediction.minPercentageSpreadInfo] = predictedGaps.min.toDouble();
     info[PercentageSpreadPrediction.maxPercentageSpreadInfo] = predictedGaps.max.toDouble();
+    info[PercentageSpreadPrediction.medianPercentageSpreadInfo] = predictedGaps.median;
     info[PercentageSpreadPrediction.meanPercentageSpreadInfo] = predictedGaps.average;
     info[PercentageSpreadPrediction.stdDevPercentageSpreadInfo] = predictedGaps.stdDev() * 2;
 
@@ -408,6 +406,142 @@ class PredictionProbability {
     );
   }
 
+  static double _nextDistributedValue(Random random, double ciOffset) {
+    // var sample = random.nextShiftedNormal(ciOffset: ciOffset);
+    var sample = random.nextGaussian();
+    return sample;
+  }
+
+  /// Log a histogram of the distribution of trials for debugging purposes.
+  ///
+  /// This function generates a specified number of samples using the same
+  /// distribution logic as the Monte Carlo simulations and logs a histogram
+  /// showing the distribution of values.
+  static void logDistributionHistogram({
+    required double ciOffset,
+    int sampleCount = 10000,
+    int bins = 20,
+    String label = "Distribution",
+    Random? random,
+  }) {
+    final actualRandom = random ?? Random();
+    final samples = <double>[];
+
+    // Generate samples using the same logic as the Monte Carlo simulations
+    for (int i = 0; i < sampleCount; i++) {
+      final z = _nextDistributedValue(actualRandom, ciOffset);
+      samples.add(z);
+    }
+
+    if (samples.isEmpty) {
+      print("$label: No samples generated");
+      return;
+    }
+
+    // Calculate statistics
+    final min = samples.reduce((a, b) => a < b ? a : b);
+    final max = samples.reduce((a, b) => a > b ? a : b);
+    final mean = samples.average;
+    final stdDev = samples.stdDev();
+
+    print("\n=== $label Histogram (ciOffset: $ciOffset) ===");
+    print("Samples: $sampleCount, Mean: ${mean.toStringAsFixed(3)}, StdDev: ${stdDev.toStringAsFixed(3)}");
+    print("Range: [${min.toStringAsFixed(3)}, ${max.toStringAsFixed(3)}]");
+
+    // Create histogram bins
+    final binWidth = (max - min) / bins;
+    final binCounts = List<int>.filled(bins, 0);
+    final binLabels = <String>[];
+
+    // Count samples in each bin
+    for (final sample in samples) {
+      int binIndex = ((sample - min) / binWidth).floor();
+      binIndex = binIndex.clamp(0, bins - 1);
+      binCounts[binIndex]++;
+    }
+
+    // Create bin labels
+    for (int i = 0; i < bins; i++) {
+      final binStart = min + i * binWidth;
+      final binEnd = min + (i + 1) * binWidth;
+      binLabels.add("${binStart.toStringAsFixed(2)}-${binEnd.toStringAsFixed(2)}");
+    }
+
+    // Find maximum count for scaling
+    final maxCount = binCounts.reduce((a, b) => a > b ? a : b);
+    final maxBarLength = 100;
+
+    // Print histogram
+    print("\nHistogram:");
+    for (int i = 0; i < bins; i++) {
+      final count = binCounts[i];
+      final barLength = (count / maxCount * maxBarLength).round();
+      final bar = "█" * barLength;
+      final percentage = (count / sampleCount * 100).toStringAsFixed(1);
+      print("${binLabels[i].padLeft(12)} |${bar.padRight(maxBarLength)}| $count ($percentage%)");
+    }
+    print("");
+  }
+
+  /// Log a histogram of actual trial data from Monte Carlo simulations.
+  ///
+  /// This can be called during Monte Carlo simulations to visualize
+  /// the distribution of the actual trial values being generated.
+  static void logTrialHistogram({
+    required List<double> trialData,
+    required double ciOffset,
+    String label = "Trial Data",
+    int bins = 20,
+  }) {
+    if (trialData.isEmpty) {
+      print("$label: No trial data provided");
+      return;
+    }
+
+    // Calculate statistics
+    final min = trialData.reduce((a, b) => a < b ? a : b);
+    final max = trialData.reduce((a, b) => a > b ? a : b);
+    final mean = trialData.average;
+    final stdDev = trialData.stdDev();
+
+    print("\n=== $label Histogram (ciOffset: $ciOffset) ===");
+    print("Trials: ${trialData.length}, Mean: ${mean.toStringAsFixed(3)}, StdDev: ${stdDev.toStringAsFixed(3)}");
+    print("Range: [${min.toStringAsFixed(3)}, ${max.toStringAsFixed(3)}]");
+
+    // Create histogram bins
+    final binWidth = (max - min) / bins;
+    final binCounts = List<int>.filled(bins, 0);
+    final binLabels = <String>[];
+
+    // Count samples in each bin
+    for (final sample in trialData) {
+      int binIndex = ((sample - min) / binWidth).floor();
+      binIndex = binIndex.clamp(0, bins - 1);
+      binCounts[binIndex]++;
+    }
+
+    // Create bin labels
+    for (int i = 0; i < bins; i++) {
+      final binStart = min + i * binWidth;
+      final binEnd = min + (i + 1) * binWidth;
+      binLabels.add("${binStart.toStringAsFixed(2)}-${binEnd.toStringAsFixed(2)}");
+    }
+
+    // Find maximum count for scaling
+    final maxCount = binCounts.reduce((a, b) => a > b ? a : b);
+    final maxBarLength = 100;
+
+    // Print histogram
+    print("\nHistogram:");
+    for (int i = 0; i < bins; i++) {
+      final count = binCounts[i];
+      final barLength = (count / maxCount * maxBarLength).round();
+      final bar = "█" * barLength;
+      final percentage = (count / trialData.length * 100).toStringAsFixed(1);
+      print("${binLabels[i].padLeft(12)} |${bar.padRight(maxBarLength)}| $count ($percentage%)");
+    }
+    print("");
+  }
 
   /// Get the raw probability.
   double get rawProbability => probability;

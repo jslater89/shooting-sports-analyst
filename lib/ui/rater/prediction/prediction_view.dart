@@ -4,6 +4,8 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:math';
+
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -78,9 +80,9 @@ class _PredictionViewState extends State<PredictionView> {
 
     var highPrediction = sortedPredictions.isEmpty ? 0.0 : (sortedPredictions[0].center + sortedPredictions[0].upperBox) / 2;
 
-    if(sortedPredictions.isNotEmpty) {
-      minValue = sortedPredictions.last.lowerWhisker;
-      maxValue = sortedPredictions.first.upperWhisker;
+    for(var p in sortedPredictions) {
+      minValue = min(minValue, p.lowerWhisker);
+      maxValue = max(maxValue, p.upperWhisker);
     }
 
     return WillPopScope(

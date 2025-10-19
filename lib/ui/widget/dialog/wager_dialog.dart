@@ -642,7 +642,7 @@ class _EditSpreadWagerDialogState extends State<EditSpreadWagerDialog> {
           ),
           TextField(
             controller: _spreadController,
-            decoration: InputDecoration(labelText: "Spread (favorite -)", suffixText: "%"),
+            decoration: InputDecoration(labelText: "Spread", prefixText: "–",suffixText: "%"),
             keyboardType: TextInputType.numberWithOptions(decimal: true, signed: false),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r"[0-9\.]*")),
