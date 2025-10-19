@@ -53,6 +53,7 @@ import 'db_oneoff_impl/analyze_icore_dump_command.dart';
 import 'db_oneoff_impl/import_icore_dump_command.dart';
 import 'db_oneoff_impl/winning_points_by_date_command.dart';
 import 'db_oneoff_impl/stage_size_analysis_command.dart';
+import 'db_oneoff_impl/elo_inflation_analysis.dart';
 
 late SSALogger _log = SSALogger("DbOneoffs");
 
@@ -81,6 +82,7 @@ Future<void> main() async {
     StageCountsByYearCommand(db),
     PredictionsToOddsCommand(db),
     PredictionPercentagesCommand(db),
+    EloInflationAnalysisCommand(db),
     QuitCommand(),
   ], menuHeader: "DB Oneoffs ${VersionInfo.version}", commandSelected: (command) async {
     switch(command.command?.runtimeType) {

@@ -106,6 +106,8 @@ class PredictionPercentagesCommand extends DbOneoffCommand {
       openEntries.sort((a, b) => b.precalculatedScore!.ratio.compareTo(a.precalculatedScore!.ratio));
 
       DbShooterRating? topRating;
+
+      // ignore: unused_local_variable
       DbMatchEntry? topEntry;
       DbShooterRating? percentile75Rating;
       DbMatchEntry? percentile75Entry;
