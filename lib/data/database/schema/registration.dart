@@ -26,11 +26,18 @@ class MatchRegistrationMapping {
 
   List<String> detectedMemberNumbers;
 
+  String? squad;
+  int? get squadNumber {
+    var stringNumber = squad?.toLowerCase().replaceAll("squad", "").trim();
+    return int.tryParse(stringNumber ?? "");
+  }
+
   MatchRegistrationMapping({
     required this.matchId,
     required this.shooterName,
     required this.shooterClassificationName,
     required this.shooterDivisionName,
     required this.detectedMemberNumbers,
+    this.squad,
   });
 }

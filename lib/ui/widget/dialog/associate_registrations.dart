@@ -199,6 +199,7 @@ class _AssociateRegistrationsDialogState extends State<AssociateRegistrationsDia
       shooterClassificationName: e.key.classification.name,
       shooterDivisionName: e.key.division.name,
       detectedMemberNumbers: e.value.allPossibleMemberNumbers.toList(),
+      squad: e.key.squad,
     )).toList();
 
     await db.saveMatchRegistrationMappings(widget.registrations.matchId, mappings);

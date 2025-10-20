@@ -57,11 +57,18 @@ class Registration {
   final String name;
   final Division division;
   final Classification classification;
+  final String? squad;
+  int? get squadNumber {
+    var stringNumber = squad?.toLowerCase().replaceAll("squad", "").trim();
+    return int.tryParse(stringNumber ?? "");
+  }
+
 
   const Registration({
     required this.name,
     required this.division,
-    required this.classification
+    required this.classification,
+    this.squad,
   });
 
   @override
@@ -168,83 +175,94 @@ RegistrationContainer _parseRegistrations(
   var allowUnknownClass = matchName.toLowerCase().contains("ipsc");
 
   int regexMatches = 0;
-  var shooterElements = document.querySelectorAll("div.squadBox span.clearable");
-  _log.i("Found ${shooterElements.length} shooter elements");
-  for(var element in shooterElements) {
-    var innerSpan = element.querySelector("span");
-    if(innerSpan == null) {
-      String outText = element.innerHtml;
-      if(outText.length > 200) {
-        outText = outText.substring(0, 100) + "..." + outText.substring(outText.length - 100);
-      }
-      _log.w("Skipping shooter element with no inner span: $outText");
-      continue;
-    }
-    var title = innerSpan.attributes["title"] ?? "";
+  var squadElements = document.querySelectorAll("div.squadBox");
 
-    if(title.isEmpty) {
-      _log.w("Unable to get title for shooter entry: ${innerSpan.outerHtml}");
-      continue;
-    }
+  for(var squadElement in squadElements) {
+    // Extract squad label/number from the first <strong> within the squad box
+    var squadLabel = squadElement.querySelector("strong")?.text.trim() ?? "";
+    var squadNumberMatch = RegExp(r"\d+").firstMatch(squadLabel);
+    var squadNumber = squadNumberMatch != null ? squadNumberMatch.group(0) : null;
 
-    var matches = shooterRegex.allMatches(title);
-
-    if(matches.isEmpty) {
-      _log.w("No matches found for shooter: $title");
-      continue;
-    }
-
-    for(var match in matches) {
-      regexMatches += 1;
-
-      if(match.end - match.start > 250) {
-        _log.w("Suspiciously long regex match: ${match.end - match.start} bytes");
-        // first 100 and last 100 and last 100 characters
-        var first100 = match.namedGroup("name")!.substring(0, 100);
-        var last100 = match.namedGroup("name")!.substring(match.namedGroup("name")!.length - 100);
-        _log.v("Suspiciously long regex match: $first100...$last100");
+    var shooterElements = squadElement.querySelectorAll("span.clearable");
+    _log.i("Squad ${squadNumber ?? squadLabel}: Found ${shooterElements.length} shooter elements");
+    for(var element in shooterElements) {
+      var innerSpan = element.querySelector("span");
+      if(innerSpan == null) {
+        String outText = element.innerHtml;
+        if(outText.length > 200) {
+          outText = outText.substring(0, 100) + "..." + outText.substring(outText.length - 100);
+        }
+        _log.w("Skipping shooter element with no inner span: $outText");
         continue;
       }
-      var shooterName = unescape.convert(match.namedGroup("name")!);
+      var title = innerSpan.attributes["title"] ?? "";
 
-      if(shooterName.contains("\n")) {
-        _log.w("Skipping shooter name containing newline: $shooterName");
-        continue;
-      }
-      var d = sport.divisions.lookupByName(match.namedGroup("division")!);
-
-      if(d == null || !divisions.contains(d)) {
-        if(verbose) {
-          _log.v("Skipping division not of interest: $d");
+      if(title.isEmpty) {
+        if(innerSpan.text.toLowerCase() != "empty") {
+          _log.w("Unable to get title for shooter entry: ${innerSpan.outerHtml}");
         }
         continue;
       }
 
-      var classification = sport.classifications.lookupByName(match.namedGroup("class"));
-      if(classification == null && !allowUnknownClass) {
-        if(verbose) {
-          _log.v("Skipping unknown classification: $shooterName");
-        }
+      var matches = shooterRegex.allMatches(title);
+
+      if(matches.isEmpty) {
+        _log.w("No matches found for shooter: $title");
         continue;
       }
 
-      var fallbackClassification = sport.classifications.fallback()!;
+      for(var match in matches) {
+        regexMatches += 1;
 
-      var foundShooter = _findShooter(shooterName, null, knownShooters);
+        if(match.end - match.start > 250) {
+          _log.w("Suspiciously long regex match: ${match.end - match.start} bytes");
+          // first 100 and last 100 and last 100 characters
+          var first100 = match.namedGroup("name")!.substring(0, 100);
+          var last100 = match.namedGroup("name")!.substring(match.namedGroup("name")!.length - 100);
+          _log.v("Suspiciously long regex match: $first100...$last100");
+          continue;
+        }
+        var shooterName = unescape.convert(match.namedGroup("name")!);
 
-      if(foundShooter != null) {
-        if(!ratings.containsValue(foundShooter)) {
-          ratings[Registration(name: shooterName, division: d, classification: classification ?? fallbackClassification)] = foundShooter;
+        if(shooterName.contains("\n")) {
+          _log.w("Skipping shooter name containing newline: $shooterName");
+          continue;
+        }
+        var d = sport.divisions.lookupByName(match.namedGroup("division")!);
+
+        if(d == null || !divisions.contains(d)) {
+          if(verbose) {
+            _log.v("Skipping division not of interest: $d");
+          }
+          continue;
+        }
+
+        var classification = sport.classifications.lookupByName(match.namedGroup("class"));
+        if(classification == null && !allowUnknownClass) {
+          if(verbose) {
+            _log.v("Skipping unknown classification: $shooterName");
+          }
+          continue;
+        }
+
+        var fallbackClassification = sport.classifications.fallback()!;
+
+        var foundShooter = _findShooter(shooterName, null, knownShooters);
+
+        if(foundShooter != null) {
+          if(!ratings.containsValue(foundShooter)) {
+            ratings[Registration(name: shooterName, division: d, classification: classification ?? fallbackClassification, squad: squadLabel)] = foundShooter;
+          }
+          else {
+            _log.w("Duplicate shooter found: $shooterName");
+          }
         }
         else {
-          _log.w("Duplicate shooter found: $shooterName");
+          _log.d("Missing shooter for: $shooterName");
+          unmatched.add(
+            Registration(name: shooterName, division: d, classification: classification ?? fallbackClassification, squad: squadLabel)
+          );
         }
-      }
-      else {
-        _log.d("Missing shooter for: $shooterName");
-        unmatched.add(
-          Registration(name: shooterName, division: d, classification: classification ?? fallbackClassification)
-        );
       }
     }
   }

@@ -5,6 +5,7 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/ui/colors.dart';
 
 class ConstrainedTooltip extends StatelessWidget {
   const ConstrainedTooltip({super.key, required this.message, required this.child, required this.constraints, this.waitDuration});
@@ -16,7 +17,7 @@ class ConstrainedTooltip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var style = Theme.of(context).textTheme.bodySmall!.copyWith(color: Colors.white);
+    var style = Theme.of(context).textTheme.bodySmall!.copyWith(color: ThemeColors.onBackgroundColor(context));
     return Tooltip(
       waitDuration: waitDuration,
       richMessage: WidgetSpan(
