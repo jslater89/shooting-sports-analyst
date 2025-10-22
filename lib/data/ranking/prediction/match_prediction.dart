@@ -17,12 +17,16 @@ See if rating percentage correlates with match finish percentage?
 2. As above, but with probabilities.
  */
 
+import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 
 /// An algorithmic prediction for a shooter's finish.
 ///
 /// Users of this class are responsible for filling in [lowPlace] and [highPlace].
 class AlgorithmPrediction {
+  final RaterSettings settings;
+  final RatingSystem algorithm;
+
   final ShooterRating shooter;
 
   /// An average performance value.
@@ -43,7 +47,7 @@ class AlgorithmPrediction {
   late int medianPlace;
 
   AlgorithmPrediction({
-    required this.shooter, required this.mean, required double sigma, this.ciOffset = 0.0,
+    required this.shooter, required this.mean, required double sigma, this.ciOffset = 0.0, required this.settings, required this.algorithm,
   }) :
       this.oneSigma = sigma,
       this.twoSigma = sigma * 2;

@@ -9,6 +9,7 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settings.dart';
@@ -629,11 +630,16 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
 
     for(var rating in eloRatings) {
       var error = rating.standardError;
+      var scale = settings.scale;
 
       // Error range thresholds
-      const lowErrorThreshold = 10.0;
-      const midErrorThreshold = 40.0;
-      const highErrorMaxThreshold = 80.0;  // Explicit maximum error that maps to maxPercent
+      // These are tuned with the default scale of 400.0, and
+      // standardError uses scale as a scaling factor, so we need
+      // to adjust the thresholds here to maintain the same relative
+      // error ranges for different settings.
+      final lowErrorThreshold = 10.0 * (scale / 400.0);
+      final midErrorThreshold = 40.0 * (scale / 400.0);
+      final highErrorMaxThreshold = 80.0 * (scale / 400.0);  // Explicit maximum error that maps to maxPercent
 
       // Percentage ranges for each error level
       const lowErrorMinPercent = 0.025;  // 2.5%
@@ -644,11 +650,25 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       const highErrorMaxPercent = 0.065;  // 6.5%
 
       // Map error ranges to percentage of rating
-      var errorPercentage = switch(error) {
-        < lowErrorThreshold => lowErrorMinPercent + (error / lowErrorThreshold) * (lowErrorMaxPercent - lowErrorMinPercent),
-        < midErrorThreshold => midErrorMinPercent + (error - lowErrorThreshold) / (midErrorThreshold - lowErrorThreshold) * (midErrorMaxPercent - midErrorMinPercent),
-        _ => highErrorMinPercent + min(highErrorMaxPercent - highErrorMinPercent, (error - midErrorThreshold) / (highErrorMaxThreshold - midErrorThreshold) * (highErrorMaxPercent - highErrorMinPercent)),
-      };
+      double errorPercentage;
+      if (error < lowErrorThreshold) {
+        errorPercentage = lowErrorMinPercent +
+            (error / lowErrorThreshold) *
+                (lowErrorMaxPercent - lowErrorMinPercent);
+      } else if (error < midErrorThreshold) {
+        errorPercentage = midErrorMinPercent +
+            (error - lowErrorThreshold) /
+                (midErrorThreshold - lowErrorThreshold) *
+                (midErrorMaxPercent - midErrorMinPercent);
+      } else {
+        errorPercentage = highErrorMinPercent +
+            min(
+              highErrorMaxPercent - highErrorMinPercent,
+              (error - midErrorThreshold) /
+                  (highErrorMaxThreshold - midErrorThreshold) *
+                  (highErrorMaxPercent - highErrorMinPercent),
+            );
+      }
 
       var stdDev = rating.rating * errorPercentage;
 
@@ -658,7 +678,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       var minThreshold = settings.errorAwareMinThreshold;
       var errMultiplier = 1.0;
       if (error >= errThreshold) {
-        errMultiplier = 1 + min(0.5, ((error - errThreshold) / (settings.scale - errThreshold))) * 1;
+        errMultiplier = 1 + min(0.5, ((error - errThreshold) / (scale - errThreshold))) * 1;
       }
       if (error < minThreshold) {
         errMultiplier = 1 - ((minThreshold - error) / minThreshold) * 0.5;
@@ -670,7 +690,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       // var trends = [rating.shortDirection, rating.direction, rating.longDirection];
       var trendAverage = rating.shortTrend * 0.45 + rating.mediumTrend * 0.35 + rating.longTrend * 0.20;
 
-      var trendShiftMaxVal = settings.scale / 2;
+      var trendShiftMaxVal = scale / 2;
       var trendShiftMaxMagnitude = 0.9;
       if(rating.length < 100) {
         trendShiftMaxMagnitude = 0.9 * rating.length / 100;
@@ -701,6 +721,8 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
       var performanceDeviation = sqrt(variance);
 
       predictions.add(AlgorithmPrediction(
+        settings: settings,
+        algorithm: this,
         shooter: rating,
         mean: averagePerformance,
         ciOffset: trendShift,
@@ -728,6 +750,12 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
     }
 
     return predictions;
+  }
+
+  @override
+  double estimateRatioFloor(double ratingDelta, {RaterSettings? settings}) {
+    var eloSettings = (settings as EloSettings?) ?? this.settings;
+    return ((99 + (-50 * log(eloSettings.probabilityBase) / (4.0 * eloSettings.scale)) * ratingDelta) / 100).clamp(0.01, 1.0);
   }
 
   @override

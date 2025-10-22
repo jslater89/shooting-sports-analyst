@@ -134,15 +134,26 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings> {
     return rating.toStringWithSignificantDigits(3);
   }
 
-  /// Return ShooterPredictions for the list of shooters.
+  /// Return [AlgorithmPrediction]s for the list of shooters.
   ///
   /// Provide a [seed] for repeatable predictions, if desired.
   List<AlgorithmPrediction> predict(List<ShooterRating> ratings, {int? seed}) {
     throw UnimplementedError();
   }
 
+  /// Given a delta between two ratings, estimate the ratio for the lower-rated shooter.
+  ///
+  /// Use [settings] to specify the rater settings to use, or else use the settings
+  /// of this algorithm instance.
+  double estimateRatioFloor(double ratingDelta, {RaterSettings? settings}) {
+    throw UnimplementedError();
+  }
+
   /// Return true if this rating system can generate predictions.
   bool get supportsPrediction => false;
+
+  /// Return true if this rating system can estimate ratio gaps.
+  bool get supportsRatioGap => false;
 
   /// Return an error measure for the given predictions and result.
   PredictionOutcome validate({

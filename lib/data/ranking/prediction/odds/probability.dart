@@ -226,7 +226,6 @@ class PredictionProbability {
     if(shooterPrediction == null) {
       throw ArgumentError("Shooter prediction not found for ${percentagePrediction.shooter.name}");
     }
-
     var ratio = percentagePrediction.ratio;
 
     var predictedPercentages = <double>[];
@@ -269,8 +268,7 @@ class PredictionProbability {
 
       // Check if this shooter's expected score is better than the percentage prediction
       var ratingDelta = bestRating - worstRating;
-      var estimatedMinimumPercentage = 95.8 + -0.0457 * ratingDelta;
-      var ratioFloor = estimatedMinimumPercentage / 100;
+      var ratioFloor = shooterPrediction.algorithm.estimateRatioFloor(ratingDelta, settings: shooterPrediction.settings);
       var ratioMultiplier = 1.0 - ratioFloor;
 
       var shooterRatio = ((shooterExpectedScore - minimumRatingScore) / (bestExpectedScore - minimumRatingScore)) * ratioMultiplier + ratioFloor;

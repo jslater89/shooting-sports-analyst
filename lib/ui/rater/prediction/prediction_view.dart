@@ -126,30 +126,46 @@ class _PredictionViewState extends State<PredictionView> {
                 onPressed: () async {
                   String contents = "Name,Member Number,Class,Rating,5%,35%,Mean,65%,95%,Low Place,Mid Place,High Place,Actual Percent,Actual Place\n";
 
-                  for(var pred in sortedPredictions) {
-                    double midLow = (PredictionView._percentFloor + pred.lowerBox / highPrediction * PredictionView._percentMult) * 100;
-                    double midHigh = (PredictionView._percentFloor + pred.upperBox / highPrediction * PredictionView._percentMult) * 100;
-                    double mean = (PredictionView._percentFloor + pred.center / highPrediction * PredictionView._percentMult) * 100;
-                    double low = (PredictionView._percentFloor + pred.lowerWhisker / highPrediction * PredictionView._percentMult) * 100;
-                    double high = (PredictionView._percentFloor + pred.upperWhisker / highPrediction * PredictionView._percentMult) * 100;
-                    int lowPlace = pred.lowPlace;
-                    int midPlace = pred.medianPlace;
-                    int highPlace = pred.highPlace;
-                    var outcome = outcomes[pred];
+                  if(sortedPredictions.isNotEmpty) {
+                    var rater = sortedPredictions.first.algorithm;
+                    var settings = sortedPredictions.first.settings;
 
-                    String line = "";
-                    line += "${pred.shooter.getName(suffixes: false)},";
-                    line += "${pred.shooter.originalMemberNumber},";
-                    line += "${pred.shooter.lastClassification?.shortDisplayName ?? "none"},";
-                    line += "${pred.shooter.rating.round()},";
-                    line += "$low,$midLow,$mean,$midHigh,$high,$lowPlace,$midPlace,$highPlace";
-
-                    if(outcome != null) {
-                      line += ",${outcome.percent * 100},${outcome.place}";
+                    double percentFloor = PredictionView._percentFloor;
+                    double percentMult = PredictionView._percentMult;
+                    if(rater.supportsRatioGap) {
+                      var sortedByRating = sortedPredictions.sorted((a, b) => b.shooter.rating.compareTo(a.shooter.rating));
+                      var bestRating = sortedByRating.first.shooter.rating;
+                      var worstRating = sortedByRating.last.shooter.rating;
+                      var ratingDelta = bestRating - worstRating;
+                      percentFloor = 1.0 - rater.estimateRatioFloor(ratingDelta, settings: settings);
+                      percentMult = 1.0 - percentFloor;
                     }
 
-                    // _log.vv(line);
-                    contents += "$line\n";
+                    for(var pred in sortedPredictions) {
+                      double midLow = (percentFloor + pred.lowerBox / highPrediction * percentMult) * 100;
+                      double midHigh = (percentFloor + pred.upperBox / highPrediction * percentMult) * 100;
+                      double mean = (percentFloor + pred.center / highPrediction * percentMult) * 100;
+                      double low = (percentFloor + pred.lowerWhisker / highPrediction * percentMult) * 100;
+                      double high = (percentFloor + pred.upperWhisker / highPrediction * percentMult) * 100;
+                      int lowPlace = pred.lowPlace;
+                      int midPlace = pred.medianPlace;
+                      int highPlace = pred.highPlace;
+                      var outcome = outcomes[pred];
+
+                      String line = "";
+                      line += "${pred.shooter.getName(suffixes: false)},";
+                      line += "${pred.shooter.originalMemberNumber},";
+                      line += "${pred.shooter.lastClassification?.shortDisplayName ?? "none"},";
+                      line += "${pred.shooter.rating.round()},";
+                      line += "$low,$midLow,$mean,$midHigh,$high,$lowPlace,$midPlace,$highPlace";
+
+                      if(outcome != null) {
+                        line += ",${outcome.percent * 100},${outcome.place}";
+                      }
+
+                      // _log.vv(line);
+                      contents += "$line\n";
+                    }
                   }
 
                   HtmlOr.saveFile("predictions.csv", contents);
@@ -384,14 +400,22 @@ class _PredictionViewState extends State<PredictionView> {
     double renderMin = min * 0.95;
     double renderMax = max * 1.01;
 
-    double renderMinPercent = (PredictionView._percentFloor + renderMin / highPrediction * PredictionView._percentMult) * 100;
-    double renderMaxPercent = (PredictionView._percentFloor + renderMax / highPrediction * PredictionView._percentMult) * 100;
+    double percentFloor = PredictionView._percentFloor;
+    double percentMult = PredictionView._percentMult;
+    if(pred.algorithm.supportsRatioGap) {
+      var ratingDelta = pred.shooter.rating - sortedPredictions.first.shooter.rating;
+      percentFloor = 1.0 - pred.algorithm.estimateRatioFloor(ratingDelta, settings: pred.settings);
+      percentMult = 1.0 - percentFloor;
+    }
 
-    double boxLowPercent = (PredictionView._percentFloor + pred.lowerBox / highPrediction * PredictionView._percentMult) * 100;
-    double boxHighPercent = (PredictionView._percentFloor + pred.upperBox / highPrediction * PredictionView._percentMult) * 100;
-    double meanPercent = (PredictionView._percentFloor + pred.mean / highPrediction * PredictionView._percentMult) * 100;
-    double whiskerLowPercent = (PredictionView._percentFloor + pred.lowerWhisker / highPrediction * PredictionView._percentMult) * 100;
-    double whiskerHighPercent = (PredictionView._percentFloor + pred.upperWhisker / highPrediction * PredictionView._percentMult) * 100;
+    double renderMinPercent = (percentFloor + renderMin / highPrediction * percentMult) * 100;
+    double renderMaxPercent = (percentFloor + renderMax / highPrediction * percentMult) * 100;
+
+    double boxLowPercent = (percentFloor + pred.lowerBox / highPrediction * percentMult) * 100;
+    double boxHighPercent = (percentFloor + pred.upperBox / highPrediction * percentMult) * 100;
+    double meanPercent = (percentFloor + pred.mean / highPrediction * percentMult) * 100;
+    double whiskerLowPercent = (percentFloor + pred.lowerWhisker / highPrediction * percentMult) * 100;
+    double whiskerHighPercent = (percentFloor + pred.upperWhisker / highPrediction * percentMult) * 100;
     double? outcomePercent;
 
     List<double> referenceLines = [];

@@ -13,6 +13,7 @@ import 'package:shooting_sports_analyst/util.dart';
 
 part 'rating_report.g.dart';
 
+// ignore: unused_element
 var _log = SSALogger("RatingReport");
 
 @embedded
