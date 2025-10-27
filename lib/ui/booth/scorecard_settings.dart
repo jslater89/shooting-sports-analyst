@@ -7,6 +7,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/match_prediction_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
@@ -19,16 +20,17 @@ SSALogger _log = SSALogger("ScorecardSettingsDialog");
 
 /// ScorecardSettingsDialog is a modal host for [ScorecardSettingsWidget].
 class ScorecardSettingsDialog extends StatelessWidget {
-  const ScorecardSettingsDialog({super.key, required this.scorecard, required this.match});
+  const ScorecardSettingsDialog({super.key, required this.scorecard, required this.match, this.ratingsContext});
 
   final ScorecardModel scorecard;
   final ShootingMatch match;
+  final DbRatingProject? ratingsContext;
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text("Settings"),
-      content: ScorecardSettingsWidget(scorecard: scorecard, match: match),
+      content: ScorecardSettingsWidget(scorecard: scorecard, match: match, ratingsContext: ratingsContext),
       actions: [
         TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text("CANCEL")),
         TextButton(onPressed: () => Navigator.of(context).pop(scorecard), child: const Text("SAVE")),
@@ -36,11 +38,15 @@ class ScorecardSettingsDialog extends StatelessWidget {
     );
   }
 
-  static Future<ScorecardModel?> show(BuildContext context, {required ScorecardModel scorecard, required ShootingMatch match}) {
+  static Future<ScorecardModel?> show(BuildContext context, {
+    required ScorecardModel scorecard,
+    required ShootingMatch match,
+    DbRatingProject? ratingsContext,
+  }) {
     _log.i("Showing scorecard settings dialog for ${scorecard.name} id:${scorecard.id}");
     return showDialog<ScorecardModel>(
       context: context,
-      builder: (context) => ScorecardSettingsDialog(scorecard: scorecard, match: match),
+      builder: (context) => ScorecardSettingsDialog(scorecard: scorecard, match: match, ratingsContext: ratingsContext),
       barrierDismissible: false,
     );
   }
@@ -49,10 +55,12 @@ class ScorecardSettingsDialog extends StatelessWidget {
 /// ScorecardSettings edits the provided scorecard.
 /// Edits happen in place, so use [ScorecardModel.copy] to get a copy if confirm/discard is needed.
 class ScorecardSettingsWidget extends StatefulWidget {
-  const ScorecardSettingsWidget({super.key, required this.scorecard, required this.match});
+  const ScorecardSettingsWidget({super.key, required this.scorecard, required this.match, this.ratingsContext});
 
   final ScorecardModel scorecard;
   final ShootingMatch match;
+  final DbRatingProject? ratingsContext;
+
   @override
   State<ScorecardSettingsWidget> createState() => _ScorecardSettingsWidgetState();
 }
@@ -310,7 +318,7 @@ class _ScorecardSettingsWidgetState extends State<ScorecardSettingsWidget> {
         DropdownButtonFormField<MatchPredictionMode>(
           value: scorecard.predictionMode,
           decoration: const InputDecoration(labelText: "Prediction mode"),
-          items: MatchPredictionMode.dropdownValues(false).map((mode) => DropdownMenuItem(
+          items: MatchPredictionMode.dropdownValues(widget.ratingsContext != null).map((mode) => DropdownMenuItem(
             value: mode,
             child: Text(mode.uiLabel),
           )).toList(),

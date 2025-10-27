@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:provider/provider.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/match_prediction_mode.dart';
 
 part 'global_card_settings_dialog.g.dart';
@@ -51,9 +52,10 @@ class GlobalScorecardSettingsModel with ChangeNotifier {
 
 /// GlobalScorecardSettingsDialog is a modal host for [GlobalScorecardSettingsWidget].
 class GlobalScorecardSettingsDialog extends StatelessWidget {
-  const GlobalScorecardSettingsDialog({super.key, required this.settings});
+  const GlobalScorecardSettingsDialog({super.key, required this.settings, this.ratingsContext});
 
   final GlobalScorecardSettingsModel settings;
+  final DbRatingProject? ratingsContext;
 
   @override
   Widget build(BuildContext context) {
@@ -61,7 +63,7 @@ class GlobalScorecardSettingsDialog extends StatelessWidget {
       value: settings,
       child: AlertDialog(
         title: const Text("Global Scorecard Settings"),
-        content: GlobalScorecardSettingsWidget(settings: settings),
+        content: GlobalScorecardSettingsWidget(settings: settings, ratingsContext: ratingsContext),
         actions: [
           TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text("CANCEL")),
           TextButton(onPressed: () {
@@ -74,10 +76,13 @@ class GlobalScorecardSettingsDialog extends StatelessWidget {
     );
   }
 
-  static Future<GlobalScorecardSettingsModel?> show(BuildContext context, {required GlobalScorecardSettingsModel settings}) {
+  static Future<GlobalScorecardSettingsModel?> show(BuildContext context, {
+    required GlobalScorecardSettingsModel settings,
+    DbRatingProject? ratingsContext,
+  }) {
     return showDialog<GlobalScorecardSettingsModel>(
       context: context,
-      builder: (context) => GlobalScorecardSettingsDialog(settings: settings),
+      builder: (context) => GlobalScorecardSettingsDialog(settings: settings, ratingsContext: ratingsContext),
       barrierDismissible: false,
     );
   }
@@ -86,9 +91,10 @@ class GlobalScorecardSettingsDialog extends StatelessWidget {
 /// GlobalScorecardSettingsWidget edits the provided global scorecard settings.
 /// Edits happen in place, so use a copy if confirm/discard is needed.
 class GlobalScorecardSettingsWidget extends StatefulWidget {
-  const GlobalScorecardSettingsWidget({super.key, required this.settings});
+  const GlobalScorecardSettingsWidget({super.key, required this.settings, this.ratingsContext});
 
   final GlobalScorecardSettingsModel settings;
+  final DbRatingProject? ratingsContext;
 
   @override
   State<GlobalScorecardSettingsWidget> createState() => _GlobalScorecardSettingsWidgetState();
@@ -117,7 +123,7 @@ class _GlobalScorecardSettingsWidgetState extends State<GlobalScorecardSettingsW
         DropdownButtonFormField<MatchPredictionMode>(
           value: settings.predictionMode,
           decoration: const InputDecoration(labelText: "Prediction mode"),
-          items: MatchPredictionMode.dropdownValues(false).map((mode) => DropdownMenuItem(
+          items: MatchPredictionMode.dropdownValues(widget.ratingsContext != null).map((mode) => DropdownMenuItem(
             value: mode,
             child: Text(mode.uiLabel),
           )).toList(),

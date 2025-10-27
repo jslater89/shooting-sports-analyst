@@ -53,8 +53,6 @@ class PredictionView extends StatefulWidget {
   static const int _whiskerPlotFlex = 40;
   static const double _whiskerPlotPadding = 20;
   static const double _rowHeight = 20;
-  static const double _percentFloor = 0.25;
-  static const double _percentMult = 1 - _percentFloor;
 }
 
 class _PredictionViewState extends State<PredictionView> {
@@ -75,6 +73,10 @@ class _PredictionViewState extends State<PredictionView> {
   Widget build(BuildContext context) {
     double minValue = 10000;
     double maxValue = -10000;
+    double percentFloor = RatingSystem.defaultRatioFloor;
+    double percentMult = RatingSystem.defaultRatioMult;
+    double minRating = double.infinity;
+    double maxRating = double.negativeInfinity;
 
     final backgroundColor = ThemeColors.backgroundColor(context);
 
@@ -83,6 +85,14 @@ class _PredictionViewState extends State<PredictionView> {
     for(var p in sortedPredictions) {
       minValue = min(minValue, p.lowerWhisker);
       maxValue = max(maxValue, p.upperWhisker);
+      minRating = min(minRating, p.shooter.rating);
+      maxRating = max(maxRating, p.shooter.rating);
+    }
+
+    if(sortedPredictions.isNotEmpty && sortedPredictions.first.algorithm.supportsRatioFloor) {
+      var ratingDelta = maxRating - minRating;
+      percentFloor = sortedPredictions.first.algorithm.estimateRatioFloor(ratingDelta, settings: sortedPredictions.first.settings);
+      percentMult = 1.0 - percentFloor;
     }
 
     return WillPopScope(
@@ -130,9 +140,9 @@ class _PredictionViewState extends State<PredictionView> {
                     var rater = sortedPredictions.first.algorithm;
                     var settings = sortedPredictions.first.settings;
 
-                    double percentFloor = PredictionView._percentFloor;
-                    double percentMult = PredictionView._percentMult;
-                    if(rater.supportsRatioGap) {
+                    double percentFloor = RatingSystem.defaultRatioFloor;
+                    double percentMult = RatingSystem.defaultRatioMult;
+                    if(rater.supportsRatioFloor) {
                       var sortedByRating = sortedPredictions.sorted((a, b) => b.shooter.rating.compareTo(a.shooter.rating));
                       var bestRating = sortedByRating.first.shooter.rating;
                       var worstRating = sortedByRating.last.shooter.rating;
@@ -194,7 +204,7 @@ class _PredictionViewState extends State<PredictionView> {
                 child: ListView.builder(
                     itemCount: searchedPredictions.length,
                     itemBuilder: (context, i) {
-                      return _buildPredictionsRow(searchedPredictions[i], minValue, maxValue, highPrediction, i);
+                      return _buildPredictionsRow(searchedPredictions[i], minValue, maxValue, percentFloor, percentMult, highPrediction, i);
                     },
                 ),
               )
@@ -396,17 +406,9 @@ class _PredictionViewState extends State<PredictionView> {
     );
   }
 
-  Widget _buildPredictionsRow(AlgorithmPrediction pred, double min, double max, double highPrediction, int index) {
+  Widget _buildPredictionsRow(AlgorithmPrediction pred, double min, double max, double percentFloor, double percentMult, double highPrediction, int index) {
     double renderMin = min * 0.95;
     double renderMax = max * 1.01;
-
-    double percentFloor = PredictionView._percentFloor;
-    double percentMult = PredictionView._percentMult;
-    if(pred.algorithm.supportsRatioGap) {
-      var ratingDelta = pred.shooter.rating - sortedPredictions.first.shooter.rating;
-      percentFloor = 1.0 - pred.algorithm.estimateRatioFloor(ratingDelta, settings: pred.settings);
-      percentMult = 1.0 - percentFloor;
-    }
 
     double renderMinPercent = (percentFloor + renderMin / highPrediction * percentMult) * 100;
     double renderMaxPercent = (percentFloor + renderMax / highPrediction * percentMult) * 100;

@@ -30,6 +30,10 @@ extension RatingProjectDatabase on AnalystDatabase {
     return isar.dbRatingProjects.where().idEqualTo(id).findFirst();
   }
 
+  DbRatingProject? getRatingProjectByIdSync(int id) {
+    return isar.dbRatingProjects.where().idEqualTo(id).findFirstSync();
+  }
+
   Future<DbRatingProject?> getRatingProjectByName(String name) {
     return isar.dbRatingProjects.where().nameEqualTo(name).findFirst();
   }

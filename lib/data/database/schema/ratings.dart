@@ -11,11 +11,13 @@ import 'package:isar_community/isar.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/connectivity.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_report.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
@@ -66,7 +68,7 @@ mixin DbDivisionEntity on DbSportEntity {
 }
 
 @collection
-class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRatingDataSource {
+class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRatingDataSource, PreloadedRatingDataSource {
   @ignore
   static const byStageKey = "byStage";
   @ignore
@@ -429,12 +431,12 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
     return Future.value(DataSourceResult.ok(outGroup));
   }
 
-  DataSourceResult<RatingGroup?> groupForDivisionSync(Division? division) {
+  RatingGroup? groupForDivisionSync(Division? division) {
     var fewestDivisions = 65536;
     RatingGroup? outGroup = null;
     if(division == null) {
       // TODO: this might not be the right result for a null division
-      return DataSourceResult.ok(groups.first);
+      return groups.first;
     }
 
     for(var group in groups) {
@@ -444,7 +446,7 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
       }
     }
 
-    return DataSourceResult.ok(outGroup);
+    return outGroup;
   }
 
   @override
@@ -520,6 +522,21 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
     project.filteredMatchPointers = (json["filteredMatchPointers"] as List<dynamic>).map((m) => MatchPointer.fromJson(m as Map<String, dynamic>)).toList();
     project.matchInProgressPointers = (json["matchInProgressPointers"] as List<dynamic>).map((m) => MatchPointer.fromJson(m as Map<String, dynamic>)).toList();
     return project;
+  }
+
+  @override
+  Sport getSportSync() {
+    return sport;
+  }
+
+  @override
+  DbShooterRating? lookupRatingSync(RatingGroup group, String memberNumber) {
+    return AnalystDatabase().maybeKnownShooterSync(project: this, group: group, memberNumber: memberNumber);
+  }
+
+  @override
+  ShooterRating<RatingEvent>? wrapDbRatingSync(DbShooterRating rating) {
+    return settings.algorithm.wrapDbRating(rating);
   }
 }
 

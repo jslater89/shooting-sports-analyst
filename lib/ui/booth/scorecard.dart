@@ -60,22 +60,27 @@ class _BoothScorecardState extends State<BoothScorecard> {
   // refresh issues.
   Map<String, ShooterRating?> _ratingLinks = {};
 
-  @override
-  void initState() {
-    super.initState();
-    // _log.v("${widget.scorecard.name} (${widget.hashCode} ${hashCode} ${widget.scorecard.hashCode}) initState");
-    _ratingContext = context.read<RatingContext>();
-    _loadRatingLinks();
-
-    var model = context.read<BroadcastBoothModel>();
-    cachedModel = model;
-
+  Future<void> _asyncInit(BroadcastBoothModel model) async {
     // Check for changes at init time, since all of the change
     // properties belong to our scorecard model, and may not require
     // recalculation at this time.
     if(_hasChanges(model)) {
-      _calculateScores();
+      await _calculateScores();
     }
+
+    // Load rating links only after calculating scores.
+    _loadRatingLinks();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    var model = context.read<BroadcastBoothModel>();
+    cachedModel = model;
+    // _log.v("${widget.scorecard.name} (${widget.hashCode} ${hashCode} ${widget.scorecard.hashCode}) initState");
+    _ratingContext = context.read<RatingContext>();
+
+    _asyncInit(model);
 
     listener = () {
       if(!mounted) {
@@ -121,6 +126,9 @@ class _BoothScorecardState extends State<BoothScorecard> {
   Future<void> _loadRatingLinks() async {
     _ratingProjectContext = await _ratingContext.getProject();
     if(_ratingProjectContext == null) {
+      if(_ratingContext.hasProjectId) {
+        _log.w("Scorecard ${widget.scorecard.name} has project id, but no project found");
+      }
       return;
     }
 
@@ -184,7 +192,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
     super.dispose();
   }
 
-  Future<void> _calculateScores() async {
+  Future<void> _calculateScores({bool manuallyTriggered = false}) async {
     if(disposed) {
       _log.w("${widget.scorecard.name} (${widget.hashCode} ${hashCode} ${widget.scorecard.hashCode}) disposed, skipping score calculation");
       return;
@@ -204,9 +212,10 @@ class _BoothScorecardState extends State<BoothScorecard> {
         scoresAfter: widget.scorecard.scoresAfter,
         scoresBefore: widget.scorecard.scoresBefore?.add(Duration(seconds: -model.tickerModel.updateInterval)),
         predictionMode: widget.scorecard.predictionMode,
+        ratings: _ratingProjectContext,
       );
     }
-    else if(!showingTimewarp) {
+    else if(!showingTimewarp && !manuallyTriggered) {
       // skip the first ticker update after leaving timewarp
       oldScores = sc.scores;
     }
@@ -221,6 +230,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
       scoresAfter: sc.scoresAfter,
       scoresBefore: sc.scoresBefore,
       predictionMode: sc.predictionMode,
+      ratings: _ratingProjectContext,
     );
 
     _applyDisplayFilters(match);
@@ -364,10 +374,16 @@ class _BoothScorecardState extends State<BoothScorecard> {
                         TextButton(
                           child: Icon(Icons.settings),
                           onPressed: () async {
-                            var editedScorecard = await ScorecardSettingsDialog.show(context, scorecard: widget.scorecard.copy(), match: match);
+                            _loadRatingLinks();
+                            var editedScorecard = await ScorecardSettingsDialog.show(
+                              context,
+                              scorecard: widget.scorecard.copy(),
+                              match: match,
+                              ratingsContext: _ratingProjectContext,
+                            );
                             if(editedScorecard != null) {
                               controller.scorecardEdited(widget.scorecard, editedScorecard);
-                              _calculateScores();
+                              _calculateScores(manuallyTriggered: false);
                             }
                           },
                         ),

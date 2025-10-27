@@ -50,4 +50,16 @@ class ThemeColors {
       return Theme.of(context).colorScheme.tertiary;
     }
   }
+
+  static Color alertRedColor(BuildContext context) {
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+    if(isDark) {
+      // Brighter/lighter red for dark background
+      return const Color.fromARGB(255, 173, 73, 73); // #FF5050
+    }
+    else {
+      // Darker/deeper red for light background
+      return const Color.fromARGB(255, 109, 7, 0);
+    }
+  }
 }

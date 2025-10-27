@@ -20,22 +20,45 @@ class RatingContext with ChangeNotifier {
     _projectId = ChangeNotifierConfigLoader().config.ratingsContextProjectId;
   }
 
+  DbRatingProject? _cachedProject;
+
   bool get hasProjectId => _projectId != null;
   Future<bool> hasValidProject() async {
     if(_projectId == null) {
       return false;
     }
+    else if(_cachedProject?.id == _projectId) {
+      return true;
+    }
     else {
-      return (await AnalystDatabase().getRatingProjectById(_projectId!)) != null;
+      _cachedProject = await AnalystDatabase().getRatingProjectById(_projectId!);
+      return _cachedProject != null;
     }
   }
 
-  Future<DbRatingProject?> getProject() {
+  Future<DbRatingProject?> getProject() async {
     if(_projectId == null) {
       return Future.value(null);
     }
+    else if(_cachedProject?.id == _projectId) {
+      return Future.value(_cachedProject);
+    }
     else {
+      _cachedProject = await AnalystDatabase().getRatingProjectById(_projectId!);
       return AnalystDatabase().getRatingProjectById(_projectId!);
+    }
+  }
+
+  DbRatingProject? getProjectSync() {
+    if(_projectId == null) {
+      return null;
+    }
+    else if(_cachedProject?.id == _projectId) {
+      return _cachedProject;
+    }
+    else {
+      _cachedProject = AnalystDatabase().getRatingProjectByIdSync(_projectId!);
+      return _cachedProject;
     }
   }
 
@@ -43,6 +66,7 @@ class RatingContext with ChangeNotifier {
     _projectId = projectId;
     ChangeNotifierConfigLoader().config.ratingsContextProjectId = projectId;
     await ChangeNotifierConfigLoader().save();
+    _cachedProject = null;
     notifyListeners();
   }
 
@@ -50,6 +74,7 @@ class RatingContext with ChangeNotifier {
     _projectId = null;
     ChangeNotifierConfigLoader().config.ratingsContextProjectId = null;
     await ChangeNotifierConfigLoader().save();
+    _cachedProject = null;
     notifyListeners();
   }
 
@@ -57,6 +82,7 @@ class RatingContext with ChangeNotifier {
     _projectId = project.id;
     ChangeNotifierConfigLoader().config.ratingsContextProjectId = project.id;
     await ChangeNotifierConfigLoader().save();
+    _cachedProject = project;
     notifyListeners();
   }
 }

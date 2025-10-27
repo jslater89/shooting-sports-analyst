@@ -8,6 +8,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shooting_sports_analyst/data/ranking/rating_context.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/booth/controller.dart';
 import 'package:shooting_sports_analyst/ui/booth/global_card_settings_dialog.dart';
@@ -58,6 +59,8 @@ class _BoothTickerState extends State<BoothTicker> {
   Widget build(BuildContext context) {
     var model = context.watch<BroadcastBoothModel>();
     var controller = context.read<BroadcastBoothController>();
+    var ratingContext = context.read<RatingContext>();
+    var project = ratingContext.getProjectSync();
     var rowCount = model.scorecards.length;
 
     var timeUntilUpdate = model.tickerModel.timeUntilUpdate;
@@ -183,7 +186,11 @@ class _BoothTickerState extends State<BoothTicker> {
                             ],
                           ),
                           onPressed: () async {
-                            var result = await GlobalScorecardSettingsDialog.show(context, settings: model.globalScorecardSettings.copy());
+                            var result = await GlobalScorecardSettingsDialog.show(
+                              context,
+                              settings: model.globalScorecardSettings.copy(),
+                              ratingsContext: project,
+                            );
                             if(result != null) {
                               controller.globalScorecardSettingsEdited(result);
                             }
@@ -257,7 +264,7 @@ class _BoothTickerState extends State<BoothTicker> {
     var widgets = <Widget>[];
     var events = model.inTimewarp ? model.tickerModel.timewarpTickerEvents : model.tickerModel.liveTickerEvents;
     for(var event in events) {
-      var style = event.priority.textStyle;
+      var style = event.priority.textStyle(context);
       widgets.add(Text(event.message, style: style));
       widgets.add(Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4.0),

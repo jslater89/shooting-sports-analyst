@@ -149,11 +149,14 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings> {
     throw UnimplementedError();
   }
 
+  static const double defaultRatioFloor = 0.25;
+  static const double defaultRatioMult = 1 - defaultRatioFloor;
+
   /// Return true if this rating system can generate predictions.
   bool get supportsPrediction => false;
 
   /// Return true if this rating system can estimate ratio gaps.
-  bool get supportsRatioGap => false;
+  bool get supportsRatioFloor => false;
 
   /// Return an error measure for the given predictions and result.
   PredictionOutcome validate({

@@ -10,7 +10,6 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/synchronous_rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_display_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
-import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 
 extension UiSorting on List<RelativeMatchScore> {
   void sortByLocalRating({required DbRatingProject ratings, ChangeNotifierRatingDataSource? ratingCache, required RatingDisplayMode displayMode, required ShootingMatch match, MatchStage? stage}) {
@@ -25,13 +24,10 @@ extension UiSorting on List<RelativeMatchScore> {
       if(aRating == null || bRating == null) {
         var aGroupRes = ratings.groupForDivisionSync(a.shooter.division);
         var bGroupRes = ratings.groupForDivisionSync(b.shooter.division);
-        if(aGroupRes.isErr() || bGroupRes.isErr()) return b.ratio.compareTo(a.ratio);
+        if(aGroupRes == null || bGroupRes == null) return b.ratio.compareTo(a.ratio);
 
-        var aGroup = aGroupRes.unwrap();
-        var bGroup = bGroupRes.unwrap();
-
-        aRating = db.maybeKnownShooterSync(project: ratings, group: aGroup!, memberNumber: a.shooter.memberNumber);
-        bRating = db.maybeKnownShooterSync(project: ratings, group: bGroup!, memberNumber: b.shooter.memberNumber);
+        aRating = db.maybeKnownShooterSync(project: ratings, group: aGroupRes, memberNumber: a.shooter.memberNumber);
+        bRating = db.maybeKnownShooterSync(project: ratings, group: bGroupRes, memberNumber: b.shooter.memberNumber);
 
         if(ratingCache != null) {
           if(aRating != null) {

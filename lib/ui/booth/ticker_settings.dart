@@ -207,7 +207,7 @@ class _TickerSettingsWidgetState extends State<TickerSettingsWidget> {
         child: Row(
           mainAxisSize: MainAxisSize.max,
           children: [
-            Expanded(child: Text(c.type.uiLabel, style: c.priority.textStyle)),
+            Expanded(child: Text(c.type.uiLabel, style: c.priority.textStyle(context))),
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [

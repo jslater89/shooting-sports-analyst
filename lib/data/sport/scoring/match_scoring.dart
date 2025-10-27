@@ -8,6 +8,7 @@ import 'dart:math';
 
 import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
@@ -223,8 +224,14 @@ final class RelativeStageFinishScoring extends MatchScoring {
       var locatedRatings = <ShooterRating>[];
       Map<ShooterRating, AlgorithmPrediction> predictions = {};
       AlgorithmPrediction? highPrediction;
+      double? highRating;
+      double? lowRating;
+      RatingSystem? algorithm;
+      double Function(double delta, {RaterSettings? settings})? ratioFloorPredictor;
+
       if(predictionMode.eloAware) {
-        RatingSystem? r = null;
+        highRating = double.negativeInfinity;
+        lowRating = double.infinity;
         for(var shooter in shooters) {
           var group = ratings!.groupForDivisionSync(shooter.division);
           if(group == null) continue;
@@ -241,17 +248,20 @@ final class RelativeStageFinishScoring extends MatchScoring {
             }
             if(!nonDnf) continue;
           }
-          if(r == null) {
-            r = ratings.getSettingsSync().algorithm;
+          if(algorithm == null) {
+            algorithm = ratings.getSettingsSync().algorithm;
+            ratioFloorPredictor = algorithm.supportsRatioFloor ? algorithm.estimateRatioFloor : null;
           }
           if(rating != null) {
-            locatedRatings.add(r.wrapDbRating(rating));
+            highRating = max(highRating!, rating.rating);
+            lowRating = min(lowRating!, rating.rating);
+            locatedRatings.add(algorithm.wrapDbRating(rating));
           }
         }
 
-        if(r != null && r.supportsPrediction) {
-          var preds = r.predict(locatedRatings);
-          preds.sort((a, b) => b.mean.compareTo(a.mean));
+        if(algorithm != null && algorithm.supportsPrediction) {
+          var preds = algorithm.predict(locatedRatings);
+          preds.sort((a, b) => b.shiftedCenter.compareTo(a.shiftedCenter));
           highPrediction = preds.first;
           for(var pred in preds) {
             predictions[pred.shooter] = pred;
@@ -320,12 +330,25 @@ final class RelativeStageFinishScoring extends MatchScoring {
               else if (predictionMode.eloAware) {
                 var group = ratings!.groupForDivisionSync(shooter.division);
                 if(group != null) {
-                  var rating = ratings.lookupRatingSync(group, shooter.memberNumber);
+                  var rating = predictions.keys.firstWhereOrNull((e) => e.group == group && e.knownMemberNumbers.contains(shooter.memberNumber));
                   var prediction = predictions[rating];
+                  double predictionComponent;
                   if (prediction != null && highPrediction != null) {
-                    // TODO: distribute this according to a Gumbel or normal cumulative distribution function
-                    var percent = 0.3 + ((prediction.mean + prediction.shift / 2) / (highPrediction.halfHighPrediction + highPrediction.shift / 2) * 0.7);
-                    stageScoreTotals.incrementBy(shooter, stage.maxPoints * percent);
+                    if(ratioFloorPredictor != null && rating != null &&highRating != null && lowRating != null) {
+                      var ratingDelta = highRating - rating.rating;
+                      predictionComponent = ratioFloorPredictor(ratingDelta);
+                    }
+                    else {
+                      var floor = RatingSystem.defaultRatioFloor;
+                      var mult = RatingSystem.defaultRatioMult;
+                      predictionComponent = floor + ((prediction.mean + prediction.shift / 2) / (highPrediction.halfHighPrediction + highPrediction.shift / 2) * mult);
+                    }
+                    // Use more average stage percentage the more scores we have, up to 75%.
+                    var averageMultiplier = (stagesCompleted / stages.length).clamp(0.0, 0.75);
+                    var predictionMultiplier = 1.0 - averageMultiplier;
+                    var averageComponent = averageStagePercentage * averageMultiplier;
+                    predictionComponent = predictionComponent * predictionMultiplier;
+                    stageScoreTotals.incrementBy(shooter, stage.maxPoints * (predictionComponent + averageComponent));
                   }
                   else {
                     // Use average stage percentage

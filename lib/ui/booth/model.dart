@@ -14,6 +14,7 @@ import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/booth/global_card_settings_dialog.dart';
 import 'package:shooting_sports_analyst/ui/booth/scorecard_model.dart';
 import 'package:shooting_sports_analyst/ui/booth/ticker_criteria.dart';
+import 'package:shooting_sports_analyst/ui/colors.dart';
 
 part 'model.g.dart';
 
@@ -287,9 +288,9 @@ enum TickerPriority {
     }
   }
 
-  TextStyle? get textStyle {
+  TextStyle? textStyle(BuildContext context) {
     final mediumPriorityStyle = TextStyle(fontWeight: FontWeight.w500);
-    final highPriorityStyle = TextStyle(fontWeight: FontWeight.w600, color: const Color.fromARGB(255, 109, 7, 0));
+    final highPriorityStyle = TextStyle(fontWeight: FontWeight.w600, color: ThemeColors.alertRedColor(context));
     switch(this) {
       case TickerPriority.low:
         return null;
