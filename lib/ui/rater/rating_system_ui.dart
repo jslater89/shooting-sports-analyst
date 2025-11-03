@@ -21,16 +21,16 @@ import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 class RatingSystemUiBuilder {
   static Row buildRatingKey(RatingSystem algorithm, BuildContext context, {DateTime? trendDate}) {
     if(algorithm is MultiplayerPercentEloRater) {
-      return algorithm.buildRatingKey(context);
+      return algorithm.buildRatingKey(context, trendDate: trendDate);
     }
     else if(algorithm is MarbleRater) {
-      return algorithm.buildRatingKey(context);
+      return algorithm.buildRatingKey(context, trendDate: trendDate);
     }
     else if(algorithm is OpenskillRater) {
-      return algorithm.buildRatingKey(context);
+      return algorithm.buildRatingKey(context, trendDate: trendDate);
     }
     else if(algorithm is PointsRater) {
-      return algorithm.buildRatingKey(context);
+      return algorithm.buildRatingKey(context, trendDate: trendDate);
     }
     throw UnimplementedError("Rating system UI not implemented for ${algorithm.runtimeType}");
   }

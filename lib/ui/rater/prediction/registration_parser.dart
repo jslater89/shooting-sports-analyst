@@ -181,10 +181,10 @@ RegistrationContainer _parseRegistrations(
     // Extract squad label/number from the first <strong> within the squad box
     var squadLabel = squadElement.querySelector("strong")?.text.trim() ?? "";
     var squadNumberMatch = RegExp(r"\d+").firstMatch(squadLabel);
-    var squadNumber = squadNumberMatch != null ? squadNumberMatch.group(0) : null;
+    var squadNumber = squadNumberMatch != null ? squadNumberMatch.group(0)! : squadLabel;
 
     var shooterElements = squadElement.querySelectorAll("span.clearable");
-    _log.i("Squad ${squadNumber ?? squadLabel}: Found ${shooterElements.length} shooter elements");
+    _log.i("Squad $squadNumber: Found ${shooterElements.length} shooter elements");
     for(var element in shooterElements) {
       var innerSpan = element.querySelector("span");
       if(innerSpan == null) {
@@ -251,7 +251,7 @@ RegistrationContainer _parseRegistrations(
 
         if(foundShooter != null) {
           if(!ratings.containsValue(foundShooter)) {
-            ratings[Registration(name: shooterName, division: d, classification: classification ?? fallbackClassification, squad: squadLabel)] = foundShooter;
+            ratings[Registration(name: shooterName, division: d, classification: classification ?? fallbackClassification, squad: squadNumber)] = foundShooter;
           }
           else {
             _log.w("Duplicate shooter found: $shooterName");
@@ -260,7 +260,7 @@ RegistrationContainer _parseRegistrations(
         else {
           _log.d("Missing shooter for: $shooterName");
           unmatched.add(
-            Registration(name: shooterName, division: d, classification: classification ?? fallbackClassification, squad: squadLabel)
+            Registration(name: shooterName, division: d, classification: classification ?? fallbackClassification, squad: squadNumber)
           );
         }
       }
