@@ -18,6 +18,8 @@ import 'package:shooting_sports_analyst/data/database/schema/fantasy/standing.da
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/team.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_heat.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
 import 'package:shooting_sports_analyst/data/database/schema/preferences.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
@@ -89,9 +91,13 @@ class AnalystDatabase {
         RatingSetSchema,
         DbRatingEventSchema,
         DbShooterRatingSchema,
-        MatchRegistrationMappingSchema,
         MatchHeatSchema,
         ApplicationPreferencesSchema,
+
+        // Match prep-related collections
+        FutureMatchSchema,
+        MatchRegistrationSchema,
+        MatchRegistrationMappingSchema,
 
         // Fantasy-related collections
         FantasyUserSchema,

@@ -362,6 +362,10 @@ class MatchStage {
 
   /// A map of event names to a list of events of variable value for that event.
   ///
+  /// Scores that use these events will have multiple entries with the same name in the
+  /// targetEvents map (e.g. ICORE X: -0.5, X: -1), and they will be stored in the database
+  /// in similar fashion.
+  ///
   /// This is only used in the event that a scoring event by a single name has multiple possible
   /// values on a stage. For instance, ICORE does not restrict X-ring hits to a single bonus value
   /// even within one stage, so in the event that a stage has more than one distinct value for X

@@ -95,6 +95,10 @@ class FilterSet {
     return set;
   }
 
+  factory FilterSet.forDivision(Sport sport, Division division) {
+    return FilterSet(sport, divisions: [division], empty: true, mode: FilterMode.or);
+  }
+
   Map<String, dynamic> toJson() {
     return _$FilterSetToJson(this);
   }

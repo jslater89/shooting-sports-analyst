@@ -264,6 +264,9 @@ class RawScore {
 
   int? _cachedPoints;
   int? _cachedPenaltyCount;
+
+  /// The total points for this score, considering both hits on target
+  /// and non-target penalties.
   int get points {
     if(_cachedPoints == null && scoringOverrides.isEmpty) {
       _cachedPoints = _scoreMaps.points;

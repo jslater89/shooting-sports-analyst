@@ -180,6 +180,7 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
     }
 
     _lastMatchChange = null;
+    _ratingForDateCache.clear();
   }
 
   /// All of the empty rating events in this shooter's history where the
@@ -254,22 +255,32 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
     }
   }
 
+  @ignore
+  Map<DateTime, double> _ratingForDateCache = {};
+
   /// Returns the shooter's rating as of the given date.
   ///
   /// If the shooter's rating history starts after the given date,
   /// this returns the shooter's earliest rating.
   double ratingForDate(DateTime date) {
+    if(_ratingForDateCache.containsKey(date)) {
+      return _ratingForDateCache[date]!;
+    }
+
     // Find the first event that occurred before the given date.
     var event = AnalystDatabase().getRatingEventsForSync(wrappedRating, before: date, limit: 1).firstOrNull;
     if(event != null) {
+      _ratingForDateCache[date] = event.newRating;
       return event.newRating;
     }
     else {
       var firstEvent = AnalystDatabase().getRatingEventsForSync(wrappedRating, limit: 1, order: Order.ascending).firstOrNull;
       if(firstEvent != null) {
+        _ratingForDateCache[date] = firstEvent.oldRating;
         return firstEvent.oldRating;
       }
       else {
+        _ratingForDateCache[date] = rating;
         return rating;
       }
     }

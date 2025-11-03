@@ -758,8 +758,8 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   @override
   double estimateRatioFloor(double ratingDelta, {RaterSettings? settings}) {
     var eloSettings = (settings as EloSettings?) ?? this.settings;
-    var scalingFactor = -50 * log(eloSettings.probabilityBase) / (4.0 * eloSettings.scale);
-    var outputRatio = ((99 + scalingFactor * ratingDelta) / 100).clamp(0.01, 1.0);
+    var scalingFactor = -58 * log(eloSettings.probabilityBase) / (4.0 * eloSettings.scale);
+    var outputRatio = ((100 + scalingFactor * ratingDelta) / 100).clamp(0.01, 1.0);
     return outputRatio;
   }
 
