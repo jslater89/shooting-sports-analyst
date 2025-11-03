@@ -19,6 +19,7 @@ import 'package:shooting_sports_analyst/data/match_cache/registration_cache.dart
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/ui/rater/prediction/registration_parser.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
@@ -34,62 +35,67 @@ class PredictionPercentagesCommand extends DbOneoffCommand {
 
     var project = await db.getRatingProjectByName("L2s Main");
     var openGroup = await project!.groupForDivision(uspsaOpen).unwrap();
+    var limitedGroup = await project!.groupForDivision(uspsaLimited).unwrap();
+    var coGroup = await project!.groupForDivision(uspsaCarryOptics).unwrap();
 
-    // var calibrationFactor = await getCalibrationFactor(project, openGroup!, project.matchPointers);
+    var openCalibrationFactor = await getCalibrationFactor(project, openGroup!, uspsaOpen, project.matchPointers);
+    var limitedCalibrationFactor = await getCalibrationFactor(project, limitedGroup!, uspsaLimited, project.matchPointers);
+    var coCalibrationFactor = await getCalibrationFactor(project, coGroup!, uspsaCarryOptics, project.matchPointers);
 
-    var dbKnownShooters = await project.getRatings(openGroup!).unwrap();
-    var knownShooters = dbKnownShooters.map((dbShooter) => project.settings.algorithm.wrapDbRating(dbShooter)).toList();
-    var registrationRes = await getRegistrations(uspsaSport, _registrationUrl, [uspsaOpen], knownShooters);
-    if(registrationRes.isErr()) {
-      console.print("Error getting registrations: ${registrationRes.unwrapErr().message}");
-      return;
-    }
-    var registration = registrationRes.unwrap();
 
-    for(var unknown in registration.unmatchedShooters) {
-      var knownMapping = await db.getMatchRegistrationMappingByName(matchId: registration.matchId, shooterName: unknown.name, shooterDivisionName: unknown.division.name);
-      if(knownMapping != null) {
-        var foundMapping = knownShooters.firstWhereOrNull((s) => s.knownMemberNumbers.intersects(knownMapping.detectedMemberNumbers));
-        if(foundMapping != null) {
-          registration.registrations[unknown] = foundMapping;
-        }
-      }
-    }
-    var predictions = project.settings.algorithm.predict(registration.registrations.values.toList(), seed: 1234567890);
-    predictions.sort((a, b) => b.ordinal.compareTo(a.ordinal));
-    var byRating = predictions.sorted((a, b) => b.shooter.rating.compareTo(a.shooter.rating)).toList();
+    // var dbKnownShooters = await project.getRatings(openGroup!).unwrap();
+    // var knownShooters = dbKnownShooters.map((dbShooter) => project.settings.algorithm.wrapDbRating(dbShooter)).toList();
+    // var registrationRes = await getRegistrations(uspsaSport, _registrationUrl, [uspsaOpen], knownShooters);
+    // if(registrationRes.isErr()) {
+    //   console.print("Error getting registrations: ${registrationRes.unwrapErr().message}");
+    //   return;
+    // }
+    // var registration = registrationRes.unwrap();
 
-    var ratingDelta = byRating[0].shooter.rating - byRating[byRating.length - 1].shooter.rating;
-    var estimatedMinimumPercentage = 95.8 + -0.0457 * ratingDelta;
-    console.print("Estimated minimum percentage: ${estimatedMinimumPercentage}%");
-    var ratioFloor = estimatedMinimumPercentage / 100;
-    var ratioMultiplier = 1.0 - ratioFloor;
-    var minimumRatingScore = byRating[byRating.length - 1].shiftedCenter;
+    // for(var unknown in registration.unmatchedShooters) {
+    //   var knownMapping = await db.getMatchRegistrationMappingByName(matchId: registration.matchId, shooterName: unknown.name, shooterDivisionName: unknown.division.name);
+    //   if(knownMapping != null) {
+    //     var foundMapping = knownShooters.firstWhereOrNull((s) => s.knownMemberNumbers.intersects(knownMapping.detectedMemberNumbers));
+    //     if(foundMapping != null) {
+    //       registration.registrations[unknown] = foundMapping;
+    //     }
+    //   }
+    // }
+    // var predictions = project.settings.algorithm.predict(registration.registrations.values.toList(), seed: 1234567890);
+    // predictions.sort((a, b) => b.ordinal.compareTo(a.ordinal));
+    // var byRating = predictions.sorted((a, b) => b.shooter.rating.compareTo(a.shooter.rating)).toList();
 
-    Map<ShooterRating, AlgorithmPrediction> shootersToPredictions = {};
-    for(var prediction in predictions) {
-      shootersToPredictions[prediction.shooter] = prediction;
-    }
+    // var ratingDelta = byRating[0].shooter.rating - byRating[byRating.length - 1].shooter.rating;
+    // var estimatedMinimumPercentage = 95.8 + -0.0457 * ratingDelta;
+    // console.print("Estimated minimum percentage: ${estimatedMinimumPercentage}%");
+    // var ratioFloor = estimatedMinimumPercentage / 100;
+    // var ratioMultiplier = 1.0 - ratioFloor;
+    // var minimumRatingScore = byRating[byRating.length - 1].shiftedCenter;
 
-    double topScore = byRating[0].shiftedCenter - minimumRatingScore;
-    console.print("Top 25");
-    for(int i = 0; i < 25; i++) {
-      var p = predictions[i];
-      var topPercent = ((p.upperBox - minimumRatingScore) / topScore) * ratioMultiplier + ratioFloor;
-      var bottomPercent = ((p.lowerBox - minimumRatingScore) / topScore) * ratioMultiplier + ratioFloor;
-      console.print("${i + 1}. ${p.shooter.name} (${p.shooter.rating.round()}): ${bottomPercent.asPercentage(decimals: 2, includePercent: true)} - ${topPercent.asPercentage(decimals: 2, includePercent: true)}");
-    }
+    // Map<ShooterRating, AlgorithmPrediction> shootersToPredictions = {};
+    // for(var prediction in predictions) {
+    //   shootersToPredictions[prediction.shooter] = prediction;
+    // }
 
-    console.print("\nBottom 25");
-    for(int i = predictions.length - 25; i < predictions.length; i++) {
-      var p = predictions[i];
-      var topPercent = ((p.upperBox - minimumRatingScore) / topScore) * ratioMultiplier + ratioFloor;
-      var bottomPercent = ((p.lowerBox - minimumRatingScore) / topScore) * ratioMultiplier + ratioFloor;
-      console.print("${p.shooter.name} (${p.shooter.rating.round()}): ${bottomPercent.asPercentage(decimals: 2, includePercent: true)} - ${topPercent.asPercentage(decimals: 2, includePercent: true)}");
-    }
+    // double topScore = byRating[0].shiftedCenter - minimumRatingScore;
+    // console.print("Top 25");
+    // for(int i = 0; i < 25; i++) {
+    //   var p = predictions[i];
+    //   var topPercent = ((p.upperBox - minimumRatingScore) / topScore) * ratioMultiplier + ratioFloor;
+    //   var bottomPercent = ((p.lowerBox - minimumRatingScore) / topScore) * ratioMultiplier + ratioFloor;
+    //   console.print("${i + 1}. ${p.shooter.name} (${p.shooter.rating.round()}): ${bottomPercent.asPercentage(decimals: 2, includePercent: true)} - ${topPercent.asPercentage(decimals: 2, includePercent: true)}");
+    // }
+
+    // console.print("\nBottom 25");
+    // for(int i = predictions.length - 25; i < predictions.length; i++) {
+    //   var p = predictions[i];
+    //   var topPercent = ((p.upperBox - minimumRatingScore) / topScore) * ratioMultiplier + ratioFloor;
+    //   var bottomPercent = ((p.lowerBox - minimumRatingScore) / topScore) * ratioMultiplier + ratioFloor;
+    //   console.print("${p.shooter.name} (${p.shooter.rating.round()}): ${bottomPercent.asPercentage(decimals: 2, includePercent: true)} - ${topPercent.asPercentage(decimals: 2, includePercent: true)}");
+    // }
   }
 
-  Future<double> getCalibrationFactor(DbRatingProject project, RatingGroup group, List<MatchPointer> matches) async {
+  Future<double> getCalibrationFactor(DbRatingProject project, RatingGroup group, Division division, List<MatchPointer> matches) async {
     var progressBar = LabeledProgressBar(maxValue: matches.length, initialLabel: "Calculating calibration factor: ...");
     // A map of match pointers to
     //   a map of rating ratios (as a percentage of the top rating at the match) to finish percentages.
@@ -102,8 +108,8 @@ class PredictionPercentagesCommand extends DbOneoffCommand {
         continue;
       }
 
-      List<DbMatchEntry> openEntries = dbMatch.shooters.where((entry) => entry.divisionName == uspsaOpen.name).toList();
-      openEntries.sort((a, b) => b.precalculatedScore!.ratio.compareTo(a.precalculatedScore!.ratio));
+      List<DbMatchEntry> entries = dbMatch.shooters.where((entry) => entry.divisionName == division.name).toList();
+      entries.sort((a, b) => b.precalculatedScore!.ratio.compareTo(a.precalculatedScore!.ratio));
 
       DbShooterRating? topRating;
 
@@ -115,13 +121,13 @@ class PredictionPercentagesCommand extends DbOneoffCommand {
       DbMatchEntry? percentile50Entry;
       DbShooterRating? percentile25Rating;
       DbMatchEntry? percentile25Entry;
-      int percentile25Index = (openEntries.length * 0.75).round();
-      int percentile50Index = (openEntries.length * 0.5).round();
-      int percentile75Index = (openEntries.length * 0.25).round();
+      int percentile25Index = (entries.length * 0.75).round();
+      int percentile50Index = (entries.length * 0.5).round();
+      int percentile75Index = (entries.length * 0.25).round();
 
       // Find the first entry with a rating at 100/75/50/25 percentile
-      for(int i = 0; i < openEntries.length; i++) {
-        var entry = openEntries[i];
+      for(int i = 0; i < entries.length; i++) {
+        var entry = entries[i];
         var rating = await db.maybeKnownShooterSync(project: project, group: group, memberNumber: entry.memberNumber);
         if(rating != null) {
           if(topRating == null) {
@@ -132,8 +138,8 @@ class PredictionPercentagesCommand extends DbOneoffCommand {
         }
       }
 
-      for(int i = percentile75Index; i < openEntries.length; i++) {
-        var entry = openEntries[i];
+      for(int i = percentile75Index; i < entries.length; i++) {
+        var entry = entries[i];
         var rating = await db.maybeKnownShooterSync(project: project, group: group, memberNumber: entry.memberNumber);
         if(rating != null) {
           if(percentile75Rating == null) {
@@ -143,8 +149,8 @@ class PredictionPercentagesCommand extends DbOneoffCommand {
           }
         }
       }
-      for(int i = percentile50Index; i < openEntries.length; i++) {
-        var entry = openEntries[i];
+      for(int i = percentile50Index; i < entries.length; i++) {
+        var entry = entries[i];
         var rating = await db.maybeKnownShooterSync(project: project, group: group, memberNumber: entry.memberNumber);
         if(rating != null) {
           if(percentile50Rating == null) {
@@ -154,8 +160,8 @@ class PredictionPercentagesCommand extends DbOneoffCommand {
           }
         }
       }
-      for(int i = percentile25Index; i < openEntries.length; i++) {
-        var entry = openEntries[i];
+      for(int i = percentile25Index; i < entries.length; i++) {
+        var entry = entries[i];
         var rating = await db.maybeKnownShooterSync(project: project, group: group, memberNumber: entry.memberNumber);
         if(rating != null) {
           if(percentile25Rating == null) {
@@ -197,7 +203,7 @@ class PredictionPercentagesCommand extends DbOneoffCommand {
       }
     }
     var csv = csvLines.join("\n");
-    await File("calibration_factors.csv").writeAsString(csv);
+    await File("calibration_factors_${group.displayName}.csv").writeAsString(csv);
 
     // TODO: figure out the calibration factor
     return 1.0;
