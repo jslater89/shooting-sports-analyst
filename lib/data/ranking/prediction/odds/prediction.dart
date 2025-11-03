@@ -170,6 +170,8 @@ class PercentageSpreadPrediction extends UserPrediction {
   ShooterRating get favorite => shooter;
   final ShooterRating underdog;
   final double ratioSpread;
+  final bool favoriteCovers;
+  bool get underdogCovers => !favoriteCovers;
   double get percentageSpread => ratioSpread * 100;
 
   static const minPercentageSpreadInfo = "minPercentageSpread";
@@ -182,6 +184,7 @@ class PercentageSpreadPrediction extends UserPrediction {
     required super.shooter,
     required this.underdog,
     required this.ratioSpread,
+    this.favoriteCovers = true,
   });
 
   @override
@@ -210,14 +213,16 @@ class PercentageSpreadPrediction extends UserPrediction {
     ShooterRating? shooter,
     ShooterRating? underdog,
     double? ratioSpread,
+    bool? favoriteCovers,
   }) => PercentageSpreadPrediction(
     shooter: shooter ?? this.shooter,
     underdog: underdog ?? this.underdog,
     ratioSpread: ratioSpread ?? this.ratioSpread,
+    favoriteCovers: favoriteCovers ?? this.favoriteCovers,
   );
 
   @override
-  String get descriptiveString => "${shooter.name} -${ratioSpread.asPercentage(decimals: 2, includePercent: true)} vs. ${underdog.name}";
+  String get descriptiveString => "${favorite.name} ${favoriteCovers ? "≥" : "≤"}${ratioSpread.asPercentage(decimals: 2, includePercent: true)} vs. ${underdog.name}";
 
   @override
   String? tooltipString(Map<String, double> info) {

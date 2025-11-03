@@ -131,7 +131,7 @@ class _WagerDialogState extends State<WagerDialog> {
                       return ListTile(
                         leading: CircleAvatar(
                           radius: 13,
-                          backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.13),
+                          backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.13),
                           child: Text(
                             "${index + 1}",
                             style: TextStyle(
@@ -544,7 +544,8 @@ class _EditPercentageWagerDialogState extends State<EditPercentageWagerDialog> {
           ),
           CheckboxListTile(
             value: _newPrediction.above,
-            title: Text("Above?"),
+            controlAffinity: ListTileControlAffinity.leading,
+            title: Text("Above ${_newPrediction.ratio.asPercentage(decimals: 1, includePercent: true)}?"),
             onChanged: (value) {
               setState(() {
                 _newPrediction = _newPrediction.copyWith(above: value ?? true);
@@ -616,6 +617,7 @@ class _EditSpreadWagerDialogState extends State<EditSpreadWagerDialog> {
 
   @override
   Widget build(BuildContext context) {
+    var spreadPrefix = _newPrediction.favoriteCovers ? "≥" : "≤";
     return AlertDialog(
       title: Text("Edit percentage spread prediction"),
       content: Column(
@@ -642,7 +644,7 @@ class _EditSpreadWagerDialogState extends State<EditSpreadWagerDialog> {
           ),
           TextField(
             controller: _spreadController,
-            decoration: InputDecoration(labelText: "Spread", prefixText: "–",suffixText: "%"),
+            decoration: InputDecoration(labelText: "Spread", prefixText: spreadPrefix, suffixText: "%"),
             keyboardType: TextInputType.numberWithOptions(decimal: true, signed: false),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r"[0-9\.]*")),
@@ -676,6 +678,17 @@ class _EditSpreadWagerDialogState extends State<EditSpreadWagerDialog> {
             },
             controller: _underdogController,
             label: Text("Underdog"),
+          ),
+          CheckboxListTile(
+            value: _newPrediction.favoriteCovers,
+            title: Text("${_newPrediction.favorite.name} covers?"),
+            controlAffinity: ListTileControlAffinity.leading,
+            onChanged: (value) {
+              setState(() {
+                _newPrediction = _newPrediction.copyWith(favoriteCovers: value ?? true);
+                _newWager = _newWager.copyWith(prediction: _newPrediction);
+              });
+            },
           ),
           TextField(
             controller: _amountController,

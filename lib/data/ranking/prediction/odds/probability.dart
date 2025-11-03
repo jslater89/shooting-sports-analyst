@@ -379,8 +379,15 @@ class PredictionProbability {
       var underdogRatio = ((underdogExpectedScore - minimumRatingScore) / (bestExpectedScore - minimumRatingScore)) * ratioMultiplier + ratioFloor;
 
       predictedGaps.add(favoriteRatio - underdogRatio);
-      if(favoriteRatio > underdogRatio + spreadRatio) {
-        successes++;
+      if(percentageSpreadPrediction.favoriteCovers) {
+        if(favoriteRatio > underdogRatio + spreadRatio) {
+          successes++;
+        }
+      }
+      else {
+        if(favoriteRatio < underdogRatio + spreadRatio) {
+          successes++;
+        }
       }
     }
 
