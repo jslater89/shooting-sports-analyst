@@ -12,7 +12,6 @@ import 'package:shooting_sports_analyst/util.dart';
 
 SSALogger _log = SSALogger("HelpTopic");
 
-
 class HelpParser {
   static Map<String, List<HelpToken>> _tokenizedCache = {};
   static const _shouldDumpTokenTree = kDebugMode && false;

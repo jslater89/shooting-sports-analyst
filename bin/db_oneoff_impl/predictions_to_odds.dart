@@ -44,7 +44,7 @@ class PredictionsToOddsCommand extends DbOneoffCommand {
     var registration = registrationRes.unwrap();
 
     for(var unknown in registration.unmatchedShooters) {
-      var knownMapping = await db.getMatchRegistrationMappingByName(matchId: registration.matchId, shooterName: unknown.name, shooterDivisionName: unknown.division.name);
+      var knownMapping = await db.getMatchRegistrationMappingByName(matchId: registration.matchId, shooterName: unknown.name, shooterDivisionName: unknown.division?.name ?? "");
       if(knownMapping != null) {
         var foundMapping = knownShooters.firstWhereOrNull((s) => s.knownMemberNumbers.intersects(knownMapping.detectedMemberNumbers));
         if(foundMapping != null) {

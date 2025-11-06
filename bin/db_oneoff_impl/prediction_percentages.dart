@@ -1,3 +1,5 @@
+// ignore_for_file: unused_local_variable, unused_import
+
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -35,8 +37,8 @@ class PredictionPercentagesCommand extends DbOneoffCommand {
 
     var project = await db.getRatingProjectByName("L2s Main");
     var openGroup = await project!.groupForDivision(uspsaOpen).unwrap();
-    var limitedGroup = await project!.groupForDivision(uspsaLimited).unwrap();
-    var coGroup = await project!.groupForDivision(uspsaCarryOptics).unwrap();
+    var limitedGroup = await project.groupForDivision(uspsaLimited).unwrap();
+    var coGroup = await project.groupForDivision(uspsaCarryOptics).unwrap();
 
     var openCalibrationFactor = await getCalibrationFactor(project, openGroup!, uspsaOpen, project.matchPointers);
     var limitedCalibrationFactor = await getCalibrationFactor(project, limitedGroup!, uspsaLimited, project.matchPointers);
@@ -113,7 +115,6 @@ class PredictionPercentagesCommand extends DbOneoffCommand {
 
       DbShooterRating? topRating;
 
-      // ignore: unused_local_variable
       DbMatchEntry? topEntry;
       DbShooterRating? percentile75Rating;
       DbMatchEntry? percentile75Entry;
@@ -214,5 +215,3 @@ class PredictionPercentagesCommand extends DbOneoffCommand {
   @override
   String get title => "Predictions To Percentages";
 }
-
-const _registrationUrl = "https://practiscore.com/vortex-race-gun-nationals-presented-by-berry-bullets/squadding";

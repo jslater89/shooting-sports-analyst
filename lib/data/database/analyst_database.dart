@@ -25,7 +25,7 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
-import 'package:shooting_sports_analyst/data/database/schema/registration.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration_mapping.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/idpa.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
@@ -96,7 +96,7 @@ class AnalystDatabase {
 
         // Match prep-related collections
         FutureMatchSchema,
-        MatchRegistrationSchema,
+        DbMatchRegistrationSchema,
         MatchRegistrationMappingSchema,
 
         // Fantasy-related collections
@@ -410,6 +410,7 @@ class AnalystDatabase {
   // }
 
   /// Build a match query. Returns either a [Query<DbShootingMatch>] or a [Query<int>], depending on the [idProperty] parameter.
+  // ignore: unused_element_parameter
   Query<DbShootingMatch> _buildMatchQuery(List<MatchQueryElement> elements, {int? limit, int? offset, MatchSortField sort = const DateSort(), bool idProperty = false}) {
     var (whereElement, filterElements, sortProperties, whereSort) = _buildMatchQueryElements(elements, sort: sort);
 
@@ -450,6 +451,8 @@ class AnalystDatabase {
     return query;
   }
 
+
+  // ignore: unused_element_parameter
   (MatchQueryElement?, Iterable<MatchQueryElement>, List<SortProperty>, Sort) _buildMatchQueryElements(List<MatchQueryElement> elements, {int? limit, int? offset, MatchSortField sort = const DateSort()}) {
     NamePartsQuery? nameQuery;
     DateQuery? dateQuery;

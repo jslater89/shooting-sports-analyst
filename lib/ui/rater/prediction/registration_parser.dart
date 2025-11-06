@@ -10,6 +10,7 @@ import 'package:collection/collection.dart';
 import 'package:cookie_store/cookie_store.dart';
 import 'package:html/parser.dart';
 import 'package:html_unescape/html_unescape_small.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
 import 'package:shooting_sports_analyst/data/match_cache/registration_cache.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:http/http.dart' as http;
@@ -42,8 +43,8 @@ enum RegistrationError implements ResultErr {
 class RegistrationContainer {
   final String name;
   final String matchId;
-  final Map<Registration, ShooterRating> registrations;
-  final List<Registration> unmatchedShooters;
+  final Map<MatchRegistration, ShooterRating> registrations;
+  final List<MatchRegistration> unmatchedShooters;
 
   RegistrationContainer(
     this.name,
@@ -51,36 +52,6 @@ class RegistrationContainer {
     this.registrations,
     this.unmatchedShooters,
   );
-}
-
-class Registration {
-  final String name;
-  final Division division;
-  final Classification classification;
-  final String? squad;
-  int? get squadNumber {
-    var stringNumber = squad?.toLowerCase().replaceAll("squad", "").trim();
-    return int.tryParse(stringNumber ?? "");
-  }
-
-
-  const Registration({
-    required this.name,
-    required this.division,
-    required this.classification,
-    this.squad,
-  });
-
-  @override
-  bool operator ==(Object other) {
-    return (other is Registration)
-        && other.name == this.name
-        && other.division == this.division
-        && other.classification == this.classification;
-  }
-
-  @override
-  int get hashCode => name.hashCode + division.hashCode + classification.hashCode;
 }
 
 Future<RegistrationResult> getRegistrations(Sport sport, String url, List<Division> divisions, List<ShooterRating> knownShooters, {bool allowCached = true}) async {
@@ -155,8 +126,8 @@ String _processRegistrationHtml(String registrationHtml) {
 RegistrationContainer _parseRegistrations(
   Sport sport, String matchId, String registrationHtml, List<Division> divisions, List<ShooterRating> knownShooters
 ) {
-  var ratings = <Registration, ShooterRating>{};
-  var unmatched = <Registration>[];
+  var ratings = <MatchRegistration, ShooterRating>{};
+  var unmatched = <MatchRegistration>[];
 
   var document = HtmlParser(registrationHtml).parse();
 
@@ -248,10 +219,20 @@ RegistrationContainer _parseRegistrations(
         var fallbackClassification = sport.classifications.fallback()!;
 
         var foundShooter = _findShooter(shooterName, null, knownShooters);
+        var syntheticEntryId = MatchRegistration.syntheticEntryId(shooterName, d.name, classification?.name ?? fallbackClassification.name);
 
         if(foundShooter != null) {
           if(!ratings.containsValue(foundShooter)) {
-            ratings[Registration(name: shooterName, division: d, classification: classification ?? fallbackClassification, squad: squadNumber)] = foundShooter;
+            var registration = MatchRegistration(
+              name: shooterName,
+              matchId: matchId,
+              entryId: syntheticEntryId,
+              division: d,
+              classification: classification ?? fallbackClassification,
+              squad: squadNumber,
+              memberNumber: foundShooter.memberNumber,
+            );
+            ratings[registration] = foundShooter;
           }
           else {
             _log.w("Duplicate shooter found: $shooterName");
@@ -260,7 +241,14 @@ RegistrationContainer _parseRegistrations(
         else {
           _log.d("Missing shooter for: $shooterName");
           unmatched.add(
-            Registration(name: shooterName, division: d, classification: classification ?? fallbackClassification, squad: squadNumber)
+            MatchRegistration(
+              name: shooterName,
+              matchId: matchId,
+              entryId: syntheticEntryId,
+              division: d,
+              classification: classification ?? fallbackClassification,
+              squad: squadNumber,
+            )
           );
         }
       }

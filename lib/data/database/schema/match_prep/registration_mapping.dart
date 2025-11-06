@@ -7,7 +7,7 @@
 import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
-part 'registration.g.dart';
+part 'registration_mapping.g.dart';
 
 @collection
 class MatchRegistrationMapping {

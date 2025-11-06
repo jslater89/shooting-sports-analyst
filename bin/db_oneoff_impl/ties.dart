@@ -4,6 +4,8 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:io';
+
 import 'package:dart_console/dart_console.dart';
 import 'package:shooting_sports_analyst/console/labeled_progress_bar.dart';
 import 'package:shooting_sports_analyst/console/repl.dart';
@@ -33,6 +35,7 @@ class TiesCommand extends DbOneoffCommand {
     int stageTiesWithSameHits = 0;
     int stageTiesWithDifferentHits = 0;
     int totalStageScores = 0;
+    List<String> tieCsv = ["Date, Match Name, Stage Number, Stage Rounds, Competitor Name, Competitor Division, Hit Factor, Time, Raw Points"];
     for(var pointer in matchPointers) {
       var dbMatchRes = await pointer.getDbMatch(db);
       if(dbMatchRes.isErr()) {
@@ -83,11 +86,12 @@ class TiesCommand extends DbOneoffCommand {
               var firstEntry = entry.value.first;
               var remainingEntries = entry.value.skip(1).toList();
               bool sameTimes = true;
+              List<String> tieCsvLines = ["${dbMatch.date.toString()}, ${dbMatch.eventName}, ${stage.stageId.toString()}, ${stage.minRounds.toString()}, ${firstEntry.shooter.name}, ${firstEntry.shooter.division?.name ?? "(none)"}, ${(entry.key / 10000).toStringAsFixed(4)}, ${firstEntry.score.finalTime.toStringAsFixed(2)}, ${firstEntry.score.points}"];
               for(var remainingEntry in remainingEntries) {
                 if(remainingEntry.score.finalTime != firstEntry.score.finalTime) {
                   sameTimes = false;
-                  break;
                 }
+                tieCsvLines.add("\"${dbMatch.date.toString()}\", ${dbMatch.eventName}, ${stage.stageId.toString()}, ${stage.minRounds.toString()}, ${remainingEntry.shooter.name}, ${remainingEntry.shooter.division?.name ?? "(none)"}, ${(entry.key / 10000).toStringAsFixed(4)}, ${remainingEntry.score.finalTime.toStringAsFixed(2)}, ${remainingEntry.score.points}");
               }
               if(sameTimes) {
                 stageTiesWithSameHits += 1;
@@ -95,6 +99,7 @@ class TiesCommand extends DbOneoffCommand {
               else {
                 stageTiesWithDifferentHits += 1;
               }
+              tieCsv.addAll(tieCsvLines);
             }
           }
         }
@@ -105,6 +110,7 @@ class TiesCommand extends DbOneoffCommand {
     console.print("Total stage scores: $totalStageScores");
     console.print("Stage ties with same hits: $stageTiesWithSameHits");
     console.print("Stage ties with different hits: $stageTiesWithDifferentHits");
+    File("ties.csv").writeAsStringSync(tieCsv.join("\n"));
   }
 
   @override

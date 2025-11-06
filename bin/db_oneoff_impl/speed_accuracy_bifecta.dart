@@ -1,10 +1,15 @@
+import 'dart:io';
+
 import 'package:collection/collection.dart';
 import 'package:dart_console/src/console.dart';
+import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/console/labeled_progress_bar.dart';
 import 'package:shooting_sports_analyst/console/repl.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 import 'base.dart';
@@ -30,6 +35,8 @@ class SpeedAccuracyBifectaCommand extends DbOneoffCommand {
     int matchGroupCount = 0;
     List<String> bifectas = [];
     var matchProgressBar = LabeledProgressBar(maxValue: matchPointers.length, initialLabel: "Processing matches...", canHaveErrors: true);
+    Map<Id, ShooterRating> shooterRatings = {};
+    Map<Id, List<MatchPointer>> shooterBifectas = {};
     for(var matchPointer in matchPointers) {
       var match = await db.getMatchByAnySourceId(matchPointer.sourceIds);
       if(match == null) {
@@ -83,6 +90,12 @@ class SpeedAccuracyBifectaCommand extends DbOneoffCommand {
         }
 
         if(hasBifecta) {
+          var firstPlaceRating = db.maybeKnownShooterSync(project: project, group: group, memberNumber: firstPlace.key.memberNumber);
+          if(firstPlaceRating != null) {
+            var rating = project.wrapDbRatingSync(firstPlaceRating)!;
+            shooterRatings[rating.wrappedRating.id] = rating;
+            shooterBifectas.addToList(rating.wrappedRating.id, matchPointer);
+          }
           var pointsRatio = firstPlaceTotalPoints / availablePoints;
           var bifectaString = "${match.eventName} - ${firstPlace.key.name} (${group.displayName ?? group.name}) - ${pointsRatio.asPercentage(includePercent: true)} - ${firstPlaceTime.toStringAsFixed(2)}s";
           matchProgressBar.error(bifectaString);
@@ -98,6 +111,21 @@ class SpeedAccuracyBifectaCommand extends DbOneoffCommand {
     for(var bifecta in bifectas) {
       console.print(bifecta);
     }
+    List<String> shooterBifectaCsv = ["Shooter, Match, Date"];
+    for(var shooterId in shooterBifectas.keys) {
+      var shooter = shooterRatings[shooterId]!;
+      console.print("${shooter.name} ${shooter.group.name} has ${shooterBifectas[shooterId]?.length} bifectas");
+      for(var matchPointer in shooterBifectas[shooterId]!) {
+        shooterBifectaCsv.add("${shooter.name} ${shooter.group.name}, \"${matchPointer.name}\", ${matchPointer.date}");
+      }
+    }
+    File("shooter_bifectas.csv").writeAsStringSync(shooterBifectaCsv.join("\n"));
+    shooterBifectaCsv = ["Shooter, Count"];
+    for(var shooterId in shooterBifectas.keys) {
+      var shooter = shooterRatings[shooterId]!;
+      shooterBifectaCsv.add("${shooter.name} ${shooter.group.name}, ${shooterBifectas[shooterId]?.length}");
+    }
+    File("shooter_bifecta_counts.csv").writeAsStringSync(shooterBifectaCsv.join("\n"));
   }
 
   @override
