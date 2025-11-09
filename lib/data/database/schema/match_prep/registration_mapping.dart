@@ -9,9 +9,15 @@ import 'package:shooting_sports_analyst/util.dart';
 
 part 'registration_mapping.g.dart';
 
-/// A MatchRegistrationMapping is a mapping of competitor name to a member number. While FutureMatches may
-/// be deleted and recreated as registrations update (depending on the details of the registration source),
-/// registration mappings are durable and can be used to re-link shooters to registrations.
+/// A MatchRegistrationMapping is a soft link between a registration (which may or may not contain a member number)
+/// and a known competitor in one or more rating projects (who has a member number by definition).
+///
+/// Note that the existence of a MatchRegistrationMapping does not guarantee that the competitor with the
+/// given member number exists in any particular rating project, just that it was detected and saved during match prep
+/// for at least one rating project.
+///
+/// Its ID is a hash of the match ID, shooter name, and shooter division name, so 'put' is an upsert as long as those
+/// values are stable.
 @collection
 class MatchRegistrationMapping {
   Id get id => combineHashList([matchId.stableHash, shooterName.stableHash, shooterDivisionName.stableHash]);
