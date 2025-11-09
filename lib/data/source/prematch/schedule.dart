@@ -1,7 +1,23 @@
-/// A MatchCalendarSource is a source of match schedule information by month,
-/// week, or day (the latter two optionally).
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
 
-abstract class MatchCalendarSource {
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+
+/// A MatchCalendarSource is a source of match schedule information, namely
+/// name and date.
+abstract class MatchScheduleSource {
+  /// A name suitable for display.
+  String get name;
+
+  /// A URL-encodable code for internal identification.
+  ///
+  /// Match IDs should be prefixed with `code:`, so that they don't overlap in the database,
+  /// unless they can be guaranteed unique across all sources.
+  String get code;
+
   /// Retrieve a list of [MatchCalendarEntry]s for a given date. Only the
   /// year and month are considered.
   Future<List<MatchCalendarEntry>> getMatchCalendarEntries(DateTime date);
@@ -28,13 +44,15 @@ abstract class MatchCalendarSource {
   Future<List<MatchCalendarEntry>> getMatchCalendarEntriesForDay(DateTime date);
 }
 
-class MatchCalendarEntry {
+class MatchCalendarEntry with DbSportEntity {
+  String sportName;
   String matchName;
   DateTime startDate;
   DateTime endDate;
   String? practiscoreRegistrationUrl;
 
   MatchCalendarEntry({
+    required this.sportName,
     required this.matchName,
     required this.startDate,
     required this.endDate,

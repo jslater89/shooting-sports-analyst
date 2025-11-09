@@ -12,6 +12,9 @@ part 'registration.g.dart';
 
 /// A MatchRegistration is information about a match registration that may be sufficient
 /// to look up a shooter in a rating project.
+///
+/// Its ID is a hash of the match ID and entry ID, so 'put' is an upsert as long as those
+/// values are stable.
 @collection
 class DbMatchRegistration {
   Id get id {

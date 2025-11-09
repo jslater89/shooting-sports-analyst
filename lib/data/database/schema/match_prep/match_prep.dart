@@ -27,7 +27,7 @@ class MatchPrep {
   /// The rating project used as context for the analysis.
   final ratingProject = IsarLink<DbRatingProject>();
 
-  /// Predictions from the [ratingProject]'s algorithm for [futureMatch].
+  /// Predictions from [ratingProject]'s algorithm for [futureMatch].
   final algorithmPredictions = IsarLinks<DbAlgorithmPrediction>();
 
   MatchPrep({

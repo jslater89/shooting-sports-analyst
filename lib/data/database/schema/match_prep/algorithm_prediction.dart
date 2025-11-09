@@ -19,6 +19,7 @@ part 'algorithm_prediction.g.dart';
 @collection
 class DbAlgorithmPrediction with DbShooterRatingEntity {
   Id get id => combineHashList([projectId, matchPrepId, originalMemberNumber.stableHash]);
+
   final project = IsarLink<DbRatingProject>();
   @Backlink(to: 'algorithmPredictions')
   final matchPrep = IsarLink<MatchPrep>();
@@ -68,6 +69,10 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
       this.group.value = prediction.shooter.group;
       this.originalMemberNumber = prediction.shooter.originalMemberNumber;
     }
+
+  static List<DbAlgorithmPrediction> dehydrate(DbRatingProject project, MatchPrep matchPrep, List<AlgorithmPrediction> predictions) {
+    return predictions.map((p) => DbAlgorithmPrediction.fromHydrated(project, matchPrep, p)).toList();
+  }
 
   // TODO: Result<>
   AlgorithmPrediction? hydrate() {
