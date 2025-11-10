@@ -5,6 +5,7 @@
  */
 
 import 'dart:async';
+import 'dart:math';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:collection/collection.dart';
@@ -66,6 +67,7 @@ class BroadcastBoothController {
     model.latestMatch = matchRes.unwrap();
     model.tickerModel.lastUpdateTime = DateTime.now().toUtc();
     model.tickerModel.liveTickerEvents.clear();
+    model.tickerModel.fuzzAmount = (0.5 - Random().nextDouble()) * model.tickerModel.fuzzFactor * model.tickerModel.updateInterval;
 
     // The ticker determines whether the UI updates, so make sure it's updated
     // before we send the UI update.

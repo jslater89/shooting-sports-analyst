@@ -8,6 +8,7 @@
 
 import 'package:cookie_store/cookie_store.dart';
 import 'package:intl/intl.dart';
+import 'package:shooting_sports_analyst/closed_sources/ps_search/ps_search_source.dart';
 import 'package:shooting_sports_analyst/config/secure_config.dart';
 import 'package:shooting_sports_analyst/data/practiscore_parser.dart';
 import 'package:shooting_sports_analyst/data/source/match_source_error.dart';
@@ -28,6 +29,31 @@ var _log = SSALogger("ReportFileMatchSource");
 
 var practiscoreCookies = CookieStore();
 
+enum HitFactorMatchType implements InternalMatchType {
+  uspsa,
+  ipsc,
+  pcsl,
+  generic;
+
+  static HitFactorMatchType? fromString(String value) {
+    return switch(value) {
+      "uspsa" => HitFactorMatchType.uspsa,
+      "ipsc" => HitFactorMatchType.ipsc,
+      "pcsl" => HitFactorMatchType.pcsl,
+      _ => HitFactorMatchType.generic,
+    };
+  }
+
+  Sport? get sport {
+    return switch(this) {
+      HitFactorMatchType.uspsa => uspsaSport,
+      HitFactorMatchType.ipsc => ipscSport,
+      HitFactorMatchType.pcsl => pcslSport,
+      _ => null,
+    };
+  }
+}
+
 /// This will parse a PractiScore hit factor report.txt file.
 ///
 /// The sport definition must broadly match USPSA: each power factor
@@ -37,9 +63,44 @@ var practiscoreCookies = CookieStore();
 ///
 /// If the sport has event levels, they must match the PractiScore I/II/III
 /// format in one of the name fields.
-class PractiscoreHitFactorReportParser extends MatchSource {
+class PractiscoreHitFactorReportParser extends MatchSource<HitFactorMatchType, InternalMatchFetchOptions> {
   Sport sport;
   bool verboseParse;
+
+  late final PSWebMatchSearchSource searchSource = PSWebMatchSearchSource(downloadSourceCode: code);
+
+  bool get canSearch => true;
+  Future<Result<List<MatchSearchResult<HitFactorMatchType>>, MatchSourceError>> findMatches(String search) async {
+    var searchHits = await searchSource.searchByName(search, sportFilter: [sport]);
+    if(searchHits.isErr()) {
+      return Result.err(searchHits.unwrapErr());
+    }
+    List<MatchSearchResult<HitFactorMatchType>> results = [];
+    for(var hit in searchHits.unwrap()) {
+      var type = HitFactorMatchType.fromString(hit.internalMatchType ?? "unknown type");
+      if(type == null && hit.name.toLowerCase().contains("pcsl")) {
+        type = HitFactorMatchType.pcsl;
+      }
+
+      if(type == null || type.sport != sport) {
+        _log.d("Skipping unsupported match ${hit.name} ($type) for sport ${sport.name}");
+        continue;
+      }
+      results.add(MatchSearchResult(
+        matchName: hit.name,
+        matchId: hit.sourceIdsForDownload.first,
+        matchSubtype: "${hit.internalMatchType ?? "unknown type"}-${hit.internalMatchSubtype ?? "unknown subtype"}",
+        matchType: type,
+        matchDate: hit.date,
+      ));
+    }
+    return Result.ok(results);
+  }
+
+  @override
+  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromSearch(MatchSearchResult<HitFactorMatchType> result, {InternalMatchFetchOptions? options, SportType? typeHint, Sport? sport}) {
+    return getMatchFromId(result.matchId, sport: sport);
+  }
 
   PractiscoreHitFactorReportParser(this.sport, {this.verboseParse = false});
 
@@ -493,19 +554,6 @@ class PractiscoreHitFactorReportParser extends MatchSource {
   }
 
   @override
-  bool get canSearch => false;
-
-  @override
-  Future<Result<List<MatchSearchResult<InternalMatchType>>, MatchSourceError>> findMatches(String search) {
-    return Future.value(Result.err(MatchSourceError.unsupportedOperation));
-  }
-
-  @override
-  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromSearch(MatchSearchResult<InternalMatchType> result, {InternalMatchFetchOptions? options, SportType? typeHint, Sport? sport}) {
-    return Future.value(Result.err(MatchSourceError.unsupportedOperation));
-  }
-
-  @override
   bool get isImplemented => true;
 
   @override
@@ -540,7 +588,14 @@ class PractiscoreHitFactorReportParser extends MatchSource {
     if(fileContentsResult.isErr()) {
       return Result.err(fileContentsResult.unwrapErr());
     }
-    return Future.value(parseWebReport(fileContentsResult.unwrap(), sourceIds: [applyCode(id)]));
+    var finalId = id;
+    if(!finalId.contains("-")) {
+      // We need to prefix short IDs with the source code because
+      // they may not be unique across sources, but UUID-style iDs
+      // can remain unprefixed for compatibility with PSv2 source.
+      finalId = applyCode(finalId);
+    }
+    return Future.value(parseWebReport(fileContentsResult.unwrap(), sourceIds: [finalId]));
   }
 }
 

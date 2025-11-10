@@ -16,6 +16,7 @@ import 'package:shooting_sports_analyst/util.dart';
 
 part 'ticker_criteria.g.dart';
 
+// ignore: unused_element
 SSALogger _log = SSALogger("TickerCriteria");
 
 @JsonSerializable()
