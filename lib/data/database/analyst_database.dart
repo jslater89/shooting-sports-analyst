@@ -81,44 +81,54 @@ class AnalystDatabase {
     if(!db.existsSync()) {
       db.createSync(recursive: true);
     }
-    isar = await Isar.open(
-      [
-        // Rating-related collections
-        DbShootingMatchSchema,
-        StandaloneDbMatchEntrySchema,
-        DbRatingProjectSchema,
-        RatingGroupSchema,
-        RatingSetSchema,
-        DbRatingEventSchema,
-        DbShooterRatingSchema,
-        MatchHeatSchema,
-        ApplicationPreferencesSchema,
+    try {
+      isar = await Isar.open(
+        [
+          // Rating-related collections
+          DbShootingMatchSchema,
+          StandaloneDbMatchEntrySchema,
+          DbRatingProjectSchema,
+          RatingGroupSchema,
+          RatingSetSchema,
+          DbRatingEventSchema,
+          DbShooterRatingSchema,
+          MatchHeatSchema,
+          ApplicationPreferencesSchema,
 
-        // Match prep-related collections
-        FutureMatchSchema,
-        MatchRegistrationSchema,
-        MatchRegistrationMappingSchema,
+          // Match prep-related collections
+          FutureMatchSchema,
+          MatchRegistrationSchema,
+          MatchRegistrationMappingSchema,
 
-        // Fantasy-related collections
-        FantasyUserSchema,
-        LeagueSchema,
-        FantasyRosterSlotTypeSchema,
-        RosterSlotSchema,
-        LeagueStandingSchema,
-        LeagueSeasonSchema,
-        LeagueMonthSchema,
-        TeamSchema,
-        FantasyPlayerSchema,
-        MatchupSchema,
-        PlayerMatchPerformanceSchema,
-        PlayerMonthlyPerformanceSchema,
-        MonthlyRosterSchema,
-        RosterAssignmentSchema,
-      ],
-      maxSizeMiB: 1024 * 32,
-      directory: db.path,
-      name: test ? "test-database" : "database",
-    );
+          // Fantasy-related collections
+          FantasyUserSchema,
+          LeagueSchema,
+          FantasyRosterSlotTypeSchema,
+          RosterSlotSchema,
+          LeagueStandingSchema,
+          LeagueSeasonSchema,
+          LeagueMonthSchema,
+          TeamSchema,
+          FantasyPlayerSchema,
+          MatchupSchema,
+          PlayerMatchPerformanceSchema,
+          PlayerMonthlyPerformanceSchema,
+          MonthlyRosterSchema,
+          RosterAssignmentSchema,
+        ],
+        maxSizeMiB: 1024 * 32,
+        directory: db.path,
+        name: test ? "test-database" : "database",
+      );
+    }
+    on IsarError catch(e, stackTrace) {
+      _log.e("Failed to open database with IsarError", error: e, stackTrace: stackTrace);
+      rethrow;
+    }
+    catch(e, stackTrace) {
+      _log.e("Failed to open database", error: e, stackTrace: stackTrace);
+      rethrow;
+    }
 
     // TODO Fix for broken IDPA databases; remove after releasing alpha11
     var provider = idpaSport.builtinRatingGroupsProvider;
