@@ -175,8 +175,11 @@ class BoothTickerModel with ChangeNotifier {
 
   int tickerSpeed;
 
+  double get fuzzFactor => 0.30;
+  double fuzzAmount = 0.0;
+
   @JsonKey(includeFromJson: false, includeToJson: false)
-  DateTime get nextUpdateTime => lastUpdateTime.add(Duration(seconds: updateInterval));
+  DateTime get nextUpdateTime => lastUpdateTime.add(Duration(seconds: (updateInterval + fuzzAmount).toInt()));
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   Duration get timeSinceUpdate => DateTime.now().difference(lastUpdateTime);

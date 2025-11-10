@@ -30,10 +30,10 @@ class MatchSourceRegistry {
   }
 
   List<MatchSource> _sources = [
-    PSv2MatchSource(),
     PractiscoreHitFactorReportParser(uspsaSport),
     PractiscoreHitFactorReportParser(ipscSport),
     PractiscoreHitFactorReportParser(pcslSport),
+    PSv2MatchSource(),
   ];
   List<MatchSource> get sources => _sources.where((element) => element.isImplemented).toList(growable: false);
 

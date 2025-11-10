@@ -1,3 +1,4 @@
+import 'package:http/http.dart' as http;
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
@@ -22,6 +23,12 @@ sealed class MatchSourceError implements ResultErr {
 class NetworkError extends MatchSourceError {
   String get message => "Network error";
   const NetworkError();
+}
+
+class NetworkErrorWithResponse extends MatchSourceError {
+  String get message => "Network error: ${response.statusCode} ${response.body}";
+  final http.Response response;
+  NetworkErrorWithResponse(this.response);
 }
 
 class UnsupportedMatchType extends MatchSourceError {

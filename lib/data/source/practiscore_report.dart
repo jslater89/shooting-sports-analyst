@@ -9,9 +9,15 @@
 import 'package:cookie_store/cookie_store.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:shooting_sports_analyst/closed_sources/ps_search/ps_search_source.dart';
+import 'package:shooting_sports_analyst/closed_sources/ps_search/ui/match_search_controls.dart';
+import 'package:shooting_sports_analyst/closed_sources/ps_search/ui/match_search_results.dart';
+import 'package:shooting_sports_analyst/closed_sources/ps_search/ui/search_model.dart';
 import 'package:shooting_sports_analyst/config/secure_config.dart';
 import 'package:shooting_sports_analyst/data/practiscore_parser.dart';
 import 'package:shooting_sports_analyst/data/source/match_source_error.dart';
+import 'package:shooting_sports_analyst/data/source/prematch/search.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/ipsc.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/pcsl.dart';
@@ -29,6 +35,31 @@ var _log = SSALogger("ReportFileMatchSource");
 
 var practiscoreCookies = CookieStore();
 
+enum HitFactorMatchType implements InternalMatchType {
+  uspsa,
+  ipsc,
+  pcsl,
+  generic;
+
+  static HitFactorMatchType? fromString(String value) {
+    return switch(value) {
+      "uspsa" => HitFactorMatchType.uspsa,
+      "ipsc" => HitFactorMatchType.ipsc,
+      "pcsl" => HitFactorMatchType.pcsl,
+      _ => HitFactorMatchType.generic,
+    };
+  }
+
+  Sport? get sport {
+    return switch(this) {
+      HitFactorMatchType.uspsa => uspsaSport,
+      HitFactorMatchType.ipsc => ipscSport,
+      HitFactorMatchType.pcsl => pcslSport,
+      _ => null,
+    };
+  }
+}
+
 /// This will parse a PractiScore hit factor report.txt file.
 ///
 /// The sport definition must broadly match USPSA: each power factor
@@ -38,13 +69,44 @@ var practiscoreCookies = CookieStore();
 ///
 /// If the sport has event levels, they must match the PractiScore I/II/III
 /// format in one of the name fields.
-class PractiscoreHitFactorReportParser extends MatchSource {
-  static const uspsaCode = "report-uspsa";
-  static const ipscCode = "report-ipsc";
-  static const pcslCode = "report-pcsl";
-
+class PractiscoreHitFactorReportParser extends MatchSource<HitFactorMatchType, InternalMatchFetchOptions> {
   Sport sport;
   bool verboseParse;
+
+  late final PSWebMatchSearchSource searchSource = PSWebMatchSearchSource(downloadSourceCode: code);
+
+  bool get canSearch => true;
+  Future<Result<List<MatchSearchResult<HitFactorMatchType>>, MatchSourceError>> findMatches(String search) async {
+    var searchHits = await searchSource.searchByName(search, sportFilter: [sport]);
+    if(searchHits.isErr()) {
+      return Result.err(searchHits.unwrapErr());
+    }
+    List<MatchSearchResult<HitFactorMatchType>> results = [];
+    for(var hit in searchHits.unwrap()) {
+      var type = HitFactorMatchType.fromString(hit.internalMatchType ?? "unknown type");
+      if(type == null && hit.name.toLowerCase().contains("pcsl")) {
+        type = HitFactorMatchType.pcsl;
+      }
+
+      if(type == null || type.sport != sport) {
+        _log.d("Skipping unsupported match ${hit.name} ($type) for sport ${sport.name}");
+        continue;
+      }
+      results.add(MatchSearchResult(
+        matchName: hit.name,
+        matchId: hit.sourceIdsForDownload.first,
+        matchSubtype: "${hit.internalMatchType ?? "unknown type"}-${hit.internalMatchSubtype ?? "unknown subtype"}",
+        matchType: type,
+        matchDate: hit.date,
+      ));
+    }
+    return Result.ok(results);
+  }
+
+  @override
+  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromSearch(MatchSearchResult<HitFactorMatchType> result, {InternalMatchFetchOptions? options, SportType? typeHint, Sport? sport}) {
+    return getMatchFromId(result.matchId, sport: sport);
+  }
 
   PractiscoreHitFactorReportParser(this.sport, {this.verboseParse = false});
 
@@ -499,19 +561,6 @@ class PractiscoreHitFactorReportParser extends MatchSource {
   }
 
   @override
-  bool get canSearch => false;
-
-  @override
-  Future<Result<List<MatchSearchResult<InternalMatchType>>, MatchSourceError>> findMatches(String search) {
-    return Future.value(Result.err(MatchSourceError.unsupportedOperation));
-  }
-
-  @override
-  Future<Result<ShootingMatch, MatchSourceError>> getMatchFromSearch(MatchSearchResult<InternalMatchType> result, {InternalMatchFetchOptions? options, SportType? typeHint, Sport? sport}) {
-    return Future.value(Result.err(MatchSourceError.unsupportedOperation));
-  }
-
-  @override
   bool get isImplemented => true;
 
   @override
@@ -523,6 +572,10 @@ class PractiscoreHitFactorReportParser extends MatchSource {
     if(sport == ipscSport) SportType.ipsc,
     if(sport == pcslSport) SportType.pcsl,
   ];
+
+  static const uspsaCode = "report-uspsa";
+  static const ipscCode = "report-ipsc";
+  static const pcslCode = "report-pcsl";
 
   String get code {
     if(sport == uspsaSport) {
@@ -546,7 +599,14 @@ class PractiscoreHitFactorReportParser extends MatchSource {
     if(fileContentsResult.isErr()) {
       return Result.err(fileContentsResult.unwrapErr());
     }
-    return Future.value(parseWebReport(fileContentsResult.unwrap(), sourceIds: [applyCode(id)]));
+    var finalId = id;
+    if(!finalId.contains("-")) {
+      // We need to prefix short IDs with the source code because
+      // they may not be unique across sources, but UUID-style iDs
+      // can remain unprefixed for compatibility with PSv2 source.
+      finalId = applyCode(finalId);
+    }
+    return Future.value(parseWebReport(fileContentsResult.unwrap(), sourceIds: [finalId]));
   }
 
   @override
@@ -556,41 +616,45 @@ class PractiscoreHitFactorReportParser extends MatchSource {
     required void Function(MatchSourceError) onError,
     String? initialSearch,
   }) {
+    var source = this;
     return Builder(builder: (context) {
-      var onSubmitted = (String value) async {
-        var matchId = await processMatchUrl(value);
-        if(matchId != null) {
-          var matchResult = await getMatchFromId(matchId, sport: sport);
-          if(matchResult.isErr()) {
-            onError(matchResult.unwrapErr());
-          }
-          else {
-            onMatchSelected(matchResult.unwrap());
-          }
-        }
-        else {
-          onError(FormatError(StringError("Match ID not found in URL")));
-        }
-      };
-      var controller = TextEditingController(text: initialSearch);
-      return Column(
-        children: [
-          Text("Enter a link to a match and press Enter."),
-          TextField(
-            controller: controller,
-            decoration: InputDecoration(
-              hintText: "https://practiscore.com/results/new/...",
-                suffixIcon: IconButton(
-                  color: Theme.of(context).buttonTheme.colorScheme?.primary,
-                  icon: Icon(Icons.search),
-                  onPressed: () {
-                    onSubmitted(controller.text);
-                  },
-                )
-            ),
-            onSubmitted: onSubmitted,
-          ),
+      return MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SearchModel>(create: (context) => SearchModel(initialSearch: initialSearch)),
+          Provider<MatchSource>.value(value: source),
+          Provider<SearchSource>.value(value: source.searchSource),
         ],
+        child: Column(
+          children: [
+            MatchSearchControls(initialSearch: initialSearch, sports: [source.sport]),
+            Divider(),
+            Expanded(child: MatchSearchResults(
+              onMatchSelected: (searchHit) async {
+                var matchResult = await source.getMatchFromId(searchHit.sourceIdsForDownload.first, sport: source.sport);
+                if(matchResult.isErr()) {
+                  onError(matchResult.unwrapErr());
+                }
+                else {
+                  onMatchSelected(matchResult.unwrap());
+                }
+              },
+              onMatchDownloadRequested: (searchHit) async {
+                if(onMatchDownloaded != null) {
+                  var matchResult = await source.getMatchFromId(searchHit.sourceIdsForDownload.first, sport: source.sport);
+                  if(matchResult.isErr()) {
+                    onError(matchResult.unwrapErr());
+                  }
+                  else {
+                    onMatchDownloaded(matchResult.unwrap());
+                  }
+                }
+              },
+              onError: (error) {
+                onError(error);
+              },
+            )),
+          ],
+        )
       );
     });
   }

@@ -102,7 +102,6 @@ class _MatchDbListViewSearchState extends State<MatchDbListViewSearch> {
                     label: Text("After"),
                     floatingLabelBehavior: FloatingLabelBehavior.always,
                     suffixIcon: IconButton(
-                      color: Theme.of(context).primaryColor,
                       icon: Icon(Icons.calendar_month),
                       onPressed: () async {
                         var date = await showDatePicker(
@@ -146,7 +145,6 @@ class _MatchDbListViewSearchState extends State<MatchDbListViewSearch> {
                     label: Text("Before"),
                     floatingLabelBehavior: FloatingLabelBehavior.always,
                     suffixIcon: IconButton(
-                      color: Theme.of(context).primaryColor,
                       icon: Icon(Icons.calendar_month),
                       onPressed: () async {
                         var date = await showDatePicker(
