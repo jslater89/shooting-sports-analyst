@@ -412,7 +412,8 @@ enum EventLevel {
   regional,
   area,
   national,
-  international;
+  international,
+  world;
 }
 
 class MatchLevel extends NameLookupEntity {
