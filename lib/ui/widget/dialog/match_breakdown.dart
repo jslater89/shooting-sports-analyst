@@ -110,7 +110,7 @@ class MatchBreakdown extends StatelessWidget {
         TableRow(
           children: columns,
           decoration: BoxDecoration(
-            color: ThemeColors.backgroundColor(context, rowIndex: i++),
+            color: ThemeColors.backgroundSurfaceColor(context, rowIndex: i++),
           )
         )
       );
@@ -136,7 +136,7 @@ class MatchBreakdown extends StatelessWidget {
       TableRow(
         children: columns,
         decoration: BoxDecoration(
-          color: ThemeColors.backgroundColor(context, rowIndex: i),
+          color: ThemeColors.backgroundSurfaceColor(context, rowIndex: i),
         )
       ),
     );

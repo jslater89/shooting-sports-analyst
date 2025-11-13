@@ -180,9 +180,12 @@ void main() async {
     ));
     configureApp();
 
+    await ChangeNotifierConfigLoader().readyFuture;
+    var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
+
     await windowManager.ensureInitialized();
     var options = WindowOptions(
-      minimumSize: Size(1280, 720),
+      minimumSize: Size(1280 * uiScaleFactor, 720 * uiScaleFactor),
       title: "Shooting Sports Analyst",
     );
     windowManager.waitUntilReadyToShow(options, () async {
@@ -190,7 +193,6 @@ void main() async {
       await windowManager.focus();
     });
 
-    await ChangeNotifierConfigLoader().readyFuture;
     SecureConfig.storageEngine = FlutterSecureStorageProvider();
     initLogger(ChangeNotifierConfigLoader().config, FlutterConfigProvider());
 

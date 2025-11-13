@@ -21,6 +21,15 @@ class ThemeColors {
     }
   }
 
+  static Color backgroundSurfaceColor(BuildContext context, {int? rowIndex}) {
+    if(rowIndex == null) {
+      return Theme.of(context).colorScheme.surfaceContainerHigh;
+    }
+    else {
+      return rowIndex % 2 == 0 ? Theme.of(context).colorScheme.surfaceContainerHigh : Theme.of(context).colorScheme.surfaceContainerLow;
+    }
+  }
+
   static Color onBackgroundColor(BuildContext context) {
     bool isDark = Theme.of(context).brightness == Brightness.dark;
     if(isDark) {
