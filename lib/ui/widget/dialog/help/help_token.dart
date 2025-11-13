@@ -216,7 +216,11 @@ class Link extends LinkableHelpToken {
 
   @override
   List<InlineSpan> intoSpans(BuildContext context, TextStyle baseStyle, {void Function(String)? onLinkTapped}) {
-    var style = baseStyle.copyWith(color: Theme.of(context).colorScheme.primary, decoration: TextDecoration.underline);
+    var style = baseStyle.copyWith(
+      color: Theme.of(context).colorScheme.primary,
+      decoration: TextDecoration.underline,
+      decorationColor: Theme.of(context).colorScheme.primary,
+    );
     return tokens.map((e) => e.intoSpans(context, style, onLinkTapped: onLinkTapped)).flattened.toList();
   }
 

@@ -239,30 +239,98 @@ class _MyAppState extends State<MyApp> {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    final lightTheme = ThemeData(
-      fontFamily: 'Ubuntu Sans',
-      useMaterial3: false,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: Colors.indigo,
-        brightness: Brightness.light,
-        secondary: Colors.indigo[300]!,
+    var config = ChangeNotifierConfigLoader().uiConfig;
+
+    final lightColorScheme = ColorScheme.fromSeed(
+      seedColor: Colors.indigo,
+      brightness: Brightness.light,
+      secondary: Colors.indigo[300]!,
+      surfaceContainerHigh: Color.fromARGB(255, 233, 231, 239),
+    );
+    final darkColorScheme = ColorScheme.fromSeed(
+      seedColor: Colors.indigo,
+      surface: Colors.grey[850]!,
+      brightness: Brightness.dark,
+      secondary: Colors.grey[800]!,
+      onSecondary: Colors.grey[300]!,
+      tertiary: Colors.indigo[300]!,
+      surfaceContainerHigh: Color.fromARGB(255, 41, 41, 47),
+
+    );
+
+    final iconTheme = IconTheme.of(context).copyWith(applyTextScaling: true);
+    final iconButtonTheme = IconButtonThemeData(
+      style: IconButton.styleFrom(
+        fixedSize: Size(36 * config.uiScaleFactor, 36 * config.uiScaleFactor),
+        iconSize: 18 * config.uiScaleFactor,
+        padding: EdgeInsets.zero,
+        alignment: Alignment.center,
       ),
+    );
+    final bool material3 = true;
+    final lightTheme = ThemeData(
+      appBarTheme: AppBarTheme(
+        color: lightColorScheme.secondary,
+        iconTheme: iconTheme.copyWith(color: lightColorScheme.onSecondary),
+        actionsIconTheme: iconTheme.copyWith(color: lightColorScheme.onSecondary),
+        titleTextStyle: TextStyle(
+          color: lightColorScheme.onSecondary,
+          fontSize: 18 * config.uiScaleFactor,
+        ),
+        elevation: 3,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8 * config.uiScaleFactor),
+          ),
+          padding: EdgeInsets.symmetric(horizontal: 12 * config.uiScaleFactor, vertical: 6 * config.uiScaleFactor),
+        ),
+      ),
+      dialogTheme: Theme.of(context).dialogTheme.copyWith(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(6 * config.uiScaleFactor),
+        ),
+      ),
+      cardTheme: Theme.of(context).cardTheme.copyWith(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(4 * config.uiScaleFactor),
+        ),
+      ),
+      iconTheme: iconTheme,
+      iconButtonTheme: iconButtonTheme,
+      fontFamily: 'Ubuntu Sans',
+      useMaterial3: material3,
+      colorScheme: lightColorScheme,
       visualDensity: VisualDensity.adaptivePlatformDensity,
     );
     var darkTheme = ThemeData(
+      appBarTheme: AppBarTheme(
+        color: darkColorScheme.secondary,
+        iconTheme: iconTheme.copyWith(color: darkColorScheme.onSecondary),
+        actionsIconTheme: iconTheme.copyWith(color: darkColorScheme.onSecondary),
+        titleTextStyle: TextStyle(
+          color: darkColorScheme.onSecondary,
+          fontSize: 18 * config.uiScaleFactor,
+        ),
+        elevation: 3,
+      ),
+      elevatedButtonTheme: lightTheme.elevatedButtonTheme,
+      dialogTheme: lightTheme.dialogTheme,
+      cardTheme: lightTheme.cardTheme,
+      iconTheme: lightTheme.iconTheme.copyWith(
+        color: Colors.grey[300],
+      ),
+      iconButtonTheme: iconButtonTheme,
       fontFamily: 'Ubuntu Sans',
       brightness: Brightness.dark,
-      useMaterial3: false,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: Colors.indigo,
-        brightness: Brightness.dark,
-        secondary: Colors.grey[800]!,
-        tertiary: Colors.indigo[300]!,
-      ),
+      useMaterial3: material3,
+      colorScheme: darkColorScheme,
       visualDensity: VisualDensity.adaptivePlatformDensity,
       textTheme: lightTheme.textTheme.apply(
         bodyColor: Colors.grey[300],
         displayColor: Colors.grey[300],
+        decorationColor: Colors.grey[300],
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: Colors.grey[800]!,
@@ -273,7 +341,6 @@ class _MyAppState extends State<MyApp> {
       ),
     );
 
-    var config = ChangeNotifierConfigLoader().uiConfig;
     if(_prefs == null) {
       return MediaQuery(
         data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(config.uiScaleFactor)),

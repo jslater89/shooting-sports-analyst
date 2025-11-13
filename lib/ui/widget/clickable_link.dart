@@ -5,6 +5,7 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ClickableLink extends StatelessWidget {
@@ -13,7 +14,16 @@ class ClickableLink extends StatelessWidget {
     this.url,
     this.onTap,
     required this.child,
+    this.color,
+    this.underline = true,
   });
+
+
+  /// If null, the link color will be determined by the theme.
+  final Color? color;
+
+  /// Whether to decorate text with a underline.
+  final bool underline;
 
   final Uri? url;
   final VoidCallback? onTap;
@@ -24,6 +34,9 @@ class ClickableLink extends StatelessWidget {
     if(url == null && onTap == null) {
       throw ArgumentError("url and onTap cannot both be null");
     }
+
+    Color linkColor = color ?? ThemeColors.linkColor(context);
+
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
@@ -35,7 +48,26 @@ class ClickableLink extends StatelessWidget {
             onTap!();
           }
         },
-        child: child,
+        child: Theme(
+          data: Theme.of(context).copyWith(
+          textTheme: Theme.of(context).textTheme.copyWith(
+            bodyLarge: Theme.of(context).textTheme.bodyLarge!.copyWith(
+              color: linkColor,
+              decoration: underline ? TextDecoration.underline : null,
+              decorationColor: linkColor,
+            ),
+            bodyMedium: Theme.of(context).textTheme.bodyMedium!.copyWith(
+              color: linkColor,
+              decoration: underline ? TextDecoration.underline : null,
+              decorationColor: linkColor,
+            ),
+            bodySmall: Theme.of(context).textTheme.bodySmall!.copyWith(
+              color: linkColor,
+              decoration: underline ? TextDecoration.underline : null,
+              decorationColor: linkColor,
+            ),
+          ),
+        ), child: child),
       ),
     );
   }

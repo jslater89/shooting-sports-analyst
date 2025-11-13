@@ -5,6 +5,7 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_report.dart';
 import 'package:shooting_sports_analyst/data/help/entries/rating_reports_help.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
@@ -56,6 +57,7 @@ class _ReportDialogState extends State<ReportDialog> {
 
   @override
   Widget build(BuildContext context) {
+    var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     if(_allReports == null || _recentReports == null) {
       return AlertDialog(
         title: Row(
@@ -75,7 +77,7 @@ class _ReportDialogState extends State<ReportDialog> {
           ],
         ),
         content: SizedBox(
-          width: 1000,
+          width: 1000 * uiScaleFactor,
           child: Center(child: CircularProgressIndicator()),
         ),
       );
@@ -98,7 +100,7 @@ class _ReportDialogState extends State<ReportDialog> {
           ],
         ),
       content: SizedBox(
-        width: 1000,
+        width: 1000 * uiScaleFactor,
         child: RatingReportView(allReports: _allReports!, recentReports: _recentReports!, onFiltersChanged: widget.onFiltersChanged, initialFilters: widget.initialFilters),
       ),
     );

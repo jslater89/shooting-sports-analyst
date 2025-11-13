@@ -15,6 +15,7 @@ import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/loading_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_source_chooser_dialog.dart';
 
@@ -226,6 +227,7 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      backgroundColor: ThemeColors.backgroundColor(context),
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -238,12 +240,14 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
           )
         ],
       ),
-      content: ConstrainedBox(
-        constraints: BoxConstraints(
-          minWidth: 700,
-          maxHeight: MediaQuery.of(context).size.height,
+      content: Container(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minWidth: 700,
+            maxHeight: MediaQuery.of(context).size.height,
+          ),
+          child: _matchSelectBody(),
         ),
-        child: _matchSelectBody(),
       ),
       actions: [
         if(widget.multiple) Row(

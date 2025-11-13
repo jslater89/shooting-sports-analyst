@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/database/match/match_db_list_view.dart';
 
 class MatchDbSelectDialog extends StatefulWidget {
@@ -37,6 +38,7 @@ class _MatchDbSelectDialogState extends State<MatchDbSelectDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      backgroundColor: ThemeColors.backgroundColor(context),
       title: Text(
         "Select a match",
       ),

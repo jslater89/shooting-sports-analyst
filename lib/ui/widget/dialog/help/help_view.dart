@@ -18,7 +18,7 @@ import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_renderer.dart
 SSALogger _log = SSALogger("HelpView");
 
 class HelpView extends StatefulWidget {
-  const HelpView({super.key, this.startingTopic = aboutHelpId, this.twoColumn = true, this.width = 1000, this.scaleWidth = true});
+  const HelpView({super.key, this.startingTopic = aboutHelpId, this.twoColumn = true, this.width = 1100, this.scaleWidth = true});
 
   /// If true, the width will be scaled by the UI scale factor.
   final bool scaleWidth;
@@ -133,7 +133,7 @@ class _HelpViewState extends State<HelpView> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if(widget.twoColumn) SizedBox(
-            width: 300,
+            width: 350,
             child: Column(
               children: [
                 Row(
@@ -226,7 +226,7 @@ class HelpIndex extends StatefulWidget {
 }
 
 class _HelpIndexState extends State<HelpIndex> {
-  static const _indexTileExtent = 65.0;
+  static const _indexTileExtent = 75.0;
 
   final ScrollController _scrollController = ScrollController();
   late HelpDirectory _currentDirectory;
@@ -339,7 +339,7 @@ class _HelpIndexState extends State<HelpIndex> {
                 height: _indexTileExtent,
                 child: ListTile(
                   leading: topic is HelpDirectory ? Icon(Icons.folder_outlined) : null,
-                  title: Text(topic.name),
+                  title: Text(topic.name, softWrap: false, overflow: TextOverflow.ellipsis),
                   subtitle: Text(topic.contentPreview(), softWrap: false, overflow: TextOverflow.ellipsis),
                   onTap: () => widget.onTopicSelected(topic),
                   selected: topic.id == widget.selectedTopic.id,

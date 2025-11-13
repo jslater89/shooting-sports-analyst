@@ -326,6 +326,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
           child: Row(
             mainAxisSize: MainAxisSize.max,
             mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Tooltip(
                 message: "View (calculating, if needed) ratings for the currently-selected matches.",

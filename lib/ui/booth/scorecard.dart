@@ -8,6 +8,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
@@ -72,9 +73,12 @@ class _BoothScorecardState extends State<BoothScorecard> {
     _loadRatingLinks();
   }
 
+  double uiScaleFactor = 1.0;
+
   @override
   void initState() {
     super.initState();
+    uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     var model = context.read<BroadcastBoothModel>();
     cachedModel = model;
     // _log.v("${widget.scorecard.name} (${widget.hashCode} ${hashCode} ${widget.scorecard.hashCode}) initState");
@@ -121,6 +125,14 @@ class _BoothScorecardState extends State<BoothScorecard> {
       return false;
     };
     HardwareKeyboard.instance.addHandler(_controlListener);
+  }
+
+  @override
+  void dispose() {
+    disposed = true;
+    cachedModel.removeListener(listener!);
+    HardwareKeyboard.instance.removeHandler(_controlListener);
+    super.dispose();
   }
 
   Future<void> _loadRatingLinks() async {
@@ -183,13 +195,6 @@ class _BoothScorecardState extends State<BoothScorecard> {
     sc.lastPredictionMode = sc.predictionMode;
     // sc.lastScorecardCount = model.scorecardCount;
     sc.lastScoresCalculated = model.tickerModel.lastUpdateTime;
-  }
-
-  void dispose() {
-    disposed = true;
-    cachedModel.removeListener(listener!);
-    HardwareKeyboard.instance.removeHandler(_controlListener);
-    super.dispose();
   }
 
   Future<void> _calculateScores({bool manuallyTriggered = false}) async {
@@ -518,14 +523,14 @@ class _BoothScorecardState extends State<BoothScorecard> {
       return Text(
         "Competitor",
         textAlign: TextAlign.right,
-        textScaleFactor: sc.tableTextSize.fontSizeFactor,
+        textScaler: TextScaler.linear(sc.tableTextSize.fontSizeFactor),
       );
     }
     else if(vicinity.column == 1) {
       return Text(
         "Total",
         textAlign: TextAlign.center,
-        textScaleFactor: sc.tableTextSize.fontSizeFactor,
+        textScaler: TextScaler.linear(sc.tableTextSize.fontSizeFactor),
       );
     }
     else {
@@ -537,16 +542,23 @@ class _BoothScorecardState extends State<BoothScorecard> {
         child: Text(
           "Stage ${stage.stageId}",
           textAlign: TextAlign.center,
-          textScaleFactor: sc.tableTextSize.fontSizeFactor,
+          textScaler: TextScaler.linear(sc.tableTextSize.fontSizeFactor),
         ),
       );
     }
   }
 
-  static const _shooterColumnWidth = 200.0;
-  static const _stageColumnWidth = 75.0;
-  static const _headerHeight = 20.0;
-  static const _scoreRowHeight = 55.0;
+  static const _shooterColumnWidthBase = 200.0;
+  double get _shooterColumnWidth => _shooterColumnWidthBase * uiScaleFactor;
+  static const _stageColumnWidthBase = 75.0;
+  double get _stageColumnWidth => _stageColumnWidthBase * uiScaleFactor;
+  static const _headerHeightBase = 20.0;
+  double get _headerHeight => _headerHeightBase * uiScaleFactor;
+  static const _scoreRowHeightBase = 70.0;
+  double get _scoreRowHeight => _scoreRowHeightBase * uiScaleFactor;
+
+
+  double get _finalTextScaleFactor => sc.tableTextSize.fontSizeFactor * uiScaleFactor;
 
 
   Widget _buildScoreCell(BuildContext context, TableVicinity vicinity, ShootingMatch match) {
@@ -594,7 +606,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
               entry.getName(),
               textAlign: TextAlign.right,
               softWrap: true,
-              textScaler: TextScaler.linear(sc.tableTextSize.fontSizeFactor),
+              textScaler: TextScaler.linear(_finalTextScaleFactor),
             ),
           ),
         ),
@@ -647,7 +659,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
           percentageText,
           textAlign: TextAlign.center,
           style: TextStyle(color: matchScoreColor),
-          textScaler: TextScaler.linear(sc.tableTextSize.fontSizeFactor),
+          textScaler: TextScaler.linear(_finalTextScaleFactor),
         ),
         _wrapWithPointsChange(
           change,
@@ -655,7 +667,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
             "${score.points.toStringAsFixed(1)}pt",
             textAlign: TextAlign.center,
             style: TextStyle(color: matchScoreColor),
-            textScaler: TextScaler.linear(sc.tableTextSize.fontSizeFactor),
+            textScaler: TextScaler.linear(_finalTextScaleFactor),
           )
         ),
       ],
@@ -673,7 +685,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
         child: Text(
           "-",
           textAlign: TextAlign.center,
-          textScaler: TextScaler.linear(sc.tableTextSize.fontSizeFactor),
+          textScaler: TextScaler.linear(_finalTextScaleFactor),
         ),
       );
     }
@@ -703,7 +715,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
             percentageText,
             textAlign: TextAlign.center,
             style: TextStyle(color: stageScoreColor),
-            textScaler: TextScaler.linear(sc.tableTextSize.fontSizeFactor),
+            textScaler: TextScaler.linear(_finalTextScaleFactor),
           ),
         ),
         Tooltip(
@@ -713,7 +725,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
             stageScore.score.displayString,
             textAlign: TextAlign.center,
             style: TextStyle(color: stageScoreColor),
-            textScaler: TextScaler.linear(sc.tableTextSize.fontSizeFactor),
+            textScaler: TextScaler.linear(_finalTextScaleFactor),
           ),
         ),
       ],
