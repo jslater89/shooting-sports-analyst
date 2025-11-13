@@ -89,18 +89,22 @@ class SerializedUIConfig {
   @JsonKey(defaultValue: ThemeMode.system)
   ThemeMode themeMode;
 
-  SerializedUIConfig({required this.themeMode});
+  @JsonKey(defaultValue: 1.0)
+  double uiScaleFactor;
+
+  SerializedUIConfig({required this.themeMode, required this.uiScaleFactor});
 
   Map<String, dynamic> toJson() => _$SerializedUIConfigToJson(this);
   factory SerializedUIConfig.fromJson(Map<String, dynamic> json) => _$SerializedUIConfigFromJson(json);
 
-  SerializedUIConfig copy() => SerializedUIConfig(themeMode: themeMode);
+  SerializedUIConfig copy() => SerializedUIConfig(themeMode: themeMode, uiScaleFactor: uiScaleFactor);
 
   @override
   String toString() {
     var builder = StringBuffer();
     builder.writeln("UIConfig:");
     builder.writeln("\tthemeMode = ${themeMode.name}");
+    builder.writeln("\tuiScaleFactor = $uiScaleFactor");
     return builder.toString();
   }
 }

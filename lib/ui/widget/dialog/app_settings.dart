@@ -39,6 +39,7 @@ class _AppSettingsDialogState extends State<AppSettingsDialog> {
   TextEditingController _logLevelController = TextEditingController();
   TextEditingController _projectController = TextEditingController();
   TextEditingController _themeModeController = TextEditingController();
+  TextEditingController _uiScaleFactorController = TextEditingController();
   @override
   void initState() {
     super.initState();
@@ -49,6 +50,7 @@ class _AppSettingsDialogState extends State<AppSettingsDialog> {
     _logLevelController.text = config.logLevel.name.toTitleCase();
     _projectController.text = project?.name ?? config.ratingsContextProjectId?.toString() ?? "(none)";
     _themeModeController.text = uiConfig.themeMode.name.toTitleCase();
+    _uiScaleFactorController.text = "${(uiConfig.uiScaleFactor * 100).toStringAsFixed(0)}%";
   }
 
   Future<void> _loadProject() async {
@@ -63,6 +65,7 @@ class _AppSettingsDialogState extends State<AppSettingsDialog> {
 
   @override
   Widget build(BuildContext context) {
+    var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     return AlertDialog(
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -72,7 +75,7 @@ class _AppSettingsDialogState extends State<AppSettingsDialog> {
         ],
       ),
       content: SizedBox(
-        width: 400,
+        width: 400 * uiScaleFactor,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -90,6 +93,18 @@ class _AppSettingsDialogState extends State<AppSettingsDialog> {
               },
               controller: _themeModeController,
               label: const Text("Theme mode"),
+              width: 300,
+            ),
+            const SizedBox(height: 16),
+            DropdownMenu<double>(
+              initialSelection: uiConfig.uiScaleFactor,
+              dropdownMenuEntries: [0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.5, 2.0].map((e) => DropdownMenuEntry<double>(value: e, label: "${(e * 100).toStringAsFixed(0)}%")).toList(),
+              onSelected: (value) {
+                if(value != null) {
+                  uiConfig.uiScaleFactor = value;
+                }
+              },
+              label: const Text("UI scale factor"),
               width: 300,
             ),
             const SizedBox(height: 16),

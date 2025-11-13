@@ -5,6 +5,7 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/help/entries/about_help.dart';
 import 'package:shooting_sports_analyst/data/help/help_directory.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
@@ -17,8 +18,10 @@ import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_renderer.dart
 SSALogger _log = SSALogger("HelpView");
 
 class HelpView extends StatefulWidget {
-  const HelpView({super.key, this.startingTopic = aboutHelpId, this.twoColumn = true, this.width = 1000});
+  const HelpView({super.key, this.startingTopic = aboutHelpId, this.twoColumn = true, this.width = 1000, this.scaleWidth = true});
 
+  /// If true, the width will be scaled by the UI scale factor.
+  final bool scaleWidth;
   final double width;
   final bool twoColumn;
   final String startingTopic;
@@ -120,8 +123,12 @@ class _HelpViewState extends State<HelpView> {
 
   @override
   Widget build(BuildContext context) {
+    var width = widget.width;
+    if(widget.scaleWidth) {
+      width = width * ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
+    }
     return SizedBox(
-      width: widget.width,
+      width: width,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

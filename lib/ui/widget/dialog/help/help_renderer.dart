@@ -7,6 +7,7 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/help/help_directory.dart';
 import 'package:shooting_sports_analyst/data/help/help_registry.dart';
 import 'package:shooting_sports_analyst/logger.dart';
@@ -93,6 +94,7 @@ class _HelpRendererState extends State<HelpRenderer> {
     return SingleChildScrollView(
       controller: _scrollController,
       child: RichText(
+        textScaler: TextScaler.linear(ChangeNotifierConfigLoader().uiConfig.uiScaleFactor),
         text: TextSpan(
           children: spans,
         ),

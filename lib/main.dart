@@ -151,7 +151,7 @@ void main() async {
     _log.i("Shooting Sports Analyst $localVersion ($packageVersion+$packageBuildNumber)");
     globals.router.define('/', transitionType: fluro.TransitionType.fadeIn, handler: fluro.Handler(
       handlerFunc: (context, params) {
-        _log.d("/ route params: $params");
+        // _log.d("/ route params: $params");
         return HomePage();
       }
     ));
@@ -275,28 +275,34 @@ class _MyAppState extends State<MyApp> {
 
     var config = ChangeNotifierConfigLoader().uiConfig;
     if(_prefs == null) {
-      return MaterialApp(
-        title: 'Shooting Sports Analyst',
-        theme: lightTheme,
-        darkTheme: darkTheme,
-        themeMode: config.themeMode,
-        home: Container(),
-      );
-    }
-    else {
-      return MultiProvider(
-        providers: [
-          Provider.value(value: _prefs!),
-          ChangeNotifierProvider(create: (context) => RatingContext()),
-        ],
+      return MediaQuery(
+        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(config.uiScaleFactor)),
         child: MaterialApp(
           title: 'Shooting Sports Analyst',
           theme: lightTheme,
           darkTheme: darkTheme,
           themeMode: config.themeMode,
-          initialRoute: '/',
-          onGenerateRoute: globals.router.generator,
+          home: Container(),
         ),
+      );
+    }
+    else {
+      return MediaQuery(
+        data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(config.uiScaleFactor)),
+        child: MultiProvider(
+          providers: [
+            Provider.value(value: _prefs!),
+            ChangeNotifierProvider(create: (context) => RatingContext()),
+          ],
+          child: MaterialApp(
+            title: 'Shooting Sports Analyst',
+            theme: lightTheme,
+            darkTheme: darkTheme,
+            themeMode: config.themeMode,
+            initialRoute: '/',
+            onGenerateRoute: globals.router.generator,
+          ),
+        )
       );
     }
   }
