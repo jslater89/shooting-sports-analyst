@@ -32,7 +32,7 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
   Id id = Isar.autoIncrement;
   String eventName;
 
-  @Index(name: AnalystDatabase.eventNameIndex, type: IndexType.value, caseSensitive: false)
+  @Index(name: AnalystDatabase.eventNamePartsIndex, type: IndexType.value, caseSensitive: false)
   List<String> get eventNameParts => Isar.splitWords(eventName);
 
   String rawDate;

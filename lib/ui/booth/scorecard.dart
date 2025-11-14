@@ -264,7 +264,31 @@ class _BoothScorecardState extends State<BoothScorecard> {
       else if(sc.scores[b] == null) {
         return -1;
       }
-      return sc.scores[b]!.points.compareTo(sc.scores[a]!.points);
+
+      var matchScoring = sc.parent.latestMatch.sport.matchScoring;
+      if(matchScoring is RelativeStageFinishScoring) {
+        return sc.scores[b]!.points.compareTo(sc.scores[a]!.points);
+      }
+      else { // Cumulative scoring
+        matchScoring as CumulativeScoring;
+        if(matchScoring.lowScoreWins) {
+          var aScore = sc.scores[a]!;
+          var bScore = sc.scores[b]!;
+          if(aScore.isDnf && !bScore.isDnf) {
+            return 1;
+          }
+          else if(!aScore.isDnf && bScore.isDnf) {
+            return -1;
+          }
+          else if(aScore.isDnf && bScore.isDnf) {
+            return aScore.shooter.lastName.compareTo(bScore.shooter.lastName);
+          }
+          return sc.scores[a]!.points.compareTo(sc.scores[b]!.points);
+        }
+        else {
+          return sc.scores[b]!.points.compareTo(sc.scores[a]!.points);
+        }
+      }
     });
 
     if(sc.displayFilters.topN != null) {
@@ -652,7 +676,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
             place: score.place,
             textAlign: TextAlign.center,
             color: matchScoreColor,
-            textScaleFactor: sc.tableTextSize.fontSizeFactor,
+            textScaleFactor: _finalTextScaleFactor,
           )
         ),
         Text(
@@ -706,7 +730,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
           place: stageScore.place,
           textAlign: TextAlign.center,
           color: stageScoreColor,
-          textScaleFactor: sc.tableTextSize.fontSizeFactor,
+          textScaleFactor: _finalTextScaleFactor,
         ),
         Tooltip(
           waitDuration: Duration(milliseconds: 500),
