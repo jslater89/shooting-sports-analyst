@@ -309,6 +309,10 @@ class AnalystDatabase {
     var terms = words.where((t) => t.length >= 3).toList();
     if(terms.isEmpty) return [];
 
+    // TODO: there may be some improvement here with stemming
+    // I think it would be best to keep it fairly minimal, but things like
+    // "nationals" to "national" or "championships" to "championship" would solve some problems.
+
     // We have to load a lot of matches and we only actually need the names to search on,
     // so get the names only and load exactly the number of requested hits at the end.
     Query<String> dbQuery = _buildMatchNameQuery([
