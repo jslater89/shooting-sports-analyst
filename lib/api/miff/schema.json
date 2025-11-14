@@ -1,0 +1,313 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/shooting-sports-analyst/miff/schema/v1.0",
+  "title": "Match Interchange File Format",
+  "description": "Schema for MIFF version 1.0",
+  "type": "object",
+  "required": ["format", "version", "match"],
+  "properties": {
+    "format": {
+      "type": "string",
+      "const": "miff"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^1\\.0$"
+    },
+    "match": {
+      "type": "object",
+      "required": ["name", "date", "sport", "stages", "shooters"],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "rawDate": {
+          "type": "string"
+        },
+        "sport": {
+          "type": "string"
+        },
+        "level": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "eventLevel": {
+              "type": "string"
+            }
+          },
+          "required": ["name"]
+        },
+        "source": {
+          "type": "object",
+          "required": ["code", "ids"],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "ids": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "stages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/stage"
+          }
+        },
+        "shooters": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/shooter"
+          }
+        },
+        "localEvents": {
+          "type": "object",
+          "properties": {
+            "bonuses": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/scoringEvent"
+              }
+            },
+            "penalties": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/scoringEvent"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "stage": {
+      "type": "object",
+      "required": ["id", "name", "scoring"],
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "minRounds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maxPoints": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "classifier": {
+          "type": "boolean"
+        },
+        "classifierNumber": {
+          "type": "string"
+        },
+        "scoring": {
+          "$ref": "#/definitions/scoring"
+        },
+        "overrides": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/scoringOverride"
+          }
+        },
+        "variableEvents": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/scoringEvent"
+            }
+          }
+        },
+        "sourceId": {
+          "type": "string"
+        }
+      }
+    },
+    "scoring": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["hitFactor", "timePlus", "points", "ignored", "timePlusChrono"]
+        },
+        "options": {
+          "type": "object",
+          "properties": {
+            "rawZeroWithEventsIsNonDnf": {
+              "type": "boolean"
+            },
+            "highScoreBest": {
+              "type": "boolean"
+            },
+            "allowDecimal": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "scoringOverride": {
+      "type": "object",
+      "properties": {
+        "points": {
+          "type": "integer"
+        },
+        "time": {
+          "type": "number"
+        }
+      }
+    },
+    "scoringEvent": {
+      "type": "object",
+      "required": ["name", "points", "time"],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "shortName": {
+          "type": "string"
+        },
+        "points": {
+          "type": "integer"
+        },
+        "time": {
+          "type": "number"
+        },
+        "bonus": {
+          "type": "boolean"
+        },
+        "bonusLabel": {
+          "type": "string"
+        }
+      }
+    },
+    "shooter": {
+      "type": "object",
+      "required": ["id", "firstName", "lastName", "memberNumber", "powerFactor", "scores"],
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "firstName": {
+          "type": "string"
+        },
+        "lastName": {
+          "type": "string"
+        },
+        "memberNumber": {
+          "type": "string"
+        },
+        "originalMemberNumber": {
+          "type": "string"
+        },
+        "knownMemberNumbers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "female": {
+          "type": "boolean"
+        },
+        "reentry": {
+          "type": "boolean"
+        },
+        "dq": {
+          "type": "boolean"
+        },
+        "squad": {
+          "type": "integer"
+        },
+        "powerFactor": {
+          "type": "string"
+        },
+        "division": {
+          "type": "string"
+        },
+        "classification": {
+          "type": "string"
+        },
+        "ageCategory": {
+          "type": "string"
+        },
+        "scores": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/score"
+          }
+        },
+        "supersededScores": {
+          "type": "object",
+          "description": "Map from stage ID to array of Score objects containing previous versions of scores that have been edited or superseded",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/score"
+            }
+          }
+        },
+        "sourceId": {
+          "type": "string"
+        }
+      }
+    },
+    "score": {
+      "type": "object",
+      "required": ["time", "targetEvents", "penaltyEvents"],
+      "properties": {
+        "time": {
+          "type": "number",
+          "minimum": 0
+        },
+        "scoring": {
+          "$ref": "#/definitions/scoring"
+        },
+        "targetEvents": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "penaltyEvents": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "stringTimes": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "dq": {
+          "type": "boolean"
+        },
+        "modified": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}
+

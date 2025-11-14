@@ -15,6 +15,7 @@ import 'package:shooting_sports_analyst/closed_sources/ps_search/ui/match_search
 import 'package:shooting_sports_analyst/closed_sources/ps_search/ui/match_search_results.dart';
 import 'package:shooting_sports_analyst/closed_sources/ps_search/ui/search_model.dart';
 import 'package:shooting_sports_analyst/config/secure_config.dart';
+import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/practiscore_parser.dart';
 import 'package:shooting_sports_analyst/data/source/match_source_error.dart';
 import 'package:shooting_sports_analyst/data/source/prematch/search.dart';
@@ -645,7 +646,19 @@ class PractiscoreHitFactorReportParser extends MatchSource<HitFactorMatchType, I
                     onError(matchResult.unwrapErr());
                   }
                   else {
-                    onMatchDownloaded(matchResult.unwrap());
+                    var res = await AnalystDatabase().saveMatch(matchResult.unwrap());
+                    if(res.isErr()) {
+                      onError(MatchSourceError.databaseError);
+                    }
+                    else {
+                      var hydratedMatch = res.unwrap().hydrate();
+                      if(hydratedMatch.isErr()) {
+                        onError(MatchSourceError.databaseError);
+                      }
+                      else {
+                        onMatchDownloaded(hydratedMatch.unwrap());
+                      }
+                    }
                   }
                 }
               },
