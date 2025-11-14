@@ -56,6 +56,7 @@ import 'db_oneoff_impl/stage_size_analysis_command.dart';
 import 'db_oneoff_impl/elo_inflation_analysis.dart';
 import 'db_oneoff_impl/speed_accuracy_bifecta.dart';
 import 'db_oneoff_impl/ties.dart';
+import 'db_oneoff_impl/find_miff_test_matches_command.dart';
 
 late SSALogger _log = SSALogger("DbOneoffs");
 
@@ -87,6 +88,7 @@ Future<void> main() async {
     EloInflationAnalysisCommand(db),
     SpeedAccuracyBifectaCommand(db),
     TiesCommand(db),
+    FindMiffTestMatchesCommand(db),
     QuitCommand(),
   ], menuHeader: "DB Oneoffs ${VersionInfo.version}", commandSelected: (command) async {
     switch(command.command?.runtimeType) {

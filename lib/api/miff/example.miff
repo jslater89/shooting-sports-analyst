@@ -1,0 +1,108 @@
+{
+  "format": "miff",
+  "version": "1.0",
+  "match": {
+    "name": "2024 Area 4 Championship",
+    "date": "2024-05-15",
+    "rawDate": "May 15-19, 2024",
+    "sport": "uspsa",
+    "level": {
+      "name": "Area",
+      "eventLevel": "area"
+    },
+    "source": {
+      "code": "practiscore",
+      "ids": ["12345"]
+    },
+    "stages": [
+      {
+        "id": 1,
+        "name": "Stage 1: Speed Option",
+        "minRounds": 24,
+        "maxPoints": 120,
+        "classifier": false,
+        "classifierNumber": "",
+        "scoring": {
+          "type": "hitFactor"
+        }
+      },
+      {
+        "id": 2,
+        "name": "Stage 2: El Presidente",
+        "minRounds": 18,
+        "maxPoints": 90,
+        "classifier": true,
+        "classifierNumber": "99-11",
+        "scoring": {
+          "type": "hitFactor"
+        }
+      }
+    ],
+    "shooters": [
+      {
+        "id": 1,
+        "firstName": "John",
+        "lastName": "Doe",
+        "memberNumber": "A12345",
+        "originalMemberNumber": "A12345",
+        "female": false,
+        "reentry": false,
+        "dq": false,
+        "squad": 1,
+        "powerFactor": "Major",
+        "division": "Limited",
+        "classification": "GM",
+        "scores": {
+          "1": {
+            "time": 12.45,
+            "targetEvents": {
+              "A": 8,
+              "C": 2
+            },
+            "penaltyEvents": {}
+          },
+          "2": {
+            "time": 8.23,
+            "targetEvents": {
+              "A": 6
+            },
+            "penaltyEvents": {}
+          }
+        }
+      },
+      {
+        "id": 2,
+        "firstName": "Jane",
+        "lastName": "Smith",
+        "memberNumber": "TY67890",
+        "female": true,
+        "reentry": false,
+        "dq": false,
+        "squad": 2,
+        "powerFactor": "Minor",
+        "division": "Production",
+        "classification": "M",
+        "scores": {
+          "1": {
+            "time": 15.67,
+            "targetEvents": {
+              "A": 6,
+              "C": 4
+            },
+            "penaltyEvents": {
+              "Procedural": 1
+            }
+          },
+          "2": {
+            "time": 9.45,
+            "targetEvents": {
+              "A": 6
+            },
+            "penaltyEvents": {}
+          }
+        }
+      }
+    ]
+  }
+}
+

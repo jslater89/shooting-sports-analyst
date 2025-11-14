@@ -345,11 +345,12 @@ class DbMatchStage {
     }
     Map<String, List<ScoringEvent>> varEventsMap = {};
     for(var override in variableEvents) {
-      var actualEvent = sport.defaultPowerFactor.allEvents.lookupByName(override.name);
-      if(actualEvent == null) {
+      var baseEvent = sport.defaultPowerFactor.allEvents.lookupByName(override.name);
+      if(baseEvent == null) {
         _log.w("base event not found for variable event ${override.name}, skipping");
       }
       else {
+        var actualEvent = baseEvent.copyWith(pointChange: override.pointChangeOverride, timeChange: override.timeChangeOverride);
         varEventsMap.addToListIfMissing(override.name, actualEvent);
       }
     }
