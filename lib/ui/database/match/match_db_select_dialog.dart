@@ -48,7 +48,7 @@ class _MatchDbSelectDialogState extends State<MatchDbSelectDialog> {
           ChangeNotifierProvider.value(value: listModel),
         ],
         child: SizedBox(
-          width: MediaQuery.of(context).size.width * 0.8,
+          width: MediaQuery.of(context).size.width * 0.9,
           height: MediaQuery.of(context).size.height * 0.8,
           child: Column(
             children: [
