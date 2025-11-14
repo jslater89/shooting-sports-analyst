@@ -6,7 +6,9 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 
+import 'package:fuzzywuzzy/fuzzywuzzy.dart' as fuzzywuzzy;
 import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_query_element.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/fantasy_user.dart';
@@ -32,13 +34,14 @@ import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
+import 'package:string_similarity/string_similarity.dart';
 
 var _log = SSALogger("AnalystDb");
 
 class AnalystDatabase {
   static const knownMemberNumbersIndex = "knownMemberNumbers";
   static const allPossibleMemberNumbersIndex = "allPossibleMemberNumbers";
-  static const eventNameIndex = "eventNameParts";
+  static const eventNamePartsIndex = "eventNameParts";
   static const sourceIdsIndex = "sourceIds";
   static const dateIndex = "date";
   static const sportNameIndex = "sportName";
@@ -212,6 +215,81 @@ class AnalystDatabase {
     );
 
     return finalQuery.findAll();
+  }
+
+  double _calculateSimilarity(String queryLower, String eventNameLower, {bool printDebugInfo = false}) {
+    var similarity = queryLower.similarityTo(eventNameLower);
+    var similarityMultiplier = 1.0;
+    var similarityBoost = 0.0;
+    final similarityFactorPerWord = 0.5;
+    final similarityBoostPerExactWord = 1;
+    var eventNameWordsLower = eventNameLower.split(" ");
+    var queryWordsLower = queryLower.split(" ");
+    int exactWordMatches = 0;
+    int partialWordMatches = 0;
+    for(var word in queryWordsLower) {
+      for(var eventNameWord in eventNameWordsLower) {
+        if(eventNameWord.startsWith(word)) {
+          if(eventNameWord.length == word.length) {
+            exactWordMatches += 1;
+            similarityBoost += similarityBoostPerExactWord;
+          }
+          else {
+            partialWordMatches += 1;
+          }
+          var similarityFactor = 1 + (word.length / eventNameWord.length) * similarityFactorPerWord;
+          similarityMultiplier *= similarityFactor;
+        }
+      }
+    }
+
+    if(printDebugInfo) {
+      var debugString = "Similarity between $queryLower and $eventNameLower: ${(similarity + similarityBoost) * similarityMultiplier}";
+      debugString += "\nExact word matches: $exactWordMatches";
+      debugString += "\nPartial word matches: $partialWordMatches";
+      debugString += "\nBase similarity: $similarity";
+      debugString += "\nSimilarity boost: $similarityBoost";
+      debugString += "\nSimilarity multiplier: $similarityMultiplier";
+      _log.v(debugString);
+    }
+    return (similarity + similarityBoost) * similarityMultiplier;
+  }
+
+  /// A text search match query, using partial searches and string similarity
+  /// to return the best-matching names.
+  /// 
+  /// Query will be split into search terms of 3+ characters on spaces.
+  Future<List<DbShootingMatch>> matchNameTextSearch(String query, {
+    int limit = 10,
+    DateTime? after,
+    DateTime? before,
+  }) async {
+    var queryLower = query.toLowerCase();
+    var wordsLower = queryLower.split(" ");
+    var words = query.split(" ");
+    var terms = words.where((t) => t.length >= 3).toList();
+    if(terms.isEmpty) return [];
+
+    Query<DbShootingMatch> dbQuery = _buildMatchQuery([
+      TextSearchQuery(terms),
+      if(after != null || before != null)
+        DateQuery(after: after, before: before),
+    ]);
+
+    var matches = await dbQuery.findAll();
+
+    // Sort by dice similarity to the original query
+    matches.sort((a, b) { 
+      var aSimilarity = _calculateSimilarity(queryLower, a.eventName.toLowerCase());
+      var bSimilarity = _calculateSimilarity(queryLower, b.eventName.toLowerCase());
+      return bSimilarity.compareTo(aSimilarity);
+    });
+
+    var topMatches = matches.take(limit).toList();
+    // for(var match in topMatches.sublist(0, min(10, topMatches.length))) {
+    //   _calculateSimilarity(queryLower, match.eventName.toLowerCase(), printDebugInfo: true);
+    // }
+    return topMatches;
   }
 
   /// Return Isar match IDs matching the query.
@@ -462,6 +540,7 @@ class AnalystDatabase {
 
   (MatchQueryElement?, Iterable<MatchQueryElement>, List<SortProperty>, Sort) _buildMatchQueryElements(List<MatchQueryElement> elements, {int? limit, int? offset, MatchSortField sort = const DateSort()}) {
     NamePartsQuery? nameQuery;
+    TextSearchQuery? textSearchQuery;
     DateQuery? dateQuery;
     // ignore: unused_local_variable
     LevelNameQuery? levelNameQuery;
@@ -469,6 +548,8 @@ class AnalystDatabase {
 
     for(var e in elements) {
       switch(e) {
+        case TextSearchQuery():
+          textSearchQuery = e;
         case NamePartsQuery():
           nameQuery = e;
         case DateQuery():
@@ -495,7 +576,11 @@ class AnalystDatabase {
     }
     (whereElement, filterElements) = _buildElementLists(elements, whereElement);
 
-    if(nameQuery?.canWhere ?? false) {
+    if(textSearchQuery != null) {
+      // If we have a text search query, always where on it.
+      (whereElement, filterElements) = _buildElementLists(elements, textSearchQuery);
+    }
+    else if(nameQuery?.canWhere ?? false) {
       nameQuery!;
 
       // If we have a one-word name query of sufficient length, prefer to 'where'

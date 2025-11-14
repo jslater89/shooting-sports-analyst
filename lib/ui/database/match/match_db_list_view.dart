@@ -200,10 +200,22 @@ class MatchDatabaseListModel extends ChangeNotifier {
     _hasMore = true;
     loading = true;
 
+    if(search?.name?.isNotEmpty ?? false) {
+      var newMatches = await matchDb.matchNameTextSearch(
+        search?.name ?? "",
+        limit: 100,
+        after: search?.before,
+        before: search?.after,
+      );
+      searchedMatches = newMatches;
+      loading = false;
+      return;
+    }
+
     var newMatches = await matchDb.queryMatches(
-      name: search?.name,
-      before: search?.before,
-      after: search?.after,
+      name: search?.name ?? "",
+      after: search?.before,
+      before: search?.after,
     );
 
     searchedMatches = newMatches;

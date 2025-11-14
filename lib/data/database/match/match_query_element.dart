@@ -15,10 +15,33 @@ sealed class MatchQueryElement {
   FilterOperation? get filterCondition;
 }
 
+class TextSearchQuery extends MatchQueryElement {
+  String get index => AnalystDatabase.eventNamePartsIndex;
+  String get property => "eventNameParts";
+
+  bool get canWhere => true;
+
+  List<WhereClause>? get whereClauses {
+    return [
+      for(var term in terms)
+        IndexWhereClause.between(indexName: index, lower: [term], upper: ['$term\u{FFFFF}']),
+    ];
+  }
+
+  FilterOperation? get filterCondition {
+    return FilterGroup.or(terms.map((t) => FilterCondition.startsWith(property: property, value: t, caseSensitive: false)).toList());
+  }
+
+  List<String> terms;
+
+  TextSearchQuery(this.terms);
+  
+}
+
 class NamePartsQuery extends MatchQueryElement {
   String name;
 
-  String get index => AnalystDatabase.eventNameIndex;
+  String get index => AnalystDatabase.eventNamePartsIndex;
   String get property => canWhere ? "eventNameParts" : "eventName";
 
   bool get canWhere => name.split(" ").length <= 1;
