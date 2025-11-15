@@ -1,6 +1,6 @@
 PROJ_ROOT=$(pwd)
 FLUTTER_COMMAND="fvm flutter"
-if [[ "$APPIMAGE" == *cursor* || "$APPIMAGE" == *vscode* ]]; then
+if [[ "$APPIMAGE" == *cursor* || "$APPIMAGE" == *vscode* || TERM_PROGRAM == *vscode* || TERM_PROGRAM == *cursor* ]]; then
   FLUTTER_COMMAND="flutter"
 fi
 $FLUTTER_COMMAND build linux

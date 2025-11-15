@@ -1,6 +1,6 @@
 VERSION=$1
 FLUTTER_COMMAND="fvm flutter"
-if [[ "$APPIMAGE" == *cursor* || "$APPIMAGE" == *vscode* ]]; then
+if [[ "$APPIMAGE" == *cursor* || "$APPIMAGE" == *vscode* || TERM_PROGRAM == *vscode* || TERM_PROGRAM == *cursor* ]]; then
   FLUTTER_COMMAND="flutter"
 fi
 if [ -z "$VERSION" ]; then
