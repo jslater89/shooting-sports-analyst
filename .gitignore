@@ -72,6 +72,7 @@ db/
 local**
 *.csv
 *.json
+checkout-branch.sh
 
 # Things shared with me under NDA that I can't put on Git
 private/
