@@ -35,8 +35,8 @@ class PredictionPercentagesCommand extends DbOneoffCommand {
 
     var project = await db.getRatingProjectByName("L2s Main");
     var openGroup = await project!.groupForDivision(uspsaOpen).unwrap();
-    var limitedGroup = await project!.groupForDivision(uspsaLimited).unwrap();
-    var coGroup = await project!.groupForDivision(uspsaCarryOptics).unwrap();
+    var limitedGroup = await project.groupForDivision(uspsaLimited).unwrap();
+    var coGroup = await project.groupForDivision(uspsaCarryOptics).unwrap();
 
     var openCalibrationFactor = await getCalibrationFactor(project, openGroup!, uspsaOpen, project.matchPointers);
     var limitedCalibrationFactor = await getCalibrationFactor(project, limitedGroup!, uspsaLimited, project.matchPointers);
