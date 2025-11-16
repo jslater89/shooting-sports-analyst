@@ -272,7 +272,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     return Column(
       children: [
         Container(
-          color: backgroundColor,
+          // color: backgroundColor,
           child: TabBar(
             controller: _tabController,
             indicatorColor: Theme.of(context).colorScheme.primary,

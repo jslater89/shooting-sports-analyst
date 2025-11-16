@@ -270,6 +270,11 @@ class _MyAppState extends State<MyApp> {
       ),
     );
     final bool material3 = true;
+
+    final elevatedButtonShape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(8 * config.uiScaleFactor)
+    );
+    final elevatedButtonPadding = EdgeInsets.symmetric(horizontal: 12 * config.uiScaleFactor, vertical: 6 * config.uiScaleFactor);
     final lightTheme = ThemeData(
       appBarTheme: AppBarTheme(
         color: lightColorScheme.secondary,
@@ -283,10 +288,8 @@ class _MyAppState extends State<MyApp> {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8 * config.uiScaleFactor),
-          ),
-          padding: EdgeInsets.symmetric(horizontal: 12 * config.uiScaleFactor, vertical: 6 * config.uiScaleFactor),
+          shape: elevatedButtonShape,
+          padding: elevatedButtonPadding
         ),
       ),
       dialogTheme: Theme.of(context).dialogTheme.copyWith(
@@ -298,6 +301,9 @@ class _MyAppState extends State<MyApp> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(4 * config.uiScaleFactor),
         ),
+      ),
+      tabBarTheme: Theme.of(context).tabBarTheme.copyWith(
+        //labelColor: 
       ),
       iconTheme: iconTheme,
       iconButtonTheme: iconButtonTheme,
@@ -317,7 +323,13 @@ class _MyAppState extends State<MyApp> {
         ),
         elevation: 3,
       ),
-      elevatedButtonTheme: lightTheme.elevatedButtonTheme,
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          shape: elevatedButtonShape,
+          padding: elevatedButtonPadding,
+          foregroundColor: Colors.grey[300],
+        )
+      ),
       dialogTheme: lightTheme.dialogTheme,
       cardTheme: lightTheme.cardTheme,
       iconTheme: lightTheme.iconTheme.copyWith(
