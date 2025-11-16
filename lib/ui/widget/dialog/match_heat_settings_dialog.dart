@@ -5,6 +5,7 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/config/config.dart';
 
 enum MatchHeatValue {
   topTenPercentAverageRating,
@@ -79,61 +80,69 @@ class _MatchHeatSettingsDialogState extends State<MatchHeatSettingsDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     return AlertDialog(
       title: Text("Display settings"),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        spacing: 16,
-        children: [
-          DropdownMenu<MatchHeatValue>(
-            label: Text("X Axis"),
-            initialSelection: workingSettings.xAxis,
-            dropdownMenuEntries: MatchHeatValue.values.map((e) => DropdownMenuEntry(value: e, label: e.label)).toList(),
-            onSelected: (value) {
-              if(value != null) {
-                setState(() {
-                  workingSettings.xAxis = value;
-                });
-              }
-            },
-          ),
-          DropdownMenu<MatchHeatValue>(
-            label: Text("Y Axis"),
-            initialSelection: workingSettings.yAxis,
-            dropdownMenuEntries: MatchHeatValue.values.map((e) => DropdownMenuEntry(value: e, label: e.label)).toList(),
-            onSelected: (value) {
-              if(value != null) {
-                setState(() {
-                  workingSettings.yAxis = value;
-                });
-              }
-            },
-          ),
-          DropdownMenu<MatchHeatValue>(
-            label: Text("Dot Size"),
-            initialSelection: workingSettings.dotSize,
-            dropdownMenuEntries: MatchHeatValue.values.map((e) => DropdownMenuEntry(value: e, label: e.label)).toList(),
-            onSelected: (value) {
-              if(value != null) {
-                setState(() {
-                  workingSettings.dotSize = value;
-                });
-              }
-            },
-          ),
-          DropdownMenu<MatchHeatValue>(
-            label: Text("Dot Color"),
-            initialSelection: workingSettings.dotColor,
-            dropdownMenuEntries: MatchHeatValue.values.map((e) => DropdownMenuEntry(value: e, label: e.label)).toList(),
-            onSelected: (value) {
-              if(value != null) {
-                setState(() {
-                  workingSettings.dotColor = value;
-                });
-              }
-            },
-          ),
-        ],
+      content: SizedBox(
+        width: 300 * uiScaleFactor,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          spacing: 16 * uiScaleFactor,
+          children: [
+            DropdownMenu<MatchHeatValue>(
+              width: 275 * uiScaleFactor,
+              label: Text("X Axis"),
+              initialSelection: workingSettings.xAxis,
+              dropdownMenuEntries: MatchHeatValue.values.map((e) => DropdownMenuEntry(value: e, label: e.label)).toList(),
+              onSelected: (value) {
+                if(value != null) {
+                  setState(() {
+                    workingSettings.xAxis = value;
+                  });
+                }
+              },
+            ),
+            DropdownMenu<MatchHeatValue>(
+              width: 275 * uiScaleFactor,
+              label: Text("Y Axis"),
+              initialSelection: workingSettings.yAxis,
+              dropdownMenuEntries: MatchHeatValue.values.map((e) => DropdownMenuEntry(value: e, label: e.label)).toList(),
+              onSelected: (value) {
+                if(value != null) {
+                  setState(() {
+                    workingSettings.yAxis = value;
+                  });
+                }
+              },
+            ),
+            DropdownMenu<MatchHeatValue>(
+              width: 275 * uiScaleFactor,
+              label: Text("Dot Size"),
+              initialSelection: workingSettings.dotSize,
+              dropdownMenuEntries: MatchHeatValue.values.map((e) => DropdownMenuEntry(value: e, label: e.label)).toList(),
+              onSelected: (value) {
+                if(value != null) {
+                  setState(() {
+                    workingSettings.dotSize = value;
+                  });
+                }
+              },
+            ),
+            DropdownMenu<MatchHeatValue>(
+              width: 275 * uiScaleFactor,
+              label: Text("Dot Color"),
+              initialSelection: workingSettings.dotColor,
+              dropdownMenuEntries: MatchHeatValue.values.map((e) => DropdownMenuEntry(value: e, label: e.label)).toList(),
+              onSelected: (value) {
+                if(value != null) {
+                  setState(() {
+                    workingSettings.dotColor = value;
+                  });
+                }
+              },
+            ),
+          ],
+        ),
       ),
       actions: [
         TextButton(onPressed: () => Navigator.of(context).pop(MatchHeatSettings()), child: Text("DEFAULTS")),

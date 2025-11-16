@@ -390,7 +390,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
             return 1;
           }
           else {
-            // Scale up from 1 pixel to 10 pixels
+            // Scale up from 1 pixel to 10 pixels, with 10 pixels being the strongest classification strength
             return 1 + ((heat.weightedClassificationStrength - (_minClassStrength + (range * 0.1))) / (range * 0.8) * 9);
           }
         }
