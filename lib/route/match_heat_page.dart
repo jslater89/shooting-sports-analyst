@@ -25,6 +25,7 @@ import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/text_styles.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/match_heat_settings_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_pointer_chooser_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/stacked_distribution_chart.dart';
 import 'package:shooting_sports_analyst/ui_util.dart';
@@ -56,6 +57,13 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
   }
 
   Map<MatchPointer, MatchHeat> _matchHeat = {};
+  MatchHeatSettings _settings = MatchHeatSettings();
+  int _minCompetitorCount = 2e32.toInt();
+  int _maxCompetitorCount = 0;
+  double _minTopRating = 2e32;
+  double _maxTopRating = -2e32;
+  double _minMedianRating = 2e32;
+  double _maxMedianRating = -2e32;
   double _minY = 1200;
   double _maxY = 1800;
   double _minX = 0;
@@ -138,16 +146,73 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
   void _recalculateSizes() {
     _minY = 2e32;
     _maxY = -2e32;
-    _minX = 0;
-    _maxX = 0;
+    _minX = 2e32;
+    _maxX = -2e32;
     _minClassStrength = 2e32;
     _maxClassStrength = -2e32;
+    _minCompetitorCount = 2e32.toInt();
+    _maxCompetitorCount = 0.toInt();
+    _minTopRating = 2e32;
+    _maxTopRating = -2e32;
+    _minMedianRating = 2e32;
+    _maxMedianRating = -2e32;
+    var yMinOffset = switch(_settings.yAxis) {
+        MatchHeatValue.matchSize => 0,
+        MatchHeatValue.topTenPercentAverageRating => 100,
+        MatchHeatValue.medianRating => 100,
+        MatchHeatValue.averageClassification => 0,
+      };
+      var yMaxOffset = switch(_settings.yAxis) {
+        MatchHeatValue.matchSize => 10,
+        MatchHeatValue.topTenPercentAverageRating => 100,
+        MatchHeatValue.medianRating => 100,
+        MatchHeatValue.averageClassification => 0.5,
+      };
+      var xMinOffset = switch(_settings.xAxis) {
+        MatchHeatValue.matchSize => 0,
+        MatchHeatValue.topTenPercentAverageRating => 100,
+        MatchHeatValue.medianRating => 100,
+        MatchHeatValue.averageClassification => 0,
+      };
+      var xMaxOffset = switch(_settings.xAxis) {
+        MatchHeatValue.matchSize => 10,
+        MatchHeatValue.topTenPercentAverageRating => 100,
+        MatchHeatValue.medianRating => 100,
+        MatchHeatValue.averageClassification => 0.5,
+      };
+
+      if(_settings.yAxis == MatchHeatValue.averageClassification || _settings.yAxis == MatchHeatValue.matchSize) {
+        _minY = 1;
+      }
+      else if(_settings.xAxis == MatchHeatValue.averageClassification || _settings.xAxis == MatchHeatValue.matchSize) {
+        _minX = 1;
+      }
     for(var heat in _matchHeat.values) {
-      _minY = min(_minY, heat.weightedTopTenPercentAverageRating - 100);
-      _maxY = max(_maxY, heat.weightedTopTenPercentAverageRating + 100);
-      _maxX = max(_maxX, heat.rawCompetitorCount + 10);
+      var yValue = switch(_settings.yAxis) {
+        MatchHeatValue.matchSize => heat.rawCompetitorCount,
+        MatchHeatValue.topTenPercentAverageRating => heat.weightedTopTenPercentAverageRating,
+        MatchHeatValue.medianRating => heat.weightedMedianRating,
+        MatchHeatValue.averageClassification => heat.weightedClassificationStrength,
+      };
+      var xValue = switch(_settings.xAxis) {
+        MatchHeatValue.matchSize => heat.rawCompetitorCount,
+        MatchHeatValue.topTenPercentAverageRating => heat.weightedTopTenPercentAverageRating,
+        MatchHeatValue.medianRating => heat.weightedMedianRating,
+        MatchHeatValue.averageClassification => heat.weightedClassificationStrength,
+      };
+
+      _minY = min(_minY, (yValue - yMinOffset).toDouble());
+      _maxY = max(_maxY, (yValue + yMaxOffset).toDouble());
+      _minX = min(_minX, (xValue - xMinOffset).toDouble());
+      _maxX = max(_maxX, (xValue + xMaxOffset).toDouble());
       _minClassStrength = min(_minClassStrength, heat.weightedClassificationStrength);
       _maxClassStrength = max(_maxClassStrength, heat.weightedClassificationStrength);
+      _minCompetitorCount = min(_minCompetitorCount, heat.rawCompetitorCount);
+      _maxCompetitorCount = max(_maxCompetitorCount, heat.rawCompetitorCount);
+      _minTopRating = min(_minTopRating, heat.weightedTopTenPercentAverageRating);
+      _maxTopRating = max(_maxTopRating, heat.weightedTopTenPercentAverageRating);
+      _minMedianRating = min(_minMedianRating, heat.weightedMedianRating);
+      _maxMedianRating = max(_maxMedianRating, heat.weightedMedianRating);
     }
 
     setStateIfMounted(() {});
@@ -155,6 +220,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
 
   @override
   Widget build(BuildContext context) {
+    String displaySettingsTooltip = "Display settings\nDot size: ${_settings.dotSize.axisLabel.toLowerCase()}\nDot color: ${_settings.dotColor.axisLabel.toLowerCase()}";
     return Scaffold(
       appBar: AppBar(
         title: GestureDetector(
@@ -201,6 +267,22 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                Tooltip(
+                  message: displaySettingsTooltip,
+                  child: IconButton(
+                    onPressed: () async {
+                      var newSettings = await MatchHeatSettingsDialog.show(context: context, settings: _settings);
+                      if(newSettings != null) {
+                        setState(() {
+                          _settings = newSettings;
+                        });
+                        _recalculateSizes();
+                        _rebuildChart();
+                      }
+                    },
+                    icon: Icon(Icons.settings),
+                  ),
+                ),
                 Tooltip(
                   message: "Highlight matches",
                   child: IconButton(
@@ -257,21 +339,63 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
 
   Offset? _mousePosition;
   Widget? _chartWidget;
-  charts.Series<MatchHeat, int>? _series;
+  charts.Series<MatchHeat, num>? _series;
   charts.ScatterPlotChart? _chart;
 
   void _rebuildSeries() {
-    _series = charts.Series<MatchHeat, int>(
+    _series = charts.Series<MatchHeat, num>(
       id: "matchHeat",
       data: _matchHeat.values.toList(),
-      domainFn: (MatchHeat heat, _) => heat.rawCompetitorCount,
-      measureFn: (MatchHeat heat, _) => heat.weightedTopTenPercentAverageRating,
+      domainFn: (MatchHeat heat, _) => switch(_settings.xAxis) {
+        MatchHeatValue.matchSize => heat.rawCompetitorCount,
+        MatchHeatValue.topTenPercentAverageRating => heat.weightedTopTenPercentAverageRating,
+        MatchHeatValue.medianRating => heat.weightedMedianRating,
+        MatchHeatValue.averageClassification => heat.weightedClassificationStrength,
+      },
+      measureFn: (MatchHeat heat, _) => switch(_settings.yAxis) {
+        MatchHeatValue.matchSize => heat.rawCompetitorCount,
+        MatchHeatValue.topTenPercentAverageRating => heat.weightedTopTenPercentAverageRating,
+        MatchHeatValue.medianRating => heat.weightedMedianRating,
+        MatchHeatValue.averageClassification => heat.weightedClassificationStrength,
+      },
       radiusPxFn: (MatchHeat heat, _) {
-        if(heat.weightedMedianRating < 800) {
-          return 1;
+        if(_settings.dotSize == MatchHeatValue.matchSize) {
+          if(heat.rawCompetitorCount < 50) {
+            return 1;
+          }
+          else {
+            return 1 + ((heat.rawCompetitorCount - 50) / 50);
+          }
+        }
+        else if(_settings.dotSize == MatchHeatValue.topTenPercentAverageRating) {
+          if(heat.weightedMedianRating < 1200) {
+            return 1;
+          }
+          else {
+            return 1 + ((heat.weightedMedianRating - 1200) / 50);
+          }
+        }
+        else if(_settings.dotSize == MatchHeatValue.medianRating) {
+          if(heat.weightedMedianRating < 800) {
+            return 1;
+          }
+          else {
+            return 1 + ((heat.weightedMedianRating - 800) / 40);
+          }
+        }
+        else if(_settings.dotSize == MatchHeatValue.averageClassification) {
+          var range = _maxClassStrength - _minClassStrength;
+          // Bottom 10% of the range is 1 pixel
+          if(heat.weightedClassificationStrength <= _minClassStrength + (range * 0.1)) {
+            return 1;
+          }
+          else {
+            // Scale up from 1 pixel to 10 pixels
+            return 1 + ((heat.weightedClassificationStrength - (_minClassStrength + (range * 0.1))) / (range * 0.8) * 9);
+          }
         }
         else {
-          return 1 + ((heat.weightedMedianRating - 800) / 40);
+          return 1;
         }
       },
       colorFn: (MatchHeat heat, _) {
@@ -279,11 +403,40 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
           return charts.MaterialPalette.blue.shadeDefault;
         }
         else {
-          return _calculateStrengthColor(
-            dimmed: !_isHighlighted(heat.matchPointer),
-            value: heat.weightedClassificationStrength,
-            classStrengths: _classStrengths,
-          ) ?? charts.MaterialPalette.blue.shadeDefault;
+          if(_settings.dotColor == MatchHeatValue.averageClassification) {
+            return _calculateStrengthColor(
+              dimmed: !_isHighlighted(heat.matchPointer),
+              value: heat.weightedClassificationStrength,
+              classStrengths: _classStrengths,
+            ) ?? charts.MaterialPalette.blue.shadeDefault;
+          }
+          else if(_settings.dotColor == MatchHeatValue.matchSize) {
+            return _calculateLerpColor(
+              value: heat.rawCompetitorCount.toDouble(),
+              minValue: _minCompetitorCount.toDouble(),
+              maxValue: _maxCompetitorCount.toDouble(),
+              dimmed: !_isHighlighted(heat.matchPointer),
+            ) ?? charts.MaterialPalette.blue.shadeDefault;
+          }
+          else if(_settings.dotColor == MatchHeatValue.topTenPercentAverageRating) {
+            return _calculateLerpColor(
+              value: heat.weightedTopTenPercentAverageRating.toDouble(),
+              minValue: _minTopRating.toDouble(),
+              maxValue: _maxTopRating.toDouble(),
+              dimmed: !_isHighlighted(heat.matchPointer),
+            ) ?? charts.MaterialPalette.blue.shadeDefault;
+          }
+          else if(_settings.dotColor == MatchHeatValue.medianRating) {
+            return _calculateLerpColor(
+              value: heat.weightedMedianRating.toDouble(),
+              minValue: _minMedianRating.toDouble(),
+              maxValue: _maxMedianRating.toDouble(),
+              dimmed: !_isHighlighted(heat.matchPointer),
+            ) ?? charts.MaterialPalette.blue.shadeDefault;
+          }
+          else {
+            return charts.MaterialPalette.blue.shadeDefault;
+          }
         }
       }
     );
@@ -308,14 +461,14 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
           maximumDomainDistancePx: 5,
         ),
         charts.ChartTitle(
-          "Elo",
+          _settings.yAxis.axisLabel,
           behaviorPosition: charts.BehaviorPosition.start,
           titleStyleSpec: charts.TextStyleSpec(
             color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
           ),
         ),
         charts.ChartTitle(
-          "Competitor Count",
+          _settings.xAxis.axisLabel,
           behaviorPosition: charts.BehaviorPosition.bottom,
           titleStyleSpec: charts.TextStyleSpec(
             color: charts.Color.fromHex(code: ThemeColors.onBackgroundColorFaded(context).toHex()),
@@ -513,12 +666,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
     _overlayMatch = null;
   }
 
-  charts.Color? _calculateStrengthColor({
-    required double value,
-    required Map<Classification, double> classStrengths,
-    bool dimmed = false,
-  }) {
-    final referenceColors = [
+  final _referenceColors = [
       Color.fromARGB(0xff, 0x09, 0x1f, 0x92).toRgbColor(),
       Colors.blue.toRgbColor(),
       Colors.green.toRgbColor(),
@@ -527,11 +675,68 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
       Colors.red.toRgbColor(),
     ];
 
-    final stepsPerColor = 100 ~/ referenceColors.length;
+  charts.Color? _calculateLerpColor({
+    required double value,
+    required double minValue,
+    required double maxValue,
+    bool dimmed = false,
+  }) {
+
+    final stepsPerColor = 100 ~/ _referenceColors.length;
     List<RgbColor> dotColorRange = [];
-    for(var i = 1; i < referenceColors.length; i++) {
+    for(var i = 1; i < _referenceColors.length; i++) {
       // For each color, add a range of stepsPerColor steps
-      dotColorRange.addAll(referenceColors[i - 1].lerpTo(referenceColors[i], stepsPerColor));
+      dotColorRange.addAll(_referenceColors[i - 1].lerpTo(_referenceColors[i], stepsPerColor));
+    }
+    var colorCount = dotColorRange.length;
+
+    List<double> rangeSteps = [];
+    for(var i = 0; i < colorCount; i++) {
+      rangeSteps.add(minValue + (i * ((maxValue - minValue) / colorCount)));
+    }
+
+    RgbColor? color;
+    if(minValue == maxValue) {
+      color = dotColorRange[colorCount ~/ 2];
+    }
+    else if(value > minValue && value < maxValue) {
+      var fromBelow = (value - minValue) / (maxValue - minValue);
+      var fromBelowSteps = (fromBelow * colorCount).floor();
+      color = dotColorRange[fromBelowSteps];
+    }
+    else if(value <= minValue) {
+      color = dotColorRange.first;
+    }
+    else if(value >= maxValue) {
+      color = dotColorRange.last;
+    }
+
+    double alpha = 0.75;
+    var isDark = Theme.of(context).brightness == Brightness.dark;
+    if(dimmed) {
+      color = color?.withChroma(color.chroma * 0.2);
+      alpha = isDark ? 0.25 : 0.1;
+    }
+    if(!dimmed && _highlightedMatches.isNotEmpty) {
+      alpha = 0.9;
+    }
+    if(color != null) {
+      return color.toChartsColor(alpha: alpha);
+    }
+    return null;
+  }
+
+  charts.Color? _calculateStrengthColor({
+    required double value,
+    required Map<Classification, double> classStrengths,
+    bool dimmed = false,
+  }) {
+
+    final stepsPerColor = 100 ~/ _referenceColors.length;
+    List<RgbColor> dotColorRange = [];
+    for(var i = 1; i < _referenceColors.length; i++) {
+      // For each color, add a range of stepsPerColor steps
+      dotColorRange.addAll(_referenceColors[i - 1].lerpTo(_referenceColors[i], stepsPerColor));
     }
     var colorCount = dotColorRange.length;
 
