@@ -533,7 +533,7 @@ class _ResultPageState extends State<ResultPage> {
         }
         Navigator.of(context).push(MaterialPageRoute(
           builder: (context) => EmptyScaffold(
-            title: "Competitor map",
+            title: "Competitors at ${_canonicalMatch.name}",
             child: Padding(
               padding: const EdgeInsets.all(8.0),
               child: Column(
