@@ -39,6 +39,7 @@ import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
 import 'package:shooting_sports_analyst/version.dart';
 
+import 'db_oneoff_impl/check_location_proportion.dart';
 import 'db_oneoff_impl/prediction_percentages.dart';
 import 'db_oneoff_impl/predictions_to_odds.dart';
 import 'db_oneoff_impl/stacked_labeled_progress_bar_test.dart';
@@ -91,21 +92,22 @@ Future<void> main(List<String> args) async {
   }
 
   await menuLoop(console, [
-    TomCastroCommand(db),
-    MatchBumpGmsCommand(db),
-    DoesMyQueryWorkCommand(db),
-    Lady90PercentFinishesCommand(db),
+    // TomCastroCommand(db),
+    //MatchBumpGmsCommand(db),
+    //DoesMyQueryWorkCommand(db),
+    //Lady90PercentFinishesCommand(db),
     AnalyzeIcoreDumpCommand(db),
     ImportIcoreDumpCommand(db),
-    WinningPointsByDateCommand(db),
-    StageSizeAnalysisCommand(db),
-    StageCountsByYearCommand(db),
+    //WinningPointsByDateCommand(db),
+    //StageSizeAnalysisCommand(db),
+    //StageCountsByYearCommand(db),
     PredictionsToOddsCommand(db),
     PredictionPercentagesCommand(db),
-    EloInflationAnalysisCommand(db),
-    SpeedAccuracyBifectaCommand(db),
-    TiesCommand(db),
+    //EloInflationAnalysisCommand(db),
+    //SpeedAccuracyBifectaCommand(db),
+    //TiesCommand(db),
     ImportMatchCommand(db),
+    CheckLocationProportionCommand(db),
     QuitCommand(),
   ], menuHeader: "DB Oneoffs ${VersionInfo.version}", commandSelected: (command) async {
     switch(command.command?.runtimeType) {
