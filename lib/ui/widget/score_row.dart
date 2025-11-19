@@ -70,8 +70,9 @@ class _ScoreRowState extends State<ScoreRow> {
             ),
             data: baseTheme.copyWith(
               textTheme: baseTheme.textTheme.copyWith(
-                bodyLarge: baseTheme.textTheme.bodyLarge!.copyWith(
+                bodyLarge: baseTheme.textTheme.bodyMedium!.copyWith(
                   color: _hover && widget.hoverEnabled ? hoverTextColor : textColor,
+                  fontWeight: FontWeight.w500,
                 ),
                 bodyMedium: baseTheme.textTheme.bodyMedium!.copyWith(
                   color: _hover && widget.hoverEnabled ? hoverTextColor : textColor,

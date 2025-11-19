@@ -237,6 +237,17 @@ Future<void> notYetImplementedExecutor(Console console, List<MenuArgumentValue> 
 /// A base class for menu arguments, which are used to parse input from the user.
 ///
 /// [T] is the type of the argument value.
+///
+/// [required] is true if the argument is required.
+///
+/// [defaultValue] is the default value for the argument.
+/// [defaultValueFactory] is a factory function that returns the default value for the argument,
+/// if the default is unergonomic in some way.
+///
+/// Arguments with default values will provide [MenuArgumentValue]s with the default value to
+/// executors.
+///
+/// [description] is the description of the argument.
 abstract class MenuArgument<T> {
   final String label;
   final bool required;

@@ -85,6 +85,9 @@ class Shooter {
     required this.firstName,
     required this.lastName,
     String memberNumber = "",
+    this.region,
+    this.regionSubdivision,
+    this.rawLocation,
     this.female = false,
     this.ageCategory,
   }) {
@@ -92,6 +95,19 @@ class Shooter {
       this.memberNumber = memberNumber;
     }
   }
+
+  @Index()
+  /// A normalized region code for the competitor, if one is
+  /// available. Typically a three-letter ISO-3166 country code.
+  String? region;
+  @Index()
+  /// A normalized region subdivision code for the competitor, if one is
+  /// available. Typically a two-letter ISO-3166 state/province code.
+  String? regionSubdivision;
+
+  /// The raw location string from the source data, if parsing into
+  /// more standardized [region] and [regionSubdivision] is not possible.
+  String? rawLocation;
 
   void copyVitalsFrom(Shooter other) {
     this.firstName = other.firstName;
@@ -102,6 +118,9 @@ class Shooter {
     this.allPossibleMemberNumbers = {}..addAll(other.allPossibleMemberNumbers);
     this.ageCategory = other.ageCategory;
     this.female = other.female;
+    this.region = other.region;
+    this.regionSubdivision = other.regionSubdivision;
+    this.rawLocation = other.rawLocation;
   }
 
   bool equalsShooter(Shooter other) {
@@ -151,6 +170,9 @@ class MatchEntry extends Shooter {
     required super.lastName,
     super.memberNumber,
     super.ageCategory,
+    super.region,
+    super.regionSubdivision,
+    super.rawLocation,
     this.reentry = false,
     this.dq = false,
     required this.entryId,
@@ -176,6 +198,9 @@ class MatchEntry extends Shooter {
       firstName: firstName,
       lastName: lastName,
       memberNumber: memberNumber,
+      region: region,
+      regionSubdivision: regionSubdivision,
+      rawLocation: rawLocation,
       reentry: reentry,
       dq: dq,
       entryId: entryId,

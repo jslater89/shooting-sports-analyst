@@ -372,9 +372,12 @@ class _MatchDatabaseChooserDialogState extends State<MatchDatabaseChooserDialog>
                       if(match.databaseId != null) {
                         selectedMatches.add(match.databaseId!);
                         _log.v("Added match ${match.name} (${match.sourceIds}) (${match.databaseId}) to selected matches");
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Downloaded and selected ${match.name}")));
+
                       }
                       else {
                         _log.w("Downloaded match ${match.name} (${match.sourceIds}) has no database ID");
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Downloaded ${match.name}, but saving failed")));
                       }
                     });
                   },

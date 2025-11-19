@@ -217,16 +217,43 @@ class AnalystDatabase {
     return finalQuery.findAll();
   }
 
+  Future<List<DbShootingMatch>> getMatchesByExactNames(List<String> names) async {
+    return await isar.dbShootingMatchs
+      .where()
+      .filter()
+      .anyOf(names, (query, name) => query.eventNameEqualTo(name))
+      .findAll();
+  }
+
   double _calculateSimilarity(String queryLower, String eventNameLower, {bool printDebugInfo = false}) {
     var similarity = queryLower.similarityTo(eventNameLower);
     var similarityMultiplier = 1.0;
     var similarityBoost = 0.0;
     final similarityFactorPerWord = 0.5;
     final similarityBoostPerExactWord = 1;
+
+    // A backward similarity factor of 1 will result in equal weight to forward
+    // similarity, by the following example:
+    // - query: "handgun"
+    // - event name: "hand gun national championships"
+    // - backward similarity for "hand" will be 4/7 * 1
+    // - forward similarity for "hand" will be 3/4 * 1
+    // - total similarity is 1
+    // The reduction is because this is a fuzzier match to catch places where
+    // a match name has a space and the query doesn't. (At present the DB query
+    // doesn't have a way to return shorter-than-query-part matches, so this is not
+    // helping if we search for "nationals" and want to get "national" matches as well.)
+    final backwardSimilarityImpactFactor = 0.3;
     var eventNameWordsLower = eventNameLower.split(" ");
     var queryWordsLower = queryLower.split(" ");
+
     int exactWordMatches = 0;
     int partialWordMatches = 0;
+
+    int backwardPartialMatches = 0;
+
+    // Forward similarity: words in the query are matched against words in
+    // the event name; query "national" will match the word "nationals"
     for(var word in queryWordsLower) {
       for(var eventNameWord in eventNameWordsLower) {
         if(eventNameWord.startsWith(word)) {
@@ -243,13 +270,26 @@ class AnalystDatabase {
       }
     }
 
+    // Backward similarity: words in the event name are matched against words in the query,
+    // So that a query for "handgun" will match "hand gun" in the event name. Impact reduced.
+    for(var eventNameWord in eventNameWordsLower) {
+      for(var queryWord in queryWordsLower) {
+        if(queryWord != eventNameWord && queryWord.contains(eventNameWord)) {
+          backwardPartialMatches += 1;
+          similarityMultiplier *= (1 + (eventNameWord.length / queryWord.length) * similarityFactorPerWord * backwardSimilarityImpactFactor);
+        }
+      }
+    }
+
     if(printDebugInfo) {
       var debugString = "Similarity between $queryLower and $eventNameLower: ${(similarity + similarityBoost) * similarityMultiplier}";
       debugString += "\nExact word matches: $exactWordMatches";
       debugString += "\nPartial word matches: $partialWordMatches";
+      debugString += "\nBackward partial matches: $backwardPartialMatches";
       debugString += "\nBase similarity: $similarity";
       debugString += "\nSimilarity boost: $similarityBoost";
       debugString += "\nSimilarity multiplier: $similarityMultiplier";
+
       _log.v(debugString);
     }
     return (similarity + similarityBoost) * similarityMultiplier;
@@ -257,7 +297,7 @@ class AnalystDatabase {
 
   /// A text search match query, using partial searches and string similarity
   /// to return the best-matching names.
-  /// 
+  ///
   /// Query will be split into search terms of 3+ characters on spaces.
   Future<List<DbShootingMatch>> matchNameTextSearch(String query, {
     int limit = 10,
@@ -265,31 +305,59 @@ class AnalystDatabase {
     DateTime? before,
   }) async {
     var queryLower = query.toLowerCase();
-    var wordsLower = queryLower.split(" ");
     var words = query.split(" ");
     var terms = words.where((t) => t.length >= 3).toList();
     if(terms.isEmpty) return [];
 
-    Query<DbShootingMatch> dbQuery = _buildMatchQuery([
+    // TODO: possibly more advanced stemming
+    // OTOH, this catches most of the cases I can think of in the USPSA and ICORE set.
+    if(terms.contains("nationals")) terms.add("national");
+    if(terms.contains("championships")) terms.add("championship");
+    if(terms.contains("sectionals")) terms.add("section");
+    if(terms.contains("sectional")) terms.add("section");
+    if(terms.contains("regionals")) terms.add("region");
+    if(terms.contains("regional")) terms.add("region");
+
+    // We have to load a lot of matches and we only actually need the names to search on,
+    // so get the names only and load exactly the number of requested hits at the end.
+    Query<String> dbQuery = _buildMatchNameQuery([
       TextSearchQuery(terms),
       if(after != null || before != null)
         DateQuery(after: after, before: before),
     ]);
 
-    var matches = await dbQuery.findAll();
+    var matchNames = await dbQuery.findAll();
+
+    Map<String, double> matchNameSimilarities = {};
+    for(var matchName in matchNames) {
+      matchNameSimilarities[matchName] = _calculateSimilarity(queryLower, matchName.toLowerCase());
+    }
 
     // Sort by dice similarity to the original query
-    matches.sort((a, b) { 
-      var aSimilarity = _calculateSimilarity(queryLower, a.eventName.toLowerCase());
-      var bSimilarity = _calculateSimilarity(queryLower, b.eventName.toLowerCase());
+    matchNames.sort((a, b) {
+      var aSimilarity = matchNameSimilarities[a] ?? 0;
+      var bSimilarity = matchNameSimilarities[b] ?? 0;
       return bSimilarity.compareTo(aSimilarity);
     });
 
-    var topMatches = matches.take(limit).toList();
-    // for(var match in topMatches.sublist(0, min(10, topMatches.length))) {
-    //   _calculateSimilarity(queryLower, match.eventName.toLowerCase(), printDebugInfo: true);
+    var topMatchNames = matchNames.take(limit).toList();
+
+    // _log.v("DUMPING SIMILARITY CALCULATIONS FOR TOP MATCH NAMES ===");
+    // for(var matchName in topMatchNames.sublist(0, min(10, topMatchNames.length))) {
+    //   _calculateSimilarity(queryLower, matchName.toLowerCase(), printDebugInfo: true);
     // }
-    return topMatches;
+
+    // Load the found matches by exact names.
+    // In the unlikely event that two matches have the same name, that's fine;
+    // a text search on that name should return both.
+    // We have to resort here because we don't preserve order in the matches-by-names query.
+    var matches = await getMatchesByExactNames(topMatchNames);
+    matches.sort((a, b) {
+      var aSimilarity = matchNameSimilarities[a.eventName] ?? 0;
+      var bSimilarity = matchNameSimilarities[b.eventName] ?? 0;
+      return bSimilarity.compareTo(aSimilarity);
+    });
+    return matches;
   }
 
   /// Return Isar match IDs matching the query.
@@ -432,10 +500,12 @@ class AnalystDatabase {
     return getMatchByAnySourceId([id]);
   }
 
+  /// Get a match by database ID.
   Future<DbShootingMatch?> getMatch(int id) async {
     return await isar.dbShootingMatchs.get(id);
   }
 
+  /// Get matches by database IDs.
   Future<List<DbShootingMatch>> getMatchesByIds(Iterable<Id> ids) async {
     return await isar.dbShootingMatchs.where().anyOf(ids, (query, id) => query.idEqualTo(id)).findAll();
   }
@@ -498,7 +568,7 @@ class AnalystDatabase {
   // }
 
   /// Build a match query. Returns either a [Query<DbShootingMatch>] or a [Query<int>], depending on the [idProperty] parameter.
-  Query<DbShootingMatch> _buildMatchQuery(List<MatchQueryElement> elements, {int? limit, int? offset, MatchSortField sort = const DateSort(), bool idProperty = false}) {
+  Query<DbShootingMatch> _buildMatchQuery(List<MatchQueryElement> elements, {int? limit, int? offset, MatchSortField sort = const DateSort()}) {
     var (whereElement, filterElements, sortProperties, whereSort) = _buildMatchQueryElements(elements, sort: sort);
 
     Query<DbShootingMatch> query = isar.dbShootingMatchs.buildQuery(
@@ -512,6 +582,26 @@ class AnalystDatabase {
       whereSort: whereSort,
       limit: limit,
       offset: offset,
+    );
+
+    return query;
+  }
+
+  Query<String> _buildMatchNameQuery(List<MatchQueryElement> elements, {int? limit, int? offset, MatchSortField sort = const DateSort()}) {
+    var (whereElement, filterElements, sortProperties, whereSort) = _buildMatchQueryElements(elements, sort: sort);
+
+    Query<String> query = isar.dbShootingMatchs.buildQuery(
+      whereClauses: whereElement?.whereClauses ?? [],
+      filter: filterElements.isEmpty ? null : FilterGroup.and([
+        for(var f in filterElements)
+          if(f.filterCondition != null)
+            f.filterCondition!,
+      ]),
+      sortBy: sortProperties,
+      whereSort: whereSort,
+      limit: limit,
+      offset: offset,
+      property: "eventName",
     );
 
     return query;

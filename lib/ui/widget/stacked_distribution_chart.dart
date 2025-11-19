@@ -10,6 +10,7 @@ import 'package:data/data.dart' show ContinuousDistribution;
 import 'package:flutter/material.dart';
 import 'package:community_charts_flutter/community_charts_flutter.dart' as charts;
 import 'package:shooting_sports_analyst/ui/colors.dart';
+import 'package:shooting_sports_analyst/ui_util.dart';
 import 'package:shooting_sports_analyst/util.dart';
 // import 'package:community_charts_common/community_charts_common.dart' as common;
 
@@ -425,26 +426,3 @@ class _HistogramStep {
   _HistogramStep({required this.label, required this.bucketStart, required this.count, required this.color});
 }
 
-extension FlutterColorConverters on Color {
-  charts.Color toChartsColor() {
-    return charts.Color(r: red, g: green, b: blue);
-  }
-
-  RgbColor toRgbColor() {
-    return RgbColor(red, green, blue);
-  }
-
-  String toHex() {
-    return '#${red.toRadixString(16).padLeft(2, '0')}${green.toRadixString(16).padLeft(2, '0')}${blue.toRadixString(16).padLeft(2, '0')}';
-  }
-}
-
-extension RgbColorConverters on RgbColor {
-  charts.Color toChartsColor({double? alpha}) {
-    return charts.Color(r: red, g: green, b: blue, a: alpha != null ? (alpha * 255).toInt() : 255);
-  }
-
-  Color toFlutterColor() {
-    return Color.fromARGB(alpha, red, green, blue);
-  }
-}

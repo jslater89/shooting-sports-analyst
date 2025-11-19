@@ -18,6 +18,12 @@ sealed class MatchSourceError implements ResultErr {
   static UnsupportedOperation get unsupportedOperation => const UnsupportedOperation();
   static UnsupportedMatchType get unsupportedMatchType => const UnsupportedMatchType();
   static NoCredentials get noCredentials => const NoCredentials();
+  static DatabaseError get databaseError => const DatabaseError();
+}
+
+class DatabaseError extends MatchSourceError {
+  String get message => "Database error";
+  const DatabaseError();
 }
 
 class NetworkError extends MatchSourceError {

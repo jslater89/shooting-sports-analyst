@@ -5,15 +5,18 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:shooting_sports_analyst/ui/widget/dialog/about_dialog.dart';
+import 'package:shooting_sports_analyst/data/help/entries/about_help.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
 
+/// The normal scaffold for Analyst, with a title, list of actions, progress indicator, and body.
 class EmptyScaffold extends StatelessWidget {
   final Widget? child;
   final String? title;
   final bool? operationInProgress;
+  final String? helpTopicId;
   final List<Widget> actions;
 
-  const EmptyScaffold({Key? key, this.child, this.operationInProgress = false, this.title, this.actions = const []}) : super(key: key);
+  const EmptyScaffold({Key? key, this.child, this.operationInProgress = false, this.title, this.actions = const [], this.helpTopicId}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -29,12 +32,7 @@ class EmptyScaffold extends StatelessWidget {
         centerTitle: true,
         actions: [
           ...actions,
-          IconButton(
-            icon: Icon(Icons.help),
-            onPressed: () {
-              showAbout(context, size);
-            },
-          ),
+          HelpButton(helpTopicId: helpTopicId ?? aboutHelpId),
         ],
         bottom: operationInProgress! ? PreferredSize(
           preferredSize: Size(double.infinity, 5),

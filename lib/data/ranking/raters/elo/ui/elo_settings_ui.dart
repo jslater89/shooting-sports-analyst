@@ -7,6 +7,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/help/entries/elo_configuration_help.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settings.dart';
@@ -431,6 +432,7 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     return Column(
       mainAxisAlignment: MainAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -438,7 +440,7 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
         Divider(endIndent: 20),
         Row(
           children: [
-            Text("Elo configuration", style: Theme.of(context).textTheme.labelLarge!),
+            Text("Elo configuration", style: Theme.of(context).textTheme.titleMedium!),
             HelpButton(helpTopicId: eloConfigHelpId),
           ],
         ),
@@ -465,13 +467,13 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
                   "change more rapidly in response to missed predictions.",
               child: Padding(
                 padding: const EdgeInsets.only(left: 16),
-                child: Text("K factor", style: Theme.of(context).textTheme.titleMedium!),
+                child: Text("K factor", style: Theme.of(context).textTheme.bodyLarge!),
               ),
             ),
             SizedBox(
-              width: 100,
+              width: 100 * uiScaleFactor,
               child: Padding(
-                padding: const EdgeInsets.only(right: 20),
+                padding: EdgeInsets.only(right: 20 * uiScaleFactor),
                 child: TextFormField(
                   controller: _kController,
                   textAlign: TextAlign.end,
@@ -495,13 +497,13 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
                   "than another shooter's by the scale factor is 4 times more likely to win than to lose.",
                 child: Padding(
                   padding: const EdgeInsets.only(left: 16),
-                  child: Text("Probability base", style: Theme.of(context).textTheme.titleMedium!),
+                  child: Text("Probability base", style: Theme.of(context).textTheme.bodyLarge!),
                 ),
               ),
               SizedBox(
-                width: 100,
+                width: 100 * uiScaleFactor,
                 child: Padding(
-                  padding: const EdgeInsets.only(right: 20),
+                  padding: EdgeInsets.only(right: 20 * uiScaleFactor),
                   child: TextFormField(
                     controller: _baseController,
                     textAlign: TextAlign.end,
@@ -526,13 +528,13 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
                   "assigned, and tells the algorithm that small score differences are more meaningful.",
               child: Padding(
                 padding: const EdgeInsets.only(left: 16),
-                child: Text("Scale factor", style: Theme.of(context).textTheme.titleMedium!),
+                child: Text("Scale factor", style: Theme.of(context).textTheme.bodyLarge!),
               ),
             ),
             SizedBox(
-              width: 100,
+              width: 100 * uiScaleFactor,
               child: Padding(
-                padding: const EdgeInsets.only(right: 20),
+                padding: EdgeInsets.only(right: 20 * uiScaleFactor),
                 child: TextFormField(
                   controller: _scaleController,
                   textAlign: TextAlign.end,
@@ -556,13 +558,13 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
                   "on that stage, and 30% from his overall match finish. No effect in by-match mode.",
               child: Padding(
                 padding: const EdgeInsets.only(left: 16),
-                child: Text("Match blend", style: Theme.of(context).textTheme.titleMedium!),
+                child: Text("Match blend", style: Theme.of(context).textTheme.bodyLarge!),
               ),
             ),
             SizedBox(
-              width: 100,
+              width: 100 * uiScaleFactor,
               child: Padding(
-                padding: const EdgeInsets.only(right: 20),
+                padding: EdgeInsets.only(right: 20.0 * uiScaleFactor),
                 child: TextFormField(
                   controller: _matchBlendController,
                   textAlign: TextAlign.end,
@@ -585,14 +587,14 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
                   "weight allows lower-level shooters to advance without having to beat high-level competition outright.",
               child: Padding(
                 padding: const EdgeInsets.only(left: 16),
-                child: Text("Percent/place weight", style: Theme.of(context).textTheme.titleMedium!),
+                child: Text("Percent/place weight", style: Theme.of(context).textTheme.bodyLarge!),
               ),
             ),
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 SizedBox(
-                  width: 80,
+                  width: 80.0 * uiScaleFactor,
                   child: Padding(
                     padding: const EdgeInsets.only(right: 20),
                     child: Tooltip(
@@ -614,7 +616,7 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
                   ),
                 ),
                 SizedBox(
-                  width: 80,
+                  width: 80 * uiScaleFactor,
                   child: Padding(
                     padding: const EdgeInsets.only(right: 20),
                     child: TextFormField(
@@ -663,13 +665,13 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
               message: "Controls the rating error where the lower multiplier will be fully applied.",
               child: Padding(
                 padding: const EdgeInsets.only(left: 16),
-                child: Text("Zero value", style: Theme.of(context).textTheme.titleMedium!),
+                child: Text("Zero value", style: Theme.of(context).textTheme.bodyLarge!),
               ),
             ),
             SizedBox(
-              width: 100,
+              width: 100 * uiScaleFactor,
               child: Padding(
-                padding: const EdgeInsets.only(right: 20),
+                padding: EdgeInsets.only(right: 20 * uiScaleFactor),
                 child: TextFormField(
                   enabled: settings.errorAwareK,
                   controller: _errorAwareZeroController,
@@ -691,13 +693,13 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
               message: "Controls the rating error where the lower multiplier will begin to be applied.",
               child: Padding(
                 padding: const EdgeInsets.only(left: 16),
-                child: Text("Min threshold", style: Theme.of(context).textTheme.titleMedium!),
+                child: Text("Min threshold", style: Theme.of(context).textTheme.bodyLarge!),
               ),
             ),
             SizedBox(
-              width: 100,
+              width: 100 * uiScaleFactor,
               child: Padding(
-                padding: const EdgeInsets.only(right: 20),
+                padding: EdgeInsets.only(right: 20 * uiScaleFactor),
                 child: TextFormField(
                   enabled: settings.errorAwareK,
                   controller: _errorAwareMinThresholdController,
@@ -719,13 +721,13 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
               message: "Controls the rating error where the upper multiplier will begin to be applied.",
               child: Padding(
                 padding: const EdgeInsets.only(left: 16),
-                child: Text("Max threshold", style: Theme.of(context).textTheme.titleMedium!),
+                child: Text("Max threshold", style: Theme.of(context).textTheme.bodyLarge!),
               ),
             ),
             SizedBox(
-              width: 100,
+              width: 100 * uiScaleFactor,
               child: Padding(
-                padding: const EdgeInsets.only(right: 20),
+                padding: EdgeInsets.only(right: 20 * uiScaleFactor),
                 child: TextFormField(
                   enabled: settings.errorAwareK,
                   controller: _errorAwareMaxThresholdController,
@@ -747,13 +749,13 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
               message: "Controls the rating error where the upper multiplier will be fully applied.",
               child: Padding(
                 padding: const EdgeInsets.only(left: 16),
-                child: Text("Maximum value", style: Theme.of(context).textTheme.titleMedium!),
+                child: Text("Maximum value", style: Theme.of(context).textTheme.bodyLarge!),
               ),
             ),
             SizedBox(
-              width: 100,
+              width: 100 * uiScaleFactor,
               child: Padding(
-                padding: const EdgeInsets.only(right: 20),
+                padding: EdgeInsets.only(right: 20 * uiScaleFactor),
                 child: TextFormField(
                   enabled: settings.errorAwareK,
                   controller: _errorAwareMaxController,
@@ -775,13 +777,13 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
               message: "Controls the amount of K reduction when rating error is below the minimum threshold.",
               child: Padding(
                 padding: const EdgeInsets.only(left: 16),
-                child: Text("Lower multiplier", style: Theme.of(context).textTheme.titleMedium!),
+                child: Text("Lower multiplier", style: Theme.of(context).textTheme.bodyLarge!),
               ),
             ),
             SizedBox(
-              width: 100,
+              width: 100 * uiScaleFactor,
               child: Padding(
-                padding: const EdgeInsets.only(right: 20),
+                padding: EdgeInsets.only(right: 20 * uiScaleFactor),
                 child: TextFormField(
                   enabled: settings.errorAwareK,
                   controller: _errorAwareLowerMultController,
@@ -803,13 +805,13 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
               message: "Controls the amount of K increase when rating error is above the maximum threshold.",
               child: Padding(
                 padding: const EdgeInsets.only(left: 16),
-                child: Text("Upper multiplier", style: Theme.of(context).textTheme.titleMedium!),
+                child: Text("Upper multiplier", style: Theme.of(context).textTheme.bodyLarge!),
               ),
             ),
             SizedBox(
-              width: 100,
+              width: 100 * uiScaleFactor,
               child: Padding(
-                padding: const EdgeInsets.only(right: 20),
+                padding: EdgeInsets.only(right: 20 * uiScaleFactor),
                 child: TextFormField(
                   enabled: settings.errorAwareK,
                   controller: _errorAwareUpperMultController,
@@ -849,13 +851,13 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
                     "will qualify for direction-aware K multipliers. Enter between -1.0 for -100 direction and 1.0 for +100 direction.",
               child: Padding(
                 padding: const EdgeInsets.only(left: 16),
-                child: Text("Streak limit", style: Theme.of(context).textTheme.titleMedium!),
+                child: Text("Streak limit", style: Theme.of(context).textTheme.bodyLarge!),
               ),
             ),
             SizedBox(
-              width: 100,
+              width: 100 * uiScaleFactor,
               child: Padding(
-                padding: const EdgeInsets.only(right: 20),
+                padding: EdgeInsets.only(right: 20 * uiScaleFactor),
                 child: TextFormField(
                   enabled: settings.directionAwareK || settings.streakAwareK,
                   controller: _streakLimitController,
@@ -893,13 +895,13 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
                 "For rating events that go opposite the current streak, reduce K by this multiplier.",
               child: Padding(
                 padding: const EdgeInsets.only(left: 16),
-                child: Text("Off-streak multiplier", style: Theme.of(context).textTheme.titleMedium!),
+                child: Text("Off-streak multiplier", style: Theme.of(context).textTheme.bodyLarge!),
               ),
             ),
             SizedBox(
-              width: 100,
+              width: 100 * uiScaleFactor,
               child: Padding(
-                padding: const EdgeInsets.only(right: 20),
+                padding: EdgeInsets.only(right: 20 * uiScaleFactor),
                 child: TextFormField(
                   enabled: settings.directionAwareK,
                   controller: _offStreakMultiplierController,
@@ -921,13 +923,13 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
                 message: "For rating events that go with the current streak, increase K by this multiplier.",
                 child: Padding(
                   padding: const EdgeInsets.only(left: 16),
-                  child: Text("On-streak multiplier", style: Theme.of(context).textTheme.titleMedium!),
+                  child: Text("On-streak multiplier", style: Theme.of(context).textTheme.bodyLarge!),
                 ),
               ),
               SizedBox(
-                width: 100,
+                width: 100 * uiScaleFactor,
                 child: Padding(
-                  padding: const EdgeInsets.only(right: 20),
+                  padding: EdgeInsets.only(right: 20 * uiScaleFactor),
                   child: TextFormField(
                     enabled: settings.directionAwareK,
                     controller: _onStreakMultiplierController,
@@ -965,13 +967,13 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
               message: "Controls the minimum percentage by which K will be reduced when bomb protection activates..",
               child: Padding(
                 padding: const EdgeInsets.only(left: 16),
-                child: Text("Bomb minimum K reduction", style: Theme.of(context).textTheme.titleMedium!),
+                child: Text("Bomb minimum K reduction", style: Theme.of(context).textTheme.bodyLarge!),
               ),
             ),
             SizedBox(
-              width: 100,
+              width: 100 * uiScaleFactor,
               child: Padding(
-                padding: const EdgeInsets.only(right: 20),
+                padding: EdgeInsets.only(right: 20 * uiScaleFactor),
                 child: TextFormField(
                   enabled: settings.bombProtection,
                   controller: _bombProtectionMinKController,
@@ -993,13 +995,13 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
               message: "Controls the maximum percentage by which K will be reduced when bomb protection activates.",
               child: Padding(
                 padding: const EdgeInsets.only(left: 16),
-                child: Text("Bomb maximum K reduction", style: Theme.of(context).textTheme.titleMedium!),
+                child: Text("Bomb maximum K reduction", style: Theme.of(context).textTheme.bodyLarge!),
               ),
             ),
             SizedBox(
-              width: 100,
+              width: 100 * uiScaleFactor,
               child: Padding(
-                padding: const EdgeInsets.only(right: 20),
+                padding: EdgeInsets.only(right: 20 * uiScaleFactor),
                 child: TextFormField(
                   enabled: settings.bombProtection,
                   controller: _bombProtectionMaxKController,
@@ -1022,13 +1024,13 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
                   "will begin to apply.",
               child: Padding(
                 padding: const EdgeInsets.only(left: 16),
-                child: Text("Bomb threshold", style: Theme.of(context).textTheme.titleMedium!),
+                child: Text("Bomb threshold", style: Theme.of(context).textTheme.bodyLarge!),
               ),
             ),
             SizedBox(
-              width: 100,
+              width: 100 * uiScaleFactor,
               child: Padding(
-                padding: const EdgeInsets.only(right: 20),
+                padding: EdgeInsets.only(right: 20 * uiScaleFactor),
                 child: TextFormField(
                   enabled: settings.bombProtection,
                   controller: _bombProtectionLowerThreshholdController,
@@ -1051,13 +1053,13 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
                   "will fully apply.",
               child: Padding(
                 padding: const EdgeInsets.only(left: 16),
-                child: Text("Bomb maximum", style: Theme.of(context).textTheme.titleMedium!),
+                child: Text("Bomb maximum", style: Theme.of(context).textTheme.bodyLarge!),
               ),
             ),
             SizedBox(
-              width: 100,
+              width: 100 * uiScaleFactor,
               child: Padding(
-                padding: const EdgeInsets.only(right: 20),
+                padding: EdgeInsets.only(right: 20 * uiScaleFactor),
                 child: TextFormField(
                   enabled: settings.bombProtection,
                   controller: _bombProtectionUpperThresholdController,
@@ -1080,13 +1082,13 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
                   "apply.",
               child: Padding(
                 padding: const EdgeInsets.only(left: 16),
-                child: Text("Bomb minimum percentage", style: Theme.of(context).textTheme.titleMedium!),
+                child: Text("Bomb minimum percentage", style: Theme.of(context).textTheme.bodyLarge!),
               ),
             ),
             SizedBox(
-              width: 100,
+              width: 100 * uiScaleFactor,
               child: Padding(
-                padding: const EdgeInsets.only(right: 20),
+                padding: EdgeInsets.only(right: 20 * uiScaleFactor),
                 child: TextFormField(
                   enabled: settings.bombProtection,
                   controller: _bombProtectionMinPercentController,
@@ -1109,13 +1111,13 @@ class _EloSettingsWidgetState extends State<EloSettingsWidget> {
                   "apply.",
               child: Padding(
                 padding: const EdgeInsets.only(left: 16),
-                child: Text("Bomb full percentage", style: Theme.of(context).textTheme.titleMedium!),
+                child: Text("Bomb full percentage", style: Theme.of(context).textTheme.bodyLarge!),
               ),
             ),
             SizedBox(
-              width: 100,
+              width: 100 * uiScaleFactor,
               child: Padding(
-                padding: const EdgeInsets.only(right: 20),
+                padding: EdgeInsets.only(right: 20 * uiScaleFactor),
                 child: TextFormField(
                   enabled: settings.bombProtection,
                   controller: _bombProtectionMaxPercentController,

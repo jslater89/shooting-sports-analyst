@@ -39,6 +39,7 @@ import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
 import 'package:shooting_sports_analyst/version.dart';
 
+import 'db_oneoff_impl/check_location_proportion.dart';
 import 'db_oneoff_impl/prediction_percentages.dart';
 import 'db_oneoff_impl/predictions_to_odds.dart';
 import 'db_oneoff_impl/stacked_labeled_progress_bar_test.dart';
@@ -57,10 +58,12 @@ import 'db_oneoff_impl/elo_inflation_analysis.dart';
 import 'db_oneoff_impl/speed_accuracy_bifecta.dart';
 import 'db_oneoff_impl/ties.dart';
 import 'db_oneoff_impl/find_miff_test_matches_command.dart';
+import 'db_oneoff_impl/import_match_command.dart';
+import 'db_oneoff_impl/state_shooters_command.dart';
 
 late SSALogger _log = SSALogger("DbOneoffs");
 
-Future<void> main() async {
+Future<void> main(List<String> args) async {
   SSALogger.debugProvider = ServerDebugProvider();
   SSALogger.consoleOutput = false;
   SSALogger.fileOutput = true;
@@ -73,22 +76,48 @@ Future<void> main() async {
   await db.ready;
 
   var console = Console();
+
+  if(args.length > 0) {
+    var command = args[0];
+    if(command == "IM") {
+      var sport = args[1];
+      var file = args[2];
+      await ImportMatchCommand(db).executor(console, [
+        MenuArgumentValue<String>(argument: StringMenuArgument(label: "sport"), value: sport),
+        MenuArgumentValue<String>(argument: StringMenuArgument(label: "file"), value: file),
+      ]);
+    }
+    else if(command == "CLP") {
+      await CheckLocationProportionCommand(db).executor(console, []);
+    }
+    else {
+      console.print("Unsupported launch command: $command");
+    }
+    return;
+  }
+
   await menuLoop(console, [
-    TomCastroCommand(db),
-    MatchBumpGmsCommand(db),
-    DoesMyQueryWorkCommand(db),
-    Lady90PercentFinishesCommand(db),
+    // TomCastroCommand(db),
+    //MatchBumpGmsCommand(db),
+    //DoesMyQueryWorkCommand(db),
+    //Lady90PercentFinishesCommand(db),
     AnalyzeIcoreDumpCommand(db),
     ImportIcoreDumpCommand(db),
-    WinningPointsByDateCommand(db),
-    StageSizeAnalysisCommand(db),
-    StageCountsByYearCommand(db),
-    PredictionsToOddsCommand(db),
-    PredictionPercentagesCommand(db),
-    EloInflationAnalysisCommand(db),
-    SpeedAccuracyBifectaCommand(db),
-    TiesCommand(db),
+    //WinningPointsByDateCommand(db),
+    //StageSizeAnalysisCommand(db),
+    //StageCountsByYearCommand(db),
+    // PredictionsToOddsCommand(db),
+    // PredictionPercentagesCommand(db),
+    // EloInflationAnalysisCommand(db),
+    // SpeedAccuracyBifectaCommand(db),
+    // TiesCommand(db),
     FindMiffTestMatchesCommand(db),
+    //EloInflationAnalysisCommand(db),
+    //SpeedAccuracyBifectaCommand(db),
+    //TiesCommand(db),
+    ImportMatchCommand(db),
+    CheckLocationProportionCommand(db),
+    StateShootersCommand(db),
     QuitCommand(),
   ], menuHeader: "DB Oneoffs ${VersionInfo.version}", commandSelected: (command) async {
     switch(command.command?.runtimeType) {

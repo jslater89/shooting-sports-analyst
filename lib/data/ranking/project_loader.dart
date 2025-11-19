@@ -573,7 +573,17 @@ class RatingProjectLoader {
       );
 
     var persistStart = DateTime.now();
-    db.updateChangedRatingsSync(changedRatings);
+    await db.updateChangedRatingsSemiSync(changedRatings, onPersisted: ({required int progress, required int total, String? message}) async {
+      await host.progressCallback(
+        progress: _currentMatchStep,
+        total: _totalMatchSteps,
+        subProgress: progress,
+        subTotal: total,
+        state: LoadingState.persistingChanges,
+        groupName: group.name,
+        eventName: message,
+      );
+    });
     if(Timings.enabled) timings.add(TimingType.persistRatingChanges, DateTime.now().difference(persistStart).inMicroseconds);
 
     var count = await db.countShooterRatings(project, group);
@@ -1256,6 +1266,13 @@ class RatingProjectLoader {
           rating.lastClassification = s.classification;
           rating.division = s.division;
           rating.ageCategory = s.ageCategory;
+
+          if(s.region != null && s.region!.isNotEmpty && s.region != rating.region) {
+            rating.region = s.region;
+          }
+          if(s.regionSubdivision != null && s.regionSubdivision!.isNotEmpty && s.regionSubdivision != rating.regionSubdivision) {
+            rating.regionSubdivision = s.regionSubdivision;
+          }
 
           if(match.date.isAfter(rating.lastSeen)) {
             rating.lastSeen = match.date;

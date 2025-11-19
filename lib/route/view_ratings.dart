@@ -31,6 +31,7 @@ import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/route/match_heat_page.dart';
+import 'package:shooting_sports_analyst/route/ratings_map.dart';
 import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/rater/display_settings.dart';
 import 'package:shooting_sports_analyst/ui/rater/member_number_correction_dialog.dart';
@@ -272,7 +273,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     return Column(
       children: [
         Container(
-          color: backgroundColor,
+          // color: backgroundColor,
           child: TabBar(
             controller: _tabController,
             indicatorColor: Theme.of(context).colorScheme.primary,
@@ -679,6 +680,12 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
         }));
         break;
 
+      case _MenuEntry.viewRatingsMap:
+        Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+          return RatingsMap(dataSource: widget.dataSource);
+        }));
+        break;
+
       case _MenuEntry.chooseRatingSets:
         var ratingSets = await RatingSetManagerDialog.show(context, db: AnalystDatabase(), validRatings: _completeRatings, initialSelection: _ratingSets);
 
@@ -816,6 +823,7 @@ enum _MenuEntry {
   dataErrors,
   viewResults,
   viewMatchHeat,
+  viewRatingsMap,
   chooseRatingSets,
   otherSettings;
 
@@ -833,6 +841,8 @@ enum _MenuEntry {
         return "View match results";
       case _MenuEntry.viewMatchHeat:
         return "View match heat";
+      case _MenuEntry.viewRatingsMap:
+        return "View ratings map";
       case _MenuEntry.chooseRatingSets:
         return "Choose rating sets";
       case _MenuEntry.otherSettings:

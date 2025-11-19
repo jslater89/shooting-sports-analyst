@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/icore.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/idpa.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/ipsc.dart';
@@ -36,8 +37,13 @@ class SportRegistry {
     }
   }
 
-  Sport? lookup(String name) {
-    return _sportsByName[name];
+  Sport? lookup(String name, {bool caseSensitive = true}) {
+    if(caseSensitive) {
+      return _sportsByName[name];
+    }
+    else {
+      return _sportsByName.values.firstWhereOrNull((s) => s.name.toLowerCase() == name.toLowerCase());
+    }
   }
 
   List<Sport> get availableSports => _sportsByName.values.toList(growable: false);

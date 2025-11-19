@@ -307,28 +307,44 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
 
   /// Delete all shooter ratings and rating events belonging to this project.
   Future<void> resetRatings({ProgressCallback? progressCallback}) async {
-    int ratingCount = ratings.countSync();
-    ProgressCallback innerCallback = (progress, total) async {
-      if(progressCallback != null) {
-        await progressCallback(progress + ratingCount, total);
-      }
-    };
-    AnalystDatabase().isar.writeTxnSync(() {
-      int eventCount = 0;
-      for(var (i, r) in ratings.indexed) {
-        var count = r.events.filter().deleteAllSync();
-        r.events.resetSync();
-        eventCount += count;
-        if(i % 50 == 0) {
-          innerCallback(i, ratingCount);
-        }
-      }
+    var ratingList = ratings.toList();
+    int ratingCount = ratingList.length;
 
-      lastUsedMatches = [];
-      var count = ratings.filter().deleteAllSync();
+    int stepCount = 100;
+    int totalSteps = ratingCount ~/ stepCount;
+    int batchSize = (ratingCount / totalSteps).ceil();
+    int removed = 0;
+    int eventCount = 0;
+
+    while(removed < ratingCount) {
+      int start = removed;
+      int end = start + batchSize;
+      if(end > ratingCount) {
+        end = ratingCount;
+      }
+      if(start >= ratingCount) {
+        break;
+      }
+      var batch = ratingList.sublist(start, end);
+      AnalystDatabase().isar.writeTxnSync(() {
+        for(var r in batch) {
+          var count = r.events.filter().deleteAllSync();
+          r.events.resetSync();
+          eventCount += count;
+          AnalystDatabase().deleteShooterRatingSyncUnwrapped(r);
+        }
+      });
+
+      removed += batch.length;
+      await progressCallback?.call(removed, ratingCount);
+    }
+
+    AnalystDatabase().isar.writeTxnSync(() {
+      ratings.filter().deleteAllSync();
       ratings.resetSync();
-      _log.i("Cleared $count ratings and $eventCount events");
+      lastUsedMatches = [];
     });
+    _log.i("Cleared $ratingCount ratings and $eventCount events");
   }
 
   DbRatingProject({

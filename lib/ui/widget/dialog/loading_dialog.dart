@@ -6,6 +6,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shooting_sports_analyst/config/config.dart';
 
 class ProgressModel extends ChangeNotifier {
   int _current = 0;
@@ -60,12 +61,13 @@ class _LoadingDialogState<T> extends State<LoadingDialog> {
 
   @override
   Widget build(BuildContext context) {
+    var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     var provider = context.watch<ProgressModel?>();
     return AlertDialog(
       title: Text(widget.title),
       content: SizedBox(
-        height: 64,
-        width: 64,
+        height: 64 * uiScaleFactor,
+        width: 64 * uiScaleFactor,
         child: Column(
           children: [
             if(provider != null)

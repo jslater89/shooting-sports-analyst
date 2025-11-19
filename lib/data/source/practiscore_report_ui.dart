@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/closed_sources/ps_search/ui/match_search_controls.dart';
 import 'package:shooting_sports_analyst/closed_sources/ps_search/ui/match_search_results.dart';
 import 'package:shooting_sports_analyst/closed_sources/ps_search/ui/search_model.dart';
+import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/source/match_source_error.dart';
 import 'package:shooting_sports_analyst/data/source/practiscore_report.dart';
 import 'package:shooting_sports_analyst/data/source/prematch/search.dart';
@@ -54,7 +55,19 @@ class PractiscoreReportUI extends SourceUI {
                     onError(matchResult.unwrapErr());
                   }
                   else {
-                    onMatchDownloaded(matchResult.unwrap());
+                    var res = await AnalystDatabase().saveMatch(matchResult.unwrap());
+                    if(res.isErr()) {
+                      onError(MatchSourceError.databaseError);
+                    }
+                    else {
+                      var hydratedMatch = res.unwrap().hydrate();
+                      if(hydratedMatch.isErr()) {
+                        onError(MatchSourceError.databaseError);
+                      }
+                      else {
+                        onMatchDownloaded(hydratedMatch.unwrap());
+                      }
+                    }
                   }
                 }
               },

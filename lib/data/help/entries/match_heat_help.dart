@@ -38,9 +38,9 @@ and results for each match will be saved to the database. Subsequent visits to t
 add new matches to the database. The 'refresh' button in the top right of the screen will remove
 all cached results from the database and recalculate heat for all matches.
 
-## Interpreting the Graph
+## Measurements
 
-### X-Axis: Match Size
+### Match Size
 
 The X axis shows the number of competitors at the match. All registered competitors with a rating
 following the match will be included in the match size, even those that did not finish the match.
@@ -48,7 +48,7 @@ If the number of registered competitors differs from the number of competitors u
 heat, the number of registered competitors will be shown first, and the number of competitors used
 to calculate heat will be shown in parentheses.
 
-### Y-Axis: Top Ten Percent Average Rating
+### Top Ten Percent Average Rating
 
 The Y axis shows the average rating of the best competitors at the match. This is calculated by
 taking the top ten percent of competitors by finish position and averaging their ratings. If there
@@ -57,7 +57,7 @@ are fewer than 30 competitors in a match, the top 3 are used instead.
 The competitor's rating at the time of the match is used for the calculation, unless the rating has
 fewer than 50 stages on record. In that case, the most recent rating is used.
 
-### Dot Size: Median Rating
+### Median Rating
 
 The size of each match's dot shows the median rating of the competitors at the match. A median rating
 of 800 Elo is displayed as a dot with a radius of 2 pixels. Each additional 40 Elo increases the radius
@@ -65,21 +65,57 @@ of the dot by 1 pixel.
 
 The rating used is determined in the same manner as the Y-axis value.
 
-### Dot Color: Average Classification Strength
+### Average Classification Strength
 
 The color of each match's dot shows the average classification strength of the competitors at
 the match, relative to all matches in the project. The classification strength averages the
 classification strengths of the relevant competitors, using values determined by each supported sport.
 
+On each match's tooltip, classification is displayed in the format "A+24%", which indicates that the
+average classification strength at the match is 24% of the way from A to the next higher classification.
+
+## Display Options
+
+The display options dialog, accessible from the action icon in the top right corner, allows
+adjusting the display of the match heat graph.
+
+### X and Y Axes
+
+The X and Y axes autoscale to appropriate ranges for the selected data. Average classification uses
+a synthetic value determined by the classification strengths defined by each sport. For USPSA,
+classification strengths are as follows:
+
+* GM: 10
+* M: 6
+* A: 4
+* B: 3
+* C: 2
+* D: 1
+* U: 2
+
+Other sports may use different values, or may not use classification strengths at all.
+
+### Dot Size
+
+Each measurement defines its own scale for dot size.
+
+* **Match Size**: 1 pixel radius for matches of fewer than 50 competitors, plus 1 pixel for each additional 50 competitors.
+* **Top Ten Percent Average Rating**: 1 pixel radius for ratings less than 1200, plus 1 pixel for each additional 50 Elo.
+* **Median Rating**: 1 pixel radius for ratings less than 800, plus 1 pixel for each additional 40 Elo.
+* **Average Classification Strength**: 1 pixel radius for classification strengths in the bottom 10% of the range, up to
+  10 pixels for the strongest classification strength in the data.
+
+### Dot Color
+
+Each measurement linearly interpolates between colors based on the position of the value within the range of the measurement.
+Pure blue is the lowest value, and pure red is the highest value.
+
 ## Searching
 
-The search bar at the top of the screen can be used to highlight certain matches. It performs
-a case-insensitive 'string contains' search on the match name. Searches are cumulative, so searching
-for 'Area 8' and subsequently 'Area 5' will show both matches whose names contain 'Area 8'
-and 'Area 5'.
+The filter button at the top of the screen can be used to select matches to highlight on the graph.
+Highlighted matches will be displayed in normal colors, while unhighlighted matches will be shown
+in muted colors, and will no longer display tooltips.
 
-Prefixing a search with a minus sign (-) will exclude matches that match the search. For example,
-searching for 'National' will show all matches whose names contain that string, and subsequently
-searching for '-international' will exclude all matches that would otherwise be shown whose names
-contain 'international'.
+A tooltip on the "N results" text at the top of the screen will show the average heat of the
+highlighted matches.
 """;
