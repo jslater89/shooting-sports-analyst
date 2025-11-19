@@ -41,13 +41,18 @@ import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/route/broadcast_booth_page.dart';
 import 'package:shooting_sports_analyst/route/compare_shooter_results.dart';
+import 'package:shooting_sports_analyst/ui/empty_scaffold.dart';
 import 'package:shooting_sports_analyst/ui/rater/stacked_distribution_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/color_legend.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/score_list_settings_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/stage_stats_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/filter_controls.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_breakdown.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_list.dart';
+import 'package:shooting_sports_analyst/ui/widget/us_data_map.dart';
+import 'package:shooting_sports_analyst/ui_util.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 SSALogger _log = SSALogger("ResultPage");
 
@@ -515,7 +520,54 @@ class _ResultPageState extends State<ResultPage> {
           showCdf: true,
         ));
         break;
+      case _MenuEntry.viewCompetitorMap:
+        Map<String, int> intData = {};
+        for(var shooter in _canonicalMatch.shooters) {
+          if(shooter.region == "USA" && shooter.regionSubdivision != null) {
+            intData.increment(shooter.regionSubdivision!);
+          }
+        }
+        Map<String, double> doubleData = {};
+        for(var entry in intData.entries) {
+          doubleData[entry.key] = entry.value.toDouble();
+        }
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (context) => EmptyScaffold(
+            title: "Competitor map",
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                children: [
+                  ColorLegend(
+                    legendEntries: 10,
+                    minValue: intData.values.min.toDouble(),
+                    maxValue: intData.values.max.toDouble(),
+                    referenceColors: thermalLerpReferenceColors,
+                    labelDecimals: 0,
+                  ),
+                  Expanded(
+                    child: USDataMap(
+                      data: doubleData,
+                      rgbColors: thermalLerpReferenceColors,
+                      tooltipTextBuilder: (state) => "${state}: ${intData[state] ?? 0} competitors",
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ));
+        break;
     }
+  }
+
+  bool _matchHasLocatedShooters() {
+    for(var shooter in _canonicalMatch.shooters) {
+      if(shooter.region == "USA" && shooter.regionSubdivision != null) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @override
@@ -792,11 +844,17 @@ class _ResultPageState extends State<ResultPage> {
         ),
       ),
     );
-      actions.add(
+    actions.add(
       PopupMenuButton<_MenuEntry>(
         onSelected: (item) => _handleThreeDotClick(item),
         itemBuilder: (context) {
-          List<PopupMenuEntry<_MenuEntry>> items = _MenuEntry.values.map((v) =>
+          List<PopupMenuEntry<_MenuEntry>> items = [
+            _MenuEntry.refresh,
+            _MenuEntry.help,
+            _MenuEntry.broadcastBooth,
+            _MenuEntry.plotDistribution,
+            if(_matchHasLocatedShooters()) _MenuEntry.viewCompetitorMap,
+          ].map((v) =>
             PopupMenuItem(
               child: Text(v.label),
               value: v,
@@ -945,7 +1003,8 @@ enum _MenuEntry {
   refresh,
   broadcastBooth,
   help,
-  plotDistribution;
+  plotDistribution,
+  viewCompetitorMap;
 
   String get label {
     switch (this) {
@@ -955,6 +1014,8 @@ enum _MenuEntry {
         return "Broadcast mode";
       case _MenuEntry.plotDistribution:
         return "Scores distribution";
+      case _MenuEntry.viewCompetitorMap:
+        return "Competitor map";
       case _MenuEntry.refresh:
         return "Refresh";
     }

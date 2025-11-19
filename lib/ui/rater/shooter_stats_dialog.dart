@@ -31,7 +31,7 @@ import 'package:community_charts_flutter/src/text_style.dart' as style;
 import 'package:community_charts_flutter/src/text_element.dart' as element;
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_shooter_rating.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
-import 'package:shooting_sports_analyst/ui/widget/stacked_distribution_chart.dart';
+import 'package:shooting_sports_analyst/ui_util.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 final _log = SSALogger("ShooterStatsDialog");
@@ -246,32 +246,42 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
     var historyLines = _historyLines ?? _buildHistoryLines();
 
     return AlertDialog(
-      title: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      title: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          ClickableLink(
-            url: Uri.parse("https://uspsa.org/classification/${widget.rating.memberNumber}"),
-            child: Text("Ratings for ${widget.rating.getName(suffixes: false)} ${widget.rating.memberNumber} (${widget.rating.lastClassification?.displayName})"),
-          ),
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Tooltip(
-                child: Icon(Icons.numbers),
-                message: "Known member numbers:\n${widget.rating.knownMemberNumbers.join("\n")}\n\n"
-                  "All possible member numbers:\n${widget.rating.allPossibleMemberNumbers.join("\n")}",
+              ClickableLink(
+                url: Uri.parse("https://uspsa.org/classification/${widget.rating.memberNumber}"),
+                child: Text("Ratings for ${widget.rating.getName(suffixes: false)} ${widget.rating.memberNumber} (${widget.rating.lastClassification?.displayName})"),
               ),
-              Tooltip(
-                message: "Export event-by-event ratings for this shooter",
-                child: IconButton(
-                  icon: Icon(Icons.download),
-                  onPressed: () {
-                    exportCSV();
-                  },
-                ),
-              ),
-              IconButton(
-                icon: Icon(Icons.close),
-                onPressed: Navigator.of(context).pop,
+              Row(
+                children: [
+                  if(widget.rating.region != null) Text(widget.rating.region!, style: Theme.of(context).textTheme.titleSmall),
+                  if(widget.rating.region != null && widget.rating.regionSubdivision != null) Text(" - ", style: Theme.of(context).textTheme.titleSmall),
+                  if(widget.rating.regionSubdivision != null) Text(widget.rating.regionSubdivision!, style: Theme.of(context).textTheme.titleSmall),
+                  if(widget.rating.region != null || widget.rating.regionSubdivision != null) SizedBox(width: 10),
+              
+                  Tooltip(
+                    child: Icon(Icons.numbers),
+                    message: "Known member numbers:\n${widget.rating.knownMemberNumbers.join("\n")}\n\n"
+                      "All possible member numbers:\n${widget.rating.allPossibleMemberNumbers.join("\n")}",
+                  ),
+                  Tooltip(
+                    message: "Export event-by-event ratings for this shooter",
+                    child: IconButton(
+                      icon: Icon(Icons.download),
+                      onPressed: () {
+                        exportCSV();
+                      },
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close),
+                    onPressed: Navigator.of(context).pop,
+                  ),
+                ],
               ),
             ],
           ),
