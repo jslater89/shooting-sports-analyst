@@ -134,6 +134,10 @@ extension RatingProjectDatabase on AnalystDatabase {
     });
   }
 
+  bool deleteShooterRatingSyncUnwrapped(DbShooterRating rating) {
+    return _innerDeleteShooterRatingSync(rating);
+  }
+
   bool _innerDeleteShooterRatingSync(DbShooterRating rating) {
       rating.events.filter().deleteAllSync();
       // _log.v("Deleted $deleted events while deleting rating");
