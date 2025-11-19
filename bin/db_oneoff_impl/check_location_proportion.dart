@@ -15,7 +15,7 @@ class CheckLocationProportionCommand extends DbOneoffCommand {
   Future<void> executor(Console console, List<MenuArgumentValue> arguments) async {
     await _checkLocationProportion(db, console);
   }
-  
+
   @override
   String get key => "CLP";
   @override
@@ -28,6 +28,26 @@ Future<void> _checkLocationProportion(AnalystDatabase db, Console console) async
     console.print("Project not found");
     return;
   }
+
+  var dbIds = project.matchPointers.map((e) => e.sourceIds.first).toList();
+  var matches = await db.getMatchesByAnySourceIds(dbIds);
+
+  int matchesWith20PercentLocation = 0;
+  int totalMatches = matches.length;
+  for(var match in matches) {
+    int locationCount = 0;
+    int threshold = (match.shooters.length * 0.2).round();
+    for(var s in match.shooters) {
+      if(s.regionSubdivision != null) {
+        locationCount++;
+      }
+      if(locationCount >= threshold) {
+        matchesWith20PercentLocation++;
+        break;
+      }
+    }
+  }
+  console.print("Matches with 20% location: ${matchesWith20PercentLocation} / ${totalMatches} (${(matchesWith20PercentLocation / totalMatches * 100).toStringAsFixed(2)}%)");
 
   var groups = project.groups;
   Map<RatingGroup, Map<String, List<double>>> ratingsByLocationByGroup = {};

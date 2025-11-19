@@ -85,6 +85,9 @@ Future<void> main(List<String> args) async {
         MenuArgumentValue<String>(argument: StringMenuArgument(label: "file"), value: file),
       ]);
     }
+    else if(command == "CLP") {
+      await CheckLocationProportionCommand(db).executor(console, []);
+    }
     else {
       console.print("Unsupported launch command: $command");
     }
