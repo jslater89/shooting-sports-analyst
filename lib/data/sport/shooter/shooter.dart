@@ -87,6 +87,7 @@ class Shooter {
     String memberNumber = "",
     this.region,
     this.regionSubdivision,
+    this.rawLocation,
     this.female = false,
     this.ageCategory,
   }) {
@@ -104,6 +105,10 @@ class Shooter {
   /// available. Typically a two-letter ISO-3166 state/province code.
   String? regionSubdivision;
 
+  /// The raw location string from the source data, if parsing into
+  /// more standardized [region] and [regionSubdivision] is not possible.
+  String? rawLocation;
+
   void copyVitalsFrom(Shooter other) {
     this.firstName = other.firstName;
     this.lastName = other.lastName;
@@ -115,6 +120,7 @@ class Shooter {
     this.female = other.female;
     this.region = other.region;
     this.regionSubdivision = other.regionSubdivision;
+    this.rawLocation = other.rawLocation;
   }
 
   bool equalsShooter(Shooter other) {
@@ -166,6 +172,7 @@ class MatchEntry extends Shooter {
     super.ageCategory,
     super.region,
     super.regionSubdivision,
+    super.rawLocation,
     this.reentry = false,
     this.dq = false,
     required this.entryId,
@@ -193,6 +200,7 @@ class MatchEntry extends Shooter {
       memberNumber: memberNumber,
       region: region,
       regionSubdivision: regionSubdivision,
+      rawLocation: rawLocation,
       reentry: reentry,
       dq: dq,
       entryId: entryId,
