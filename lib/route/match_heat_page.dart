@@ -600,7 +600,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
               child: Container(
                 width: 300,
                 decoration: BoxDecoration(
-                  color: finalBackgroundColor.withOpacity(0.8),
+                  color: finalBackgroundColor.withValues(alpha: 0.8),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 padding: EdgeInsets.all(8),
@@ -667,56 +667,24 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
     _overlayMatch = null;
   }
 
-  final _referenceColors = [
-      Color.fromARGB(0xff, 0x09, 0x1f, 0x92).toRgbColor(),
-      Colors.blue.toRgbColor(),
-      Colors.green.toRgbColor(),
-      Colors.yellow.toRgbColor(),
-      Colors.orange.toRgbColor(),
-      Colors.red.toRgbColor(),
-    ];
-
   charts.Color? _calculateLerpColor({
     required double value,
     required double minValue,
     required double maxValue,
     bool dimmed = false,
   }) {
-
-    final stepsPerColor = 100 ~/ _referenceColors.length;
-    List<RgbColor> dotColorRange = [];
-    for(var i = 1; i < _referenceColors.length; i++) {
-      // For each color, add a range of stepsPerColor steps
-      dotColorRange.addAll(_referenceColors[i - 1].lerpTo(_referenceColors[i], stepsPerColor));
-    }
-    var colorCount = dotColorRange.length;
-
-    List<double> rangeSteps = [];
-    for(var i = 0; i < colorCount; i++) {
-      rangeSteps.add(minValue + (i * ((maxValue - minValue) / colorCount)));
-    }
-
-    RgbColor? color;
-    if(minValue == maxValue) {
-      color = dotColorRange[colorCount ~/ 2];
-    }
-    else if(value > minValue && value < maxValue) {
-      var fromBelow = (value - minValue) / (maxValue - minValue);
-      var fromBelowSteps = (fromBelow * colorCount).floor();
-      color = dotColorRange[fromBelowSteps];
-    }
-    else if(value <= minValue) {
-      color = dotColorRange.first;
-    }
-    else if(value >= maxValue) {
-      color = dotColorRange.last;
-    }
-
-    double alpha = 0.75;
     var isDark = Theme.of(context).brightness == Brightness.dark;
+    var color = lerpRgbColor(
+      value: value,
+      minValue: minValue,
+      maxValue: maxValue,
+      dimmed: dimmed,
+      isDark: isDark,
+      referenceColors: _referenceColors,
+    );
+    double alpha = 0.75;
     if(dimmed) {
-      color = color?.withChroma(color.chroma * 0.2);
-      alpha = isDark ? 0.25 : 0.1;
+      alpha = Theme.of(context).brightness == Brightness.dark ? 0.25 : 0.1;
     }
     if(!dimmed && _highlightedMatches.isNotEmpty) {
       alpha = 0.9;
@@ -727,12 +695,14 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
     return null;
   }
 
+  LerpColorScheme _colorScheme = LerpColorScheme.rainbow;
+  List<RgbColor> get _referenceColors => _colorScheme.referenceColors;
+
   charts.Color? _calculateStrengthColor({
     required double value,
     required Map<Classification, double> classStrengths,
     bool dimmed = false,
   }) {
-
     final stepsPerColor = 100 ~/ _referenceColors.length;
     List<RgbColor> dotColorRange = [];
     for(var i = 1; i < _referenceColors.length; i++) {
