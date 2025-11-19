@@ -49,6 +49,11 @@ class StringError extends ResultErr {
   static Result<T, StringError> result<T>(String message) {
     return Result.err(StringError(message));
   }
+
+  @override
+  String toString() {
+    return "$message";
+  }
 }
 
 typedef Nullable<T> = T?;
