@@ -573,7 +573,17 @@ class RatingProjectLoader {
       );
 
     var persistStart = DateTime.now();
-    db.updateChangedRatingsSync(changedRatings);
+    await db.updateChangedRatingsSemiSync(changedRatings, onPersisted: ({required int progress, required int total, String? message}) async {
+      await host.progressCallback(
+        progress: _currentMatchStep,
+        total: _totalMatchSteps,
+        subProgress: progress,
+        subTotal: total,
+        state: LoadingState.persistingChanges,
+        groupName: group.name,
+        eventName: message,
+      );
+    });
     if(Timings.enabled) timings.add(TimingType.persistRatingChanges, DateTime.now().difference(persistStart).inMicroseconds);
 
     var count = await db.countShooterRatings(project, group);

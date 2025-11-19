@@ -539,15 +539,66 @@ extension RatingProjectDatabase on AnalystDatabase {
   }
 
   /// Update DbShooterRatings that have changed as part of the rating process.
-  void updateChangedRatingsSync(Iterable<DbShooterRating> ratings, {bool useCache = true, ChangedRatingPersistedSyncCallback? onPersisted}) {
+  ///
+  /// This is a hybrid sync-async operation. Database operations are synchronous for speed,
+  /// but batched into between 10 and 100 transctions with an async callback between for the
+  /// progress UI.
+  Future<void> updateChangedRatingsSemiSync(Iterable<DbShooterRating> ratings, {bool useCache = true, ChangedRatingPersistedCallback? onPersisted}) async {
+    var ratingsList = ratings.toList();
+    Map<String, DbShootingMatch> matches = {};
+
+    // Do one transaction per five ratings for between 50 and 500 ratings.
+    // For more than 500 ratings, do 100 transactions total. For less than 50, just
+    // call the sync version directly.
+    if(ratingsList.length < 50) {
+      updateChangedRatingsSync(ratings, useCache: useCache, matches: matches);
+      return;
+    }
+
+    int transactionCount = (ratingsList.length / 5).round();
+    if(transactionCount > 100) {
+      transactionCount = 100;
+    }
+
+    var batchSize = (ratingsList.length / transactionCount).round();
+    int totalProcessed = 0;
+
+    while(totalProcessed < ratingsList.length) {
+      int startIndex = totalProcessed;
+      int endIndex = startIndex + batchSize;
+      if(startIndex >= ratingsList.length) {
+        break;
+      }
+      if(endIndex > ratingsList.length) {
+        endIndex = ratingsList.length;
+      }
+      var batch = ratingsList.sublist(startIndex, endIndex);
+      updateChangedRatingsSync(batch, useCache: useCache, matches: matches);
+
+      totalProcessed = endIndex;
+      if(onPersisted != null) {
+        int total = ratingsList.length;
+        await onPersisted(
+          progress: totalProcessed,
+          total: total,
+          message: "Processed $totalProcessed of $total ratings",
+        );
+      }
+    }
+  }
+
+  /// Update DbShooterRatings that have changed as part of the rating process.
+  ///
+  /// This is a fully synchronous operation and doesn't support progress callbacks. Use [updateChangedRatingsSemiSync] instead
+  /// for a hybrid sync-async operation that supports progress callbacks without the loss of speed of the fully async version.
+  ///
+  /// Takes and returns a map of match IDs to DbShootingMatch objects as an internal optimization.
+  Map<String, DbShootingMatch> updateChangedRatingsSync(Iterable<DbShooterRating> ratings, {bool useCache = true, Map<String, DbShootingMatch>? matches}) {
     late DateTime outerStart;
     if(Timings.enabled) outerStart = DateTime.now();
+    matches ??= {};
     isar.writeTxnSync(() {
-      int progress = 0;
       late DateTime start;
-
-      Map<String, DbShootingMatch> matches = {};
-
       for(var r in ratings) {
         if(Timings.enabled) start = DateTime.now();
         if(!r.isPersisted) {
@@ -577,13 +628,13 @@ extension RatingProjectDatabase on AnalystDatabase {
 
               // Otherwise, check our local cache.
               if(match == null) {
-                match = matches[event.matchId];
+                match = matches![event.matchId];
               }
 
               // If it still isn't available, ask the DB.
               if(match == null) {
                 match = this.getMatchByAnySourceIdSync([event.matchId]);
-                matches[event.matchId] = match!;
+                matches![event.matchId] = match!;
               }
               event.match.value = match;
               if(Timings.enabled) Timings().add(TimingType.getEventMatches, DateTime.now().difference(matchStart).inMicroseconds);
@@ -597,14 +648,6 @@ extension RatingProjectDatabase on AnalystDatabase {
         r.events.saveSync();
 
         if(Timings.enabled) Timings().add(TimingType.persistEvents, DateTime.now().difference(start).inMicroseconds);
-        if(onPersisted != null) {
-          onPersisted(
-            progress: progress,
-            total: ratings.length,
-            message: r.toString(),
-          );
-          progress += 1;
-        }
       }
     });
     if(Timings.enabled) Timings().add(TimingType.dbRatingUpdateTransaction, DateTime.now().difference(outerStart).inMicroseconds);
@@ -617,6 +660,7 @@ extension RatingProjectDatabase on AnalystDatabase {
     }
     if(Timings.enabled) Timings().add(TimingType.cacheUpdatedRatings, DateTime.now().difference(outerStart).inMicroseconds);
 
+    return matches;
   }
 
   Future<int> countShooterRatings(DbRatingProject project, RatingGroup group) async {
