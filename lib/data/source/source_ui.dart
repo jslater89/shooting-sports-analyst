@@ -7,6 +7,8 @@
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
 import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_ui.dart';
+import 'package:shooting_sports_analyst/closed_sources/ssa_server_source/ssa_server_source.dart';
+import 'package:shooting_sports_analyst/closed_sources/ssa_server_source/ssa_server_source_ui.dart';
 import 'package:shooting_sports_analyst/data/source/match_source_error.dart';
 import 'package:shooting_sports_analyst/data/source/practiscore_report.dart';
 import 'package:shooting_sports_analyst/data/source/practiscore_report_ui.dart';
@@ -36,6 +38,9 @@ abstract class SourceUI {
     }
     else if(source is PractiscoreHitFactorReportParser) {
       return PractiscoreReportUI();
+    }
+    else if(source is SSAServerMatchSource) {
+      return SSAServerSourceUI();
     }
     throw StateError("No UI for source $source");
   }

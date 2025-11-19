@@ -12,6 +12,7 @@ fi
 set +e
 rm psv2
 rm ps_search
+rm ssa_server_source
 set -e
 
 ln -s ../../../shooting-sports-analyst-closed-sources/psv2_match_source psv2
@@ -27,3 +28,11 @@ git checkout $TARGET_BRANCH
 cd ..
 ls ps_search
 head ps_search/ps_search_provider.dart
+
+
+ln -s ../../../shooting-sports-analyst-closed-sources/ssa_server_source ssa_server_source
+cd ssa_server_source
+git checkout $TARGET_BRANCH
+cd ..
+ls ssa_server_source
+head ssa_server_source/ssa_server_source.dart

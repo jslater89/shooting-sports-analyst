@@ -6,6 +6,7 @@
 
 import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
+import 'package:shooting_sports_analyst/closed_sources/ssa_server_source/ssa_server_source.dart';
 import 'package:shooting_sports_analyst/data/source/practiscore_report.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/ipsc.dart';
@@ -34,6 +35,7 @@ class MatchSourceRegistry {
     PractiscoreHitFactorReportParser(ipscSport),
     PractiscoreHitFactorReportParser(pcslSport),
     PSv2MatchSource(),
+    SSAServerMatchSource(),
   ];
   List<MatchSource> get sources => _sources.where((e) => e.isImplemented).toList(growable: false);
 
