@@ -605,3 +605,18 @@ extension AsNotNullExtension<X> on X? {
   /// Cast this object to [X], or throw an error if it is null.
   X asNotNull() => this as X;
 }
+
+extension WeightedAverage on List<num> {
+  double weightedAverage(List<double> weights) {
+    if(length != weights.length) {
+      throw ArgumentError("length of list and weights must be the same");
+    }
+    var sum = 0.0;
+    var weightSum = 0.0;
+    for(var i = 0; i < length; i++) {
+      sum += this[i] * weights[i];
+      weightSum += weights[i];
+    }
+    return sum / weightSum;
+  }
+}

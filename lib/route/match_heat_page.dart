@@ -586,6 +586,7 @@ class _MatchHeatGraphPageState extends State<MatchHeatGraphPage> {
           left -= 350;
         }
         if(top + 200 > windowSize.height) {
+          // move up when close to the bottom
           top -= 100;
         }
 
