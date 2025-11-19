@@ -1267,6 +1267,13 @@ class RatingProjectLoader {
           rating.division = s.division;
           rating.ageCategory = s.ageCategory;
 
+          if(s.region != null && s.region!.isNotEmpty && s.region != rating.region) {
+            rating.region = s.region;
+          }
+          if(s.regionSubdivision != null && s.regionSubdivision!.isNotEmpty && s.regionSubdivision != rating.regionSubdivision) {
+            rating.regionSubdivision = s.regionSubdivision;
+          }
+
           if(match.date.isAfter(rating.lastSeen)) {
             rating.lastSeen = match.date;
           }
