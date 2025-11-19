@@ -62,7 +62,7 @@ class _ImportState {
       return null;
     }
     var powerFactor = preexistingSport!.powerFactors.lookupByName(powerFactorName);
-    if(powerFactor == null) { 
+    if(powerFactor == null) {
       return null;
     }
     return powerFactor.allEvents.lookupByName(name);
@@ -136,7 +136,7 @@ class MiffImporter implements AbstractMiffImporter {
             return Result.err(StringError("Invalid event level: $eventLevelStr"));
           }
         }
-        level = sport.eventLevels.lookupByName(levelName) ?? 
+        level = sport.eventLevels.lookupByName(levelName) ??
                 (eventLevel != null ? MatchLevel(name: levelName, shortName: levelName, eventLevel: eventLevel) : null);
       }
 
@@ -362,6 +362,9 @@ class MiffImporter implements AbstractMiffImporter {
         reentry: json["reentry"] as bool? ?? false,
         dq: json["dq"] as bool? ?? false,
         squad: json["squad"] as int?,
+        region: json["region"] as String?,
+        regionSubdivision: json["regionSubdivision"] as String?,
+        rawLocation: json["rawLocation"] as String?,
         sourceId: json["sourceId"] as String?,
         scores: {},
       );
@@ -376,7 +379,7 @@ class MiffImporter implements AbstractMiffImporter {
       // Parse scores
       var scoresJson = json["scores"] as Map<String, dynamic>;
       var stageMap = {for (var s in stages) s.stageId: s};
-      
+
       for (var entry in scoresJson.entries) {
         var stageId = int.parse(entry.key);
         var stage = stageMap[stageId];

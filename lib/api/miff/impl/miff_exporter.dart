@@ -10,7 +10,6 @@ import "dart:io";
 import "package:shooting_sports_analyst/api/miff/miff.dart";
 import "package:shooting_sports_analyst/data/sport/match/match.dart";
 import "package:shooting_sports_analyst/data/sport/scoring/scoring.dart";
-import "package:shooting_sports_analyst/data/sport/scoring/stage_scoring.dart";
 import "package:shooting_sports_analyst/data/sport/shooter/shooter.dart";
 import "package:shooting_sports_analyst/data/sport/sport.dart";
 import "package:shooting_sports_analyst/util.dart";
@@ -218,6 +217,15 @@ class MiffExporter implements AbstractMiffExporter {
     if (shooter.ageCategory != null) {
       shooterJson["ageCategory"] = shooter.ageCategory!.name;
     }
+    if (shooter.region != null) {
+      shooterJson["region"] = shooter.region;
+    }
+    if (shooter.regionSubdivision != null) {
+      shooterJson["regionSubdivision"] = shooter.regionSubdivision;
+    }
+    if (shooter.rawLocation != null) {
+      shooterJson["rawLocation"] = shooter.rawLocation;
+    }
     if (shooter.sourceId != null) {
       shooterJson["sourceId"] = shooter.sourceId;
     }
@@ -261,7 +269,7 @@ class MiffExporter implements AbstractMiffExporter {
 
   Map<String, int> _eventCountsToJson(Map<ScoringEvent, int> events, MatchStage stage) {
     var result = <String, int>{};
-    
+
     // Build a map from (baseName, pointChange, timeChange) to distinct name for variable events
     // This allows us to match score events (which have base names) to variable events (which may have distinct names)
     var variableEventMap = <String, Map<String, String>>{}; // baseName -> (key: "$pointChange:$timeChange", value: distinctName)
@@ -282,7 +290,7 @@ class MiffExporter implements AbstractMiffExporter {
     for (var entry in events.entries) {
       var event = entry.key;
       var count = entry.value;
-      
+
       // Check if this event matches any variable event in the stage
       // Match by base name and values (pointChange, timeChange)
       String? distinctName;
@@ -291,7 +299,7 @@ class MiffExporter implements AbstractMiffExporter {
         var key = "${event.pointChange}:${event.timeChange}";
         distinctName = nameMap[key];
       }
-      
+
       if (distinctName != null) {
         // This is a variable event - use the distinct name
         result[distinctName] = count;
@@ -305,7 +313,7 @@ class MiffExporter implements AbstractMiffExporter {
   }
 
   /// Generates a distinct name for a variable event.
-  /// 
+  ///
   /// If there are multiple events with the same base name but different values,
   /// generates names like "X-0.5", "X-1.0", or "X-5--1.0" to ensure uniqueness.
   String _generateVariableEventName(ScoringEvent event, List<ScoringEvent> allEventsWithSameName) {

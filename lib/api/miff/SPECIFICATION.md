@@ -193,6 +193,9 @@ Represents a competitor's entry in the match.
 | `division` | string | No | Division name (if sport has divisions) |
 | `classification` | string | No | Classification name (if sport has classifications) |
 | `ageCategory` | string | No | Age category name (if applicable) |
+| `region` | string | No | Normalized region code (typically ISO-3166 country code) |
+| `regionSubdivision` | string | No | Normalized region subdivision code (typically ISO-3166 state/province code) |
+| `rawLocation` | string | No | Raw location string from source data |
 | `scores` | object | Yes | Map from stage ID to score (see Score Object) |
 | `supersededScores` | object | No | Map from stage ID to array of Score objects. Contains previous versions of scores that have been edited or superseded. The array preserves the history of edits, with older scores appearing earlier in the array. |
 | `sourceId` | string | No | Source-specific entry identifier |
