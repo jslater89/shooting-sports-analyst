@@ -10,7 +10,7 @@ import 'package:shooting_sports_analyst/ui/widget/interactive_svg.dart';
 import 'package:shooting_sports_analyst/ui/widget/stacked_distribution_chart.dart';
 import 'package:shooting_sports_analyst/ui_util.dart';
 
-class USDataMap extends StatelessWidget {
+class USDataMap extends StatefulWidget {
   /// A map of state names to data values. Use the two-letter state code as the key.
   final Map<String, double> data;
 
@@ -38,12 +38,10 @@ class USDataMap extends StatelessWidget {
   /// to zoom/pan.
   final double sizeMultiplier;
 
-  late final _tooltip = CustomTooltip<String>(
-    child: Text(""), width: tooltipWidth, height: tooltipHeight);
 
   USDataMap({
-    super.key, 
-    required this.data, 
+    super.key,
+    required this.data,
     this.rgbColors,
     this.colors,
     this.tooltipTextBuilder,
@@ -52,36 +50,50 @@ class USDataMap extends StatelessWidget {
     this.sizeMultiplier = 1,
   });
 
+  static const svgAsset = "assets/images/us-states-map.svg";
+
+  @override
+  State<USDataMap> createState() => _USDataMapState();
+}
+
+class _USDataMapState extends State<USDataMap> {
+  late final _tooltip = CustomTooltip<String>(
+    child: Text(""), width: widget.tooltipWidth, height: widget.tooltipHeight);
+
   List<RgbColor> resolveColors() {
-    if(rgbColors != null) {
-      return rgbColors!;
+    if(widget.rgbColors != null) {
+      return widget.rgbColors!;
     }
-    if(colors != null) {
-      return colors!.map((e) => e.toRgbColor()).toList();
+    if(widget.colors != null) {
+      return widget.colors!.map((e) => e.toRgbColor()).toList();
     }
     return blueToYellowLerpReferenceColors;
   }
 
-  static const svgAsset = "assets/images/us-states-map.svg";
+  @override
+  void dispose() {
+    _tooltip.remove(context);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     var size = MediaQuery.of(context).size;
-    if(data.isEmpty) {
+    if(widget.data.isEmpty) {
       return InteractiveSvg(
-      assetPath: svgAsset,
+      assetPath: USDataMap.svgAsset,
       colorMapper: _StateColorMapper(context, {}),
-      width: size.width * sizeMultiplier,
-      height: size.height * sizeMultiplier,
+      width: size.width * widget.sizeMultiplier,
+      height: size.height * widget.sizeMultiplier,
     );
     }
-    var minValue = data.values.min;
-    var maxValue = data.values.max;
+    var minValue = widget.data.values.min;
+    var maxValue = widget.data.values.max;
     var colors = resolveColors();
     Map<String, Color?> stateColors = {};
-    for(var state in data.keys) {
-      var value = data[state]!;
+    for(var state in widget.data.keys) {
+      var value = widget.data[state]!;
       var color = lerpRgbColor(
         value: value,
         minValue: minValue,
@@ -92,29 +104,29 @@ class USDataMap extends StatelessWidget {
     }
     var colorMapper = _StateColorMapper(context, stateColors);
     return InteractiveSvg(
-      assetPath: svgAsset,
+      assetPath: USDataMap.svgAsset,
       colorMapper: colorMapper,
-      width: size.width * sizeMultiplier,
-      height: size.height * sizeMultiplier,
-      onHover: tooltipTextBuilder == null ? null : (event, pathId) {
+      width: size.width * widget.sizeMultiplier,
+      height: size.height * widget.sizeMultiplier,
+      onHover: widget.tooltipTextBuilder == null ? null : (event, pathId) {
         _tooltip.onHover(event);
         if(pathId == null) {
           return;
         }
         var normalizedId = normalizeUSState(pathId);
-        var tooltipText = tooltipTextBuilder?.call(normalizedId);
+        var tooltipText = widget.tooltipTextBuilder?.call(normalizedId);
         if(tooltipText == null) {
           return;
         }
         _tooltip.insert(
           context: context,
           data: pathId,
-          width: tooltipWidth * uiScaleFactor,
-          height: tooltipHeight * uiScaleFactor,
+          width: widget.tooltipWidth * uiScaleFactor,
+          height: widget.tooltipHeight * uiScaleFactor,
           child: Text(tooltipText, style: TextStyles.tooltipText(context)),
         );
       },
-      onExit: tooltipTextBuilder == null ? null : (event, pathId) {
+      onExit: widget.tooltipTextBuilder == null ? null : (event, pathId) {
         _tooltip.remove(context);
       },
     );
@@ -135,7 +147,7 @@ class _StateColorMapper extends ColorMapper {
         if(color.toHex().toLowerCase() == "#ffffff") {
           return Colors.black;
         }
-        else if(color.toHex().toLowerCase() == "#b0b0b0") {         
+        else if(color.toHex().toLowerCase() == "#b0b0b0") {
           return Color.fromARGB(255, 0x50, 0x50, 0x50);
         }
       }
@@ -145,5 +157,5 @@ class _StateColorMapper extends ColorMapper {
     var stateColor = _stateColors[normalizedId];
     return stateColor ?? color;
   }
-  
+
 }
