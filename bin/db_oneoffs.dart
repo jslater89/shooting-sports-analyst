@@ -58,6 +58,7 @@ import 'db_oneoff_impl/elo_inflation_analysis.dart';
 import 'db_oneoff_impl/speed_accuracy_bifecta.dart';
 import 'db_oneoff_impl/ties.dart';
 import 'db_oneoff_impl/import_match_command.dart';
+import 'db_oneoff_impl/state_shooters_command.dart';
 
 late SSALogger _log = SSALogger("DbOneoffs");
 
@@ -111,6 +112,7 @@ Future<void> main(List<String> args) async {
     //TiesCommand(db),
     ImportMatchCommand(db),
     CheckLocationProportionCommand(db),
+    StateShootersCommand(db),
     QuitCommand(),
   ], menuHeader: "DB Oneoffs ${VersionInfo.version}", commandSelected: (command) async {
     switch(command.command?.runtimeType) {
