@@ -297,7 +297,7 @@ class AnalystDatabase {
 
   /// A text search match query, using partial searches and string similarity
   /// to return the best-matching names.
-  /// 
+  ///
   /// Query will be split into search terms of 3+ characters on spaces.
   Future<List<DbShootingMatch>> matchNameTextSearch(String query, {
     int limit = 10,
@@ -334,7 +334,7 @@ class AnalystDatabase {
     }
 
     // Sort by dice similarity to the original query
-    matchNames.sort((a, b) { 
+    matchNames.sort((a, b) {
       var aSimilarity = matchNameSimilarities[a] ?? 0;
       var bSimilarity = matchNameSimilarities[b] ?? 0;
       return bSimilarity.compareTo(aSimilarity);
@@ -500,10 +500,12 @@ class AnalystDatabase {
     return getMatchByAnySourceId([id]);
   }
 
+  /// Get a match by database ID.
   Future<DbShootingMatch?> getMatch(int id) async {
     return await isar.dbShootingMatchs.get(id);
   }
 
+  /// Get matches by database IDs.
   Future<List<DbShootingMatch>> getMatchesByIds(Iterable<Id> ids) async {
     return await isar.dbShootingMatchs.where().anyOf(ids, (query, id) => query.idEqualTo(id)).findAll();
   }
