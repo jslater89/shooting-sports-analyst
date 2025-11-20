@@ -303,7 +303,7 @@ class _MyAppState extends State<MyApp> {
         ),
       ),
       tabBarTheme: Theme.of(context).tabBarTheme.copyWith(
-        //labelColor: 
+        //labelColor:
       ),
       iconTheme: iconTheme,
       iconButtonTheme: iconButtonTheme,

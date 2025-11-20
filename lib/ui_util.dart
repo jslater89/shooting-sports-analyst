@@ -22,6 +22,7 @@ enum LerpColorScheme {
   blueToRed,
   grayscale,
   thermal,
+  hotMetal,
   blueToYellow;
 
   String get uiLabel => switch(this) {
@@ -29,6 +30,7 @@ enum LerpColorScheme {
     blueToRed => "Blue to red",
     grayscale => "Grayscale",
     thermal => "Thermal",
+    hotMetal => "Hot metal",
     blueToYellow => "Blue to yellow",
   };
 
@@ -37,6 +39,7 @@ enum LerpColorScheme {
     blueToRed => blueToRedLerpReferenceColors,
     grayscale => grayscaleLerpReferenceColors,
     thermal => thermalLerpReferenceColors,
+    hotMetal => hotMetalLerpReferenceColors,
     blueToYellow => blueToYellowLerpReferenceColors,
   };
 }
@@ -50,14 +53,14 @@ final rainbowLerpReferenceColors = [
   Colors.red.toRgbColor(),
 ];
 
-final blackToWhiteLerpReferenceColors = [
-  Color.fromARGB(255, 0, 0, 0).toRgbColor(),
-  Color.fromARGB(255, 0, 0, 255).toRgbColor(),
-  Color.fromARGB(255, 0, 255, 255).toRgbColor(),
-  Color.fromARGB(255,0, 255, 0).toRgbColor(),
-  Color.fromARGB(255, 255, 255, 0).toRgbColor(),
-  Color.fromARGB(255, 255, 0, 0).toRgbColor(),
-  Color.fromARGB(255, 255, 255, 255).toRgbColor(),
+final hotMetalLerpReferenceColors = [
+  RgbColor.fromHex("#50353a"),
+  RgbColor.fromHex("#923436"),
+  RgbColor.fromHex("#dd3c3a"),
+  RgbColor.fromHex("#fc6b3c"),
+  RgbColor.fromHex("#fe9733"),
+  RgbColor.fromHex("#ffc872"),
+  RgbColor.fromHex("#f8e3c3"),
 ];
 
 final blueToRedLerpReferenceColors = [
@@ -71,14 +74,15 @@ final grayscaleLerpReferenceColors = [
 ];
 
 final thermalLerpReferenceColors = [
-  Color.fromARGB(255, 0, 63, 92).toRgbColor(),
-  Color.fromARGB(255, 47, 75, 124).toRgbColor(),
-  Color.fromARGB(255, 102, 81, 145).toRgbColor(),
-  Color.fromARGB(255, 160, 81, 149).toRgbColor(),
-  Color.fromARGB(255, 212, 80, 135).toRgbColor(),
-  Color.fromARGB(255, 249, 93, 106).toRgbColor(),
-  Color.fromARGB(255, 255, 124, 67).toRgbColor(),
-  Color.fromARGB(255, 255, 166, 0).toRgbColor(),
+  RgbColor.fromHex("#003f5c"),
+  RgbColor.fromHex("#394871"),
+  RgbColor.fromHex("#644e81"),
+  RgbColor.fromHex("#8f518b"),
+  RgbColor.fromHex("#bb5090"),
+  RgbColor.fromHex("#db5c79"),
+  RgbColor.fromHex("#f07060"),
+  RgbColor.fromHex("#fc8942"),
+  RgbColor.fromHex("#ffa600"),
 ];
 
 final blueToYellowLerpReferenceColors = [

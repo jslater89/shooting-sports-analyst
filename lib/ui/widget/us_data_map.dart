@@ -38,6 +38,12 @@ class USDataMap extends StatefulWidget {
   /// to zoom/pan.
   final double sizeMultiplier;
 
+  /// If true, null values will be colored the same as the minimum value.
+  final bool treatNullAsMinimum;
+
+  /// If true, null values will be colored the same as the maximum value.
+  final bool treatNullAsMaximum;
+
 
   USDataMap({
     super.key,
@@ -48,6 +54,8 @@ class USDataMap extends StatefulWidget {
     this.tooltipWidth = 150,
     this.tooltipHeight = 24,
     this.sizeMultiplier = 1,
+    this.treatNullAsMinimum = true,
+    this.treatNullAsMaximum = false,
   });
 
   static const svgAsset = "assets/images/us-states-map.svg";
@@ -83,7 +91,10 @@ class _USDataMapState extends State<USDataMap> {
     if(widget.data.isEmpty) {
       return InteractiveSvg(
       assetPath: USDataMap.svgAsset,
-      colorMapper: _StateColorMapper(context, {}),
+      colorMapper: _StateColorMapper(
+        context: context,
+        stateColors: {},
+      ),
       width: size.width * widget.sizeMultiplier,
       height: size.height * widget.sizeMultiplier,
     );
@@ -102,7 +113,19 @@ class _USDataMapState extends State<USDataMap> {
       );
       stateColors[state] = color?.toFlutterColor();
     }
-    var colorMapper = _StateColorMapper(context, stateColors);
+
+    Color? missingDataColor;
+    if(widget.treatNullAsMinimum) {
+      missingDataColor = colors.first.toFlutterColor();
+    }
+    else if(widget.treatNullAsMaximum) {
+      missingDataColor = colors.last.toFlutterColor();
+    }
+    var colorMapper = _StateColorMapper(
+      context: context,
+      stateColors: stateColors,
+      missingDataColor: missingDataColor,
+    );
     return InteractiveSvg(
       assetPath: USDataMap.svgAsset,
       colorMapper: colorMapper,
@@ -135,9 +158,14 @@ class _USDataMapState extends State<USDataMap> {
 
 class _StateColorMapper extends ColorMapper {
   final BuildContext context;
-  final Map<String, Color?> _stateColors;
+  final Map<String, Color?> stateColors;
+  final Color? missingDataColor;
 
-  _StateColorMapper(this.context, this._stateColors);
+  _StateColorMapper({
+    required this.context,
+    required this.stateColors,
+    this.missingDataColor,
+  });
 
   @override
   Color substitute(String? id, String elementName, String attributeName, Color color) {
@@ -154,8 +182,14 @@ class _StateColorMapper extends ColorMapper {
       return color;
     }
     var normalizedId = normalizeUSState(id);
-    var stateColor = _stateColors[normalizedId];
-    return stateColor ?? color;
+    var stateColor = stateColors[normalizedId];
+    if(stateColor != null) {
+      return stateColor;
+    }
+    if(normalizedId != null && normalizedId.isNotEmpty && missingDataColor != null) {
+      return missingDataColor ?? color;
+    }
+    return color;
   }
 
 }

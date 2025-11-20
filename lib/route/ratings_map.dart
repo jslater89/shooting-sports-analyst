@@ -38,11 +38,20 @@ class _RatingsMapState extends State<RatingsMap> {
 
   Map<String, double> _ratingsByState = {};
   Map<String, int> _totalCompetitorsByState = {};
+  Map<String, int> _gmCountByState = {};
+  Map<String, double> _classificationStrengthByState = {};
   int _totalLocatedRatings = 0;
   ColorMode _colorMode = ColorMode.ratings;
 
   Future<void> _loadData() async {
     var dataSource = widget.dataSource;
+
+    var sportRes = await dataSource.getSport();
+    if(sportRes.isErr()) {
+      _log.w("Error getting sport: ${sportRes.unwrapErr()}");
+      return;
+    }
+    var sport = sportRes.unwrap();
 
     var groupsRes = await dataSource.getGroups();
     if(groupsRes.isErr()) {
@@ -55,10 +64,14 @@ class _RatingsMapState extends State<RatingsMap> {
     /// For each group, the total number of ratings in the group across all locations.
     Map<RatingGroup, int> totalGroupSizes = {};
     Set<String> knownLocations = {};
+    Map<RatingGroup, Map<String, List<double>>> classificationStrengthByLocationByGroup = {};
     for(var group in groups) {
       double ratingScalerMin = double.infinity;
       double ratingScalerMax = double.negativeInfinity;
+
       var ratingsByLocation = <String, List<double>>{};
+      var classificationStrengthsByLocation = <String, List<double>>{};
+
       var ratingsRes = await dataSource.getRatings(group);
       if(ratingsRes.isErr()) {
         _log.w("Error getting ratings for group ${group.name}: ${ratingsRes.unwrapErr()}");
@@ -89,9 +102,15 @@ class _RatingsMapState extends State<RatingsMap> {
         if(rating.regionSubdivision != null) {
           ratingsByLocation.addToList(rating.regionSubdivision!, scaler.scaleRating(rating.rating));
           knownLocations.add(rating.regionSubdivision!);
+          classificationStrengthsByLocation.addToList(rating.regionSubdivision!, sport.ratingStrengthProvider?.strengthForClass(rating.lastClassification) ?? 1.0);
+
+          if(rating.lastClassificationName != null && rating.lastClassificationName! == "Grandmaster") {
+            _gmCountByState.increment(rating.regionSubdivision!);
+          }
         }
 
         ratingsByLocationByGroup[group] = ratingsByLocation;
+        classificationStrengthByLocationByGroup[group] = classificationStrengthsByLocation;
       }
       totalGroupSizes.incrementBy(group, totalRatings);
     }
@@ -104,17 +123,26 @@ class _RatingsMapState extends State<RatingsMap> {
       int totalRatingCountAtLocation = ratingsByLocationByGroup.values.map((e) => e[location]?.length ?? 0).sum;
       List<double> ratings = [];
       List<double> weights = [];
+      List<double> classificationStrengths = [];
+
       for(var group in groups) {
         var locationRatings = ratingsByLocationByGroup[group]![location];
+        var locationClassificationStrengths = classificationStrengthByLocationByGroup[group]![location];
+
         if(locationRatings != null) {
           int totalGroupSize = totalGroupSizes[group]!;
           double averageRatingAtLocation = locationRatings.average;
           weights.add(totalGroupSize / totalRatingCount);
           ratings.add(averageRatingAtLocation);
         }
+        if(locationClassificationStrengths != null) {
+          double averageClassificationStrengthAtLocation = locationClassificationStrengths.average;
+          classificationStrengths.add(averageClassificationStrengthAtLocation);
+        }
       }
       _ratingsByState[location] = ratings.weightedAverage(weights);
       _totalCompetitorsByState[location] = totalRatingCountAtLocation;
+      _classificationStrengthByState[location] = classificationStrengths.average;
       _totalLocatedRatings += totalRatingCountAtLocation;
     }
 
@@ -144,6 +172,15 @@ class _RatingsMapState extends State<RatingsMap> {
     else if(_colorMode == ColorMode.competitorCount) {
       data = _totalCompetitorsByState.map((key, value) => MapEntry(key, value.toDouble()));
     }
+    else if(_colorMode == ColorMode.classificationStrength) {
+      data = _classificationStrengthByState.map((key, value) => MapEntry(key, value.toDouble()));
+    }
+    else if(_colorMode == ColorMode.gmCount) {
+      data = _gmCountByState.map((key, value) => MapEntry(key, value.toDouble()));
+    }
+    else if(_colorMode == ColorMode.classificationStrength) {
+      data = _classificationStrengthByState.map((key, value) => MapEntry(key, value.toDouble()));
+    }
     if(data.isNotEmpty) {
       maxValue = data.values.max;
       minValue = data.values.min;
@@ -156,7 +193,16 @@ class _RatingsMapState extends State<RatingsMap> {
           if(_colorMode == ColorMode.ratings) {
             return "${state} average rating: ${_ratingsByState[state]?.toStringAsFixed(1)}";
           }
-          return "${state}: ${_totalCompetitorsByState[state]?.toString()} competitors";
+          else if(_colorMode == ColorMode.competitorCount) {
+            return "${state}: ${_totalCompetitorsByState[state]?.toString()} competitors";
+          }
+          else if(_colorMode == ColorMode.classificationStrength) {
+            return "${state}: ${_classificationStrengthByState[state]?.toStringAsFixed(1)} classification strength";
+          }
+          else if(_colorMode == ColorMode.gmCount) {
+            return "${state}: ${(_gmCountByState[state] ?? 0).toString()} GMs";
+          }
+          return "$state";
         },
       );
     }
@@ -223,10 +269,14 @@ class _RatingsMapState extends State<RatingsMap> {
 
 enum ColorMode {
   ratings,
-  competitorCount;
+  competitorCount,
+  classificationStrength,
+  gmCount;
 
   String get uiLabel => switch(this) {
     ratings => "Ratings",
     competitorCount => "Competitor count",
+    classificationStrength => "Classification strength",
+    gmCount => "GM count",
   };
 }

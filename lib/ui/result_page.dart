@@ -41,6 +41,7 @@ import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/route/broadcast_booth_page.dart';
 import 'package:shooting_sports_analyst/route/compare_shooter_results.dart';
+import 'package:shooting_sports_analyst/route/competitors_map.dart';
 import 'package:shooting_sports_analyst/ui/empty_scaffold.dart';
 import 'package:shooting_sports_analyst/ui/rater/stacked_distribution_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/color_legend.dart';
@@ -522,40 +523,23 @@ class _ResultPageState extends State<ResultPage> {
         break;
       case _MenuEntry.viewCompetitorMap:
         Map<String, int> intData = {};
+        int locatedCount = 0;
         for(var shooter in _canonicalMatch.shooters) {
           if(shooter.region == "USA" && shooter.regionSubdivision != null) {
             intData.increment(shooter.regionSubdivision!);
+            locatedCount++;
           }
         }
+        _log.i("Located $locatedCount of ${_canonicalMatch.shooters.length} shooters");
         Map<String, double> doubleData = {};
         for(var entry in intData.entries) {
           doubleData[entry.key] = entry.value.toDouble();
         }
         Navigator.of(context).push(MaterialPageRoute(
-          builder: (context) => EmptyScaffold(
+          builder: (context) => CompetitorMap(
             title: "Competitors at ${_canonicalMatch.name}",
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                children: [
-                  ColorLegend(
-                    legendEntries: 10,
-                    minValue: intData.values.min.toDouble(),
-                    maxValue: intData.values.max.toDouble(),
-                    referenceColors: thermalLerpReferenceColors,
-                    labelDecimals: 0,
-                  ),
-                  Expanded(
-                    child: USDataMap(
-                      data: doubleData,
-                      rgbColors: thermalLerpReferenceColors,
-                      tooltipTextBuilder: (state) => "${state}: ${intData[state] ?? 0} competitors",
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+            data: doubleData,
+          )
         ));
         break;
     }
