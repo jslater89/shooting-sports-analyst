@@ -223,7 +223,11 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     _getPrefs();
-    ChangeNotifierConfigLoader().addListener(() {
+    ChangeNotifierConfigLoader().addListener(() async {
+      await windowManager.ensureInitialized();
+      var scaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
+      await windowManager.setMinimumSize(Size(1280 * scaleFactor, 720 * scaleFactor));
+
       setState(() {
         // refresh theme mode
       });

@@ -620,3 +620,9 @@ extension WeightedAverage on List<num> {
     return sum / weightSum;
   }
 }
+
+extension NextBytes on Random {
+  List<int> nextBytes(int length) {
+    return List.generate(length, (index) => nextInt(256));
+  }
+}
