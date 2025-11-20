@@ -36,6 +36,7 @@ import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/server/providers.dart';
 import 'package:shooting_sports_analyst/util.dart';
 import 'package:shooting_sports_analyst/version.dart';
 

@@ -8,3 +8,8 @@ ln -s ps_search_stub ps_search
 
 rm ssa_server_source
 ln -s ssa_server_stub ssa_server_source
+
+rm ssa_auth_client
+ln -s ssa_auth_client_stub ssa_auth_client
+
+rm ssa_auth_server

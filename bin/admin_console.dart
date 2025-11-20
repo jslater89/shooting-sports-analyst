@@ -11,10 +11,9 @@ import 'package:shooting_sports_analyst/server/fantasy/cli/calculate_annual_stat
 import 'package:shooting_sports_analyst/server/fantasy/cli/lookup_competitor_scores.dart';
 import 'package:shooting_sports_analyst/server/fantasy/cli/show_fantasy_leaders.dart';
 import 'package:shooting_sports_analyst/server/fantasy/cli/show_valid_groups.dart';
+import 'package:shooting_sports_analyst/server/providers.dart';
 import 'package:shooting_sports_analyst/util.dart';
 import 'package:shooting_sports_analyst/version.dart';
-
-import 'server.dart';
 
 DbRatingProject? _ratingContext;
 late final AnalystDatabase _database;
