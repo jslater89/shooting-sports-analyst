@@ -5,6 +5,7 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/source/source_ui.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
@@ -74,48 +75,47 @@ class _MatchSourceChooserDialogState extends State<MatchSourceChooserDialog> {
 
   @override
   Widget build(BuildContext context) {
+    var scaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     return AlertDialog(
       title: Text(widget.title ?? "Find a match"),
       content: SizedBox(
-        width: 800,
-        height: 500,
-        child: Container(
-          child: Column(
-            mainAxisSize: MainAxisSize.max,
-            children: [
-              DropdownButton(
-                items: widget.sources.map((e) => DropdownMenuItem(
-                  child: Text(e.name),
-                  value: e,
-                )).toList(),
-                onChanged: (s) {
-                  if(s != null) {
-                    setState(() {
-                      source = s;
-                    });
-                  }
+        width: 800 * scaleFactor,
+        height: 500 * scaleFactor,
+        child: Column(
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            DropdownButton(
+              items: widget.sources.map((e) => DropdownMenuItem(
+                child: Text(e.name),
+                value: e,
+              )).toList(),
+              onChanged: (s) {
+                if(s != null) {
+                  setState(() {
+                    source = s;
+                  });
+                }
+              },
+              value: source,
+            ),
+            Divider(),
+            Expanded(child:
+              SourceUI.forSource(source).getDownloadMatchUIFor(
+                source: source,
+                onMatchSelected: (match) {
+                  submit(match);
                 },
-                value: source,
-              ),
-              Divider(),
-              Expanded(child:
-                SourceUI.forSource(source).getDownloadMatchUIFor(
-                  source: source,
-                  onMatchSelected: (match) {
-                    submit(match);
-                  },
-                  onMatchDownloaded: widget.onMatchDownloaded,
-                  onError: (error) {
-                    showDialog(context: context, builder: (context) => AlertDialog(
-                      title: Text("Match source error"),
-                      content: Text(error.message),
-                    ));
-                  },
-                  initialSearch: widget.initialSearch,
-                )
-              ),
-            ],
-          ),
+                onMatchDownloaded: widget.onMatchDownloaded,
+                onError: (error) {
+                  showDialog(context: context, builder: (context) => AlertDialog(
+                    title: Text("Match source error"),
+                    content: Text(error.message),
+                  ));
+                },
+                initialSearch: widget.initialSearch,
+              )
+            ),
+          ],
         ),
       ),
       actions: [
