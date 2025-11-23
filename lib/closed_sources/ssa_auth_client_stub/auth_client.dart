@@ -1,4 +1,4 @@
-import 'package:shooting_sports_analyst/server/auth/auth_provider.dart';
+import 'package:shooting_sports_analyst/api/auth/auth_provider.dart';
 
 class SSAPublicAuthClient extends TokenAuthProvider<SSASession> {
   @override
