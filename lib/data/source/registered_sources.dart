@@ -6,9 +6,9 @@
 
 import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
-import 'package:shooting_sports_analyst/closed_sources/ssa_server_source/ssa_server_source.dart';
 import 'package:shooting_sports_analyst/data/source/practiscore_report.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
+import 'package:shooting_sports_analyst/data/source/ssa_source/ssa_server_source.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/ipsc.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/pcsl.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
@@ -35,7 +35,9 @@ class MatchSourceRegistry {
     PractiscoreHitFactorReportParser(ipscSport),
     PractiscoreHitFactorReportParser(pcslSport),
     PSv2MatchSource(),
-    SSAServerMatchSource(),
+    // SSA Server source - baseUrl should be configured via environment variable or config
+    // Defaults to http://localhost:8080 if SSA_SERVER_URL is not set
+    SSAServerMatchSource(baseUrl: const String.fromEnvironment("SSA_SERVER_URL", defaultValue: "http://localhost:8080")),
   ];
   List<MatchSource> get sources => _sources.where((e) => e.isImplemented).toList(growable: false);
 
