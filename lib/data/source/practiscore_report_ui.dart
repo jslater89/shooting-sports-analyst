@@ -34,7 +34,7 @@ class PractiscoreReportUI extends SourceUI {
           Provider<MatchSource>.value(value: source),
           Provider<SearchSource>.value(value: source.searchSource),
         ],
-        child: Column(
+        builder: (context, child) => Column(
           children: [
             MatchSearchControls(initialSearch: initialSearch, sports: [source.sport]),
             Divider(),
