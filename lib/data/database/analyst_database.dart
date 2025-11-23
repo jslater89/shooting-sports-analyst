@@ -266,6 +266,8 @@ class AnalystDatabase {
           }
           var similarityFactor = 1 + (word.length / eventNameWord.length) * similarityFactorPerWord;
           similarityMultiplier *= similarityFactor;
+          // Each query word can only match an event word once.
+          break;
         }
       }
     }
@@ -360,6 +362,7 @@ class AnalystDatabase {
     return matches;
   }
 
+  /// Return all matches in the database.
   Future<List<DbShootingMatch>> getAllMatches() async {
     return await isar.dbShootingMatchs.where().findAll();
   }
