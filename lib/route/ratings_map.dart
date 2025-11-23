@@ -4,7 +4,6 @@ import 'package:collection/collection.dart';
 import 'package:color_models/color_models.dart';
 import 'package:data/data.dart' show WeibullDistribution;
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
@@ -13,7 +12,6 @@ import 'package:shooting_sports_analyst/data/ranking/scaling/standardized_maximu
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/empty_scaffold.dart';
 import 'package:shooting_sports_analyst/ui/widget/color_legend.dart';
-import 'package:shooting_sports_analyst/ui/widget/custom_tooltip.dart';
 import 'package:shooting_sports_analyst/ui/widget/us_data_map.dart';
 import 'package:shooting_sports_analyst/ui_util.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -181,6 +179,9 @@ class _RatingsMapState extends State<RatingsMap> {
     else if(_colorMode == ColorMode.classificationStrength) {
       data = _classificationStrengthByState.map((key, value) => MapEntry(key, value.toDouble()));
     }
+    else if(_colorMode == ColorMode.gmRatio) {
+      data = _gmCountByState.map((key, value) => MapEntry(key, value.toDouble() / _totalCompetitorsByState[key]!.toDouble() * 100));
+    }
     if(data.isNotEmpty) {
       maxValue = data.values.max;
       minValue = data.values.min;
@@ -201,6 +202,9 @@ class _RatingsMapState extends State<RatingsMap> {
           }
           else if(_colorMode == ColorMode.gmCount) {
             return "${state}: ${(_gmCountByState[state] ?? 0).toString()} GMs";
+          }
+          else if(_colorMode == ColorMode.gmRatio) {
+            return "${state}: ${((_gmCountByState[state] ?? 0).toDouble() / _totalCompetitorsByState[state]!).asPercentage(decimals: 1, includePercent: true)} GMs";
           }
           return "$state";
         },
@@ -255,7 +259,7 @@ class _RatingsMapState extends State<RatingsMap> {
               minValue: minValue,
               maxValue: maxValue,
               referenceColors: _referenceColors,
-              labelDecimals: _colorMode == ColorMode.ratings ? 1 : 0,
+              labelDecimals: _colorMode == ColorMode.ratings || _colorMode == ColorMode.gmRatio ? 1 : 0,
             ),
             Expanded(
               child: _svgWidget!,
@@ -271,12 +275,14 @@ enum ColorMode {
   ratings,
   competitorCount,
   classificationStrength,
-  gmCount;
+  gmCount,
+  gmRatio;
 
   String get uiLabel => switch(this) {
     ratings => "Ratings",
     competitorCount => "Competitor count",
     classificationStrength => "Classification strength",
     gmCount => "GM count",
+    gmRatio => "GM ratio",
   };
 }
