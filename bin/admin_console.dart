@@ -54,6 +54,9 @@ enum _MainMenuCommand implements MenuCommand {
   final CommandExecutor? execute;
 
   const _MainMenuCommand(this.key, this.title, {this.execute = null, this.arguments = const []});
+
+  @override
+  String? get description => "";
 }
 
 
@@ -113,6 +116,9 @@ enum _FantasyMenuCommand implements MenuCommand {
   final CommandExecutor? execute;
 
   const _FantasyMenuCommand(this.key, this.title, {this.execute = null, this.arguments = const []});
+
+  @override
+  String? get description => "";
 }
 
 Future<void> _fantasyMenuLoop(Console console) async {
@@ -151,6 +157,9 @@ enum _DatabaseMenuCommand implements MenuCommand {
   final CommandExecutor? execute;
 
   const _DatabaseMenuCommand(this.key, this.title, {this.execute = null, this.arguments = const []});
+
+  @override
+  String? get description => "";
 }
 
 Future<void> _databaseMenuLoop(Console console) async {

@@ -271,6 +271,23 @@ class StringMenuArgument extends MenuArgument<String> {
   const StringMenuArgument({required super.label, super.required = false, super.description, super.defaultValue, super.defaultValueFactory});
 }
 
+class BoolMenuArgument extends MenuArgument<bool> {
+  BoolMenuArgument({required super.required, required super.label, super.description, super.defaultValue, super.defaultValueFactory});
+
+  @override
+  MenuArgumentValue<bool>? parseInput(String value) {
+    if(value.toLowerCase() == "true") {
+      return MenuArgumentValue(argument: this, value: true);
+    }
+    else if(value.toLowerCase() == "false") {
+      return MenuArgumentValue(argument: this, value: false);
+    }
+    else {
+      return null;
+    }
+  }
+}
+
 class IntMenuArgument extends MenuArgument<int> {
   @override
   MenuArgumentValue<int>? parseInput(String value) {
