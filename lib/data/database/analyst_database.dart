@@ -218,6 +218,7 @@ class AnalystDatabase {
   }
 
   Future<List<DbShootingMatch>> getMatchesByExactNames(List<String> names) async {
+    if(names.isEmpty) return [];
     return await isar.dbShootingMatchs
       .where()
       .filter()
