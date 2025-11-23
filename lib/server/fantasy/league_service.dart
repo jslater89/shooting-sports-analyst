@@ -30,7 +30,7 @@ class LeagueService {
   /// /<leagueId>/player/<playerId>/scoring
   ///
   /// Returns the best score for each month for the given player.
-  dynamic getScoring(Request request, String leagueId, String playerId) async {
+  Future<Response> getScoring(Request request, String leagueId, String playerId) async {
     final ratingContext = await database.getRatingProjectByName("L2s Main");
     if(ratingContext == null) {
       return Response.notFound('Rating project not found');
@@ -101,7 +101,7 @@ class LeagueService {
       bestScoreByMonth[date] = bestScore;
     }
 
-    return bestScoreByMonth.toJson();
+    return Response.ok(bestScoreByMonth.toJson());
   }
 }
 
