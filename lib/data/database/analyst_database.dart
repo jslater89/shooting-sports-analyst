@@ -360,6 +360,10 @@ class AnalystDatabase {
     return matches;
   }
 
+  Future<List<DbShootingMatch>> getAllMatches() async {
+    return await isar.dbShootingMatchs.where().findAll();
+  }
+
   /// Return Isar match IDs matching the query.
   Future<List<int>> queryMatchIds({
     String? name,

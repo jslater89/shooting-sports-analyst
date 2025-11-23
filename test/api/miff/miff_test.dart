@@ -369,6 +369,557 @@ void main() {
       expect(result.isErr(), isTrue);
       expect(result.unwrapErr().message, contains("unknown stage ID"));
     });
+
+    test("Validator: score with targets array", () {
+      var validator = MiffValidator();
+      var json = {
+        "format": "miff",
+        "version": "1.0",
+        "match": {
+          "name": "Test",
+          "date": "2024-01-01",
+          "sport": "uspsa",
+          "stages": [
+            {"id": 1, "name": "Stage 1", "scoring": {"type": "hitFactor"}}
+          ],
+          "shooters": [
+            {
+              "id": 1,
+              "firstName": "John",
+              "lastName": "Doe",
+              "memberNumber": "A123",
+              "powerFactor": "Major",
+              "scores": {
+                "1": {
+                  "time": 10.0,
+                  "targets": [
+                    {
+                      "targetNumber": "T1",
+                      "events": {"A": 2, "C": 1}
+                    },
+                    {
+                      "targetNumber": "T2",
+                      "events": {"A": 2}
+                    },
+                    {
+                      "targetNumber": "P1",
+                      "events": {"A": 1}
+                    }
+                  ],
+                  "penaltyEvents": {}
+                }
+              }
+            }
+          ]
+        }
+      };
+      var result = validator.validateJson(json);
+      expect(result.isOk(), isTrue);
+    });
+
+    test("Validator: score with totalPointsOverride and finalTimeOverride", () {
+      var validator = MiffValidator();
+      var json = {
+        "format": "miff",
+        "version": "1.0",
+        "match": {
+          "name": "Test",
+          "date": "2024-01-01",
+          "sport": "uspsa",
+          "stages": [
+            {"id": 1, "name": "Stage 1", "scoring": {"type": "hitFactor"}}
+          ],
+          "shooters": [
+            {
+              "id": 1,
+              "firstName": "John",
+              "lastName": "Doe",
+              "memberNumber": "A123",
+              "powerFactor": "Major",
+              "scores": {
+                "1": {
+                  "time": 10.0,
+                  "totalPointsOverride": 120,
+                  "finalTimeOverride": 11.5
+                }
+              }
+            }
+          ]
+        }
+      };
+      var result = validator.validateJson(json);
+      expect(result.isOk(), isTrue);
+    });
+
+    test("Validator: score with totalPointsOverride and penaltyEvents (forbidden)", () {
+      var validator = MiffValidator();
+      var json = {
+        "format": "miff",
+        "version": "1.0",
+        "match": {
+          "name": "Test",
+          "date": "2024-01-01",
+          "sport": "uspsa",
+          "stages": [
+            {"id": 1, "name": "Stage 1", "scoring": {"type": "hitFactor"}}
+          ],
+          "shooters": [
+            {
+              "id": 1,
+              "firstName": "John",
+              "lastName": "Doe",
+              "memberNumber": "A123",
+              "powerFactor": "Major",
+              "scores": {
+                "1": {
+                  "time": 10.0,
+                  "totalPointsOverride": 120,
+                  "penaltyEvents": {}
+                }
+              }
+            }
+          ]
+        }
+      };
+      var result = validator.validateJson(json);
+      expect(result.isErr(), isTrue);
+      expect(result.unwrapErr().message, contains("forbidden"));
+    });
+
+    test("Validator: score with finalTimeOverride and penaltyEvents (forbidden)", () {
+      var validator = MiffValidator();
+      var json = {
+        "format": "miff",
+        "version": "1.0",
+        "match": {
+          "name": "Test",
+          "date": "2024-01-01",
+          "sport": "uspsa",
+          "stages": [
+            {"id": 1, "name": "Stage 1", "scoring": {"type": "hitFactor"}}
+          ],
+          "shooters": [
+            {
+              "id": 1,
+              "firstName": "John",
+              "lastName": "Doe",
+              "memberNumber": "A123",
+              "powerFactor": "Major",
+              "scores": {
+                "1": {
+                  "time": 10.0,
+                  "totalPointsOverride": 120,
+                  "finalTimeOverride": 11.5,
+                  "penaltyEvents": {"Procedural": 1}
+                }
+              }
+            }
+          ]
+        }
+      };
+      var result = validator.validateJson(json);
+      expect(result.isErr(), isTrue);
+      expect(result.unwrapErr().message, contains("forbidden"));
+    });
+
+    test("Validator: score with finalTimeOverride alone (valid)", () {
+      var validator = MiffValidator();
+      var json = {
+        "format": "miff",
+        "version": "1.0",
+        "match": {
+          "name": "Test",
+          "date": "2024-01-01",
+          "sport": "uspsa",
+          "stages": [
+            {"id": 1, "name": "Stage 1", "scoring": {"type": "hitFactor"}}
+          ],
+          "shooters": [
+            {
+              "id": 1,
+              "firstName": "John",
+              "lastName": "Doe",
+              "memberNumber": "A123",
+              "powerFactor": "Major",
+              "scores": {
+                "1": {
+                  "time": 10.0,
+                  "finalTimeOverride": 11.5
+                }
+              }
+            }
+          ]
+        }
+      };
+      var result = validator.validateJson(json);
+      expect(result.isOk(), isTrue);
+    });
+
+    test("Validator: score with totalPointsOverride alone (valid)", () {
+      var validator = MiffValidator();
+      var json = {
+        "format": "miff",
+        "version": "1.0",
+        "match": {
+          "name": "Test",
+          "date": "2024-01-01",
+          "sport": "uspsa",
+          "stages": [
+            {"id": 1, "name": "Stage 1", "scoring": {"type": "hitFactor"}}
+          ],
+          "shooters": [
+            {
+              "id": 1,
+              "firstName": "John",
+              "lastName": "Doe",
+              "memberNumber": "A123",
+              "powerFactor": "Major",
+              "scores": {
+                "1": {
+                  "time": 10.0,
+                  "totalPointsOverride": 120
+                }
+              }
+            }
+          ]
+        }
+      };
+      var result = validator.validateJson(json);
+      expect(result.isOk(), isTrue);
+    });
+
+    test("Validator: score with targetEvents and overrides (forbidden)", () {
+      var validator = MiffValidator();
+      var json = {
+        "format": "miff",
+        "version": "1.0",
+        "match": {
+          "name": "Test",
+          "date": "2024-01-01",
+          "sport": "uspsa",
+          "stages": [
+            {"id": 1, "name": "Stage 1", "scoring": {"type": "hitFactor"}}
+          ],
+          "shooters": [
+            {
+              "id": 1,
+              "firstName": "John",
+              "lastName": "Doe",
+              "memberNumber": "A123",
+              "powerFactor": "Major",
+              "scores": {
+                "1": {
+                  "time": 10.0,
+                  "targetEvents": {"A": 8},
+                  "totalPointsOverride": 120,
+                  "penaltyEvents": {}
+                }
+              }
+            }
+          ]
+        }
+      };
+      var result = validator.validateJson(json);
+      expect(result.isErr(), isTrue);
+      expect(result.unwrapErr().message, contains("multiple representation modes"));
+    });
+
+    test("Validator: score with targets and overrides (forbidden)", () {
+      var validator = MiffValidator();
+      var json = {
+        "format": "miff",
+        "version": "1.0",
+        "match": {
+          "name": "Test",
+          "date": "2024-01-01",
+          "sport": "uspsa",
+          "stages": [
+            {"id": 1, "name": "Stage 1", "scoring": {"type": "hitFactor"}}
+          ],
+          "shooters": [
+            {
+              "id": 1,
+              "firstName": "John",
+              "lastName": "Doe",
+              "memberNumber": "A123",
+              "powerFactor": "Major",
+              "scores": {
+                "1": {
+                  "time": 10.0,
+                  "targets": [
+                    {"targetNumber": "T1", "events": {"A": 2}}
+                  ],
+                  "finalTimeOverride": 11.5,
+                  "penaltyEvents": {}
+                }
+              }
+            }
+          ]
+        }
+      };
+      var result = validator.validateJson(json);
+      expect(result.isErr(), isTrue);
+      expect(result.unwrapErr().message, contains("multiple representation modes"));
+    });
+
+    test("Validator: score with totalPointsOverride without penaltyEvents", () {
+      var validator = MiffValidator();
+      var json = {
+        "format": "miff",
+        "version": "1.0",
+        "match": {
+          "name": "Test",
+          "date": "2024-01-01",
+          "sport": "uspsa",
+          "stages": [
+            {"id": 1, "name": "Stage 1", "scoring": {"type": "hitFactor"}}
+          ],
+          "shooters": [
+            {
+              "id": 1,
+              "firstName": "John",
+              "lastName": "Doe",
+              "memberNumber": "A123",
+              "powerFactor": "Major",
+              "scores": {
+                "1": {
+                  "time": 10.0,
+                  "totalPointsOverride": 120,
+                  "finalTimeOverride": 11.5
+                }
+              }
+            }
+          ]
+        }
+      };
+      var result = validator.validateJson(json);
+      expect(result.isOk(), isTrue);
+    });
+
+    test("Validator: score missing all representation methods", () {
+      var validator = MiffValidator();
+      var json = {
+        "format": "miff",
+        "version": "1.0",
+        "match": {
+          "name": "Test",
+          "date": "2024-01-01",
+          "sport": "uspsa",
+          "stages": [
+            {"id": 1, "name": "Stage 1", "scoring": {"type": "hitFactor"}}
+          ],
+          "shooters": [
+            {
+              "id": 1,
+              "firstName": "John",
+              "lastName": "Doe",
+              "memberNumber": "A123",
+              "powerFactor": "Major",
+              "scores": {
+                "1": {
+                  "time": 10.0,
+                  "penaltyEvents": {}
+                }
+              }
+            }
+          ]
+        }
+      };
+      var result = validator.validateJson(json);
+      expect(result.isErr(), isTrue);
+      expect(result.unwrapErr().message, contains("must have one of"));
+    });
+
+    test("Validator: score with multiple representation methods", () {
+      var validator = MiffValidator();
+      var json = {
+        "format": "miff",
+        "version": "1.0",
+        "match": {
+          "name": "Test",
+          "date": "2024-01-01",
+          "sport": "uspsa",
+          "stages": [
+            {"id": 1, "name": "Stage 1", "scoring": {"type": "hitFactor"}}
+          ],
+          "shooters": [
+            {
+              "id": 1,
+              "firstName": "John",
+              "lastName": "Doe",
+              "memberNumber": "A123",
+              "powerFactor": "Major",
+              "scores": {
+                "1": {
+                  "time": 10.0,
+                  "targetEvents": {"A": 8},
+                  "targets": [
+                    {"targetNumber": "T1", "events": {"A": 2}}
+                  ],
+                  "penaltyEvents": {}
+                }
+              }
+            }
+          ]
+        }
+      };
+      var result = validator.validateJson(json);
+      expect(result.isErr(), isTrue);
+      // This test has both targetEvents and targets, so it should error about having both
+      var errorMsg = result.unwrapErr().message;
+      expect(
+        (errorMsg.contains("targetEvents") && errorMsg.contains("targets")) || errorMsg.contains("multiple representation modes"),
+        isTrue,
+      );
+    });
+
+    test("Validator: score with totalPointsOverride but missing finalTimeOverride (optional)", () {
+      var validator = MiffValidator();
+      var json = {
+        "format": "miff",
+        "version": "1.0",
+        "match": {
+          "name": "Test",
+          "date": "2024-01-01",
+          "sport": "uspsa",
+          "stages": [
+            {"id": 1, "name": "Stage 1", "scoring": {"type": "hitFactor"}}
+          ],
+          "shooters": [
+            {
+              "id": 1,
+              "firstName": "John",
+              "lastName": "Doe",
+              "memberNumber": "A123",
+              "powerFactor": "Major",
+              "scores": {
+                "1": {
+                  "time": 10.0,
+                  "totalPointsOverride": 120
+                }
+              }
+            }
+          ]
+        }
+      };
+      var result = validator.validateJson(json);
+      expect(result.isOk(), isTrue);
+    });
+
+    test("Validator: invalid targets array structure", () {
+      var validator = MiffValidator();
+      var json = {
+        "format": "miff",
+        "version": "1.0",
+        "match": {
+          "name": "Test",
+          "date": "2024-01-01",
+          "sport": "uspsa",
+          "stages": [
+            {"id": 1, "name": "Stage 1", "scoring": {"type": "hitFactor"}}
+          ],
+          "shooters": [
+            {
+              "id": 1,
+              "firstName": "John",
+              "lastName": "Doe",
+              "memberNumber": "A123",
+              "powerFactor": "Major",
+              "scores": {
+                "1": {
+                  "time": 10.0,
+                  "targets": [
+                    {
+                      "targetNumber": 1, // Should be string
+                      "events": {"A": 2}
+                    }
+                  ],
+                  "penaltyEvents": {}
+                }
+              }
+            }
+          ]
+        }
+      };
+      var result = validator.validateJson(json);
+      expect(result.isErr(), isTrue);
+      expect(result.unwrapErr().message, contains("targetNumber"));
+    });
+
+    test("Validator: targets array missing required fields", () {
+      var validator = MiffValidator();
+      var json = {
+        "format": "miff",
+        "version": "1.0",
+        "match": {
+          "name": "Test",
+          "date": "2024-01-01",
+          "sport": "uspsa",
+          "stages": [
+            {"id": 1, "name": "Stage 1", "scoring": {"type": "hitFactor"}}
+          ],
+          "shooters": [
+            {
+              "id": 1,
+              "firstName": "John",
+              "lastName": "Doe",
+              "memberNumber": "A123",
+              "powerFactor": "Major",
+              "scores": {
+                "1": {
+                  "time": 10.0,
+                  "targets": [
+                    {
+                      "events": {"A": 2} // Missing targetNumber
+                    }
+                  ],
+                  "penaltyEvents": {}
+                }
+              }
+            }
+          ]
+        }
+      };
+      var result = validator.validateJson(json);
+      expect(result.isErr(), isTrue);
+      expect(result.unwrapErr().message, contains("targetNumber"));
+    });
+
+    test("Validator: invalid override types", () {
+      var validator = MiffValidator();
+      var json = {
+        "format": "miff",
+        "version": "1.0",
+        "match": {
+          "name": "Test",
+          "date": "2024-01-01",
+          "sport": "uspsa",
+          "stages": [
+            {"id": 1, "name": "Stage 1", "scoring": {"type": "hitFactor"}}
+          ],
+          "shooters": [
+            {
+              "id": 1,
+              "firstName": "John",
+              "lastName": "Doe",
+              "memberNumber": "A123",
+              "powerFactor": "Major",
+              "scores": {
+                "1": {
+                  "time": 10.0,
+                  "totalPointsOverride": "120", // Should be number
+                  "finalTimeOverride": 11.5,
+                  "penaltyEvents": {}
+                }
+              }
+            }
+          ]
+        }
+      };
+      var result = validator.validateJson(json);
+      expect(result.isErr(), isTrue);
+      expect(result.unwrapErr().message, contains("totalPointsOverride"));
+    });
   });
 }
 

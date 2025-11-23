@@ -2,7 +2,7 @@
 
 ## Version 1.0
 
-The Match Interchange File Format (`.miff`) is an open standard for exchanging match score data across platforms and applications in practical shooting sports. This format uses JSON as its underlying data structure, compressed with gzip for efficient storage and transfer. The format is designed to be compact, easily parseable, and self-describing.
+The Match Interchange File Format (`.miff` or `.miff.gz`) is an open standard for exchanging match score data across platforms and applications in practical shooting sports. This format uses JSON as its underlying data structure, compressed with gzip for efficient storage and transfer. The format is designed to be compact, easily parseable, and self-describing.
 
 ## File Format
 
@@ -208,15 +208,37 @@ Represents a shooter's score on a single stage.
 |-------|------|----------|-------------|
 | `time` | number | Yes | Raw time from shot timer (0 for untimed) |
 | `scoring` | object | No | Scoring system override (if different from stage default) |
-| `targetEvents` | object | Yes | Map from event name to count (see Event Counts) |
-| `penaltyEvents` | object | Yes | Map from event name to count (see Event Counts) |
+| `targetEvents` | object | Conditional | Map from event name to count (see Event Counts). Required when using aggregated events mode. Forbidden when using per target events or overrides. |
+| `targets` | array | Conditional | Array of target objects (see Target Array). Required when using per target events mode. Forbidden when using aggregated events or overrides. |
+| `totalPointsOverride` | number | Conditional | Override for total points. Required when using overrides mode. Prevents the use of `targetEvents`, `targets`, or `penaltyEvents`. One or both of `totalPointsOverride` or `finalTimeOverride` must be present. |
+| `finalTimeOverride` | number | Conditional | Override for final time. Optional when using overrides mode. If omitted when using `totalPointsOverride`, defaults to `time`. Prevents the use of `targetEvents`, `targets`, or `penaltyEvents`. |
+| `penaltyEvents` | object | Conditional | Map from event name to count (see Event Counts). Optional when using aggregated events or per target events (may be omitted if all entries are zero). Forbidden when using overrides. |
 | `stringTimes` | array[number] | No | Array of string times for display |
 | `dq` | boolean | No | Whether this score resulted in DQ (default: false) |
 | `modified` | string | No | ISO 8601 timestamp of last modification |
 
+**Score Representation:** A score must use exactly one of three mutually exclusive representation modes:
+
+1. **Aggregated Events** (`targetEvents`): A map from event name to total count across all targets (see Event Counts). The `targetEvents` field is required. `penaltyEvents` is optional (may be omitted if all entries are zero).
+
+2. **Per Target Events** (`targets`): An array of target objects, each specifying which target and its events (see Target Array). The `targets` field is required. `penaltyEvents` is optional (may be omitted if all entries are zero). `targetEvents` and `targets` are mutually exclusive.
+
+3. **Overrides** (`totalPointsOverride` and/or `finalTimeOverride`): Direct overrides for the calculated points and/or time. One or both of `totalPointsOverride` or `finalTimeOverride` must be present. If `finalTimeOverride` is omitted when `totalPointsOverride` is present, it defaults to `time`. Forbids `targetEvents`, `targets`, and `penaltyEvents`.
+
+### Target Array
+
+An array of target objects, each representing a single target and its scoring events.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `targetNumber` | string | Yes | Target identifier (e.g., `"1"`, `"T1"`, `"T2"`, `"P1"` for poppers/plates) |
+| `events` | object | Yes | Map from event name to count for this target (see Event Counts) |
+
 ### Event Counts
 
 A map from scoring event name to count. Event names should match those defined in the sport or in local events.
+
+**Zero-value entries:** Entries with a count of 0 may be omitted from the map. If all entries in a map would be 0, the entire map may be omitted. When reading a MIFF file, missing entries should be treated as having a count of 0, and missing maps should be treated as empty maps.
 
 For standard events, use the event name directly:
 
@@ -229,6 +251,17 @@ For standard events, use the event name directly:
   },
   "penaltyEvents": {
     "Procedural": 1
+  }
+}
+```
+
+If there are no penalty events, the `penaltyEvents` map may be omitted entirely:
+
+```json
+{
+  "targetEvents": {
+    "A": 8,
+    "C": 2
   }
 }
 ```
@@ -255,6 +288,71 @@ This indicates 6 A-zone hits, 2 X-ring hits worth -0.5 seconds each (using the `
 3. If still not found, treat as an error or unknown event (implementation-dependent)
 
 The file format is self-describing: all event names used in scores are explicitly defined in the stage or match metadata.
+
+**Example with Target Array:**
+
+```json
+{
+  "time": 12.45,
+  "targets": [
+    {
+      "targetNumber": "T1",
+      "events": {
+        "A": 2,
+        "C": 1
+      }
+    },
+    {
+      "targetNumber": "T2",
+      "events": {
+        "A": 2
+      }
+    },
+    {
+      "targetNumber": "P1",
+      "events": {
+        "A": 1
+      }
+    }
+  ],
+  "penaltyEvents": {}
+}
+```
+
+**Example with Overrides:**
+
+```json
+{
+  "time": 10.0,
+  "totalPointsOverride": 120,
+  "finalTimeOverride": 11.5,
+  "penaltyEvents": {}
+}
+```
+
+This indicates a score where the total points and/or final time are directly specified rather than calculated from target events. One or both overrides may be present. If `finalTimeOverride` is omitted when `totalPointsOverride` is present, it defaults to the value of `time`. When using overrides, `targetEvents`, `targets`, and `penaltyEvents` are forbidden:
+
+```json
+{
+  "time": 10.0,
+  "totalPointsOverride": 120
+}
+```
+
+```json
+{
+  "time": 10.0,
+  "finalTimeOverride": 11.5
+}
+```
+
+```json
+{
+  "time": 10.0,
+  "totalPointsOverride": 120,
+  "finalTimeOverride": 11.5
+}
+```
 
 ## Example
 
@@ -433,7 +531,7 @@ Future versions may add fields, but must maintain backward compatibility where p
 
 **MIFF files MUST be compressed using gzip.** All `.miff` files are gzip-compressed JSON documents. This compression is mandatory and provides significant space savings (typically 70-95% reduction) due to the highly repetitive nature of match data.
 
-**File Extension:** MIFF files use the `.miff` extension. The compression is implicit—all `.miff` files are gzip-compressed.
+**File Extension:** MIFF files may use either the `.miff` or `.miff.gz` extension. The compression is implicit—all MIFF files are gzip-compressed regardless of extension. The `.miff.gz` extension is recommended for better compatibility with tools like `gunzip` that expect the `.gz` extension, but `.miff` is also valid.
 
 **Parsing:** When reading a MIFF file, implementations must:
 1. Decompress the gzip content
@@ -443,7 +541,7 @@ Future versions may add fields, but must maintain backward compatibility where p
 **Writing:** When writing a MIFF file, implementations must:
 1. Generate the JSON document according to this specification
 2. Compress it using gzip
-3. Write the compressed data to a file with the `.miff` extension
+3. Write the compressed data to a file with either the `.miff` or `.miff.gz` extension (`.miff.gz` is recommended)
 
 The gzip compression format is standardized (RFC 1952) and supported by virtually all programming languages and platforms.
 

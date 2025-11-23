@@ -247,9 +247,18 @@ class MiffExporter implements AbstractMiffExporter {
   Map<String, dynamic> _scoreToJson(RawScore score, MatchStage stage) {
     var scoreJson = <String, dynamic>{
       "time": score.rawTime,
-      "targetEvents": _eventCountsToJson(score.targetEvents, stage),
-      "penaltyEvents": _eventCountsToJson(score.penaltyEvents, stage),
     };
+
+    // Always include targetEvents (even if empty) to indicate representation method
+    // Zero-value entries within the map are omitted by _eventCountsToJson
+    var targetEventsJson = _eventCountsToJson(score.targetEvents, stage);
+    scoreJson["targetEvents"] = targetEventsJson;
+
+    // penaltyEvents can be omitted if all entries are zero
+    var penaltyEventsJson = _eventCountsToJson(score.penaltyEvents, stage);
+    if (penaltyEventsJson.isNotEmpty) {
+      scoreJson["penaltyEvents"] = penaltyEventsJson;
+    }
 
     if (score.scoring.dbString != stage.scoring.dbString) {
       scoreJson["scoring"] = _scoringToJson(score.scoring);
@@ -290,6 +299,11 @@ class MiffExporter implements AbstractMiffExporter {
     for (var entry in events.entries) {
       var event = entry.key;
       var count = entry.value;
+
+      // Skip zero-value entries
+      if (count == 0) {
+        continue;
+      }
 
       // Check if this event matches any variable event in the stage
       // Match by base name and values (pointChange, timeChange)

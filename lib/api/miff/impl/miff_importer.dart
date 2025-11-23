@@ -423,12 +423,12 @@ class MiffImporter implements AbstractMiffImporter {
         scoring = parsedScoring;
       }
 
-      // Parse target events
-      var targetEventsJson = json["targetEvents"] as Map<String, dynamic>;
+      // Parse target events (treat missing as empty map)
+      var targetEventsJson = (json["targetEvents"] as Map<String, dynamic>?) ?? <String, dynamic>{};
       var targetEvents = _parseEventCounts(targetEventsJson, stage, powerFactor, importState, true);
 
-      // Parse penalty events
-      var penaltyEventsJson = json["penaltyEvents"] as Map<String, dynamic>;
+      // Parse penalty events (treat missing as empty map)
+      var penaltyEventsJson = (json["penaltyEvents"] as Map<String, dynamic>?) ?? <String, dynamic>{};
       var penaltyEvents = _parseEventCounts(penaltyEventsJson, stage, powerFactor, importState, false);
 
       var score = RawScore(

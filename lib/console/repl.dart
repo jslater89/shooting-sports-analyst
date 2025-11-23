@@ -306,6 +306,9 @@ abstract class MenuCommand {
   String get key;
   String get title;
 
+  /// The description of the command to be shown in help output.
+  String? get description => null;
+
   /// For data commands, this is called with the console and arguments.
   CommandExecutor? get execute => null;
 
@@ -334,6 +337,9 @@ abstract class MenuCommand {
     }
     buffer.write(firstLine);
     buffer.write("\n");
+    if(command.description != null) {
+      buffer.write("${command.description}\nArgs:\n");
+    }
     for(var arg in command.arguments) {
       buffer.write("  ${arg.label}: ${arg.required ? "required" : "optional"}\n");
       if(arg.description != null) {

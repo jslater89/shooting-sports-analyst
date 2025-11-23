@@ -648,26 +648,109 @@ class MiffValidator implements AbstractMiffValidator {
       return StringError("Field 'time' must be a number");
     }
 
-    if (!json.containsKey("targetEvents")) {
-      return StringError("Missing required field: targetEvents");
+    // Validate score representation - exactly one mode must be present:
+    // Mode 1: Aggregated events (targetEvents required)
+    // Mode 2: Per target events (targets required)
+    // Mode 3: Overrides (totalPointsOverride and/or finalTimeOverride required)
+    var hasTargetEvents = json.containsKey("targetEvents");
+    var hasTargets = json.containsKey("targets");
+    var hasTotalPointsOverride = json.containsKey("totalPointsOverride");
+    var hasFinalTimeOverride = json.containsKey("finalTimeOverride");
+
+    var hasAggregatedEvents = hasTargetEvents;
+    var hasPerTargetEvents = hasTargets;
+    var hasOverrides = hasTotalPointsOverride || hasFinalTimeOverride;
+
+    // Must have exactly one mode
+    var modeCount = (hasAggregatedEvents ? 1 : 0) + (hasPerTargetEvents ? 1 : 0) + (hasOverrides ? 1 : 0);
+    if (modeCount == 0) {
+      return StringError("Score must have one of: targetEvents (aggregated events), targets (per target events), or totalPointsOverride/finalTimeOverride (overrides)");
     }
-    if (json["targetEvents"] is! Map) {
-      return StringError("Field 'targetEvents' must be an object");
-    }
-    var targetEventsErr = _validateEventCounts(Map<String, dynamic>.from(json["targetEvents"]));
-    if (targetEventsErr != null) {
-      return StringError("TargetEvents: ${targetEventsErr.message}");
+    if (modeCount > 1) {
+      return StringError("Score cannot have multiple representation modes (targetEvents, targets, and overrides are mutually exclusive)");
     }
 
-    if (!json.containsKey("penaltyEvents")) {
-      return StringError("Missing required field: penaltyEvents");
+    // targetEvents and targets are mutually exclusive
+    if (hasTargetEvents && hasTargets) {
+      return StringError("Score cannot have both 'targetEvents' (aggregated events) and 'targets' (per target events)");
     }
-    if (json["penaltyEvents"] is! Map) {
-      return StringError("Field 'penaltyEvents' must be an object");
+
+    // Validate targetEvents - required when using aggregated events mode
+    if (hasAggregatedEvents) {
+      if (json["targetEvents"] is! Map) {
+        return StringError("Field 'targetEvents' must be an object");
+      }
+      var targetEventsErr = _validateEventCounts(Map<String, dynamic>.from(json["targetEvents"]));
+      if (targetEventsErr != null) {
+        return StringError("TargetEvents: ${targetEventsErr.message}");
+      }
+    } else if (hasPerTargetEvents) {
+      // When using per target events, targetEvents must not be present
+      if (hasTargetEvents) {
+        return StringError("Field 'targetEvents' is forbidden when using 'targets' (per target events mode)");
+      }
     }
-    var penaltyEventsErr = _validateEventCounts(Map<String, dynamic>.from(json["penaltyEvents"]));
-    if (penaltyEventsErr != null) {
-      return StringError("PenaltyEvents: ${penaltyEventsErr.message}");
+
+    // Validate targets if present
+    if (hasTargets) {
+      if (json["targets"] is! List) {
+        return StringError("Field 'targets' must be an array");
+      }
+      var targets = json["targets"] as List;
+      for (var i = 0; i < targets.length; i++) {
+        var target = targets[i];
+        if (target is! Map) {
+          return StringError("Field 'targets[$i]' must be an object");
+        }
+        var targetMap = Map<String, dynamic>.from(target);
+        if (!targetMap.containsKey("targetNumber")) {
+          return StringError("Field 'targets[$i].targetNumber' is required");
+        }
+        if (targetMap["targetNumber"] is! String) {
+          return StringError("Field 'targets[$i].targetNumber' must be a string");
+        }
+        if (!targetMap.containsKey("events")) {
+          return StringError("Field 'targets[$i].events' is required");
+        }
+        if (targetMap["events"] is! Map) {
+          return StringError("Field 'targets[$i].events' must be an object");
+        }
+        var eventsErr = _validateEventCounts(Map<String, dynamic>.from(targetMap["events"]));
+        if (eventsErr != null) {
+          return StringError("Targets[$i].events: ${eventsErr.message}");
+        }
+      }
+    }
+
+    // Validate totalPointsOverride and finalTimeOverride if present
+    if (hasTotalPointsOverride) {
+      if (json["totalPointsOverride"] is! num) {
+        return StringError("Field 'totalPointsOverride' must be a number");
+      }
+    }
+    if (hasFinalTimeOverride) {
+      if (json["finalTimeOverride"] is! num) {
+        return StringError("Field 'finalTimeOverride' must be a number");
+      }
+    }
+
+    // penaltyEvents is optional when using targetEvents or targets (may be omitted if all entries are zero), but forbidden when using overrides
+    if (!hasOverrides) {
+      if (json.containsKey("penaltyEvents")) {
+        if (json["penaltyEvents"] is! Map) {
+          return StringError("Field 'penaltyEvents' must be an object");
+        }
+        var penaltyEventsErr = _validateEventCounts(Map<String, dynamic>.from(json["penaltyEvents"]));
+        if (penaltyEventsErr != null) {
+          return StringError("PenaltyEvents: ${penaltyEventsErr.message}");
+        }
+      }
+      // If penaltyEvents is missing, it's treated as an empty map (all zeros) - this is valid
+    } else {
+      // Forbidden when using overrides
+      if (json.containsKey("penaltyEvents")) {
+        return StringError("Field 'penaltyEvents' is forbidden when using 'totalPointsOverride' or 'finalTimeOverride'");
+      }
     }
 
     // Optional fields
