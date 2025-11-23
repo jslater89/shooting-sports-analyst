@@ -33,7 +33,7 @@ class ImportMatchCommand extends DbOneoffCommand {
   @override
   List<MenuArgument> get arguments => [
     StringMenuArgument(label: "sport", description: "Sport to import the match for", required: true),
-    StringMenuArgument(label: "file", description: "Path to a match file to import", required: true),
+    StringMenuArgument(label: "file", description: "Path to a match file or directory to import", required: true),
   ];
 
   @override
@@ -61,7 +61,7 @@ class ImportMatchCommand extends DbOneoffCommand {
         scores = utf8.decode(entry.content);
         // For heaven's sake, people, stop with the nicknames
         scores = scores.replaceAll(r"\u201c", '"').replaceAll(r"\u201d", '"');
-      } 
+      }
       else if(entryPath.contains("def")) {
         metadata = utf8.decode(entry.content);
         // I say again...

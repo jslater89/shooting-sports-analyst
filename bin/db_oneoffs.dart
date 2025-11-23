@@ -61,6 +61,8 @@ import 'db_oneoff_impl/ties.dart';
 import 'db_oneoff_impl/find_miff_test_matches_command.dart';
 import 'db_oneoff_impl/import_match_command.dart';
 import 'db_oneoff_impl/state_shooters_command.dart';
+import 'db_oneoff_impl/export_miffs_command.dart';
+import 'db_oneoff_impl/import_miffs_command.dart';
 
 late SSALogger _log = SSALogger("DbOneoffs");
 
@@ -91,6 +93,12 @@ Future<void> main(List<String> args) async {
     else if(command == "CLP") {
       await CheckLocationProportionCommand(db).executor(console, []);
     }
+    else if(command == "EM") {
+      var directory = args[1];
+      await ExportMiffsCommand(db).executor(console, [
+        MenuArgumentValue<String>(argument: StringMenuArgument(label: "directory"), value: directory),
+      ]);
+    }
     else {
       console.print("Unsupported launch command: $command");
     }
@@ -119,6 +127,8 @@ Future<void> main(List<String> args) async {
     ImportMatchCommand(db),
     CheckLocationProportionCommand(db),
     StateShootersCommand(db),
+    ImportMiffsCommand(db),
+    ExportMiffsCommand(db),
     QuitCommand(),
   ], menuHeader: "DB Oneoffs ${VersionInfo.version}", commandSelected: (command) async {
     switch(command.command?.runtimeType) {
