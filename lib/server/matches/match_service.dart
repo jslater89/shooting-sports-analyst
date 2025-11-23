@@ -43,7 +43,9 @@ class MatchService {
     if(miff.isErr()) {
       return Response.internalServerError(body: "Failed to export match");
     }
-    return Response.ok(miff.unwrap());
+    return Response.ok(miff.unwrap(), headers:{
+      "Content-Type": MiffExporter.compressedMimeType,
+    });
   }
 
   /// /search
@@ -61,7 +63,9 @@ class MatchService {
     }
     var matches = await database.matchNameTextSearch(query, limit: 25);
     var matchJson = jsonEncode(matches.map((m) => MatchSearchResult.fromDbMatch(m).toJson()).toList());
-    return Response.ok(matchJson);
+    return Response.ok(matchJson, headers:{
+      "Content-Type": "application/json",
+    });
   }
 }
 

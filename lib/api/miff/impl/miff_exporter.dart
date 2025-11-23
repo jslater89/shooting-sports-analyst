@@ -16,6 +16,9 @@ import "package:shooting_sports_analyst/util.dart";
 
 /// Implementation of AbstractMiffExporter.
 class MiffExporter implements AbstractMiffExporter {
+  static const String mimeType = "application/x-miff";
+  static const String compressedMimeType = "application/x-miff+gzip";
+
   @override
   Result<List<int>, ResultErr> exportMatch(ShootingMatch match) {
     try {
