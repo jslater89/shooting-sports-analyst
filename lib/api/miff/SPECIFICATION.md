@@ -16,6 +16,11 @@ MIFF files are gzip-compressed JSON documents. When decompressed, the JSON has t
 }
 ```
 
+When delivered over HTTP connections, it is recommended to use MIFF-specific MIME types:
+
+* `application/x-miff`
+* `application/x-miff+gzip`
+
 ### Root Object
 
 | Field | Type | Required | Description |
