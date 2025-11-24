@@ -37,11 +37,12 @@ Future<void> main() async {
 
   _log.i("Server initialization completed.");
 
-  setupKeys();
-  shelfRun(init);
+  final authServer = SSAAuthServer();
+  await authServer.setupKeys();
+  shelfRun(() => init(authServer));
 }
 
-Handler init() {
+Handler init(SSAAuthServer authServer) {
   final app = Router().plus;
   app.use(createLoggerMiddleware());
   app.get("/", (request) => "Shooting Sports Analyst API ${VersionInfo.version}");
@@ -49,10 +50,10 @@ Handler init() {
   // var leagueService = LeagueService([createLoggerMiddleware()]);
   // app.mount("/league", leagueService.router);
 
-  var authService = AuthService([createLoggerMiddleware()]);
+  var authService = AuthService.withServer(authServer, [createLoggerMiddleware()]);
   app.mount("/auth", authService.router);
 
-  var matchService = MatchService([createLoggerMiddleware(), createSSAAuthMiddleware()]);
+  var matchService = MatchService([createLoggerMiddleware(), createSSAAuthMiddleware(authServer)]);
   app.mount("/match", matchService.router);
 
   return app.call;

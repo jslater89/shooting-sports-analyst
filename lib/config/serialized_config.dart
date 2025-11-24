@@ -92,10 +92,27 @@ class SerializedConfig {
   @JsonKey(defaultValue: null, includeIfNull: false)
   int? ratingsContextProjectId;
 
+  @JsonKey(defaultValue: "https://parabellum.shootingsportsanalyst.com", includeIfNull: false)
+  String ssaServerBaseUrl;
+
+  @JsonKey(defaultValue: "nt+FPpDMvdo9iwpyuNr5rZzs5CLNczhFY7Zcxf2TfD0=", includeIfNull: false)
+  String ssaServerX25519PubBase64;
+
+  @JsonKey(defaultValue: "QNr4wVng7Oa2yvMzJRQ2YDGFOsBQbEY3GfSWt2vt+EQ=", includeIfNull: false)
+  String ssaServerEd25519PubBase64;
+
   factory SerializedConfig.fromToml(Map<String, dynamic> json) => _$SerializedConfigFromJson(json);
   Map<String, dynamic> toToml() => _$SerializedConfigToJson(this);
 
-  SerializedConfig({required this.logLevel, required this.playDeduplicationAlert, required this.playRatingsCalculationCompleteAlert, this.ratingsContextProjectId});
+  SerializedConfig({
+    required this.logLevel,
+    required this.playDeduplicationAlert,
+    required this.playRatingsCalculationCompleteAlert,
+    required this.ratingsContextProjectId,
+    required this.ssaServerBaseUrl,
+    required this.ssaServerX25519PubBase64,
+    required this.ssaServerEd25519PubBase64,
+  });
 
   @override
   String toString() {
@@ -105,6 +122,9 @@ class SerializedConfig {
     builder.writeln("\tplayDeduplicationAlert = $playDeduplicationAlert");
     builder.writeln("\tplayRatingsCalculationCompleteAlert = $playRatingsCalculationCompleteAlert");
     builder.writeln("\tratingsContextProjectId = $ratingsContextProjectId");
+    builder.writeln("\tssaServerBaseUrl = $ssaServerBaseUrl");
+    builder.writeln("\tssaServerX25519PubBase64 = $ssaServerX25519PubBase64");
+    builder.writeln("\tssaServerEd25519PubBase64 = $ssaServerEd25519PubBase64");
     return builder.toString();
   }
 
@@ -114,6 +134,9 @@ class SerializedConfig {
       playDeduplicationAlert: playDeduplicationAlert,
       playRatingsCalculationCompleteAlert: playRatingsCalculationCompleteAlert,
       ratingsContextProjectId: ratingsContextProjectId,
+      ssaServerBaseUrl: ssaServerBaseUrl,
+      ssaServerX25519PubBase64: ssaServerX25519PubBase64,
+      ssaServerEd25519PubBase64: ssaServerEd25519PubBase64,
     );
   }
 }

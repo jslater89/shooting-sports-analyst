@@ -30,11 +30,28 @@ enum ServerMatchType implements InternalMatchType {
 }
 
 class SSAServerMatchSource extends MatchSource<ServerMatchType, InternalMatchFetchOptions> {
-  final String baseUrl;
+  late final String baseUrl;
   late final SSAPublicAuthClient _authClient;
+  bool _initialized = false;
+  bool get initialized => _initialized;
 
-  SSAServerMatchSource({required this.baseUrl}) {
-    _authClient = SSAPublicAuthClient(baseUrl: baseUrl);
+  SSAServerMatchSource();
+
+  void initialize() {
+    var configProvider = FlutterOrNative.configProvider;
+    var config = configProvider.currentConfig;
+    var debugMode = FlutterOrNative.debugModeProvider.kDebugMode;
+    var serverBaseUrl = config.ssaServerBaseUrl;
+    var serverX25519PubBase64 = config.ssaServerX25519PubBase64;
+    var serverEd25519PubBase64 = config.ssaServerEd25519PubBase64;
+
+    baseUrl = serverBaseUrl;
+    _authClient = SSAPublicAuthClient(
+      baseUrl: serverBaseUrl,
+      allowDebugCertificates: debugMode,
+      serverX25519PubBase64: serverX25519PubBase64,
+      serverEd25519PubBase64: serverEd25519PubBase64,
+    );
   }
 
   @override

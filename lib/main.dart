@@ -222,6 +222,9 @@ void main() async {
     // oneoffDbAnalyses(AnalystDatabase());
     registerHelpTopics();
 
+    // initialize match sources
+    MatchSourceRegistry();
+
     runApp(MyApp());
   }, (error, stack) {
     _log.e("Uncaught error", error: error, stackTrace: stack);
