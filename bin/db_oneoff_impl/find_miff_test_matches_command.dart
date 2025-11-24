@@ -18,6 +18,11 @@ class FindMiffTestMatchesCommand extends DbOneoffCommand {
       console.print("${match.eventName} ${match.sourceIds}");
     }
 
+    icoreMatches = await db.queryMatches(name: "Central States Regional");
+    for(var match in icoreMatches) {
+      console.print("${match.eventName} ${match.sourceIds}");
+    }
+
     var idpaNationals2025 = await db.queryMatches(name: "2025 IDPA National Championship");
     for(var match in idpaNationals2025) {
       console.print("${match.eventName} ${match.sourceIds}");
