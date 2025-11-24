@@ -74,6 +74,7 @@ local**
 *.json
 checkout-branch.sh
 data/export**
+**.exe
 
 # Things shared with me under NDA that I can't put on Git
 private/
