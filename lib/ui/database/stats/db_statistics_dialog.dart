@@ -35,16 +35,16 @@ class _DbStatisticsDialogState extends State<DbStatisticsDialog> {
             Text("Basic statistics", style: Theme.of(context).textTheme.titleMedium!.copyWith(decoration: TextDecoration.underline)),
             SizedBox(height: 10),
             Table(
-              columnWidths: const {
-                0: FixedColumnWidth(200),
-                1: FixedColumnWidth(100),
-                2: FixedColumnWidth(100),
-                3: FixedColumnWidth(100),
+              columnWidths: {
+                0: FixedColumnWidth(200 * uiScaleFactor),
+                1: FixedColumnWidth(100 * uiScaleFactor),
+                2: FixedColumnWidth(100 * uiScaleFactor),
+                3: FixedColumnWidth(100 * uiScaleFactor),
               },
               children: [
                 TableRow(
                   decoration: BoxDecoration(
-                    border: Border(bottom: BorderSide())
+                    border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outline))
                   ),
                   children: [
                     Text("Entity", style: Theme.of(context).textTheme.bodyLarge, textAlign: TextAlign.left),
@@ -55,7 +55,7 @@ class _DbStatisticsDialogState extends State<DbStatisticsDialog> {
                 ),
                 TableRow(
                   decoration: BoxDecoration(
-                    border: Border(bottom: BorderSide())
+                    border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outline))
                   ),
                   children: [
                     Text("Matches", style: Theme.of(context).textTheme.bodyLarge),
@@ -66,7 +66,7 @@ class _DbStatisticsDialogState extends State<DbStatisticsDialog> {
                 ),
                 TableRow(
                   decoration: BoxDecoration(
-                    border: Border(bottom: BorderSide())
+                    border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outline))
                   ),
                   children: [
                     Text("Rating projects", style: Theme.of(context).textTheme.bodyLarge),
@@ -77,7 +77,7 @@ class _DbStatisticsDialogState extends State<DbStatisticsDialog> {
                 ),
                 TableRow(
                   decoration: BoxDecoration(
-                    border: Border(bottom: BorderSide())
+                    border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outline))
                   ),
                   children: [
                     Text("Ratings", style: Theme.of(context).textTheme.bodyLarge),
@@ -88,7 +88,7 @@ class _DbStatisticsDialogState extends State<DbStatisticsDialog> {
                 ),
                 TableRow(
                   decoration: BoxDecoration(
-                    border: Border(bottom: BorderSide())
+                    border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outline))
                   ),
                   children: [
                     Text("Events", style: Theme.of(context).textTheme.bodyLarge),
@@ -111,7 +111,7 @@ class _DbStatisticsDialogState extends State<DbStatisticsDialog> {
                 child: Text("LOAD PROJECT STATISTICS"),
               ),
             if(_loadedDetailedStats)
-              ..._detailedStats(),
+              ..._detailedStats(uiScaleFactor),
             SizedBox(height: 10),
             Text("Total size: ${_formatMiB(widget.stats.totalSize)} (${(widget.stats.totalSize / widget.stats.maxSize).asPercentage(decimals: 1)}% full)"),
           ],
@@ -134,11 +134,11 @@ class _DbStatisticsDialogState extends State<DbStatisticsDialog> {
     return "${bytes.round()} bytes";
   }
 
-  List<Widget> _detailedStats() {
+  List<Widget> _detailedStats(double uiScaleFactor) {
     List<TableRow> stats = [];
     stats.add(TableRow(
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide())
+        border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outline))
       ),
       children: [
         Text("Project", style: Theme.of(context).textTheme.bodyLarge),
@@ -153,7 +153,7 @@ class _DbStatisticsDialogState extends State<DbStatisticsDialog> {
       }
       stats.add(TableRow(
         decoration: BoxDecoration(
-          border: Border(bottom: BorderSide())
+          border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outline))
         ),
         children: [
           Tooltip(
@@ -171,11 +171,11 @@ class _DbStatisticsDialogState extends State<DbStatisticsDialog> {
       Text("Project statistics", style: Theme.of(context).textTheme.titleMedium!.copyWith(decoration: TextDecoration.underline)),
       SizedBox(height: 10),
       Table(
-        columnWidths: const {
-          0: FixedColumnWidth(200),
-          1: FixedColumnWidth(100),
-          2: FixedColumnWidth(100),
-          3: FixedColumnWidth(100),
+        columnWidths: {
+          0: FixedColumnWidth(200 * uiScaleFactor),
+          1: FixedColumnWidth(100 * uiScaleFactor),
+          2: FixedColumnWidth(100 * uiScaleFactor),
+          3: FixedColumnWidth(100 * uiScaleFactor),
         },
         children: stats,
       ),

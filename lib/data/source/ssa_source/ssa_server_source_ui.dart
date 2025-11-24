@@ -207,16 +207,16 @@ class _SSASearchResultsState extends State<SSASearchResults> {
     latestSearch = searchTerm;
 
     try {
-      var searchResult = await widget.source.findMatches(searchTerm);
-      if (searchTerm != latestSearch) {
-        // Another search came in before this one returned
-        return;
-      }
-
       if(searchTerm.isEmpty) {
         setState(() {
           results = [];
         });
+        return;
+      }
+
+      var searchResult = await widget.source.findMatches(searchTerm);
+      if (searchTerm != latestSearch) {
+        // Another search came in before this one returned
         return;
       }
 
