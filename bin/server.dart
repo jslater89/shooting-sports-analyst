@@ -5,9 +5,11 @@
  */
 
 import 'package:shelf_plus/shelf_plus.dart';
+import 'package:shooting_sports_analyst/closed_sources/ssa_auth_client/dart_machine_fingerprinter.dart';
 import 'package:shooting_sports_analyst/closed_sources/ssa_auth_server/auth_server.dart';
 import 'package:shooting_sports_analyst/config/serialized_config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/flutter_native_providers.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/server/matches/match_service.dart';
 import 'package:shooting_sports_analyst/server/middleware/logger_middleware.dart';
@@ -18,11 +20,16 @@ final _log = SSALogger("Server Main");
 
 Future<void> main() async {
   print("Starting server.");
-  SSALogger.debugProvider = ServerDebugProvider();
+  FlutterOrNative.debugModeProvider = ServerDebugProvider();
+  FlutterOrNative.machineFingerprintProvider = DartOnlyMachineFingerprinter();
+
   var configLoader = ConfigLoader();
   await configLoader.readyFuture;
   print("Loaded configuration.");
-  initLogger(configLoader.config, ServerConfigProvider());
+  var configProvider = ServerConfigProvider(configLoader.config);
+  initLogger(configLoader.config, configProvider);
+
+
   _log.i("Initialized logger.");
 
   var database = AnalystDatabase();

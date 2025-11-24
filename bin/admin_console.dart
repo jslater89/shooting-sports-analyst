@@ -6,6 +6,7 @@ import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/db_statistics.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/flutter_native_providers.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/server/fantasy/cli/calculate_annual_stats.dart';
 import 'package:shooting_sports_analyst/server/fantasy/cli/lookup_competitor_scores.dart';
@@ -19,7 +20,7 @@ DbRatingProject? _ratingContext;
 late final AnalystDatabase _database;
 
 Future<void> main() async {
-  SSALogger.debugProvider = ServerDebugProvider();
+  FlutterOrNative.debugModeProvider = ServerDebugProvider();
   SSALogger.consoleOutput = false;
 
   var console = Console();

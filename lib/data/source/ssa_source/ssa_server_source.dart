@@ -9,10 +9,12 @@ import "dart:convert";
 import "package:http/http.dart" as http;
 import "package:shooting_sports_analyst/api/miff/miff.dart";
 import "package:shooting_sports_analyst/closed_sources/ssa_auth_client/auth_client.dart";
+import "package:shooting_sports_analyst/config/serialized_config.dart";
 import "package:shooting_sports_analyst/data/source/match_source_error.dart";
 import "package:shooting_sports_analyst/data/source/source.dart";
 import "package:shooting_sports_analyst/data/sport/match/match.dart";
 import "package:shooting_sports_analyst/data/sport/sport.dart";
+import "package:shooting_sports_analyst/flutter_native_providers.dart";
 import "package:shooting_sports_analyst/logger.dart";
 import "package:shooting_sports_analyst/util.dart";
 

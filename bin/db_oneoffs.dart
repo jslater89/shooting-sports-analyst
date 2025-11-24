@@ -35,6 +35,7 @@ import 'package:shooting_sports_analyst/data/sport/builtins/icore.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/uspsa.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
+import 'package:shooting_sports_analyst/flutter_native_providers.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/server/providers.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -67,7 +68,7 @@ import 'db_oneoff_impl/import_miffs_command.dart';
 late SSALogger _log = SSALogger("DbOneoffs");
 
 Future<void> main(List<String> args) async {
-  SSALogger.debugProvider = ServerDebugProvider();
+  FlutterOrNative.debugModeProvider = ServerDebugProvider();
   SSALogger.consoleOutput = false;
   SSALogger.fileOutput = true;
   await _log.ready;
