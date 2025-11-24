@@ -487,6 +487,52 @@ class AnalystDatabase {
     return Result.ok(dbMatch);
   }
 
+  /// Save a match.
+  ///
+  /// The provided ShootingMatch will have its database ID set if the save succeeds.
+  Result<DbShootingMatch, ResultErr> saveMatchSync(ShootingMatch match) {
+    if(match.sourceIds.isEmpty || match.sourceCode.isEmpty) {
+      throw ArgumentError("Match must have at least one source ID and a source code to be saved in the database");
+    }
+    var dbMatch = DbShootingMatch.from(match);
+    try {
+      var oldMatch = getMatchByAnySourceIdSync(dbMatch.sourceIds);
+      dbMatch = isar.writeTxnSync(() {
+        if (oldMatch != null) {
+          dbMatch.id = oldMatch.id;
+          isar.dbShootingMatchs.putSync(dbMatch);
+        }
+        else {
+          dbMatch.id = isar.dbShootingMatchs.putSync(dbMatch);
+        }
+        return dbMatch;
+      });
+
+      if(dbMatch.shootersStoredSeparately) {
+        // We need to load outside the write transaction, because load can't be done inside.
+        // It should be lightweight because dbMatch shouldn't have any DB entries (just the newly inserted ones).
+        dbMatch.shooterLinks.loadSync();
+        isar.writeTxnSync(() {
+          if(oldMatch != null) {
+            var deletedEntries = deleteStandaloneMatchEntriesForMatchSourceIdsSync(oldMatch.sourceIds);
+            _log.d("Deleted $deletedEntries standalone match entries while updating match ${oldMatch.eventName}");
+          }
+          isar.standaloneDbMatchEntrys.putAllSync(dbMatch.shooterLinks.toList());
+          dbMatch.shooterLinks.saveSync();
+        });
+      }
+    }
+    catch(e, stackTrace) {
+      _log.e("Failed to save match", error: e, stackTrace: stackTrace);
+      _log.i("Failed source IDs: ${dbMatch.sourceIds}");
+      return Result.err(StringError("$e"));
+    }
+
+    // For least confusion
+    match.databaseId = dbMatch.id;
+    return Result.ok(dbMatch);
+  }
+
   Future<DbShootingMatch?> getMatchByAnySourceId(List<String> ids) async {
     for(var id in ids) {
       var match = await isar.dbShootingMatchs.getByIndex(AnalystDatabase.sourceIdsIndex, [id]);
@@ -506,6 +552,34 @@ class AnalystDatabase {
 
   Future<DbShootingMatch?> getMatchBySourceId(String id) {
     return getMatchByAnySourceId([id]);
+  }
+
+  /// Check if a match exists by source ID.
+  ///
+  /// Faster than [getMatchBySourceId] because it doesn't need to load the match.
+  Future<bool> hasMatchBySourceId(String id) async {
+    return hasMatchByAnySourceId([id]);
+  }
+
+  /// Check if a match exists by any of the given source IDs.
+  ///
+  /// Faster than [getMatchByAnySourceId] because it doesn't need to load the match.
+  Future<bool> hasMatchByAnySourceId(List<String> ids) async {
+    return await isar.dbShootingMatchs.where().anyOf(ids, (query, id) => query.sourceIdsElementEqualTo(id)).count() > 0;
+  }
+
+  /// Check if a match exists by source ID.
+  ///
+  /// Faster than [getMatchBySourceIdSync] because it doesn't need to load the match.
+  bool hasMatchBySourceIdSync(String id) {
+    return hasMatchByAnySourceIdSync([id]);
+  }
+
+  /// Check if a match exists by any of the given source IDs.
+  ///
+  /// Faster than [getMatchByAnySourceIdSync] because it doesn't need to load the match.
+  bool hasMatchByAnySourceIdSync(List<String> ids) {
+    return isar.dbShootingMatchs.where().anyOf(ids, (query, id) => query.sourceIdsElementEqualTo(id)).countSync() > 0;
   }
 
   /// Get a match by database ID.
@@ -528,6 +602,10 @@ class AnalystDatabase {
 
   Future<int> deleteStandaloneMatchEntriesForMatchSourceIds(List<String> matchSourceIds) async {
     return await isar.standaloneDbMatchEntrys.where().anyOf(matchSourceIds, (q, sourceId) => q.matchSourceIdsElementEqualTo(sourceId)).deleteAll();
+  }
+
+  int deleteStandaloneMatchEntriesForMatchSourceIdsSync(List<String> matchSourceIds) {
+    return isar.standaloneDbMatchEntrys.where().anyOf(matchSourceIds, (q, sourceId) => q.matchSourceIdsElementEqualTo(sourceId)).deleteAllSync();
   }
 
   Future<Result<bool, ResultErr>> deleteMatch(int id) async {

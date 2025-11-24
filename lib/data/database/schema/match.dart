@@ -191,45 +191,55 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
       }
     }
 
-    if(shootersStoredSeparately) {
-      var dbMatch = DbShootingMatch(
-        id: match.databaseId ?? Isar.autoIncrement,
-        eventName: match.name,
-        rawDate: match.rawDate,
-        date: match.date,
-        matchLevelName: match.level?.name,
-        matchEventLevel: match.level?.eventLevel ?? EventLevel.local,
-        sourceIds: []..addAll(match.sourceIds),
-        sourceCode: match.sourceCode,
-        sportName: match.sport.name,
-        stages: []..addAll(match.stages.map((s) => DbMatchStage.from(s))),
-        shooters: [],
-        shootersStoredSeparately: true,
-        memberNumbersAppearing: memberNumbersAppearing.toList(),
-        localBonusEvents: match.localBonusEvents.map((e) => DbScoringEvent.fromScoringEvent(e)).toList(),
-        localPenaltyEvents: match.localPenaltyEvents.map((e) => DbScoringEvent.fromScoringEvent(e)).toList(),
-      );
+    try {
+      if(shootersStoredSeparately) {
+        var dbMatch = DbShootingMatch(
+          id: match.databaseId ?? Isar.autoIncrement,
+          eventName: match.name,
+          rawDate: match.rawDate,
+          date: match.date,
+          matchLevelName: match.level?.name,
+          matchEventLevel: match.level?.eventLevel ?? EventLevel.local,
+          sourceIds: []..addAll(match.sourceIds),
+          sourceCode: match.sourceCode,
+          sportName: match.sport.name,
+          stages: []..addAll(match.stages.map((s) => DbMatchStage.from(s))),
+          shooters: [],
+          shootersStoredSeparately: true,
+          memberNumbersAppearing: memberNumbersAppearing.toList(),
+          localBonusEvents: match.localBonusEvents.map((e) => DbScoringEvent.fromScoringEvent(e)).toList(),
+          localPenaltyEvents: match.localPenaltyEvents.map((e) => DbScoringEvent.fromScoringEvent(e)).toList(),
+        );
 
-      dbMatch.shooterLinks.addAll(standaloneDbEntries);
-      return dbMatch;
+        dbMatch.shooterLinks.addAll(standaloneDbEntries);
+        return dbMatch;
+      }
+      else {
+        return DbShootingMatch(
+          id: match.databaseId ?? Isar.autoIncrement,
+          eventName: match.name,
+          rawDate: match.rawDate,
+          date: match.date,
+          matchLevelName: match.level?.name,
+          matchEventLevel: match.level?.eventLevel ?? EventLevel.local,
+          sourceIds: []..addAll(match.sourceIds),
+          sourceCode: match.sourceCode,
+          sportName: match.sport.name,
+          shooters: dbEntries,
+          stages: []..addAll(match.stages.map((s) => DbMatchStage.from(s))),
+          memberNumbersAppearing: memberNumbersAppearing.toList(),
+          localBonusEvents: match.localBonusEvents.map((e) => DbScoringEvent.fromScoringEvent(e)).toList(),
+          localPenaltyEvents: match.localPenaltyEvents.map((e) => DbScoringEvent.fromScoringEvent(e)).toList(),
+        );
+      }
     }
-    else {
-      return DbShootingMatch(
-        id: match.databaseId ?? Isar.autoIncrement,
-        eventName: match.name,
-        rawDate: match.rawDate,
-        date: match.date,
-        matchLevelName: match.level?.name,
-        matchEventLevel: match.level?.eventLevel ?? EventLevel.local,
-        sourceIds: []..addAll(match.sourceIds),
-        sourceCode: match.sourceCode,
-        sportName: match.sport.name,
-        shooters: dbEntries,
-        stages: []..addAll(match.stages.map((s) => DbMatchStage.from(s))),
-        memberNumbersAppearing: memberNumbersAppearing.toList(),
-        localBonusEvents: match.localBonusEvents.map((e) => DbScoringEvent.fromScoringEvent(e)).toList(),
-        localPenaltyEvents: match.localPenaltyEvents.map((e) => DbScoringEvent.fromScoringEvent(e)).toList(),
-      );
+    catch(e, stackTrace) {
+      _log.e("Exception creating DbShootingMatch from ${match.name} ${match.sourceIds} ${match.sourceCode}", error: e, stackTrace: stackTrace);
+      if(!SSALogger.consoleOutput) {
+        // clobber some REPL output if we're going down
+        print("Exception creating DbShootingMatch from ${match.name} ${match.sourceIds} ${match.sourceCode}");
+      }
+      rethrow;
     }
 
   }

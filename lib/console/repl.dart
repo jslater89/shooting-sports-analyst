@@ -272,7 +272,7 @@ class StringMenuArgument extends MenuArgument<String> {
 }
 
 class BoolMenuArgument extends MenuArgument<bool> {
-  BoolMenuArgument({required super.required, required super.label, super.description, super.defaultValue, super.defaultValueFactory});
+  const BoolMenuArgument({required super.required, required super.label, super.description, super.defaultValue, super.defaultValueFactory});
 
   @override
   MenuArgumentValue<bool>? parseInput(String value) {

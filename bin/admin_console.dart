@@ -1,6 +1,10 @@
 
+import 'dart:io';
+
 import 'package:dart_console/dart_console.dart';
+import 'package:shooting_sports_analyst/api/miff/impl/miff_importer.dart';
 import 'package:shooting_sports_analyst/config/serialized_config.dart';
+import 'package:shooting_sports_analyst/console/labeled_progress_bar.dart';
 import 'package:shooting_sports_analyst/console/repl.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/db_statistics.dart';
@@ -45,6 +49,7 @@ Future<void> main() async {
 enum _MainMenuCommand implements MenuCommand {
   fantasy("1", "Fantasy"),
   database("2", "Database Information"),
+  ssaServerTools("3", "SSA Server Tools"),
   quit("Q", "Quit");
 
   final String key;
@@ -71,6 +76,9 @@ Future<void> _mainMenuLoop(Console console) async {
           return true;
         case _MainMenuCommand.database:
           await _databaseMenuLoop(console);
+          return true;
+        case _MainMenuCommand.ssaServerTools:
+          await _ssaServerToolsMenuLoop(console);
           return true;
         case _MainMenuCommand.quit:
           return false;
@@ -223,4 +231,100 @@ Future<void> _setRatingContext(Console console, List<MenuArgumentValue> argument
   config.ratingsContextProjectId = projectId;
   await ConfigLoader().save();
   console.write("Rating context set to ${project.name}\n");
+}
+
+enum _SSAMenuCommand implements MenuCommand {
+  importMiffs("1", "Import MIFFs", execute: _importMiffs, arguments: [
+    StringMenuArgument(label: "directory", description: "Directory to import the MIFFs from", required: true),
+    BoolMenuArgument(label: "overwrite", description: "Overwrite existing matches", required: false, defaultValue: true),
+  ]),
+  back("B", "Back");
+
+  final String key;
+  final String title;
+  final List<MenuArgument> arguments;
+
+  @override
+  final CommandExecutor? execute;
+
+  const _SSAMenuCommand(this.key, this.title, {this.execute = null, this.arguments = const []});
+
+  @override
+  String? get description => "";
+}
+
+Future<void> _importMiffs(Console console, List<MenuArgumentValue> arguments) async {
+  var path = arguments[0].value;
+  var overwrite = arguments[1].value;
+  var directory = Directory(path);
+  if(!directory.existsSync()) {
+    console.print("Directory does not exist: ${directory.path}");
+    return;
+  }
+  var miffs = directory.listSync().where((e) => e.path.endsWith(".miff.gz") || e.path.endsWith(".miff")).toList();
+  var importer = MiffImporter();
+  int filesConsidered = 0;
+  int totalFiles = miffs.length;
+  int importedMatches = 0;
+  int savedMatches = 0;
+  var progressBar = LabeledProgressBar(maxValue: totalFiles, canHaveErrors: true, initialLabel: "Importing MIFFs...");
+  for(var miff in miffs) {
+    filesConsidered++;
+    progressBar.tick("Imported: $importedMatches Saved: $savedMatches ($filesConsidered of $totalFiles)");
+    if(miff is! File) {
+      continue;
+    }
+    var bytes = miff.readAsBytesSync();
+    var importRes = importer.importMatch(bytes);
+    if(importRes.isErr()) {
+      progressBar.error("Error importing match ${miff.path}: ${importRes.unwrapErr().message}");
+      continue;
+    }
+    var match = importRes.unwrap();
+    importedMatches++;
+    bool saved = false;
+    if(match.sourceIds.isEmpty || match.sourceCode.isEmpty) {
+      progressBar.error("No source info: ${match.name} ${match.sourceIds} ${match.sourceCode}");
+      continue;
+    }
+    if(overwrite) {
+      var saveRes = _database.saveMatchSync(match);
+      if(saveRes.isOk()) {
+        saved = true;
+        savedMatches++;
+      }
+    }
+    else {
+      var existingMatch = await _database.hasMatchByAnySourceId(match.sourceIds);
+      if(existingMatch) {
+        progressBar.error("Match already exists: ${match.name}");
+        miff.deleteSync();
+        continue;
+      }
+      var saveRes = _database.saveMatchSync(match);
+      if(saveRes.isOk()) {
+        saved = true;
+        savedMatches++;
+      }
+    }
+
+    if(saved) {
+      miff.deleteSync();
+    }
+  }
+  progressBar.complete();
+}
+
+Future<void> _ssaServerToolsMenuLoop(Console console) async {
+  await menuLoop(console, _SSAMenuCommand.values,
+    menuHeader: "SSA Server Tools",
+    commandSelected: (command) async {
+      switch(command.command) {
+        case _SSAMenuCommand.back:
+          return false;
+        default:
+          return true;
+      }
+    }
+  );
 }
