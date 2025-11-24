@@ -18,6 +18,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shooting_sports_analyst/closed_sources/ssa_auth_client/flutter_machine_fingerprinter.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/config/encrypted_file_store/encrypted_file_store.dart';
 import 'package:shooting_sports_analyst/config/encrypted_file_store/macos_key_deriver.dart';
@@ -27,6 +28,8 @@ import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/help/entries/all_helps.dart';
 import 'package:shooting_sports_analyst/data/match_cache/registration_cache.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_context.dart';
+import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
+import 'package:shooting_sports_analyst/flutter_native_providers.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/route/local_upload.dart';
@@ -68,10 +71,18 @@ class FlutterDebugProvider implements DebugModeProvider {
 }
 
 class FlutterConfigProvider implements ConfigProvider {
+  FlutterConfigProvider(this._config);
+
+  SerializedConfig _config;
+
+  @override
+  SerializedConfig get currentConfig => _config;
+
   @override
   void addListener(void Function(SerializedConfig config) listener) {
     ChangeNotifierConfigLoader().addListener(() {
-      listener.call(ChangeNotifierConfigLoader().config);
+      _config = ChangeNotifierConfigLoader().config;
+      listener.call(_config);
     });
   }
 }
@@ -134,7 +145,8 @@ class FlutterSecureStorageProvider implements SecureStorageProvider {
 }
 
 void main() async {
-  SSALogger.debugProvider = FlutterDebugProvider();
+  FlutterOrNative.debugModeProvider = FlutterDebugProvider();
+  FlutterOrNative.machineFingerprintProvider = FlutterMachineFingerprinter();
   // dumpRatings();
 
   FlutterError.onError = (details) {
@@ -181,6 +193,9 @@ void main() async {
     configureApp();
 
     await ChangeNotifierConfigLoader().readyFuture;
+    var initialConfig = ChangeNotifierConfigLoader().config;
+    FlutterOrNative.configProvider = FlutterConfigProvider(initialConfig);
+
     var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
 
     await windowManager.ensureInitialized();
@@ -194,7 +209,7 @@ void main() async {
     });
 
     SecureConfig.storageEngine = FlutterSecureStorageProvider();
-    initLogger(ChangeNotifierConfigLoader().config, FlutterConfigProvider());
+    initLogger(initialConfig, FlutterOrNative.configProvider);
 
     await AnalystDatabase().ready;
     _log.i("Database ready");

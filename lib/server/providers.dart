@@ -5,6 +5,7 @@ import 'dart:io';
 
 import 'package:shooting_sports_analyst/config/secure_config.dart';
 import 'package:shooting_sports_analyst/config/serialized_config.dart';
+import 'package:shooting_sports_analyst/flutter_native_providers.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 
 class ServerDebugProvider implements DebugModeProvider {
@@ -16,9 +17,16 @@ class ServerDebugProvider implements DebugModeProvider {
 }
 
 class ServerConfigProvider implements ConfigProvider {
+  ServerConfigProvider(this._config);
+
+  SerializedConfig _config;
+
+  @override
+  SerializedConfig get currentConfig => _config;
+
   @override
   void addListener(void Function(SerializedConfig config) Function) {
-
+    // server configs are read-only
   }
 }
 
