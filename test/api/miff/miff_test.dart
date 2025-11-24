@@ -9,11 +9,15 @@ import "package:shooting_sports_analyst/api/miff/impl/miff_exporter.dart";
 import "package:shooting_sports_analyst/api/miff/impl/miff_importer.dart";
 import "package:shooting_sports_analyst/api/miff/impl/miff_validator.dart";
 import "package:shooting_sports_analyst/data/database/analyst_database.dart";
+import "package:shooting_sports_analyst/data/database/schema/match.dart";
 import "package:shooting_sports_analyst/data/sport/match/match.dart";
 import "package:shooting_sports_analyst/data/sport/scoring/scoring.dart";
 import "package:shooting_sports_analyst/data/sport/shooter/shooter.dart";
+import "package:shooting_sports_analyst/flutter_native_providers.dart";
+import "package:shooting_sports_analyst/server/providers.dart";
 
 void main() {
+  FlutterOrNative.debugModeProvider = ServerDebugProvider();
   group("MIFF Tests", () {
     late AnalystDatabase db;
     late MiffValidator validator;
@@ -32,6 +36,7 @@ void main() {
       "19d277bd-c7fb-4850-b14b-d8551d50343e", // Shooting Sports Analyst ICORE Feb 28, 2025
       "cc98089a-83ad-4898-9622-b7cd16e41ddb", // 2025 IDPA National Championship Presented by Beretta
       "44b2f321-a893-4ca3-b3cc-22ffcca0cb08", // The 2025 SIG Sauer Factory Gun Nationals presented by Vortex Optics
+      "18179972-7036-42e6-b7bd-89e2cbcd69f5", // Central States ICORE Regional; observed crash
     ];
 
     test("Export match from database", () async {
@@ -59,6 +64,8 @@ void main() {
 
         var originalMatch = dbMatch!.hydrate().unwrap();
 
+        var _ = DbShootingMatch.from(originalMatch);
+
         // Export to MIFF
         var miffBytes = await exportToMiff(originalMatch);
 
@@ -68,6 +75,8 @@ void main() {
 
         // Import from MIFF
         var importedMatch = await importFromMiff(miffBytes);
+
+        var _ = DbShootingMatch.from(importedMatch);
 
         // Compare matches
         expectMatchesEqual(importedMatch, originalMatch, reason: "Match $matchId");

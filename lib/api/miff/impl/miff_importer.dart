@@ -283,7 +283,7 @@ class MiffImporter implements AbstractMiffImporter {
           var events = <ScoringEvent>[];
           for (var eventJson in eventsJson) {
             var nameInFile = eventJson["name"] as String;
-            var event = _parseScoringEvent(eventJson as Map<String, dynamic>, importState, baseName: baseName);
+            var event = _parseScoringEvent(eventJson as Map<String, dynamic>, importState, baseName: baseName, isVariableEvent: true);
             importState.addVariableEvent(stageId, nameInFile, event);
             events.add(event);
           }
@@ -321,12 +321,17 @@ class MiffImporter implements AbstractMiffImporter {
     }
   }
 
-  ScoringEvent _parseScoringEvent(Map<String, dynamic> json, _ImportState importState, {String? baseName}) {
+  ScoringEvent _parseScoringEvent(Map<String, dynamic> json, _ImportState importState, {String? baseName, bool isVariableEvent = false}) {
     return ScoringEvent(
       baseName ?? json["name"] as String,
       shortName: json["shortName"] as String? ?? "",
       pointChange: json["points"] as int,
       timeChange: (json["time"] as num).toDouble(),
+      // TODO: see if we can pull nondefault points/time from the import state somehow
+      // (checking the base event?)
+      variableValue: isVariableEvent,
+      nondefaultPoints: isVariableEvent,
+      nondefaultTime: isVariableEvent,
       bonus: json["bonus"] as bool? ?? false,
       bonusLabel: json["bonusLabel"] as String? ?? "X",
     );
