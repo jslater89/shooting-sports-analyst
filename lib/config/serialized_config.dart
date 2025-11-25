@@ -101,6 +101,18 @@ class SerializedConfig {
   @JsonKey(defaultValue: "QNr4wVng7Oa2yvMzJRQ2YDGFOsBQbEY3GfSWt2vt+EQ=", includeIfNull: false)
   String ssaServerEd25519PubBase64;
 
+  @JsonKey(defaultValue: null, includeIfNull: false)
+  String? autoImportDirectory;
+
+  @JsonKey(defaultValue: false, includeIfNull: false)
+  bool autoImportOverwrites;
+
+  @JsonKey(defaultValue: true, includeIfNull: false)
+  bool autoImportDeletesAfterImport;
+
+  @JsonKey(defaultValue: true, includeIfNull: false)
+  bool autoImportDeletesAfterSkippingOverwrite;
+
   factory SerializedConfig.fromToml(Map<String, dynamic> json) => _$SerializedConfigFromJson(json);
   Map<String, dynamic> toToml() => _$SerializedConfigToJson(this);
 
@@ -112,6 +124,10 @@ class SerializedConfig {
     required this.ssaServerBaseUrl,
     required this.ssaServerX25519PubBase64,
     required this.ssaServerEd25519PubBase64,
+    required this.autoImportDirectory,
+    required this.autoImportOverwrites,
+    required this.autoImportDeletesAfterImport,
+    required this.autoImportDeletesAfterSkippingOverwrite,
   });
 
   @override
@@ -125,6 +141,10 @@ class SerializedConfig {
     builder.writeln("\tssaServerBaseUrl = $ssaServerBaseUrl");
     builder.writeln("\tssaServerX25519PubBase64 = $ssaServerX25519PubBase64");
     builder.writeln("\tssaServerEd25519PubBase64 = $ssaServerEd25519PubBase64");
+    builder.writeln("\tautoImportDirectory = $autoImportDirectory");
+    builder.writeln("\tautoImportOverwrites = $autoImportOverwrites");
+    builder.writeln("\tautoImportDeletesAfterImport = $autoImportDeletesAfterImport");
+    builder.writeln("\tautoImportDeletesAfterSkippingOverwrite = $autoImportDeletesAfterSkippingOverwrite");
     return builder.toString();
   }
 
@@ -137,6 +157,10 @@ class SerializedConfig {
       ssaServerBaseUrl: ssaServerBaseUrl,
       ssaServerX25519PubBase64: ssaServerX25519PubBase64,
       ssaServerEd25519PubBase64: ssaServerEd25519PubBase64,
+      autoImportDirectory: autoImportDirectory,
+      autoImportOverwrites: autoImportOverwrites,
+      autoImportDeletesAfterImport: autoImportDeletesAfterImport,
+      autoImportDeletesAfterSkippingOverwrite: autoImportDeletesAfterSkippingOverwrite,
     );
   }
 }

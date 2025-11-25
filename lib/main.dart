@@ -28,6 +28,7 @@ import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/help/entries/all_helps.dart';
 import 'package:shooting_sports_analyst/data/match_cache/registration_cache.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_context.dart';
+import 'package:shooting_sports_analyst/data/source/auto_importer.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/flutter_native_providers.dart';
 import 'package:shooting_sports_analyst/html_or/html_or.dart';
@@ -195,6 +196,8 @@ void main() async {
     await ChangeNotifierConfigLoader().readyFuture;
     var initialConfig = ChangeNotifierConfigLoader().config;
     FlutterOrNative.configProvider = FlutterConfigProvider(initialConfig);
+
+    AutoImporter().initialize();
 
     var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
 
