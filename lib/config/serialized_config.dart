@@ -80,38 +80,58 @@ class ConfigLoader {
 
 @JsonSerializable()
 class SerializedConfig {
+  /// The log level to use for the application.
   @JsonKey(defaultValue: Level.debug)
   Level logLevel;
 
+  /// Whether to play a sound when deduplication is required.
   @JsonKey(defaultValue: true)
   bool playDeduplicationAlert;
 
+  /// Whether to play a sound when ratings calculation is complete.
   @JsonKey(defaultValue: false)
   bool playRatingsCalculationCompleteAlert;
 
+  /// The project ID to use as a ratings context outside of the ratings section of the UI.
   @JsonKey(defaultValue: null, includeIfNull: false)
   int? ratingsContextProjectId;
 
+  /// The base URL of an SSA server match data source.
   @JsonKey(defaultValue: "https://parabellum.shootingsportsanalyst.com", includeIfNull: false)
   String ssaServerBaseUrl;
 
+  /// The base64-encoded X25519 public key for the SSA server.
   @JsonKey(defaultValue: "nt+FPpDMvdo9iwpyuNr5rZzs5CLNczhFY7Zcxf2TfD0=", includeIfNull: false)
   String ssaServerX25519PubBase64;
 
+  /// The base64-encoded Ed25519 public key for the SSA server.
   @JsonKey(defaultValue: "QNr4wVng7Oa2yvMzJRQ2YDGFOsBQbEY3GfSWt2vt+EQ=", includeIfNull: false)
   String ssaServerEd25519PubBase64;
 
+  /// The directory to use for auto-importing matches, or null to disable auto-importing.
   @JsonKey(defaultValue: null, includeIfNull: false)
   String? autoImportDirectory;
 
+  /// Whether to overwrite existing matches when auto-importing.
   @JsonKey(defaultValue: false, includeIfNull: false)
   bool autoImportOverwrites;
 
+  /// Whether to delete the imported file after a successful import.
   @JsonKey(defaultValue: true, includeIfNull: false)
   bool autoImportDeletesAfterImport;
 
+  /// Whether to delete the imported file after a successful import, or if the import was skipped due to an overwrite.
   @JsonKey(defaultValue: true, includeIfNull: false)
   bool autoImportDeletesAfterSkippingOverwrite;
+
+  /// Whether to forward requests for refreshing UUID-style match IDs to the SSA server source, regardless of
+  /// whether the match record specifies a different source.
+  @JsonKey(defaultValue: true, includeIfNull: false)
+  bool forwardUuidsToSSAServerSource;
+
+  /// The path to a private key file used to identify a user to SSA server sources.
+  @JsonKey(defaultValue: null, includeIfNull: false)
+  String? ssaServerAuthPrivateKeyPath;
 
   factory SerializedConfig.fromToml(Map<String, dynamic> json) => _$SerializedConfigFromJson(json);
   Map<String, dynamic> toToml() => _$SerializedConfigToJson(this);
@@ -128,6 +148,8 @@ class SerializedConfig {
     required this.autoImportOverwrites,
     required this.autoImportDeletesAfterImport,
     required this.autoImportDeletesAfterSkippingOverwrite,
+    required this.forwardUuidsToSSAServerSource,
+    required this.ssaServerAuthPrivateKeyPath,
   });
 
   @override
@@ -145,6 +167,8 @@ class SerializedConfig {
     builder.writeln("\tautoImportOverwrites = $autoImportOverwrites");
     builder.writeln("\tautoImportDeletesAfterImport = $autoImportDeletesAfterImport");
     builder.writeln("\tautoImportDeletesAfterSkippingOverwrite = $autoImportDeletesAfterSkippingOverwrite");
+    builder.writeln("\tforwardUuidsToSSAServerSource = $forwardUuidsToSSAServerSource");
+    builder.writeln("\tssaServerAuthPrivateKeyPath = $ssaServerAuthPrivateKeyPath");
     return builder.toString();
   }
 
@@ -161,6 +185,8 @@ class SerializedConfig {
       autoImportOverwrites: autoImportOverwrites,
       autoImportDeletesAfterImport: autoImportDeletesAfterImport,
       autoImportDeletesAfterSkippingOverwrite: autoImportDeletesAfterSkippingOverwrite,
+      forwardUuidsToSSAServerSource: forwardUuidsToSSAServerSource,
+      ssaServerAuthPrivateKeyPath: ssaServerAuthPrivateKeyPath,
     );
   }
 }

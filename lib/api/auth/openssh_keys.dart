@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+const rsaKeyType = "ssh-rsa";
+const ed25519KeyType = "ssh-ed25519";
+
 /// Represents a simple RSA public key that consists of modulus and exponent.
 class OpenSSHRsaPublicKey {
   final BigInt modulus;
@@ -19,7 +22,7 @@ class OpenSSHRsaPublicKey {
   final reader = _OpenSSHReader(raw);
 
   final keyType = reader.readString();
-  if (keyType != "ssh-rsa") {
+  if (keyType != rsaKeyType) {
     throw FormatException("Expected ssh-rsa public key, got $keyType");
   }
 
@@ -36,14 +39,14 @@ class OpenSSHRsaPublicKey {
     throw FormatException("Public key text is empty.");
   }
 
-  if (trimmed.startsWith("ssh-rsa ")) {
+  if (trimmed.startsWith("$rsaKeyType ")) {
     final parts = trimmed.split(RegExp(r'\s+'));
     if (parts.length < 2) {
       throw FormatException("ssh-rsa public key is missing a base64 blob.");
     }
     final (e, n) = parseOpenSSHBase64RsaPublicKey(parts[1]);
     return (
-      "ssh-rsa",
+      rsaKeyType,
       OpenSSHRsaPublicKey(
         modulus: _bytesToBigInt(Uint8List.fromList(n)),
         publicExponent: _bytesToBigInt(Uint8List.fromList(e)),
@@ -51,26 +54,26 @@ class OpenSSHRsaPublicKey {
     );
   }
 
-  if (trimmed.startsWith("ssh-ed25519 ")) {
+  if (trimmed.startsWith("$ed25519KeyType ")) {
     final parts = trimmed.split(RegExp(r'\s+'));
     if (parts.length < 2) {
       throw FormatException("ssh-ed25519 public key is missing a base64 blob.");
     }
     final reader = _readerFromBase64(parts[1]);
     final keyType = reader.readString();
-    if (keyType != "ssh-ed25519") {
+    if (keyType != ed25519KeyType) {
       throw FormatException("Expected ssh-ed25519 public key, got $keyType");
     }
-    return ("ssh-ed25519", reader.readLengthPrefixedBytes());
+    return (ed25519KeyType, reader.readLengthPrefixedBytes());
   }
 
   if (_hasPemBlock(trimmed, "OPENSSH PUBLIC KEY")) {
     final blob = _decodePemBlock(trimmed, "OPENSSH PUBLIC KEY");
-    return ("ssh-rsa", _parseOpenSSHPublicKeyBlob(blob));
+    return (rsaKeyType, _parseOpenSSHPublicKeyBlob(blob));
   }
 
   if (_hasPemBlock(trimmed, "RSA PUBLIC KEY")) {
-    return ("ssh-rsa", parsePemRsaPublicKey(trimmed));
+    return (rsaKeyType, parsePemRsaPublicKey(trimmed));
   }
 
   throw FormatException("Unsupported public key format.");
@@ -89,7 +92,7 @@ class OpenSSHRsaPublicKey {
   }
 
   if (_hasPemBlock(trimmed, "RSA PRIVATE KEY")) {
-    return ("ssh-rsa", parsePemRsaPrivateKey(trimmed));
+    return (rsaKeyType, parsePemRsaPrivateKey(trimmed));
   }
 
   throw FormatException("Unsupported private key format.");
@@ -99,7 +102,7 @@ class OpenSSHRsaPublicKey {
 OpenSSHRsaKeyPair parseOpenSSHRsaPrivateKey(String keyText) {
   final privateBlock = _extractOpenSSHPrivateBlock(keyText);
   final (keyType, data) = _parseOpenSSHPrivateKeyBlock(privateBlock);
-  if (keyType != "ssh-rsa") {
+  if (keyType != rsaKeyType) {
     throw FormatException("Expected ssh-rsa key, got $keyType.");
   }
 
@@ -110,7 +113,7 @@ OpenSSHRsaKeyPair parseOpenSSHRsaPrivateKey(String keyText) {
 OpenSSHEd25519KeyPair parseOpenSSHEd25519PrivateKey(String keyText) {
   final privateBlock = _extractOpenSSHPrivateBlock(keyText);
   final (keyType, data) = _parseOpenSSHPrivateKeyBlock(privateBlock);
-  if (keyType != "ssh-ed25519") {
+  if (keyType != ed25519KeyType) {
     throw FormatException("Expected ssh-ed25519 key, got $keyType.");
   }
 
@@ -228,9 +231,9 @@ Uint8List _extractOpenSSHPrivateBlock(String keyText) {
 
   final keyType = reader.readString();
   switch (keyType) {
-    case "ssh-rsa":
-      return (keyType, _readOpenSshRsaPrivateKey(reader));
-    case "ssh-ed25519":
+    case rsaKeyType:
+      return (keyType, _readOpenSSHRsaPrivateKey(reader));
+    case ed25519KeyType:
       return (keyType, _readOpenSshEd25519PrivateKey(reader));
     default:
       throw FormatException("Unsupported OpenSSH key type: $keyType");
@@ -240,7 +243,7 @@ Uint8List _extractOpenSSHPrivateBlock(String keyText) {
 OpenSSHRsaPublicKey _parseOpenSSHPublicKeyBlob(Uint8List blob) {
   final reader = _OpenSSHReader(blob);
   final keyType = reader.readString();
-  if (keyType != "ssh-rsa") {
+  if (keyType != rsaKeyType) {
     throw FormatException("Unsupported OpenSSH public key type: $keyType");
   }
 
@@ -253,7 +256,7 @@ OpenSSHRsaPublicKey _parseOpenSSHPublicKeyBlob(Uint8List blob) {
   );
 }
 
-OpenSSHRsaKeyPair _readOpenSshRsaPrivateKey(_OpenSSHReader reader) {
+OpenSSHRsaKeyPair _readOpenSSHRsaPrivateKey(_OpenSSHReader reader) {
   final modulus = reader.readMpInt();
   final publicExponent = reader.readMpInt();
   final privateExponent = reader.readMpInt();
