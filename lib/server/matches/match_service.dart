@@ -89,7 +89,6 @@ class MatchService {
     }
     return Response.ok(jsonEncode({"success": "Match uploaded"}));
   }
-
 }
 
 class MatchSearchResult {

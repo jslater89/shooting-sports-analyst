@@ -1,28 +1,30 @@
 import 'package:shooting_sports_analyst/api/auth/auth_provider.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 class SSAPublicAuthClient extends TokenAuthProvider<SSASession> {
   @override
   Future<Map<String, String>> getHeaders(SSASession session, {required String method, required String path, required List<int> bodyBytes}) {
-    // TODO: implement getHeaders
-    throw UnimplementedError();
+    return Future.value({});
+  }
+
+  @override
+  Result<SSASession, AuthError> getCurrentSession() {
+    return Result.err(AuthError.unauthenticated);
   }
 
   @override
   Future<AuthResult<SSASession>> getSession() {
-    // TODO: implement getSession
-    throw UnimplementedError();
+    return Future.value(Result.err(AuthError.unauthenticated));
   }
 
   @override
   Future<bool> isAuthenticated() {
-    // TODO: implement isAuthenticated
-    throw UnimplementedError();
+    return Future.value(false);
   }
 
   @override
   Future<AuthResult<SSASession>> refreshSession(SSASession currentSession) {
-    // TODO: implement refreshSession
-    throw UnimplementedError();
+    return Future.value(Result.err(AuthError.unauthenticated));
   }
 }
 

@@ -67,6 +67,7 @@ abstract class UserAuthProvider<T extends Session> extends AuthProvider<T> {
 abstract class TokenAuthProvider<T extends Session> extends AuthProvider<T> {
   Future<AuthResult<T>> getSession();
   Future<AuthResult<T>> refreshSession(T currentSession);
+  AuthResult<T> getCurrentSession();
 }
 
 abstract class Session {

@@ -13,6 +13,7 @@ import "package:shooting_sports_analyst/data/source/source_ui.dart";
 import "package:shooting_sports_analyst/data/source/ssa_source/ssa_server_source.dart";
 import "package:shooting_sports_analyst/data/sport/match/match.dart";
 import "package:shooting_sports_analyst/logger.dart";
+import "package:shooting_sports_analyst/ui/widget/dialog/match_database_chooser_dialog.dart";
 import "package:shooting_sports_analyst/util.dart";
 
 var _log = SSALogger("SSAServerSourceUI");
@@ -32,48 +33,91 @@ class SSAServerSourceUI extends SourceUI {
         ChangeNotifierProvider<SSASearchModel>(create: (context) => SSASearchModel(initialSearch: initialSearch)),
         Provider<MatchSource>.value(value: source),
       ],
-      builder: (context, child) => Column(
-        children: [
-          SSASearchControls(initialSearch: initialSearch),
-          Divider(),
-          Expanded(
-            child: SSASearchResults(
-              source: source,
-              onMatchSelected: (result) async {
-                var matchResult = await source.getMatchFromId(result.matchId);
-                if (matchResult.isErr()) {
-                  onError(matchResult.unwrapErr());
-                } else {
-                  onMatchSelected(matchResult.unwrap());
-                }
-              },
-              onMatchDownloadRequested: (result) async {
-                if (onMatchDownloaded != null) {
-                  var matchResult = await source.getMatchFromId(result.matchId);
-                  if (matchResult.isErr()) {
-                    onError(matchResult.unwrapErr());
-                  } else {
-                    var res = await AnalystDatabase().saveMatch(matchResult.unwrap());
-                    if (res.isErr()) {
-                      onError(MatchSourceError.databaseError);
-                    } else {
-                      var hydratedMatch = res.unwrap().hydrate();
-                      if (hydratedMatch.isErr()) {
-                        onError(MatchSourceError.databaseError);
+      builder: (context, child) {
+        var canUpload = source.canUpload;
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: SSASearchControls(initialSearch: initialSearch)),
+                    if(canUpload) IconButton(
+                      icon: Icon(Icons.upload),
+                      onPressed: () async {
+                        var matches = await MatchDatabaseChooserDialog.show(
+                          context: context,
+                          multiple: true,
+                          showIds: true,
+                        );
+                        if(matches == null) return;
+                        for(var match in matches) {
+                          var hydratedRes = match.hydrate();
+                          if(hydratedRes.isErr()) {
+                            onError(FormatError(hydratedRes.unwrapErr()));
+                            continue;
+                          }
+                          var hydrated = hydratedRes.unwrap();
+                          var result = await source.uploadMatch(hydrated);
+                          if(result != null) {
+                            onError(result);
+                          }
+                        }
+                      },
+                    ),
+                    if(!canUpload) IconButton(
+                      icon: Icon(Icons.refresh),
+                      onPressed: () async {
+                        await source.refreshAuth();
+                        setState(() {
+                          canUpload = source.canUpload;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                Divider(),
+                Expanded(
+                  child: SSASearchResults(
+                    source: source,
+                    onMatchSelected: (result) async {
+                      var matchResult = await source.getMatchFromId(result.matchId);
+                      if (matchResult.isErr()) {
+                        onError(matchResult.unwrapErr());
                       } else {
-                        onMatchDownloaded(hydratedMatch.unwrap());
+                        onMatchSelected(matchResult.unwrap());
                       }
-                    }
-                  }
-                }
-              },
-              onError: (error) {
-                onError(error);
-              },
-            ),
-          ),
-        ],
-      ),
+                    },
+                    onMatchDownloadRequested: (result) async {
+                      if (onMatchDownloaded != null) {
+                        var matchResult = await source.getMatchFromId(result.matchId);
+                        if (matchResult.isErr()) {
+                          onError(matchResult.unwrapErr());
+                        } else {
+                          var res = await AnalystDatabase().saveMatch(matchResult.unwrap());
+                          if (res.isErr()) {
+                            onError(MatchSourceError.databaseError);
+                          } else {
+                            var hydratedMatch = res.unwrap().hydrate();
+                            if (hydratedMatch.isErr()) {
+                              onError(MatchSourceError.databaseError);
+                            } else {
+                              onMatchDownloaded(hydratedMatch.unwrap());
+                            }
+                          }
+                        }
+                      }
+                    },
+                    onError: (error) {
+                      onError(error);
+                    },
+                  ),
+                ),
+              ],
+            );
+          }
+        );
+      },
     );
   }
 }

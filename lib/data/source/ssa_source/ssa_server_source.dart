@@ -63,6 +63,35 @@ class SSAServerMatchSource extends MatchSource<ServerMatchType, InternalMatchFet
   @override
   String get name => "SSA Server";
 
+  bool get canUpload {
+    var sessionResult = _authClient.getCurrentSession();
+    if(sessionResult.isErr()) {
+      return false;
+    }
+    var session = sessionResult.unwrap();
+    return session.hasAnyRole(["uploader", "admin"]);
+  }
+
+  Future<void> refreshAuth() async {
+    await _authClient.getSession();
+  }
+
+  Future<MatchSourceError?> uploadMatch(ShootingMatch match) async {
+    if(!canUpload) {
+      return MatchSourceError.noCredentials;
+    }
+    var miff = MiffExporter().exportMatch(match);
+    if(miff.isErr()) {
+      return FormatError(miff.unwrapErr());
+    }
+    var bodyBytes = miff.unwrap();
+    var response = await _makeAuthenticatedRequest("POST", "/match/upload", bodyBytes: bodyBytes);
+    if(response.statusCode != 200) {
+      return NetworkErrorWithResponse(response);
+    }
+    return null;
+  }
+
   @override
   List<SportType> get supportedSports => [
     SportType.uspsa,
