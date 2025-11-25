@@ -8,9 +8,14 @@ import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/source/match_source_error.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
+import 'package:shooting_sports_analyst/data/source/ssa_source/ssa_server_source.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/flutter_native_providers.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
+
+var _log = SSALogger("MatchSource");
 
 /// A MatchSource represents some way to retrieve match data from a remote source,
 /// like a database or website. Matches are keyed by a unique ID—for PractiScore, for
@@ -77,7 +82,10 @@ abstract class MatchSource<T extends InternalMatchType, S extends InternalMatchF
       return Result.err(UnsupportedMatchType("No source for ${match.sourceCode}"));
     }
 
-    var result = await source.getMatchFromId(match.sourceIds.first, sport: match.sport);
+    var preferredSourceId = match.sourceIds.first;
+    source = maybeForwardToSSAServer(source, preferredSourceId);
+
+    var result = await source.getMatchFromId(preferredSourceId, sport: match.sport);
 
     if(result.isOk()) {
       var match = result.unwrap();
@@ -93,6 +101,20 @@ abstract class MatchSource<T extends InternalMatchType, S extends InternalMatchF
     else {
       return Result.errFrom(result);
     }
+  }
+
+  /// If the app config specifies that UUID-style matches should be forwarded to the SSA server source,
+  /// and the match ID is a UUID, and the current source is not already the SSA server source,
+  /// return the SSA server source. Otherwise, return the current source.
+  static MatchSource maybeForwardToSSAServer(MatchSource currentSource, String matchId) {
+    var shouldForward = FlutterOrNative.configProvider.currentConfig.forwardUuidsToSSAServerSource && currentSource is! SSAServerMatchSource;
+    if(shouldForward && RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+    ).hasMatch(matchId)) {
+      _log.i("Forwarding UUID-style match ID to SSA server source");
+      return MatchSourceRegistry().getByCode(SSAServerMatchSource.ssaServerCode, currentSource);
+    }
+    return currentSource;
   }
 }
 

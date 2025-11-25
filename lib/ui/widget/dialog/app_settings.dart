@@ -149,6 +149,17 @@ class _AppSettingsDialogState extends State<AppSettingsDialog> {
               },
             ),
             const SizedBox(height: 16),
+            CheckboxListTile(
+              title: const Text("Prefer SSA server source"),
+              subtitle: const Text("Use the SSA server for matches it may contain"),
+              value: config.forwardUuidsToSSAServerSource,
+              onChanged: (value) {
+                setState(() {
+                  config.forwardUuidsToSSAServerSource = value ?? false;
+                });
+              },
+            ),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(

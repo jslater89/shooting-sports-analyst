@@ -11,10 +11,13 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
+import 'package:shooting_sports_analyst/data/source/ssa_source/ssa_server_source.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/match_prediction_mode.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
+import 'package:shooting_sports_analyst/flutter_native_providers.dart';
 import 'package:shooting_sports_analyst/ui/booth/global_card_settings_dialog.dart';
 import 'package:shooting_sports_analyst/ui/booth/model.dart';
 import 'package:shooting_sports_analyst/logger.dart';
@@ -44,17 +47,11 @@ class BroadcastBoothController {
     }
 
     refreshPending = true;
-    var source = MatchSourceRegistry().getByCodeOrNull(model.matchSource);
-    if(source == null) {
-      return false;
-    }
-    InternalMatchFetchOptions? options;
-    if(source is PSv2MatchSource) {
-      options = PSv2MatchFetchOptions(
-        downloadScoreLogs: true,
-      );
-    }
-    var matchRes = await source.getMatchFromId(model.matchId, options: options);
+    var matchRes = await MatchSource.reloadMatch(DbShootingMatch.sourcePlaceholder(
+      sport: model.latestMatch.sport,
+      sourceCode: model.matchSource,
+      sourceIds: [model.matchId],
+    ));
     if(matchRes.isErr()) {
       _log.e("unable to refresh match: ${matchRes.unwrapErr()}");
       return false;

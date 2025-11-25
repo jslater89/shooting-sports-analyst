@@ -815,10 +815,11 @@ class MatchPointer with DbSportEntity implements SourceIdsProvider {
       else if(downloadIfMissing) {
         var source = MatchSourceRegistry().getByCodeOrNull(sourceCode);
         if(source == null || !source.supportedSports.contains(sport.type)) {
-          _log.e("Unable to download missing match: source $sourceCode source supported sports${source?.supportedSports} match sport type ${sport.type}");
+          _log.e("Unable to download missing match: source $sourceCode source supported sports ${source?.supportedSports} match sport type ${sport.type}");
           return DataSourceResult.err(DataSourceError.invalidRequest);
         }
 
+        source = MatchSource.maybeForwardToSSAServer(source, sourceIds.first);
         InternalMatchFetchOptions? options;
         if(source is PSv2MatchSource) {
           options = PSv2MatchFetchOptions(

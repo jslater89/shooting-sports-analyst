@@ -15,6 +15,7 @@ import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/application_preferences.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/player.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/fantasy/fantasy_points_mode.dart';
 import 'package:shooting_sports_analyst/data/help/entries/results_help.dart';
@@ -451,14 +452,7 @@ class _ResultPageState extends State<ResultPage> {
         _log.d("Refreshing match from source ${_canonicalMatch.sourceCode}");
         var source = MatchSourceRegistry().getByCodeOrNull(_canonicalMatch.sourceCode);
         if(source != null && _canonicalMatch.sourceIds.isNotEmpty) {
-          InternalMatchFetchOptions? options;
-          if(source is PSv2MatchSource) {
-            options = PSv2MatchFetchOptions(
-              downloadScoreLogs: true,
-            );
-          }
-          _log.d("Using source ${source.name}");
-          var matchRes = await source.getMatchFromId(_canonicalMatch.sourceIds.first, options: options);
+          var matchRes = await MatchSource.reloadMatch(DbShootingMatch.sourcePlaceholderFromMatch(_canonicalMatch));
 
           if(matchRes.isOk()) {
             var match = matchRes.unwrap();

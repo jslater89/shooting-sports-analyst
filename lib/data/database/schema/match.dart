@@ -95,6 +95,7 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
     this.shootersStoredSeparately = false,
   });
 
+  /// Create a placeholder [DbShootingMatch] with the given database ID only.
   DbShootingMatch.dbPlaceholder(this.id) :
     eventName = "(invalid)",
     rawDate = "(invalid)",
@@ -111,6 +112,7 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
     localPenaltyEvents = [],
     shootersStoredSeparately = false;
 
+  /// Create a placeholder [DbShootingMatch] suitable to request match source reloading.
   DbShootingMatch.sourcePlaceholder({
     required Sport sport,
     required this.sourceCode,
@@ -126,6 +128,25 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
     stages = [],
     shooters = [],
       memberNumbersAppearing = [],
+    localBonusEvents = [],
+    localPenaltyEvents = [],
+    shootersStoredSeparately = false;
+
+  /// Create a placeholder [DbShootingMatch] suitable to request match source reloading, using
+  /// details from the given [ShootingMatch].
+  DbShootingMatch.sourcePlaceholderFromMatch(ShootingMatch match) :
+    id = Isar.autoIncrement,
+    eventName = match.name,
+    rawDate = match.rawDate,
+    date = match.date,
+    matchLevelName = match.level?.name,
+    matchEventLevel = match.level?.eventLevel ?? EventLevel.local,
+    sportName = match.sport.name,
+    sourceIds = [...match.sourceIds],
+    sourceCode = match.sourceCode,
+    stages = [],
+    shooters = [],
+    memberNumbersAppearing = [],
     localBonusEvents = [],
     localPenaltyEvents = [],
     shootersStoredSeparately = false;
