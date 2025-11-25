@@ -75,6 +75,7 @@ local**
 checkout-branch.sh
 data/export**
 **.exe
+db/auth_identities.toml
 
 # Things shared with me under NDA that I can't put on Git
 private/

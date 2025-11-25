@@ -78,32 +78,34 @@ void main() {
 }
 
 void _expectRsaPair(OpenSSHRsaKeyPair actual, Map<String, dynamic> expected) {
-  expect(actual.modulus, _hexBigInt(expected['modulus'] as String));
-  expect(
-    actual.publicExponent,
-    _hexBigInt(expected['publicExponent'] as String),
-  );
-  expect(
-    actual.privateExponent,
-    _hexBigInt(expected['privateExponent'] as String),
-  );
-  expect(actual.prime1, _hexBigInt(expected['prime1'] as String));
-  expect(actual.prime2, _hexBigInt(expected['prime2'] as String));
-  expect(actual.iqmp, _hexBigInt(expected['iqmp'] as String));
+  expect(_mpIntToHex(actual.modulus), expected['modulus']);
+  expect(_mpIntToHex(actual.publicExponent), expected['publicExponent']);
+  expect(_mpIntToHex(actual.privateExponent), expected['privateExponent']);
+  expect(_mpIntToHex(actual.prime1), expected['prime1']);
+  expect(_mpIntToHex(actual.prime2), expected['prime2']);
+  expect(_mpIntToHex(actual.iqmp), expected['iqmp']);
 }
 
 void _expectRsaPublic(
   OpenSSHRsaPublicKey actual,
   Map<String, dynamic> expected,
 ) {
-  expect(actual.modulus, _hexBigInt(expected['modulus'] as String));
-  expect(
-    actual.publicExponent,
-    _hexBigInt(expected['publicExponent'] as String),
-  );
+  expect(_mpIntToHex(actual.modulus), expected['modulus']);
+  expect(_mpIntToHex(actual.publicExponent), expected['publicExponent']);
 }
-
-BigInt _hexBigInt(String hex) => BigInt.parse(hex, radix: 16);
 
 String _bytesToHex(Uint8List bytes) =>
     bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+
+/// Converts mpint bytes to hex, stripping the leading zero that OpenSSH adds
+/// when the high bit is set.
+String _mpIntToHex(List<int> bytes) {
+  var start = 0;
+  while (start < bytes.length - 1 && bytes[start] == 0) {
+    start++;
+  }
+  return bytes
+      .sublist(start)
+      .map((b) => b.toRadixString(16).padLeft(2, '0'))
+      .join();
+}

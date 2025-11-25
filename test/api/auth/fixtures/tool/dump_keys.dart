@@ -3,6 +3,9 @@ import 'dart:typed_data';
 
 import 'package:shooting_sports_analyst/api/auth/openssh_keys.dart';
 
+String _bytesToHex(List<int> bytes) =>
+    bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+
 void main() {
   const fixtures = <String, String>{
     'old_private': '../old_rsa_pkcs1',
@@ -21,11 +24,11 @@ void main() {
       print('--- $name ---');
       print('type=$type');
       if (data is OpenSSHRsaPublicKey) {
-        print('modulus=${data.modulus.toRadixString(16)}');
-        print('publicExponent=${data.publicExponent.toRadixString(16)}');
+        print('modulus=${_bytesToHex(data.modulus)}');
+        print('publicExponent=${_bytesToHex(data.publicExponent)}');
       } else if (data is Uint8List) {
         print(
-          'hex=${data.map((b) => b.toRadixString(16).padLeft(2, '0')).join()}',
+          'hex=${_bytesToHex(data)}',
         );
       }
     } else {
@@ -33,18 +36,19 @@ void main() {
       print('--- $name ---');
       print('type=$type');
       if (data is OpenSSHRsaKeyPair) {
-        print('modulus=${data.modulus.toRadixString(16)}');
-        print('publicExponent=${data.publicExponent.toRadixString(16)}');
-        print('privateExponent=${data.privateExponent.toRadixString(16)}');
-        print('prime1=${data.prime1.toRadixString(16)}');
-        print('prime2=${data.prime2.toRadixString(16)}');
-        print('iqmp=${data.iqmp.toRadixString(16)}');
-      } else if (data is OpenSSHEd25519KeyPair) {
+        print('modulus=${_bytesToHex(data.modulus)}');
+        print('publicExponent=${_bytesToHex(data.publicExponent)}');
+        print('privateExponent=${_bytesToHex(data.privateExponent)}');
+        print('prime1=${_bytesToHex(data.prime1)}');
+        print('prime2=${_bytesToHex(data.prime2)}');
+        print('iqmp=${_bytesToHex(data.iqmp)}');
+      }
+      else if (data is OpenSSHEd25519KeyPair) {
         print(
-          'pub=${data.publicKey.map((b) => b.toRadixString(16).padLeft(2, '0')).join()}',
+          'pub=${_bytesToHex(data.publicKey)}',
         );
         print(
-          'priv=${data.privateKey.map((b) => b.toRadixString(16).padLeft(2, '0')).join()}',
+          'priv=${_bytesToHex(data.privateKey)}',
         );
       }
     }

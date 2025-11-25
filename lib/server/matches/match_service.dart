@@ -7,6 +7,7 @@
 import 'dart:convert';
 
 import 'package:shelf_plus/shelf_plus.dart';
+import 'package:shooting_sports_analyst/api/auth/check_auth.dart';
 import 'package:shooting_sports_analyst/api/miff/miff.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
@@ -19,6 +20,7 @@ class MatchService {
     }
     router.get("/<matchId>", getMatch);
     router.post("/search", search);
+    router.post("/upload", upload);
   }
 
   final database = AnalystDatabase();
@@ -29,7 +31,7 @@ class MatchService {
   /// Return the match with the given source ID in MIFF format.
   ///
   /// Returns 404 if the match is not found.
-  dynamic getMatch(Request request, String matchId) async {
+  Future<Response> getMatch(Request request, String matchId) async {
     var match = await database.getMatchBySourceId(matchId);
     if(match == null) {
       return Response.notFound("Match not found");
@@ -67,6 +69,27 @@ class MatchService {
       "Content-Type": "application/json",
     });
   }
+
+  /// POST /upload
+  ///
+  /// Upload a match in MIFF format.
+  Future<Response> upload(Request request) async {
+    if(!validateAuth(request, ["uploader", "admin"])) {
+      return Response.unauthorized(jsonEncode({"error": "Unauthorized"}));
+    }
+    var bodyBytes = await request.body.asBinary.reduce((a, b) => a + b);
+    var importRes = MiffImporter().importMatch(bodyBytes);
+    if(importRes.isErr()) {
+      return Response.badRequest(body: jsonEncode({"error": importRes.unwrapErr().message}));
+    }
+    var match = importRes.unwrap();
+    var saveRes = await database.saveMatch(match);
+    if(saveRes.isErr()) {
+      return Response.internalServerError(body: jsonEncode({"error": saveRes.unwrapErr().message}));
+    }
+    return Response.ok(jsonEncode({"success": "Match uploaded"}));
+  }
+
 }
 
 class MatchSearchResult {

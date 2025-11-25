@@ -129,6 +129,9 @@ class SerializedConfig {
   @JsonKey(defaultValue: true, includeIfNull: false)
   bool forwardUuidsToSSAServerSource;
 
+  @JsonKey(defaultValue: null, includeIfNull: false)
+  String? ssaServerAuthIdentityName;
+
   /// The path to a private key file used to identify a user to SSA server sources.
   @JsonKey(defaultValue: null, includeIfNull: false)
   String? ssaServerAuthPrivateKeyPath;
@@ -149,6 +152,7 @@ class SerializedConfig {
     required this.autoImportDeletesAfterImport,
     required this.autoImportDeletesAfterSkippingOverwrite,
     required this.forwardUuidsToSSAServerSource,
+    required this.ssaServerAuthIdentityName,
     required this.ssaServerAuthPrivateKeyPath,
   });
 
@@ -168,6 +172,7 @@ class SerializedConfig {
     builder.writeln("\tautoImportDeletesAfterImport = $autoImportDeletesAfterImport");
     builder.writeln("\tautoImportDeletesAfterSkippingOverwrite = $autoImportDeletesAfterSkippingOverwrite");
     builder.writeln("\tforwardUuidsToSSAServerSource = $forwardUuidsToSSAServerSource");
+    builder.writeln("\tssaServerAuthIdentityName = $ssaServerAuthIdentityName");
     builder.writeln("\tssaServerAuthPrivateKeyPath = $ssaServerAuthPrivateKeyPath");
     return builder.toString();
   }
@@ -186,6 +191,7 @@ class SerializedConfig {
       autoImportDeletesAfterImport: autoImportDeletesAfterImport,
       autoImportDeletesAfterSkippingOverwrite: autoImportDeletesAfterSkippingOverwrite,
       forwardUuidsToSSAServerSource: forwardUuidsToSSAServerSource,
+      ssaServerAuthIdentityName: ssaServerAuthIdentityName,
       ssaServerAuthPrivateKeyPath: ssaServerAuthPrivateKeyPath,
     );
   }

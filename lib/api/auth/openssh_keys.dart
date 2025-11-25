@@ -6,12 +6,51 @@ const ed25519KeyType = "ssh-ed25519";
 
 /// Represents a simple RSA public key that consists of modulus and exponent.
 class OpenSSHRsaPublicKey {
-  final BigInt modulus;
-  final BigInt publicExponent;
+  final List<int> modulus;
+  final List<int> publicExponent;
 
   const OpenSSHRsaPublicKey({
     required this.modulus,
     required this.publicExponent,
+  });
+}
+
+class OpenSSHEd25519PublicKey {
+  final Uint8List publicKey;
+
+  const OpenSSHEd25519PublicKey({
+    required this.publicKey,
+  });
+}
+
+
+/// Represents the full set of RSA key components that OpenSSH exposes.
+class OpenSSHRsaKeyPair {
+  final List<int> modulus;
+  final List<int> publicExponent;
+  final List<int> privateExponent;
+  final List<int> iqmp;
+  final List<int> prime1;
+  final List<int> prime2;
+
+  const OpenSSHRsaKeyPair({
+    required this.modulus,
+    required this.publicExponent,
+    required this.privateExponent,
+    required this.iqmp,
+    required this.prime1,
+    required this.prime2,
+  });
+}
+
+/// Represents the ed25519 key material stored in an OpenSSH key file.
+class OpenSSHEd25519KeyPair {
+  final Uint8List publicKey;
+  final Uint8List privateKey;
+
+  const OpenSSHEd25519KeyPair({
+    required this.publicKey,
+    required this.privateKey,
   });
 }
 
@@ -32,6 +71,17 @@ class OpenSSHRsaPublicKey {
   return (eBytes, nBytes);
 }
 
+OpenSSHEd25519KeyPair _readOpenSshEd25519PrivateKey(_OpenSSHReader reader) {
+  final publicKey = reader.readLengthPrefixedBytes();
+  final privateKey = reader.readLengthPrefixedBytes();
+  reader.readString(); // comment
+
+  return OpenSSHEd25519KeyPair(
+    publicKey: Uint8List.fromList(publicKey),
+    privateKey: Uint8List.fromList(privateKey.sublist(0, 32)),
+  );
+}
+
 /// Parses a public key file and returns the OpenSSH key type with its payload.
 (String keyType, Object data) parsePublicKeyFile(String keyText) {
   final trimmed = keyText.trim();
@@ -45,13 +95,7 @@ class OpenSSHRsaPublicKey {
       throw FormatException("ssh-rsa public key is missing a base64 blob.");
     }
     final (e, n) = parseOpenSSHBase64RsaPublicKey(parts[1]);
-    return (
-      rsaKeyType,
-      OpenSSHRsaPublicKey(
-        modulus: _bytesToBigInt(Uint8List.fromList(n)),
-        publicExponent: _bytesToBigInt(Uint8List.fromList(e)),
-      ),
-    );
+    return (rsaKeyType, OpenSSHRsaPublicKey(modulus: n, publicExponent: e));
   }
 
   if (trimmed.startsWith("$ed25519KeyType ")) {
@@ -64,7 +108,7 @@ class OpenSSHRsaPublicKey {
     if (keyType != ed25519KeyType) {
       throw FormatException("Expected ssh-ed25519 public key, got $keyType");
     }
-    return (ed25519KeyType, reader.readLengthPrefixedBytes());
+    return (ed25519KeyType, OpenSSHEd25519PublicKey(publicKey: Uint8List.fromList(reader.readLengthPrefixedBytes())));
   }
 
   if (_hasPemBlock(trimmed, "OPENSSH PUBLIC KEY")) {
@@ -127,10 +171,7 @@ OpenSSHRsaPublicKey parsePemRsaPublicKey(String keyText) {
   final modulus = reader.readInteger();
   final exponent = reader.readInteger();
 
-  return OpenSSHRsaPublicKey(
-    modulus: _bytesToBigInt(modulus),
-    publicExponent: _bytesToBigInt(exponent),
-  );
+  return OpenSSHRsaPublicKey(modulus: modulus, publicExponent: exponent);
 }
 
 OpenSSHRsaKeyPair parsePemRsaPrivateKey(String keyText) {
@@ -148,43 +189,13 @@ OpenSSHRsaKeyPair parsePemRsaPrivateKey(String keyText) {
   final coefficient = reader.readInteger();
 
   return OpenSSHRsaKeyPair(
-    modulus: _bytesToBigInt(modulus),
-    publicExponent: _bytesToBigInt(publicExponent),
-    privateExponent: _bytesToBigInt(privateExponent),
-    prime1: _bytesToBigInt(prime1),
-    prime2: _bytesToBigInt(prime2),
-    iqmp: _bytesToBigInt(coefficient),
+    modulus: modulus,
+    publicExponent: publicExponent,
+    privateExponent: privateExponent,
+    prime1: prime1,
+    prime2: prime2,
+    iqmp: coefficient,
   );
-}
-
-/// Represents the full set of RSA key components that OpenSSH exposes.
-class OpenSSHRsaKeyPair {
-  final BigInt modulus;
-  final BigInt publicExponent;
-  final BigInt privateExponent;
-  final BigInt iqmp;
-  final BigInt prime1;
-  final BigInt prime2;
-
-  const OpenSSHRsaKeyPair({
-    required this.modulus,
-    required this.publicExponent,
-    required this.privateExponent,
-    required this.iqmp,
-    required this.prime1,
-    required this.prime2,
-  });
-}
-
-/// Represents the ed25519 key material stored in an OpenSSH key file.
-class OpenSSHEd25519KeyPair {
-  final Uint8List publicKey;
-  final Uint8List privateKey;
-
-  const OpenSSHEd25519KeyPair({
-    required this.publicKey,
-    required this.privateKey,
-  });
 }
 
 Uint8List _extractOpenSSHPrivateBlock(String keyText) {
@@ -250,10 +261,7 @@ OpenSSHRsaPublicKey _parseOpenSSHPublicKeyBlob(Uint8List blob) {
   final publicExponent = reader.readMpInt();
   final modulus = reader.readMpInt();
 
-  return OpenSSHRsaPublicKey(
-    modulus: _bytesToBigInt(modulus),
-    publicExponent: _bytesToBigInt(publicExponent),
-  );
+  return OpenSSHRsaPublicKey(modulus: modulus, publicExponent: publicExponent);
 }
 
 OpenSSHRsaKeyPair _readOpenSSHRsaPrivateKey(_OpenSSHReader reader) {
@@ -266,23 +274,12 @@ OpenSSHRsaKeyPair _readOpenSSHRsaPrivateKey(_OpenSSHReader reader) {
   reader.readString(); // comment
 
   return OpenSSHRsaKeyPair(
-    modulus: _bytesToBigInt(modulus),
-    publicExponent: _bytesToBigInt(publicExponent),
-    privateExponent: _bytesToBigInt(privateExponent),
-    iqmp: _bytesToBigInt(iqmp),
-    prime1: _bytesToBigInt(prime1),
-    prime2: _bytesToBigInt(prime2),
-  );
-}
-
-OpenSSHEd25519KeyPair _readOpenSshEd25519PrivateKey(_OpenSSHReader reader) {
-  final publicKey = reader.readLengthPrefixedBytes();
-  final privateKey = reader.readLengthPrefixedBytes();
-  reader.readString(); // comment
-
-  return OpenSSHEd25519KeyPair(
-    publicKey: Uint8List.fromList(publicKey),
-    privateKey: Uint8List.fromList(privateKey.sublist(0, 32)),
+    modulus: modulus,
+    publicExponent: publicExponent,
+    privateExponent: privateExponent,
+    iqmp: iqmp,
+    prime1: prime1,
+    prime2: prime2,
   );
 }
 
@@ -330,14 +327,6 @@ String _normalizeOpenSSHKeyBlob(String keyText) {
     throw FormatException("OpenSSH key text is empty.");
   }
   return joined.replaceAll(RegExp(r'\s+'), '');
-}
-
-BigInt _bytesToBigInt(Uint8List bytes) {
-  var result = BigInt.zero;
-  for (final byte in bytes) {
-    result = (result << 8) | BigInt.from(byte);
-  }
-  return result;
 }
 
 class _DerReader {
