@@ -35,6 +35,7 @@ class SSAServerSourceUI extends SourceUI {
       ],
       builder: (context, child) {
         var canUpload = source.canUpload;
+        var validAuth = source.isCurrentlyAuthenticated;
         return StatefulBuilder(
           builder: (context, setState) {
             return Column(
@@ -65,12 +66,13 @@ class SSAServerSourceUI extends SourceUI {
                         }
                       },
                     ),
-                    if(!canUpload) IconButton(
+                    if(!validAuth) IconButton(
                       icon: Icon(Icons.refresh),
                       onPressed: () async {
                         await source.refreshAuth();
                         setState(() {
                           canUpload = source.canUpload;
+                          validAuth = source.isCurrentlyAuthenticated;
                         });
                       },
                     ),

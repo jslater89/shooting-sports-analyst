@@ -4,8 +4,12 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
+import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/application_preferences.dart';
+import 'package:shooting_sports_analyst/data/database/schema/preferences.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/source/source_ui.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
@@ -71,6 +75,13 @@ class _MatchSourceChooserDialogState extends State<MatchSourceChooserDialog> {
   void initState() {
     super.initState();
     source = widget.sources.first;
+    var lastUsedSourceCode = AnalystDatabase().getPreferencesSync().lastUsedSourceCode;
+    if(lastUsedSourceCode != null) {
+      var maybeSource = widget.sources.firstWhereOrNull((e) => e.code == lastUsedSourceCode);
+      if(maybeSource != null) {
+        source = maybeSource;
+      }
+    }
   }
 
   @override
@@ -91,6 +102,9 @@ class _MatchSourceChooserDialogState extends State<MatchSourceChooserDialog> {
               )).toList(),
               onChanged: (s) {
                 if(s != null) {
+                  var prefs = AnalystDatabase().getPreferencesSync();
+                  prefs.lastUsedSourceCode = s.code;
+                  AnalystDatabase().savePreferencesSync(prefs);
                   setState(() {
                     source = s;
                   });

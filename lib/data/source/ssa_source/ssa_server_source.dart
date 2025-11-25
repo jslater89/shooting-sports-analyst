@@ -72,6 +72,11 @@ class SSAServerMatchSource extends MatchSource<ServerMatchType, InternalMatchFet
     return session.hasAnyRole(["uploader", "admin"]);
   }
 
+  bool get isCurrentlyAuthenticated {
+    var sessionResult = _authClient.getCurrentSession();
+    return sessionResult.isOk() && sessionResult.unwrap().isValid();
+  }
+
   Future<void> refreshAuth() async {
     await _authClient.getSession();
   }

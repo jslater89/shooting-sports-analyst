@@ -60,6 +60,9 @@ class ApplicationPreferences {
     matchPredictionModeName = value.name;
   }
 
+  /// The last source code used in the match source chooser dialog.
+  String? lastUsedSourceCode;
+
   /// The list of recent prediction URLs from match predictions, used
   /// for typeahead support.
   List<RecentPredictionUrl> recentPredictionUrls = [];
