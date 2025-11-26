@@ -45,6 +45,10 @@ class AutoImporter {
       }
     });
 
+    if(_config.autoImportDirectory == null) {
+      _log.i("Auto import directory not set, disabling auto import");
+      return;
+    }
     if(!autoImportEnabled && _config.autoImportDirectory != null) {
       _log.i("Auto import directory not found, creating it: ${_config.autoImportDirectory}");
       Directory(_config.autoImportDirectory!).createSync(recursive: true);
