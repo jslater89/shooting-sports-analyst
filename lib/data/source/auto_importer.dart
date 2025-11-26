@@ -45,11 +45,11 @@ class AutoImporter {
       }
     });
 
-    if(!autoImportEnabled) {
+    if(!autoImportEnabled && _config.autoImportDirectory != null) {
       _log.i("Auto import directory not found, creating it: ${_config.autoImportDirectory}");
       Directory(_config.autoImportDirectory!).createSync(recursive: true);
     }
-    else {
+    else if(_config.autoImportDirectory != null) {
       _log.i("Auto import directory ${Directory(_config.autoImportDirectory!).path} found, enabling auto import");
     }
 
