@@ -8,6 +8,7 @@ import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/flutter_native_providers.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/util.dart';
 import 'package:watcher/watcher.dart';
 
 var _log = SSALogger("AutoImporter");
@@ -63,85 +64,120 @@ class AutoImporter {
         _onEvent(event);
       }
     });
+  }
 
+  Map<String, int> _pathsToSizes = {};
+  Map<String, int> _pathsToCheckCounts = {};
+
+  Future<void> _waitForConsistentSize(String path, Future<void> Function() callback) async {
+    while(true) {
+      var file = File(path);
+      if(!file.existsSync()) {
+        continue;
+      }
+      var previousSize = _pathsToSizes[path] ?? 0;
+      var size = await file.length();
+      if(previousSize == size && size > 0) {
+        var finalCount = _pathsToCheckCounts.remove(path);
+        var finalSize = _pathsToSizes.remove(path);
+        _log.i("Path $path has consistent size $finalSize after $finalCount checks, importing");
+        callback();
+        return;
+      }
+      _pathsToSizes[path] = size;
+      _pathsToCheckCounts.increment(path);
+      if((_pathsToCheckCounts[path] ?? 0) >= 25) {
+        _log.e("Path $path has not been consistent for 25 checks, giving up");
+        _pathsToCheckCounts.remove(path);
+        _pathsToSizes.remove(path);
+        return;
+      }
+      await Future.delayed(Duration(seconds: 1));
+    }
+  }
+
+  Future<void> _importMatch(String path) async {
+    ShootingMatch? match;
+    if(path.toLowerCase().endsWith(".miff.gz") || path.toLowerCase().endsWith(".miff")) {
+      _log.i("Auto import file: $path");
+      var file = File(path);
+      var bytes = file.readAsBytesSync();
+      var importer = MiffImporter();
+      var importRes = importer.importMatch(bytes);
+      if(importRes.isErr()) {
+        _log.e("Error importing match: ${importRes.unwrapErr().message}");
+        return;
+      }
+      match = importRes.unwrap();
+    }
+    else if(path.toLowerCase().endsWith(".zip") || path.toLowerCase().endsWith(".psc")) {
+      _log.i("Auto import zip file: $path");
+      var file = File(path);
+      var bytes = file.readAsBytesSync();
+      try {
+        var matchInfoFilesRes = MatchInfoFiles.unzipMatchInfoZip(bytes);
+        if(matchInfoFilesRes.isErr()) {
+          var error = matchInfoFilesRes.unwrapErr();
+          _log.e("Error unzipping match info zip: ${error.message} ${error.stackTrace}");
+          return;
+        }
+        var matchInfoFiles = matchInfoFilesRes.unwrap();
+        var matchRes = await PSv2MatchSource().getMatchFromInfoFiles(matchInfoFiles);
+        if(matchRes.isErr()) {
+          _log.e("Error getting match from info files: ${matchRes.unwrapErr().message}");
+          return;
+        }
+        match = matchRes.unwrap();
+      }
+      catch(e, stackTrace) {
+        _log.i("Zip file is not match info zip: $e", stackTrace: stackTrace);
+        return;
+      }
+    }
+
+    if(match != null) {
+      _log.i("Found match in $path: ${match.name}");
+      bool shouldSave = false;
+      bool shouldDelete = false;
+      if(_config.autoImportOverwrites) {
+        shouldSave = true;
+      }
+      else {
+        var hasMatch = await AnalystDatabase().hasMatchByAnySourceId(match.sourceIds);
+        if(hasMatch) {
+          shouldSave = false;
+          shouldDelete = _config.autoImportDeletesAfterSkippingOverwrite;
+        }
+        else {
+          shouldSave = true;
+          // delete after succesful save
+        }
+      }
+
+      if(shouldSave) {
+        var saveRes = await AnalystDatabase().saveMatch(match);
+        if(saveRes.isErr()) {
+          _log.e("Error saving match: ${saveRes.unwrapErr().message}");
+          return;
+        }
+        shouldDelete = _config.autoImportDeletesAfterImport;
+        _log.i("Saved match: ${match.name}");
+      }
+
+      if(shouldDelete) {
+        var importedFile = File(path);
+        importedFile.deleteSync();
+        _log.i("Deleted imported file: $path");
+      }
+    }
   }
 
   Future<void> _onEvent(WatchEvent event) async {
     if(event.type == ChangeType.ADD) {
       var path = event.path;
-      ShootingMatch? match;
-      if(path.toLowerCase().endsWith(".miff.gz") || path.toLowerCase().endsWith(".miff")) {
-        _log.i("Auto import file: $path");
-        var file = File(path);
-        var bytes = file.readAsBytesSync();
-        var importer = MiffImporter();
-        var importRes = importer.importMatch(bytes);
-        if(importRes.isErr()) {
-          _log.e("Error importing match: ${importRes.unwrapErr().message}");
-          return;
-        }
-        match = importRes.unwrap();
-      }
-      else if(path.toLowerCase().endsWith(".zip") || path.toLowerCase().endsWith(".psc")) {
-        _log.i("Auto import zip file: $path");
-        var file = File(path);
-        var bytes = file.readAsBytesSync();
-        try {
-          var matchInfoFilesRes = MatchInfoFiles.unzipMatchInfoZip(bytes);
-          if(matchInfoFilesRes.isErr()) {
-            var error = matchInfoFilesRes.unwrapErr();
-            _log.e("Error unzipping match info zip: ${error.message} ${error.stackTrace}");
-            return;
-          }
-          var matchInfoFiles = matchInfoFilesRes.unwrap();
-          var matchRes = await PSv2MatchSource().getMatchFromInfoFiles(matchInfoFiles);
-          if(matchRes.isErr()) {
-            _log.e("Error getting match from info files: ${matchRes.unwrapErr().message}");
-            return;
-          }
-          match = matchRes.unwrap();
-        }
-        catch(e, stackTrace) {
-          _log.i("Zip file is not match info zip: $e", stackTrace: stackTrace);
-          return;
-        }
-      }
-
-      if(match != null) {
-        _log.i("Found match in $path: ${match.name}");
-        bool shouldSave = false;
-        bool shouldDelete = false;
-        if(_config.autoImportOverwrites) {
-          shouldSave = true;
-        }
-        else {
-          var hasMatch = await AnalystDatabase().hasMatchByAnySourceId(match.sourceIds);
-          if(hasMatch) {
-            shouldSave = false;
-            shouldDelete = _config.autoImportDeletesAfterSkippingOverwrite;
-          }
-          else {
-            shouldSave = true;
-            // delete after succesful save
-          }
-        }
-
-        if(shouldSave) {
-          var saveRes = await AnalystDatabase().saveMatch(match);
-          if(saveRes.isErr()) {
-            _log.e("Error saving match: ${saveRes.unwrapErr().message}");
-            return;
-          }
-          shouldDelete = _config.autoImportDeletesAfterImport;
-          _log.i("Saved match: ${match.name}");
-        }
-
-        if(shouldDelete) {
-          var importedFile = File(path);
-          importedFile.deleteSync();
-          _log.i("Deleted imported file: $path");
-        }
-      }
+      _waitForConsistentSize(path, () async {
+        _importMatch(path);
+      });
     }
   }
 }
