@@ -73,6 +73,13 @@ class AutoImporter {
     while(true) {
       var file = File(path);
       if(!file.existsSync()) {
+        if((_pathsToCheckCounts[path] ?? 0) > 1) {
+          _log.e("Path $path no longer exists but is being checked, giving up");
+          _pathsToCheckCounts.remove(path);
+          _pathsToSizes.remove(path);
+          return;
+        }
+        _pathsToCheckCounts.increment(path);
         continue;
       }
       var previousSize = _pathsToSizes[path] ?? 0;
@@ -175,9 +182,11 @@ class AutoImporter {
   Future<void> _onEvent(WatchEvent event) async {
     if(event.type == ChangeType.ADD) {
       var path = event.path;
-      _waitForConsistentSize(path, () async {
-        _importMatch(path);
-      });
+      if(path.endsWith(".miff.gz") || path.endsWith(".miff") || path.endsWith(".zip") || path.endsWith(".psc")) {
+        _waitForConsistentSize(path, () async {
+          _importMatch(path);
+        });
+      }
     }
   }
 }
