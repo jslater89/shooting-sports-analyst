@@ -312,6 +312,9 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
 
     int stepCount = 100;
     int totalSteps = ratingCount ~/ stepCount;
+    if(totalSteps == 0) {
+      return;
+    }
     int batchSize = (ratingCount / totalSteps).ceil();
     int removed = 0;
     int eventCount = 0;
