@@ -212,6 +212,12 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
       }
     }
 
+    // Sort source IDs by length descending, so the longest source ID is first.
+    // There aren't any cases yet where distinguishing between source IDs is important, but
+    // we do use match.sourceIds.first as a canonical source ID in some cases, and we should
+    // probably prefer some kind of stability for that.
+    var sortedSourceIds = match.sourceIds.sorted((a, b) => b.length.compareTo(a.length)).toList();
+
     try {
       if(shootersStoredSeparately) {
         var dbMatch = DbShootingMatch(
@@ -221,7 +227,7 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
           date: match.date,
           matchLevelName: match.level?.name,
           matchEventLevel: match.level?.eventLevel ?? EventLevel.local,
-          sourceIds: []..addAll(match.sourceIds),
+          sourceIds: sortedSourceIds,
           sourceCode: match.sourceCode,
           sportName: match.sport.name,
           stages: []..addAll(match.stages.map((s) => DbMatchStage.from(s))),
@@ -243,7 +249,7 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
           date: match.date,
           matchLevelName: match.level?.name,
           matchEventLevel: match.level?.eventLevel ?? EventLevel.local,
-          sourceIds: []..addAll(match.sourceIds),
+          sourceIds: sortedSourceIds,
           sourceCode: match.sourceCode,
           sportName: match.sport.name,
           shooters: dbEntries,
