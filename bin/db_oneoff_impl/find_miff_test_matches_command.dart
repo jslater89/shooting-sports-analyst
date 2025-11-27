@@ -32,5 +32,10 @@ class FindMiffTestMatchesCommand extends DbOneoffCommand {
     for(var match in uspsaNationals2025) {
       console.print("${match.eventName} ${match.sourceIds}");
     }
+
+    var handgunWorldShoot2025 = await db.queryMatches(name: "2025 IPSC Handgun World Shoot");
+    for(var match in handgunWorldShoot2025) {
+      console.print("${match.eventName} ${match.sourceIds}");
+    }
   }
 }

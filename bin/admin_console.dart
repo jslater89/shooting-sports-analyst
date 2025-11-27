@@ -59,6 +59,7 @@ enum _MainMenuCommand implements MenuCommand {
   @override
   final CommandExecutor? execute;
 
+  // ignore: unused_element_parameter
   const _MainMenuCommand(this.key, this.title, {this.execute = null, this.arguments = const []});
 
   @override

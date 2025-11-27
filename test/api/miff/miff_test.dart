@@ -37,6 +37,7 @@ void main() {
       "cc98089a-83ad-4898-9622-b7cd16e41ddb", // 2025 IDPA National Championship Presented by Beretta
       "44b2f321-a893-4ca3-b3cc-22ffcca0cb08", // The 2025 SIG Sauer Factory Gun Nationals presented by Vortex Optics
       "18179972-7036-42e6-b7bd-89e2cbcd69f5", // Central States ICORE Regional; observed crash
+      "949e40673709d62673eec10da85451c7899d477a" // 2025 Handgun World Shoot
     ];
 
     test("Export match from database", () async {

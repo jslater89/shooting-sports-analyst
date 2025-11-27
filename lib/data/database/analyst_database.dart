@@ -463,15 +463,17 @@ class AnalystDatabase {
       });
 
       if(dbMatch.shootersStoredSeparately) {
-        // We need to load outside the write transaction, because load can't be done inside.
-        // It should be lightweight because dbMatch shouldn't have any DB entries (just the newly inserted ones).
-        await dbMatch.shooterLinks.load();
+        // Get the current shooters from the links object, which are the ones we added during
+        // conversion from ShootingMatch to DbShootingMatch. We have to do this before the
+        // write transaction because toList() triggers a load of the links, which illegally
+        // nests a transaction.
+        var currentShooters = dbMatch.shooterLinks.toList();
         await isar.writeTxn(() async {
           if(oldMatch != null) {
             var deletedEntries = await deleteStandaloneMatchEntriesForMatchSourceIds(oldMatch.sourceIds);
             _log.d("Deleted $deletedEntries standalone match entries while updating match ${oldMatch.eventName}");
           }
-          await isar.standaloneDbMatchEntrys.putAll(dbMatch.shooterLinks.toList());
+          await isar.standaloneDbMatchEntrys.putAll(currentShooters);
           await dbMatch.shooterLinks.save();
         });
       }
@@ -487,7 +489,7 @@ class AnalystDatabase {
     return Result.ok(dbMatch);
   }
 
-  /// Save a match.
+  /// Save a match synchronously.
   ///
   /// The provided ShootingMatch will have its database ID set if the save succeeds.
   Result<DbShootingMatch, ResultErr> saveMatchSync(ShootingMatch match) {
@@ -508,19 +510,8 @@ class AnalystDatabase {
         return dbMatch;
       });
 
-      if(dbMatch.shootersStoredSeparately) {
-        // We need to load outside the write transaction, because load can't be done inside.
-        // It should be lightweight because dbMatch shouldn't have any DB entries (just the newly inserted ones).
-        dbMatch.shooterLinks.loadSync();
-        isar.writeTxnSync(() {
-          if(oldMatch != null) {
-            var deletedEntries = deleteStandaloneMatchEntriesForMatchSourceIdsSync(oldMatch.sourceIds);
-            _log.d("Deleted $deletedEntries standalone match entries while updating match ${oldMatch.eventName}");
-          }
-          isar.standaloneDbMatchEntrys.putAllSync(dbMatch.shooterLinks.toList());
-          dbMatch.shooterLinks.saveSync();
-        });
-      }
+      // We don't need to save the shooters separately in sync code, because putSync
+      // also handles links, unlike the async version.
     }
     catch(e, stackTrace) {
       _log.e("Failed to save match", error: e, stackTrace: stackTrace);
@@ -602,10 +593,6 @@ class AnalystDatabase {
 
   Future<int> deleteStandaloneMatchEntriesForMatchSourceIds(List<String> matchSourceIds) async {
     return await isar.standaloneDbMatchEntrys.where().anyOf(matchSourceIds, (q, sourceId) => q.matchSourceIdsElementEqualTo(sourceId)).deleteAll();
-  }
-
-  int deleteStandaloneMatchEntriesForMatchSourceIdsSync(List<String> matchSourceIds) {
-    return isar.standaloneDbMatchEntrys.where().anyOf(matchSourceIds, (q, sourceId) => q.matchSourceIdsElementEqualTo(sourceId)).deleteAllSync();
   }
 
   Future<Result<bool, ResultErr>> deleteMatch(int id) async {

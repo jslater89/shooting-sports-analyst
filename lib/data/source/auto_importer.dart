@@ -152,6 +152,7 @@ class AutoImporter {
       else {
         var hasMatch = await AnalystDatabase().hasMatchByAnySourceId(match.sourceIds);
         if(hasMatch) {
+          _log.i("Match already exists, skipping import: ${match.name}");
           shouldSave = false;
           shouldDelete = _config.autoImportDeletesAfterSkippingOverwrite;
         }
@@ -174,7 +175,7 @@ class AutoImporter {
       if(shouldDelete) {
         var importedFile = File(path);
         importedFile.deleteSync();
-        _log.i("Deleted imported file: $path");
+        _log.i("Deleted detected file: $path");
       }
     }
   }

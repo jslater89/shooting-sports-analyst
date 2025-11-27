@@ -4,6 +4,9 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+// ignore_for_file: unused_import
+// ignore_for_file: unused_local_variable
+
 import 'dart:io';
 
 import 'package:collection/collection.dart';
@@ -113,7 +116,6 @@ class PredictionPercentagesCommand extends DbOneoffCommand {
 
       DbShooterRating? topRating;
 
-      // ignore: unused_local_variable
       DbMatchEntry? topEntry;
       DbShooterRating? percentile75Rating;
       DbMatchEntry? percentile75Entry;
@@ -205,7 +207,8 @@ class PredictionPercentagesCommand extends DbOneoffCommand {
     var csv = csvLines.join("\n");
     await File("calibration_factors_${group.displayName}.csv").writeAsString(csv);
 
-    // TODO: figure out the calibration factor
+    // calibration factor turns out to be a more complicated calculation
+    // see Google Drive spreadsheets
     return 1.0;
   }
 
@@ -215,4 +218,5 @@ class PredictionPercentagesCommand extends DbOneoffCommand {
   String get title => "Predictions To Percentages";
 }
 
+// ignore: unused_element
 const _registrationUrl = "https://practiscore.com/vortex-race-gun-nationals-presented-by-berry-bullets/squadding";

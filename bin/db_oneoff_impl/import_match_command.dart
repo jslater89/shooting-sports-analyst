@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:archive/archive.dart';
 import 'package:dart_console/src/console.dart';
-import 'package:shooting_sports_analyst/closed_sources/psv2/matchdef/bare_match_def.dart';
 import 'package:shooting_sports_analyst/closed_sources/psv2/matchdef/hitfactor/converter.dart';
 import 'package:shooting_sports_analyst/closed_sources/psv2/matchdef/hitfactor/hitfactor_matchdef.dart';
 import 'package:shooting_sports_analyst/closed_sources/psv2/matchdef/hitfactor/hitfactor_scores.dart';
