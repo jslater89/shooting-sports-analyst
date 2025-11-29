@@ -11,6 +11,7 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_e
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_settings.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
@@ -21,8 +22,12 @@ enum _DoubleKeys {
   /// The volatility parameter for this competitor.
   volatility,
   /// The current RD for this competitor, calculated on demand based on the difference between
-  /// the current time and the last commit.
+  /// the current time and the last commit, in internal units.
   currentRD,
+  /// The committed RD for this competitor, in internal units.
+  committedRD,
+  /// The current rating for this competitor, in internal units.
+  rating,
 }
 
 enum _IntKeys {
@@ -37,10 +42,13 @@ enum _IntKeys {
   lengthInStages,
 }
 
+/// Create a new Glicko-2 rating for a competitor. [initialRating] and [initialRD] should be in
+/// display units.
 class Glicko2Rating extends ShooterRating<Glicko2RatingEvent> {
   static int? ratingPeriodLength;
-
+  Glicko2Settings settings;
   Glicko2Rating(MatchEntry shooter, {
+    required this.settings,
     required super.sport,
     required super.date,
     required double initialRating,
@@ -52,9 +60,10 @@ class Glicko2Rating extends ShooterRating<Glicko2RatingEvent> {
     doubleDataElements: _DoubleKeys.values.length,
   ) {
     this.rating = initialRating;
+    this.internalRating = settings.scaleToInternal(initialRating, offset: settings.initialRating);
     this.volatility = initialVolatility;
-    this.currentRD = initialRD;
-    this.committedRD = initialRD;
+    this.currentInternalRD = settings.scaleToInternal(initialRD);
+    this.committedInternalRD = settings.scaleToInternal(initialRD);
     this.lastCommitTimestamp = super.firstSeen.millisecondsSinceEpoch ~/ 1000;
     this.currentRDTimestamp = super.firstSeen.millisecondsSinceEpoch ~/ 1000;
   }
@@ -63,18 +72,25 @@ class Glicko2Rating extends ShooterRating<Glicko2RatingEvent> {
   set volatility(double v) => wrappedRating.doubleData[_DoubleKeys.volatility.index] = v;
 
   /// This getter is current as of the current clock time.
-  double get currentRD {
+  double get currentInternalRD {
     if(currentRDTimestamp.isSameDay(DateTime.now())) {
       return wrappedRating.doubleData[_DoubleKeys.currentRD.index];
     }
     else {
-      final updated = calculateCurrentRD();
+      final updated = calculateCurrentInternalRD();
       wrappedRating.doubleData[_DoubleKeys.currentRD.index] = updated;
       currentRDTimestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       return updated;
     }
   }
-  set currentRD(double v) => wrappedRating.doubleData[_DoubleKeys.currentRD.index] = v;
+  set currentInternalRD(double v) => wrappedRating.doubleData[_DoubleKeys.currentRD.index] = v;
+
+  // Get the currentRD for the current clock time in display units.
+  double get currentDisplayRD => currentInternalRD * Glicko2Settings.defaultScalingFactor;
+
+  /// For Glicko-2, the rating getter and setter use display units, and the internalRating getter and setter use internal units.
+  double get internalRating => wrappedRating.doubleData[_DoubleKeys.rating.index];
+  set internalRating(double v) => wrappedRating.doubleData[_DoubleKeys.rating.index] = v;
 
   int get lastCommitTimestamp => wrappedRating.intData[_IntKeys.lastCommitTimestamp.index];
   set lastCommitTimestamp(int v) => wrappedRating.intData[_IntKeys.lastCommitTimestamp.index] = v;
@@ -82,9 +98,12 @@ class Glicko2Rating extends ShooterRating<Glicko2RatingEvent> {
   int get currentRDTimestamp => wrappedRating.intData[_IntKeys.currentRDTimestamp.index];
   set currentRDTimestamp(int v) => wrappedRating.intData[_IntKeys.currentRDTimestamp.index] = v;
 
-  /// The RD that was calculated at the end of the last rating event commit.
-  double get committedRD => wrappedRating.error;
-  set committedRD(double v) => wrappedRating.error = v;
+  /// The RD that was calculated at the end of the last rating event commit, in display units.
+  double get committedRD => wrappedRating.doubleData[_DoubleKeys.committedRD.index] * Glicko2Settings.defaultScalingFactor;
+
+  /// The RD that was calculated at the end of the last rating event commit, in internal units.
+  double get committedInternalRD => wrappedRating.doubleData[_DoubleKeys.committedRD.index];
+  set committedInternalRD(double v) => wrappedRating.doubleData[_DoubleKeys.committedRD.index] = v;
 
   /// The number of matches shot.
   int get lengthInMatches => wrappedRating.length;
@@ -94,28 +113,28 @@ class Glicko2Rating extends ShooterRating<Glicko2RatingEvent> {
   set lengthInStages(int v) => wrappedRating.intData[_IntKeys.lengthInStages.index] = v;
 
   /// Calculate the current RD for this competitor based on the committed RD, volatility, and
-  /// (fractional) number of pseudo-rating-periods since the last commit.
+  /// (fractional) number of pseudo-rating-periods since the last commit, in internal units.
   ///
-  /// If [upcomingVolatility] is provided, it will be used instead of the current volatility.
+  /// If [volatilityOverride] is provided, it will be used instead of the current volatility.
   /// If [asOfDate] is provided, it will be used instead of the current date.
   /// If [maximumRD] is provided, it will be used to limit the RD to the maximum value. It should
   /// be provided in internal units.
   ///
   /// No-argument calls are suitable for showing a real-time gain in RD in a UI. Both arguments
   /// should be provided when calculating the RD as part of the rating process.
-  double calculateCurrentRD({double? upcomingVolatility, DateTime? asOfDate, double? maximumRD}) {
+  double calculateCurrentInternalRD({double? volatilityOverride, DateTime? asOfDate, double? maximumRD}) {
     asOfDate ??= DateTime.now();
     if(ratingPeriodLength == null) {
       var settings = wrappedRating.project.value!.settings.algorithm.settings as Glicko2Settings;
       ratingPeriodLength = settings.pseudoRatingPeriodLength;
     }
     if(asOfDate.isBefore(lastCommitTimestamp.toDateTime())) {
-      return committedRD;
+      return committedInternalRD;
     }
-    var volatilityValue = upcomingVolatility ?? this.volatility;
+    var volatilityValue = volatilityOverride ?? this.volatility;
     var daysSinceLastCommit = asOfDate.difference(lastCommitTimestamp.toDateTime()).inDays;
     var ratingPeriodsSinceLastCommit = daysSinceLastCommit / ratingPeriodLength!;
-    var rd = sqrt(pow(committedRD, 2) + (pow(volatilityValue, 2) * ratingPeriodsSinceLastCommit));
+    var rd = sqrt(pow(committedInternalRD, 2) + (pow(volatilityValue, 2) * ratingPeriodsSinceLastCommit));
     if(maximumRD != null) {
       rd = min(rd, maximumRD);
     }
@@ -144,25 +163,38 @@ class Glicko2Rating extends ShooterRating<Glicko2RatingEvent> {
       lastCommitTimestamp = e.date.millisecondsSinceEpoch ~/ 1000;
       currentRDTimestamp = e.date.millisecondsSinceEpoch ~/ 1000;
 
-      committedRD += e.rdChange;
-      currentRD = committedRD;
+      committedInternalRD += e.rdChange;
+      currentInternalRD = committedInternalRD;
       volatility += e.volatilityChange;
-      rating += e.ratingChange;
+      internalRating += e.internalRatingChange;
+
+      // Update display values
+      rating = internalRating * Glicko2Settings.defaultScalingFactor + Glicko2Settings.defaultInitialRating;
     }
   }
 
   @override
   Glicko2RatingEvent wrapEvent(DbRatingEvent e) {
-    return Glicko2RatingEvent.wrap(e);
+    return Glicko2RatingEvent.wrap(e, settings: settings);
   }
 
-  Glicko2Rating.wrapDbRating(DbShooterRating rating) : super.wrapDbRating(rating);
+  Glicko2Rating.wrapDbRatingWithSettings(Glicko2Rater rater, DbShooterRating rating) :
+    this.settings = rater.settings, super.wrapDbRating(rating);
 
-  Glicko2Rating.copy(Glicko2Rating other) : super.copy(other) {
+  Glicko2Rating.wrapDbRating(DbShooterRating rating) : this.settings = Glicko2Settings(), super.wrapDbRating(rating) {
+    throw Exception("Must use wrapDbRatingWithSettings for Glicko2Rating");
+  }
+
+  Glicko2Rating.copy(Glicko2Rating other) : this.settings = other.settings, super.copy(other) {
     this.volatility = other.volatility;
-    this.currentRD = other.currentRD;
+    this.currentInternalRD = other.currentInternalRD;
     this.lastCommitTimestamp = other.lastCommitTimestamp;
     this.currentRDTimestamp = other.currentRDTimestamp;
-    this.committedRD = other.committedRD;
+    this.committedInternalRD = other.committedInternalRD;
+  }
+
+  @override
+  String toString() {
+    return "$name $memberNumber ${rating.round()}/${committedRD.round()}/${volatility.toStringAsFixed(4)} ($hashCode)";
   }
 }

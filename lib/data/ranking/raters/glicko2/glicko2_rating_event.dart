@@ -9,6 +9,7 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings/db_relative
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_settings.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 
 enum _IntKeys {
@@ -18,13 +19,16 @@ enum _IntKeys {
 
 enum _DoubleKeys {
   oldRD,
+  oldInternalRating,
   rdChange,
   oldVolatility,
   volatilityChange,
+  internalRatingChange,
 }
 
 class Glicko2RatingEvent extends RatingEvent {
   Glicko2RatingEvent({
+    required this.settings,
     required ShootingMatch match,
     MatchStage? stage,
     required RelativeScore score,
@@ -32,7 +36,9 @@ class Glicko2RatingEvent extends RatingEvent {
     List<String> infoLines = const [],
     List<RatingEventInfoElement> infoData = const [],
     required double ratingChange,
+    required double internalRatingChange,
     required double oldRating,
+    required double oldInternalRating,
     required double oldVolatility,
     required double volatilityChange,
     required double oldRD,
@@ -54,12 +60,17 @@ class Glicko2RatingEvent extends RatingEvent {
     this.oldRD = oldRD;
     this.rdChange = rdChange;
     this.oldVolatility = oldVolatility;
+    this.oldInternalRating = oldInternalRating;
+    this.internalRatingChange = internalRatingChange;
     this.volatilityChange = volatilityChange;
     wrappedEvent.setMatchId(match.sourceIds.first, load: false);
   }
 
   double get oldRD => wrappedEvent.doubleData[_DoubleKeys.oldRD.index];
   set oldRD(double v) => wrappedEvent.doubleData[_DoubleKeys.oldRD.index] = v;
+
+  double get oldInternalRating => wrappedEvent.doubleData[_DoubleKeys.oldInternalRating.index];
+  set oldInternalRating(double v) => wrappedEvent.doubleData[_DoubleKeys.oldInternalRating.index] = v;
 
   double get rdChange => wrappedEvent.doubleData[_DoubleKeys.rdChange.index];
   set rdChange(double v) => wrappedEvent.doubleData[_DoubleKeys.rdChange.index] = v;
@@ -70,14 +81,24 @@ class Glicko2RatingEvent extends RatingEvent {
   double get volatilityChange => wrappedEvent.doubleData[_DoubleKeys.volatilityChange.index];
   set volatilityChange(double v) => wrappedEvent.doubleData[_DoubleKeys.volatilityChange.index] = v;
 
+  double get internalRatingChange => wrappedEvent.doubleData[_DoubleKeys.internalRatingChange.index];
+  set internalRatingChange(double v) => wrappedEvent.doubleData[_DoubleKeys.internalRatingChange.index] = v;
+
   int get stages => wrappedEvent.intData[_IntKeys.stages.index];
   set stages(int v) => wrappedEvent.intData[_IntKeys.stages.index] = v;
 
-  Glicko2RatingEvent.wrap(DbRatingEvent event) :
-    super(wrappedEvent: event);
+  Glicko2RatingEvent.wrap(DbRatingEvent event, {required this.settings}) :
+    super(wrappedEvent: event) {
+    this.settings = settings;
+  }
 
+  double get oldDisplayRD => oldRD * Glicko2Settings.defaultScalingFactor;
   double get newRd => oldRD + rdChange;
+  double get newDisplayRD => newRd * Glicko2Settings.defaultScalingFactor;
   double get newVolatility => oldVolatility + volatilityChange;
+  double get newInternalRating => oldInternalRating + internalRatingChange;
+
+  Glicko2Settings settings;
 
   @override
   void apply(RatingChange change) {
@@ -89,14 +110,15 @@ class Glicko2RatingEvent extends RatingEvent {
     stages = change.change[Glicko2Rater.stagesKey]!.round();
 
     // Base class keys
-    ratingChange += change.change[RatingSystem.ratingKey]!;
+    internalRatingChange += change.change[RatingSystem.ratingKey]!;
+    ratingChange = change.change[RatingSystem.ratingKey]! * Glicko2Settings.defaultScalingFactor;
     extraData = change.extraData;
     infoLines = change.infoLines;
     infoData = change.infoData;
   }
 
   Glicko2RatingEvent.copy(Glicko2RatingEvent other) :
-    super.copy(other) {
+    this.settings = other.settings, super.copy(other) {
     this.oldRD = other.oldRD;
     this.rdChange = other.rdChange;
     this.oldVolatility = other.oldVolatility;

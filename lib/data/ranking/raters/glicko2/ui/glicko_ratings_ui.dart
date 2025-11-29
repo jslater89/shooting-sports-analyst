@@ -35,8 +35,22 @@ extension Glicko2RatingsUi on Glicko2Rater {
         Expanded(flex: _classFlex, child: Text("Class")),
         Expanded(flex: _nameFlex, child: Text("Name")),
         Expanded(flex: _ratingFlex, child: Text("Rating", textAlign: TextAlign.end)),
-        Expanded(flex: _rdFlex, child: Text("RD", textAlign: TextAlign.end)),
-        Expanded(flex: _volatilityFlex, child: Text("Volatility", textAlign: TextAlign.end)),
+        Expanded(
+          flex: _rdFlex,
+          child: Tooltip(
+            message: "The current rating deviation, a measure of the system's confidence in the shooter's rating.",
+            child: Text("RD", textAlign: TextAlign.end),
+          ),
+        ),
+        Expanded(
+          flex: _volatilityFlex,
+          child: Tooltip(
+            message: "The current volatility, a measure of the shooter's rating stability.\n\n" +
+            "The volatility is a normalized version of the amount that will be added to\n"
+            "the competitor's RD per rating period (${settings.pseudoRatingPeriodLength} days).",
+            child: Text("Volatility", textAlign: TextAlign.end),
+          ),
+        ),
         Expanded(flex: _matchesFlex, child: Text("Matches", textAlign: TextAlign.end)),
         Expanded(flex: _stagesFlex, child: Text("Stages", textAlign: TextAlign.end)),
         Expanded(flex: _paddingFlex, child: Text("")),
@@ -63,9 +77,9 @@ extension Glicko2RatingsUi on Glicko2Rater {
             Expanded(flex: _memberNumFlex, child: Text(rating.memberNumber)),
             Expanded(flex: _classFlex, child: Text(rating.lastClassification?.shortDisplayName ?? "none")),
             Expanded(flex: _nameFlex, child: Text(rating.getName(suffixes: false))),
-            Expanded(flex: _ratingFlex, child: Text(settings.scaleToDisplay(rating.rating, offset: settings.initialRating).round().toString(), textAlign: TextAlign.end)),
-            Expanded(flex: _rdFlex, child: Text(settings.scaleToDisplay(rating.currentRD).round().toString(), textAlign: TextAlign.end)),
-            Expanded(flex: _volatilityFlex, child: Text(rating.volatility.toStringAsFixed(4), textAlign: TextAlign.end)),
+            Expanded(flex: _ratingFlex, child: Text(rating.rating.round().toString(), textAlign: TextAlign.end)),
+            Expanded(flex: _rdFlex, child: Text(settings.scaleToDisplay(rating.currentInternalRD).round().toString(), textAlign: TextAlign.end)),
+            Expanded(flex: _volatilityFlex, child: Text(settings.volatilityToDisplay(rating.volatility).toStringAsFixed(3), textAlign: TextAlign.end)),
             Expanded(flex: _matchesFlex, child: Text(rating.lengthInMatches.toString(), textAlign: TextAlign.end)),
             Expanded(flex: _stagesFlex, child: Text(rating.lengthInStages.toString(), textAlign: TextAlign.end)),
             Expanded(flex: _paddingFlex, child: Text("")),

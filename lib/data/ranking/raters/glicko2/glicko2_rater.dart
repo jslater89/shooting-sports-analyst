@@ -77,11 +77,14 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
   RatingEvent newEvent({required ShootingMatch match, MatchStage? stage, required ShooterRating<RatingEvent> rating, required RelativeScore score, required RelativeMatchScore matchScore, List<String> infoLines = const [], List<RatingEventInfoElement> infoData = const []}) {
     rating as Glicko2Rating;
     return Glicko2RatingEvent(
+      settings: settings,
       ratingChange: 0.0,
+      internalRatingChange: 0.0,
       oldRating: rating.rating,
+      oldInternalRating: rating.internalRating,
       oldVolatility: rating.volatility,
       volatilityChange: 0.0,
-      oldRD: rating.committedRD,
+      oldRD: rating.committedInternalRD,
       rdChange: 0.0,
       match: match,
       stage: stage,
@@ -94,14 +97,14 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
 
   @override
   ShooterRating<RatingEvent> newShooterRating(MatchEntry shooter, {required Sport sport, required DateTime date}) {
-    // var ratingMultiplier = sport.initialGenericRatingMultipliers[shooter.classification] ?? 1.0;
-    // var initialRating = settings.initialRating * ratingMultiplier;
-    var initialRating = settings.initialRating;
+    var ratingMultiplier = sport.initialGenericRatingMultipliers[shooter.classification] ?? 1.0;
+    var initialRating = settings.initialRating * ratingMultiplier;
+    // var initialRating = settings.initialRating;
     return Glicko2Rating(
-      shooter, sport: sport, date: date,
-      initialRating: settings.scaleToInternal(initialRating, offset: settings.initialRating),
+      shooter, settings: settings, sport: sport, date: date,
+      initialRating: initialRating,
       initialVolatility: settings.initialVolatility,
-      initialRD: settings.scaleToInternal(settings.startingRD),
+      initialRD: settings.startingRD,
     );
   }
 
@@ -111,7 +114,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     csv.writeln("Member#,Name,Rating,RD,Volatility,Matches,Stages");
     for(var r in ratings) {
       r as Glicko2Rating;
-      csv.writeln("${r.memberNumber},${r.name},${r.rating},${r.currentRD},${r.volatility},${r.lengthInMatches},${r.lengthInStages}");
+      csv.writeln("${r.memberNumber},${r.name},${r.rating},${r.currentInternalRD},${r.volatility},${r.lengthInMatches},${r.lengthInStages}");
     }
     return csv.toString();
   }
@@ -123,7 +126,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
 
   @override
   Glicko2Rating wrapDbRating(DbShooterRating rating) {
-    return Glicko2Rating.wrapDbRating(rating);
+    return Glicko2Rating.wrapDbRatingWithSettings(this, rating);
   }
 
   @override
@@ -175,20 +178,20 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     // pass over all the scores.
     for(var opponent in opponents) {
       opponent as Glicko2Rating;
-      var opponentRDAtMatch = opponent.calculateCurrentRD(asOfDate: match.date, maximumRD: settings.internalMaximumRD);
+      var opponentRDAtMatch = opponent.calculateCurrentInternalRD(asOfDate: match.date, maximumRD: settings.internalMaximumRD);
       var opponentMatchScore = matchScores[opponent];
       if(opponentMatchScore == null) {
         continue;
       }
 
-        var vForOpponent = _glickoVForOpponent(shooter.rating, opponent.rating, opponentRDAtMatch);
+        var vForOpponent = _glickoVForOpponent(shooter.internalRating, opponent.internalRating, opponentRDAtMatch);
         vSum += vForOpponent;
 
         var shooterStageScoreRatio = shooterMatchScore.ratio;
         var opponentStageScoreRatio = opponentMatchScore.ratio;
         var scoreForOpponent = _calculateScoreForOpponent(shooterStageScoreRatio, opponentStageScoreRatio);
 
-        var deltaForOpponent = _glickoDeltaForOpponent(scoreForOpponent, shooter.rating, opponent.rating, opponentRDAtMatch);
+        var deltaForOpponent = _glickoDeltaForOpponent(scoreForOpponent, shooter.internalRating, opponent.internalRating, opponentRDAtMatch);
         deltaSum += deltaForOpponent;
 
       // by stage below
@@ -218,7 +221,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     // Step 2: volatility update
     var newVolatility = _iterateVolatility(
       volatility: shooter.volatility,
-      rd: shooter.committedRD,
+      rd: shooter.committedInternalRD,
       delta: delta,
       v: v,
     );
@@ -230,21 +233,21 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     // var newVolatility = shooter.volatility;
 
     // Step 3: calculate changes to RD and volatility
-    var rdStar = shooter.calculateCurrentRD(
-      upcomingVolatility: newVolatility,
+    var rdStar = shooter.calculateCurrentInternalRD(
+      volatilityOverride: newVolatility,
       asOfDate: match.date,
       maximumRD: settings.internalMaximumRD,
     );
     var rdPrime = 1 / sqrt((1 / pow(rdStar, 2)) + (1 / v));
     var ratingChange = pow(rdPrime, 2) * deltaSum;
-    var rdChange = rdPrime - shooter.committedRD;
+    var rdChange = rdPrime - shooter.committedInternalRD;
     var volatilityChange = newVolatility - shooter.volatility;
 
     return {
       shooter: RatingChange(
         change: {
           RatingSystem.ratingKey: ratingChange,
-          Glicko2Rater.oldRDKey: shooter.committedRD,
+          Glicko2Rater.oldRDKey: shooter.committedInternalRD,
           Glicko2Rater.rdChangeKey: rdChange,
           Glicko2Rater.oldVolatilityKey: shooter.volatility,
           Glicko2Rater.volatilityChangeKey: volatilityChange,

@@ -15,6 +15,9 @@ import 'package:shooting_sports_analyst/data/database/schema/preferences.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/career_stats.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rating_event.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
@@ -262,7 +265,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
                   if(widget.rating.region != null && widget.rating.regionSubdivision != null) Text(" - ", style: Theme.of(context).textTheme.titleSmall),
                   if(widget.rating.regionSubdivision != null) Text(widget.rating.regionSubdivision!, style: Theme.of(context).textTheme.titleSmall),
                   if(widget.rating.region != null || widget.rating.regionSubdivision != null) SizedBox(width: 10),
-              
+
                   Tooltip(
                     child: Icon(Icons.numbers),
                     message: "Known member numbers:\n${widget.rating.knownMemberNumbers.join("\n")}\n\n"
@@ -455,6 +458,10 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
         else if(rating is OpenskillRating) {
           error = rating.sigmaWithOffset(eventsOfInterest.length - (i + 1)) / 2;
         }
+        else if(rating is Glicko2Rating) {
+          e as Glicko2RatingEvent;
+          error = e.newDisplayRD / 2;
+        }
 
         var plusError = e.newRating + error;
         var minusError = e.newRating - error;
@@ -485,16 +492,18 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
             return color;
           }
         },
-        measureFn: (_AccumulatedRatingEvent e, _) => e.baseEvent.newRating,
+        measureFn: (_AccumulatedRatingEvent e, _) {
+          return e.baseEvent.newRating;
+        },
         domainFn: (_, int? index) => index!,
         measureLowerBoundFn: (e, i) {
-          if(rating is EloShooterRating || rating is OpenskillRating) {
+          if(rating is EloShooterRating || rating is OpenskillRating || rating is Glicko2Rating) {
             return e.baseEvent.newRating - e.errorAt;
           }
           return null;
         },
         measureUpperBoundFn: (e, i) {
-          if(rating is EloShooterRating || rating is OpenskillRating) {
+          if(rating is EloShooterRating || rating is OpenskillRating || rating is Glicko2Rating) {
             return e.baseEvent.newRating + e.errorAt;
           }
           return null;
