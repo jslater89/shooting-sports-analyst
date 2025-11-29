@@ -327,6 +327,10 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
   @ignore
   int get length => wrappedRating.length;
 
+  /// Update this rating from the given list of events.
+  ///
+  /// This function updates [wrappedRating.cachedLength], but implementations
+  /// are responsible for all other state updates.
   @mustCallSuper
   void updateFromEvents(List<RatingEvent> events) {
     wrappedRating.cachedLength += events.length;

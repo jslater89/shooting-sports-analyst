@@ -34,6 +34,9 @@ import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/elo_rater_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/ui/elo_settings_ui.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_settings.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/ui/glicko_settings_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/ui/marble_settings_ui.dart';
@@ -301,6 +304,14 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     else if(_ratingSystem is PointsRater) {
       settings as PointsSettings;
       _ratingSystem = PointsRater(settings);
+    }
+    else if(_ratingSystem is Glicko2Rater) {
+      settings as Glicko2Settings;
+      _ratingSystem = Glicko2Rater(settings: settings);
+    }
+    else if(_ratingSystem is MarbleRater) {
+      settings as MarbleSettings;
+      _ratingSystem = MarbleRater(settings: settings);
     }
     // var ratingSystem = OpenskillRater(byStage: _byStage);
 
@@ -901,6 +912,12 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
           _ratingSystemUi = MarbleSettingsUi();
           _settingsController = _ratingSystemUi.newSettingsController();
           break;
+        case _ConfigurableRater.glicko2:
+          settings = Glicko2Settings();
+          _ratingSystem = Glicko2Rater(settings: settings as Glicko2Settings);
+          _ratingSystemUi = Glicko2SettingsUi();
+          _settingsController = _ratingSystemUi.newSettingsController();
+          break;
       }
 
       setState(() {
@@ -916,6 +933,7 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     if(algorithm is PointsRater) return _ConfigurableRater.points;
     if(algorithm is OpenskillRater) return _ConfigurableRater.openskill;
     if(algorithm is MarbleRater) return _ConfigurableRater.marbles;
+    if(algorithm is Glicko2Rater) return _ConfigurableRater.glicko2;
 
     throw UnsupportedError("Algorithm not yet supported");
   }
@@ -1539,7 +1557,8 @@ enum _ConfigurableRater {
   multiplayerElo,
   openskill,
   points,
-  marbles;
+  marbles,
+  glicko2;
 
   String get uiLabel {
     switch(this) {
@@ -1551,6 +1570,8 @@ enum _ConfigurableRater {
         return "OpenSkill";
       case _ConfigurableRater.marbles:
         return "Marble game";
+      case _ConfigurableRater.glicko2:
+        return "Glicko2";
     }
   }
 
@@ -1566,6 +1587,8 @@ enum _ConfigurableRater {
           "It doesn't work as well as Elo, and depends heavily on large sample sizes.";
       case _ConfigurableRater.marbles:
         return "A system where competitors stake marbes to enter matches and win them by placing highly.";
+      case _ConfigurableRater.glicko2:
+        return "Glicko2, a rating system that predicts match outcomes by comparing the ratings of competitors.";
     }
   }
 
@@ -1574,6 +1597,7 @@ enum _ConfigurableRater {
     _ConfigurableRater.openskill => openskillHelpId,
     _ConfigurableRater.points => pointsHelpId,
     _ConfigurableRater.marbles => marblesHelpId,
+    _ConfigurableRater.glicko2 => eloHelpId,
   };
 
   String get configHelpId => switch(this) {
@@ -1581,5 +1605,6 @@ enum _ConfigurableRater {
     _ConfigurableRater.openskill => openskillHelpId,
     _ConfigurableRater.points => pointsHelpId,
     _ConfigurableRater.marbles => marblesHelpLink,
+    _ConfigurableRater.glicko2 => eloConfigHelpId,
   };
 }

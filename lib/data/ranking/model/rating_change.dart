@@ -102,6 +102,8 @@ abstract class RatingEvent implements IRatingEvent, IConnectivityEvent {
 
   bool get byStage => wrappedEvent.stageNumber >= 0;
 
+  DateTime get date => wrappedEvent.date;
+
   RelativeScore? _cachedScore;
   RelativeScore get score {
     if(_cachedScore == null) {

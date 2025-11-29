@@ -46,7 +46,7 @@ class MarbleSettings extends RaterSettings {
   double ordinalPower;
 
   String modelName;
-  
+
   MarbleModel? _model;
   MarbleModel get model => _model!;
   set model(MarbleModel v) {
@@ -85,7 +85,7 @@ class MarbleSettings extends RaterSettings {
     json[_sigmoidMidpointKey] = sigmoidMidpoint;
     json[_ordinalPowerKey] = ordinalPower;
   }
-  
+
   @override
   void loadFromJson(Map<String, dynamic> json) {
     startingMarbles = json[_startingMarblesKey] ?? defaultStartingMarbles;

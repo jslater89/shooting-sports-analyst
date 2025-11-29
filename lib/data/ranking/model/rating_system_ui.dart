@@ -9,6 +9,8 @@ import 'package:shooting_sports_analyst/data/ranking/model/rating_settings_ui.da
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/ui/elo_settings_ui.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/ui/glicko_settings_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/ui/marble_settings_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rater.dart';
@@ -39,6 +41,9 @@ abstract class RatingSystemUi<S extends RaterSettings, C extends RaterSettingsCo
     }
     else if(algorithm is PointsRater) {
       return PointsSettingsUi();
+    }
+    else if(algorithm is Glicko2Rater) {
+      return Glicko2SettingsUi();
     }
 
     throw UnimplementedError("Rating system UI not implemented for ${algorithm.runtimeType}");

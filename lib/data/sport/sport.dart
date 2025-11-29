@@ -67,6 +67,8 @@ class Sport {
   /// Initial rating for the OpenSkill rating engine.
   Map<Classification, List<double>> initialOpenskillRatings;
 
+  Map<Classification, double> initialGenericRatingMultipliers;
+
   PowerFactor get defaultPowerFactor {
     if(powerFactors.length == 1) {
       return powerFactors.values.first;
@@ -132,6 +134,7 @@ class Sport {
     this.shooterDeduplicator,
     this.initialEloRatings = const {},
     this.initialOpenskillRatings = const {},
+    this.initialGenericRatingMultipliers = const {},
     this.ratingStrengthProvider,
     this.pubstompProvider,
     this.builtinRatingGroupsProvider,

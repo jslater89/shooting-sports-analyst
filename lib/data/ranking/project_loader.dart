@@ -2153,18 +2153,20 @@ class RatingProjectLoader {
         connectednessMultiplier: connectednessMod,
       );
 
-      // You only get one rating change per match.
-      if(changes[rating.wrappedRating]!.isEmpty) {
-        changes[rating.wrappedRating]![score] = ratingSystem.newEvent(
-          rating: rating,
-          match: match,
-          score: score,
-          matchScore: score,
-          infoLines: update[rating]!.infoLines,
-          infoData: update[rating]!.infoData,
-        );
+      if(update[rating] != null) {
+        // You only get one rating change per match.
+        if(changes[rating.wrappedRating]!.isEmpty) {
+          changes[rating.wrappedRating]![score] = ratingSystem.newEvent(
+            rating: rating,
+            match: match,
+            score: score,
+            matchScore: score,
+            infoLines: update[rating]!.infoLines,
+            infoData: update[rating]!.infoData,
+          );
 
-        changes[rating.wrappedRating]![score]!.apply(update[rating]!);
+          changes[rating.wrappedRating]![score]!.apply(update[rating]!);
+        }
       }
     }
   }

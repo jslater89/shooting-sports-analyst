@@ -13,6 +13,7 @@ import 'package:shooting_sports_analyst/data/ranking/model/rating_settings.dart'
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rater.dart';
@@ -210,6 +211,8 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings> {
         return OpenskillRater.fromJson(encodedProject);
       case _marblesValue:
         return MarbleRater.fromJson(encodedProject);
+      case DbRatingProject.glicko2Value:
+        return Glicko2Rater.fromJson(encodedProject);
       default:
         throw ArgumentError();
     }

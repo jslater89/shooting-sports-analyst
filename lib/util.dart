@@ -626,3 +626,14 @@ extension NextBytes on Random {
     return List.generate(length, (index) => nextInt(256));
   }
 }
+
+extension SecondTimestampUtils on int {
+  DateTime toDateTime() {
+    return DateTime.fromMillisecondsSinceEpoch(this * 1000);
+  }
+
+  bool isSameDay(DateTime date) {
+    final thisDate = this.toDateTime();
+    return thisDate.year == date.year && thisDate.month == date.month && thisDate.day == date.day;
+  }
+}
