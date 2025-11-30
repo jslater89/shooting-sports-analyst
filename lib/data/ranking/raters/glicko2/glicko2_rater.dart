@@ -6,6 +6,7 @@
 
 import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
@@ -155,6 +156,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     }
 
     var opponents = matchScores.keys.where((key) => key != shooter).toList();
+    opponents = _selectOpponents(matchScores, shooter.rating, shooterMatchScore.ratio);
 
     /// For each competitor, we only update ratings for the stages that they completed.
     var shooterStageScores = shooterMatchScore.stageScores.entries
@@ -239,7 +241,15 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
       maximumRD: settings.internalMaximumRD,
     );
     var rdPrime = 1 / sqrt((1 / pow(rdStar, 2)) + (1 / v));
+    if(rdPrime > settings.internalMaximumRD) {
+      rdPrime = settings.internalMaximumRD;
+    }
     var ratingChange = pow(rdPrime, 2) * deltaSum;
+    var maximumRatingChange = settings.internalMaximumRatingDelta;
+    if(ratingChange.abs() > maximumRatingChange) {
+      ratingChange = ratingChange.sign * maximumRatingChange;
+    }
+
     var rdChange = rdPrime - shooter.committedInternalRD;
     var volatilityChange = newVolatility - shooter.volatility;
 
@@ -253,8 +263,85 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
           Glicko2Rater.volatilityChangeKey: volatilityChange,
           Glicko2Rater.stagesKey: shooterStageScores.length.toDouble(),
         },
+        infoLines: [
+          "Finish: {{finish}} of {{competitors}} at {{finishPercent}}%",
+          "Rating ± Change: {{rating}}/{{change}}",
+          "RD ± Change: {{rd}}/{{rdChange}}",
+          "Volatility ± Change: {{volatility}}/{{volatilityChange}}",
+          "Considered {{opponents}} opponents",
+        ],
+        infoData: [
+          RatingEventInfoElement.int(name: "finish", intValue: shooterMatchScore.place),
+          RatingEventInfoElement.int(name: "competitors", intValue: matchScores.length),
+          RatingEventInfoElement.double(name: "finishPercent", doubleValue: shooterMatchScore.percentage, numberFormat: "%00.2f"),
+          RatingEventInfoElement.double(name: "rating", doubleValue: shooter.rating, numberFormat: "%00.0f"),
+          RatingEventInfoElement.double(name: "change", doubleValue: ratingChange * settings.scalingFactor, numberFormat: "%00.2f"),
+          RatingEventInfoElement.double(name: "rd", doubleValue: rdPrime * settings.scalingFactor, numberFormat: "%00.0f"),
+          RatingEventInfoElement.double(name: "rdChange", doubleValue: rdChange * settings.scalingFactor, numberFormat: "%00.2f"),
+          RatingEventInfoElement.double(name: "volatility", doubleValue: newVolatility, numberFormat: "%00.4f"),
+          RatingEventInfoElement.double(name: "volatilityChange", doubleValue: volatilityChange, numberFormat: "%00.4f"),
+          RatingEventInfoElement.int(name: "opponents", intValue: opponents.length),
+        ]
       ),
     };
+  }
+
+  /// Get opponents based on the selection mode. Input must be sorted by match finish.
+  List<ShooterRating> _selectOpponents(Map<ShooterRating, RelativeMatchScore> matchScores, double competitorRating, double competitorRatio) {
+    var opponentsByFinish = matchScores.keys.toList();
+    var opponentsByRating = opponentsByFinish.sorted((a, b) => b.rating.compareTo(a.rating)).toList();
+    var selectionMode = settings.opponentSelectionMode;
+    if(selectionMode == OpponentSelectionMode.all) {
+      return opponentsByFinish;
+    }
+    else if(selectionMode == OpponentSelectionMode.top10Pct) {
+      return _selectTop10PctOpponents(opponentsByFinish, opponentsByRating);
+    }
+    else if(selectionMode == OpponentSelectionMode.nearby) {
+      return _selectNearbyOpponents(matchScores, opponentsByRating, competitorRating, competitorRatio);
+    }
+    else if(selectionMode == OpponentSelectionMode.topAndNearby) {
+      var topOpponents = _selectTop10PctOpponents(opponentsByFinish, opponentsByRating).toSet();
+      topOpponents.addAll(_selectNearbyOpponents(matchScores, opponentsByRating, competitorRating, competitorRatio));
+      return topOpponents.toList();
+    }
+    else {
+      throw Exception("Invalid opponent selection mode: $selectionMode");
+    }
+  }
+
+  /// Get the top 10% of opponents by rating and match finish. Input must be sorted by match finish.
+  List<ShooterRating> _selectTop10PctOpponents(List<ShooterRating> opponentsByFinish, List<ShooterRating> opponentsByRating) {
+    var top10Pct = (opponentsByFinish.length * 0.1).ceil();
+    var top10PctByMatchFinish = opponentsByFinish.take(top10Pct).toSet();
+
+    var sortedByRating = (opponentsByRating.length * 0.1).ceil();
+    var top10PctByRating = opponentsByRating.take(sortedByRating).toSet();
+
+
+     top10PctByMatchFinish.addAll(top10PctByRating);
+     return top10PctByMatchFinish.toList();
+  }
+
+  List<ShooterRating> _selectNearbyOpponents(Map<ShooterRating, RelativeMatchScore> matchScores, List<ShooterRating> opponentsByRating, double competitorRating, double competitorRatio) {
+    List<ShooterRating> nearbyOpponents = [];
+    for(var opponent in matchScores.keys) {
+      if((opponent.rating - competitorRating).abs() <= settings.maximumRD) {
+        nearbyOpponents.add(opponent);
+        continue;
+      }
+
+      var opponentMatchScore = matchScores[opponent];
+      if(opponentMatchScore == null) {
+        continue;
+      }
+      var opponentRatio = opponentMatchScore.ratio;
+      if((opponentRatio - competitorRatio).abs() <= settings.maximumRD) {
+        nearbyOpponents.add(opponent);
+      }
+    }
+
+    return nearbyOpponents;
   }
 
   double _iterateVolatility({
@@ -361,7 +448,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
 
   /// Calculate a Glicko-compatible score against an opponent.
   double _calculateScoreForOpponent(double shooterRatio, double opponentRatio) {
-    return linearMarginOfVictoryScoreFunction(shooterRatio, opponentRatio);
+    return settings.scoreFunction.calculateScore(shooterRatio, opponentRatio);
   }
 
   double _glickoVForOpponent(double rating, double opponentRating, double opponentRD) {
