@@ -81,6 +81,8 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   static const pointsValue = "points";
   @ignore
   static const marbleValue = "marbles";
+  @ignore
+  static const glicko2Value = "glicko2";
 
   Id id = Isar.autoIncrement;
 

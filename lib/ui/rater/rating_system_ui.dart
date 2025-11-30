@@ -9,6 +9,8 @@ import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/ui/elo_ratings_ui.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rater.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/ui/glicko_ratings_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/ui/marble_ratings_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rater.dart';
@@ -18,6 +20,9 @@ import 'package:shooting_sports_analyst/data/ranking/raters/points/ui/points_rat
 import 'package:shooting_sports_analyst/data/ranking/scaling/rating_scaler.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 
+// This file is kind of ugly, but it's a necessary evil to keep UI imports out of the core rating engine
+// code. Every rating system has an extension on it that fits the buildRatingKey/buildRatingRow interface,
+// but I don't think I have a way to fully augment the class to implement an interface yet.
 class RatingSystemUiBuilder {
   static Row buildRatingKey(RatingSystem algorithm, BuildContext context, {DateTime? trendDate}) {
     if(algorithm is MultiplayerPercentEloRater) {
@@ -30,6 +35,9 @@ class RatingSystemUiBuilder {
       return algorithm.buildRatingKey(context, trendDate: trendDate);
     }
     else if(algorithm is PointsRater) {
+      return algorithm.buildRatingKey(context, trendDate: trendDate);
+    }
+    else if(algorithm is Glicko2Rater) {
       return algorithm.buildRatingKey(context, trendDate: trendDate);
     }
     throw UnimplementedError("Rating system UI not implemented for ${algorithm.runtimeType}");
@@ -46,6 +54,9 @@ class RatingSystemUiBuilder {
       return algorithm.buildRatingRow(context: context, place: place, rating: rating, trendDate: trendDate, scaler: scaler);
     }
     else if(algorithm is PointsRater) {
+      return algorithm.buildRatingRow(context: context, place: place, rating: rating, trendDate: trendDate, scaler: scaler);
+    }
+    else if(algorithm is Glicko2Rater) {
       return algorithm.buildRatingRow(context: context, place: place, rating: rating, trendDate: trendDate, scaler: scaler);
     }
     throw UnimplementedError("Rating system UI not implemented for ${algorithm.runtimeType}");

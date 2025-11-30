@@ -70,6 +70,8 @@ class MarbleRating extends ShooterRating<MarbleRatingEvent> {
 
       marbles -= event.marblesStaked;
       marbles += event.marblesWon;
+
+      lastSeen = event.wrappedEvent.date;
     }
   }
 

@@ -309,7 +309,12 @@ class AnalystDatabase {
   }) async {
     var queryLower = query.toLowerCase();
     var words = query.split(" ");
-    var terms = words.where((t) => t.length >= 3).toList();
+    final numRegex = RegExp(r'^\d{1,2}$');
+    var terms = words.where((t) =>
+      t.length >= 3 ||
+      // Also match 1- or 2-digit numbers, for e.g. "area 5"
+      numRegex.hasMatch(t)
+    ).toList();
     if(terms.isEmpty) return [];
 
     // TODO: possibly more advanced stemming

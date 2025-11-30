@@ -6,6 +6,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_settings_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system_ui.dart';
 import 'package:shooting_sports_analyst/data/help/entries/marbles_configuration_help.dart';
@@ -241,6 +242,7 @@ class _MarbleSettingsWidgetState extends State<MarbleSettingsWidget> {
 
   @override
   Widget build(BuildContext context) {
+    var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     return Padding(
       padding: const EdgeInsets.only(right: 20),
       child: Column(
@@ -265,7 +267,7 @@ class _MarbleSettingsWidgetState extends State<MarbleSettingsWidget> {
                 ),
               ),
               SizedBox(
-                width: 100,
+                width: 100 * uiScaleFactor,
                 child: TextFormField(
                   controller: _startingMarblesController,
                   textAlign: TextAlign.end,
@@ -289,7 +291,7 @@ class _MarbleSettingsWidgetState extends State<MarbleSettingsWidget> {
                 ),
               ),
               SizedBox(
-                width: 100,
+                width: 100 * uiScaleFactor,
                 child: TextFormField(
                   controller: _anteController,
                   textAlign: TextAlign.end,
@@ -313,7 +315,7 @@ class _MarbleSettingsWidgetState extends State<MarbleSettingsWidget> {
                 ),
               ),
               SizedBox(
-                width: 160,
+                width: 160 * uiScaleFactor,
                 child: InputDecorator(
                   decoration: InputDecoration(
                     isDense: true,
@@ -345,7 +347,7 @@ class _MarbleSettingsWidgetState extends State<MarbleSettingsWidget> {
                 ),
               ),
               SizedBox(
-                width: 100,
+                width: 100 * uiScaleFactor,
                 child: TextFormField(
                   enabled: settings.model.name == PowerLawModel.modelName,
                   controller: _powerController,
@@ -372,7 +374,7 @@ class _MarbleSettingsWidgetState extends State<MarbleSettingsWidget> {
                 ),
               ),
               SizedBox(
-                width: 100,
+                width: 100 * uiScaleFactor,
                 child: TextFormField(
                   enabled: settings.model.name == SigmoidModel.modelName,
                   controller: _steepnessController,
@@ -397,7 +399,7 @@ class _MarbleSettingsWidgetState extends State<MarbleSettingsWidget> {
                 ),
               ),
               SizedBox(
-                width: 100,
+                width: 100 * uiScaleFactor,
                 child: TextFormField(
                   enabled: settings.model.name == SigmoidModel.modelName,
                   controller: _midpointController,
@@ -422,7 +424,7 @@ class _MarbleSettingsWidgetState extends State<MarbleSettingsWidget> {
                 ),
               ),
               SizedBox(
-                width: 100,
+                width: 100 * uiScaleFactor,
                 child: TextFormField(
                   enabled: settings.model.name == OrdinalPowerLawModel.modelName,
                   controller: _ordinalPowerController,
