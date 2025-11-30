@@ -9,6 +9,7 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_charts/flutter_charts.dart';
+import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_statistics.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/icore.dart';
@@ -52,21 +53,22 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
 
   @override
   Widget build(BuildContext context) {
+    var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     return AlertDialog(
       title: Text("${widget.group.uiLabel} Statistics"),
       content: SizedBox(
-        width: RaterStatsDialog._width,
+        width: RaterStatsDialog._width * uiScaleFactor,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: _buildStatsRows(context),
+            children: _buildStatsRows(context, uiScaleFactor),
           ),
         ),
       ),
     );
   }
 
-  List<Widget> _buildStatsRows(BuildContext context) {
+  List<Widget> _buildStatsRows(BuildContext context, double uiScaleFactor) {
     return [
       Row(
         children: [
@@ -146,7 +148,7 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
               }),
               child: Text(histogram ? "Histogram" : "Quartiles", style: Theme.of(context).textTheme.bodyLarge!.copyWith(color: Theme.of(context).colorScheme.tertiary)),
             ),
-            const SizedBox(width: 16),
+            SizedBox(width: 16 * uiScaleFactor),
             ClickableLink(
               onTap: () {
                 showDialog(context: context, builder: (context) => RatingDistributionDialog(
@@ -166,9 +168,9 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
         ),
       ),
       SizedBox(
-        height: RaterStatsDialog._width * 0.675,
-        width: RaterStatsDialog._width,
-        child: buildHistogram(context)
+        height: RaterStatsDialog._width * 0.675 * uiScaleFactor,
+        width: RaterStatsDialog._width * uiScaleFactor,
+        child: buildHistogram(context, uiScaleFactor)
       ),
     ];
   }
@@ -238,11 +240,11 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
     );
   }
 
-  Widget buildHistogram(BuildContext context) {
-    return histogram ? _barChartHistogram(context) : _boxPlot(context);
+  Widget buildHistogram(BuildContext context, double uiScaleFactor) {
+    return histogram ? _barChartHistogram(context, uiScaleFactor) : _boxPlot(context, uiScaleFactor);
   }
 
-  Widget _boxPlot(BuildContext context) {
+  Widget _boxPlot(BuildContext context, double uiScaleFactor) {
     Map<Classification, Widget> plots = {};
     Map<Classification, String> tooltips = {};
 
@@ -333,7 +335,7 @@ class _RaterStatsDialogState extends State<RaterStatsDialog> {
     );
   }
 
-  Widget _barChartHistogram(BuildContext context) {
+  Widget _barChartHistogram(BuildContext context, double uiScaleFactor) {
     ChartOptions chartOptions = const ChartOptions(
       legendOptions: LegendOptions(
         //isLegendContainerShown: false,

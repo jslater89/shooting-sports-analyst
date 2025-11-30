@@ -496,6 +496,7 @@ class _ConflictDetailsState extends State<ConflictDetails> {
   @override
   Widget build(BuildContext context) {
     var c = widget.collision;
+    var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     if(c == null) {
       return const Center(child: Text("No collision selected"));
     }
@@ -526,7 +527,7 @@ class _ConflictDetailsState extends State<ConflictDetails> {
                 mainAxisSize: MainAxisSize.max,
                 children: [
                   Text("${c.shooterRatings.values.first.name}", style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10 * uiScaleFactor),
                   Row(
                     children: [
                       Text("Issues", style: Theme.of(context).textTheme.titleMedium),
@@ -543,7 +544,7 @@ class _ConflictDetailsState extends State<ConflictDetails> {
                   ),
                   for(var issue in c.causes)
                     IssueDescription(sport: widget.sport, issue: issue),
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10 * uiScaleFactor),
                   Row(
                     children: [
                       Text("Member Numbers", style: Theme.of(context).textTheme.titleMedium),
@@ -566,7 +567,7 @@ class _ConflictDetailsState extends State<ConflictDetails> {
                         MemberNumberTypeColumn(type: type, collision: c),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10 * uiScaleFactor),
                   Row(
                     children: [
                       Text("Proposed Actions", style: Theme.of(context).textTheme.titleMedium),
@@ -648,6 +649,7 @@ class _ConflictDetailsState extends State<ConflictDetails> {
                         }
                       }
                     ),
+                  SizedBox(height: 10 * uiScaleFactor),
                   Row(
                     children: [
                       Padding(
@@ -875,11 +877,14 @@ class IssueDescription extends StatelessWidget {
     }
     if(dedup != null) {
       var text = "• Multiple ${issue.memberNumberType.infixName} numbers: ${issue.memberNumbers.join(", ")}$probablyInvalidString$strdiffString";
-      return RichText(text: MemberNumberLinker.forDeduplicator(dedup).linksForMemberNumbers(
-        context: context,
-        text: text,
-        memberNumbers: issue.memberNumbers,
-      ));
+      return RichText(
+        textScaler: MediaQuery.of(context).textScaler,
+        text: MemberNumberLinker.forDeduplicator(dedup).linksForMemberNumbers(
+          context: context,
+          text: text,
+          memberNumbers: issue.memberNumbers,
+        ),
+      );
     }
     else {
       return Text("• Multiple ${issue.memberNumberType.infixName} numbers: ${issue.memberNumbers.join(", ")}$probablyInvalidString$strdiffString", style: Theme.of(context).textTheme.bodyMedium);
@@ -911,11 +916,14 @@ class IssueDescription extends StatelessWidget {
       targetNumbers = issue.targetNumbers.firstOrNull ?? "(null)";
     }
     if(dedup != null) {
-      return RichText(text: MemberNumberLinker.forDeduplicator(dedup).linksForMemberNumbers(
-        context: context,
-        text: "• Ambiguous mapping from $sourceNumbers to $targetNumbers",
-        memberNumbers: [...issue.sourceNumbers, ...issue.targetNumbers],
-      ));
+      return RichText(
+        textScaler: MediaQuery.of(context).textScaler,
+        text: MemberNumberLinker.forDeduplicator(dedup).linksForMemberNumbers(
+          context: context,
+          text: "• Ambiguous mapping from $sourceNumbers to $targetNumbers",
+          memberNumbers: [...issue.sourceNumbers, ...issue.targetNumbers],
+        ),
+      );
     }
     else {
       return Text("• Ambiguous mapping from $sourceNumbers to $targetNumbers", style: Theme.of(context).textTheme.bodyMedium);
@@ -960,12 +968,15 @@ class _DedupLink extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return RichText(text: MemberNumberLinker.forDeduplicator(deduplicator).linksForMemberNumbers(
-      context: context,
-      text: number,
-      memberNumbers: [number],
-      linkStyle: TextStyles.underlineBodyMedium(context).copyWith(color: collision.coversNumber(number) ? Colors.green.shade600 : Colors.grey.shade400),
-    ));
+    return RichText(
+      textScaler: MediaQuery.of(context).textScaler,
+        text: MemberNumberLinker.forDeduplicator(deduplicator).linksForMemberNumbers(
+        context: context,
+        text: number,
+        memberNumbers: [number],
+        linkStyle: TextStyles.underlineBodyMedium(context).copyWith(color: collision.coversNumber(number) ? Colors.green.shade600 : Colors.grey.shade400),
+      )
+    );
   }
 }
 
@@ -982,11 +993,14 @@ class ProposedAction extends StatelessWidget {
     Widget textWidget;
     var dedup = sport.shooterDeduplicator;
     if(dedup != null) {
-      textWidget = RichText(text: MemberNumberLinker.forDeduplicator(dedup).linksForMemberNumbers(
-        context: context,
-        text: action.descriptiveString,
-        memberNumbers: action.coveredNumbers.toList(),
-      ));
+      textWidget = RichText(
+        textScaler: MediaQuery.of(context).textScaler,
+          text: MemberNumberLinker.forDeduplicator(dedup).linksForMemberNumbers(
+          context: context,
+          text: action.descriptiveString,
+          memberNumbers: action.coveredNumbers.toList(),
+        ),
+      );
     }
     else {
       textWidget = Text(action.descriptiveString, style: Theme.of(context).textTheme.bodyMedium);
