@@ -13,7 +13,6 @@ import 'package:shooting_sports_analyst/data/location_normalizer.dart';
 import 'package:shooting_sports_analyst/ui/text_styles.dart';
 import 'package:shooting_sports_analyst/ui/widget/custom_tooltip.dart';
 import 'package:shooting_sports_analyst/ui/widget/interactive_svg.dart';
-import 'package:shooting_sports_analyst/ui/widget/stacked_distribution_chart.dart';
 import 'package:shooting_sports_analyst/ui_util.dart';
 
 class USDataMap extends StatefulWidget {
