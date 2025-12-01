@@ -354,7 +354,6 @@ class _DeduplicationDialogState extends State<DeduplicationDialog> {
                             title: "Review incomplete",
                             content: const Text("You have not reviewed all conflicts. Are you sure you want to continue?"),
                             positiveButtonLabel: "CONTINUE",
-                            // TODO: SharedPreferences, troll James
                             width: 400,
                           );
 

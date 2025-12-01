@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'package:color_models/color_models.dart';
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
@@ -20,9 +26,9 @@ class ColorLegend extends StatelessWidget {
     required this.maxValue,
     required this.referenceColors,
     this.labelDecimals = 1,
-    this.boxSize = 24, 
-    this.boxStrokeWidth = 1, 
-    this.boxStrokeColor, 
+    this.boxSize = 24,
+    this.boxStrokeWidth = 1,
+    this.boxStrokeColor,
     this.labelTextStyle,
   }) {
     if(legendEntries < 2) {

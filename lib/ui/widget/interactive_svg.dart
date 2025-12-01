@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -6,10 +12,10 @@ import 'package:path_drawing/path_drawing.dart';
 import 'dart:ui' as ui;
 
 /// A widget that allows for interaction with an SVG file.
-/// 
+///
 /// Paths with an ID attribute are considered interactive. Interactive
 /// paths will trigger the [onEnter], [onHover], [onExit], and [onClick] callbacks.
-/// 
+///
 /// [onEnter] is called when the mouse enters a region bounded by an
 /// interactive path. [onExit] is called when the mouse exits a region bounded by an
 /// interactive path, and will be called with null when the mouse exits a noninteractive
@@ -26,10 +32,10 @@ class InteractiveSvg extends StatefulWidget {
   final Function(PointerDownEvent event, String? pathId)? onClick;
 
   const InteractiveSvg({
-    Key? key, 
-    required this.assetPath, 
-    this.colorMapper, 
-    this.width, 
+    Key? key,
+    required this.assetPath,
+    this.colorMapper,
+    this.width,
     this.height,
     this.onHover,
     this.onEnter,

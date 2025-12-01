@@ -10,6 +10,7 @@ import 'package:collection/collection.dart';
 import 'package:cookie_store/cookie_store.dart';
 import 'package:html/parser.dart';
 import 'package:html_unescape/html_unescape_small.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
 import 'package:shooting_sports_analyst/data/match_cache/registration_cache.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:http/http.dart' as http;
@@ -51,6 +52,32 @@ class RegistrationContainer {
     this.registrations,
     this.unmatchedShooters,
   );
+
+  List<MatchRegistration> exportMatchRegistrations() {
+    var exported = <MatchRegistration>[];
+    for(var entry in registrations.entries) {
+      exported.add(MatchRegistration(
+        matchId: matchId,
+        entryId: entry.key.name,
+        shooterName: entry.key.name,
+        shooterDivisionName: entry.key.division.name,
+        shooterClassificationName: entry.key.classification.name,
+        shooterMemberNumber: entry.value.memberNumber,
+        squad: entry.key.squad,
+      ));
+    }
+    for(var entry in unmatchedShooters) {
+      exported.add(MatchRegistration(
+        matchId: matchId,
+        entryId: entry.name,
+        shooterName: entry.name,
+        shooterDivisionName: entry.division.name,
+        shooterClassificationName: entry.classification.name,
+        squad: entry.squad,
+      ));
+    }
+    return exported;
+  }
 }
 
 class Registration {

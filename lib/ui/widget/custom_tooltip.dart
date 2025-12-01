@@ -1,3 +1,9 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
@@ -5,7 +11,7 @@ import 'package:shooting_sports_analyst/ui/colors.dart';
 
 /// A custom tooltip that can be used to insert an overlay entry into
 /// the overlay stack. Call [insert] and [remove] to manage the overlay entry.
-/// 
+///
 /// The type parameter [T] is the type of the data being displayed in the tooltip.
 /// [data] is checked for equality to determine if the tooltip should be updated.
 class CustomTooltip<T> {
@@ -35,7 +41,7 @@ class CustomTooltip<T> {
     if(mousePosition == null) {
       mousePosition = Offset(0, 0);
     }
-    
+
     // Measure the container size after the first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final RenderBox? renderBox = _containerKey.currentContext?.findRenderObject() as RenderBox?;
@@ -47,11 +53,11 @@ class CustomTooltip<T> {
         }
       }
     });
-    
+
     // Use measured size if available, otherwise fall back to fixed width/height
     final tooltipWidth = _measuredSize?.width ?? width;
     final tooltipHeight = _measuredSize?.height ?? height;
-    
+
     var offset = 25 * uiScaleFactor;
     // tooltip is to the right of the mouse position
     var left = offset + mousePosition.dx;
@@ -67,7 +73,7 @@ class CustomTooltip<T> {
     }
 
     var finalBackgroundColor = ThemeColors.onBackgroundColor(context);
-    
+
     // Hide tooltip until we've measured its size to avoid jitter
     final isMeasured = _measuredSize != null;
 
