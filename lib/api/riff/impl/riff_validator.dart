@@ -36,6 +36,13 @@ class RiffValidator implements AbstractRiffValidator {
       return Result.err(rootErr);
     }
 
+    // Validate match object
+    var matchJson = Map<String, dynamic>.from(jsonData["match"] as Map);
+    var matchErr = _validateMatch(matchJson);
+    if (matchErr != null) {
+      return Result.err(matchErr);
+    }
+
     var registrationsJson = jsonData["registrations"] as List;
     var registrationsErr = _validateRegistrations(registrationsJson);
     if (registrationsErr != null) {
@@ -68,6 +75,13 @@ class RiffValidator implements AbstractRiffValidator {
       return StringError("Unsupported version: $version (expected version starting with '1.')");
     }
 
+    if (!json.containsKey("match")) {
+      return StringError("Missing required field: match");
+    }
+    if (json["match"] is! Map) {
+      return StringError("Field 'match' must be an object");
+    }
+
     if (!json.containsKey("registrations")) {
       return StringError("Missing required field: registrations");
     }
@@ -78,13 +92,77 @@ class RiffValidator implements AbstractRiffValidator {
     return null;
   }
 
+  ResultErr? _validateMatch(Map<String, dynamic> json) {
+    // Required fields
+    if (!json.containsKey("matchId")) {
+      return StringError("Missing required field: matchId");
+    }
+    if (json["matchId"] is! String) {
+      return StringError("Field 'matchId' must be a string");
+    }
+
+    // Optional fields
+    if (json.containsKey("eventName") && json["eventName"] is! String) {
+      return StringError("Field 'eventName' must be a string");
+    }
+
+    if (json.containsKey("date") && json["date"] is! String) {
+      return StringError("Field 'date' must be a string");
+    }
+    if (json.containsKey("date")) {
+      var dateStr = json["date"] as String;
+      if (!_isValidDate(dateStr)) {
+        return StringError("Field 'date' must be in ISO 8601 format (YYYY-MM-DD), got: $dateStr");
+      }
+    }
+
+    if (json.containsKey("sportName") && json["sportName"] is! String) {
+      return StringError("Field 'sportName' must be a string");
+    }
+
+    if (json.containsKey("sourceCode") && json["sourceCode"] is! String) {
+      return StringError("Field 'sourceCode' must be a string");
+    }
+
+    if (json.containsKey("sourceIds")) {
+      if (json["sourceIds"] is! List) {
+        return StringError("Field 'sourceIds' must be an array");
+      }
+      var sourceIds = json["sourceIds"] as List;
+      for (var i = 0; i < sourceIds.length; i++) {
+        if (sourceIds[i] is! String) {
+          return StringError("Field 'sourceIds[$i]' must be a string");
+        }
+      }
+    }
+
+    return null;
+  }
+
+  bool _isValidDate(String dateStr) {
+    try {
+      var parts = dateStr.split("-");
+      if (parts.length != 3) return false;
+      var year = int.parse(parts[0]);
+      var month = int.parse(parts[1]);
+      var day = int.parse(parts[2]);
+      if (month < 1 || month > 12) return false;
+      if (day < 1 || day > 31) return false;
+      // Basic validation - could be more strict
+      DateTime(year, month, day);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   ResultErr? _validateRegistrations(List registrationsJson) {
     for (var i = 0; i < registrationsJson.length; i++) {
       var registration = registrationsJson[i];
       if (registration is! Map) {
         return StringError("Registrations[$i] must be an object");
       }
-      var registrationMap = registration as Map<String, dynamic>;
+      var registrationMap = Map<String, dynamic>.from(registration);
       var registrationErr = _validateRegistration(registrationMap, i);
       if (registrationErr != null) {
         return StringError("Registrations[$i]: ${registrationErr.message}");
@@ -96,13 +174,6 @@ class RiffValidator implements AbstractRiffValidator {
 
   ResultErr? _validateRegistration(Map<String, dynamic> json, int index) {
     // Required fields
-    if (!json.containsKey("matchId")) {
-      return StringError("Missing required field: matchId");
-    }
-    if (json["matchId"] is! String) {
-      return StringError("Field 'matchId' must be a string");
-    }
-
     if (!json.containsKey("entryId")) {
       return StringError("Missing required field: entryId");
     }
@@ -123,8 +194,16 @@ class RiffValidator implements AbstractRiffValidator {
       return StringError("Field 'shooterDivisionName' must be a string");
     }
 
-    if (json.containsKey("shooterMemberNumber") && json["shooterMemberNumber"] is! String) {
-      return StringError("Field 'shooterMemberNumber' must be a string");
+    if (json.containsKey("shooterMemberNumbers")) {
+      if (json["shooterMemberNumbers"] is! List) {
+        return StringError("Field 'shooterMemberNumbers' must be an array");
+      }
+      var shooterMemberNumbers = json["shooterMemberNumbers"] as List;
+      for (var i = 0; i < shooterMemberNumbers.length; i++) {
+        if (shooterMemberNumbers[i] is! String) {
+          return StringError("Field 'shooterMemberNumbers[$i]' must be a string");
+        }
+      }
     }
 
     if (json.containsKey("squad") && json["squad"] is! String) {

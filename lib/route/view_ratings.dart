@@ -16,8 +16,12 @@ import 'package:fluttericon/rpg_awesome_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/application_preferences.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/match_prep.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_set.dart';
+import 'package:shooting_sports_analyst/data/match_cache/registration_cache.dart';
 import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/synchronous_rating_data_source.dart';
@@ -703,90 +707,70 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     }
   }
 
-  String? lastUrlPredicted;
+  String? lastMatchIdPredicted;
   Future<void> _startPredictionView(RatingDataSource dataSource, RatingGroup tab) async {
     var options = _ratings.toSet().toList();
     options.sort((a, b) => b.rating.compareTo(a.rating));
+    Map<String, ShooterRating> shootersByMemberNumber = {};
+    for(var rating in options) {
+      for(var n in rating.knownMemberNumbers) {
+        shootersByMemberNumber[n] = rating;
+      }
+    }
     List<ShooterRating>? shooters = [];
     var divisions = tab.divisions;
 
-    var appPrefs = AnalystDatabase().getPreferencesSync();
-
-    var result = await showDialog<(bool, String?)>(context: context, builder: (context) {
+    // select a FutureMatch from the database to predict
+    var futureMatchId = await showDialog<String>(context: context, builder: (context) {
       return UrlEntryDialog(
-        hintText: "https://practiscore.com/match-name/squadding",
-        descriptionText: "Enter a link to the match registration or squadding page.\nUncheck 'used cached data' to force a fresh download.",
-        initialUrl: lastUrlPredicted,
-        showCacheCheckbox: true,
-        initialCacheValue: true,
-        typeaheadSuggestionsFunction: (String url) {
-          var suggestions = appPrefs.predictionSuggestions(url);
-          return suggestions.map((e) => TypeaheadUrlSuggestion(url: e.url, matchName: e.matchName)).toList();
+        hintText: "Match name",
+        descriptionText: "Enter the name of a match to predict.",
+        initialUrl: lastMatchIdPredicted,
+        typeaheadSuggestionsFunction: (String name) {
+          var suggestions = AnalystDatabase().getFutureMatchesByNameSync(name);
+          return suggestions.map((e) => TypeaheadUrlSuggestion(url: e.matchId, matchName: e.eventName)).toList();
         },
-        validator: (url) {
-          if(url.endsWith("/register") || url.endsWith("/squadding") || url.endsWith("/printhtml") || (url.endsWith("/") && !url.contains("squadding"))) {
-            return null;
-          }
-          else {
-            return "Enter a match registration or squadding URL.";
-          }
-        }
       );
     });
 
-    var (allowCached, url) = result ?? (true, null);
-
-    if(url == null) {
+    if(futureMatchId == null) {
+      _log.d("No future match ID elected");
       return;
     }
 
-    if(url.endsWith("/register")) {
-      url = url.replaceFirst("/register", "/squadding");
-    }
-    else if(url.endsWith("/") && !url.contains("squadding")) {
-      url += "squadding";
-    }
-    else if(url.endsWith("/printhtml")) {
-      url = url.replaceFirst("/printhtml", "");
+    var futureMatch = await AnalystDatabase().getFutureMatchByMatchId(futureMatchId);
+
+    if(futureMatch == null) {
+      _log.d("No future match selected");
+      return;
     }
 
-    var registrationResult = await getRegistrations(_sport, url, divisions, options, allowCached: allowCached);
-    if(registrationResult.isErr()) {
-      if(registrationResult.unwrapErr() == RegistrationError.noCredentials) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Missing or invalid credentials"),
-            action: SnackBarAction(
-              label: "EDIT CREDENTIALS",
-              onPressed: () {
-                showDialog(context: context, builder: (context) {
-                  return SourceCredentialsManager();
-                });
-              },
-            ),
-          )
-        );
+    lastMatchIdPredicted = futureMatch.matchId;
+
+    await futureMatch.matchRegistrationsToRatings(_sport, options, group: tab);
+    var registrationsForDivision = futureMatch.getRegistrationsFor(_sport, tab);
+
+    List<MatchRegistration> unmatchedRegistrations = [];
+    for(var registration in registrationsForDivision) {
+      if(registration.shooterMemberNumbers.isEmpty) {
+        unmatchedRegistrations.add(registration);
       }
       else {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Unable to retrieve registrations"))
-        );
+        var shooter = shootersByMemberNumber[registration.shooterMemberNumbers.first];
+        if(shooter != null) {
+          shooters.add(shooter);
+        }
       }
-      return;
     }
 
-    lastUrlPredicted = url;
-    var registrationContainer = registrationResult.unwrap();
-    appPrefs.addRecentPredictionUrl(url, registrationContainer.name);
-    AnalystDatabase().savePreferencesSync(appPrefs);
-
-    shooters.addAll(registrationContainer.registrations.values);
-
-    if(registrationContainer.unmatchedShooters.isNotEmpty) {
+    if(unmatchedRegistrations.isNotEmpty) {
       var newRegistrations = await showDialog<List<ShooterRating>>(context: context, builder: (context) {
         return AssociateRegistrationsDialog(
-            registrations: registrationContainer,
-            possibleMappings: options.where((element) => !registrationContainer.registrations.values.contains(element)).toList());
+          sport: _sport,
+          futureMatch: futureMatch,
+          unmatchedRegistrations: unmatchedRegistrations,
+          possibleMappings: options.where((element) => !shooters.contains(element)).toList(),
+        );
       }, barrierDismissible: false);
 
       if(newRegistrations != null) {
@@ -807,7 +791,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     int seed = _selectedMatch.date.millisecondsSinceEpoch;
     var predictions = _settings.algorithm.predict(shooters, seed: seed);
     Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-      return PredictionView(dataSource: dataSource, predictions: predictions, matchId: registrationContainer.matchId, filters: FilterSet(
+      return PredictionView(dataSource: dataSource, predictions: predictions, matchId: futureMatch.matchId, filters: FilterSet(
         _sport,
         mode: FilterMode.or,
         divisions: [...divisions],

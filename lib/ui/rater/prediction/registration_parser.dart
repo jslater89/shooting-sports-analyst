@@ -10,6 +10,7 @@ import 'package:collection/collection.dart';
 import 'package:cookie_store/cookie_store.dart';
 import 'package:html/parser.dart';
 import 'package:html_unescape/html_unescape_small.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
 import 'package:shooting_sports_analyst/data/match_cache/registration_cache.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
@@ -43,6 +44,8 @@ enum RegistrationError implements ResultErr {
 class RegistrationContainer {
   final String name;
   final String matchId;
+  final String? sportName;
+  final DateTime? date;
   final Map<Registration, ShooterRating> registrations;
   final List<Registration> unmatchedShooters;
 
@@ -51,7 +54,22 @@ class RegistrationContainer {
     this.matchId,
     this.registrations,
     this.unmatchedShooters,
+    this.sportName,
+    this.date,
   );
+
+  FutureMatch exportFutureMatch() {
+    var m = FutureMatch(
+      matchId: matchId,
+      eventName: name,
+      date: date ?? DateTime.now(),
+      sportName: sportName ?? "unknown",
+      sourceCode: "",
+      sourceIds: [matchId],
+    );
+    m.registrations.addAll(exportMatchRegistrations());
+    return m;
+  }
 
   List<MatchRegistration> exportMatchRegistrations() {
     var exported = <MatchRegistration>[];
@@ -62,7 +80,7 @@ class RegistrationContainer {
         shooterName: entry.key.name,
         shooterDivisionName: entry.key.division.name,
         shooterClassificationName: entry.key.classification.name,
-        shooterMemberNumber: entry.value.memberNumber,
+        shooterMemberNumbers: [entry.value.memberNumber],
         squad: entry.key.squad,
       ));
     }
@@ -110,13 +128,13 @@ class Registration {
   int get hashCode => name.hashCode + division.hashCode + classification.hashCode;
 }
 
-Future<RegistrationResult> getRegistrations(Sport sport, String url, List<Division> divisions, List<ShooterRating> knownShooters, {bool allowCached = true}) async {
-  if(!url.endsWith("squadding")) {
-    _log.i("Wrong URL");
-    return RegistrationResult.err(RegistrationError.badUrl);
-  }
+// TODO: the registration parser is doing two things here instead of just one
+// 1. Parsing out registrations from page source
+// 2. Matching registrations to shooters in a rating project
+// We should prefer to just parse out registrations, and build a second step
+// that matches registrations to ratings.
 
-  // Urls look like [https://]practiscore.com/match-id/[register|squadding[/printhtml]]
+String extractMatchIdFromUrl(String url) {
   var urlParts = url.split("/");
   var matchId = "";
   var nextIsId = false;
@@ -129,15 +147,34 @@ Future<RegistrationResult> getRegistrations(Sport sport, String url, List<Divisi
       nextIsId = true;
     }
   }
+  return matchId;
+}
+
+Future<RegistrationResult> getRegistrations(
+  Sport sport, String url,
+  List<Division> divisions,
+  List<ShooterRating> knownShooters,
+  {
+    bool allowCached = true,
+  }
+) async {
+  if(!url.endsWith("squadding")) {
+    _log.i("Wrong URL");
+    return RegistrationResult.err(RegistrationError.badUrl);
+  }
+
+  // Urls look like [https://]practiscore.com/match-id/[register|squadding[/printhtml]]
+  var urlParts = url.split("/");
+  var matchId = extractMatchIdFromUrl(url);
   if(matchId.isEmpty) {
     _log.w("No match ID found in $url");
+    return RegistrationResult.err(RegistrationError.noMatchId);
   }
 
   if(allowCached) {
-    var cached = await RegistrationCache().get(url);
+    var cached = await RegistrationCache().get(matchId);
     if(cached != null && cached.isNotEmpty) {
-      _log.i("Using cached registration for $url");
-      File("cached.html").writeAsStringSync(cached);
+      _log.i("Using cached registration for $matchId");
       return RegistrationResult.ok(_parseRegistrations(sport, matchId, cached, divisions, knownShooters));
     }
   }
@@ -161,7 +198,7 @@ Future<RegistrationResult> getRegistrations(Sport sport, String url, List<Divisi
 
       // Cache regardless of allowCached, so that new data gets
       // cached.
-      RegistrationCache().put(url, processedHtml);
+      RegistrationCache().put(matchId, processedHtml);
       return RegistrationResult.ok(_parseRegistrations(sport, matchId, processedHtml, divisions, knownShooters));
     }
     else {
@@ -173,6 +210,30 @@ Future<RegistrationResult> getRegistrations(Sport sport, String url, List<Divisi
   return RegistrationResult.err(RegistrationError.networkError);
 }
 
+Future<RegistrationResult> getRegistrationsFromHtml({
+  required String registrationHtml,
+  required Sport sport,
+  required String matchId,
+  required List<Division> divisions,
+  required List<ShooterRating> knownShooters,
+  bool allowCached = false,
+}) async {
+  if(allowCached) {
+    var cached = await RegistrationCache().get(matchId);
+    if(cached != null && cached.isNotEmpty) {
+      _log.i("Using cached registration for $matchId");
+      return RegistrationResult.ok(_parseRegistrations(sport, matchId, cached, divisions, knownShooters));
+    }
+  }
+
+  var processedHtml = _processRegistrationHtml(registrationHtml);
+  RegistrationCache().put(matchId, processedHtml);
+
+  return RegistrationResult.ok(
+    _parseRegistrations(sport, matchId, registrationHtml, divisions, knownShooters, warnOnUnmatched: false)
+  );
+}
+
 String _processRegistrationHtml(String registrationHtml) {
   // registrationHtml = registrationHtml.replaceAll("\n", "");
   registrationHtml = registrationHtml.replaceAll(RegExp(r"\s{4,}"), " ");
@@ -180,7 +241,14 @@ String _processRegistrationHtml(String registrationHtml) {
 }
 
 RegistrationContainer _parseRegistrations(
-  Sport sport, String matchId, String registrationHtml, List<Division> divisions, List<ShooterRating> knownShooters
+  Sport sport,
+  String matchId,
+  String registrationHtml,
+  List<Division> divisions,
+  List<ShooterRating> knownShooters,
+  {
+    bool warnOnUnmatched = false,
+  }
 ) {
   var ratings = <Registration, ShooterRating>{};
   var unmatched = <Registration>[];
@@ -188,6 +256,8 @@ RegistrationContainer _parseRegistrations(
   var document = HtmlParser(registrationHtml).parse();
 
   var matchName = "unnamed match";
+  var matchDate = practicalShootingZeroDate;
+  var sportName = "unknown";
 
   // Match a line
   var metaTitle = document.querySelector("meta[property='og:title']");
@@ -195,6 +265,23 @@ RegistrationContainer _parseRegistrations(
     matchName = metaTitle.attributes["content"]!;
     _log.d("Match name: $matchName");
   }
+
+  var metaMatchDate = document.querySelector("meta[name='match-date']");
+  if(metaMatchDate != null) {
+    try {
+      matchDate = programmerYmdFormat.parse(metaMatchDate.attributes["content"]!);
+    }
+    catch(e) {
+      _log.w("Unable to parse match date: ${metaMatchDate.attributes["content"]}", error: e);
+    }
+  }
+
+  var metaSportName = document.querySelector("meta[name='sport-name']");
+  if(metaSportName != null) {
+    sportName = metaSportName.attributes["content"]!;
+    _log.d("Sport name: $sportName");
+  }
+
   var shooterRegex = RegExp(r'(?<name>.*?)\s+\((?<division>[\w\s]+?)(\s+\/\s+(?<class>\w+?))?\)');
   // var matchRegex = RegExp(r'<meta\s+property="og:title"\s+content="(?<matchname>.*)"\s*/>');
   var unescape = HtmlUnescape();
@@ -225,7 +312,7 @@ RegistrationContainer _parseRegistrations(
       var title = innerSpan.attributes["title"] ?? "";
 
       if(title.isEmpty) {
-        if(innerSpan.text.toLowerCase() != "empty") {
+        if(!innerSpan.text.toLowerCase().contains("empty")) {
           _log.w("Unable to get title for shooter entry: ${innerSpan.outerHtml}");
         }
         continue;
@@ -233,7 +320,7 @@ RegistrationContainer _parseRegistrations(
 
       var matches = shooterRegex.allMatches(title);
 
-      if(matches.isEmpty) {
+      if(matches.isEmpty && warnOnUnmatched) {
         _log.w("No matches found for shooter: $title");
         continue;
       }
@@ -296,7 +383,9 @@ RegistrationContainer _parseRegistrations(
 
   _log.d("Found ${ratings.length} registrations from $regexMatches matches");
 
-  return RegistrationContainer(matchName, matchId, ratings, unmatched);
+  return RegistrationContainer(
+    matchName, matchId, ratings, unmatched, sportName, matchDate
+  );
 }
 
 String _processRegistrationName(String name) {

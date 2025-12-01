@@ -9,6 +9,7 @@ import 'dart:io';
 
 import 'package:hive/hive.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/rater/prediction/registration_parser.dart';
 
 var _log = SSALogger("RegistrationCache");
 
@@ -48,18 +49,34 @@ class RegistrationCache {
     );
   }
 
-  /// Contains match registration HTML. The key is the match URL.
+  /// Contains match registration HTML. The key is the match ID.
   late LazyBox<String> _box;
 
-  Future<void> put(String url, String html) async {
+  Future<List<String>> getMatchIds({String? prefix, int? limit}) async {
+    if(prefix != null) {
+      if(prefix.contains("http") || prefix.contains("practiscore.com")) {
+        prefix = extractMatchIdFromUrl(prefix);
+      }
+    }
     await _openBox();
-    await _box.put(url, html);
+    var keys = await _box.keys;
+    await _box.close();
+    var iterator = keys.map((k) => k as String).where((k) => prefix == null || k.toLowerCase().startsWith(prefix.toLowerCase())).toList();
+    if(limit != null) {
+      iterator = iterator.take(limit).toList();
+    }
+    return iterator.toList();
+  }
+
+  Future<void> put(String matchId, String html) async {
+    await _openBox();
+    await _box.put(matchId, html);
     await _box.close();
   }
 
-  Future<String?> get(String url) async {
+  Future<String?> get(String matchId) async {
     await _openBox();
-    var html = await _box.get(url);
+    var html = await _box.get(matchId);
     await _box.close();
     return html;
   }

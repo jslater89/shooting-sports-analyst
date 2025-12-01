@@ -8,6 +8,7 @@ import "dart:convert";
 import "dart:io";
 
 import "package:shooting_sports_analyst/api/riff/riff.dart";
+import "package:shooting_sports_analyst/data/database/schema/match_prep/match.dart";
 import "package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart";
 import "package:shooting_sports_analyst/util.dart";
 
@@ -17,30 +18,54 @@ class RiffExporter implements AbstractRiffExporter {
   static const String compressedMimeType = "application/x-riff+gzip";
 
   @override
-  Result<List<int>, ResultErr> exportRegistrations(List<MatchRegistration> registrations) {
+  Result<List<int>, ResultErr> exportMatch(FutureMatch match) {
     try {
-      var json = toJson(registrations);
+      var json = toJson(match);
       var jsonString = jsonEncode(json);
       var jsonBytes = utf8.encode(jsonString);
       var compressed = gzip.encode(jsonBytes);
       return Result.ok(compressed);
     } catch (e) {
-      return Result.err(StringError("Failed to export registrations: $e"));
+      return Result.err(StringError("Failed to export match: $e"));
     }
   }
 
-  /// Converts a list of MatchRegistration objects to RIFF JSON format.
-  Map<String, dynamic> toJson(List<MatchRegistration> registrations) {
+  /// Converts a FutureMatch object to RIFF JSON format.
+  Map<String, dynamic> toJson(FutureMatch match) {
+    // Build match object
+    var matchJson = <String, dynamic>{
+      "matchId": match.matchId,
+    };
+
+    if (match.eventName.isNotEmpty) {
+      matchJson["eventName"] = match.eventName;
+    }
+    if (match.date != practicalShootingZeroDate) {
+      matchJson["date"] = programmerYmdFormat.format(match.date);
+    }
+    if (match.sportName.isNotEmpty) {
+      matchJson["sportName"] = match.sportName;
+    }
+    if (match.sourceCode != null && match.sourceCode!.isNotEmpty) {
+      matchJson["sourceCode"] = match.sourceCode;
+    }
+    if (match.sourceIds != null && match.sourceIds!.isNotEmpty) {
+      matchJson["sourceIds"] = match.sourceIds;
+    }
+
+    // Get registrations from the match
+    var registrations = match.registrations.toList();
+
     return {
       "format": "riff",
       "version": "1.0",
+      "match": matchJson,
       "registrations": registrations.map((registration) => _registrationToJson(registration)).toList(),
     };
   }
 
   Map<String, dynamic> _registrationToJson(MatchRegistration registration) {
     var json = <String, dynamic>{
-      "matchId": registration.matchId,
       "entryId": registration.entryId,
     };
 
@@ -53,8 +78,8 @@ class RiffExporter implements AbstractRiffExporter {
     if (registration.shooterDivisionName != null) {
       json["shooterDivisionName"] = registration.shooterDivisionName;
     }
-    if (registration.shooterMemberNumber != null) {
-      json["shooterMemberNumber"] = registration.shooterMemberNumber;
+    if (registration.shooterMemberNumbers.isNotEmpty) {
+      json["shooterMemberNumbers"] = registration.shooterMemberNumbers;
     }
     if (registration.squad != null) {
       json["squad"] = registration.squad;

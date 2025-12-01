@@ -9,30 +9,30 @@
 /// This file defines the interfaces for RIFF import, export, and validation.
 library;
 
-import "package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart";
+import "package:shooting_sports_analyst/data/database/schema/match_prep/match.dart";
 import "package:shooting_sports_analyst/util.dart";
 
-/// Imports a list of MatchRegistration objects from RIFF format.
+/// Imports a FutureMatch from RIFF format.
 ///
 /// Takes gzip-compressed JSON bytes and returns a Result containing either
-/// a list of MatchRegistration objects or an error.
+/// a FutureMatch object or an error.
 abstract interface class AbstractRiffImporter {
-  /// Import registrations from RIFF bytes.
+  /// Import match from RIFF bytes.
   ///
   /// [riffBytes] should be gzip-compressed JSON bytes conforming to the RIFF specification.
-  /// Returns a Result with the imported list of MatchRegistration objects on success, or an error on failure.
-  Result<List<MatchRegistration>, ResultErr> importRegistrations(List<int> riffBytes);
+  /// Returns a Result with the imported FutureMatch on success, or an error on failure.
+  Result<FutureMatch, ResultErr> importMatch(List<int> riffBytes);
 }
 
-/// Exports a list of MatchRegistration objects to RIFF format.
+/// Exports a FutureMatch to RIFF format.
 ///
 /// Produces gzip-compressed JSON bytes conforming to the RIFF specification.
 abstract interface class AbstractRiffExporter {
-  /// Export registrations to RIFF format.
+  /// Export match to RIFF format.
   ///
   /// Returns gzip-compressed JSON bytes conforming to the RIFF specification.
   /// Returns a Result with the bytes on success, or an error on failure.
-  Result<List<int>, ResultErr> exportRegistrations(List<MatchRegistration> registrations);
+  Result<List<int>, ResultErr> exportMatch(FutureMatch match);
 }
 
 /// Validates RIFF format data.

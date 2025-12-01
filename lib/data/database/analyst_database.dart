@@ -27,7 +27,7 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
-import 'package:shooting_sports_analyst/data/database/schema/registration.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration_mapping.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/idpa.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';

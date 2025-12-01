@@ -10,16 +10,18 @@ import 'package:shooting_sports_analyst/util.dart';
 part 'registration.g.dart';
 
 /// A MatchRegistration is information about a match registration that may be sufficient
-/// to look up a shooter in a rating project.
+/// to look up a shooter in a rating project, sourced from a registration source.
 @collection
 class MatchRegistration {
+  /// A unique identifier for the registration based on the match ID and entry ID.
+  ///
+  /// If a registration source does not have a stable entryId, that registration source
+  /// should prefer to delete and recreate the FutureMatch and MatchRegistration objects.
   Id get id {
-    if(shooterMemberNumber != null) {
-      return combineHashes(matchId.stableHash, shooterMemberNumber!.stableHash);
-    }
-    else {
-      return combineHashes(matchId.stableHash, entryId.stableHash);
-    }
+    return combineHashList([
+      matchId.stableHash,
+      entryId.stableHash,
+    ]);
   }
   /// A unique identifier for the match.
   @Index()
@@ -34,7 +36,7 @@ class MatchRegistration {
   /// The division of the competitor.
   String? shooterDivisionName;
   /// The member number of the competitor.
-  String? shooterMemberNumber;
+  List<String> shooterMemberNumbers;
   /// The squad of the competitor.
   String? squad;
   /// The number of the squad of the competitor.
@@ -49,7 +51,7 @@ class MatchRegistration {
     this.shooterName,
     this.shooterClassificationName,
     this.shooterDivisionName,
-    this.shooterMemberNumber,
+    this.shooterMemberNumbers = const [],
     this.squad,
   });
 }

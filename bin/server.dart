@@ -12,11 +12,12 @@ import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/flutter_native_providers.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/server/matches/match_service.dart';
+import 'package:shooting_sports_analyst/server/matches/registration_service.dart';
 import 'package:shooting_sports_analyst/server/middleware/logger_middleware.dart';
 import 'package:shooting_sports_analyst/server/providers.dart';
 import 'package:shooting_sports_analyst/version.dart';
 
-final _log = SSALogger("Server Main");
+final _log = SSALogger("Server");
 
 Future<void> main() async {
   print("Starting server.");
@@ -55,6 +56,9 @@ Handler init(SSAAuthServer authServer) {
 
   var matchService = MatchService([createLoggerMiddleware(), createSSAAuthMiddleware(authServer)]);
   app.mount("/match", matchService.router);
+
+  var registrationService = RegistrationService([createLoggerMiddleware(), createSSAAuthMiddleware(authServer)]);
+  app.mount("/registration", registrationService.router);
 
   return app.call;
 }

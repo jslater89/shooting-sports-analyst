@@ -11,6 +11,13 @@ import 'package:intl/intl.dart';
 
 final DateFormat programmerYmdFormat = DateFormat("yyyy-MM-dd");
 final DateFormat programmerYmdHmFormat = DateFormat("yyyy-MM-dd HH:mm");
+
+/// A zero date for practical shooting matches, used to indicate that a date is not
+/// known.
+///
+/// It is the date of the Columbia Conference, which established IPSC as a sport.
+final practicalShootingZeroDate = DateTime(1976, 5, 24);
+
 abstract class ResultErr {
   String get message;
   const ResultErr();

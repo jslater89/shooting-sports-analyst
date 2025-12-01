@@ -6,7 +6,9 @@
 
 import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
-import 'package:shooting_sports_analyst/data/database/schema/registration.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration_mapping.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 
 var _log = SSALogger("RegistrationDatabase");
@@ -45,6 +47,18 @@ extension RegistrationDatabase on AnalystDatabase {
         totalDeleted += deleteCount;
       }
       _log.v("Deleted $totalDeleted match registration mappings");
+    });
+  }
+
+  Future<void> saveMatchRegistrations(List<MatchRegistration> registrations) async {
+    await isar.writeTxn(() async {
+      await isar.matchRegistrations.putAll(registrations);
+    });
+  }
+
+  void saveMatchRegistrationsSync(List<MatchRegistration> registrations) {
+    isar.writeTxnSync(() {
+      isar.matchRegistrations.putAllSync(registrations);
     });
   }
 }

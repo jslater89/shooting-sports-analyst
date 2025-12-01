@@ -9,6 +9,7 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
@@ -94,6 +95,8 @@ class _PredictionViewState extends State<PredictionView> {
       percentFloor = sortedPredictions.first.algorithm.estimateRatioFloor(ratingDelta, settings: sortedPredictions.first.settings);
       percentMult = 1.0 - percentFloor;
     }
+
+    var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
 
     return WillPopScope(
       onWillPop: () async {
@@ -197,14 +200,14 @@ class _PredictionViewState extends State<PredictionView> {
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(2.0),
-                  child: _buildPredictionsHeader(),
+                  child: _buildPredictionsHeader(uiScaleFactor),
                 ),
               ),
               Expanded(
                 child: ListView.builder(
                     itemCount: searchedPredictions.length,
                     itemBuilder: (context, i) {
-                      return _buildPredictionsRow(searchedPredictions[i], minValue, maxValue, percentFloor, percentMult, highPrediction, i);
+                      return _buildPredictionsRow(searchedPredictions[i], minValue, maxValue, percentFloor, percentMult, highPrediction, i, uiScaleFactor);
                     },
                 ),
               )
@@ -310,7 +313,7 @@ class _PredictionViewState extends State<PredictionView> {
     // });
   }
 
-  Widget _buildPredictionsHeader() {
+  Widget _buildPredictionsHeader(double uiScaleFactor) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
@@ -319,7 +322,7 @@ class _PredictionViewState extends State<PredictionView> {
           mainAxisSize: MainAxisSize.min,
           children: [
             SizedBox(
-              width: 250,
+              width: 250 * uiScaleFactor,
               child: TextField(
                 decoration: InputDecoration(
                   hintText: "Search"
@@ -336,7 +339,7 @@ class _PredictionViewState extends State<PredictionView> {
             ),
           ],
         ),
-        SizedBox(height: 15),
+        SizedBox(height: 15 * uiScaleFactor),
         Row(
           mainAxisSize: MainAxisSize.max,
           children: [
@@ -406,7 +409,7 @@ class _PredictionViewState extends State<PredictionView> {
     );
   }
 
-  Widget _buildPredictionsRow(AlgorithmPrediction pred, double min, double max, double percentFloor, double percentMult, double highPrediction, int index) {
+  Widget _buildPredictionsRow(AlgorithmPrediction pred, double min, double max, double percentFloor, double percentMult, double highPrediction, int index, double uiScaleFactor) {
     double renderMin = min * 0.95;
     double renderMax = max * 1.01;
 
@@ -430,6 +433,8 @@ class _PredictionViewState extends State<PredictionView> {
     }
 
     return ClickableLink(
+      color: Theme.of(context).colorScheme.onSurface,
+      underline: false,
       onTap: () {
         var latestEvent = pred.shooter.eventsWithWindow(window: 1).firstOrNull;
         if(latestEvent != null) {
@@ -511,7 +516,7 @@ class _PredictionViewState extends State<PredictionView> {
                     upperBoxColor: ThemeColors.onBackgroundColor(context),
                     whiskerColor: ThemeColors.onBackgroundColor(context),
                     fillBox: true,
-                    boxSize: 12,
+                    boxSize: 12 * uiScaleFactor,
                     strokeWidth: 1.5,
                     referenceLines: referenceLines,
                   ),

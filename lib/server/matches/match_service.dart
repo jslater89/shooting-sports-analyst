@@ -53,6 +53,8 @@ class MatchService {
   /// /search
   ///
   /// Searches for matches by name, returning a list of match search results.
+  ///
+  /// Search term is in the JSON body as {"query": "term"}.
   Future<Response> search(Request request) async {
     // Search in {"query": "term"} in the body
     var body = await request.body.asJson;

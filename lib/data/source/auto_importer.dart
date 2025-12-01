@@ -4,16 +4,22 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:archive/archive.dart';
+import 'package:html/parser.dart';
 import 'package:shooting_sports_analyst/api/miff/impl/miff_importer.dart';
 import 'package:shooting_sports_analyst/closed_sources/psv2/matchdef/match_info_zip.dart';
 import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
 import 'package:shooting_sports_analyst/config/serialized_config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/match_prep.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/flutter_native_providers.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/rater/prediction/registration_parser.dart';
 import 'package:shooting_sports_analyst/util.dart';
 import 'package:watcher/watcher.dart';
 
@@ -186,12 +192,128 @@ class AutoImporter {
     }
   }
 
+  Future<void> _handleFileImport(String path) async {
+    if(path.endsWith(".miff.gz") || path.endsWith(".miff") || path.endsWith(".psc")) {
+      // if the file is a .miff.gz, .miff, or .psc, import it as a match
+      _importMatch(path);
+    }
+    else if(path.endsWith(".riff") || path.endsWith(".riff.gz") || path.endsWith("squadding.zip")) {
+      // if the file is a .riff, .riff.gz, or squadding zip, import it as a registration
+      _importRegistrations(path);
+    }
+    else if(path.endsWith(".zip")) {
+      // A zip might be either a match info zip or a squadding zip, so peek inside to check
+      var file = File(path);
+      var bytes = file.readAsBytesSync();
+      var zip = ZipDecoder().decodeBytes(bytes);
+      bool foundSquadding = false;
+      bool foundMatchInfo = false;
+      for(var entry in zip) {
+        if(entry.name == "squadding.html") {
+          foundSquadding = true;
+        }
+        else if(entry.name == "match_def.json") {
+          foundMatchInfo = true;
+        }
+      }
+      if(foundMatchInfo) {
+        _importMatch(path);
+      }
+      else if(foundSquadding) {
+        _importRegistrations(path);
+      }
+      else {
+        _log.i("Zip file does not match either squadding or match info: $path");
+      }
+    }
+  }
+
+  Future<void> _importRegistrations(String path) async {
+    var file = File(path);
+    var bytes = file.readAsBytesSync();
+    var archive = await ZipDecoder().decodeBytes(bytes);
+    ArchiveFile? archiveFile;
+    for(var f in archive.files) {
+      if(f.name == "squadding.html") {
+        archiveFile = f;
+      }
+    }
+
+    if(archiveFile == null) {
+      _log.w("Zip file does not contain registration information");
+      return;
+    }
+
+    var archiveBytes = archiveFile.readBytes();
+    var registrationHtml = utf8.decode(archiveBytes ?? []);
+
+    var document = HtmlParser(registrationHtml).parse();
+
+    var sportName = "unknown";
+    var metaSportName = document.querySelector("meta[name='sport-name']");
+    if(metaSportName != null) {
+      sportName = metaSportName.attributes["content"]!;
+      _log.d("Sport name: $sportName");
+    }
+    if(sportName == "unknown") {
+      _log.e("Sport name is unknown, cannot import registrations");
+      _log.w("Zip file: $path");
+      return;
+    }
+
+    var metaMatchId = document.querySelector("meta[name='match-id']");
+    if(metaMatchId == null) {
+      _log.e("Match ID is unknown, cannot import registrations");
+      _log.w("Zip file: $path");
+      return;
+    }
+    var matchId = metaMatchId.attributes["content"]!;
+    _log.d("Match ID: $matchId");
+
+    var sport = SportRegistry().lookup(sportName, caseSensitive: false);
+    if(sport == null) {
+      _log.e("Sport not found: $sportName");
+      _log.w("Zip file: $path");
+      return;
+    }
+
+    // Pass to parser to get old-style registrations
+    // This will cache the HTML, which is sufficient for
+    var registrationResult = await getRegistrationsFromHtml(
+      registrationHtml: registrationHtml,
+      sport: sport,
+      matchId: matchId,
+      divisions: sport.divisions.values.toList(),
+      knownShooters: [],
+    );
+    if(registrationResult.isErr()) {
+      _log.e("Error getting registrations from HTML: ${registrationResult.unwrapErr().message}");
+      return;
+    }
+    var registrations = registrationResult.unwrap();
+
+    var exportedRegistrations = registrations.exportMatchRegistrations();
+    var futureMatch = registrations.exportFutureMatch();
+
+    // This source can't guarantee stable entry IDs, so overwrite all old registrations.
+    AnalystDatabase().saveFutureMatchSync(
+      futureMatch,
+      newRegistrations: exportedRegistrations,
+    );
+
+    // We need to re-apply any saved mappings to the new registrations too.
+    await futureMatch.updateRegistrationsFromMappings();
+
+    _log.i("Saved future match: ${futureMatch.matchId}");
+    return;
+  }
+
   Future<void> _onEvent(WatchEvent event) async {
     if(event.type == ChangeType.ADD) {
       var path = event.path;
       if(path.endsWith(".miff.gz") || path.endsWith(".miff") || path.endsWith(".zip") || path.endsWith(".psc")) {
         _waitForConsistentSize(path, () async {
-          _importMatch(path);
+          _handleFileImport(path);
         });
       }
     }

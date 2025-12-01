@@ -12,6 +12,7 @@ RIFF files are gzip-compressed JSON documents. When decompressed, the JSON has t
 {
   "format": "riff",
   "version": "1.0",
+  "match": { ... },
   "registrations": [ ... ]
 }
 ```
@@ -27,7 +28,21 @@ When delivered over HTTP connections, it is recommended to use RIFF-specific MIM
 |-------|------|----------|-------------|
 | `format` | string | Yes | Must be `"riff"` |
 | `version` | string | Yes | Format version (e.g., `"1.0"`) |
+| `match` | object | Yes | Match information (see Match Object) |
 | `registrations` | array | Yes | Array of registration objects (see Registration Object) |
+
+## Match Object
+
+The match object contains information about the match for which registrations are being exchanged.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `matchId` | string | Yes | A unique identifier for the match. If a unique identifier is not yet available, this may be a synthetic ID |
+| `eventName` | string | No | The name of the event |
+| `date` | string | No | ISO 8601 date (YYYY-MM-DD) |
+| `sportName` | string | No | The sport of the event |
+| `sourceCode` | string | No | The source code of the event, if available |
+| `sourceIds` | array[string] | No | The source IDs of the event, if available |
 
 ## Registration Object
 
@@ -35,12 +50,11 @@ A registration object represents a single competitor's registration for a match.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `matchId` | string | Yes | A unique identifier for the match |
 | `entryId` | string | Yes | An entry identifier for the shooter, used to uniquely identify the shooter in the match. This may be synthetic if a unique ID is unavailable in the registration source |
 | `shooterName` | string | No | The name of the competitor |
 | `shooterClassificationName` | string | No | The classification of the competitor |
 | `shooterDivisionName` | string | No | The division of the competitor |
-| `shooterMemberNumber` | string | No | The member number of the competitor |
+| `shooterMemberNumbers` | array[string] | No | The member number(s) of the competitor |
 | `squad` | string | No | The squad of the competitor (e.g., `"Squad 1"`, `"Squad A"`) |
 
 **Note:** The `squadNumber` field is a computed property derived from `squad` and is not stored or serialized in RIFF format.
@@ -51,30 +65,33 @@ A registration object represents a single competitor's registration for a match.
 {
   "format": "riff",
   "version": "1.0",
+  "match": {
+    "matchId": "2024-area-4-championship",
+    "eventName": "2024 Area 4 Championship",
+    "date": "2024-05-15",
+    "sportName": "uspsa"
+  },
   "registrations": [
     {
-      "matchId": "2024-area-4-championship",
       "entryId": "12345",
       "shooterName": "John Doe",
       "shooterClassificationName": "GM",
       "shooterDivisionName": "Limited",
-      "shooterMemberNumber": "A12345",
+      "shooterMemberNumbers": ["A12345"],
       "squad": "Squad 1"
     },
     {
-      "matchId": "2024-area-4-championship",
       "entryId": "12346",
       "shooterName": "Jane Smith",
       "shooterClassificationName": "M",
       "shooterDivisionName": "Production",
-      "shooterMemberNumber": "A67890",
+      "shooterMemberNumbers": ["A67890"],
       "squad": "Squad 2"
     },
     {
-      "matchId": "2024-area-4-championship",
       "entryId": "12347",
       "shooterName": "Bob Johnson",
-      "shooterMemberNumber": "A11111",
+      "shooterMemberNumbers": ["A11111"],
       "squad": "Squad 1"
     }
   ]

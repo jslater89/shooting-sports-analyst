@@ -11,8 +11,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/registrations.dart';
-import 'package:shooting_sports_analyst/data/database/schema/registration.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration_mapping.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/rater/prediction/registration_parser.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -20,9 +23,11 @@ import 'package:shooting_sports_analyst/util.dart';
 var _log = SSALogger("AssocRegistrationsDialog");
 
 class AssociateRegistrationsDialog extends StatefulWidget {
-  const AssociateRegistrationsDialog({Key? key, required this.registrations, required this.possibleMappings}) : super(key: key);
+  const AssociateRegistrationsDialog({Key? key, required this.sport, required this.futureMatch, required this.unmatchedRegistrations, required this.possibleMappings}) : super(key: key);
 
-  final RegistrationContainer registrations;
+  final Sport sport;
+  final FutureMatch futureMatch;
+  final List<MatchRegistration> unmatchedRegistrations;
   final List<ShooterRating> possibleMappings;
 
   @override
@@ -30,21 +35,25 @@ class AssociateRegistrationsDialog extends StatefulWidget {
 }
 
 class _AssociateRegistrationsDialogState extends State<AssociateRegistrationsDialog> {
-  late Map<Registration, ShooterRating> selectedMappings;
+  late Map<MatchRegistration, ShooterRating> selectedMappings;
   late List<ShooterRating> remainingOptions;
   bool persistMappings = true;
 
   @override
   void initState() {
     super.initState();
-    widget.registrations.unmatchedShooters.sort((a, b) => a.classification.index.compareTo(b.classification.index));
+    widget.unmatchedRegistrations.sort((a, b) {
+      var aClassification = widget.sport.classifications.lookupByName(a.shooterClassificationName);
+      var bClassification = widget.sport.classifications.lookupByName(b.shooterClassificationName);
+      return aClassification?.index.compareTo(bClassification?.index ?? 0) ?? 0;
+    });
 
     selectedMappings = {};
     remainingOptions = []..addAll(widget.possibleMappings);
     loadSavedMappings();
   }
 
-  List<Registration> deletedMappings = [];
+  List<MatchRegistration> deletedMappings = [];
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +77,7 @@ class _AssociateRegistrationsDialogState extends State<AssociateRegistrationsDia
               ),
               Expanded(
                 child: ListView(
-                  children: widget.registrations.unmatchedShooters.map((unmatched) {
+                  children: widget.unmatchedRegistrations.map((unmatched) {
                     var enabled = true;
                     var currentMapping = selectedMappings[unmatched];
                     var controller = TextEditingController();
@@ -79,9 +88,11 @@ class _AssociateRegistrationsDialogState extends State<AssociateRegistrationsDia
 
                     return StatefulBuilder(
                       builder: (context, setState) {
+                        var classification = widget.sport.classifications.lookupByName(unmatched.shooterClassificationName);
+                        var division = widget.sport.divisions.lookupByName(unmatched.shooterDivisionName);
                         return Row(
                           children: [
-                            Expanded(child: Text("${unmatched.name} (${unmatched.division.displayName} ${unmatched.classification.displayName})")),
+                            Expanded(child: Text("${unmatched.shooterName} (${division?.displayName ?? "(unknown division)"} ${classification?.displayName ?? "(no classification)"})")),
                             Expanded(
                               child: SizedBox(
                                 width: 250,
@@ -169,46 +180,46 @@ class _AssociateRegistrationsDialogState extends State<AssociateRegistrationsDia
     var db = AnalystDatabase();
     int found = 0;
     int applied = 0;
-    for(var unmatched in widget.registrations.unmatchedShooters) {
-      var mapping = await db.getMatchRegistrationMappingByName(matchId: widget.registrations.matchId, shooterName: unmatched.name, shooterDivisionName: unmatched.division.name);
+    for(var unmatched in widget.unmatchedRegistrations) {
+      var mapping = await db.getMatchRegistrationMappingByName(matchId: widget.futureMatch.matchId, shooterName: unmatched.shooterName ?? "", shooterDivisionName: unmatched.shooterDivisionName ?? "");
       if(mapping != null) {
         found += 1;
         var foundMapping = widget.possibleMappings.firstWhereOrNull((r) => r.allPossibleMemberNumbers.intersects(mapping.detectedMemberNumbers));
-        var registration = widget.registrations.unmatchedShooters.firstWhereOrNull((r) => r.name == mapping.shooterName);
+        var registration = widget.unmatchedRegistrations.firstWhereOrNull((r) => r.shooterName == mapping.shooterName && r.shooterDivisionName == mapping.shooterDivisionName && r.shooterClassificationName == mapping.shooterClassificationName);
         if(foundMapping != null && registration != null) {
           selectedMappings[registration] = foundMapping;
           applied += 1;
         }
         else if(foundMapping != null) {
-          _log.w("Found mapping for ${unmatched.name} but no registration");
+          _log.w("Found mapping for ${unmatched.shooterName} but no registration");
         }
         else if(registration != null) {
-          _log.w("Found registration for ${unmatched.name} but no mapping");
+          _log.w("Found registration for ${unmatched.shooterName} but no mapping");
         }
       }
     }
-    _log.i("Found $found mappings, applied $applied to ${widget.registrations.unmatchedShooters.length} unmatched shooters");
+    _log.i("Found $found mappings, applied $applied to ${widget.unmatchedRegistrations.length} unmatched registrations");
     setState(() {});
   }
 
   Future<void> saveMappings() async {
     var db = AnalystDatabase();
     var mappings = selectedMappings.entries.map((e) => MatchRegistrationMapping(
-      matchId: widget.registrations.matchId,
-      shooterName: e.key.name,
-      shooterClassificationName: e.key.classification.name,
-      shooterDivisionName: e.key.division.name,
+      matchId: widget.futureMatch.matchId,
+      shooterName: e.key.shooterName ?? "",
+      shooterClassificationName: e.key.shooterClassificationName ?? "",
+      shooterDivisionName: e.key.shooterDivisionName ?? "",
       detectedMemberNumbers: e.value.allPossibleMemberNumbers.toList(),
       squad: e.key.squad,
     )).toList();
 
-    await db.saveMatchRegistrationMappings(widget.registrations.matchId, mappings);
-    await db.deleteMatchRegistrationMappingsByNames(matchId: widget.registrations.matchId, shooterNames: deletedMappings.map((e) => e.name).toList());
+    await db.saveMatchRegistrationMappings(widget.futureMatch.matchId, mappings);
+    await db.deleteMatchRegistrationMappingsByNames(matchId: widget.futureMatch.matchId, shooterNames: deletedMappings.map((e) => e.shooterName ?? "").toList());
 
     _log.i("Saved ${mappings.length} mappings and deleted ${deletedMappings.length} mappings");
   }
 
-  String _formatMapping(Registration registration, ShooterRating mapping) {
+  String _formatMapping(MatchRegistration registration, ShooterRating mapping) {
     return "${mapping.getName(suffixes: false)} ${mapping.memberNumber} (${mapping.division?.displayName ?? "NO DIVISION"} ${mapping.lastClassification?.displayName})";
   }
 }
