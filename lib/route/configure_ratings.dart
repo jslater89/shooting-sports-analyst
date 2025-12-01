@@ -20,6 +20,8 @@ import 'package:shooting_sports_analyst/data/database/util.dart';
 import 'package:shooting_sports_analyst/data/help/entries/configure_ratings_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/elo_configuration_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/elo_help.dart';
+import 'package:shooting_sports_analyst/data/help/entries/glicko2_configuration_help.dart';
+import 'package:shooting_sports_analyst/data/help/entries/glicko2_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/marbles_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/openskill_help.dart';
 import 'package:shooting_sports_analyst/data/help/entries/points_help.dart';
@@ -308,6 +310,11 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
     else if(_ratingSystem is Glicko2Rater) {
       settings as Glicko2Settings;
       _ratingSystem = Glicko2Rater(settings: settings);
+      Map<String, dynamic> settingsJson = {};
+      settings.encodeToJson(settingsJson);
+
+      var jsonEncoder = JsonEncoder.withIndent("  ");
+      _log.d("Glicko-2 settings as JSON: ${jsonEncoder.convert(settingsJson)}");
     }
     else if(_ratingSystem is MarbleRater) {
       settings as MarbleSettings;
@@ -1597,7 +1604,7 @@ enum _ConfigurableRater {
     _ConfigurableRater.openskill => openskillHelpId,
     _ConfigurableRater.points => pointsHelpId,
     _ConfigurableRater.marbles => marblesHelpId,
-    _ConfigurableRater.glicko2 => eloHelpId,
+    _ConfigurableRater.glicko2 => glicko2HelpId,
   };
 
   String get configHelpId => switch(this) {
@@ -1605,6 +1612,6 @@ enum _ConfigurableRater {
     _ConfigurableRater.openskill => openskillHelpId,
     _ConfigurableRater.points => pointsHelpId,
     _ConfigurableRater.marbles => marblesHelpLink,
-    _ConfigurableRater.glicko2 => eloConfigHelpId,
+    _ConfigurableRater.glicko2 => glicko2ConfigHelpId,
   };
 }

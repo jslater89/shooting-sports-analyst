@@ -15,7 +15,6 @@ import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rating_event.dart';
-import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_score_functions.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_settings.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
@@ -180,7 +179,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     // pass over all the scores.
     for(var opponent in opponents) {
       opponent as Glicko2Rating;
-      var opponentRDAtMatch = opponent.calculateCurrentInternalRD(asOfDate: match.date, maximumRD: settings.internalMaximumRD);
+      var opponentRDAtMatch = opponent.calculateCurrentInternalRD(asOfDate: match.date);
       var opponentMatchScore = matchScores[opponent];
       if(opponentMatchScore == null) {
         continue;
@@ -238,7 +237,6 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     var rdStar = shooter.calculateCurrentInternalRD(
       volatilityOverride: newVolatility,
       asOfDate: match.date,
-      maximumRD: settings.internalMaximumRD,
     );
     var rdPrime = 1 / sqrt((1 / pow(rdStar, 2)) + (1 / v));
     if(rdPrime > settings.internalMaximumRD) {
@@ -312,12 +310,15 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
 
   /// Get the top 10% of opponents by rating and match finish. Input must be sorted by match finish.
   List<ShooterRating> _selectTop10PctOpponents(List<ShooterRating> opponentsByFinish, List<ShooterRating> opponentsByRating) {
-    var top10Pct = (opponentsByFinish.length * 0.1).ceil();
+    var percentToTake = 0.1;
+    if(opponentsByFinish.length < 10) {
+      percentToTake = 0.3;
+    }
+    var top10Pct = (opponentsByFinish.length * percentToTake).ceil();
     var top10PctByMatchFinish = opponentsByFinish.take(top10Pct).toSet();
 
-    var sortedByRating = (opponentsByRating.length * 0.1).ceil();
+    var sortedByRating = (opponentsByRating.length * percentToTake).ceil();
     var top10PctByRating = opponentsByRating.take(sortedByRating).toSet();
-
 
      top10PctByMatchFinish.addAll(top10PctByRating);
      return top10PctByMatchFinish.toList();
@@ -336,7 +337,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
         continue;
       }
       var opponentRatio = opponentMatchScore.ratio;
-      if((opponentRatio - competitorRatio).abs() <= settings.maximumRD) {
+      if((opponentRatio - competitorRatio).abs() <= 0.1) {
         nearbyOpponents.add(opponent);
       }
     }

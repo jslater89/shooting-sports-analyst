@@ -125,7 +125,7 @@ class _RatingDistributionDialogState extends State<RatingDistributionDialog> {
     }
 
     return AlertDialog(
-      title: Text("Distribution vs. histogram (${widget.group.name}, ${widget.statistics.ratingDistribution.runtimeType})"),
+      title: Text("Distribution vs. histogram (${widget.group.name}, ${distribution.runtimeType})"),
       content: SizedBox(
         width: size.width * 0.9,
         height: size.height * 0.9,

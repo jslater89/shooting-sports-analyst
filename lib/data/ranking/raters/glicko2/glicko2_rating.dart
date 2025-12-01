@@ -117,12 +117,10 @@ class Glicko2Rating extends ShooterRating<Glicko2RatingEvent> {
   ///
   /// If [volatilityOverride] is provided, it will be used instead of the current volatility.
   /// If [asOfDate] is provided, it will be used instead of the current date.
-  /// If [maximumRD] is provided, it will be used to limit the RD to the maximum value. It should
-  /// be provided in internal units.
   ///
   /// No-argument calls are suitable for showing a real-time gain in RD in a UI. Both arguments
   /// should be provided when calculating the RD as part of the rating process.
-  double calculateCurrentInternalRD({double? volatilityOverride, DateTime? asOfDate, double? maximumRD}) {
+  double calculateCurrentInternalRD({double? volatilityOverride, DateTime? asOfDate}) {
     asOfDate ??= DateTime.now();
     if(ratingPeriodLength == null) {
       var settings = wrappedRating.project.value!.settings.algorithm.settings as Glicko2Settings;
@@ -135,9 +133,7 @@ class Glicko2Rating extends ShooterRating<Glicko2RatingEvent> {
     var daysSinceLastCommit = asOfDate.difference(lastCommitTimestamp.toDateTime()).inDays;
     var ratingPeriodsSinceLastCommit = daysSinceLastCommit / ratingPeriodLength!;
     var rd = sqrt(pow(committedInternalRD, 2) + (pow(volatilityValue, 2) * ratingPeriodsSinceLastCommit));
-    if(maximumRD != null) {
-      rd = min(rd, maximumRD);
-    }
+    rd = min(rd, settings.internalMaximumRD);
     return rd;
   }
 

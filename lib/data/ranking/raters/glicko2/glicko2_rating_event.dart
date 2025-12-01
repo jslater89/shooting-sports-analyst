@@ -111,7 +111,7 @@ class Glicko2RatingEvent extends RatingEvent {
 
     // Base class keys
     internalRatingChange += change.change[RatingSystem.ratingKey]!;
-    ratingChange = change.change[RatingSystem.ratingKey]! * Glicko2Settings.defaultScalingFactor;
+    ratingChange = change.change[RatingSystem.ratingKey]! * settings.scalingFactor;
     extraData = change.extraData;
     infoLines = change.infoLines;
     infoData = change.infoData;

@@ -7,7 +7,7 @@
 import "package:flutter/material.dart";
 import "package:flutter/services.dart";
 import "package:shooting_sports_analyst/config/config.dart";
-import "package:shooting_sports_analyst/data/help/entries/elo_configuration_help.dart";
+import "package:shooting_sports_analyst/data/help/entries/glicko2_configuration_help.dart";
 import "package:shooting_sports_analyst/data/ranking/model/rating_settings_ui.dart";
 import "package:shooting_sports_analyst/data/ranking/model/rating_system_ui.dart";
 import "package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_score_functions.dart";
@@ -162,6 +162,10 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
         _validateText();
       }
     });
+
+    _scalingFactorController.addListener(() {
+      // Don't auto-validate, user needs to click Apply
+    });
   }
 
   void _fillTextFields() {
@@ -178,6 +182,38 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
 
   void _updateScalingFactorDisplay() {
     _scalingFactorController.text = _getCurrentScalingFactor().toStringAsFixed(4);
+  }
+
+  void _applyScalingFactor() {
+    // Use the current calculated scaling factor to normalize all scalable fields
+    final currentScalingFactor = _getCurrentScalingFactor();
+    if(currentScalingFactor <= 0) {
+      widget.controller.lastError = "Scaling factor must be a positive number";
+      return;
+    }
+
+    // Calculate new values based on the current scale factor to normalize them
+    final newInitialRating = currentScalingFactor / Glicko2Settings.defaultScalingFactor * Glicko2Settings.defaultInitialRating;
+    final newStartingRD = currentScalingFactor / Glicko2Settings.defaultScalingFactor * Glicko2Settings.defaultStartingRD;
+    final newMaximumRD = currentScalingFactor / Glicko2Settings.defaultScalingFactor * Glicko2Settings.defaultMaximumRD;
+    final newMaximumRatingDelta = currentScalingFactor / Glicko2Settings.defaultScalingFactor * Glicko2Settings.defaultMaximumRatingDelta;
+
+    // Update the settings
+    settings.initialRating = newInitialRating;
+    settings.startingRD = newStartingRD;
+    settings.maximumRD = newMaximumRD;
+    settings.maximumRatingDelta = newMaximumRatingDelta;
+
+    // Update the text fields
+    _initialRatingController.text = newInitialRating.toStringAsFixed(0);
+    _startingRDController.text = newStartingRD.toStringAsFixed(0);
+    _maximumRDController.text = newMaximumRD.toStringAsFixed(0);
+    _maximumRatingDeltaController.text = newMaximumRatingDelta.toStringAsFixed(0);
+
+    // Validate and notify
+    _validateText();
+    widget.controller.settingsChanged();
+    setState(() {});
   }
 
   double _getCurrentScalingFactor() {
@@ -290,6 +326,8 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
     if(settings.scoreFunctionType == ScoreFunctionType.linearMarginOfVictory) {
       settings.perfectVictoryDifference = perfectVictoryDifference!;
     }
+    // Update scaling factor display when initial rating changes
+    _updateScalingFactorDisplay();
     widget.controller.lastError = null;
   }
 
@@ -305,7 +343,7 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
           Row(
             children: [
               Text("Glicko-2 configuration", style: Theme.of(context).textTheme.labelLarge!),
-              HelpButton(helpTopicId: eloConfigHelpId),
+              HelpButton(helpTopicId: glicko2ConfigHelpId),
             ],
           ),
           Row(
@@ -313,7 +351,7 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Tooltip(
-                message: "The initial rating for new competitors, in display units",
+                message: "The initial rating for new competitors, in display units. Controls the scaling factor.",
                 child: Padding(
                   padding: const EdgeInsets.only(left: 16),
                   child: Text("Initial rating", style: Theme.of(context).textTheme.bodyLarge),
@@ -337,19 +375,33 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Tooltip(
-                message: "The scaling factor to convert between internal and display units. Automatically calculated from initial rating. Edit Initial Rating to change this value.",
+                message: "The scaling factor to convert between internal and display units. Automatically calculated from initial rating.\n"
+                "Use the Apply button to set initial rating, starting RD, maximum RD, and maximum rating delta to match a target scaling factor.",
                 child: Padding(
                   padding: const EdgeInsets.only(left: 16),
                   child: Text("Scaling factor", style: Theme.of(context).textTheme.bodyLarge),
                 ),
               ),
-              SizedBox(
-                width: 100 * uiScaleFactor,
-                child: TextFormField(
-                  enabled: false,
-                  controller: _scalingFactorController,
-                  textAlign: TextAlign.end,
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 100 * uiScaleFactor,
+                    child: TextFormField(
+                      enabled: false,
+                      controller: _scalingFactorController,
+                      textAlign: TextAlign.end,
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Tooltip(
+                    message: "Set initial rating, starting RD, maximum RD, and maximum rating delta to match the current scaling factor proportionally",
+                    child: IconButton(
+                      onPressed: _applyScalingFactor,
+                      icon: Icon(Icons.arrow_forward),
+                    ),
+                  ),
+                ],
               )
             ]
           ),
@@ -392,6 +444,30 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
                 width: 100 * uiScaleFactor,
                 child: TextFormField(
                   controller: _maximumRDController,
+                  textAlign: TextAlign.end,
+                  keyboardType: TextInputType.numberWithOptions(decimal: false, signed: false),
+                  inputFormatters: [
+                    FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
+                  ],
+                ),
+              )
+            ]
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Tooltip(
+                message: "The largest rating change permitted per match, in display units",
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: Text("Maximum rating delta", style: Theme.of(context).textTheme.bodyLarge),
+                ),
+              ),
+              SizedBox(
+                width: 100 * uiScaleFactor,
+                child: TextFormField(
+                  controller: _maximumRatingDeltaController,
                   textAlign: TextAlign.end,
                   keyboardType: TextInputType.numberWithOptions(decimal: false, signed: false),
                   inputFormatters: [
@@ -466,30 +542,6 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
                   controller: _initialVolatilityController,
                   textAlign: TextAlign.end,
                   keyboardType: TextInputType.numberWithOptions(decimal: true, signed: false),
-                  inputFormatters: [
-                    FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
-                  ],
-                ),
-              )
-            ]
-          ),
-          Row(
-            mainAxisSize: MainAxisSize.max,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Tooltip(
-                message: "The maximum rating change to allow per match, in display units",
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 16),
-                  child: Text("Maximum rating delta", style: Theme.of(context).textTheme.bodyLarge),
-                ),
-              ),
-              SizedBox(
-                width: 100 * uiScaleFactor,
-                child: TextFormField(
-                  controller: _maximumRatingDeltaController,
-                  textAlign: TextAlign.end,
-                  keyboardType: TextInputType.numberWithOptions(decimal: false, signed: false),
                   inputFormatters: [
                     FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
                   ],
