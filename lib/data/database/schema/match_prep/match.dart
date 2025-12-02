@@ -34,8 +34,20 @@ class FutureMatch {
   /// The event name, split by words.
   List<String> get eventNameParts => Isar.splitWords(eventName);
 
-  /// The date of the event.
+  /// The start date of the event.
+  @Index()
   DateTime date;
+
+  /// A convenience property for the start date of the event.
+  ///
+  /// Equivalent to [date] for backward compatibility.
+  @ignore
+  DateTime get startDate => date;
+
+  /// The end date of the event.
+  @Index()
+  DateTime? endDate;
+
   /// The sport of the event.
   String sportName;
   /// The source code of the event, if available.

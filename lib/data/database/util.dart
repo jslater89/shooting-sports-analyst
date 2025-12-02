@@ -92,3 +92,12 @@ class IsarLinksChange<T> {
     return "IsarLinksChange(added: $added, removed: $removed)";
   }
 }
+
+(T?, Iterable<T>) buildQueryElementLists<T>(Iterable<T> elements, T? where) {
+  if(where == null) {
+    return (null, elements);
+  }
+  else {
+    return (where, elements.where((element) => element != where));
+  }
+}

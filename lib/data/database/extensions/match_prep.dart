@@ -6,9 +6,10 @@
 
 import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
-import 'package:shooting_sports_analyst/data/database/match/match_query_element.dart';
+import 'package:shooting_sports_analyst/data/database/match/future_match_query_element.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
+import 'package:shooting_sports_analyst/data/database/util.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
@@ -126,63 +127,31 @@ extension MatchPrepDatabase on AnalystDatabase {
   /// Query future matches with pagination, sorting, and filtering.
   ///
   /// Similar to [AnalystDatabase.queryMatches] but for [FutureMatch].
-  /// Note: Since FutureMatch doesn't have date/sportName indexes, filtering and sorting is done in memory.
   Future<List<FutureMatch>> queryFutureMatches({
     String? name,
     DateTime? after,
     DateTime? before,
     int page = 0,
     int pageSize = 100,
-    MatchSortField sort = const DateSort(),
+    FutureMatchSortField sort = const DateSort(),
     Sport? sport,
   }) async {
-    // Load all matches and filter/sort in memory (FutureMatch is typically a smaller dataset)
-    List<FutureMatch> matches = await isar.futureMatchs.where().findAll();
-
-    // Apply filters in memory
-    if (name != null && name.isNotEmpty) {
-      var nameLower = name.toLowerCase();
-      matches = matches.where((m) => m.eventName.toLowerCase().contains(nameLower)).toList();
-    }
-
-    if (sport != null) {
-      matches = matches.where((m) => m.sportName == sport.name).toList();
-    }
-
-    if (after != null) {
-      matches = matches.where((m) => m.date.isAfter(after) || m.date.isAtSameMomentAs(after)).toList();
-    }
-
-    if (before != null) {
-      matches = matches.where((m) => m.date.isBefore(before) || m.date.isAtSameMomentAs(before)).toList();
-    }
-
-    // Apply sorting in memory (since FutureMatch doesn't have date/sportName indexes)
-    switch (sort) {
-      case NameSort():
-        matches.sort((a, b) {
-          var comparison = a.eventName.compareTo(b.eventName);
-          return sort.desc ? -comparison : comparison;
-        });
-        break;
-      case DateSort():
-        matches.sort((a, b) {
-          var comparison = a.date.compareTo(b.date);
-          return sort.desc ? -comparison : comparison;
-        });
-        break;
-    }
-
-    // Apply pagination
-    var start = page * pageSize;
-    var end = start + pageSize;
-    if (start >= matches.length) {
-      return [];
-    }
-    if (end > matches.length) {
-      end = matches.length;
-    }
-    return matches.sublist(start, end);
+    List<FutureMatchQueryElement> elements = [
+      if(name != null)
+        NamePartsQuery(name),
+      if(sport != null)
+        SportQuery([sport]),
+      if(after != null || before != null)
+        DateQuery(after: after, before: before),
+    ];
+    var query = _buildFutureMatchQuery(
+      elements,
+      sort: sort,
+      limit: pageSize,
+      offset: page * pageSize,
+    );
+    var matches = await query.findAll();
+    return matches;
   }
 
   /// Return Isar future match IDs matching the query.
@@ -195,57 +164,20 @@ extension MatchPrepDatabase on AnalystDatabase {
     DateTime? before,
     int page = 0,
     int pageSize = 100,
-    MatchSortField sort = const DateSort(),
+    FutureMatchSortField sort = const DateSort(),
     List<Sport>? sports,
   }) async {
-    // Load all matches and filter/sort in memory (FutureMatch is typically a smaller dataset)
-    List<FutureMatch> matches = await isar.futureMatchs.where().findAll();
-
-    // Apply filters in memory
-    if (name != null && name.isNotEmpty) {
-      var nameLower = name.toLowerCase();
-      matches = matches.where((m) => m.eventName.toLowerCase().contains(nameLower)).toList();
-    }
-
-    if (sports != null && sports.isNotEmpty) {
-      var sportNames = sports.map((s) => s.name).toSet();
-      matches = matches.where((m) => sportNames.contains(m.sportName)).toList();
-    }
-
-    if (after != null) {
-      matches = matches.where((m) => m.date.isAfter(after) || m.date.isAtSameMomentAs(after)).toList();
-    }
-
-    if (before != null) {
-      matches = matches.where((m) => m.date.isBefore(before) || m.date.isAtSameMomentAs(before)).toList();
-    }
-
-    // Apply sorting in memory (since FutureMatch doesn't have date/sportName indexes)
-    switch (sort) {
-      case NameSort():
-        matches.sort((a, b) {
-          var comparison = a.eventName.compareTo(b.eventName);
-          return sort.desc ? -comparison : comparison;
-        });
-        break;
-      case DateSort():
-        matches.sort((a, b) {
-          var comparison = a.date.compareTo(b.date);
-          return sort.desc ? -comparison : comparison;
-        });
-        break;
-    }
-
-    // Apply pagination and get IDs
-    var start = page * pageSize;
-    var end = start + pageSize;
-    if (start >= matches.length) {
-      return [];
-    }
-    if (end > matches.length) {
-      end = matches.length;
-    }
-    return matches.sublist(start, end).map((m) => m.id).toList();
+    List<FutureMatchQueryElement> elements = [
+      if(name != null)
+        NamePartsQuery(name),
+      if(sports != null && sports.isNotEmpty)
+        SportQuery(sports),
+      if(after != null || before != null)
+        DateQuery(after: after, before: before),
+    ];
+    var query = _buildFutureMatchIdQuery(elements, sort: sort);
+    var ids = await query.findAll();
+    return ids;
   }
 
   /// Delete a future match by its internal ID.
@@ -253,6 +185,134 @@ extension MatchPrepDatabase on AnalystDatabase {
     await isar.writeTxn(() async {
       await isar.futureMatchs.delete(id);
     });
+  }
+
+  Query<FutureMatch> _buildFutureMatchQuery(List<FutureMatchQueryElement> elements, {
+    int? limit,
+    int? offset,
+    FutureMatchSortField sort = const DateSort(),
+  }) {
+    var (whereElement, filterElements, sortProperties, whereSort) = _buildFutureMatchQueryElements(
+      elements,
+      sort: sort,
+      limit: limit,
+      offset: offset,
+    );
+
+    Query<FutureMatch> query = this.isar.futureMatchs.buildQuery(
+      whereClauses: whereElement?.whereClauses ?? [],
+      filter: filterElements.isEmpty ? null : FilterGroup.and([
+        for(var f in filterElements)
+          if(f.filterCondition != null)
+            f.filterCondition!,
+      ]),
+      sortBy: sortProperties,
+      whereSort: whereSort,
+      limit: limit,
+      offset: offset,
+    );
+
+    return query;
+  }
+
+  Query<int> _buildFutureMatchIdQuery(List<FutureMatchQueryElement> elements, {
+    int? limit,
+    int? offset,
+    FutureMatchSortField sort = const DateSort(),
+  }) {
+    var (whereElement, filterElements, sortProperties, whereSort) = _buildFutureMatchQueryElements(
+      elements,
+      sort: sort,
+      limit: limit,
+      offset: offset,
+    );
+
+    Query<int> query = this.isar.futureMatchs.buildQuery(
+      whereClauses: whereElement?.whereClauses ?? [],
+      filter: filterElements.isEmpty ? null : FilterGroup.and([
+        for(var f in filterElements)
+          if(f.filterCondition != null)
+            f.filterCondition!,
+      ]),
+      sortBy: sortProperties,
+      property: "id",
+      whereSort: whereSort,
+      limit: limit,
+      offset: offset,
+    );
+
+    return query;
+  }
+
+  (FutureMatchQueryElement?, Iterable<FutureMatchQueryElement>, List<SortProperty>, Sort) _buildFutureMatchQueryElements(List<FutureMatchQueryElement> elements, {
+    int? limit,
+    int? offset,
+    FutureMatchSortField sort = const DateSort(),
+  }) {
+    NamePartsQuery? nameQuery;
+    DateQuery? dateQuery;
+    SportQuery? sportQuery;
+
+    for(var e in elements) {
+      switch(e) {
+        case NamePartsQuery():
+          nameQuery = e;
+        case DateQuery():
+          dateQuery = e;
+        case SportQuery():
+          sportQuery = e;
+      }
+    }
+
+    // Defaults. Prefer strongly to 'where' by our sort. Since we do limit/offset
+    // for paging, unless an alternate 'where' is highly selective, leaning on the
+    // index for sort is probably preferable.
+    FutureMatchQueryElement? whereElement;
+    Iterable<FutureMatchQueryElement> filterElements = elements;
+    if(dateQuery == null && (sort is DateSort)) {
+      dateQuery = DateQuery(before: null, after: null);
+      whereElement = dateQuery;
+    }
+    else if(nameQuery == null && (sort is NameSort)) {
+      nameQuery = NamePartsQuery("");
+      whereElement = nameQuery;
+    }
+    (whereElement, filterElements) =  buildQueryElementLists(elements, whereElement);
+
+    if(nameQuery?.canWhere ?? false) {
+      nameQuery!;
+
+      // If we have a one-word name query of sufficient length, prefer to 'where'
+      // on it, since high selectivity will probably outweigh the fast sort on
+      // by the other index.
+      if(nameQuery.name.length >= 3 || (sort is NameSort)) {
+        (whereElement, filterElements) = buildQueryElementLists(elements, nameQuery);
+      }
+    }
+
+    var (sortProperties, whereSort) = _buildFutureMatchSortFields(whereElement, sort);
+
+    return (whereElement, filterElements, sortProperties, whereSort);
+  }
+
+  (List<SortProperty>, Sort) _buildFutureMatchSortFields(FutureMatchQueryElement? whereElement, FutureMatchSortField sort) {
+    var direction = sort.desc ? Sort.desc : Sort.asc;
+    switch(sort) {
+      case NameSort():
+        if(whereElement is NamePartsQuery) {
+          return ([], direction);
+        }
+        else {
+          return ([SortProperty(property: NamePartsQuery("").property, sort: direction)], direction);
+        }
+      case DateSort():
+        if(whereElement is DateQuery) {
+          return ([], direction);
+        }
+        else {
+          return ([SortProperty(property: DateQuery().property, sort: direction)], direction);
+        }
+    }
   }
 }
 

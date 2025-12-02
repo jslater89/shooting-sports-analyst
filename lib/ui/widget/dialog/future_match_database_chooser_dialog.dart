@@ -10,7 +10,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/match_prep.dart';
-import 'package:shooting_sports_analyst/data/database/match/match_query_element.dart';
+import 'package:shooting_sports_analyst/data/database/match/future_match_query_element.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
 import 'package:shooting_sports_analyst/data/source/prematch/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';

@@ -28,6 +28,7 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_e
 import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration_mapping.dart';
+import 'package:shooting_sports_analyst/data/database/util.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/idpa.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
@@ -308,7 +309,7 @@ class AnalystDatabase {
     DateTime? before,
   }) async {
     var queryLower = query.toLowerCase();
-    var words = query.split(" ");
+    var words = Isar.splitWords(queryLower);
     final numRegex = RegExp(r'^\d{1,2}$');
     var terms = words.where((t) =>
       t.length >= 3 ||
@@ -742,11 +743,11 @@ class AnalystDatabase {
       nameQuery = NamePartsQuery("");
       whereElement = nameQuery;
     }
-    (whereElement, filterElements) = _buildElementLists(elements, whereElement);
+    (whereElement, filterElements) = buildQueryElementLists(elements, whereElement);
 
     if(textSearchQuery != null) {
       // If we have a text search query, always where on it.
-      (whereElement, filterElements) = _buildElementLists(elements, textSearchQuery);
+      (whereElement, filterElements) = buildQueryElementLists(elements, textSearchQuery);
     }
     else if(nameQuery?.canWhere ?? false) {
       nameQuery!;
@@ -755,7 +756,7 @@ class AnalystDatabase {
       // on it, since high selectivity will probably outweigh the fast sort on
       // by the other index.
       if(nameQuery.name.length >= 3 || (sort is NameSort)) {
-        (whereElement, filterElements) = _buildElementLists(elements, nameQuery);
+        (whereElement, filterElements) = buildQueryElementLists(elements, nameQuery);
       }
     }
     else if(sportQuery != null && whereElement == null) {
@@ -763,7 +764,7 @@ class AnalystDatabase {
       // This is very unlikely to happen currently, since we're usually going to end up
       // with a name or date where for sorting, but just in case we add future sorts
       // that aren't where-backed...
-      (whereElement, filterElements) = _buildElementLists(elements, sportQuery);
+      (whereElement, filterElements) = buildQueryElementLists(elements, sportQuery);
     }
 
     var (sortProperties, whereSort) = _buildMatchSortFields(whereElement, sort);
@@ -787,15 +788,6 @@ class AnalystDatabase {
         else {
           return ([SortProperty(property: DateQuery().property, sort: direction)], direction);
         }
-    }
-  }
-
-  (MatchQueryElement?, Iterable<MatchQueryElement>) _buildElementLists(Iterable<MatchQueryElement> elements, MatchQueryElement? where) {
-    if(where == null) {
-      return (null, elements);
-    }
-    else {
-      return (where, elements.where((element) => element != where));
     }
   }
 }
