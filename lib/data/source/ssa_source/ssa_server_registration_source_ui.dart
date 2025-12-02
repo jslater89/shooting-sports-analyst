@@ -4,35 +4,37 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import "package:flutter/material.dart";
-import "package:provider/provider.dart";
-import "package:shooting_sports_analyst/data/database/analyst_database.dart";
-import "package:shooting_sports_analyst/data/source/match_source_error.dart";
-import "package:shooting_sports_analyst/data/source/source.dart";
-import "package:shooting_sports_analyst/data/source/source_ui.dart";
-import "package:shooting_sports_analyst/data/source/ssa_source/ssa_auth.dart";
-import "package:shooting_sports_analyst/data/source/ssa_source/ssa_server_source.dart";
-import "package:shooting_sports_analyst/data/sport/match/match.dart";
-import "package:shooting_sports_analyst/logger.dart";
-import "package:shooting_sports_analyst/ui/widget/dialog/match_database_chooser_dialog.dart";
-import "package:shooting_sports_analyst/util.dart";
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/match_prep.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
+import 'package:shooting_sports_analyst/data/source/match_source_error.dart';
+import 'package:shooting_sports_analyst/data/source/prematch/registration.dart';
+import 'package:shooting_sports_analyst/data/source/prematch/registration_ui.dart';
+import 'package:shooting_sports_analyst/data/source/ssa_source/ssa_auth.dart';
+import 'package:shooting_sports_analyst/data/source/ssa_source/ssa_server_registration_source.dart';
+import 'package:shooting_sports_analyst/data/source/ssa_source/ssa_server_source_ui.dart';
+import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/future_match_database_chooser_dialog.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
-var _log = SSALogger("SSAServerSourceUI");
+var _log = SSALogger("SSAServerFutureMatchSourceUI");
 
-class SSAServerSourceUI extends SourceUI {
+class SSAServerFutureMatchSourceUI extends FutureMatchSourceUI {
   @override
   Widget getDownloadMatchUIFor({
-    required MatchSource source,
-    required void Function(ShootingMatch) onMatchSelected,
-    void Function(ShootingMatch)? onMatchDownloaded,
+    required FutureMatchSource source,
+    required void Function(FutureMatch) onMatchSelected,
+    void Function(FutureMatch)? onMatchDownloaded,
     required void Function(MatchSourceError) onError,
     String? initialSearch,
   }) {
-    source as SSAServerMatchSource;
+    source as SSAServerFutureMatchSource;
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<SSASearchModel>(create: (context) => SSASearchModel(initialSearch: initialSearch)),
-        Provider<MatchSource>.value(value: source),
+        Provider<FutureMatchSource>.value(value: source),
       ],
       builder: (context, child) {
         var canUpload = source.canUpload;
@@ -47,20 +49,13 @@ class SSAServerSourceUI extends SourceUI {
                     if(canUpload) IconButton(
                       icon: Icon(Icons.upload),
                       onPressed: () async {
-                        var matches = await MatchDatabaseChooserDialog.show(
+                        var matches = await FutureMatchDatabaseChooserDialog.showMultiple(
                           context: context,
-                          multiple: true,
                           showIds: true,
                         );
                         if(matches == null) return;
                         for(var match in matches) {
-                          var hydratedRes = match.hydrate();
-                          if(hydratedRes.isErr()) {
-                            onError(FormatError(hydratedRes.unwrapErr()));
-                            continue;
-                          }
-                          var hydrated = hydratedRes.unwrap();
-                          var result = await source.uploadMatch(hydrated);
+                          var result = await source.uploadMatch(match);
                           if(result != null) {
                             onError(result);
                           }
@@ -81,122 +76,46 @@ class SSAServerSourceUI extends SourceUI {
                 ),
                 Divider(),
                 Expanded(
-                  child: SSASearchResults(
+                  child: SSAFutureMatchSearchResults(
                     source: source,
                     onMatchSelected: (result) async {
-                      var matchResult = await source.getMatchFromId(result.matchId);
+                      var matchResult = await source.getMatchById(result.matchId);
                       if (matchResult.isErr()) {
                         onError(matchResult.unwrapErr());
-                      } else {
+                      }
+                      else {
                         onMatchSelected(matchResult.unwrap());
                       }
                     },
-                    onMatchDownloadRequested: (result) async {
-                      if (onMatchDownloaded != null) {
-                        var matchResult = await source.getMatchFromId(result.matchId);
-                        if (matchResult.isErr()) {
-                          onError(matchResult.unwrapErr());
-                        } else {
-                          var res = await AnalystDatabase().saveMatch(matchResult.unwrap());
-                          if (res.isErr()) {
-                            onError(MatchSourceError.databaseError);
-                          } else {
-                            var hydratedMatch = res.unwrap().hydrate();
-                            if (hydratedMatch.isErr()) {
-                              onError(MatchSourceError.databaseError);
-                            } else {
-                              onMatchDownloaded(hydratedMatch.unwrap());
-                            }
-                          }
+                    onMatchDownloadRequested: onMatchDownloaded == null ? null : (result) async {
+                      var matchResult = await source.getMatchById(result.matchId);
+                      if (matchResult.isErr()) {
+                        onError(matchResult.unwrapErr());
+                      }
+                      else {
+                        var res = await AnalystDatabase().saveFutureMatch(matchResult.unwrap());
+                        if (res.isErr()) {
+                          onError(MatchSourceError.databaseError);
+                        }
+                        else {
+                          onMatchDownloaded(matchResult.unwrap());
                         }
                       }
                     },
-                    onError: (error) {
-                      onError(error);
-                    },
+                    onError: onError,
                   ),
                 ),
               ],
             );
-          }
+          },
         );
       },
     );
   }
 }
 
-class SSASearchModel extends ChangeNotifier {
-  SSASearchModel({String? initialSearch}) {
-    _search = initialSearch ?? "";
-  }
-
-  String _search = "";
-  String get search => _search;
-  set search(String search) {
-    _search = search;
-    notifyListeners();
-  }
-}
-
-class SSASearchControls extends StatefulWidget {
-  const SSASearchControls({super.key, this.initialSearch});
-
-  final String? initialSearch;
-
-  @override
-  State<SSASearchControls> createState() => _SSASearchControlsState();
-}
-
-class _SSASearchControlsState extends State<SSASearchControls> {
-  TextEditingController controller = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    controller.text = widget.initialSearch ?? "";
-  }
-
-  @override
-  void dispose() {
-    controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    var model = Provider.of<SSASearchModel>(context);
-
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: TextField(
-        controller: controller,
-        onSubmitted: (value) {
-          model.search = value;
-        },
-        decoration: InputDecoration(
-          label: Text("Search"),
-          suffixIcon: IconButton(
-            color: Theme.of(context).buttonTheme.colorScheme?.primary,
-            icon: Icon(Icons.search),
-            onPressed: () {
-              model.search = controller.text;
-            },
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-enum DownloadState {
-  idle,
-  downloading,
-  success,
-  error,
-}
-
-class SSASearchResults extends StatefulWidget {
-  const SSASearchResults({
+class SSAFutureMatchSearchResults extends StatefulWidget {
+  const SSAFutureMatchSearchResults({
     super.key,
     required this.source,
     required this.onMatchSelected,
@@ -204,18 +123,18 @@ class SSASearchResults extends StatefulWidget {
     required this.onError,
   });
 
-  final SSAServerMatchSource source;
-  final void Function(MatchSearchResult<ServerMatchType>) onMatchSelected;
-  final void Function(MatchSearchResult<ServerMatchType>)? onMatchDownloadRequested;
+  final SSAServerFutureMatchSource source;
+  final void Function(FutureMatch) onMatchSelected;
+  final void Function(FutureMatchSearchHit)? onMatchDownloadRequested;
   final void Function(MatchSourceError) onError;
 
   @override
-  State<SSASearchResults> createState() => _SSASearchResultsState();
+  State<SSAFutureMatchSearchResults> createState() => _SSAFutureMatchSearchResultsState();
 }
 
-class _SSASearchResultsState extends State<SSASearchResults> {
+class _SSAFutureMatchSearchResultsState extends State<SSAFutureMatchSearchResults> {
   late SSASearchModel model;
-  List<MatchSearchResult<ServerMatchType>> results = [];
+  List<FutureMatchSearchHit> results = [];
   Map<String, DownloadState> downloadStates = {};
   String latestSearch = "";
 
@@ -261,7 +180,7 @@ class _SSASearchResultsState extends State<SSASearchResults> {
         return;
       }
 
-      var searchResult = await widget.source.findMatches(searchTerm);
+      var searchResult = await widget.source.searchByName(searchTerm);
       if (searchTerm != latestSearch) {
         // Another search came in before this one returned
         return;
@@ -282,7 +201,7 @@ class _SSASearchResultsState extends State<SSASearchResults> {
     }
   }
 
-  Future<void> _downloadMatch(MatchSearchResult<ServerMatchType> result) async {
+  Future<void> _downloadMatch(FutureMatchSearchHit result) async {
     if (widget.onMatchDownloadRequested == null) return;
 
     setState(() {
@@ -290,7 +209,7 @@ class _SSASearchResultsState extends State<SSASearchResults> {
     });
 
     try {
-      var matchResult = await widget.source.getMatchFromId(result.matchId);
+      var matchResult = await widget.source.getMatchById(result.matchId);
       if (matchResult.isErr()) {
         setState(() {
           downloadStates[result.matchId] = DownloadState.error;
@@ -299,17 +218,8 @@ class _SSASearchResultsState extends State<SSASearchResults> {
         return;
       }
 
-      var res = await AnalystDatabase().saveMatch(matchResult.unwrap());
+      var res = await AnalystDatabase().saveFutureMatch(matchResult.unwrap());
       if (res.isErr()) {
-        setState(() {
-          downloadStates[result.matchId] = DownloadState.error;
-        });
-        widget.onError(MatchSourceError.databaseError);
-        return;
-      }
-
-      var hydratedMatch = res.unwrap().hydrate();
-      if (hydratedMatch.isErr()) {
         setState(() {
           downloadStates[result.matchId] = DownloadState.error;
         });
@@ -359,7 +269,7 @@ class _SSASearchResultsState extends State<SSASearchResults> {
         return ListTile(
           title: Text(result.matchName),
           subtitle: Text(
-            "${result.matchSubtype} - ${result.matchDate != null ? programmerYmdFormat.format(result.matchDate!) : "unknown date"}",
+            "${result.sportName} - ${programmerYmdFormat.format(result.matchStartDate)}",
           ),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
@@ -374,7 +284,13 @@ class _SSASearchResultsState extends State<SSASearchResults> {
             ],
           ),
           onTap: isDownloading ? null : () async {
-            widget.onMatchSelected(result);
+            var matchResult = await widget.source.getMatchById(result.matchId);
+            if (matchResult.isErr()) {
+              widget.onError(matchResult.unwrapErr());
+            }
+            else {
+              widget.onMatchSelected(matchResult.unwrap());
+            }
           },
         );
       },

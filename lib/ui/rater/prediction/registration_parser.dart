@@ -372,7 +372,9 @@ RegistrationContainer _parseRegistrations(
           }
         }
         else {
-          _log.d("Missing shooter for: $shooterName");
+          if(warnOnUnmatched) {
+            _log.d("Missing shooter for: $shooterName");
+          }
           unmatched.add(
             Registration(name: shooterName, division: d, classification: classification ?? fallbackClassification, squad: squadNumber)
           );

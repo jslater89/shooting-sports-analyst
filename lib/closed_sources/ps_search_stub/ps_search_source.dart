@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-import 'package:shooting_sports_analyst/data/source/prematch/search.dart';
+import 'package:shooting_sports_analyst/data/source/search.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 
 class PSWebMatchSearchSource extends SearchSource {

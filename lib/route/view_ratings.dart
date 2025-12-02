@@ -53,6 +53,7 @@ import 'package:shooting_sports_analyst/ui/rater/reports/report_view.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
 import 'package:shooting_sports_analyst/ui/source/credentials_manager.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/associate_registrations.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/future_match_database_chooser_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/loading_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/match_pointer_chooser_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/url_entry_dialog.dart';
@@ -721,24 +722,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     var divisions = tab.divisions;
 
     // select a FutureMatch from the database to predict
-    var futureMatchId = await showDialog<String>(context: context, builder: (context) {
-      return UrlEntryDialog(
-        hintText: "Match name",
-        descriptionText: "Enter the name of a match to predict.",
-        initialUrl: lastMatchIdPredicted,
-        typeaheadSuggestionsFunction: (String name) {
-          var suggestions = AnalystDatabase().getFutureMatchesByNameSync(name);
-          return suggestions.map((e) => TypeaheadUrlSuggestion(url: e.matchId, matchName: e.eventName)).toList();
-        },
-      );
-    });
-
-    if(futureMatchId == null) {
-      _log.d("No future match ID elected");
-      return;
-    }
-
-    var futureMatch = await AnalystDatabase().getFutureMatchByMatchId(futureMatchId);
+    var futureMatch = await FutureMatchDatabaseChooserDialog.showSingle(context: context);
 
     if(futureMatch == null) {
       _log.d("No future match selected");

@@ -63,6 +63,9 @@ class ApplicationPreferences {
   /// The last source code used in the match source chooser dialog.
   String? lastUsedSourceCode;
 
+  /// The last source code used in the future match source chooser dialog.
+  String? lastUsedFutureMatchSourceCode;
+
   /// The list of recent prediction URLs from match predictions, used
   /// for typeahead support.
   List<RecentPredictionUrl> recentPredictionUrls = [];

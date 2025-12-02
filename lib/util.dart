@@ -18,6 +18,8 @@ final DateFormat programmerYmdHmFormat = DateFormat("yyyy-MM-dd HH:mm");
 /// It is the date of the Columbia Conference, which established IPSC as a sport.
 final practicalShootingZeroDate = DateTime(1976, 5, 24);
 
+typedef VoidResult = Result<void, ResultErr>;
+
 abstract class ResultErr {
   String get message;
   const ResultErr();

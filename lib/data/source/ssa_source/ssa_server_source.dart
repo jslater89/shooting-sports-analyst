@@ -8,10 +8,9 @@ import "dart:convert";
 
 import "package:http/http.dart" as http;
 import "package:shooting_sports_analyst/api/miff/miff.dart";
-import "package:shooting_sports_analyst/closed_sources/ssa_auth_client/auth_client.dart";
-import "package:shooting_sports_analyst/config/serialized_config.dart";
 import "package:shooting_sports_analyst/data/source/match_source_error.dart";
 import "package:shooting_sports_analyst/data/source/source.dart";
+import "package:shooting_sports_analyst/data/source/ssa_source/ssa_auth.dart";
 import "package:shooting_sports_analyst/data/sport/match/match.dart";
 import "package:shooting_sports_analyst/data/sport/sport.dart";
 import "package:shooting_sports_analyst/flutter_native_providers.dart";
@@ -31,7 +30,6 @@ enum ServerMatchType implements InternalMatchType {
 
 class SSAServerMatchSource extends MatchSource<ServerMatchType, InternalMatchFetchOptions> {
   late final String baseUrl;
-  late final SSAPublicAuthClient _authClient;
   bool _initialized = false;
   bool get initialized => _initialized;
 
@@ -46,8 +44,8 @@ class SSAServerMatchSource extends MatchSource<ServerMatchType, InternalMatchFet
     var serverEd25519PubBase64 = config.ssaServerEd25519PubBase64;
 
     baseUrl = serverBaseUrl;
-    _authClient = SSAPublicAuthClient(
-      baseUrl: serverBaseUrl,
+    initializeAuthClient(
+      serverBaseUrl: serverBaseUrl,
       allowDebugCertificates: debugMode,
       serverX25519PubBase64: serverX25519PubBase64,
       serverEd25519PubBase64: serverEd25519PubBase64,
@@ -64,21 +62,12 @@ class SSAServerMatchSource extends MatchSource<ServerMatchType, InternalMatchFet
   String get name => "SSA Server";
 
   bool get canUpload {
-    var sessionResult = _authClient.getCurrentSession();
+    var sessionResult = ssaAuthClient.getCurrentSession();
     if(sessionResult.isErr()) {
       return false;
     }
     var session = sessionResult.unwrap();
     return session.hasAnyRole(["uploader", "admin"]);
-  }
-
-  bool get isCurrentlyAuthenticated {
-    var sessionResult = _authClient.getCurrentSession();
-    return sessionResult.isOk() && sessionResult.unwrap().isValid();
-  }
-
-  Future<void> refreshAuth() async {
-    await _authClient.getSession();
   }
 
   Future<MatchSourceError?> uploadMatch(ShootingMatch match) async {
@@ -90,7 +79,7 @@ class SSAServerMatchSource extends MatchSource<ServerMatchType, InternalMatchFet
       return FormatError(miff.unwrapErr());
     }
     var bodyBytes = miff.unwrap();
-    var response = await _makeAuthenticatedRequest("POST", "/match/upload", bodyBytes: bodyBytes);
+    var response = await makeAuthenticatedRequest("POST", "/match/upload", bodyBytes: bodyBytes);
     if(response.statusCode != 200) {
       return NetworkErrorWithResponse(response);
     }
@@ -110,63 +99,11 @@ class SSAServerMatchSource extends MatchSource<ServerMatchType, InternalMatchFet
   @override
   String get code => ssaServerCode;
 
-  Future<http.Response> _makeAuthenticatedRequest(
-    String method,
-    String path, {
-    List<int>? bodyBytes,
-  }) async {
-    var sessionResult = await _authClient.getSession();
-    if (sessionResult.isErr()) {
-      throw Exception("Authentication failed: ${sessionResult.unwrapErr().message}");
-    }
-    var session = sessionResult.unwrap();
-
-    var bodyBytesList = bodyBytes ?? <int>[];
-    var headers = await _authClient.getHeaders(
-      session,
-      method: method,
-      path: path,
-      bodyBytes: bodyBytesList,
-    );
-
-    var uri = Uri.parse("$baseUrl$path");
-    http.Response response;
-    if (method == "GET") {
-      response = await http.get(uri, headers: headers);
-    } else if (method == "POST") {
-      response = await http.post(uri, headers: headers, body: bodyBytesList);
-    } else {
-      throw Exception("Unsupported HTTP method: $method");
-    }
-
-    // If auth failed, try refreshing session once
-    if (response.statusCode == 401) {
-      _log.w("Refreshing ostensibly valid session");
-      var refreshResult = await _authClient.refreshSession(session);
-      if (refreshResult.isOk()) {
-        session = refreshResult.unwrap();
-        headers = await _authClient.getHeaders(
-          session,
-          method: method,
-          path: path,
-          bodyBytes: bodyBytesList,
-        );
-        if (method == "GET") {
-          response = await http.get(uri, headers: headers);
-        } else if (method == "POST") {
-          response = await http.post(uri, headers: headers, body: bodyBytesList);
-        }
-      }
-    }
-
-    return response;
-  }
-
   @override
   Future<Result<List<MatchSearchResult<ServerMatchType>>, MatchSourceError>> findMatches(String search) async {
     try {
       var bodyBytes = utf8.encode(jsonEncode({"query": search}));
-      var response = await _makeAuthenticatedRequest("POST", "/match/search", bodyBytes: bodyBytes);
+      var response = await makeAuthenticatedRequest("POST", "/match/search", bodyBytes: bodyBytes);
 
       if (response.statusCode != 200) {
         _log.e("Search failed with status ${response.statusCode}: ${response.body}");
@@ -234,7 +171,7 @@ class SSAServerMatchSource extends MatchSource<ServerMatchType, InternalMatchFet
     InternalMatchFetchOptions? options,
   }) async {
     try {
-      var response = await _makeAuthenticatedRequest("GET", "/match/$id");
+      var response = await makeAuthenticatedRequest("GET", "/match/$id");
 
       if (response.statusCode == 404) {
         return Result.err(MatchSourceError.notFound);

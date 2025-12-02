@@ -10,7 +10,7 @@ import 'package:shooting_sports_analyst/util.dart';
 
 typedef SearchSourceResult = Result<List<SearchSourceHit>, MatchSourceError>;
 
-/// A SearchSource is a source that can be used to search for matches,
+/// A SearchSource is a source that can be used to search for match scores,
 /// either by date, by name, or both.
 abstract class SearchSource {
   /// The name of the source.

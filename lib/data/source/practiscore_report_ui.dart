@@ -12,7 +12,7 @@ import 'package:shooting_sports_analyst/closed_sources/ps_search/ui/search_model
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/source/match_source_error.dart';
 import 'package:shooting_sports_analyst/data/source/practiscore_report.dart';
-import 'package:shooting_sports_analyst/data/source/prematch/search.dart';
+import 'package:shooting_sports_analyst/data/source/search.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/source/source_ui.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';

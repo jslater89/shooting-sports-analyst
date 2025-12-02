@@ -1,0 +1,25 @@
+---
+alwaysApply: true
+---
+
+# If style
+Prefer:
+
+```
+if {
+
+}
+else {
+
+}
+```
+
+over `... } else {`
+
+# Loggers
+Import lib/util with a package-relative path.
+
+`var _log = SSALogger("<log-tag>");`
+
+# List copying
+Prefer the spread operator `var copy = [...oldList]`;
