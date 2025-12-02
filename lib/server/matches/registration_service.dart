@@ -80,7 +80,8 @@ class RegistrationService {
       return Response.badRequest(body: jsonEncode({"error": importRes.unwrapErr().message}));
     }
     var match = importRes.unwrap();
-    await database.saveFutureMatch(match, newRegistrations: match.registrations.toList());
+
+    await database.saveFutureMatch(match);
     return Response.ok(jsonEncode({"success": "Match uploaded"}));
   }
 }
