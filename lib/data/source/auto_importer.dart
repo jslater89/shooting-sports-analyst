@@ -296,13 +296,23 @@ class AutoImporter {
     var futureMatch = registrations.exportFutureMatch();
 
     // This source can't guarantee stable entry IDs, so overwrite all old registrations.
-    AnalystDatabase().saveFutureMatchSync(
+    var saveRes = await AnalystDatabase().saveFutureMatch(
       futureMatch,
       newRegistrations: exportedRegistrations,
     );
+    if(saveRes.isErr()) {
+      _log.e("Error saving future match from path $path: ${saveRes.unwrapErr().message}");
+      return;
+    }
 
     // We need to re-apply any saved mappings to the new registrations too.
     await futureMatch.updateRegistrationsFromMappings();
+
+    if(_config.autoImportDeletesAfterImport) {
+      // Always overwrites, so no need for complicated logic here
+      file.deleteSync();
+      _log.i("Deleted detected file: $path");
+    }
 
     _log.i("Saved future match: ${futureMatch.matchId}");
     return;

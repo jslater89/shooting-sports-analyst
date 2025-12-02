@@ -107,21 +107,7 @@ extension MatchPrepDatabase on AnalystDatabase {
   }
 
   Future<List<FutureMatch>> getFutureMatchesByName(String name) async {
-    if(name.contains(" ")) {
-      return await isar.futureMatchs.filter().eventNameContains(name).findAll();
-    }
-    else {
-      return await isar.futureMatchs.where().eventNamePartsElementStartsWith(name).findAll();
-    }
-  }
-
-  List<FutureMatch> getFutureMatchesByNameSync(String name) {
-    if(name.contains(" ")) {
-      return isar.futureMatchs.filter().eventNameContains(name).findAllSync();
-    }
-    else {
-      return isar.futureMatchs.where().eventNamePartsElementStartsWith(name).findAllSync();
-    }
+    return queryFutureMatches(name: name);
   }
 
   /// Query future matches with pagination, sorting, and filtering.
