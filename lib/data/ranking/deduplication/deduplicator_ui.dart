@@ -83,10 +83,13 @@ class IcoreLinker extends MemberNumberLinker {
       var numericUniqueId = uniqueId.replaceAll(RegExp(r"[^0-9]"), "");
       if(uniqueId != numericUniqueId) {
         // If the unique identifier is not entirely numeric, it isn't a DB
-        // ID, so we can't link to it. (yet)
+        // ID, so we can't link to it; link to the active members list/search
+        // instead because all vanity IDs are lifetime/active members.
         spans[number] = TextSpan(
           text: number,
-          style: runningStyle,
+          style: linkStyle,
+          recognizer: TapGestureRecognizer()..onTap = () => launchUrl(Uri.parse("https://icore.org/members-list-active.php")),
+          mouseCursor: SystemMouseCursors.click
         );
         continue;
       }
@@ -94,7 +97,7 @@ class IcoreLinker extends MemberNumberLinker {
       spans[number] = TextSpan(
         text: number,
         style: linkStyle,
-        recognizer: TapGestureRecognizer()..onTap = () => launchUrl(Uri.parse("https://icore.org/member-details.php?id=$number")),
+        recognizer: TapGestureRecognizer()..onTap = () => launchUrl(Uri.parse("https://icore.org/member-details.php?id=$numericUniqueId")),
         mouseCursor: SystemMouseCursors.click,
       );
     }
