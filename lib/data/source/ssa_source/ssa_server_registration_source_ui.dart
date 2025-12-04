@@ -163,11 +163,15 @@ class _SSAFutureMatchSearchResultsState extends State<SSAFutureMatchSearchResult
   }
 
   void _onModelChanged() {
+    if(!model.searching) return;
     _search();
   }
 
   Future<void> _search() async {
-    if (model.search == latestSearch) return;
+    if (model.search == latestSearch) {
+      model.stopSearch();
+      return;
+    }
 
     var searchTerm = model.search;
     latestSearch = searchTerm;
@@ -177,6 +181,7 @@ class _SSAFutureMatchSearchResultsState extends State<SSAFutureMatchSearchResult
         setState(() {
           results = [];
         });
+        model.stopSearch();
         return;
       }
 
@@ -195,9 +200,13 @@ class _SSAFutureMatchSearchResultsState extends State<SSAFutureMatchSearchResult
         var err = searchResult.unwrapErr();
         widget.onError(err);
       }
-    } catch (e) {
+    }
+    catch (e) {
       // Probably a canceled request
       widget.onError(GeneralError(StringError("Search error: $e")));
+    }
+    finally {
+      model.stopSearch();
     }
   }
 

@@ -132,8 +132,18 @@ class SSASearchModel extends ChangeNotifier {
 
   String _search = "";
   String get search => _search;
-  set search(String search) {
-    _search = search;
+
+  bool _searching = false;
+  bool get searching => _searching;
+
+  void startSearch(String query) {
+    _search = query;
+    _searching = true;
+    notifyListeners();
+  }
+
+  void stopSearch() {
+    _searching = false;
     notifyListeners();
   }
 }
@@ -171,15 +181,15 @@ class _SSASearchControlsState extends State<SSASearchControls> {
       child: TextField(
         controller: controller,
         onSubmitted: (value) {
-          model.search = value;
+          model.startSearch(value);
         },
         decoration: InputDecoration(
           label: Text("Search"),
-          suffixIcon: IconButton(
+          suffixIcon: model.searching ? Padding(padding: EdgeInsets.all(4), child: CircularProgressIndicator()) : IconButton(
             color: Theme.of(context).buttonTheme.colorScheme?.primary,
             icon: Icon(Icons.search),
             onPressed: () {
-              model.search = controller.text;
+              model.startSearch(controller.text);
             },
           ),
         ),
@@ -244,11 +254,15 @@ class _SSASearchResultsState extends State<SSASearchResults> {
   }
 
   void _onModelChanged() {
+    if(!model.searching) return;
     _search();
   }
 
   Future<void> _search() async {
-    if (model.search == latestSearch) return;
+    if (model.search == latestSearch) {
+      model.stopSearch();
+      return;
+    }
 
     var searchTerm = model.search;
     latestSearch = searchTerm;
@@ -258,6 +272,7 @@ class _SSASearchResultsState extends State<SSASearchResults> {
         setState(() {
           results = [];
         });
+        model.stopSearch();
         return;
       }
 
@@ -276,9 +291,13 @@ class _SSASearchResultsState extends State<SSASearchResults> {
         var err = searchResult.unwrapErr();
         widget.onError(err);
       }
-    } catch (e) {
+    }
+    catch (e) {
       // Probably a canceled request
       widget.onError(GeneralError(StringError("Search error: $e")));
+    }
+    finally {
+      model.stopSearch();
     }
   }
 
