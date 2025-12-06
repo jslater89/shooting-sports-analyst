@@ -44,6 +44,14 @@ class MiffExporter implements AbstractMiffExporter {
       matchJson["rawDate"] = match.rawDate;
     }
 
+    if (match.endDate != null) {
+      matchJson["endDate"] = _formatDate(match.endDate!);
+    }
+
+    if (match.sourceLastUpdated != null) {
+      matchJson["lastUpdatedAt"] = match.sourceLastUpdated!.toIso8601String();
+    }
+
     if (match.level != null) {
       matchJson["level"] = {
         "name": match.level!.name,
@@ -74,7 +82,7 @@ class MiffExporter implements AbstractMiffExporter {
 
     return {
       "format": "miff",
-      "version": "1.0",
+      "version": "1.1",
       "match": matchJson,
     };
   }

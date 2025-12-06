@@ -67,6 +67,7 @@ class MiffValidator implements AbstractMiffValidator {
     if (!version.startsWith("1.")) {
       return StringError("Unsupported version: $version (expected version starting with '1.')");
     }
+    // Accept versions 1.0 and 1.1 (and future 1.x versions)
 
     if (!json.containsKey("match")) {
       return StringError("Missing required field: match");
@@ -122,6 +123,28 @@ class MiffValidator implements AbstractMiffValidator {
     // Optional fields
     if (json.containsKey("rawDate") && json["rawDate"] is! String) {
       return StringError("Match field 'rawDate' must be a string");
+    }
+
+    if (json.containsKey("endDate")) {
+      if (json["endDate"] is! String) {
+        return StringError("Match field 'endDate' must be a string");
+      }
+      var endDateStr = json["endDate"] as String;
+      if (!_isValidDate(endDateStr)) {
+        return StringError("Match field 'endDate' must be in ISO 8601 format (YYYY-MM-DD), got: $endDateStr");
+      }
+    }
+
+    if (json.containsKey("lastUpdatedAt")) {
+      if (json["lastUpdatedAt"] is! String) {
+        return StringError("Match field 'lastUpdatedAt' must be a string");
+      }
+      var lastUpdatedAtStr = json["lastUpdatedAt"] as String;
+      try {
+        DateTime.parse(lastUpdatedAtStr);
+      } catch (e) {
+        return StringError("Match field 'lastUpdatedAt' must be a valid ISO 8601 timestamp, got: $lastUpdatedAtStr");
+      }
     }
 
     if (json.containsKey("sportDef") && json["sportDef"] is! Map) {

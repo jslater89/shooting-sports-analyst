@@ -400,6 +400,16 @@ class AnalystDatabase {
     return finalQuery.findAll();
   }
 
+  /// Get the last time the match was updated, according to the source it was retrieved from.
+  Future<DateTime?> getMatchLastUpdated(String sourceId) async {
+    return await isar.dbShootingMatchs.where().sourceIdsElementEqualTo(sourceId).sourceLastUpdatedProperty().findFirst();
+  }
+
+  /// Get the last time the match was updated, according to the source it was retrieved from.
+  DateTime? getMatchLastUpdatedSync(String sourceId) {
+    return isar.dbShootingMatchs.where().sourceIdsElementEqualTo(sourceId).sourceLastUpdatedProperty().findFirstSync();
+  }
+
   Future<List<DbShootingMatch>> queryMatchesByCompetitorMemberNumbers(List<String> memberNumbers, {int page = 0, int pageSize = 10}) async {
     if(memberNumbers.isEmpty) return [];
 
@@ -686,6 +696,25 @@ class AnalystDatabase {
     return query;
   }
 
+  Query<DateTime> _buildMatchLastUpdatedQuery(List<MatchQueryElement> elements, {int? limit, int? offset, MatchSortField sort = const DateSort()}) {
+    var (whereElement, filterElements, sortProperties, whereSort) = _buildMatchQueryElements(elements, sort: sort);
+
+    Query<DateTime> query = isar.dbShootingMatchs.buildQuery(
+      whereClauses: whereElement?.whereClauses ?? [],
+      filter: filterElements.isEmpty ? null : FilterGroup.and([
+        for(var f in filterElements)
+          if(f.filterCondition != null)
+            f.filterCondition!,
+      ]),
+      sortBy: sortProperties,
+      property: "sourceLastUpdated",
+      whereSort: whereSort,
+      limit: limit,
+      offset: offset,
+    );
+
+    return query;
+  }
 
   Query<int> _buildMatchIdQuery(List<MatchQueryElement> elements, {int? limit, int? offset, MatchSortField sort = const DateSort()}) {
     var (whereElement, filterElements, sortProperties, whereSort) = _buildMatchQueryElements(elements, sort: sort);

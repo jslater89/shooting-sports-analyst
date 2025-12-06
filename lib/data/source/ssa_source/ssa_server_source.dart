@@ -8,6 +8,7 @@ import "dart:convert";
 
 import "package:http/http.dart" as http;
 import "package:shooting_sports_analyst/api/miff/miff.dart";
+import "package:shooting_sports_analyst/data/database/analyst_database.dart";
 import "package:shooting_sports_analyst/data/source/match_source_error.dart";
 import "package:shooting_sports_analyst/data/source/source.dart";
 import "package:shooting_sports_analyst/data/source/ssa_source/ssa_auth.dart";
@@ -28,7 +29,22 @@ enum ServerMatchType implements InternalMatchType {
   generic;
 }
 
-class SSAServerMatchSource extends MatchSource<ServerMatchType, InternalMatchFetchOptions> {
+class SSAServerMatchFetchOptions extends InternalMatchFetchOptions {
+  /// The time of the last update to the match. If provided, the source will return a local copy of the
+  /// match if it has not been updated since the provided time.
+  ///
+  /// If not provided, the source will always retrieve a full match from the server.
+  DateTime? lastUpdated;
+
+  SSAServerMatchFetchOptions({this.lastUpdated});
+
+  @override
+  String toString() {
+    return "SSAServerMatchFetchOptions(lastUpdated: $lastUpdated)";
+  }
+}
+
+class SSAServerMatchSource extends MatchSource<ServerMatchType, SSAServerMatchFetchOptions> {
   late final String baseUrl;
   bool _initialized = false;
   bool get initialized => _initialized;
@@ -158,7 +174,7 @@ class SSAServerMatchSource extends MatchSource<ServerMatchType, InternalMatchFet
     MatchSearchResult<ServerMatchType> result, {
     SportType? typeHint,
     Sport? sport,
-    InternalMatchFetchOptions? options,
+    SSAServerMatchFetchOptions? options,
   }) async {
     return getMatchFromId(result.matchId, typeHint: typeHint, sport: sport, options: options);
   }
@@ -168,13 +184,25 @@ class SSAServerMatchSource extends MatchSource<ServerMatchType, InternalMatchFet
     String id, {
     SportType? typeHint,
     Sport? sport,
-    InternalMatchFetchOptions? options,
+    SSAServerMatchFetchOptions? options,
   }) async {
     try {
-      var response = await makeAuthenticatedRequest("GET", "/match/$id");
+      var response = await makeAuthenticatedRequest("GET", "/match/$id", headers: options?.lastUpdated != null ? {"If-Modified-Since": options!.lastUpdated!.toUtc().toIso8601String()} : null);
 
       if (response.statusCode == 404) {
         return Result.err(MatchSourceError.notFound);
+      }
+
+      if (response.statusCode == 304) {
+        var localCopy = await AnalystDatabase().getMatchBySourceId(id);
+        if(localCopy == null) {
+          return Result.err(MatchSourceError.notModified);
+        }
+        var hydrateRes = localCopy.hydrate();
+        if(hydrateRes.isErr()) {
+          return Result.err(GeneralError(StringError("Failed to hydrate local copy: ${hydrateRes.unwrapErr().message}")));
+        }
+        return Result.ok(hydrateRes.unwrap());
       }
 
       if (response.statusCode != 200) {

@@ -56,6 +56,14 @@ class ShootingMatch implements SourceIdsProvider {
   String name;
   String rawDate;
   DateTime date;
+
+  /// The date after which this match is completed.
+  DateTime? endDate;
+
+  /// The last time the match was updated, according to the source it was retrieved from.
+  /// This can be used to determine if fetching a full match is necessary.
+  DateTime? sourceLastUpdated;
+
   MatchLevel? level;
 
   /// The sport whose rules govern this match.
@@ -105,6 +113,8 @@ class ShootingMatch implements SourceIdsProvider {
     required this.name,
     required this.rawDate,
     required this.date,
+    this.endDate,
+    this.sourceLastUpdated,
     this.level,
     required this.sport,
     required this.stages,

@@ -36,6 +36,7 @@ Future<http.Response> makeAuthenticatedRequest(
   String method,
   String path, {
   List<int>? bodyBytes,
+  Map<String, String>? headers,
 }) async {
   var sessionResult = await ssaAuthClient.getSession();
   if (sessionResult.isErr()) {
@@ -44,19 +45,24 @@ Future<http.Response> makeAuthenticatedRequest(
   var session = sessionResult.unwrap();
 
   var bodyBytesList = bodyBytes ?? <int>[];
-  var headers = await ssaAuthClient.getHeaders(
+  var authHeaders = await ssaAuthClient.getHeaders(
     session,
     method: method,
     path: path,
     bodyBytes: bodyBytesList,
   );
 
+  var allHeaders = {
+    ...authHeaders,
+    ...headers ?? {},
+  };
+
   var uri = Uri.parse("${ssaAuthClient.baseUrl}$path");
   http.Response response;
   if (method == "GET") {
-    response = await http.get(uri, headers: headers);
+    response = await http.get(uri, headers: allHeaders);
   } else if (method == "POST") {
-    response = await http.post(uri, headers: headers, body: bodyBytesList);
+    response = await http.post(uri, headers: allHeaders, body: bodyBytesList);
   } else {
     throw Exception("Unsupported HTTP method: $method");
   }
@@ -67,16 +73,20 @@ Future<http.Response> makeAuthenticatedRequest(
       var refreshResult = await ssaAuthClient.refreshSession(session);
     if (refreshResult.isOk()) {
       session = refreshResult.unwrap();
-      headers = await ssaAuthClient.getHeaders(
+      authHeaders = await ssaAuthClient.getHeaders(
         session,
         method: method,
         path: path,
         bodyBytes: bodyBytesList,
       );
+      allHeaders = {
+        ...authHeaders,
+        ...headers ?? {},
+      };
       if (method == "GET") {
-        response = await http.get(uri, headers: headers);
+        response = await http.get(uri, headers: allHeaders);
       } else if (method == "POST") {
-        response = await http.post(uri, headers: headers, body: bodyBytesList);
+        response = await http.post(uri, headers: allHeaders, body: bodyBytesList);
       }
     }
   }

@@ -90,6 +90,7 @@ class MiffImporter implements AbstractMiffImporter {
       if (version == null || !version.startsWith("1.")) {
         return Result.err(StringError("Unsupported version: $version"));
       }
+      // Accept versions 1.0 and 1.1 (and future 1.x versions)
 
       // Parse match
       var matchJson = json["match"] as Map<String, dynamic>;
@@ -121,6 +122,26 @@ class MiffImporter implements AbstractMiffImporter {
       }
 
       var rawDate = json["rawDate"] as String? ?? "";
+
+      // Parse endDate
+      DateTime? endDate;
+      if (json.containsKey("endDate")) {
+        var endDateStr = json["endDate"] as String;
+        endDate = _parseDate(endDateStr);
+        if (endDate == null) {
+          return Result.err(StringError("Invalid endDate format: $endDateStr"));
+        }
+      }
+
+      // Parse lastUpdatedAt
+      DateTime? sourceLastUpdated;
+      if (json.containsKey("lastUpdatedAt")) {
+        try {
+          sourceLastUpdated = DateTime.parse(json["lastUpdatedAt"] as String);
+        } catch (e) {
+          return Result.err(StringError("Invalid lastUpdatedAt format: ${json["lastUpdatedAt"]}"));
+        }
+      }
 
       // Parse level
       MatchLevel? level;
@@ -196,6 +217,7 @@ class MiffImporter implements AbstractMiffImporter {
         name: json["name"] as String,
         rawDate: rawDate,
         date: date,
+        endDate: endDate,
         level: level,
         sport: sport,
         stages: stages,
@@ -204,6 +226,7 @@ class MiffImporter implements AbstractMiffImporter {
         sourceIds: sourceIds,
         localBonusEvents: localBonusEvents,
         localPenaltyEvents: localPenaltyEvents,
+        sourceLastUpdated: sourceLastUpdated,
       );
 
       return Result.ok(match);

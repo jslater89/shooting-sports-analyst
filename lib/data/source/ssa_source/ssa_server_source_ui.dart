@@ -309,7 +309,12 @@ class _SSASearchResultsState extends State<SSASearchResults> {
     });
 
     try {
-      var matchResult = await widget.source.getMatchFromId(result.matchId);
+      var localLastUpdated = await AnalystDatabase().getMatchLastUpdated(result.matchId);
+      SSAServerMatchFetchOptions? options;
+      if(localLastUpdated != null) {
+        options = SSAServerMatchFetchOptions(lastUpdated: localLastUpdated);
+      }
+      var matchResult = await widget.source.getMatchFromId(result.matchId, options: options);
       if (matchResult.isErr()) {
         setState(() {
           downloadStates[result.matchId] = DownloadState.error;

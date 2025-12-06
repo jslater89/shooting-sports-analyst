@@ -32,6 +32,22 @@ class MatchService {
   ///
   /// Returns 404 if the match is not found.
   Future<Response> getMatch(Request request, String matchId) async {
+
+    var ifModifiedSince = request.headers["If-Modified-Since"];
+    if(ifModifiedSince != null) {
+      var matchLastModified = await database.getMatchLastUpdated(matchId);
+      var clientLastModified = DateTime.tryParse(ifModifiedSince);
+
+      if(clientLastModified == null) {
+        return Response.badRequest(body: "Invalid If-Modified-Since header");
+      }
+
+      // If the match in the DB was last modified at or before the client's last modified date, return not modified
+      if(matchLastModified != null && (matchLastModified.isAtSameMomentAs(clientLastModified) || matchLastModified.isBefore(clientLastModified))) {
+        return Response.notModified();
+      }
+    }
+
     var match = await database.getMatchBySourceId(matchId);
     if(match == null) {
       return Response.notFound("Match not found");
@@ -45,9 +61,14 @@ class MatchService {
     if(miff.isErr()) {
       return Response.internalServerError(body: "Failed to export match");
     }
-    return Response.ok(miff.unwrap(), headers:{
+    var headers = {
       "Content-Type": MiffExporter.compressedMimeType,
-    });
+    };
+
+    if(match.sourceLastUpdated != null) {
+      headers["Last-Modified"] = match.sourceLastUpdated!.toUtc().toIso8601String();
+    }
+    return Response.ok(miff.unwrap(), headers: headers);
   }
 
   /// /search

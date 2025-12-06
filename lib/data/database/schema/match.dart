@@ -39,6 +39,13 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
 
   @Index(name: AnalystDatabase.dateIndex)
   DateTime date;
+
+  DateTime? endDate;
+
+  /// The last time the match was updated, according to the source it was retrieved from.
+  /// This can be used to determine if fetching a full match is necessary.
+  DateTime? sourceLastUpdated;
+
   String? matchLevelName;
 
   /// A list of IDs this match is known by at its source.
@@ -82,6 +89,8 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
     required this.eventName,
     required this.rawDate,
     required this.date,
+    required this.endDate,
+    required this.sourceLastUpdated,
     required this.matchLevelName,
     required this.matchEventLevel,
     required this.sportName,
@@ -100,6 +109,8 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
     eventName = "(invalid)",
     rawDate = "(invalid)",
     date = DateTime.now(),
+    endDate = null,
+    sourceLastUpdated = null,
     matchLevelName = "(invalid)",
     matchEventLevel = EventLevel.local,
     sportName = "(invalid)",
@@ -122,6 +133,8 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
     eventName = "(invalid)",
     rawDate = "(invalid)",
     date = DateTime.now(),
+    endDate = null,
+    sourceLastUpdated = null,
     matchLevelName = "(invalid)",
     matchEventLevel = EventLevel.local,
     sportName = sport.name,
@@ -139,6 +152,8 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
     eventName = match.name,
     rawDate = match.rawDate,
     date = match.date,
+    endDate = match.endDate,
+    sourceLastUpdated = match.sourceLastUpdated,
     matchLevelName = match.level?.name,
     matchEventLevel = match.level?.eventLevel ?? EventLevel.local,
     sportName = match.sport.name,
@@ -225,6 +240,8 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
           eventName: match.name,
           rawDate: match.rawDate,
           date: match.date,
+          endDate: match.endDate,
+          sourceLastUpdated: match.sourceLastUpdated,
           matchLevelName: match.level?.name,
           matchEventLevel: match.level?.eventLevel ?? EventLevel.local,
           sourceIds: sortedSourceIds,
@@ -247,6 +264,8 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
           eventName: match.name,
           rawDate: match.rawDate,
           date: match.date,
+          endDate: match.endDate,
+          sourceLastUpdated: match.sourceLastUpdated,
           matchLevelName: match.level?.name,
           matchEventLevel: match.level?.eventLevel ?? EventLevel.local,
           sourceIds: sortedSourceIds,
@@ -312,6 +331,8 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
       name: this.eventName,
       rawDate: this.rawDate,
       date: this.date,
+      endDate: this.endDate,
+      sourceLastUpdated: this.sourceLastUpdated,
       stages: hydratedStages,
       sport: sport,
       shooters: hydratedShooters.map((e) => e.unwrap()).toList(),

@@ -20,6 +20,7 @@ sealed class MatchSourceError implements ResultErr {
   static UnsupportedMatchType get unsupportedMatchType => const UnsupportedMatchType();
   static NoCredentials get noCredentials => const NoCredentials();
   static DatabaseError get databaseError => const DatabaseError();
+  static NotModified get notModified => const NotModified();
 }
 
 class DatabaseError extends MatchSourceError {
@@ -87,4 +88,10 @@ class NoCredentials extends MatchSourceError {
   String get message => "Match source requires credentials";
   StackTrace? get stackTrace => null;
   const NoCredentials();
+}
+
+class NotModified extends MatchSourceError {
+  String get message => "Not modified";
+  StackTrace? get stackTrace => null;
+  const NotModified();
 }
