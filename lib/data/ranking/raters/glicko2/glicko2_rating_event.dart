@@ -92,9 +92,9 @@ class Glicko2RatingEvent extends RatingEvent {
     this.settings = settings;
   }
 
-  double get oldDisplayRD => oldRD * Glicko2Settings.defaultScalingFactor;
+  double get oldDisplayRD => oldRD * settings.scalingFactor;
   double get newRd => oldRD + rdChange;
-  double get newDisplayRD => newRd * Glicko2Settings.defaultScalingFactor;
+  double get newDisplayRD => newRd * settings.scalingFactor;
   double get newVolatility => oldVolatility + volatilityChange;
   double get newInternalRating => oldInternalRating + internalRatingChange;
 

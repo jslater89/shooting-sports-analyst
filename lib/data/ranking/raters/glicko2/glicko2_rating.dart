@@ -86,7 +86,7 @@ class Glicko2Rating extends ShooterRating<Glicko2RatingEvent> {
   set currentInternalRD(double v) => wrappedRating.doubleData[_DoubleKeys.currentRD.index] = v;
 
   // Get the currentRD for the current clock time in display units.
-  double get currentDisplayRD => currentInternalRD * Glicko2Settings.defaultScalingFactor;
+  double get currentDisplayRD => currentInternalRD * settings.scalingFactor;
 
   /// For Glicko-2, the rating getter and setter use display units, and the internalRating getter and setter use internal units.
   double get internalRating => wrappedRating.doubleData[_DoubleKeys.rating.index];
@@ -99,7 +99,7 @@ class Glicko2Rating extends ShooterRating<Glicko2RatingEvent> {
   set currentRDTimestamp(int v) => wrappedRating.intData[_IntKeys.currentRDTimestamp.index] = v;
 
   /// The RD that was calculated at the end of the last rating event commit, in display units.
-  double get committedRD => wrappedRating.doubleData[_DoubleKeys.committedRD.index] * Glicko2Settings.defaultScalingFactor;
+  double get committedRD => wrappedRating.doubleData[_DoubleKeys.committedRD.index] * settings.scalingFactor;
 
   /// The RD that was calculated at the end of the last rating event commit, in internal units.
   double get committedInternalRD => wrappedRating.doubleData[_DoubleKeys.committedRD.index];
@@ -165,7 +165,7 @@ class Glicko2Rating extends ShooterRating<Glicko2RatingEvent> {
       internalRating += e.internalRatingChange;
 
       // Update display values
-      rating = internalRating * Glicko2Settings.defaultScalingFactor + Glicko2Settings.defaultInitialRating;
+      rating = internalRating * settings.scalingFactor + settings.initialRating;
     }
   }
 
