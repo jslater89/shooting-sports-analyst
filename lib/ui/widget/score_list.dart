@@ -8,6 +8,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/synchronous_rating_data_source.dart';
@@ -152,6 +153,11 @@ class _ScoreListState extends State<ScoreList> {
   }
 
   Widget _buildMatchScoreKey(Size screenSize, int? maxPoints) {
+    var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
+    var throughText = "Through";
+    if(screenSize.width < 1320 * uiScaleFactor) {
+      throughText = "Thru";
+    }
     return ConstrainedBox(
       constraints: BoxConstraints(
           minWidth: widget.minWidth,
@@ -204,7 +210,13 @@ class _ScoreListState extends State<ScoreList> {
                 Expanded(flex: 2, child: Text("Match %")),
                 if(sport.matchScoring is CumulativeScoring && sport.type.isTimePlus) Expanded(flex: 2, child: Text("Final Time"))
                 else Expanded(flex: 2, child: Text("Match Pts.")),
-                if(widget.match?.inProgress ?? false) Expanded(flex: 1, child: Text("Through", textAlign: TextAlign.end)),
+                if(widget.match?.inProgress ?? false) Expanded(
+                  flex: 1,
+                  child: Tooltip(
+                    message: "The number of stages completed.",
+                    child: Text(throughText, textAlign: TextAlign.end),
+                  ),
+                ),
                 if(widget.match?.inProgress ?? false) SizedBox(width: 15),
                 if(fantasyScores != null) Expanded(flex: 2, child: Text("F. Pts.")),
                 if(sport.type.isTimePlus) Expanded(flex: 2, child: Text("Raw Time"))
