@@ -4,6 +4,10 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:math';
+
+import 'package:shooting_sports_analyst/util.dart';
+
 enum ScoreFunctionType {
   allOrNothing,
   linearMarginOfVictory;
@@ -43,9 +47,19 @@ class LinearMarginOfVictoryScoreFunction extends Glicko2ScoreFunction {
 
   @override
   double calculateScore(double shooterRatio, double opponentRatio) {
-    var margin = shooterRatio - opponentRatio;
-    if(margin >= perfectVictoryDifference) return 1.0;
-    if(margin <= -perfectVictoryDifference) return 0.0;
-    return 0.5 + margin / (2 * perfectVictoryDifference);
+    // The loser's score is always expressed in terms of the winner's; scale
+    // the range based on the winner's ratio.
+    var higherRatio = max(shooterRatio, opponentRatio);
+    var topOfRange = opponentRatio + (perfectVictoryDifference * higherRatio);
+    var bottomOfRange = opponentRatio - (perfectVictoryDifference * higherRatio);
+    return lerpAroundCenter(
+      value: shooterRatio,
+      center: opponentRatio,
+      rangeMin: bottomOfRange,
+      rangeMax: topOfRange,
+      minOut: 0.0,
+      centerOut: 0.5,
+      maxOut: 1.0,
+    );
   }
 }

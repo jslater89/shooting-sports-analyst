@@ -134,7 +134,7 @@ class AutoImporter {
       var file = File(path);
       var bytes = file.readAsBytesSync();
       try {
-        var matchInfoFilesRes = MatchInfoFiles.unzipMatchInfoZip(bytes);
+        var matchInfoFilesRes = MatchInfoFiles.unzipMatchInfoZip(bytes, useUtf8: true);
         if(matchInfoFilesRes.isErr()) {
           var error = matchInfoFilesRes.unwrapErr();
           _log.e("Error unzipping match info zip: ${error.message} ${error.stackTrace}");

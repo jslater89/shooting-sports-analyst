@@ -36,7 +36,7 @@ void main() {
       expect(result, equals(0.5));
     });
 
-        test("interpolates between minOut and centerOut when value is between minimum and center", () {
+    test("interpolates between minOut and centerOut when value is between minimum and center", () {
       // With center=10, bottom=5.0, centerOut=1.0, minOut=0.5
       // Value of 7.0 should interpolate between 0.5 and 1.0
       // 7.0 is 2/5 of the way from 5.0 to 10.0, so result should be 0.5 + (1.0-0.5) * (2/5) = 0.7
@@ -79,7 +79,7 @@ void main() {
       expect(result, equals(1.0));
     });
 
-        test("interpolates between centerOut and maxOut when value is between center and maximum", () {
+    test("interpolates between centerOut and maxOut when value is between center and maximum", () {
       // With center=10, top=20.0, centerOut=1.0, maxOut=2.0
       // Value of 15.0 should interpolate between 1.0 and 2.0
       // 15.0 is 5/10 = 0.5 of the way from 10.0 to 20.0, so result should be 1.0 + (2.0-1.0) * 0.5 = 1.5
@@ -247,6 +247,76 @@ void main() {
       // Value of 3.0 is above rangeMax of 2.0, should return maxOut
       expect(result, equals(1.4));
     });
+
+    test("handles nonzero center with rangeMin and rangeMax", () {
+      // Test below rangeMin
+      var result = lerpAroundCenter(
+        value: -2.0,
+        center: 1.0,
+        rangeMin: 0.0,
+        rangeMax: 3.0,
+        minOut: 0.2,
+        centerOut: 0.8,
+        maxOut: 1.4,
+      );
+      // Value of -2.0 is below rangeMin of -1.0, should return minOut
+      expect(result, equals(0.2));
+
+      // Test between rangeMin and center, very close to center
+      result = lerpAroundCenter(
+        value: 0.9,
+        center: 1.0,
+        rangeMin: 0.0,
+        rangeMax: 3.0,
+        minOut: 0.2,
+        centerOut: 0.8,
+        maxOut: 1.4,
+      );
+      // -0.1 is 0.9/1.0 = 0.9 of the way from -1.0 to 0.0
+      // Result should be 0.2 + (0.8-0.2) * 0.9 = 0.74 (close to centerOut, not minOut)
+      expect(result, closeTo(0.74, 0.001));
+
+      // Test at center
+      result = lerpAroundCenter(
+        value: 1.0,
+        center: 1.0,
+        rangeMin: 0.0,
+        rangeMax: 3.0,
+        minOut: 0.2,
+        centerOut: 0.8,
+        maxOut: 1.4,
+      );
+      // At center, should return centerOut
+      expect(result, equals(0.8));
+
+      // Test between center and rangeMax, very close to center
+      result = lerpAroundCenter(
+        value: 1.1,
+        center: 1.0,
+        rangeMin: 0.0,
+        rangeMax: 3.0,
+        minOut: 0.2,
+        centerOut: 0.8,
+        maxOut: 1.4,
+      );
+      // 0.1 is 0.1/2.0 = 0.05 of the way from 0.0 to 2.0
+      // Result should be 0.8 + (1.4-0.8) * 0.05 = 0.83 (close to centerOut, not maxOut)
+      expect(result, closeTo(0.83, 0.001));
+
+      // Test above rangeMax
+      result = lerpAroundCenter(
+        value: 3.1,
+        center: 1.0,
+        rangeMin: 0.0,
+        rangeMax: 3.0,
+        minOut: 0.2,
+        centerOut: 0.8,
+        maxOut: 1.4,
+      );
+      // Value of 3.0 is above rangeMax of 2.0, should return maxOut
+      expect(result, equals(1.4));
+    });
+
 
     test("throws error when center is zero without rangeMin/rangeMax", () {
       expect(() => lerpAroundCenter(

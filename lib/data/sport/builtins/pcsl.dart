@@ -4,11 +4,11 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:shooting_sports_analyst/data/ranking/deduplication/typo_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/interfaces.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/sorts.dart';
 import 'package:shooting_sports_analyst/data/sport/display_settings.dart';
 import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
-import 'package:shooting_sports_analyst/data/sport/scoring/stage_scoring.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 
 const _pcslProcedural = ScoringEvent("Procedural", shortName: "P", pointChange: -10);
@@ -90,6 +90,9 @@ const pcslDivisions = [
   ),
 ];
 
+const _pcslStandardCompetitor = const Classification(index: 0, name: "Standard Competitor", shortName: "STD", fallback: true);
+const _pcslCoachableShooter = const Classification(index: 1, name: "Coachable Shooter", shortName: "CS");
+
 final _pcslDisplaySettings = SportDisplaySettings(
   showClassification: false,
   scoreColumns: [
@@ -124,8 +127,8 @@ final pcslSport = Sport(
   displaySettings: _pcslDisplaySettings,
   resultSortModes: hitFactorSorts,
   classifications: [
-    const Classification(index: 0, name: "Standard Competitor", shortName: "STD", fallback: true),
-    const Classification(index: 1, name: "Coachable Shooter", shortName: "CS"),
+    _pcslStandardCompetitor,
+    _pcslCoachableShooter,
   ],
   divisions: pcslDivisions,
   powerFactors: [
@@ -142,5 +145,14 @@ final pcslSport = Sport(
       penaltyEvents: _pcslPenalties,
     ),
   ],
-  builtinRatingGroupsProvider: DivisionRatingGroupProvider(pcslSportName, pcslDivisions)
+  initialEloRatings: {
+    _pcslStandardCompetitor: 1000,
+    _pcslCoachableShooter: 1000,
+  },
+  initialGenericRatingMultipliers: {
+    _pcslStandardCompetitor: 1.0,
+    _pcslCoachableShooter: 1.0,
+  },
+  builtinRatingGroupsProvider: DivisionRatingGroupProvider(pcslSportName, pcslDivisions),
+  shooterDeduplicator: TypoDeduplicator(sportName: pcslSportName),
 );

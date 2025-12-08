@@ -446,6 +446,10 @@ double lerpAroundCenter({
     bottom = rangeMin;
     top = rangeMax;
   }
+  else if(rangeMin != null && rangeMax != null) {
+    bottom = rangeMin;
+    top = rangeMax;
+  }
 
   if(value <= bottom) return minOut;
   if(value >= top) return maxOut;

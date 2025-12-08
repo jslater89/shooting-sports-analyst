@@ -13,6 +13,7 @@ import 'package:shooting_sports_analyst/data/ranking/model/rating_change.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_mode.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/rating_system.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rating_event.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_settings.dart';
@@ -283,6 +284,45 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
       ),
     };
   }
+
+  // false, for now
+  @override
+  bool get supportsPrediction => false;
+
+  @override
+  List<AlgorithmPrediction> predict(List<ShooterRating> ratings, {int? seed}) {
+    /*
+    Thoughts:
+    The head-to-head margin of victory algorithm actually probably can be used to predict.
+
+    How? Leverage head-to-head scores. Exactly one person will be predicted to win. (He'll have
+    a >0.5 score against all comers.)
+
+    From that person, we can build up a ladder of initial predictions: people within 25% of the
+    leader will have score greater than 0, and we can de-lerp the expected score to get that number
+    (100 - delerp(expected_score)). Then, for people further than 25% away from the leader, we can
+    use non-leaders for whom we have performances against the leader.
+
+    xPb = xPa - (pctLoss(rB, rA) * (xPa / 100)) # scaling down as a 25% loss to 75% is only an 18.75% loss
+
+    Once we have an initial estimate for everyone based off of one opponent, then we can go through the list
+    and calculate estimates from everyone. I think it's probably a three-pass thing in total?
+
+    1. Moving from the top of the list to the bottom of the list, calculate a possible percentage using only
+    the competitors ahead of the player in the result. (Actually probably best to do this as the first step.)
+    Use weighted averages (by RD) to calculate the expected percentage.
+    2. Moving from the bottom of the list to the top of the list, calculate a possible percentage using both
+    the competitors ahead of the player and the competitors behind the player. (This adds information from the
+    lower end of the spectrum; "X is expected to beat Y by Z%").
+    3. Moving from the top of the list to the bottom again, calculate predicted percentages using both competitors
+    ahead of and behind the player. (This bubbles information from step 2 back down through the list.)
+    */
+
+
+    return [];
+  }
+
+  // -- internal methods below --
 
   /// Get opponents based on the selection mode. Input must be sorted by match finish.
   List<ShooterRating> _selectOpponents(Map<ShooterRating, RelativeMatchScore> matchScores, double competitorRating, double competitorRatio) {
