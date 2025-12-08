@@ -13,6 +13,7 @@ set +e
 rm psv2
 rm ps_search
 rm ssa_server_source
+rm ssa_auth_client
 set -e
 
 ln -s ../../../shooting-sports-analyst-closed-sources/psv2_match_source psv2
@@ -29,6 +30,7 @@ cd ..
 ls ps_search
 head ps_search/ps_search_source.dart
 
+# remove stub symlink
 ln -s ../../../shooting-sports-analyst-closed-sources/ssa_auth/client ssa_auth_client
 cd ssa_auth_client
 git checkout $TARGET_BRANCH
