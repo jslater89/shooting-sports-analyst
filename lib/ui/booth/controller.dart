@@ -51,7 +51,7 @@ class BroadcastBoothController {
       sport: model.latestMatch.sport,
       sourceCode: model.matchSource,
       sourceIds: [model.matchId],
-    ));
+    ), matchInProgress: true);
     if(matchRes.isErr()) {
       _log.e("unable to refresh match: ${matchRes.unwrapErr()}");
       return false;

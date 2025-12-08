@@ -261,10 +261,12 @@ final class RelativeStageFinishScoring extends MatchScoring {
 
         if(algorithm != null && algorithm.supportsPrediction) {
           var preds = algorithm.predict(locatedRatings);
-          preds.sort((a, b) => b.shiftedCenter.compareTo(a.shiftedCenter));
-          highPrediction = preds.first;
-          for(var pred in preds) {
-            predictions[pred.shooter] = pred;
+          if(preds.isNotEmpty) {
+            preds.sort((a, b) => b.shiftedCenter.compareTo(a.shiftedCenter));
+            highPrediction = preds.first;
+            for(var pred in preds) {
+              predictions[pred.shooter] = pred;
+            }
           }
         }
       }

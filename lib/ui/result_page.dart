@@ -452,7 +452,9 @@ class _ResultPageState extends State<ResultPage> {
         _log.d("Refreshing match from source ${_canonicalMatch.sourceCode}");
         var source = MatchSourceRegistry().getByCodeOrNull(_canonicalMatch.sourceCode);
         if(source != null && _canonicalMatch.sourceIds.isNotEmpty) {
-          var matchRes = await MatchSource.reloadMatch(DbShootingMatch.sourcePlaceholderFromMatch(_canonicalMatch));
+          var matchRes = await MatchSource.reloadMatch(DbShootingMatch.sourcePlaceholderFromMatch(_canonicalMatch),
+            matchInProgress: _canonicalMatch.date.isAfter(DateTime.now().subtract(Duration(days: 7)))
+          );
 
           if(matchRes.isOk()) {
             var match = matchRes.unwrap();
