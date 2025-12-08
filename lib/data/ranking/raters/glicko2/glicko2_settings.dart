@@ -51,7 +51,7 @@ class Glicko2Settings extends RaterSettings {
   /// The default starting RD for Glicko-2.
   static const defaultStartingRD = 350.0;
   /// The default maximum rating delta to allow per match.
-  static const defaultMaximumRatingDelta = 500.0;
+  static const defaultMaximumRatingDelta = 750.0;
   /// The default score function type for Glicko-2.
   static const defaultScoreFunctionType = ScoreFunctionType.linearMarginOfVictory;
   /// The default perfect victory difference for Glicko-2's linear margin of victory score function.
@@ -77,7 +77,9 @@ class Glicko2Settings extends RaterSettings {
   /// The method to use for selecting opponents when calculating rating updates.
   OpponentSelectionMode opponentSelectionMode;
 
-  /// The maximum rating delta to allow per match, in display units.
+  /// The maximum rating delta to allow per match, in display units. Maximum rating delta
+  /// is a safety valve; generally, Glicko-2 will perform well without it, but this serves
+  /// to catch some occasional numerical instability before it can become too big a problem.
   double maximumRatingDelta;
 
   /// The maximum rating delta to allow per match, in internal units.

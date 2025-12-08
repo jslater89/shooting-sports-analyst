@@ -228,6 +228,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
       v: v,
     );
 
+    // Cap at 0.15; volatility higher than that yields instability.
     if(newVolatility > 0.15) {
       newVolatility = 0.15;
     }
@@ -365,7 +366,14 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
   }
 
   List<ShooterRating> _selectNearbyOpponents(Map<ShooterRating, RelativeMatchScore> matchScores, List<ShooterRating> opponentsByRating, double competitorRating, double competitorRatio) {
-    List<ShooterRating> nearbyOpponents = [];
+    double margin = 0.1;
+    if(opponentsByRating.length < 10) {
+      margin = 0.25;
+    }
+
+    Set<ShooterRating> nearbyOpponents = {};
+    final topRatio = competitorRatio * (1 + margin);
+    final bottomRatio = competitorRatio * (1 - margin);
     for(var opponent in matchScores.keys) {
       if((opponent.rating - competitorRating).abs() <= settings.maximumRD) {
         nearbyOpponents.add(opponent);
@@ -377,12 +385,12 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
         continue;
       }
       var opponentRatio = opponentMatchScore.ratio;
-      if((opponentRatio - competitorRatio).abs() <= 0.1) {
+      if(opponentRatio >= bottomRatio && opponentRatio <= topRatio) {
         nearbyOpponents.add(opponent);
       }
     }
 
-    return nearbyOpponents;
+    return nearbyOpponents.toList();
   }
 
   double _iterateVolatility({
