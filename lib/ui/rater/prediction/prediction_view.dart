@@ -302,6 +302,25 @@ class _PredictionViewState extends State<PredictionView> {
     setState(() {
       outcomes = outcome.actualResults;
     });
+
+    List<double> percentErrors = [];
+    List<int> placeErrors = [];
+    for(var pred in outcome.actualResults.keys) {
+      double percentError = (pred.mean - outcome.actualResults[pred]!.percent);
+      percentErrors.add(percentError);
+      int placeError = (pred.medianPlace - outcome.actualResults[pred]!.place);
+      placeErrors.add(placeError);
+    }
+
+    double percentRmsError = sqrt(percentErrors.map((e) => e * e).average);
+    double placeRmsError = sqrt(placeErrors.map((e) => e * e).average);
+    double percentMeanAbsoluteError = percentErrors.map((e) => e.abs()).average;
+    double placeMeanAbsoluteError = placeErrors.map((e) => e.abs()).average;
+    double percentMeanSignedError = percentErrors.average;
+    double placeMeanSignedError = placeErrors.average;
+    _log.i("Percent RMSE: ${(percentRmsError * 100).toStringAsPrecision(3)}% Place RMSE: ${(placeRmsError).toStringAsPrecision(3)}");
+    _log.i("Percent MAE: ${(percentMeanAbsoluteError * 100).toStringAsPrecision(3)}% Place MAE: ${(placeMeanAbsoluteError).toStringAsPrecision(3)}");
+    _log.i("Percent MSE: ${(percentMeanSignedError * 100).toStringAsPrecision(3)}% Place MSE: ${(placeMeanSignedError).toStringAsPrecision(3)}");
     // }
 
   //   int correct68 = 0;

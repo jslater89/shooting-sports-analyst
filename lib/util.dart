@@ -619,7 +619,7 @@ extension AsNotNullExtension<X> on X? {
   X asNotNull() => this as X;
 }
 
-extension WeightedAverage on List<num> {
+extension ListWeightedAverage on List<num> {
   double weightedAverage(List<double> weights) {
     if(length != weights.length) {
       throw ArgumentError("length of list and weights must be the same");
@@ -631,6 +631,13 @@ extension WeightedAverage on List<num> {
       weightSum += weights[i];
     }
     return sum / weightSum;
+  }
+}
+
+extension IterableWeightedAverage on Iterable<num> {
+  double weightedAverage(List<double> weights) {
+    var thisList = this.toList();
+    return thisList.weightedAverage(weights);
   }
 }
 

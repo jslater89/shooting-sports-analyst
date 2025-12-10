@@ -308,6 +308,9 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
   @override
   List<AlgorithmPrediction> predict(List<ShooterRating> ratings, {int? seed}) {
     /*
+    The below was the initial design approach; it's retained for reference in case I forgot
+    something.
+
     Thoughts:
     The head-to-head margin of victory algorithm actually probably can be used to predict.
 
@@ -387,7 +390,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     // running the score function in reverse for each pair of competitors and
     // averaging the results.
 
-    Map<ShooterRating, double> expectedPercentages = _calculateExpectedPercentages(sortedRatings, initial: true, descending: true);
+    Map<ShooterRating, _ExpectedPercentage> expectedPercentages = _calculateExpectedPercentages(sortedRatings, initial: true, descending: true);
 
     // Step 2: percolate from bottom to top.
     expectedPercentages = _calculateExpectedPercentages(sortedRatings.reversed.toList(), descending: false, priorExpectedPercentages: expectedPercentages);
@@ -396,33 +399,59 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     expectedPercentages = _calculateExpectedPercentages(sortedRatings, descending: true, priorExpectedPercentages: expectedPercentages);
 
     // Step 4: normalize
-    var highestPercentage = expectedPercentages.values.max;
+    var highestPercentage = expectedPercentages.values.map((e) => e.centralValue).max;
     var factor = 1.0 / highestPercentage;
 
     if((factor - 1.0).abs() > 0.05) {
       _log.w("Percentage output instability detected, factor: $factor");
     }
     for(var entry in expectedPercentages.entries) {
-      expectedPercentages[entry.key] = entry.value * factor;
+      expectedPercentages[entry.key] = _ExpectedPercentage(
+        rating: entry.value.rating,
+        rd: entry.value.rd,
+        centralValue: entry.value.centralValue * factor,
+        upperValue: entry.value.upperValue * factor,
+        lowerValue: entry.value.lowerValue * factor,
+      );
     }
 
     // Step 5: calculate expected places.
     Map<ShooterRating, int> expectedPlaces = {};
-    sortedRatings.sort((a, b) => expectedPercentages[b]!.compareTo(expectedPercentages[a]!));
+    Map<ShooterRating, int> expectedLowPlaces = {};
+    Map<ShooterRating, int> expectedHighPlaces = {};
+    sortedRatings.sort((a, b) => expectedPercentages[b]!.centralValue.compareTo(expectedPercentages[a]!.centralValue));
     for(var (i, rating) in sortedRatings.indexed) {
       expectedPlaces[rating] = i + 1;
     }
 
-
+    for(var entry in sortedRatings) {
+      var expectedPercentage = expectedPercentages[entry]!;
+      int bestPlace = 1;
+      int worstPlace = 1;
+      for(var (i, other) in sortedRatings.indexed) {
+        if(other == entry) {
+          continue;
+        }
+        var otherExpectedPercentage = expectedPercentages[other]!;
+        if(otherExpectedPercentage.centralValue > expectedPercentage.upperValue) {
+          bestPlace = i + 1;
+        }
+        if(otherExpectedPercentage.centralValue > expectedPercentage.lowerValue) {
+          worstPlace = i + 1;
+        }
+      }
+      expectedHighPlaces[entry] = bestPlace;
+      expectedLowPlaces[entry] = worstPlace;
+    }
 
     return expectedPercentages.entries.map((entry) => AlgorithmPrediction(
       shooter: entry.key,
-      mean: entry.value,
-      sigma: 0.0,
+      mean: entry.value.centralValue,
+      sigma: (entry.value.upperValue - entry.value.lowerValue).abs() / 2,
       settings: settings,
       algorithm: this,
-      lowPlace: expectedPlaces[entry.key]!,
-      highPlace: expectedPlaces[entry.key]!,
+      lowPlace: expectedLowPlaces[entry.key]!,
+      highPlace: expectedHighPlaces[entry.key]!,
       medianPlace: expectedPlaces[entry.key]!,
     )).toList();
   }
@@ -632,38 +661,52 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
   /// 1. The first rating is assigned 1.0, and other ratings' finishes are calculated against
   /// only better finishes.
   /// 2. It assumes that the list is sorted descending.
-  Map<ShooterRating, double> _calculateExpectedPercentages(List<ShooterRating> ratings, {
-    Map<ShooterRating, double>? priorExpectedPercentages,
+  Map<ShooterRating, _ExpectedPercentage> _calculateExpectedPercentages(List<ShooterRating> ratings, {
+    Map<ShooterRating, _ExpectedPercentage>? priorExpectedPercentages,
     bool descending = true,
     bool initial = false,
+    // TODO: date param for RD
   }) {
     // Magic number. Since expected scores are probabilistic (i.e., someone very likely to
     // lose might still have an expected score of 0.1), we want to slightly inflate the victory
     // margins we generate in this calculation to fudge the results toward what we expect to
     // happen. If we don't, repeated applications of this function end up compressing the outputs—
     // in the 0.1 case above, we get (1 - 0.9^3) for the way this is currently being used.
-    final victoryMarginInflation = 1.05;
+    final victoryMarginInflation = 1.000;
 
     var scoreFunction = settings.scoreFunction as LinearMarginOfVictoryScoreFunction;
     if(priorExpectedPercentages == null) {
       priorExpectedPercentages = {};
     }
-    Map<ShooterRating, double> outputExpectedPercentages = {};
+    Map<ShooterRating, _ExpectedPercentage> outputExpectedPercentages = {};
     if(initial) {
-      priorExpectedPercentages[ratings[0]] = 1.0;
+      var firstRating = ratings[0] as Glicko2Rating;
+      priorExpectedPercentages[firstRating] = _ExpectedPercentage(
+        rating: firstRating.internalRating,
+        rd: firstRating.currentInternalRD,
+        centralValue: 1.0,
+        upperValue: 1.0,
+        lowerValue: 1.0,
+      );
     }
 
     if(initial && !descending) {
       throw Exception("Initial expected percentages cannot be calculated for an ascending list");
     }
 
-    Map<ShooterRating, List<double>> expectedPercentages = {};
+    Map<ShooterRating, List<_ExpectedPercentage>> expectedPercentages = {};
     Map<ShooterRating, List<double>> weights = {};
 
     for(var (i, rating) in ratings.indexed) {
       rating as Glicko2Rating;
       if(initial && i == 0) {
-        outputExpectedPercentages[rating] = 1.0;
+        outputExpectedPercentages[rating] = _ExpectedPercentage(
+          rating: rating.internalRating,
+          rd: rating.currentInternalRD,
+          centralValue: 1.0,
+          upperValue: 1.0,
+          lowerValue: 1.0,
+        );
         continue;
       }
       else {
@@ -676,24 +719,20 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
             _log.e("Missing expected percentage in prediction calculation for $rating vs $betterRating (better ratings, descending: $descending, initial: $initial)");
             continue;
           }
-          var expectedScore = _glickoE(rating.internalRating, betterRating.internalRating, betterRating.currentInternalRD);
-
-          // The linear region of the score function is approximately 0.2 to 0.8.
-          if(expectedScore > 0.8) {
+          var expectedPercentage = _calculateHeadToHeadExpectedPercentage(
+            rating: rating.internalRating,
+            rd: rating.currentInternalRD,
+            opponentRating: betterRating.internalRating,
+            opponentRD: betterRating.currentInternalRD,
+            opponentRatio: opponentExpectedPercentage.centralValue,
+            playerRatio: null, // not needed for this scenario
+            scoreFunction: settings.scoreFunction as LinearMarginOfVictoryScoreFunction,
+            victoryMarginInflation: victoryMarginInflation,
+            playerIsBetter: false,
+          );
+          if(expectedPercentage == null) {
             continue;
           }
-          else if(expectedScore < 0.2) {
-            continue;
-          }
-
-          // The margin from the winner (i.e. the better rating) to the loser (i.e. the player).
-          var victoryMargin = scoreFunction.calculateVictoryMargin(expectedScore, opponentExpectedPercentage);
-          // Magic number: since expected scores are a sigmoid function that will approach saturation but
-          // never quite get there, we want to slightly inflate the output margins to make sure we aren't
-          // compressing the outputs with repeated applications of this function.
-          victoryMargin *= victoryMarginInflation;
-
-          var expectedPercentage = opponentExpectedPercentage - victoryMargin;
           if(initial) {
             // For the first run through, set the prior expected percentage to the new estimate immediately.
             priorExpectedPercentages[rating] = expectedPercentage;
@@ -713,20 +752,21 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
               _log.e("Missing expected percentage (p: $playerExpectedPercentage, o: $opponentExpectedPercentage) in prediction calculation for $rating vs $worseRating (worse ratings, descending: $descending, initial: $initial)");
               continue;
             }
-            var expectedScore = _glickoE(worseRating.internalRating, rating.internalRating, rating.currentInternalRD);
+            var expectedPercentage = _calculateHeadToHeadExpectedPercentage(
+              rating: rating.internalRating,
+              rd: rating.currentInternalRD,
+              opponentRating: worseRating.internalRating,
+              opponentRD: worseRating.currentInternalRD,
+              opponentRatio: opponentExpectedPercentage.centralValue,
+              playerRatio: playerExpectedPercentage.centralValue,
+              scoreFunction: settings.scoreFunction as LinearMarginOfVictoryScoreFunction,
+              victoryMarginInflation: victoryMarginInflation,
+              playerIsBetter: true,
+            );
 
-            if(expectedScore > 0.8) {
+            if(expectedPercentage == null) {
               continue;
             }
-            else if(expectedScore < 0.2) {
-              continue;
-            }
-
-            var victoryMargin = scoreFunction.calculateVictoryMargin(expectedScore, playerExpectedPercentage);
-
-            // Magic number; see comment above.
-            victoryMargin *= victoryMarginInflation;
-            var expectedPercentage = opponentExpectedPercentage + victoryMargin;
             expectedPercentages.addToList(rating, expectedPercentage);
             weights.addToList(rating, _glickoG(worseRating.currentInternalRD));
           }
@@ -735,6 +775,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     }
 
     for(var rating in ratings) {
+      rating as Glicko2Rating;
       var ratingExpectedPercentages = expectedPercentages[rating];
       if(ratingExpectedPercentages == null) {
         continue;
@@ -743,10 +784,124 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
       if(ratingWeights == null) {
         continue;
       }
-      var outputExpectedPercentage = ratingExpectedPercentages.weightedAverage(ratingWeights);
-      outputExpectedPercentages[rating] = outputExpectedPercentage;
+      var centerExpectedPercentage = ratingExpectedPercentages.map((e) => e.centralValue).weightedAverage(ratingWeights);
+      var upperExpectedPercentage = ratingExpectedPercentages.map((e) => e.upperValue).weightedAverage(ratingWeights);
+      var lowerExpectedPercentage = ratingExpectedPercentages.map((e) => e.lowerValue).weightedAverage(ratingWeights);
+      outputExpectedPercentages[rating] = _ExpectedPercentage(
+        rating: rating.internalRating,
+        rd: rating.currentInternalRD,
+        centralValue: centerExpectedPercentage,
+        upperValue: upperExpectedPercentage,
+        lowerValue: lowerExpectedPercentage,
+      );
     }
 
     return outputExpectedPercentages;
+  }
+
+  /// Calculate the expected percentage for a given rating and RD.
+  ///
+  /// [rating] is the rating of the competitor to calculate the expected percentage for.
+  /// [rd] is the RD of the competitor to calculate the expected percentage for.
+  /// [opponentRating] is the rating of the opponent.
+  /// [opponentRD] is the RD of the opponent.
+  /// [winnerRatio] is 0-1 match outcome of the winner against the field (not just the opponent).
+  /// [playerIsBetter] is true if the player is the winner, false if the player is the loser.
+  /// [scoreFunction] is the score function to use to calculate the expected percentage.
+  /// [victoryMarginInflation] is the inflation factor to apply to the victory margin.
+  ///
+  /// Returns the expected percentage as a _ExpectedPercentage object, or null if the
+  /// center value of the expected percentage is outside the linear region of the E function.
+  _ExpectedPercentage? _calculateHeadToHeadExpectedPercentage({
+    required double rating,
+    required double rd,
+    double? playerRatio,
+    required double opponentRating,
+    required double opponentRD,
+    required double opponentRatio,
+    required LinearMarginOfVictoryScoreFunction scoreFunction,
+    required double victoryMarginInflation,
+    required bool playerIsBetter,
+  }) {
+    double expectedScore, downRdExpectedScore, upRdExpectedScore;
+    if(!playerIsBetter) {
+      expectedScore = _glickoE(rating, opponentRating, opponentRD);
+      downRdExpectedScore = _glickoE(rating - rd, opponentRating, opponentRD);
+      upRdExpectedScore = _glickoE(rating + rd, opponentRating, opponentRD);
+    }
+    else {
+      expectedScore = _glickoE(opponentRating, rating, rd);
+      downRdExpectedScore = _glickoE(opponentRating, rating - rd, rd);
+      upRdExpectedScore = _glickoE(opponentRating, rating + rd, rd);
+    }
+
+    // The linear region of the E function outputs approximately 0.2 to 0.8.
+    if(expectedScore > 0.8) {
+      return null;
+    }
+    else if(expectedScore < 0.2) {
+      return null;
+    }
+
+    if(playerIsBetter && playerRatio == null) {
+      throw ArgumentError("playerRatio is required when playerIsBetter is true");
+    }
+
+    var winnerRatio = playerIsBetter ? playerRatio! : opponentRatio;
+
+    // The margin from the winner (i.e. the better rating) to the loser (i.e. the player).
+    var victoryMargin = scoreFunction.calculateVictoryMargin(expectedScore, winnerRatio);
+    var downRdVictoryMargin = scoreFunction.calculateVictoryMargin(downRdExpectedScore, winnerRatio);
+    var upRdVictoryMargin = scoreFunction.calculateVictoryMargin(upRdExpectedScore, winnerRatio);
+    // Magic number: since expected scores are a sigmoid function that will approach saturation but
+    // never quite get there, we want to slightly inflate the output margins to make sure we aren't
+    // compressing the outputs with repeated applications of this function.
+    victoryMargin *= victoryMarginInflation;
+    downRdVictoryMargin *= victoryMarginInflation;
+    upRdVictoryMargin *= victoryMarginInflation;
+
+    double expectedPercentage, downRdExpectedPercentage, upRdExpectedPercentage;
+    if(!playerIsBetter) {
+      expectedPercentage = opponentRatio - victoryMargin;
+      downRdExpectedPercentage = opponentRatio - downRdVictoryMargin;
+      upRdExpectedPercentage = opponentRatio - upRdVictoryMargin;
+    }
+    else {
+      expectedPercentage = opponentRatio + victoryMargin;
+      downRdExpectedPercentage = opponentRatio + downRdVictoryMargin;
+      upRdExpectedPercentage = opponentRatio + upRdVictoryMargin;
+    }
+
+    return _ExpectedPercentage(
+      rating: rating,
+      rd: rd,
+      centralValue: expectedPercentage,
+      upperValue: upRdExpectedPercentage,
+      lowerValue: downRdExpectedPercentage,
+    );
+  }
+}
+
+/// As produced by the Glicko-2 prediction algorithm, an expected percentage is actually
+/// a range of percentages, centered around the actual rating with detours up and down
+/// based on RD.
+class _ExpectedPercentage {
+  final double rating;
+  final double rd;
+  final double centralValue;
+  final double upperValue;
+  final double lowerValue;
+
+  _ExpectedPercentage({
+    required this.rating,
+    required this.rd,
+    required this.centralValue,
+    required this.upperValue,
+    required this.lowerValue,
+  });
+
+  @override
+  String toString() {
+    return "${centralValue.toStringAsFixed(2)} - ${lowerValue.toStringAsFixed(2)} + ${upperValue.toStringAsFixed(2)}";
   }
 }
