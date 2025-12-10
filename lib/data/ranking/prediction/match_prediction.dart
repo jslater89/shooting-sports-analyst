@@ -47,10 +47,28 @@ class AlgorithmPrediction {
   late int medianPlace;
 
   AlgorithmPrediction({
-    required this.shooter, required this.mean, required double sigma, this.ciOffset = 0.0, required this.settings, required this.algorithm,
+    required this.shooter,
+    required this.mean,
+    required double sigma,
+    this.ciOffset = 0.0,
+    required this.settings,
+    required this.algorithm,
+    int? lowPlace,
+    int? highPlace,
+    int? medianPlace,
   }) :
       this.oneSigma = sigma,
-      this.twoSigma = sigma * 2;
+      this.twoSigma = sigma * 2 {
+        if(lowPlace != null) {
+          this.lowPlace = lowPlace;
+        }
+        if(highPlace != null) {
+          this.highPlace = highPlace;
+        }
+        if(medianPlace != null) {
+          this.medianPlace = medianPlace;
+        }
+      }
 
   /// A value suitble for ordinal sorting, based off of the 95%/-2 sigma
   /// expected value.

@@ -645,6 +645,21 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
                 )
               ]
             ),
+          // CheckboxListTile(
+          //   title: Tooltip(
+          //     child: Text("By stage? (experimental)"),
+          //     message: "Calculate and update ratings after each stage if checked, or after each match if unchecked.\n"
+          //       "By-stage mode is experimental and may not work as expected.",
+          //   ),
+          //   value: settings.byStage,
+          //   onChanged: (value) {
+          //     if(value != null) {
+          //       setState(() {
+          //         settings.byStage = value;
+          //       });
+          //     }
+          //   }
+          // ),
         ]
       ),
     );

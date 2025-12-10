@@ -775,11 +775,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     int seed = _selectedMatch.date.millisecondsSinceEpoch;
     var predictions = _settings.algorithm.predict(shooters, seed: seed);
     Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-      return PredictionView(dataSource: dataSource, predictions: predictions, matchId: futureMatch.matchId, filters: FilterSet(
-        _sport,
-        mode: FilterMode.or,
-        divisions: [...divisions],
-      ));
+      return PredictionView(dataSource: dataSource, predictions: predictions, matchId: futureMatch.matchId, group: tab);
     }));
   }
 }

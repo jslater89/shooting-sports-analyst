@@ -10,6 +10,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
@@ -29,15 +30,15 @@ import 'package:shooting_sports_analyst/ui/widget/dialog/wager_dialog.dart';
 var _log = SSALogger("PredictionView");
 
 class PredictionView extends StatefulWidget {
-  const PredictionView({Key? key, required this.dataSource, required this.matchId, required this.filters, required this.predictions}) : super(key: key);
+  const PredictionView({Key? key, required this.dataSource, required this.matchId, required this.group, required this.predictions}) : super(key: key);
 
   /// The data source that generated the predictions.
   final RatingDataSource dataSource;
 
   /// The match.
   final String matchId;
-  /// The filters from the rating group used to generate the predictions.
-  final FilterSet filters;
+  /// The rating group that the predictions were generated for.
+  final RatingGroup group;
 
   /// The predictions.
   final List<AlgorithmPrediction> predictions;
@@ -219,12 +220,10 @@ class _PredictionViewState extends State<PredictionView> {
   }
 
   void _validate(double highPrediction) async {
-    var matchList = await MatchDatabaseChooserDialog.show(
+    var dbMatch = await MatchDatabaseChooserDialog.showSingle(
       context: context,
-      multiple: false,
     );
-    if(matchList == null || matchList.isEmpty) return;
-    var dbMatch = matchList.first;
+    if(dbMatch == null) return;
 
     var matchRes = dbMatch.hydrate(useCache: true);
 
@@ -234,12 +233,10 @@ class _PredictionViewState extends State<PredictionView> {
     }
     var match = matchRes.unwrap();
 
-    var filters = widget.filters;
+    var filters = widget.group.filters;
     var shooters = match.filterShooters(
-      filterMode: filters.mode,
+      filterMode: FilterMode.and,
       divisions: filters.activeDivisions.toList(),
-      powerFactors: [],
-      classes: [],
       allowReentries: false,
     );
     var scores = match.getScores(
@@ -249,19 +246,28 @@ class _PredictionViewState extends State<PredictionView> {
 
     var matchScores = <ShooterRating, RelativeMatchScore>{};
     List<ShooterRating> knownShooters = [];
+    Map<AlgorithmPrediction, SimpleMatchResult> actualResults = {};
 
     // We can only do validation for shooters with ratings and scores.
     // Give raters the whole list of shooters, and let them figure out
     // what to do with registration lists that don't match
     for(var shooter in shooters) {
-      var rating = null;
-      // var rating = widget.rater.ratingFor(shooter);
+      var ratingRes = await widget.dataSource.lookupRating(widget.group, shooter.memberNumber);
+      if(ratingRes.isErr()) {
+        _log.e("Error looking up rating for ${shooter.getName(suffixes: false)}: ${ratingRes.unwrapErr().message}");
+        continue;
+      }
+      var rating = ratingRes.unwrap();
       if(rating != null) {
+        var shooterRating = (await widget.dataSource.wrapDbRating(rating)).unwrap();
         var score = scores[shooter];
-        // var prediction = sortedPredictions.firstWhereOrNull((element) => element.shooter == rating);
+        var prediction = sortedPredictions.firstWhereOrNull((element) => rating.allPossibleMemberNumbers.contains(element.shooter.memberNumber));
+        if(prediction != null) {
+          actualResults[prediction] = SimpleMatchResult(raterScore: prediction.mean, percent: score?.ratio ?? 0, place: score?.place ?? 0);
+        }
         if(score != null) {
-          matchScores[rating] = score;
-          knownShooters.add(rating);
+          matchScores[shooterRating] = score;
+          knownShooters.add(shooterRating);
         }
       }
       else {
@@ -271,46 +277,55 @@ class _PredictionViewState extends State<PredictionView> {
 
     _log.i("Registrants: ${shooters.length} Predictions: ${shooters.length} Matched: ${knownShooters.length}");
 
-    // var outcome = widget.rater.ratingSystem.validate(
-    //     shooters: knownShooters,
-    //     scores: matchScores.map((k, v) => MapEntry(k, v.total)),
-    //     matchScores: matchScores,
-    //     predictions: sortedPredictions
-    // );
-    //
-    // if(outcome.mutatedInputs) {
-    //   _log.i("Predictions changed");
-    //   setState(() {
-    //     sortedPredictions = outcome.actualResults.keys.sorted((a, b) => b.ordinal.compareTo(a.ordinal));
-    //     searchedPredictions = search.isEmpty ? sortedPredictions : sortedPredictions.where((p) =>
-    //         p.shooter.getName(suffixes: false).toLowerCase().startsWith(search.toLowerCase())
-    //         || p.shooter.lastName.toLowerCase().startsWith(search.toLowerCase())
-    //     ).toList();
-    //   });
+    PredictionOutcome outcome;
+    // if(widget.dataSource.supportsValidation) {
+      // var outcome = widget.rater.ratingSystem.validate(
+      //     shooters: knownShooters,
+      //     scores: matchScores.map((k, v) => MapEntry(k, v.total)),
+      //     matchScores: matchScores,
+      //     predictions: sortedPredictions
+      // );
+
+      // if(outcome.mutatedInputs) {
+      //   _log.i("Predictions changed");
+      //   setState(() {
+      //     sortedPredictions = outcome.actualResults.keys.sorted((a, b) => b.ordinal.compareTo(a.ordinal));
+      //     searchedPredictions = search.isEmpty ? sortedPredictions : sortedPredictions.where((p) =>
+      //         p.shooter.getName(suffixes: false).toLowerCase().startsWith(search.toLowerCase())
+      //         || p.shooter.lastName.toLowerCase().startsWith(search.toLowerCase())
+      //     ).toList();
+      //   });
+      // }
+
+    // } else {
+    outcome = PredictionOutcome(error: 0, actualResults: actualResults, mutatedInputs: false);
+    setState(() {
+      outcomes = outcome.actualResults;
+    });
     // }
-    //
-    // int correct68 = 0;
-    // int correct95 = 0;
-    // int total = 0;
-    // for(var pred in outcome.actualResults.keys) {
-    //   double boxLowPercent = (PredictionView._percentFloor + pred.lowerBox / highPrediction * PredictionView._percentMult) * 100;
-    //   double whiskerLowPercent = (PredictionView._percentFloor + pred.lowerWhisker / highPrediction * PredictionView._percentMult) * 100;
-    //   double whiskerHighPercent = (PredictionView._percentFloor + pred.upperWhisker / highPrediction * PredictionView._percentMult) * 100;
-    //   double boxHighPercent = (PredictionView._percentFloor + pred.upperBox / highPrediction * PredictionView._percentMult) * 100;
-    //   double? outcomePercent;
-    //
-    //   if(outcome.actualResults[pred] != null) {
-    //     total += 1;
-    //     outcomePercent = outcome.actualResults[pred]!.percent * 100;
-    //     if(outcomePercent >= whiskerLowPercent && outcomePercent <= whiskerHighPercent) correct95 += 1;
-    //     if(outcomePercent >= boxLowPercent && outcomePercent <= boxHighPercent) correct68 += 1;
-    //   }
-    // }
-    // _log.i("Pct. correct: $correct68/$correct95/$total (${(correct68 / total * 100).toStringAsFixed(1)}%/${(correct95 / total * 100).toStringAsFixed(1)}%)");
-    //
-    // setState(() {
-    //   outcomes = outcome.actualResults;
-    // });
+
+  //   int correct68 = 0;
+  //   int correct95 = 0;
+  //   int total = 0;
+  //   for(var pred in outcome.actualResults.keys) {
+  //     double boxLowPercent = (PredictionView._percentFloor + pred.lowerBox / highPrediction * PredictionView._percentMult) * 100;
+  //     double whiskerLowPercent = (PredictionView._percentFloor + pred.lowerWhisker / highPrediction * PredictionView._percentMult) * 100;
+  //     double whiskerHighPercent = (PredictionView._percentFloor + pred.upperWhisker / highPrediction * PredictionView._percentMult) * 100;
+  //     double boxHighPercent = (PredictionView._percentFloor + pred.upperBox / highPrediction * PredictionView._percentMult) * 100;
+  //     double? outcomePercent;
+
+  //     if(outcome.actualResults[pred] != null) {
+  //       total += 1;
+  //       outcomePercent = outcome.actualResults[pred]!.percent * 100;
+  //       if(outcomePercent >= whiskerLowPercent && outcomePercent <= whiskerHighPercent) correct95 += 1;
+  //       if(outcomePercent >= boxLowPercent && outcomePercent <= boxHighPercent) correct68 += 1;
+  //     }
+  //   }
+  //   _log.i("Pct. correct: $correct68/$correct95/$total (${(correct68 / total * 100).toStringAsFixed(1)}%/${(correct95 / total * 100).toStringAsFixed(1)}%)");
+
+  //   setState(() {
+  //     outcomes = outcome.actualResults;
+  //   });
   }
 
   Widget _buildPredictionsHeader(double uiScaleFactor) {

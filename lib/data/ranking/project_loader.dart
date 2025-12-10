@@ -557,8 +557,8 @@ class RatingProjectLoader {
         subProgress: subProgress,
         subTotal: subTotal,
       );
-      var newChanges = await _rankMatch(group, match);
-      changeCount += newChanges.length;
+      var (newChanges, newChangeCount) = await _rankMatch(group, match);
+      changeCount += newChangeCount;
       changedRatings.addAll(newChanges);
     }
 
@@ -1396,8 +1396,8 @@ class RatingProjectLoader {
 
   double get _centerStrength => sport.ratingStrengthProvider?.centerStrength ?? 1.0;
 
-  /// Returns a set of ratings that were changed.
-  Future<Set<DbShooterRating>> _rankMatch(RatingGroup group, ShootingMatch match) async {
+  /// Returns a set of ratings that were changed and a count of new events created.
+  Future<(Set<DbShooterRating>, int)> _rankMatch(RatingGroup group, ShootingMatch match) async {
     late DateTime start;
     if(Timings.enabled) start = DateTime.now();
     var shooters = _getShooters(group, match, verify: true);
@@ -1405,7 +1405,7 @@ class RatingProjectLoader {
 
     // Skip when a match has no shooters in a group
     if(shooters.length == 0 && scores.length == 0) {
-      return {};
+      return (Set<DbShooterRating>(), 0);
     }
 
     if(Timings.enabled) timings.add(TimingType.getShootersAndScores, DateTime.now().difference(start).inMicroseconds);
@@ -1782,7 +1782,7 @@ class RatingProjectLoader {
     if(Timings.enabled) timings.add(TimingType.updateConnectedness, DateTime.now().difference(start).inMicroseconds);
 
     timings.ratingEventCount += changeCount;
-    return changedRatings;
+    return (changedRatings, changeCount);
   }
 
   (List<MatchEntry>, List<RelativeMatchScore>) _filterScores(List<MatchEntry> shooters, List<RelativeMatchScore> scores, MatchStage? stage) {
@@ -2137,7 +2137,14 @@ class RatingProjectLoader {
       if(!changes[rating.wrappedRating]!.containsKey(stageScore)) {
         changes[rating.wrappedRating]![stageScore] =
             ratingSystem.newEvent(rating: rating, match: match, stage: stage, score: stageScore, matchScore: score);
-        changes[rating.wrappedRating]![stageScore]!.apply(update[rating]!);
+        var ratingChange = update[rating];
+        if(ratingChange == null) {
+          if(matchScores.length <= 1) {
+            // solo competitors may not have updates, depending on the rater
+            return;
+          }
+        }
+        changes[rating.wrappedRating]![stageScore]!.apply(ratingChange!);
       }
       if(Timings.enabled) timings.add(TimingType.changeMap, DateTime.now().difference(start).inMicroseconds);
     }

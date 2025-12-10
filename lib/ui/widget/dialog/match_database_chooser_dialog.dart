@@ -47,12 +47,11 @@ class MatchDatabaseChooserDialog extends StatefulWidget {
   @override
   State<MatchDatabaseChooserDialog> createState() => _MatchDatabaseChooserDialogState();
 
-  static Future<List<DbShootingMatch>?> show({
+  static Future<List<DbShootingMatch>?> showMultiple({
     required BuildContext context,
     List<DbShootingMatch>? matches,
     bool showStats = false,
     String? helpText,
-    bool multiple = false,
     bool showIds = false,
     Sport? sport,
     List<Sport>? sports,
@@ -65,7 +64,30 @@ class MatchDatabaseChooserDialog extends StatefulWidget {
       showStats: showStats,
       matches: matches,
       helpText: helpText,
-      multiple: multiple,
+      multiple: true,
+      sport: sport,
+      sports: sports,
+    ), barrierDismissible: false);
+  }
+
+  static Future<DbShootingMatch?> showSingle({
+    required BuildContext context,
+    List<DbShootingMatch>? matches,
+    bool showStats = false,
+    String? helpText,
+    bool showIds = false,
+    Sport? sport,
+    List<Sport>? sports,
+  }) {
+    if(sport != null && sports != null) {
+      throw ArgumentError("Cannot provide both sport and sports");
+    }
+    return showDialog(context: context, builder: (context) => MatchDatabaseChooserDialog(
+      showIds: showIds,
+      showStats: showStats,
+      matches: matches,
+      helpText: helpText,
+      multiple: false,
       sport: sport,
       sports: sports,
     ), barrierDismissible: false);

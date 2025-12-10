@@ -47,9 +47,8 @@ class SSAServerSourceUI extends SourceUI {
                     if(canUpload) IconButton(
                       icon: Icon(Icons.upload),
                       onPressed: () async {
-                        var matches = await MatchDatabaseChooserDialog.show(
+                        var matches = await MatchDatabaseChooserDialog.showMultiple(
                           context: context,
-                          multiple: true,
                           showIds: true,
                         );
                         if(matches == null) return;

@@ -38,7 +38,7 @@ import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_perc
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/ui/elo_settings_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_settings.dart';
-import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/ui/glicko_settings_ui.dart';
+import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/ui/glicko2_settings_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_rater.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/marble_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/marbles/ui/marble_settings_ui.dart';

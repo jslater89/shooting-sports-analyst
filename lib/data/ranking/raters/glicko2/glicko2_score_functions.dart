@@ -62,4 +62,26 @@ class LinearMarginOfVictoryScoreFunction extends Glicko2ScoreFunction {
       maxOut: 1.0,
     );
   }
+
+  /// Reverse the score function, taking a loser's expected score and a winner's ratio and returning
+  /// the margin of victory for the winner.
+  double calculateVictoryMargin(double expectedScore, double winnerRatio) {
+    var topOfOutput = winnerRatio + (perfectVictoryDifference * winnerRatio);
+    var bottomOfOutput = winnerRatio - (perfectVictoryDifference * winnerRatio);
+    var centerOfOutput = (topOfOutput + bottomOfOutput) / 2;
+
+    // This outputs the expected score for the loser.
+    var output = lerpAroundCenter(
+      value: expectedScore,
+      center: 0.5,
+      rangeMin: 0.0,
+      rangeMax: 1.0,
+      minOut: bottomOfOutput,
+      centerOut: centerOfOutput,
+      maxOut: topOfOutput,
+    );
+
+    // So to get the margin of victory for the winner, we need to subtract the expected score from the winner's ratio.
+    return winnerRatio - output;
+  }
 }

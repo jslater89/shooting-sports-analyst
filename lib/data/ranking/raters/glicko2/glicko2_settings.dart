@@ -11,6 +11,7 @@ import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_scor
 
 class Glicko2Settings extends RaterSettings {
 
+  static const _byStageKey = "g2ByStage";
   static const _initialRatingKey = "g2InitialRating";
   static const _maximumRDKey = "g2MaximumRD";
   static const _tauKey = "g2Tau";
@@ -23,13 +24,14 @@ class Glicko2Settings extends RaterSettings {
   static const _perfectVictoryDifferenceKey = "g2PerfectVictoryDifference";
 
   Glicko2Settings({
+    this.byStage = false,
     this.initialRating = defaultInitialRating,
     this.startingRD = defaultStartingRD,
     this.maximumRD = defaultMaximumRD,
     this.tau = defaultTau,
     this.pseudoRatingPeriodLength = defaultPseudoRatingPeriodLength,
     this.initialVolatility = defaultInitialVolatility,
-    this.opponentSelectionMode = OpponentSelectionMode.all,
+    this.opponentSelectionMode = OpponentSelectionMode.topAndNearby,
     this.maximumRatingDelta = defaultMaximumRatingDelta,
     this.scoreFunctionType = ScoreFunctionType.linearMarginOfVictory,
     this.perfectVictoryDifference = defaultPerfectVictoryDifference,
@@ -52,10 +54,13 @@ class Glicko2Settings extends RaterSettings {
   static const defaultStartingRD = 350.0;
   /// The default maximum rating delta to allow per match.
   static const defaultMaximumRatingDelta = 750.0;
-  /// The default score function type for Glicko-2.
-  static const defaultScoreFunctionType = ScoreFunctionType.linearMarginOfVictory;
   /// The default perfect victory difference for Glicko-2's linear margin of victory score function.
   static const defaultPerfectVictoryDifference = 0.25;
+
+  /// Whether to calculate and update ratings by stage (true) or by match (false).
+  ///
+  /// By match is the default, the standard behavior, and the most sturdily tested.
+  bool byStage;
 
   /// The default initial rating for Glicko-2, in display units.
   double initialRating;
@@ -102,7 +107,7 @@ class Glicko2Settings extends RaterSettings {
   /// Converts volatility to display units showing the RD increase per rating period.
   ///
   /// Calculates the actual RD increase using the formula: sqrt(referenceRD^2 + volatility^2) - referenceRD,
-  /// where referenceRD is 50 (an active/well-known competitor) in internal units according to default scaling.
+  /// where referenceRD is 25 (an active/well-known competitor) in internal units according to default scaling.
   /// This shows how much RD increases per rating period for a shooter at that RD.
   double volatilityToDisplay(double volatility) {
     final referenceRDInternal = 25 / defaultScalingFactor;
@@ -126,6 +131,7 @@ class Glicko2Settings extends RaterSettings {
 
   @override
   void encodeToJson(Map<String, dynamic> json) {
+    json[_byStageKey] = byStage;
     json[_initialRatingKey] = initialRating;
     json[_maximumRDKey] = maximumRD;
     json[_tauKey] = tau;
@@ -140,6 +146,7 @@ class Glicko2Settings extends RaterSettings {
 
   @override
   void loadFromJson(Map<String, dynamic> json) {
+    byStage = (json[_byStageKey] ?? false) as bool;
     initialRating = (json[_initialRatingKey] ?? defaultInitialRating) as double;
     maximumRD = (json[_maximumRDKey] ?? defaultMaximumRD) as double;
     tau = (json[_tauKey] ?? defaultTau) as double;

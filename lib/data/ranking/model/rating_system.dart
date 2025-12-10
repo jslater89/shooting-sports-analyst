@@ -150,8 +150,8 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings> {
     throw UnimplementedError();
   }
 
-  static const double defaultRatioFloor = 0.25;
-  static const double defaultRatioMult = 1 - defaultRatioFloor;
+  static const double defaultRatioFloor = 0;
+  static const double defaultRatioMult = 1;
 
   /// Return true if this rating system can generate predictions.
   bool get supportsPrediction => false;
