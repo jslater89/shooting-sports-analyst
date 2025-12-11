@@ -68,6 +68,8 @@ class Glicko2Settings extends RaterSettings {
   static const defaultMarginOfVictoryInflation = 1.00;
   /// The default maximum number of opponents to consider when calculating rating updates for new players.
   static const defaultMaximumOpponentCount = 20;
+  /// The default maximum volatility to allow, in display units.
+  static const defaultMaximumVolatility = 0.15;
 
   /// Whether to calculate and update ratings by stage (true) or by match (false).
   ///
@@ -145,6 +147,15 @@ class Glicko2Settings extends RaterSettings {
     final newRDInternal = sqrt(pow(referenceRDInternal, 2) + pow(volatility, 2));
     final rdIncreaseInternal = newRDInternal - referenceRDInternal;
     return scaleToDisplay(rdIncreaseInternal);
+  }
+
+  /// Converts volatility to an alternate representation showing how far above or below default the competitor is.
+  double volatilityToAlternateDisplay(double volatility) {
+    // scale volatility to a number between (some negative value) and 1000, where
+    // 0 is the initial volatility and 1000 is the maximum volatility.
+    var percentageDifference = (volatility - initialVolatility) / (defaultMaximumVolatility - initialVolatility);
+    var scaleFactor = (defaultMaximumVolatility - initialVolatility) / initialVolatility * 1000;
+    return percentageDifference * scaleFactor;
   }
 
   /// The maximum RD to allow, in display units.

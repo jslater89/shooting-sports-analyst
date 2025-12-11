@@ -244,8 +244,8 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     );
 
     // Cap at 0.15; volatility higher than that yields instability.
-    if(newVolatility > 0.15) {
-      newVolatility = 0.15;
+    if(newVolatility > Glicko2Settings.defaultMaximumVolatility) {
+      newVolatility = Glicko2Settings.defaultMaximumVolatility;
     }
 
     // var newVolatility = shooter.volatility;
@@ -494,6 +494,13 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
         var bDiff = (b.rating - player.rating).abs();
         return aDiff.compareTo(bDiff);
       }).take(settings.maximumOpponentCount).toList();
+    }
+
+    // If that doesn't include the winner, include the winner and remove the most distant opponent.
+    var winner = matchScores.keys.first;
+    if(!selected.contains(winner) && player != winner) {
+      selected.insert(0, winner);
+      selected.removeLast();
     }
 
     return selected;
