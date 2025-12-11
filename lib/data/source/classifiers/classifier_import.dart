@@ -117,6 +117,11 @@ class ClassifierImporter {
         if(entries.isNotEmpty) {
           var pseudoDate = date.add(Duration(hours: pseudoDateOffset));
           pseudoDateOffset += 1;
+
+          // TODO: generate a sourceLastUpdated date
+          // It should be either the very end of the month of the pseudo-match date,
+          // or the current date if we're in the month in question.
+
           var match = ShootingMatch(
             name: "$matchNamePrefix $classifier ${programmerYmdFormat.format(date)}",
             rawDate: programmerYmdFormat.format(pseudoDate),

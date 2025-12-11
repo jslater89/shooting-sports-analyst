@@ -19,6 +19,8 @@ class MatchService {
       router.use(m);
     }
     router.get("/<matchId>", getMatch);
+    router.get("/has/<matchId>", hasMatch);
+    router.post("/needs", needsMatch);
     router.post("/search", search);
     router.post("/upload", upload);
   }
@@ -69,6 +71,45 @@ class MatchService {
       headers["Last-Modified"] = match.sourceLastUpdated!.toUtc().toIso8601String();
     }
     return Response.ok(miff.unwrap(), headers: headers);
+  }
+
+  /// GET /has/<matchId>
+  ///
+  /// Returns true if the match with the given source ID exists, false otherwise.
+  Future<Response> hasMatch(Request request, String matchId) async {
+    var hasMatch = await database.hasMatchBySourceId(matchId);
+    return Response.ok(jsonEncode({"hasMatch": hasMatch}));
+  }
+
+  Future<Response> needsMatch(Request request) async {
+    var body = await request.body.asJson;
+    if(body == null || body is! Map<String, dynamic>) {
+      return Response.badRequest(body: "Invalid request");
+    }
+    var matchId = body["matchId"] as String;
+    if(matchId.isEmpty) {
+      return Response.badRequest(body: "Invalid match ID");
+    }
+    var hasMatch = await database.hasMatchBySourceId(matchId);
+    if(!hasMatch) {
+      return Response.ok(jsonEncode({"needsMatch": true}));
+    }
+    var clientDate = body["matchDate"] as String?;
+    if(clientDate == null) {
+      return Response.ok(jsonEncode({"needsMatch": true}));
+    }
+    if(clientDate.isEmpty) {
+      return Response.badRequest(body: "Invalid match date");
+    }
+    var parsedDate = DateTime.tryParse(clientDate);
+    if(parsedDate == null) {
+      return Response.badRequest(body: "Invalid match date");
+    }
+    var matchDate = await database.getMatchLastUpdated(matchId);
+    if(matchDate == null) {
+      return Response.ok(jsonEncode({"needsMatch": true}));
+    }
+    return Response.ok(jsonEncode({"needsMatch": false}));
   }
 
   /// /search

@@ -86,6 +86,15 @@ class SSAServerMatchSource extends MatchSource<ServerMatchType, SSAServerMatchFe
     return session.hasAnyRole(["uploader", "admin"]);
   }
 
+  Future<bool> needsMatch(ShootingMatch match) async {
+    var response = await makeAuthenticatedRequest("POST", "/match/needs", bodyBytes: utf8.encode(jsonEncode({"matchId": match.sourceIds.first, "matchDate": match.date.toIso8601String()})));
+    if(response.statusCode != 200) {
+      return false;
+    }
+    var json = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+    return json["needsMatch"] as bool? ?? false;
+  }
+
   Future<MatchSourceError?> uploadMatch(ShootingMatch match) async {
     if(!canUpload) {
       return MatchSourceError.noCredentials;

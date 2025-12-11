@@ -58,10 +58,13 @@ class SSAServerSourceUI extends SourceUI {
                             onError(FormatError(hydratedRes.unwrapErr()));
                             continue;
                           }
-                          var hydrated = hydratedRes.unwrap();
-                          var result = await source.uploadMatch(hydrated);
-                          if(result != null) {
-                            onError(result);
+                          var hydratedMatch = hydratedRes.unwrap();
+                          var needsMatch = await source.needsMatch(hydratedMatch);
+                          if(needsMatch) {
+                            var result = await source.uploadMatch(hydratedMatch);
+                            if(result != null) {
+                              onError(result);
+                            }
                           }
                         }
                       },
