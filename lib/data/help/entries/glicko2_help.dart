@@ -22,6 +22,8 @@ The Glicko-2 rating system is an evolution of the earlier Glicko rating system, 
 were developed to improve on Elo in its original chess application. Glicko-2 has a few features
 which make it attractive for application to the shooting sports.
 
+It supports predictions when using the linear margin of victory score function.
+
 ## General Description
 Glicko-2 replaces Elo's single parameter (rating) with three:
 

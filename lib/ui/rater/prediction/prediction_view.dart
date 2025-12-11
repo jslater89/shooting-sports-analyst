@@ -320,7 +320,7 @@ class _PredictionViewState extends State<PredictionView> {
     double placeMeanSignedError = placeErrors.average;
     _log.i("Percent RMSE: ${(percentRmsError * 100).toStringAsPrecision(3)}% Place RMSE: ${(placeRmsError).toStringAsPrecision(3)}");
     _log.i("Percent MAE: ${(percentMeanAbsoluteError * 100).toStringAsPrecision(3)}% Place MAE: ${(placeMeanAbsoluteError).toStringAsPrecision(3)}");
-    _log.i("Percent MSE: ${(percentMeanSignedError * 100).toStringAsPrecision(3)}% Place MSE: ${(placeMeanSignedError).toStringAsPrecision(3)}");
+    _log.i("Percent MSignedE: ${(percentMeanSignedError * 100).toStringAsPrecision(3)}% Place MSignedE: ${(placeMeanSignedError).toStringAsPrecision(3)}");
     // }
 
   //   int correct68 = 0;

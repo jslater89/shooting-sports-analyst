@@ -24,7 +24,7 @@ setting and its effects. For general information on the Glicko-2 rating system, 
 
 Glicko-2 uses an internal representation of ratings where (with the default settings) the
 1500-point starting rating corresponds to an internal rating of 0, according to the formula
-(rating - initialRating) / scalingFactor.Starting RD, maximum RD, and maximum rating delta
+(rating - initialRating) / scalingFactor. Starting RD, maximum RD, and maximum rating delta
 are all specified with the same scaling. Use the 'apply' button next to calculated scaling
 factor to set starting RD, maximum RD, and maximum rating delta to the default values,
 scaled to the current initial rating.
@@ -52,6 +52,13 @@ the category of 'ugly hacks'; it prevents occasional extreme overperformances or
 underperformances from breaking the system. The default value of 500 (with the default
 scale factor) is relatively conservative. Observationally, 1000 or more means 'disabled'.
 
+### Maximum Opponent Count
+The maximum number of opponents to consider when calculating rating updates for new players.
+This helps prevent excessive rating changes for new competitors joining mature rating sets,
+where comparing against many opponents with large rating gaps can cause rating changes to
+accumulate to problematic values before Glicko-2's stabilizing features come into play at
+the end of a match.
+
 ### Tau
 The tau value controls the rate of volatility changes. Lower values of tau will make
 volatility more resistant to change. There is no strict minimum, but amounts below 0.2-0.3
@@ -70,6 +77,8 @@ The initial volatility for new competitors. The default value of 0.06 is reasona
 is capped at 0.15. Volatility is not affected by the scaling factor. On the ratings list, the
 displayed volatility is scaled to show the RD increase per rating period for a competitor with
 a very low RD (25 with the default scaling factor).
+
+RD increases over time are faster for competitors with higher volatility and lower RD.
 
 ### Opponent Selection Mode
 Glicko-2 is a head-to-head rating system, so it may be applied to a subset of eligible competitors
@@ -92,4 +101,19 @@ and 1.0 or 0.0 and 0.5, respectively.
 ### Perfect Victory Difference
 The margin of victory or defeat that results in a perfect victory score (1.0) or perfect loss score (0.0),
 when using the linear margin of victory score function.
+
+### Linear Region
+The size of the region where the expected score function is approximately linear, for the purposes of
+calculating percentage predictions. The default value of 0.125 means that the linear region is between
+0.125 and 1 - 0.125 = 0.875. Making this value smaller will allow for comparisons between more distant
+competitors when calculating predictions, but will also tend to compress the outputs and produce too-high
+predictions for the bottom of the field. Making this value larger will more closely match the behavior
+of the linear margin of victory score function, but will also reduce the number of comparisons between
+competitors and may reduce overall accuracy. The default value of 0.125 represents a reasonable compromise.
+
+### Margin of Victory Inflation
+A factor by which to inflate the expected margin of victory when calculating predictions. This can reduce
+the impact of larger linear region settings by artificially reversing the compression effect of that
+setting. By default it is set to 1, which means 'off'. A value of 1.05 means to inflate the expected margin
+of victory by 5%.
 """;

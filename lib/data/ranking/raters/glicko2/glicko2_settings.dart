@@ -22,6 +22,9 @@ class Glicko2Settings extends RaterSettings {
   static const _maximumRatingDeltaKey = "g2MaximumRatingDelta";
   static const _scoreFunctionTypeKey = "g2ScoreFunctionType";
   static const _perfectVictoryDifferenceKey = "g2PerfectVictoryDifference";
+  static const _linearRegionKey = "g2LinearRegion";
+  static const _marginOfVictoryInflationKey = "g2MarginOfVictoryInflation";
+  static const _maximumOpponentCountKey = "g2MaximumOpponentCount";
 
   Glicko2Settings({
     this.byStage = false,
@@ -35,6 +38,9 @@ class Glicko2Settings extends RaterSettings {
     this.maximumRatingDelta = defaultMaximumRatingDelta,
     this.scoreFunctionType = ScoreFunctionType.linearMarginOfVictory,
     this.perfectVictoryDifference = defaultPerfectVictoryDifference,
+    this.eLinearRegion = defaultLinearRegion,
+    this.marginOfVictoryInflation = defaultMarginOfVictoryInflation,
+    this.maximumOpponentCount = defaultMaximumOpponentCount,
   });
 
   /// The default default rating for Glicko-2, in display units.
@@ -56,6 +62,12 @@ class Glicko2Settings extends RaterSettings {
   static const defaultMaximumRatingDelta = 750.0;
   /// The default perfect victory difference for Glicko-2's linear margin of victory score function.
   static const defaultPerfectVictoryDifference = 0.25;
+  /// The default linear region for the score function in predictions, measured in from 0 and 1.
+  static const defaultLinearRegion = 0.125;
+  /// The default margin of victory inflation factor for predictions.
+  static const defaultMarginOfVictoryInflation = 1.00;
+  /// The default maximum number of opponents to consider when calculating rating updates for new players.
+  static const defaultMaximumOpponentCount = 20;
 
   /// Whether to calculate and update ratings by stage (true) or by match (false).
   ///
@@ -101,6 +113,25 @@ class Glicko2Settings extends RaterSettings {
   /// The perfect victory difference for Glicko-2's linear margin of victory score function.
   double perfectVictoryDifference;
 
+  /// The linear region for the expected score function in predictions, measured in from 0 and 1.
+  ///
+  /// e.g. 0.175 means the linear region is between 0.175 and 1 - 0.175 = 0.825.
+  double eLinearRegion;
+
+  /// The margin of victory inflation factor for predictions, which can help reduce
+  /// numerical instability/compression from repeated applications of the score function.
+  ///
+  /// e.g. 1.05 means the margin of victory predicted by the expected score is inflated by 5%.
+  double marginOfVictoryInflation;
+
+  /// The maximum number of opponents to consider when calculating rating updates for new players.
+  ///
+  /// When opponent selection modes produce more opponents than this limit, opponents are
+  /// prioritized by rating proximity (closer ratings first). This helps prevent excessive
+  /// rating changes for new competitors joining mature rating sets, where comparing against
+  /// many opponents with large rating gaps can cause deltaSum to accumulate to problematic values.
+  int maximumOpponentCount;
+
   double scaleToInternal(double number, {double? offset}) => (number - (offset ?? 0)) / scalingFactor;
   double scaleToDisplay(double number, {double? offset}) => (number * scalingFactor) + (offset ?? 0);
 
@@ -142,6 +173,9 @@ class Glicko2Settings extends RaterSettings {
     json[_maximumRatingDeltaKey] = maximumRatingDelta;
     json[_scoreFunctionTypeKey] = scoreFunctionType.name;
     json[_perfectVictoryDifferenceKey] = perfectVictoryDifference;
+    json[_linearRegionKey] = eLinearRegion;
+    json[_marginOfVictoryInflationKey] = marginOfVictoryInflation;
+    json[_maximumOpponentCountKey] = maximumOpponentCount;
   }
 
   @override
@@ -157,6 +191,9 @@ class Glicko2Settings extends RaterSettings {
     maximumRatingDelta = (json[_maximumRatingDeltaKey] ?? defaultMaximumRatingDelta) as double;
     scoreFunctionType = ScoreFunctionType.values.byName(json[_scoreFunctionTypeKey] ?? ScoreFunctionType.linearMarginOfVictory.name);
     perfectVictoryDifference = (json[_perfectVictoryDifferenceKey] ?? defaultPerfectVictoryDifference) as double;
+    eLinearRegion = (json[_linearRegionKey] ?? defaultLinearRegion) as double;
+    marginOfVictoryInflation = (json[_marginOfVictoryInflationKey] ?? defaultMarginOfVictoryInflation) as double;
+    maximumOpponentCount = (json[_maximumOpponentCountKey] ?? defaultMaximumOpponentCount) as int;
   }
 }
 

@@ -83,7 +83,10 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
   TextEditingController _initialVolatilityController = TextEditingController(text: Glicko2Settings.defaultInitialVolatility.toStringAsFixed(4));
   TextEditingController _maximumRatingDeltaController = TextEditingController(text: Glicko2Settings.defaultMaximumRatingDelta.toStringAsFixed(0));
   TextEditingController _perfectVictoryDifferenceController = TextEditingController(text: Glicko2Settings.defaultPerfectVictoryDifference.toStringAsFixed(3));
-  late TextEditingController _scalingFactorController;
+  TextEditingController _linearRegionController = TextEditingController(text: Glicko2Settings.defaultLinearRegion.toStringAsFixed(3));
+  TextEditingController _marginOfVictoryInflationController = TextEditingController(text: Glicko2Settings.defaultMarginOfVictoryInflation.toStringAsFixed(3));
+  TextEditingController _maximumOpponentCountController = TextEditingController(text: Glicko2Settings.defaultMaximumOpponentCount.toString());
+  TextEditingController _scalingFactorController = TextEditingController();
 
   late Glicko2Settings settings;
 
@@ -91,7 +94,6 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
   void initState() {
     super.initState();
     settings = widget.controller._currentSettings;
-    _scalingFactorController = TextEditingController();
     _fillTextFields();
 
     widget.controller.addListener(() {
@@ -163,6 +165,24 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
       }
     });
 
+    _linearRegionController.addListener(() {
+      if(double.tryParse(_linearRegionController.text) != null) {
+        _validateText();
+      }
+    });
+
+    _marginOfVictoryInflationController.addListener(() {
+      if(double.tryParse(_marginOfVictoryInflationController.text) != null) {
+        _validateText();
+      }
+    });
+
+    _maximumOpponentCountController.addListener(() {
+      if(int.tryParse(_maximumOpponentCountController.text) != null) {
+        _validateText();
+      }
+    });
+
     _scalingFactorController.addListener(() {
       // Don't auto-validate, user needs to click Apply
     });
@@ -177,6 +197,8 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
     _initialVolatilityController.text = "${settings.initialVolatility.toStringAsFixed(4)}";
     _maximumRatingDeltaController.text = "${settings.maximumRatingDelta.toStringAsFixed(0)}";
     _perfectVictoryDifferenceController.text = "${settings.perfectVictoryDifference.toStringAsFixed(3)}";
+    _linearRegionController.text = "${settings.eLinearRegion.toStringAsFixed(3)}";
+    _marginOfVictoryInflationController.text = "${settings.marginOfVictoryInflation.toStringAsFixed(3)}";
     _updateScalingFactorDisplay();
   }
 
@@ -233,6 +255,9 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
     double? initialVolatility = double.tryParse(_initialVolatilityController.text);
     double? maximumRatingDelta = double.tryParse(_maximumRatingDeltaController.text);
     double? perfectVictoryDifference = double.tryParse(_perfectVictoryDifferenceController.text);
+    double? linearRegion = double.tryParse(_linearRegionController.text);
+    double? marginOfVictoryInflation = double.tryParse(_marginOfVictoryInflationController.text);
+    int? maximumOpponentCount = int.tryParse(_maximumOpponentCountController.text);
 
     if(initialRating == null) {
       widget.controller.lastError = "Initial rating formatted incorrectly";
@@ -316,6 +341,36 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
       }
     }
 
+    if(linearRegion == null) {
+      widget.controller.lastError = "Linear region formatted incorrectly";
+      return;
+    }
+
+    if(linearRegion <= 0 || linearRegion >= 1) {
+      widget.controller.lastError = "Linear region must be between 0 and 1";
+      return;
+    }
+
+    if(marginOfVictoryInflation == null) {
+      widget.controller.lastError = "Margin of victory inflation formatted incorrectly";
+      return;
+    }
+
+    if(marginOfVictoryInflation <= 0) {
+      widget.controller.lastError = "Margin of victory inflation must be positive";
+      return;
+    }
+
+    if(maximumOpponentCount == null) {
+      widget.controller.lastError = "Maximum opponent count formatted incorrectly";
+      return;
+    }
+
+    if(maximumOpponentCount <= 0) {
+      widget.controller.lastError = "Maximum opponent count must be positive";
+      return;
+    }
+
     settings.initialRating = initialRating;
     settings.startingRD = startingRD;
     settings.maximumRD = maximumRD;
@@ -323,6 +378,8 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
     settings.pseudoRatingPeriodLength = pseudoRatingPeriodLength;
     settings.initialVolatility = initialVolatility;
     settings.maximumRatingDelta = maximumRatingDelta;
+    settings.eLinearRegion = linearRegion;
+    settings.marginOfVictoryInflation = marginOfVictoryInflation;
     if(settings.scoreFunctionType == ScoreFunctionType.linearMarginOfVictory) {
       settings.perfectVictoryDifference = perfectVictoryDifference!;
     }
@@ -474,6 +531,30 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
                     FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
                   ],
                 ),
+              )
+            ]
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Tooltip(
+                message: "The maximum number of opponents to consider when calculating rating updates for new players",
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: Text("Maximum opponent count", style: Theme.of(context).textTheme.bodyLarge),
+                ),
+              ),
+              SizedBox(
+                width: 100 * uiScaleFactor,
+                child: TextFormField(
+                  controller: _maximumOpponentCountController,
+                  textAlign: TextAlign.end,
+                  keyboardType: TextInputType.numberWithOptions(decimal: false, signed: false),
+                  inputFormatters: [
+                    FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
+                  ],
+                )
               )
             ]
           ),
@@ -645,6 +726,57 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
                 )
               ]
             ),
+          if(settings.scoreFunctionType == ScoreFunctionType.linearMarginOfVictory)
+            Row(
+              mainAxisSize: MainAxisSize.max,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Tooltip(
+                  message: "The region of the score function in predictions, measured in from 0 and 1",
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 16),
+                    child: Text("Linear region", style: Theme.of(context).textTheme.bodyLarge),
+                  ),
+                ),
+                SizedBox(
+                  width: 100 * uiScaleFactor,
+                  child: TextFormField(
+                    controller: _linearRegionController,
+                    textAlign: TextAlign.end,
+                    keyboardType: TextInputType.numberWithOptions(decimal: true, signed: false),
+                    inputFormatters: [
+                      FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
+                    ],
+                  ),
+                )
+              ]
+            ),
+          if(settings.scoreFunctionType == ScoreFunctionType.linearMarginOfVictory)
+            Row(
+              mainAxisSize: MainAxisSize.max,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Tooltip(
+                  message: "The margin of victory inflation factor for predictions, which can help reduce numerical instability/compression from repeated applications of the score function",
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 16),
+                    child: Text("Margin of victory inflation", style: Theme.of(context).textTheme.bodyLarge),
+                  ),
+                ),
+                SizedBox(
+                  width: 100 * uiScaleFactor,
+                  child: TextFormField(
+                    controller: _marginOfVictoryInflationController,
+                    textAlign: TextAlign.end,
+                    keyboardType: TextInputType.numberWithOptions(decimal: true, signed: false),
+                    inputFormatters: [
+                      FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
+                    ],
+                  ),
+                )
+              ]
+            ),
+
           // CheckboxListTile(
           //   title: Tooltip(
           //     child: Text("By stage? (experimental)"),

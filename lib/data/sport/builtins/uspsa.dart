@@ -146,7 +146,7 @@ final uspsaSport = Sport(
     uspsaB: 1000,
     uspsaC: 900,
     uspsaD: 800,
-    uspsaU: 900,
+    uspsaU: 1000,
   },
   initialOpenskillRatings: {
     // uspsaGM: [OpenskillSettings.defaultMu + 25, OpenskillSettings.defaultSigma],
@@ -164,7 +164,7 @@ final uspsaSport = Sport(
     uspsaB: 1.0,
     uspsaC: 0.9,
     uspsaD: 0.8,
-    uspsaU: 0.9,
+    uspsaU: 1.0,
   },
   ratingStrengthProvider: _UspsaRatingStrengthProvider(),
   pubstompProvider: _UspsaPubstompProvider(),

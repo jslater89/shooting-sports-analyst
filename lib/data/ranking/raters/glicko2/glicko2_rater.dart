@@ -171,7 +171,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     }
 
     var opponents = matchScores.keys.where((key) => key != shooter).toList();
-    opponents = _selectOpponents(matchScores, shooter.rating, shooterScore.ratio);
+    opponents = _selectOpponents(shooter, matchScores, shooterScore.ratio);
 
     /// For each competitor, we only update ratings for the stages that they completed.
     var shooterStageScores = shooterMatchScore.stageScores.entries
@@ -405,6 +405,10 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     if((factor - 1.0).abs() > 0.05) {
       _log.w("Percentage output instability detected, factor: $factor");
     }
+    else {
+      _log.i("Percentage output stability within tolerance, factor: $factor");
+    }
+
     for(var entry in expectedPercentages.entries) {
       expectedPercentages[entry.key] = _ExpectedPercentage(
         rating: entry.value.rating,
@@ -459,27 +463,40 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
   // -- internal methods below --
 
   /// Get opponents based on the selection mode. Input must be sorted by match finish.
-  List<ShooterRating> _selectOpponents(Map<ShooterRating, RelativeMatchScore> matchScores, double competitorRating, double competitorRatio) {
+  List<ShooterRating> _selectOpponents(Glicko2Rating player, Map<ShooterRating, RelativeMatchScore> matchScores, double playerRatio) {
     var opponentsByFinish = matchScores.keys.toList();
     var opponentsByRating = opponentsByFinish.sorted((a, b) => b.rating.compareTo(a.rating)).toList();
     var selectionMode = settings.opponentSelectionMode;
+    List<ShooterRating> selected = [];
     if(selectionMode == OpponentSelectionMode.all) {
-      return opponentsByFinish;
+      selected = opponentsByFinish;
     }
     else if(selectionMode == OpponentSelectionMode.top10Pct) {
-      return _selectTop10PctOpponents(opponentsByFinish, opponentsByRating);
+      selected = _selectTop10PctOpponents(opponentsByFinish, opponentsByRating);
     }
     else if(selectionMode == OpponentSelectionMode.nearby) {
-      return _selectNearbyOpponents(matchScores, opponentsByRating, competitorRating, competitorRatio);
+      selected = _selectNearbyOpponents(player, matchScores, opponentsByRating, playerRatio);
     }
     else if(selectionMode == OpponentSelectionMode.topAndNearby) {
       var topOpponents = _selectTop10PctOpponents(opponentsByFinish, opponentsByRating).toSet();
-      topOpponents.addAll(_selectNearbyOpponents(matchScores, opponentsByRating, competitorRating, competitorRatio));
-      return topOpponents.toList();
+      topOpponents.addAll(_selectNearbyOpponents(player, matchScores, opponentsByRating, playerRatio));
+      selected = topOpponents.toList();
     }
     else {
       throw Exception("Invalid opponent selection mode: $selectionMode");
     }
+
+    // For new players, limit the number of opponents to avoid massive stacking rating
+    // deltas.
+    if(player.length == 0 && selected.length > settings.maximumOpponentCount) {
+      selected = selected.sorted((a, b) {
+        var aDiff = (a.rating - player.rating).abs();
+        var bDiff = (b.rating - player.rating).abs();
+        return aDiff.compareTo(bDiff);
+      }).take(settings.maximumOpponentCount).toList();
+    }
+
+    return selected;
   }
 
   /// Get the top 10% of opponents by rating and match finish. Input must be sorted by match finish.
@@ -498,7 +515,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
      return top10PctByMatchFinish.toList();
   }
 
-  List<ShooterRating> _selectNearbyOpponents(Map<ShooterRating, RelativeMatchScore> matchScores, List<ShooterRating> opponentsByRating, double competitorRating, double competitorRatio) {
+  List<ShooterRating> _selectNearbyOpponents(Glicko2Rating player, Map<ShooterRating, RelativeMatchScore> matchScores, List<ShooterRating> opponentsByRating, double competitorRatio) {
     double margin = 0.1;
     if(opponentsByRating.length < 10) {
       margin = 0.25;
@@ -508,7 +525,9 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     final topRatio = competitorRatio * (1 + margin);
     final bottomRatio = competitorRatio * (1 - margin);
     for(var opponent in matchScores.keys) {
-      if((opponent.rating - competitorRating).abs() <= settings.maximumRD) {
+      // Players with no rating history don't have a valid rating yet, so 'nearby' in rating terms
+      // isn't meaningful yet.
+      if((opponent.rating - player.rating).abs() <= settings.maximumRD) {
         nearbyOpponents.add(opponent);
         continue;
       }
@@ -672,7 +691,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     // margins we generate in this calculation to fudge the results toward what we expect to
     // happen. If we don't, repeated applications of this function end up compressing the outputs—
     // in the 0.1 case above, we get (1 - 0.9^3) for the way this is currently being used.
-    final victoryMarginInflation = 1.000;
+    final victoryMarginInflation = settings.marginOfVictoryInflation;
 
     var scoreFunction = settings.scoreFunction as LinearMarginOfVictoryScoreFunction;
     if(priorExpectedPercentages == null) {
@@ -836,10 +855,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     }
 
     // The linear region of the E function outputs approximately 0.2 to 0.8.
-    if(expectedScore > 0.8) {
-      return null;
-    }
-    else if(expectedScore < 0.2) {
+    if(expectedScore > (1 - settings.eLinearRegion) || expectedScore < settings.eLinearRegion) {
       return null;
     }
 
