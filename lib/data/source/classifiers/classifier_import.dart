@@ -199,6 +199,11 @@ enum PseudoMatchDuration {
   month,
   year;
 
+  // TODO: rather than containsDate, check for after reference date +1 period
+  // I can't think of scenarios where we'd have a referenceDate in the future,
+  // given that we're talking about existing scores, but the extra robustness
+  // will make me feel better.
+
   bool containsDate({
     required DateTime referenceDate,
     required DateTime queryDate,
