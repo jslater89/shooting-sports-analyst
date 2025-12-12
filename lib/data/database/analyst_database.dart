@@ -460,13 +460,24 @@ class AnalystDatabase {
   /// Save a match.
   ///
   /// The provided ShootingMatch will have its database ID set if the save succeeds.
-  Future<Result<DbShootingMatch, ResultErr>> saveMatch(ShootingMatch match) async {
+  Future<Result<DbShootingMatch, ResultErr>> saveMatch(
+    ShootingMatch match, {
+      bool updateOnly = false,
+      bool insertOnly = false,
+    }
+  ) async {
     if(match.sourceIds.isEmpty || match.sourceCode.isEmpty) {
       throw ArgumentError("Match must have at least one source ID and a source code to be saved in the database");
     }
     var dbMatch = DbShootingMatch.from(match);
     try {
       var oldMatch = await getMatchByAnySourceId(dbMatch.sourceIds);
+      if(oldMatch != null && insertOnly) {
+        return Result.err(StringError("Match already exists and insertOnly is true"));
+      }
+      if(oldMatch == null && updateOnly) {
+        return Result.err(StringError("Match does not exist and updateOnly is true"));
+      }
       dbMatch = await isar.writeTxn<DbShootingMatch>(() async {
         if (oldMatch != null) {
           dbMatch.id = oldMatch.id;

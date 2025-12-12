@@ -118,9 +118,13 @@ class ClassifierImporter {
           var pseudoDate = date.add(Duration(hours: pseudoDateOffset));
           pseudoDateOffset += 1;
 
-          // TODO: generate a sourceLastUpdated date
-          // It should be either the very end of the month of the pseudo-match date,
-          // or the current date if we're in the month in question.
+          // The source-last-updated date is either the first day of the next month past the
+          // match pseudo-date (if we're after the month in question), or the current date
+          // if we're still within the month.
+          DateTime sourceLastUpdated = DateTime(date.year, date.month + 1, 1);
+          if(duration.containsDate(referenceDate: date, queryDate: DateTime.now())) {
+            sourceLastUpdated = DateTime.now();
+          }
 
           var match = ShootingMatch(
             name: "$matchNamePrefix $classifier ${programmerYmdFormat.format(date)}",
@@ -128,6 +132,7 @@ class ClassifierImporter {
             date: pseudoDate,
             sport: sport,
             level: sport.eventLevels.values.firstWhereOrNull((e) => e.fallback),
+            sourceLastUpdated: sourceLastUpdated,
             stages: [stage],
             shooters: entries,
             sourceCode: sourceCode,
@@ -192,7 +197,24 @@ typedef ClassifierImportResult = Result<List<ShootingMatch>, MatchSourceError>;
 
 enum PseudoMatchDuration {
   month,
-  year
+  year;
+
+  bool containsDate({
+    required DateTime referenceDate,
+    required DateTime queryDate,
+  }) {
+    return switch(this) {
+      month => referenceDate.month == queryDate.month && referenceDate.year == queryDate.year,
+      year => referenceDate.year == queryDate.year,
+    };
+  }
+
+  DateTime getReferenceDate(DateTime date) {
+    return switch(this) {
+      month => DateTime(date.year, date.month, 1),
+      year => DateTime(date.year, 1, 1),
+    };
+  }
 }
 
 /// A classifier score is a single classifier stage score.

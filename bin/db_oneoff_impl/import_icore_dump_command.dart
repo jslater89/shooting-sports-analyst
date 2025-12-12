@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:dart_console/dart_console.dart';
 import 'package:isar_community/isar.dart';
+import 'package:shooting_sports_analyst/console/labeled_progress_bar.dart';
 import 'package:shooting_sports_analyst/console/repl.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
@@ -40,12 +41,14 @@ Future<void> _importIcoreDump(AnalystDatabase db, Console console, File file) as
   var masterScores = IcoreClassifierExport.fromFile(file);
   var analystScores = masterScores.toAnalystScores();
 
-  await db.isar.writeTxn(() async {
-    int deleted = await db.isar.dbShootingMatchs.filter()
-      .eventNameStartsWith("ICORE Classifier Analysis")
-      .deleteAll();
-    console.print("Deleted ${deleted} matches");
-  });
+  // Don't need to delete old matches, because we have stable source IDs from
+  // classifier importer.
+  // await db.isar.writeTxn(() async {
+  //   int deleted = await db.isar.dbShootingMatchs.filter()
+  //     .eventNameStartsWith("ICORE Classifier Analysis")
+  //     .deleteAll();
+  //   console.print("Deleted ${deleted} matches");
+  // });
 
   var importer = ClassifierImporter(
     sport: icoreSport,
@@ -61,13 +64,16 @@ Future<void> _importIcoreDump(AnalystDatabase db, Console console, File file) as
   var matches = matchesResult.unwrap();
   console.print("Imported ${matches.length} matches");
   int dbInserts = 0;
+  var progressBar = LabeledProgressBar(maxValue: matches.length, initialLabel: "Saving matches...", canHaveErrors: true);
   for(var match in matches) {
     var saveResult = await db.saveMatch(match);
+    progressBar.tick("Saved ${dbInserts} matches of ${matches.length} total");
+
     if(saveResult.isOk()) {
       dbInserts++;
     }
     else {
-      console.print("Error saving match: ${saveResult.unwrapErr()}");
+      progressBar.error("Error saving match ${match.name}: ${saveResult.unwrapErr()}");
     }
   }
   console.print("Saved ${dbInserts} matches to DB");
