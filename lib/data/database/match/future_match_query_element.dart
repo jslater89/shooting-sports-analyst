@@ -114,31 +114,30 @@ class DateQuery extends FutureMatchQueryElement {
   DateQuery({this.after, this.before});
 
   List<WhereClause>? get whereClauses {
-    return null;
-    // if(after != null && before != null) {
-    //   return [IndexWhereClause.between(
-    //     indexName: index,
-    //     lower: [after!],
-    //     upper: [before!],
-    //   )];
-    // }
-    // else if (after != null) {
-    //   return [IndexWhereClause.greaterThan(
-    //       indexName: index,
-    //       lower: [after!]
-    //   )];
-    // }
-    // else if (before != null) {
-    //   return [IndexWhereClause.lessThan(
-    //       indexName: index,
-    //       upper: [before!]
-    //   )];
-    // }
-    // else {
-    //   return [IndexWhereClause.any(
-    //     indexName: index,
-    //   )];
-    // }
+    if(after != null && before != null) {
+      return [IndexWhereClause.between(
+        indexName: index,
+        lower: [after!],
+        upper: [before!],
+      )];
+    }
+    else if (after != null) {
+      return [IndexWhereClause.greaterThan(
+          indexName: index,
+          lower: [after!]
+      )];
+    }
+    else if (before != null) {
+      return [IndexWhereClause.lessThan(
+          indexName: index,
+          upper: [before!]
+      )];
+    }
+    else {
+      return [IndexWhereClause.any(
+        indexName: index,
+      )];
+    }
   }
 
   FilterOperation? get filterCondition {

@@ -35,7 +35,7 @@ class FutureMatch {
   List<String> get eventNameParts => Isar.splitWords(eventName);
 
   /// The start date of the event.
-  @Index()
+  @Index(name: AnalystDatabase.dateIndex)
   DateTime date;
 
   /// A convenience property for the start date of the event.
