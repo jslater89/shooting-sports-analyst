@@ -440,7 +440,7 @@ class _FutureMatchDatabaseChooserDialogState extends State<FutureMatchDatabaseCh
               if(name.isEmpty) name = "(match name not provided)";
               return ListTile(
                 title: Text(name, overflow: TextOverflow.ellipsis),
-                subtitle: !widget.showIds ? null
+                subtitle: !widget.showIds ? Text(programmerYmdFormat.format(searchedMatches[i].date))
                   : SelectableText("${searchedMatches[i].matchId}"),
                 visualDensity: VisualDensity(vertical: -4),
                 onTap: () {

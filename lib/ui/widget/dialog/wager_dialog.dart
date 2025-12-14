@@ -114,10 +114,12 @@ class _WagerDialogState extends State<WagerDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
+    var parlayValidity = _parlay != null ? _parlay!.checkValidity(fieldSize: _shootersToPredictions.length) : null;
     return AlertDialog(
       title: Text("Check odds"),
       content: SizedBox(
-        width: 600,
+        width: 600 * uiScaleFactor,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -205,12 +207,12 @@ class _WagerDialogState extends State<WagerDialog> {
               ListTile(
                 title: Text("${_parlay!.legs.length}-leg parlay"),
                 subtitle: Tooltip(
-                  message: "Fractional: ${_parlay!.probability.fractionalOdds}\n"
+                  message: !parlayValidity!.isValid ? parlayValidity.longDescription : "Fractional: ${_parlay!.probability.fractionalOdds}\n"
                       "Decimal: ${_parlay!.probability.decimalOdds.toStringAsFixed(3)}\n"
                       "Probabilities: ${_parlay!.probability.probability.asPercentage(decimals: 2, includePercent: true)}/${_parlay!.probability.probabilityWithHouseEdge.asPercentage(decimals: 2, includePercent: true)}",
                   child: Text(
-                    "Moneyline: ${_parlay!.probability.moneylineOdds}  -  "
-                    "Payout: ${_parlay!.amount.toStringAsFixed(2)} → ${_parlay!.payout.toStringAsFixed(2)}"
+                    "Moneyline: ${parlayValidity.isValid ? _parlay!.probability.moneylineOdds : "n/a"}  -  "
+                    "${parlayValidity.isValid ? "Payout: ${_parlay!.amount.toStringAsFixed(2)} → ${_parlay!.payout.toStringAsFixed(2)}" : parlayValidity.shortDescription}"
                   ),
                 ),
                 trailing: IconButton(
