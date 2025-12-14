@@ -56,7 +56,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
   final Glicko2Settings settings;
 
   @override
-  bool get byStage => false;
+  bool get byStage => settings.byStage;
 
   @override
   ShooterRating<RatingEvent> copyShooterRating(Glicko2Rating rating) {

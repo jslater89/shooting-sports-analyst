@@ -116,70 +116,72 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
 
     _initialRatingController.addListener(() {
       if(double.tryParse(_initialRatingController.text) != null) {
-        _validateText();
-        setState(() {
-          _updateScalingFactorDisplay();
-        });
+        if(!widget.controller._restoreDefaults) {
+          _validateText();
+          setState(() {
+            _updateScalingFactorDisplay();
+          });
+        }
       }
     });
 
     _startingRDController.addListener(() {
       if(double.tryParse(_startingRDController.text) != null) {
-        _validateText();
+        if(!widget.controller._restoreDefaults) _validateText();
       }
     });
 
     _maximumRDController.addListener(() {
       if(double.tryParse(_maximumRDController.text) != null) {
-        _validateText();
+        if(!widget.controller._restoreDefaults) _validateText();
       }
     });
 
     _tauController.addListener(() {
       if(double.tryParse(_tauController.text) != null) {
-        _validateText();
+        if(!widget.controller._restoreDefaults) _validateText();
       }
     });
 
     _pseudoRatingPeriodLengthController.addListener(() {
       if(int.tryParse(_pseudoRatingPeriodLengthController.text) != null) {
-        _validateText();
+        if(!widget.controller._restoreDefaults) _validateText();
       }
     });
 
     _initialVolatilityController.addListener(() {
       if(double.tryParse(_initialVolatilityController.text) != null) {
-        _validateText();
+        if(!widget.controller._restoreDefaults) _validateText();
       }
     });
 
     _maximumRatingDeltaController.addListener(() {
       if(double.tryParse(_maximumRatingDeltaController.text) != null) {
-        _validateText();
+        if(!widget.controller._restoreDefaults) _validateText();
       }
     });
 
     _perfectVictoryDifferenceController.addListener(() {
       if(double.tryParse(_perfectVictoryDifferenceController.text) != null) {
-        _validateText();
+        if(!widget.controller._restoreDefaults) _validateText();
       }
     });
 
     _linearRegionController.addListener(() {
       if(double.tryParse(_linearRegionController.text) != null) {
-        _validateText();
+        if(!widget.controller._restoreDefaults) _validateText();
       }
     });
 
     _marginOfVictoryInflationController.addListener(() {
       if(double.tryParse(_marginOfVictoryInflationController.text) != null) {
-        _validateText();
+        if(!widget.controller._restoreDefaults) _validateText();
       }
     });
 
     _maximumOpponentCountController.addListener(() {
       if(int.tryParse(_maximumOpponentCountController.text) != null) {
-        _validateText();
+        if(!widget.controller._restoreDefaults) _validateText();
       }
     });
 
@@ -777,21 +779,21 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
               ]
             ),
 
-          // CheckboxListTile(
-          //   title: Tooltip(
-          //     child: Text("By stage? (experimental)"),
-          //     message: "Calculate and update ratings after each stage if checked, or after each match if unchecked.\n"
-          //       "By-stage mode is experimental and may not work as expected.",
-          //   ),
-          //   value: settings.byStage,
-          //   onChanged: (value) {
-          //     if(value != null) {
-          //       setState(() {
-          //         settings.byStage = value;
-          //       });
-          //     }
-          //   }
-          // ),
+          CheckboxListTile(
+            title: Tooltip(
+              child: Text("By stage? (experimental)"),
+              message: "Calculate and update ratings after each stage if checked, or after each match if unchecked.\n"
+                "By-stage mode is experimental and may not work as expected.",
+            ),
+            value: settings.byStage,
+            onChanged: (value) {
+              if(value != null) {
+                setState(() {
+                  settings.byStage = value;
+                });
+              }
+            }
+          ),
         ]
       ),
     );

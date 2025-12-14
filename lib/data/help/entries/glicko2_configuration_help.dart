@@ -116,4 +116,12 @@ A factor by which to inflate the expected margin of victory when calculating pre
 the impact of larger linear region settings by artificially reversing the compression effect of that
 setting. By default it is set to 1, which means 'off'. A value of 1.05 means to inflate the expected margin
 of victory by 5%.
+
+### By Stage
+Whether to calculate and update ratings by stage (checked) or by match (unchecked). By match is default
+and recommended. By stage is still experimental and yields very volatile ratings. The following settings
+are recommended:
+
+* Maximum rating delta: 100 (with default scaling)
+* Tau: 0.05
 """;
