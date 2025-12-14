@@ -765,6 +765,10 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       }
     }
 
+    // No predictions for created shooters who no-showed their first
+    // match, or who have faced zero competition so far.
+    shooters.retainWhere((element) => element.length > 0);
+
     if(shooters.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("No shooters with matching registrations found."))
