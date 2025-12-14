@@ -156,6 +156,14 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings> {
   /// Return true if this rating system can generate predictions.
   bool get supportsPrediction => false;
 
+  /// Return the prediction settings for this rating system.
+  PredictionSettings get predictionSettings => PredictionSettings();
+
+  /// Return true if this rating system's predictions are given in ratios
+  /// (i.e. 0-1 scores where 1.0 is the winner and everyone else is their
+  /// proportional expected score).
+  bool get predictionsOutputRatios => false;
+
   /// Return true if this rating system can estimate ratio gaps.
   bool get supportsRatioFloor => false;
 
@@ -275,4 +283,31 @@ class JsonShooterRating {
 
   factory JsonShooterRating.fromJson(Map<String, dynamic> json) => _$JsonShooterRatingFromJson(json);
   Map<String, dynamic> toJson() => _$JsonShooterRatingToJson(this);
+}
+
+class PredictionSettings {
+  /// True if the prediction's internal score values are result ratios (0-1) where 1.0 is the winner and everyone else is their proportional expected score.
+  /// Default false.
+  final bool outputsAreRatios;
+
+  /// True if the prediction's internal score values are result percentages (0-100) where 100 is the winner and everyone else is their proportional expected score.
+  /// Default false.
+  final bool outputsArePercentages;
+
+  /// A multiplier for the prediction's sigma value when calculating place probabilities, default 2.0.
+  final double placeSigmaMultiplier;
+
+  /// A multiplier for the prediction's sigma value when calculating percent probabilities, default 2.0.
+  final double percentSigmaMultiplier;
+
+  /// A multiplier for the prediction's sigma value when calculating spread probabilities, default 2.0.
+  final double spreadSigmaMultiplier;
+
+  PredictionSettings({
+    this.outputsAreRatios = false,
+    this.outputsArePercentages = false,
+    this.placeSigmaMultiplier = 2.0,
+    this.percentSigmaMultiplier = 2.0,
+    this.spreadSigmaMultiplier = 2.0,
+  });
 }

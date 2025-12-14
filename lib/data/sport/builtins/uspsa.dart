@@ -146,7 +146,7 @@ final uspsaSport = Sport(
     uspsaB: 1000,
     uspsaC: 900,
     uspsaD: 800,
-    uspsaU: 1000,
+    uspsaU: 900,
   },
   initialOpenskillRatings: {
     // uspsaGM: [OpenskillSettings.defaultMu + 25, OpenskillSettings.defaultSigma],

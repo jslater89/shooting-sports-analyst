@@ -155,9 +155,11 @@ class PredictionProbability {
       // Generate a random expected score for this shooter using a normal distribution
 
       // Adjust mean by up to 10% based on trend.
-      var actualMean = shooterPrediction.mean + shooterPrediction.oneSigma * shooterPrediction.ciOffset;
+      var sigmaMultiplier = shooterPrediction.algorithm.predictionSettings.placeSigmaMultiplier;
+      var finalSigma = shooterPrediction.oneSigma * sigmaMultiplier;
+      var actualMean = shooterPrediction.mean + finalSigma * shooterPrediction.ciOffset;
       var z = _nextDistributedValue(actualRandom, shooterPrediction.ciOffset);
-      var shooterExpectedScore = actualMean + shooterPrediction.oneSigma * z;
+      var shooterExpectedScore = actualMean + finalSigma * z;
 
       // Generate random expected scores for all other shooters
       var otherExpectedScores = <double>[];
@@ -236,9 +238,11 @@ class PredictionProbability {
       }
 
       // Generate a random expected score for this shooter using a normal distribution
-      var actualMean = shooterPrediction.mean + shooterPrediction.oneSigma * shooterPrediction.ciOffset;
+      var sigmaMultiplier = shooterPrediction.algorithm.predictionSettings.percentSigmaMultiplier;
+      var finalSigma = shooterPrediction.oneSigma * sigmaMultiplier;
+      var actualMean = shooterPrediction.mean + finalSigma * shooterPrediction.ciOffset;
       var z = _nextDistributedValue(actualRandom, shooterPrediction.ciOffset);
-      var shooterExpectedScore = actualMean + shooterPrediction.twoSigma * z;
+      var shooterExpectedScore = actualMean + finalSigma * z;
 
       // Generate random expected scores for all other shooters
       var otherExpectedScores = <double>[];
@@ -267,11 +271,27 @@ class PredictionProbability {
       }
 
       // Check if this shooter's expected score is better than the percentage prediction
-      var ratingDelta = bestRating - worstRating;
-      var ratioFloor = shooterPrediction.algorithm.estimateRatioFloor(ratingDelta, settings: shooterPrediction.settings);
-      var ratioMultiplier = 1.0 - ratioFloor;
+      double shooterRatio;
 
-      var shooterRatio = ((shooterExpectedScore - minimumRatingScore) / (bestExpectedScore - minimumRatingScore)) * ratioMultiplier + ratioFloor;
+      // If the rating system outputs ratios, we need to renormalize so that the winner is 1.0
+      if(shooterPrediction.algorithm.predictionsOutputRatios) {
+        shooterExpectedScore = shooterExpectedScore / bestExpectedScore;
+        minimumRatingScore = minimumRatingScore / bestExpectedScore;
+        bestExpectedScore = 1.0;
+      }
+
+      if(shooterPrediction.algorithm.supportsRatioFloor) {
+        var ratingDelta = bestRating - worstRating;
+        var ratioFloor = shooterPrediction.algorithm.estimateRatioFloor(ratingDelta, settings: shooterPrediction.settings);
+        var ratioMultiplier = 1.0 - ratioFloor;
+        shooterRatio = ((shooterExpectedScore - minimumRatingScore) / (bestExpectedScore - minimumRatingScore)) * ratioMultiplier + ratioFloor;
+      }
+      else if(shooterPrediction.algorithm.predictionsOutputRatios) {
+        shooterRatio = shooterExpectedScore;
+      }
+      else {
+        throw UnsupportedError("Rating system ${shooterPrediction.algorithm} cannot generate percentage predictions");
+      }
       predictedPercentages.add(shooterRatio);
       if(percentagePrediction.above ? shooterRatio >= ratio : shooterRatio <= ratio) {
         successes++;
@@ -370,13 +390,32 @@ class PredictionProbability {
         }
       }
 
-      // Check if this shooter's expected score is better than the percentage prediction
-      var ratingDelta = bestRating - worstRating;
-      var estimatedMinimumPercentage = 95.8 + -0.0457 * ratingDelta;
-      var ratioFloor = estimatedMinimumPercentage / 100;
-      var ratioMultiplier = 1.0 - ratioFloor;
-      var favoriteRatio = ((favoriteExpectedScore - minimumRatingScore) / (bestExpectedScore - minimumRatingScore)) * ratioMultiplier + ratioFloor;
-      var underdogRatio = ((underdogExpectedScore - minimumRatingScore) / (bestExpectedScore - minimumRatingScore)) * ratioMultiplier + ratioFloor;
+      // If the rating system outputs ratios, we need to renormalize so that the winner is 1.0
+      double favoriteRatio;
+      double underdogRatio;
+      if(favoritePrediction.algorithm.predictionsOutputRatios) {
+        favoriteExpectedScore = favoriteExpectedScore / bestExpectedScore;
+        underdogExpectedScore = underdogExpectedScore / bestExpectedScore;
+        bestExpectedScore = 1.0;
+      }
+
+      if(favoritePrediction.algorithm.supportsRatioFloor) {
+        // Check if this shooter's expected score is better than the percentage prediction
+        var ratingDelta = bestRating - worstRating;
+        var ratioFloor = favoritePrediction.algorithm.estimateRatioFloor(ratingDelta, settings: favoritePrediction.settings);
+        var ratioMultiplier = 1.0 - ratioFloor;
+        favoriteRatio = ((favoriteExpectedScore - minimumRatingScore) / (bestExpectedScore - minimumRatingScore)) * ratioMultiplier + ratioFloor;
+        underdogRatio = ((underdogExpectedScore - minimumRatingScore) / (bestExpectedScore - minimumRatingScore)) * ratioMultiplier + ratioFloor;
+        favoriteExpectedScore = favoriteRatio;
+        underdogExpectedScore = underdogRatio;
+      }
+      else if(favoritePrediction.algorithm.predictionsOutputRatios) {
+        favoriteRatio = favoriteExpectedScore;
+        underdogRatio = underdogExpectedScore;
+      }
+      else {
+        throw UnsupportedError("Rating system ${favoritePrediction.algorithm} cannot generate ratio-scaled percentage spread predictions");
+      }
 
       predictedGaps.add(favoriteRatio - underdogRatio);
       if(percentageSpreadPrediction.favoriteCovers) {

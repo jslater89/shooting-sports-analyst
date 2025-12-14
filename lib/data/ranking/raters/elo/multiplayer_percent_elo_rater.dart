@@ -613,6 +613,13 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   bool get supportsPrediction => true;
 
   @override
+  PredictionSettings get predictionSettings => PredictionSettings(
+    placeSigmaMultiplier: 1.0,
+    percentSigmaMultiplier: 2.0,
+    spreadSigmaMultiplier: 1.0,
+  );
+
+  @override
   bool get supportsValidation => true;
 
   @override

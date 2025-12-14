@@ -306,6 +306,14 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
   bool get supportsPrediction => settings.scoreFunctionType == ScoreFunctionType.linearMarginOfVictory;
 
   @override
+  PredictionSettings get predictionSettings => PredictionSettings(
+    outputsAreRatios: true,
+  );
+
+  @override
+  bool get predictionsOutputRatios => true;
+
+  @override
   List<AlgorithmPrediction> predict(List<ShooterRating> ratings, {int? seed}) {
     /*
     The below was the initial design approach; it's retained for reference in case I forgot
@@ -448,16 +456,35 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
       expectedLowPlaces[entry] = worstPlace;
     }
 
-    return expectedPercentages.entries.map((entry) => AlgorithmPrediction(
-      shooter: entry.key,
-      mean: entry.value.centralValue,
-      sigma: (entry.value.upperValue - entry.value.lowerValue).abs() / 2,
-      settings: settings,
-      algorithm: this,
-      lowPlace: expectedLowPlaces[entry.key]!,
-      highPlace: expectedHighPlaces[entry.key]!,
-      medianPlace: expectedPlaces[entry.key]!,
-    )).toList();
+
+    return expectedPercentages.entries.map((entry) {
+      // In Glicko-2, RD is the standard deviation of the rating. The upperValue and
+      // lowerValue are calculated by adjusting the rating by ±RD (i.e., ±1σ in rating space).
+      // The range (upperValue - lowerValue) represents approximately 2σ in rating space,
+      // which maps to percentage space through a non-linear transformation.
+      //
+      // As a first-order approximation, we divide the range by 2 to get 1σ in percentage space.
+      // This is principled because:
+      // 1. RD represents 1σ uncertainty in rating space
+      // 2. Adjusting by ±RD gives us the range from -1σ to +1σ (total span of 2σ)
+      // 3. The transformation to percentage space, while non-linear, is relatively smooth
+      //    in the linear region of the E function where we operate
+      // 4. The range already incorporates the shooter's RD and is affected by opponents' RDs
+      //    through the E function calculations, so it captures the relevant uncertainty
+      var range = (entry.value.upperValue - entry.value.lowerValue).abs();
+      var sigma = range / 2.0;
+
+      return AlgorithmPrediction(
+        shooter: entry.key,
+        mean: entry.value.centralValue,
+        sigma: sigma,
+        settings: settings,
+        algorithm: this,
+        lowPlace: expectedLowPlaces[entry.key]!,
+        highPlace: expectedHighPlaces[entry.key]!,
+        medianPlace: expectedPlaces[entry.key]!,
+      );
+    }).toList();
   }
 
   // -- internal methods below --
@@ -487,12 +514,22 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     }
 
     // For new players, limit the number of opponents to avoid massive stacking rating
-    // deltas.
+    // deltas, taking players closest in match finish first.
+    final bool byMatchScore = false;
     if(player.length == 0 && selected.length > settings.maximumOpponentCount) {
       selected = selected.sorted((a, b) {
-        var aDiff = (a.rating - player.rating).abs();
-        var bDiff = (b.rating - player.rating).abs();
-        return aDiff.compareTo(bDiff);
+        // ignore: dead_code (configurable, if not yet in UI)
+        if(byMatchScore) {
+          var aRatio = matchScores[a]?.ratio ?? 0.0;
+          var bRatio = matchScores[b]?.ratio ?? 0.0;
+          return aRatio.compareTo(bRatio);
+        }
+        // ignore: dead_code
+        else {
+          var aDiff = (a.rating - player.rating).abs();
+          var bDiff = (b.rating - player.rating).abs();
+          return aDiff.compareTo(bDiff);
+        }
       }).take(settings.maximumOpponentCount).toList();
     }
 
@@ -746,13 +783,14 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
             continue;
           }
           var expectedPercentage = _calculateHeadToHeadExpectedPercentage(
-            rating: rating.internalRating,
-            rd: rating.currentInternalRD,
+            playerRating: rating.internalRating,
+            playerRD: rating.currentInternalRD,
+            playerVolatility: rating.volatility,
             opponentRating: betterRating.internalRating,
             opponentRD: betterRating.currentInternalRD,
             opponentRatio: opponentExpectedPercentage.centralValue,
             playerRatio: null, // not needed for this scenario
-            scoreFunction: settings.scoreFunction as LinearMarginOfVictoryScoreFunction,
+            scoreFunction: scoreFunction,
             victoryMarginInflation: victoryMarginInflation,
             playerIsBetter: false,
           );
@@ -779,13 +817,14 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
               continue;
             }
             var expectedPercentage = _calculateHeadToHeadExpectedPercentage(
-              rating: rating.internalRating,
-              rd: rating.currentInternalRD,
+              playerRating: rating.internalRating,
+              playerRD: rating.currentInternalRD,
+              playerVolatility: rating.volatility,
               opponentRating: worseRating.internalRating,
               opponentRD: worseRating.currentInternalRD,
               opponentRatio: opponentExpectedPercentage.centralValue,
               playerRatio: playerExpectedPercentage.centralValue,
-              scoreFunction: settings.scoreFunction as LinearMarginOfVictoryScoreFunction,
+              scoreFunction: scoreFunction,
               victoryMarginInflation: victoryMarginInflation,
               playerIsBetter: true,
             );
@@ -827,8 +866,9 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
 
   /// Calculate the expected percentage for a given rating and RD.
   ///
-  /// [rating] is the rating of the competitor to calculate the expected percentage for.
-  /// [rd] is the RD of the competitor to calculate the expected percentage for.
+  /// [playerRating] is the rating of the competitor to calculate the expected percentage for.
+  /// [playerRD] is the RD of the competitor to calculate the expected percentage for.
+  /// [playerVolatility] is the volatility of the competitor to calculate the expected percentage for.
   /// [opponentRating] is the rating of the opponent.
   /// [opponentRD] is the RD of the opponent.
   /// [winnerRatio] is 0-1 match outcome of the winner against the field (not just the opponent).
@@ -839,8 +879,9 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
   /// Returns the expected percentage as a _ExpectedPercentage object, or null if the
   /// center value of the expected percentage is outside the linear region of the E function.
   _ExpectedPercentage? _calculateHeadToHeadExpectedPercentage({
-    required double rating,
-    required double rd,
+    required double playerRating,
+    required double playerRD,
+    required double playerVolatility,
     double? playerRatio,
     required double opponentRating,
     required double opponentRD,
@@ -849,16 +890,27 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     required double victoryMarginInflation,
     required bool playerIsBetter,
   }) {
+    var volatilityFactor = lerpAroundCenter(
+      value: playerVolatility,
+      center: settings.initialVolatility,
+      rangeMin: settings.initialVolatility * 0.75,
+      rangeMax: settings.initialVolatility * 1.25,
+      minOut: 0.5,
+      centerOut: 1.0,
+      maxOut: 2.0,
+    );
+    double adjustedRD = playerRD * volatilityFactor;
+
     double expectedScore, downRdExpectedScore, upRdExpectedScore;
     if(!playerIsBetter) {
-      expectedScore = _glickoE(rating, opponentRating, opponentRD);
-      downRdExpectedScore = _glickoE(rating - rd, opponentRating, opponentRD);
-      upRdExpectedScore = _glickoE(rating + rd, opponentRating, opponentRD);
+      expectedScore = _glickoE(playerRating, opponentRating, opponentRD);
+      downRdExpectedScore = _glickoE(playerRating - adjustedRD, opponentRating, opponentRD);
+      upRdExpectedScore = _glickoE(playerRating + adjustedRD, opponentRating, opponentRD);
     }
     else {
-      expectedScore = _glickoE(opponentRating, rating, rd);
-      downRdExpectedScore = _glickoE(opponentRating, rating - rd, rd);
-      upRdExpectedScore = _glickoE(opponentRating, rating + rd, rd);
+      expectedScore = _glickoE(opponentRating, playerRating, playerRD);
+      downRdExpectedScore = _glickoE(opponentRating, playerRating - adjustedRD, playerRD);
+      upRdExpectedScore = _glickoE(opponentRating, playerRating + adjustedRD, playerRD);
     }
 
     // The linear region of the E function outputs approximately 0.2 to 0.8.
@@ -896,8 +948,8 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     }
 
     return _ExpectedPercentage(
-      rating: rating,
-      rd: rd,
+      rating: playerRating,
+      rd: playerRD,
       centralValue: expectedPercentage,
       upperValue: upRdExpectedPercentage,
       lowerValue: downRdExpectedPercentage,

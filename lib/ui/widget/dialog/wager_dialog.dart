@@ -8,6 +8,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/prediction.dart';
