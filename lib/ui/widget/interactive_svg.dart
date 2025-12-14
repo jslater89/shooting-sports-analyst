@@ -4,6 +4,8 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -49,6 +51,7 @@ class InteractiveSvg extends StatefulWidget {
 
 class _InteractiveSvgState extends State<InteractiveSvg> {
   Map<String, ui.Path> _svgPaths = {};
+  Uint8List? _svgBytes;
   String? _hoveredPathId; // To store the ID of the currently hovered path
   double? _svgWidth;
   double? _svgHeight;
@@ -61,7 +64,8 @@ class _InteractiveSvgState extends State<InteractiveSvg> {
   }
 
   Future<void> _loadSvgPaths() async {
-    final String svgString = await DefaultAssetBundle.of(context).loadString(widget.assetPath);
+    _svgBytes = await DefaultAssetBundle.of(context).load(widget.assetPath).then((value) => value.buffer.asUint8List());
+    final String svgString = utf8.decode(_svgBytes!);
     final XmlDocument document = XmlDocument.parse(svgString);
     Map<String, ui.Path> svgPaths = {};
 
@@ -182,15 +186,18 @@ class _InteractiveSvgState extends State<InteractiveSvg> {
 
   @override
   Widget build(BuildContext context) {
+    if(_svgBytes == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
     return Listener(
       onPointerDown: _onClick,
       child: MouseRegion(
         onHover: _onHover,
         child: Stack(
           children: [
-            SvgPicture.asset(
+            SvgPicture.memory(
+              _svgBytes!,
               key: _svgKey,
-              widget.assetPath,
               fit: BoxFit.contain,
               colorMapper: widget.colorMapper,
               width: widget.width,
