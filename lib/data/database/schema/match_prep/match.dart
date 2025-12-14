@@ -175,4 +175,9 @@ class FutureMatch {
     required this.sourceIds,
     this.newRegistrations = const [],
   });
+
+  @override
+  String toString() {
+    return "$eventName ($matchId) (${programmerYmdFormat.format(date)})";
+  }
 }
