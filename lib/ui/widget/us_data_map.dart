@@ -97,6 +97,7 @@ class _USDataMapState extends State<USDataMap> {
       return InteractiveSvg(
       assetPath: USDataMap.svgAsset,
       colorMapper: _StateColorMapper(
+        darkMode: Theme.of(context).brightness == Brightness.dark,
         context: context,
         stateColors: {},
       ),
@@ -127,6 +128,7 @@ class _USDataMapState extends State<USDataMap> {
       missingDataColor = colors.last.toFlutterColor();
     }
     var colorMapper = _StateColorMapper(
+      darkMode: Theme.of(context).brightness == Brightness.dark,
       context: context,
       stateColors: stateColors,
       missingDataColor: missingDataColor,
@@ -162,11 +164,13 @@ class _USDataMapState extends State<USDataMap> {
 }
 
 class _StateColorMapper extends ColorMapper {
+  final bool darkMode;
   final BuildContext context;
   final Map<String, Color?> stateColors;
   final Color? missingDataColor;
 
   _StateColorMapper({
+    required this.darkMode,
     required this.context,
     required this.stateColors,
     this.missingDataColor,
@@ -175,7 +179,7 @@ class _StateColorMapper extends ColorMapper {
   @override
   Color substitute(String? id, String elementName, String attributeName, Color color) {
     if(id == null) {
-      if(Theme.of(context).brightness == Brightness.light) {
+      if(!darkMode) {
         // invert some borders/dividers for light mode
         if(color.toHex().toLowerCase() == "#ffffff") {
           return Colors.black;
