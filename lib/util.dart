@@ -620,6 +620,7 @@ extension AsNotNullExtension<X> on X? {
 }
 
 extension ListWeightedAverage on List<num> {
+  /// Calculate the weighted average of this list of numbers, using the weights in [weights].
   double weightedAverage(List<double> weights) {
     if(length != weights.length) {
       throw ArgumentError("length of list and weights must be the same");
@@ -635,6 +636,7 @@ extension ListWeightedAverage on List<num> {
 }
 
 extension IterableWeightedAverage on Iterable<num> {
+  /// Calculate the weighted average of this iterable of numbers, using the weights in [weights].
   double weightedAverage(List<double> weights) {
     var thisList = this.toList();
     return thisList.weightedAverage(weights);
@@ -642,18 +644,26 @@ extension IterableWeightedAverage on Iterable<num> {
 }
 
 extension NextBytes on Random {
+  /// Generate a list of [length] random bytes.
   List<int> nextBytes(int length) {
     return List.generate(length, (index) => nextInt(256));
   }
 }
 
 extension SecondTimestampUtils on int {
+  /// If this int is a timestamp in seconds since Unix epoch, convert it to a DateTime.
   DateTime toDateTime() {
     return DateTime.fromMillisecondsSinceEpoch(this * 1000);
   }
 
+  /// Check if this int is the same day as [date], according to the rules of [toDateTime].
   bool isSameDay(DateTime date) {
     final thisDate = this.toDateTime();
     return thisDate.year == date.year && thisDate.month == date.month && thisDate.day == date.day;
   }
 }
+
+/// A regular expression for matching UUIDs.
+final uuidRegex = RegExp(
+  r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+);

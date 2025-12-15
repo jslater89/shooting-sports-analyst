@@ -117,9 +117,7 @@ abstract class MatchSource<T extends InternalMatchType, S extends InternalMatchF
   /// return the SSA server source. Otherwise, return the current source.
   static MatchSource maybeForwardToSSAServer(MatchSource currentSource, String matchId) {
     var shouldForward = FlutterOrNative.configProvider.currentConfig.forwardUuidsToSSAServerSource && currentSource is! SSAServerMatchSource;
-    if(shouldForward && RegExp(
-      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
-    ).hasMatch(matchId)) {
+    if(shouldForward && uuidRegex.hasMatch(matchId)) {
       _log.i("Forwarding UUID-style match ID to SSA server source");
       return MatchSourceRegistry().getByCode(SSAServerMatchSource.ssaServerCode, currentSource);
     }
