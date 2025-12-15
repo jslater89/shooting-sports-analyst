@@ -333,17 +333,18 @@ class _MemberNumberCorrectionListDialogState extends State<MemberNumberCorrectio
 
   bool validate(String input, {bool allowEmpty = false}) {
     if(allowEmpty && input.isEmpty) return true;
-    if(!input.contains(RegExp(r"[0-9]+"))) {
-      setState(() {
-        errorText = "Member number must contain at least one number.";
-      });
-      return false;
-    }
-    else {
-      setState(() {
-        errorText = "";
-      });
-      return true;
-    }
+  //   if(!input.contains(RegExp(r"[0-9]+"))) {
+  //     setState(() {
+  //       errorText = "Member number must contain at least one number.";
+  //     });
+  //     return false;
+  //   }
+  //   else {
+  //     setState(() {
+  //       errorText = "";
+  //     });
+  //     return true;
+  //   }
+    return true;
   }
 }

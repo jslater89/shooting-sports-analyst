@@ -117,4 +117,12 @@ class MemberNumberCorrectionContainer {
   }
 
   List<MemberNumberCorrection> get all => _byName.values.flattened.toList();
+
+  MemberNumberCorrectionContainer copy() {
+    var container = MemberNumberCorrectionContainer();
+    for(var correction in all) {
+      container.add(correction);
+    }
+    return container;
+  }
 }

@@ -1,0 +1,22 @@
+Veda Persad
+IPSCTT202006 -> F151138
+TT202006     -> F151138
+
+Adrian Randle
+INVALID001 -> A124353
+MRRINGLE   -> A124353
+A12345     -> A124353
+
+German Romitelli
+ARTA618 -> F1000001
+PELADO ->  F1000001
+
+Michal Stepan
+LAUGOCZECH -> F1000002
+LA         -> F1000002
+RBR        -> F1000002
+
+
+Dan Koudelka
+LAUGOCZECH -> F1000003
+LA         -> F1000003

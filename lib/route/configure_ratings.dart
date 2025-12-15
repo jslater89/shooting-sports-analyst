@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
+import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/application_preferences.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
@@ -1491,6 +1492,49 @@ class _ConfigureRatingsPageState extends State<ConfigureRatingsPage> {
         }
         ReportDialog.show(context, _loadedProject!);
         break;
+
+      case _MenuEntry.importDeduplication:
+        var otherProject = await showDialog<DbRatingProject>(context: context, builder: (context) {
+          return SelectProjectDialog();
+        });
+
+        if(otherProject != null) {
+          var thisProjectUserMappings = _memNumMappings.length;
+          var otherProjectUserMappings = otherProject.settings.userMemberNumberMappings.length;
+
+          var thisProjectAutoMappings = _loadedProject!.automaticNumberMappings.length;
+          var otherProjectAutoMappings = otherProject.automaticNumberMappings.length;
+
+          var thisProjectBlacklist = _memNumMappingBlacklist.length;
+          var otherProjectBlacklist = otherProject.settings.memberNumberMappingBlacklist.length;
+
+          var thisProjectCorrections = _memNumCorrections.length;
+          var otherProjectCorrections = otherProject.settings.memberNumberCorrections.length;
+
+          var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
+
+          var confirm = await ConfirmDialog.show(
+            context,
+            title: "Import deduplication data from other project",
+            content: Text("Are you sure you want to import deduplication data from the other project?\n\n"
+            "This will overwrite the following data in the current project:\n"
+            "- ${thisProjectUserMappings} user number mappings in this project with ${otherProjectUserMappings} from other project\n"
+            "- ${thisProjectAutoMappings} automatic number mappings in this project with ${otherProjectAutoMappings} from other project\n"
+            "- ${thisProjectBlacklist} blacklist entries in this project with ${otherProjectBlacklist} from other project\n"
+            "- ${thisProjectCorrections} data entry fixes in this project with ${otherProjectCorrections} from other project\n\n"
+            "This cannot be undone. Are you sure you want to continue?"),
+            positiveButtonLabel: "IMPORT",
+            negativeButtonLabel: "CANCEL",
+            width: 500 * uiScaleFactor,
+          ) ?? false;
+          if(confirm) {
+            _memNumMappings = Map<String, String>.from(otherProject.settings.userMemberNumberMappings);
+            _loadedProject!.automaticNumberMappings = otherProject.automaticNumberMappings.map((e) => e.copy()).toList();
+            _memNumMappingBlacklist = Map<String, List<String>>.from(otherProject.settings.memberNumberMappingBlacklist);
+            _memNumCorrections = otherProject.settings.memberNumberCorrections.copy();
+            _saveProject(_loadedProject!.name);
+          }
+        }
     }
   }
 }
@@ -1500,6 +1544,7 @@ enum _MenuEntry {
   export,
   hiddenShooters,
   viewReports,
+  importDeduplication,
   dataEntryErrors,
   numberMappings,
   autoMappings,
@@ -1514,6 +1559,7 @@ enum _MenuEntry {
   static List<_MenuEntry> get menu => [
     hiddenShooters,
     viewReports,
+    importDeduplication,
     dataEntryErrors,
     numberMappings,
     autoMappings,
@@ -1536,6 +1582,8 @@ enum _MenuEntry {
         return "Hide shooters";
       case _MenuEntry.viewReports:
         return "View reports";
+      case _MenuEntry.importDeduplication:
+        return "Import deduplication data from other project";
       case _MenuEntry.dataEntryErrors:
         return "Fix data entry errors";
       case _MenuEntry.numberMappings:
