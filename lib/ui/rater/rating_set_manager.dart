@@ -4,16 +4,23 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/rating_sets.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_set.dart';
 import 'package:shooting_sports_analyst/data/help/entries/rating_set_help.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/html_or/html_or.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/rater/rating_select_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/text_input_dialog.dart';
+
+SSALogger _log = SSALogger("RatingSetManager");
 
 class RatingSetManagerDialog extends StatefulWidget {
   const RatingSetManagerDialog({super.key, required this.db, required this.validRatings, this.initialSelection = const []});
@@ -31,7 +38,13 @@ class RatingSetManagerDialog extends StatefulWidget {
 }
 
 class _RatingSetManagerDialogState extends State<RatingSetManagerDialog> {
-  List<RatingSet> selectedRatingSets = [];
+  late _RatingSetManagerModel _model;
+
+  @override
+  void initState() {
+    super.initState();
+    _model = _RatingSetManagerModel();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,15 +53,31 @@ class _RatingSetManagerDialogState extends State<RatingSetManagerDialog> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text("Rating sets"),
-          HelpButton(helpTopicId: ratingSetsHelpId),
+          Row(
+            children: [
+              IconButton(
+                icon: Icon(Icons.upload),
+                onPressed: () async {
+                  var fileContents = await HtmlOr.pickAndReadFileNow();
+                  if(fileContents != null) {
+                    var set = RatingSet.fromJson(jsonDecode(fileContents));
+                    AnalystDatabase().saveRatingSetSync(set);
+                    _model.availableSetsChanged();
+                  }
+                },
+              ),
+              HelpButton(helpTopicId: ratingSetsHelpId),
+            ],
+          ),
         ],
       ),
       content: SizedBox(
         width: 600,
         height: MediaQuery.of(context).size.height * 0.8,
-        child: RatingSetManager(db: widget.db, initialSelection: widget.initialSelection, onSelectionChanged: (sets) {
-          selectedRatingSets = sets;
-        }, validRatings: widget.validRatings),
+        child: ChangeNotifierProvider.value(
+          value: _model,
+          builder: (context, _) => RatingSetManager(db: widget.db, initialSelection: widget.initialSelection, validRatings: widget.validRatings),
+        ),
       ),
       actions: [
         TextButton(
@@ -60,7 +89,7 @@ class _RatingSetManagerDialogState extends State<RatingSetManagerDialog> {
           child: Text("CANCEL"),
         ),
         TextButton(
-          onPressed: () => Navigator.of(context).pop(selectedRatingSets),
+          onPressed: () => Navigator.of(context).pop(_model.selectedSets),
           child: Text("APPLY"),
         ),
       ],
@@ -69,12 +98,11 @@ class _RatingSetManagerDialogState extends State<RatingSetManagerDialog> {
 }
 
 class RatingSetManager extends StatefulWidget {
-  const RatingSetManager({super.key, required this.db, required this.validRatings, required this.onSelectionChanged, this.initialSelection = const []});
+  const RatingSetManager({super.key, required this.db, required this.validRatings, this.initialSelection = const []});
 
   final AnalystDatabase db;
   final List<ShooterRating> validRatings;
   final List<RatingSet> initialSelection;
-  final void Function(List<RatingSet>) onSelectionChanged;
 
   @override
   State<RatingSetManager> createState() => _RatingSetManagerState();
@@ -84,19 +112,42 @@ class _RatingSetManagerState extends State<RatingSetManager> {
   List<RatingSet> ratingSets = [];
   List<RatingSet> selectedRatingSets = [];
 
+  late _RatingSetManagerModel model;
+
   @override
   void initState() {
     super.initState();
+    model = context.read<_RatingSetManagerModel>();
     ratingSets = widget.db.getRatingSetsSync();
     var initialSetIds = widget.initialSelection.map((s) => s.id).toList();
     selectedRatingSets = ratingSets.where((s) => initialSetIds.contains(s.id)).toList();
     if(selectedRatingSets.isNotEmpty) {
-      widget.onSelectionChanged(selectedRatingSets);
+      model.selectionChanged(selectedRatingSets);
+    }
+
+    model.addListener(_handleSetChange);
+  }
+
+  void _handleSetChange() {
+    if(!model.handledSetChange) {
+      _log.i("Handling set change");
+      setState(() {
+        ratingSets = widget.db.getRatingSetsSync();
+        model.handledSetChange = true;
+        _log.i("New set count: ${ratingSets.length}");
+      });
     }
   }
 
   @override
+  void dispose() {
+    model.removeListener(_handleSetChange);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    var model = context.watch<_RatingSetManagerModel>();
     return Column(
       children: [
         TextButton(
@@ -153,13 +204,29 @@ class _RatingSetManagerState extends State<RatingSetManager> {
                       }
                     },
                   ),
+                  Tooltip(
+                    message: "Export rating set",
+                    child: IconButton(
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(Icons.download),
+                      onPressed: () async {
+                        var filename = "${ratingSets[index].displayName.replaceAll(RegExp(r'[^a-zA-Z0-9]'), "")}.json";
+                        HtmlOr.saveFile(filename, jsonEncode(ratingSets[index].toJson()));
+                      },
+                    ),
+                  ),
                   IconButton(
                     visualDensity: VisualDensity.compact,
                     icon: Icon(Icons.delete),
                     onPressed: () async {
                       var confirm = await ConfirmDialog.show(context, content: Text("Delete ${ratingSets[index].displayName}?"));
                       if(confirm ?? false) {
-                        widget.db.deleteRatingSetSync(ratingSets[index]);
+                        var set = ratingSets[index];
+                        widget.db.deleteRatingSetSync(set);
+                        if(selectedRatingSets.contains(set)) {
+                          selectedRatingSets.remove(set);
+                          model.selectionChanged(selectedRatingSets);
+                        }
                         setState(() {
                           ratingSets.removeAt(index);
                         });
@@ -177,7 +244,7 @@ class _RatingSetManagerState extends State<RatingSetManager> {
                   else {
                     selectedRatingSets.remove(ratingSets[index]);
                   }
-                  widget.onSelectionChanged(selectedRatingSets);
+                  model.selectionChanged(selectedRatingSets);
                 });
               },
               title: Text(ratingSets[index].displayName, overflow: TextOverflow.ellipsis),
@@ -188,4 +255,23 @@ class _RatingSetManagerState extends State<RatingSetManager> {
       ],
     );
   }
+}
+
+class _RatingSetManagerModel with ChangeNotifier {
+  // Parents should call this when available sets change.
+  void availableSetsChanged() {
+    handledSetChange = false;
+    notifyListeners();
+  }
+
+  bool handledSetChange = true;
+
+  // The manager will call this when the selection changes.
+  void selectionChanged(List<RatingSet> sets) {
+    notifyListeners();
+    _selectedSets = [...sets];
+  }
+
+  List<RatingSet> get selectedSets => _selectedSets;
+  List<RatingSet> _selectedSets = [];
 }

@@ -850,6 +850,8 @@ class MatchPointer with DbSportEntity implements SourceIdsProvider {
     return DataSourceResult.err(DataSourceError.notFound);
   }
 
+  /// Convert this [MatchPointer] into a [DbShootingMatch] that can be used to reload the match
+  /// from its source.
   DbShootingMatch intoSourcePlaceholder() {
     return DbShootingMatch.sourcePlaceholder(
       sport: sport,

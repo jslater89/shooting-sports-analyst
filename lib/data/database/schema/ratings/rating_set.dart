@@ -5,6 +5,7 @@
  */
 
 import 'package:isar_community/isar.dart';
+import 'package:json_annotation/json_annotation.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 
 part 'rating_set.g.dart';
@@ -12,7 +13,9 @@ part 'rating_set.g.dart';
 /// A rating set is a collection of member numbers of interest, which can be used
 /// to filter the ratings display pages.
 @collection
+@JsonSerializable()
 class RatingSet {
+  @JsonKey(includeToJson: false, includeFromJson: false)
   Id id = Isar.autoIncrement;
 
   /// The name of the rating set. If unset, whenever this set is applied, a short list
@@ -20,6 +23,7 @@ class RatingSet {
   String? name;
 
   /// The display name of the rating set. Use instead of [name] or [matchingRatingsName].
+  @JsonKey(includeToJson: false, includeFromJson: false)
   String get displayName => name ?? matchingRatingsName;
 
   /// Specific member numbers to match.
@@ -35,6 +39,7 @@ class RatingSet {
   bool femaleOnly = false;
 
   /// A few names of ratings that match this set.
+  @JsonKey(includeToJson: false, includeFromJson: false)
   List<MatchingRatingName> matchingRatingNames = [];
 
   DateTime created;
@@ -42,6 +47,7 @@ class RatingSet {
   DateTime lastApplied;
 
   /// A default name for the rating set, used when [name] is unset.
+  @JsonKey(includeToJson: false, includeFromJson: false)
   String get matchingRatingsName {
     if(matchingRatingNames.isEmpty) {
       if(memberNumbers.isNotEmpty) {
@@ -119,6 +125,9 @@ class RatingSet {
   }) : this.created = created ?? DateTime.now(),
     this.updated = updated ?? created ?? DateTime.now(),
     this.lastApplied = lastApplied ?? DateTime(1976, 5, 24);
+
+  factory RatingSet.fromJson(Map<String, dynamic> json) => _$RatingSetFromJson(json);
+  Map<String, dynamic> toJson() => _$RatingSetToJson(this);
 }
 
 @embedded
