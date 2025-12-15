@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:collection/collection.dart';
 import 'package:isar_community/isar.dart';
 
 extension LinkUtilities<T> on IsarLinks<T> {
@@ -99,5 +100,22 @@ class IsarLinksChange<T> {
   }
   else {
     return (where, elements.where((element) => element != where));
+  }
+}
+
+/// Get the preferred source ID from a list of source IDs. Prefer UUID-style IDs,
+/// which can be shared between sources safely, allowing mirroring.
+String getPreferredSourceId(List<String> sourceIds) {
+  if(sourceIds.length == 1) {
+    return sourceIds.first;
+  }
+  else {
+    var uuidId = sourceIds.firstWhereOrNull((id) => id.contains("-"));
+    if(uuidId != null) {
+      return uuidId;
+    }
+    else {
+      return sourceIds.reduce((a, b) => a.length > b.length ? a : b);
+    }
   }
 }

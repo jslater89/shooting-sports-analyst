@@ -7,6 +7,7 @@
 import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
+import 'package:shooting_sports_analyst/data/database/util.dart';
 import 'package:shooting_sports_analyst/data/source/match_source_error.dart';
 import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/source/ssa_source/ssa_server_source.dart';
@@ -83,7 +84,7 @@ abstract class MatchSource<T extends InternalMatchType, S extends InternalMatchF
       return Result.err(UnsupportedMatchType("No source for ${match.sourceCode}"));
     }
 
-    var preferredSourceId = match.sourceIds.first;
+    var preferredSourceId = getPreferredSourceId(match.sourceIds);
     source = maybeForwardToSSAServer(source, preferredSourceId);
 
     InternalMatchFetchOptions? options;
