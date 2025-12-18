@@ -20,3 +20,48 @@ RBR        -> F1000002
 Dan Koudelka
 LAUGOCZECH -> F1000003
 LA         -> F1000003
+
+Giacomo Bolzoni
+12799 -> F1000004
+
+Petr Znamenacek
+23001 -> F1000005
+
+Zdenek Liehne
+DLA -> F1000006
+
+Frederick Ian Capin
+080904 -> F1000007
+
+Jeffrey Wee
+080491 -> F1000008
+
+Ezequiel Salzano
+520 -> F1000009
+
+Jean-Baptiste (John) Nguyen
+109066 -> F1000010
+
+Marcos "Tali" Henin
+304AR -> F1000011
+
+Giovanni Callegaro
+FR -> F1000012
+
+Arthur Toledo
+1019627BT -> F1000013
+
+Jorge Claudio
+LATRYA -> F1000014
+
+Enrique Larranaga
+RB7F -> F1000015
+
+Filippo Peruccacci
+3463 -> F1000016
+
+Luis Henrique Ishihara
+BRA5LD3 -> F1000017
+
+Omar Larranaga
+R68YR -> F1000018
