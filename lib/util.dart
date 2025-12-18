@@ -226,6 +226,10 @@ extension ListMap<K, V> on Map<K, List<V>> {
     return true;
   }
 
+  /// Remove [value] from the list at [key], if it is in the list.
+  ///
+  /// Returns true if the value was removed, or false if it was not in the list,
+  /// or if the list does not exist.
   bool removeFromList(K key, V value) {
     var list = this[key];
     if(list == null) {
