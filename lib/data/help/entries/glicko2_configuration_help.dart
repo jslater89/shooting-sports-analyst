@@ -52,12 +52,23 @@ the category of 'ugly hacks'; it prevents occasional extreme overperformances or
 underperformances from breaking the system. The default value of 500 (with the default
 scale factor) is relatively conservative. Observationally, 1000 or more means 'disabled'.
 
-### Maximum Opponent Count
+### Maximum New Opponent Count
 The maximum number of opponents to consider when calculating rating updates for new players.
 This helps prevent excessive rating changes for new competitors joining mature rating sets,
 where comparing against many opponents with large rating gaps can cause rating changes to
 accumulate to problematic values before Glicko-2's stabilizing features come into play at
 the end of a match.
+
+### Maximum Existing Opponent Count
+The maximum number of opponents to consider when calculating rating updates for existing players.
+This functions similarly to the above setting, but applies to existing players instead. Leave
+empty (the default) for no limit: observationally, players who have appeared before will have
+sufficient rating information to avoid the numerical instability solved by the above setting.
+
+### Limit Opponents Mode
+The method to use to select opponents if either maximum number of opponents above is exceeded.
+Rating mode uses opponents closest in rating. Finish mode uses opponents closest in final match
+result.
 
 ### Tau
 The tau value controls the rate of volatility changes. Lower values of tau will make

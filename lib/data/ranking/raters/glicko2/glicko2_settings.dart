@@ -24,7 +24,9 @@ class Glicko2Settings extends RaterSettings {
   static const _perfectVictoryDifferenceKey = "g2PerfectVictoryDifference";
   static const _linearRegionKey = "g2LinearRegion";
   static const _marginOfVictoryInflationKey = "g2MarginOfVictoryInflation";
-  static const _maximumOpponentCountKey = "g2MaximumOpponentCount";
+  static const _maximumOpponentCountForNewKey = "g2MaximumOpponentCount";
+  static const _maximumOpponentCountForExistingKey = "g2MaximumOpponentCountForExisting";
+  static const _limitOpponentsModeKey = "g2LimitOpponentsMode";
 
   Glicko2Settings({
     this.byStage = false,
@@ -40,7 +42,9 @@ class Glicko2Settings extends RaterSettings {
     this.perfectVictoryDifference = defaultPerfectVictoryDifference,
     this.eLinearRegion = defaultLinearRegion,
     this.marginOfVictoryInflation = defaultMarginOfVictoryInflation,
-    this.maximumOpponentCount = defaultMaximumOpponentCount,
+    this.maximumOpponentCountForNew = defaultMaximumOpponentCount,
+    this.maximumOpponentCountForExisting = defaultMaximumOpponentCountForExisting,
+    this.limitOpponentsMode = LimitOpponentsMode.rating,
   });
 
   /// The default default rating for Glicko-2, in display units.
@@ -68,6 +72,8 @@ class Glicko2Settings extends RaterSettings {
   static const defaultMarginOfVictoryInflation = 1.00;
   /// The default maximum number of opponents to consider when calculating rating updates for new players.
   static const defaultMaximumOpponentCount = 20;
+  /// The default maximum number of opponents to consider when calculating rating updates for existing players.
+  static const int? defaultMaximumOpponentCountForExisting = null;
   /// The default maximum volatility to allow, in display units.
   static const defaultMaximumVolatility = 0.15;
 
@@ -132,7 +138,16 @@ class Glicko2Settings extends RaterSettings {
   /// prioritized by rating proximity (closer ratings first). This helps prevent excessive
   /// rating changes for new competitors joining mature rating sets, where comparing against
   /// many opponents with large rating gaps can cause deltaSum to accumulate to problematic values.
-  int maximumOpponentCount;
+  int maximumOpponentCountForNew;
+
+  /// The maximum number of opponents to consider when calculating rating updates for existing players.
+  ///
+  /// When opponent selection modes produce more opponents than this limit, opponents are
+  /// prioritized by rating proximity (closer ratings first).
+  int? maximumOpponentCountForExisting;
+
+  /// The method to use for selecting opponents when calculating rating updates for existing players.
+  LimitOpponentsMode limitOpponentsMode;
 
   double scaleToInternal(double number, {double? offset}) => (number - (offset ?? 0)) / scalingFactor;
   double scaleToDisplay(double number, {double? offset}) => (number * scalingFactor) + (offset ?? 0);
@@ -186,7 +201,7 @@ class Glicko2Settings extends RaterSettings {
     json[_perfectVictoryDifferenceKey] = perfectVictoryDifference;
     json[_linearRegionKey] = eLinearRegion;
     json[_marginOfVictoryInflationKey] = marginOfVictoryInflation;
-    json[_maximumOpponentCountKey] = maximumOpponentCount;
+    json[_maximumOpponentCountForNewKey] = maximumOpponentCountForNew;
   }
 
   @override
@@ -204,7 +219,7 @@ class Glicko2Settings extends RaterSettings {
     perfectVictoryDifference = (json[_perfectVictoryDifferenceKey] ?? defaultPerfectVictoryDifference) as double;
     eLinearRegion = (json[_linearRegionKey] ?? defaultLinearRegion) as double;
     marginOfVictoryInflation = (json[_marginOfVictoryInflationKey] ?? defaultMarginOfVictoryInflation) as double;
-    maximumOpponentCount = (json[_maximumOpponentCountKey] ?? defaultMaximumOpponentCount) as int;
+    maximumOpponentCountForNew = (json[_maximumOpponentCountForNewKey] ?? defaultMaximumOpponentCount) as int;
   }
 }
 
@@ -217,4 +232,29 @@ enum OpponentSelectionMode {
   nearby,
   /// Use both top and nearby opponents.
   topAndNearby,
+}
+
+enum LimitOpponentsMode {
+  /// Use opponents closest in rating.
+  rating,
+  /// Use opponents closest in match finish.
+  finish;
+
+  String get uiLabel {
+    switch(this) {
+      case LimitOpponentsMode.rating:
+        return "Rating";
+      case LimitOpponentsMode.finish:
+        return "Match finish";
+    }
+  }
+
+  String get tooltip {
+    switch(this) {
+      case LimitOpponentsMode.rating:
+        return "Use opponents closest in rating.";
+      case LimitOpponentsMode.finish:
+        return "Use opponents closest in match finish.";
+    }
+  }
 }

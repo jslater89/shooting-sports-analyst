@@ -85,7 +85,8 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
   TextEditingController _perfectVictoryDifferenceController = TextEditingController(text: Glicko2Settings.defaultPerfectVictoryDifference.toStringAsFixed(3));
   TextEditingController _linearRegionController = TextEditingController(text: Glicko2Settings.defaultLinearRegion.toStringAsFixed(3));
   TextEditingController _marginOfVictoryInflationController = TextEditingController(text: Glicko2Settings.defaultMarginOfVictoryInflation.toStringAsFixed(3));
-  TextEditingController _maximumOpponentCountController = TextEditingController(text: Glicko2Settings.defaultMaximumOpponentCount.toString());
+  TextEditingController _maximumOpponentCountForNewController = TextEditingController(text: Glicko2Settings.defaultMaximumOpponentCount.toString());
+  TextEditingController _maximumOpponentCountForExistingController = TextEditingController(text: Glicko2Settings.defaultMaximumOpponentCountForExisting?.toString() ?? "");
   TextEditingController _scalingFactorController = TextEditingController();
 
   late Glicko2Settings settings;
@@ -179,8 +180,14 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
       }
     });
 
-    _maximumOpponentCountController.addListener(() {
-      if(int.tryParse(_maximumOpponentCountController.text) != null) {
+    _maximumOpponentCountForNewController.addListener(() {
+      if(int.tryParse(_maximumOpponentCountForNewController.text) != null) {
+        if(!widget.controller._restoreDefaults) _validateText();
+      }
+    });
+
+    _maximumOpponentCountForExistingController.addListener(() {
+      if(int.tryParse(_maximumOpponentCountForExistingController.text) != null) {
         if(!widget.controller._restoreDefaults) _validateText();
       }
     });
@@ -201,6 +208,8 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
     _perfectVictoryDifferenceController.text = "${settings.perfectVictoryDifference.toStringAsFixed(3)}";
     _linearRegionController.text = "${settings.eLinearRegion.toStringAsFixed(3)}";
     _marginOfVictoryInflationController.text = "${settings.marginOfVictoryInflation.toStringAsFixed(3)}";
+    _maximumOpponentCountForNewController.text = "${settings.maximumOpponentCountForNew.toString()}";
+    _maximumOpponentCountForExistingController.text = "${settings.maximumOpponentCountForExisting?.toString() ?? ""}";
     _updateScalingFactorDisplay();
   }
 
@@ -259,7 +268,8 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
     double? perfectVictoryDifference = double.tryParse(_perfectVictoryDifferenceController.text);
     double? linearRegion = double.tryParse(_linearRegionController.text);
     double? marginOfVictoryInflation = double.tryParse(_marginOfVictoryInflationController.text);
-    int? maximumOpponentCount = int.tryParse(_maximumOpponentCountController.text);
+    int? maximumOpponentCount = int.tryParse(_maximumOpponentCountForNewController.text);
+    int? maximumOpponentCountForExisting = int.tryParse(_maximumOpponentCountForExistingController.text);
 
     if(initialRating == null) {
       widget.controller.lastError = "Initial rating formatted incorrectly";
@@ -373,6 +383,16 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
       return;
     }
 
+    if(maximumOpponentCountForExisting == null && _maximumOpponentCountForExistingController.text.isNotEmpty) {
+      widget.controller.lastError = "Maximum opponent count for existing formatted incorrectly";
+      return;
+    }
+
+    if(maximumOpponentCountForExisting != null && maximumOpponentCountForExisting <= 0) {
+      widget.controller.lastError = "Maximum opponent count for existing must be positive";
+      return;
+    }
+
     settings.initialRating = initialRating;
     settings.startingRD = startingRD;
     settings.maximumRD = maximumRD;
@@ -380,6 +400,8 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
     settings.pseudoRatingPeriodLength = pseudoRatingPeriodLength;
     settings.initialVolatility = initialVolatility;
     settings.maximumRatingDelta = maximumRatingDelta;
+    settings.maximumOpponentCountForNew = maximumOpponentCount;
+    settings.maximumOpponentCountForExisting = maximumOpponentCountForExisting;
     settings.eLinearRegion = linearRegion;
     settings.marginOfVictoryInflation = marginOfVictoryInflation;
     if(settings.scoreFunctionType == ScoreFunctionType.linearMarginOfVictory) {
@@ -544,19 +566,78 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
                 message: "The maximum number of opponents to consider when calculating rating updates for new players",
                 child: Padding(
                   padding: const EdgeInsets.only(left: 16),
-                  child: Text("Maximum opponent count", style: Theme.of(context).textTheme.bodyLarge),
+                  child: Text("Maximum new opponent count", style: Theme.of(context).textTheme.bodyLarge),
                 ),
               ),
               SizedBox(
                 width: 100 * uiScaleFactor,
                 child: TextFormField(
-                  controller: _maximumOpponentCountController,
+                  controller: _maximumOpponentCountForNewController,
                   textAlign: TextAlign.end,
                   keyboardType: TextInputType.numberWithOptions(decimal: false, signed: false),
                   inputFormatters: [
                     FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
                   ],
                 )
+              )
+            ]
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Tooltip(
+                message: "The maximum number of opponents to consider when calculating rating updates for existing players",
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: Text("Maximum existing opponent count", style: Theme.of(context).textTheme.bodyLarge),
+                ),
+              ),
+              SizedBox(
+                width: 100 * uiScaleFactor,
+                child: TextFormField(
+                  controller: _maximumOpponentCountForExistingController,
+                  textAlign: TextAlign.end,
+                  keyboardType: TextInputType.numberWithOptions(decimal: false, signed: false),
+                  inputFormatters: [
+                    FilteringTextInputFormatter(RegExp(r"[0-9\.]*"), allow: true),
+                  ],
+                )
+              )
+            ]
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Tooltip(
+                message: "The method to use for selecting opponents when calculating rating updates for existing players.\nLeave empty for no limit.",
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: Text("Limit opponents mode", style: Theme.of(context).textTheme.bodyLarge),
+                ),
+              ),
+              SizedBox(
+                width: 200 * uiScaleFactor,
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    isDense: true,
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<LimitOpponentsMode>(
+                      value: settings.limitOpponentsMode,
+                      items: LimitOpponentsMode.values.map((e) => DropdownMenuItem(
+                        value: e,
+                        child: Tooltip(message: e.tooltip, child: Text(e.uiLabel)),
+                      )).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          settings.limitOpponentsMode = value!;
+                        });
+                      },
+                    ),
+                  ),
+                ),
               )
             ]
           ),

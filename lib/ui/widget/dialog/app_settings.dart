@@ -74,119 +74,121 @@ class _AppSettingsDialogState extends State<AppSettingsDialog> {
           HelpButton(helpTopicId: appSettingsHelpId),
         ],
       ),
-      content: SizedBox(
-        width: 400 * uiScaleFactor,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownMenu<ThemeMode>(
-              dropdownMenuEntries: [
-                ThemeMode.system,
-                ThemeMode.light,
-                ThemeMode.dark,
-              ].map((e) => DropdownMenuEntry(value: e, label: e.name.toTitleCase())).toList(),
-              onSelected: (value) {
-                if(value != null) {
-                  uiConfig.themeMode = value;
-                  _themeModeController.text = value.name.toTitleCase();
-                }
-              },
-              controller: _themeModeController,
-              label: const Text("Theme mode"),
-              width: 300,
-            ),
-            const SizedBox(height: 16),
-            DropdownMenu<double>(
-              initialSelection: uiConfig.uiScaleFactor,
-              dropdownMenuEntries: [0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.5, 2.0].map((e) => DropdownMenuEntry<double>(value: e, label: "${(e * 100).toStringAsFixed(0)}%")).toList(),
-              onSelected: (value) {
-                if(value != null) {
-                  uiConfig.uiScaleFactor = value;
-                }
-              },
-              label: const Text("UI scale factor"),
-              width: 300,
-            ),
-            const SizedBox(height: 16),
-            DropdownMenu<Level>(
-              dropdownMenuEntries: [
-                Level.trace,
-                Level.debug,
-                Level.info,
-                Level.warning,
-                Level.error,
-              ].map((e) => DropdownMenuEntry(value: e, label: e.name.toTitleCase())).toList(),
-              onSelected: (value) {
-                if(value != null) {
-                  config.logLevel = value;
-                  _logLevelController.text = value.name.toTitleCase();
-                }
-              },
-              controller: _logLevelController,
-              label: const Text("Log level"),
-              width: 300,
-            ),
-            const SizedBox(height: 16),
-            CheckboxListTile(
-              title: const Text("Play deduplication alert"),
-              subtitle: const Text("Play a sound when loading a project and deduplication is required"),
-              value: config.playDeduplicationAlert,
-              onChanged: (value) {
-                setState(() {
-                  config.playDeduplicationAlert = value ?? false;
-                });
-              },
-            ),
-            const SizedBox(height: 16),
-            CheckboxListTile(
-              title: const Text("Play ratings calculation complete alert"),
-              subtitle: const Text("Play a sound when ratings calculation is complete"),
-              value: config.playRatingsCalculationCompleteAlert,
-              onChanged: (value) {
-                setState(() {
-                  config.playRatingsCalculationCompleteAlert = value ?? false;
-                });
-              },
-            ),
-            const SizedBox(height: 16),
-            CheckboxListTile(
-              title: const Text("Prefer SSA server source"),
-              subtitle: const Text("Use the SSA server for matches it may contain"),
-              value: config.forwardUuidsToSSAServerSource,
-              onChanged: (value) {
-                setState(() {
-                  config.forwardUuidsToSSAServerSource = value ?? false;
-                });
-              },
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _projectController,
-                    decoration: const InputDecoration(
-                      labelText: "Ratings context",
+      content: SingleChildScrollView(
+        child: SizedBox(
+          width: 400 * uiScaleFactor,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownMenu<ThemeMode>(
+                dropdownMenuEntries: [
+                  ThemeMode.system,
+                  ThemeMode.light,
+                  ThemeMode.dark,
+                ].map((e) => DropdownMenuEntry(value: e, label: e.name.toTitleCase())).toList(),
+                onSelected: (value) {
+                  if(value != null) {
+                    uiConfig.themeMode = value;
+                    _themeModeController.text = value.name.toTitleCase();
+                  }
+                },
+                controller: _themeModeController,
+                label: const Text("Theme mode"),
+                width: 300,
+              ),
+              const SizedBox(height: 16),
+              DropdownMenu<double>(
+                initialSelection: uiConfig.uiScaleFactor,
+                dropdownMenuEntries: [0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.5, 2.0].map((e) => DropdownMenuEntry<double>(value: e, label: "${(e * 100).toStringAsFixed(0)}%")).toList(),
+                onSelected: (value) {
+                  if(value != null) {
+                    uiConfig.uiScaleFactor = value;
+                  }
+                },
+                label: const Text("UI scale factor"),
+                width: 300,
+              ),
+              const SizedBox(height: 16),
+              DropdownMenu<Level>(
+                dropdownMenuEntries: [
+                  Level.trace,
+                  Level.debug,
+                  Level.info,
+                  Level.warning,
+                  Level.error,
+                ].map((e) => DropdownMenuEntry(value: e, label: e.name.toTitleCase())).toList(),
+                onSelected: (value) {
+                  if(value != null) {
+                    config.logLevel = value;
+                    _logLevelController.text = value.name.toTitleCase();
+                  }
+                },
+                controller: _logLevelController,
+                label: const Text("Log level"),
+                width: 300,
+              ),
+              const SizedBox(height: 16),
+              CheckboxListTile(
+                title: const Text("Play deduplication alert"),
+                subtitle: const Text("Play a sound when loading a project and deduplication is required"),
+                value: config.playDeduplicationAlert,
+                onChanged: (value) {
+                  setState(() {
+                    config.playDeduplicationAlert = value ?? false;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              CheckboxListTile(
+                title: const Text("Play ratings calculation complete alert"),
+                subtitle: const Text("Play a sound when ratings calculation is complete"),
+                value: config.playRatingsCalculationCompleteAlert,
+                onChanged: (value) {
+                  setState(() {
+                    config.playRatingsCalculationCompleteAlert = value ?? false;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              CheckboxListTile(
+                title: const Text("Prefer SSA server source"),
+                subtitle: const Text("Use the SSA server for matches it may contain"),
+                value: config.forwardUuidsToSSAServerSource,
+                onChanged: (value) {
+                  setState(() {
+                    config.forwardUuidsToSSAServerSource = value ?? false;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _projectController,
+                      decoration: const InputDecoration(
+                        labelText: "Ratings context",
+                      ),
+                      readOnly: true,
                     ),
-                    readOnly: true,
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.edit),
-                  onPressed: () async {
-                    project = await SelectProjectDialog.show(context);
-                    setProject(project);
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete),
-                  onPressed: () async {
-                    setProject(null);
-                  },
-                ),
-              ],
-            )
-          ],
+                  IconButton(
+                    icon: const Icon(Icons.edit),
+                    onPressed: () async {
+                      project = await SelectProjectDialog.show(context);
+                      setProject(project);
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete),
+                    onPressed: () async {
+                      setProject(null);
+                    },
+                  ),
+                ],
+              )
+            ],
+          ),
         ),
       ),
       actions: [

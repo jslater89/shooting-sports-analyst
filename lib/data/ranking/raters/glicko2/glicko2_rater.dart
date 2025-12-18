@@ -515,22 +515,23 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
 
     // For new players, limit the number of opponents to avoid massive stacking rating
     // deltas, taking players closest in match finish first.
-    final bool byMatchScore = false;
-    if(player.length == 0 && selected.length > settings.maximumOpponentCount) {
+    final bool byMatchScore = settings.limitOpponentsMode == LimitOpponentsMode.finish;
+    if((player.length == 0 && selected.length > settings.maximumOpponentCountForNew) ||
+      (settings.maximumOpponentCountForExisting != null && player.length > 0 && selected.length > settings.maximumOpponentCountForExisting!)) {
+
+      var limit = player.length == 0 ? settings.maximumOpponentCountForNew : settings.maximumOpponentCountForExisting!;
       selected = selected.sorted((a, b) {
-        // ignore: dead_code (configurable, if not yet in UI)
         if(byMatchScore) {
           var aRatio = matchScores[a]?.ratio ?? 0.0;
           var bRatio = matchScores[b]?.ratio ?? 0.0;
           return aRatio.compareTo(bRatio);
         }
-        // ignore: dead_code
         else {
           var aDiff = (a.rating - player.rating).abs();
           var bDiff = (b.rating - player.rating).abs();
           return aDiff.compareTo(bDiff);
         }
-      }).take(settings.maximumOpponentCount).toList();
+      }).take(limit).toList();
     }
 
     // If that doesn't include the winner, include the winner and remove the most distant opponent.
