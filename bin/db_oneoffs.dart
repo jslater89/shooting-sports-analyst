@@ -65,6 +65,7 @@ import 'db_oneoff_impl/state_shooters_command.dart';
 import 'db_oneoff_impl/export_miffs_command.dart';
 import 'db_oneoff_impl/import_miffs_command.dart';
 import 'db_oneoff_impl/set_match_date_command.dart';
+import 'db_oneoff_impl/finding_adrian_randle.dart';
 
 late SSALogger _log = SSALogger("DbOneoffs");
 
@@ -131,6 +132,7 @@ Future<void> main(List<String> args) async {
     StateShootersCommand(db),
     ImportMiffsCommand(db),
     ExportMiffsCommand(db),
+    FindAdrianRandleCommand(db),
     SetMatchDatesCommand(db),
     QuitCommand(),
   ], menuHeader: "DB Oneoffs ${VersionInfo.version}", commandSelected: (command) async {

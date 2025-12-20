@@ -33,8 +33,12 @@ Future<void> _checkLocationProportion(AnalystDatabase db, Console console) async
   var matches = await db.getMatchesByAnySourceIds(dbIds);
 
   int matchesWith20PercentLocation = 0;
-  int totalMatches = matches.length;
+  int totalMatches = 0;
   for(var match in matches) {
+    if(match.date.isBefore(DateTime(2024, 1, 1))) {
+      continue;
+    }
+    totalMatches++;
     int locationCount = 0;
     int threshold = (match.shooters.length * 0.2).round();
     for(var s in match.shooters) {
