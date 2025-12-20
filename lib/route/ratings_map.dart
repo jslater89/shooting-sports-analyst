@@ -99,9 +99,9 @@ class _RatingsMapState extends State<RatingsMap> {
         ),
       );
       for(var rating in ratings) {
-        // if(rating.lastSeen.isBefore(DateTime(2024, 1, 1))) {
-        //   continue;
-        // }
+        if(rating.lastSeen.isBefore(DateTime(2024, 1, 1))) {
+          continue;
+        }
         totalRatings++;
         if(rating.regionSubdivision != null) {
           ratingsByLocation.addToList(rating.regionSubdivision!, scaler.scaleRating(rating.rating));
@@ -150,6 +150,9 @@ class _RatingsMapState extends State<RatingsMap> {
       _totalLocatedRatings += totalRatingCountAtLocation;
     }
 
+    _log.i("Total located ratings: $_totalLocatedRatings");
+    _log.i("Total ratings: $totalRatingCount");
+    _log.i("Total located ratings: ${(_totalLocatedRatings / totalRatingCount).asPercentage(decimals: 1, includePercent: true)}");
     _rebuildMap();
   }
 
