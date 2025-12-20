@@ -35,6 +35,7 @@ abstract class StandardDeduplicator extends ShooterDeduplicator {
   {
     var userMappings = ratingProject.settings.userMemberNumberMappings;
     var autoMappings = ratingProject.automaticNumberMappings;
+    var dataEntryFixes = ratingProject.settings.memberNumberCorrections;
     Map<String, List<String>> reverseMappings = {};
 
     await progressCallback?.call(0, 2, "Preparing data");
@@ -187,6 +188,10 @@ abstract class StandardDeduplicator extends ShooterDeduplicator {
         proposedActions: [],
       );
 
+      if(conflict.deduplicatorName == "adrianrandle") {
+        print("break");
+      }
+
       if(conflict.flattenedMemberNumbers.length == 1) {
         // If we condense numbers and end up with a single number, there's no conflict.
         continue;
@@ -195,11 +200,32 @@ abstract class StandardDeduplicator extends ShooterDeduplicator {
       // Try to sort the numbers into identities: sets of strings that refer to the same person,
       // according to mappings/reverse mappings.
       List<Set<String>> identities = [];
+      var fixes = dataEntryFixes.getByName(name);
+
+      // Count the number of times each number appears as the target of a data entry fix.
+      Map<String, int> numbersByFixTargets = {};
       for(var number in conflict.flattenedMemberNumbers) {
+        for(var fix in fixes) {
+          if(fix.correctedNumber == number) {
+            numbersByFixTargets.increment(number);
+          }
+        }
+      }
+
+      // We want to sort the numbers so that the ones that are most targeted by data entry fixes
+      // appear first. That way they're always added to identities first, so if a data entry fix
+      // source shows up, its target will already be present. We want this because data entry fix
+      // sources don't exist, logically, and we want to wash our hands of handling them ASAP to
+      // avoid detecting spurious conflicts.
+      var sortedNumbers = conflict.flattenedMemberNumbers.toList();
+      sortedNumbers.sort((a, b) => (numbersByFixTargets[b] ?? 0).compareTo(numbersByFixTargets[a] ?? 0));
+
+      for(var number in sortedNumbers) {
         bool foundIdentity = false;
         for(var identity in identities) {
           // A number belongs to an identity if it is either the source or target of a mapping
-          // that belongs to the identity.
+          // that belongs to the identity, or if it is the source or target of a data entry fix
+          // of a number belonging to the identity.
           if(identity.contains(number)) {
             // This shouldn't happen, but catch it anyway just in case.
             foundIdentity = true;
@@ -210,7 +236,22 @@ abstract class StandardDeduplicator extends ShooterDeduplicator {
             foundIdentity = true;
           }
           else {
-          // If the identity contains the source of number's mapping, number belongs to the identity.
+            // Although we handle data entry fixes when we add competitors to matches, we also need
+            // to handle them here, since we're working with literal member numbers rather than
+            // processed ones and sometimes miss badly-misformatted international numbers because of it.
+            // Canonical edge case: Adrian Randle, who has A124353 but also 'MRRINGLE'.
+            // Data entry fixes are a bit trickier because we need to check each fix and make sure both
+            // the source and target end up in the identity if it's a match.
+            for(var fix in fixes) {
+              if(number == fix.invalidNumber || number == fix.correctedNumber) {
+                identity.add(fix.invalidNumber);
+                identity.add(fix.correctedNumber);
+                foundIdentity = true;
+                break;
+              }
+            }
+
+            // If the identity contains the source of number's mapping, number belongs to the identity.
             var reverse = reverseMappings[number];
             if(reverse != null) {
               for(var reverseMapping in reverse) {

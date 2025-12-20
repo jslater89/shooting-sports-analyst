@@ -57,6 +57,8 @@ class _MemberNumberCorrectionListDialogState extends State<MemberNumberCorrectio
 
   var changed = false;
 
+  bool _shouldProcessSource = true;
+
   @override
   void initState() {
     super.initState();
@@ -227,6 +229,20 @@ class _MemberNumberCorrectionListDialogState extends State<MemberNumberCorrectio
                           ),
                         ],
                       ),
+                      CheckboxListTile(
+                        value: _shouldProcessSource,
+                        onChanged: (value) {
+                          setState(() {
+                            _shouldProcessSource = value ?? false;
+                          });
+                        },
+                        title: Tooltip(
+                          message: "Uncheck to enter literal badly misformatted international member numbers",
+                          child: Text("Process source number"),
+                        ),
+                        dense: true,
+                        controlAffinity: ListTileControlAffinity.leading,
+                      )
                     ],
                   ),
                 ),
@@ -303,11 +319,13 @@ class _MemberNumberCorrectionListDialogState extends State<MemberNumberCorrectio
       });
       return;
     }
-    if(!validate(source, allowEmpty: true)) return;
+    if(_shouldProcessSource && !validate(source, allowEmpty: true)) return;
     if(!validate(target)) return;
 
     name = name.toLowerCase().replaceAll(RegExp(r"[^a-zA-Z0-9]"), "");
-    source = widget.sport == null ? source : ShooterDeduplicator.numberProcessor(widget.sport!)(source);
+    if(_shouldProcessSource) {
+      source = widget.sport == null ? source : ShooterDeduplicator.numberProcessor(widget.sport!)(source);
+    }
     target = widget.sport == null ? target : ShooterDeduplicator.numberProcessor(widget.sport!)(target);
 
     if(source == target) {
@@ -333,18 +351,17 @@ class _MemberNumberCorrectionListDialogState extends State<MemberNumberCorrectio
 
   bool validate(String input, {bool allowEmpty = false}) {
     if(allowEmpty && input.isEmpty) return true;
-  //   if(!input.contains(RegExp(r"[0-9]+"))) {
-  //     setState(() {
-  //       errorText = "Member number must contain at least one number.";
-  //     });
-  //     return false;
-  //   }
-  //   else {
-  //     setState(() {
-  //       errorText = "";
-  //     });
-  //     return true;
-  //   }
-    return true;
+    if(!input.contains(RegExp(r"[0-9]+"))) {
+      setState(() {
+        errorText = "Member number must contain at least one number.";
+      });
+      return false;
+    }
+    else {
+      setState(() {
+        errorText = "";
+      });
+      return true;
+    }
   }
 }

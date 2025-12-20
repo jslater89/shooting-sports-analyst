@@ -44,6 +44,11 @@ class MemberNumberCorrection {
   int get hashCode {
     return Object.hash(name, invalidNumber, correctedNumber);
   }
+
+  @override
+  String toString() {
+    return "$name: $invalidNumber → $correctedNumber";
+  }
 }
 
 class MemberNumberCorrectionContainer {

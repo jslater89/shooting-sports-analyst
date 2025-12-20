@@ -1074,6 +1074,10 @@ class RatingProjectLoader {
     List<DbShooterRating> ratingsToUpsert = [];
     List<DbShooterRating> newRatings = [];
     for(MatchEntry s in shooters) {
+      if(s.lastName == "Randle") {
+        print("break");
+      }
+
       // Process the member number:
       // First, normalize it according to the sport's rules.
       var processed = sport.shooterDeduplicator?.processNumber(s.memberNumber) ?? ShooterDeduplicator.normalizeNumberBasic(s.memberNumber);
