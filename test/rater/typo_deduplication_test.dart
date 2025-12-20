@@ -16,10 +16,13 @@ import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/elo/multiplayer_percent_elo_rater.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/idpa.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
+import 'package:shooting_sports_analyst/flutter_native_providers.dart';
+import 'package:shooting_sports_analyst/server/providers.dart';
 import 'package:shooting_sports_analyst/util.dart';
 import 'package:uuid/uuid.dart';
 
 void main() async {
+  FlutterOrNative.debugModeProvider = ServerDebugProvider();
   var db = AnalystDatabase.test();
   var ratingGroup = idpaSport.builtinRatingGroupsProvider!.builtinRatingGroups.first;
 
