@@ -28,6 +28,17 @@ class Controller extends ControlInterface {
   }
 
   @override
+  Future<Directory?> pickDirectory() async {
+    var result = await FilePicker.platform.getDirectoryPath();
+    if(result != null) {
+      return Directory(result);
+    }
+    else {
+      return null;
+    }
+  }
+
+  @override
   void pickAndReadFile(Function(String? p1) onFileContents) async {
     var result = await FilePicker.platform.pickFiles();
     if(result != null) {

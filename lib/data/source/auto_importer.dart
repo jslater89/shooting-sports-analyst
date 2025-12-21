@@ -4,6 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -37,7 +38,8 @@ class AutoImporter {
   AutoImporter._();
 
   bool _initialized = false;
-  late DirectoryWatcher _watcher;
+  DirectoryWatcher? _watcher;
+  StreamSubscription<WatchEvent>? _watcherSubscription;
   late SerializedConfig _config;
   bool get autoImportEnabled => _config.autoImportDirectory != null && Directory(_config.autoImportDirectory!).existsSync();
 
@@ -54,7 +56,14 @@ class AutoImporter {
         _log.i("Auto import directory not set, disabling auto import");
       }
       else {
-        _log.i("Auto import directory set, enabling auto import");
+        _log.i("Auto import directory set, enabling auto import at ${_config.autoImportDirectory}");
+        _watcherSubscription?.cancel();
+        _watcher = DirectoryWatcher(Directory(_config.autoImportDirectory!).path);
+        _watcherSubscription = _watcher!.events.listen((event) {
+          if(autoImportEnabled) {
+            _onEvent(event);
+          }
+        });
       }
     });
 
@@ -71,7 +80,7 @@ class AutoImporter {
     }
 
     _watcher = DirectoryWatcher(Directory(_config.autoImportDirectory!).path);
-    _watcher.events.listen((event) {
+    _watcherSubscription = _watcher!.events.listen((event) {
       if(autoImportEnabled) {
         _onEvent(event);
       }

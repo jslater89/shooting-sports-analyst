@@ -7,6 +7,7 @@
 import 'dart:convert';
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html';
+import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -48,6 +49,18 @@ class Controller extends ControlInterface {
     else {
       return null;
     }
+  }
+
+  @override
+  Future<Directory?> pickDirectory() async {
+    throw UnimplementedError();
+    // var result = await FilePicker.platform.pickDirectory();
+    // if(result != null) {
+    //   return Directory(result.path);
+    // }
+    // else {
+    //   return null;
+    // }
   }
 
   @override

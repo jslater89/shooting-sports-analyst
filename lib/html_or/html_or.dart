@@ -4,6 +4,8 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -18,6 +20,7 @@ abstract class ControlInterface {
   Future<bool> saveFile(String defaultName, String fileContents);
   Future<bool> saveBuffer(String defaultName, List<int> buffer);
   void pickAndReadFile(Function(String?) onFileContents);
+  Future<Directory?> pickDirectory();
   Future<String?> pickAndReadFileNow();
   bool get needsProxy;
 }
@@ -28,6 +31,10 @@ class HtmlOr {
   static void navigateTo(BuildContext context, String path) {
     lastContext = context;
     controller.navigateTo(path);
+  }
+
+  static Future<Directory?> pickDirectory() async {
+    return controller.pickDirectory();
   }
 
   static void pickAndReadFile(BuildContext context, Function(String?) onFileContents) async {
