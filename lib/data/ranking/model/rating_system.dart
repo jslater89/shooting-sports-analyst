@@ -26,6 +26,17 @@ import 'package:shooting_sports_analyst/util.dart';
 
 part 'rating_system.g.dart';
 
+/// A rating system implements the core logic for a particular rating algorithm.
+/// It is responsible for updating ratings given a set of shooters and scores in one
+/// of several modes. (See [RatingMode].)
+///
+/// It may also generate predictions for a set of shooters, and validate predictions
+/// against actual results.
+///
+/// A rating system has a few ancillary classes, two of which are given as generic
+/// type parameters: [T] is the type of a [ShooterRating] class that holds the history
+/// for a particular competitor, and [S] is the type of a [RaterSettings] class that
+/// holds configuration parameters for the rating system.
 abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings> {
   /// Use in rating changes
   static const ratingKey = "rating";
