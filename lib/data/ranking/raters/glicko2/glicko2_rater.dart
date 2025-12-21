@@ -170,6 +170,8 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
       throw Exception("Shooter score or match score is null");
     }
 
+    // TODO: providing a relative score rather than a relative match score here might improve by stage mode
+    // (compare stage score against close opponents on the stage rather than close opponents overall)
     var opponents = matchScores.keys.where((key) => key != shooter).toList();
     opponents = _selectOpponents(shooter, matchScores, shooterScore.ratio);
 
