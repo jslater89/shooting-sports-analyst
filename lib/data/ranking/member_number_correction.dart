@@ -105,7 +105,7 @@ class MemberNumberCorrectionContainer {
     return _byInvalidNumber[number] ?? [];
   }
 
-  int get length => _byName.length;
+  int get length => _byName.values.map((e) => e.length).sum;
 
   List<dynamic> toJson() {
     return _byName.values.flattened.map((v) => v.toJson()).toList();
