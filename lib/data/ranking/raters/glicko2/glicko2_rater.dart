@@ -172,8 +172,8 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
 
     // TODO: providing a relative score rather than a relative match score here might improve by stage mode
     // (compare stage score against close opponents on the stage rather than close opponents overall)
-    var opponents = matchScores.keys.where((key) => key != shooter).toList();
-    opponents = _selectOpponents(shooter, matchScores, shooterScore.ratio);
+    var opponents = scores.keys.where((key) => key != shooter).toList();
+    opponents = _selectOpponents(shooter, scores, shooterScore.ratio);
 
     /// For each competitor, we only update ratings for the stages that they completed.
     var shooterStageScores = shooterMatchScore.stageScores.entries
@@ -485,8 +485,8 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
   // -- internal methods below --
 
   /// Get opponents based on the selection mode. Input must be sorted by match finish.
-  List<ShooterRating> _selectOpponents(Glicko2Rating player, Map<ShooterRating, RelativeMatchScore> matchScores, double playerRatio) {
-    var opponentsByFinish = matchScores.keys.toList();
+  List<ShooterRating> _selectOpponents(Glicko2Rating player, Map<ShooterRating, RelativeScore> scores, double playerRatio) {
+    var opponentsByFinish = scores.keys.toList();
     var opponentsByRating = opponentsByFinish.sorted((a, b) => b.rating.compareTo(a.rating)).toList();
     var selectionMode = settings.opponentSelectionMode;
     List<ShooterRating> selected = [];
@@ -497,11 +497,11 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
       selected = _selectTop10PctOpponents(opponentsByFinish, opponentsByRating);
     }
     else if(selectionMode == OpponentSelectionMode.nearby) {
-      selected = _selectNearbyOpponents(player, matchScores, opponentsByRating, playerRatio);
+      selected = _selectNearbyOpponents(player, scores, opponentsByRating, playerRatio);
     }
     else if(selectionMode == OpponentSelectionMode.topAndNearby) {
       var topOpponents = _selectTop10PctOpponents(opponentsByFinish, opponentsByRating).toSet();
-      topOpponents.addAll(_selectNearbyOpponents(player, matchScores, opponentsByRating, playerRatio));
+      topOpponents.addAll(_selectNearbyOpponents(player, scores, opponentsByRating, playerRatio));
       selected = topOpponents.toList();
     }
     else {
@@ -517,8 +517,8 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
       var limit = player.length == 0 ? settings.maximumOpponentCountForNew : settings.maximumOpponentCountForExisting!;
       selected = selected.sorted((a, b) {
         if(byMatchScore) {
-          var aRatio = matchScores[a]?.ratio ?? 0.0;
-          var bRatio = matchScores[b]?.ratio ?? 0.0;
+          var aRatio = scores[a]?.ratio ?? 0.0;
+          var bRatio = scores[b]?.ratio ?? 0.0;
           return aRatio.compareTo(bRatio);
         }
         else {
@@ -530,7 +530,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     }
 
     // If that doesn't include the winner, include the winner and remove the most distant opponent.
-    var winner = matchScores.keys.first;
+    var winner = scores.keys.first;
     if(!selected.contains(winner) && player != winner) {
       selected.insert(0, winner);
       selected.removeLast();
@@ -555,7 +555,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
      return top10PctByMatchFinish.toList();
   }
 
-  List<ShooterRating> _selectNearbyOpponents(Glicko2Rating player, Map<ShooterRating, RelativeMatchScore> matchScores, List<ShooterRating> opponentsByRating, double competitorRatio) {
+  List<ShooterRating> _selectNearbyOpponents(Glicko2Rating player, Map<ShooterRating, RelativeScore> scores, List<ShooterRating> opponentsByRating, double competitorRatio) {
     double margin = 0.1;
     if(opponentsByRating.length < 10) {
       margin = 0.25;
@@ -564,7 +564,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     Set<ShooterRating> nearbyOpponents = {};
     final topRatio = competitorRatio * (1 + margin);
     final bottomRatio = competitorRatio * (1 - margin);
-    for(var opponent in matchScores.keys) {
+    for(var opponent in scores.keys) {
       // Players with no rating history don't have a valid rating yet, so 'nearby' in rating terms
       // isn't meaningful yet.
       if((opponent.rating - player.rating).abs() <= settings.maximumRD) {
@@ -572,11 +572,11 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
         continue;
       }
 
-      var opponentMatchScore = matchScores[opponent];
-      if(opponentMatchScore == null) {
+      var opponentScore = scores[opponent];
+      if(opponentScore == null) {
         continue;
       }
-      var opponentRatio = opponentMatchScore.ratio;
+      var opponentRatio = opponentScore.ratio;
       if(opponentRatio >= bottomRatio && opponentRatio <= topRatio) {
         nearbyOpponents.add(opponent);
       }
