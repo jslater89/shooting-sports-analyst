@@ -6,8 +6,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shooting_sports_analyst/config/config.dart';
+import 'package:shooting_sports_analyst/data/database/match/match_query_element.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/database/match/match_db_list_view.dart';
+import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 var _log = SSALogger("MatchDbListSearch");
@@ -42,6 +45,7 @@ class _MatchDbListViewSearchState extends State<MatchDbListViewSearch> {
   @override
   Widget build(BuildContext context) {
     var searchModel = Provider.of<MatchDatabaseSearchModel>(context);
+    var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -53,49 +57,87 @@ class _MatchDbListViewSearchState extends State<MatchDbListViewSearch> {
             children: [
               Expanded(
                 flex: 5,
-                child: TextField(
-                  decoration: InputDecoration(
-                    floatingLabelBehavior: FloatingLabelBehavior.always,
-                    label: Text("Search"),
-                    suffixIcon: IconButton(
-                      icon: searchModel.name != null ? Icon(Icons.search_off) : Icon(Icons.search),
-                      onPressed: () {
-                        if(searchModel.name != null) {
-                          searchModel.name = null;
-                          _searchController.clear();
-                        }
-                        else {
-                          var search = _searchController.text;
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        decoration: InputDecoration(
+                          floatingLabelBehavior: FloatingLabelBehavior.always,
+                          label: Text("Search"),
+                          suffixIcon: IconButton(
+                            icon: searchModel.name != null ? Icon(Icons.search_off) : Icon(Icons.search),
+                            onPressed: () {
+                              if(searchModel.name != null) {
+                                searchModel.name = null;
+                                _searchController.clear();
+                              }
+                              else {
+                                var search = _searchController.text;
 
-                          if (search.isEmpty) {
+                                if (search.isEmpty) {
+                                  searchModel.name = null;
+                                }
+                                else {
+                                  searchModel.name = search;
+                                }
+                              }
+
+                              searchModel.changed();
+                            },
+                          )
+                        ),
+                        textInputAction: TextInputAction.search,
+                        controller: _searchController,
+                        onSubmitted: (search) {
+                          if(!mounted) return;
+
+                          if(search.isEmpty) {
                             searchModel.name = null;
                           }
                           else {
                             searchModel.name = search;
                           }
-                        }
 
+                          searchModel.changed();
+                        },
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Checkbox(value: searchModel.matchAll, onChanged: (value) {
+                      searchModel.matchAll = value ?? false;
+                      searchModel.changed();
+                    }),
+                    Tooltip(
+                      message: searchModel.matchAll ? "Match all words" : "Match any word",
+                      child: ClickableLink(
+                        child: Text("Match all"),
+                        onTap: () {
+                          searchModel.matchAll = !searchModel.matchAll;
+                          searchModel.changed();
+                        },
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    DropdownMenu<MatchSortField>(
+                      width: 100 * uiScaleFactor,
+                      label: Text("Sort by"),
+
+                      dropdownMenuEntries: [
+                        DropdownMenuEntry<MatchSortField>(value: const NameSort(), label: "Name"),
+                        DropdownMenuEntry<MatchSortField>(value: const DateSort(), label: "Date"),
+                      ],
+                      onSelected: (value) {
+                        searchModel.sort = value ?? const NameSort();
                         searchModel.changed();
                       },
-                    )
-                  ),
-                  textInputAction: TextInputAction.search,
-                  controller: _searchController,
-                  onSubmitted: (search) {
-                    if(!mounted) return;
-
-                    if(search.isEmpty) {
-                      searchModel.name = null;
-                    }
-                    else {
-                      searchModel.name = search;
-                    }
-
-                    searchModel.changed();
-                  },
+                      initialSelection: searchModel.sort,
+                    ),
+                  ],
                 ),
               ),
-              SizedBox(width: 8),
+              SizedBox(width: 12),
+              SizedBox(height: 36 * uiScaleFactor, child: VerticalDivider(width: 1, thickness: 1)),
+              SizedBox(width: 12),
               Expanded(
                 child: TextField(
                   decoration: InputDecoration(

@@ -38,6 +38,17 @@ sealed class FutureMatchQueryElement {
 
 // }
 
+class NameSortQuery extends FutureMatchQueryElement {
+  String get index => AnalystDatabase.eventNameIndex;
+  String get property => "eventName";
+
+  bool get canWhere => true;
+
+  List<WhereClause>? get whereClauses => [IndexWhereClause.any(indexName: index)];
+
+  FilterOperation? get filterCondition => null;
+}
+
 class NamePartsQuery extends FutureMatchQueryElement {
   String name;
 

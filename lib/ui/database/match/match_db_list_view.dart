@@ -7,6 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/match/match_query_element.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/ranking/rating_context.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
@@ -159,6 +160,8 @@ class MatchDatabaseSearchModel extends ChangeNotifier {
   MatchDatabaseSearchModel();
 
   String? name;
+  bool matchAll = true;
+  MatchSortField sort = const DateSort();
   DateTime? before;
   DateTime? after;
 
@@ -168,6 +171,8 @@ class MatchDatabaseSearchModel extends ChangeNotifier {
 
   void reset() {
     name = null;
+    matchAll = false;
+    sort = const DateSort();
     before = null;
     after = null;
     notifyListeners();
@@ -203,6 +208,8 @@ class MatchDatabaseListModel extends ChangeNotifier {
     if(search?.name?.isNotEmpty ?? false) {
       var newMatches = await matchDb.matchNameTextSearch(
         search?.name ?? "",
+        matchAll: search?.matchAll ?? false,
+        sort: search?.sort ?? const DateSort(),
         limit: 100,
         after: search?.before,
         before: search?.after,
@@ -216,6 +223,7 @@ class MatchDatabaseListModel extends ChangeNotifier {
       name: search?.name ?? "",
       after: search?.before,
       before: search?.after,
+      sort: search?.sort ?? const DateSort(),
     );
 
     searchedMatches = newMatches;
@@ -233,6 +241,7 @@ class MatchDatabaseListModel extends ChangeNotifier {
       before: _currentSearch?.before,
       after: _currentSearch?.after,
       page: _page,
+      sort: _currentSearch?.sort ?? const DateSort(),
     );
 
     if(newMatches.isEmpty) {

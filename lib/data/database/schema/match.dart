@@ -30,6 +30,8 @@ typedef ExternalId = int;
 @collection
 class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
   Id id = Isar.autoIncrement;
+
+  @Index(name: AnalystDatabase.eventNameIndex, type: IndexType.value, caseSensitive: false)
   String eventName;
 
   @Index(name: AnalystDatabase.eventNamePartsIndex, type: IndexType.value, caseSensitive: false)

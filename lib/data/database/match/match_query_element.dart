@@ -35,7 +35,18 @@ class TextSearchQuery extends MatchQueryElement {
   List<String> terms;
 
   TextSearchQuery(this.terms);
-  
+
+}
+
+class NameSortQuery extends MatchQueryElement {
+  String get index => AnalystDatabase.eventNameIndex;
+  String get property => "eventName";
+
+  bool get canWhere => true;
+
+  List<WhereClause>? get whereClauses => [IndexWhereClause.any(indexName: index)];
+
+  FilterOperation? get filterCondition => null;
 }
 
 class NamePartsQuery extends MatchQueryElement {
@@ -45,6 +56,8 @@ class NamePartsQuery extends MatchQueryElement {
   String get property => canWhere ? "eventNameParts" : "eventName";
 
   bool get canWhere => name.split(" ").length <= 1;
+
+  bool get hasSearchTerms => name.isNotEmpty;
 
   List<WhereClause>? get whereClauses {
     if (!canWhere) return null;

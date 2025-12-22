@@ -187,14 +187,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     var vSum = 0.0;
     var deltaSum = 0.0;
 
-    // To handle multiple stages against the same opponent within a match/rating period,
-    // we just pretend that each stage-opponent pair is a separate 'game' for Glicko
-    // purposes.
-    //
-    // So, when calculating sum-of-V, we can just do nested iteration over stages and
-    // opponent scores, and add to V for each stage-opponent pair.
-    // We can also calculate the sum component of delta while iterating to save a
-    // pass over all the scores.
+    // Because Glicko-2 has a
     for(var opponent in opponents) {
       opponent as Glicko2Rating;
       var opponentRDAtMatch = opponent.calculateCurrentInternalRD(asOfDate: match.date);

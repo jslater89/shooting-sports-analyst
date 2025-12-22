@@ -236,6 +236,7 @@ extension MatchPrepDatabase on AnalystDatabase {
     FutureMatchSortField sort = const DateSort(),
   }) {
     NamePartsQuery? nameQuery;
+    NameSortQuery? nameSortQuery;
     DateQuery? dateQuery;
     SportQuery? sportQuery;
 
@@ -243,6 +244,8 @@ extension MatchPrepDatabase on AnalystDatabase {
       switch(e) {
         case NamePartsQuery():
           nameQuery = e;
+        case NameSortQuery():
+          nameSortQuery = e;
         case DateQuery():
           dateQuery = e;
         case SportQuery():
@@ -259,8 +262,8 @@ extension MatchPrepDatabase on AnalystDatabase {
       dateQuery = DateQuery(before: null, after: null);
       whereElement = dateQuery;
     }
-    else if(nameQuery == null && (sort is NameSort)) {
-      nameQuery = NamePartsQuery("");
+    else if(nameSortQuery == null && (sort is NameSort)) {
+      nameSortQuery = NameSortQuery();
       whereElement = nameQuery;
     }
     (whereElement, filterElements) =  buildQueryElementLists(elements, whereElement);
@@ -271,7 +274,7 @@ extension MatchPrepDatabase on AnalystDatabase {
       // If we have a one-word name query of sufficient length, prefer to 'where'
       // on it, since high selectivity will probably outweigh the fast sort on
       // by the other index.
-      if(nameQuery.name.length >= 3 || (sort is NameSort)) {
+      if(nameQuery.name.length >= 3) {
         (whereElement, filterElements) = buildQueryElementLists(elements, nameQuery);
       }
     }
@@ -285,11 +288,11 @@ extension MatchPrepDatabase on AnalystDatabase {
     var direction = sort.desc ? Sort.desc : Sort.asc;
     switch(sort) {
       case NameSort():
-        if(whereElement is NamePartsQuery) {
+        if(whereElement is NameSortQuery) {
           return ([], direction);
         }
         else {
-          return ([SortProperty(property: NamePartsQuery("").property, sort: direction)], direction);
+          return ([SortProperty(property: NameSortQuery().property, sort: direction)], direction);
         }
       case DateSort():
         if(whereElement is DateQuery) {

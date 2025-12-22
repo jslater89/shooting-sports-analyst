@@ -6,9 +6,7 @@
 
 import 'dart:async';
 import 'dart:io';
-import 'dart:math';
 
-import 'package:fuzzywuzzy/fuzzywuzzy.dart' as fuzzywuzzy;
 import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/database/match/match_query_element.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/fantasy_user.dart';
@@ -42,6 +40,7 @@ var _log = SSALogger("AnalystDb");
 class AnalystDatabase {
   static const knownMemberNumbersIndex = "knownMemberNumbers";
   static const allPossibleMemberNumbersIndex = "allPossibleMemberNumbers";
+  static const eventNameIndex = "eventName";
   static const eventNamePartsIndex = "eventNameParts";
   static const sourceIdsIndex = "sourceIds";
   static const dateIndex = "date";
@@ -213,6 +212,7 @@ class AnalystDatabase {
       ],
       limit: pageSize,
       offset: page * pageSize,
+      sort: sort,
     );
 
     return finalQuery.findAll();
@@ -227,8 +227,24 @@ class AnalystDatabase {
       .findAll();
   }
 
-  double _calculateSimilarity(String queryLower, String eventNameLower, {bool printDebugInfo = false}) {
+  Future<DateTime?> getMatchDateByExactName(String name) async {
+    return isar.dbShootingMatchs.where().filter().eventNameEqualTo(name).dateProperty().findFirst();
+  }
+
+  DateTime? getMatchDateByExactNameSync(String name) {
+    return isar.dbShootingMatchs.where().filter().eventNameEqualTo(name).dateProperty().findFirstSync();
+  }
+
+  double _calculateSimilarity(
+    String queryLower, String eventNameLower,
+    {bool printDebugInfo = false, bool matchAll = false}
+  ) {
     var similarity = queryLower.similarityTo(eventNameLower);
+
+    // Normalize similarity by the length of the event name.
+    var similarityLengthFactor = eventNameLower.length / 20;
+    similarity *= similarityLengthFactor;
+
     var similarityMultiplier = 1.0;
     var similarityBoost = 0.0;
     final similarityFactorPerWord = 0.5;
@@ -257,7 +273,11 @@ class AnalystDatabase {
     // Forward similarity: words in the query are matched against words in
     // the event name; query "national" will match the word "nationals"
     for(var word in queryWordsLower) {
+      bool found = false;
       for(var eventNameWord in eventNameWordsLower) {
+        if(eventNameWord.contains(word)) {
+          found = true;
+        }
         if(eventNameWord.startsWith(word)) {
           if(eventNameWord.length == word.length) {
             exactWordMatches += 1;
@@ -271,6 +291,12 @@ class AnalystDatabase {
           // Each query word can only match an event word once.
           break;
         }
+      }
+
+      // If we require a match on all query terms and this word was not found in
+      // any word in the event name, return no similarity.
+      if(matchAll && !found) {
+        return 0;
       }
     }
 
@@ -302,11 +328,22 @@ class AnalystDatabase {
   /// A text search match query, using partial searches and string similarity
   /// to return the best-matching names.
   ///
-  /// Query will be split into search terms of 3+ characters on spaces.
+  /// Query will be split into search terms of 3+ characters on spaces. Fully numeric
+  /// search terms shorter than 3 characters will also be used.
+  ///
+  /// If [matchAll] is true, the query will only return matches that contain all of the
+  /// search terms. If it is false, the query will return matches that contain any of the
+  /// search terms.
+  ///
+  /// The [sort] parameter may be either [NameSort] or [DateSort]. Both sorts are
+  /// postprocessing sorts, and may be slow in the event that the query matches
+  /// a large number of matches.
   Future<List<DbShootingMatch>> matchNameTextSearch(String query, {
     int limit = 10,
     DateTime? after,
     DateTime? before,
+    bool matchAll = false,
+    MatchSortField sort = const NameSort(),
   }) async {
     var queryLower = query.toLowerCase();
     var words = Isar.splitWords(queryLower);
@@ -338,15 +375,48 @@ class AnalystDatabase {
     var matchNames = await dbQuery.findAll();
 
     Map<String, double> matchNameSimilarities = {};
+    double bestSimilarity = 0;
     for(var matchName in matchNames) {
-      matchNameSimilarities[matchName] = _calculateSimilarity(queryLower, matchName.toLowerCase());
+      var matchNameSimilarity = _calculateSimilarity(queryLower, matchName.toLowerCase(), matchAll: matchAll);
+      matchNameSimilarities[matchName] = matchNameSimilarity;
+      if(matchNameSimilarity > bestSimilarity) {
+        bestSimilarity = matchNameSimilarity;
+      }
     }
 
-    // Sort by dice similarity to the original query
+    Map<String, DateTime> matchNameDates = {};
+    if(sort is DateSort) {
+      for(var matchName in matchNames) {
+        var date = getMatchDateByExactNameSync(matchName);
+        if(date != null) {
+          matchNameDates[matchName] = date;
+        }
+        else {
+          _log.e("No date found for match name $matchName");
+        }
+      }
+    }
+
+    // Keep only matches with a minimum similarity of [minimumSimilarity]
+    final minimumSimilarity = bestSimilarity * 0.2;
+    matchNames.retainWhere((matchName) =>
+      (matchNameSimilarities[matchName]!) >= minimumSimilarity);
+
+    // Sort by the requested sort type
     matchNames.sort((a, b) {
-      var aSimilarity = matchNameSimilarities[a] ?? 0;
-      var bSimilarity = matchNameSimilarities[b] ?? 0;
-      return bSimilarity.compareTo(aSimilarity);
+      if(sort is NameSort) {
+        var aSimilarity = matchNameSimilarities[a] ?? 0;
+        var bSimilarity = matchNameSimilarities[b] ?? 0;
+        return bSimilarity.compareTo(aSimilarity);
+      }
+      else if(sort is DateSort) {
+        var aDate = matchNameDates[a] ?? DateTime.now();
+        var bDate = matchNameDates[b] ?? DateTime.now();
+        return bDate.compareTo(aDate);
+      }
+      else {
+        throw ArgumentError("Invalid sort type: $sort");
+      }
     });
 
     var topMatchNames = matchNames.take(limit).toList();
@@ -362,9 +432,19 @@ class AnalystDatabase {
     // We have to resort here because we don't preserve order in the matches-by-names query.
     var matches = await getMatchesByExactNames(topMatchNames);
     matches.sort((a, b) {
-      var aSimilarity = matchNameSimilarities[a.eventName] ?? 0;
-      var bSimilarity = matchNameSimilarities[b.eventName] ?? 0;
-      return bSimilarity.compareTo(aSimilarity);
+      if(sort is NameSort) {
+        var aSimilarity = matchNameSimilarities[a.eventName] ?? 0;
+        var bSimilarity = matchNameSimilarities[b.eventName] ?? 0;
+        return bSimilarity.compareTo(aSimilarity);
+      }
+      else if(sort is DateSort) {
+        var aDate = matchNameDates[a.eventName] ?? DateTime.now();
+        var bDate = matchNameDates[b.eventName] ?? DateTime.now();
+        return bDate.compareTo(aDate);
+      }
+      else {
+        throw ArgumentError("Invalid sort type: $sort");
+      }
     });
     return matches;
   }
@@ -749,6 +829,7 @@ class AnalystDatabase {
 
   (MatchQueryElement?, Iterable<MatchQueryElement>, List<SortProperty>, Sort) _buildMatchQueryElements(List<MatchQueryElement> elements, {int? limit, int? offset, MatchSortField sort = const DateSort()}) {
     NamePartsQuery? nameQuery;
+    NameSortQuery? nameSortQuery;
     TextSearchQuery? textSearchQuery;
     DateQuery? dateQuery;
     // ignore: unused_local_variable
@@ -761,6 +842,8 @@ class AnalystDatabase {
           textSearchQuery = e;
         case NamePartsQuery():
           nameQuery = e;
+        case NameSortQuery():
+          nameSortQuery = e;
         case DateQuery():
           dateQuery = e;
         case LevelNameQuery():
@@ -779,9 +862,9 @@ class AnalystDatabase {
       dateQuery = DateQuery(before: null, after: null);
       whereElement = dateQuery;
     }
-    else if(nameQuery == null && (sort is NameSort)) {
-      nameQuery = NamePartsQuery("");
-      whereElement = nameQuery;
+    else if(nameSortQuery == null && (sort is NameSort)) {
+      nameSortQuery = NameSortQuery();
+      whereElement = nameSortQuery;
     }
     (whereElement, filterElements) = buildQueryElementLists(elements, whereElement);
 
@@ -815,11 +898,11 @@ class AnalystDatabase {
     var direction = sort.desc ? Sort.desc : Sort.asc;
     switch(sort) {
       case NameSort():
-        if(whereElement is NamePartsQuery) {
+        if(whereElement is NameSort) {
           return ([], direction);
         }
         else {
-          return ([SortProperty(property: NamePartsQuery("").property, sort: direction)], direction);
+          return ([SortProperty(property: NameSortQuery().property, sort: direction)], direction);
         }
       case DateSort():
         if(whereElement is DateQuery) {
