@@ -202,6 +202,8 @@ class Glicko2Settings extends RaterSettings {
     json[_linearRegionKey] = eLinearRegion;
     json[_marginOfVictoryInflationKey] = marginOfVictoryInflation;
     json[_maximumOpponentCountForNewKey] = maximumOpponentCountForNew;
+    json[_maximumOpponentCountForExistingKey] = maximumOpponentCountForExisting;
+    json[_limitOpponentsModeKey] = limitOpponentsMode.name;
   }
 
   @override
@@ -220,6 +222,8 @@ class Glicko2Settings extends RaterSettings {
     eLinearRegion = (json[_linearRegionKey] ?? defaultLinearRegion) as double;
     marginOfVictoryInflation = (json[_marginOfVictoryInflationKey] ?? defaultMarginOfVictoryInflation) as double;
     maximumOpponentCountForNew = (json[_maximumOpponentCountForNewKey] ?? defaultMaximumOpponentCount) as int;
+    maximumOpponentCountForExisting = (json[_maximumOpponentCountForExistingKey] ?? defaultMaximumOpponentCountForExisting) as int?;
+    limitOpponentsMode = LimitOpponentsMode.values.byName(json[_limitOpponentsModeKey] ?? LimitOpponentsMode.rating.name);
   }
 }
 
