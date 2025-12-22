@@ -148,8 +148,9 @@ abstract class RatingSystem<T extends ShooterRating, S extends RaterSettings> {
 
   /// Return [AlgorithmPrediction]s for the list of shooters.
   ///
-  /// Provide a [seed] for repeatable predictions, if desired.
-  List<AlgorithmPrediction> predict(List<ShooterRating> ratings, {int? seed}) {
+  /// Provide a [seed] for repeatable predictions, if desired. [matchDate] may improve
+  /// the accuracy of some predictions that use date-based factors.
+  List<AlgorithmPrediction> predict(List<ShooterRating> ratings, {int? seed, DateTime? matchDate}) {
     throw UnimplementedError();
   }
 

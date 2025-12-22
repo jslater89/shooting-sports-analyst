@@ -91,6 +91,12 @@ a very low RD (25 with the default scaling factor).
 
 RD increases over time are faster for competitors with higher volatility and lower RD.
 
+### Volatility Gravity
+If set, this will apply a factor that causes volatility to trend back toward the initial value,
+with increasing strength as volatility moves further from the initial value. This more closely
+matches observations of volatility in the shooting sports, where upsets are relatively common,
+by preventing volatility from remaining high for long periods after an initial spike.
+
 ### Opponent Selection Mode
 Glicko-2 is a head-to-head rating system, so it may be applied to a subset of eligible competitors
 at a match. **All** uses all competitors at a match in the same division. **Top 10%** uses the top
@@ -111,7 +117,10 @@ and 1.0 or 0.0 and 0.5, respectively.
 
 ### Perfect Victory Difference
 The margin of victory or defeat that results in a perfect victory score (1.0) or perfect loss score (0.0),
-when using the linear margin of victory score function.
+when using the linear margin of victory score function. Increasing this value will bring ratings closer
+together, since a given percentage difference will yield a smaller margin of victory, but will allow for
+predictions in very sparse fields. Decreasing this value will push ratings further apart, but will require
+denser fields for predictions to be calculated.
 
 ### Linear Region
 The size of the region where the expected score function is approximately linear, for the purposes of

@@ -27,6 +27,7 @@ class Glicko2Settings extends RaterSettings {
   static const _maximumOpponentCountForNewKey = "g2MaximumOpponentCount";
   static const _maximumOpponentCountForExistingKey = "g2MaximumOpponentCountForExisting";
   static const _limitOpponentsModeKey = "g2LimitOpponentsMode";
+  static const _useInitialVolatilityForPriorKey = "g2UseInitialVolatilityForPrior";
 
   Glicko2Settings({
     this.byStage = false,
@@ -45,6 +46,7 @@ class Glicko2Settings extends RaterSettings {
     this.maximumOpponentCountForNew = defaultMaximumOpponentCount,
     this.maximumOpponentCountForExisting = defaultMaximumOpponentCountForExisting,
     this.limitOpponentsMode = LimitOpponentsMode.rating,
+    this.useInitialVolatilityForPrior = true,
   });
 
   /// The default default rating for Glicko-2, in display units.
@@ -95,6 +97,9 @@ class Glicko2Settings extends RaterSettings {
   ///
   /// Volatility is a non-scaled property.
   double initialVolatility;
+
+  /// True if the prior volatility should be the initial volatility or the current volatility.
+  bool useInitialVolatilityForPrior;
 
   /// The starting RD for Glicko-2, in display units.
   double startingRD;
@@ -204,6 +209,7 @@ class Glicko2Settings extends RaterSettings {
     json[_maximumOpponentCountForNewKey] = maximumOpponentCountForNew;
     json[_maximumOpponentCountForExistingKey] = maximumOpponentCountForExisting;
     json[_limitOpponentsModeKey] = limitOpponentsMode.name;
+    json[_useInitialVolatilityForPriorKey] = useInitialVolatilityForPrior;
   }
 
   @override
@@ -224,6 +230,7 @@ class Glicko2Settings extends RaterSettings {
     maximumOpponentCountForNew = (json[_maximumOpponentCountForNewKey] ?? defaultMaximumOpponentCount) as int;
     maximumOpponentCountForExisting = (json[_maximumOpponentCountForExistingKey] ?? defaultMaximumOpponentCountForExisting) as int?;
     limitOpponentsMode = LimitOpponentsMode.values.byName(json[_limitOpponentsModeKey] ?? LimitOpponentsMode.rating.name);
+    useInitialVolatilityForPrior = (json[_useInitialVolatilityForPriorKey] ?? false) as bool;
   }
 }
 

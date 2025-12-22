@@ -146,7 +146,6 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     double eventWeightMultiplier = 1.0,
   }) {
 
-    // TODO: by-stage Glicko-2?
     // Glicko-2 has more or less proven itself to be pretty much as good as carefully tuned Elo,
     // which means that with some careful tuning, it's plausibly the better rating system. That said,
     // by stage mode is useful; per-stage volatility is a useful thing to be able to see in the graph.
@@ -170,8 +169,6 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
       throw Exception("Shooter score or match score is null");
     }
 
-    // TODO: providing a relative score rather than a relative match score here might improve by stage mode
-    // (compare stage score against close opponents on the stage rather than close opponents overall)
     var opponents = scores.keys.where((key) => key != shooter).toList();
     opponents = _selectOpponents(shooter, scores, shooterScore.ratio);
 
@@ -231,8 +228,36 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     var delta = deltaSum * v;
 
     // Step 2: volatility update
+    double volatilityPrior;
+
+    if(settings.useInitialVolatilityForPrior) {
+      // Calculate how far current volatility is from initial
+      var volatilityDistance = (shooter.volatility - settings.initialVolatility).abs();
+
+      // Normalize by the range from initial to max volatility
+      var maxDistance = Glicko2Settings.defaultMaximumVolatility - settings.initialVolatility;
+      var normalizedDistance = (volatilityDistance / maxDistance).clamp(0.0, 1.0);
+
+      // When volatility is far from initial, weight toward initial (pull back)
+      // When volatility is close to initial, weight toward current (allow movement)
+      // Use a smooth curve (squared or sigmoid) to make the transition gradual
+      // Use quadratic curve for smoother transition, then map to bounds
+      const minPullBack = 0.1;
+      const maxPullBack = 0.7;
+      var quadraticDistance = pow(normalizedDistance, 2.0);
+      var pullBackWeight = minPullBack + (maxPullBack - minPullBack) * quadraticDistance;
+
+      volatilityPrior = lerp(
+        shooter.volatility,  // When close to initial, use current (weight = 0)
+        settings.initialVolatility,  // When far from initial, use initial (weight = 1)
+        pullBackWeight,
+      ).toDouble();
+    }
+    else {
+      volatilityPrior = shooter.volatility;
+    }
     var newVolatility = _iterateVolatility(
-      volatility: shooter.volatility,
+      volatility: volatilityPrior,
       rd: shooter.committedInternalRD,
       delta: delta,
       v: v,
@@ -309,7 +334,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
   bool get predictionsOutputRatios => true;
 
   @override
-  List<AlgorithmPrediction> predict(List<ShooterRating> ratings, {int? seed}) {
+  List<AlgorithmPrediction> predict(List<ShooterRating> ratings, {int? seed, DateTime? matchDate}) {
     /*
     The below was the initial design approach; it's retained for reference in case I forgot
     something.
@@ -342,6 +367,20 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     ahead of and behind the player. (This bubbles information from step 2 back down through the list.)
     */
 
+    if(ratings.isEmpty) {
+      return [];
+    }
+    else if(ratings.length == 1) {
+      return [
+        AlgorithmPrediction(
+          shooter: ratings[0],
+          mean: 1.0,
+          sigma: 0.0,
+          settings: settings,
+          algorithm: this,
+        ),
+      ];
+    }
     // Step 0: calculate initial expected scores for each competitor against all other competitors,
     // and sort by number of expected scores above 0.5, then average expected scores. This should
     // give us a good initial ordering.
@@ -355,8 +394,14 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
           continue;
         }
         bRating as Glicko2Rating;
-        // TODO: current RD for match date?
-        var expectedScore = _glickoE(aRating.internalRating, bRating.internalRating, bRating.currentInternalRD);
+        double bCurrentRD;
+        if(matchDate != null) {
+          bCurrentRD = bRating.calculateCurrentInternalRD(asOfDate: matchDate);
+        }
+        else {
+          bCurrentRD = bRating.currentInternalRD;
+        }
+        var expectedScore = _glickoE(aRating.internalRating, bRating.internalRating, bCurrentRD);
         initialExpectedScores.addToList(aRating, expectedScore);
         if(expectedScore > 0.5) {
           expectedScoresAboveDrawCount.increment(aRating);
@@ -393,13 +438,33 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     // running the score function in reverse for each pair of competitors and
     // averaging the results.
 
-    Map<ShooterRating, _ExpectedPercentage> expectedPercentages = _calculateExpectedPercentages(sortedRatings, initial: true, descending: true);
+    Map<ShooterRating, _ExpectedPercentage> expectedPercentages = _calculateExpectedPercentages(
+      sortedRatings,
+      initial: true,
+      descending: true,
+      matchDate: matchDate,
+    );
 
     // Step 2: percolate from bottom to top.
-    expectedPercentages = _calculateExpectedPercentages(sortedRatings.reversed.toList(), descending: false, priorExpectedPercentages: expectedPercentages);
+    expectedPercentages = _calculateExpectedPercentages(
+      sortedRatings.reversed.toList(),
+      descending: false,
+      priorExpectedPercentages: expectedPercentages,
+      matchDate: matchDate,
+    );
 
     // Step 3: percolate from top to bottom.
-    expectedPercentages = _calculateExpectedPercentages(sortedRatings, descending: true, priorExpectedPercentages: expectedPercentages);
+    expectedPercentages = _calculateExpectedPercentages(
+      sortedRatings,
+      descending: true,
+      priorExpectedPercentages: expectedPercentages,
+      matchDate: matchDate,
+    );
+
+    if(expectedPercentages.isEmpty) {
+      _log.w("Unable to calculate expected percentages");
+      return [];
+    }
 
     // Step 4: normalize
     var highestPercentage = expectedPercentages.values.map((e) => e.centralValue).max;
@@ -724,7 +789,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     Map<ShooterRating, _ExpectedPercentage>? priorExpectedPercentages,
     bool descending = true,
     bool initial = false,
-    // TODO: date param for RD
+    DateTime? matchDate,
   }) {
     // Magic number. Since expected scores are probabilistic (i.e., someone very likely to
     // lose might still have an expected score of 0.1), we want to slightly inflate the victory
@@ -755,6 +820,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
 
     Map<ShooterRating, List<_ExpectedPercentage>> expectedPercentages = {};
     Map<ShooterRating, List<double>> weights = {};
+    Map<ShooterRating, double> currentRds = {};
 
     for(var (i, rating) in ratings.indexed) {
       rating as Glicko2Rating;
@@ -769,21 +835,44 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
         continue;
       }
       else {
+        Glicko2Rating? closestBetterRating;
+        Glicko2Rating? closestWorseRating;
+
         var betterRatings = descending ? ratings.sublist(0, i) : ratings.sublist(i + 1);
         var worseRatings = descending ? ratings.sublist(i + 1) : ratings.sublist(0, i);
+
         for(var betterRating in betterRatings) {
           betterRating as Glicko2Rating;
           var opponentExpectedPercentage = priorExpectedPercentages[betterRating];
           if(opponentExpectedPercentage == null) {
-            _log.e("Missing expected percentage in prediction calculation for $rating vs $betterRating (better ratings, descending: $descending, initial: $initial)");
+            _log.w("Missing expected percentage in prediction calculation for $rating vs $betterRating (better ratings, descending: $descending, initial: $initial)");
             continue;
+          }
+
+          // Keep track of the closest better rating for later use in defaults if needed.
+          if(closestBetterRating == null || (betterRating.rating - rating.rating).abs() < (closestBetterRating.rating - rating.rating).abs()) {
+            closestBetterRating = betterRating;
+          }
+          double playerRd;
+          double opponentRd;
+          if(matchDate != null) {
+            playerRd = currentRds[rating] ?? rating.calculateCurrentInternalRD(asOfDate: matchDate);
+            opponentRd = currentRds[betterRating] ?? betterRating.calculateCurrentInternalRD(asOfDate: matchDate);
+            currentRds[rating] ??= playerRd;
+            currentRds[betterRating] ??= opponentRd;
+          }
+          else {
+            playerRd = currentRds[rating] ?? rating.currentInternalRD;
+            opponentRd = currentRds[betterRating] ?? betterRating.currentInternalRD;
+            currentRds[rating] ??= playerRd;
+            currentRds[betterRating] ??= opponentRd;
           }
           var expectedPercentage = _calculateHeadToHeadExpectedPercentage(
             playerRating: rating.internalRating,
-            playerRD: rating.currentInternalRD,
+            playerRD: playerRd,
             playerVolatility: rating.volatility,
             opponentRating: betterRating.internalRating,
-            opponentRD: betterRating.currentInternalRD,
+            opponentRD: opponentRd,
             opponentRatio: opponentExpectedPercentage.centralValue,
             playerRatio: null, // not needed for this scenario
             scoreFunction: scoreFunction,
@@ -793,10 +882,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
           if(expectedPercentage == null) {
             continue;
           }
-          if(initial) {
-            // For the first run through, set the prior expected percentage to the new estimate immediately.
-            priorExpectedPercentages[rating] = expectedPercentage;
-          }
+
           expectedPercentages.addToList(rating, expectedPercentage);
           weights.addToList(rating, _glickoG(betterRating.currentInternalRD));
         }
@@ -812,12 +898,26 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
               _log.e("Missing expected percentage (p: $playerExpectedPercentage, o: $opponentExpectedPercentage) in prediction calculation for $rating vs $worseRating (worse ratings, descending: $descending, initial: $initial)");
               continue;
             }
+            double playerRd;
+            double opponentRd;
+            if(matchDate != null) {
+              playerRd = currentRds[rating] ?? rating.calculateCurrentInternalRD(asOfDate: matchDate);
+              opponentRd = currentRds[worseRating] ?? worseRating.calculateCurrentInternalRD(asOfDate: matchDate);
+              currentRds[rating] ??= playerRd;
+              currentRds[worseRating] ??= opponentRd;
+            }
+            else {
+              playerRd = currentRds[rating] ?? rating.currentInternalRD;
+              opponentRd = currentRds[worseRating] ?? worseRating.currentInternalRD;
+              currentRds[rating] ??= playerRd;
+              currentRds[worseRating] ??= opponentRd;
+            }
             var expectedPercentage = _calculateHeadToHeadExpectedPercentage(
               playerRating: rating.internalRating,
-              playerRD: rating.currentInternalRD,
+              playerRD: playerRd,
               playerVolatility: rating.volatility,
               opponentRating: worseRating.internalRating,
-              opponentRD: worseRating.currentInternalRD,
+              opponentRD: opponentRd,
               opponentRatio: opponentExpectedPercentage.centralValue,
               playerRatio: playerExpectedPercentage.centralValue,
               scoreFunction: scoreFunction,
@@ -832,17 +932,53 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
             weights.addToList(rating, _glickoG(worseRating.currentInternalRD));
           }
         }
+
+        // If we didn't get any expected percentages, all opponents are outside the linear
+        // region, so make the probably-wrong assumption that they're perfectVictoryDifference
+        // away.
+        var ratingExpectedPercentages = expectedPercentages[rating];
+        if(ratingExpectedPercentages == null || ratingExpectedPercentages.isEmpty) {
+          if(closestBetterRating == null) {
+            _log.w("No closest better rating for $rating");
+            continue;
+          }
+          var defaultExpectedPercentage = _getDefaultExpectedPercentage(
+            rating: rating,
+            closestBetterRating: closestBetterRating,
+            priorExpectedPercentages: priorExpectedPercentages,
+            closestWorseRating: closestWorseRating,
+          );
+
+          if(defaultExpectedPercentage == null) {
+            _log.e("Unable to calculate default expected percentage for $rating against $closestBetterRating and $closestWorseRating");
+            continue;
+          }
+          expectedPercentages[rating] = [defaultExpectedPercentage];
+          weights[rating] = [1];
+          if(initial) {
+            priorExpectedPercentages[rating] = defaultExpectedPercentage;
+          }
+        }
       }
     }
 
     for(var rating in ratings) {
       rating as Glicko2Rating;
       var ratingExpectedPercentages = expectedPercentages[rating];
-      if(ratingExpectedPercentages == null) {
+      if(ratingExpectedPercentages == null || ratingExpectedPercentages.isEmpty) {
+        var priorPercentage = priorExpectedPercentages[rating];
+        if(priorPercentage != null) {
+          outputExpectedPercentages[rating] = priorPercentage;
+        }
+        else {
+          _log.w("No expected percentages or prior percentages for $rating");
+          continue;
+        }
         continue;
       }
       var ratingWeights = weights[rating];
       if(ratingWeights == null) {
+        _log.w("$rating has expectedPercentages but no weights");
         continue;
       }
       var centerExpectedPercentage = ratingExpectedPercentages.map((e) => e.centralValue).weightedAverage(ratingWeights);
@@ -858,6 +994,73 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     }
 
     return outputExpectedPercentages;
+  }
+
+  _ExpectedPercentage? _getDefaultExpectedPercentage({
+    required ShooterRating rating,
+    required Map<ShooterRating, _ExpectedPercentage> priorExpectedPercentages,
+    ShooterRating? closestBetterRating,
+    ShooterRating? closestWorseRating,
+  }) {
+    rating as Glicko2Rating;
+
+    List<_ExpectedPercentage> expectedAgainstCloseRatings = [];
+
+    if(closestBetterRating == null && closestWorseRating == null) {
+      _log.w("No closest better or worse ratings for $rating");
+      return null;
+    }
+
+    if(closestBetterRating != null) {
+      var closestBetterRatingPrior = priorExpectedPercentages[closestBetterRating];
+      if(closestBetterRatingPrior == null) {
+        _log.e("No prior expected percentage for closest better rating $closestBetterRating");
+      }
+      else {
+        var centerExpectedPercentage = closestBetterRatingPrior.centralValue - settings.perfectVictoryDifference;
+        var upperExpectedPercentage = centerExpectedPercentage + (centerExpectedPercentage * settings.perfectVictoryDifference);
+        var lowerExpectedPercentage = centerExpectedPercentage - (centerExpectedPercentage * settings.perfectVictoryDifference);
+
+        expectedAgainstCloseRatings.add(_ExpectedPercentage(
+          rating: rating.internalRating,
+          rd: rating.currentInternalRD,
+          centralValue: centerExpectedPercentage,
+          upperValue: upperExpectedPercentage,
+          lowerValue: lowerExpectedPercentage,
+        ));
+      }
+    }
+
+    if(closestWorseRating != null) {
+      var closestWorseRatingPrior = priorExpectedPercentages[closestWorseRating];
+      if(closestWorseRatingPrior == null) {
+        _log.d("No prior expected percentage for closest worse rating $closestWorseRating");
+      }
+      else {
+        var centerExpectedPercentage = closestWorseRatingPrior.centralValue + settings.perfectVictoryDifference;
+        var upperExpectedPercentage = centerExpectedPercentage + settings.perfectVictoryDifference;
+        var lowerExpectedPercentage = centerExpectedPercentage;
+
+        expectedAgainstCloseRatings.add(_ExpectedPercentage(
+          rating: rating.internalRating,
+          rd: rating.currentInternalRD,
+          centralValue: centerExpectedPercentage,
+          upperValue: upperExpectedPercentage,
+          lowerValue: lowerExpectedPercentage,
+        ));
+      }
+    }
+
+
+    _log.w("Falling back to perfect victory difference for $rating against $closestBetterRating and $closestWorseRating");
+    _log.i("Center: ${expectedAgainstCloseRatings.map((e) => e.centralValue).average}, Upper: ${expectedAgainstCloseRatings.map((e) => e.upperValue).average}, Lower: ${expectedAgainstCloseRatings.map((e) => e.lowerValue).average}");
+    return _ExpectedPercentage(
+      rating: rating.internalRating,
+      rd: rating.currentInternalRD,
+      centralValue: expectedAgainstCloseRatings.map((e) => e.centralValue).average,
+      upperValue: expectedAgainstCloseRatings.map((e) => e.upperValue).average,
+      lowerValue: expectedAgainstCloseRatings.map((e) => e.lowerValue).average,
+    );
   }
 
   /// Calculate the expected percentage for a given rating and RD.
@@ -890,10 +1093,10 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
       value: playerVolatility,
       center: settings.initialVolatility,
       rangeMin: settings.initialVolatility * 0.75,
-      rangeMax: settings.initialVolatility * 1.25,
-      minOut: 0.5,
+      rangeMax: settings.initialVolatility * 1.5,
+      minOut: 0.75,
       centerOut: 1.0,
-      maxOut: 2.0,
+      maxOut: 1.5,
     );
     double adjustedRD = playerRD * volatilityFactor;
 
@@ -910,6 +1113,7 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
     }
 
     // The linear region of the E function outputs approximately 0.2 to 0.8.
+    // Outside that region, we can't calculate an expected percentage to reasonable accuracy.
     if(expectedScore > (1 - settings.eLinearRegion) || expectedScore < settings.eLinearRegion) {
       return null;
     }

@@ -719,7 +719,6 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       }
     }
     List<ShooterRating>? shooters = [];
-    var divisions = tab.divisions;
 
     // select a FutureMatch from the database to predict
     var futureMatch = await FutureMatchDatabaseChooserDialog.showSingle(context: context);
@@ -769,15 +768,21 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     // match, or who have faced zero competition so far.
     shooters.retainWhere((element) => element.length > 0);
 
-    if(shooters.isEmpty) {
+    if(shooters.length < 2) {
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("No shooters with matching registrations found."))
+          SnackBar(content: Text("Minimum of two shooters required for predictions."))
       );
       return;
     }
 
     int seed = _selectedMatch.date.millisecondsSinceEpoch;
-    var predictions = _settings.algorithm.predict(shooters, seed: seed);
+    var predictions = _settings.algorithm.predict(shooters, seed: seed, matchDate: futureMatch.date);
+    if(predictions.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Prediction calculation returned no results."))
+      );
+      return;
+    }
     Navigator.of(context).push(MaterialPageRoute(builder: (context) {
       return PredictionView(dataSource: dataSource, predictions: predictions, matchId: futureMatch.matchId, group: tab);
     }));

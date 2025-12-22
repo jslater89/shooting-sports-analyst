@@ -623,7 +623,7 @@ class MultiplayerPercentEloRater extends RatingSystem<EloShooterRating, EloSetti
   bool get supportsValidation => true;
 
   @override
-  List<AlgorithmPrediction> predict(List<ShooterRating> ratings, {int? seed}) {
+  List<AlgorithmPrediction> predict(List<ShooterRating> ratings, {int? seed, DateTime? matchDate}) {
     List<EloShooterRating> eloRatings = List.castFrom(ratings);
     List<AlgorithmPrediction> predictions = [];
 

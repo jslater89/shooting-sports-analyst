@@ -713,6 +713,18 @@ class _Glicko2SettingsWidgetState extends State<Glicko2SettingsWidget> {
               )
             ]
           ),
+          CheckboxListTile(
+            title: Tooltip(
+              message: "Apply a factor that pulls volatility back toward the initial value when very high or very low.",
+              child: Text("Volatility gravity"),
+            ),
+            value: settings.useInitialVolatilityForPrior,
+            onChanged: (value) {
+              setState(() {
+                settings.useInitialVolatilityForPrior = value!;
+              });
+            }
+          ),
           Row(
             mainAxisSize: MainAxisSize.max,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
