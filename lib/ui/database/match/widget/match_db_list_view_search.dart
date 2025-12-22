@@ -108,7 +108,7 @@ class _MatchDbListViewSearchState extends State<MatchDbListViewSearch> {
                       searchModel.changed();
                     }),
                     Tooltip(
-                      message: searchModel.matchAll ? "Match all words" : "Match any word",
+                      message: searchModel.matchAll ? "Match all words in the event name" : "Match any word in the event name",
                       child: ClickableLink(
                         child: Text("Match all"),
                         onTap: () {
