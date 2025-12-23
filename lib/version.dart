@@ -5,6 +5,6 @@
  */
 
 class VersionInfo {
-  static const String version = "9.0.0-alpha10";
-  static const int buildNumber = 27;
+  static const String version = "9.0.0-beta1";
+  static const int buildNumber = 28;
 }
