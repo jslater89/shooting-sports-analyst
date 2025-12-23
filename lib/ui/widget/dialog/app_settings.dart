@@ -212,6 +212,22 @@ class _AppSettingsDialogState extends State<AppSettingsDialog> {
                   },
                 ),
                 const SizedBox(height: 16),
+                CheckboxListTile(
+                  title: Tooltip(
+                    message: "When auto-importing hit factor matches, use the sport that matches the most divisions,\n"
+                      "rather than requiring an exact match. Useful if your match includes nonstandard divisions\n"
+                      "e.g. 'Rimfire' in USPSA.",
+                    child: const Text("Fuzzy hit factor division matching"),
+                  ),
+                  subtitle: const Text("Auto-import matches that do not perfectly fit a known sport"),
+                  value: config.autoImportFuzzyHitFactorDivisionMatching,
+                  onChanged: (value) {
+                    setState(() {
+                      config.autoImportFuzzyHitFactorDivisionMatching = value ?? false;
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
                 Row(
                   children: [
                     Expanded(

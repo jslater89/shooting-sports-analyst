@@ -124,6 +124,10 @@ class SerializedConfig {
   @JsonKey(defaultValue: true, includeIfNull: false)
   bool autoImportDeletesAfterSkippingOverwrite;
 
+  /// Whether to use fuzzy division matching when auto-importing (i.e., best match among hit factor sports).
+  @JsonKey(defaultValue: false, includeIfNull: false)
+  bool autoImportFuzzyHitFactorDivisionMatching;
+
   /// Whether to forward requests for refreshing UUID-style match IDs to the SSA server source, regardless of
   /// whether the match record specifies a different source.
   @JsonKey(defaultValue: true, includeIfNull: false)
@@ -151,6 +155,7 @@ class SerializedConfig {
     required this.autoImportOverwrites,
     required this.autoImportDeletesAfterImport,
     required this.autoImportDeletesAfterSkippingOverwrite,
+    required this.autoImportFuzzyHitFactorDivisionMatching,
     required this.forwardUuidsToSSAServerSource,
     required this.ssaServerAuthIdentityName,
     required this.ssaServerAuthPrivateKeyPath,
@@ -171,6 +176,7 @@ class SerializedConfig {
     builder.writeln("\tautoImportOverwrites = $autoImportOverwrites");
     builder.writeln("\tautoImportDeletesAfterImport = $autoImportDeletesAfterImport");
     builder.writeln("\tautoImportDeletesAfterSkippingOverwrite = $autoImportDeletesAfterSkippingOverwrite");
+    builder.writeln("\tautoImportFuzzyHitFactorDivisionMatching = $autoImportFuzzyHitFactorDivisionMatching");
     builder.writeln("\tforwardUuidsToSSAServerSource = $forwardUuidsToSSAServerSource");
     builder.writeln("\tssaServerAuthIdentityName = $ssaServerAuthIdentityName");
     builder.writeln("\tssaServerAuthPrivateKeyPath = $ssaServerAuthPrivateKeyPath");
@@ -193,6 +199,7 @@ class SerializedConfig {
       forwardUuidsToSSAServerSource: forwardUuidsToSSAServerSource,
       ssaServerAuthIdentityName: ssaServerAuthIdentityName,
       ssaServerAuthPrivateKeyPath: ssaServerAuthPrivateKeyPath,
+      autoImportFuzzyHitFactorDivisionMatching: autoImportFuzzyHitFactorDivisionMatching,
     );
   }
 }

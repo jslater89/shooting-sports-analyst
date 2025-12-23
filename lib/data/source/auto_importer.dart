@@ -150,7 +150,8 @@ class AutoImporter {
           return;
         }
         var matchInfoFiles = matchInfoFilesRes.unwrap();
-        var matchRes = await PSv2MatchSource().getMatchFromInfoFiles(matchInfoFiles);
+        var options = PSv2MatchFetchOptions(fuzzyHitFactorDivisionMatching: _config.autoImportFuzzyHitFactorDivisionMatching);
+        var matchRes = await PSv2MatchSource().getMatchFromInfoFiles(matchInfoFiles, options: options);
         if(matchRes.isErr()) {
           _log.e("Error getting match from info files: ${matchRes.unwrapErr().message}");
           return;
