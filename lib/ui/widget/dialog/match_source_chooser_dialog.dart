@@ -90,8 +90,8 @@ class _MatchSourceChooserDialogState extends State<MatchSourceChooserDialog> {
     return AlertDialog(
       title: Text(widget.title ?? "Find a match"),
       content: SizedBox(
-        width: 800 * scaleFactor,
-        height: 500 * scaleFactor,
+        width: 900 * scaleFactor,
+        height: 600 * scaleFactor,
         child: Column(
           mainAxisSize: MainAxisSize.max,
           children: [

@@ -10,6 +10,7 @@ import 'package:shelf_plus/shelf_plus.dart';
 import 'package:shooting_sports_analyst/api/auth/check_auth.dart';
 import 'package:shooting_sports_analyst/api/miff/miff.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/match/match_query_element.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/sport/match/match.dart';
 
@@ -116,7 +117,12 @@ class MatchService {
   ///
   /// Searches for matches by name, returning a list of match search results.
   ///
-  /// Search term is in the JSON body as {"query": "term"}.
+  /// Search term is in the JSON body as {"query": "term", "matchAll": true, "sort": "date"}.
+  ///
+  /// matchAll: return only matches that contain all search terms if true, or any search term if false.
+  /// default is true.
+  ///
+  /// sort: "date" or "similarity". Default is "date".
   Future<Response> search(Request request) async {
     // Search in {"query": "term"} in the body
     var body = await request.body.asJson;
@@ -127,7 +133,14 @@ class MatchService {
     if(query.isEmpty) {
       return Response.badRequest(body: "Invalid query");
     }
-    var matches = await database.matchNameTextSearch(query, limit: 25);
+    var matchAll = body["matchAll"] as bool? ?? true;
+    var sort = body["sort"] as String? ?? "date";
+    var sortField = switch(sort) {
+      "date" => DateSort(),
+      "similarity" => NameSort(),
+      String() => DateSort(),
+    };
+    var matches = await database.matchNameTextSearch(query, limit: 25, matchAll: matchAll, sort: sortField);
     var matchJson = jsonEncode(matches.map((m) => MatchSearchResult.fromDbMatch(m).toJson()).toList());
     return Response.ok(matchJson, headers:{
       "Content-Type": "application/json",

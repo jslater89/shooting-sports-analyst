@@ -6,7 +6,9 @@
 
 import "package:flutter/material.dart";
 import "package:provider/provider.dart";
+import "package:shooting_sports_analyst/config/config.dart";
 import "package:shooting_sports_analyst/data/database/analyst_database.dart";
+import "package:shooting_sports_analyst/data/database/match/match_query_element.dart";
 import "package:shooting_sports_analyst/data/source/match_source_error.dart";
 import "package:shooting_sports_analyst/data/source/source.dart";
 import "package:shooting_sports_analyst/data/source/source_ui.dart";
@@ -14,6 +16,7 @@ import "package:shooting_sports_analyst/data/source/ssa_source/ssa_auth.dart";
 import "package:shooting_sports_analyst/data/source/ssa_source/ssa_server_source.dart";
 import "package:shooting_sports_analyst/data/sport/match/match.dart";
 import "package:shooting_sports_analyst/logger.dart";
+import "package:shooting_sports_analyst/ui/widget/clickable_link.dart";
 import "package:shooting_sports_analyst/ui/widget/dialog/match_database_chooser_dialog.dart";
 import "package:shooting_sports_analyst/util.dart";
 
@@ -135,11 +138,19 @@ class SSASearchModel extends ChangeNotifier {
   String _search = "";
   String get search => _search;
 
+  bool _matchAll = true;
+  bool get matchAll => _matchAll;
+
+  MatchSortField _sort = const DateSort();
+  MatchSortField get sort => _sort;
+
   bool _searching = false;
   bool get searching => _searching;
 
-  void startSearch(String query) {
+  void startSearch(String query, {bool matchAll = true, MatchSortField sort = const DateSort()}) {
     _search = query;
+    _matchAll = matchAll;
+    _sort = sort;
     _searching = true;
     notifyListeners();
   }
@@ -161,6 +172,8 @@ class SSASearchControls extends StatefulWidget {
 
 class _SSASearchControlsState extends State<SSASearchControls> {
   TextEditingController controller = TextEditingController();
+  bool matchAll = true;
+  MatchSortField sort = const DateSort();
 
   @override
   void initState() {
@@ -177,24 +190,70 @@ class _SSASearchControlsState extends State<SSASearchControls> {
   @override
   Widget build(BuildContext context) {
     var model = Provider.of<SSASearchModel>(context);
-
+    var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: TextField(
-        controller: controller,
-        onSubmitted: (value) {
-          model.startSearch(value);
-        },
-        decoration: InputDecoration(
-          label: Text("Search"),
-          suffixIcon: model.searching ? Padding(padding: EdgeInsets.all(4), child: CircularProgressIndicator()) : IconButton(
-            color: Theme.of(context).buttonTheme.colorScheme?.primary,
-            icon: Icon(Icons.search),
-            onPressed: () {
-              model.startSearch(controller.text);
-            },
+      padding: EdgeInsets.all(8 * uiScaleFactor),
+      child: Row(
+        spacing: 8 * uiScaleFactor,
+        children: [
+          Expanded(
+            child: TextField(
+              controller: controller,
+              onSubmitted: (value) {
+                model.startSearch(value);
+              },
+              decoration: InputDecoration(
+                label: Text("Search"),
+                suffixIcon: model.searching ? Padding(padding: EdgeInsets.all(4), child: CircularProgressIndicator()) : IconButton(
+                  color: Theme.of(context).buttonTheme.colorScheme?.primary,
+                  icon: Icon(Icons.search),
+                  onPressed: () {
+                    model.startSearch(controller.text, matchAll: matchAll, sort: sort);
+                  },
+                ),
+              ),
+            ),
           ),
-        ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Checkbox(value: matchAll, onChanged: (value) {
+                setState(() {
+                  matchAll = value ?? false;
+                });
+              }),
+              Tooltip(
+                message: matchAll ? "Match all words in the query" : "Match any word in the query",
+                child: ClickableLink(
+                  child: Text("Match all"),
+                  onTap: () {
+                    setState(() {
+                      matchAll = !matchAll;
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+          DropdownMenu<MatchSortField>(
+            width: 100 * uiScaleFactor,
+            label: Tooltip(
+              message: sort is NameSort ? "Sort by name similarity" : "Sort by date",
+              child: Text("Sort by"),
+            ),
+            dropdownMenuEntries: [
+              DropdownMenuEntry<MatchSortField>(value: const NameSort(), label: "Name"),
+              DropdownMenuEntry<MatchSortField>(value: const DateSort(), label: "Date"),
+            ],
+            onSelected: (value) {
+              setState(() {
+                sort = value ?? const NameSort();
+              });
+            },
+            initialSelection: sort,
+          ),
+
+        ],
       ),
     );
   }
@@ -261,11 +320,6 @@ class _SSASearchResultsState extends State<SSASearchResults> {
   }
 
   Future<void> _search() async {
-    if (model.search == latestSearch) {
-      model.stopSearch();
-      return;
-    }
-
     var searchTerm = model.search;
     latestSearch = searchTerm;
 
@@ -278,7 +332,7 @@ class _SSASearchResultsState extends State<SSASearchResults> {
         return;
       }
 
-      var searchResult = await widget.source.findMatches(searchTerm);
+      var searchResult = await widget.source.findMatchesWithOptions(searchTerm, matchAll: model.matchAll, sort: model.sort);
       if (searchTerm != latestSearch) {
         // Another search came in before this one returned
         return;

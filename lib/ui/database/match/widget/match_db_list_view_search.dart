@@ -108,7 +108,7 @@ class _MatchDbListViewSearchState extends State<MatchDbListViewSearch> {
                       searchModel.changed();
                     }),
                     Tooltip(
-                      message: searchModel.matchAll ? "Match all words in the event name" : "Match any word in the event name",
+                      message: searchModel.matchAll ? "Match all words in the query" : "Match any word in the query",
                       child: ClickableLink(
                         child: Text("Match all"),
                         onTap: () {
@@ -121,7 +121,6 @@ class _MatchDbListViewSearchState extends State<MatchDbListViewSearch> {
                     DropdownMenu<MatchSortField>(
                       width: 100 * uiScaleFactor,
                       label: Text("Sort by"),
-
                       dropdownMenuEntries: [
                         DropdownMenuEntry<MatchSortField>(value: const NameSort(), label: "Name"),
                         DropdownMenuEntry<MatchSortField>(value: const DateSort(), label: "Date"),

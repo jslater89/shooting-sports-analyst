@@ -9,6 +9,7 @@ import "dart:convert";
 import "package:http/http.dart" as http;
 import "package:shooting_sports_analyst/api/miff/miff.dart";
 import "package:shooting_sports_analyst/data/database/analyst_database.dart";
+import "package:shooting_sports_analyst/data/database/match/match_query_element.dart";
 import "package:shooting_sports_analyst/data/source/match_source_error.dart";
 import "package:shooting_sports_analyst/data/source/source.dart";
 import "package:shooting_sports_analyst/data/source/ssa_source/ssa_auth.dart";
@@ -124,10 +125,16 @@ class SSAServerMatchSource extends MatchSource<ServerMatchType, SSAServerMatchFe
   @override
   String get code => ssaServerCode;
 
-  @override
-  Future<Result<List<MatchSearchResult<ServerMatchType>>, MatchSourceError>> findMatches(String search) async {
+  /// Find matches with the given search options.
+  ///
+  /// search: the search query.
+  /// matchAll: return only matches that contain all search terms if true, or any search term if false.
+  /// default is true.
+  /// sort: how to sort the results. DateSort() sorts by match date, NameSort() sorts by match name similarity.
+  Future<Result<List<MatchSearchResult<ServerMatchType>>, MatchSourceError>> findMatchesWithOptions(String search, {bool matchAll = true, MatchSortField sort = const DateSort()}) async {
     try {
-      var bodyBytes = utf8.encode(jsonEncode({"query": search}));
+      var similarityString = sort is NameSort ? "similarity" : "date";
+      var bodyBytes = utf8.encode(jsonEncode({"query": search, "matchAll": matchAll, "sort": similarityString}));
       var response = await makeAuthenticatedRequest("POST", "/match/search", bodyBytes: bodyBytes);
 
       if (response.statusCode != 200) {
@@ -176,6 +183,11 @@ class SSAServerMatchSource extends MatchSource<ServerMatchType, SSAServerMatchFe
       _log.e("Error searching matches", error: e, stackTrace: st);
       return Result.err(GeneralError(StringError("Search failed: $e")));
     }
+  }
+
+  @override
+  Future<Result<List<MatchSearchResult<ServerMatchType>>, MatchSourceError>> findMatches(String search) {
+    return findMatchesWithOptions(search, matchAll: false, sort: const NameSort());
   }
 
   @override
