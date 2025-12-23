@@ -54,6 +54,10 @@ approaches 1. The **midpoint** parameter controls where the curve is centered. T
 controls how steep the middle section of the curve is, and how quickly it transitions from the steep middle
 section to the asymptotic sections.
 
+To use our example of (100, 99.4, 80.5) again, with the default midpoint of 0.75 and steepness of 6, the
+shares are (0.537, 0.537, 0.508) for a total of 1.582. With a total stake of 100 marbles, the competitors
+receive 100 × (0.537 ÷ 1.582, 0.537 ÷ 1.582, 0.508 ÷ 1.582) = (34, 34, 32) marbles.
+
 ## Ordinal Finish Distribution Models
 Ordinal finish models operate almost exactly like the relative finish models, but use a competitor's inverse
 place as their raw score, rather than the relative finish ratio. For example, in a match with three competitors,
@@ -66,5 +70,5 @@ inverse places are (3^2, 2^2, 1^2) = (9, 4, 1), for a total of 14 shares. Each c
 ### Ordinal power law
 The ordinal power law model has one parameter: **power**, which controls the number to which each competitor's
 inverse place is raised. A higher power parameter generates a greater disparity in marbles received,
-giving more to low finishers and fewer to high finishers.
+giving more to high finishers and fewer to low finishers.
 """;
