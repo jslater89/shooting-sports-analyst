@@ -237,6 +237,7 @@ class _HomePageState extends State<HomePage> {
     var children = <Widget>[
       GestureDetector(
         onTap: () async {
+          // TODO: import from file picker now that we're desktop only
           _uploadResultsFile((contents) async {
             if(contents != null) {
               await Navigator.of(context).pushNamed('/local', arguments: contents);
@@ -260,6 +261,25 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
+      GestureDetector(
+        onTap: () async {
+
+        },
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.event_available, size: 230, color: Colors.grey,),
+            Text("Prepare for a future match", style: Theme
+                .of(context)
+                .textTheme
+                .titleMedium!
+                .apply(color: Colors.grey),
+                textAlign: TextAlign.center,
+                ),
+          ],
+        ),
+      ),
+
       GestureDetector(
         onTap: () async {
           MatchSource source;
