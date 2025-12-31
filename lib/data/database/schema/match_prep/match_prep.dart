@@ -5,8 +5,8 @@
  */
 
 import 'package:isar_community/isar.dart';
-import 'package:shooting_sports_analyst/data/database/schema/match_prep/algorithm_prediction.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
@@ -27,8 +27,8 @@ class MatchPrep {
   /// The rating project used as context for the analysis.
   final ratingProject = IsarLink<DbRatingProject>();
 
-  /// Predictions from [ratingProject]'s algorithm for [futureMatch].
-  final algorithmPredictions = IsarLinks<DbAlgorithmPrediction>();
+  /// Prediction sets for this match prep.
+  final predictionSets = IsarLinks<PredictionSet>();
 
   MatchPrep({
     required this.matchId,

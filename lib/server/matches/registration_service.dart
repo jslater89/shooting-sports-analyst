@@ -10,7 +10,7 @@ import 'package:shelf_plus/shelf_plus.dart';
 import 'package:shooting_sports_analyst/api/riff/impl/riff_exporter.dart';
 import 'package:shooting_sports_analyst/api/riff/impl/riff_importer.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
-import 'package:shooting_sports_analyst/data/database/extensions/match_prep.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/future_match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
 import 'package:shooting_sports_analyst/data/source/prematch/registration.dart';
 

@@ -7,7 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
-import 'package:shooting_sports_analyst/data/database/extensions/match_prep.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/future_match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
 import 'package:shooting_sports_analyst/data/source/match_source_error.dart';
 import 'package:shooting_sports_analyst/data/source/prematch/registration.dart';

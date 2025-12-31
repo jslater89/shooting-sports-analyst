@@ -16,7 +16,7 @@ import 'package:fluttericon/rpg_awesome_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/application_preferences.dart';
-import 'package:shooting_sports_analyst/data/database/extensions/match_prep.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/future_match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';

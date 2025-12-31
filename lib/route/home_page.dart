@@ -7,7 +7,6 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-// ignore: avoid_web_libraries_in_flutter
 import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/application_preferences.dart';
@@ -20,6 +19,7 @@ import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/main.dart';
 import 'package:shooting_sports_analyst/route/broadcast_booth_page.dart';
 import 'package:shooting_sports_analyst/route/match_database_manager.dart';
+import 'package:shooting_sports_analyst/route/match_prep_list_page.dart';
 import 'package:shooting_sports_analyst/route/practiscore_url.dart';
 import 'package:shooting_sports_analyst/ui/empty_scaffold.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/app_settings.dart';
@@ -53,7 +53,6 @@ class _HomePageState extends State<HomePage> {
       _launchingFromParam = true;
       _launchNonPractiscoreFile(url: globals.resultsFileUrl!);
     }
-
 
     Future.delayed(Duration.zero, () {
       var prefs = AnalystDatabase().getPreferencesSync();
@@ -263,7 +262,7 @@ class _HomePageState extends State<HomePage> {
       ),
       GestureDetector(
         onTap: () async {
-
+          Navigator.of(context).push(MaterialPageRoute(builder: (context) => MatchPrepListPage()));
         },
         child: Column(
           mainAxisSize: MainAxisSize.min,

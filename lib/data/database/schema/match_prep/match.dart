@@ -7,7 +7,7 @@
 import 'package:collection/collection.dart';
 import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
-import 'package:shooting_sports_analyst/data/database/extensions/match_prep.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/future_match.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/registrations.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
