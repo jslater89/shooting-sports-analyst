@@ -199,7 +199,8 @@ class DbShootingMatch with DbSportEntity implements SourceIdsProvider {
       }
     }
     else {
-      // No need to filter, just calculate overall scores
+      // No need to filter if only one division appears, just calculate overall scores
+      // TODO: the 2025 Handgun World Shoot is getting overall scores despite having multiple divisions
       var scores = match.getScores();
       for(var entry in scores.entries) {
         shooterScores[entry.key] = entry.value;

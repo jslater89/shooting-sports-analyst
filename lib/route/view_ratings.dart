@@ -731,7 +731,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
     lastMatchIdPredicted = futureMatch.matchId;
 
     await futureMatch.matchRegistrationsToRatings(_sport, options, group: tab);
-    var registrationsForDivision = futureMatch.getRegistrationsFor(_sport, tab);
+    var registrationsForDivision = futureMatch.getRegistrationsFor(_sport, group: tab);
 
     List<MatchRegistration> unmatchedRegistrations = [];
     for(var registration in registrationsForDivision) {

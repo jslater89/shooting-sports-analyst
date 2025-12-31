@@ -17,12 +17,20 @@ part 'match_prep.g.dart';
 /// and other before-the-fact analysis for a particular match.
 @collection
 class MatchPrep {
-  Id get id => combineHashes(matchId.stableHash, projectId.stableHash);
-  int matchId = -1;
-  int projectId = -1;
+  Id get id => synthesizeIdFromIds(projectId, matchId);
+  int matchId;
+  int projectId;
 
   /// The match under analysis.
   final futureMatch = IsarLink<FutureMatch>();
+
+  /// The date of the match being analyzed.
+  @Index()
+  DateTime get matchDate => futureMatch.value!.date;
+
+  /// The last time the match prep was viewed.
+  @Index()
+  DateTime lastViewed = practicalShootingZeroDate;
 
   /// The rating project used as context for the analysis.
   final ratingProject = IsarLink<DbRatingProject>();
@@ -43,5 +51,13 @@ class MatchPrep {
 
     this.futureMatch.value = futureMatch;
     this.ratingProject.value = project;
+  }
+
+  static int synthesizeIdFromIds(int projectId, int matchId) {
+    return combineHashes(projectId, matchId);
+  }
+
+  static int synthesizeIdFromEntities(DbRatingProject project, FutureMatch match) {
+    return synthesizeIdFromIds(project.id, match.id);
   }
 }

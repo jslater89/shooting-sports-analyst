@@ -18,6 +18,9 @@ part 'registration_mapping.g.dart';
 ///
 /// Its ID is a hash of the match ID, shooter name, and shooter division name, so 'put' is an upsert as long as those
 /// values are stable.
+///
+/// It implements object equality and hash code based on its database ID, so operations on lists/sets of these objects
+/// enforce database equality.
 @collection
 class MatchRegistrationMapping {
   Id get id => combineHashList([matchId.stableHash, shooterName.stableHash, shooterDivisionName.stableHash]);
@@ -49,4 +52,13 @@ class MatchRegistrationMapping {
     required this.detectedMemberNumbers,
     this.squad,
   });
+
+  @override
+  operator ==(Object other) {
+    if(!(other is MatchRegistrationMapping)) return false;
+    return this.id == other.id;
+  }
+
+  @override
+  int get hashCode => id;
 }

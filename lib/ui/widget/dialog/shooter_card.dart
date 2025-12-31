@@ -188,7 +188,7 @@ class ShooterResultCard extends StatelessWidget {
               child: IconButton(
                 icon: Icon(Icons.auto_graph),
                 onPressed: () {
-                  ShooterStatsDialog.show(context, shooterRating!, match!, ratings: ratings);
+                  ShooterStatsDialog.show(context, shooterRating!, match: match!, ratings: ratings);
                 }
               ),
             )

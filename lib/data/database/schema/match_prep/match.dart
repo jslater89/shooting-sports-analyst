@@ -20,7 +20,8 @@ import 'package:shooting_sports_analyst/util.dart';
 part 'match.g.dart';
 
 /// A FutureMatch is a match that has not yet occurred, including information about registration
-/// and predictions.
+/// and predictions. Its database ID is a stable hash of the match ID string, so it is stable
+/// as long as the string match ID is stable.
 @collection
 class FutureMatch {
   Id get id => matchId.stableHash;
@@ -78,27 +79,33 @@ class FutureMatch {
   }
 
   /// Find the registrations for a given sport and rating group.
-  List<MatchRegistration> getRegistrationsFor(Sport sport, [RatingGroup? group]) {
+  List<MatchRegistration> getRegistrationsFor(Sport sport, {RatingGroup? group = null, List<String>? squads = null}) {
+    List<MatchRegistration> matchedRegistrations = [];
     if(group == null) {
-      return registrations.toList();
+      matchedRegistrations = registrations.toList();
     }
-    List<MatchRegistration> matching = [];
-    for(var registration in registrations) {
-      var division = sport.divisions.lookupByName(registration.shooterDivisionName);
-      if(division == null) {
-        continue;
-      }
-      if(group.containsDivision(division)) {
-        matching.add(registration);
+    else {
+      for(var registration in registrations) {
+        var division = sport.divisions.lookupByName(registration.shooterDivisionName);
+        if(division == null) {
+          continue;
+        }
+        if(group.containsDivision(division)) {
+          matchedRegistrations.add(registration);
+        }
       }
     }
-    return matching;
+
+    if(squads != null) {
+      matchedRegistrations = matchedRegistrations.where((registration) => squads.contains(registration.squad)).toList();
+    }
+    return matchedRegistrations;
   }
 
   /// Find the unmatched registrations for a given sport and rating group.
   List<MatchRegistration> getUnmatchedRegistrationsFor(Sport sport, [RatingGroup? group]) {
     List<MatchRegistration> unmatched = [];
-    for(var registration in getRegistrationsFor(sport, group)) {
+    for(var registration in getRegistrationsFor(sport, group: group)) {
       if(registration.shooterMemberNumbers.isEmpty) {
         unmatched.add(registration);
       }
@@ -129,6 +136,7 @@ class FutureMatch {
     }
   }
 
+  /// Update the saved registrations for this match from its saved mappings.
   Future<void> updateRegistrationsFromMappings() async {
     var db = AnalystDatabase();
     var mappings = await db.getMatchRegistrationMappings(matchId);

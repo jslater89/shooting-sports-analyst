@@ -15,12 +15,17 @@ class ClickableLink extends StatelessWidget {
     this.onTap,
     required this.child,
     this.color,
+    this.decorateColor = true,
     this.underline = true,
   });
 
 
-  /// If null, the link color will be determined by the theme.
+  /// If null, the link color will be determined by the link color in [ThemeColors].
+  /// Set [decorateColor] to false to use the standard theme text color.
   final Color? color;
+
+  /// Whether to decorate the text with the link color.
+  final bool decorateColor;
 
   /// Whether to decorate text with a underline.
   final bool underline;
@@ -35,7 +40,11 @@ class ClickableLink extends StatelessWidget {
       throw ArgumentError("url and onTap cannot both be null");
     }
 
-    Color linkColor = color ?? ThemeColors.linkColor(context);
+    Color? linkColor;
+    if(decorateColor) {
+      linkColor = color ?? ThemeColors.linkColor(context);
+    }
+
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,

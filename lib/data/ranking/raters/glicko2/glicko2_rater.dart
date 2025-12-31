@@ -845,7 +845,9 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
           betterRating as Glicko2Rating;
           var opponentExpectedPercentage = priorExpectedPercentages[betterRating];
           if(opponentExpectedPercentage == null) {
-            _log.w("Missing expected percentage in prediction calculation for $rating vs $betterRating (better ratings, descending: $descending, initial: $initial)");
+            if(!initial) {
+              _log.w("Missing expected percentage in prediction calculation for $rating vs $betterRating (better ratings, descending: $descending, initial: $initial)");
+            }
             continue;
           }
 

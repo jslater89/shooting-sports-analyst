@@ -10,8 +10,12 @@ import 'package:shooting_sports_analyst/data/database/match/future_match_query_e
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
 import 'package:shooting_sports_analyst/data/database/util.dart';
+import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
+
+final _log = SSALogger("FutureMatchDatabase");
 
 extension FutureMatchDatabase on AnalystDatabase {
   /// Get a future match by its internal ID.
@@ -37,6 +41,14 @@ extension FutureMatchDatabase on AnalystDatabase {
     List<MatchPrepLinkTypes> updateLinks = MatchPrepLinkTypes.values,
     List<MatchRegistration>? newRegistrations,
   }) async {
+    var sport = SportRegistry().lookup(match.sportName, caseSensitive: false);
+    if(sport == null) {
+      _log.w("Unknown sport in future match: ${match.sportName}");
+    }
+    else {
+      // normalize to the canonically-cased name
+      match.sportName = sport.name;
+    }
     try {
       await isar.writeTxn(() async {
         await isar.futureMatchs.put(match);
@@ -79,6 +91,14 @@ extension FutureMatchDatabase on AnalystDatabase {
     List<MatchPrepLinkTypes> updateLinks = MatchPrepLinkTypes.values,
     List<MatchRegistration>? newRegistrations,
   }) {
+    var sport = SportRegistry().lookup(match.sportName, caseSensitive: false);
+    if(sport == null) {
+      _log.w("Unknown sport in future match: ${match.sportName}");
+    }
+    else {
+      // normalize to the canonically-cased name
+      match.sportName = sport.name;
+    }
     isar.writeTxnSync(() {
       isar.futureMatchs.putSync(match);
 

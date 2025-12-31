@@ -473,7 +473,7 @@ class _PredictionViewState extends State<PredictionView> {
         var latestEvent = pred.shooter.eventsWithWindow(window: 1).firstOrNull;
         if(latestEvent != null) {
           var latestMatch = latestEvent.match;
-          ShooterStatsDialog.show(context, pred.shooter, latestMatch);
+          ShooterStatsDialog.show(context, pred.shooter, match: latestMatch);
         }
       },
       child: ConstrainedBox(
@@ -500,7 +500,7 @@ class _PredictionViewState extends State<PredictionView> {
                     var latestEvent = pred.shooter.eventsWithWindow(window: 1).firstOrNull;
                     if(latestEvent != null) {
                       var latestMatch = latestEvent.match;
-                      ShooterStatsDialog.show(context, pred.shooter, latestMatch);
+                      ShooterStatsDialog.show(context, pred.shooter, match: latestMatch);
                     }
                   },
                   child: Text(pred.shooter.getName(suffixes: false)),

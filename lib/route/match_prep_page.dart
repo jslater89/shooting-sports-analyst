@@ -5,17 +5,181 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/empty_scaffold.dart';
+import 'package:shooting_sports_analyst/ui/prematch/widget/match_prep_squadding.dart';
 
+final _log = SSALogger("MatchPrepPage");
+
+/// A match prep page displays details of a match prep. It has controls for showing
+/// predictions, ratings, a breakdown of registrations, the registration mapping dialog,
+/// and other items of interest.
 class MatchPrepPage extends StatefulWidget {
-  const MatchPrepPage({super.key});
+  const MatchPrepPage({super.key, required this.prep});
+
+  final MatchPrep prep;
 
   @override
   State<MatchPrepPage> createState() => _MatchPrepPageState();
 }
 
-class _MatchPrepPageState extends State<MatchPrepPage> {
+class _MatchPrepPageState extends State<MatchPrepPage> with TickerProviderStateMixin {
+
+  late MatchPrepPageModel _model;
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _model = MatchPrepPageModel(prep: widget.prep);
+    _model.init();
+    _tabController = TabController(length: _MatchPrepPageTab.values.length, vsync: this);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container();
+    return ChangeNotifierProvider.value(
+      value: _model,
+      child: EmptyScaffold(
+        title: _model.futureMatch.eventName,
+        child: Column(
+          children: [
+            TabBar(
+              controller: _tabController,
+              tabs: _MatchPrepPageTab.values.map((tab) => Tab(text: tab.uiLabel)).toList(),
+            ),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  ..._MatchPrepPageTab.values.map((tab) => tab.build(context)).toList(),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+enum _MatchPrepPageTab {
+  squadding,
+  divisions,
+  predictions;
+
+  String get uiLabel =>
+    switch(this) {
+      _MatchPrepPageTab.squadding => "Squadding",
+      _MatchPrepPageTab.divisions => "Divisions",
+      _MatchPrepPageTab.predictions => "Predictions",
+    };
+
+  Widget build(BuildContext context) =>
+    switch(this) {
+      _MatchPrepPageTab.squadding =>
+        MatchPrepSquadding(),
+      _MatchPrepPageTab.divisions =>
+        Center(child: Text("Divisions")),
+      _MatchPrepPageTab.predictions =>
+        Center(child: Text("Predictions")),
+    };
+}
+
+/// MatchPrepPageModel is a model for the match prep page, and contains
+/// the data and interaction functions for the page and its tabs.
+class MatchPrepPageModel extends ChangeNotifier {
+  final MatchPrep prep;
+  final AnalystDatabase db = AnalystDatabase();
+
+  FutureMatch get futureMatch => prep.futureMatch.value!;
+  DbRatingProject get ratingProject => prep.ratingProject.value!;
+  Sport get sport => ratingProject.sport;
+
+  List<String> knownSquads = [];
+  Map<MatchRegistration, ShooterRating> matchedRegistrations = {};
+
+  MatchPrepPageModel({required this.prep});
+
+  Future<void> init() async {
+    _getKnownSquads(notify: false);
+    _loadMatchingRegistrations(notify: false);
+  }
+
+  // ===========================
+  // Internal data handling
+  // ===========================
+
+  /// Get the known squads for this match, sorted in USPSA-like fashion (by length, then lexically).
+  void _getKnownSquads({bool notify = true}) {
+    var squadSet = <String>{};
+    for(var registration in prep.futureMatch.value!.registrations) {
+      if(registration.squad != null) {
+        squadSet.add(registration.squad!);
+      }
+    }
+    knownSquads = squadSet.toList();
+    knownSquads.sort((a, b) {
+      var aLength = a.length;
+      var bLength = b.length;
+      if(aLength != bLength) {
+        return aLength.compareTo(bLength);
+      }
+      return a.compareTo(b);
+    });
+    if(notify) {
+      notifyListeners();
+    }
+  }
+
+  // TODO: might be nice to do this on demand in children
+  // we'd probably want a debounce timer, so when a few dozen children ask, we get them all
+  // at once with a single notifyListeners at the end
+
+  /// Load known registrations for this match into [matchedRegistrations].
+  void _loadMatchingRegistrations({bool notify = true}) async {
+    var registrations = futureMatch.getRegistrationsFor(sport);
+    int matched = 0;
+    for(var registration in registrations) {
+      if(registration.shooterMemberNumbers.isNotEmpty) {
+        var division = sport.divisions.lookupByName(registration.shooterDivisionName);
+        if(division == null) {
+          continue;
+        }
+        var ratingGroup = ratingProject.groupForDivisionSync(division);
+        if(ratingGroup == null) {
+          continue;
+        }
+        DbShooterRating? rating;
+        for(var memberNumber in registration.shooterMemberNumbers) {
+          rating = db.maybeKnownShooterSync(project: ratingProject, group: ratingGroup, memberNumber: memberNumber);
+          if(rating != null) {
+            break;
+          }
+        }
+        if(rating != null) {
+          matchedRegistrations[registration] = ratingProject.wrapDbRatingSync(rating);
+          matched++;
+        }
+      }
+    }
+    if(notify) {
+      notifyListeners();
+    }
+    _log.i("Matched ${matched} of ${registrations.length} registrations");
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 }

@@ -5,9 +5,12 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/match_prep.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
+import 'package:shooting_sports_analyst/route/match_prep_page.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 /// MatchPrepList is a database-backed list of match prep(s).
 ///
@@ -20,19 +23,26 @@ class MatchPrepList extends StatefulWidget {
 }
 
 class _MatchPrepListState extends State<MatchPrepList> {
-  final model = MatchPrepListModel();
-
   @override
   void initState() {
     super.initState();
-    model.load();
   }
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-        itemBuilder: (context, index) => ListTile(
-        title: Text(model.matchPreps[index].futureMatch.value!.eventName),
+    return Consumer<MatchPrepListModel>(
+      builder: (context, model, child) => ListView.builder(
+        itemCount: model.matchPreps.length,
+        itemBuilder: (context, index) {
+          var prep = model.matchPreps[index];
+          return ListTile(
+            title: Text(prep.futureMatch.value!.eventName),
+            subtitle: Text(programmerYmdFormat.format(prep.matchDate)),
+            onTap: () {
+              Navigator.of(context).push(MaterialPageRoute(builder: (context) => MatchPrepPage(prep: prep)));
+            },
+          );
+        },
       ),
     );
   }

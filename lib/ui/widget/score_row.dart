@@ -18,7 +18,23 @@ class ScoreRow extends StatefulWidget {
   final Color? hoverTextColor;
   final bool bold;
 
-  const ScoreRow({Key? key, this.bold = true, this.index, this.child, this.color, this.textColor, this.hoverColor, this.hoverEnabled = true, this.hoverTextColor, this.edited}) : super(key: key);
+  /// Whether to use the theme's surface colors for background colors, or
+  /// the older [ThemeColors] background colors.
+  final bool useSurfaceColors;
+
+  const ScoreRow({
+    Key? key,
+    this.bold = true,
+    this.index,
+    this.child,
+    this.color,
+    this.textColor,
+    this.hoverColor,
+    this.hoverEnabled = true,
+    this.hoverTextColor,
+    this.edited,
+    this.useSurfaceColors = false,
+  }) : super(key: key);
 
   @override
   State<StatefulWidget> createState() {
@@ -33,10 +49,20 @@ class _ScoreRowState extends State<ScoreRow> {
   Widget build(BuildContext context) {
     Color background;
     if(widget.index != null && widget.color == null) {
-      background = ThemeColors.backgroundColor(context, rowIndex: widget.index);
+      if(widget.useSurfaceColors) {
+        background = ThemeColors.backgroundSurfaceColor(context, rowIndex: widget.index);
+      }
+      else {
+        background = ThemeColors.backgroundColor(context, rowIndex: widget.index);
+      }
     }
     else {
-      background = widget.color ?? ThemeColors.backgroundColor(context, rowIndex: widget.index);
+      if(widget.useSurfaceColors) {
+        background = widget.color ?? ThemeColors.backgroundSurfaceColor(context, rowIndex: widget.index);
+      }
+      else {
+        background = widget.color ?? ThemeColors.backgroundColor(context, rowIndex: widget.index);
+      }
     }
 
     Color hoverColor = widget.hoverColor ?? Theme.of(context).colorScheme.primary;

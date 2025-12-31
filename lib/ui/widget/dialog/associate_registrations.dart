@@ -17,7 +17,6 @@ import 'package:shooting_sports_analyst/data/database/schema/match_prep/registra
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
-import 'package:shooting_sports_analyst/ui/rater/prediction/registration_parser.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 var _log = SSALogger("AssocRegistrationsDialog");

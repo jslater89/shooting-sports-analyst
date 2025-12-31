@@ -18,7 +18,10 @@ import 'package:shooting_sports_analyst/data/database/schema/fantasy/standing.da
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/team.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_heat.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/algorithm_prediction.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
 import 'package:shooting_sports_analyst/data/database/schema/preferences.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
@@ -102,6 +105,9 @@ class AnalystDatabase {
           FutureMatchSchema,
           MatchRegistrationSchema,
           MatchRegistrationMappingSchema,
+          MatchPrepSchema,
+          PredictionSetSchema,
+          DbAlgorithmPredictionSchema,
 
           // Fantasy-related collections
           FantasyUserSchema,
@@ -912,6 +918,11 @@ class AnalystDatabase {
           return ([SortProperty(property: DateQuery().property, sort: direction)], direction);
         }
     }
+  }
+
+  /// Get all future matches.
+  Future<List<FutureMatch>> getFutureMatches() async {
+    return await isar.futureMatchs.where().sortByDateDesc().findAll();
   }
 }
 

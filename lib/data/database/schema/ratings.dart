@@ -556,7 +556,7 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   }
 
   @override
-  ShooterRating<RatingEvent>? wrapDbRatingSync(DbShooterRating rating) {
+  ShooterRating<RatingEvent> wrapDbRatingSync(DbShooterRating rating) {
     return settings.algorithm.wrapDbRating(rating);
   }
 }

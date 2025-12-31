@@ -67,6 +67,7 @@ import 'db_oneoff_impl/import_miffs_command.dart';
 import 'db_oneoff_impl/set_match_date_command.dart';
 import 'db_oneoff_impl/finding_adrian_randle.dart';
 import 'db_oneoff_impl/lady_rating_analysis_command.dart';
+import 'db_oneoff_impl/fix_future_match_sport_names_command.dart';
 
 late SSALogger _log = SSALogger("DbOneoffs");
 
@@ -136,6 +137,7 @@ Future<void> main(List<String> args) async {
     FindAdrianRandleCommand(db),
     SetMatchDatesCommand(db),
     LadyRatingAnalysisCommand(db),
+    FixFutureMatchSportNamesCommand(db),
     QuitCommand(),
   ], menuHeader: "DB Oneoffs ${VersionInfo.version}", commandSelected: (command) async {
     switch(command.command?.runtimeType) {
