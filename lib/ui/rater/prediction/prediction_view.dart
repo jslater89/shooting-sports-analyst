@@ -9,6 +9,7 @@ import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
@@ -29,8 +30,8 @@ import 'package:shooting_sports_analyst/ui/widget/dialog/wager_dialog.dart';
 
 var _log = SSALogger("PredictionView");
 
-class PredictionView extends StatefulWidget {
-  const PredictionView({Key? key, required this.dataSource, required this.matchId, required this.group, required this.predictions}) : super(key: key);
+class PredictionListViewScreen extends StatefulWidget {
+  const PredictionListViewScreen({Key? key, required this.dataSource, required this.matchId, required this.group, required this.predictions}) : super(key: key);
 
   /// The data source that generated the predictions.
   final RatingDataSource dataSource;
@@ -44,7 +45,7 @@ class PredictionView extends StatefulWidget {
   final List<AlgorithmPrediction> predictions;
 
   @override
-  State<PredictionView> createState() => _PredictionViewState();
+  State<PredictionListViewScreen> createState() => _PredictionListViewScreenState();
 
   static const int _padding = 2;
   static const int _rowFlex = 2;
@@ -57,48 +58,18 @@ class PredictionView extends StatefulWidget {
   static const double _rowHeight = 20;
 }
 
-class _PredictionViewState extends State<PredictionView> {
-  Map<AlgorithmPrediction, SimpleMatchResult> outcomes = {};
-  List<AlgorithmPrediction> sortedPredictions = [];
-  List<AlgorithmPrediction> searchedPredictions = [];
-  String search = "";
+class _PredictionListViewScreenState extends State<PredictionListViewScreen> {
+  final predictionViewModel = PredictionViewModel();
 
   @override
   void initState() {
     super.initState();
 
-    sortedPredictions = widget.predictions.sorted((a, b) => b.ordinal.compareTo(a.ordinal));
-    searchedPredictions = sortedPredictions;
+    predictionViewModel.setPredictions(widget.predictions, notify: false);
   }
 
   @override
   Widget build(BuildContext context) {
-    double minValue = 10000;
-    double maxValue = -10000;
-    double percentFloor = RatingSystem.defaultRatioFloor;
-    double percentMult = RatingSystem.defaultRatioMult;
-    double minRating = double.infinity;
-    double maxRating = double.negativeInfinity;
-
-    final backgroundColor = ThemeColors.backgroundColor(context);
-
-    var highPrediction = sortedPredictions.isEmpty ? 0.0 : (sortedPredictions[0].center + sortedPredictions[0].upperBox) / 2;
-
-    for(var p in sortedPredictions) {
-      minValue = min(minValue, p.lowerWhisker);
-      maxValue = max(maxValue, p.upperWhisker);
-      minRating = min(minRating, p.shooter.rating);
-      maxRating = max(maxRating, p.shooter.rating);
-    }
-
-    if(sortedPredictions.isNotEmpty && sortedPredictions.first.algorithm.supportsRatioFloor) {
-      var ratingDelta = maxRating - minRating;
-      percentFloor = sortedPredictions.first.algorithm.estimateRatioFloor(ratingDelta, settings: sortedPredictions.first.settings);
-      percentMult = 1.0 - percentFloor;
-    }
-
-    var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
-
     return WillPopScope(
       onWillPop: () async {
         var confirm = await showDialog<bool>(context: context, builder: (context) =>
@@ -112,114 +83,93 @@ class _PredictionViewState extends State<PredictionView> {
 
         return confirm ?? false;
       },
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text("Predictions"),
-          centerTitle: true,
-          actions: [
-            if(kDebugMode)
-              Tooltip(
-                message: "Check predictions",
-                child: IconButton(
-                  icon: Icon(Icons.candlestick_chart),
-                  onPressed: () => _validate(highPrediction),
+      child: ChangeNotifierProvider<PredictionViewModel>.value(
+        value: predictionViewModel,
+        child: Consumer<PredictionViewModel>(
+          builder: (context, model, child) => Scaffold(
+            appBar: AppBar(
+              title: Text("Predictions"),
+              centerTitle: true,
+              actions: [
+                if(kDebugMode)
+                  Tooltip(
+                    message: "Check predictions",
+                    child: IconButton(
+                      icon: Icon(Icons.candlestick_chart),
+                      onPressed: () => _validate(model),
+                    ),
+                  ),
+                // endif kDebugMode
+                Tooltip(
+                  message: "Generate odds",
+                  child: IconButton(
+                    icon: Icon(Icons.casino),
+                    onPressed: () => WagerDialog.show(context, predictions: model.predictions, matchId: widget.matchId),
+                  )
                 ),
-              ),
-            // endif kDebugMode
-            Tooltip(
-              message: "Generate odds",
-              child: IconButton(
-                icon: Icon(Icons.casino),
-                onPressed: () => WagerDialog.show(context, predictions: sortedPredictions, matchId: widget.matchId),
-              )
-            ),
-            Tooltip(
-              message: "Export predictions as CSV",
-              child: IconButton(
-                icon: Icon(Icons.save_alt),
-                onPressed: () async {
-                  String contents = "Name,Member Number,Class,Rating,5%,35%,Mean,65%,95%,Low Place,Mid Place,High Place,Actual Percent,Actual Place\n";
+                Tooltip(
+                  message: "Export predictions as CSV",
+                  child: IconButton(
+                    icon: Icon(Icons.save_alt),
+                    onPressed: () async {
+                      String contents = "Name,Member Number,Class,Rating,5%,35%,Mean,65%,95%,Low Place,Mid Place,High Place,Actual Percent,Actual Place\n";
 
-                  if(sortedPredictions.isNotEmpty) {
-                    var rater = sortedPredictions.first.algorithm;
-                    var settings = sortedPredictions.first.settings;
+                      if(model.predictions.isNotEmpty) {
+                        var rater = model.predictions.first.algorithm;
+                        var settings = model.predictions.first.settings;
 
-                    double percentFloor = RatingSystem.defaultRatioFloor;
-                    double percentMult = RatingSystem.defaultRatioMult;
-                    if(rater.supportsRatioFloor) {
-                      var sortedByRating = sortedPredictions.sorted((a, b) => b.shooter.rating.compareTo(a.shooter.rating));
-                      var bestRating = sortedByRating.first.shooter.rating;
-                      var worstRating = sortedByRating.last.shooter.rating;
-                      var ratingDelta = bestRating - worstRating;
-                      percentFloor = 1.0 - rater.estimateRatioFloor(ratingDelta, settings: settings);
-                      percentMult = 1.0 - percentFloor;
-                    }
+                        double percentFloor = RatingSystem.defaultRatioFloor;
+                        double percentMult = RatingSystem.defaultRatioMult;
+                        if(rater.supportsRatioFloor) {
+                          var sortedByRating = model.predictions.sorted((a, b) => b.shooter.rating.compareTo(a.shooter.rating));
+                          var bestRating = sortedByRating.first.shooter.rating;
+                          var worstRating = sortedByRating.last.shooter.rating;
+                          var ratingDelta = bestRating - worstRating;
+                          percentFloor = 1.0 - rater.estimateRatioFloor(ratingDelta, settings: settings);
+                          percentMult = 1.0 - percentFloor;
+                        }
 
-                    for(var pred in sortedPredictions) {
-                      double midLow = (percentFloor + pred.lowerBox / highPrediction * percentMult) * 100;
-                      double midHigh = (percentFloor + pred.upperBox / highPrediction * percentMult) * 100;
-                      double mean = (percentFloor + pred.center / highPrediction * percentMult) * 100;
-                      double low = (percentFloor + pred.lowerWhisker / highPrediction * percentMult) * 100;
-                      double high = (percentFloor + pred.upperWhisker / highPrediction * percentMult) * 100;
-                      int lowPlace = pred.lowPlace;
-                      int midPlace = pred.medianPlace;
-                      int highPlace = pred.highPlace;
-                      var outcome = outcomes[pred];
+                        for(var pred in model.predictions) {
+                          double midLow = (percentFloor + pred.lowerBox / model.highPrediction * percentMult) * 100;
+                          double midHigh = (percentFloor + pred.upperBox / model.highPrediction * percentMult) * 100;
+                          double mean = (percentFloor + pred.center / model.highPrediction * percentMult) * 100;
+                          double low = (percentFloor + pred.lowerWhisker / model.highPrediction * percentMult) * 100;
+                          double high = (percentFloor + pred.upperWhisker / model.highPrediction * percentMult) * 100;
+                          int lowPlace = pred.lowPlace;
+                          int midPlace = pred.medianPlace;
+                          int highPlace = pred.highPlace;
+                          var outcome = model.outcomes[pred];
 
-                      String line = "";
-                      line += "${pred.shooter.getName(suffixes: false)},";
-                      line += "${pred.shooter.originalMemberNumber},";
-                      line += "${pred.shooter.lastClassification?.shortDisplayName ?? "none"},";
-                      line += "${pred.shooter.rating.round()},";
-                      line += "$low,$midLow,$mean,$midHigh,$high,$lowPlace,$midPlace,$highPlace";
+                          String line = "";
+                          line += "${pred.shooter.getName(suffixes: false)},";
+                          line += "${pred.shooter.originalMemberNumber},";
+                          line += "${pred.shooter.lastClassification?.shortDisplayName ?? "none"},";
+                          line += "${pred.shooter.rating.round()},";
+                          line += "$low,$midLow,$mean,$midHigh,$high,$lowPlace,$midPlace,$highPlace";
 
-                      if(outcome != null) {
-                        line += ",${outcome.percent * 100},${outcome.place}";
+                          if(outcome != null) {
+                            line += ",${outcome.percent * 100},${outcome.place}";
+                          }
+
+                          // _log.vv(line);
+                          contents += "$line\n";
+                        }
                       }
 
-                      // _log.vv(line);
-                      contents += "$line\n";
-                    }
-                  }
-
-                  HtmlOr.saveFile("predictions.csv", contents);
-                },
-              ),
-            ),
-          ],
-        ),
-        body: Container(
-          color: backgroundColor,
-          child: Column(
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(color: ThemeColors.onBackgroundColor(context)),
-                  ),
-                  color: ThemeColors.backgroundColor(context),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(2.0),
-                  child: _buildPredictionsHeader(uiScaleFactor),
-                ),
-              ),
-              Expanded(
-                child: ListView.builder(
-                    itemCount: searchedPredictions.length,
-                    itemBuilder: (context, i) {
-                      return _buildPredictionsRow(searchedPredictions[i], minValue, maxValue, percentFloor, percentMult, highPrediction, i, uiScaleFactor);
+                      HtmlOr.saveFile("predictions.csv", contents);
                     },
+                  ),
                 ),
-              )
-            ],
+              ],
+            ),
+            body: PredictionListView(),
           ),
         ),
       ),
     );
   }
 
-  void _validate(double highPrediction) async {
+  void _validate(PredictionViewModel model) async {
     var dbMatch = await MatchDatabaseChooserDialog.showSingle(
       context: context,
     );
@@ -261,7 +211,7 @@ class _PredictionViewState extends State<PredictionView> {
       if(rating != null) {
         var shooterRating = (await widget.dataSource.wrapDbRating(rating)).unwrap();
         var score = scores[shooter];
-        var prediction = sortedPredictions.firstWhereOrNull((element) => rating.allPossibleMemberNumbers.contains(element.shooter.memberNumber));
+        var prediction = model.predictions.firstWhereOrNull((element) => rating.allPossibleMemberNumbers.contains(element.shooter.memberNumber));
         if(prediction != null) {
           actualResults[prediction] = SimpleMatchResult(raterScore: prediction.mean, percent: score?.ratio ?? 0, place: score?.place ?? 0);
         }
@@ -299,9 +249,7 @@ class _PredictionViewState extends State<PredictionView> {
 
     // } else {
     outcome = PredictionOutcome(error: 0, actualResults: actualResults, mutatedInputs: false);
-    setState(() {
-      outcomes = outcome.actualResults;
-    });
+    model.setOutcomes(outcome.actualResults);
 
     List<double> percentErrors = [];
     List<int> placeErrors = [];
@@ -346,8 +294,79 @@ class _PredictionViewState extends State<PredictionView> {
   //     outcomes = outcome.actualResults;
   //   });
   }
+}
 
-  Widget _buildPredictionsHeader(double uiScaleFactor) {
+class PredictionViewModel extends ChangeNotifier {
+
+  PredictionViewModel({List<AlgorithmPrediction>? initialPredictions}) {
+    if(initialPredictions != null) {
+      setPredictions(initialPredictions, notify: false);
+    }
+  }
+  List<AlgorithmPrediction> predictions = [];
+  bool get hasOutcomes => outcomes.isNotEmpty;
+  Map<AlgorithmPrediction, SimpleMatchResult> outcomes = {};
+  List<AlgorithmPrediction> searchedPredictions = [];
+  String searchTerm = "";
+
+  double highPrediction = 0.0;
+  double minValue = 10000;
+  double maxValue = -10000;
+  double percentFloor = RatingSystem.defaultRatioFloor;
+  double percentMult = RatingSystem.defaultRatioMult;
+  double minRating = double.infinity;
+  double maxRating = double.negativeInfinity;
+
+  void search(String search) {
+    searchTerm = search;
+    searchedPredictions = predictions.where((p) =>
+      p.shooter.getName(suffixes: false).toLowerCase().startsWith(searchTerm.toLowerCase())
+      || p.shooter.lastName.toLowerCase().startsWith(searchTerm.toLowerCase())
+    ).toList();
+    notifyListeners();
+  }
+
+  void setPredictions(List<AlgorithmPrediction> predictions, {bool notify = true}) {
+    this.predictions = [...predictions];
+    this.predictions.sort((a, b) => b.ordinal.compareTo(a.ordinal));
+    searchedPredictions = this.predictions;
+    minValue = 10000;
+    maxValue = -10000;
+    percentFloor = RatingSystem.defaultRatioFloor;
+    percentMult = RatingSystem.defaultRatioMult;
+    minRating = double.infinity;
+    maxRating = double.negativeInfinity;
+
+    highPrediction = this.predictions.isEmpty ? 0.0 : (this.predictions[0].center + this.predictions[0].upperBox) / 2;
+
+    for(var p in this.predictions) {
+      minValue = min(minValue, p.lowerWhisker);
+      maxValue = max(maxValue, p.upperWhisker);
+      minRating = min(minRating, p.shooter.rating);
+      maxRating = max(maxRating, p.shooter.rating);
+    }
+
+    if(this.predictions.isNotEmpty && this.predictions.first.algorithm.supportsRatioFloor) {
+      var ratingDelta = maxRating - minRating;
+      percentFloor = this.predictions.first.algorithm.estimateRatioFloor(ratingDelta, settings: this.predictions.first.settings);
+      percentMult = 1.0 - percentFloor;
+    }
+    if(notify) notifyListeners();
+  }
+
+  void setOutcomes(Map<AlgorithmPrediction, SimpleMatchResult> outcomes, {bool notify = true}) {
+    this.outcomes = outcomes;
+    if(notify) notifyListeners();
+  }
+}
+
+class PredictionListHeader extends StatelessWidget {
+  PredictionListHeader({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    var model = Provider.of<PredictionViewModel>(context);
+    var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
@@ -362,12 +381,7 @@ class _PredictionViewState extends State<PredictionView> {
                   hintText: "Search"
                 ),
                 onChanged: (search) {
-                  setState(() {
-                    searchedPredictions = search.isEmpty ? sortedPredictions : sortedPredictions.where((p) =>
-                    p.shooter.getName(suffixes: false).toLowerCase().startsWith(search.toLowerCase())
-                        || p.shooter.lastName.toLowerCase().startsWith(search.toLowerCase())
-                    ).toList();
-                  });
+                  model.search(search);
                 },
               ),
             ),
@@ -378,34 +392,34 @@ class _PredictionViewState extends State<PredictionView> {
           mainAxisSize: MainAxisSize.max,
           children: [
             Expanded(
-              flex: PredictionView._padding,
+              flex: PredictionListViewScreen._padding,
               child: Container(),
             ),
             Expanded(
-              flex: PredictionView._rowFlex,
+              flex: PredictionListViewScreen._rowFlex,
               child: Text("Row"),
             ),
             Expanded(
-              flex: PredictionView._nameFlex,
+              flex: PredictionListViewScreen._nameFlex,
               child: Text("Name"),
             ),
             Expanded(
-              flex: PredictionView._classFlex,
+              flex: PredictionListViewScreen._classFlex,
               child: Text("Class", textAlign: TextAlign.end),
             ),
             Expanded(
-              flex: PredictionView._ratingFlex,
+              flex: PredictionListViewScreen._ratingFlex,
               child: Text("Rating", textAlign: TextAlign.end),
             ),
             Expanded(
-                flex: PredictionView._95ciFlex,
+                flex: PredictionListViewScreen._95ciFlex,
                 child: Tooltip(
                     message: "An estimated lower bound for a shooter's place finish, if he has a moderately bad day and everyone else has a moderately good one.",
                     child: Text("Low Place", textAlign: TextAlign.end)
                 )
             ),
             Expanded(
-                flex: PredictionView._95ciFlex,
+                flex: PredictionListViewScreen._95ciFlex,
                 child: Tooltip(
                     message: "An estimated middle of the range for a shooter's place finish, if he performs slightly above average and everyone else performs at"
                         "\nan average level.",
@@ -413,22 +427,22 @@ class _PredictionViewState extends State<PredictionView> {
                 )
             ),
             Expanded(
-              flex: PredictionView._95ciFlex,
+              flex: PredictionListViewScreen._95ciFlex,
               child: Tooltip(
                   message: "An estimated upper bound for a shooter's place finish, if he has a good day and everyone else has a moderately bad one.",
                 child: Text("High Place", textAlign: TextAlign.end)
               )
             ),
-            if(outcomes.isNotEmpty) Expanded(
-                flex: PredictionView._95ciFlex,
+            if(model.hasOutcomes) Expanded(
+                flex: PredictionListViewScreen._95ciFlex,
                 child: Tooltip(
                   message: "The shooter's actual finish.",
                   child: Text("Actual Place", textAlign: TextAlign.end)
                 )
             ),
-            SizedBox(width: PredictionView._whiskerPlotPadding),
+            SizedBox(width: PredictionListViewScreen._whiskerPlotPadding),
             Expanded(
-              flex: PredictionView._whiskerPlotFlex,
+              flex: PredictionListViewScreen._whiskerPlotFlex,
               child: Tooltip(
                 message: "Boxes show a prediction with about 65% confidence. Whiskers show a prediction with about 95% confidence.\n"
                     "Predicted performances are relative to one another. The percentage in each prediction's tooltip is an\n"
@@ -436,29 +450,38 @@ class _PredictionViewState extends State<PredictionView> {
                 child: Text("Performance Prediction", textAlign: TextAlign.center),
               ),
             ),
-            SizedBox(width: PredictionView._whiskerPlotPadding),
+            SizedBox(width: PredictionListViewScreen._whiskerPlotPadding),
           ]
         ),
       ],
     );
   }
+}
 
-  Widget _buildPredictionsRow(AlgorithmPrediction pred, double min, double max, double percentFloor, double percentMult, double highPrediction, int index, double uiScaleFactor) {
-    double renderMin = min * 0.95;
-    double renderMax = max * 1.01;
+class PredictionListRow extends StatelessWidget {
+  PredictionListRow({super.key, required this.prediction, required this.index});
+  final int index;
+  final AlgorithmPrediction prediction;
 
-    double renderMinPercent = (percentFloor + renderMin / highPrediction * percentMult) * 100;
-    double renderMaxPercent = (percentFloor + renderMax / highPrediction * percentMult) * 100;
+  @override
+  Widget build(BuildContext context) {
+    var model = Provider.of<PredictionViewModel>(context);
+    var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
+    double renderMin = model.minValue * 0.95;
+    double renderMax = model.maxValue * 1.01;
 
-    double boxLowPercent = (percentFloor + pred.lowerBox / highPrediction * percentMult) * 100;
-    double boxHighPercent = (percentFloor + pred.upperBox / highPrediction * percentMult) * 100;
-    double meanPercent = (percentFloor + pred.mean / highPrediction * percentMult) * 100;
-    double whiskerLowPercent = (percentFloor + pred.lowerWhisker / highPrediction * percentMult) * 100;
-    double whiskerHighPercent = (percentFloor + pred.upperWhisker / highPrediction * percentMult) * 100;
+    double renderMinPercent = (model.percentFloor + renderMin / model.highPrediction * model.percentMult) * 100;
+    double renderMaxPercent = (model.percentFloor + renderMax / model.highPrediction * model.percentMult) * 100;
+
+    double boxLowPercent = (model.percentFloor + prediction.lowerBox / model.highPrediction * model.percentMult) * 100;
+    double boxHighPercent = (model.percentFloor + prediction.upperBox / model.highPrediction * model.percentMult) * 100;
+    double meanPercent = (model.percentFloor + prediction.mean / model.highPrediction * model.percentMult) * 100;
+    double whiskerLowPercent = (model.percentFloor + prediction.lowerWhisker / model.highPrediction * model.percentMult) * 100;
+    double whiskerHighPercent = (model.percentFloor + prediction.upperWhisker / model.highPrediction * model.percentMult) * 100;
     double? outcomePercent;
 
     List<double> referenceLines = [];
-    var outcome = outcomes[pred];
+    var outcome = model.outcomes[prediction];
     if(outcome != null) {
       if(outcome.percent > 0.2) {
         outcomePercent = outcome.percent * 100;
@@ -470,69 +493,69 @@ class _PredictionViewState extends State<PredictionView> {
       color: Theme.of(context).colorScheme.onSurface,
       underline: false,
       onTap: () {
-        var latestEvent = pred.shooter.eventsWithWindow(window: 1).firstOrNull;
+        var latestEvent = prediction.shooter.eventsWithWindow(window: 1).firstOrNull;
         if(latestEvent != null) {
           var latestMatch = latestEvent.match;
-          ShooterStatsDialog.show(context, pred.shooter, match: latestMatch);
+          ShooterStatsDialog.show(context, prediction.shooter, match: latestMatch);
         }
       },
       child: ConstrainedBox(
-        key: Key(pred.shooter.memberNumber),
+        key: Key(prediction.shooter.memberNumber),
         constraints: BoxConstraints(
-          minHeight: PredictionView._rowHeight,
+          minHeight: PredictionListViewScreen._rowHeight,
         ),
         child: ScoreRow(
           color: ThemeColors.backgroundColor(context, rowIndex: index),
           child: Row(
             children: [
               Expanded(
-                flex: PredictionView._padding,
+                flex: PredictionListViewScreen._padding,
                 child: Container(),
               ),
               Expanded(
-                flex: PredictionView._rowFlex,
+                flex: PredictionListViewScreen._rowFlex,
                 child: Text("${index + 1}"),
               ),
               Expanded(
-                flex: PredictionView._nameFlex,
+                flex: PredictionListViewScreen._nameFlex,
                 child: GestureDetector(
                   onTap: () async {
-                    var latestEvent = pred.shooter.eventsWithWindow(window: 1).firstOrNull;
+                    var latestEvent = prediction.shooter.eventsWithWindow(window: 1).firstOrNull;
                     if(latestEvent != null) {
                       var latestMatch = latestEvent.match;
-                      ShooterStatsDialog.show(context, pred.shooter, match: latestMatch);
+                      ShooterStatsDialog.show(context, prediction.shooter, match: latestMatch);
                     }
                   },
-                  child: Text(pred.shooter.getName(suffixes: false)),
+                  child: Text(prediction.shooter.getName(suffixes: false)),
                 ),
               ),
               Expanded(
-                flex: PredictionView._classFlex,
-                child: Text(pred.shooter.lastClassification?.shortDisplayName ?? "(none)", textAlign: TextAlign.end),
+                flex: PredictionListViewScreen._classFlex,
+                child: Text(prediction.shooter.lastClassification?.shortDisplayName ?? "(none)", textAlign: TextAlign.end),
               ),
               Expanded(
-                flex: PredictionView._ratingFlex,
-                child: Text(pred.shooter.rating.round().toString(), textAlign: TextAlign.end),
+                flex: PredictionListViewScreen._ratingFlex,
+                child: Text(prediction.shooter.rating.round().toString(), textAlign: TextAlign.end),
               ),
               Expanded(
-                flex: PredictionView._95ciFlex,
-                child: Text("${pred.lowPlace}", textAlign: TextAlign.end), //Text("${whiskerLowPercent.toStringAsFixed(1)}", textAlign: TextAlign.end),
+                flex: PredictionListViewScreen._95ciFlex,
+                child: Text("${prediction.lowPlace}", textAlign: TextAlign.end), //Text("${whiskerLowPercent.toStringAsFixed(1)}", textAlign: TextAlign.end),
               ),
               Expanded(
-                flex: PredictionView._95ciFlex,
-                child: Text("${pred.medianPlace}", textAlign: TextAlign.end), // Text("${whiskerHighPercent.toStringAsFixed(1)}%", textAlign: TextAlign.end),
+                flex: PredictionListViewScreen._95ciFlex,
+                child: Text("${prediction.medianPlace}", textAlign: TextAlign.end), // Text("${whiskerHighPercent.toStringAsFixed(1)}%", textAlign: TextAlign.end),
               ),
               Expanded(
-                flex: PredictionView._95ciFlex,
-                child: Text("${pred.highPlace}", textAlign: TextAlign.end), // Text("${whiskerHighPercent.toStringAsFixed(1)}%", textAlign: TextAlign.end),
+                flex: PredictionListViewScreen._95ciFlex,
+                child: Text("${prediction.highPlace}", textAlign: TextAlign.end), // Text("${whiskerHighPercent.toStringAsFixed(1)}%", textAlign: TextAlign.end),
               ),
-              if(outcomes.isNotEmpty) Expanded(
-                flex: PredictionView._95ciFlex,
+              if(model.hasOutcomes) Expanded(
+                flex: PredictionListViewScreen._95ciFlex,
                 child: Text("${outcome?.place ?? "n/a"}", textAlign: TextAlign.end), // Text("${whiskerHighPercent.toStringAsFixed(1)}%", textAlign: TextAlign.end),
               ),
-              SizedBox(width: PredictionView._whiskerPlotPadding),
+              SizedBox(width: PredictionListViewScreen._whiskerPlotPadding),
               Expanded(
-                flex: PredictionView._whiskerPlotFlex,
+                flex: PredictionListViewScreen._whiskerPlotFlex,
                 child: Tooltip(
                   message: "68% confidence: ${boxLowPercent.toStringAsFixed(1)}-${boxHighPercent.toStringAsFixed(1)}%\n"
                       "95% confidence: ${whiskerLowPercent.toStringAsFixed(1)}-${whiskerHighPercent.toStringAsFixed(1)}%" + (
@@ -556,10 +579,46 @@ class _PredictionViewState extends State<PredictionView> {
                   ),
                 )
               ),
-              SizedBox(width: PredictionView._whiskerPlotPadding),
+              SizedBox(width: PredictionListViewScreen._whiskerPlotPadding),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class PredictionListView extends StatelessWidget {
+  PredictionListView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    var model = Provider.of<PredictionViewModel>(context);
+    return Container(
+      color: ThemeColors.backgroundColor(context),
+      child: Column(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: ThemeColors.onBackgroundColor(context)),
+              ),
+              color: ThemeColors.backgroundColor(context),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(2.0),
+              child: PredictionListHeader(),
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+                itemCount: model.searchedPredictions.length,
+                itemBuilder: (context, i) {
+                  return PredictionListRow(prediction: model.searchedPredictions[i], index: i);
+                },
+            ),
+          )
+        ],
       ),
     );
   }

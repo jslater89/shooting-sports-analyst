@@ -784,7 +784,7 @@ class _RatingsViewPageState extends State<RatingsViewPage> with TickerProviderSt
       return;
     }
     Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-      return PredictionView(dataSource: dataSource, predictions: predictions, matchId: futureMatch.matchId, group: tab);
+      return PredictionListViewScreen(dataSource: dataSource, predictions: predictions, matchId: futureMatch.matchId, group: tab);
     }));
   }
 }

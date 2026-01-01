@@ -10,6 +10,7 @@ import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/route/match_prep_page.dart';
+import 'package:shooting_sports_analyst/ui/rater/prediction/prediction_view.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
@@ -66,7 +67,38 @@ class _MatchPrepPredictionsState extends State<MatchPrepPredictions> {
   }
 }
 
-class _PredictionsHeader extends StatelessWidget {
+class _PredictionsHeader extends StatefulWidget {
+  @override
+  State<_PredictionsHeader> createState() => _PredictionsHeaderState();
+}
+
+class _PredictionsHeaderState extends State<_PredictionsHeader> {
+  late TextEditingController nameController;
+  late _MatchPrepPredictionsModel model;
+
+  @override
+  void initState() {
+    super.initState();
+    nameController = TextEditingController();
+    model = context.read<_MatchPrepPredictionsModel>();
+    model.addListener(updatePredictionSetName);
+  }
+
+  @override
+  void dispose() {
+    model.removeListener(updatePredictionSetName);
+    super.dispose();
+  }
+
+  void updatePredictionSetName() {
+    if(model.selectedPredictionSet == null) {
+      nameController.clear();
+    }
+    else if(nameController.text != model.selectedPredictionSet?.name) {
+      nameController.text = model.selectedPredictionSet?.name ?? "";
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
@@ -79,18 +111,17 @@ class _PredictionsHeader extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             spacing: 8 * uiScaleFactor,
             children: [
-              SizedBox(
-                width: 200.0 * uiScaleFactor,
-                child: DropdownMenu<PredictionSet>(
-                  label: Text("Prediction set"),
-                  initialSelection: model.selectedPredictionSet,
-                  onSelected: (value) {
-                    if(value != null) {
-                      model.setSelectedPredictionSet(value);
-                    }
-                  },
-                  dropdownMenuEntries: model.predictionSets.map((e) => DropdownMenuEntry(value: e, label: e.name)).toList(),
-                ),
+              DropdownMenu<PredictionSet>(
+                width: 400.0 * uiScaleFactor,
+                label: Text("Prediction set"),
+                initialSelection: model.selectedPredictionSet,
+                controller: nameController,
+                onSelected: (value) {
+                  if(value != null) {
+                    model.setSelectedPredictionSet(value);
+                  }
+                },
+                dropdownMenuEntries: model.predictionSets.map((e) => DropdownMenuEntry(value: e, label: e.name)).toList(),
               ),
               IconButton(
                 icon: Icon(Icons.add),
@@ -126,7 +157,7 @@ class _PredictionsHeader extends StatelessWidget {
                 onPressed: () async {
                   var confirm = await ConfirmDialog.show(context, content: Text("Delete prediction set?"));
                   if(confirm ?? false) {
-                    await model.matchPrepModel.deletePredictionSet(model.selectedPredictionSet!);
+                    model.deletePredictionSet(model.selectedPredictionSet!);
                   }
                 },
               ),
@@ -163,12 +194,16 @@ class _PredictionSetTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final model = Provider.of<_MatchPrepPredictionsModel>(context);
-    var groupPredictions = model.selectedPredictionSet?.algorithmPredictions.where((p) {
-      return p.group.value == group;
-    }).toList();
-    var hydratedPredictions = groupPredictions?.map((p) => p.hydrate()).toList();
-    return Center(child: Text("Prediction set: ${group.name} with ${hydratedPredictions?.length} predictions"));
+    final outerModel = Provider.of<_MatchPrepPredictionsModel>(context);
+    var groupPredictions = outerModel.selectedPredictionSet?.algorithmPredictions.where((p) => p.group.value == group).toList();
+    var hydratedPredictions = groupPredictions?.map((p) => p.hydrate()).nonNulls.toList();
+    if(hydratedPredictions == null) {
+      return Center(child: Text("No predictions for ${group.name}"));
+    }
+    return ChangeNotifierProvider(
+      create: (context) => PredictionViewModel(initialPredictions: hydratedPredictions),
+      child: PredictionListView(),
+    );
   }
 }
 
@@ -192,7 +227,15 @@ class _MatchPrepPredictionsModel extends ChangeNotifier {
   }
 
   Future<void> createPredictionSet(String name) async {
-    await matchPrepModel.createPredictionSet(name);
+    var predictionSet = await matchPrepModel.createPredictionSet(name);
+    setSelectedPredictionSet(predictionSet);
+  }
+
+  Future<void> deletePredictionSet(PredictionSet predictionSet) async {
+    await matchPrepModel.deletePredictionSet(predictionSet);
+    if(selectedPredictionSet == predictionSet) {
+      selectedPredictionSet = null;
+    }
     notifyListeners();
   }
 

@@ -125,7 +125,7 @@ class MatchPrepPageModel extends ChangeNotifier {
   // Data manipulation functions
   // ===========================
 
-  Future<void> createPredictionSet(String name) async {
+  Future<PredictionSet> createPredictionSet(String name) async {
     // predict for all rating groups
     Map<RatingGroup, List<AlgorithmPrediction>> predictions = {};
     var seed = futureMatch.date.millisecondsSinceEpoch;
@@ -162,6 +162,7 @@ class MatchPrepPageModel extends ChangeNotifier {
     await db.saveMatchPrep(prep, savePredictionSetLinks: false);
 
     notifyListeners();
+    return predictionSet;
   }
 
   Future<void> deletePredictionSet(PredictionSet predictionSet) async {
