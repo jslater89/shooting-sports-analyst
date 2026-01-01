@@ -79,14 +79,14 @@ class FutureMatch {
   }
 
   /// Find the registrations for a given sport and rating group.
-  List<MatchRegistration> getRegistrationsFor(Sport sport, {RatingGroup? group = null, List<String>? squads = null}) {
+  List<MatchRegistration> getRegistrationsFor(Sport sport, {RatingGroup? group = null, List<String>? squads = null, bool fallbackDivision = true}) {
     List<MatchRegistration> matchedRegistrations = [];
     if(group == null) {
       matchedRegistrations = registrations.toList();
     }
     else {
       for(var registration in registrations) {
-        var division = sport.divisions.lookupByName(registration.shooterDivisionName);
+        var division = sport.divisions.lookupByName(registration.shooterDivisionName, fallback: fallbackDivision);
         if(division == null) {
           continue;
         }
@@ -137,7 +137,9 @@ class FutureMatch {
   }
 
   /// Update the saved registrations for this match from its saved mappings.
-  Future<void> updateRegistrationsFromMappings() async {
+  ///
+  /// Returns the number of registrations updated.
+  Future<int> updateRegistrationsFromMappings() async {
     var db = AnalystDatabase();
     var mappings = await db.getMatchRegistrationMappings(matchId);
     List<MatchRegistration> registrationsToUpdate = [];
@@ -157,8 +159,9 @@ class FutureMatch {
     }
 
     if(registrationsToUpdate.isNotEmpty) {
-      await db.saveFutureMatch(this, updateLinks: [MatchPrepLinkTypes.registrations]);
+      await db.saveMatchRegistrations(registrationsToUpdate);
     }
+    return registrationsToUpdate.length;
   }
 
   /// Once this match has occurred and been saved to the local database, this will

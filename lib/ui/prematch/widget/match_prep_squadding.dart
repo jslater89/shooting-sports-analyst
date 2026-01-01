@@ -43,6 +43,7 @@ class MatchPrepSquadding extends StatelessWidget {
               schedule: entry.key,
               squads: entry.value,
               crossAxisCount: crossAxisCount.round(),
+              model: model,
             ),
           );
           if(index < squadsBySchedule.entries.length - 1) {
@@ -65,11 +66,13 @@ class _MatchPrepSquaddingSchedule extends StatelessWidget {
     required this.schedule,
     required this.squads,
     required this.crossAxisCount,
+    required this.model,
   });
 
   final String schedule;
   final List<String> squads;
   final int crossAxisCount;
+  final MatchPrepPageModel model;
 
   @override
   Widget build(BuildContext context) {
@@ -95,7 +98,7 @@ class _MatchPrepSquaddingSchedule extends StatelessWidget {
                 return Expanded(child: Container());
               }
               else {
-                return Expanded(child: _SquadCard(squad: squad));
+                return Expanded(child: _SquadCard(squad: squad, model: model));
               }
             }).toList(),
         )),
@@ -105,72 +108,32 @@ class _MatchPrepSquaddingSchedule extends StatelessWidget {
 }
 
 class _SquadCard extends StatelessWidget {
-  const _SquadCard({required this.squad});
+  const _SquadCard({required this.squad, required this.model});
 
   final String squad;
+  final MatchPrepPageModel model;
 
   @override
   Widget build(BuildContext context) {
     final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
-    return Consumer<MatchPrepPageModel>(
-      builder: (context, model, child) {
-        final competitors = model.futureMatch.getRegistrationsFor(model.sport, squads: [squad]);
-        competitors.sort((a, b) {
-          var aName = a.shooterName;
-          var bName = b.shooterName;
-          if(aName == null && bName == null) {
-            return 0;
-          }
-          if(aName == null) {
-            return 1;
-          }
-          if(bName == null) {
-            return -1;
-          }
+    final competitors = model.futureMatch.getRegistrationsFor(model.sport, squads: [squad]);
+    competitors.sort(model.compareRegistrations);
 
-          String aLastName;
-          String bLastName;
-          ShooterRating? aRating;
-          ShooterRating? bRating;
-          if(model.matchedRegistrations.containsKey(a)) {
-            aRating = model.matchedRegistrations[a];
-          }
-          if(model.matchedRegistrations.containsKey(b)) {
-            bRating = model.matchedRegistrations[b];
-          }
-
-          if(aRating != null) {
-            aLastName = aRating.lastName;
-          }
-          else {
-            aLastName = aName.split(" ").last;
-          }
-          if(bRating != null) {
-            bLastName = bRating.lastName;
-          }
-          else {
-            bLastName = bName.split(" ").last;
-          }
-
-          return aLastName.compareTo(bLastName);
-        });
-        return Card(
-          child: Padding(
-            padding: EdgeInsets.all(8 * uiScaleFactor),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(child: Text(squad, style: Theme.of(context).textTheme.titleMedium)),
-                Divider(),
-                _CompetitorKey(hasDivisions: model.sport.hasDivisions),
-                ...competitors.mapIndexed((index, competitor) => _CompetitorRow(competitor: competitor, index: index)),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(8 * uiScaleFactor),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(child: Text(squad, style: Theme.of(context).textTheme.titleMedium)),
+            Divider(),
+            _CompetitorKey(hasDivisions: model.sport.hasDivisions),
+            ...competitors.mapIndexed((index, competitor) => _CompetitorRow(competitor: competitor, index: index, model: model)),
+          ],
+        ),
+    ),
+  );
   }
 }
 
@@ -208,47 +171,44 @@ class _CompetitorKey extends StatelessWidget {
 }
 
 class _CompetitorRow extends StatelessWidget {
-  const _CompetitorRow({required this.competitor, required this.index});
+  const _CompetitorRow({required this.competitor, required this.index, required this.model});
 
   final MatchRegistration competitor;
   final int index;
+  final MatchPrepPageModel model;
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<MatchPrepPageModel>(
-      builder: (context, model, child) {
-        final division = model.sport.divisions.lookupByName(competitor.shooterDivisionName);
-        final hasDivisions = model.sport.hasDivisions;
-        final rating = model.matchedRegistrations[competitor];
-        final row = ScoreRow(
-          index: index,
-          hoverEnabled: rating != null,
-          useSurfaceColors: true,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0),
-            child: Row(
-              children: [
-                Expanded(flex: _CompetitorKey._nameFlex, child: Text(competitor.shooterName ?? "Unknown")),
-                if(hasDivisions) Expanded(flex: _CompetitorKey._divisionFlex, child: Text(division?.shortDisplayName ?? "(n/a)")),
-                Expanded(flex: _CompetitorKey._ratingFlex, child: Text(rating?.formattedRating() ?? "(unrated)")),
-              ],
-            ),
-          ),
-        );
-        if(rating == null) {
-          return row;
-        }
-        else {
-          return ClickableLink(
-            decorateColor: false,
-            underline: false,
-            onTap: () {
-              ShooterStatsDialog.show(context, rating, sport: model.sport);
-            },
-            child: row,
-          );
-        }
-      },
+    final division = model.sport.divisions.lookupByName(competitor.shooterDivisionName);
+    final hasDivisions = model.sport.hasDivisions;
+    final rating = model.matchedRegistrations[competitor];
+    final row = ScoreRow(
+      index: index,
+      hoverEnabled: rating != null,
+      useSurfaceColors: true,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+        child: Row(
+          children: [
+            Expanded(flex: _CompetitorKey._nameFlex, child: Text(competitor.shooterName ?? "Unknown")),
+            if(hasDivisions) Expanded(flex: _CompetitorKey._divisionFlex, child: Text(division?.shortDisplayName ?? "(n/a)")),
+            Expanded(flex: _CompetitorKey._ratingFlex, child: Text(rating?.formattedRating() ?? "(unrated)")),
+          ],
+        ),
+      ),
     );
+    if(rating == null) {
+      return row;
+    }
+    else {
+      return ClickableLink(
+        decorateColor: false,
+        underline: false,
+        onTap: () {
+          ShooterStatsDialog.show(context, rating, sport: model.sport);
+        },
+        child: row,
+      );
+    }
   }
 }

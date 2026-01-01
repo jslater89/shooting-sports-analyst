@@ -21,7 +21,7 @@ var _log = SSALogger("DbShooterRatingEntity");
 mixin DbShooterRatingEntity {
   /// The original/oldest member number for this competitor, or as
   /// old as possible.
-  String get originalMemberNumber;
+  String get memberNumber;
 
   /// The project containing the shooter rating of interest.
   IsarLink<DbRatingProject> get project;
@@ -40,11 +40,11 @@ mixin DbShooterRatingEntity {
     var projectValue = project.value;
     var groupValue = group.value;
     if(projectValue == null || groupValue == null) {
-      _log.w("Project or group not set when looking up shooter rating for $originalMemberNumber");
+      _log.w("Project or group not set when looking up shooter rating for $memberNumber");
       return null;
     }
 
-    var ratingValue = db.maybeKnownShooterSync(project: projectValue, group: groupValue, memberNumber: originalMemberNumber);
+    var ratingValue = db.maybeKnownShooterSync(project: projectValue, group: groupValue, memberNumber: memberNumber);
     if(ratingValue == null) {
       return null;
     }

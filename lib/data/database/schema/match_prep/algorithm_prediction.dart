@@ -21,16 +21,28 @@ part 'algorithm_prediction.g.dart';
 /// and the shooter's original member number.
 @collection
 class DbAlgorithmPrediction with DbShooterRatingEntity {
-  Id get id => combineHashList([projectId, predictionSetId, originalMemberNumber.stableHash]);
+  Id get id => combineHashList([projectId, predictionSetId, memberNumber.stableHash]);
 
   final project = IsarLink<DbRatingProject>();
 
   @Backlink(to: 'algorithmPredictions')
   final predictionSet = IsarLink<PredictionSet>();
 
+  @override
+  final group = IsarLink<RatingGroup>();
+
+  /// A member number that can locate the correct shooter rating for this prediction
+  /// in [group].
+  @override
+  String memberNumber = "";
+
+  @override
+  final rating = IsarLink<DbShooterRating>();
+
   /// The id of the [DbRatingProject] that this prediction belongs to.
   int projectId;
 
+  @Index()
   /// The id of the [PredictionSet] that this prediction belongs to.
   int predictionSetId;
 
@@ -76,7 +88,7 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
       this.project.value = project;
       this.group.value = prediction.shooter.group;
       this.predictionSet.value = predictionSet;
-      this.originalMemberNumber = prediction.shooter.originalMemberNumber;
+      this.memberNumber = prediction.shooter.originalMemberNumber;
     }
 
   /// Create a list of [DbAlgorithmPrediction] from a list of [AlgorithmPrediction]s, belonging
@@ -107,12 +119,10 @@ class DbAlgorithmPrediction with DbShooterRatingEntity {
     return prediction;
   }
 
-  @override
-  final group = IsarLink<RatingGroup>();
-
-  @override
-  String originalMemberNumber = "";
-
-  @override
-  final rating = IsarLink<DbShooterRating>();
+  Future<void> saveLinks() async {
+    await rating.save();
+    await project.save();
+    await group.save();
+    await predictionSet.save();
+  }
 }

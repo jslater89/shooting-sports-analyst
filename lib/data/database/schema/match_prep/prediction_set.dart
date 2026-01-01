@@ -20,16 +20,27 @@ class PredictionSet {
     required this.matchPrepId,
     required this.name,
     required this.created,
-    required this.note,
+    this.note,
   });
+
+  PredictionSet.create({
+    required MatchPrep matchPrep,
+    required this.name,
+    DateTime? created,
+    this.note
+  }) {
+    this.matchPrep.value = matchPrep;
+    this.matchPrepId = matchPrep.id;
+    this.created = created ?? DateTime.now();
+  }
 
   Id get id => combineHashList([matchPrepId.stableHash, name.stableHash]);
 
   /// The id of the [MatchPrep] that this prediction set belongs to.
-  int matchPrepId;
+  late int matchPrepId;
 
   /// The date and time the prediction set was created.
-  DateTime created;
+  late DateTime created;
 
   /// The name of the prediction set.
   String name;

@@ -7,15 +7,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/match_prep.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/algorithm_prediction.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
 import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/empty_scaffold.dart';
+import 'package:shooting_sports_analyst/ui/prematch/widget/match_prep_divisions.dart';
+import 'package:shooting_sports_analyst/ui/prematch/widget/match_prep_predictions.dart';
 import 'package:shooting_sports_analyst/ui/prematch/widget/match_prep_squadding.dart';
 
 final _log = SSALogger("MatchPrepPage");
@@ -61,7 +67,7 @@ class _MatchPrepPageState extends State<MatchPrepPage> with TickerProviderStateM
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  ..._MatchPrepPageTab.values.map((tab) => tab.build(context)).toList(),
+                  ..._MatchPrepPageTab.values.map((tab) => tab.build(context, _model)).toList(),
                 ],
               ),
             ),
@@ -84,14 +90,14 @@ enum _MatchPrepPageTab {
       _MatchPrepPageTab.predictions => "Predictions",
     };
 
-  Widget build(BuildContext context) =>
+  Widget build(BuildContext context, MatchPrepPageModel model) =>
     switch(this) {
       _MatchPrepPageTab.squadding =>
         MatchPrepSquadding(),
       _MatchPrepPageTab.divisions =>
-        Center(child: Text("Divisions")),
+        MatchPrepDivisions(groups: model.ratingProject.groups),
       _MatchPrepPageTab.predictions =>
-        Center(child: Text("Predictions")),
+        MatchPrepPredictions(),
     };
 }
 
@@ -113,6 +119,85 @@ class MatchPrepPageModel extends ChangeNotifier {
   Future<void> init() async {
     _getKnownSquads(notify: false);
     _loadMatchingRegistrations(notify: false);
+  }
+
+  // ===========================
+  // Data manipulation functions
+  // ===========================
+
+  Future<void> createPredictionSet(String name) async {
+    // predict for all rating groups
+    Map<RatingGroup, List<AlgorithmPrediction>> predictions = {};
+    var seed = futureMatch.date.millisecondsSinceEpoch;
+    for(var group in ratingProject.groups) {
+      var ratings = matchedRegistrations.values.where((r) => r.group == group).toList();
+      var groupPredictions = ratingProject.settings.algorithm.predict(ratings, seed: seed);
+      predictions[group] = groupPredictions;
+    }
+
+    // create and save prediction set
+    var predictionSet = PredictionSet.create(
+      matchPrep: prep,
+      name: name,
+    );
+    predictionSet = await db.savePredictionSet(predictionSet, savePredictions: false);
+
+    // dehydrate and save algorithm predictions
+    List<DbAlgorithmPrediction> dbPredictions = [];
+    for(var group in predictions.keys) {
+      for(var prediction in predictions[group]!) {
+        var dbPrediction = DbAlgorithmPrediction.fromHydrated(ratingProject, predictionSet, prediction);
+        dbPredictions.add(dbPrediction);
+      }
+    }
+
+    List<Future> saveFutures = [];
+    for(var prediction in dbPredictions) {
+      saveFutures.add(db.saveAlgorithmPrediction(prediction, saveLinks: true));
+    }
+    await Future.wait(saveFutures);
+
+    // add to prep and save prediction set link, but not the predictions (saved above)
+    prep.predictionSets.add(predictionSet);
+    await db.saveMatchPrep(prep, savePredictionSetLinks: false);
+
+    notifyListeners();
+  }
+
+  Future<void> deletePredictionSet(PredictionSet predictionSet) async {
+    prep.predictionSets.remove(predictionSet);
+    await db.saveMatchPrep(prep, savePredictionSetLinks: false);
+    await db.deletePredictionSet(predictionSet);
+    notifyListeners();
+  }
+
+  // ===========================
+  // Public utility functions
+  // ===========================
+
+  int compareRegistrations(MatchRegistration a, MatchRegistration b) {
+    var aName = a.shooterName;
+    var bName = b.shooterName;
+    if(aName == null && bName == null) {
+      return 0;
+    }
+    if(aName == null) {
+      return 1;
+    }
+    if(bName == null) {
+      return -1;
+    }
+    aName = aName.split(" ").last;
+    bName = bName.split(" ").last;
+    var aRating = matchedRegistrations[a];
+    var bRating = matchedRegistrations[b];
+    if(aRating != null) {
+      aName = aRating.lastName;
+    }
+    if(bRating != null) {
+      bName = bRating.lastName;
+    }
+    return aName.compareTo(bName);
   }
 
   // ===========================

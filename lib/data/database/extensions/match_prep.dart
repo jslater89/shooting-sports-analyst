@@ -6,8 +6,10 @@
 
 import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/algorithm_prediction.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 
 extension MatchPrepDatabase on AnalystDatabase {
@@ -70,5 +72,54 @@ extension MatchPrepDatabase on AnalystDatabase {
       isar.matchPreps.putSync(matchPrep);
     });
     return matchPrep;
+  }
+
+  /// Save a prediction set to the database.
+  Future<PredictionSet> savePredictionSet(PredictionSet predictionSet, {bool savePredictions = true}) async {
+    var predictions = savePredictions ? predictionSet.algorithmPredictions.toList() : <DbAlgorithmPrediction>[];
+    await isar.writeTxn(() async {
+      await isar.predictionSets.put(predictionSet);
+      if(savePredictions) {
+        await isar.dbAlgorithmPredictions.putAll(predictions);
+        for(var prediction in predictions) {
+          await prediction.saveLinks();
+        }
+        await predictionSet.algorithmPredictions.save();
+      }
+    });
+    return predictionSet;
+  }
+
+  /// Save a prediction set to the database synchronously, along with its linked predictions.
+  void savePredictionSetSync(PredictionSet predictionSet) {
+    isar.writeTxnSync(() {
+      isar.predictionSets.putSync(predictionSet);
+    });
+  }
+
+  Future<void> deletePredictionSet(PredictionSet predictionSet) async {
+    await isar.writeTxn(() async {
+      await predictionSet.algorithmPredictions.filter().deleteAll();
+      await isar.predictionSets.where().idEqualTo(predictionSet.id).deleteAll();
+    });
+  }
+
+  void deletePredictionSetSync(PredictionSet predictionSet) {
+    isar.writeTxnSync(() {
+      predictionSet.algorithmPredictions.filter().deleteAllSync();
+      isar.predictionSets.where().idEqualTo(predictionSet.id).deleteAllSync();
+    });
+  }
+
+  Future<void> saveAlgorithmPrediction(DbAlgorithmPrediction prediction, {bool saveLinks = true}) async {
+    await isar.writeTxn(() async {
+      await isar.dbAlgorithmPredictions.put(prediction);
+      if(saveLinks) {
+        await prediction.rating.save();
+        await prediction.project.save();
+        await prediction.group.save();
+        await prediction.predictionSet.save();
+      }
+    });
   }
 }

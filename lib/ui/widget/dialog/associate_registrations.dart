@@ -10,6 +10,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/future_match.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/registrations.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
@@ -216,6 +217,9 @@ class _AssociateRegistrationsDialogState extends State<AssociateRegistrationsDia
     await db.deleteMatchRegistrationMappingsByNames(matchId: widget.futureMatch.matchId, shooterNames: deletedMappings.map((e) => e.shooterName ?? "").toList());
 
     _log.i("Saved ${mappings.length} mappings and deleted ${deletedMappings.length} mappings");
+
+    var updated = await widget.futureMatch.updateRegistrationsFromMappings();
+    _log.i("Updated $updated registrations from ${mappings.length} mappings");
   }
 
   String _formatMapping(MatchRegistration registration, ShooterRating mapping) {
