@@ -306,6 +306,7 @@ class AutoImporter {
     var futureMatch = registrations.exportFutureMatch();
 
     // This source can't guarantee stable entry IDs, so overwrite all old registrations.
+    // TODO: with match prep, we want to be able to merge
     var saveRes = await AnalystDatabase().saveFutureMatch(
       futureMatch,
       newRegistrations: exportedRegistrations,

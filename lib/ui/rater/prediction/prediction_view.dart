@@ -59,13 +59,13 @@ class PredictionListViewScreen extends StatefulWidget {
 }
 
 class _PredictionListViewScreenState extends State<PredictionListViewScreen> {
-  final predictionViewModel = PredictionViewModel();
+  late final PredictionViewModel predictionViewModel;
 
   @override
   void initState() {
-    super.initState();
+      super.initState();
 
-    predictionViewModel.setPredictions(widget.predictions, notify: false);
+    predictionViewModel = PredictionViewModel(matchId: widget.matchId, initialPredictions: widget.predictions);
   }
 
   @override
@@ -298,16 +298,30 @@ class _PredictionListViewScreenState extends State<PredictionListViewScreen> {
 
 class PredictionViewModel extends ChangeNotifier {
 
-  PredictionViewModel({List<AlgorithmPrediction>? initialPredictions}) {
+  PredictionViewModel({List<AlgorithmPrediction>? initialPredictions, required this.matchId, this.showSearch = true, this.showWager = false}) {
     if(initialPredictions != null) {
       setPredictions(initialPredictions, notify: false);
     }
   }
+  String matchId;
   List<AlgorithmPrediction> predictions = [];
   bool get hasOutcomes => outcomes.isNotEmpty;
   Map<AlgorithmPrediction, SimpleMatchResult> outcomes = {};
   List<AlgorithmPrediction> searchedPredictions = [];
   String searchTerm = "";
+
+  bool showSearch;
+  bool showWager;
+
+  void setShowSearch(bool show) {
+    showSearch = show;
+    notifyListeners();
+  }
+
+  void setShowWager(bool show) {
+    showWager = show;
+    notifyListeners();
+  }
 
   double highPrediction = 0.0;
   double minValue = 10000;
@@ -362,7 +376,6 @@ class PredictionViewModel extends ChangeNotifier {
 
 class PredictionListHeader extends StatelessWidget {
   PredictionListHeader({super.key});
-
   @override
   Widget build(BuildContext context) {
     var model = Provider.of<PredictionViewModel>(context);
@@ -374,7 +387,7 @@ class PredictionListHeader extends StatelessWidget {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(
+            if(model.showSearch) SizedBox(
               width: 250 * uiScaleFactor,
               child: TextField(
                 decoration: InputDecoration(
@@ -383,6 +396,19 @@ class PredictionListHeader extends StatelessWidget {
                 onChanged: (search) {
                   model.search(search);
                 },
+              ),
+            ),
+            if(model.showWager) SizedBox(
+              width: 100 * uiScaleFactor,
+              child: TextButton(
+                onPressed: () => WagerDialog.show(context, predictions: model.predictions, matchId: model.matchId),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.casino),
+                    Text("ODDS"),
+                  ],
+                ),
               ),
             ),
           ],
@@ -590,6 +616,7 @@ class PredictionListRow extends StatelessWidget {
 
 class PredictionListView extends StatelessWidget {
   PredictionListView({super.key});
+
 
   @override
   Widget build(BuildContext context) {

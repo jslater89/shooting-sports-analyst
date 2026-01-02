@@ -202,7 +202,7 @@ class _PredictionSetTab extends StatelessWidget {
     final outerModel = Provider.of<_MatchPrepPredictionsModel>(context);
     var groupPredictions = outerModel.getPredictionsForGroup(group);
     return ChangeNotifierProvider(
-      create: (context) => PredictionViewModel(initialPredictions: groupPredictions),
+      create: (context) => PredictionViewModel(matchId: outerModel.matchPrepModel.futureMatch.matchId, initialPredictions: groupPredictions, showWager: true),
       child: PredictionListView(),
     );
   }
