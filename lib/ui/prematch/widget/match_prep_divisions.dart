@@ -7,30 +7,40 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
-import 'package:shooting_sports_analyst/route/match_prep_page.dart';
+import 'package:shooting_sports_analyst/ui/prematch/match_prep_model.dart';
 import 'package:shooting_sports_analyst/ui/rater/shooter_stats_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 
-class MatchPrepDivisions extends StatelessWidget {
+class MatchPrepDivisions extends StatefulWidget {
   const MatchPrepDivisions({super.key, required this.groups});
   final List<RatingGroup> groups;
 
   @override
+  State<MatchPrepDivisions> createState() => _MatchPrepDivisionsState();
+}
+
+class _MatchPrepDivisionsState extends State<MatchPrepDivisions> with AutomaticKeepAliveClientMixin{
+  @override
   Widget build(BuildContext context) {
-    return DefaultTabController(length: groups.length,
+    super.build(context);
+    return ChangeNotifierProvider(create: (context) => _DivisionModel(), child: DefaultTabController(length: widget.groups.length,
       child: Column(
         children: [
-          TabBar(tabs: groups.map((d) => Tab(text: d.name)).toList()),
-          Expanded(child: TabBarView(children: groups.map((g) => _MatchPrepGroupTab(group: g)).toList())),
+          TabBar(tabs: widget.groups.map((d) => Tab(text: d.name)).toList()),
+          Expanded(child: TabBarView(children: widget.groups.map((g) => _MatchPrepGroupTab(group: g)).toList())),
         ],
       ),
-    );
+    ));
   }
+
+  @override
+  bool get wantKeepAlive => true;
 }
 
 class _MatchPrepGroupTab extends StatelessWidget {
@@ -41,8 +51,9 @@ class _MatchPrepGroupTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<MatchPrepPageModel>(
       builder: (context, model, child) {
+        var divisionModel = Provider.of<_DivisionModel>(context);
         List<MatchRegistration> divisionEntries = model.futureMatch.getRegistrationsFor(model.sport, group: group);
-        divisionEntries.sort(model.compareRegistrations);
+        divisionEntries.sort((a, b) => divisionModel.sortMode.compare(model, a, b));
 
         return Column(
           children: [
@@ -57,6 +68,73 @@ class _MatchPrepGroupTab extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+class _DivisionModel extends ChangeNotifier {
+  _DivisionSortMode sortMode = _DivisionSortMode.lastName;
+
+  void setSortMode( _DivisionSortMode value) {
+    sortMode = value;
+    notifyListeners();
+  }
+}
+
+enum _DivisionSortMode {
+  lastName,
+  rating,
+  classification,
+  squad;
+
+  String get uiLabel {
+    switch(this) {
+      case _DivisionSortMode.lastName:
+        return "Last name";
+      case _DivisionSortMode.rating:
+        return "Rating";
+      case _DivisionSortMode.classification:
+        return "Classification";
+      case _DivisionSortMode.squad:
+        return "Squad";
+    }
+  }
+
+  int compare(MatchPrepPageModel model, MatchRegistration a, MatchRegistration b) {
+    switch(this) {
+      case _DivisionSortMode.lastName:
+        return model.compareRegistrationNames(a, b);
+      case _DivisionSortMode.rating:
+        var aRating = model.matchedRegistrations[a];
+        var bRating = model.matchedRegistrations[b];
+        if(aRating == null && bRating == null) {
+          return model.compareRegistrationNames(a, b);
+        }
+        if(aRating == null) {
+          return 1;
+        }
+        if(bRating == null) {
+          return -1;
+        }
+        return bRating.rating.compareTo(aRating.rating);
+      case _DivisionSortMode.classification:
+        var aClassification = model.sport.classifications.lookupByName(a.shooterClassificationName);
+        var bClassification = model.sport.classifications.lookupByName(b.shooterClassificationName);
+        if(aClassification == null && bClassification == null) {
+          return model.compareRegistrationNames(a, b);
+        }
+        if(aClassification == null) {
+          return 1;
+        }
+        if(bClassification == null) {
+          return -1;
+        }
+        return aClassification.index.compareTo(bClassification.index);
+      case _DivisionSortMode.squad:
+        if(a.squad == b.squad) {
+          return model.compareRegistrationNames(a, b);
+        }
+        return a.squad?.compareTo(b.squad ?? "") ?? 0;
+    }
   }
 }
 
@@ -75,8 +153,24 @@ class _DivisionListKey extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    var divisionModel = Provider.of<_DivisionModel>(context);
+    var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     return Column(
       children: [
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: 12 * uiScaleFactor),
+          child: DropdownMenu<_DivisionSortMode>(
+            width: 200 * uiScaleFactor,
+            dropdownMenuEntries: _DivisionSortMode.values.map((e) => DropdownMenuEntry(value: e, label: e.uiLabel)).toList(),
+            onSelected: (value) {
+              if(value != null) {
+                divisionModel.setSortMode(value);
+              }
+            },
+            initialSelection: divisionModel.sortMode,
+            label: Text("Sort by"),
+          ),
+        ),
         ScoreRow(
           hoverEnabled: false,
           index: 0,
@@ -97,7 +191,7 @@ class _DivisionListKey extends StatelessWidget {
             ),
           ),
         ),
-        Divider(height: 2, thickness: 1, endIndent: 4),
+        const ScoreRowDivider(),
       ],
     );
   }
@@ -136,7 +230,7 @@ class _DivisionListEntry extends StatelessWidget {
 
     if(rating != null) {
       return ClickableLink(
-        decorateColor: false,
+        decorateTextColor: false,
         underline: false,
         onTap: () {
           var shooter = model.matchedRegistrations[entry];

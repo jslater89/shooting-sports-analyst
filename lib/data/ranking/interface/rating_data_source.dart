@@ -70,6 +70,11 @@ abstract interface class RatingDataSource {
   /// Returns Result.ok(null) if no rating is found.
   Future<DataSourceResult<DbShooterRating?>> lookupRating(RatingGroup group, String memberNumber, {bool allPossibleMemberNumbers = false});
 
+  /// Find shooter ratings by name search.
+  ///
+  /// Returns an empty list if fewer than three characters are provided.
+  Future<DataSourceResult<List<DbShooterRating>>> findShooterRatings(RatingGroup group, String name, {int limit = 10});
+
   Future<DataSourceResult<ShooterRating>> wrapDbRating(DbShooterRating rating);
 
   Future<DataSourceResult<List<DbShooterRating>>> getRatings(RatingGroup group);
@@ -85,6 +90,7 @@ abstract interface class PreloadedRatingDataSource {
   DbShooterRating? lookupRatingSync(RatingGroup group, String memberNumber);
   ShooterRating? wrapDbRatingSync(DbShooterRating rating);
   RatingGroup? groupForDivisionSync(Division? division);
+  List<DbShooterRating> findShooterRatingsSync(RatingGroup group, String name, {int limit = 10});
 }
 
 /// An EditableRatingDataSource is a view into a rating project sufficient to

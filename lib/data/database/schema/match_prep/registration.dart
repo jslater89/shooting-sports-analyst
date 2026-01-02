@@ -11,6 +11,9 @@ part 'registration.g.dart';
 
 /// A MatchRegistration is information about a match registration that may be sufficient
 /// to look up a shooter in a rating project, sourced from a registration source.
+///
+/// It implements object equality and hash code based on its database ID, so operations on
+/// list/sets of these objects enforce database equality.
 @collection
 class MatchRegistration {
   /// A unique identifier for the registration based on the match ID and entry ID.
@@ -54,4 +57,12 @@ class MatchRegistration {
     this.shooterMemberNumbers = const [],
     this.squad,
   });
+
+  operator ==(Object other) {
+    if(!(other is MatchRegistration)) return false;
+    return this.id == other.id;
+  }
+
+  @override
+  int get hashCode => id;
 }

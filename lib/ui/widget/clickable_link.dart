@@ -8,24 +8,37 @@ import 'package:flutter/material.dart';
 import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class ClickableLink extends StatelessWidget {
+class ClickableLink extends StatefulWidget {
   const ClickableLink({
     super.key,
     this.url,
     this.onTap,
     required this.child,
     this.color,
-    this.decorateColor = true,
+    this.decorateTextColor = true,
+    this.decorateIconColor = true,
     this.underline = true,
+    this.hoverColor,
+    this.decorateIconHoverColor = false,
   });
 
 
   /// If null, the link color will be determined by the link color in [ThemeColors].
-  /// Set [decorateColor] to false to use the standard theme text color.
+  /// Set [decorateTextColor] to false to use the standard theme text color.
   final Color? color;
 
-  /// Whether to decorate the text with the link color.
-  final bool decorateColor;
+  /// If null, the link color will remain the same when hovered. If present, the
+  /// link color will be replaced with this color when hovered.
+  final Color? hoverColor;
+
+  /// Whether to decorate text with the link color.
+  final bool decorateTextColor;
+
+  /// Whether to decorate icons with the link color when not hovered.
+  final bool decorateIconColor;
+
+  /// Whether to decorate icons with the hover color when hovered.
+  final bool decorateIconHoverColor;
 
   /// Whether to decorate text with a underline.
   final bool underline;
@@ -35,48 +48,70 @@ class ClickableLink extends StatelessWidget {
   final Widget child;
 
   @override
+  State<ClickableLink> createState() => _ClickableLinkState();
+}
+
+class _ClickableLinkState extends State<ClickableLink> {
+  bool _hovering = false;
+
+  @override
   Widget build(BuildContext context) {
-    if(url == null && onTap == null) {
+    if(widget.url == null && widget.onTap == null) {
       throw ArgumentError("url and onTap cannot both be null");
     }
 
     Color? linkColor;
-    if(decorateColor) {
-      linkColor = color ?? ThemeColors.linkColor(context);
+    if(widget.decorateTextColor) {
+      linkColor = widget.color ?? ThemeColors.linkColor(context);
     }
 
+    Color? iconColor;
+    if(widget.decorateIconColor) {
+      if(widget.hoverColor != null && widget.decorateIconHoverColor && _hovering) {
+        iconColor = widget.hoverColor;
+      }
+      else if(!_hovering) {
+        iconColor = linkColor;
+      }
+    }
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
+      onEnter: (event) => setState(() => _hovering = true),
+      onExit: (event) => setState(() => _hovering = false),
       child: GestureDetector(
         onTap: () {
-          if(url != null) {
-            launchUrl(url!);
+          if(widget.url != null) {
+            launchUrl(widget.url!);
           }
           else {
-            onTap!();
+            widget.onTap!();
           }
         },
         child: Theme(
           data: Theme.of(context).copyWith(
-          textTheme: Theme.of(context).textTheme.copyWith(
-            bodyLarge: Theme.of(context).textTheme.bodyLarge!.copyWith(
-              color: linkColor,
-              decoration: underline ? TextDecoration.underline : null,
-              decorationColor: linkColor,
+            iconTheme: iconColor != null ? Theme.of(context).iconTheme.copyWith(
+              color: iconColor,
+            ) : null,
+            textTheme: Theme.of(context).textTheme.copyWith(
+              bodyLarge: Theme.of(context).textTheme.bodyLarge!.copyWith(
+                color: linkColor,
+                decoration: widget.underline ? TextDecoration.underline : null,
+                decorationColor: linkColor,
+              ),
+              bodyMedium: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                color: linkColor,
+                decoration: widget.underline ? TextDecoration.underline : null,
+                decorationColor: linkColor,
+              ),
+              bodySmall: Theme.of(context).textTheme.bodySmall!.copyWith(
+                color: linkColor,
+                decoration: widget.underline ? TextDecoration.underline : null,
+                decorationColor: linkColor,
+              ),
             ),
-            bodyMedium: Theme.of(context).textTheme.bodyMedium!.copyWith(
-              color: linkColor,
-              decoration: underline ? TextDecoration.underline : null,
-              decorationColor: linkColor,
-            ),
-            bodySmall: Theme.of(context).textTheme.bodySmall!.copyWith(
-              color: linkColor,
-              decoration: underline ? TextDecoration.underline : null,
-              decorationColor: linkColor,
-            ),
-          ),
-        ), child: child),
+          ), child: widget.child
+        ),
       ),
     );
   }

@@ -177,6 +177,16 @@ class FutureMatch {
   /// Mappings of registrations to known shooters for this match.
   final mappings = IsarLinks<MatchRegistrationMapping>();
 
+  /// Check if a mapping exists for a given registration.
+  bool hasMappingFor(MatchRegistration registration) {
+    return mappings.any((m) => m.matchesRegistration(registration));
+  }
+
+  /// Get a mapping for a given registration, if it exists.
+  MatchRegistrationMapping? getMappingFor(MatchRegistration registration) {
+    return mappings.firstWhereOrNull((m) => m.matchesRegistration(registration));
+  }
+
   FutureMatch({
     required this.matchId,
     required this.eventName,

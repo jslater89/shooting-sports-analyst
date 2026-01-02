@@ -5,6 +5,7 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/ui/colors.dart';
 
 class ScoreRow extends StatefulWidget {
@@ -13,7 +14,9 @@ class ScoreRow extends StatefulWidget {
   final Color? color;
   final int? index;
   final Color? textColor;
+  final Color? iconColor;
   final Color? hoverColor;
+  final Color? hoverIconColor;
   final bool hoverEnabled;
   final Color? hoverTextColor;
   final bool bold;
@@ -30,8 +33,10 @@ class ScoreRow extends StatefulWidget {
     this.color,
     this.textColor,
     this.hoverColor,
+    this.iconColor,
     this.hoverEnabled = true,
     this.hoverTextColor,
+    this.hoverIconColor,
     this.edited,
     this.useSurfaceColors = false,
   }) : super(key: key);
@@ -66,6 +71,8 @@ class _ScoreRowState extends State<ScoreRow> {
     }
 
     Color hoverColor = widget.hoverColor ?? Theme.of(context).colorScheme.primary;
+    Color? iconColor = widget.iconColor ?? Theme.of(context).iconTheme.color;
+    Color? hoverIconColor = widget.hoverIconColor ?? Theme.of(context).colorScheme.onPrimary;
     Color? textColor = widget.textColor ?? Theme.of(context).textTheme.bodyMedium!.color;
     Color hoverTextColor = widget.hoverTextColor ?? Theme.of(context).colorScheme.onPrimary;
 
@@ -82,32 +89,44 @@ class _ScoreRowState extends State<ScoreRow> {
         _hover = false;
       }),
       child: Container(
-          color: _hover && widget.hoverEnabled ? hoverColor : background,
-          child: Theme(
-            child: Builder(
-              builder: (context) {
-                return DefaultTextStyle(
-                  style: widget.bold ?
-                      Theme.of(context).textTheme.bodyLarge! :
-                      Theme.of(context).textTheme.bodyMedium!,
-                  child: widget.child!,
-                );
-              }
+        color: _hover && widget.hoverEnabled ? hoverColor : background,
+        child: Theme(
+          child: Builder(
+            builder: (context) {
+              return DefaultTextStyle(
+                style: widget.bold ?
+                    Theme.of(context).textTheme.bodyLarge! :
+                    Theme.of(context).textTheme.bodyMedium!,
+                child: widget.child!,
+              );
+            }
+          ),
+          data: baseTheme.copyWith(
+            iconTheme: baseTheme.iconTheme.copyWith(
+              color: _hover && widget.hoverEnabled ? hoverIconColor : iconColor,
             ),
-            data: baseTheme.copyWith(
-              textTheme: baseTheme.textTheme.copyWith(
-                bodyLarge: baseTheme.textTheme.bodyMedium!.copyWith(
-                  color: _hover && widget.hoverEnabled ? hoverTextColor : textColor,
-                  fontWeight: FontWeight.w500,
-                ),
-                bodyMedium: baseTheme.textTheme.bodyMedium!.copyWith(
-                  color: _hover && widget.hoverEnabled ? hoverTextColor : textColor,
-                ),
-              )
-            ),
-          )
+            textTheme: baseTheme.textTheme.copyWith(
+              bodyLarge: baseTheme.textTheme.bodyMedium!.copyWith(
+                color: _hover && widget.hoverEnabled ? hoverTextColor : textColor,
+                fontWeight: FontWeight.w500,
+              ),
+              bodyMedium: baseTheme.textTheme.bodyMedium!.copyWith(
+                color: _hover && widget.hoverEnabled ? hoverTextColor : textColor,
+              ),
+            )
+          ),
+        )
       ),
     );
   }
+}
 
+class ScoreRowDivider extends StatelessWidget {
+  const ScoreRowDivider({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
+    return Divider(height: 2 * uiScaleFactor, thickness: 1 * uiScaleFactor, endIndent: 0, color: ThemeColors.onBackgroundColor(context));
+  }
 }

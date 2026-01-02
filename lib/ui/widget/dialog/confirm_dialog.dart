@@ -33,11 +33,23 @@ class ConfirmDialog extends StatelessWidget {
     );
   }
 
-  static Future<bool?> show(BuildContext context, {String? title, Widget? content, String? positiveButtonLabel, String? negativeButtonLabel, double? width, bool barrierDismissible = true}) async {
-    return showDialog<bool>(
-      context: context,
-      barrierDismissible: barrierDismissible,
-      builder: (context) => ConfirmDialog(title: title, content: content, positiveButtonLabel: positiveButtonLabel, negativeButtonLabel: negativeButtonLabel, width: width),
-    );
+  static Future<bool?> show(BuildContext context, {String? title, Widget? content, String? positiveButtonLabel, String? negativeButtonLabel, double? width, bool barrierDismissible = true, bool getRootTheme = false}) async {
+    BuildContext? rootContext;
+    if(getRootTheme) {
+      rootContext = Navigator.of(context, rootNavigator: true).context;
+    }
+    if(rootContext != null) {
+      return showDialog<bool>(
+        context: context,
+        barrierDismissible: barrierDismissible,
+        builder: (context) => Theme(
+          data: Theme.of(rootContext!),
+          child: ConfirmDialog(title: title, content: content, positiveButtonLabel: positiveButtonLabel, negativeButtonLabel: negativeButtonLabel, width: width),
+        )
+      );
+    }
+    else {
+      return showDialog<bool>(context: context, builder: (context) => ConfirmDialog(title: title, content: content, positiveButtonLabel: positiveButtonLabel, negativeButtonLabel: negativeButtonLabel, width: width));
+    }
   }
 }

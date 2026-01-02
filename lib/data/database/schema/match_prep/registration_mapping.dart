@@ -5,6 +5,7 @@
  */
 
 import 'package:isar_community/isar.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 part 'registration_mapping.g.dart';
@@ -42,6 +43,12 @@ class MatchRegistrationMapping {
   int? get squadNumber {
     var stringNumber = squad?.toLowerCase().replaceAll("squad", "").trim();
     return int.tryParse(stringNumber ?? "");
+  }
+
+  bool matchesRegistration(MatchRegistration registration) {
+    return registration.shooterName == shooterName
+      && registration.shooterDivisionName == shooterDivisionName
+      && registration.shooterClassificationName == shooterClassificationName;
   }
 
   MatchRegistrationMapping({

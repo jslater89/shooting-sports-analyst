@@ -559,6 +559,28 @@ class DbRatingProject with DbSportEntity implements RatingDataSource, EditableRa
   ShooterRating<RatingEvent> wrapDbRatingSync(DbShooterRating rating) {
     return settings.algorithm.wrapDbRating(rating);
   }
+
+  @override
+  Future<DataSourceResult<List<DbShooterRating>>> findShooterRatings(RatingGroup group, String name, {int limit = 10}) async {
+    try {
+      return DataSourceResult.ok(await AnalystDatabase().findShooterRatings(project: this, group: group, name: name, limit: limit));
+    }
+    catch(e) {
+      _log.e("Error finding shooter ratings: $e");
+      return DataSourceResult.err(DataSourceError.database);
+    }
+  }
+
+  @override
+  List<DbShooterRating> findShooterRatingsSync(RatingGroup group, String name, {int limit = 10}) {
+    try {
+      return AnalystDatabase().findShooterRatingsSync(project: this, group: group, name: name, limit: limit);
+    }
+    catch(e) {
+      _log.e("Error finding shooter ratings: $e");
+      return [];
+    }
+  }
 }
 
 @embedded

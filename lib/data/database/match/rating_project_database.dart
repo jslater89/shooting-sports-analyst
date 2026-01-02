@@ -316,15 +316,16 @@ extension RatingProjectDatabase on AnalystDatabase {
     required DbRatingProject project,
     required RatingGroup group,
     required String name,
+    int limit = 10,
   }) {
     if(name.length < 3) {
       return Future.value([]);
     }
     var processedName = ShooterDeduplicator.processNameString(name);
-    return isar.dbShooterRatings.filter()
-      .deduplicatorNameContains(processedName)
-      .project((q) => q.idEqualTo(project.id))
+    return project.ratings.filter()
       .group((q) => q.uuidEqualTo(group.uuid))
+      .deduplicatorNameContains(processedName)
+      .limit(limit)
       .findAll();
   }
 
@@ -335,15 +336,16 @@ extension RatingProjectDatabase on AnalystDatabase {
     required DbRatingProject project,
     required RatingGroup group,
     required String name,
+    int limit = 10,
   }) {
     if(name.length < 3) {
       return [];
     }
     var processedName = ShooterDeduplicator.processNameString(name);
-    return isar.dbShooterRatings.filter()
-      .deduplicatorNameContains(processedName)
-      .project((q) => q.idEqualTo(project.id))
+    return project.ratings.filter()
       .group((q) => q.uuidEqualTo(group.uuid))
+      .deduplicatorNameContains(processedName)
+      .limit(limit)
       .findAllSync();
   }
 

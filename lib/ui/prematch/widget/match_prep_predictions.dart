@@ -9,7 +9,8 @@ import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
-import 'package:shooting_sports_analyst/route/match_prep_page.dart';
+import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
+import 'package:shooting_sports_analyst/ui/prematch/match_prep_model.dart';
 import 'package:shooting_sports_analyst/ui/rater/prediction/prediction_view.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
@@ -26,7 +27,7 @@ class MatchPrepPredictions extends StatefulWidget {
   State<MatchPrepPredictions> createState() => _MatchPrepPredictionsState();
 }
 
-class _MatchPrepPredictionsState extends State<MatchPrepPredictions> {
+class _MatchPrepPredictionsState extends State<MatchPrepPredictions> with AutomaticKeepAliveClientMixin{
   late MatchPrepPageModel mainModel;
   late _MatchPrepPredictionsModel localModel;
 
@@ -48,6 +49,7 @@ class _MatchPrepPredictionsState extends State<MatchPrepPredictions> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     // rebuild on main model changes
     var mainModel = Provider.of<MatchPrepPageModel>(context);
     return ChangeNotifierProvider.value(
@@ -65,6 +67,9 @@ class _MatchPrepPredictionsState extends State<MatchPrepPredictions> {
       ),
     );
   }
+
+  @override
+  bool get wantKeepAlive => true;
 }
 
 class _PredictionsHeader extends StatefulWidget {
@@ -195,13 +200,9 @@ class _PredictionSetTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final outerModel = Provider.of<_MatchPrepPredictionsModel>(context);
-    var groupPredictions = outerModel.selectedPredictionSet?.algorithmPredictions.where((p) => p.group.value == group).toList();
-    var hydratedPredictions = groupPredictions?.map((p) => p.hydrate()).nonNulls.toList();
-    if(hydratedPredictions == null) {
-      return Center(child: Text("No predictions for ${group.name}"));
-    }
+    var groupPredictions = outerModel.getPredictionsForGroup(group);
     return ChangeNotifierProvider(
-      create: (context) => PredictionViewModel(initialPredictions: hydratedPredictions),
+      create: (context) => PredictionViewModel(initialPredictions: groupPredictions),
       child: PredictionListView(),
     );
   }
@@ -216,6 +217,17 @@ class _MatchPrepPredictionsModel extends ChangeNotifier {
   List<PredictionSet> get predictionSets => matchPrepModel.prep.predictionSets.toList();
   PredictionSet? selectedPredictionSet;
 
+  Map<RatingGroup, List<AlgorithmPrediction>> _algorithmPredictionCache = {};
+
+  List<AlgorithmPrediction> getPredictionsForGroup(RatingGroup group) {
+    if(_algorithmPredictionCache.containsKey(group)) {
+      return _algorithmPredictionCache[group]!;
+    }
+    var predictions = selectedPredictionSet?.algorithmPredictions.where((p) => p.group.value == group).toList();
+    _algorithmPredictionCache[group] = predictions?.map((p) => p.hydrate()).nonNulls.toList() ?? [];
+    return _algorithmPredictionCache[group]!;
+  }
+
   Future<void> reloadPredictionSets() async {
     await matchPrepModel.prep.predictionSets.load();
     notifyListeners();
@@ -223,6 +235,7 @@ class _MatchPrepPredictionsModel extends ChangeNotifier {
 
   void setSelectedPredictionSet(PredictionSet value) {
     selectedPredictionSet = value;
+    _algorithmPredictionCache.clear();
     notifyListeners();
   }
 
@@ -235,6 +248,7 @@ class _MatchPrepPredictionsModel extends ChangeNotifier {
     await matchPrepModel.deletePredictionSet(predictionSet);
     if(selectedPredictionSet == predictionSet) {
       selectedPredictionSet = null;
+      _algorithmPredictionCache.clear();
     }
     notifyListeners();
   }

@@ -11,19 +11,24 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
-import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
-import 'package:shooting_sports_analyst/route/match_prep_page.dart';
+import 'package:shooting_sports_analyst/ui/prematch/match_prep_model.dart';
 import 'package:shooting_sports_analyst/ui/rater/shooter_stats_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
-class MatchPrepSquadding extends StatelessWidget {
+class MatchPrepSquadding extends StatefulWidget {
   const MatchPrepSquadding({super.key});
 
   @override
+  State<MatchPrepSquadding> createState() => _MatchPrepSquaddingState();
+}
+
+class _MatchPrepSquaddingState extends State<MatchPrepSquadding> with AutomaticKeepAliveClientMixin{
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
     final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     return Consumer<MatchPrepPageModel>(
       builder: (context, model, child) {
@@ -59,6 +64,9 @@ class MatchPrepSquadding extends StatelessWidget {
       }
     );
   }
+
+  @override
+  bool get wantKeepAlive => true;
 }
 
 class _MatchPrepSquaddingSchedule extends StatelessWidget {
@@ -117,7 +125,7 @@ class _SquadCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     final competitors = model.futureMatch.getRegistrationsFor(model.sport, squads: [squad]);
-    competitors.sort(model.compareRegistrations);
+    competitors.sort(model.compareRegistrationNames);
 
     return Card(
       child: Padding(
@@ -202,7 +210,7 @@ class _CompetitorRow extends StatelessWidget {
     }
     else {
       return ClickableLink(
-        decorateColor: false,
+        decorateTextColor: false,
         underline: false,
         onTap: () {
           ShooterStatsDialog.show(context, rating, sport: model.sport);

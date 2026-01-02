@@ -2,6 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import 'dart:math';
+
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_source.dart';
 import 'package:shooting_sports_analyst/data/ranking/project_settings.dart';
@@ -59,6 +61,12 @@ class InMemoryCachedRatingSource implements PreloadedRatingDataSource {
     settings = await source.getSettings().unwrap();
     groups = await source.getGroups().unwrap();
     sport = await source.getSport().unwrap();
+  }
+
+  @override
+  List<DbShooterRating> findShooterRatingsSync(RatingGroup group, String name, {int limit = 10}) {
+    var result = ratings[group]?.values.where((r) => r.deduplicatorName.contains(name)).toList() ?? [];
+    return result.take(limit).toList();
   }
 
 }
