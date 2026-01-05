@@ -1,6 +1,8 @@
 import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/database/schema/db_entities.dart';
-import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
+import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_game.dart';
+import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_user.dart';
 import 'package:shooting_sports_analyst/data/database/util.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/probability.dart';
 
@@ -14,6 +16,21 @@ class DbWager {
   /// The prediction for the wager, or legs for a parlay.
   List<DbPrediction> legs;
 
+  /// The match prep this wager is part of.
+  final matchPrep = IsarLink<MatchPrep>();
+
+  /// The game this wager is part of.
+  final game = IsarLink<PredictionGame>();
+
+  /// The user that made this wager.
+  final user = IsarLink<PredictionGameUser>();
+
+  /// The transaction that recorded the wager.
+  final wagerTransaction = IsarLink<PredictionGameTransaction>();
+
+  /// The transaction that recorded the payout.
+  final payoutTransaction = IsarLink<PredictionGameTransaction>();
+
   /// Whether this is a parlay.
   bool get isParlay => legs.length > 1;
 
@@ -21,10 +38,30 @@ class DbWager {
   /// (If it's a single leg, the probability is in the prediction.)
   DbProbability? parlayProbability;
 
+  /// The probability of the wager.
   @ignore
   DbProbability get wagerProbability => isParlay ? parlayProbability! : legs.first.probability;
 
+  /// The amount of the wager.
   double amount;
+
+  double payout({bool roundToMoneyline = true}) {
+    if(!roundToMoneyline) {
+      return amount * wagerProbability.decimalOdds;
+    }
+    else {
+      var moneylineOddsDouble = double.parse(wagerProbability.moneylineOdds);
+      if(moneylineOddsDouble > 0) {
+        return amount + (amount * moneylineOddsDouble) / 100;
+      }
+      else {
+        return amount + (amount * 100) / moneylineOddsDouble.abs();
+      }
+    }
+  }
+
+  @enumerated
+  DbWagerStatus status = DbWagerStatus.pending;
 
   DbWager({
     required this.legs,
@@ -156,4 +193,15 @@ enum DbPredictionType {
   place,
   percentage,
   spread;
+}
+
+enum DbWagerStatus {
+  /// The wagered event has not yet occurred.
+  pending,
+  /// The wager was won.
+  won,
+  /// The wager was lost.
+  lost,
+  /// The wager was voided and refunded.
+  voided;
 }

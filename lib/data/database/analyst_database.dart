@@ -23,12 +23,16 @@ import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.da
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
+import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_game.dart';
+import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_user.dart';
+import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
 import 'package:shooting_sports_analyst/data/database/schema/preferences.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration_mapping.dart';
+import 'package:shooting_sports_analyst/data/database/schema/server/user.dart';
 import 'package:shooting_sports_analyst/data/database/util.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/idpa.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
@@ -109,6 +113,9 @@ class AnalystDatabase {
           PredictionSetSchema,
           DbAlgorithmPredictionSchema,
 
+          // Server collections
+          UserSchema,
+
           // Fantasy-related collections
           FantasyUserSchema,
           LeagueSchema,
@@ -124,6 +131,12 @@ class AnalystDatabase {
           PlayerMonthlyPerformanceSchema,
           MonthlyRosterSchema,
           RosterAssignmentSchema,
+
+          // Prediction game-related collections
+          PredictionGameSchema,
+          PredictionGameUserSchema,
+          DbWagerSchema,
+          PredictionGameTransactionSchema,
         ],
         maxSizeMiB: 1024 * 32,
         directory: db.path,

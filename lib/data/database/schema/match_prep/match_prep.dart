@@ -7,6 +7,7 @@
 import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
+import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_game.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
@@ -37,6 +38,9 @@ class MatchPrep {
 
   /// Prediction sets for this match prep.
   final predictionSets = IsarLinks<PredictionSet>();
+
+  /// The games that use this match prep.
+  final games = IsarLinks<PredictionGame>();
 
   MatchPrep({
     required this.matchId,
