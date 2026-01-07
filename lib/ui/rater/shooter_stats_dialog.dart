@@ -17,7 +17,6 @@ import 'package:shooting_sports_analyst/data/ranking/interface/rating_data_sourc
 import 'package:shooting_sports_analyst/data/ranking/model/career_stats.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_rating_event.dart';
-import 'package:shooting_sports_analyst/data/ranking/raters/glicko2/glicko2_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/openskill/openskill_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
@@ -863,7 +862,7 @@ class _ShooterStatsDialogState extends State<ShooterStatsDialog> {
       Row(
         children: [
           Expanded(flex: 2, child: Text("Hit percentages", style: Theme.of(context).textTheme.bodyMedium)),
-          Expanded(flex: 4, child: Text(displayedStats.totalScore?.hitPercentages(sport) ?? "",
+          Expanded(flex: 4, child: Text(displayedStats.totalScore?.hitPercentagesText(sport) ?? "",
               style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.right)),
         ],
       ),
@@ -982,56 +981,5 @@ class _StatefulContainerState extends State<_StatefulContainer> {
       color: highlighted ? bgColor.withOpacity(0.1) : null,
       child: widget.child,
     );
-  }
-}
-
-extension _HitPercentagesText on RawScore {
-  String hitPercentages(Sport sport) {
-    List<String> entries = [];
-    var totalCount = this.targetEventCount;
-    Map<String, int> eventCountsByName = {};
-    var sortedEvents = this.targetEvents.entries.sorted((a, b) => a.key.sortOrder.compareTo(b.key.sortOrder));
-    for(var entry in sortedEvents) {
-      var event = entry.key;
-      var count = entry.value;
-      eventCountsByName.incrementBy(event.name, count);
-    }
-
-    var powerFactor = sport.defaultPowerFactor;
-    for(var entry in eventCountsByName.entries) {
-      var event = powerFactor.targetEvents.lookupByName(entry.key);
-      if(event != null && event.displayInOverview) {
-        entries.add("${(entry.value / totalCount).asPercentage(decimals: 1)} ${event.shortDisplayName}");
-      }
-    }
-
-    return entries.join(", ");
-  }
-
-  String scoringEventText(Sport sport) {
-    var message = StringBuffer();
-    Map<String, int> eventCountsByName = {};
-    var sortedEvents = this.targetEvents.entries.sorted((a, b) => a.key.sortOrder.compareTo(b.key.sortOrder));
-    for(var entry in sortedEvents) {
-      var event = entry.key;
-      var count = entry.value;
-      eventCountsByName.incrementBy(event.name, count);
-    }
-
-    var powerFactor = sport.defaultPowerFactor;
-    for(var entry in eventCountsByName.entries) {
-      var event = powerFactor.targetEvents.lookupByName(entry.key);
-      var count = entry.value;
-      if(event != null && event.displayInOverview) {
-        if(sport.displaySettings.eventNamesAsSuffix) {
-          message.write("$count${event.shortDisplayName} ");
-        }
-        else {
-          message.write("${event.shortDisplayName}: $count ");
-        }
-      }
-    }
-
-    return message.toString();
   }
 }

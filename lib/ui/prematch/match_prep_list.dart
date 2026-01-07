@@ -37,7 +37,7 @@ class _MatchPrepListState extends State<MatchPrepList> {
           var prep = model.matchPreps[index];
           return ListTile(
             title: Text(prep.futureMatch.value!.eventName),
-            subtitle: Text(programmerYmdFormat.format(prep.matchDate)),
+            subtitle: Text("${programmerYmdFormat.format(prep.matchDate)} - ${prep.ratingProject.value!.name}"),
             onTap: () {
               Navigator.of(context).push(MaterialPageRoute(builder: (context) => MatchPrepPage(prep: prep)));
             },
