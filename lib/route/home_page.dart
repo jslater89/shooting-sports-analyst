@@ -282,8 +282,8 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.cloud_upload, size: 230, color: Colors.grey,),
-            Text("Upload a report.txt file from your device", style: Theme
+            Icon(Icons.save_alt, size: 230, color: Colors.grey,),
+            Text("Import a match file from your device", style: Theme
                 .of(context)
                 .textTheme
                 .titleMedium!
