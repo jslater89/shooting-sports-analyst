@@ -21,6 +21,7 @@ import 'package:shooting_sports_analyst/route/broadcast_booth_page.dart';
 import 'package:shooting_sports_analyst/route/match_database_manager.dart';
 import 'package:shooting_sports_analyst/route/match_prep_list_page.dart';
 import 'package:shooting_sports_analyst/route/practiscore_url.dart';
+import 'package:shooting_sports_analyst/route/prediction_game_list_page.dart';
 import 'package:shooting_sports_analyst/ui/empty_scaffold.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/app_settings.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
@@ -127,18 +128,24 @@ class _HomePageState extends State<HomePage> {
         width: size.width,
         child: size.width > 800 ? Padding(
           padding: const EdgeInsets.all(8.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.max,
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: _selectButtons(column: false),
-              ),
-              SizedBox(height: 60),
-              if(HtmlOr.isDesktop) _desktopLinks(column: false),
-            ],
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(height: 30),
+                Row(
+                  mainAxisSize: MainAxisSize.max,
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: _selectButtons(column: false),
+                ),
+                SizedBox(height: 60),
+                if(HtmlOr.isDesktop) _desktopLinks(column: false),
+                if(HtmlOr.isDesktop) SizedBox(height: 60),
+                if(HtmlOr.isDesktop) ..._additionalLinks(column: false),
+                SizedBox(height: 30),
+              ],
+            ),
           ),
         ) : SingleChildScrollView(
           child: Column(
@@ -146,6 +153,7 @@ class _HomePageState extends State<HomePage> {
             children: [
               ..._selectButtons(column: true),
               if(HtmlOr.isDesktop) _desktopLinks(column: true),
+              if(HtmlOr.isDesktop) ..._additionalLinks(column: true)
             ]
           ),
         ),
@@ -205,7 +213,7 @@ class _HomePageState extends State<HomePage> {
                 .titleMedium!
                 .apply(color: Colors.grey),
                 textAlign: TextAlign.center,
-                ),
+              ),
           ],
         ),
       ),
@@ -230,6 +238,31 @@ class _HomePageState extends State<HomePage> {
         ],
       );
     }
+  }
+
+  List<Widget> _additionalLinks({required bool column}) {
+    var children = <Widget>[
+      GestureDetector(
+        onTap: () async {
+          Navigator.of(context).push(MaterialPageRoute(builder: (context) => PredictionGameListPage()));
+        },
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.sports_score, size: 230, color: Colors.grey,),
+            Text("View prediction games", style: Theme
+                .of(context)
+                .textTheme
+                .titleMedium!
+                .apply(color: Colors.grey),
+                textAlign: TextAlign.center,
+              ),
+          ],
+        ),
+      ),
+    ];
+
+    return children;
   }
 
   List<Widget> _selectButtons({bool column = false}) {
