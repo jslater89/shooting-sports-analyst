@@ -52,26 +52,35 @@ abstract class ShooterDeduplicator {
     bool verbose = false
   });
 
+  /// A regex that matches all non-alphanumeric characters, including accented characters and
+  /// non-Latin glyphs.
+  static final _nonAlphaNumericRegex = RegExp(r"[^\p{L}\p{N}]", unicode: true);
+
   /// Process a shooter's name into a deduplicator name.
   ///
   /// This currently converts to lowercase, removes all whitespace, and removes all
-  /// non-alphanumeric characters, including accented characters.
+  /// non-alphanumeric characters (where 'alphabetic' means 'has the Unicode letter property').
   static String processName(Shooter shooter) {
     var lowercaseName = shooter.name.toLowerCase();
     if(_processNameCache.containsKey(lowercaseName)) return _processNameCache[lowercaseName]!;
 
     String name = "${lowercaseName.replaceAll(RegExp(r"\s+"), "")}";
-    name = name.replaceAll(RegExp(r"[^a-zA-Z0-9]"), "");
+    name = name.replaceAll(_nonAlphaNumericRegex, "");
 
     _processNameCache[lowercaseName] = name;
 
     return name;
   }
+
+  /// Process a string into a deduplicator name.
+  ///
+  /// This currently converts to lowercase, removes all whitespace, and removes all
+  /// non-alphanumeric characters (where 'alphabetic' means 'has the Unicode letter property').
   static String processNameString(String name) {
     if(_processNameCache.containsKey(name)) return _processNameCache[name]!;
 
     String processed = "${name.toLowerCase().replaceAll(RegExp(r"\s+"), "")}";
-    processed = processed.replaceAll(RegExp(r"[^a-zA-Z0-9]"), "");
+    processed = processed.replaceAll(_nonAlphaNumericRegex, "");
 
     return processed;
   }

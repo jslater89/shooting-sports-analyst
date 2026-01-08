@@ -4,6 +4,7 @@ import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/colors.dart';
 import 'package:shooting_sports_analyst/ui/prematch/dialog/find_rating_dialog.dart';
 import 'package:shooting_sports_analyst/ui/prematch/match_prep_model.dart';
@@ -11,6 +12,8 @@ import 'package:shooting_sports_analyst/ui/rater/shooter_stats_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/ui/widget/score_row.dart';
+
+final _log = SSALogger("MatchPrepRatingLinks");
 
 class MatchPrepRatingLinks extends StatefulWidget {
   const MatchPrepRatingLinks({super.key, required this.groups});
@@ -63,7 +66,7 @@ class _RatingLinksTab extends StatelessWidget {
 
         return Column(
           children: [
-            _RatingLinksKey(),
+            _RatingLinksKey(group: group),
             Expanded(
               child: ListView.builder(
                 itemBuilder: (context, index) => _RatingLinksEntry(model: model, index: index, entry: filteredEntries[index], group: group),
@@ -102,7 +105,9 @@ class _RatingLinksKey extends StatelessWidget {
 
   static const _linkedRatingFlex = 3;
   static const _actionsFlex = 1;
-  const _RatingLinksKey();
+
+  final RatingGroup group;
+  const _RatingLinksKey({required this.group});
 
   @override
   Widget build(BuildContext context) {
@@ -118,6 +123,20 @@ class _RatingLinksKey extends StatelessWidget {
             SizedBox(width: 12 * uiScaleFactor),
             Checkbox(value: model.showUnlinked, onChanged: (value) => model.setShowUnlinked(value ?? false)),
             ClickableLink(decorateTextColor: false, underline: false, onTap: () => model.setShowUnlinked(!model.showUnlinked), child: Text("Show unlinked")),
+            SizedBox(width: 12 * uiScaleFactor),
+            Tooltip(
+              message: "Attempt to find ratings in the database for unmatched registrations",
+              child: TextButton(
+                child: Text("Match from database"),
+                onPressed: () async {
+                  var outerModel = context.read<MatchPrepPageModel>();
+                  var match = outerModel.futureMatch;
+                  var project = outerModel.ratingProject;
+                  var (matched, unmatched) = await match.matchRegistrationsToRatingsFromDatabase(outerModel.sport, project, group);
+                  _log.i("Matched $matched registrations out of $unmatched unmatched registrations for group ${group.name}");
+                },
+              ),
+            )
           ],
         ),
         Padding(

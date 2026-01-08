@@ -13,11 +13,15 @@ import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration_mapping.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 part 'match.g.dart';
+
+final _log = SSALogger("FutureMatch");
 
 /// A FutureMatch is a match that has not yet occurred, including information about registration
 /// and predictions. Its database ID is a stable hash of the match ID string, so it is stable
@@ -115,6 +119,8 @@ class FutureMatch {
 
   /// Attempt to match registrations (optionally for a given rating group) to known
   /// competitors from a list of possible shooter ratings, by comparing name, division, and classification.
+  ///
+  /// Saves updated registrations to the database.
   Future<void> matchRegistrationsToRatings(Sport sport, List<ShooterRating> ratings, {RatingGroup? group}) async {
     var unmatched = getUnmatchedRegistrationsFor(sport, group);
 
@@ -134,6 +140,41 @@ class FutureMatch {
     if(updateRequired.isNotEmpty) {
       await AnalystDatabase().saveMatchRegistrations(updateRequired);
     }
+  }
+
+  /// Attempt to match registrations from the given rating group to known competitors
+  /// in the given rating project, by comparing deduplicator name and classification.
+  ///
+  /// Returns a tuple of the number of registrations matched and the number of unmatched registrations
+  /// at the start of the process.
+  Future<(int, int)> matchRegistrationsToRatingsFromDatabase(Sport sport, DbRatingProject project, RatingGroup group) async {
+
+    List<MatchRegistration> unmatched = getUnmatchedRegistrationsFor(sport, group);
+
+    List<MatchRegistration> updateRequired = [];
+    for(var registration in unmatched) {
+      if(registration.shooterName == null) {
+        continue;
+      }
+      var processedName = ShooterDeduplicator.processNameString(registration.shooterName!);
+      var ratings = await project.getRatingsByDeduplicatorName(group, processedName);
+      if(ratings.isErr()) {
+        _log.w("Error getting ratings for deduplicator name $processedName", error: ratings.unwrapErr());
+        continue;
+      }
+      for(var rating in ratings.unwrap()) {
+        var registrationClassification = sport.classifications.lookupByName(registration.shooterClassificationName);
+        if(rating.lastClassification?.name == registrationClassification?.name) {
+          registration.shooterMemberNumbers = rating.knownMemberNumbers.toList();
+          updateRequired.add(registration);
+        }
+      }
+    }
+
+    if(updateRequired.isNotEmpty) {
+      await AnalystDatabase().saveMatchRegistrations(updateRequired);
+    }
+    return (updateRequired.length, unmatched.length);
   }
 
   /// Update the saved registrations for this match from its saved mappings.
