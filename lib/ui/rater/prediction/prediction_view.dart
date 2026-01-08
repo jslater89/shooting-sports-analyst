@@ -617,7 +617,6 @@ class PredictionListRow extends StatelessWidget {
 class PredictionListView extends StatelessWidget {
   PredictionListView({super.key});
 
-
   @override
   Widget build(BuildContext context) {
     var model = Provider.of<PredictionViewModel>(context);

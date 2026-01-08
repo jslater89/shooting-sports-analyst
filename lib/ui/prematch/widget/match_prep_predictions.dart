@@ -10,10 +10,13 @@ import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/ui/prematch/match_prep_model.dart';
 import 'package:shooting_sports_analyst/ui/rater/prediction/prediction_view.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
+
+final _log = SSALogger("MatchPrepPredictions");
 
 /// The predictions tab displays prediction sets from the match prep.
 class MatchPrepPredictions extends StatefulWidget {
@@ -172,7 +175,7 @@ class _PredictionsHeaderState extends State<_PredictionsHeader> {
         if(model.selectedPredictionSet != null) TabBar(
           tabs: model.matchPrepModel.ratingProject.groups.map((g) => Tab(text: g.name)).toList(),
         ),
-      ]
+      ],
     );
   }
 }
@@ -193,16 +196,44 @@ class _PredictionBody extends StatelessWidget {
   }
 }
 
-class _PredictionSetTab extends StatelessWidget {
+class _PredictionSetTab extends StatefulWidget {
   const _PredictionSetTab({required this.group});
   final RatingGroup group;
 
   @override
+  State<_PredictionSetTab> createState() => _PredictionSetTabState();
+}
+
+class _PredictionSetTabState extends State<_PredictionSetTab> {
+  late PredictionViewModel model;
+  late int lastPredictionSetId;
+  late String lastRatingGroupUuid;
+
+  @override
+  void initState() {
+    super.initState();
+    var outerModel = context.read<_MatchPrepPredictionsModel>();
+    lastPredictionSetId = outerModel.selectedPredictionSet?.id ?? 0;
+    lastRatingGroupUuid = widget.group.uuid;
+    var groupPredictions = outerModel.getPredictionsForGroup(widget.group);
+    model = PredictionViewModel(matchId: outerModel.matchPrepModel.futureMatch.matchId, initialPredictions: groupPredictions, showWager: true);
+  }
+
+  void updatePredictionViewModel(_MatchPrepPredictionsModel outerModel) {
+    if(outerModel.selectedPredictionSet?.id != lastPredictionSetId || widget.group.uuid != lastRatingGroupUuid) {
+      lastPredictionSetId = outerModel.selectedPredictionSet?.id ?? 0;
+      lastRatingGroupUuid = widget.group.uuid;
+      var groupPredictions = outerModel.getPredictionsForGroup(widget.group);
+      model.setPredictions(groupPredictions, notify: false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final outerModel = Provider.of<_MatchPrepPredictionsModel>(context);
-    var groupPredictions = outerModel.getPredictionsForGroup(group);
-    return ChangeNotifierProvider(
-      create: (context) => PredictionViewModel(matchId: outerModel.matchPrepModel.futureMatch.matchId, initialPredictions: groupPredictions, showWager: true),
+    var outerModel = Provider.of<_MatchPrepPredictionsModel>(context);
+    updatePredictionViewModel(outerModel);
+    return ChangeNotifierProvider.value(
+      value: model,
       child: PredictionListView(),
     );
   }
