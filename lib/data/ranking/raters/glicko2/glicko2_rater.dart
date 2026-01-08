@@ -333,6 +333,13 @@ class Glicko2Rater extends RatingSystem<Glicko2Rating, Glicko2Settings> {
   @override
   bool get predictionsOutputRatios => true;
 
+  double glickoExpectedScore(double displayRating1, double displayRating2, double displayRD2) {
+    var internalRating1 = displayRating1 / settings.scalingFactor;
+    var internalRating2 = displayRating2 / settings.scalingFactor;
+    var internalRD2 = displayRD2 / settings.scalingFactor;
+    return _glickoE(internalRating1, internalRating2, internalRD2);
+  }
+
   @override
   List<AlgorithmPrediction> predict(List<ShooterRating> ratings, {int? seed, DateTime? matchDate}) {
     /*

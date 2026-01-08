@@ -42,6 +42,7 @@ import 'package:shooting_sports_analyst/util.dart';
 import 'package:shooting_sports_analyst/version.dart';
 
 import 'db_oneoff_impl/check_location_proportion.dart';
+import 'db_oneoff_impl/glicko2_rating_gap_command.dart';
 import 'db_oneoff_impl/prediction_percentages.dart';
 import 'db_oneoff_impl/predictions_to_odds.dart';
 import 'db_oneoff_impl/stacked_labeled_progress_bar_test.dart';
@@ -126,20 +127,21 @@ Future<void> main(List<String> args) async {
     // EloInflationAnalysisCommand(db),
     // SpeedAccuracyBifectaCommand(db),
     // TiesCommand(db),
-    FindMiffTestMatchesCommand(db),
+    // FindMiffTestMatchesCommand(db),
     //EloInflationAnalysisCommand(db),
     //SpeedAccuracyBifectaCommand(db),
     //TiesCommand(db),
     ImportMatchCommand(db),
-    CheckLocationProportionCommand(db),
-    StateShootersCommand(db),
+    // CheckLocationProportionCommand(db),
+    // StateShootersCommand(db),
     ImportMiffsCommand(db),
     ExportMiffsCommand(db),
-    FindAdrianRandleCommand(db),
-    SetMatchDatesCommand(db),
-    LadyRatingAnalysisCommand(db),
-    FixFutureMatchSportNamesCommand(db),
+    // FindAdrianRandleCommand(db),
+    // SetMatchDatesCommand(db),
+    // LadyRatingAnalysisCommand(db),
+    // FixFutureMatchSportNamesCommand(db),
     OpenStyleAnalysisCommand(db),
+    Glicko2RatingGapCommand(db),
     QuitCommand(),
   ], menuHeader: "DB Oneoffs ${VersionInfo.version}", commandSelected: (command) async {
     switch(command.command?.runtimeType) {
