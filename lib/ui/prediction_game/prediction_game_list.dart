@@ -9,23 +9,36 @@ import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/prediction_game.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_game.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
-class PredictionGameList extends StatefulWidget {
+class PredictionGameList extends StatelessWidget {
   const PredictionGameList({super.key});
 
-  @override
-  State<PredictionGameList> createState() => _PredictionGameListState();
-}
-
-class _PredictionGameListState extends State<PredictionGameList> {
   @override
   Widget build(BuildContext context) {
     return Consumer<PredictionGameListModel>(
       builder: (context, model, child) {
         return ListView.builder(
-          itemBuilder: (context, index) => ListTile(
-            title: Text("Prediction Game $index")
-          ),
+          itemBuilder: (context, index) {
+            var predictionGame = model.predictionGames[index];
+            List<String> subtitleParts = [];
+            if(predictionGame.start != null) {
+              subtitleParts.add("Start: ${programmerYmdFormat.format(predictionGame.start!)}");
+            }
+            if(predictionGame.end != null) {
+              subtitleParts.add("End: ${programmerYmdFormat.format(predictionGame.end!)}");
+            }
+            String? subtitle;
+            if(subtitleParts.isNotEmpty) {
+              subtitle = subtitleParts.join(" - ");
+            }
+            return ListTile(
+              title: Text(predictionGame.name),
+              subtitle: subtitle != null ? Text(subtitle) : null,
+              onTap: () {
+              },
+            );
+          },
           itemCount: model.predictionGames.length,
         );
       }
