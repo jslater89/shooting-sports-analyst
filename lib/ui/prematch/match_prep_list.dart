@@ -16,7 +16,9 @@ import 'package:shooting_sports_analyst/util.dart';
 ///
 /// Requires a [MatchPrepListModel] to be provided.
 class MatchPrepList extends StatefulWidget {
-  const MatchPrepList({super.key});
+  MatchPrepList({super.key, this.onMatchPrepSelected});
+
+  final void Function(MatchPrep)? onMatchPrepSelected;
 
   @override
   State<MatchPrepList> createState() => _MatchPrepListState();
@@ -39,7 +41,12 @@ class _MatchPrepListState extends State<MatchPrepList> {
             title: Text(prep.futureMatch.value!.eventName),
             subtitle: Text("${programmerYmdFormat.format(prep.matchDate)} - ${prep.ratingProject.value!.name}"),
             onTap: () {
-              Navigator.of(context).push(MaterialPageRoute(builder: (context) => MatchPrepPage(prep: prep)));
+              if(widget.onMatchPrepSelected != null) {
+                widget.onMatchPrepSelected!(prep);
+              }
+              else {
+                Navigator.of(context).push(MaterialPageRoute(builder: (context) => MatchPrepPage(prep: prep)));
+              }
             },
           );
         },

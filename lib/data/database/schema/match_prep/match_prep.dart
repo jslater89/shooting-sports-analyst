@@ -39,6 +39,10 @@ class MatchPrep {
   /// Prediction sets for this match prep.
   final predictionSets = IsarLinks<PredictionSet>();
 
+  PredictionSet? latestPredictionSet() {
+    return predictionSets.filter().sortByCreatedDesc().findFirstSync();
+  }
+
   /// The games that use this match prep.
   final games = IsarLinks<PredictionGame>();
 

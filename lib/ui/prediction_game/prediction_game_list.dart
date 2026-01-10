@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/prediction_game.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_game.dart';
+import 'package:shooting_sports_analyst/route/prediction_game_page.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 class PredictionGameList extends StatelessWidget {
@@ -36,6 +37,8 @@ class PredictionGameList extends StatelessWidget {
               title: Text(predictionGame.name),
               subtitle: subtitle != null ? Text(subtitle) : null,
               onTap: () {
+                Navigator.of(context).push(MaterialPageRoute(builder: (context) =>
+                  PredictionGamePage(predictionGame: predictionGame)));
               },
             );
           },
@@ -51,7 +54,7 @@ class PredictionGameListModel extends ChangeNotifier {
   List<PredictionGame> predictionGames = [];
 
   Future<void> load() async {
-    predictionGames = await db.getPredictionGames();
+    predictionGames = await db.getAllPredictionGames();
     notifyListeners();
   }
 }

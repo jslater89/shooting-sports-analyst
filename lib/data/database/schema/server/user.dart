@@ -8,7 +8,7 @@ import 'dart:math';
 
 import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/fantasy_user.dart';
-import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_user.dart';
+import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_player.dart';
 
 part 'user.g.dart';
 
@@ -20,7 +20,7 @@ class User {
   Id id = Isar.autoIncrement;
 
   final fantasyUser = IsarLink<FantasyUser>();
-  final predictionGameUser = IsarLink<PredictionGameUser>();
+  final predictionGamePlayer = IsarLink<PredictionGamePlayer>();
 
   String username;
   String email;

@@ -17,18 +17,36 @@ import 'package:shooting_sports_analyst/data/ranking/prediction/odds/wager.dart'
 import 'package:shooting_sports_analyst/ui/widget/maybe_tooltip.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
-class WagerDialog extends StatefulWidget {
-  const WagerDialog({super.key, required this.predictions, required this.matchId});
+/// Result of a [WagerDialog]. It will be either a list of independent wagers or a parlay.
+///
+/// [independentWagers] is a list of independent wagers, each of which is a single prediction.
+///
+/// [parlay] is a parlay of multiple wagers.
+class WagerDialogResult {
+  final List<Wager>? independentWagers;
+  final Parlay? parlay;
 
+  bool get isParlay => parlay != null;
+  bool get isIndependentWagers => independentWagers != null;
+
+  WagerDialogResult({this.independentWagers, this.parlay});
+}
+
+/// Show a dialog to edit a list of wagers. Pops a [WagerDialogResult].
+class WagerDialog extends StatefulWidget {
+  const WagerDialog({super.key, required this.predictions, required this.matchId, this.title});
+
+  final String? title;
   final String matchId;
   final List<AlgorithmPrediction> predictions;
 
-  static Future<List<Wager>?> show(BuildContext context, {required List<AlgorithmPrediction> predictions, required String matchId}) async {
-    return showDialog<List<Wager>>(
+  static Future<WagerDialogResult?> show(BuildContext context, {required List<AlgorithmPrediction> predictions, required String matchId, String? title}) async {
+    return showDialog<WagerDialogResult>(
       context: context,
       builder: (context) => WagerDialog(
         predictions: predictions,
-        matchId: matchId
+        matchId: matchId,
+        title: title,
       ),
       barrierDismissible: false
     );
@@ -117,7 +135,7 @@ class _WagerDialogState extends State<WagerDialog> {
     final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     var parlayValidity = _parlay != null ? _parlay!.checkValidity(fieldSize: _shootersToPredictions.length) : null;
     return AlertDialog(
-      title: Text("Check odds"),
+      title: Text(widget.title ?? "Check odds"),
       content: SizedBox(
         width: 600 * uiScaleFactor,
         child: Column(
@@ -306,7 +324,10 @@ class _WagerDialogState extends State<WagerDialog> {
       ),
       actions: [
         TextButton(onPressed: () => Navigator.of(context).pop(), child: Text("CANCEL")),
-        TextButton(onPressed: () => Navigator.of(context).pop(_legs), child: Text("SAVE")),
+        if(_parlay != null)
+          TextButton(onPressed: () => Navigator.of(context).pop(WagerDialogResult(parlay: _parlay!)), child: Text("SAVE PARLAY")),
+        if(_legs.isNotEmpty)
+          TextButton(onPressed: () => Navigator.of(context).pop(WagerDialogResult(independentWagers: _legs)), child: Text("SAVE${_legs.length == 1 ? "" : " INDEPENDENT WAGERS"}")),
       ],
     );
   }
@@ -624,6 +645,7 @@ class _EditSpreadWagerDialogState extends State<EditSpreadWagerDialog> {
     return AlertDialog(
       title: Text("Edit percentage spread prediction"),
       content: Column(
+        spacing: 8,
         mainAxisSize: MainAxisSize.min,
         children: [
           DropdownMenu<ShooterRating>(

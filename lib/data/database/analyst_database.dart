@@ -24,7 +24,7 @@ import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_pr
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_game.dart';
-import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_user.dart';
+import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_player.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
 import 'package:shooting_sports_analyst/data/database/schema/preferences.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
@@ -134,7 +134,7 @@ class AnalystDatabase {
 
           // Prediction game-related collections
           PredictionGameSchema,
-          PredictionGameUserSchema,
+          PredictionGamePlayerSchema,
           DbWagerSchema,
           PredictionGameTransactionSchema,
         ],

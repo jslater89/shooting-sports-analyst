@@ -7,6 +7,7 @@
 import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/probability.dart';
@@ -35,7 +36,16 @@ enum ParlayValidity {
   };
 }
 
-class Wager {
+abstract class IWager {
+  double get amount;
+  double get payout;
+  PredictionProbability get probability;
+
+  String get descriptiveString;
+  String? get parlayDescription;
+}
+
+class Wager implements IWager {
   final UserPrediction prediction;
   final double amount;
   final PredictionProbability probability;
@@ -66,9 +76,10 @@ class Wager {
 
   String get descriptiveString => prediction.descriptiveString;
   String? get tooltipString => prediction.tooltipString(probability.info);
+  String? get parlayDescription => null;
 }
 
-class Parlay {
+class Parlay implements IWager {
   final List<Wager> legs;
   final double amount;
   PredictionProbability get probability => PredictionProbability.fromParlayLegs(
@@ -76,6 +87,15 @@ class Parlay {
     houseEdgePerLeg: PredictionProbability.standardHouseEdge,
   );
   double get payout => amount * probability.decimalOdds;
+
+  String get descriptiveString => "${legs.length}-leg parlay";
+  String? get parlayDescription {
+    List<String> descriptions = [];
+    for(var leg in legs) {
+      descriptions.add(leg.descriptiveString);
+    }
+    return descriptions.join("\n");
+  }
 
   Parlay({
     required this.legs,
@@ -111,11 +131,12 @@ class Parlay {
 
   static bool isParlayPossible(List<Wager> legs) {
     // Find the maximum place we need to consider
-    var placePredictions = legs.where((leg) => leg.prediction is PlacePrediction).map((leg) => leg.prediction as PlacePrediction).toList();
+    var placeLegs = legs.where((leg) => leg.prediction is PlacePrediction).toList();
+    var placePredictions = placeLegs.map((leg) => leg.prediction as PlacePrediction).toList();
     var maxPlace = placePredictions.map((p) => p.worstPlace).reduce(max);
 
     // Try to assign each prediction to a valid place
-    return _canAssignPredictions(legs, 0, <int, Wager>{}, maxPlace);
+    return _canAssignPredictions(placeLegs, 0, <int, Wager>{}, maxPlace);
   }
 
   static bool _canAssignPredictions(

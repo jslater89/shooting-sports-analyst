@@ -13,6 +13,8 @@ part 'prediction_set.g.dart';
 /// can be reviewed after the fact (and after later predictions are run).
 ///
 /// The id is a synthesis of the match prep id and the name of the prediction set.
+///
+/// PredictionSet == and hashCode implement database equality.
 @collection
 class PredictionSet {
 
@@ -54,4 +56,18 @@ class PredictionSet {
 
   /// The algorithm predictions for this prediction set.
   final algorithmPredictions = IsarLinks<DbAlgorithmPrediction>();
+
+  @override
+  bool operator ==(Object other) {
+    if(identical(this, other)) {
+      return true;
+    }
+    if(!(other is PredictionSet)) {
+      return false;
+    }
+    return id == other.id;
+  }
+
+  @override
+  int get hashCode => id.stableHash;
 }

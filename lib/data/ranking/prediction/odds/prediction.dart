@@ -6,6 +6,8 @@
 
 import 'dart:math';
 
+import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/probability.dart';
@@ -102,7 +104,14 @@ class PlacePrediction extends UserPrediction {
   UserPrediction deepCopy() => copyWith();
 
   @override
-  String get descriptiveString => "${shooter.name} ${bestPlace.ordinalPlace}-${worstPlace.ordinalPlace}";
+  String get descriptiveString {
+    if(bestPlace == worstPlace) {
+      return "${shooter.name} ${bestPlace.ordinalPlace}";
+    }
+    else {
+      return "${shooter.name} ${bestPlace.ordinalPlace}-${worstPlace.ordinalPlace}";
+    }
+  }
 
   @override
   String? tooltipString(Map<String, double> info) {
@@ -222,7 +231,14 @@ class PercentageSpreadPrediction extends UserPrediction {
   );
 
   @override
-  String get descriptiveString => "${favorite.name} ${favoriteCovers ? "≥" : "≤"}${ratioSpread.asPercentage(decimals: 2, includePercent: true)} vs. ${underdog.name}";
+  String get descriptiveString {
+    if(favoriteCovers) {
+      return "${favorite.name} covers -${ratioSpread.asPercentage(decimals: 2, includePercent: true)} vs. ${underdog.name}";
+    }
+    else {
+      return "${underdog.name} covers +${ratioSpread.asPercentage(decimals: 2, includePercent: true)} vs. ${favorite.name}";
+    }
+  }
 
   @override
   String? tooltipString(Map<String, double> info) {
