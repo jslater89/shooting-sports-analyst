@@ -1,5 +1,6 @@
 import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_game.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_player.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
@@ -212,5 +213,94 @@ extension PredictionGameExtension on AnalystDatabase {
   PredictionGamePlayer updatePlayerBalanceSync(PredictionGamePlayer player, double amount) {
     player.balance += amount;
     return savePredictionGamePlayerSync(player);
+  }
+
+  /// Get the wagers for a prediction game with various filters.
+  Future<List<DbWager>> getWagers({
+    required PredictionGame game,
+    bool openOnly = false,
+    MatchPrep? matchPrep,
+    PredictionGamePlayer? player,
+  }) async {
+    if(player != null) {
+      var query = player.wagers.filter();
+      if(openOnly) {
+        query = query.statusEqualTo(DbWagerStatus.pending);
+      }
+      if(matchPrep != null) {
+        query = query.matchPrep((q) => q.idEqualTo(matchPrep.id));
+      }
+      return query.findAll();
+    }
+    else {
+      var query = game.wagers.filter();
+      if(openOnly) {
+        query = query.statusEqualTo(DbWagerStatus.pending);
+      }
+      if(matchPrep != null) {
+        query = query.matchPrep((q) => q.idEqualTo(matchPrep.id));
+      }
+      return query.findAll();
+    }
+  }
+
+  List<DbWager> getWagersSync({
+    required PredictionGame game,
+    bool openOnly = false,
+    MatchPrep? matchPrep,
+    PredictionGamePlayer? player,
+  }) {
+    if(player != null) {
+      var query = player.wagers.filter();
+      if(openOnly) {
+        query = query.statusEqualTo(DbWagerStatus.pending);
+      }
+      if(matchPrep != null) {
+        query = query.matchPrep((q) => q.idEqualTo(matchPrep.id));
+      }
+      return query.findAllSync();
+    }
+    else {
+      var query = game.wagers.filter();
+      if(openOnly) {
+        query = query.statusEqualTo(DbWagerStatus.pending);
+      }
+      if(matchPrep != null) {
+        query = query.matchPrep((q) => q.idEqualTo(matchPrep.id));
+      }
+      return query.findAllSync();
+    }
+  }
+
+  /// Get the transactions for a prediction game with various filters.
+  Future<List<PredictionGameTransaction>> getTransactions({
+    required PredictionGame game,
+    MatchPrep? matchPrep,
+    PredictionGamePlayer? player,
+  }) async {
+    var query = game.transactions.filter();
+    if(matchPrep != null) {
+      query = query.wager((w) => w.matchPrep((q) => q.idEqualTo(matchPrep.id)));
+    }
+    if(player != null) {
+      query = query.user((q) => q.idEqualTo(player.id));
+    }
+    return query.findAll();
+  }
+
+  /// Get the transactions for a prediction game with various filters.
+  List<PredictionGameTransaction> getTransactionsSync({
+    required PredictionGame game,
+    MatchPrep? matchPrep,
+    PredictionGamePlayer? player,
+  }) {
+    var query = game.transactions.filter();
+    if(matchPrep != null) {
+      query = query.wager((w) => w.matchPrep((q) => q.idEqualTo(matchPrep.id)));
+    }
+    if(player != null) {
+      query = query.user((q) => q.idEqualTo(player.id));
+    }
+    return query.findAllSync();
   }
 }

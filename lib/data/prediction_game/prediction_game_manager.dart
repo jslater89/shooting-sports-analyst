@@ -72,6 +72,57 @@ class PredictionGameManager {
     loadPredictionGameSync();
   }
 
+  /// Get the wagers from the prediction game with various filters.
+  Future<List<DbWager>> getWagers({
+    bool openOnly = false,
+    MatchPrep? matchPrep,
+    PredictionGamePlayer? player,
+  }) async {
+    return db.getWagers(game: predictionGame, openOnly: openOnly, matchPrep: matchPrep, player: player);
+  }
+
+  /// Get the wagers from the prediction game with various filters.
+  List<DbWager> getWagersSync({
+    bool openOnly = false,
+    MatchPrep? matchPrep,
+    PredictionGamePlayer? player,
+  }) {
+    return db.getWagersSync(game: predictionGame, openOnly: openOnly, matchPrep: matchPrep, player: player);
+  }
+
+  /// Process the wagers for a particular match prep.
+  Future<void> processWagersForMatch(MatchPrep matchPrep) async {
+    var wagers = await getWagers(matchPrep: matchPrep);
+    for(var wager in wagers) {
+
+    }
+  }
+
+  /// Process the wagers for a particular match prep.
+  void processWagersForMatchSync(MatchPrep matchPrep) {
+    var wagers = predictionGame.wagers.where((wager) => wager.matchPrep.value!.id == matchPrep.id).toList();
+    for(var wager in wagers) {
+      db.deleteWagerSync(wager);
+    }
+    db.savePredictionGameSync(predictionGame);
+    loadPredictionGameSync();
+  }
+
+  /// Get the transactions from the prediction game with various filters.
+  Future<List<PredictionGameTransaction>> getTransactions({
+    MatchPrep? matchPrep,
+    PredictionGamePlayer? player,
+  }) async {
+    return db.getTransactions(game: predictionGame, matchPrep: matchPrep, player: player);
+  }
+
+  List<PredictionGameTransaction> getTransactionsSync({
+    MatchPrep? matchPrep,
+    PredictionGamePlayer? player,
+  }) {
+    return db.getTransactionsSync(game: predictionGame, matchPrep: matchPrep, player: player);
+  }
+
   // ======================
   // Internal utilities
   // ======================

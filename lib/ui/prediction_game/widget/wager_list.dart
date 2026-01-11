@@ -5,7 +5,6 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:isar_community/isar.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_player.dart';
@@ -124,30 +123,8 @@ class WagerListModel extends ChangeNotifier {
   List<DbWager> wagers = [];
 
   Future<void> loadWagers() async {
-    if(player != null) {
-      List<DbWager> newWagers = [];
-      var query = player!.wagers.filter();
-      if(openOnly) {
-        query = query.statusEqualTo(DbWagerStatus.pending);
-      }
-      if(matchPrep != null) {
-        query = query.matchPrep((q) => q.idEqualTo(matchPrep!.id));
-      }
-      newWagers = await query.findAll();
-      _setWagers(newWagers);
-    }
-    else {
-      List<DbWager> newWagers = [];
-      var query = managerModel.manager.predictionGame.wagers.filter();
-      if(openOnly) {
-        query = query.statusEqualTo(DbWagerStatus.pending);
-      }
-      if(matchPrep != null) {
-        query = query.matchPrep((q) => q.idEqualTo(matchPrep!.id));
-      }
-      newWagers = await query.findAll();
-      _setWagers(newWagers);
-    }
+    var newWagers = await managerModel.getWagers(openOnly: openOnly, matchPrep: matchPrep, player: player);
+    _setWagers(newWagers);
   }
 
   void _setWagers(List<DbWager> wagers) {

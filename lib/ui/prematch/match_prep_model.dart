@@ -5,6 +5,7 @@ import 'package:shooting_sports_analyst/data/database/extensions/future_match.da
 import 'package:shooting_sports_analyst/data/database/extensions/match_prep.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/registrations.dart';
 import 'package:shooting_sports_analyst/data/database/match/rating_project_database.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/algorithm_prediction.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
@@ -161,6 +162,11 @@ class MatchPrepPageModel extends ChangeNotifier {
     registration.shooterMemberNumbers = [];
     await db.saveMatchRegistrations([registration]);
 
+    notifyListeners();
+  }
+
+  Future<void> linkMatch(DbShootingMatch match) async {
+    futureMatch.associateDbMatch(match);
     notifyListeners();
   }
 

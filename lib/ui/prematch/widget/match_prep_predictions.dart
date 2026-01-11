@@ -16,6 +16,7 @@ import 'package:shooting_sports_analyst/ui/rater/prediction/prediction_view.dart
 import 'package:shooting_sports_analyst/ui/widget/dialog/confirm_dialog.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
+// ignore: unused_element
 final _log = SSALogger("MatchPrepPredictions");
 
 /// The predictions tab displays prediction sets from the match prep.

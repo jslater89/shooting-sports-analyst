@@ -6,8 +6,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
-import 'package:shooting_sports_analyst/data/database/extensions/prediction_game.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_game.dart';
@@ -20,6 +18,7 @@ import 'package:shooting_sports_analyst/ui/prediction_game/widget/prediction_gam
 import 'package:shooting_sports_analyst/ui/prediction_game/widget/prediction_game_match_list.dart';
 import 'package:shooting_sports_analyst/ui/prediction_game/widget/prediction_game_player_list.dart';
 
+// ignore: unused_element
 var _log = SSALogger("PredictionGameManager");
 
 class PredictionGameManagerUI extends StatelessWidget {
@@ -58,8 +57,43 @@ class PredictionGameManagerModel extends ChangeNotifier {
   PredictionGame get predictionGame => manager.predictionGame;
   late PredictionGameManager manager;
 
+  Future<List<PredictionGameTransaction>> getTransactions({
+    MatchPrep? matchPrep,
+    PredictionGamePlayer? player,
+  }) async {
+    return manager.getTransactions(matchPrep: matchPrep, player: player);
+  }
+
+  List<PredictionGameTransaction> getTransactionsSync({
+    MatchPrep? matchPrep,
+    PredictionGamePlayer? player,
+  }) {
+    return manager.getTransactionsSync(matchPrep: matchPrep, player: player);
+  }
+
+  Future<List<DbWager>> getWagers({
+    bool openOnly = false,
+    MatchPrep? matchPrep,
+    PredictionGamePlayer? player,
+  }) async {
+    return manager.getWagers(openOnly: openOnly, matchPrep: matchPrep, player: player);
+  }
+
+  List<DbWager> getWagersSync({
+    bool openOnly = false,
+    MatchPrep? matchPrep,
+    PredictionGamePlayer? player,
+  }) {
+    return manager.getWagersSync(openOnly: openOnly, matchPrep: matchPrep, player: player);
+  }
+
   Future<void> addMatchPrep(MatchPrep matchPrep) async {
     await manager.addMatchPrep(matchPrep);
+    notifyListeners();
+  }
+
+  Future<void> processWagersForMatch(MatchPrep matchPrep) async {
+    await manager.processWagersForMatch(matchPrep);
     notifyListeners();
   }
 

@@ -14,6 +14,7 @@ import 'package:shooting_sports_analyst/ui/prematch/widget/match_prep_divisions.
 import 'package:shooting_sports_analyst/ui/prematch/widget/match_prep_predictions.dart';
 import 'package:shooting_sports_analyst/ui/prematch/widget/match_prep_rating_links.dart';
 import 'package:shooting_sports_analyst/ui/prematch/widget/match_prep_squadding.dart';
+import 'package:shooting_sports_analyst/ui/widget/dialog/match_database_chooser_dialog.dart';
 
 final _log = SSALogger("MatchPrepPage");
 
@@ -48,6 +49,20 @@ class _MatchPrepPageState extends State<MatchPrepPage> with TickerProviderStateM
       value: _model,
       child: EmptyScaffold(
         title: _model.futureMatch.eventName,
+        actions: [
+          Tooltip(
+            message: "Link a match result to this match prep",
+            child: IconButton(
+              icon: Icon(Icons.link),
+              onPressed: () async {
+                var match = await MatchDatabaseChooserDialog.showSingle(context: context, sport: _model.sport);
+                if(match != null) {
+                  _model.linkMatch(match);
+                }
+              }
+            ),
+          )
+        ],
         child: Column(
           children: [
             TabBar(

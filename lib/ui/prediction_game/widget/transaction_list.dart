@@ -5,11 +5,9 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:isar_community/isar.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_player.dart';
-import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
 import 'package:shooting_sports_analyst/ui/prediction_game/prediction_game_manager.dart';
 
 class TransactionList extends StatelessWidget {
@@ -105,21 +103,7 @@ class TransactionListModel extends ChangeNotifier {
   List<PredictionGameTransaction> transactions = [];
 
   Future<void> loadTransactions() async {
-    var newTransactions = <PredictionGameTransaction>[];
-    if(player != null) {
-      var query = player!.transactions.filter();
-      if(matchPrep != null) {
-        query = query.wager((w) => w.matchPrep((p) => p.idEqualTo(matchPrep!.id)));
-      }
-      newTransactions = await query.sortByCreatedDesc().findAll();
-    }
-    else {
-      var query = managerModel.manager.predictionGame.transactions.filter();
-      if(matchPrep != null) {
-        query = query.wager((w) => w.matchPrep((p) => p.idEqualTo(matchPrep!.id)));
-      }
-      newTransactions = await query.sortByCreatedDesc().findAll();
-    }
+    var newTransactions = await managerModel.getTransactions(matchPrep: matchPrep, player: player);
     _setTransactions(newTransactions);
   }
 
