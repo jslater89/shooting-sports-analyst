@@ -133,7 +133,10 @@ class _RatingLinksKey extends StatelessWidget {
                   var match = outerModel.futureMatch;
                   var project = outerModel.ratingProject;
                   var (matched, unmatched) = await match.matchRegistrationsToRatingsFromDatabase(outerModel.sport, project, group);
-                  _log.i("Matched $matched registrations out of $unmatched unmatched registrations for group ${group.name}");
+                  _log.i("Matched ${matched.length} registrations out of ${unmatched.length} unmatched registrations for group ${group.name}");
+
+                  // reload registrations in the model, since we need to update the UI
+                  outerModel.loadMatchingRegistrations(notify: true);
                 },
               ),
             )

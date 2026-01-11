@@ -38,7 +38,7 @@ class MatchPrepPageModel extends ChangeNotifier {
 
   Future<void> init() async {
     _getKnownSquads(notify: false);
-    _loadMatchingRegistrations(notify: false);
+    loadMatchingRegistrations(notify: false);
   }
 
   // ===========================
@@ -80,6 +80,8 @@ class MatchPrepPageModel extends ChangeNotifier {
     // add to prep and save prediction set link, but not the predictions (saved above)
     prep.predictionSets.add(predictionSet);
     await db.saveMatchPrep(prep, savePredictionSetLinks: false);
+
+    _log.i("Created prediction set ${predictionSet.name} for match ${prep.futureMatch.value!.eventName} with ${dbPredictions.length} predictions for ${predictions.keys.map((k) => k.name).join(", ")}");
 
     notifyListeners();
     return predictionSet;
@@ -222,7 +224,7 @@ class MatchPrepPageModel extends ChangeNotifier {
   // at once with a single notifyListeners at the end
 
   /// Load known registrations for this match into [matchedRegistrations].
-  void _loadMatchingRegistrations({bool notify = true}) async {
+  void loadMatchingRegistrations({bool notify = true}) async {
     var registrations = futureMatch.getRegistrationsFor(sport);
     int matched = 0;
     for(var registration in registrations) {

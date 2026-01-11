@@ -147,7 +147,7 @@ class FutureMatch {
   ///
   /// Returns a tuple of the number of registrations matched and the number of unmatched registrations
   /// at the start of the process.
-  Future<(int, int)> matchRegistrationsToRatingsFromDatabase(Sport sport, DbRatingProject project, RatingGroup group) async {
+  Future<(List<MatchRegistration> matched, List<MatchRegistration> unmatched)> matchRegistrationsToRatingsFromDatabase(Sport sport, DbRatingProject project, RatingGroup group) async {
 
     List<MatchRegistration> unmatched = getUnmatchedRegistrationsFor(sport, group);
 
@@ -174,7 +174,7 @@ class FutureMatch {
     if(updateRequired.isNotEmpty) {
       await AnalystDatabase().saveMatchRegistrations(updateRequired);
     }
-    return (updateRequired.length, unmatched.length);
+    return (updateRequired, unmatched);
   }
 
   /// Update the saved registrations for this match from its saved mappings.
