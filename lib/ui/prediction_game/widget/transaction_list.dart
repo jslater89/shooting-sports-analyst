@@ -9,6 +9,7 @@ import 'package:isar_community/isar.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_player.dart';
+import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
 import 'package:shooting_sports_analyst/ui/prediction_game/prediction_game_manager.dart';
 
 class TransactionList extends StatelessWidget {
@@ -19,6 +20,8 @@ class TransactionList extends StatelessWidget {
     var model = Provider.of<TransactionListModel>(context);
     final forPlayer = model.player != null;
     final forMatchPrep = model.matchPrep != null;
+    final showPlayer = !forPlayer;
+    final showMatchPrep = !forMatchPrep;
     return ListView.builder(
       itemCount: model.transactions.length,
       itemBuilder: (context, index) {
@@ -30,8 +33,9 @@ class TransactionList extends StatelessWidget {
         var type = transaction.type;
         var date = transaction.created;
 
-        final nameFlex = 4;
-        final amountFlex = 1;
+        final nameFlex = 2;
+        final descriptionFlex = 5;
+        final amountFlex = 2;
 
         String amountString;
         if(type.isCredit) {
@@ -41,34 +45,33 @@ class TransactionList extends StatelessWidget {
           amountString = "(${amount.toStringAsFixed(2)})";
         }
 
+        String? descriptionString;
+        if(wager != null) {
+          descriptionString = "${wager.descriptiveString} (${wager.ratingGroup.value?.name ?? "unknown group"})";
+        }
+
         Widget title = Row(
           children: [
             Expanded(flex: nameFlex, child: Text(transaction.type.displayName)),
+            Expanded(flex: descriptionFlex, child: Text(descriptionString ?? "", overflow: TextOverflow.ellipsis)),
             Expanded(flex: amountFlex, child: Text(amountString)),
           ],
         );
 
-        List<String> subtitleParts = [];
-        if(wager != null) {
-          subtitleParts.add("${wager.descriptiveString} (${wager.ratingGroup.value?.name ?? "unknown group"})");
+        List<Widget> subtitleParts = [];
+        if(showPlayer && player != null) {
+          subtitleParts.add(
+            Expanded(flex: 1, child: Text(player.nickname ?? player.serverUser.value?.username ?? "(no username)", overflow: TextOverflow.ellipsis)),
+          );
         }
-        if(matchPrep != null && !forMatchPrep) {
-          var limitedPrepName = matchPrep.futureMatch.value!.eventName;
-          if(limitedPrepName.length > 50) {
-            limitedPrepName = "${limitedPrepName.substring(0, 50)}...";
-          }
-          subtitleParts.add(limitedPrepName);
-        }
-        if(player != null && !forPlayer) {
-          subtitleParts.add(player.nickname ?? player.serverUser.value?.username ?? "(no username)");
-        }
-        String subtitle = "";
-        if(subtitleParts.isNotEmpty) {
-          subtitle = subtitleParts.join(" - ");
+        if(showMatchPrep && matchPrep != null) {
+          subtitleParts.add(
+            Expanded(flex: 6, child: Text(matchPrep.futureMatch.value!.eventName, overflow: TextOverflow.ellipsis)),
+          );
         }
         return ListTile(
           title: title,
-          subtitle: Text(subtitle),
+          subtitle: Row(children: subtitleParts),
         );
       },
     );
@@ -104,16 +107,18 @@ class TransactionListModel extends ChangeNotifier {
   Future<void> loadTransactions() async {
     var newTransactions = <PredictionGameTransaction>[];
     if(player != null) {
-      newTransactions = await player!.transactions.filter().sortByCreatedDesc().findAll();
+      var query = player!.transactions.filter();
       if(matchPrep != null) {
-        newTransactions = newTransactions.where((transaction) => transaction.wager.value?.matchPrep.value!.id == matchPrep!.id).toList();
+        query = query.wager((w) => w.matchPrep((p) => p.idEqualTo(matchPrep!.id)));
       }
+      newTransactions = await query.sortByCreatedDesc().findAll();
     }
     else {
-      newTransactions = managerModel.manager.predictionGame.transactions.toList();
+      var query = managerModel.manager.predictionGame.transactions.filter();
       if(matchPrep != null) {
-        newTransactions = newTransactions.where((transaction) => transaction.wager.value?.matchPrep.value!.id == matchPrep!.id).toList();
+        query = query.wager((w) => w.matchPrep((p) => p.idEqualTo(matchPrep!.id)));
       }
+      newTransactions = await query.sortByCreatedDesc().findAll();
     }
     _setTransactions(newTransactions);
   }

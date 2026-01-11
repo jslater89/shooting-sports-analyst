@@ -56,14 +56,14 @@ class WagerList extends StatelessWidget {
         }
 
         List<Widget> subtitleText = [];
-        if(showMatchName) {
-          subtitleText.add(
-            Expanded(flex: 6, child: Text(matchPrepName, overflow: TextOverflow.ellipsis)),
-          );
-        }
         if(showPlayer) {
           subtitleText.add(
             Expanded(flex: 1, child: Text(playerName)),
+          );
+        }
+        if(showMatchName) {
+          subtitleText.add(
+            Expanded(flex: 6, child: Text(matchPrepName, overflow: TextOverflow.ellipsis)),
           );
         }
 
