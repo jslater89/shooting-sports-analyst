@@ -125,24 +125,28 @@ class WagerListModel extends ChangeNotifier {
 
   Future<void> loadWagers() async {
     if(player != null) {
-      var newWagers = await player!.wagers.filter().findAll();
-      if(matchPrep != null) {
-        newWagers = newWagers.where((wager) => wager.matchPrep.value!.id == matchPrep!.id).toList();
-      }
+      List<DbWager> newWagers = [];
+      var query = player!.wagers.filter();
       if(openOnly) {
-        newWagers = newWagers.where((wager) => wager.status == DbWagerStatus.pending).toList();
+        query = query.statusEqualTo(DbWagerStatus.pending);
       }
+      if(matchPrep != null) {
+        query = query.matchPrep((q) => q.idEqualTo(matchPrep!.id));
+      }
+      newWagers = await query.findAll();
       _setWagers(newWagers);
     }
     else {
-      var gameWagers = managerModel.manager.predictionGame.wagers.toList();
-      if(matchPrep != null) {
-        gameWagers = gameWagers.where((wager) => wager.matchPrep.value!.id == matchPrep!.id).toList();
-      }
+      List<DbWager> newWagers = [];
+      var query = managerModel.manager.predictionGame.wagers.filter();
       if(openOnly) {
-        gameWagers = gameWagers.where((wager) => wager.status == DbWagerStatus.pending).toList();
+        query = query.statusEqualTo(DbWagerStatus.pending);
       }
-      _setWagers(gameWagers);
+      if(matchPrep != null) {
+        query = query.matchPrep((q) => q.idEqualTo(matchPrep!.id));
+      }
+      newWagers = await query.findAll();
+      _setWagers(newWagers);
     }
   }
 
