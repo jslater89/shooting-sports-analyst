@@ -35,9 +35,19 @@ class WagerList extends StatelessWidget {
         var prediction = "${hydratedWager.descriptiveString} (${wager.ratingGroup.value?.name ?? "unknown group"})";
         var tooltipString = hydratedWager.parlayDescription;
 
-        bool showTooltip = wager.isParlay;
+        var moneylineOdds = hydratedWager.probability.moneylineOdds;
+        var stake = hydratedWager.amount;
+        var payout = hydratedWager.payout;
 
-        Widget descriptionText = Text(prediction);
+        bool showTooltip = wager.isParlay;
+        String oddsString = "${moneylineOdds} - ${stake.toStringAsFixed(2)} → ${payout.toStringAsFixed(2)}";
+
+        Widget descriptionText = Row(
+          children: [
+            Expanded(flex: 4, child: Text(prediction)),
+            Expanded(flex: 2, child: Text(oddsString)),
+          ],
+        );
         if(showTooltip) {
           descriptionText = Tooltip(
             message: tooltipString,
@@ -45,25 +55,21 @@ class WagerList extends StatelessWidget {
           );
         }
 
-        var moneylineOdds = hydratedWager.probability.moneylineOdds;
-        var stake = hydratedWager.amount;
-        var payout = hydratedWager.payout;
-
-        var subtitleText = "${moneylineOdds} - ${stake.toStringAsFixed(2)} → ${payout.toStringAsFixed(2)}";
+        List<Widget> subtitleText = [];
         if(showMatchName) {
-          var limitedPrepName = matchPrepName;
-          if(matchPrepName.length > 50) {
-            limitedPrepName = "${matchPrepName.substring(0, 50)}...";
-          }
-          subtitleText = "$limitedPrepName | $subtitleText";
+          subtitleText.add(
+            Expanded(flex: 6, child: Text(matchPrepName, overflow: TextOverflow.ellipsis)),
+          );
         }
         if(showPlayer) {
-          subtitleText = "$playerName | $subtitleText";
+          subtitleText.add(
+            Expanded(flex: 1, child: Text(playerName)),
+          );
         }
 
         return ListTile(
           title: descriptionText,
-          subtitle: Text(subtitleText),
+          subtitle: Row(children: subtitleText),
           trailing: !canManage ? null : IconButton(
             icon: Icon(Icons.delete),
             onPressed: () {

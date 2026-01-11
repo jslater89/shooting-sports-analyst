@@ -22,7 +22,7 @@ class PredictionGamePlayerPage extends StatelessWidget {
     else if(player.serverUser.value != null) {
       title = "$title - ${player.serverUser.value!.username}";
     }
-    var wagerModel = WagerListModel(managerModel: managerModel, player: player);
+    var wagerModel = WagerListModel(managerModel: managerModel, player: player, openOnly: true);
     var transactionModel = TransactionListModel(managerModel: managerModel, player: player);
     return EmptyScaffold(
       title: title,
@@ -47,7 +47,7 @@ class PredictionGamePlayerPage extends StatelessWidget {
                     Expanded(
                       child: Column(
                         children: [
-                          Text("Wagers", style: Theme.of(context).textTheme.titleMedium),
+                          Text("Open Wagers", style: Theme.of(context).textTheme.titleMedium),
                           Expanded(child: WagerList()),
                         ],
                       ),

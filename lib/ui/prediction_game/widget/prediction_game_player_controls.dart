@@ -99,97 +99,110 @@ class _PredictionGamePlayerControlsState extends State<PredictionGamePlayerContr
     var model = Provider.of<PredictionGameManagerModel>(context);
     var player = model.getPlayerById(widget.player.id)!;
     var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       spacing: 8 * uiScaleFactor,
       children: [
-        Text("Balance: ${player.balance.toStringAsFixed(2)}"),
-        DropdownMenu<MatchPrep>(
-          width: 300 * uiScaleFactor,
-          dropdownMenuEntries: validMatchPreps.map((e) => DropdownMenuEntry(value: e, label: e.futureMatch.value!.eventName)).toList(),
-          initialSelection: selectedMatchPrep,
-          onSelected: (value) {
-            if(value != null) {
-              _selectMatchPrep(model, value);
-            }
-          },
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          spacing: 8 * uiScaleFactor,
+          children: [
+            Text("Balance: ${player.balance.toStringAsFixed(2)}"),
+            TextButton(
+              child: Row(
+                children: [
+                  Icon(Icons.add),
+                  Text("Top up"),
+                ],
+              ),
+              onPressed: () {
+
+              },
+            ),
+            TextButton(
+              child: Row(
+                children: [
+                  Icon(Icons.security),
+                  Text("Audit"),
+                ],
+              ),
+              onPressed: () {
+
+              },
+            )
+          ],
         ),
-        DropdownMenu<RatingGroup>(
-          width: 300 * uiScaleFactor,
-          dropdownMenuEntries: validRatingGroups.map((e) => DropdownMenuEntry(value: e, label: e.name)).toList(),
-          initialSelection: selectedRatingGroup,
-          onSelected: (value) {
-            if(value != null) {
-              setState(() {
-                selectedRatingGroup = value;
-              });
-            }
-          },
-        ),
-        TextButton(
-          child: Row(
-            children: [
-              Icon(Icons.casino),
-              Text("Wager"),
-            ],
-          ),
-          onPressed: () async {
-            if(selectedMatchPrep == null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("Please select a match prep to wager on.")),
-              );
-              return;
-            }
-            if(selectedRatingGroup == null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("Please select a rating group to wager on.")),
-              );
-              return;
-            }
-            var predictions = getPredictionsForGroup(selectedRatingGroup!);
-            predictions.sort((a, b) => b.shooter.rating.compareTo(a.shooter.rating));
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          spacing: 8 * uiScaleFactor,
+          children: [
+            DropdownMenu<MatchPrep>(
+              width: 300 * uiScaleFactor,
+              label: Text("Match"),
+              dropdownMenuEntries: validMatchPreps.map((e) => DropdownMenuEntry(value: e, label: e.futureMatch.value!.eventName)).toList(),
+              initialSelection: selectedMatchPrep,
+              onSelected: (value) {
+                if(value != null) {
+                  _selectMatchPrep(model, value);
+                }
+              },
+            ),
+            DropdownMenu<RatingGroup>(
+              width: 300 * uiScaleFactor,
+              label: Text("Group"),
+              dropdownMenuEntries: validRatingGroups.map((e) => DropdownMenuEntry(value: e, label: e.name)).toList(),
+              initialSelection: selectedRatingGroup,
+              onSelected: (value) {
+                if(value != null) {
+                  setState(() {
+                    selectedRatingGroup = value;
+                  });
+                }
+              },
+            ),
+            TextButton(
+              child: Row(
+                children: [
+                  Icon(Icons.casino),
+                  Text("Wager"),
+                ],
+              ),
+              onPressed: () async {
+                if(selectedMatchPrep == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Please select a match prep to wager on.")),
+                  );
+                  return;
+                }
+                if(selectedRatingGroup == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Please select a rating group to wager on.")),
+                  );
+                  return;
+                }
+                var predictions = getPredictionsForGroup(selectedRatingGroup!);
+                predictions.sort((a, b) => b.shooter.rating.compareTo(a.shooter.rating));
 
-            var result = await WagerDialog.show(
-              context,
-              predictions: predictions,
-              matchId: selectedMatchPrep!.futureMatch.value!.matchId,
-              title: "Odds for ${selectedRatingGroup!.name}",
-            );
+                var result = await WagerDialog.show(
+                  context,
+                  predictions: predictions,
+                  matchId: selectedMatchPrep!.futureMatch.value!.matchId,
+                  title: "Odds for ${selectedRatingGroup!.name}",
+                );
 
-            if(result != null) {
-              if(result.isParlay) {
-                _log.i("Saving ${result.parlay!.legs.length}-leg parlay");
-                _saveParlay(player, model, result.parlay!);
-              }
-              else if(result.isIndependentWagers) {
-                _log.i("Saving ${result.independentWagers!.length} independent wagers");
-                _saveIndependentWagers(player, model, result.independentWagers!);
-              }
-            }
-
-          },
-        ),
-        TextButton(
-          child: Row(
-            children: [
-              Icon(Icons.add),
-              Text("Top up"),
-            ],
-          ),
-          onPressed: () {
-
-          },
-        ),
-        TextButton(
-          child: Row(
-            children: [
-              Icon(Icons.security),
-              Text("Audit"),
-            ],
-          ),
-          onPressed: () {
-
-          },
+                if(result != null) {
+                  if(result.isParlay) {
+                    _log.i("Saving ${result.parlay!.legs.length}-leg parlay");
+                    _saveParlay(player, model, result.parlay!);
+                  }
+                  else if(result.isIndependentWagers) {
+                    _log.i("Saving ${result.independentWagers!.length} independent wagers");
+                    _saveIndependentWagers(player, model, result.independentWagers!);
+                  }
+                }
+              },
+            ),
+          ],
         )
       ],
     );
