@@ -42,11 +42,13 @@ class WagerDialog extends StatefulWidget {
     this.title,
     this.roundToMoneyline = false,
     this.availableBalance,
+    this.helpText,
   });
 
   final bool roundToMoneyline;
   final double? availableBalance;
   final String? title;
+  final String? helpText;
   final String matchId;
   final List<AlgorithmPrediction> predictions;
 
@@ -56,6 +58,7 @@ class WagerDialog extends StatefulWidget {
     String? title,
     bool roundToMoneyline = false,
     double? availableBalance,
+    String? helpText,
   }) async {
     return showDialog<WagerDialogResult>(
       context: context,
@@ -65,6 +68,7 @@ class WagerDialog extends StatefulWidget {
         title: title,
         roundToMoneyline: roundToMoneyline,
         availableBalance: availableBalance,
+        helpText: helpText,
       ),
       barrierDismissible: false
     );
@@ -176,6 +180,8 @@ class _WagerDialogState extends State<WagerDialog> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    if(widget.helpText != null)
+                      Text(widget.helpText!),
                     ..._legs.asMap().entries.map((entry) {
                       final index = entry.key;
                       final leg = entry.value;

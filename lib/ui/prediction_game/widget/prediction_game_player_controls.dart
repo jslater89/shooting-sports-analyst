@@ -196,6 +196,7 @@ class _PredictionGamePlayerControlsState extends State<PredictionGamePlayerContr
                   matchId: selectedMatchPrep!.futureMatch.value!.matchId,
                   roundToMoneyline: true,
                   title: "Odds for ${selectedRatingGroup!.name}",
+                  helpText: "Current match: ${selectedMatchPrep!.futureMatch.value!.eventName}",
                   availableBalance: player.balance,
                 );
 
