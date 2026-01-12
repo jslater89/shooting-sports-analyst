@@ -39,6 +39,9 @@ class MatchPrep {
   /// Prediction sets for this match prep.
   final predictionSets = IsarLinks<PredictionSet>();
 
+  @ignore
+  List<PredictionSet> get sortedPredictionSets => predictionSets.filter().sortByCreatedDesc().findAllSync();
+
   PredictionSet? latestPredictionSet() {
     return predictionSets.filter().sortByCreatedDesc().findFirstSync();
   }

@@ -33,7 +33,7 @@ class PredictionGamePlayerList extends StatelessWidget {
                   returnInitialTransactionSeparately: false,
                 );
                 if(player != null) {
-                  model.addNewPlayerSync(player);
+                  model.savePlayerSync(player);
                 }
               },
             )

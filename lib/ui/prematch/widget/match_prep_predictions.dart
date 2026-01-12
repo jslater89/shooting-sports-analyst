@@ -246,7 +246,7 @@ class _MatchPrepPredictionsModel extends ChangeNotifier {
 
   _MatchPrepPredictionsModel({required this.matchPrepModel});
 
-  List<PredictionSet> get predictionSets => matchPrepModel.prep.predictionSets.toList();
+  List<PredictionSet> get predictionSets => matchPrepModel.prep.sortedPredictionSets;
   PredictionSet? selectedPredictionSet;
 
   Map<RatingGroup, List<AlgorithmPrediction>> _algorithmPredictionCache = {};

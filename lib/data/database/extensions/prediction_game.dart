@@ -104,10 +104,67 @@ extension PredictionGameExtension on AnalystDatabase {
     });
   }
 
+  /// Save a prediction game transaction to the database.
+  ///
+  /// If [saveLinks] is true, the transaction's links will be saved.
+  Future<PredictionGameTransaction> savePredictionGameTransaction(PredictionGameTransaction transaction, {bool saveLinks = true}) async {
+    await isar.writeTxn(() async {
+      await isar.predictionGameTransactions.put(transaction);
+      if(saveLinks) {
+        await transaction.game.save();
+        await transaction.user.save();
+        await transaction.wager.save();
+      }
+    });
+    return transaction;
+  }
+
+  /// Save a prediction game transaction to the database synchronously.
+  PredictionGameTransaction savePredictionGameTransactionSync(PredictionGameTransaction transaction) {
+    isar.writeTxnSync(() {
+      isar.predictionGameTransactions.putSync(transaction);
+    });
+    return transaction;
+  }
+
+  /// Delete prediction game transactions from the database synchronously.
+  void deletePredictionGameTransactionsSync(List<PredictionGameTransaction> transactions) {
+    isar.writeTxnSync(() {
+      isar.predictionGameTransactions.deleteAllSync(transactions.map((t) => t.id).toList());
+    });
+  }
+
+  /// Save a wager to the database.
+  ///
+  /// If [saveLinks] is true, the wager's links will be saved, and if this wager
+  /// is already saved to the database, any of its transactions that are not yet
+  /// saved will be saved first. (If they are already saved, they will not be saved again.)
+  ///
+  /// If [createWagerTransaction] is true, a wager transaction will be created.
   Future<DbWager> saveWager(DbWager wager, {bool saveLinks = false, bool createWagerTransaction = true}) async {
     if(wager.user.value == null) {
       throw ArgumentError("Wager has no user");
     }
+
+    bool alreadySaved = wager.id != Isar.autoIncrement;
+    if(alreadySaved) {
+      var transactionsToSave = <PredictionGameTransaction>[];
+      if(wager.wagerTransaction.value?.id == Isar.autoIncrement) {
+        transactionsToSave.add(wager.wagerTransaction.value!);
+      }
+      if(wager.payoutTransaction.value?.id == Isar.autoIncrement) {
+        transactionsToSave.add(wager.payoutTransaction.value!);
+      }
+      if(wager.refundTransaction.value?.id == Isar.autoIncrement) {
+        transactionsToSave.add(wager.refundTransaction.value!);
+      }
+      await isar.writeTxn(() async {
+        for(var transaction in transactionsToSave) {
+          await savePredictionGameTransaction(transaction);
+        }
+      });
+    }
+
     await isar.writeTxn(() async {
       await isar.dbWagers.put(wager);
       if(saveLinks) {
@@ -115,6 +172,9 @@ extension PredictionGameExtension on AnalystDatabase {
         await wager.game.save();
         await wager.user.save();
         await wager.ratingGroup.save();
+        await wager.wagerTransaction.save();
+        await wager.payoutTransaction.save();
+        await wager.refundTransaction.save();
       }
     });
 
@@ -168,16 +228,20 @@ extension PredictionGameExtension on AnalystDatabase {
   Future<void> deleteWager(DbWager wager) async {
     var wagerTransaction = wager.wagerTransaction.value;
     var payoutTransaction = wager.payoutTransaction.value;
-    var netAmount = -(wagerTransaction?.amount ?? 0) + (payoutTransaction?.amount ?? 0);
+    var refundTransaction = wager.refundTransaction.value;
+    var netAmount = -(wagerTransaction?.amount ?? 0) + (payoutTransaction?.amount ?? 0) + (refundTransaction?.amount ?? 0);
     var player = wager.user.value;
     await isar.writeTxn(() async {
       if(wagerTransaction != null) {
         await isar.predictionGameTransactions.delete(wagerTransaction.id);
       }
 
-      // Payout transaction link is used for both payout and refund transactions.
       if(payoutTransaction != null) {
         await isar.predictionGameTransactions.delete(payoutTransaction.id);
+      }
+
+      if(refundTransaction != null) {
+        await isar.predictionGameTransactions.delete(refundTransaction.id);
       }
 
       // Everything else is backlinked.
@@ -191,14 +255,18 @@ extension PredictionGameExtension on AnalystDatabase {
   void deleteWagerSync(DbWager wager) {
     var wagerTransaction = wager.wagerTransaction.value;
     var payoutTransaction = wager.payoutTransaction.value;
-    var netAmount = -(wagerTransaction?.amount ?? 0) + (payoutTransaction?.amount ?? 0);
+    var refundTransaction = wager.refundTransaction.value;
+    var netAmount = -(wagerTransaction?.amount ?? 0) + (payoutTransaction?.amount ?? 0) + (refundTransaction?.amount ?? 0);
     var player = wager.user.value;
     isar.writeTxnSync(() {
-      if(wager.wagerTransaction.value != null) {
-        isar.predictionGameTransactions.deleteSync(wager.wagerTransaction.value!.id);
+      if(wagerTransaction != null) {
+        isar.predictionGameTransactions.deleteSync(wagerTransaction.id);
       }
-      if(wager.payoutTransaction.value != null) {
-        isar.predictionGameTransactions.deleteSync(wager.payoutTransaction.value!.id);
+      if(payoutTransaction != null) {
+        isar.predictionGameTransactions.deleteSync(payoutTransaction.id);
+      }
+      if(refundTransaction != null) {
+        isar.predictionGameTransactions.deleteSync(refundTransaction.id);
       }
       isar.dbWagers.deleteSync(wager.id);
     });
@@ -230,7 +298,7 @@ extension PredictionGameExtension on AnalystDatabase {
       if(matchPrep != null) {
         query = query.matchPrep((q) => q.idEqualTo(matchPrep.id));
       }
-      return query.findAll();
+      return query.sortByCreatedDesc().findAll();
     }
     else {
       var query = game.wagers.filter();
@@ -240,7 +308,7 @@ extension PredictionGameExtension on AnalystDatabase {
       if(matchPrep != null) {
         query = query.matchPrep((q) => q.idEqualTo(matchPrep.id));
       }
-      return query.findAll();
+      return query.sortByCreatedDesc().findAll();
     }
   }
 
@@ -258,7 +326,7 @@ extension PredictionGameExtension on AnalystDatabase {
       if(matchPrep != null) {
         query = query.matchPrep((q) => q.idEqualTo(matchPrep.id));
       }
-      return query.findAllSync();
+      return query.sortByCreatedDesc().findAllSync();
     }
     else {
       var query = game.wagers.filter();
@@ -268,7 +336,7 @@ extension PredictionGameExtension on AnalystDatabase {
       if(matchPrep != null) {
         query = query.matchPrep((q) => q.idEqualTo(matchPrep.id));
       }
-      return query.findAllSync();
+      return query.sortByCreatedDesc().findAllSync();
     }
   }
 
@@ -285,7 +353,7 @@ extension PredictionGameExtension on AnalystDatabase {
     if(player != null) {
       query = query.user((q) => q.idEqualTo(player.id));
     }
-    return query.findAll();
+    return query.sortByCreatedDesc().findAll();
   }
 
   /// Get the transactions for a prediction game with various filters.
@@ -301,6 +369,42 @@ extension PredictionGameExtension on AnalystDatabase {
     if(player != null) {
       query = query.user((q) => q.idEqualTo(player.id));
     }
-    return query.findAllSync();
+    return query.sortByCreatedDesc().findAllSync();
+  }
+
+  /// Audit the transactions for a player, both for total amount and validity (i.e.,
+  /// transactions requiring a wager must have a wager).
+  ///
+  /// Returns true if the audit passes (i.e., the balance is consistent with the transactions).
+  ///
+  /// If [updateBalance] is true, the player's balance will be updated to the new balance.
+  /// If [save] is true, the player will be updated with the new balance and any invalid
+  /// transactions will be deleted.
+  bool auditPlayerTransactionsSync(PredictionGamePlayer player, {bool updateBalance = true, bool save = true}) {
+    var totalDebit = 0.0;
+    var totalCredit = 0.0;
+    var transactionsToRemove = <PredictionGameTransaction>[];
+    for(var transaction in player.transactions) {
+      if(transaction.type.shouldHaveWager && transaction.wager.value == null) {
+        transactionsToRemove.add(transaction);
+        continue;
+      }
+      if(transaction.type.isDebit) {
+        totalDebit += transaction.amount;
+      }
+      else {
+        totalCredit += transaction.amount;
+      }
+    }
+    var newBalance = totalCredit - totalDebit;
+    var isConsistent = (newBalance - player.balance).abs() < 0.0001;
+    if(updateBalance && !isConsistent) {
+      player.balance = newBalance;
+    }
+    if(save) {
+      deletePredictionGameTransactionsSync(transactionsToRemove);
+      savePredictionGamePlayerSync(player);
+    }
+    return isConsistent;
   }
 }

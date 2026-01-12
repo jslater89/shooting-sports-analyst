@@ -6,6 +6,7 @@
 
 import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
@@ -34,19 +35,36 @@ class WagerDialogResult {
 
 /// Show a dialog to edit a list of wagers. Pops a [WagerDialogResult].
 class WagerDialog extends StatefulWidget {
-  const WagerDialog({super.key, required this.predictions, required this.matchId, this.title});
+  const WagerDialog({
+    super.key,
+    required this.predictions,
+    required this.matchId,
+    this.title,
+    this.roundToMoneyline = false,
+    this.availableBalance,
+  });
 
+  final bool roundToMoneyline;
+  final double? availableBalance;
   final String? title;
   final String matchId;
   final List<AlgorithmPrediction> predictions;
 
-  static Future<WagerDialogResult?> show(BuildContext context, {required List<AlgorithmPrediction> predictions, required String matchId, String? title}) async {
+  static Future<WagerDialogResult?> show(BuildContext context, {
+    required List<AlgorithmPrediction> predictions,
+    required String matchId,
+    String? title,
+    bool roundToMoneyline = false,
+    double? availableBalance,
+  }) async {
     return showDialog<WagerDialogResult>(
       context: context,
       builder: (context) => WagerDialog(
         predictions: predictions,
         matchId: matchId,
         title: title,
+        roundToMoneyline: roundToMoneyline,
+        availableBalance: availableBalance,
       ),
       barrierDismissible: false
     );
@@ -134,6 +152,18 @@ class _WagerDialogState extends State<WagerDialog> {
   Widget build(BuildContext context) {
     final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     var parlayValidity = _parlay != null ? _parlay!.checkValidity(fieldSize: _shootersToPredictions.length) : null;
+    bool canAffordIndividualWagers = true;
+    bool canAffordParlay = true;
+
+    if(widget.availableBalance != null) {
+      var legSum = _legs.map((e) => e.amount).sum;
+
+      canAffordIndividualWagers = legSum <= widget.availableBalance!;
+      if(_parlay != null) {
+        var parlaySum = _parlay!.amount;
+        canAffordParlay = parlaySum <= widget.availableBalance!;
+      }
+    }
     return AlertDialog(
       title: Text(widget.title ?? "Check odds"),
       content: SizedBox(
@@ -167,7 +197,7 @@ class _WagerDialogState extends State<WagerDialog> {
                               "Probabilities: ${leg.probability.probability.asPercentage(decimals: 2, includePercent: true)}/${leg.probability.probabilityWithHouseEdge.asPercentage(decimals: 2, includePercent: true)}",
                           child: Text(
                             "Moneyline: ${leg.probability.moneylineOdds}  -  "
-                            "Payout: ${leg.amount.toStringAsFixed(2)} → ${leg.payout.toStringAsFixed(2)}"
+                            "Payout: ${leg.amount.toStringAsFixed(2)} → ${widget.roundToMoneyline ? leg.moneylinePayout.toStringAsFixed(2) : leg.payout.toStringAsFixed(2)}"
                           )
                         ),
                         trailing: Row(
@@ -324,10 +354,22 @@ class _WagerDialogState extends State<WagerDialog> {
       ),
       actions: [
         TextButton(onPressed: () => Navigator.of(context).pop(), child: Text("CANCEL")),
-        if(_parlay != null)
-          TextButton(onPressed: () => Navigator.of(context).pop(WagerDialogResult(parlay: _parlay!)), child: Text("SAVE PARLAY")),
+        if(_parlay != null && _parlay!.checkValidity(fieldSize: _shootersToPredictions.length).isValid)
+          MaybeTooltip(
+            message: !canAffordParlay ? "You cannot afford this parlay (available balance: ${widget.availableBalance!.toStringAsFixed(2)})" : null,
+            child: TextButton(
+              onPressed: canAffordParlay ? () => Navigator.of(context).pop(WagerDialogResult(parlay: _parlay!)) : null,
+              child: Text("SAVE PARLAY")
+            ),
+          ),
         if(_legs.isNotEmpty)
-          TextButton(onPressed: () => Navigator.of(context).pop(WagerDialogResult(independentWagers: _legs)), child: Text("SAVE${_legs.length == 1 ? "" : " INDEPENDENT WAGERS"}")),
+          MaybeTooltip(
+            message: !canAffordIndividualWagers ? "You cannot afford ${_legs.length == 1 ? "this wager" : "these individual wagers"} (available balance: ${widget.availableBalance!.toStringAsFixed(2)})" : null,
+            child: TextButton(
+              onPressed: canAffordIndividualWagers ? () => Navigator.of(context).pop(WagerDialogResult(independentWagers: _legs)) : null,
+              child: Text("SAVE${_legs.length == 1 ? "" : " INDEPENDENT WAGERS"}")
+            ),
+          ),
       ],
     );
   }

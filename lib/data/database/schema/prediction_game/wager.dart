@@ -11,6 +11,7 @@ import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/probability.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/wager.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 part 'wager.g.dart';
@@ -41,12 +42,19 @@ class DbWager {
   /// The transaction that recorded the wager.
   final wagerTransaction = IsarLink<PredictionGameTransaction>();
 
-  /// The transaction that recorded the payout, for a winning wager,
-  /// or the refund transaction, for a voided wager.
+  /// The transaction that recorded the payout, for a winning wager.
   final payoutTransaction = IsarLink<PredictionGameTransaction>();
+
+  /// The transaction that recorded the refund, for a voided wager.
+  final refundTransaction = IsarLink<PredictionGameTransaction>();
 
   /// Whether this is a parlay.
   bool get isParlay => legs.length > 1;
+
+  @ignore
+  bool get isOpen => status.isOpen;
+  @ignore
+  bool get isResolved => status.isResolved;
 
   /// If this is a parlay, the probability of the parlay.
   /// (If it's a single leg, the probability is in the prediction.)
@@ -55,6 +63,9 @@ class DbWager {
   /// The probability of the wager.
   @ignore
   DbProbability get wagerProbability => isParlay ? parlayProbability! : legs.first.probability;
+
+  /// The date and time the wager was created.
+  DateTime created = practicalShootingZeroDate;
 
   /// The amount of the wager.
   double amount;
@@ -74,6 +85,17 @@ class DbWager {
     }
   }
 
+  /// Evaluate the legs of the wager against the given scores.
+  ///
+  /// Returns a map of the legs to their evaluation results.
+  Map<DbPrediction, bool> evaluateLegs(Map<String, RelativeMatchScore> scores) {
+    Map<DbPrediction, bool> results = {};
+    for(var leg in legs) {
+      results[leg] = leg.evaluate(scores);
+    }
+    return results;
+  }
+
   @ignore
   String get descriptiveString {
     if(isParlay) {
@@ -91,7 +113,9 @@ class DbWager {
     required this.legs,
     required this.amount,
     this.parlayProbability,
-  });
+  }) {
+    created = DateTime.now();
+  }
 
   factory DbWager.fromWager(Wager wager) {
     var ratingGroup = wager.prediction.shooter.wrappedRating.group.value;
@@ -139,7 +163,7 @@ class DbWager {
     return Wager(
       prediction: prediction,
       probability: PredictionProbability.fromDecimalOdds(
-        dbProbability.decimalOdds,
+        dbProbability.rawDecimalOdds,
         houseEdge: dbProbability.houseEdge,
         bestPossibleOdds: dbProbability.bestPossibleOdds,
         worstPossibleOdds: dbProbability.worstPossibleOdds,
@@ -178,15 +202,15 @@ class DbWager {
   Parlay _hydrateParlay(AnalystDatabase db, DbRatingProject project) {
     var outLegs = <Wager>[];
     for(var dbPrediction in legs) {
-      ShooterRating target = project.wrapDbRatingSync(legs.first.target.getShooterRatingSync(db)!);
+      ShooterRating target = project.wrapDbRatingSync(dbPrediction.target.getShooterRatingSync(db)!);
       ShooterRating? underdog;
-      if(legs.first.underdog != null) {
-        underdog = project.wrapDbRatingSync(legs.first.underdog!.getShooterRatingSync(db)!);
+      if(dbPrediction.underdog != null) {
+        underdog = project.wrapDbRatingSync(dbPrediction.underdog!.getShooterRatingSync(db)!);
       }
       var prediction = _hydratePrediction(dbPrediction, target, underdog);
       outLegs.add(Wager(
         prediction: prediction,
-        probability: PredictionProbability.fromDecimalOdds(dbPrediction.probability.decimalOdds),
+        probability: PredictionProbability.fromDecimalOdds(dbPrediction.probability.rawDecimalOdds),
         amount: amount,
       ));
     }
@@ -206,6 +230,8 @@ class DbPrediction {
 
   /// If this is a percentage prediction, the percentage.
   /// If this is a spread prediction, the spread.
+  ///
+  /// Always specificed in ratio form (0.0-1.0).
   double? percentage;
 
   /// If this is a percentage prediction, true if the percentage is above the target.
@@ -228,6 +254,46 @@ class DbPrediction {
 
   /// The underdog for a spread prediction, or null otherwise.
   DbPredictionTarget? underdog;
+
+  // TODO: replicate on hydrated wagers
+  // and/or move to utility function so it's not duplicated
+  /// Evaluate the prediction against the map of given scores (from member number to RelativeMatchScore).
+  bool evaluate(Map<String, RelativeMatchScore> scores) {
+    switch(type) {
+      case DbPredictionType.place:
+        var targetScore = scores[target.memberNumber];
+        if(targetScore == null) {
+          return false;
+        }
+        return targetScore.place >= bestPlace! && targetScore.place <= worstPlace!;
+      case DbPredictionType.percentage:
+        var targetScore = scores[target.memberNumber];
+        if(targetScore == null) {
+          return false;
+        }
+        if(abovePercentage) {
+          return targetScore.ratio >= percentage!;
+        }
+        else {
+          return targetScore.ratio <= percentage!;
+        }
+      case DbPredictionType.spread:
+        var targetScore = scores[target.memberNumber];
+        var underdogScore = scores[underdog!.memberNumber];
+        if(targetScore == null || underdogScore == null) {
+          return false;
+        }
+        var actualSpread = targetScore.ratio - underdogScore.ratio;
+        if(favoriteCovers) {
+          return actualSpread >= percentage!;
+        }
+        else {
+          return actualSpread <= percentage!;
+        }
+      case DbPredictionType.invalid:
+        throw ArgumentError("Invalid prediction type: ${type}");
+    }
+  }
 
   @ignore
   String get descriptiveString {
@@ -277,7 +343,7 @@ class DbPrediction {
         dbPrediction.percentage = userPrediction.ratioSpread;
         dbPrediction.abovePercentage = userPrediction.favoriteCovers;
         dbPrediction.target = DbPredictionTarget.fromShooterRating(userPrediction.shooter);
-        dbPrediction.underdog = DbPredictionTarget.fromShooterRating(userPrediction.underdog!);
+        dbPrediction.underdog = DbPredictionTarget.fromShooterRating(userPrediction.underdog);
       default:
         throw ArgumentError("Invalid prediction type: ${userPrediction.runtimeType}");
     }
@@ -434,4 +500,5 @@ enum DbWagerStatus {
 
   /// Whether this wager is closed.
   bool get isResolved => this != pending;
+  bool get isOpen => this == pending;
 }

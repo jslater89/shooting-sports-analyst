@@ -97,13 +97,13 @@ class PredictionGameManagerModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> addNewPlayer(PredictionGamePlayer player, {List<PredictionGameTransaction>? newTransactions}) async {
-    await manager.addNewPlayer(player, newTransactions: newTransactions);
+  Future<void> savePlayer(PredictionGamePlayer player, {List<PredictionGameTransaction>? newTransactions}) async {
+    await manager.savePlayer(player, newTransactions: newTransactions);
     notifyListeners();
   }
 
-  void addNewPlayerSync(PredictionGamePlayer player) {
-    manager.addNewPlayerSync(player);
+  void savePlayerSync(PredictionGamePlayer player) {
+    manager.savePlayerSync(player);
     notifyListeners();
   }
 
@@ -176,5 +176,25 @@ class PredictionGameManagerModel extends ChangeNotifier {
 
   MatchPrep? getMatchPrepById(int id) {
     return predictionGame.matchPreps.where((matchPrep) => matchPrep.id == id).firstOrNull;
+  }
+
+  Future<void> resolveWager(DbWager wager, DbWagerStatus status) async {
+    await manager.resolveWager(wager, status);
+    notifyListeners();
+  }
+
+  void resolveWagerSync(DbWager wager, DbWagerStatus status) {
+    manager.resolveWagerSync(wager, status);
+    notifyListeners();
+  }
+
+  Future<void> auditUserBalance(PredictionGamePlayer player) async {
+    await manager.auditUserBalance(player);
+    notifyListeners();
+  }
+
+  void auditUserBalanceSync(PredictionGamePlayer player) {
+    manager.auditUserBalanceSync(player);
+    notifyListeners();
   }
 }

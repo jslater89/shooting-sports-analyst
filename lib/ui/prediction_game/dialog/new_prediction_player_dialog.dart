@@ -52,7 +52,6 @@ class _NewPredictionPlayerDialogState extends State<NewPredictionPlayerDialog> {
 
   String? _errorMessage;
 
-
   @override
   void initState() {
     super.initState();
@@ -83,7 +82,8 @@ class _NewPredictionPlayerDialogState extends State<NewPredictionPlayerDialog> {
                 FilteringTextInputFormatter.allow(RegExp(r"[0-9\.]*")),
               ],
             ),
-            // TODO: select server user
+            if(_errorMessage != null)
+              Text(_errorMessage!),
           ],
         ),
       ),
@@ -94,9 +94,21 @@ class _NewPredictionPlayerDialogState extends State<NewPredictionPlayerDialog> {
           onPressed: () {
             var name = _nameController.text.trim();
             var balance = double.tryParse(_balanceController.text);
-            if(name.isEmpty || balance == null || balance < 0) {
+            if(name.isEmpty) {
+              setState(() {
+                _errorMessage = "Name is required";
+              });
               return;
             }
+            if(balance == null || balance < 0) {
+              setState(() {
+                _errorMessage = "Balance must be greater than 0";
+              });
+              return;
+            }
+            setState(() {
+              _errorMessage = null;
+            });
             var predictionPlayer = PredictionGamePlayer();
             predictionPlayer.nickname = name;
             predictionPlayer.balance = balance;

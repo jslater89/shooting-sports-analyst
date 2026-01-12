@@ -82,7 +82,9 @@ class PredictionGameHouseStats extends StatelessWidget {
             children: [
               Expanded(child: Text("Total open wagers: ${totalOpenWagered.toStringAsFixed(2)}")),
               Expanded(child: Text("Total open risk: ${totalOpenHouseRisk.toStringAsFixed(2)}")),
-              Expanded(child: Text("Open net: ${openHouseNet.toStringAsFixed(2)} ($averageOpenOddsString)")),
+              Expanded(child: Tooltip(
+                message: "The house's loss if all open wagers hit for players",
+                child: Text("Open net: ${(-openHouseNet).toStringAsFixed(2)} ($averageOpenOddsString)"))),
               Expanded(child: Text("Total player bankroll: ${totalPlayerBankroll.toStringAsFixed(2)}")),
             ],
           ),
@@ -91,7 +93,9 @@ class PredictionGameHouseStats extends StatelessWidget {
             children: [
               Expanded(child: Text("Total closed wagers: ${totalUnvoidedWagered.toStringAsFixed(2)}")),
               Expanded(child: Text("Total player winnings: ${totalUnvoidedPaidOut.toStringAsFixed(2)}")),
-              Expanded(child: Text("House net: ${houseNet.toStringAsFixed(2)} (${profitPercentage.asPercentage(decimals: 1, includePercent: true)})")),
+              Expanded(child: Tooltip(
+                message: "The house's profit or loss on closed wagers",
+                child: Text("House net: ${houseNet.toStringAsFixed(2)} (${profitPercentage.asPercentage(decimals: 1, includePercent: true)})"))),
               Expanded(child: Text("Total voided: ${voidedAmount.toStringAsFixed(2)}")),
             ],
           )

@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_player.dart';
 import 'package:shooting_sports_analyst/ui/prediction_game/prediction_game_manager.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 class TransactionList extends StatelessWidget {
   const TransactionList({super.key});
@@ -37,10 +38,20 @@ class TransactionList extends StatelessWidget {
 
         String amountString;
         if(type.isCredit) {
-          amountString = "${amount.toStringAsFixed(2)}";
+          if(amount >= 0) {
+            amountString = "${amount.toStringAsFixed(2)}";
+          }
+          else {
+            amountString = "(${(-amount).toStringAsFixed(2)})";
+          }
         }
         else {
-          amountString = "(${amount.toStringAsFixed(2)})";
+          if(amount > 0) {
+            amountString = "(${amount.toStringAsFixed(2)})";
+          }
+          else {
+            amountString = "${(-amount).toStringAsFixed(2)}";
+          }
         }
 
         String? descriptionString;
@@ -57,6 +68,9 @@ class TransactionList extends StatelessWidget {
         );
 
         List<Widget> subtitleParts = [];
+        subtitleParts.add(
+          Expanded(flex: 1, child: Text(programmerYmdHmFormat.format(date), overflow: TextOverflow.ellipsis)),
+        );
         if(showPlayer && player != null) {
           subtitleParts.add(
             Expanded(flex: 1, child: Text(player.nickname ?? player.serverUser.value?.username ?? "(no username)", overflow: TextOverflow.ellipsis)),
@@ -64,7 +78,7 @@ class TransactionList extends StatelessWidget {
         }
         if(showMatchPrep && matchPrep != null) {
           subtitleParts.add(
-            Expanded(flex: 6, child: Text(matchPrep.futureMatch.value!.eventName, overflow: TextOverflow.ellipsis)),
+            Expanded(flex: 4, child: Text(matchPrep.futureMatch.value!.eventName, overflow: TextOverflow.ellipsis)),
           );
         }
         return ListTile(

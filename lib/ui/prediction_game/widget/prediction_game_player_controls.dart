@@ -14,7 +14,10 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/wager.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/prediction_game/dialog/topup_player_dialog.dart';
 import 'package:shooting_sports_analyst/ui/prediction_game/prediction_game_manager.dart';
+import 'package:shooting_sports_analyst/ui/prediction_game/widget/wager_list.dart';
+import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/wager_dialog.dart';
 
 final _log = SSALogger("PredictionGamePlayerControls");
@@ -115,8 +118,12 @@ class _PredictionGamePlayerControlsState extends State<PredictionGamePlayerContr
                   Text("Top up"),
                 ],
               ),
-              onPressed: () {
-
+              onPressed: () async {
+                var result = await TopupPlayerDialog.show(context, player: player);
+                if(result != null) {
+                  player.balance = result;
+                  await model.savePlayer(player);
+                }
               },
             ),
             TextButton(
@@ -127,7 +134,7 @@ class _PredictionGamePlayerControlsState extends State<PredictionGamePlayerContr
                 ],
               ),
               onPressed: () {
-
+                model.auditUserBalance(player);
               },
             )
           ],
@@ -187,7 +194,9 @@ class _PredictionGamePlayerControlsState extends State<PredictionGamePlayerContr
                   context,
                   predictions: predictions,
                   matchId: selectedMatchPrep!.futureMatch.value!.matchId,
+                  roundToMoneyline: true,
                   title: "Odds for ${selectedRatingGroup!.name}",
+                  availableBalance: player.balance,
                 );
 
                 if(result != null) {
@@ -202,6 +211,26 @@ class _PredictionGamePlayerControlsState extends State<PredictionGamePlayerContr
                 }
               },
             ),
+            Consumer<WagerListModel>(
+              builder: (context, wagerModel, child) => ClickableLink(
+                decorateTextColor: false,
+                onTap: () {
+                  wagerModel.openOnly = !(wagerModel.openOnly);
+                },
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Checkbox(
+                      value: !wagerModel.openOnly,
+                      onChanged: (value) {
+                        wagerModel.openOnly = !(value ?? false);
+                      },
+                    ),
+                    Text("Show all wagers"),
+                  ],
+                )
+              ),
+            )
           ],
         )
       ],

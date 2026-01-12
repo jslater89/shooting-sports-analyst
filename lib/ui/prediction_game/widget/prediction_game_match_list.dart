@@ -7,6 +7,8 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shooting_sports_analyst/route/match_prep_page.dart';
+import 'package:shooting_sports_analyst/ui/prediction_game/dialog/match_prep_wager_dialog.dart';
 import 'package:shooting_sports_analyst/ui/prediction_game/prediction_game_manager.dart';
 import 'package:shooting_sports_analyst/ui/prematch/dialog/match_prep_select_dialog.dart';
 import 'package:shooting_sports_analyst/ui/result_page.dart';
@@ -60,18 +62,29 @@ class PredictionGameMatchList extends StatelessWidget {
                     }
                   ),
                 ));
-                trailing.add(Tooltip(
-                  message: "Process wagers for this match",
-                  child: IconButton(
-                    icon: Icon(Icons.dataset_linked),
-                    onPressed: () {
-                      model.processWagersForMatch(match);
-                    }
-                  ),
-                ));
               }
+            trailing.add(Tooltip(
+                message: "Process wagers for this match",
+                child: IconButton(
+                  icon: Icon(Icons.dataset_linked),
+                  onPressed: () async {
+                    var processedWagers = await MatchPrepWagerDialog.show(
+                      context: context,
+                      matchPrep: match,
+                      predictionGameModel: model,
+                    );
+
+                    if(processedWagers?.isNotEmpty ?? false) {
+                      model.loadPredictionGame();
+                    }
+                  }
+                ),
+              ));
               return ListTile(
                 title: Text(match.futureMatch.value!.eventName),
+                onTap: () async {
+                  await Navigator.of(context).push(MaterialPageRoute(builder: (context) => MatchPrepPage(prep: match)));
+                },
                 subtitle: Text("Action: ${action.toStringAsFixed(2)}  ($projectName)"),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,

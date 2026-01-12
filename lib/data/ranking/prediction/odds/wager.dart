@@ -39,10 +39,27 @@ enum ParlayValidity {
 abstract class IWager {
   double get amount;
   double get payout;
+  double get moneylinePayout;
+
   PredictionProbability get probability;
 
   String get descriptiveString;
   String? get parlayDescription;
+
+  static double advancedPayout(double amount, PredictionProbability probability, {bool roundToMoneyline = true}) {
+    if(!roundToMoneyline) {
+      return amount * probability.decimalOdds;
+    }
+    else {
+      var moneylineOddsDouble = double.parse(probability.moneylineOdds);
+      if(moneylineOddsDouble > 0) {
+        return amount + (amount * moneylineOddsDouble) / 100;
+      }
+      else {
+        return amount + (amount * 100) / moneylineOddsDouble.abs();
+      }
+    }
+  }
 }
 
 class Wager implements IWager {
@@ -51,6 +68,7 @@ class Wager implements IWager {
   final PredictionProbability probability;
 
   double get payout => amount * probability.decimalOdds;
+  double get moneylinePayout => IWager.advancedPayout(amount, probability, roundToMoneyline: true);
 
   Wager({
     required this.prediction,
@@ -87,6 +105,7 @@ class Parlay implements IWager {
     houseEdgePerLeg: PredictionProbability.standardHouseEdge,
   );
   double get payout => amount * probability.decimalOdds;
+  double get moneylinePayout => IWager.advancedPayout(amount, probability, roundToMoneyline: true);
 
   String get descriptiveString => "${legs.length}-leg parlay";
   String? get parlayDescription {

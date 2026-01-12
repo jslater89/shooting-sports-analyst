@@ -2,6 +2,7 @@
 import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/algorithm_prediction.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
+import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 part 'prediction_set.g.dart';
@@ -56,6 +57,16 @@ class PredictionSet {
 
   /// The algorithm predictions for this prediction set.
   final algorithmPredictions = IsarLinks<DbAlgorithmPrediction>();
+
+  @ignore
+  List<AlgorithmPrediction>? _hydratedPredictions;
+
+  List<AlgorithmPrediction> getHydratedPredictions() {
+    if(_hydratedPredictions == null) {
+      _hydratedPredictions = algorithmPredictions.map((p) => p.hydrate()).nonNulls.toList();
+    }
+    return _hydratedPredictions!;
+  }
 
   @override
   bool operator ==(Object other) {

@@ -36,27 +36,9 @@ class PredictionGamePlayer {
   @Backlink(to: 'user')
   final transactions = IsarLinks<PredictionGameTransaction>();
 
-  /// Audits the transactions for the user and updates the balance if needed.
-  ///
-  /// Returns true if the audit passes (i.e., the balance is consistent with the transactions).
-  bool auditTransactionsSync({bool updateBalance = true}) {
-    var totalDebit = 0.0;
-    var totalCredit = 0.0;
-    for(var transaction in transactions) {
-      if(transaction.type.isDebit) {
-        totalDebit += transaction.amount;
-      }
-      else {
-        totalCredit += transaction.amount;
-      }
-    }
-    var newBalance = totalCredit - totalDebit;
-    var isConsistent = newBalance == balance;
-    if(updateBalance && !isConsistent) {
-      balance = newBalance;
-    }
-    return isConsistent;
-  }
+  /// The amount that the user should be topped up to at regular intervals,
+  /// or null if none.
+  double? topupTargetBalance;
 
   double balance = 0.0;
 }
@@ -112,6 +94,8 @@ enum PredictionGameTransactionType {
 
   bool get isDebit => this == wager;
   bool get isCredit => this == topUp || this == payout || this == refund;
+
+  bool get shouldHaveWager => this != topUp;
 
   @ignore
   String get displayName => switch(this) {

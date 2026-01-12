@@ -211,6 +211,16 @@ class ShootingMatch implements SourceIdsProvider {
     );
   }
 
+  /// Get the match entries for a list of shooters (comparing by member number), optionally
+  /// filtered to a list of divisions.
+  List<MatchEntry> getEntriesFor(List<Shooter> shooters, {List<Division>? divisions}) {
+    List<MatchEntry> eligibleEntries = filterShooters(divisions: divisions);
+    List<MatchEntry> entries = [];
+    entries.addAll(eligibleEntries
+      .where((e) => shooters.any((s) => s.equalsShooter(e))));
+    return entries;
+  }
+
   /// Look up a stage by name.
   ///
   /// (This looks useless, but is used for finding the stage represented

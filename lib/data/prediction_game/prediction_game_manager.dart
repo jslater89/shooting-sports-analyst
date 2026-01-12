@@ -25,12 +25,12 @@ class PredictionGameManager {
   // Player management
   // ======================
 
-  Future<void> addNewPlayer(PredictionGamePlayer player, {List<PredictionGameTransaction>? newTransactions}) async {
+  Future<void> savePlayer(PredictionGamePlayer player, {List<PredictionGameTransaction>? newTransactions}) async {
     await db.savePredictionGamePlayer(player, newTransactions: newTransactions, saveLinks: true);
     await loadPredictionGame();
   }
 
-  void addNewPlayerSync(PredictionGamePlayer player) {
+  void savePlayerSync(PredictionGamePlayer player) {
     db.savePredictionGamePlayerSync(player);
     loadPredictionGameSync();
   }
@@ -48,12 +48,12 @@ class PredictionGameManager {
   Future<void> addWager(DbWager wager) async {
     // It's already backlinked to everything else, so we can just save it
     // and its links.
-    await db.saveWager(wager, saveLinks: true);
+    await db.saveWager(wager, saveLinks: true, createWagerTransaction: true);
     await loadPredictionGame();
   }
 
   void addWagerSync(DbWager wager) {
-    db.saveWagerSync(wager);
+    db.saveWagerSync(wager, createWagerTransaction: true);
     loadPredictionGameSync();
   }
 
@@ -116,11 +116,131 @@ class PredictionGameManager {
     return db.getTransactions(game: predictionGame, matchPrep: matchPrep, player: player);
   }
 
+  /// Get the transactions from the prediction game with various filters.
   List<PredictionGameTransaction> getTransactionsSync({
     MatchPrep? matchPrep,
     PredictionGamePlayer? player,
   }) {
     return db.getTransactionsSync(game: predictionGame, matchPrep: matchPrep, player: player);
+  }
+
+  /// Resolve a wager with the given status, creating a payout or refund transaction
+  /// as necessary and updating the wager player's balance.
+  Future<void> resolveWager(DbWager wager, DbWagerStatus status) async {
+    wager.status = status;
+
+    double playerBalanceChange = 0;
+
+    if(status == DbWagerStatus.won) {
+      if(wager.payoutTransaction.value == null) {
+        playerBalanceChange = wager.payout();
+        var payoutTransaction = PredictionGameTransaction(
+          type: PredictionGameTransactionType.payout,
+          amount: playerBalanceChange,
+          created: DateTime.now(),
+        );
+        payoutTransaction.game.value = wager.game.value;
+        payoutTransaction.user.value = wager.user.value;
+        payoutTransaction.wager.value = wager;
+
+        var savedTxn = await db.savePredictionGameTransaction(payoutTransaction);
+        wager.payoutTransaction.value = savedTxn;
+      }
+      else {
+        _log.w("Wager ${wager.id} was already resolved as won, but is being resolved again");
+      }
+    }
+    else if(status == DbWagerStatus.voided) {
+      if(wager.refundTransaction.value == null) {
+        playerBalanceChange = wager.amount;
+
+        // If we're voiding a wager that was already paid out for some reason,
+        // we need to refund the player the amount they were paid.
+        if(wager.payoutTransaction.value != null) {
+          playerBalanceChange -= wager.payoutTransaction.value!.amount;
+        }
+        var refundTransaction = PredictionGameTransaction(
+          type: PredictionGameTransactionType.refund,
+          amount: playerBalanceChange,
+          created: DateTime.now(),
+        );
+        refundTransaction.game.value = wager.game.value;
+        refundTransaction.user.value = wager.user.value;
+        refundTransaction.wager.value = wager;
+
+        var savedTxn = await db.savePredictionGameTransaction(refundTransaction);
+        wager.refundTransaction.value = savedTxn;
+      }
+      else {
+        _log.w("Wager ${wager.id} was already resolved as voided, but is being resolved again");
+      }
+    }
+
+    if(playerBalanceChange != 0) {
+      await db.updatePlayerBalance(wager.user.value!, playerBalanceChange);
+    }
+    await db.saveWager(wager, saveLinks: true, createWagerTransaction: false);
+    await loadPredictionGame();
+  }
+
+  /// Resolve a wager with the given status, creating a payout or refund transaction
+  /// as necessary and updating the wager player's balance.
+  void resolveWagerSync(DbWager wager, DbWagerStatus status) {
+    wager.status = status;
+    double playerBalanceChange = 0;
+    if(status == DbWagerStatus.won) {
+      playerBalanceChange = wager.payout();
+      var payoutTransaction = PredictionGameTransaction(
+        type: PredictionGameTransactionType.payout,
+        amount: playerBalanceChange,
+        created: DateTime.now(),
+      );
+      payoutTransaction.game.value = wager.game.value;
+      payoutTransaction.user.value = wager.user.value;
+      payoutTransaction.wager.value = wager;
+      wager.payoutTransaction.value = payoutTransaction;
+    }
+    else if(status == DbWagerStatus.voided) {
+      playerBalanceChange = wager.amount;
+      var refundTransaction = PredictionGameTransaction(
+        type: PredictionGameTransactionType.refund,
+        amount: playerBalanceChange,
+        created: DateTime.now(),
+      );
+      refundTransaction.game.value = wager.game.value;
+      refundTransaction.user.value = wager.user.value;
+      refundTransaction.wager.value = wager;
+      wager.refundTransaction.value = refundTransaction;
+    }
+
+    if(playerBalanceChange != 0) {
+      db.updatePlayerBalanceSync(wager.user.value!, playerBalanceChange);
+    }
+    db.saveWagerSync(wager, createWagerTransaction: false);
+    loadPredictionGameSync();
+  }
+
+  /// Audit the transactions for a player and update the balance if needed.
+  Future<void> auditUserBalance(PredictionGamePlayer player) async {
+    double priorBalance = player.balance;
+    bool isConsistent = db.auditPlayerTransactionsSync(player);
+    if(!isConsistent) {
+      await db.savePredictionGamePlayer(player, saveLinks: false);
+      _log.w("Audit of player ${player.id} failed: balance changed from ${priorBalance.toStringAsFixed(2)} to ${player.balance.toStringAsFixed(2)}");
+    }
+
+    await loadPredictionGame();
+  }
+
+  /// Audit the transactions for a player and update the balance if needed.
+  void auditUserBalanceSync(PredictionGamePlayer player) {
+    double priorBalance = player.balance;
+    bool isConsistent = db.auditPlayerTransactionsSync(player);
+    if(!isConsistent) {
+      db.savePredictionGamePlayerSync(player);
+      _log.w("Audit of player ${player.id} failed: balance changed from ${priorBalance.toStringAsFixed(2)} to ${player.balance.toStringAsFixed(2)}");
+    }
+    loadPredictionGameSync();
   }
 
   // ======================

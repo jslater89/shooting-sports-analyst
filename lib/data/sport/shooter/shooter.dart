@@ -124,7 +124,7 @@ class Shooter {
   }
 
   bool equalsShooter(Shooter other) {
-    return memberNumber == other.memberNumber;
+    return other.knownMemberNumbers.contains(memberNumber);
   }
 
   /// The shooter's name, without suffixes.
