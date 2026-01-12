@@ -14,6 +14,7 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/wager.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/ui/prediction_game/dialog/edit_prediction_player_dialog.dart';
 import 'package:shooting_sports_analyst/ui/prediction_game/dialog/topup_player_dialog.dart';
 import 'package:shooting_sports_analyst/ui/prediction_game/prediction_game_manager.dart';
 import 'package:shooting_sports_analyst/ui/prediction_game/widget/wager_list.dart';
@@ -113,6 +114,7 @@ class _PredictionGamePlayerControlsState extends State<PredictionGamePlayerContr
             Text("Balance: ${player.balance.toStringAsFixed(2)}"),
             TextButton(
               child: Row(
+                spacing: 4 * uiScaleFactor,
                 children: [
                   Icon(Icons.add),
                   Text("Top up"),
@@ -128,6 +130,7 @@ class _PredictionGamePlayerControlsState extends State<PredictionGamePlayerContr
             ),
             TextButton(
               child: Row(
+                spacing: 4 * uiScaleFactor,
                 children: [
                   Icon(Icons.security),
                   Text("Audit"),
@@ -135,6 +138,21 @@ class _PredictionGamePlayerControlsState extends State<PredictionGamePlayerContr
               ),
               onPressed: () {
                 model.auditUserBalance(player);
+              },
+            ),
+            TextButton(
+              child: Row(
+                spacing: 4 * uiScaleFactor,
+                children: [
+                  Icon(Icons.edit),
+                  Text("Edit"),
+                ],
+              ),
+              onPressed: () async {
+                var result = await EditPredictionPlayerDialog.show(context, player: player);
+                if(result != null) {
+                  await model.savePlayer(result);
+                }
               },
             )
           ],
