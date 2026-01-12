@@ -10,7 +10,7 @@ import 'package:shooting_sports_analyst/data/database/schema/prediction_game/pre
 ///
 /// [predictionGame] is the game this player is participating in.
 ///
-/// [initialBalance] will populate the initial balance field.
+/// [initialBalance] will populate the initial balance and topup target balance fields.
 ///
 /// [returnInitialTransactionSeparately] determines whether the initial transaction should be
 /// returned separately from the player, or included in the player object. If using synchronous
@@ -112,6 +112,7 @@ class _NewPredictionPlayerDialogState extends State<NewPredictionPlayerDialog> {
             var predictionPlayer = PredictionGamePlayer();
             predictionPlayer.nickname = name;
             predictionPlayer.balance = balance;
+            predictionPlayer.topupTargetBalance = balance;
             predictionPlayer.game.value = widget.predictionGame;
 
             var initialTransaction = PredictionGameTransaction(
