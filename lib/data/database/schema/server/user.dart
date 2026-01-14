@@ -6,9 +6,13 @@
 
 import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/fantasy_user.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_player.dart';
+import 'package:shooting_sports_analyst/data/database/schema/server/permission.dart';
+import 'package:shooting_sports_analyst/data/database/schema/server/role.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 part 'user.g.dart';
 
@@ -17,45 +21,71 @@ part 'user.g.dart';
 /// This is used to authenticate
 @collection
 class User {
-  Id id = Isar.autoIncrement;
+  Id get id => username.stableHash;
 
   final fantasyUser = IsarLink<FantasyUser>();
   final predictionGamePlayer = IsarLink<PredictionGamePlayer>();
 
+  final roles = IsarLinks<Role>();
+  @enumerated
+  List<Permission> standalonePermissions = [];
+
+  @ignore
+  Set<Permission> get permissions {
+    return roles.map((role) => role.permissions).flattened.toSet().union(standalonePermissions.toSet());
+  }
+
+  bool hasPermission(Permission p) {
+    return permissions.any((permission) {
+      return p == permission || p == Permission.siteAdmin;
+    });
+  }
+
   String username;
-  String email;
+
+  String? email;
 
   /// Local players can be at most password authenticated.
   bool isLocal;
 
   /// The authentication methods that can identify the user.
   @enumerated
-  List<AuthMethods> availableAuthMethods;
+  List<AuthMethod> availableAuthMethods;
 
   @ignore
-  bool get isPasswordAuthenticated => availableAuthMethods.contains(AuthMethods.password);
-  /// Argon2 password hash, if ava
+  bool get isPasswordAuthenticated => availableAuthMethods.contains(AuthMethod.password);
+  /// Hashed password, if available.
   String? hashedPassword;
 
   @ignore
-  bool get isPrivateKeyAuthenticated => availableAuthMethods.contains(AuthMethods.privateKey);
+  bool get isPrivateKeyAuthenticated => availableAuthMethods.contains(AuthMethod.privateKey);
   /// Public key corresponding to the user's private key, if available.
   String? publicKey;
 
   @ignore
-  bool get isPatreonOauthAuthenticated => availableAuthMethods.contains(AuthMethods.patreonOauth);
-  // TODO: patreon oauth stuff
+  bool get isPatreonOauthAuthenticated => availableAuthMethods.contains(AuthMethod.patreonOauth);
+  PatreonOauthSession? patreonOauthSession;
 
   User({
     required this.username,
-    required this.email,
+    this.email,
     required this.isLocal,
     required this.availableAuthMethods,
   });
 }
 
-enum AuthMethods {
+enum AuthMethod {
   password,
   privateKey,
-  patreonOauth,
+  patreonOauth;
+}
+
+@embedded
+class PatreonOauthSession {
+  String accessToken = "";
+  String refreshToken = "";
+  DateTime expiresAt = practicalShootingZeroDate;
+
+  @ignore
+  bool get isValid => expiresAt.isAfter(DateTime.now());
 }

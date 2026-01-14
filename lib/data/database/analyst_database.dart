@@ -32,6 +32,8 @@ import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_e
 import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration_mapping.dart';
+import 'package:shooting_sports_analyst/data/database/schema/server/role.dart';
+import 'package:shooting_sports_analyst/data/database/schema/server/session.dart';
 import 'package:shooting_sports_analyst/data/database/schema/server/user.dart';
 import 'package:shooting_sports_analyst/data/database/util.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/idpa.dart';
@@ -115,6 +117,8 @@ class AnalystDatabase {
 
           // Server collections
           UserSchema,
+          RoleSchema,
+          SessionSchema,
 
           // Fantasy-related collections
           FantasyUserSchema,
