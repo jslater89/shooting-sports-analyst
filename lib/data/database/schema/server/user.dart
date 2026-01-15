@@ -27,7 +27,7 @@ class User {
   final predictionGamePlayer = IsarLink<PredictionGamePlayer>();
 
   final roles = IsarLinks<Role>();
-  @enumerated
+  @Enumerated(EnumType.value, 'permissionName')
   List<Permission> standalonePermissions = [];
 
   @ignore
@@ -41,8 +41,19 @@ class User {
     });
   }
 
+  /// An alternate display name for the user, if desired. (Since
+  /// username is the primary identifier, username cannot be edited.)
+  String? displayName;
+
+  /// The username of the user.
+  @Index()
   String username;
 
+  @ignore
+  String get guaranteedDisplayName => displayName ?? username;
+
+  /// The email address of the user.
+  @Index()
   String? email;
 
   /// Local players can be at most password authenticated.
@@ -64,10 +75,12 @@ class User {
 
   @ignore
   bool get isPatreonOauthAuthenticated => availableAuthMethods.contains(AuthMethod.patreonOauth);
-  PatreonOauthSession? patreonOauthSession;
+  /// The session information for Patreon OAuth authentication, if available.
+  PatreonOauthSession? patreonInfo;
 
   User({
     required this.username,
+    this.displayName,
     this.email,
     required this.isLocal,
     required this.availableAuthMethods,
@@ -82,8 +95,8 @@ enum AuthMethod {
 
 @embedded
 class PatreonOauthSession {
-  String accessToken = "";
-  String refreshToken = "";
+  String lastPatreonTierId = "";
+  String lastPatreonTierName = "";
   DateTime expiresAt = practicalShootingZeroDate;
 
   @ignore

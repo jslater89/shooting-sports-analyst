@@ -31,6 +31,11 @@ class PredictionGame {
   /// eligible for the game.
   int minimumCompetitorsRequired;
 
+  /// The minimum finish ratio required (using the center of the range, however the prediction
+  /// algorithm defines 'center') for a competitor to be eligible for wagers. If null,
+  /// all competitors are eligible.
+  double? minimumWagerableCompetitorFinishRatio;
+
   // TODO: a way to specify matchPrep -> allowed rating groups
   // and/or other ways to determine what we want to offer odds on
   // (e.g. Glicko-2 can say "we couldn't do accurate predictions because of too big a rating gap")

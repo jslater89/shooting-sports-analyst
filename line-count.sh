@@ -16,4 +16,3 @@ if [ "$INCLUDE_GENERATED" == true ]; then
 else
     echo Code:  && find $PATHS -iname "*.dart" -and -not -iname "*.g.dart" | xargs wc -l | sort -n -r | head -15
 fi
-

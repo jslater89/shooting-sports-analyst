@@ -6,25 +6,30 @@ part 'role.g.dart';
 
 @collection
 class Role {
-  Id get id => name.stableHash;
+  Id get id => roleId.stableHash;
 
   @Index()
   String name;
 
-  @enumerated
+  @Index()
+  String roleId;
+
+  @Enumerated(EnumType.value, 'permissionName')
   List<Permission> permissions = [];
 
-  List<UsageLimit> usageLimits = [];
+  List<UsageInfo> usageLimits = [];
 
   Role({
     required this.name,
+    required this.roleId,
     required this.permissions,
     this.usageLimits = const [],
   });
 }
 
+/// Information about the allowed usage or limits for a role.
 @embedded
-class UsageLimit {
+class UsageInfo {
   String usageType = "";
 
   @ignore
@@ -39,12 +44,12 @@ class UsageLimit {
   int? intLimit;
   double? doubleLimit;
 
-  UsageLimit();
-  UsageLimit.int({
+  UsageInfo();
+  UsageInfo.int({
     required this.usageType,
     required this.intLimit,
   });
-  UsageLimit.double({
+  UsageInfo.double({
     required this.usageType,
     required this.doubleLimit,
   });
