@@ -21,6 +21,10 @@ abstract interface class SourceIdsProvider {
   List<String> get sourceIds;
 }
 
+abstract interface class SportSourceIdsProvider extends SourceIdsProvider {
+  Sport get sport;
+}
+
 class BareSourceIdsProvider implements SourceIdsProvider {
   String sourceCode;
   List<String> sourceIds;
