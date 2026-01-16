@@ -466,10 +466,16 @@ class PredictionLeaderboardEntry {
         if(wagers.isEmpty) {
           return 0.0;
         }
-        return wagers.map((w) {
-          var decimalOdds = w.wagerProbability.decimalOdds;
-          return roundDecimalOddsToMoneyline(decimalOdds);
-        }).average;
+        List<double> roundedOdds = [];
+        List<double> amounts = [];
+
+        for(var wager in wagers) {
+          var decimalOdds = wager.wagerProbability.decimalOdds;
+          var rounded = roundDecimalOddsToMoneyline(decimalOdds);
+          roundedOdds.add(rounded);
+          amounts.add(wager.amount);
+        }
+        return roundedOdds.weightedAverage(amounts);
     }
   }
 }

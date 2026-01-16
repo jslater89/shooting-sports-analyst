@@ -625,6 +625,8 @@ extension AsNotNullExtension<X> on X? {
 
 extension ListWeightedAverage on List<num> {
   /// Calculate the weighted average of this list of numbers, using the weights in [weights].
+  ///
+  /// Weights need not be normalized.
   double weightedAverage(List<double> weights) {
     if(length != weights.length) {
       throw ArgumentError("length of list and weights must be the same");
