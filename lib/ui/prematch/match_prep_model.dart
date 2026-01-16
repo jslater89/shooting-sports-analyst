@@ -175,8 +175,8 @@ class MatchPrepPageModel extends ChangeNotifier {
   // ===========================
 
   int compareRegistrationNames(MatchRegistration a, MatchRegistration b) {
-    var aName = a.shooterName;
-    var bName = b.shooterName;
+    var aName = a.shooterName?.toLowerCase();
+    var bName = b.shooterName?.toLowerCase();
     if(aName == null && bName == null) {
       return 0;
     }
@@ -191,10 +191,10 @@ class MatchPrepPageModel extends ChangeNotifier {
     var aRating = matchedRegistrations[a];
     var bRating = matchedRegistrations[b];
     if(aRating != null) {
-      aName = aRating.lastName;
+      aName = aRating.lastName.toLowerCase();
     }
     if(bRating != null) {
-      bName = bRating.lastName;
+      bName = bRating.lastName.toLowerCase();
     }
     return aName.compareTo(bName);
   }
