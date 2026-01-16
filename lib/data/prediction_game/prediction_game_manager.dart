@@ -22,6 +22,15 @@ class PredictionGameManager {
   }
 
   // ======================
+  // Leaderboard
+  // ======================
+
+  /// Get the leaderboard for the prediction game.
+  Future<List<PredictionLeaderboardEntry>> getLeaderboard(LeaderboardSortMode sortMode) async {
+    return db.getLeaderboard(predictionGame, sortMode);
+  }
+
+  // ======================
   // Player management
   // ======================
 

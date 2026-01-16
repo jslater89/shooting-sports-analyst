@@ -1,9 +1,13 @@
+import 'package:collection/collection.dart';
 import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_game.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_player.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
+import 'package:shooting_sports_analyst/data/prediction_game/prediction_utils.dart';
+import 'package:shooting_sports_analyst/data/ranking/prediction/odds/probability.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 extension PredictionGameExtension on AnalystDatabase {
   /// Get a prediction game by its ID.
@@ -406,5 +410,111 @@ extension PredictionGameExtension on AnalystDatabase {
       savePredictionGamePlayerSync(player);
     }
     return isConsistent;
+  }
+
+  Future<List<PredictionLeaderboardEntry>> getLeaderboard(PredictionGame game, LeaderboardSortMode sortMode) async {
+    List<PredictionLeaderboardEntry> entries = [];
+    for(var player in game.users) {
+      if(player.wagers.isEmpty) {
+        // Players with no wagers don't appear on the leaderboard
+        continue;
+      }
+      var leaderboardEntry = PredictionLeaderboardEntry.fromPlayer(player, sortMode);
+      entries.add(leaderboardEntry);
+    }
+    entries.sort((a, b) => b.value.compareTo(a.value));
+    for(var i = 0; i < entries.length; i++) {
+      entries[i].rank = i + 1;
+    }
+    return entries;
+  }
+}
+
+class PredictionLeaderboardEntry {
+  int rank;
+  PredictionGamePlayer player;
+  double value;
+
+  PredictionLeaderboardEntry.fromPlayer(this.player, LeaderboardSortMode sortMode) : value = _calculateValue(player, sortMode), rank = -1;
+
+  static double _calculateValue(PredictionGamePlayer player, LeaderboardSortMode sortMode) {
+    switch(sortMode) {
+      case LeaderboardSortMode.rawBalance:
+        return player.balance;
+      case LeaderboardSortMode.balancePlusOpenWagers:
+        return player.balance + player.wagers.filter().statusEqualTo(DbWagerStatus.pending).findAllSync().map((w) => w.amount).sum;
+      case LeaderboardSortMode.balancePlusOpenWagersNetOfTopups:
+        return player.balance
+          + player.wagers.filter().statusEqualTo(DbWagerStatus.pending).findAllSync().map((w) => w.amount).sum
+          - player.transactions.filter().typeEqualTo(PredictionGameTransactionType.topUp).findAllSync().map((t) => t.amount).sum;
+      case LeaderboardSortMode.accuracy:
+        List<DbWager> closedWagers = player.wagers.filter().statusEqualTo(DbWagerStatus.won).or().statusEqualTo(DbWagerStatus.lost).findAllSync();
+        List<DbWager> wonWagers = closedWagers.where((w) => w.status == DbWagerStatus.won).toList();
+        if(closedWagers.isEmpty) {
+          return 0.0;
+        }
+        return wonWagers.length / closedWagers.length;
+      case LeaderboardSortMode.profitRatio:
+        PredictionGameTransaction? initialTopUp = player.transactions.filter().typeEqualTo(PredictionGameTransactionType.topUp).sortByCreated().findFirstSync();
+        if(initialTopUp == null) {
+          return 0.0;
+        }
+        var bankroll = player.balance + player.wagers.filter().statusEqualTo(DbWagerStatus.pending).findAllSync().map((w) => w.amount).sum;
+        return bankroll / initialTopUp.amount;
+      case LeaderboardSortMode.averageOdds:
+        var wagers = player.wagers.filter().not().statusEqualTo(DbWagerStatus.voided).findAllSync();
+        if(wagers.isEmpty) {
+          return 0.0;
+        }
+        return wagers.map((w) {
+          var decimalOdds = w.wagerProbability.decimalOdds;
+          return roundDecimalOddsToMoneyline(decimalOdds);
+        }).average;
+    }
+  }
+}
+
+/// The mode to sort the leaderboard by.
+enum LeaderboardSortMode {
+  /// The raw balance of the player.
+  ///
+  /// This is slightly distorted, in that players who consistently miss wagers
+  /// will end up getting topped up to their top-up balance.
+  rawBalance,
+
+  /// The balance plus the total amount of open wagers.
+  balancePlusOpenWagers,
+
+  /// The balance plus the total amount of open wagers, minus the total amount of top-ups.
+  ///
+  /// This is the most accurate balance measure, as it dings people who are only still in the
+  /// game because of top-ups.
+  balancePlusOpenWagersNetOfTopups,
+
+  /// The ratio of successful closed wagers to total closed wagers (except voided wagers).
+  accuracy,
+
+  /// The player's profit ratio, defined as the multiple of the player's initial balance that
+  /// they have earned from wagers.
+  profitRatio,
+
+  /// The average odds of all of the player's non-voided wagers.
+  averageOdds;
+
+  String formatValue(double value) {
+    switch(this) {
+      case LeaderboardSortMode.rawBalance:
+        return value.toStringAsFixed(2);
+      case LeaderboardSortMode.balancePlusOpenWagers:
+        return value.toStringAsFixed(2);
+      case LeaderboardSortMode.balancePlusOpenWagersNetOfTopups:
+        return value.toStringAsFixed(2);
+      case LeaderboardSortMode.accuracy:
+        return value.asPercentage(decimals: 1, includePercent: true);
+      case LeaderboardSortMode.profitRatio:
+        return value.toStringAsFixed(3);
+      case LeaderboardSortMode.averageOdds:
+        return PredictionProbability.fromDecimalOdds(value).moneylineOdds;
+    }
   }
 }
