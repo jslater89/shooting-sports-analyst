@@ -9,6 +9,7 @@ import 'package:shooting_sports_analyst/data/ranking/rater_types.dart';
 import 'package:shooting_sports_analyst/data/sport/model.dart';
 import 'package:shooting_sports_analyst/data/sport/shooter/filter_set.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 var _log = SSALogger("CareerStats");
 
@@ -44,6 +45,12 @@ class CareerStats {
 
     List<MatchHistoryEntry> matchHistory = rating.careerHistory();
     matchHistory.sort((a, b) => a.match.date.compareTo(b.match.date));
+
+    if(matchHistory.isEmpty) {
+      careerStats = PeriodicStats.container(career: this, start: DateTime.now(), end: DateTime.now(), isCareer: true);
+      return;
+    }
+
     DateTime earliest = matchHistory.first.match.date;
     DateTime latest = matchHistory.last.match.date;
 
@@ -334,5 +341,68 @@ class PeriodicStats {
       }
     }
 
+  }
+}
+
+extension HitPercentagesText on RawScore {
+  Map<ScoringEvent, double> hitPercentages(Sport sport) {
+    Map<ScoringEvent, double> result = {};
+    var totalCount = this.targetEventCount;
+    var sortedEvents = this.targetEvents.entries.sorted((a, b) => a.key.sortOrder.compareTo(b.key.sortOrder));
+    for(var entry in sortedEvents) {
+      var event = entry.key;
+      var count = entry.value;
+      result[event] = count / totalCount;
+    }
+    return result;
+  }
+
+  String hitPercentagesText(Sport sport) {
+    List<String> entries = [];
+    var totalCount = this.targetEventCount;
+    Map<String, int> eventCountsByName = {};
+    var sortedEvents = this.targetEvents.entries.sorted((a, b) => a.key.sortOrder.compareTo(b.key.sortOrder));
+    for(var entry in sortedEvents) {
+      var event = entry.key;
+      var count = entry.value;
+      eventCountsByName.incrementBy(event.name, count);
+    }
+
+    var powerFactor = sport.defaultPowerFactor;
+    for(var entry in eventCountsByName.entries) {
+      var event = powerFactor.targetEvents.lookupByName(entry.key);
+      if(event != null && event.displayInOverview) {
+        entries.add("${(entry.value / totalCount).asPercentage(decimals: 1)} ${event.shortDisplayName}");
+      }
+    }
+
+    return entries.join(", ");
+  }
+
+  String scoringEventText(Sport sport) {
+    var message = StringBuffer();
+    Map<String, int> eventCountsByName = {};
+    var sortedEvents = this.targetEvents.entries.sorted((a, b) => a.key.sortOrder.compareTo(b.key.sortOrder));
+    for(var entry in sortedEvents) {
+      var event = entry.key;
+      var count = entry.value;
+      eventCountsByName.incrementBy(event.name, count);
+    }
+
+    var powerFactor = sport.defaultPowerFactor;
+    for(var entry in eventCountsByName.entries) {
+      var event = powerFactor.targetEvents.lookupByName(entry.key);
+      var count = entry.value;
+      if(event != null && event.displayInOverview) {
+        if(sport.displaySettings.eventNamesAsSuffix) {
+          message.write("$count${event.shortDisplayName} ");
+        }
+        else {
+          message.write("${event.shortDisplayName}: $count ");
+        }
+      }
+    }
+
+    return message.toString();
   }
 }

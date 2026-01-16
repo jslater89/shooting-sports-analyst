@@ -50,6 +50,14 @@ class PredictionProbability {
     }
   }
 
+  factory PredictionProbability.fromDecimalOdds(double decimalOdds, {
+    double? houseEdge,
+    double bestPossibleOdds = bestPossibleOddsDefault,
+    double worstPossibleOdds = worstPossibleOddsDefault,
+  }) {
+    return PredictionProbability(1 / decimalOdds, houseEdge: houseEdge ?? standardHouseEdge);
+  }
+
   /// Calculate the probability of a parlay over the given predictions.
   factory PredictionProbability.fromParlayPredictions({
     required List<UserPrediction> predictions,

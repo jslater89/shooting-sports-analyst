@@ -18,14 +18,23 @@ import 'package:shooting_sports_analyst/data/database/schema/fantasy/standing.da
 import 'package:shooting_sports_analyst/data/database/schema/fantasy/team.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_heat.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/algorithm_prediction.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
+import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_game.dart';
+import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_player.dart';
+import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
 import 'package:shooting_sports_analyst/data/database/schema/preferences.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/db_rating_event.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/rating_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration_mapping.dart';
+import 'package:shooting_sports_analyst/data/database/schema/server/role.dart';
+import 'package:shooting_sports_analyst/data/database/schema/server/session.dart';
+import 'package:shooting_sports_analyst/data/database/schema/server/user.dart';
 import 'package:shooting_sports_analyst/data/database/util.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/idpa.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';
@@ -102,6 +111,14 @@ class AnalystDatabase {
           FutureMatchSchema,
           MatchRegistrationSchema,
           MatchRegistrationMappingSchema,
+          MatchPrepSchema,
+          PredictionSetSchema,
+          DbAlgorithmPredictionSchema,
+
+          // Server collections
+          UserSchema,
+          RoleSchema,
+          SessionSchema,
 
           // Fantasy-related collections
           FantasyUserSchema,
@@ -118,6 +135,12 @@ class AnalystDatabase {
           PlayerMonthlyPerformanceSchema,
           MonthlyRosterSchema,
           RosterAssignmentSchema,
+
+          // Prediction game-related collections
+          PredictionGameSchema,
+          PredictionGamePlayerSchema,
+          DbWagerSchema,
+          PredictionGameTransactionSchema,
         ],
         maxSizeMiB: 1024 * 32,
         directory: db.path,
@@ -912,6 +935,11 @@ class AnalystDatabase {
           return ([SortProperty(property: DateQuery().property, sort: direction)], direction);
         }
     }
+  }
+
+  /// Get all future matches.
+  Future<List<FutureMatch>> getFutureMatches() async {
+    return await isar.futureMatchs.where().sortByDateDesc().findAll();
   }
 }
 

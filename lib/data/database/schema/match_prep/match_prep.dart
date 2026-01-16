@@ -5,8 +5,9 @@
  */
 
 import 'package:isar_community/isar.dart';
-import 'package:shooting_sports_analyst/data/database/schema/match_prep/algorithm_prediction.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
+import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_game.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
@@ -17,18 +18,36 @@ part 'match_prep.g.dart';
 /// and other before-the-fact analysis for a particular match.
 @collection
 class MatchPrep {
-  Id get id => combineHashes(matchId.stableHash, projectId.stableHash);
-  int matchId = -1;
-  int projectId = -1;
+  Id get id => synthesizeIdFromIds(projectId, matchId);
+  int matchId;
+  int projectId;
 
   /// The match under analysis.
   final futureMatch = IsarLink<FutureMatch>();
 
+  /// The date of the match being analyzed.
+  @Index()
+  DateTime get matchDate => futureMatch.value!.date;
+
+  /// The last time the match prep was viewed.
+  @Index()
+  DateTime lastViewed = practicalShootingZeroDate;
+
   /// The rating project used as context for the analysis.
   final ratingProject = IsarLink<DbRatingProject>();
 
-  /// Predictions from [ratingProject]'s algorithm for [futureMatch].
-  final algorithmPredictions = IsarLinks<DbAlgorithmPrediction>();
+  /// Prediction sets for this match prep.
+  final predictionSets = IsarLinks<PredictionSet>();
+
+  @ignore
+  List<PredictionSet> get sortedPredictionSets => predictionSets.filter().sortByCreatedDesc().findAllSync();
+
+  PredictionSet? latestPredictionSet() {
+    return predictionSets.filter().sortByCreatedDesc().findFirstSync();
+  }
+
+  /// The games that use this match prep.
+  final games = IsarLinks<PredictionGame>();
 
   MatchPrep({
     required this.matchId,
@@ -43,5 +62,13 @@ class MatchPrep {
 
     this.futureMatch.value = futureMatch;
     this.ratingProject.value = project;
+  }
+
+  static int synthesizeIdFromIds(int projectId, int matchId) {
+    return combineHashes(projectId, matchId);
+  }
+
+  static int synthesizeIdFromEntities(DbRatingProject project, FutureMatch match) {
+    return synthesizeIdFromIds(project.id, match.id);
   }
 }

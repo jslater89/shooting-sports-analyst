@@ -188,5 +188,5 @@ final icoreSport = Sport(
       icoreUnclassified: 850.0,
     },
     shooterDeduplicator: IcoreDeduplicator(),
-    builtinRatingGroupsProvider: DivisionRatingGroupProvider(icoreSportName, icoreDivisions)
+    builtinRatingGroupsProvider: DivisionRatingGroupProvider(icoreSportName, icoreDivisions, includeCombined: true)
 );

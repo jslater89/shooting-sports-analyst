@@ -7,6 +7,8 @@
 import 'package:collection/collection.dart';
 import 'package:isar_community/isar.dart';
 
+part 'util.g.dart';
+
 extension LinkUtilities<T> on IsarLinks<T> {
   void empty({bool ensureLoaded = false}) {
     if(ensureLoaded && !isLoaded) {
@@ -118,4 +120,15 @@ String getPreferredSourceId(List<String> sourceIds) {
       return sourceIds.reduce((a, b) => a.length > b.length ? a : b);
     }
   }
+}
+
+@embedded
+class DbDoubleKeyValue {
+  String key;
+  double value;
+
+  DbDoubleKeyValue({
+    this.key = "",
+    this.value = 0,
+  });
 }

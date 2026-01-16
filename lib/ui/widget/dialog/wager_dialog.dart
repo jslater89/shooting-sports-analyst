@@ -6,6 +6,7 @@
 
 import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
@@ -17,18 +18,57 @@ import 'package:shooting_sports_analyst/data/ranking/prediction/odds/wager.dart'
 import 'package:shooting_sports_analyst/ui/widget/maybe_tooltip.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
-class WagerDialog extends StatefulWidget {
-  const WagerDialog({super.key, required this.predictions, required this.matchId});
+/// Result of a [WagerDialog]. It will be either a list of independent wagers or a parlay.
+///
+/// [independentWagers] is a list of independent wagers, each of which is a single prediction.
+///
+/// [parlay] is a parlay of multiple wagers.
+class WagerDialogResult {
+  final List<Wager>? independentWagers;
+  final Parlay? parlay;
 
+  bool get isParlay => parlay != null;
+  bool get isIndependentWagers => independentWagers != null;
+
+  WagerDialogResult({this.independentWagers, this.parlay});
+}
+
+/// Show a dialog to edit a list of wagers. Pops a [WagerDialogResult].
+class WagerDialog extends StatefulWidget {
+  const WagerDialog({
+    super.key,
+    required this.predictions,
+    required this.matchId,
+    this.title,
+    this.roundToMoneyline = false,
+    this.availableBalance,
+    this.helpText,
+  });
+
+  final bool roundToMoneyline;
+  final double? availableBalance;
+  final String? title;
+  final String? helpText;
   final String matchId;
   final List<AlgorithmPrediction> predictions;
 
-  static Future<List<Wager>?> show(BuildContext context, {required List<AlgorithmPrediction> predictions, required String matchId}) async {
-    return showDialog<List<Wager>>(
+  static Future<WagerDialogResult?> show(BuildContext context, {
+    required List<AlgorithmPrediction> predictions,
+    required String matchId,
+    String? title,
+    bool roundToMoneyline = false,
+    double? availableBalance,
+    String? helpText,
+  }) async {
+    return showDialog<WagerDialogResult>(
       context: context,
       builder: (context) => WagerDialog(
         predictions: predictions,
-        matchId: matchId
+        matchId: matchId,
+        title: title,
+        roundToMoneyline: roundToMoneyline,
+        availableBalance: availableBalance,
+        helpText: helpText,
       ),
       barrierDismissible: false
     );
@@ -116,8 +156,20 @@ class _WagerDialogState extends State<WagerDialog> {
   Widget build(BuildContext context) {
     final uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
     var parlayValidity = _parlay != null ? _parlay!.checkValidity(fieldSize: _shootersToPredictions.length) : null;
+    bool canAffordIndividualWagers = true;
+    bool canAffordParlay = true;
+
+    if(widget.availableBalance != null) {
+      var legSum = _legs.map((e) => e.amount).sum;
+
+      canAffordIndividualWagers = legSum <= widget.availableBalance!;
+      if(_parlay != null) {
+        var parlaySum = _parlay!.amount;
+        canAffordParlay = parlaySum <= widget.availableBalance!;
+      }
+    }
     return AlertDialog(
-      title: Text("Check odds"),
+      title: Text(widget.title ?? "Check odds"),
       content: SizedBox(
         width: 600 * uiScaleFactor,
         child: Column(
@@ -128,6 +180,8 @@ class _WagerDialogState extends State<WagerDialog> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    if(widget.helpText != null)
+                      Text(widget.helpText!),
                     ..._legs.asMap().entries.map((entry) {
                       final index = entry.key;
                       final leg = entry.value;
@@ -149,7 +203,7 @@ class _WagerDialogState extends State<WagerDialog> {
                               "Probabilities: ${leg.probability.probability.asPercentage(decimals: 2, includePercent: true)}/${leg.probability.probabilityWithHouseEdge.asPercentage(decimals: 2, includePercent: true)}",
                           child: Text(
                             "Moneyline: ${leg.probability.moneylineOdds}  -  "
-                            "Payout: ${leg.amount.toStringAsFixed(2)} → ${leg.payout.toStringAsFixed(2)}"
+                            "Payout: ${leg.amount.toStringAsFixed(2)} → ${widget.roundToMoneyline ? leg.moneylinePayout.toStringAsFixed(2) : leg.payout.toStringAsFixed(2)}"
                           )
                         ),
                         trailing: Row(
@@ -306,7 +360,22 @@ class _WagerDialogState extends State<WagerDialog> {
       ),
       actions: [
         TextButton(onPressed: () => Navigator.of(context).pop(), child: Text("CANCEL")),
-        TextButton(onPressed: () => Navigator.of(context).pop(_legs), child: Text("SAVE")),
+        if(_parlay != null && _parlay!.checkValidity(fieldSize: _shootersToPredictions.length).isValid)
+          MaybeTooltip(
+            message: !canAffordParlay ? "You cannot afford this parlay (available balance: ${widget.availableBalance!.toStringAsFixed(2)})" : null,
+            child: TextButton(
+              onPressed: canAffordParlay ? () => Navigator.of(context).pop(WagerDialogResult(parlay: _parlay!)) : null,
+              child: Text("SAVE PARLAY")
+            ),
+          ),
+        if(_legs.isNotEmpty)
+          MaybeTooltip(
+            message: !canAffordIndividualWagers ? "You cannot afford ${_legs.length == 1 ? "this wager" : "these individual wagers"} (available balance: ${widget.availableBalance!.toStringAsFixed(2)})" : null,
+            child: TextButton(
+              onPressed: canAffordIndividualWagers ? () => Navigator.of(context).pop(WagerDialogResult(independentWagers: _legs)) : null,
+              child: Text("SAVE${_legs.length == 1 ? "" : " INDEPENDENT WAGERS"}")
+            ),
+          ),
       ],
     );
   }
@@ -624,6 +693,7 @@ class _EditSpreadWagerDialogState extends State<EditSpreadWagerDialog> {
     return AlertDialog(
       title: Text("Edit percentage spread prediction"),
       content: Column(
+        spacing: 8,
         mainAxisSize: MainAxisSize.min,
         children: [
           DropdownMenu<ShooterRating>(

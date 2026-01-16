@@ -7,11 +7,9 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:shooting_sports_analyst/closed_sources/psv2/psv2_source.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/application_preferences.dart';
@@ -51,7 +49,6 @@ import 'package:shooting_sports_analyst/data/ranking/raters/points/points_rater.
 import 'package:shooting_sports_analyst/data/ranking/raters/points/points_settings.dart';
 import 'package:shooting_sports_analyst/data/ranking/raters/points/ui/points_settings_ui.dart';
 import 'package:shooting_sports_analyst/data/ranking/shooter_aliases.dart';
-import 'package:shooting_sports_analyst/data/source/registered_sources.dart';
 import 'package:shooting_sports_analyst/data/source/source.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/ipsc.dart';
 import 'package:shooting_sports_analyst/data/sport/builtins/registry.dart';

@@ -645,7 +645,7 @@ class _BoothScorecardState extends State<BoothScorecard> {
     if(rating != null) {
       return ClickableLink(
         onTap: () {
-          ShooterStatsDialog.show(context, rating, match, ratings: _ratingProjectContext!, showDivisions: sc.scoresMultipleDivisions);
+          ShooterStatsDialog.show(context, rating, match: match, ratings: _ratingProjectContext!, showDivisions: sc.scoresMultipleDivisions);
         },
         child: child,
       );

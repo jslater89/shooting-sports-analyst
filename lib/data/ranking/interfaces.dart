@@ -58,7 +58,7 @@ abstract interface class RatingGroupsProvider {
 class DivisionRatingGroupProvider implements RatingGroupsProvider {
   final List<Division> divisions;
 
-  DivisionRatingGroupProvider(String sportName,this.divisions) :
+  DivisionRatingGroupProvider(String sportName,this.divisions, {bool includeCombined = false}) :
     divisionRatingGroups = divisions.mapIndexed((index, d) => RatingGroup(
       uuid: "${sportName.toLowerCase()}-${d.name.toLowerCase().replaceAll(" ", "-")}",
       sortOrder: index,
@@ -70,6 +70,17 @@ class DivisionRatingGroupProvider implements RatingGroupsProvider {
   {
     builtinRatingGroups = divisionRatingGroups;
     defaultRatingGroups = divisionRatingGroups;
+    if(includeCombined) {
+      var combinedGroup = RatingGroup(
+        uuid: "${sportName.toLowerCase()}-combined",
+        sortOrder: divisionRatingGroups.length,
+        sportName: sportName,
+        name: "Combined",
+        displayName: "COMBINED",
+        divisionNames: divisions.map((d) => d.name).toList(),
+      );
+      builtinRatingGroups.add(combinedGroup);
+    }
   }
 
   @override

@@ -7,7 +7,6 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-// ignore: avoid_web_libraries_in_flutter
 import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/application_preferences.dart';
@@ -20,7 +19,9 @@ import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/main.dart';
 import 'package:shooting_sports_analyst/route/broadcast_booth_page.dart';
 import 'package:shooting_sports_analyst/route/match_database_manager.dart';
+import 'package:shooting_sports_analyst/route/match_prep_list_page.dart';
 import 'package:shooting_sports_analyst/route/practiscore_url.dart';
+import 'package:shooting_sports_analyst/route/prediction_game_list_page.dart';
 import 'package:shooting_sports_analyst/ui/empty_scaffold.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/app_settings.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/help/help_dialog.dart';
@@ -53,7 +54,6 @@ class _HomePageState extends State<HomePage> {
       _launchingFromParam = true;
       _launchNonPractiscoreFile(url: globals.resultsFileUrl!);
     }
-
 
     Future.delayed(Duration.zero, () {
       var prefs = AnalystDatabase().getPreferencesSync();
@@ -128,18 +128,24 @@ class _HomePageState extends State<HomePage> {
         width: size.width,
         child: size.width > 800 ? Padding(
           padding: const EdgeInsets.all(8.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.max,
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: _selectButtons(column: false),
-              ),
-              SizedBox(height: 60),
-              if(HtmlOr.isDesktop) _desktopLinks(column: false),
-            ],
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(height: 30),
+                Row(
+                  mainAxisSize: MainAxisSize.max,
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: _selectButtons(column: false),
+                ),
+                SizedBox(height: 60),
+                if(HtmlOr.isDesktop) _desktopLinks(column: false),
+                if(HtmlOr.isDesktop) SizedBox(height: 60),
+                if(HtmlOr.isDesktop) ..._additionalLinks(column: false),
+                SizedBox(height: 30),
+              ],
+            ),
           ),
         ) : SingleChildScrollView(
           child: Column(
@@ -147,6 +153,7 @@ class _HomePageState extends State<HomePage> {
             children: [
               ..._selectButtons(column: true),
               if(HtmlOr.isDesktop) _desktopLinks(column: true),
+              if(HtmlOr.isDesktop) ..._additionalLinks(column: true)
             ]
           ),
         ),
@@ -206,7 +213,7 @@ class _HomePageState extends State<HomePage> {
                 .titleMedium!
                 .apply(color: Colors.grey),
                 textAlign: TextAlign.center,
-                ),
+              ),
           ],
         ),
       ),
@@ -233,10 +240,36 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  List<Widget> _additionalLinks({required bool column}) {
+    var children = <Widget>[
+      GestureDetector(
+        onTap: () async {
+          Navigator.of(context).push(MaterialPageRoute(builder: (context) => PredictionGameListPage()));
+        },
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.sports_score, size: 230, color: Colors.grey,),
+            Text("View prediction games", style: Theme
+                .of(context)
+                .textTheme
+                .titleMedium!
+                .apply(color: Colors.grey),
+                textAlign: TextAlign.center,
+              ),
+          ],
+        ),
+      ),
+    ];
+
+    return children;
+  }
+
   List<Widget> _selectButtons({bool column = false}) {
     var children = <Widget>[
       GestureDetector(
         onTap: () async {
+          // TODO: import from file picker now that we're desktop only
           _uploadResultsFile((contents) async {
             if(contents != null) {
               await Navigator.of(context).pushNamed('/local', arguments: contents);
@@ -249,8 +282,8 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.cloud_upload, size: 230, color: Colors.grey,),
-            Text("Upload a report.txt file from your device", style: Theme
+            Icon(Icons.save_alt, size: 230, color: Colors.grey,),
+            Text("Import a match file from your device", style: Theme
                 .of(context)
                 .textTheme
                 .titleMedium!
@@ -260,6 +293,25 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
+      GestureDetector(
+        onTap: () async {
+          Navigator.of(context).push(MaterialPageRoute(builder: (context) => MatchPrepListPage()));
+        },
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.event_available, size: 230, color: Colors.grey,),
+            Text("Prepare for a future match", style: Theme
+                .of(context)
+                .textTheme
+                .titleMedium!
+                .apply(color: Colors.grey),
+                textAlign: TextAlign.center,
+                ),
+          ],
+        ),
+      ),
+
       GestureDetector(
         onTap: () async {
           MatchSource source;

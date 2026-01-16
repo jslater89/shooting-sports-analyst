@@ -5,6 +5,7 @@
  */
 
 import 'package:isar_community/isar.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 part 'registration_mapping.g.dart';
@@ -18,6 +19,9 @@ part 'registration_mapping.g.dart';
 ///
 /// Its ID is a hash of the match ID, shooter name, and shooter division name, so 'put' is an upsert as long as those
 /// values are stable.
+///
+/// It implements object equality and hash code based on its database ID, so operations on lists/sets of these objects
+/// enforce database equality.
 @collection
 class MatchRegistrationMapping {
   Id get id => combineHashList([matchId.stableHash, shooterName.stableHash, shooterDivisionName.stableHash]);
@@ -41,6 +45,12 @@ class MatchRegistrationMapping {
     return int.tryParse(stringNumber ?? "");
   }
 
+  bool matchesRegistration(MatchRegistration registration) {
+    return registration.shooterName == shooterName
+      && registration.shooterDivisionName == shooterDivisionName
+      && registration.shooterClassificationName == shooterClassificationName;
+  }
+
   MatchRegistrationMapping({
     required this.matchId,
     required this.shooterName,
@@ -49,4 +59,13 @@ class MatchRegistrationMapping {
     required this.detectedMemberNumbers,
     this.squad,
   });
+
+  @override
+  operator ==(Object other) {
+    if(!(other is MatchRegistrationMapping)) return false;
+    return this.id == other.id;
+  }
+
+  @override
+  int get hashCode => id;
 }

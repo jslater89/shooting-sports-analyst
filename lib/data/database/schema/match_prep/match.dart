@@ -7,20 +7,25 @@
 import 'package:collection/collection.dart';
 import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
-import 'package:shooting_sports_analyst/data/database/extensions/match_prep.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/future_match.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/registrations.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration_mapping.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/ranking/deduplication/shooter_deduplicator.dart';
 import 'package:shooting_sports_analyst/data/ranking/model/shooter_rating.dart';
 import 'package:shooting_sports_analyst/data/sport/sport.dart';
+import 'package:shooting_sports_analyst/logger.dart';
 import 'package:shooting_sports_analyst/util.dart';
 
 part 'match.g.dart';
 
+final _log = SSALogger("FutureMatch");
+
 /// A FutureMatch is a match that has not yet occurred, including information about registration
-/// and predictions.
+/// and predictions. Its database ID is a stable hash of the match ID string, so it is stable
+/// as long as the string match ID is stable.
 @collection
 class FutureMatch {
   Id get id => matchId.stableHash;
@@ -78,27 +83,33 @@ class FutureMatch {
   }
 
   /// Find the registrations for a given sport and rating group.
-  List<MatchRegistration> getRegistrationsFor(Sport sport, [RatingGroup? group]) {
+  List<MatchRegistration> getRegistrationsFor(Sport sport, {RatingGroup? group = null, List<String>? squads = null, bool fallbackDivision = true}) {
+    List<MatchRegistration> matchedRegistrations = [];
     if(group == null) {
-      return registrations.toList();
+      matchedRegistrations = registrations.toList();
     }
-    List<MatchRegistration> matching = [];
-    for(var registration in registrations) {
-      var division = sport.divisions.lookupByName(registration.shooterDivisionName);
-      if(division == null) {
-        continue;
-      }
-      if(group.containsDivision(division)) {
-        matching.add(registration);
+    else {
+      for(var registration in registrations) {
+        var division = sport.divisions.lookupByName(registration.shooterDivisionName, fallback: fallbackDivision);
+        if(division == null) {
+          continue;
+        }
+        if(group.containsDivision(division)) {
+          matchedRegistrations.add(registration);
+        }
       }
     }
-    return matching;
+
+    if(squads != null) {
+      matchedRegistrations = matchedRegistrations.where((registration) => squads.contains(registration.squad)).toList();
+    }
+    return matchedRegistrations;
   }
 
   /// Find the unmatched registrations for a given sport and rating group.
   List<MatchRegistration> getUnmatchedRegistrationsFor(Sport sport, [RatingGroup? group]) {
     List<MatchRegistration> unmatched = [];
-    for(var registration in getRegistrationsFor(sport, group)) {
+    for(var registration in getRegistrationsFor(sport, group: group)) {
       if(registration.shooterMemberNumbers.isEmpty) {
         unmatched.add(registration);
       }
@@ -108,6 +119,8 @@ class FutureMatch {
 
   /// Attempt to match registrations (optionally for a given rating group) to known
   /// competitors from a list of possible shooter ratings, by comparing name, division, and classification.
+  ///
+  /// Saves updated registrations to the database.
   Future<void> matchRegistrationsToRatings(Sport sport, List<ShooterRating> ratings, {RatingGroup? group}) async {
     var unmatched = getUnmatchedRegistrationsFor(sport, group);
 
@@ -129,7 +142,45 @@ class FutureMatch {
     }
   }
 
-  Future<void> updateRegistrationsFromMappings() async {
+  /// Attempt to match registrations from the given rating group to known competitors
+  /// in the given rating project, by comparing deduplicator name and classification.
+  ///
+  /// Returns a tuple of the number of registrations matched and the number of unmatched registrations
+  /// at the start of the process.
+  Future<(List<MatchRegistration> matched, List<MatchRegistration> unmatched)> matchRegistrationsToRatingsFromDatabase(Sport sport, DbRatingProject project, RatingGroup group) async {
+
+    List<MatchRegistration> unmatched = getUnmatchedRegistrationsFor(sport, group);
+
+    List<MatchRegistration> updateRequired = [];
+    for(var registration in unmatched) {
+      if(registration.shooterName == null) {
+        continue;
+      }
+      var processedName = ShooterDeduplicator.processNameString(registration.shooterName!);
+      var ratings = await project.getRatingsByDeduplicatorName(group, processedName);
+      if(ratings.isErr()) {
+        _log.w("Error getting ratings for deduplicator name $processedName", error: ratings.unwrapErr());
+        continue;
+      }
+      for(var rating in ratings.unwrap()) {
+        var registrationClassification = sport.classifications.lookupByName(registration.shooterClassificationName);
+        if(rating.lastClassification?.name == registrationClassification?.name) {
+          registration.shooterMemberNumbers = rating.knownMemberNumbers.toList();
+          updateRequired.add(registration);
+        }
+      }
+    }
+
+    if(updateRequired.isNotEmpty) {
+      await AnalystDatabase().saveMatchRegistrations(updateRequired);
+    }
+    return (updateRequired, unmatched);
+  }
+
+  /// Update the saved registrations for this match from its saved mappings.
+  ///
+  /// Returns the number of registrations updated.
+  Future<int> updateRegistrationsFromMappings() async {
     var db = AnalystDatabase();
     var mappings = await db.getMatchRegistrationMappings(matchId);
     List<MatchRegistration> registrationsToUpdate = [];
@@ -149,8 +200,9 @@ class FutureMatch {
     }
 
     if(registrationsToUpdate.isNotEmpty) {
-      await db.saveFutureMatch(this, updateLinks: [MatchPrepLinkTypes.registrations]);
+      await db.saveMatchRegistrations(registrationsToUpdate);
     }
+    return registrationsToUpdate.length;
   }
 
   /// Once this match has occurred and been saved to the local database, this will
@@ -165,6 +217,16 @@ class FutureMatch {
 
   /// Mappings of registrations to known shooters for this match.
   final mappings = IsarLinks<MatchRegistrationMapping>();
+
+  /// Check if a mapping exists for a given registration.
+  bool hasMappingFor(MatchRegistration registration) {
+    return mappings.any((m) => m.matchesRegistration(registration));
+  }
+
+  /// Get a mapping for a given registration, if it exists.
+  MatchRegistrationMapping? getMappingFor(MatchRegistration registration) {
+    return mappings.firstWhereOrNull((m) => m.matchesRegistration(registration));
+  }
 
   FutureMatch({
     required this.matchId,

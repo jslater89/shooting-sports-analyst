@@ -21,6 +21,10 @@ abstract interface class SourceIdsProvider {
   List<String> get sourceIds;
 }
 
+abstract interface class SportSourceIdsProvider extends SourceIdsProvider {
+  Sport get sport;
+}
+
 class BareSourceIdsProvider implements SourceIdsProvider {
   String sourceCode;
   List<String> sourceIds;
@@ -209,6 +213,16 @@ class ShootingMatch implements SourceIdsProvider {
       scoresAfter: scoresAfter,
       scoresBefore: scoresBefore,
     );
+  }
+
+  /// Get the match entries for a list of shooters (comparing by member number), optionally
+  /// filtered to a list of divisions.
+  List<MatchEntry> getEntriesFor(List<Shooter> shooters, {List<Division>? divisions}) {
+    List<MatchEntry> eligibleEntries = filterShooters(divisions: divisions);
+    List<MatchEntry> entries = [];
+    entries.addAll(eligibleEntries
+      .where((e) => shooters.any((s) => s.equalsShooter(e))));
+    return entries;
   }
 
   /// Look up a stage by name.

@@ -6,7 +6,7 @@
 
 import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
-import 'package:shooting_sports_analyst/data/database/schema/match_prep/match.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/future_match.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/registration_mapping.dart';
 import 'package:shooting_sports_analyst/logger.dart';
@@ -26,6 +26,16 @@ extension RegistrationDatabase on AnalystDatabase {
     await isar.writeTxn(() async {
       await isar.matchRegistrationMappings.putAll(mappings);
     });
+
+    var futureMatch = await getFutureMatchByMatchId(matchId);
+    if(futureMatch != null) {
+      // Merge the new mappings with the existing mappings, preserving the new mappings
+      // if there are conflicts.
+      Set<MatchRegistrationMapping> newMappings = {...mappings, ...futureMatch.mappings};
+      futureMatch.mappings.clear();
+      futureMatch.mappings.addAll(newMappings);
+      await saveFutureMatch(futureMatch);
+    }
   }
 
   Future<void> deleteMatchRegistrationMappings(List<MatchRegistrationMapping> mappings) async {

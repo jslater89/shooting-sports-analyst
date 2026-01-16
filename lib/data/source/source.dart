@@ -77,7 +77,7 @@ abstract class MatchSource<T extends InternalMatchType, S extends InternalMatchF
   /// A caller providing [sport] requires a match belonging to the provided sport.
   Future<Result<ShootingMatch, MatchSourceError>> getMatchFromId(String id, {SportType? typeHint, Sport? sport, S? options});
 
-  static Future<Result<ShootingMatch, MatchSourceError>> reloadMatch(DbShootingMatch match, {bool matchInProgress = false}) async {
+  static Future<Result<ShootingMatch, MatchSourceError>> reloadMatch(SourceIdsProvider match, {bool matchInProgress = false}) async {
     var source = MatchSourceRegistry().getByCodeOrNull(match.sourceCode);
 
     if(source == null || !source.isImplemented) {
@@ -94,7 +94,12 @@ abstract class MatchSource<T extends InternalMatchType, S extends InternalMatchF
       );
     }
 
-    var result = await source.getMatchFromId(preferredSourceId, sport: match.sport, options: options);
+    Sport? sport;
+    if(match is SportSourceIdsProvider) {
+      sport = match.sport;
+    }
+
+    var result = await source.getMatchFromId(preferredSourceId, sport: sport, options: options);
 
     if(result.isOk()) {
       var match = result.unwrap();

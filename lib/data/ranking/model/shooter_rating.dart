@@ -597,6 +597,8 @@ abstract class ShooterRating<T extends RatingEvent> extends Shooter with DbSport
   }
 
 
+  /// Whether this shooter rating equals the given competitor, taking into account
+  /// all the known member numbers for both shooters.
   @override
   bool equalsShooter(Shooter other) {
     if(super.equalsShooter(other)) return true;

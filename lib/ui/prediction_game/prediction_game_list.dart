@@ -1,0 +1,60 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
+import 'package:shooting_sports_analyst/data/database/extensions/prediction_game.dart';
+import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_game.dart';
+import 'package:shooting_sports_analyst/route/prediction_game_page.dart';
+import 'package:shooting_sports_analyst/util.dart';
+
+class PredictionGameList extends StatelessWidget {
+  const PredictionGameList({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<PredictionGameListModel>(
+      builder: (context, model, child) {
+        return ListView.builder(
+          itemBuilder: (context, index) {
+            var predictionGame = model.predictionGames[index];
+            List<String> subtitleParts = [];
+            if(predictionGame.start != null) {
+              subtitleParts.add("Start: ${programmerYmdFormat.format(predictionGame.start!)}");
+            }
+            if(predictionGame.end != null) {
+              subtitleParts.add("End: ${programmerYmdFormat.format(predictionGame.end!)}");
+            }
+            String? subtitle;
+            if(subtitleParts.isNotEmpty) {
+              subtitle = subtitleParts.join(" - ");
+            }
+            return ListTile(
+              title: Text(predictionGame.name),
+              subtitle: subtitle != null ? Text(subtitle) : null,
+              onTap: () {
+                Navigator.of(context).push(MaterialPageRoute(builder: (context) =>
+                  PredictionGamePage(predictionGame: predictionGame)));
+              },
+            );
+          },
+          itemCount: model.predictionGames.length,
+        );
+      }
+    );
+  }
+}
+
+class PredictionGameListModel extends ChangeNotifier {
+  final db = AnalystDatabase();
+  List<PredictionGame> predictionGames = [];
+
+  Future<void> load() async {
+    predictionGames = await db.getAllPredictionGames();
+    notifyListeners();
+  }
+}
