@@ -4,12 +4,14 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shooting_sports_analyst/config/config.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_player.dart';
+import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
 import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/match_prediction.dart';
 import 'package:shooting_sports_analyst/data/ranking/prediction/odds/wager.dart';
@@ -20,6 +22,8 @@ import 'package:shooting_sports_analyst/ui/prediction_game/prediction_game_manag
 import 'package:shooting_sports_analyst/ui/prediction_game/widget/wager_list.dart';
 import 'package:shooting_sports_analyst/ui/widget/clickable_link.dart';
 import 'package:shooting_sports_analyst/ui/widget/dialog/wager_dialog.dart';
+import 'package:shooting_sports_analyst/ui/widget/maybe_tooltip.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 final _log = SSALogger("PredictionGamePlayerControls");
 
@@ -103,6 +107,8 @@ class _PredictionGamePlayerControlsState extends State<PredictionGamePlayerContr
     var model = Provider.of<PredictionGameManagerModel>(context);
     var player = model.getPlayerById(widget.player.id)!;
     var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
+
+    bool canWager = selectedMatchPrep?.matchDate.isAfter(DateTime.now()) ?? false;
     return Column(
       mainAxisSize: MainAxisSize.min,
       spacing: 8 * uiScaleFactor,
@@ -157,6 +163,8 @@ class _PredictionGamePlayerControlsState extends State<PredictionGamePlayerContr
             )
           ],
         ),
+        PredictionGamePlayerStats(player: player),
+        SizedBox(height: 4 * uiScaleFactor),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           spacing: 8 * uiScaleFactor,
@@ -185,50 +193,53 @@ class _PredictionGamePlayerControlsState extends State<PredictionGamePlayerContr
                 }
               },
             ),
-            TextButton(
-              child: Row(
-                children: [
-                  Icon(Icons.casino),
-                  Text("Wager"),
-                ],
+            MaybeTooltip(
+              message: canWager ? null : "Match has already begun",
+              child: TextButton(
+                child: Row(
+                  children: [
+                    Icon(Icons.casino),
+                    Text("Wager"),
+                  ],
+                ),
+                onPressed: !canWager ? null : () async {
+                  if(selectedMatchPrep == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Please select a match prep to wager on.")),
+                    );
+                    return;
+                  }
+                  if(selectedRatingGroup == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Please select a rating group to wager on.")),
+                    );
+                    return;
+                  }
+                  var predictions = getPredictionsForGroup(selectedRatingGroup!);
+                  predictions.sort((a, b) => b.shooter.rating.compareTo(a.shooter.rating));
+
+                  var result = await WagerDialog.show(
+                    context,
+                    predictions: predictions,
+                    matchId: selectedMatchPrep!.futureMatch.value!.matchId,
+                    roundToMoneyline: true,
+                    title: "Odds for ${selectedRatingGroup!.name}",
+                    helpText: "Current match: ${selectedMatchPrep!.futureMatch.value!.eventName}",
+                    availableBalance: player.balance,
+                  );
+
+                  if(result != null) {
+                    if(result.isParlay) {
+                      _log.i("Saving ${result.parlay!.legs.length}-leg parlay");
+                      _saveParlay(player, model, result.parlay!);
+                    }
+                    else if(result.isIndependentWagers) {
+                      _log.i("Saving ${result.independentWagers!.length} independent wagers");
+                      _saveIndependentWagers(player, model, result.independentWagers!);
+                    }
+                  }
+                },
               ),
-              onPressed: () async {
-                if(selectedMatchPrep == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Please select a match prep to wager on.")),
-                  );
-                  return;
-                }
-                if(selectedRatingGroup == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Please select a rating group to wager on.")),
-                  );
-                  return;
-                }
-                var predictions = getPredictionsForGroup(selectedRatingGroup!);
-                predictions.sort((a, b) => b.shooter.rating.compareTo(a.shooter.rating));
-
-                var result = await WagerDialog.show(
-                  context,
-                  predictions: predictions,
-                  matchId: selectedMatchPrep!.futureMatch.value!.matchId,
-                  roundToMoneyline: true,
-                  title: "Odds for ${selectedRatingGroup!.name}",
-                  helpText: "Current match: ${selectedMatchPrep!.futureMatch.value!.eventName}",
-                  availableBalance: player.balance,
-                );
-
-                if(result != null) {
-                  if(result.isParlay) {
-                    _log.i("Saving ${result.parlay!.legs.length}-leg parlay");
-                    _saveParlay(player, model, result.parlay!);
-                  }
-                  else if(result.isIndependentWagers) {
-                    _log.i("Saving ${result.independentWagers!.length} independent wagers");
-                    _saveIndependentWagers(player, model, result.independentWagers!);
-                  }
-                }
-              },
             ),
             Consumer<WagerListModel>(
               builder: (context, wagerModel, child) => ClickableLink(
@@ -252,6 +263,34 @@ class _PredictionGamePlayerControlsState extends State<PredictionGamePlayerContr
             )
           ],
         )
+      ],
+    );
+  }
+}
+
+class PredictionGamePlayerStats extends StatelessWidget {
+  const PredictionGamePlayerStats({super.key, required this.player});
+
+  final PredictionGamePlayer player;
+
+  @override
+  Widget build(BuildContext context) {
+    var uiScaleFactor = ChangeNotifierConfigLoader().uiConfig.uiScaleFactor;
+    var wagers = player.wagers.toList();
+
+    var unvoidedWagers = wagers.where((wager) => wager.status != DbWagerStatus.voided).toList();
+    var wonWagers = unvoidedWagers.where((wager) => wager.status == DbWagerStatus.won).toList();
+    var totalWagered = unvoidedWagers.map((wager) => wager.amount).sum;
+    var totalWon = wonWagers.map((wager) => wager.amount).sum;
+    var winPercentage = unvoidedWagers.length > 0 ? (totalWon / totalWagered) : 0;
+
+    return Row(
+      spacing: 8 * uiScaleFactor,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text("Wagered: ${totalWagered.toStringAsFixed(2)}"),
+        Text("Won: ${totalWon.toStringAsFixed(2)}"),
+        Text("Accuracy: ${winPercentage.toDouble().asPercentage(decimals: 1, includePercent: true)}"),
       ],
     );
   }

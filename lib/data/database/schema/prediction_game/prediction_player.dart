@@ -105,3 +105,8 @@ enum PredictionGameTransactionType {
     refund => "Refund",
   };
 }
+
+class PredictionGamePlayerLimits {
+  double? maxWager;
+  int? maxWagerCount;
+}

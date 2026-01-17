@@ -1,10 +1,19 @@
+import 'package:collection/collection.dart';
+import 'package:isar_community/isar.dart';
 import 'package:shooting_sports_analyst/data/database/analyst_database.dart';
 import 'package:shooting_sports_analyst/data/database/extensions/prediction_game.dart';
+import 'package:shooting_sports_analyst/data/database/match/hydrated_cache.dart';
 import 'package:shooting_sports_analyst/data/database/schema/match_prep/match_prep.dart';
+import 'package:shooting_sports_analyst/data/database/schema/match_prep/prediction_set.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_game.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/prediction_player.dart';
 import 'package:shooting_sports_analyst/data/database/schema/prediction_game/wager.dart';
+import 'package:shooting_sports_analyst/data/database/schema/ratings.dart';
+import 'package:shooting_sports_analyst/data/sport/match/match.dart';
+import 'package:shooting_sports_analyst/data/sport/scoring/scoring.dart';
+import 'package:shooting_sports_analyst/data/sport/shooter/shooter.dart';
 import 'package:shooting_sports_analyst/logger.dart';
+import 'package:shooting_sports_analyst/util.dart';
 
 final _log = SSALogger("PredictionGameManager");
 
@@ -54,16 +63,63 @@ class PredictionGameManager {
     loadPredictionGameSync();
   }
 
-  Future<void> addWager(DbWager wager) async {
+  /// Add a wager to the prediction game.
+  ///
+  /// If [player] is provided, the wager will be added to that player.
+  /// If [limits] is provided, the wager will be checked against the limits. Player must be provided if limits are provided.
+  Future<AddWagerResult> addWager(DbWager wager, {PredictionGamePlayer? player, PredictionGamePlayerLimits? limits}) async {
+    if(player != null) {
+      if(player.balance < wager.amount) {
+        return Result.err(AddWagerError.insufficientFunds);
+      }
+    }
+    if(limits != null) {
+      if(limits.maxWager != null && limits.maxWager! < wager.amount) {
+        return Result.err(AddWagerError.exceededMaxWager);
+      }
+
+      var openWagers = player!.wagers.filter().statusEqualTo(DbWagerStatus.pending).countSync();
+      if(limits.maxWagerCount != null && limits.maxWagerCount! < openWagers + 1) {
+        return Result.err(AddWagerError.exceededMaxWagerCount);
+      }
+    }
+
     // It's already backlinked to everything else, so we can just save it
     // and its links.
-    await db.saveWager(wager, saveLinks: true, createWagerTransaction: true);
+    try {
+      await db.saveWager(wager, saveLinks: true, createWagerTransaction: true);
+    }
+    catch(e) {
+      return Result.err(AddWagerError.unknown);
+    }
     await loadPredictionGame();
+    return Result.ok(null);
   }
 
-  void addWagerSync(DbWager wager) {
+  /// Add a wager to the prediction game.
+  ///
+  /// If [player] is provided, the wager will be added to that player.
+  /// If [limits] is provided, the wager will be checked against the limits. Player must be provided if limits are provided.
+  AddWagerResult addWagerSync(DbWager wager, {PredictionGamePlayer? player, PredictionGamePlayerLimits? limits}) {
+    if(player != null) {
+      if(player.balance < wager.amount) {
+        return Result.err(AddWagerError.insufficientFunds);
+      }
+    }
+    if(limits != null) {
+      if(limits.maxWager != null && limits.maxWager! < wager.amount) {
+        return Result.err(AddWagerError.exceededMaxWager);
+      }
+
+      var openWagers = player!.wagers.filter().statusEqualTo(DbWagerStatus.pending).countSync();
+      if(limits.maxWagerCount != null && limits.maxWagerCount! < openWagers + 1) {
+        return Result.err(AddWagerError.exceededMaxWagerCount);
+      }
+    }
+
     db.saveWagerSync(wager, createWagerTransaction: true);
     loadPredictionGameSync();
+    return Result.ok(null);
   }
 
   /// Fully deletes a wager from the database, also deleting
@@ -99,23 +155,23 @@ class PredictionGameManager {
     return db.getWagersSync(game: predictionGame, openOnly: openOnly, matchPrep: matchPrep, player: player);
   }
 
-  /// Process the wagers for a particular match prep.
-  Future<void> processWagersForMatch(MatchPrep matchPrep) async {
-    var wagers = await getWagers(matchPrep: matchPrep);
-    for(var wager in wagers) {
+  // /// Process the wagers for a particular match prep.
+  // Future<void> processWagersForMatch(MatchPrep matchPrep) async {
+  //   var wagers = await getWagers(matchPrep: matchPrep);
+  //   for(var wager in wagers) {
+  //   }
+  //   await db.savePredictionGame(predictionGame, saveLinks: true);
+  //   await loadPredictionGame();
+  // }
 
-    }
-  }
-
-  /// Process the wagers for a particular match prep.
-  void processWagersForMatchSync(MatchPrep matchPrep) {
-    var wagers = predictionGame.wagers.where((wager) => wager.matchPrep.value!.id == matchPrep.id).toList();
-    for(var wager in wagers) {
-      db.deleteWagerSync(wager);
-    }
-    db.savePredictionGameSync(predictionGame);
-    loadPredictionGameSync();
-  }
+  // /// Process the wagers for a particular match prep.
+  // void processWagersForMatchSync(MatchPrep matchPrep) {
+  //   var wagers = predictionGame.wagers.where((wager) => wager.matchPrep.value!.id == matchPrep.id).toList();
+  //   for(var wager in wagers) {
+  //   }
+  //   db.savePredictionGameSync(predictionGame);
+  //   loadPredictionGameSync();
+  // }
 
   /// Get the transactions from the prediction game with various filters.
   Future<List<PredictionGameTransaction>> getTransactions({
@@ -131,6 +187,27 @@ class PredictionGameManager {
     PredictionGamePlayer? player,
   }) {
     return db.getTransactionsSync(game: predictionGame, matchPrep: matchPrep, player: player);
+  }
+
+  /// Get the relevant scores for a wager: scores for all of the shooters in the wager's legs,
+  /// for both the match result and the result within the prediction set.
+  WagerScores getRelevantScores(DbWager wager) {
+    var scores = WagerScores(wager: wager);
+    List<Shooter> shooters = [];
+    for(var leg in wager.legs) {
+      var shooter = leg.target.getShooterRatingSync(db);
+      var underdog = leg.underdog?.getShooterRatingSync(db);
+      if(shooter != null) {
+        shooters.add(shooter);
+      }
+      if(underdog != null) {
+        shooters.add(underdog);
+      }
+    }
+
+    scores.scores = _getScoresForShooters(shooters, wager, false);
+    scores.predictionSetScores = _getScoresForShooters(shooters, wager, true);
+    return scores;
   }
 
   /// Resolve a wager with the given status, creating a payout or refund transaction
@@ -275,4 +352,134 @@ class PredictionGameManager {
       _log.w("Prediction game not found: ${predictionGame.id}");
     }
   }
+
+  Map<String, RelativeMatchScore> _getScoresForShooters(List<Shooter> shooters, DbWager wager, bool usePredictionSet) {
+    Map<String, RelativeMatchScore> scores = {};
+    if(wager.matchPrep.value == null) {
+      return scores;
+    }
+    for(var shooter in shooters) {
+      RelativeMatchScore? score;
+      if(usePredictionSet) {
+        score = _getMatchScore(
+          shooter: shooter,
+          ratingGroup: wager.ratingGroup.value!,
+          matchPrep: wager.matchPrep.value!,
+          predictionSet: wager.predictionSet.value,
+        );
+      }
+      else {
+        score = _getMatchScore(
+          shooter: shooter,
+          ratingGroup: wager.ratingGroup.value!,
+          matchPrep: wager.matchPrep.value!,
+        );
+      }
+      if(score != null) {
+        scores[shooter.memberNumber] = score;
+      }
+    }
+    return scores;
+  }
+
+  RelativeMatchScore? _getMatchScore({
+    required Shooter shooter,
+    required RatingGroup ratingGroup,
+    required MatchPrep matchPrep,
+    PredictionSet? predictionSet,
+  }) {
+    // TODO: cache, maybe?
+    // var memberNumber = shooter.memberNumber;
+    // if(predictionSet != null) {
+    //   var cachedScore = _predictionSetMemberNumberScoreCache[memberNumber];
+    //   if(cachedScore != null) {
+    //     return cachedScore;
+    //   }
+    // }
+    // else {
+    //   var cachedScore = _memberNumberScoreCache[memberNumber];
+    //   if(cachedScore != null) {
+    //     return cachedScore;
+    //   }
+    // }
+
+    final divisions = ratingGroup.divisions;
+    if(predictionSet != null) {
+      final dbMatch = matchPrep.futureMatch.value!.dbMatch.value;
+      ShootingMatch? match;
+      if(dbMatch == null) {
+        return null;
+      }
+      final result = HydratedMatchCache().get(dbMatch);
+      if(result.isOk()) {
+        match = result.unwrap();
+      }
+      else {
+        _log.e("Error hydrating match: ${result.unwrapErr().message}");
+        return null;
+      }
+      List<Shooter> predictedShooters = predictionSet.getHydratedPredictions().map((p) => p.shooter).toList();
+      var entries = match.getEntriesFor(predictedShooters, divisions: divisions);
+      var scores = match.getScores(shooters: entries);
+      var matchScores = scores;
+
+      var score = matchScores.entries.firstWhereOrNull((element) => shooter.equalsShooter(element.key))?.value;
+      if(score != null) {
+        return score;
+      }
+      return null;
+    }
+    else {
+
+      final dbMatch = matchPrep.futureMatch.value!.dbMatch.value;
+      ShootingMatch? match;
+      if(dbMatch == null) {
+        return null;
+      }
+      final result = HydratedMatchCache().get(dbMatch);
+      if(result.isOk()) {
+        match = result.unwrap();
+      }
+      else {
+        _log.e("Error hydrating match: ${result.unwrapErr().message}");
+        return null;
+      }
+      var entries = match.filterShooters(divisions: divisions);
+      var scores = match.getScores(shooters: entries);
+      var matchScores = scores;
+
+      var score = matchScores.entries.firstWhereOrNull((element) => shooter.equalsShooter(element.key))?.value;
+      if(score != null) {
+        return score;
+      }
+      return null;
+    }
+  }
+}
+
+enum AddWagerError implements ResultErr {
+  insufficientFunds,
+  exceededMaxWager,
+  exceededMaxWagerCount,
+  matchAlreadyStarted,
+  unknown;
+
+  @override
+  String get message => switch(this) {
+    insufficientFunds => "Insufficient funds",
+    exceededMaxWager => "Exceeded max wager",
+    exceededMaxWagerCount => "Exceeded max wager count",
+    matchAlreadyStarted => "Match already started",
+    unknown => "Unknown error",
+  };
+}
+
+typedef AddWagerResult = Result<void, AddWagerError>;
+
+class WagerScores {
+  DbWager wager;
+  Map<String, RelativeMatchScore> scores = {};
+  Map<String, RelativeMatchScore> predictionSetScores = {};
+
+  WagerScores({required this.wager});
 }

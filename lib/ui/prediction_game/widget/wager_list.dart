@@ -537,7 +537,7 @@ class WagerListModel extends ChangeNotifier {
       }
     }
 
-    scores.scores = getScoresForShooters(shooters, wager.ratingGroup.value!, wager.predictionSet.value);
+    scores.scores = getScoresForShooters(shooters, wager.ratingGroup.value!, null);
     scores.predictionSetScores = getScoresForShooters(shooters, wager.ratingGroup.value!, wager.predictionSet.value);
     return scores;
   }

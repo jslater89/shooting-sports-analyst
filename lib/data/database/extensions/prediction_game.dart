@@ -412,6 +412,7 @@ extension PredictionGameExtension on AnalystDatabase {
     return isConsistent;
   }
 
+  /// Get the full leaderboard for a prediction game.
   Future<List<PredictionLeaderboardEntry>> getLeaderboard(PredictionGame game, LeaderboardSortMode sortMode) async {
     List<PredictionLeaderboardEntry> entries = [];
     for(var player in game.users) {
@@ -428,6 +429,8 @@ extension PredictionGameExtension on AnalystDatabase {
     }
     return entries;
   }
+
+  /// TODO: calculate/store leaderboard ahead of time
 }
 
 class PredictionLeaderboardEntry {

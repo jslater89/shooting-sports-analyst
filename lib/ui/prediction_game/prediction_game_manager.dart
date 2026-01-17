@@ -92,10 +92,10 @@ class PredictionGameManagerModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> processWagersForMatch(MatchPrep matchPrep) async {
-    await manager.processWagersForMatch(matchPrep);
-    notifyListeners();
-  }
+  // Future<void> processWagersForMatch(MatchPrep matchPrep) async {
+  //   await manager.processWagersForMatch(matchPrep);
+  //   notifyListeners();
+  // }
 
   Future<void> savePlayer(PredictionGamePlayer player, {List<PredictionGameTransaction>? newTransactions}) async {
     await manager.savePlayer(player, newTransactions: newTransactions);

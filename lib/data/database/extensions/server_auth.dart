@@ -30,9 +30,15 @@ extension UserRoleDatabase on AnalystDatabase {
     return isar.users.where().emailEqualTo(email).findFirstSync();
   }
 
-  Future<User> saveUser(User user) async {
+  Future<User> saveUser(User user, {bool saveLinks = true}) async {
     await isar.writeTxn(() async {
       await isar.users.put(user);
+
+      if(saveLinks) {
+        await user.roles.save();
+        await user.fantasyUser.save();
+        await user.predictionGamePlayer.save();
+      }
     });
     return user;
   }
